@@ -51,6 +51,7 @@ services:
       TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@postgres:5432/tessera
       TESSERA_OBS__LOG_FORMAT: console
       TESSERA_OBS__METRICS_ENABLED: "false"
+      TESSERA_OLLAMA__HOST: "http://host.docker.internal:11434"
       # Close /docs and /openapi.json: this agent is reachable via a public
       # tunnel, and the schema would otherwise expose the full route surface.
       TESSERA_API__EXPOSE_DOCS: "false"
