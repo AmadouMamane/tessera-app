@@ -69,3 +69,17 @@ Every persisted bundle uses schema `tessera.evidence_bundle.v1` and links:
 
 The bundle is the portable audit object. Langfuse is a cockpit view, not the
 source of truth.
+
+## Operator Endpoints
+
+- `GET /observability/status` reports the active profile, exporters, Langfuse
+  bridge posture, assurance score, warnings, and recent bundles.
+- `POST /observability/evidence/preview` returns a redacted bundle without
+  persisting it.
+- `POST /observability/evidence/commit` persists a redacted bundle to the local
+  evidence store for operator workflows.
+- `GET /observability/conformance` runs the lightweight Shadow Verifier over
+  recent persisted bundles and returns the current cloud/on-prem/air-gapped
+  digital-twin matrix.
+
+The dashboard consumes these endpoints through the authenticated Next.js proxy.

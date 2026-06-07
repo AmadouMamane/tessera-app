@@ -13,6 +13,7 @@ from tessera.observability.actions import (
     issue_decision_proof,
     validate_decision_proof,
 )
+from tessera.observability.digital_twin import run_assurance_twin
 from tessera.observability.evidence import (
     build_turn_evidence_bundle,
     list_recent_evidence_bundles,
@@ -20,6 +21,7 @@ from tessera.observability.evidence import (
 )
 from tessera.observability.privacy import hash_identifier, sanitize_attributes
 from tessera.observability.profiles import resolve_profile
+from tessera.observability.verifier import verify_evidence_bundle
 from tessera.settings import AssuranceLevel, ObservabilityProfile, get_settings
 
 if TYPE_CHECKING:
@@ -163,6 +165,35 @@ def test_decision_proof_validates_and_rejects_replay() -> None:
     assert first.valid is True
     assert second.valid is False
     assert second.reason_code == "proof_replayed"
+
+
+def test_shadow_verifier_flags_sensitive_tool_without_proof() -> None:
+    """Verifier catches the core V2 invariant: sensitive tools carry proof."""
+    report = verify_evidence_bundle(
+        {
+            "evidence_id": "ev_test",
+            "privacy_status": "redacted",
+            "assurance_level": "L3",
+            "signature": "hmac-sha256:test",
+            "tool_calls": [{"tool_name": "account_balance"}],
+            "retrieval_evidence": {"document_count": 0},
+            "citation_evidence": [],
+            "evidence_gaps": [],
+        }
+    )
+
+    assert report.status == "fail"
+    assert any(finding.code == "tool_without_proof" for finding in report.findings)
+
+
+def test_assurance_twin_matrix_covers_profiles_and_languages() -> None:
+    """Digital twin exposes cloud/on-prem/air-gapped coverage across languages."""
+    scenarios = run_assurance_twin()
+    keys = {(scenario.profile, scenario.language) for scenario in scenarios}
+
+    assert ("cloud_gcp_regulated", "fr") in keys
+    assert ("on_prem_standard", "de") in keys
+    assert ("on_prem_airgapped", "en") in keys
 
 
 def test_observability_status_endpoint_reports_degraded_when_required_collector_missing(

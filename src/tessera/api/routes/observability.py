@@ -13,6 +13,7 @@ from tessera.observability.evidence import (
     list_recent_evidence_bundles,
     persist_evidence_bundle,
 )
+from tessera.observability.digital_twin import run_assurance_twin
 from tessera.observability.langfuse import langfuse_status
 from tessera.observability.metrics import OBSERVABILITY_COMPLETENESS, PROOF_CONSENSUS
 from tessera.observability.profiles import resolve_profile
@@ -21,6 +22,7 @@ from tessera.observability.schema import (
     FORBIDDEN_ATTRIBUTES,
     LOW_CARDINALITY_METRIC_LABELS,
 )
+from tessera.observability.verifier import shadow_verify_recent
 from tessera.settings import get_settings
 
 router = APIRouter(prefix="/observability", tags=["observability"])
@@ -75,6 +77,22 @@ class EvidenceSummary(BaseModel):
     evidence_gaps: list[str]
 
 
+class VerificationFindingModel(BaseModel):
+    """One shadow-verifier finding."""
+
+    code: str
+    severity: str
+    message: str
+
+
+class VerificationReportModel(BaseModel):
+    """One shadow-verifier report."""
+
+    evidence_id: str | None
+    status: str
+    findings: list[VerificationFindingModel]
+
+
 class ObservabilityStatus(BaseModel):
     """Public operator status for the assurance layer."""
 
@@ -94,6 +112,13 @@ class ObservabilityStatus(BaseModel):
     experiment_id: str | None
     experiment_variant: str | None
     warnings: list[str]
+
+
+class ObservabilityConformance(BaseModel):
+    """Recent conformance and twin matrix status."""
+
+    reports: list[VerificationReportModel]
+    twin_scenarios: list[dict[str, object]]
 
 
 class EvidencePreviewRequest(BaseModel):
@@ -242,3 +267,15 @@ async def commit_evidence(payload: EvidencePreviewRequest) -> dict[str, Any]:
     body["persisted"] = True
     body["storage"] = {"kind": "local_redacted_json", "path": str(path)}
     return body
+
+
+@router.get("/conformance", response_model=ObservabilityConformance)
+async def conformance() -> ObservabilityConformance:
+    """Return shadow verification reports and the current assurance twin matrix."""
+    return ObservabilityConformance(
+        reports=[
+            VerificationReportModel.model_validate(report.model_dump())
+            for report in shadow_verify_recent(limit=10)
+        ],
+        twin_scenarios=[scenario.model_dump() for scenario in run_assurance_twin()],
+    )
