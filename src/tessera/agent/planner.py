@@ -148,7 +148,8 @@ _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
         (
             re.compile(
                 r"\b(stolen|payments.*not.*made|fraudulent.*payments?"
-                r"|block.*immediately|immediately.*block|card.*fraud|fraud.*card)\b",
+                r"|block.*immediately|immediately.*block|block.*right now"
+                r"|lost it|lost.*card|card.*lost|card.*fraud|fraud.*card)\b",
                 re.IGNORECASE,
             ),
             Intent(

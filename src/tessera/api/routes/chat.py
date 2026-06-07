@@ -160,7 +160,7 @@ def _sse(event: str, payload: object) -> bytes:
     return f"event: {event}\ndata: {body}\n\n".encode()
 
 
-async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:
+async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: PLR0915
     """Run one chat turn, streaming SSE events and committing evidence."""
     conversation_id = request.conversation_id or uuid.uuid4()
     turn_id = uuid.uuid4()
@@ -331,8 +331,6 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:
     finally:
         current_model.reset(model_token)
         reset_turn_context(turn_tokens)
-
-
 
 
 @router.post("/chat")

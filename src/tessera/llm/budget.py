@@ -144,12 +144,8 @@ class BudgetTracker:
             self._persist()
         from tessera.observability.metrics import BUDGET_GAUGE, LLM_COST_EUR_TOTAL, LLM_TOKENS_TOTAL
 
-        LLM_TOKENS_TOTAL.labels(backend=backend, model=model, direction="input").inc(
-            input_tokens
-        )
-        LLM_TOKENS_TOTAL.labels(backend=backend, model=model, direction="output").inc(
-            output_tokens
-        )
+        LLM_TOKENS_TOTAL.labels(backend=backend, model=model, direction="input").inc(input_tokens)
+        LLM_TOKENS_TOTAL.labels(backend=backend, model=model, direction="output").inc(output_tokens)
         LLM_COST_EUR_TOTAL.labels(backend=backend, model=model).inc(float(cost))
         BUDGET_GAUGE.set(float(self.snapshot().estimated_cost_eur))
 

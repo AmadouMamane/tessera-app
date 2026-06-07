@@ -17,21 +17,43 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     ConsoleSpanExporter,
+    SpanExporter,
+    SpanExportResult,
 )
 
 from tessera import __version__
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
-    from opentelemetry.sdk.trace.export import SpanExporter
+    from collections.abc import Sequence
+
+    from opentelemetry.sdk.trace import ReadableSpan
 
 __all__ = ["configure", "tracer"]
 
 _configured: bool = False
 
 
+class _NoopSpanExporter(SpanExporter):
+    """Span exporter used in CI to avoid writing to closed pytest streams."""
+
+    def export(self, _spans: Sequence[ReadableSpan]) -> SpanExportResult:
+        """Drop spans successfully."""
+        return SpanExportResult.SUCCESS
+
+    def shutdown(self) -> None:
+        """No-op shutdown."""
+
+    def force_flush(self, _timeout_millis: int = 30_000) -> bool:
+        """No-op flush."""
+        return True
+
+
 def _resolve_exporter() -> SpanExporter:
-    settings = get_settings().observability
+    active = get_settings()
+    settings = active.observability
+    if active.environment.value == "ci":
+        return _NoopSpanExporter()
     if settings.cloud_logging_project:
         try:
             from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
@@ -44,7 +66,7 @@ def _resolve_exporter() -> SpanExporter:
             OTLPSpanExporter,
         )
 
-        return OTLPSpanExporter(endpoint=settings.otel_endpoint)  # type: ignore[no-any-return]
+        return OTLPSpanExporter(endpoint=settings.otel_endpoint)
     return ConsoleSpanExporter()
 
 

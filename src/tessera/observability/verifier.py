@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from tessera.settings import get_settings
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 __all__ = [
     "VerificationFinding",
@@ -95,15 +97,18 @@ def verify_evidence_bundle(bundle: Mapping[str, Any]) -> VerificationReport:
             )
     retrieval = bundle.get("retrieval_evidence", {})
     citation_count = len(bundle.get("citation_evidence", []) or [])
-    if isinstance(retrieval, Mapping) and int(retrieval.get("document_count", 0) or 0) > 0:
-        if citation_count == 0:
-            findings.append(
-                VerificationFinding(
-                    code="retrieval_without_citation",
-                    severity="medium",
-                    message="retrieved documents are present but no citation evidence exists",
-                )
+    if (
+        isinstance(retrieval, Mapping)
+        and int(retrieval.get("document_count", 0) or 0) > 0
+        and citation_count == 0
+    ):
+        findings.append(
+            VerificationFinding(
+                code="retrieval_without_citation",
+                severity="medium",
+                message="retrieved documents are present but no citation evidence exists",
             )
+        )
     for gap in bundle.get("evidence_gaps", []) or []:
         findings.append(
             VerificationFinding(
@@ -124,7 +129,11 @@ def verify_evidence_bundle(bundle: Mapping[str, Any]) -> VerificationReport:
     )
 
 
-def shadow_verify_recent(*, limit: int = 10, base_dir: Path | None = None) -> list[VerificationReport]:
+def shadow_verify_recent(
+    *,
+    limit: int = 10,
+    base_dir: Path | None = None,
+) -> list[VerificationReport]:
     """Verify the most recent persisted evidence bundles."""
     root = base_dir or get_settings().observability.evidence_dir
     if not root.exists():

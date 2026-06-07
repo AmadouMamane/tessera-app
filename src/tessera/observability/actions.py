@@ -193,20 +193,19 @@ def validate_decision_proof(
     now: datetime | None = None,
 ) -> ProofValidation:
     """Validate a proof against the actual sensitive tool invocation."""
-    if proof.verdict != "allowed":
-        return ProofValidation(valid=False, reason_code="proof_verdict_not_allowed")
-    if proof.tool != tool_name:
-        return ProofValidation(valid=False, reason_code="tool_mismatch")
-    if proof.argument_hash != canonical_hash(arguments):
-        return ProofValidation(valid=False, reason_code="argument_hash_mismatch")
-    if proof.context_hash != canonical_hash(context):
-        return ProofValidation(valid=False, reason_code="context_hash_mismatch")
-    if proof.policy_hash != policy_hash:
-        return ProofValidation(valid=False, reason_code="policy_hash_mismatch")
     current = now or datetime.now(UTC)
     expires_at = datetime.fromisoformat(proof.expires_at)
-    if current > expires_at:
-        return ProofValidation(valid=False, reason_code="proof_expired")
+    checks = (
+        (proof.verdict == "allowed", "proof_verdict_not_allowed"),
+        (proof.tool == tool_name, "tool_mismatch"),
+        (proof.argument_hash == canonical_hash(arguments), "argument_hash_mismatch"),
+        (proof.context_hash == canonical_hash(context), "context_hash_mismatch"),
+        (proof.policy_hash == policy_hash, "policy_hash_mismatch"),
+        (current <= expires_at, "proof_expired"),
+    )
+    for valid, reason_code in checks:
+        if not valid:
+            return ProofValidation(valid=False, reason_code=reason_code)
     if sensitive_action_policy(tool_name).replay_protection:
         if proof.decision_id in _REPLAYED_DECISIONS:
             return ProofValidation(valid=False, reason_code="proof_replayed")

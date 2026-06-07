@@ -19,7 +19,11 @@ from datetime import UTC, datetime
 from pathlib import Path  # noqa: TCH003  used at runtime by the file sink
 from typing import TYPE_CHECKING, Any, Literal
 
-from tessera.observability.context import current_conversation_hash, current_request_id, current_turn_id
+from tessera.observability.context import (
+    current_conversation_hash,
+    current_request_id,
+    current_turn_id,
+)
 from tessera.observability.instrumentation import current_trace_id, emit_event
 from tessera.observability.profiles import resolve_profile
 from tessera.observability.schema import TelemetryEvent

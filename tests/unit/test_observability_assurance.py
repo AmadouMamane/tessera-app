@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -25,6 +24,8 @@ from tessera.observability.verifier import verify_evidence_bundle
 from tessera.settings import AssuranceLevel, ObservabilityProfile, get_settings
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import pytest
 
 
@@ -134,8 +135,8 @@ def test_evidence_bundle_persistence_lists_recent(
 
 def test_decision_proof_validates_and_rejects_replay() -> None:
     """Sensitive action proofs bind tool, arguments, context, policy hash, and replay."""
-    arguments = {"customer_id": "demo-customer-001"}
-    context = {"language": "fr", "tool_name": "account_balance"}
+    arguments: dict[str, object] = {"customer_id": "demo-customer-001"}
+    context: dict[str, object] = {"language": "fr", "tool_name": "account_balance"}
     policy_hash = active_policy_hash()
     proof = issue_decision_proof(
         tool_name="account_balance",

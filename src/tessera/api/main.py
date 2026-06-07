@@ -25,7 +25,14 @@ from tessera import __version__
 from tessera.api.limits import RequestSizeLimitMiddleware
 from tessera.api.middleware import AuthMiddleware, RequestIdMiddleware
 from tessera.api.ratelimit import RateLimitMiddleware
-from tessera.api.routes import audit, chat, health, memory, observability, settings as settings_routes
+from tessera.api.routes import (
+    audit,
+    chat,
+    health,
+    memory,
+    observability,
+    settings as settings_routes,
+)
 from tessera.api.security import SecurityHeadersMiddleware, require_bearer
 from tessera.memory.governance import ensure_consent_schema
 from tessera.memory.persistent import ensure_longterm_schema

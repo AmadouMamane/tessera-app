@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from tessera.observability.privacy import hash_identifier
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 __all__ = [
     "TurnContextTokens",

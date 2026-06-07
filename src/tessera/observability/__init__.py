@@ -13,8 +13,8 @@ duplicate handlers.
 from __future__ import annotations
 
 from tessera.observability import (
-    context,
     actions,
+    context,
     digital_twin,
     evidence,
     instrumentation,

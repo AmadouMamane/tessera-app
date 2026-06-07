@@ -303,7 +303,10 @@ async def guarded_invoke(
         validate_decision_proof,
     )
 
-    with start_span(TelemetrySpan.GUARD_DECISION, {"target": tool_name, "language": language.value}):
+    with start_span(
+        TelemetrySpan.GUARD_DECISION,
+        {"target": tool_name, "language": language.value},
+    ):
         active_policy = policy or load_policy()
         tool_policy = active_policy.tool(tool_name)
         settings = get_settings()
@@ -339,7 +342,10 @@ async def guarded_invoke(
             TelemetryEvent.TOOL_EXECUTION_STARTED,
             {"target": tool_name, "guard_verdict": "allow"},
         )
-        SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="execution_started").inc()
+        SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(
+            target=tool_name,
+            state="execution_started",
+        ).inc()
         decision_proof = None
         if requires_decision_proof(tool_name):
             decision_proof = issue_decision_proof(
@@ -389,7 +395,10 @@ async def guarded_invoke(
             if inspect.isawaitable(result):
                 result = await result
         except Exception as exc:
-            SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="execution_failed").inc()
+            SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(
+                target=tool_name,
+                state="execution_failed",
+            ).inc()
             emit_audit(
                 target=tool_name,
                 arguments=audit_args,
@@ -408,7 +417,10 @@ async def guarded_invoke(
                 )
             raise
 
-        SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="execution_succeeded").inc()
+        SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(
+            target=tool_name,
+            state="execution_succeeded",
+        ).inc()
         emit_event(
             TelemetryEvent.TOOL_EXECUTION_ALLOWED,
             {"target": tool_name, "guard_verdict": "allow"},

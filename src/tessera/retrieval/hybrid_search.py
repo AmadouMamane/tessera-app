@@ -72,7 +72,5 @@ async def search(
             )
             for item in reranked
         ]
-        RETRIEVAL_DOCUMENTS_TOTAL.labels(target=corpus, language=language_label).inc(
-            len(documents)
-        )
+        RETRIEVAL_DOCUMENTS_TOTAL.labels(target=corpus, language=language_label).inc(len(documents))
         return documents

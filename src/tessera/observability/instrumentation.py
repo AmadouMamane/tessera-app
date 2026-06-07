@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import inspect
 import time
-from collections.abc import Callable, Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from opentelemetry import trace
 from opentelemetry.trace import Span, Status, StatusCode
-from opentelemetry.util.types import AttributeValue
 
 from tessera.observability.context import (
     current_conversation_hash,
@@ -19,9 +17,15 @@ from tessera.observability.context import (
 from tessera.observability.metrics import LANGGRAPH_NODE_DURATION
 from tessera.observability.privacy import sanitize_attributes
 from tessera.observability.profiles import resolve_profile
-from tessera.observability.schema import TelemetryEvent, TelemetrySpan
 from tessera.observability.traces import tracer
 from tessera.settings import get_settings
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
+
+    from opentelemetry.util.types import AttributeValue
+
+    from tessera.observability.schema import TelemetryEvent, TelemetrySpan
 
 __all__ = [
     "current_trace_id",

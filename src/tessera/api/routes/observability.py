@@ -8,12 +8,12 @@ from typing import Any
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
 
+from tessera.observability.digital_twin import run_assurance_twin
 from tessera.observability.evidence import (
     build_turn_evidence_bundle,
     list_recent_evidence_bundles,
     persist_evidence_bundle,
 )
-from tessera.observability.digital_twin import run_assurance_twin
 from tessera.observability.langfuse import langfuse_status
 from tessera.observability.metrics import OBSERVABILITY_COMPLETENESS, PROOF_CONSENSUS
 from tessera.observability.profiles import resolve_profile
@@ -170,7 +170,9 @@ def _assurance_status(warnings: list[str]) -> AssuranceStatus:
     missing = [name for name, ok in checks.items() if not ok]
     current_level = profile.assurance_level.value
     if warnings:
-        current_level = "L2" if profile.assurance_level.value in {"L3", "L4", "L5"} else current_level
+        current_level = (
+            "L2" if profile.assurance_level.value in {"L3", "L4", "L5"} else current_level
+        )
     proof_consensus = 1.0 if not missing else max(0.0, 1.0 - (len(missing) * 0.2))
     OBSERVABILITY_COMPLETENESS.labels(
         profile=profile.name.value,

@@ -6,16 +6,18 @@ import hashlib
 import hmac
 import json
 import uuid
-from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from tessera.observability.instrumentation import current_trace_id
 from tessera.observability.privacy import hash_identifier, sanitize_attributes
 from tessera.observability.profiles import resolve_profile
 from tessera.settings import get_settings
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from pathlib import Path
 
 __all__ = [
     "EvidenceBundle",
@@ -110,9 +112,7 @@ def _sign(payload: dict[str, Any]) -> str:
 
 def canonical_hash(value: object) -> str:
     """Return a stable SHA-256 hash for JSON-compatible evidence fragments."""
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode(
-        "utf-8"
-    )
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
 
 
