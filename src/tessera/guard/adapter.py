@@ -31,6 +31,9 @@ from tessera.guard.decisions import (
     ToolPolicy,
     load_policy,
 )
+from tessera.observability.instrumentation import emit_event, start_span
+from tessera.observability.metrics import GUARD_DECISIONS_TOTAL, SENSITIVE_ACTION_TRANSACTIONS_TOTAL
+from tessera.observability.schema import TelemetryEvent, TelemetrySpan
 from tessera.settings import LanguageCode, get_settings
 
 if TYPE_CHECKING:
@@ -172,6 +175,20 @@ def _to_record(decision: Decision, target: str) -> GuardDecisionRecord:
     )
 
 
+def _observe_guard_records(records: list[GuardDecisionRecord]) -> None:
+    """Record guard decision metrics and canonical policy events."""
+    for record in records:
+        GUARD_DECISIONS_TOTAL.labels(target=record.target, decision=record.decision).inc()
+        emit_event(
+            TelemetryEvent.POLICY_EVALUATED,
+            {
+                "target": record.target,
+                "guard_verdict": record.decision,
+                "rule_id": record.policy_rule,
+            },
+        )
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -194,60 +211,63 @@ def check_user_input(
     """
     from tessera.agent.state import GuardDecisionRecord
 
-    active_policy = policy or load_policy()
-    settings = get_settings()
-    records: list[GuardDecisionRecord] = []
+    with start_span(TelemetrySpan.GUARD_DECISION, {"target": "user_input"}):
+        active_policy = policy or load_policy()
+        settings = get_settings()
+        records: list[GuardDecisionRecord] = []
 
-    for pattern in active_policy.prompt_injection_deny:
-        if pattern.search(text):
+        for pattern in active_policy.prompt_injection_deny:
+            if pattern.search(text):
+                record = GuardDecisionRecord(
+                    target="user_input",
+                    decision=DecisionKind.DENY.value,
+                    policy_rule="prompt_injection.deny_patterns",
+                    rationale=f"user input matched injection deny pattern: {pattern.pattern!r}",
+                )
+                records.append(record)
+                _observe_guard_records(records)
+                emit_audit(
+                    target="user_input",
+                    arguments={"text": "[redacted — matched deny pattern]"},
+                    decisions=records,
+                    sink=settings.guard.audit_sink,
+                    outcome="denied",
+                )
+                return InputCheckResult(
+                    allowed=False,
+                    sanitised_text=text,
+                    decisions=tuple(records),
+                )
+
+        sanitised = text
+        for pattern, replacement in active_policy.prompt_injection_transforms:
+            sanitised = pattern.sub(replacement, sanitised)
+
+        if sanitised != text:
             record = GuardDecisionRecord(
                 target="user_input",
-                decision=DecisionKind.DENY.value,
-                policy_rule="prompt_injection.deny_patterns",
-                rationale=f"user input matched injection deny pattern: {pattern.pattern!r}",
+                decision=DecisionKind.TRANSFORM.value,
+                policy_rule="prompt_injection.transform_patterns",
+                rationale="role-play or persona cue redacted from user input",
             )
             records.append(record)
-            emit_audit(
-                target="user_input",
-                arguments={"text": "[redacted — matched deny pattern]"},
-                decisions=records,
-                sink=settings.guard.audit_sink,
-                outcome="denied",
-            )
-            return InputCheckResult(
-                allowed=False,
-                sanitised_text=text,
-                decisions=tuple(records),
+
+        if not records:
+            records.append(
+                GuardDecisionRecord(
+                    target="user_input",
+                    decision=DecisionKind.ALLOW.value,
+                    policy_rule="prompt_injection.deny_patterns",
+                    rationale="user input passed all injection checks",
+                )
             )
 
-    sanitised = text
-    for pattern, replacement in active_policy.prompt_injection_transforms:
-        sanitised = pattern.sub(replacement, sanitised)
-
-    if sanitised != text:
-        record = GuardDecisionRecord(
-            target="user_input",
-            decision=DecisionKind.TRANSFORM.value,
-            policy_rule="prompt_injection.transform_patterns",
-            rationale="role-play or persona cue redacted from user input",
+        _observe_guard_records(records)
+        return InputCheckResult(
+            allowed=True,
+            sanitised_text=sanitised,
+            decisions=tuple(records),
         )
-        records.append(record)
-
-    if not records:
-        records.append(
-            GuardDecisionRecord(
-                target="user_input",
-                decision=DecisionKind.ALLOW.value,
-                policy_rule="prompt_injection.deny_patterns",
-                rationale="user input passed all injection checks",
-            )
-        )
-
-    return InputCheckResult(
-        allowed=True,
-        sanitised_text=sanitised,
-        decisions=tuple(records),
-    )
 
 
 async def guarded_invoke(
@@ -274,61 +294,79 @@ async def guarded_invoke(
         A :class:`GuardedResult` containing the result (or error), the
         allow/deny verdict, and every decision recorded for audit.
     """
-    active_policy = policy or load_policy()
-    tool_policy = active_policy.tool(tool_name)
-    settings = get_settings()
-    decisions = _check_tool(tool_policy, arguments, language)
-    records = [_to_record(d, target=tool_name) for d in decisions]
-    audit_args = _redacted_arguments(tool_policy, arguments, active_policy.pii_patterns)
+    with start_span(TelemetrySpan.GUARD_DECISION, {"target": tool_name, "language": language.value}):
+        active_policy = policy or load_policy()
+        tool_policy = active_policy.tool(tool_name)
+        settings = get_settings()
+        decisions = _check_tool(tool_policy, arguments, language)
+        records = [_to_record(d, target=tool_name) for d in decisions]
+        audit_args = _redacted_arguments(tool_policy, arguments, active_policy.pii_patterns)
+        _observe_guard_records(records)
 
-    denied = any(d.kind is DecisionKind.DENY for d in decisions)
-    if denied:
-        emit_audit(
-            target=tool_name,
-            arguments=audit_args,
-            decisions=records,
-            sink=settings.guard.audit_sink,
-            outcome="denied",
-        )
-        return GuardedResult(
-            allowed=False,
-            result=None,
-            error="guard: tool invocation denied by policy",
-            decisions=tuple(records),
-        )
-
-    try:
-        result = invoke()
-        if inspect.isawaitable(result):
-            result = await result
-    except Exception as exc:
-        emit_audit(
-            target=tool_name,
-            arguments=audit_args,
-            decisions=records,
-            sink=settings.guard.audit_sink,
-            outcome="error",
-            error=str(exc),
-        )
-        if settings.guard.fail_closed:
+        denied = any(d.kind is DecisionKind.DENY for d in decisions)
+        if denied:
+            SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="blocked").inc()
+            emit_event(
+                TelemetryEvent.TOOL_EXECUTION_BLOCKED,
+                {"target": tool_name, "guard_verdict": "deny"},
+            )
+            emit_audit(
+                target=tool_name,
+                arguments=audit_args,
+                decisions=records,
+                sink=settings.guard.audit_sink,
+                outcome="denied",
+            )
             return GuardedResult(
-                allowed=True,
+                allowed=False,
                 result=None,
-                error=f"tool {tool_name!r} raised: {exc}",
+                error="guard: tool invocation denied by policy",
                 decisions=tuple(records),
             )
-        raise
 
-    emit_audit(
-        target=tool_name,
-        arguments=audit_args,
-        decisions=records,
-        sink=settings.guard.audit_sink,
-        outcome="allowed",
-    )
-    return GuardedResult(
-        allowed=True,
-        result=result,
-        error=None,
-        decisions=tuple(records),
-    )
+        emit_event(
+            TelemetryEvent.TOOL_EXECUTION_STARTED,
+            {"target": tool_name, "guard_verdict": "allow"},
+        )
+        SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="execution_started").inc()
+        try:
+            result = invoke()
+            if inspect.isawaitable(result):
+                result = await result
+        except Exception as exc:
+            SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="execution_failed").inc()
+            emit_audit(
+                target=tool_name,
+                arguments=audit_args,
+                decisions=records,
+                sink=settings.guard.audit_sink,
+                outcome="error",
+                error=str(exc),
+            )
+            if settings.guard.fail_closed:
+                return GuardedResult(
+                    allowed=True,
+                    result=None,
+                    error=f"tool {tool_name!r} raised: {exc}",
+                    decisions=tuple(records),
+                )
+            raise
+
+        SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="execution_succeeded").inc()
+        emit_event(
+            TelemetryEvent.TOOL_EXECUTION_ALLOWED,
+            {"target": tool_name, "guard_verdict": "allow"},
+        )
+        emit_audit(
+            target=tool_name,
+            arguments=audit_args,
+            decisions=records,
+            sink=settings.guard.audit_sink,
+            outcome="allowed",
+        )
+        return GuardedResult(
+            allowed=True,
+            result=result,
+            error=None,
+            decisions=tuple(records),
+        )

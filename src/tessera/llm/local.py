@@ -8,6 +8,8 @@ import ollama
 
 from tessera.llm.budget import get_budget_tracker
 from tessera.llm.router import ChatMessage, ChatResponse
+from tessera.observability.instrumentation import start_span
+from tessera.observability.schema import TelemetrySpan
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -49,25 +51,26 @@ class OllamaBackend:
         payload = [{"role": m.role, "content": m.content} for m in messages]
         input_tokens = 0
         output_tokens = 0
-        async for chunk in await self._client.chat(
-            model=effective_model,
-            messages=payload,
-            options=options,
-            keep_alive=self._keep_alive,
-            stream=True,
-        ):
-            token: str = chunk["message"]["content"]
-            if token:
-                yield token
-            if chunk.get("done"):
-                input_tokens = int(chunk.get("prompt_eval_count", 0) or 0)
-                output_tokens = int(chunk.get("eval_count", 0) or 0)
-        get_budget_tracker().record(
-            backend=self.name,
-            model=effective_model,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-        )
+        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": effective_model}):
+            async for chunk in await self._client.chat(
+                model=effective_model,
+                messages=payload,
+                options=options,
+                keep_alive=self._keep_alive,
+                stream=True,
+            ):
+                token: str = chunk["message"]["content"]
+                if token:
+                    yield token
+                if chunk.get("done"):
+                    input_tokens = int(chunk.get("prompt_eval_count", 0) or 0)
+                    output_tokens = int(chunk.get("eval_count", 0) or 0)
+            get_budget_tracker().record(
+                backend=self.name,
+                model=effective_model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
 
     async def chat(
         self,
@@ -84,12 +87,13 @@ class OllamaBackend:
             options["num_predict"] = max_output_tokens
 
         payload = [{"role": message.role, "content": message.content} for message in messages]
-        response = await self._client.chat(
-            model=effective_model,
-            messages=payload,
-            options=options,
-            keep_alive=self._keep_alive,
-        )
+        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": effective_model}):
+            response = await self._client.chat(
+                model=effective_model,
+                messages=payload,
+                options=options,
+                keep_alive=self._keep_alive,
+            )
         content = response["message"]["content"]
         input_tokens = int(response.get("prompt_eval_count", 0) or 0)
         output_tokens = int(response.get("eval_count", 0) or 0)

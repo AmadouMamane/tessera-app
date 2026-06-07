@@ -18,6 +18,7 @@ from tessera.agent.reporter import load_prompts
 from tessera.agent.state import AgentState, ConversationMessage, ToolCallRecord
 from tessera.agent.tools import ticket_escalate
 from tessera.guard.adapter import guarded_invoke
+from tessera.observability.metrics import ESCALATIONS_TOTAL
 
 NODE_NAME = "escalation_worker"
 
@@ -72,6 +73,10 @@ async def run(state: AgentState) -> dict[str, object]:
     ticket_reference = (
         guarded_result.result.reference if call.succeeded and guarded_result.result else "PENDING"
     )
+    ESCALATIONS_TOTAL.labels(
+        language=state["language"].value,
+        outcome="created" if call.succeeded else "failed",
+    ).inc()
 
     prompts = load_prompts(state["language"])
     user_input = state["user_input"]

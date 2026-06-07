@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Literal
 
 from tessera.llm.budget import get_budget_tracker
 from tessera.llm.router import ChatMessage, ChatResponse
+from tessera.observability.instrumentation import start_span
+from tessera.observability.schema import TelemetrySpan
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -73,15 +75,16 @@ class VertexAIBackend:
         """Yield tokens from Vertex AI as they arrive."""
         gemini = self._ensure_model()
         max_tokens = max_output_tokens or self._max_output_tokens
-        stream = await gemini.generate_content_async(
-            self._convert(messages),
-            generation_config={"temperature": temperature, "max_output_tokens": max_tokens},
-            stream=True,
-        )
-        async for chunk in stream:
-            text = chunk.text if (chunk.candidates and chunk.text) else ""
-            if text:
-                yield text
+        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": self.model}):
+            stream = await gemini.generate_content_async(
+                self._convert(messages),
+                generation_config={"temperature": temperature, "max_output_tokens": max_tokens},
+                stream=True,
+            )
+            async for chunk in stream:
+                text = chunk.text if (chunk.candidates and chunk.text) else ""
+                if text:
+                    yield text
 
     async def chat(
         self,
@@ -94,13 +97,14 @@ class VertexAIBackend:
         """Stream-less chat completion."""
         gemini = self._ensure_model()
         max_tokens = max_output_tokens or self._max_output_tokens
-        response = await gemini.generate_content_async(
-            self._convert(messages),
-            generation_config={
-                "temperature": temperature,
-                "max_output_tokens": max_tokens,
-            },
-        )
+        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": self.model}):
+            response = await gemini.generate_content_async(
+                self._convert(messages),
+                generation_config={
+                    "temperature": temperature,
+                    "max_output_tokens": max_tokens,
+                },
+            )
         text = response.text if response.candidates else ""
         usage = getattr(response, "usage_metadata", None)
         input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)

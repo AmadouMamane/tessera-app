@@ -19,6 +19,11 @@ from datetime import UTC, datetime
 from pathlib import Path  # noqa: TCH003  used at runtime by the file sink
 from typing import TYPE_CHECKING, Any, Literal
 
+from tessera.observability.context import current_conversation_hash, current_request_id, current_turn_id
+from tessera.observability.instrumentation import current_trace_id, emit_event
+from tessera.observability.profiles import resolve_profile
+from tessera.observability.schema import TelemetryEvent
+
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
@@ -131,6 +136,7 @@ def emit_audit(
     from tessera.settings import LLMProfile, get_settings
 
     settings = get_settings()
+    profile = resolve_profile(settings)
     # Record the model that actually ran this turn (UI picker override) when set;
     # otherwise fall back to the configured default for the active profile.
     model = current_model.get()
@@ -148,6 +154,12 @@ def emit_audit(
         error=error,
         model=model,
     )
+    entry["request_id"] = current_request_id.get()
+    entry["trace_id"] = current_trace_id()
+    entry["conversation_id_hash"] = current_conversation_hash.get()
+    entry["turn_id"] = current_turn_id.get()
+    entry["observability_profile"] = profile.name.value
+    entry["assurance_level"] = profile.assurance_level.value
     try:
         match sink:
             case "stdout":
@@ -158,5 +170,13 @@ def emit_audit(
                 _emit_cloud_logging(entry)
             case "postgres":
                 _emit_postgres(entry)
+        emit_event(
+            TelemetryEvent.AUDIT_EMITTED,
+            {
+                "target": target,
+                "outcome": outcome,
+                "model": model,
+            },
+        )
     except Exception as exc:
         sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")

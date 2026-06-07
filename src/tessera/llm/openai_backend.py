@@ -17,6 +17,8 @@ import openai
 
 from tessera.llm.budget import get_budget_tracker
 from tessera.llm.router import ChatResponse
+from tessera.observability.instrumentation import start_span
+from tessera.observability.schema import TelemetrySpan
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -56,29 +58,30 @@ class OpenAIBackend:
     ) -> AsyncIterator[str]:
         """Yield tokens from OpenAI as they arrive."""
         effective_model = model or self.model
-        stream = await self._client.chat.completions.create(
-            model=effective_model,
-            messages=[{"role": m.role, "content": m.content} for m in messages],
-            max_completion_tokens=max_output_tokens,
-            stream=True,
-            stream_options={"include_usage": True},
-        )
         input_tokens = 0
         output_tokens = 0
-        async for chunk in stream:
-            if chunk.choices:
-                token = chunk.choices[0].delta.content
-                if token:
-                    yield token
-            if chunk.usage is not None:
-                input_tokens = chunk.usage.prompt_tokens
-                output_tokens = chunk.usage.completion_tokens
-        get_budget_tracker().record(
-            backend=self.name,
-            model=effective_model,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-        )
+        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": effective_model}):
+            stream = await self._client.chat.completions.create(
+                model=effective_model,
+                messages=[{"role": m.role, "content": m.content} for m in messages],
+                max_completion_tokens=max_output_tokens,
+                stream=True,
+                stream_options={"include_usage": True},
+            )
+            async for chunk in stream:
+                if chunk.choices:
+                    token = chunk.choices[0].delta.content
+                    if token:
+                        yield token
+                if chunk.usage is not None:
+                    input_tokens = chunk.usage.prompt_tokens
+                    output_tokens = chunk.usage.completion_tokens
+            get_budget_tracker().record(
+                backend=self.name,
+                model=effective_model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
 
     async def chat(
         self,
@@ -90,11 +93,12 @@ class OpenAIBackend:
     ) -> ChatResponse:
         """Stream-less chat completion."""
         effective_model = model or self.model
-        response = await self._client.chat.completions.create(
-            model=effective_model,
-            messages=[{"role": m.role, "content": m.content} for m in messages],
-            max_completion_tokens=max_output_tokens,
-        )
+        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": effective_model}):
+            response = await self._client.chat.completions.create(
+                model=effective_model,
+                messages=[{"role": m.role, "content": m.content} for m in messages],
+                max_completion_tokens=max_output_tokens,
+            )
         choice = response.choices[0]
         usage = response.usage
         input_tokens = usage.prompt_tokens if usage else 0

@@ -56,6 +56,8 @@ from tessera.agent.workers import (
     regulation_lookup as regulation_lookup_worker,
     simulator as simulator_worker,
 )
+from tessera.observability.instrumentation import instrument_node
+from tessera.observability.schema import TelemetrySpan
 
 if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
@@ -73,6 +75,18 @@ _WORKER_NODES: dict[WorkerName, str] = {
     WorkerName.ACCOUNT_LOOKUP: account_lookup_worker.NODE_NAME,
     WorkerName.SIMULATOR: simulator_worker.NODE_NAME,
     WorkerName.ESCALATION: escalation_worker.NODE_NAME,
+}
+
+_NODE_SPANS: dict[str, TelemetrySpan] = {
+    NodeName.ROUTER.value: TelemetrySpan.ROUTER,
+    NodeName.PLANNER.value: TelemetrySpan.PLANNER,
+    NodeName.REVIEWER.value: TelemetrySpan.REVIEWER,
+    NodeName.REPORTER.value: TelemetrySpan.REPORTER,
+    product_lookup_worker.NODE_NAME: TelemetrySpan.PRODUCT_LOOKUP,
+    regulation_lookup_worker.NODE_NAME: TelemetrySpan.REGULATION_LOOKUP,
+    account_lookup_worker.NODE_NAME: TelemetrySpan.ACCOUNT_LOOKUP,
+    simulator_worker.NODE_NAME: TelemetrySpan.SIMULATOR,
+    escalation_worker.NODE_NAME: TelemetrySpan.ESCALATION,
 }
 
 
@@ -123,18 +137,81 @@ def build_graph() -> StateGraph[AgentState]:
     graph: StateGraph[AgentState] = StateGraph(AgentState)
 
     # Top-level nodes
-    graph.add_node(NodeName.ROUTER.value, router_module.run)
-    graph.add_node(NodeName.PLANNER.value, planner_module.run)
-    graph.add_node(NodeName.REVIEWER.value, reviewer_module.run)
-    graph.add_node(NodeName.REPORTER.value, reporter_module.run)
+    graph.add_node(
+        NodeName.ROUTER.value,
+        instrument_node(
+            node=NodeName.ROUTER.value,
+            span_name=_NODE_SPANS[NodeName.ROUTER.value],
+            handler=router_module.run,
+        ),
+    )
+    graph.add_node(
+        NodeName.PLANNER.value,
+        instrument_node(
+            node=NodeName.PLANNER.value,
+            span_name=_NODE_SPANS[NodeName.PLANNER.value],
+            handler=planner_module.run,
+        ),
+    )
+    graph.add_node(
+        NodeName.REVIEWER.value,
+        instrument_node(
+            node=NodeName.REVIEWER.value,
+            span_name=_NODE_SPANS[NodeName.REVIEWER.value],
+            handler=reviewer_module.run,
+        ),
+    )
+    graph.add_node(
+        NodeName.REPORTER.value,
+        instrument_node(
+            node=NodeName.REPORTER.value,
+            span_name=_NODE_SPANS[NodeName.REPORTER.value],
+            handler=reporter_module.run,
+        ),
+    )
 
     # Workers — registered under the names declared in their modules so that
     # _route_after_planner's return values are valid node identifiers.
-    graph.add_node(product_lookup_worker.NODE_NAME, product_lookup_worker.run)
-    graph.add_node(regulation_lookup_worker.NODE_NAME, regulation_lookup_worker.run)
-    graph.add_node(account_lookup_worker.NODE_NAME, account_lookup_worker.run)
-    graph.add_node(simulator_worker.NODE_NAME, simulator_worker.run)
-    graph.add_node(escalation_worker.NODE_NAME, escalation_worker.run)
+    graph.add_node(
+        product_lookup_worker.NODE_NAME,
+        instrument_node(
+            node=product_lookup_worker.NODE_NAME,
+            span_name=_NODE_SPANS[product_lookup_worker.NODE_NAME],
+            handler=product_lookup_worker.run,
+        ),
+    )
+    graph.add_node(
+        regulation_lookup_worker.NODE_NAME,
+        instrument_node(
+            node=regulation_lookup_worker.NODE_NAME,
+            span_name=_NODE_SPANS[regulation_lookup_worker.NODE_NAME],
+            handler=regulation_lookup_worker.run,
+        ),
+    )
+    graph.add_node(
+        account_lookup_worker.NODE_NAME,
+        instrument_node(
+            node=account_lookup_worker.NODE_NAME,
+            span_name=_NODE_SPANS[account_lookup_worker.NODE_NAME],
+            handler=account_lookup_worker.run,
+        ),
+    )
+    graph.add_node(
+        simulator_worker.NODE_NAME,
+        instrument_node(
+            node=simulator_worker.NODE_NAME,
+            span_name=_NODE_SPANS[simulator_worker.NODE_NAME],
+            handler=simulator_worker.run,
+        ),
+    )
+    graph.add_node(
+        escalation_worker.NODE_NAME,
+        instrument_node(
+            node=escalation_worker.NODE_NAME,
+            span_name=_NODE_SPANS[escalation_worker.NODE_NAME],
+            handler=escalation_worker.run,
+        ),
+    )
 
     # Linear backbone
     graph.add_edge(START, NodeName.ROUTER.value)

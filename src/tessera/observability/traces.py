@@ -3,7 +3,7 @@
 The configure helper installs a tracer provider that exports to either:
 
 * Cloud Trace (when ``observability.cloud_logging_project`` is set), or
-* an OTLP HTTP collector pointed at ``observability.otel_endpoint``, or
+* an OTLP gRPC collector pointed at ``observability.otel_endpoint``, or
 * an in-process console exporter as a last-resort fallback for local dev.
 """
 
@@ -40,7 +40,7 @@ def _resolve_exporter() -> SpanExporter:
         except ImportError:
             pass
     if settings.otel_endpoint:
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
             OTLPSpanExporter,
         )
 

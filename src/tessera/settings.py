@@ -29,11 +29,13 @@ from pydantic import Field, HttpUrl, PostgresDsn, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
+    "AssuranceLevel",
     "DeploymentMode",
     "Environment",
     "LanguageCode",
     "LLMProfile",
     "MemorySettings",
+    "ObservabilityProfile",
     "SecretsSettings",
     "Settings",
     "get_settings",
@@ -85,6 +87,28 @@ class DeploymentMode(StrEnum):
 
     CLOUD_RUN = "cloud_run"
     ON_PREM = "on_prem"
+
+
+class AssuranceLevel(StrEnum):
+    """Target evidence maturity for the active observability profile."""
+
+    L0_OBSERVED = "L0"
+    L1_CORRELATED = "L1"
+    L2_AUDITABLE = "L2"
+    L3_VERIFIABLE = "L3"
+    L4_REPLAYABLE = "L4"
+    L5_CERTIFIABLE = "L5"
+
+
+class ObservabilityProfile(StrEnum):
+    """Deployment-aware observability assurance profile."""
+
+    LOCAL_DEV = "local_dev"
+    DEMO_PREMIUM = "demo_premium"
+    CLOUD_GCP_STANDARD = "cloud_gcp_standard"
+    CLOUD_GCP_REGULATED = "cloud_gcp_regulated"
+    ON_PREM_STANDARD = "on_prem_standard"
+    ON_PREM_AIRGAPPED = "on_prem_airgapped"
 
 
 # ---------------------------------------------------------------------------
@@ -184,6 +208,21 @@ class ObservabilitySettings(BaseSettings):
     cloud_logging_project: str | None = None
     metrics_enabled: bool = True
     metrics_port: int = 9090
+    profile: ObservabilityProfile | None = None
+    assurance_level: AssuranceLevel | None = None
+    collector_required: bool | None = None
+    langfuse_enabled: bool = False
+    langfuse_host: str | None = None
+    raw_prompts_export: bool = False
+    pii_export: bool = False
+    evidence_enabled: bool = True
+    evidence_dir: Path = Path("/tmp/tessera/evidence")  # noqa: S108  local evidence store
+    evidence_signing_enabled: bool | None = None
+    prompt_family: str = "banking_support"
+    prompt_version: str = "local"
+    dataset_id: str | None = None
+    experiment_id: str | None = None
+    experiment_variant: str | None = None
 
 
 class APISettings(BaseSettings):

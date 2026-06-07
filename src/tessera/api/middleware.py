@@ -9,6 +9,7 @@ import structlog
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, Response
 
+from tessera.observability.context import reset_request_context, set_request_context
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -35,10 +36,12 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         existing = request.headers.get(_REQUEST_ID_HEADER)
         request_id = existing or secrets.token_hex(8)
         structlog.contextvars.bind_contextvars(request_id=request_id)
+        token = set_request_context(request_id)
         try:
             response = await call_next(request)
         finally:
             structlog.contextvars.unbind_contextvars("request_id")
+            reset_request_context(token)
         response.headers[_REQUEST_ID_HEADER] = request_id
         return response
 

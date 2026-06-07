@@ -25,7 +25,7 @@ from tessera import __version__
 from tessera.api.limits import RequestSizeLimitMiddleware
 from tessera.api.middleware import AuthMiddleware, RequestIdMiddleware
 from tessera.api.ratelimit import RateLimitMiddleware
-from tessera.api.routes import audit, chat, health, memory, settings as settings_routes
+from tessera.api.routes import audit, chat, health, memory, observability, settings as settings_routes
 from tessera.api.security import SecurityHeadersMiddleware, require_bearer
 from tessera.memory.governance import ensure_consent_schema
 from tessera.memory.persistent import ensure_longterm_schema
@@ -101,6 +101,7 @@ def build_app() -> FastAPI:
     # level too, not only via the global middleware (ADR 0008).
     app.include_router(audit.router, dependencies=[Depends(require_bearer)])
     app.include_router(memory.router, dependencies=[Depends(require_bearer)])
+    app.include_router(observability.router, dependencies=[Depends(require_bearer)])
     app.include_router(settings_routes.router, dependencies=[Depends(require_bearer)])
 
     FastAPIInstrumentor.instrument_app(app)
