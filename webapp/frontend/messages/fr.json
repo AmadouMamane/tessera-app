@@ -2,83 +2,84 @@
   "app": {
     "title": "Tessera",
     "subtitle": "Assistance bancaire",
-    "bank": "Crédit Aurore",
-    "tagline": "Pare-feu actif · Ancrage réglementaire UE",
-    "operational": "Opérationnel",
-    "disclaimer": "Crédit Aurore — démo non destinée à la production. Données fictives."
+    "bank": "Cr\u00e9dit Aurore",
+    "tagline": "Pare-feu actif \u00b7 Ancrage r\u00e9glementaire UE",
+    "operational": "Op\u00e9rationnel",
+    "disclaimer": "Cr\u00e9dit Aurore \u2014 d\u00e9mo non destin\u00e9e \u00e0 la production. Donn\u00e9es fictives."
   },
   "nav": {
     "chat": "Conversation",
     "audit": "Journal d'audit",
-    "eval": "Score de non-régression",
-    "health": "État du service",
-    "settings": "Paramètres"
+    "eval": "Score de non-r\u00e9gression",
+    "health": "\u00c9tat du service",
+    "settings": "Param\u00e8tres",
+    "observability": "Observabilit\u00e9"
   },
   "common": {
     "language": "Langue",
     "search": "Rechercher",
-    "loading": "Chargement…",
-    "empty": "Aucun résultat.",
+    "loading": "Chargement\u2026",
+    "empty": "Aucun r\u00e9sultat.",
     "error": "Une erreur est survenue.",
-    "retry": "Réessayer",
+    "retry": "R\u00e9essayer",
     "close": "Fermer",
-    "details": "Détails",
+    "details": "D\u00e9tails",
     "filter": "Filtrer",
     "all": "Tous",
     "of": "sur",
-    "results": "résultats",
+    "results": "r\u00e9sultats",
     "next": "Suivant",
-    "previous": "Précédent",
+    "previous": "Pr\u00e9c\u00e9dent",
     "theme": {
-      "label": "Thème",
+      "label": "Th\u00e8me",
       "light": "Clair",
       "dark": "Sombre",
-      "system": "Système"
+      "system": "Syst\u00e8me"
     }
   },
   "chat": {
     "title": "Conversation",
-    "description": "Posez vos questions à Tessera.",
-    "placeholder": "Posez votre question…",
+    "description": "Posez vos questions \u00e0 Tessera.",
+    "placeholder": "Posez votre question\u2026",
     "send": "Envoyer",
-    "stop": "Arrêter",
+    "stop": "Arr\u00eater",
     "clear": "Nouvelle conversation",
-    "thinking": "Tessera réfléchit…",
+    "thinking": "Tessera r\u00e9fl\u00e9chit\u2026",
     "youSaid": "Vous",
     "assistantSaid": "Tessera",
     "sources": "Sources",
-    "escalated": "Cette conversation a été transmise à un conseiller.",
+    "escalated": "Cette conversation a \u00e9t\u00e9 transmise \u00e0 un conseiller.",
     "confidence": "Confiance",
-    "languageHint": "Langue détectée",
+    "languageHint": "Langue d\u00e9tect\u00e9e",
     "copy": "Copier",
-    "copied": "Copié !",
-    "scrollToBottom": "Défiler vers le bas",
+    "copied": "Copi\u00e9 !",
+    "scrollToBottom": "D\u00e9filer vers le bas",
     "startWith": "Pour commencer",
-    "composerHint": "Entrée pour envoyer · Maj+Entrée pour aller à la ligne",
-    "streamingPlaceholder": "Tessera répond…",
-    "regenerate": "Régénérer",
+    "composerHint": "Entr\u00e9e pour envoyer \u00b7 Maj+Entr\u00e9e pour aller \u00e0 la ligne",
+    "streamingPlaceholder": "Tessera r\u00e9pond\u2026",
+    "regenerate": "R\u00e9g\u00e9n\u00e9rer",
     "edit": "Modifier",
     "confirm": "Envoyer",
     "cancel": "Annuler",
-    "editHint": "Entrée pour envoyer · Échap pour annuler",
-    "editWillTruncate": "Les messages suivants seront supprimés",
-    "errorFallback": "Une erreur est survenue. Veuillez réessayer."
+    "editHint": "Entr\u00e9e pour envoyer \u00b7 \u00c9chap pour annuler",
+    "editWillTruncate": "Les messages suivants seront supprim\u00e9s",
+    "errorFallback": "Une erreur est survenue. Veuillez r\u00e9essayer."
   },
   "audit": {
     "title": "Journal d'audit",
-    "description": "Chaque appel d'outil est enregistré avec sa décision, son auteur, et la justification de la politique.",
+    "description": "Chaque appel d'outil est enregistr\u00e9 avec sa d\u00e9cision, son auteur, et la justification de la politique.",
     "payload": "Charge utile",
-    "redacted": "Caviardé",
+    "redacted": "Caviard\u00e9",
     "columns": {
       "occurredAt": "Date",
       "target": "Outil",
       "outcome": "Verdict",
-      "decisions": "Décisions",
+      "decisions": "D\u00e9cisions",
       "actions": ""
     },
     "outcomes": {
-      "allowed": "Autorisé",
-      "denied": "Refusé",
+      "allowed": "Autoris\u00e9",
+      "denied": "Refus\u00e9",
       "error": "Erreur"
     },
     "filters": {
@@ -87,38 +88,38 @@
     }
   },
   "eval": {
-    "title": "Score de non-régression",
-    "description": "Tessera est confrontée à un catalogue d'échecs publiquement documentés. Les cas qui échouent sont visibles, pas masqués.",
+    "title": "Score de non-r\u00e9gression",
+    "description": "Tessera est confront\u00e9e \u00e0 un catalogue d'\u00e9checs publiquement document\u00e9s. Les cas qui \u00e9chouent sont visibles, pas masqu\u00e9s.",
     "summary": {
-      "total": "Cas exécutés",
-      "passed": "Réussis",
-      "failed": "Échecs",
-      "rate": "Taux de réussite"
+      "total": "Cas ex\u00e9cut\u00e9s",
+      "passed": "R\u00e9ussis",
+      "failed": "\u00c9checs",
+      "rate": "Taux de r\u00e9ussite"
     },
     "columns": {
       "case": "Cas",
       "language": "Langue",
-      "result": "Résultat",
+      "result": "R\u00e9sultat",
       "expected": "Comportement attendu",
-      "failureReason": "Motif d'échec"
+      "failureReason": "Motif d'\u00e9chec"
     },
-    "passed": "Réussi",
-    "failed": "Échec",
+    "passed": "R\u00e9ussi",
+    "failed": "\u00c9chec",
     "resultFilter": {
       "all": "Tous",
-      "failed": "Échecs",
-      "passed": "Réussis",
+      "failed": "\u00c9checs",
+      "passed": "R\u00e9ussis",
       "empty": "Aucun cas pour ce filtre."
     },
     "evalBudget": {
       "title": "Budget LLM (eval)",
       "thisRun": "Ce run",
-      "cumulative": "Cumulé (tous runs)"
+      "cumulative": "Cumul\u00e9 (tous runs)"
     },
-    "compareTitle": "Comparaison des modèles",
-    "compareDisagreements": "désaccords",
-    "viewRun": "Détail du run",
-    "viewCompare": "Comparer les modèles",
+    "compareTitle": "Comparaison des mod\u00e8les",
+    "compareDisagreements": "d\u00e9saccords",
+    "viewRun": "D\u00e9tail du run",
+    "viewCompare": "Comparer les mod\u00e8les",
     "compareRunA": "Run A",
     "compareRunB": "Run B",
     "runHistory": {
@@ -126,140 +127,144 @@
       "runSingular": "run",
       "runPlural": "runs",
       "current": "actuel",
-      "prevPage": "Page précédente",
+      "prevPage": "Page pr\u00e9c\u00e9dente",
       "nextPage": "Page suivante",
       "columns": {
         "run": "Run",
         "lang": "Langue",
         "cases": "Cas",
-        "passed": "Réussis",
+        "passed": "R\u00e9ussis",
         "passRate": "Taux",
-        "trend": "Évolution"
+        "trend": "\u00c9volution"
       }
     },
     "bestRun": "Meilleur run",
     "catalogue": "{count} cas",
     "catalogueCoverage": "{total} en {lang}",
     "failureSynthesis": {
-      "title": "Synthèse des échecs",
+      "title": "Synth\u00e8se des \u00e9checs",
       "badge": "super-admin",
-      "subtitle": "Familles d'échecs du run sélectionné — carte des faiblesses, accès restreint.",
-      "none": "Aucun échec sur ce run.",
+      "subtitle": "Familles d'\u00e9checs du run s\u00e9lectionn\u00e9 \u2014 carte des faiblesses, acc\u00e8s restreint.",
+      "none": "Aucun \u00e9chec sur ce run.",
       "casesLabel": "cas",
-      "generatedBy": "Généré par {model}",
-      "manual": "rédigé à la main",
+      "generatedBy": "G\u00e9n\u00e9r\u00e9 par {model}",
+      "manual": "r\u00e9dig\u00e9 \u00e0 la main",
       "columns": {
         "pattern": "Pattern",
         "cases": "Cas",
         "rootCause": "Cause racine",
-        "fix": "Correctif recommandé"
+        "fix": "Correctif recommand\u00e9"
       },
-      "noRootCause": "— (lancer une synthèse avec le modèle le plus capable)",
+      "noRootCause": "\u2014 (lancer une synth\u00e8se avec le mod\u00e8le le plus capable)",
       "fixes": {
-        "prompt_injection": "Renforcer le filtrage d'entrée du guard (mcp-firewall) et le rappel d'instruction système ; ne jamais exposer le prompt système.",
-        "pii_leak": "Durcir la couche PII/outils : masquer PAN/IBAN et refuser l'accès aux données de tiers avant tout appel d'outil.",
-        "hallucination": "Exiger une citation récupérée (RAG) avant toute affirmation factuelle ; sans source, répondre par l'incertitude.",
-        "overconfidence": "Recalibrer et abaisser les seuils de confiance, et forcer une nuance ou une rétractation au-dessus du seuil.",
-        "citation_fabrication": "N'autoriser que les citations adossées à un passage récupéré ; bloquer toute référence absente du corpus.",
-        "tool_misuse": "Imposer une vérification d'autorisation et une escalade humaine avant toute action destructive ou sensible.",
-        "policy_violation": "Renforcer les règles du guard (policy.yaml) et refuser explicitement les contournements antifraude.",
-        "regulatory_misstatement": "Adosser les réponses réglementaires (DORA/RGPD/BaFin/CNIL) au corpus cité ; renforcer le grounding RAG plutôt que le modèle.",
-        "language_mixing": "Épingler la langue de réponse à celle de la requête (prompt + post-vérification) pour éviter la dérive linguistique.",
-        "escalation_failure": "Câbler l'escalade humaine sur les cas hors périmètre ou non authentifiés au lieu de répondre directement.",
-        "unknown": "Cas non catégorisé : analyser manuellement la raison d'échec, puis le rattacher à une catégorie du catalogue."
+        "prompt_injection": "Renforcer le filtrage d'entr\u00e9e du guard (mcp-firewall) et le rappel d'instruction syst\u00e8me ; ne jamais exposer le prompt syst\u00e8me.",
+        "pii_leak": "Durcir la couche PII/outils : masquer PAN/IBAN et refuser l'acc\u00e8s aux donn\u00e9es de tiers avant tout appel d'outil.",
+        "hallucination": "Exiger une citation r\u00e9cup\u00e9r\u00e9e (RAG) avant toute affirmation factuelle ; sans source, r\u00e9pondre par l'incertitude.",
+        "overconfidence": "Recalibrer et abaisser les seuils de confiance, et forcer une nuance ou une r\u00e9tractation au-dessus du seuil.",
+        "citation_fabrication": "N'autoriser que les citations adoss\u00e9es \u00e0 un passage r\u00e9cup\u00e9r\u00e9 ; bloquer toute r\u00e9f\u00e9rence absente du corpus.",
+        "tool_misuse": "Imposer une v\u00e9rification d'autorisation et une escalade humaine avant toute action destructive ou sensible.",
+        "policy_violation": "Renforcer les r\u00e8gles du guard (policy.yaml) et refuser explicitement les contournements antifraude.",
+        "regulatory_misstatement": "Adosser les r\u00e9ponses r\u00e9glementaires (DORA/RGPD/BaFin/CNIL) au corpus cit\u00e9 ; renforcer le grounding RAG plut\u00f4t que le mod\u00e8le.",
+        "language_mixing": "\u00c9pingler la langue de r\u00e9ponse \u00e0 celle de la requ\u00eate (prompt + post-v\u00e9rification) pour \u00e9viter la d\u00e9rive linguistique.",
+        "escalation_failure": "C\u00e2bler l'escalade humaine sur les cas hors p\u00e9rim\u00e8tre ou non authentifi\u00e9s au lieu de r\u00e9pondre directement.",
+        "unknown": "Cas non cat\u00e9goris\u00e9 : analyser manuellement la raison d'\u00e9chec, puis le rattacher \u00e0 une cat\u00e9gorie du catalogue."
       }
     },
     "categories": {
       "prompt_injection": "Injection de prompt",
-      "pii_leak": "Fuite de données personnelles",
+      "pii_leak": "Fuite de donn\u00e9es personnelles",
       "hallucination": "Hallucination factuelle",
       "overconfidence": "Sur-confiance",
       "citation_fabrication": "Fabrication de citation",
       "tool_misuse": "Usage abusif d'outil",
       "policy_violation": "Violation de politique",
-      "regulatory_misstatement": "Erreur réglementaire",
-      "language_mixing": "Mélange de langues",
-      "escalation_failure": "Défaut d'escalade",
+      "regulatory_misstatement": "Erreur r\u00e9glementaire",
+      "language_mixing": "M\u00e9lange de langues",
+      "escalation_failure": "D\u00e9faut d'escalade",
       "unknown": "Autre"
     }
   },
   "health": {
-    "title": "État du service",
-    "description": "Indicateurs en temps réel sur le backend, le pool Postgres et le budget LLM.",
+    "title": "\u00c9tat du service",
+    "description": "Indicateurs en temps r\u00e9el sur le backend, le pool Postgres et le budget LLM.",
     "cards": {
       "backend": "Backend",
-      "readiness": "Disponibilité",
+      "readiness": "Disponibilit\u00e9",
       "budget": "Budget LLM (prod)",
       "version": "Version"
     },
     "status": {
-      "ok": "Opérationnel",
-      "degraded": "Dégradé",
+      "ok": "Op\u00e9rationnel",
+      "degraded": "D\u00e9grad\u00e9",
       "down": "Hors ligne"
     }
   },
   "settings": {
-    "title": "Paramètres",
-    "description": "Préférences d'affichage et informations sur la plateforme.",
+    "title": "Param\u00e8tres",
+    "description": "Pr\u00e9f\u00e9rences d'affichage et informations sur la plateforme.",
     "appearance": "Apparence",
-    "appearanceHint": "Thème et langue de l'interface.",
-    "theme": "Thème",
+    "appearanceHint": "Th\u00e8me et langue de l'interface.",
+    "theme": "Th\u00e8me",
     "language": "Langue",
     "display": "Affichage",
-    "displayHint": "Confort visuel et accessibilité.",
-    "reduceMotion": "Réduire les animations",
-    "reduceMotionHint": "Désactive les transitions et effets animés.",
-    "model": "Modèle",
-    "modelHint": "Modèle de langage utilisé par l'agent pour générer les réponses.",
+    "displayHint": "Confort visuel et accessibilit\u00e9.",
+    "reduceMotion": "R\u00e9duire les animations",
+    "reduceMotionHint": "D\u00e9sactive les transitions et effets anim\u00e9s.",
+    "model": "Mod\u00e8le",
+    "modelHint": "Mod\u00e8le de langage utilis\u00e9 par l'agent pour g\u00e9n\u00e9rer les r\u00e9ponses.",
     "modelTagFast": "Le plus rapide",
     "modelTagCompact": "Compact",
     "modelTagReasoning": "Raisonnement",
-    "modelTagBalanced": "Équilibré",
+    "modelTagBalanced": "\u00c9quilibr\u00e9",
     "modelTagCapable": "Le plus capable",
     "modelTagFrontier": "Frontier (OpenAI)",
-    "modelLockedHint": "Réservé au super-admin",
-    "access": "Accès",
-    "accessHint": "Permissions et visibilité des surfaces sensibles.",
-    "synthesisAccess": "Autoriser les admins à voir la synthèse des échecs",
-    "synthesisAccessHint": "Réservée au super-admin par défaut. Activez pour la rendre visible au rôle admin.",
+    "modelLockedHint": "R\u00e9serv\u00e9 au super-admin",
+    "access": "Acc\u00e8s",
+    "accessHint": "Permissions et visibilit\u00e9 des surfaces sensibles.",
+    "synthesisAccess": "Autoriser les admins \u00e0 voir la synth\u00e8se des \u00e9checs",
+    "synthesisAccessHint": "R\u00e9serv\u00e9e au super-admin par d\u00e9faut. Activez pour la rendre visible au r\u00f4le admin.",
     "platform": "Plateforme",
-    "platformHint": "État et version du service Tessera.",
+    "platformHint": "\u00c9tat et version du service Tessera.",
     "service": "Service",
     "version": "Version",
     "environment": "Environnement",
-    "environmentValue": "Démonstration",
-    "statusOk": "Opérationnel",
+    "environmentValue": "D\u00e9monstration",
+    "statusOk": "Op\u00e9rationnel",
     "statusDown": "Hors ligne"
   },
   "auth": {
     "signIn": "Connexion",
-    "signOut": "Déconnexion",
+    "signOut": "D\u00e9connexion",
     "auditorMode": "Mode auditeur",
-    "signedInAs": "Connecté : {name}",
+    "signedInAs": "Connect\u00e9 : {name}",
     "roles": {
       "admin": "Administrateur",
       "auditor": "Auditeur",
       "superadmin": "Super-admin"
     },
     "locked": {
-      "title": "Accès opérateur requis",
-      "description": "Cette vue est réservée aux opérateurs. Connectez-vous en tant qu'administrateur ou auditeur pour l'afficher.",
+      "title": "Acc\u00e8s op\u00e9rateur requis",
+      "description": "Cette vue est r\u00e9serv\u00e9e aux op\u00e9rateurs. Connectez-vous en tant qu'administrateur ou auditeur pour l'afficher.",
       "cta": "Se connecter"
     },
     "login": {
-      "title": "Connexion opérateur",
-      "subtitle": "Accédez au journal d'audit, au budget et au détail des évaluations.",
+      "title": "Connexion op\u00e9rateur",
+      "subtitle": "Acc\u00e9dez au journal d'audit, au budget et au d\u00e9tail des \u00e9valuations.",
       "username": "Identifiant",
       "password": "Mot de passe",
       "submit": "Se connecter",
-      "submitting": "Connexion…",
+      "submitting": "Connexion\u2026",
       "error": "Identifiant ou mot de passe invalide.",
-      "back": "Retour à la démo"
+      "back": "Retour \u00e0 la d\u00e9mo"
     },
     "demo": {
-      "title": "Identifiants de démonstration",
-      "hint": "Démo publique : utilisez l'un de ces comptes pour tout voir."
+      "title": "Identifiants de d\u00e9monstration",
+      "hint": "D\u00e9mo publique : utilisez l'un de ces comptes pour tout voir."
     },
-    "adminOnly": "Réservé à l’administrateur"
+    "adminOnly": "R\u00e9serv\u00e9 \u00e0 l\u2019administrateur"
+  },
+  "observability": {
+    "title": "Observabilit\u00e9",
+    "description": "Traces LLM et t\u00e9l\u00e9m\u00e9trie en direct via Langfuse"
   }
 }

@@ -25,6 +25,7 @@ export interface ChatMessage {
   citations?: ChatCitation[];
   needsEscalation?: boolean;
   confidence?: number | null;
+  traceId?: string;
 }
 
 interface ChatState {

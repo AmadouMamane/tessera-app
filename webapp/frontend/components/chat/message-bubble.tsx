@@ -1,12 +1,13 @@
 "use client";
 
-import { AlertTriangle, BookOpen, Check, Copy, Pencil, Sparkles, User2 } from "lucide-react";
+import { AlertTriangle, BookOpen, Check, Copy, Pencil, Sparkles, User2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/lib/stores/chat-store";
+import { submitFeedback } from "@/lib/api/feedback";
 import { Markdown } from "./markdown";
 
 interface MessageBubbleProps {
@@ -36,6 +37,7 @@ export function MessageBubble({
   const [userCopied, setUserCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  const [feedback, setFeedback] = useState<1 | 0 | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -67,6 +69,13 @@ export function MessageBubble({
       setUserCopied(true);
       setTimeout(() => setUserCopied(false), 1500);
     });
+  }
+
+  function handleFeedback(value: 1 | 0) {
+    if (message.traceId) {
+      submitFeedback(message.traceId, value);
+      setFeedback(value);
+    }
   }
 
   function startEdit() {
@@ -236,22 +245,52 @@ export function MessageBubble({
             </div>
           ))}
 
-        {/* Assistant copy — self-start prevents stretching to full column width */}
+        {/* Assistant actions: copy + feedback — self-start prevents stretching to full column width */}
         {!isUser && message.content && (
-          <button
-            type="button"
-            onClick={handleCopy}
-            aria-label={copied ? t("copied") : t("copy")}
-            className={cn(
-              "self-start flex items-center gap-1 px-1 text-[0.62rem] transition-all duration-150",
-              "text-[var(--muted-foreground)]/40 hover:text-[var(--muted-foreground)]",
-              "opacity-20 group-hover:opacity-100",
-              copied && "!opacity-100 text-green-600 dark:text-green-400",
+          <div className="self-start flex items-center gap-2 opacity-20 group-hover:opacity-100 transition-opacity duration-150">
+            <button
+              type="button"
+              onClick={handleCopy}
+              aria-label={copied ? t("copied") : t("copy")}
+              className={cn(
+                "flex items-center gap-1 px-1 text-[0.62rem] transition-all duration-150",
+                "text-[var(--muted-foreground)]/40 hover:text-[var(--muted-foreground)]",
+                copied && "!opacity-100 text-green-600 dark:text-green-400",
+              )}
+            >
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? t("copied") : t("copy")}
+            </button>
+            
+            {message.traceId && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleFeedback(1)}
+                  aria-label={t("thumbsUp")}
+                  className={cn(
+                    "flex items-center gap-1 px-1 text-[0.62rem] transition-all duration-150",
+                    "text-[var(--muted-foreground)]/40 hover:text-[var(--muted-foreground)]",
+                    feedback === 1 && "!opacity-100 text-green-600 dark:text-green-400"
+                  )}
+                >
+                  <ThumbsUp className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFeedback(0)}
+                  aria-label={t("thumbsDown")}
+                  className={cn(
+                    "flex items-center gap-1 px-1 text-[0.62rem] transition-all duration-150",
+                    "text-[var(--muted-foreground)]/40 hover:text-[var(--muted-foreground)]",
+                    feedback === 0 && "!opacity-100 text-red-600 dark:text-red-400"
+                  )}
+                >
+                  <ThumbsDown className="h-3 w-3" />
+                </button>
+              </>
             )}
-          >
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? t("copied") : t("copy")}
-          </button>
+          </div>
         )}
 
         {/* Citations */}

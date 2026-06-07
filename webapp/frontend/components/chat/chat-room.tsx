@@ -240,6 +240,7 @@ export function ChatRoom() {
                 citations: envelope.citations,
                 needsEscalation: envelope.needs_escalation,
                 confidence: envelope.confidence,
+                traceId: envelope.trace_id ?? undefined,
               });
             },
             onError: (message) => {

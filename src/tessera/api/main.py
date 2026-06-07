@@ -31,7 +31,7 @@ from tessera.memory.governance import ensure_consent_schema
 from tessera.memory.persistent import ensure_longterm_schema
 from tessera.memory.summary import ensure_summary_schema
 from tessera.memory.transcript import ensure_transcript_schema
-from tessera.observability import logging as obs_logging, metrics, traces
+from tessera.observability import logging as obs_logging, metrics
 from tessera.retrieval.store import get_pool
 from tessera.settings import get_settings
 
@@ -45,7 +45,7 @@ __all__ = ["build_app", "cli"]
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
     obs_logging.configure()
-    traces.configure()
+    # traces.configure() is disabled so Langfuse SDK can configure the global OTEL TracerProvider automatically
     metrics.configure()
     pool = get_pool()
     try:
@@ -92,7 +92,7 @@ def build_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(AuthMiddleware)
     # Added last → outermost, so security headers cover every response,
-    # including the 401s / 429s produced by inner middleware (ADR 0008).
+    # including those rejected early by inner middleware.
     app.add_middleware(SecurityHeadersMiddleware)
 
     app.include_router(health.router)

@@ -46,6 +46,10 @@ class CaseResult:
     category: str = ""
     title: str = ""
     expected_behavior: str = ""
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 def _load_schema() -> dict[str, object]:
@@ -152,7 +156,19 @@ def _evaluate(
     return not reasons, reasons
 
 
-async def _run_case(case: dict[str, object], language: str, model: str | None = None) -> CaseResult:
+async def _run_case(
+    case: dict[str, object],
+    language: str,
+    model: str | None = None,
+    config: dict[str, object] | None = None,
+) -> CaseResult:
+    from datetime import datetime
+
+    from tessera.llm.budget import get_budget_tracker
+
+    start_dt = datetime.now(UTC)
+    budget_before = get_budget_tracker().snapshot()
+
     prompt_bundle = (case.get("prompts") or {}).get(language)
     if not isinstance(prompt_bundle, dict):
         return CaseResult(
@@ -176,7 +192,7 @@ async def _run_case(case: dict[str, object], language: str, model: str | None = 
     )
     graph = compile_graph()
     try:
-        final_state = await graph.ainvoke(initial)
+        final_state = await graph.ainvoke(initial, config=config)
     except Exception as exc:  # one case must never crash the whole language run
         return CaseResult(
             case_id=str(case["id"]),
@@ -190,6 +206,12 @@ async def _run_case(case: dict[str, object], language: str, model: str | None = 
             title=str(case.get("title", "")),
             expected_behavior=str(case.get("expected_behavior", "")),
         )
+
+    end_dt = datetime.now(UTC)
+    budget_after = get_budget_tracker().snapshot()
+    input_tokens = budget_after.input_tokens - budget_before.input_tokens
+    output_tokens = budget_after.output_tokens - budget_before.output_tokens
+
     passed, reasons = _evaluate(case, language, final_state)
     return CaseResult(
         case_id=str(case["id"]),
@@ -202,6 +224,10 @@ async def _run_case(case: dict[str, object], language: str, model: str | None = 
         category=str(case.get("category", "")),
         title=str(case.get("title", "")),
         expected_behavior=str(case.get("expected_behavior", "")),
+        start_time=start_dt,
+        end_time=end_dt,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
     )
 
 
@@ -247,6 +273,46 @@ async def _run_all(args: argparse.Namespace) -> int:
             sys.stderr.write(f"no case with id {args.case!r}\n")
             return 2
 
+    try:
+        import time
+
+        from langfuse import Langfuse
+
+        try:
+            from dotenv import load_dotenv
+
+            load_dotenv(".env.local")
+        except ImportError:
+            if os.path.exists(".env.local"):
+                with open(".env.local") as f:
+                    for line in f:
+                        if line.strip() and not line.startswith("#") and "=" in line:
+                            k, v = line.strip().split("=", 1)
+                            os.environ.setdefault(k, v.strip("\"'"))
+
+        if (
+            "LANGFUSE_PUBLIC_KEY" not in os.environ
+            and "NEXT_PUBLIC_LANGFUSE_PUBLIC_KEY" in os.environ
+        ):
+            os.environ["LANGFUSE_PUBLIC_KEY"] = os.environ["NEXT_PUBLIC_LANGFUSE_PUBLIC_KEY"]
+
+        langfuse_client = Langfuse(
+            public_key=os.getenv("LANGFUSE_PUBLIC_KEY", "pk-lf-1234567890"),
+            secret_key=os.getenv("LANGFUSE_SECRET_KEY", "sk-lf-1234567890"),
+            host=os.getenv("LANGFUSE_HOST", "http://localhost:3080"),
+        )
+        dataset_name = "tessera-regression-suite"
+        try:
+            langfuse_client.create_dataset(
+                name=dataset_name, description="Tessera offline regression suite"
+            )
+        except Exception:
+            pass  # Dataset already exists
+
+        run_name = f"eval-run-{catalogue_version}-{int(time.time())}"
+    except ImportError:
+        langfuse_client = None
+
     results: list[CaseResult] = []
     for case in cases:
         prompts = case.get("prompts") or {}
@@ -254,8 +320,74 @@ async def _run_all(args: argparse.Namespace) -> int:
         for language in languages:
             if language not in prompts:
                 continue
-            result = await _run_case(case, language, args.model)
+
+            # Create/sync the dataset item
+            item_id = None
+            if langfuse_client:
+                try:
+                    item = langfuse_client.create_dataset_item(
+                        dataset_name=dataset_name,
+                        input={"user": str(prompts[language]["user"]), "language": language},
+                        expected_output=str(case.get("expected_behavior", "")),
+                        metadata={"case_id": case["id"], "category": case.get("category", "")},
+                    )
+                    item_id = item.id
+                except Exception:
+                    import traceback
+
+                    traceback.print_exc()
+
+            config: dict[str, object] | None = None
+            trace = None
+            if langfuse_client and item_id:
+                try:
+                    from langfuse.langchain import CallbackHandler
+
+                    langfuse_handler = CallbackHandler()
+                    config = {
+                        "callbacks": [langfuse_handler],
+                        "tags": ["eval", language],
+                        "metadata": {"case_id": case["id"]},
+                    }
+                except Exception:
+                    pass
+
+            result = await _run_case(case, language, args.model, config)
             results.append(result)
+
+            # Log score to experiment run
+            if langfuse_client and item_id:
+                try:
+                    trace_id = (
+                        config["callbacks"][0].last_trace_id
+                        if config and "callbacks" in config
+                        else None
+                    )
+                    if trace_id:
+                        # With the observe/callback SDK in V4, inputs/outputs are auto-captured.
+                        # We just attach the score to the trace.
+                        langfuse_client.create_score(
+                            trace_id=trace_id,
+                            name="pass",
+                            value=1.0 if result.passed else 0.0,
+                            comment=", ".join(result.reasons) if not result.passed else "Passed",
+                        )
+
+                    # Link trace to dataset run
+                    try:
+                        from langfuse.client import DatasetItemClient
+
+                        item_client = DatasetItemClient(item, langfuse=langfuse_client)
+                        item_client.link(trace, run_name=run_name)
+                    except Exception:
+                        import traceback
+
+                        traceback.print_exc()
+                except Exception:
+                    pass
+
+    if langfuse_client:
+        langfuse_client.flush()
 
     args.report.parent.mkdir(parents=True, exist_ok=True)
     scorecard = build_scorecard(results)
@@ -291,7 +423,14 @@ async def _run_all(args: argparse.Namespace) -> int:
             "model": model,
             "catalogue_version": catalogue_version,
             "summary": asdict(scorecard.summary),
-            "results": [asdict(r) for r in results],
+            "results": [
+                {
+                    **asdict(r),
+                    "start_time": r.start_time.isoformat() if r.start_time else None,
+                    "end_time": r.end_time.isoformat() if r.end_time else None,
+                }
+                for r in results
+            ],
             "synthesis": synthesis,
             "cost": cost,
         },

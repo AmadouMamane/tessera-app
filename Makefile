@@ -99,6 +99,10 @@ run: install
 run-on-prem: install
 	TESSERA_LLM_PROFILE=on_prem uv run python scripts/run_local.py
 
+# Run the synthetic active monitoring probe
+probe: install
+	uv run python scripts/synthetic_probe.py
+
 # ── CI simulation ───────────────────────────────────────────────────────────
 
 # Replicate what ci.yml does locally (fast path — no integration tests)
@@ -142,5 +146,6 @@ help:
 	@echo "Run"
 	@echo "  run                Local agent (Vertex AI path)"
 	@echo "  run-on-prem        Local agent (Ollama / on-prem path)"
+	@echo "  probe              Run synthetic active monitoring probe"
 	@echo ""
 	@echo "  ci                 Local CI simulation (no integration tests)"

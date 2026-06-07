@@ -40,6 +40,7 @@ export const ChatEndEventSchema = z.object({
   confidence: z.number().min(0).max(1).nullable(),
   citations: z.array(ChatCitationSchema),
   finish_reason: z.enum(["complete", "escalated", "error"]),
+  trace_id: z.string().nullable().optional(),
 });
 export type ChatEndEvent = z.infer<typeof ChatEndEventSchema>;
 

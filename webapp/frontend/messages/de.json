@@ -2,33 +2,34 @@
   "app": {
     "title": "Tessera",
     "subtitle": "Bankberatung",
-    "bank": "Crédit Aurore",
-    "tagline": "Aktive Firewall · EU-Regulierungsbasis",
+    "bank": "Cr\u00e9dit Aurore",
+    "tagline": "Aktive Firewall \u00b7 EU-Regulierungsbasis",
     "operational": "Betriebsbereit",
-    "disclaimer": "Crédit Aurore — Demo, nicht für den Produktiveinsatz. Fiktive Daten."
+    "disclaimer": "Cr\u00e9dit Aurore \u2014 Demo, nicht f\u00fcr den Produktiveinsatz. Fiktive Daten."
   },
   "nav": {
     "chat": "Chat",
     "audit": "Audit-Protokoll",
     "eval": "Regressionsscore",
     "health": "Servicestatus",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "observability": "Beobachtbarkeit"
   },
   "common": {
     "language": "Sprache",
     "search": "Suchen",
-    "loading": "Lädt …",
+    "loading": "L\u00e4dt \u2026",
     "empty": "Keine Ergebnisse.",
     "error": "Ein Fehler ist aufgetreten.",
     "retry": "Erneut versuchen",
-    "close": "Schließen",
+    "close": "Schlie\u00dfen",
     "details": "Details",
     "filter": "Filter",
     "all": "Alle",
     "of": "von",
     "results": "Ergebnissen",
     "next": "Weiter",
-    "previous": "Zurück",
+    "previous": "Zur\u00fcck",
     "theme": {
       "label": "Design",
       "light": "Hell",
@@ -39,11 +40,11 @@
   "chat": {
     "title": "Chat",
     "description": "Stellen Sie Tessera Ihre Fragen.",
-    "placeholder": "Stellen Sie Ihre Frage …",
+    "placeholder": "Stellen Sie Ihre Frage \u2026",
     "send": "Senden",
     "stop": "Stopp",
     "clear": "Neuer Chat",
-    "thinking": "Tessera denkt nach …",
+    "thinking": "Tessera denkt nach \u2026",
     "youSaid": "Sie",
     "assistantSaid": "Tessera",
     "sources": "Quellen",
@@ -54,21 +55,21 @@
     "copied": "Kopiert!",
     "scrollToBottom": "Nach unten scrollen",
     "startWith": "Zum Einstieg",
-    "composerHint": "Eingabe zum Senden · Umschalt+Eingabe für neue Zeile",
-    "streamingPlaceholder": "Tessera antwortet…",
+    "composerHint": "Eingabe zum Senden \u00b7 Umschalt+Eingabe f\u00fcr neue Zeile",
+    "streamingPlaceholder": "Tessera antwortet\u2026",
     "regenerate": "Neu generieren",
     "edit": "Bearbeiten",
     "confirm": "Senden",
     "cancel": "Abbrechen",
-    "editHint": "Eingabe zum Senden · Esc zum Abbrechen",
-    "editWillTruncate": "Die folgenden Nachrichten werden gelöscht",
+    "editHint": "Eingabe zum Senden \u00b7 Esc zum Abbrechen",
+    "editWillTruncate": "Die folgenden Nachrichten werden gel\u00f6scht",
     "errorFallback": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
   },
   "audit": {
     "title": "Audit-Protokoll",
-    "description": "Jeder Werkzeugaufruf wird mit seiner Entscheidung, Quelle und der zugehörigen Richtlinie protokolliert.",
+    "description": "Jeder Werkzeugaufruf wird mit seiner Entscheidung, Quelle und der zugeh\u00f6rigen Richtlinie protokolliert.",
     "payload": "Nutzdaten",
-    "redacted": "Geschwärzt",
+    "redacted": "Geschw\u00e4rzt",
     "columns": {
       "occurredAt": "Zeitpunkt",
       "target": "Werkzeug",
@@ -88,9 +89,9 @@
   },
   "eval": {
     "title": "Regressionsscore",
-    "description": "Tessera wird gegen einen Katalog öffentlich dokumentierter Agentenfehler getestet. Durchgefallene Fälle bleiben sichtbar — nichts wird versteckt.",
+    "description": "Tessera wird gegen einen Katalog \u00f6ffentlich dokumentierter Agentenfehler getestet. Durchgefallene F\u00e4lle bleiben sichtbar \u2014 nichts wird versteckt.",
     "summary": {
-      "total": "Durchgeführt",
+      "total": "Durchgef\u00fchrt",
       "passed": "Bestanden",
       "failed": "Fehlgeschlagen",
       "rate": "Erfolgsquote"
@@ -108,12 +109,12 @@
       "all": "Alle",
       "failed": "Fehlgeschlagen",
       "passed": "Bestanden",
-      "empty": "Keine Fälle für diesen Filter."
+      "empty": "Keine F\u00e4lle f\u00fcr diesen Filter."
     },
     "evalBudget": {
       "title": "LLM-Budget (Eval)",
       "thisRun": "Dieser Lauf",
-      "cumulative": "Kumuliert (alle Läufe)"
+      "cumulative": "Kumuliert (alle L\u00e4ufe)"
     },
     "compareTitle": "Modellvergleich",
     "compareDisagreements": "Abweichungen",
@@ -122,50 +123,50 @@
     "compareRunA": "Run A",
     "compareRunB": "Run B",
     "runHistory": {
-      "title": "Ausführungshistorie",
-      "runSingular": "Ausführung",
-      "runPlural": "Ausführungen",
+      "title": "Ausf\u00fchrungshistorie",
+      "runSingular": "Ausf\u00fchrung",
+      "runPlural": "Ausf\u00fchrungen",
       "current": "aktuell",
       "prevPage": "Vorherige Seite",
-      "nextPage": "Nächste Seite",
+      "nextPage": "N\u00e4chste Seite",
       "columns": {
         "run": "Run",
         "lang": "Sprache",
-        "cases": "Fälle",
+        "cases": "F\u00e4lle",
         "passed": "Bestanden",
         "passRate": "Quote",
         "trend": "Trend"
       }
     },
     "bestRun": "Bestes Ergebnis",
-    "catalogue": "{count} Fälle",
+    "catalogue": "{count} F\u00e4lle",
     "catalogueCoverage": "{total} in {lang}",
     "failureSynthesis": {
-      "title": "Fehlerübersicht",
+      "title": "Fehler\u00fcbersicht",
       "badge": "Superadmin",
-      "subtitle": "Fehlerfamilien des ausgewählten Laufs — eine Schwachstellenkarte, eingeschränkter Zugriff.",
+      "subtitle": "Fehlerfamilien des ausgew\u00e4hlten Laufs \u2014 eine Schwachstellenkarte, eingeschr\u00e4nkter Zugriff.",
       "none": "Keine Fehler in diesem Lauf.",
-      "casesLabel": "Fälle",
+      "casesLabel": "F\u00e4lle",
       "generatedBy": "Erstellt von {model}",
       "manual": "von Hand verfasst",
       "columns": {
         "pattern": "Muster",
-        "cases": "Fälle",
+        "cases": "F\u00e4lle",
         "rootCause": "Grundursache",
         "fix": "Empfohlene Behebung"
       },
-      "noRootCause": "— (Synthese mit dem leistungsstärksten Modell ausführen)",
+      "noRootCause": "\u2014 (Synthese mit dem leistungsst\u00e4rksten Modell ausf\u00fchren)",
       "fixes": {
-        "prompt_injection": "Eingabefilter des Guard (mcp-firewall) und die System-Instruktions-Erinnerung stärken; den System-Prompt nie offenlegen.",
-        "pii_leak": "PII-/Tool-Schicht härten: PAN/IBAN maskieren und Zugriff auf Drittdaten vor jedem Tool-Aufruf verweigern.",
+        "prompt_injection": "Eingabefilter des Guard (mcp-firewall) und die System-Instruktions-Erinnerung st\u00e4rken; den System-Prompt nie offenlegen.",
+        "pii_leak": "PII-/Tool-Schicht h\u00e4rten: PAN/IBAN maskieren und Zugriff auf Drittdaten vor jedem Tool-Aufruf verweigern.",
         "hallucination": "Vor jeder Tatsachenaussage eine abgerufene Quelle (RAG) verlangen; ohne Quelle mit Unsicherheit antworten.",
-        "overconfidence": "Konfidenzschwellen neu kalibrieren und senken und oberhalb der Schwelle eine Relativierung oder Rücknahme erzwingen.",
-        "citation_fabrication": "Nur Zitate zulassen, die durch eine abgerufene Passage gestützt sind; jede nicht im Korpus vorhandene Referenz blockieren.",
-        "tool_misuse": "Vor jeder destruktiven oder sensiblen Aktion eine Autorisierungsprüfung und eine menschliche Eskalation erzwingen.",
-        "policy_violation": "Guard-Regeln (policy.yaml) verschärfen und Anti-Betrugs-Umgehungen explizit ablehnen.",
-        "regulatory_misstatement": "Regulatorische Antworten (DORA/DSGVO/BaFin/CNIL) an das zitierte Korpus binden; eher das RAG-Grounding als das Modell stärken.",
-        "language_mixing": "Die Antwortsprache an die der Anfrage binden (Prompt + Nachprüfung), um Sprachdrift zu vermeiden.",
-        "escalation_failure": "Menschliche Eskalation für Fälle außerhalb des Geltungsbereichs oder ohne Authentifizierung verdrahten, statt direkt zu antworten.",
+        "overconfidence": "Konfidenzschwellen neu kalibrieren und senken und oberhalb der Schwelle eine Relativierung oder R\u00fccknahme erzwingen.",
+        "citation_fabrication": "Nur Zitate zulassen, die durch eine abgerufene Passage gest\u00fctzt sind; jede nicht im Korpus vorhandene Referenz blockieren.",
+        "tool_misuse": "Vor jeder destruktiven oder sensiblen Aktion eine Autorisierungspr\u00fcfung und eine menschliche Eskalation erzwingen.",
+        "policy_violation": "Guard-Regeln (policy.yaml) versch\u00e4rfen und Anti-Betrugs-Umgehungen explizit ablehnen.",
+        "regulatory_misstatement": "Regulatorische Antworten (DORA/DSGVO/BaFin/CNIL) an das zitierte Korpus binden; eher das RAG-Grounding als das Modell st\u00e4rken.",
+        "language_mixing": "Die Antwortsprache an die der Anfrage binden (Prompt + Nachpr\u00fcfung), um Sprachdrift zu vermeiden.",
+        "escalation_failure": "Menschliche Eskalation f\u00fcr F\u00e4lle au\u00dferhalb des Geltungsbereichs oder ohne Authentifizierung verdrahten, statt direkt zu antworten.",
         "unknown": "Nicht kategorisierter Fall: Fehlergrund manuell analysieren und einer Katalogkategorie zuordnen."
       }
     },
@@ -173,10 +174,10 @@
       "prompt_injection": "Prompt-Injection",
       "pii_leak": "PII-Leck",
       "hallucination": "Faktische Halluzination",
-      "overconfidence": "Selbstüberschätzung",
+      "overconfidence": "Selbst\u00fcbersch\u00e4tzung",
       "citation_fabrication": "Erfundene Quellenangabe",
       "tool_misuse": "Werkzeug-Missbrauch",
-      "policy_violation": "Richtlinienverstoß",
+      "policy_violation": "Richtlinienversto\u00df",
       "regulatory_misstatement": "Regulatorische Falschaussage",
       "language_mixing": "Sprachvermischung",
       "escalation_failure": "Eskalationsfehler",
@@ -185,16 +186,16 @@
   },
   "health": {
     "title": "Servicestatus",
-    "description": "Echtzeit-Indikatoren für Backend, Postgres-Pool und LLM-Budget.",
+    "description": "Echtzeit-Indikatoren f\u00fcr Backend, Postgres-Pool und LLM-Budget.",
     "cards": {
       "backend": "Backend",
-      "readiness": "Verfügbarkeit",
+      "readiness": "Verf\u00fcgbarkeit",
       "budget": "LLM-Budget (Prod)",
       "version": "Version"
     },
     "status": {
       "ok": "Betriebsbereit",
-      "degraded": "Beeinträchtigt",
+      "degraded": "Beeintr\u00e4chtigt",
       "down": "Offline"
     }
   },
@@ -202,26 +203,26 @@
     "title": "Einstellungen",
     "description": "Anzeigeeinstellungen und Plattforminformationen.",
     "appearance": "Darstellung",
-    "appearanceHint": "Thema und Sprache der Oberfläche.",
+    "appearanceHint": "Thema und Sprache der Oberfl\u00e4che.",
     "theme": "Thema",
     "language": "Sprache",
     "display": "Anzeige",
     "displayHint": "Visueller Komfort und Barrierefreiheit.",
     "reduceMotion": "Animationen reduzieren",
-    "reduceMotionHint": "Deaktiviert Übergänge und animierte Effekte.",
+    "reduceMotionHint": "Deaktiviert \u00dcberg\u00e4nge und animierte Effekte.",
     "model": "Modell",
     "modelHint": "Sprachmodell, das der Agent zur Antwortgenerierung verwendet.",
     "modelTagFast": "Am schnellsten",
     "modelTagCompact": "Kompakt",
     "modelTagReasoning": "Reasoning",
     "modelTagBalanced": "Ausgewogen",
-    "modelTagCapable": "Am leistungsfähigsten",
+    "modelTagCapable": "Am leistungsf\u00e4higsten",
     "modelTagFrontier": "Frontier (OpenAI)",
     "modelLockedHint": "Nur Superadmin",
     "access": "Zugriff",
     "accessHint": "Berechtigungen und Sichtbarkeit sensibler Bereiche.",
     "synthesisAccess": "Admins die Fehlersynthese sehen lassen",
-    "synthesisAccessHint": "Standardmäßig nur für den Superadmin. Aktivieren, um sie für die Admin-Rolle sichtbar zu machen.",
+    "synthesisAccessHint": "Standardm\u00e4\u00dfig nur f\u00fcr den Superadmin. Aktivieren, um sie f\u00fcr die Admin-Rolle sichtbar zu machen.",
     "platform": "Plattform",
     "platformHint": "Status und Version des Tessera-Dienstes.",
     "service": "Dienst",
@@ -252,14 +253,18 @@
       "username": "Benutzername",
       "password": "Passwort",
       "submit": "Anmelden",
-      "submitting": "Anmeldung…",
-      "error": "Ungültiger Benutzername oder Passwort.",
-      "back": "Zurück zur Demo"
+      "submitting": "Anmeldung\u2026",
+      "error": "Ung\u00fcltiger Benutzername oder Passwort.",
+      "back": "Zur\u00fcck zur Demo"
     },
     "demo": {
       "title": "Demo-Zugangsdaten",
-      "hint": "Öffentliche Demo: Verwenden Sie eines dieser Konten, um alles zu sehen."
+      "hint": "\u00d6ffentliche Demo: Verwenden Sie eines dieser Konten, um alles zu sehen."
     },
-    "adminOnly": "Nur für Administratoren"
+    "adminOnly": "Nur f\u00fcr Administratoren"
+  },
+  "observability": {
+    "title": "Beobachtbarkeit",
+    "description": "Live-LLM-Traces und Telemetrie \u00fcber Langfuse"
   }
 }

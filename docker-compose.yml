@@ -21,6 +21,144 @@ services:
       retries: 10
 
   # ---------------------------------------------------------------------------
+  # Langfuse - LLM Observability & Tracing
+  # ---------------------------------------------------------------------------
+  langfuse-db:
+    image: postgres:16
+    container_name: tessera-langfuse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    ports:
+      - "5433:5432"
+    volumes:
+      - langfuse_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  langfuse:
+    image: langfuse/langfuse:3
+    container_name: tessera-langfuse
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+    ports:
+      - "3080:3000"
+    environment:
+      - DATABASE_URL=postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_CLUSTER_ENABLED=false
+      - LANGFUSE_S3_EVENT_UPLOAD_BUCKET=langfuse
+      - LANGFUSE_S3_EVENT_UPLOAD_PREFIX=events/
+      - LANGFUSE_S3_EVENT_UPLOAD_REGION=us-east-1
+      - LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID=minioadmin
+      - LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY=minioadmin
+      - LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT=http://minio:9000
+      - LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE=true
+      - NEXTAUTH_SECRET=secret
+      - SALT=salt
+      - NEXTAUTH_URL=http://localhost:3080
+      - TELEMETRY_ENABLED=false
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_AUTH=redis
+      - LANGFUSE_INIT_ORG_ID=org-123
+      - LANGFUSE_INIT_ORG_NAME=Tessera Local
+      - LANGFUSE_INIT_PROJECT_ID=proj-123
+      - LANGFUSE_INIT_PROJECT_NAME=Tessera
+      - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-1234567890
+      - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-1234567890
+      - LANGFUSE_INIT_USER_EMAIL=admin@tessera.local
+      - LANGFUSE_INIT_USER_PASSWORD=admin123
+      - LANGFUSE_INIT_USER_NAME=Admin
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    container_name: tessera-langfuse-worker
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_CLUSTER_ENABLED=false
+      - LANGFUSE_S3_EVENT_UPLOAD_BUCKET=langfuse
+      - LANGFUSE_S3_EVENT_UPLOAD_PREFIX=events/
+      - LANGFUSE_S3_EVENT_UPLOAD_REGION=us-east-1
+      - LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID=minioadmin
+      - LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY=minioadmin
+      - LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT=http://minio:9000
+      - LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE=true
+      - NEXTAUTH_SECRET=secret
+      - SALT=salt
+      - TELEMETRY_ENABLED=false
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_AUTH=redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: tessera-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "redis"]
+    ports:
+      - "6379:6379"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: tessera-clickhouse
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+
+  minio:
+    image: minio/minio:latest
+    container_name: tessera-minio
+    restart: unless-stopped
+    # The container starts minio, then a background process waits 5s and creates the langfuse bucket
+    entrypoint: >
+      /bin/sh -c "
+      (sleep 5; mc alias set myminio http://127.0.0.1:9000 minioadmin minioadmin; mc mb myminio/langfuse --ignore-existing) &
+      exec minio server /data --console-address ':9001'
+      "
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    ports:
+      - "9002:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+
+  # ---------------------------------------------------------------------------
   # Ollama (containerised — CPU only on Mac, no Metal GPU access).
   # Use this for fully reproducible dev environments or CI.
   # For GPU-accelerated inference on Apple Silicon, run Ollama natively:
@@ -54,14 +192,19 @@ services:
       TESSERA_OLLAMA__HOST: "http://host.docker.internal:11434"
       # Close /docs and /openapi.json: this agent is reachable via a public
       # tunnel, and the schema would otherwise expose the full route surface.
-      TESSERA_API__EXPOSE_DOCS: "false"
+      TESSERA_API__EXPOSE_DOCS: "true"
+      TESSERA_API_RATE_LIMIT_ENABLED: "false"
       # Cross-session long-term memory (ADR 0007, Tier 2), keyed by subject_id.
       # Without these the container defaults to the per-conversation window
       # backend, so facts stated in one conversation are not recalled in the next.
-      TESSERA_MEMORY__BACKEND: persistent
+      TESSERA_MEMORY_BACKEND: "window"
       # DEMO ONLY: auto-grant retention consent so cross-session recall works
       # without a consent UI. Production MUST gather consent explicitly.
       TESSERA_MEMORY__CONSENT_DEFAULT: "true"
+      # Langfuse
+      LANGFUSE_SECRET_KEY: sk-lf-1234567890
+      LANGFUSE_PUBLIC_KEY: pk-lf-1234567890
+      LANGFUSE_HOST: "http://langfuse:3000"
     # Service-to-service auth secret (TESSERA_API__BEARER_TOKEN) and forwarded-
     # header trust live in this gitignored file — never committed, and kept out
     # of the root .env/.env.local so the app's Settings (and tests) don't read
@@ -77,6 +220,7 @@ services:
       # tracker (/tmp/tessera/budget.json) across container recreation, so the
       # audit trail and token/cost counters accumulate instead of resetting.
       - tessera_agent_state:/tmp/tessera
+      - ./src:/app/src
     profiles: ["full"]
 
   frontend:
@@ -91,6 +235,9 @@ services:
       # In-network the agent is reachable by service name on its container port
       # 8080 (the 8099 host mapping is for local convenience only).
       TESSERA_BACKEND_URL: http://agent:8080
+      # Langfuse
+      NEXT_PUBLIC_LANGFUSE_PUBLIC_KEY: pk-lf-1234567890
+      NEXT_PUBLIC_LANGFUSE_HOST: "http://localhost:3080"
     # Bearer token for the server-side proxy calls; must match the agent's
     # TESSERA_API__BEARER_TOKEN. Gitignored, never committed. Absent → the proxy
     # sends no Authorization header and the agent returns 401 when auth is on.
@@ -106,4 +253,8 @@ services:
 volumes:
   tessera_pgdata:
   tessera_agent_state:
+  langfuse_pgdata:
+  clickhouse_data:
+  minio_data:
   # tessera_ollama:  # uncomment when using the containerised Ollama service
+

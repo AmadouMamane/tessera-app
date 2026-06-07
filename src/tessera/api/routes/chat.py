@@ -23,6 +23,15 @@ from tessera.agent import build_graph, reporter as reporter_module
 from tessera.agent.state import ConversationMessage, NodeName, new_state
 from tessera.guard.audit import current_model
 from tessera.memory import get_memory_backend, scope_for
+
+try:
+    from langfuse import Langfuse
+    from langfuse.langchain import CallbackHandler
+except ImportError:
+    Langfuse = None
+    CallbackHandler = None
+from datetime import UTC
+
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, load_transcript
 from tessera.observability.metrics import AGENT_TURN_DURATION, AGENT_TURNS_TOTAL
@@ -138,6 +147,7 @@ class ChatEnvelope(BaseModel):
     confidence: float | None
     citations: list[dict[str, str]]
     finish_reason: Literal["complete", "escalated", "error"]
+    trace_id: str | None = None
 
 
 def _sse(event: str, payload: object) -> bytes:
@@ -145,7 +155,7 @@ def _sse(event: str, payload: object) -> bytes:
     return f"event: {event}\ndata: {body}\n\n".encode()
 
 
-async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:
+async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: PLR0912, PLR0915
     conversation_id = request.conversation_id or uuid.uuid4()
     turn_id = uuid.uuid4()
     language = request.language or get_settings().default_language
@@ -167,9 +177,36 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:
     current_model.set(request.model)
 
     graph = _streaming_graph()
-    config: dict[str, object] = {"configurable": {"thread_id": str(turn_id)}}
+    config: dict[str, object] = {
+        "configurable": {"thread_id": str(turn_id)},
+        "tags": ["chat", f"model:{request.model or 'default'}", f"lang:{language.value}"],
+        "metadata": {
+            "session_id": str(conversation_id),
+            "user_id": request.subject_id,
+        },
+    }
+
+    langfuse_handler = None
+    import logging
+
+    logger = logging.getLogger("tessera.api")
+    logger.error("CallbackHandler is: %s", CallbackHandler)
+    if CallbackHandler is not None:
+        langfuse_handler = CallbackHandler()
+        config["callbacks"] = [langfuse_handler]
+        logger.error("Instantiated langfuse_handler: %s", langfuse_handler)
+
     started = time.perf_counter()
-    yield _sse("turn.start", {"conversation_id": str(conversation_id), "turn_id": str(turn_id)})
+    from datetime import datetime
+
+    datetime.now(UTC)
+
+    # Yield the turn start immediately
+    trace_id = langfuse_handler.last_trace_id if langfuse_handler is not None else None
+    yield _sse(
+        "turn.start",
+        {"conversation_id": str(conversation_id), "turn_id": str(turn_id), "trace_id": trace_id},
+    )
 
     # Phase 1: run graph up to (but not including) the reporter node.
     # Escalation and injection-block paths complete fully here.
@@ -207,6 +244,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:
     else:
         final_response = str(state.get("final_response", ""))
 
+    datetime.now(UTC)
     duration = time.perf_counter() - started
     resolved_language: LanguageCode = state.get("language", language)
     AGENT_TURN_DURATION.labels(language=resolved_language.value).observe(duration)
@@ -238,6 +276,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:
         )
     )
 
+    trace_id = langfuse_handler.last_trace_id if langfuse_handler is not None else None
     envelope = ChatEnvelope(
         conversation_id=conversation_id,
         turn_id=turn_id,
@@ -250,8 +289,86 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:
             for c in state.get("citations", [])
         ],
         finish_reason=outcome,
+        trace_id=trace_id,
     )
+
+    # Langfuse trace is managed by the CallbackHandler automatically
+    if langfuse_handler is not None:
+        try:
+            if hasattr(langfuse_handler, "_langfuse_client"):
+                langfuse_handler._langfuse_client.flush()
+            from opentelemetry import trace
+
+            provider = trace.get_tracer_provider()
+            if hasattr(provider, "force_flush"):
+                provider.force_flush()
+        except Exception as exc:
+            import logging
+
+            logging.getLogger("tessera.api").warning("Failed to flush langfuse traces: %s", exc)
+    shadow_model = get_settings().observability.shadow_model
+    if shadow_model:
+        _spawn_background(
+            _run_shadow_mode(
+                request, conversation_id, resolved_language, prior_messages, shadow_model
+            )
+        )
+
     yield _sse("turn.end", envelope.model_dump())
+
+
+async def _run_shadow_mode(
+    request: ChatRequest,
+    conversation_id: uuid.UUID,
+    language: LanguageCode,
+    prior_messages: list[ConversationMessage] | None,
+    shadow_model: str,
+) -> None:
+    """Execute a shadow trace asynchronously, throwing away the result but recording the telemetry."""  # noqa: E501
+    shadow_turn_id = uuid.uuid4()
+    initial = new_state(
+        conversation_id=conversation_id,
+        turn_id=shadow_turn_id,
+        user_input=request.message,
+        language=language,
+        language_confidence=1.0,
+        prior_messages=prior_messages,
+        subject_id=request.subject_id,
+        model=shadow_model,
+    )
+    graph = build_graph().compile()
+
+    config: dict[str, object] = {
+        "configurable": {"thread_id": str(shadow_turn_id)},
+        "tags": ["shadow", f"model:{shadow_model}", f"lang:{language.value}"],
+        "metadata": {
+            "session_id": str(conversation_id),
+            "user_id": request.subject_id,
+        },
+    }
+    if CallbackHandler is not None:
+        langfuse_handler = CallbackHandler()
+        config["callbacks"] = [langfuse_handler]
+
+    try:
+        final_state = await graph.ainvoke(initial, config=config)
+        str(final_state.get("final_response", ""))
+    except Exception as exc:
+        import logging
+        logging.getLogger("tessera.api").warning("Shadow trace graph invocation failed: %s", exc)
+
+    if CallbackHandler is not None:
+        try:
+            if hasattr(langfuse_handler, "_langfuse_client"):
+                langfuse_handler._langfuse_client.flush()
+            from opentelemetry import trace
+
+            provider = trace.get_tracer_provider()
+            if hasattr(provider, "force_flush"):
+                provider.force_flush()
+        except Exception as exc:
+            import logging
+            logging.getLogger("tessera.api").warning("Shadow trace forced flush failed: %s", exc)
 
 
 @router.post("/chat")

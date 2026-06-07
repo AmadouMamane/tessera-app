@@ -184,6 +184,7 @@ class ObservabilitySettings(BaseSettings):
     cloud_logging_project: str | None = None
     metrics_enabled: bool = True
     metrics_port: int = 9090
+    shadow_model: str | None = None
 
 
 class APISettings(BaseSettings):
