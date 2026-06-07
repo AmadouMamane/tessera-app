@@ -141,6 +141,8 @@ def _safe_tool_call(call: object) -> dict[str, Any]:
         "succeeded": bool(getattr(call, "succeeded", False)),
         "error": getattr(call, "error", None),
         "duration_ms": float(getattr(call, "duration_ms", 0.0) or 0.0),
+        "decision_proof_id": getattr(call, "decision_proof_id", None),
+        "decision_proof_hash": getattr(call, "decision_proof_hash", None),
     }
 
 

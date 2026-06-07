@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi.testclient import TestClient
 
-from tessera.observability.evidence import build_turn_evidence_bundle
+from tessera.observability.actions import (
+    active_policy_hash,
+    issue_decision_proof,
+    validate_decision_proof,
+)
+from tessera.observability.evidence import (
+    build_turn_evidence_bundle,
+    list_recent_evidence_bundles,
+    persist_evidence_bundle,
+)
 from tessera.observability.privacy import hash_identifier, sanitize_attributes
 from tessera.observability.profiles import resolve_profile
 from tessera.settings import AssuranceLevel, ObservabilityProfile, get_settings
@@ -95,6 +105,66 @@ def test_evidence_bundle_is_redacted_and_signed(monkeypatch: pytest.MonkeyPatch)
     assert body["attributes"] == {"language": "fr", "model": "[REDACTED:iban]"}
 
 
+def test_evidence_bundle_persistence_lists_recent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Evidence bundles persist as local redacted JSON and can be listed."""
+    monkeypatch.setenv("TESSERA_OBS_PROFILE", "demo_premium")
+    get_settings.cache_clear()
+    root = tmp_path / "evidence"
+    bundle = build_turn_evidence_bundle(
+        conversation_id=UUID(int=10),
+        turn_id=UUID(int=11),
+        trace_id="trace-persist",
+        model="gpt-test",
+        language="fr",
+        attributes={"language": "fr"},
+    )
+
+    path = persist_evidence_bundle(bundle, base_dir=root)
+    recent = list_recent_evidence_bundles(base_dir=root)
+
+    assert path.exists()
+    assert recent[0]["evidence_id"] == bundle.evidence_id
+    assert recent[0]["privacy_status"] == "redacted"
+
+
+def test_decision_proof_validates_and_rejects_replay() -> None:
+    """Sensitive action proofs bind tool, arguments, context, policy hash, and replay."""
+    arguments = {"customer_id": "demo-customer-001"}
+    context = {"language": "fr", "tool_name": "account_balance"}
+    policy_hash = active_policy_hash()
+    proof = issue_decision_proof(
+        tool_name="account_balance",
+        arguments=arguments,
+        context=context,
+        policy_hash=policy_hash,
+        rule_id="tool.account_balance.allow",
+        verdict="allowed",
+        reason_code="guard_preflight_allowed",
+    )
+
+    first = validate_decision_proof(
+        proof,
+        tool_name="account_balance",
+        arguments=arguments,
+        context=context,
+        policy_hash=policy_hash,
+    )
+    second = validate_decision_proof(
+        proof,
+        tool_name="account_balance",
+        arguments=arguments,
+        context=context,
+        policy_hash=policy_hash,
+    )
+
+    assert first.valid is True
+    assert second.valid is False
+    assert second.reason_code == "proof_replayed"
+
+
 def test_observability_status_endpoint_reports_degraded_when_required_collector_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -114,6 +184,8 @@ def test_observability_status_endpoint_reports_degraded_when_required_collector_
     assert body["profile"] == "cloud_gcp_regulated"
     assert body["status"] == "degraded"
     assert "collector_required_but_not_configured" in body["warnings"]
+    assert body["assurance"]["proof_slo_status"] == "degraded"
+    assert body["llmops"]["role"] == "optional_llmops_cockpit"
 
 
 def test_observability_evidence_preview_endpoint_redacts_payload(

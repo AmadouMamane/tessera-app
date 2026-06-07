@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     # Runtime-imported lazily inside the functions below to avoid a
     # guard.adapter -> agent.state -> agent.graph -> guard.adapter import cycle.
     from tessera.agent.state import GuardDecisionRecord
+    from tessera.observability.actions import DecisionProof
 
 __all__ = ["GuardedResult", "InputCheckResult", "check_user_input", "guarded_invoke"]
 
@@ -63,6 +64,7 @@ class GuardedResult:
     result: Any
     error: str | None
     decisions: tuple[GuardDecisionRecord, ...] = field(default_factory=tuple)
+    decision_proof: DecisionProof | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -294,6 +296,13 @@ async def guarded_invoke(
         A :class:`GuardedResult` containing the result (or error), the
         allow/deny verdict, and every decision recorded for audit.
     """
+    from tessera.observability.actions import (
+        active_policy_hash,
+        issue_decision_proof,
+        requires_decision_proof,
+        validate_decision_proof,
+    )
+
     with start_span(TelemetrySpan.GUARD_DECISION, {"target": tool_name, "language": language.value}):
         active_policy = policy or load_policy()
         tool_policy = active_policy.tool(tool_name)
@@ -301,6 +310,8 @@ async def guarded_invoke(
         decisions = _check_tool(tool_policy, arguments, language)
         records = [_to_record(d, target=tool_name) for d in decisions]
         audit_args = _redacted_arguments(tool_policy, arguments, active_policy.pii_patterns)
+        policy_hash = active_policy_hash()
+        proof_context: dict[str, object] = {"language": language.value, "tool_name": tool_name}
         _observe_guard_records(records)
 
         denied = any(d.kind is DecisionKind.DENY for d in decisions)
@@ -329,6 +340,50 @@ async def guarded_invoke(
             {"target": tool_name, "guard_verdict": "allow"},
         )
         SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="execution_started").inc()
+        decision_proof = None
+        if requires_decision_proof(tool_name):
+            decision_proof = issue_decision_proof(
+                tool_name=tool_name,
+                arguments=arguments,
+                context=proof_context,
+                policy_hash=policy_hash,
+                rule_id=records[0].policy_rule if records else f"tool.{tool_name}.allow",
+                verdict="allowed",
+                reason_code="guard_preflight_allowed",
+            )
+            emit_event(
+                TelemetryEvent.PROOF_ISSUED,
+                {
+                    "target": tool_name,
+                    "rule_id": decision_proof.rule_id,
+                    "proof_quality": "complete",
+                },
+            )
+            SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="proof_issued").inc()
+            validation = validate_decision_proof(
+                decision_proof,
+                tool_name=tool_name,
+                arguments=arguments,
+                context=proof_context,
+                policy_hash=policy_hash,
+            )
+            if not validation.valid:
+                SENSITIVE_ACTION_TRANSACTIONS_TOTAL.labels(target=tool_name, state="blocked").inc()
+                emit_audit(
+                    target=tool_name,
+                    arguments=audit_args,
+                    decisions=records,
+                    sink=settings.guard.audit_sink,
+                    outcome="denied",
+                    error=validation.reason_code,
+                )
+                return GuardedResult(
+                    allowed=False,
+                    result=None,
+                    error=f"guard: decision proof invalid ({validation.reason_code})",
+                    decisions=tuple(records),
+                    decision_proof=decision_proof,
+                )
         try:
             result = invoke()
             if inspect.isawaitable(result):
@@ -349,6 +404,7 @@ async def guarded_invoke(
                     result=None,
                     error=f"tool {tool_name!r} raised: {exc}",
                     decisions=tuple(records),
+                    decision_proof=decision_proof,
                 )
             raise
 
@@ -369,4 +425,5 @@ async def guarded_invoke(
             result=result,
             error=None,
             decisions=tuple(records),
+            decision_proof=decision_proof,
         )

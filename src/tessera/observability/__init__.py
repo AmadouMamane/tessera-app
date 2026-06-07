@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from tessera.observability import (
     context,
+    actions,
     evidence,
     instrumentation,
     langfuse,
@@ -27,6 +28,7 @@ from tessera.observability import (
 
 __all__ = [
     "context",
+    "actions",
     "evidence",
     "instrumentation",
     "langfuse",

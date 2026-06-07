@@ -76,6 +76,16 @@ async def run(state: AgentState) -> dict[str, object]:
         result=guarded_result.result,
         succeeded=guarded_result.allowed and guarded_result.error is None,
         error=guarded_result.error,
+        decision_proof_id=(
+            guarded_result.decision_proof.decision_id
+            if guarded_result.decision_proof is not None
+            else None
+        ),
+        decision_proof_hash=(
+            guarded_result.decision_proof.proof_hash
+            if guarded_result.decision_proof is not None
+            else None
+        ),
         started_at=datetime.now(UTC),
         duration_ms=duration_ms,
     )

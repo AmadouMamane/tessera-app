@@ -102,6 +102,8 @@ class ToolCallRecord:
     result: object | None
     succeeded: bool
     error: str | None = None
+    decision_proof_id: str | None = None
+    decision_proof_hash: str | None = None
     started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     duration_ms: float = 0.0
 

@@ -1,0 +1,60 @@
+version: 1
+
+privacy:
+  raw_prompts: forbidden
+  pii_export: forbidden
+  high_cardinality_metric_labels:
+    - conversation_id
+    - turn_id
+    - raw_account_id
+    - raw_card_id
+
+profiles:
+  local_dev:
+    target_assurance: L1
+    collector: optional
+    evidence_bundle: optional
+    langfuse: disabled
+  demo_premium:
+    target_assurance: L3
+    collector: optional
+    evidence_bundle: required
+    langfuse: optional
+  cloud_gcp_regulated:
+    target_assurance: L4
+    collector: required
+    evidence_bundle: required
+    langfuse: optional
+  on_prem_standard:
+    target_assurance: L3
+    collector: required
+    evidence_bundle: required
+    langfuse: optional
+  on_prem_airgapped:
+    target_assurance: L5
+    collector: forbidden
+    evidence_bundle: required
+    langfuse: disabled
+
+sensitive_actions:
+  card_block:
+    proof_required: true
+    audit_required: true
+    evidence_level: L3
+    actor_scope: authenticated_customer
+    target_scope: own_card_only
+    replay_protection: required
+  account_balance:
+    proof_required: true
+    audit_required: true
+    evidence_level: L3
+    actor_scope: authenticated_customer
+    target_scope: own_account_only
+    replay_protection: required
+  ticket_escalate:
+    proof_required: false
+    audit_required: true
+    evidence_level: L2
+    actor_scope: authenticated_customer
+    target_scope: support_ticket
+    replay_protection: optional
