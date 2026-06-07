@@ -6,6 +6,7 @@ import {
   FileSearch,
   type LucideIcon,
   MessageSquareText,
+  Radar,
   Settings,
   ShieldCheck,
 } from "lucide-react";
@@ -15,15 +16,16 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
 interface NavItem {
-  href: "/chat" | "/audit" | "/eval" | "/health" | "/settings";
+  href: "/chat" | "/audit" | "/eval" | "/health" | "/observability" | "/settings";
   icon: LucideIcon;
-  labelKey: "chat" | "audit" | "eval" | "health" | "settings";
+  labelKey: "chat" | "audit" | "eval" | "health" | "observability" | "settings";
 }
 
 const NAV_ITEMS: ReadonlyArray<NavItem> = [
   { href: "/chat", icon: MessageSquareText, labelKey: "chat" },
   { href: "/eval", icon: FileSearch, labelKey: "eval" },
   { href: "/audit", icon: ShieldCheck, labelKey: "audit" },
+  { href: "/observability", icon: Radar, labelKey: "observability" },
   { href: "/health", icon: Activity, labelKey: "health" },
   { href: "/settings", icon: Settings, labelKey: "settings" },
 ];

@@ -12,6 +12,7 @@
     "audit": "Audit trail",
     "eval": "Regression scorecard",
     "health": "Service health",
+    "observability": "Observability",
     "settings": "Settings"
   },
   "common": {
@@ -196,6 +197,40 @@
       "ok": "Operational",
       "degraded": "Degraded",
       "down": "Down"
+    }
+  },
+  "observability": {
+    "title": "Observability",
+    "description": "Active profile, evidence, and Tessera exporter posture.",
+    "error": "Observability status unavailable.",
+    "assurance": "Assurance",
+    "evidence": "Evidence",
+    "allowed": "Allowed attributes",
+    "forbidden": "Forbidden attributes",
+    "proofConsensus": "Proof consensus",
+    "prompt": "Prompt",
+    "signed": "Signed",
+    "unsigned": "Unsigned",
+    "noWarnings": "No gaps",
+    "commit": "Generate",
+    "committing": "Generating…",
+    "emptyEvidence": "No persisted bundle.",
+    "cards": {
+      "profile": "Profile",
+      "completeness": "Completeness",
+      "exporters": "Exporters",
+      "llmops": "LLMOps"
+    },
+    "status": {
+      "ok": "ok",
+      "degraded": "degraded",
+      "disabled": "disabled"
+    },
+    "controls": {
+      "privacy": "Privacy Gateway",
+      "collector": "Collector",
+      "evidence": "Evidence store",
+      "langfuse": "Langfuse"
     }
   },
   "settings": {

@@ -17,8 +17,12 @@ import {
   AuditPageSchema,
   type BudgetSnapshot,
   BudgetSnapshotSchema,
+  type EvidenceBundleResponse,
+  EvidenceBundleResponseSchema,
   type HealthResponse,
   HealthResponseSchema,
+  type ObservabilityStatus,
+  ObservabilityStatusSchema,
 } from "./schemas";
 
 const BASE = "/api";
@@ -134,4 +138,31 @@ export async function fetchBudget(signal?: AbortSignal): Promise<BudgetSnapshot>
     output_tokens: Number(parsed.output_tokens ?? 0),
     estimated_cost_eur: Number(parsed.estimated_cost_eur ?? 0),
   });
+}
+
+export async function fetchObservabilityStatus(signal?: AbortSignal): Promise<ObservabilityStatus> {
+  return request("/observability/status", { signal }, ObservabilityStatusSchema);
+}
+
+export interface CommitEvidencePayload {
+  conversation_id: string;
+  turn_id: string;
+  trace_id?: string;
+  model?: string;
+  language?: string;
+  attributes?: Record<string, unknown>;
+}
+
+export async function commitEvidenceBundle(
+  payload: CommitEvidencePayload,
+): Promise<EvidenceBundleResponse> {
+  return request(
+    "/observability/evidence/commit",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    EvidenceBundleResponseSchema,
+  );
 }

@@ -12,6 +12,7 @@
     "audit": "Audit-Protokoll",
     "eval": "Regressionsscore",
     "health": "Servicestatus",
+    "observability": "Observability",
     "settings": "Einstellungen"
   },
   "common": {
@@ -196,6 +197,40 @@
       "ok": "Betriebsbereit",
       "degraded": "Beeinträchtigt",
       "down": "Offline"
+    }
+  },
+  "observability": {
+    "title": "Observability",
+    "description": "Aktives Profil, Evidenz und Exporter-Status von Tessera.",
+    "error": "Observability-Status nicht verfügbar.",
+    "assurance": "Assurance",
+    "evidence": "Evidenz",
+    "allowed": "Erlaubte Attribute",
+    "forbidden": "Verbotene Attribute",
+    "proofConsensus": "Proof Consensus",
+    "prompt": "Prompt",
+    "signed": "Signiert",
+    "unsigned": "Nicht signiert",
+    "noWarnings": "Keine Lücken",
+    "commit": "Generieren",
+    "committing": "Generiert…",
+    "emptyEvidence": "Kein persistiertes Bundle.",
+    "cards": {
+      "profile": "Profil",
+      "completeness": "Vollständigkeit",
+      "exporters": "Exporter",
+      "llmops": "LLMOps"
+    },
+    "status": {
+      "ok": "ok",
+      "degraded": "beeinträchtigt",
+      "disabled": "deaktiviert"
+    },
+    "controls": {
+      "privacy": "Privacy Gateway",
+      "collector": "Collector",
+      "evidence": "Evidence Store",
+      "langfuse": "Langfuse"
     }
   },
   "settings": {

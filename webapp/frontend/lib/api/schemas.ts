@@ -105,6 +105,90 @@ export const BudgetSnapshotSchema = z.object({
 export type BudgetSnapshot = z.infer<typeof BudgetSnapshotSchema>;
 
 // ---------------------------------------------------------------------------
+// Observability assurance
+// ---------------------------------------------------------------------------
+
+export const ExporterStatusSchema = z.object({
+  collector_required: z.boolean(),
+  collector_configured: z.boolean(),
+  langfuse_enabled: z.boolean(),
+  langfuse_configured: z.boolean(),
+  primary_backend: z.string(),
+  evidence_enabled: z.boolean(),
+  evidence_signing_enabled: z.boolean(),
+  raw_prompts_export: z.boolean(),
+  pii_export: z.boolean(),
+});
+export type ExporterStatus = z.infer<typeof ExporterStatusSchema>;
+
+export const LLMOpsStatusSchema = z.object({
+  enabled: z.boolean(),
+  configured: z.boolean(),
+  status: z.string(),
+  host: z.string().nullable(),
+  role: z.string(),
+});
+export type LLMOpsStatus = z.infer<typeof LLMOpsStatusSchema>;
+
+export const AssuranceStatusSchema = z.object({
+  target_level: z.string(),
+  current_level: z.string(),
+  completeness: z.number().min(0).max(1),
+  proof_consensus: z.number().min(0).max(1),
+  proof_slo_status: z.string(),
+  missing_controls: z.array(z.string()),
+});
+export type AssuranceStatus = z.infer<typeof AssuranceStatusSchema>;
+
+export const EvidenceSummarySchema = z.object({
+  evidence_id: z.string().nullable(),
+  created_at: z.string().nullable(),
+  turn_id: z.string().nullable(),
+  profile: z.string().nullable(),
+  assurance_level: z.string().nullable(),
+  proof_quality: z.string().nullable(),
+  proof_consensus: z.string().nullable(),
+  privacy_status: z.string().nullable(),
+  evidence_gaps: z.array(z.string()).default([]),
+});
+export type EvidenceSummary = z.infer<typeof EvidenceSummarySchema>;
+
+export const ObservabilityStatusSchema = z.object({
+  profile: z.string(),
+  assurance_level: z.string(),
+  status: z.string(),
+  exporters: ExporterStatusSchema,
+  llmops: LLMOpsStatusSchema,
+  assurance: AssuranceStatusSchema,
+  recent_evidence: z.array(EvidenceSummarySchema),
+  allowed_attribute_count: z.number().int().nonnegative(),
+  forbidden_attribute_count: z.number().int().nonnegative(),
+  low_cardinality_metric_labels: z.array(z.string()),
+  prompt_family: z.string(),
+  prompt_version: z.string(),
+  dataset_id: z.string().nullable(),
+  experiment_id: z.string().nullable(),
+  experiment_variant: z.string().nullable(),
+  warnings: z.array(z.string()),
+});
+export type ObservabilityStatus = z.infer<typeof ObservabilityStatusSchema>;
+
+export const EvidenceBundleResponseSchema = z.object({
+  evidence_id: z.string(),
+  created_at: z.string(),
+  turn_id: z.string(),
+  profile: z.string(),
+  assurance_level: z.string(),
+  proof_quality: z.string(),
+  proof_consensus: z.string(),
+  privacy_status: z.string(),
+  signature: z.string().nullable(),
+  evidence_gaps: z.array(z.string()).default([]),
+  persisted: z.boolean().optional(),
+});
+export type EvidenceBundleResponse = z.infer<typeof EvidenceBundleResponseSchema>;
+
+// ---------------------------------------------------------------------------
 // Eval scorecard (read from a local JSON artefact, not from the backend)
 // ---------------------------------------------------------------------------
 
