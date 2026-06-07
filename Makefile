@@ -1,5 +1,6 @@
 .PHONY: install lint typecheck format test test-integration test-all \
-        coverage eval seed ingest run run-on-prem precommit check ci help
+        coverage eval seed ingest run run-on-prem demo-observability \
+        precommit check ci help
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
@@ -99,6 +100,14 @@ run: install
 run-on-prem: install
 	TESSERA_LLM_PROFILE=on_prem uv run python scripts/run_local.py
 
+# Start the full local production-like observability demo stack.
+demo-observability:
+	docker compose \
+		-f docker-compose.yml \
+		-f docker-compose.unix.yml \
+		-f docker-compose.observability.yml \
+		--profile full up -d --build
+
 # ── CI simulation ───────────────────────────────────────────────────────────
 
 # Replicate what ci.yml does locally (fast path — no integration tests)
@@ -142,5 +151,6 @@ help:
 	@echo "Run"
 	@echo "  run                Local agent (Vertex AI path)"
 	@echo "  run-on-prem        Local agent (Ollama / on-prem path)"
+	@echo "  demo-observability Local prod-like stack: UI + agent + OTel + Jaeger + Prometheus + Grafana"
 	@echo ""
 	@echo "  ci                 Local CI simulation (no integration tests)"

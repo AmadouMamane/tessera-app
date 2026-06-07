@@ -1,0 +1,92 @@
+# Local production-like observability stack for demos without GCP.
+#
+# Usage:
+#   docker compose \
+#     -f docker-compose.yml \
+#     -f docker-compose.unix.yml \
+#     -f docker-compose.observability.yml \
+#     --profile full up -d --build
+#
+# Surfaces:
+#   - Tessera UI:    http://localhost:3190/fr/observability
+#   - Agent API:     http://localhost:8199
+#   - Jaeger traces: http://localhost:16686
+#   - Prometheus:    http://localhost:9091
+#   - Grafana:       http://localhost:3001  (admin / tessera)
+
+services:
+  agent:
+    depends_on:
+      otel-collector:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      TESSERA_DEPLOYMENT_MODE: on_prem
+      TESSERA_OBS_PROFILE: on_prem_standard
+      TESSERA_OBS_ASSURANCE_LEVEL: L3
+      TESSERA_OBS_COLLECTOR_REQUIRED: "true"
+      TESSERA_OBS_OTEL_ENDPOINT: http://otel-collector:4317
+      TESSERA_OBS_LOG_FORMAT: json
+      TESSERA_OBS_METRICS_ENABLED: "true"
+      TESSERA_OBS_EVIDENCE_SIGNING_ENABLED: "true"
+    ports: !override
+      - "8199:8080"
+      - "9190:9090"
+
+  frontend:
+    ports: !override
+      - "3190:3000"
+
+  postgres:
+    # The demo stack keeps Postgres inside the Compose network so it can run
+    # next to any already-running host Postgres or another Tessera worktree.
+    ports: !override []
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.113.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    depends_on:
+      jaeger:
+        condition: service_started
+      prometheus:
+        condition: service_started
+    volumes:
+      - ./infra/observability/collector-local-demo.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./infra/observability/prometheus-local-demo.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9091:9090"
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    depends_on:
+      jaeger:
+        condition: service_started
+      prometheus:
+        condition: service_started
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: tessera
+      GF_USERS_DEFAULT_THEME: light
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"

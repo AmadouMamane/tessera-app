@@ -98,7 +98,7 @@ are resolved from Secret Manager at start. Defaults are from
 | `TESSERA_VERTEX__LOCATION`        | `europe-west1`                | plain (region)                    |
 | `TESSERA_VERTEX__CHAT_MODEL`      | `gemini-2.0-flash-001`        | plain                             |
 | `TESSERA_VERTEX__EMBEDDING_MODEL` | `text-multilingual-embedding-002` | plain                         |
-| `TESSERA_OBS__CLOUD_LOGGING_PROJECT` | unset                      | plain (project id)                |
+| `TESSERA_OBS_CLOUD_LOGGING_PROJECT` | unset                      | plain (project id)                |
 | `TESSERA_GUARD__AUDIT_SINK`       | `file`                        | plain (`cloud_logging`)           |
 | `TESSERA_POSTGRES__DSN`           | local DSN                     | **secret** `postgres_url`         |
 | `TESSERA_API__BEARER_TOKEN`       | unset                         | **secret** `bearer_token`         |
@@ -152,6 +152,41 @@ Two alert policies are configured:
 
 Both policies have empty `notification_channels` in Terraform — wire your
 channels (PagerDuty, email, Slack) before relying on them.
+
+### Local production-like observability demo
+
+The demo does not require GCP. Run the on-premises profile with a local
+OpenTelemetry Collector, Jaeger, Prometheus and Grafana:
+
+```bash
+docker compose \
+  -f docker-compose.yml \
+  -f docker-compose.unix.yml \
+  -f docker-compose.observability.yml \
+  --profile full up -d --build
+```
+
+This starts the same portable telemetry contract used by production, but routes
+it to local tools:
+
+- Tessera UI: `http://localhost:3190/fr/observability`
+- Agent API: `http://localhost:8199`
+- Jaeger traces: `http://localhost:16686/search?service=tessera-agent`
+- Prometheus: `http://localhost:9091`
+- Grafana: `http://localhost:3001` (`admin` / `tessera`)
+
+Expected dashboard posture for this demo:
+
+- profile `on_prem_standard`
+- assurance `L3 / L3`
+- primary backend `sovereign_otel_stack`
+- signed evidence bundles
+- collector configured
+- no observability warnings
+
+Use `TESSERA_OBS_*` environment variables for observability settings. The
+short `OBS` prefix is handled by `ObservabilitySettings`; forms such as
+`TESSERA_OBS__PROFILE` are intentionally not used for this block.
 
 ## Audit log
 

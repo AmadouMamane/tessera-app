@@ -4,7 +4,6 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: tessera-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: tessera
@@ -49,8 +48,8 @@ services:
       TESSERA_ENVIRONMENT: local
       TESSERA_LLM_PROFILE: on_prem
       TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@postgres:5432/tessera
-      TESSERA_OBS__LOG_FORMAT: console
-      TESSERA_OBS__METRICS_ENABLED: "false"
+      TESSERA_OBS_LOG_FORMAT: console
+      TESSERA_OBS_METRICS_ENABLED: "false"
       TESSERA_OLLAMA__HOST: "http://host.docker.internal:11434"
       # Close /docs and /openapi.json: this agent is reachable via a public
       # tunnel, and the schema would otherwise expose the full route surface.

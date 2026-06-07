@@ -22,8 +22,8 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     monkeypatch.delenv("TESSERA_VERTEX__PROJECT_ID", raising=False)
     monkeypatch.setenv("TESSERA_ENVIRONMENT", "ci")
     monkeypatch.setenv("TESSERA_LLM_PROFILE", "on_prem")
-    monkeypatch.setenv("TESSERA_OBS__LOG_FORMAT", "console")
-    monkeypatch.setenv("TESSERA_OBS__METRICS_ENABLED", "false")
+    monkeypatch.setenv("TESSERA_OBS_LOG_FORMAT", "console")
+    monkeypatch.setenv("TESSERA_OBS_METRICS_ENABLED", "false")
     monkeypatch.setenv(
         "TESSERA_GUARD__POLICY_PATH",
         str(Path("src/tessera/guard/policy.yaml").resolve()),
