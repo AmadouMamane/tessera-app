@@ -59,6 +59,9 @@ services:
       TESSERA_OBS_EVIDENCE_SIGNING_ENABLED: "true"
     ports: !override
       - "8199:8080"
+      # Existing public ngrok demos are wired to host port 8099. Publish both
+      # ports so tessera.amadoumamane.fr reaches this worktree's agent too.
+      - "8099:8080"
       - "9190:9090"
 
   frontend:
