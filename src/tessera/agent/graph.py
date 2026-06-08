@@ -38,7 +38,7 @@ deterministically replay decisions during the regression harness — see
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import END, START, StateGraph
 
@@ -56,8 +56,11 @@ from tessera.agent.workers import (
     regulation_lookup as regulation_lookup_worker,
     simulator as simulator_worker,
 )
+from tessera.observability.instrument import instrument_node
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from langgraph.graph.state import CompiledStateGraph
 
 __all__ = ["build_graph", "compile_graph"]
@@ -122,19 +125,23 @@ def build_graph() -> StateGraph[AgentState]:
     """
     graph: StateGraph[AgentState] = StateGraph(AgentState)
 
+    # Every node is wrapped in an ``invoke_agent <name>`` span (ADR 0010, #4).
+    def _add(name: str, fn: Callable[..., Any]) -> None:
+        graph.add_node(name, instrument_node(name, fn))
+
     # Top-level nodes
-    graph.add_node(NodeName.ROUTER.value, router_module.run)
-    graph.add_node(NodeName.PLANNER.value, planner_module.run)
-    graph.add_node(NodeName.REVIEWER.value, reviewer_module.run)
-    graph.add_node(NodeName.REPORTER.value, reporter_module.run)
+    _add(NodeName.ROUTER.value, router_module.run)
+    _add(NodeName.PLANNER.value, planner_module.run)
+    _add(NodeName.REVIEWER.value, reviewer_module.run)
+    _add(NodeName.REPORTER.value, reporter_module.run)
 
     # Workers — registered under the names declared in their modules so that
     # _route_after_planner's return values are valid node identifiers.
-    graph.add_node(product_lookup_worker.NODE_NAME, product_lookup_worker.run)
-    graph.add_node(regulation_lookup_worker.NODE_NAME, regulation_lookup_worker.run)
-    graph.add_node(account_lookup_worker.NODE_NAME, account_lookup_worker.run)
-    graph.add_node(simulator_worker.NODE_NAME, simulator_worker.run)
-    graph.add_node(escalation_worker.NODE_NAME, escalation_worker.run)
+    _add(product_lookup_worker.NODE_NAME, product_lookup_worker.run)
+    _add(regulation_lookup_worker.NODE_NAME, regulation_lookup_worker.run)
+    _add(account_lookup_worker.NODE_NAME, account_lookup_worker.run)
+    _add(simulator_worker.NODE_NAME, simulator_worker.run)
+    _add(escalation_worker.NODE_NAME, escalation_worker.run)
 
     # Linear backbone
     graph.add_edge(START, NodeName.ROUTER.value)

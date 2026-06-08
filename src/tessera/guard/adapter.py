@@ -31,6 +31,8 @@ from tessera.guard.decisions import (
     ToolPolicy,
     load_policy,
 )
+from tessera.observability import semconv
+from tessera.observability.instrument import tool_span
 from tessera.settings import LanguageCode, get_settings
 
 if TYPE_CHECKING:
@@ -282,53 +284,64 @@ async def guarded_invoke(
     audit_args = _redacted_arguments(tool_policy, arguments, active_policy.pii_patterns)
 
     denied = any(d.kind is DecisionKind.DENY for d in decisions)
-    if denied:
-        emit_audit(
-            target=tool_name,
-            arguments=audit_args,
-            decisions=records,
-            sink=settings.guard.audit_sink,
-            outcome="denied",
-        )
-        return GuardedResult(
-            allowed=False,
-            result=None,
-            error="guard: tool invocation denied by policy",
-            decisions=tuple(records),
-        )
 
-    try:
-        result = invoke()
-        if inspect.isawaitable(result):
-            result = await result
-    except Exception as exc:
-        emit_audit(
-            target=tool_name,
-            arguments=audit_args,
-            decisions=records,
-            sink=settings.guard.audit_sink,
-            outcome="error",
-            error=str(exc),
-        )
-        if settings.guard.fail_closed:
+    # execute_tool span (ADR 0010, #4): carries the guard verdict so a backend
+    # can show why a tool was allowed/denied without reading the audit log.
+    with tool_span(tool_name, language) as span:
+        if denied:
+            deny_rule = next((d.rule for d in decisions if d.kind is DecisionKind.DENY), None)
+            span.set_attribute(semconv.TESSERA_GUARD_DECISION, "denied")
+            if deny_rule is not None:
+                span.set_attribute(semconv.TESSERA_GUARD_RULE, deny_rule)
+            emit_audit(
+                target=tool_name,
+                arguments=audit_args,
+                decisions=records,
+                sink=settings.guard.audit_sink,
+                outcome="denied",
+            )
             return GuardedResult(
-                allowed=True,
+                allowed=False,
                 result=None,
-                error=f"tool {tool_name!r} raised: {exc}",
+                error="guard: tool invocation denied by policy",
                 decisions=tuple(records),
             )
-        raise
 
-    emit_audit(
-        target=tool_name,
-        arguments=audit_args,
-        decisions=records,
-        sink=settings.guard.audit_sink,
-        outcome="allowed",
-    )
-    return GuardedResult(
-        allowed=True,
-        result=result,
-        error=None,
-        decisions=tuple(records),
-    )
+        try:
+            result = invoke()
+            if inspect.isawaitable(result):
+                result = await result
+        except Exception as exc:
+            span.set_attribute(semconv.TESSERA_GUARD_DECISION, "error")
+            span.record_exception(exc)
+            emit_audit(
+                target=tool_name,
+                arguments=audit_args,
+                decisions=records,
+                sink=settings.guard.audit_sink,
+                outcome="error",
+                error=str(exc),
+            )
+            if settings.guard.fail_closed:
+                return GuardedResult(
+                    allowed=True,
+                    result=None,
+                    error=f"tool {tool_name!r} raised: {exc}",
+                    decisions=tuple(records),
+                )
+            raise
+
+        span.set_attribute(semconv.TESSERA_GUARD_DECISION, "allowed")
+        emit_audit(
+            target=tool_name,
+            arguments=audit_args,
+            decisions=records,
+            sink=settings.guard.audit_sink,
+            outcome="allowed",
+        )
+        return GuardedResult(
+            allowed=True,
+            result=result,
+            error=None,
+            decisions=tuple(records),
+        )

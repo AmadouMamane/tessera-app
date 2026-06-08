@@ -24,6 +24,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     ConsoleSpanExporter,
+    SimpleSpanProcessor,
 )
 
 from tessera import __version__
@@ -75,7 +76,15 @@ def configure() -> None:
         }
     )
     provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(_resolve_exporter()))
+    exporter = _resolve_exporter()
+    # The console fallback is a dev convenience: export synchronously so spans
+    # appear immediately and nothing is flushed to a closed stream at exit.
+    processor = (
+        SimpleSpanProcessor(exporter)
+        if isinstance(exporter, ConsoleSpanExporter)
+        else BatchSpanProcessor(exporter)
+    )
+    provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
     _configured = True
 

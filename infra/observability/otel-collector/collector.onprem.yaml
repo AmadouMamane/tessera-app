@@ -33,13 +33,17 @@ processors:
 
 exporters:
   debug:
-    verbosity: detailed
-  # ── Phase 2 fan-out backends (added when the on_prem stack is wired) ───────
-  # otlp/phoenix:
-  #   endpoint: tessera-claude-phoenix:4317
-  #   tls: { insecure: true }
-  # otlphttp/langfuse:
-  #   endpoint: http://tessera-claude-langfuse:3000/api/public/otel
+    verbosity: normal
+  # Canonical backend — Phoenix (OTLP/HTTP on its UI port, no auth). The image
+  # serves OTLP HTTP at :6006/v1/traces; gRPC :4317 is not exposed.
+  otlphttp/phoenix:
+    endpoint: http://phoenix:6006
+  # Second fan-out — my own Langfuse. OTLP/HTTP with Basic auth built from the
+  # LANGFUSE_INIT_* keys; the base64 is injected via the collector's env.
+  otlphttp/langfuse:
+    endpoint: http://langfuse-web:3000/api/public/otel
+    headers:
+      Authorization: "Basic ${env:LANGFUSE_OTEL_BASIC_AUTH}"
 
 service:
   telemetry:
@@ -49,4 +53,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, redaction, batch]
-      exporters: [debug]
+      exporters: [debug, otlphttp/phoenix, otlphttp/langfuse]

@@ -1,38 +1,187 @@
 # Claude-Powered observability stack (ADR 0010) — INDEPENDENT build.
 #
-# This file is deliberately separate from the shared docker-compose.yml so it
-# never conflicts with parallel work by other agents. Every container/volume is
-# prefixed `tessera-claude-*`, on the dedicated `tessera-claude-obs` network,
-# and bound to the Claude-Powered port-map (Collector 4417/4418, internal
-# metrics 18888) — avoiding 3090/3190 and the base Tessera ports.
-#
-# Usage:
-#   docker compose -f docker-compose.obs.claude.yml up -d
-# Point the agent at the Collector:
-#   TESSERA_OBS__OTEL_COLLECTOR_ENDPOINT=http://localhost:4418
-#
-# Phase 1 ships the Collector. Phase 2 adds Phoenix + Langfuse (+ ClickHouse /
-# Redis / MinIO / Postgres) on the reserved ports in the Claude-Powered map.
+# Deliberately separate from the shared docker-compose.yml so it never conflicts
+# with parallel work by other agents. Every container/volume is prefixed
+# `tessera-claude-*`, on the dedicated `tessera-claude-obs` network, bound to the
+# Claude-Powered port-map — avoiding 3090/3190 and the base Tessera ports, AND
+# the other agents' live Langfuse stack (5433/6379/9001/9002).
 #
 # `name:` pins an explicit Compose *project* so up/down operate ONLY on these
 # containers — never on the shared `tessera` project other agents run in.
+#
+# Usage:
+#   docker compose -f docker-compose.obs.claude.yml up -d
+#   Point the agent at the Collector: TESSERA_OBS__OTEL_COLLECTOR_ENDPOINT=http://localhost:4418
+# Backends:
+#   Phoenix (canonical)  http://localhost:16006
+#   Langfuse (2nd export) http://localhost:3900   (login: claude@tessera.local / claude-demo-pw)
 
 name: tessera-claude
 
+x-langfuse-env: &langfuse-env
+  DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+  SALT: claude-powered-salt
+  ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+  CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+  CLICKHOUSE_URL: http://clickhouse:8123
+  CLICKHOUSE_USER: clickhouse
+  CLICKHOUSE_PASSWORD: clickhouse
+  CLICKHOUSE_CLUSTER_ENABLED: "false"
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: miniosecret
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_AUTH: claude-redis
+
 services:
+  # ── Vendor-neutral hub ──────────────────────────────────────────────────────
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.116.1
     container_name: tessera-claude-collector
     restart: unless-stopped
     command: ["--config=/etc/otelcol-contrib/collector.onprem.yaml"]
+    environment:
+      # Basic-auth header for the Langfuse OTLP exporter (base64 of
+      # "<public-key>:<secret-key>"); matches the LANGFUSE_INIT_* keys below.
+      LANGFUSE_OTEL_BASIC_AUTH: "cGstbGYtY2xhdWRlLXB1YmxpYzpzay1sZi1jbGF1ZGUtc2VjcmV0"
     volumes:
       - ./infra/observability/otel-collector/collector.onprem.yaml:/etc/otelcol-contrib/collector.onprem.yaml:ro
     ports:
       - "4417:4317" # OTLP gRPC
       - "4418:4318" # OTLP HTTP
       - "18888:8888" # Collector internal telemetry
-    networks:
-      - tessera-claude-obs
+    depends_on:
+      phoenix:
+        condition: service_started
+    networks: [tessera-claude-obs]
+
+  # ── Canonical LLM-observability backend ─────────────────────────────────────
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: tessera-claude-phoenix
+    restart: unless-stopped
+    ports:
+      - "16006:6006" # UI + OTLP/HTTP
+      # 4317 (OTLP gRPC) stays internal; the Collector reaches it by name.
+    networks: [tessera-claude-obs]
+
+  # ── My own Langfuse v3 (2nd fan-out exporter) ───────────────────────────────
+  langfuse-web:
+    image: langfuse/langfuse:3
+    container_name: tessera-claude-langfuse
+    restart: unless-stopped
+    depends_on: &langfuse-deps
+      langfuse-db: {condition: service_healthy}
+      clickhouse: {condition: service_healthy}
+      minio: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_URL: http://localhost:3900
+      NEXTAUTH_SECRET: claude-nextauth-secret
+      TELEMETRY_ENABLED: "false"
+      LANGFUSE_INIT_ORG_ID: claude-org
+      LANGFUSE_INIT_PROJECT_ID: claude-project
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-claude-public
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-claude-secret
+      LANGFUSE_INIT_USER_EMAIL: claude@tessera.local
+      LANGFUSE_INIT_USER_NAME: Claude Powered
+      LANGFUSE_INIT_USER_PASSWORD: claude-demo-pw
+    ports:
+      - "3900:3000"
+    networks: [tessera-claude-obs]
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    container_name: tessera-claude-langfuse-worker
+    restart: unless-stopped
+    depends_on: *langfuse-deps
+    environment:
+      <<: *langfuse-env
+    networks: [tessera-claude-obs]
+
+  langfuse-db:
+    image: postgres:16
+    container_name: tessera-claude-langfuse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    ports:
+      - "55433:5432"
+    volumes:
+      - claude_langfuse_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [tessera-claude-obs]
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: tessera-claude-clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+    ports:
+      - "18123:8123"
+      - "19000:9000"
+    volumes:
+      - claude_clickhouse:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [tessera-claude-obs]
+
+  minio:
+    image: minio/minio:latest
+    container_name: tessera-claude-minio
+    restart: unless-stopped
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server /data --console-address ":9001"'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: miniosecret
+    ports:
+      - "19100:9000"
+      - "19101:9001"
+    volumes:
+      - claude_minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [tessera-claude-obs]
+
+  redis:
+    image: redis:7-alpine
+    container_name: tessera-claude-redis
+    restart: unless-stopped
+    command: --requirepass claude-redis
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "AUTH", "claude-redis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [tessera-claude-obs]
+
+volumes:
+  claude_langfuse_pg:
+  claude_clickhouse:
+  claude_minio:
 
 networks:
   tessera-claude-obs:
