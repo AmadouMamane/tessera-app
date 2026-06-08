@@ -1,5 +1,5 @@
 .PHONY: install lint typecheck format test test-integration test-all \
-        coverage eval seed ingest run run-on-prem demo-observability \
+        coverage eval seed ingest run run-on-prem demo-observability demo-secrets \
         precommit check ci help
 
 # ── Dependencies ────────────────────────────────────────────────────────────
@@ -100,8 +100,23 @@ run: install
 run-on-prem: install
 	TESSERA_LLM_PROFILE=on_prem uv run python scripts/run_local.py
 
+# Create local-only frontend secrets for Auth.js and the superadmin demo account.
+demo-secrets: frontend.secret.env
+	@echo "Local frontend secrets ready in frontend.secret.env"
+
+frontend.secret.env:
+	@auth_secret="$$(openssl rand -base64 32)"; \
+	super_password="$$(openssl rand -base64 18)"; \
+	{ \
+		printf 'AUTH_SECRET=%s\n' "$$auth_secret"; \
+		printf 'AUTH_URL=http://localhost:3190\n'; \
+		printf 'TESSERA_AUTH_SUPERADMIN_PASSWORD=%s\n' "$$super_password"; \
+	} > $@; \
+	chmod 600 $@; \
+	echo "Created $@ (gitignored). Superadmin password is inside it."
+
 # Start the full local production-like observability demo stack.
-demo-observability:
+demo-observability: frontend.secret.env
 	docker compose \
 		-f docker-compose.yml \
 		-f docker-compose.unix.yml \
@@ -151,6 +166,7 @@ help:
 	@echo "Run"
 	@echo "  run                Local agent (Vertex AI path)"
 	@echo "  run-on-prem        Local agent (Ollama / on-prem path)"
+	@echo "  demo-secrets       Create local Auth.js/superadmin secrets for the demo"
 	@echo "  demo-observability Local prod-like stack: UI + agent + OTel + Jaeger + Prometheus + Grafana"
 	@echo ""
 	@echo "  ci                 Local CI simulation (no integration tests)"

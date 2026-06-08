@@ -155,8 +155,16 @@ channels (PagerDuty, email, Slack) before relying on them.
 
 ### Local production-like observability demo
 
-The demo does not require GCP. Run the on-premises profile with a local
-OpenTelemetry Collector, Jaeger, Prometheus and Grafana:
+The demo does not require GCP. Prefer the Make target: it creates a
+gitignored `frontend.secret.env` if missing, because the production Next.js
+container needs `AUTH_SECRET` for Auth.js sessions and
+`TESSERA_AUTH_SUPERADMIN_PASSWORD` to enable the superadmin demo account.
+
+```bash
+make demo-observability
+```
+
+Equivalent manual command:
 
 ```bash
 docker compose \
@@ -165,6 +173,21 @@ docker compose \
   -f docker-compose.observability.yml \
   --profile full up -d --build
 ```
+
+If you run the Compose command directly, create `frontend.secret.env` first:
+
+```dotenv
+AUTH_SECRET=<random-authjs-secret>
+AUTH_URL=http://localhost:3190
+TESSERA_AUTH_SUPERADMIN_PASSWORD=<random-demo-password>
+```
+
+Demo accounts:
+
+- `admin` / `tessera-admin`
+- `auditor` / `tessera-auditor`
+- `superadmin` / value of `TESSERA_AUTH_SUPERADMIN_PASSWORD` in
+  `frontend.secret.env`
 
 This starts the same portable telemetry contract used by production, but routes
 it to local tools:
