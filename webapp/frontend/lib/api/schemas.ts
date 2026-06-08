@@ -222,3 +222,33 @@ export const CalibrationSchema = z.object({
   judge_model: z.string().optional(),
 });
 export type Calibration = z.infer<typeof CalibrationSchema>;
+
+export const ReplayBundleSchema = z.object({
+  bundle_id: z.string(),
+  captured_at: z.string(),
+  conversation_id: z.string().nullable().optional(),
+  language: z.string(),
+  question: z.string(),
+  context: z.string(),
+  original_answer: z.string(),
+  original_model: z.string(),
+  original_score: z.number(),
+});
+export type ReplayBundle = z.infer<typeof ReplayBundleSchema>;
+
+export const ReplaysResponseSchema = z.object({
+  bundles: z.array(ReplayBundleSchema),
+});
+export type ReplaysResponse = z.infer<typeof ReplaysResponseSchema>;
+
+export const ReplayResultSchema = z.object({
+  bundle_id: z.string(),
+  original_model: z.string(),
+  original_score: z.number(),
+  candidate_model: z.string(),
+  candidate_answer: z.string(),
+  candidate_score: z.number(),
+  score_delta: z.number(),
+  similarity: z.number(),
+});
+export type ReplayResult = z.infer<typeof ReplayResultSchema>;

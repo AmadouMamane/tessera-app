@@ -292,6 +292,16 @@
       "lenientNo": "Calibré",
       "judge": "Juge",
       "unavailable": "Calibration indisponible (juge hors-ligne)."
+    },
+    "replay": {
+      "title": "Replay (régression depuis la prod)",
+      "model": "Modèle",
+      "empty": "Aucun tour capturé — chatte pour en capturer.",
+      "original": "original",
+      "run": "Rejouer",
+      "running": "Replay…",
+      "candidate": "candidat",
+      "similarity": "similarité"
     }
   }
 }

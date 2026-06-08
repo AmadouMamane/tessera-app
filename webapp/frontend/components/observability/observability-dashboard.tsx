@@ -5,6 +5,7 @@ import { ExternalLink, Gauge, LineChart, Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { ReplayPanel } from "@/components/observability/replay-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,6 +60,8 @@ export function ObservabilityDashboard() {
       </div>
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
+
+      <ReplayPanel />
 
       <Card>
         <CardHeader>

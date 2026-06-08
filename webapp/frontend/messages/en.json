@@ -292,6 +292,16 @@
       "lenientNo": "Calibrated",
       "judge": "Judge",
       "unavailable": "Calibration unavailable (judge offline)."
+    },
+    "replay": {
+      "title": "Replay (regression from production)",
+      "model": "Model",
+      "empty": "No captured turns yet — chat to capture some.",
+      "original": "original",
+      "run": "Replay",
+      "running": "Replaying…",
+      "candidate": "candidate",
+      "similarity": "similarity"
     }
   }
 }

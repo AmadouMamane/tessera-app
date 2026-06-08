@@ -25,6 +25,10 @@ import {
   EvalScoresResponseSchema,
   type HealthResponse,
   HealthResponseSchema,
+  type ReplayResult,
+  ReplayResultSchema,
+  type ReplaysResponse,
+  ReplaysResponseSchema,
 } from "./schemas";
 
 const BASE = "/api";
@@ -124,6 +128,24 @@ export async function fetchEvalScores(signal?: AbortSignal): Promise<EvalScoresR
 /** Judge calibration against the human gold set (computed server-side, cached). */
 export async function fetchCalibration(signal?: AbortSignal): Promise<Calibration> {
   return request("/observability/calibration", { signal }, CalibrationSchema);
+}
+
+/** Captured production turns available for regression replay. */
+export async function fetchReplays(signal?: AbortSignal): Promise<ReplaysResponse> {
+  return request("/observability/replays", { signal }, ReplaysResponseSchema);
+}
+
+/** Replay a captured turn against a candidate model and diff the result. */
+export async function runReplay(bundleId: string, model: string): Promise<ReplayResult> {
+  return request(
+    "/observability/replay",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId, model }),
+    },
+    ReplayResultSchema,
+  );
 }
 
 /**

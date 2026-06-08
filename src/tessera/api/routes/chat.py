@@ -25,6 +25,7 @@ from tessera.guard.audit import current_model
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, load_transcript
+from tessera.observability import replay
 from tessera.observability.eval import online as online_eval
 from tessera.observability.metrics import AGENT_TURN_DURATION, AGENT_TURNS_TOTAL
 from tessera.settings import LanguageCode, get_settings
@@ -53,10 +54,14 @@ async def _run_online_eval(
     context: str,
     language: LanguageCode,
     conversation_id: uuid.UUID,
+    model: str,
 ) -> None:
-    """Score the turn off the hot path (ADR 0010, Phase 4). Never raise into the turn."""
+    """Score the turn off the hot path and capture it for replay (ADR 0010).
+
+    Never raises into the turn.
+    """
     try:
-        await online_eval.evaluate_turn(
+        outcome = await online_eval.evaluate_turn(
             question=question,
             answer=answer,
             context=context,
@@ -64,6 +69,17 @@ async def _run_online_eval(
             conversation_id=str(conversation_id),
             flagged=True,  # the dashboard demo scores every grounded turn
         )
+        # Capture the turn for regression-from-production replay (idea #1).
+        if outcome.verdict is not None:
+            replay.capture_bundle(
+                question=question,
+                context=context,
+                original_answer=answer,
+                language=language.value,
+                original_score=outcome.verdict.score,
+                original_model=model,
+                conversation_id=str(conversation_id),
+            )
     except Exception as exc:  # cold path must never break the response
         sys.stderr.write(f"tessera.observability.eval: online eval failed: {exc}\n")
 
@@ -274,6 +290,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
                 context=context_text,
                 language=resolved_language,
                 conversation_id=conversation_id,
+                model=request.model or get_settings().ollama.chat_model,
             )
         )
 

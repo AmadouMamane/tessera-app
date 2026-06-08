@@ -10,13 +10,25 @@ from __future__ import annotations
 import sys
 from dataclasses import asdict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, ConfigDict
 
+from tessera.observability import replay as replay_mod
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.scores import recent_scores
 
 router = APIRouter(tags=["observability"])
+
+
+class ReplayRequest(BaseModel):
+    """Replay a captured turn against a candidate model."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bundle_id: str
+    model: str
+
 
 # Calibration runs the judge over the gold set (slow), so cache it per process.
 _calibration_cache: dict[str, object] | None = None
@@ -45,3 +57,19 @@ async def observability_calibration() -> dict[str, object]:
             sys.stderr.write(f"tessera.observability.calibration: failed: {exc}\n")
             return {"available": False}
     return _calibration_cache
+
+
+@router.get("/observability/replays")
+async def observability_replays() -> dict[str, object]:
+    """List the captured turns available for regression replay (newest last)."""
+    return {"bundles": [asdict(b) for b in replay_mod.recent_bundles()]}
+
+
+@router.post("/observability/replay")
+async def observability_replay(payload: ReplayRequest) -> dict[str, object]:
+    """Replay a captured turn against a candidate model and diff the result."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    result = await replay_mod.replay(bundle, model=payload.model)
+    return asdict(result)

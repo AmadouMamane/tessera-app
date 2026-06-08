@@ -68,3 +68,41 @@ export async function GET(
   if (contentType) headers.set("content-type", contentType);
   return new Response(upstream.body, { status: upstream.status, headers });
 }
+
+/**
+ * POST is only proxied for the public `observability` surface (replay). Every
+ * other path is 404 — POST /api/chat has its own dedicated route.
+ */
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+): Promise<Response> {
+  const { path } = await context.params;
+  if ((path[0] ?? "") !== "observability") {
+    return NextResponse.json({ detail: "not found" }, { status: 404 });
+  }
+  const target = `${backendUrl()}/${path.join("/")}${request.nextUrl.search}`;
+  const body = await request.text();
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method: "POST",
+      headers: backendHeaders({
+        "content-type": request.headers.get("content-type") ?? "application/json",
+        Accept: "application/json",
+      }),
+      body,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { detail: err instanceof Error ? err.message : "backend unreachable" },
+      { status: 502 },
+    );
+  }
+
+  const headers = new Headers();
+  const contentType = upstream.headers.get("content-type");
+  if (contentType) headers.set("content-type", contentType);
+  return new Response(upstream.body, { status: upstream.status, headers });
+}
