@@ -204,6 +204,11 @@ The observability overlay uses project-scoped Docker images
 from other Tessera worktrees that may also build `tessera-agent:local` or
 `tessera-frontend:local`.
 
+Before the agent starts, the `seed-corpus` one-shot service creates the
+pgvector schema and idempotently ingests the packaged regulation and Credit
+Aurore corpora. If this step is skipped, product questions degrade into the
+human-escalation path because the agent has no grounding documents.
+
 Expected dashboard posture for this demo:
 
 - profile `on_prem_standard`

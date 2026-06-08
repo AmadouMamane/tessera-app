@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 from importlib import resources
 from pathlib import Path
@@ -100,6 +101,18 @@ async def ingest_path(path: Path, corpus: str, language: LanguageCode) -> int:
     return inserted
 
 
+async def ingest_corpus(corpus_filter: str = "regulations") -> int:
+    """Create the vector schema and ingest the selected packaged corpus."""
+    await ensure_schema()
+    total = 0
+    for path, corpus, language in _iter_data_files(corpus_filter):
+        if corpus_filter and corpus != corpus_filter:
+            continue
+        total += await ingest_path(path, corpus, language)
+    LOG.info("corpus.ingest_done", inserted=total)
+    return total
+
+
 async def main(argv: list[str] | None = None) -> int:
     """CLI entry point used by ``scripts/ingest_regulations.py``."""
     parser = argparse.ArgumentParser(description="Ingest a corpus into pgvector.")
@@ -109,12 +122,14 @@ async def main(argv: list[str] | None = None) -> int:
         help="Filter to this logical corpus (default: regulations).",
     )
     args = parser.parse_args(argv)
-
-    await ensure_schema()
-    total = 0
-    for path, corpus, language in _iter_data_files(args.corpus):
-        if args.corpus and corpus != args.corpus:
-            continue
-        total += await ingest_path(path, corpus, language)
-    LOG.info("corpus.ingest_done", inserted=total)
+    await ingest_corpus(args.corpus)
     return 0
+
+
+def cli(argv: list[str] | None = None) -> int:
+    """Synchronous console-script entry point."""
+    return asyncio.run(main(argv))
+
+
+if __name__ == "__main__":
+    raise SystemExit(cli())

@@ -15,6 +15,24 @@
 #   - Grafana:       http://localhost:3001  (admin / tessera)
 
 services:
+  seed-corpus:
+    image: tessera-observability-refinement-agent:local
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TESSERA_ENVIRONMENT: local
+      TESSERA_LLM_PROFILE: on_prem
+      TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@postgres:5432/tessera
+      TESSERA_OLLAMA__HOST: "http://host.docker.internal:11434"
+      TESSERA_OBS_LOG_FORMAT: json
+      TESSERA_OBS_METRICS_ENABLED: "false"
+    command: ["python", "-m", "tessera.corpus.bootstrap"]
+    profiles: ["full"]
+
   agent:
     # Project-scoped image names prevent another Tessera worktree from
     # overwriting the shared `tessera-agent:local` tag before a recreate.
@@ -22,6 +40,8 @@ services:
     depends_on:
       otel-collector:
         condition: service_started
+      seed-corpus:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     environment:
