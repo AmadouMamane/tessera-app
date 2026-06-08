@@ -185,6 +185,25 @@ class ObservabilitySettings(BaseSettings):
     metrics_enabled: bool = True
     metrics_port: int = 9090
 
+    # -- Frontier observability (ADR 0010) -----------------------------------
+    # Which observability backend stack this process targets. Independent of
+    # ``deployment_mode``: an on-prem app may still ship traces to GCP, or a
+    # Cloud Run app may export to a self-hosted Phoenix. ``on_prem`` → OTLP to
+    # the local OpenTelemetry Collector (fanning out to Phoenix / Langfuse);
+    # ``gcp`` → Cloud Trace plus managed backends.
+    profile: Literal["on_prem", "gcp"] = "on_prem"
+    # OTLP/HTTP endpoint of the OpenTelemetry Collector, preferred over
+    # ``otel_endpoint``. The Claude-Powered local stack exposes it on
+    # ``http://localhost:4418`` (see docker-compose.obs.claude.yml).
+    otel_collector_endpoint: str | None = None
+    # Opt-in capture of prompt/completion *content* as span events (OTel GenAI
+    # convention). Off by default — content is sensitive in banking, so it is
+    # screened before it is ever attached (ADR 0010, idea #4).
+    content_capture: bool = False
+    # Data-residency tag attached to every span as a resource attribute and used
+    # by the Collector to route EU-only (ADR 0010, idea #3).
+    data_residency: str = "eu"
+
 
 class APISettings(BaseSettings):
     """HTTP layer configuration."""

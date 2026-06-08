@@ -1,0 +1,50 @@
+# OpenTelemetry Collector — gcp profile.  ADR 0010.
+#
+# Same gen_ai.* receive + PII-redaction front end as the on_prem profile, but
+# exporting to Google Cloud. Phase 1 ships the Cloud Trace path; Phase 3 fleshes
+# out Managed Service for Prometheus (googlemanagedprometheus) and the resource
+# detection that attributes spans to the Cloud Run revision. The BigQuery
+# trace/eval sink is provisioned in Terraform (a log sink), not here.
+#
+# Auth uses Application Default Credentials; `project` falls back to the
+# detected GCP project when omitted. Requires the *contrib* collector image.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  redaction:
+    allow_all_keys: true
+    blocked_values:
+      - "[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}" # IBAN
+      - "\\b\\d{13,19}\\b" # PAN / long account numbers
+    summary: debug
+  # Phase 3: resourcedetection (gcp) to attach cloud.* + the Cloud Run revision.
+  batch:
+    timeout: 2s
+
+exporters:
+  debug:
+    verbosity: normal
+  googlecloud:
+    # project: <detected from ADC when omitted>
+    trace: {}
+
+service:
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8888
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, redaction, batch]
+      exporters: [googlecloud]

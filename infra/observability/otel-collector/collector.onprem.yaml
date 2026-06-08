@@ -1,0 +1,52 @@
+# OpenTelemetry Collector — on_prem (sovereign) profile.  ADR 0010.
+#
+# The vendor-neutral hub: it receives gen_ai.* spans over OTLP, scrubs banking
+# PII before anything leaves the box, and fans out to the self-hosted backends.
+# Phase 1 ships the receive + redact + debug pipeline; Phase 2 adds the Phoenix
+# and Langfuse exporters (marked below). Requires the *contrib* collector image
+# (the redaction processor is not in the core distribution).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  # PII-safe traces (ADR 0010, ideas #3/#4): redact banking identifiers from
+  # span attribute *values* before any backend sees them. Defence in depth with
+  # the in-process redaction added in a later phase.
+  redaction:
+    allow_all_keys: true
+    blocked_values:
+      - "[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}" # IBAN
+      - "\\b\\d{13,19}\\b" # PAN / long account numbers
+    summary: debug
+  batch:
+    timeout: 2s
+
+exporters:
+  debug:
+    verbosity: detailed
+  # ── Phase 2 fan-out backends (added when the on_prem stack is wired) ───────
+  # otlp/phoenix:
+  #   endpoint: tessera-claude-phoenix:4317
+  #   tls: { insecure: true }
+  # otlphttp/langfuse:
+  #   endpoint: http://tessera-claude-langfuse:3000/api/public/otel
+
+service:
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8888
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, redaction, batch]
+      exporters: [debug]

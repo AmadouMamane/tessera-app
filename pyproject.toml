@@ -85,6 +85,7 @@ dependencies = [
     "google-cloud-logging>=3.11.3,<4",
     "google-cloud-aiplatform>=1.133.0,<2",
     "openai>=2.40.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.28.0,<2",
 ]
 
 [project.optional-dependencies]

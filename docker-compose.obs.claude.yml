@@ -1,0 +1,39 @@
+# Claude-Powered observability stack (ADR 0010) — INDEPENDENT build.
+#
+# This file is deliberately separate from the shared docker-compose.yml so it
+# never conflicts with parallel work by other agents. Every container/volume is
+# prefixed `tessera-claude-*`, on the dedicated `tessera-claude-obs` network,
+# and bound to the Claude-Powered port-map (Collector 4417/4418, internal
+# metrics 18888) — avoiding 3090/3190 and the base Tessera ports.
+#
+# Usage:
+#   docker compose -f docker-compose.obs.claude.yml up -d
+# Point the agent at the Collector:
+#   TESSERA_OBS__OTEL_COLLECTOR_ENDPOINT=http://localhost:4418
+#
+# Phase 1 ships the Collector. Phase 2 adds Phoenix + Langfuse (+ ClickHouse /
+# Redis / MinIO / Postgres) on the reserved ports in the Claude-Powered map.
+#
+# `name:` pins an explicit Compose *project* so up/down operate ONLY on these
+# containers — never on the shared `tessera` project other agents run in.
+
+name: tessera-claude
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.1
+    container_name: tessera-claude-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/collector.onprem.yaml"]
+    volumes:
+      - ./infra/observability/otel-collector/collector.onprem.yaml:/etc/otelcol-contrib/collector.onprem.yaml:ro
+    ports:
+      - "4417:4317" # OTLP gRPC
+      - "4418:4318" # OTLP HTTP
+      - "18888:8888" # Collector internal telemetry
+    networks:
+      - tessera-claude-obs
+
+networks:
+  tessera-claude-obs:
+    name: tessera-claude-obs
