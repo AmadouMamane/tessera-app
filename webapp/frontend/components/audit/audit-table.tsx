@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchAudit } from "@/lib/api/client";
+import { fetchAudit, replayTrace } from "@/lib/api/client";
 import type { AuditEntry, AuditOutcome } from "@/lib/api/schemas";
 import { findModel } from "@/lib/models";
 
@@ -289,6 +289,8 @@ function DetailsDrawer({
   const tAudit = useTranslations("audit");
   const formatter = useFormatter();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [replayStatus, setReplayStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Move focus into the drawer on open and close it on Escape — a drawer that
   // can be opened by keyboard must also be dismissible and focusable by keyboard.
@@ -313,9 +315,40 @@ function DetailsDrawer({
       <div className="pointer-events-none absolute inset-y-0 left-0 w-px bg-gradient-to-b from-gold-500/50 via-gold-500/10 to-transparent" />
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[var(--border)] bg-gradient-to-b from-[var(--muted)]/30 to-transparent px-5 py-3.5">
-        <div className="flex items-center gap-2">
-          <OutcomeBadge outcome={entry.outcome} />
-          <p className="font-serif text-sm font-semibold">{entry.target}</p>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <OutcomeBadge outcome={entry.outcome} />
+            <p className="font-serif text-sm font-semibold">{entry.target}</p>
+          </div>
+          {entry.trace_id && (
+            <div className="flex flex-col gap-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={isReplaying}
+                className="h-7 text-[0.65rem] uppercase font-semibold tracking-wider self-start"
+                onClick={async () => {
+                  try {
+                    setIsReplaying(true);
+                    setReplayStatus(null);
+                    const result = await replayTrace(entry.trace_id!);
+                    setReplayStatus({ type: "success", message: `Rehydrated! ${result.message}` });
+                  } catch (e: any) {
+                    setReplayStatus({ type: "error", message: e.message || "Failed to replay trace" });
+                  } finally {
+                    setIsReplaying(false);
+                  }
+                }}
+              >
+                {isReplaying ? "Replaying..." : "Time Travel Replay"}
+              </Button>
+              {replayStatus && (
+                <div className={`text-xs p-2 rounded-md ${replayStatus.type === "success" ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-red-500/10 text-red-600 dark:text-red-400"}`}>
+                  {replayStatus.message}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <Button
           ref={closeRef}

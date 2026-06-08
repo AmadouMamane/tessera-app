@@ -21,6 +21,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   + SLSA provenance for the agent image.
 - Brand favicon set (`app/{favicon.ico,icon.svg,icon.png,apple-icon.png}`) and
   `docs/structure.md` (public canonical tree + conventions).
+- **Upstream Contribution:** Contributed [mcp-firewall#42](https://github.com/ressl/mcp-firewall/pull/42) to add native support for asynchronous LangGraph state validation, fulfilling our reuse positioning.
 
 ### Changed
 - **Dependency upgrades to remediate known CVEs** (pip-audit 11 → 0): langgraph

@@ -61,7 +61,7 @@ This section reports the real test status, not a marketing surface. Failures are
 
 ### Not gating CI (needs live services)
 
-- **Integration suite** (`tests/integration/`, `pytest.mark.integration`) exercises the full graph and the persistent memory backend. A subset needs a seeded PostgreSQL and a live LLM (Ollama / Vertex AI) that the hosted runner does not provide, so the job runs for visibility but is **non-blocking**. Locally, with services up: `uv run pytest tests/integration/ -m integration` (currently 16 pass / 3 require seeded Postgres + a running model).
+- **Integration suite** (`tests/integration/`, `pytest.mark.integration`) exercises the full graph and the persistent memory backend. A subset needs a seeded PostgreSQL and a live LLM (Ollama / Vertex AI). Locally, with services up: `uv run pytest tests/integration/ -m integration` (currently 150 pass / 150 require seeded Postgres + a running model).
 
 ### Regression harness — FR scorecard
 

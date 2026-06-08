@@ -25,7 +25,14 @@ from tessera import __version__
 from tessera.api.limits import RequestSizeLimitMiddleware
 from tessera.api.middleware import AuthMiddleware, RequestIdMiddleware
 from tessera.api.ratelimit import RateLimitMiddleware
-from tessera.api.routes import audit, chat, health, memory, settings as settings_routes
+from tessera.api.routes import (
+    audit,
+    chat,
+    health,
+    memory,
+    observability,
+    settings as settings_routes,
+)
 from tessera.api.security import SecurityHeadersMiddleware, require_bearer
 from tessera.memory.governance import ensure_consent_schema
 from tessera.memory.persistent import ensure_longterm_schema
@@ -57,6 +64,15 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         await pool.close()
+
+        # Graceful shutdown of OpenTelemetry to flush remaining traces
+        try:
+            from opentelemetry import trace
+            provider = trace.get_tracer_provider()
+            if hasattr(provider, "shutdown"):
+                provider.shutdown()
+        except Exception:
+            pass
 
 
 def build_app() -> FastAPI:
@@ -102,6 +118,7 @@ def build_app() -> FastAPI:
     app.include_router(audit.router, dependencies=[Depends(require_bearer)])
     app.include_router(memory.router, dependencies=[Depends(require_bearer)])
     app.include_router(settings_routes.router, dependencies=[Depends(require_bearer)])
+    app.include_router(observability.router)
 
     FastAPIInstrumentor.instrument_app(app)
     return app

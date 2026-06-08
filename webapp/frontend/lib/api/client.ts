@@ -135,3 +135,20 @@ export async function fetchBudget(signal?: AbortSignal): Promise<BudgetSnapshot>
     estimated_cost_eur: Number(parsed.estimated_cost_eur ?? 0),
   });
 }
+
+/**
+ * Triggers a Time-Travel Replay from the Langfuse trace ID.
+ */
+export async function replayTrace(traceId: string, signal?: AbortSignal): Promise<any> {
+  const response = await fetch(`${BASE}/observability/replay/${traceId}`, {
+    method: "POST",
+    signal,
+    headers: { Accept: "application/json" },
+  });
+  
+  if (!response.ok) {
+    throw new ApiError(`/observability/replay/${traceId} failed`, response.status, null);
+  }
+  
+  return response.json();
+}

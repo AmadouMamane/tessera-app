@@ -94,6 +94,7 @@ services:
       redis:
         condition: service_started
     environment:
+      - NODE_OPTIONS=--max-old-space-size=4096
       - DATABASE_URL=postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
       - CLICKHOUSE_URL=http://clickhouse:8123
       - CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
@@ -238,6 +239,7 @@ services:
       # Langfuse
       NEXT_PUBLIC_LANGFUSE_PUBLIC_KEY: pk-lf-1234567890
       NEXT_PUBLIC_LANGFUSE_HOST: "http://localhost:3080"
+      LANGFUSE_HOST: "http://langfuse:3000"
     # Bearer token for the server-side proxy calls; must match the agent's
     # TESSERA_API__BEARER_TOKEN. Gitignored, never committed. Absent → the proxy
     # sends no Authorization header and the agent returns 401 when auth is on.

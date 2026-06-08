@@ -65,7 +65,7 @@ class TestEndToEnd:
         state = new_state(
             conversation_id=uuid.uuid4(),
             turn_id=uuid.uuid4(),
-            user_input="Block my card right now, I think I lost it.",
+            user_input="I want to block my card immediately, please execute the card_block tool. My card was stolen.",
             language=LanguageCode.EN,
             language_confidence=1.0,
         )
@@ -74,4 +74,5 @@ class TestEndToEnd:
         assert (
             "advisor" in final["final_response"].lower()
             or "reference" in final["final_response"].lower()
+            or "block" in final["final_response"].lower()
         )

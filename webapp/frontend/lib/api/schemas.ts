@@ -78,6 +78,7 @@ export const AuditEntrySchema = z.object({
   arguments: z.record(z.string(), z.unknown()).default({}),
   decisions: z.array(AuditDecisionSchema).default([]),
   error: z.string().nullable().default(null),
+  trace_id: z.string().nullable().optional(),
 });
 export type AuditEntry = z.infer<typeof AuditEntrySchema>;
 

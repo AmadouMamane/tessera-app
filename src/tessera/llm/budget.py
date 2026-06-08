@@ -15,12 +15,16 @@ from __future__ import annotations
 import json
 import os
 import threading
+from contextvars import ContextVar
 from dataclasses import dataclass
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
-__all__ = ["BudgetSnapshot", "BudgetTracker", "get_budget_tracker"]
+__all__ = ["BudgetSnapshot", "BudgetTracker", "get_budget_tracker", "current_request_input", "current_request_output"]
+
+current_request_input: ContextVar[int] = ContextVar("current_request_input", default=0)
+current_request_output: ContextVar[int] = ContextVar("current_request_output", default=0)
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,6 +146,14 @@ class BudgetTracker:
             self._output_tokens += output_tokens
             self._cost_eur += cost
             self._persist()
+        
+        # Also update the request-scoped context variables if we are in a request context
+        try:
+            current_request_input.set(current_request_input.get() + input_tokens)
+            current_request_output.set(current_request_output.get() + output_tokens)
+        except LookupError:
+            pass
+
 
     def snapshot(self) -> BudgetSnapshot:
         """Return the current totals."""

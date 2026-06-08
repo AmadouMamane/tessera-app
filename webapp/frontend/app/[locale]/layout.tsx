@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { Providers } from "@/components/providers";
+import { Telemetry } from "@/components/telemetry";
 import { type Locale, routing } from "@/i18n/routing";
 import { cn } from "@/lib/cn";
 
@@ -53,6 +54,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       className={cn(inter.variable, serif.variable, mono.variable)}
     >
       <body className="h-screen overflow-hidden font-sans antialiased">
+        <Telemetry />
         <NextIntlClientProvider locale={locale as Locale} messages={messages}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>

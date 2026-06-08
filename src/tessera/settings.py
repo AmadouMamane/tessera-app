@@ -185,6 +185,8 @@ class ObservabilitySettings(BaseSettings):
     metrics_enabled: bool = True
     metrics_port: int = 9090
     shadow_model: str | None = None
+    canary_model: str | None = None
+    canary_ratio: float = 0.0
 
 
 class APISettings(BaseSettings):

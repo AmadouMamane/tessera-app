@@ -68,3 +68,49 @@ export async function GET(
   if (contentType) headers.set("content-type", contentType);
   return new Response(upstream.body, { status: upstream.status, headers });
 }
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+): Promise<Response> {
+  const { path } = await context.params;
+  const head = path[0] ?? "";
+
+  const role = (await auth())?.user?.role;
+  const allowed =
+    (head === "observability" && (role === "admin" || role === "auditor" || role === "superadmin"));
+  if (!allowed) {
+    return NextResponse.json(
+      { detail: head === "observability" ? "operator authentication required" : "not found" },
+      { status: head === "observability" ? 401 : 404 },
+    );
+  }
+
+  const target = `${backendUrl()}/${path.join("/")}${request.nextUrl.search}`;
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method: "POST",
+      headers: backendHeaders({
+        Accept: request.headers.get("accept") ?? "application/json",
+        "Content-Type": request.headers.get("content-type") ?? "application/json",
+      }),
+      body: request.body,
+      // Duplex is required for streaming bodies in Next.js fetch
+      // @ts-expect-error duplex is a Node fetch extension
+      duplex: "half",
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { detail: err instanceof Error ? err.message : "backend unreachable" },
+      { status: 502 },
+    );
+  }
+
+  const headers = new Headers();
+  const contentType = upstream.headers.get("content-type");
+  if (contentType) headers.set("content-type", contentType);
+  return new Response(upstream.body, { status: upstream.status, headers });
+}
+

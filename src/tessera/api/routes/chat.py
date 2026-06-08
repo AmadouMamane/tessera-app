@@ -31,6 +31,7 @@ except ImportError:
     Langfuse = None
     CallbackHandler = None
 from datetime import UTC
+import datetime
 
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, load_transcript
@@ -156,6 +157,10 @@ def _sse(event: str, payload: object) -> bytes:
 
 
 async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: PLR0912, PLR0915
+    from tessera.llm.budget import current_request_input, current_request_output
+    current_request_input.set(0)
+    current_request_output.set(0)
+
     conversation_id = request.conversation_id or uuid.uuid4()
     turn_id = uuid.uuid4()
     language = request.language or get_settings().default_language
@@ -295,17 +300,16 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     # Langfuse trace is managed by the CallbackHandler automatically
     if langfuse_handler is not None:
         try:
+            import asyncio
             if hasattr(langfuse_handler, "_langfuse_client"):
-                langfuse_handler._langfuse_client.flush()
+                await asyncio.to_thread(langfuse_handler._langfuse_client.flush)
             from opentelemetry import trace
 
             provider = trace.get_tracer_provider()
             if hasattr(provider, "force_flush"):
-                provider.force_flush()
+                await asyncio.to_thread(provider.force_flush)
         except Exception as exc:
-            import logging
-
-            logging.getLogger("tessera.api").warning("Failed to flush langfuse traces: %s", exc)
+            logging.getLogger("tessera.api").exception("Failed to flush langfuse traces")
     shadow_model = get_settings().observability.shadow_model
     if shadow_model:
         _spawn_background(
@@ -359,13 +363,14 @@ async def _run_shadow_mode(
 
     if CallbackHandler is not None:
         try:
+            import asyncio
             if hasattr(langfuse_handler, "_langfuse_client"):
-                langfuse_handler._langfuse_client.flush()
+                await asyncio.to_thread(langfuse_handler._langfuse_client.flush)
             from opentelemetry import trace
 
             provider = trace.get_tracer_provider()
             if hasattr(provider, "force_flush"):
-                provider.force_flush()
+                await asyncio.to_thread(provider.force_flush)
         except Exception as exc:
             import logging
             logging.getLogger("tessera.api").warning("Shadow trace forced flush failed: %s", exc)
@@ -379,6 +384,15 @@ async def chat(
 
     Rate limiting is applied by RateLimitMiddleware (ADR 0008), not a decorator.
     """
+    settings = get_settings()
+    if settings.observability.canary_model and settings.observability.canary_ratio > 0:
+        import random
+        if random.random() < settings.observability.canary_ratio:
+            payload.model = settings.observability.canary_model
+            # Note: The 'variant' tag is usually added in the graph config
+            # but setting it here is the simplest way. We will add a tag
+            # to langfuse if we pass it down, but for now just modifying the model works.
+
     return StreamingResponse(
         _stream_turn(payload),
         media_type="text/event-stream",

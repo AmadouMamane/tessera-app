@@ -29,6 +29,7 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
         str(Path("src/tessera/guard/policy.yaml").resolve()),
     )
     monkeypatch.setenv("TESSERA_GUARD__AUDIT_SINK", "stdout")
+    monkeypatch.setenv("TESSERA_MEMORY__CONSENT_DEFAULT", "false")
     monkeypatch.setenv(
         "TESSERA_POSTGRES__DSN",
         "postgresql://tessera:tessera@localhost:5432/tessera_test",
