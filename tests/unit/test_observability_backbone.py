@@ -136,3 +136,23 @@ def test_resolve_exporter_gcp_without_project_falls_through_to_collector(
         lambda: _fake_obs(profile="gcp", otel_collector_endpoint="http://localhost:4418"),
     )
     assert isinstance(traces._resolve_exporter(), OTLPSpanExporter)
+
+
+def test_resolve_exporter_appends_v1_traces_to_bare_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        traces, "get_settings", lambda: _fake_obs(otel_collector_endpoint="http://localhost:4418")
+    )
+    exporter = traces._resolve_exporter()
+    assert exporter._endpoint == "http://localhost:4418/v1/traces"  # type: ignore[attr-defined]
+
+
+def test_resolve_exporter_keeps_explicit_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        traces,
+        "get_settings",
+        lambda: _fake_obs(otel_collector_endpoint="http://localhost:4418/v1/traces"),
+    )
+    exporter = traces._resolve_exporter()
+    assert exporter._endpoint == "http://localhost:4418/v1/traces"  # type: ignore[attr-defined]

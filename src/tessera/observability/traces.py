@@ -51,10 +51,17 @@ def _resolve_exporter() -> SpanExporter:
             pass
     endpoint = settings.otel_collector_endpoint or settings.otel_endpoint
     if endpoint:
+        from urllib.parse import urlsplit
+
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
             OTLPSpanExporter,
         )
 
+        # The OTLP/HTTP exporter does not append the signal path to an explicit
+        # endpoint, so a bare base URL (host:port, no path) is normalised to the
+        # traces signal — the natural mental model for a "collector endpoint".
+        if not urlsplit(endpoint).path.strip("/"):
+            endpoint = endpoint.rstrip("/") + "/v1/traces"
         return OTLPSpanExporter(endpoint=endpoint)
     return ConsoleSpanExporter()
 
