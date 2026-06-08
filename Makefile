@@ -1,5 +1,6 @@
 .PHONY: install lint typecheck format test test-integration test-all \
         coverage eval seed ingest run run-on-prem demo-observability demo-llmops demo-secrets \
+        llmops-secrets \
         precommit check ci help
 
 # ── Dependencies ────────────────────────────────────────────────────────────
@@ -123,22 +124,44 @@ demo-observability: frontend.secret.env
 		-f docker-compose.observability.yml \
 		--profile full up -d --build
 
-# Start the same demo with the optional Langfuse cockpit wired to tessera-llmops.
-demo-llmops: frontend.secret.env
-	@if ! test -f agent.secret.env; then \
-		echo "Missing agent.secret.env"; \
-		echo "Add TESSERA_OBS_LANGFUSE_PUBLIC_KEY and TESSERA_OBS_LANGFUSE_SECRET_KEY for the tessera-llmops project."; \
-		exit 1; \
+# Create local-only secrets for the isolated Langfuse LLMOps stack.
+llmops-secrets:
+	@if test -f llmops.secret.env && grep -q '^LLMOPS_LANGFUSE_PUBLIC_KEY=' llmops.secret.env; then \
+		echo "Local LLMOps secrets ready in llmops.secret.env"; \
+	else \
+		$(MAKE) -B llmops.secret.env; \
 	fi
-	@if ! grep -q '^TESSERA_OBS_LANGFUSE_PUBLIC_KEY=pk-' agent.secret.env; then \
-		echo "Missing TESSERA_OBS_LANGFUSE_PUBLIC_KEY=pk-lf-... in agent.secret.env"; \
-		exit 1; \
-	fi
-	@if ! grep -q '^TESSERA_OBS_LANGFUSE_SECRET_KEY=sk-' agent.secret.env; then \
-		echo "Missing TESSERA_OBS_LANGFUSE_SECRET_KEY=sk-lf-... in agent.secret.env"; \
-		exit 1; \
-	fi
-	docker compose \
+
+llmops.secret.env:
+	@postgres_password="$$(openssl rand -hex 24)"; \
+	clickhouse_password="$$(openssl rand -hex 24)"; \
+	redis_auth="$$(openssl rand -hex 24)"; \
+	minio_user="tessera_llmops"; \
+	minio_password="$$(openssl rand -hex 24)"; \
+	nextauth_secret="$$(openssl rand -base64 32)"; \
+	salt="$$(openssl rand -hex 32)"; \
+	user_password="$$(openssl rand -base64 18)"; \
+	public_key="pk-lf-$$(openssl rand -hex 16)"; \
+	secret_key="sk-lf-$$(openssl rand -hex 32)"; \
+	{ \
+		printf 'LLMOPS_POSTGRES_PASSWORD=%s\n' "$$postgres_password"; \
+		printf 'LLMOPS_DATABASE_URL=postgresql://langfuse:%s@llmops-postgres:5432/langfuse\n' "$$postgres_password"; \
+		printf 'LLMOPS_CLICKHOUSE_PASSWORD=%s\n' "$$clickhouse_password"; \
+		printf 'LLMOPS_REDIS_AUTH=%s\n' "$$redis_auth"; \
+		printf 'LLMOPS_MINIO_ROOT_USER=%s\n' "$$minio_user"; \
+		printf 'LLMOPS_MINIO_ROOT_PASSWORD=%s\n' "$$minio_password"; \
+		printf 'LLMOPS_NEXTAUTH_SECRET=%s\n' "$$nextauth_secret"; \
+		printf 'LLMOPS_SALT=%s\n' "$$salt"; \
+		printf 'LLMOPS_INIT_USER_PASSWORD=%s\n' "$$user_password"; \
+		printf 'LLMOPS_LANGFUSE_PUBLIC_KEY=%s\n' "$$public_key"; \
+		printf 'LLMOPS_LANGFUSE_SECRET_KEY=%s\n' "$$secret_key"; \
+	} > $@; \
+	chmod 600 $@; \
+	echo "Created $@ (gitignored). Langfuse admin password is inside it."
+
+# Start the same demo with an isolated Langfuse cockpit wired to tessera-llmops.
+demo-llmops: frontend.secret.env llmops-secrets
+	docker compose --env-file llmops.secret.env \
 		-f docker-compose.yml \
 		-f docker-compose.unix.yml \
 		-f docker-compose.observability.yml \
@@ -190,6 +213,7 @@ help:
 	@echo "  run-on-prem        Local agent (Ollama / on-prem path)"
 	@echo "  demo-secrets       Create local Auth.js/superadmin secrets for the demo"
 	@echo "  demo-observability Local prod-like stack: UI + agent + OTel + Jaeger + Prometheus + Grafana"
-	@echo "  demo-llmops        Local prod-like stack plus Langfuse tessera-llmops export"
+	@echo "  llmops-secrets     Create local secrets for the isolated Langfuse LLMOps stack"
+	@echo "  demo-llmops        Local prod-like stack plus isolated Langfuse on :3081"
 	@echo ""
 	@echo "  ci                 Local CI simulation (no integration tests)"

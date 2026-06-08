@@ -204,37 +204,45 @@ The observability overlay uses project-scoped Docker images
 from other Tessera worktrees that may also build `tessera-agent:local` or
 `tessera-frontend:local`.
 
-### Optional local LLMOps cockpit: Langfuse
+### Isolated local LLMOps cockpit: Langfuse
 
 Langfuse is deliberately non-canonical in Tessera: the contractual telemetry
-surface remains OpenTelemetry + evidence bundles. For demos, the same local OTel
-traces can also be mirrored to an already-running self-hosted Langfuse instance
-without creating or managing Langfuse containers from this worktree.
+surface remains OpenTelemetry + evidence bundles. For demos, the same local
+OTel traces can also be mirrored to a dedicated self-hosted Langfuse instance
+owned by this worktree.
 
-Use the project name `tessera-llmops`.
+Use the project name `tessera-llmops`. The isolated cockpit listens on
+`http://localhost:3081`, separate from any pre-existing Langfuse instance on
+`http://localhost:3080`.
 
-1. Open the existing Langfuse UI at `http://localhost:3080`.
-2. Create or select a project named `tessera-llmops`.
-3. Create project API keys in Langfuse project settings.
-4. Put the keys in gitignored `agent.secret.env`:
+Create local-only secrets once:
 
-```dotenv
-TESSERA_OBS_LANGFUSE_PUBLIC_KEY=pk-lf-...
-TESSERA_OBS_LANGFUSE_SECRET_KEY=sk-lf-...
+```bash
+make llmops-secrets
 ```
 
-5. Start the demo with the LLMOps overlay:
+Then start the demo with the LLMOps overlay:
 
 ```bash
 make demo-llmops
 ```
 
+If you run Compose directly instead of using `make`, pass
+`--env-file llmops.secret.env` before the compose files so the isolated
+Langfuse credentials are used only for this overlay.
+
 The overlay keeps the local Jaeger, Prometheus, Grafana, and evidence store
-active, then adds a second OTel trace exporter to
-`http://host.docker.internal:3080/api/public/otel`. The browser-facing
-observability dashboard links to `http://localhost:3080` and reports the
-Langfuse project, ingestion mode, and credential posture. Raw prompts and PII
-remain blocked unless the explicit observability privacy flags are changed.
+active, then starts a dedicated Langfuse web process, worker, Postgres,
+ClickHouse, Redis, and MinIO. The collector exports to
+`http://llmops-langfuse:3000/api/public/otel/v1/traces` inside the Compose
+network. The browser-facing observability dashboard links to
+`http://localhost:3081` and reports the Langfuse project, ingestion mode, and
+credential posture. Raw prompts and PII remain blocked unless the explicit
+observability privacy flags are changed.
+
+Local Langfuse credentials live in gitignored `llmops.secret.env`; the bootstrap
+admin email is `admin@tessera-llmops.local` and the generated password is stored
+in that file. Do not commit it.
 
 Before the agent starts, the `seed-corpus` one-shot service creates the
 pgvector schema and idempotently ingests the packaged regulation and Credit

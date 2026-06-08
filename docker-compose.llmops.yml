@@ -1,26 +1,198 @@
-# Optional LLMOps overlay that mirrors the local production-like OTel traces to
-# an already-running Langfuse instance. It does not create or manage Langfuse.
+# Isolated local LLMOps stack for Tessera.
 #
-# Expected existing Langfuse UI: http://localhost:3080
-# Expected Langfuse project: tessera-llmops
+# This overlay creates a dedicated Langfuse instance for the Tessera demo. It
+# intentionally does not reuse the existing localhost:3080 Langfuse instance or
+# any of its Postgres/ClickHouse/Redis/MinIO storage.
 #
-# Required in gitignored agent.secret.env:
-#   TESSERA_OBS_LANGFUSE_PUBLIC_KEY=pk-lf-...
-#   TESSERA_OBS_LANGFUSE_SECRET_KEY=sk-lf-...
+# UI:      http://localhost:3081
+# Project: tessera-llmops
+# Secrets: gitignored llmops.secret.env
 
 services:
   agent:
     environment:
       TESSERA_OBS_LANGFUSE_ENABLED: "true"
-      TESSERA_OBS_LANGFUSE_HOST: http://host.docker.internal:3080
-      TESSERA_OBS_LANGFUSE_PUBLIC_URL: http://localhost:3080
+      TESSERA_OBS_LANGFUSE_HOST: http://llmops-langfuse:3000
+      TESSERA_OBS_LANGFUSE_PUBLIC_URL: http://localhost:3081
       TESSERA_OBS_LANGFUSE_PROJECT: tessera-llmops
+      TESSERA_OBS_LANGFUSE_PUBLIC_KEY: ${LLMOPS_LANGFUSE_PUBLIC_KEY:?run make llmops-secrets}
+      TESSERA_OBS_LANGFUSE_SECRET_KEY: ${LLMOPS_LANGFUSE_SECRET_KEY:?run make llmops-secrets}
+    depends_on:
+      llmops-langfuse:
+        condition: service_healthy
 
   otel-collector:
-    env_file:
-      - path: agent.secret.env
-        required: false
     environment:
-      TESSERA_OBS_LANGFUSE_HOST: http://host.docker.internal:3080
+      TESSERA_OBS_LANGFUSE_HOST: http://llmops-langfuse:3000
+      TESSERA_OBS_LANGFUSE_PUBLIC_KEY: ${LLMOPS_LANGFUSE_PUBLIC_KEY:?run make llmops-secrets}
+      TESSERA_OBS_LANGFUSE_SECRET_KEY: ${LLMOPS_LANGFUSE_SECRET_KEY:?run make llmops-secrets}
+    depends_on:
+      llmops-langfuse:
+        condition: service_healthy
     volumes: !override
       - ./infra/observability/collector-local-demo-langfuse.yaml:/etc/otelcol-contrib/config.yaml:ro
+
+  llmops-langfuse:
+    image: langfuse/langfuse:3
+    restart: unless-stopped
+    depends_on:
+      llmops-postgres:
+        condition: service_healthy
+      llmops-clickhouse:
+        condition: service_started
+      llmops-redis:
+        condition: service_started
+      llmops-minio:
+        condition: service_started
+      llmops-minio-create-bucket:
+        condition: service_completed_successfully
+    environment:
+      PORT: "3000"
+      DATABASE_URL: ${LLMOPS_DATABASE_URL:?run make llmops-secrets}
+      NEXTAUTH_URL: http://localhost:3081
+      NEXTAUTH_SECRET: ${LLMOPS_NEXTAUTH_SECRET:?run make llmops-secrets}
+      SALT: ${LLMOPS_SALT:?run make llmops-secrets}
+      TELEMETRY_ENABLED: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CLICKHOUSE_URL: http://llmops-clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://llmops-clickhouse:9000
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${LLMOPS_CLICKHOUSE_PASSWORD:?run make llmops-secrets}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: llmops-redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: ${LLMOPS_REDIS_AUTH:?run make llmops-secrets}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://llmops-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${LLMOPS_MINIO_ROOT_USER:?run make llmops-secrets}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LLMOPS_MINIO_ROOT_PASSWORD:?run make llmops-secrets}
+      LANGFUSE_INIT_ORG_ID: org-tessera-llmops
+      LANGFUSE_INIT_ORG_NAME: Tessera LLMOps
+      LANGFUSE_INIT_PROJECT_ID: proj-tessera-llmops
+      LANGFUSE_INIT_PROJECT_NAME: tessera-llmops
+      LANGFUSE_INIT_USER_EMAIL: admin@tessera-llmops.local
+      LANGFUSE_INIT_USER_NAME: Tessera Admin
+      LANGFUSE_INIT_USER_PASSWORD: ${LLMOPS_INIT_USER_PASSWORD:?run make llmops-secrets}
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LLMOPS_LANGFUSE_PUBLIC_KEY:?run make llmops-secrets}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LLMOPS_LANGFUSE_SECRET_KEY:?run make llmops-secrets}
+    ports:
+      - "3081:3000"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - node -e "const os=require('os'); fetch('http://'+os.hostname()+':3000/api/public/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 24
+
+  llmops-worker:
+    image: langfuse/langfuse-worker:3
+    restart: unless-stopped
+    depends_on:
+      llmops-postgres:
+        condition: service_healthy
+      llmops-clickhouse:
+        condition: service_started
+      llmops-redis:
+        condition: service_started
+      llmops-minio:
+        condition: service_started
+      llmops-minio-create-bucket:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: ${LLMOPS_DATABASE_URL:?run make llmops-secrets}
+      NEXTAUTH_SECRET: ${LLMOPS_NEXTAUTH_SECRET:?run make llmops-secrets}
+      SALT: ${LLMOPS_SALT:?run make llmops-secrets}
+      TELEMETRY_ENABLED: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CLICKHOUSE_URL: http://llmops-clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://llmops-clickhouse:9000
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${LLMOPS_CLICKHOUSE_PASSWORD:?run make llmops-secrets}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: llmops-redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: ${LLMOPS_REDIS_AUTH:?run make llmops-secrets}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://llmops-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${LLMOPS_MINIO_ROOT_USER:?run make llmops-secrets}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LLMOPS_MINIO_ROOT_PASSWORD:?run make llmops-secrets}
+
+  llmops-postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_DB: langfuse
+      POSTGRES_PASSWORD: ${LLMOPS_POSTGRES_PASSWORD:?run make llmops-secrets}
+    volumes:
+      - tessera_llmops_langfuse_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  llmops-clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${LLMOPS_CLICKHOUSE_PASSWORD:?run make llmops-secrets}
+    volumes:
+      - tessera_llmops_clickhouse_data:/var/lib/clickhouse
+      - tessera_llmops_clickhouse_logs:/var/log/clickhouse-server
+
+  llmops-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["sh", "-c", "redis-server --requirepass \"$${REDIS_AUTH}\""]
+    environment:
+      REDIS_AUTH: ${LLMOPS_REDIS_AUTH:?run make llmops-secrets}
+    volumes:
+      - tessera_llmops_redis_data:/data
+
+  llmops-minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--address", ":9000", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${LLMOPS_MINIO_ROOT_USER:?run make llmops-secrets}
+      MINIO_ROOT_PASSWORD: ${LLMOPS_MINIO_ROOT_PASSWORD:?run make llmops-secrets}
+    ports:
+      - "9012:9000"
+      - "9011:9001"
+    volumes:
+      - tessera_llmops_minio_data:/data
+
+  llmops-minio-create-bucket:
+    image: minio/mc:latest
+    depends_on:
+      llmops-minio:
+        condition: service_started
+    entrypoint: ["/bin/sh", "-c"]
+    environment:
+      MINIO_ROOT_USER: ${LLMOPS_MINIO_ROOT_USER:?run make llmops-secrets}
+      MINIO_ROOT_PASSWORD: ${LLMOPS_MINIO_ROOT_PASSWORD:?run make llmops-secrets}
+    command:
+      - |
+        until mc alias set langfuse http://llmops-minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
+          sleep 2
+        done
+        mc mb --ignore-existing langfuse/langfuse
+
+volumes:
+  tessera_llmops_langfuse_pgdata:
+  tessera_llmops_clickhouse_data:
+  tessera_llmops_clickhouse_logs:
+  tessera_llmops_redis_data:
+  tessera_llmops_minio_data:

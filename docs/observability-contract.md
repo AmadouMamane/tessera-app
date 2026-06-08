@@ -56,9 +56,11 @@ fragments instead of user secrets.
 
 The local `tessera-llmops` Langfuse project is an operator cockpit, not the
 source of truth. Tessera emits the same OpenTelemetry spans and evidence bundle
-metadata first; the LLMOps overlay mirrors only privacy-gated span attributes to
-Langfuse through the OTLP HTTP endpoint. This preserves a single canonical
-contract while giving demos a familiar LLM trace explorer.
+metadata first; the LLMOps overlay runs a dedicated Langfuse instance on
+`localhost:3081` and mirrors only privacy-gated span attributes through the OTLP
+HTTP endpoint. This preserves a single canonical contract while giving demos a
+familiar LLM trace explorer without inheriting traces from any other local
+Langfuse stack.
 
 The mirror exports:
 
