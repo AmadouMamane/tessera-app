@@ -12,7 +12,8 @@
     "audit": "Journal d'audit",
     "eval": "Score de non-régression",
     "health": "État du service",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "observability": "Observabilité"
   },
   "common": {
     "language": "Langue",
@@ -261,5 +262,21 @@
       "hint": "Démo publique : utilisez l'un de ces comptes pour tout voir."
     },
     "adminOnly": "Réservé à l’administrateur"
+  },
+  "observability": {
+    "title": "Observabilité",
+    "description": "Traces et évaluation en direct de chaque tour.",
+    "phoenix": "Ouvrir les traces, spans et l'évaluation RAG dans Phoenix.",
+    "langfuse": "Ouvrir les sessions, traces et coûts dans Langfuse.",
+    "scores": {
+      "title": "Scores d'évaluation récents",
+      "metric": "faithfulness",
+      "metricCol": "Métrique",
+      "score": "Score",
+      "language": "Langue",
+      "judge": "Juge",
+      "time": "Heure",
+      "empty": "Aucun score pour l'instant — envoyez un message ancré et le juge le notera."
+    }
   }
 }

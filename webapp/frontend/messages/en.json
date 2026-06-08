@@ -12,7 +12,8 @@
     "audit": "Audit trail",
     "eval": "Regression scorecard",
     "health": "Service health",
-    "settings": "Settings"
+    "settings": "Settings",
+    "observability": "Observability"
   },
   "common": {
     "language": "Language",
@@ -261,5 +262,21 @@
       "hint": "Public demo: use one of these accounts to see everything."
     },
     "adminOnly": "Administrator only"
+  },
+  "observability": {
+    "title": "Observability",
+    "description": "Traces and live evaluation for every turn.",
+    "phoenix": "Open traces, spans and RAG evaluation in Phoenix.",
+    "langfuse": "Open sessions, traces and cost in Langfuse.",
+    "scores": {
+      "title": "Recent online-eval scores",
+      "metric": "faithfulness",
+      "metricCol": "Metric",
+      "score": "Score",
+      "language": "Lang",
+      "judge": "Judge",
+      "time": "Time",
+      "empty": "No scores yet — send a grounded chat message and the judge will score it."
+    }
   }
 }

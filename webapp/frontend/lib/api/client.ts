@@ -17,6 +17,8 @@ import {
   AuditPageSchema,
   type BudgetSnapshot,
   BudgetSnapshotSchema,
+  type EvalScoresResponse,
+  EvalScoresResponseSchema,
   type HealthResponse,
   HealthResponseSchema,
 } from "./schemas";
@@ -104,6 +106,11 @@ export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse>
 
 export async function fetchReadiness(signal?: AbortSignal): Promise<HealthResponse> {
   return request("/readyz", { signal }, HealthResponseSchema);
+}
+
+/** Recent online-eval scores (eval-as-telemetry; public aggregate surface). */
+export async function fetchEvalScores(signal?: AbortSignal): Promise<EvalScoresResponse> {
+  return request("/observability/scores", { signal }, EvalScoresResponseSchema);
 }
 
 /**

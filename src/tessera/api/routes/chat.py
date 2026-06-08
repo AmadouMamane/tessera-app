@@ -25,6 +25,7 @@ from tessera.guard.audit import current_model
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, load_transcript
+from tessera.observability.eval import online as online_eval
 from tessera.observability.metrics import AGENT_TURN_DURATION, AGENT_TURNS_TOTAL
 from tessera.settings import LanguageCode, get_settings
 
@@ -43,6 +44,28 @@ def _spawn_background(coro: Coroutine[object, object, None]) -> None:
     task = asyncio.create_task(coro)
     _BACKGROUND_TASKS.add(task)
     task.add_done_callback(_BACKGROUND_TASKS.discard)
+
+
+async def _run_online_eval(
+    *,
+    question: str,
+    answer: str,
+    context: str,
+    language: LanguageCode,
+    conversation_id: uuid.UUID,
+) -> None:
+    """Score the turn off the hot path (ADR 0010, Phase 4). Never raise into the turn."""
+    try:
+        await online_eval.evaluate_turn(
+            question=question,
+            answer=answer,
+            context=context,
+            language=language.value,
+            conversation_id=str(conversation_id),
+            flagged=True,  # the dashboard demo scores every grounded turn
+        )
+    except Exception as exc:  # cold path must never break the response
+        sys.stderr.write(f"tessera.observability.eval: online eval failed: {exc}\n")
 
 
 # The checkpointer is keyed per turn (thread_id = turn_id) on purpose: it only
@@ -145,7 +168,7 @@ def _sse(event: str, payload: object) -> bytes:
     return f"event: {event}\ndata: {body}\n\n".encode()
 
 
-async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:
+async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: PLR0915  SSE turn handler is inherently statement-heavy (graph run + stream + persist + eval)
     conversation_id = request.conversation_id or uuid.uuid4()
     turn_id = uuid.uuid4()
     language = request.language or get_settings().default_language
@@ -237,6 +260,22 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:
             ),
         )
     )
+
+    # Online evaluation (ADR 0010, idea #6): score grounded turns off the hot
+    # path, feeding eval-as-telemetry and the dashboard's recent-scores view.
+    # Only when there is retrieved context to be faithful to.
+    docs_for_eval = state.get("retrieved_documents", [])
+    if docs_for_eval and final_response:
+        context_text = "\n\n".join(getattr(doc, "text", "") for doc in docs_for_eval)
+        _spawn_background(
+            _run_online_eval(
+                question=request.message,
+                answer=final_response,
+                context=context_text,
+                language=resolved_language,
+                conversation_id=conversation_id,
+            )
+        )
 
     envelope = ChatEnvelope(
         conversation_id=conversation_id,

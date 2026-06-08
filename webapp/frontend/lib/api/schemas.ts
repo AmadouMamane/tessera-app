@@ -181,3 +181,24 @@ export const RunMetaSchema = z.object({
   cost: RunCostSchema.nullable().optional(),
 });
 export type RunMeta = z.infer<typeof RunMetaSchema>;
+
+// ---------------------------------------------------------------------------
+// Observability — live online-eval scores (eval-as-telemetry, ADR 0010)
+// ---------------------------------------------------------------------------
+
+export const EvalScoreSchema = z.object({
+  scored_at: z.string(),
+  metric: z.string(),
+  score: z.number(),
+  language: z.string(),
+  judge_model: z.string(),
+  conversation_id: z.string().nullable().optional(),
+  trace_id: z.string().nullable().optional(),
+  sampled: z.boolean().default(false),
+});
+export type EvalScore = z.infer<typeof EvalScoreSchema>;
+
+export const EvalScoresResponseSchema = z.object({
+  scores: z.array(EvalScoreSchema),
+});
+export type EvalScoresResponse = z.infer<typeof EvalScoresResponseSchema>;

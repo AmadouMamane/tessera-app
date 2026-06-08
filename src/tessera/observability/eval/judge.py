@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Protocol
 
 from tessera.llm.router import ChatMessage, get_summary_backend
+from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from tessera.llm.router import ChatBackend
@@ -89,8 +90,11 @@ def _coerce_score(value: object) -> float:
 class LLMJudge:
     """Scores turns with a ChatBackend (default: the sovereign summary backend)."""
 
-    def __init__(self, backend: ChatBackend | None = None) -> None:
+    def __init__(self, backend: ChatBackend | None = None, *, model: str | None = None) -> None:
         self._backend = backend or get_summary_backend()
+        # Optional judge-model override; on on_prem this points at a small, fast
+        # local model (e.g. llama3.2:3b) so scoring stays cheap (idea #2).
+        self._model = model or get_settings().observability.judge_model
 
     async def score(self, *, metric: str, question: str, answer: str, context: str) -> JudgeVerdict:
         """Score ``answer`` for ``metric`` given ``question`` and ``context``."""
@@ -102,7 +106,7 @@ class LLMJudge:
                 content=f"CONTEXT:\n{context}\n\nQUESTION:\n{question}\n\nANSWER:\n{answer}",
             ),
         ]
-        response = await self._backend.chat(messages, temperature=0.0)
+        response = await self._backend.chat(messages, temperature=0.0, model=self._model)
         data = _extract_json(response.content)
         return JudgeVerdict(
             metric=metric,

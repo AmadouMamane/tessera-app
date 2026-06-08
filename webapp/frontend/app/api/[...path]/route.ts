@@ -22,7 +22,7 @@ import { backendHeaders, backendUrl } from "@/lib/server/backend";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ALWAYS_PUBLIC = new Set(["healthz", "readyz"]);
+const ALWAYS_PUBLIC = new Set(["healthz", "readyz", "observability"]);
 
 export async function GET(
   request: NextRequest,

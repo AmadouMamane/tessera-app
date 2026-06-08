@@ -13,6 +13,8 @@ The effect: quality becomes a time series you can alert on, exactly like latency
 
 from __future__ import annotations
 
+from collections import deque
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from opentelemetry import trace
@@ -23,9 +25,19 @@ from tessera.observability.metrics import EVAL_SCORE
 if TYPE_CHECKING:
     from tessera.observability.eval.judge import JudgeVerdict
 
-__all__ = ["emit_score"]
+__all__ = ["emit_score", "recent_scores"]
 
 _log = get_logger("tessera.eval")
+
+# A small in-process ring buffer of the most recent scores, so the dashboard can
+# show live eval-as-telemetry without standing up Prometheus/BigQuery locally.
+# This is a convenience view, not the system of record (that is logs + metrics).
+_RECENT: deque[dict[str, object]] = deque(maxlen=200)
+
+
+def recent_scores() -> list[dict[str, object]]:
+    """Return the most recent eval scores (newest last)."""
+    return list(_RECENT)
 
 
 def emit_score(
@@ -60,3 +72,16 @@ def emit_score(
     )
     EVAL_SCORE.labels(metric=verdict.metric, language=language).observe(verdict.score)
     span.set_attribute(f"tessera.eval.{verdict.metric}", verdict.score)
+
+    _RECENT.append(
+        {
+            "scored_at": datetime.now(UTC).isoformat(),
+            "metric": verdict.metric,
+            "score": verdict.score,
+            "language": language,
+            "judge_model": verdict.judge_model,
+            "conversation_id": conversation_id,
+            "trace_id": trace_id,
+            "sampled": sampled,
+        }
+    )

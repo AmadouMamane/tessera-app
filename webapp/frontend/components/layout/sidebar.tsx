@@ -4,6 +4,7 @@ import {
   Activity,
   AlertTriangle,
   FileSearch,
+  LineChart,
   type LucideIcon,
   MessageSquareText,
   Settings,
@@ -15,14 +16,15 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
 interface NavItem {
-  href: "/chat" | "/audit" | "/eval" | "/health" | "/settings";
+  href: "/chat" | "/audit" | "/eval" | "/observability" | "/health" | "/settings";
   icon: LucideIcon;
-  labelKey: "chat" | "audit" | "eval" | "health" | "settings";
+  labelKey: "chat" | "audit" | "eval" | "observability" | "health" | "settings";
 }
 
 const NAV_ITEMS: ReadonlyArray<NavItem> = [
   { href: "/chat", icon: MessageSquareText, labelKey: "chat" },
   { href: "/eval", icon: FileSearch, labelKey: "eval" },
+  { href: "/observability", icon: LineChart, labelKey: "observability" },
   { href: "/audit", icon: ShieldCheck, labelKey: "audit" },
   { href: "/health", icon: Activity, labelKey: "health" },
   { href: "/settings", icon: Settings, labelKey: "settings" },

@@ -12,7 +12,8 @@
     "audit": "Audit-Protokoll",
     "eval": "Regressionsscore",
     "health": "Servicestatus",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "observability": "Beobachtbarkeit"
   },
   "common": {
     "language": "Sprache",
@@ -261,5 +262,21 @@
       "hint": "Öffentliche Demo: Verwenden Sie eines dieser Konten, um alles zu sehen."
     },
     "adminOnly": "Nur für Administratoren"
+  },
+  "observability": {
+    "title": "Beobachtbarkeit",
+    "description": "Traces und Live-Bewertung für jeden Turn.",
+    "phoenix": "Traces, Spans und RAG-Bewertung in Phoenix öffnen.",
+    "langfuse": "Sitzungen, Traces und Kosten in Langfuse öffnen.",
+    "scores": {
+      "title": "Aktuelle Online-Bewertungen",
+      "metric": "faithfulness",
+      "metricCol": "Metrik",
+      "score": "Score",
+      "language": "Sprache",
+      "judge": "Judge",
+      "time": "Zeit",
+      "empty": "Noch keine Bewertungen — senden Sie eine fundierte Nachricht, der Judge bewertet sie."
+    }
   }
 }
