@@ -85,6 +85,10 @@
     "filters": {
       "target": "Outil",
       "outcome": "Verdict"
+    },
+    "integrity": {
+      "verified": "Chaîne d'audit vérifiée · {n} entrées",
+      "broken": "Chaîne d'audit ALTÉRÉE à #{at}"
     }
   },
   "eval": {

@@ -34,8 +34,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchAudit } from "@/lib/api/client";
-import type { AuditEntry, AuditOutcome } from "@/lib/api/schemas";
+import { fetchAudit, fetchAuditIntegrity } from "@/lib/api/client";
+import type { AuditEntry, AuditIntegrity, AuditOutcome } from "@/lib/api/schemas";
 import { findModel } from "@/lib/models";
 
 const PAGE_SIZE = 20;
@@ -66,8 +66,17 @@ export function AuditTable() {
 
   const entries = query.data?.entries ?? [];
 
+  const integrity = useQuery({
+    queryKey: ["audit-integrity"],
+    queryFn: ({ signal }) => fetchAuditIntegrity(signal),
+    refetchInterval: 30_000,
+  });
+
   return (
     <>
+      <div className="mb-3 flex items-center justify-end">
+        <IntegrityBadge data={integrity.data} />
+      </div>
       <Card>
         <CardContent className="p-0">
           <Filters
@@ -396,5 +405,22 @@ function DetailsDrawer({
         </section>
       </div>
     </div>
+  );
+}
+
+/** Tamper-evident hash-chain status of the audit log (ADR 0010, #3). */
+function IntegrityBadge({ data }: { data: AuditIntegrity | undefined }) {
+  const t = useTranslations("audit");
+  if (!data) return null;
+  return data.verified ? (
+    <Badge tone="success">
+      <ShieldCheck className="h-3.5 w-3.5" />
+      {t("integrity.verified", { n: data.length })}
+    </Badge>
+  ) : (
+    <Badge tone="danger">
+      <ShieldOff className="h-3.5 w-3.5" />
+      {t("integrity.broken", { at: data.broken_at ?? 0 })}
+    </Badge>
   );
 }

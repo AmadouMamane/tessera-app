@@ -87,6 +87,13 @@ export const AuditPageSchema = z.object({
 });
 export type AuditPage = z.infer<typeof AuditPageSchema>;
 
+export const AuditIntegritySchema = z.object({
+  verified: z.boolean(),
+  length: z.number().int(),
+  broken_at: z.number().int().nullable().default(null),
+});
+export type AuditIntegrity = z.infer<typeof AuditIntegritySchema>;
+
 // ---------------------------------------------------------------------------
 // Health + budget
 // ---------------------------------------------------------------------------

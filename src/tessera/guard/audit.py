@@ -12,9 +12,11 @@ The on-disk schema is shared across sinks and matches
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from contextvars import ContextVar
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path  # noqa: TCH003  used at runtime by the file sink
 from typing import TYPE_CHECKING, Any, Literal
@@ -24,9 +26,47 @@ if TYPE_CHECKING:
 
     from tessera.agent.state import GuardDecisionRecord
 
-__all__ = ["current_model", "emit_audit"]
+__all__ = ["ChainStatus", "current_model", "emit_audit", "verify_audit_chain"]
 
 _Outcome = Literal["allowed", "denied", "error"]
+
+# ── Tamper-evident hash chain (ADR 0010, idea #3) ─────────────────────────────
+# Each audit entry carries the hash of the previous entry and its own SHA-256,
+# so any insertion, deletion, or edit breaks the chain and is detectable by
+# verify_audit_chain. The genesis link is all-zero.
+_GENESIS_HASH = "0" * 64
+_last_hash: str | None = None
+
+
+def _canonical(payload: Mapping[str, Any]) -> str:
+    """Deterministic JSON for hashing (sorted keys, no whitespace)."""
+    return json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+
+def _hash_core(core: Mapping[str, Any]) -> str:
+    """SHA-256 of an entry's canonical form (the entry without its own hash)."""
+    return hashlib.sha256(_canonical(core).encode("utf-8")).hexdigest()
+
+
+def _seed_last_hash(path: Path) -> str:
+    """Resume the chain from the last hash already on disk (or genesis)."""
+    if not path.exists():
+        return _GENESIS_HASH
+    last = _GENESIS_HASH
+    with path.open("r", encoding="utf-8") as fp:
+        for raw in fp:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            try:
+                obj = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            candidate = obj.get("hash")
+            if isinstance(candidate, str):
+                last = candidate
+    return last
+
 
 # Effective chat model for the current turn (the UI picker override). Set at the
 # turn boundary so audit entries record what actually ran, not just the server
@@ -66,6 +106,7 @@ def _build_entry(
     outcome: _Outcome,
     error: str | None,
     model: str | None,
+    data_residency: str,
 ) -> dict[str, Any]:
     return {
         "type": "tessera.guard.audit",
@@ -74,6 +115,7 @@ def _build_entry(
         "target": target,
         "outcome": outcome,
         "model": model,
+        "data_residency": data_residency,
         "arguments": _coerce_arguments(arguments),
         "decisions": [_record_to_dict(d) for d in decisions],
         "error": error,
@@ -147,7 +189,17 @@ def emit_audit(
         outcome=outcome,
         error=error,
         model=model,
+        data_residency=settings.observability.data_residency,
     )
+    # Link this entry into the tamper-evident chain (idea #3). The file sink
+    # resumes the chain from disk so it survives restarts; other sinks chain
+    # in-process from genesis.
+    global _last_hash
+    if _last_hash is None:
+        _last_hash = _seed_last_hash(settings.guard.audit_file) if sink == "file" else _GENESIS_HASH
+    entry["prev_hash"] = _last_hash
+    entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
+    _last_hash = entry["hash"]
     try:
         match sink:
             case "stdout":
@@ -160,3 +212,47 @@ def emit_audit(
                 _emit_postgres(entry)
     except Exception as exc:
         sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")
+
+
+@dataclass(frozen=True, slots=True)
+class ChainStatus:
+    """Result of verifying the audit hash chain (ADR 0010, idea #3)."""
+
+    verified: bool
+    length: int
+    broken_at: int | None  # 0-based index of the first broken entry, if any
+
+
+def verify_audit_chain(path: Path) -> ChainStatus:
+    """Re-derive the hash chain on disk and report whether it is intact.
+
+    Any inserted, deleted, reordered, or edited entry breaks either the
+    prev-hash linkage or an entry's own hash, and is reported as ``broken_at``.
+
+    Args:
+        path: The JSON-Lines audit file to verify.
+
+    Returns:
+        A :class:`ChainStatus`. An empty/absent log is trivially verified.
+    """
+    if not path.exists():
+        return ChainStatus(verified=True, length=0, broken_at=None)
+
+    prev = _GENESIS_HASH
+    index = 0
+    with path.open("r", encoding="utf-8") as fp:
+        for raw in fp:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            try:
+                obj = json.loads(stripped)
+            except json.JSONDecodeError:
+                return ChainStatus(verified=False, length=index, broken_at=index)
+            stored = obj.get("hash")
+            recomputed = _hash_core({k: v for k, v in obj.items() if k != "hash"})
+            if obj.get("prev_hash") != prev or stored != recomputed:
+                return ChainStatus(verified=False, length=index + 1, broken_at=index)
+            prev = stored
+            index += 1
+    return ChainStatus(verified=True, length=index, broken_at=None)

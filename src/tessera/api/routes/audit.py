@@ -16,6 +16,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from tessera.guard.audit import verify_audit_chain
+
 router = APIRouter(tags=["audit"])
 
 
@@ -41,6 +43,16 @@ class AuditPage(BaseModel):
     entries: list[AuditEntry]
     cursor: int
     has_more: bool
+
+
+class AuditIntegrity(BaseModel):
+    """Tamper-evident hash-chain status of the audit log (ADR 0010, #3)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    verified: bool
+    length: int
+    broken_at: int | None = None
 
 
 _PAGE_DEFAULT = 50
@@ -93,4 +105,13 @@ async def audit_list(
         entries=slice_,
         cursor=cursor + len(slice_),
         has_more=(cursor + len(slice_)) < len(entries),
+    )
+
+
+@router.get("/audit/integrity", response_model=AuditIntegrity)
+async def audit_integrity() -> AuditIntegrity:
+    """Verify the audit log's tamper-evident hash chain."""
+    status = verify_audit_chain(_resolve_audit_path())
+    return AuditIntegrity(
+        verified=status.verified, length=status.length, broken_at=status.broken_at
     )

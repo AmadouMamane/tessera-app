@@ -12,6 +12,8 @@
 import type { z } from "zod";
 
 import {
+  type AuditIntegrity,
+  AuditIntegritySchema,
   type AuditOutcome,
   type AuditPage,
   AuditPageSchema,
@@ -98,6 +100,10 @@ export async function fetchAudit(options: FetchAuditOptions = {}): Promise<Audit
   if (options.outcome) params.set("outcome", options.outcome);
   const query = params.toString();
   return request(`/audit${query ? `?${query}` : ""}`, { signal: options.signal }, AuditPageSchema);
+}
+
+export async function fetchAuditIntegrity(signal?: AbortSignal): Promise<AuditIntegrity> {
+  return request("/audit/integrity", { signal }, AuditIntegritySchema);
 }
 
 export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {

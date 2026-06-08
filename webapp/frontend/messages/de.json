@@ -85,6 +85,10 @@
     "filters": {
       "target": "Werkzeug",
       "outcome": "Verdikt"
+    },
+    "integrity": {
+      "verified": "Audit-Kette verifiziert · {n} Einträge",
+      "broken": "Audit-Kette MANIPULIERT bei #{at}"
     }
   },
   "eval": {
