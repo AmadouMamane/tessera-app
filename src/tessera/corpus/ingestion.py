@@ -12,7 +12,12 @@ from typing import TYPE_CHECKING
 from tessera.observability.logging import get_logger
 from tessera.retrieval import embeddings
 from tessera.retrieval.chunking import chunk_text
-from tessera.retrieval.store import DocumentRecord, ensure_schema, insert_documents
+from tessera.retrieval.store import (
+    DocumentRecord,
+    ensure_schema,
+    existing_chunk_ids,
+    insert_documents,
+)
 from tessera.settings import LanguageCode
 
 if TYPE_CHECKING:
@@ -76,13 +81,22 @@ async def ingest_path(path: Path, corpus: str, language: LanguageCode) -> int:
         chunks = chunk_text(text, language=language)
         if not chunks:
             continue
-        vectors = await embeddings.embed([c.text for c in chunks])
-        for idx, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True)):
+        chunk_ids = [f"{source}#{idx:04d}" for idx, _ in enumerate(chunks)]
+        existing = await existing_chunk_ids(corpus=corpus, source=source, chunk_ids=chunk_ids)
+        missing = [
+            (idx, chunk, chunk_ids[idx])
+            for idx, chunk in enumerate(chunks)
+            if chunk_ids[idx] not in existing
+        ]
+        if not missing:
+            continue
+        vectors = await embeddings.embed([chunk.text for _, chunk, _ in missing])
+        for (_, chunk, chunk_id), vector in zip(missing, vectors, strict=True):
             records.append(
                 DocumentRecord(
                     corpus=corpus,
                     source=source,
-                    chunk_id=f"{source}#{idx:04d}",
+                    chunk_id=chunk_id,
                     language=language,
                     text=chunk.text,
                     embedding=vector,

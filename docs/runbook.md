@@ -208,6 +208,8 @@ Before the agent starts, the `seed-corpus` one-shot service creates the
 pgvector schema and idempotently ingests the packaged regulation and Credit
 Aurore corpora. If this step is skipped, product questions degrade into the
 human-escalation path because the agent has no grounding documents.
+Re-running the stack does not re-embed the full corpus: the bootstrap checks
+existing chunk ids and embeds only missing chunks.
 
 Expected dashboard posture for this demo:
 

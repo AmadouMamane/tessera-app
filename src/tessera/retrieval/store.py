@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
@@ -32,6 +33,7 @@ __all__ = [
     "DocumentRecord",
     "VectorHit",
     "ensure_schema",
+    "existing_chunk_ids",
     "get_pool",
     "insert_documents",
     "knn_search",
@@ -156,6 +158,28 @@ async def insert_documents(records: Sequence[DocumentRecord]) -> int:
         )
         await conn.commit()
         return cur.rowcount or 0
+
+
+async def existing_chunk_ids(*, corpus: str, source: str, chunk_ids: Sequence[str]) -> set[str]:
+    """Return already-persisted chunk ids for one corpus/source pair."""
+    if not chunk_ids:
+        return set()
+    table = get_settings().postgres.vector_table
+    async with _connection() as conn, conn.cursor() as cur:
+        await cur.execute(
+            sql.SQL(
+                """
+            SELECT chunk_id
+            FROM {table}
+            WHERE corpus = %s
+              AND source = %s
+              AND chunk_id = ANY(%s);
+            """
+            ).format(table=sql.Identifier(table)),
+            (corpus, source, list(chunk_ids)),
+        )
+        rows = await cur.fetchall()
+    return {str(row[0]) for row in rows}
 
 
 async def knn_search(
