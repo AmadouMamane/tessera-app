@@ -41,6 +41,8 @@ locals {
     "cloudtrace.googleapis.com",
     "vpcaccess.googleapis.com",
     "servicenetworking.googleapis.com",
+    # Observability lakehouse + GenAI evaluation sink (ADR 0010, Phase 3).
+    "bigquery.googleapis.com",
   ]
 
   common_labels = {

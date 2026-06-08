@@ -1,13 +1,14 @@
-# OpenTelemetry Collector — gcp profile.  ADR 0010.
+# OpenTelemetry Collector — gcp profile (ADR 0010, Phase 3).
 #
 # Same gen_ai.* receive + PII-redaction front end as the on_prem profile, but
-# exporting to Google Cloud. Phase 1 ships the Cloud Trace path; Phase 3 fleshes
-# out Managed Service for Prometheus (googlemanagedprometheus) and the resource
-# detection that attributes spans to the Cloud Run revision. The BigQuery
-# trace/eval sink is provisioned in Terraform (a log sink), not here.
+# exporting to Google Cloud: traces → Cloud Trace, metrics → Managed Service for
+# Prometheus (GMP). `resourcedetection` attaches the Cloud Run revision so spans
+# and metrics are attributed correctly. The BigQuery trace/eval sink is
+# provisioned in Terraform (observability_genai.tf), not here.
 #
-# Auth uses Application Default Credentials; `project` falls back to the
-# detected GCP project when omitted. Requires the *contrib* collector image.
+# Auth uses Application Default Credentials; `project` falls back to the detected
+# GCP project when omitted. Requires the *contrib* collector image. Code-only in
+# this build — validated structurally, not applied (no GCP project wired).
 
 receivers:
   otlp:
@@ -22,22 +23,28 @@ processors:
     check_interval: 1s
     limit_percentage: 80
     spike_limit_percentage: 25
+  # Attribute telemetry to the Cloud Run revision / region / project.
+  resourcedetection:
+    detectors: [env, gcp]
+    timeout: 5s
+    override: false
+  # PII-safe traces (ADR 0010, ideas #3/#4): redact banking identifiers before
+  # anything reaches Google Cloud.
   redaction:
     allow_all_keys: true
     blocked_values:
       - "[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}" # IBAN
       - "\\b\\d{13,19}\\b" # PAN / long account numbers
     summary: debug
-  # Phase 3: resourcedetection (gcp) to attach cloud.* + the Cloud Run revision.
   batch:
     timeout: 2s
 
 exporters:
-  debug:
-    verbosity: normal
   googlecloud:
     # project: <detected from ADC when omitted>
     trace: {}
+  googlemanagedprometheus:
+    # project: <detected from ADC when omitted>
 
 service:
   telemetry:
@@ -46,5 +53,9 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, redaction, batch]
+      processors: [memory_limiter, resourcedetection, redaction, batch]
       exporters: [googlecloud]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [googlemanagedprometheus]
