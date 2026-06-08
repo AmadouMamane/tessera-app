@@ -204,6 +204,38 @@ The observability overlay uses project-scoped Docker images
 from other Tessera worktrees that may also build `tessera-agent:local` or
 `tessera-frontend:local`.
 
+### Optional local LLMOps cockpit: Langfuse
+
+Langfuse is deliberately non-canonical in Tessera: the contractual telemetry
+surface remains OpenTelemetry + evidence bundles. For demos, the same local OTel
+traces can also be mirrored to an already-running self-hosted Langfuse instance
+without creating or managing Langfuse containers from this worktree.
+
+Use the project name `tessera-llmops`.
+
+1. Open the existing Langfuse UI at `http://localhost:3080`.
+2. Create or select a project named `tessera-llmops`.
+3. Create project API keys in Langfuse project settings.
+4. Put the keys in gitignored `agent.secret.env`:
+
+```dotenv
+TESSERA_OBS_LANGFUSE_PUBLIC_KEY=pk-lf-...
+TESSERA_OBS_LANGFUSE_SECRET_KEY=sk-lf-...
+```
+
+5. Start the demo with the LLMOps overlay:
+
+```bash
+make demo-llmops
+```
+
+The overlay keeps the local Jaeger, Prometheus, Grafana, and evidence store
+active, then adds a second OTel trace exporter to
+`http://host.docker.internal:3080/api/public/otel`. The browser-facing
+observability dashboard links to `http://localhost:3080` and reports the
+Langfuse project, ingestion mode, and credential posture. Raw prompts and PII
+remain blocked unless the explicit observability privacy flags are changed.
+
 Before the agent starts, the `seed-corpus` one-shot service creates the
 pgvector schema and idempotently ingests the packaged regulation and Credit
 Aurore corpora. If this step is skipped, product questions degrade into the

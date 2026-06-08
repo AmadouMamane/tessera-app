@@ -18,6 +18,8 @@ from tessera.observability.evidence import (
     list_recent_evidence_bundles,
     persist_evidence_bundle,
 )
+from tessera.observability.instrumentation import span_attributes
+from tessera.observability.langfuse import generation_span_attributes, langfuse_status
 from tessera.observability.privacy import hash_identifier, sanitize_attributes
 from tessera.observability.profiles import resolve_profile
 from tessera.observability.verifier import verify_evidence_bundle
@@ -133,6 +135,49 @@ def test_evidence_bundle_persistence_lists_recent(
     assert recent[0]["privacy_status"] == "redacted"
 
 
+def test_langfuse_status_uses_tessera_llmops_public_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The optional LLMOps cockpit is configured by project keys, not by UI URL alone."""
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_ENABLED", "true")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_HOST", "http://host.docker.internal:3080")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_PUBLIC_URL", "http://localhost:3080")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_PROJECT", "tessera-llmops")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_PUBLIC_KEY", "pk-lf-test")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_SECRET_KEY", "sk-lf-test")
+    get_settings.cache_clear()
+
+    status = langfuse_status()
+
+    assert status.enabled is True
+    assert status.configured is True
+    assert status.credentials_configured is True
+    assert status.status == "configured"
+    assert status.host == "http://localhost:3080"
+    assert status.project == "tessera-llmops"
+    assert status.ingestion_mode == "otel_collector"
+
+
+def test_langfuse_generation_attributes_do_not_export_raw_text() -> None:
+    """Langfuse receives GenAI metadata and token counts, not prompts or completions."""
+    attributes = span_attributes(
+        generation_span_attributes(
+            backend="ollama",
+            model="llama3.3:70b",
+            input_tokens=12,
+            output_tokens=8,
+        )
+    )
+
+    assert attributes["langfuse.observation.type"] == "generation"
+    assert attributes["langfuse.observation.model.name"] == "llama3.3:70b"
+    assert attributes["gen_ai.system"] == "ollama"
+    assert attributes["gen_ai.usage.input_tokens"] == 12
+    assert attributes["gen_ai.usage.output_tokens"] == 8
+    assert "raw_prompt" not in attributes
+    assert "raw_completion" not in attributes
+
+
 def test_decision_proof_validates_and_rejects_replay() -> None:
     """Sensitive action proofs bind tool, arguments, context, policy hash, and replay."""
     arguments: dict[str, object] = {"customer_id": "demo-customer-001"}
@@ -230,6 +275,61 @@ def test_observability_status_endpoint_reports_degraded_when_required_collector_
     assert next(link for link in body["operator_links"] if link["key"] == "grafana")["url"] == (
         "http://grafana.local"
     )
+
+
+def test_observability_status_reports_langfuse_project_and_public_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The dashboard points operators to Langfuse without exposing internal container URLs."""
+    monkeypatch.delenv("TESSERA_API__BEARER_TOKEN", raising=False)
+    monkeypatch.setenv("TESSERA_OBS_PROFILE", "demo_premium")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_ENABLED", "true")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_HOST", "http://host.docker.internal:3080")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_PUBLIC_URL", "http://localhost:3080")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_PROJECT", "tessera-llmops")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_PUBLIC_KEY", "pk-lf-test")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_SECRET_KEY", "sk-lf-test")
+    get_settings.cache_clear()
+    from tessera.api.main import build_app
+
+    client = TestClient(build_app())
+    response = client.get("/observability/status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["llmops"]["configured"] is True
+    assert body["llmops"]["credentials_configured"] is True
+    assert body["llmops"]["project"] == "tessera-llmops"
+    assert body["llmops"]["host"] == "http://localhost:3080"
+    langfuse_link = next(link for link in body["operator_links"] if link["key"] == "langfuse")
+    assert langfuse_link["url"] == "http://localhost:3080"
+    assert langfuse_link["status"] == "configured"
+    assert "langfuse_missing_credentials" not in body["warnings"]
+
+
+def test_observability_status_degrades_langfuse_when_keys_are_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Operators see a clear gap when the Langfuse URL exists but API keys do not."""
+    monkeypatch.delenv("TESSERA_API__BEARER_TOKEN", raising=False)
+    monkeypatch.setenv("TESSERA_OBS_PROFILE", "demo_premium")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_ENABLED", "true")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_HOST", "http://host.docker.internal:3080")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_PUBLIC_URL", "http://localhost:3080")
+    monkeypatch.setenv("TESSERA_OBS_LANGFUSE_PROJECT", "tessera-llmops")
+    monkeypatch.delenv("TESSERA_OBS_LANGFUSE_PUBLIC_KEY", raising=False)
+    monkeypatch.delenv("TESSERA_OBS_LANGFUSE_SECRET_KEY", raising=False)
+    get_settings.cache_clear()
+    from tessera.api.main import build_app
+
+    client = TestClient(build_app())
+    response = client.get("/observability/status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["llmops"]["configured"] is False
+    assert body["llmops"]["status"] == "degraded"
+    assert "langfuse_missing_credentials" in body["warnings"]
 
 
 def test_observability_evidence_preview_endpoint_redacts_payload(

@@ -8,7 +8,8 @@ import ollama
 
 from tessera.llm.budget import get_budget_tracker
 from tessera.llm.router import ChatMessage, ChatResponse
-from tessera.observability.instrumentation import start_span
+from tessera.observability.instrumentation import span_attributes, start_span
+from tessera.observability.langfuse import generation_span_attributes
 from tessera.observability.schema import TelemetrySpan
 from tessera.settings import get_settings
 
@@ -51,7 +52,10 @@ class OllamaBackend:
         payload = [{"role": m.role, "content": m.content} for m in messages]
         input_tokens = 0
         output_tokens = 0
-        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": effective_model}):
+        with start_span(
+            TelemetrySpan.LLM_CALL,
+            generation_span_attributes(backend=self.name, model=effective_model),
+        ) as span:
             async for chunk in await self._client.chat(
                 model=effective_model,
                 messages=payload,
@@ -65,6 +69,16 @@ class OllamaBackend:
                 if chunk.get("done"):
                     input_tokens = int(chunk.get("prompt_eval_count", 0) or 0)
                     output_tokens = int(chunk.get("eval_count", 0) or 0)
+            span.set_attributes(
+                span_attributes(
+                    generation_span_attributes(
+                        backend=self.name,
+                        model=effective_model,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                    )
+                )
+            )
             get_budget_tracker().record(
                 backend=self.name,
                 model=effective_model,
@@ -87,17 +101,30 @@ class OllamaBackend:
             options["num_predict"] = max_output_tokens
 
         payload = [{"role": message.role, "content": message.content} for message in messages]
-        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": effective_model}):
+        with start_span(
+            TelemetrySpan.LLM_CALL,
+            generation_span_attributes(backend=self.name, model=effective_model),
+        ) as span:
             response = await self._client.chat(
                 model=effective_model,
                 messages=payload,
                 options=options,
                 keep_alive=self._keep_alive,
             )
-        content = response["message"]["content"]
-        input_tokens = int(response.get("prompt_eval_count", 0) or 0)
-        output_tokens = int(response.get("eval_count", 0) or 0)
-        done_reason = str(response.get("done_reason", "stop"))
+            content = response["message"]["content"]
+            input_tokens = int(response.get("prompt_eval_count", 0) or 0)
+            output_tokens = int(response.get("eval_count", 0) or 0)
+            done_reason = str(response.get("done_reason", "stop"))
+            span.set_attributes(
+                span_attributes(
+                    generation_span_attributes(
+                        backend=self.name,
+                        model=effective_model,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                    )
+                )
+            )
 
         get_budget_tracker().record(
             backend=self.name,

@@ -213,6 +213,11 @@ class ObservabilitySettings(BaseSettings):
     collector_required: bool | None = None
     langfuse_enabled: bool = False
     langfuse_host: str | None = None
+    langfuse_public_url: str | None = None
+    langfuse_project: str = "tessera-llmops"
+    langfuse_public_key: SecretStr | None = None
+    langfuse_secret_key: SecretStr | None = None
+    langfuse_ingestion_mode: Literal["otel_collector"] = "otel_collector"
     grafana_url: str | None = None
     jaeger_url: str | None = None
     prometheus_url: str | None = None

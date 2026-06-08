@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import inspect
 import time
-from typing import TYPE_CHECKING, Any
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, cast
 
 from opentelemetry import trace
 from opentelemetry.trace import Span, Status, StatusCode
 
+from tessera import __version__
 from tessera.observability.context import (
     current_conversation_hash,
     current_request_id,
@@ -42,6 +44,12 @@ def _coerce_attribute(value: object) -> AttributeValue | None:
         return value
     if value is None:
         return None
+    if (
+        isinstance(value, Sequence)
+        and not isinstance(value, bytes | bytearray | str)
+        and all(isinstance(item, str | bool | int | float) for item in value)
+    ):
+        return cast("AttributeValue", list(value))
     return str(value)
 
 
@@ -53,6 +61,20 @@ def span_attributes(attributes: Mapping[str, object] | None = None) -> dict[str,
         "deployment.target": settings.deployment_mode.value,
         "observability.profile": profile.name.value,
         "assurance.level": profile.assurance_level.value,
+        "prompt_family": settings.observability.prompt_family,
+        "prompt_version": settings.observability.prompt_version,
+        "langfuse.trace.name": "tessera.chat.turn",
+        "langfuse.trace.tags": [
+            "tessera",
+            profile.name.value,
+            profile.assurance_level.value,
+            settings.observability.langfuse_project,
+        ],
+        "langfuse.version": __version__,
+        "langfuse.environment": settings.environment.value,
+        "langfuse.trace.metadata.observability_profile": profile.name.value,
+        "langfuse.trace.metadata.assurance_level": profile.assurance_level.value,
+        "langfuse.trace.metadata.langfuse_project": settings.observability.langfuse_project,
     }
     request_id = current_request_id.get()
     conversation_hash = current_conversation_hash.get()
@@ -62,6 +84,8 @@ def span_attributes(attributes: Mapping[str, object] | None = None) -> dict[str,
         raw["request_id"] = request_id
     if conversation_hash is not None:
         raw["conversation_id_hash"] = conversation_hash
+        raw["langfuse.session.id"] = conversation_hash
+        raw["langfuse.user.id"] = conversation_hash
     if turn_id is not None:
         raw["turn_id"] = turn_id
     if trace_id is not None:

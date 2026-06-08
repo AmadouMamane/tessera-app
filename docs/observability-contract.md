@@ -52,6 +52,24 @@ Raw prompts are not exported. Prompt lineage is carried by `prompt_family`,
 `prompt_version`, and `prompt_hash`; evidence bundles store hashes and redacted
 fragments instead of user secrets.
 
+## Optional Langfuse Mirror
+
+The local `tessera-llmops` Langfuse project is an operator cockpit, not the
+source of truth. Tessera emits the same OpenTelemetry spans and evidence bundle
+metadata first; the LLMOps overlay mirrors only privacy-gated span attributes to
+Langfuse through the OTLP HTTP endpoint. This preserves a single canonical
+contract while giving demos a familiar LLM trace explorer.
+
+The mirror exports:
+
+- trace-level hashed user/session identifiers;
+- profile, assurance level, prompt family/version, and project metadata;
+- generation spans with backend, model, and token usage;
+- retrieval, guard, LangGraph, and evidence events already present in OTel.
+
+The mirror does not export raw prompts, raw completions, account identifiers,
+PANs, IBANs, email addresses, phone numbers, access tokens, or secrets.
+
 ## Evidence Bundle V1
 
 Every persisted bundle uses schema `tessera.evidence_bundle.v1` and links:

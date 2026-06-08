@@ -95,10 +95,10 @@ export function ObservabilityDashboard() {
         <StatusTile
           title={t("cards.llmops")}
           icon={<Activity />}
-          value={data.llmops.status}
-          badge={data.llmops.enabled ? data.llmops.role : t("status.disabled")}
+          value={data.llmops.project}
+          badge={data.llmops.status}
           tone={data.llmops.status === "degraded" ? "warning" : "info"}
-          detail={data.llmops.host ?? "OpenTelemetry"}
+          detail={`${data.llmops.ingestion_mode} / ${data.llmops.host ?? "OpenTelemetry"}`}
         />
       </div>
 
@@ -343,7 +343,15 @@ function OperatorLinksPanel({ data }: { data: ObservabilityStatus }) {
                 </span>
               </span>
               <span key="status" className="flex items-center gap-2">
-                <Badge tone={active ? "success" : link.status === "disabled" ? "info" : "warning"}>
+                <Badge
+                  tone={
+                    link.status === "configured"
+                      ? "success"
+                      : link.status === "disabled" || link.status === "linked"
+                        ? "info"
+                        : "warning"
+                  }
+                >
                   {t(`links.status.${link.status}`)}
                 </Badge>
                 {active ? <ExternalLink className="h-3.5 w-3.5" /> : null}

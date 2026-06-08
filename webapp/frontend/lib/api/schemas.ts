@@ -124,8 +124,11 @@ export type ExporterStatus = z.infer<typeof ExporterStatusSchema>;
 export const LLMOpsStatusSchema = z.object({
   enabled: z.boolean(),
   configured: z.boolean(),
+  credentials_configured: z.boolean(),
   status: z.string(),
   host: z.string().nullable(),
+  project: z.string(),
+  ingestion_mode: z.string(),
   role: z.string(),
 });
 export type LLMOpsStatus = z.infer<typeof LLMOpsStatusSchema>;

@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Literal
 
 from tessera.llm.budget import get_budget_tracker
 from tessera.llm.router import ChatMessage, ChatResponse
-from tessera.observability.instrumentation import start_span
+from tessera.observability.instrumentation import span_attributes, start_span
+from tessera.observability.langfuse import generation_span_attributes
 from tessera.observability.schema import TelemetrySpan
 from tessera.settings import get_settings
 
@@ -75,7 +76,10 @@ class VertexAIBackend:
         """Yield tokens from Vertex AI as they arrive."""
         gemini = self._ensure_model()
         max_tokens = max_output_tokens or self._max_output_tokens
-        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": self.model}):
+        with start_span(
+            TelemetrySpan.LLM_CALL,
+            generation_span_attributes(backend=self.name, model=self.model),
+        ):
             stream = await gemini.generate_content_async(
                 self._convert(messages),
                 generation_config={"temperature": temperature, "max_output_tokens": max_tokens},
@@ -97,7 +101,10 @@ class VertexAIBackend:
         """Stream-less chat completion."""
         gemini = self._ensure_model()
         max_tokens = max_output_tokens or self._max_output_tokens
-        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": self.model}):
+        with start_span(
+            TelemetrySpan.LLM_CALL,
+            generation_span_attributes(backend=self.name, model=self.model),
+        ) as span:
             response = await gemini.generate_content_async(
                 self._convert(messages),
                 generation_config={
@@ -105,10 +112,20 @@ class VertexAIBackend:
                     "max_output_tokens": max_tokens,
                 },
             )
-        text = response.text if response.candidates else ""
-        usage = getattr(response, "usage_metadata", None)
-        input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-        output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+            text = response.text if response.candidates else ""
+            usage = getattr(response, "usage_metadata", None)
+            input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
+            output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+            span.set_attributes(
+                span_attributes(
+                    generation_span_attributes(
+                        backend=self.name,
+                        model=self.model,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                    )
+                )
+            )
         finish_reason = (
             getattr(response.candidates[0], "finish_reason", "stop")
             if response.candidates

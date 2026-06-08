@@ -1,5 +1,5 @@
 .PHONY: install lint typecheck format test test-integration test-all \
-        coverage eval seed ingest run run-on-prem demo-observability demo-secrets \
+        coverage eval seed ingest run run-on-prem demo-observability demo-llmops demo-secrets \
         precommit check ci help
 
 # ── Dependencies ────────────────────────────────────────────────────────────
@@ -123,6 +123,28 @@ demo-observability: frontend.secret.env
 		-f docker-compose.observability.yml \
 		--profile full up -d --build
 
+# Start the same demo with the optional Langfuse cockpit wired to tessera-llmops.
+demo-llmops: frontend.secret.env
+	@if ! test -f agent.secret.env; then \
+		echo "Missing agent.secret.env"; \
+		echo "Add TESSERA_OBS_LANGFUSE_PUBLIC_KEY and TESSERA_OBS_LANGFUSE_SECRET_KEY for the tessera-llmops project."; \
+		exit 1; \
+	fi
+	@if ! grep -q '^TESSERA_OBS_LANGFUSE_PUBLIC_KEY=pk-' agent.secret.env; then \
+		echo "Missing TESSERA_OBS_LANGFUSE_PUBLIC_KEY=pk-lf-... in agent.secret.env"; \
+		exit 1; \
+	fi
+	@if ! grep -q '^TESSERA_OBS_LANGFUSE_SECRET_KEY=sk-' agent.secret.env; then \
+		echo "Missing TESSERA_OBS_LANGFUSE_SECRET_KEY=sk-lf-... in agent.secret.env"; \
+		exit 1; \
+	fi
+	docker compose \
+		-f docker-compose.yml \
+		-f docker-compose.unix.yml \
+		-f docker-compose.observability.yml \
+		-f docker-compose.llmops.yml \
+		--profile full up -d --build
+
 # ── CI simulation ───────────────────────────────────────────────────────────
 
 # Replicate what ci.yml does locally (fast path — no integration tests)
@@ -168,5 +190,6 @@ help:
 	@echo "  run-on-prem        Local agent (Ollama / on-prem path)"
 	@echo "  demo-secrets       Create local Auth.js/superadmin secrets for the demo"
 	@echo "  demo-observability Local prod-like stack: UI + agent + OTel + Jaeger + Prometheus + Grafana"
+	@echo "  demo-llmops        Local prod-like stack plus Langfuse tessera-llmops export"
 	@echo ""
 	@echo "  ci                 Local CI simulation (no integration tests)"

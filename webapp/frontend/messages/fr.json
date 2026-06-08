@@ -230,7 +230,9 @@
       "status": {
         "configured": "prêt",
         "missing": "non configuré",
-        "disabled": "désactivé"
+        "disabled": "désactivé",
+        "linked": "lié",
+        "degraded": "dégradé"
       },
       "roles": {
         "metrics_dashboard": "Dashboard métriques",

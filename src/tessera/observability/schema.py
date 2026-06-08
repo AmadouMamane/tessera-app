@@ -82,6 +82,23 @@ ALLOWED_ATTRIBUTES: frozenset[str] = frozenset(
         "target",
         "backend",
         "direction",
+        "evidence_id",
+        "langfuse.user.id",
+        "langfuse.session.id",
+        "langfuse.trace.name",
+        "langfuse.trace.tags",
+        "langfuse.version",
+        "langfuse.environment",
+        "langfuse.trace.metadata.observability_profile",
+        "langfuse.trace.metadata.assurance_level",
+        "langfuse.trace.metadata.langfuse_project",
+        "langfuse.observation.type",
+        "langfuse.observation.model.name",
+        "langfuse.observation.usage_details",
+        "gen_ai.system",
+        "gen_ai.request.model",
+        "gen_ai.usage.input_tokens",
+        "gen_ai.usage.output_tokens",
     }
 )
 

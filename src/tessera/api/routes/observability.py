@@ -47,8 +47,11 @@ class LLMOpsStatus(BaseModel):
 
     enabled: bool
     configured: bool
+    credentials_configured: bool
     status: str
     host: str | None
+    project: str
+    ingestion_mode: str
     role: str
 
 
@@ -173,8 +176,11 @@ def _warnings() -> list[str]:
     warnings: list[str] = []
     if profile.collector_required and not obs.otel_endpoint and not obs.cloud_logging_project:
         warnings.append("collector_required_but_not_configured")
+    llmops = langfuse_status()
     if profile.langfuse_enabled and not obs.langfuse_host:
         warnings.append("langfuse_enabled_but_not_configured")
+    if profile.langfuse_enabled and obs.langfuse_host and not llmops.credentials_configured:
+        warnings.append("langfuse_missing_credentials")
     if obs.raw_prompts_export:
         warnings.append("raw_prompt_export_enabled")
     if obs.pii_export:
@@ -194,7 +200,7 @@ def _assurance_status(warnings: list[str]) -> AssuranceStatus:
         "privacy_gateway": not obs.raw_prompts_export and not obs.pii_export,
         "collector": collector_configured or not profile.collector_required,
         "evidence": profile.evidence_enabled,
-        "langfuse_optional": (not profile.langfuse_enabled) or bool(obs.langfuse_host),
+        "langfuse_optional": (not profile.langfuse_enabled) or langfuse_status().configured,
         "audit_sink": bool(settings.guard.audit_sink),
     }
     passed = sum(1 for ok in checks.values() if ok)
@@ -238,6 +244,7 @@ def _trace_url(trace_id: str | None) -> str | None:
 
 def _operator_links() -> list[OperatorLink]:
     obs = get_settings().observability
+    llmops = langfuse_status()
     return [
         OperatorLink(
             key="grafana",
@@ -263,8 +270,8 @@ def _operator_links() -> list[OperatorLink]:
         OperatorLink(
             key="langfuse",
             label="Langfuse",
-            url=obs.langfuse_host,
-            status="configured" if obs.langfuse_host else "disabled",
+            url=llmops.host,
+            status=llmops.status,
             role="optional_llmops_cockpit",
         ),
     ]
@@ -315,7 +322,7 @@ async def status() -> ObservabilityStatus:
             collector_required=profile.collector_required,
             collector_configured=collector_configured,
             langfuse_enabled=profile.langfuse_enabled,
-            langfuse_configured=bool(obs.langfuse_host),
+            langfuse_configured=llmops.configured,
             primary_backend=profile.primary_backend,
             evidence_enabled=profile.evidence_enabled,
             evidence_signing_enabled=profile.evidence_signing_enabled,
@@ -325,8 +332,11 @@ async def status() -> ObservabilityStatus:
         llmops=LLMOpsStatus(
             enabled=llmops.enabled,
             configured=llmops.configured,
+            credentials_configured=llmops.credentials_configured,
             status=llmops.status,
             host=llmops.host,
+            project=llmops.project,
+            ingestion_mode=llmops.ingestion_mode,
             role=llmops.role,
         ),
         operator_links=_operator_links(),

@@ -1,0 +1,58 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: tessera-agent
+          static_configs:
+            - targets: ["agent:9090"]
+
+extensions:
+  basicauth/langfuse:
+    client_auth:
+      username: ${env:TESSERA_OBS_LANGFUSE_PUBLIC_KEY}
+      password: ${env:TESSERA_OBS_LANGFUSE_SECRET_KEY}
+
+processors:
+  batch:
+    timeout: 5s
+  memory_limiter:
+    check_interval: 2s
+    limit_mib: 256
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  otlphttp/langfuse:
+    endpoint: ${env:TESSERA_OBS_LANGFUSE_HOST}/api/public/otel
+    auth:
+      authenticator: basicauth/langfuse
+    headers:
+      x-langfuse-ingestion-version: "4"
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+  debug:
+    verbosity: basic
+
+service:
+  extensions: [basicauth/langfuse]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/jaeger, otlphttp/langfuse, debug]
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, batch]
+      exporters: [prometheusremotewrite, debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]

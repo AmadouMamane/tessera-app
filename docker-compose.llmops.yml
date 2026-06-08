@@ -1,0 +1,26 @@
+# Optional LLMOps overlay that mirrors the local production-like OTel traces to
+# an already-running Langfuse instance. It does not create or manage Langfuse.
+#
+# Expected existing Langfuse UI: http://localhost:3080
+# Expected Langfuse project: tessera-llmops
+#
+# Required in gitignored agent.secret.env:
+#   TESSERA_OBS_LANGFUSE_PUBLIC_KEY=pk-lf-...
+#   TESSERA_OBS_LANGFUSE_SECRET_KEY=sk-lf-...
+
+services:
+  agent:
+    environment:
+      TESSERA_OBS_LANGFUSE_ENABLED: "true"
+      TESSERA_OBS_LANGFUSE_HOST: http://host.docker.internal:3080
+      TESSERA_OBS_LANGFUSE_PUBLIC_URL: http://localhost:3080
+      TESSERA_OBS_LANGFUSE_PROJECT: tessera-llmops
+
+  otel-collector:
+    env_file:
+      - path: agent.secret.env
+        required: false
+    environment:
+      TESSERA_OBS_LANGFUSE_HOST: http://host.docker.internal:3080
+    volumes: !override
+      - ./infra/observability/collector-local-demo-langfuse.yaml:/etc/otelcol-contrib/config.yaml:ro

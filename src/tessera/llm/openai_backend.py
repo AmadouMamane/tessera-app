@@ -17,7 +17,8 @@ import openai
 
 from tessera.llm.budget import get_budget_tracker
 from tessera.llm.router import ChatResponse
-from tessera.observability.instrumentation import start_span
+from tessera.observability.instrumentation import span_attributes, start_span
+from tessera.observability.langfuse import generation_span_attributes
 from tessera.observability.schema import TelemetrySpan
 from tessera.settings import get_settings
 
@@ -60,7 +61,10 @@ class OpenAIBackend:
         effective_model = model or self.model
         input_tokens = 0
         output_tokens = 0
-        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": effective_model}):
+        with start_span(
+            TelemetrySpan.LLM_CALL,
+            generation_span_attributes(backend=self.name, model=effective_model),
+        ) as span:
             stream = await self._client.chat.completions.create(
                 model=effective_model,
                 messages=[{"role": m.role, "content": m.content} for m in messages],
@@ -76,6 +80,16 @@ class OpenAIBackend:
                 if chunk.usage is not None:
                     input_tokens = chunk.usage.prompt_tokens
                     output_tokens = chunk.usage.completion_tokens
+            span.set_attributes(
+                span_attributes(
+                    generation_span_attributes(
+                        backend=self.name,
+                        model=effective_model,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                    )
+                )
+            )
             get_budget_tracker().record(
                 backend=self.name,
                 model=effective_model,
@@ -93,16 +107,29 @@ class OpenAIBackend:
     ) -> ChatResponse:
         """Stream-less chat completion."""
         effective_model = model or self.model
-        with start_span(TelemetrySpan.LLM_CALL, {"backend": self.name, "model": effective_model}):
+        with start_span(
+            TelemetrySpan.LLM_CALL,
+            generation_span_attributes(backend=self.name, model=effective_model),
+        ) as span:
             response = await self._client.chat.completions.create(
                 model=effective_model,
                 messages=[{"role": m.role, "content": m.content} for m in messages],
                 max_completion_tokens=max_output_tokens,
             )
-        choice = response.choices[0]
-        usage = response.usage
-        input_tokens = usage.prompt_tokens if usage else 0
-        output_tokens = usage.completion_tokens if usage else 0
+            choice = response.choices[0]
+            usage = response.usage
+            input_tokens = usage.prompt_tokens if usage else 0
+            output_tokens = usage.completion_tokens if usage else 0
+            span.set_attributes(
+                span_attributes(
+                    generation_span_attributes(
+                        backend=self.name,
+                        model=effective_model,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                    )
+                )
+            )
         # Record on the non-streaming path too — the agent graph (and the eval
         # harness) use chat(), not stream_chat(); without this their gpt-5.5
         # usage never reaches the budget tracker (local/frontier already do this).
