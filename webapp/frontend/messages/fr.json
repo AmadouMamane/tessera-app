@@ -281,6 +281,17 @@
       "judge": "Juge",
       "time": "Heure",
       "empty": "Aucun score pour l'instant — envoyez un message ancré et le juge le notera."
+    },
+    "calibration": {
+      "title": "Calibration du juge",
+      "kappa": "κ de Cohen",
+      "agreement": "Accord",
+      "verbosity": "Biais de verbosité",
+      "lenient": "Clémence",
+      "lenientYes": "Trop clément",
+      "lenientNo": "Calibré",
+      "judge": "Juge",
+      "unavailable": "Calibration indisponible (juge hors-ligne)."
     }
   }
 }

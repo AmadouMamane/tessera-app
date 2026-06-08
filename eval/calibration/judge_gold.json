@@ -1,0 +1,50 @@
+[
+  {
+    "question": "Quel est le plafond de la garantie des dépôts ?",
+    "context": "La garantie des dépôts protège les fonds des déposants jusqu'à 100 000 EUR par déposant et par établissement.",
+    "answer": "La garantie des dépôts couvre jusqu'à 100 000 EUR par déposant et par établissement.",
+    "human_label": "good"
+  },
+  {
+    "question": "Quel est le plafond de la garantie des dépôts ?",
+    "context": "La garantie des dépôts protège les fonds des déposants jusqu'à 100 000 EUR par déposant et par établissement.",
+    "answer": "La garantie des dépôts couvre jusqu'à 250 000 EUR, et l'État rembourse sous 24 heures.",
+    "human_label": "bad"
+  },
+  {
+    "question": "What does DORA require for ICT incident reporting?",
+    "context": "DORA requires financial entities to report major ICT-related incidents to the competent authority within set deadlines.",
+    "answer": "DORA requires financial entities to report major ICT-related incidents to the competent authority within the deadlines it sets.",
+    "human_label": "good"
+  },
+  {
+    "question": "What does DORA require for ICT incident reporting?",
+    "context": "DORA requires financial entities to report major ICT-related incidents to the competent authority within set deadlines.",
+    "answer": "DORA requires reporting every incident to Interpol within one hour and imposes a 10 million EUR fine per hour of delay.",
+    "human_label": "bad"
+  },
+  {
+    "question": "Mon virement SEPA est-il instantané ?",
+    "context": "Un virement SEPA standard est exécuté en un jour ouvré. Le virement SEPA instantané, lui, est crédité en quelques secondes, 24h/24.",
+    "answer": "Un virement SEPA standard prend un jour ouvré ; la version instantanée est créditée en quelques secondes, 24h/24.",
+    "human_label": "good"
+  },
+  {
+    "question": "Mon virement SEPA est-il instantané ?",
+    "context": "Un virement SEPA standard est exécuté en un jour ouvré. Le virement SEPA instantané, lui, est crédité en quelques secondes, 24h/24.",
+    "answer": "Tous les virements SEPA sont instantanés et gratuits sans aucune limite de montant.",
+    "human_label": "bad"
+  },
+  {
+    "question": "Was deckt die GDPR-Auskunftspflicht ab?",
+    "context": "Nach der DSGVO haben betroffene Personen das Recht, Auskunft über die zu ihnen gespeicherten personenbezogenen Daten zu erhalten.",
+    "answer": "Nach der DSGVO können betroffene Personen Auskunft über die zu ihnen gespeicherten personenbezogenen Daten verlangen.",
+    "human_label": "good"
+  },
+  {
+    "question": "Was deckt die GDPR-Auskunftspflicht ab?",
+    "context": "Nach der DSGVO haben betroffene Personen das Recht, Auskunft über die zu ihnen gespeicherten personenbezogenen Daten zu erhalten.",
+    "answer": "Die DSGVO verpflichtet Banken, alle Kundendaten öffentlich zu machen und unbegrenzt zu speichern.",
+    "human_label": "bad"
+  }
+]

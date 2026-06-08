@@ -209,3 +209,16 @@ export const EvalScoresResponseSchema = z.object({
   scores: z.array(EvalScoreSchema),
 });
 export type EvalScoresResponse = z.infer<typeof EvalScoresResponseSchema>;
+
+export const CalibrationSchema = z.object({
+  available: z.boolean(),
+  n: z.number().int().optional(),
+  kappa: z.number().optional(),
+  agreement: z.number().optional(),
+  mean_score_good: z.number().optional(),
+  mean_score_bad: z.number().optional(),
+  verbosity_corr: z.number().optional(),
+  lenient: z.boolean().optional(),
+  judge_model: z.string().optional(),
+});
+export type Calibration = z.infer<typeof CalibrationSchema>;

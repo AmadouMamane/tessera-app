@@ -1,15 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Gauge, LineChart } from "lucide-react";
+import { ExternalLink, Gauge, LineChart, Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchEvalScores } from "@/lib/api/client";
-import type { EvalScore } from "@/lib/api/schemas";
+import { fetchCalibration, fetchEvalScores } from "@/lib/api/client";
+import type { Calibration, EvalScore } from "@/lib/api/schemas";
 
 const POLL_MS = 5_000;
 const PHOENIX_URL = process.env.NEXT_PUBLIC_PHOENIX_URL ?? "http://localhost:16006";
@@ -28,6 +28,14 @@ export function ObservabilityDashboard() {
     queryKey: ["eval-scores"],
     queryFn: ({ signal }) => fetchEvalScores(signal),
     refetchInterval: POLL_MS,
+  });
+
+  // Calibration is computed server-side (slow, judge over a gold set) and cached,
+  // so fetch it once rather than polling.
+  const calibration = useQuery({
+    queryKey: ["calibration"],
+    queryFn: ({ signal }) => fetchCalibration(signal),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
   // Newest first for display.
@@ -49,6 +57,8 @@ export function ObservabilityDashboard() {
           icon={<Gauge className="h-5 w-5 text-blue-500" />}
         />
       </div>
+
+      <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
       <Card>
         <CardHeader>
@@ -132,5 +142,56 @@ function BackendCard({
         </CardContent>
       </Card>
     </a>
+  );
+}
+
+function CalibrationCard({ data, loading }: { data: Calibration | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Scale className="h-4 w-4 text-blue-500" />
+          {t("calibration.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-12 w-full" />
+        ) : !data?.available ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("calibration.unavailable")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <Metric label={t("calibration.kappa")} value={(data.kappa ?? 0).toFixed(2)} />
+            <Metric
+              label={t("calibration.agreement")}
+              value={`${Math.round((data.agreement ?? 0) * 100)}%`}
+            />
+            <Metric
+              label={t("calibration.verbosity")}
+              value={(data.verbosity_corr ?? 0).toFixed(2)}
+            />
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("calibration.lenient")}
+              </span>
+              <Badge tone={data.lenient ? "warning" : "success"}>
+                {data.lenient ? t("calibration.lenientYes") : t("calibration.lenientNo")}
+              </Badge>
+            </div>
+            <Metric label={t("calibration.judge")} value={data.judge_model ?? "—"} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-xs text-[var(--muted-foreground)]">{label}</span>
+      <span className="font-semibold tabular-nums">{value}</span>
+    </div>
   );
 }

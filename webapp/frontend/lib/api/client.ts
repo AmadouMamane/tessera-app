@@ -19,6 +19,8 @@ import {
   AuditPageSchema,
   type BudgetSnapshot,
   BudgetSnapshotSchema,
+  type Calibration,
+  CalibrationSchema,
   type EvalScoresResponse,
   EvalScoresResponseSchema,
   type HealthResponse,
@@ -117,6 +119,11 @@ export async function fetchReadiness(signal?: AbortSignal): Promise<HealthRespon
 /** Recent online-eval scores (eval-as-telemetry; public aggregate surface). */
 export async function fetchEvalScores(signal?: AbortSignal): Promise<EvalScoresResponse> {
   return request("/observability/scores", { signal }, EvalScoresResponseSchema);
+}
+
+/** Judge calibration against the human gold set (computed server-side, cached). */
+export async function fetchCalibration(signal?: AbortSignal): Promise<Calibration> {
+  return request("/observability/calibration", { signal }, CalibrationSchema);
 }
 
 /**

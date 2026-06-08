@@ -281,6 +281,17 @@
       "judge": "Judge",
       "time": "Time",
       "empty": "No scores yet — send a grounded chat message and the judge will score it."
+    },
+    "calibration": {
+      "title": "Judge calibration",
+      "kappa": "Cohen's κ",
+      "agreement": "Agreement",
+      "verbosity": "Verbosity bias",
+      "lenient": "Leniency",
+      "lenientYes": "Too lenient",
+      "lenientNo": "Calibrated",
+      "judge": "Judge",
+      "unavailable": "Calibration unavailable (judge offline)."
     }
   }
 }

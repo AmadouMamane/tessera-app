@@ -281,6 +281,17 @@
       "judge": "Judge",
       "time": "Zeit",
       "empty": "Noch keine Bewertungen — senden Sie eine fundierte Nachricht, der Judge bewertet sie."
+    },
+    "calibration": {
+      "title": "Judge-Kalibrierung",
+      "kappa": "Cohens κ",
+      "agreement": "Übereinstimmung",
+      "verbosity": "Verbositäts-Bias",
+      "lenient": "Nachsicht",
+      "lenientYes": "Zu nachsichtig",
+      "lenientNo": "Kalibriert",
+      "judge": "Judge",
+      "unavailable": "Kalibrierung nicht verfügbar (Judge offline)."
     }
   }
 }
