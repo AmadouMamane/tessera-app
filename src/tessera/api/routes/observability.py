@@ -71,10 +71,40 @@ class EvidenceSummary(BaseModel):
     turn_id: str | None
     profile: str | None
     assurance_level: str | None
+    trace_id: str | None = None
+    trace_url: str | None = None
+    model: str | None = None
+    language: str | None = None
+    citation_count: int = 0
+    retrieval_hit_count: int = 0
     proof_quality: str | None
     proof_consensus: str | None
     privacy_status: str | None
     evidence_gaps: list[str]
+
+
+class OperatorLink(BaseModel):
+    """External observability cockpit link."""
+
+    key: str
+    label: str
+    url: str | None
+    status: str
+    role: str
+
+
+class TraceSummary(BaseModel):
+    """Compact synthesis of recent trace-backed evidence."""
+
+    recent_count: int
+    traceable_count: int
+    complete_count: int
+    degraded_count: int
+    latest_trace_id: str | None
+    latest_trace_url: str | None
+    latest_evidence_id: str | None
+    latest_created_at: str | None
+    gap_codes: list[str]
 
 
 class VerificationFindingModel(BaseModel):
@@ -101,6 +131,8 @@ class ObservabilityStatus(BaseModel):
     status: str
     exporters: ExporterStatus
     llmops: LLMOpsStatus
+    operator_links: list[OperatorLink]
+    trace_summary: TraceSummary
     assurance: AssuranceStatus
     recent_evidence: list[EvidenceSummary]
     allowed_attribute_count: int
@@ -192,6 +224,79 @@ def _assurance_status(warnings: list[str]) -> AssuranceStatus:
     )
 
 
+def _join_url(base: str | None, suffix: str = "") -> str | None:
+    if not base:
+        return None
+    return f"{base.rstrip('/')}{suffix}"
+
+
+def _trace_url(trace_id: str | None) -> str | None:
+    if not trace_id:
+        return None
+    return _join_url(get_settings().observability.jaeger_url, f"/trace/{trace_id}")
+
+
+def _operator_links() -> list[OperatorLink]:
+    obs = get_settings().observability
+    return [
+        OperatorLink(
+            key="grafana",
+            label="Grafana",
+            url=obs.grafana_url,
+            status="configured" if obs.grafana_url else "missing",
+            role="metrics_dashboard",
+        ),
+        OperatorLink(
+            key="jaeger",
+            label="Jaeger",
+            url=obs.jaeger_url,
+            status="configured" if obs.jaeger_url else "missing",
+            role="trace_explorer",
+        ),
+        OperatorLink(
+            key="prometheus",
+            label="Prometheus",
+            url=obs.prometheus_url,
+            status="configured" if obs.prometheus_url else "missing",
+            role="metrics_store",
+        ),
+        OperatorLink(
+            key="langfuse",
+            label="Langfuse",
+            url=obs.langfuse_host,
+            status="configured" if obs.langfuse_host else "disabled",
+            role="optional_llmops_cockpit",
+        ),
+    ]
+
+
+def _evidence_summaries() -> list[EvidenceSummary]:
+    summaries: list[EvidenceSummary] = []
+    for item in list_recent_evidence_bundles(limit=5):
+        trace_id = item.get("trace_id")
+        item["trace_url"] = _trace_url(str(trace_id)) if trace_id else None
+        summaries.append(EvidenceSummary.model_validate(item))
+    return summaries
+
+
+def _trace_summary(recent: list[EvidenceSummary]) -> TraceSummary:
+    gap_codes = sorted({gap for item in recent for gap in item.evidence_gaps})
+    latest = recent[0] if recent else None
+    return TraceSummary(
+        recent_count=len(recent),
+        traceable_count=sum(1 for item in recent if item.trace_id),
+        complete_count=sum(1 for item in recent if item.proof_quality == "complete"),
+        degraded_count=sum(
+            1 for item in recent if item.proof_quality != "complete" or bool(item.evidence_gaps)
+        ),
+        latest_trace_id=latest.trace_id if latest else None,
+        latest_trace_url=latest.trace_url if latest else None,
+        latest_evidence_id=latest.evidence_id if latest else None,
+        latest_created_at=latest.created_at if latest else None,
+        gap_codes=gap_codes,
+    )
+
+
 @router.get("/status", response_model=ObservabilityStatus)
 async def status() -> ObservabilityStatus:
     """Return the active observability assurance posture."""
@@ -201,6 +306,7 @@ async def status() -> ObservabilityStatus:
     warnings = _warnings()
     collector_configured = bool(obs.otel_endpoint or obs.cloud_logging_project)
     llmops = langfuse_status()
+    recent_evidence = _evidence_summaries()
     return ObservabilityStatus(
         profile=profile.name.value,
         assurance_level=profile.assurance_level.value,
@@ -223,10 +329,10 @@ async def status() -> ObservabilityStatus:
             host=llmops.host,
             role=llmops.role,
         ),
+        operator_links=_operator_links(),
+        trace_summary=_trace_summary(recent_evidence),
         assurance=_assurance_status(warnings),
-        recent_evidence=[
-            EvidenceSummary.model_validate(item) for item in list_recent_evidence_bundles(limit=5)
-        ],
+        recent_evidence=recent_evidence,
         allowed_attribute_count=len(ALLOWED_ATTRIBUTES),
         forbidden_attribute_count=len(FORBIDDEN_ATTRIBUTES),
         low_cardinality_metric_labels=sorted(LOW_CARDINALITY_METRIC_LABELS),

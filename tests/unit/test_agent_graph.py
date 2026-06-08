@@ -167,6 +167,29 @@ class TestReporter:
         assert "Sources" in rendered
         assert "Crédit Aurore" in rendered
 
+    def test_citation_footer_deduplicates_sources(self, fr_state: dict[str, object]) -> None:
+        citation = Citation(
+            source="credit-aurore/produits/compte-courant",
+            locator="Catalogue produits 2026 - Section Comptes de dépôt",
+            language=LanguageCode.FR,
+            excerpt="Compte courant.",
+        )
+        duplicate_chunk = Citation(
+            source="credit-aurore/produits/compte-courant",
+            locator="Catalogue produits 2026 - Section Comptes de dépôt",
+            language=LanguageCode.FR,
+            excerpt="Autre passage du compte courant.",
+        )
+        state = {
+            **fr_state,
+            "draft_response": "Les virements SEPA sont disponibles.",
+            "citations": [citation, duplicate_chunk],
+        }
+
+        rendered = render(state)
+
+        assert rendered.count("credit-aurore/produits/compte-courant") == 1
+
 
 class TestInjectionGuard:
     def test_french_injection_blocked_at_router(self) -> None:

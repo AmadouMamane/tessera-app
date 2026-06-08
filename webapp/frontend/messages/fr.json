@@ -65,6 +65,16 @@
     "editWillTruncate": "Les messages suivants seront supprimés",
     "errorFallback": "Une erreur est survenue. Veuillez réessayer."
   },
+  "source": {
+    "title": "Source",
+    "back": "Conversation",
+    "verified": "Source vérifiée",
+    "sourceId": "Identifiant",
+    "corpus": "Corpus",
+    "category": "Catégorie",
+    "language": "Langue",
+    "document": "Document cité"
+  },
   "audit": {
     "title": "Journal d'audit",
     "description": "Chaque appel d'outil est enregistré avec sa décision, son auteur, et la justification de la politique.",
@@ -215,6 +225,31 @@
     "commit": "Générer",
     "committing": "Génération…",
     "emptyEvidence": "Aucun bundle persistant.",
+    "links": {
+      "title": "Explorateurs",
+      "status": {
+        "configured": "prêt",
+        "missing": "non configuré",
+        "disabled": "désactivé"
+      },
+      "roles": {
+        "metrics_dashboard": "Dashboard métriques",
+        "trace_explorer": "Explorateur de traces",
+        "metrics_store": "Magasin Prometheus",
+        "optional_llmops_cockpit": "Cockpit LLMOps optionnel"
+      }
+    },
+    "traces": {
+      "title": "Synthèse traces",
+      "recent": "Preuves récentes",
+      "traceable": "Traçables",
+      "complete": "Complètes",
+      "degraded": "Dégradées",
+      "latest": "Dernière trace",
+      "trace": "Trace",
+      "none": "aucune",
+      "noGaps": "Aucun écart trace"
+    },
     "cards": {
       "profile": "Profil",
       "completeness": "Complétude",

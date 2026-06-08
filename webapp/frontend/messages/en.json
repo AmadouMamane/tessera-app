@@ -65,6 +65,16 @@
     "editWillTruncate": "The following messages will be removed",
     "errorFallback": "Something went wrong. Please try again."
   },
+  "source": {
+    "title": "Source",
+    "back": "Chat",
+    "verified": "Verified source",
+    "sourceId": "Identifier",
+    "corpus": "Corpus",
+    "category": "Category",
+    "language": "Language",
+    "document": "Cited document"
+  },
   "audit": {
     "title": "Audit trail",
     "description": "Every tool call is recorded with its decision, target, and policy rationale.",
@@ -215,6 +225,31 @@
     "commit": "Generate",
     "committing": "Generating…",
     "emptyEvidence": "No persisted bundle.",
+    "links": {
+      "title": "Explorers",
+      "status": {
+        "configured": "ready",
+        "missing": "not configured",
+        "disabled": "disabled"
+      },
+      "roles": {
+        "metrics_dashboard": "Metrics dashboard",
+        "trace_explorer": "Trace explorer",
+        "metrics_store": "Prometheus store",
+        "optional_llmops_cockpit": "Optional LLMOps cockpit"
+      }
+    },
+    "traces": {
+      "title": "Trace synthesis",
+      "recent": "Recent evidence",
+      "traceable": "Traceable",
+      "complete": "Complete",
+      "degraded": "Degraded",
+      "latest": "Latest trace",
+      "trace": "Trace",
+      "none": "none",
+      "noGaps": "No trace gap"
+    },
     "cards": {
       "profile": "Profile",
       "completeness": "Completeness",

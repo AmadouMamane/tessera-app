@@ -213,6 +213,9 @@ class ObservabilitySettings(BaseSettings):
     collector_required: bool | None = None
     langfuse_enabled: bool = False
     langfuse_host: str | None = None
+    grafana_url: str | None = None
+    jaeger_url: str | None = None
+    prometheus_url: str | None = None
     raw_prompts_export: bool = False
     pii_export: bool = False
     evidence_enabled: bool = True

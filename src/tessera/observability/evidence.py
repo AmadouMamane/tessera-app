@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from tessera.agent.state import deduplicate_citations
 from tessera.observability.instrumentation import current_trace_id
 from tessera.observability.privacy import hash_identifier, sanitize_attributes
 from tessera.observability.profiles import resolve_profile
@@ -272,7 +273,7 @@ def build_state_evidence_bundle(
     guard_records = list(state.get("guard_decisions", []) or [])
     tool_records = list(state.get("tool_calls", []) or [])
     documents = list(state.get("retrieved_documents", []) or [])
-    citations = list(state.get("citations", []) or [])
+    citations = deduplicate_citations(state.get("citations", []) or [])
     errors = [str(item) for item in state.get("errors", []) or []]
     rejected_paths = [
         *_safe_rejected_paths(guard_records),
@@ -378,6 +379,11 @@ def list_recent_evidence_bundles(
                 "turn_id": data.get("turn_id"),
                 "profile": data.get("profile"),
                 "assurance_level": data.get("assurance_level"),
+                "trace_id": data.get("trace_id"),
+                "model": data.get("model"),
+                "language": data.get("language"),
+                "citation_count": data.get("attributes", {}).get("citation_count", 0),
+                "retrieval_hit_count": data.get("attributes", {}).get("retrieval_hit_count", 0),
                 "proof_quality": data.get("proof_quality"),
                 "proof_consensus": data.get("proof_consensus"),
                 "privacy_status": data.get("privacy_status"),

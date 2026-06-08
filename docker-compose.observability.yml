@@ -50,6 +50,9 @@ services:
       TESSERA_OBS_ASSURANCE_LEVEL: L3
       TESSERA_OBS_COLLECTOR_REQUIRED: "true"
       TESSERA_OBS_OTEL_ENDPOINT: http://otel-collector:4317
+      TESSERA_OBS_GRAFANA_URL: http://localhost:3001/d/tessera-local-observability/tessera-local-observability
+      TESSERA_OBS_JAEGER_URL: http://localhost:16686
+      TESSERA_OBS_PROMETHEUS_URL: http://localhost:9091
       TESSERA_OBS_LOG_FORMAT: json
       TESSERA_OBS_METRICS_ENABLED: "true"
       TESSERA_OBS_EVIDENCE_SIGNING_ENABLED: "true"

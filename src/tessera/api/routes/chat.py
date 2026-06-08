@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import StreamingResponse
 
 from tessera.agent import build_graph, reporter as reporter_module
-from tessera.agent.state import ConversationMessage, NodeName, new_state
+from tessera.agent.state import ConversationMessage, NodeName, deduplicate_citations, new_state
 from tessera.guard.audit import current_model
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
@@ -226,10 +226,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
                     async for token in reporter_module.astream_synthesise(state):
                         tokens.append(token)
                         yield _sse("turn.token", {"token": token})
-                    citations_footer = reporter_module.format_citations(
-                        state.get("citations", []), state["language"]
-                    )
-                    final_response = "".join(tokens) + citations_footer
+                    final_response = "".join(tokens)
                 elif draft:
                     final_response = reporter_module.render(state)
                 else:
@@ -323,7 +320,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
                 confidence=state.get("confidence"),
                 citations=[
                     {"source": c.source, "locator": c.locator, "language": c.language.value}
-                    for c in state.get("citations", [])
+                    for c in deduplicate_citations(state.get("citations", []))
                 ],
                 finish_reason=outcome,
             )

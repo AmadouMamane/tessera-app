@@ -18,10 +18,13 @@ import operator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Annotated, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Annotated, Literal, NotRequired, TypedDict
 from uuid import UUID  # noqa: TCH003  — LangGraph calls get_type_hints() at runtime
 
 from tessera.settings import LanguageCode  # noqa: TCH001  — same reason
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 __all__ = [
     "AgentState",
@@ -32,6 +35,8 @@ __all__ = [
     "RetrievedDocument",
     "ToolCallRecord",
     "WorkerName",
+    "citation_identity",
+    "deduplicate_citations",
     "new_state",
 ]
 
@@ -128,6 +133,28 @@ class Citation:
     locator: str  # e.g. "art. 28(3)", "section 4.2"
     language: LanguageCode
     excerpt: str
+
+
+def citation_identity(citation: Citation) -> tuple[str, str, str]:
+    """Return the stable public identity for a citation."""
+    return (
+        citation.source.strip(),
+        citation.locator.strip(),
+        citation.language.value,
+    )
+
+
+def deduplicate_citations(citations: Iterable[Citation]) -> list[Citation]:
+    """Collapse repeated chunks from the same source while preserving rank order."""
+    seen: set[tuple[str, str, str]] = set()
+    out: list[Citation] = []
+    for citation in citations:
+        key = citation_identity(citation)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(citation)
+    return out
 
 
 # ---------------------------------------------------------------------------

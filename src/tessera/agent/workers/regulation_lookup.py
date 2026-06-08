@@ -9,7 +9,7 @@ the state.
 
 from __future__ import annotations
 
-from tessera.agent.state import AgentState, Citation, RetrievedDocument
+from tessera.agent.state import AgentState, Citation, RetrievedDocument, deduplicate_citations
 from tessera.observability.metrics import CITATIONS_TOTAL
 from tessera.retrieval import hybrid_search
 
@@ -45,7 +45,9 @@ async def run(state: AgentState) -> dict[str, object]:
     except Exception as exc:
         return {"errors": [f"regulation_lookup failed: {exc}"]}
 
-    citations = [c for c in (_to_citation(doc) for doc in documents) if c is not None]
+    citations = deduplicate_citations(
+        c for c in (_to_citation(doc) for doc in documents) if c is not None
+    )
     update: dict[str, object] = {"retrieved_documents": documents}
     if citations:
         CITATIONS_TOTAL.labels(target=_CORPUS, language=state["language"].value).inc(len(citations))

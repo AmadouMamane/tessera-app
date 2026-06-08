@@ -203,6 +203,8 @@ def test_observability_status_endpoint_reports_degraded_when_required_collector_
     """The operator endpoint exposes profile gaps without probing the network."""
     monkeypatch.delenv("TESSERA_API__BEARER_TOKEN", raising=False)
     monkeypatch.setenv("TESSERA_OBS_PROFILE", "cloud_gcp_regulated")
+    monkeypatch.setenv("TESSERA_OBS_GRAFANA_URL", "http://grafana.local")
+    monkeypatch.setenv("TESSERA_OBS_JAEGER_URL", "http://jaeger.local")
     monkeypatch.delenv("TESSERA_OBS_OTEL_ENDPOINT", raising=False)
     monkeypatch.delenv("TESSERA_OBS_CLOUD_LOGGING_PROJECT", raising=False)
     get_settings.cache_clear()
@@ -218,6 +220,16 @@ def test_observability_status_endpoint_reports_degraded_when_required_collector_
     assert "collector_required_but_not_configured" in body["warnings"]
     assert body["assurance"]["proof_slo_status"] == "degraded"
     assert body["llmops"]["role"] == "optional_llmops_cockpit"
+    assert body["trace_summary"]["recent_count"] >= 0
+    assert {link["key"] for link in body["operator_links"]} == {
+        "grafana",
+        "jaeger",
+        "prometheus",
+        "langfuse",
+    }
+    assert next(link for link in body["operator_links"] if link["key"] == "grafana")["url"] == (
+        "http://grafana.local"
+    )
 
 
 def test_observability_evidence_preview_endpoint_redacts_payload(

@@ -146,6 +146,12 @@ export const EvidenceSummarySchema = z.object({
   turn_id: z.string().nullable(),
   profile: z.string().nullable(),
   assurance_level: z.string().nullable(),
+  trace_id: z.string().nullable().default(null),
+  trace_url: z.string().nullable().default(null),
+  model: z.string().nullable().default(null),
+  language: z.string().nullable().default(null),
+  citation_count: z.number().int().nonnegative().default(0),
+  retrieval_hit_count: z.number().int().nonnegative().default(0),
   proof_quality: z.string().nullable(),
   proof_consensus: z.string().nullable(),
   privacy_status: z.string().nullable(),
@@ -153,12 +159,36 @@ export const EvidenceSummarySchema = z.object({
 });
 export type EvidenceSummary = z.infer<typeof EvidenceSummarySchema>;
 
+export const OperatorLinkSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  url: z.string().nullable(),
+  status: z.string(),
+  role: z.string(),
+});
+export type OperatorLink = z.infer<typeof OperatorLinkSchema>;
+
+export const TraceSummarySchema = z.object({
+  recent_count: z.number().int().nonnegative(),
+  traceable_count: z.number().int().nonnegative(),
+  complete_count: z.number().int().nonnegative(),
+  degraded_count: z.number().int().nonnegative(),
+  latest_trace_id: z.string().nullable(),
+  latest_trace_url: z.string().nullable(),
+  latest_evidence_id: z.string().nullable(),
+  latest_created_at: z.string().nullable(),
+  gap_codes: z.array(z.string()),
+});
+export type TraceSummary = z.infer<typeof TraceSummarySchema>;
+
 export const ObservabilityStatusSchema = z.object({
   profile: z.string(),
   assurance_level: z.string(),
   status: z.string(),
   exporters: ExporterStatusSchema,
   llmops: LLMOpsStatusSchema,
+  operator_links: z.array(OperatorLinkSchema).default([]),
+  trace_summary: TraceSummarySchema,
   assurance: AssuranceStatusSchema,
   recent_evidence: z.array(EvidenceSummarySchema),
   allowed_attribute_count: z.number().int().nonnegative(),

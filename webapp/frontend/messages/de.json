@@ -65,6 +65,16 @@
     "editWillTruncate": "Die folgenden Nachrichten werden gelöscht",
     "errorFallback": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
   },
+  "source": {
+    "title": "Quelle",
+    "back": "Chat",
+    "verified": "Geprüfte Quelle",
+    "sourceId": "Kennung",
+    "corpus": "Korpus",
+    "category": "Kategorie",
+    "language": "Sprache",
+    "document": "Zitiertes Dokument"
+  },
   "audit": {
     "title": "Audit-Protokoll",
     "description": "Jeder Werkzeugaufruf wird mit seiner Entscheidung, Quelle und der zugehörigen Richtlinie protokolliert.",
@@ -215,6 +225,31 @@
     "commit": "Generieren",
     "committing": "Generiert…",
     "emptyEvidence": "Kein persistiertes Bundle.",
+    "links": {
+      "title": "Explorer",
+      "status": {
+        "configured": "bereit",
+        "missing": "nicht konfiguriert",
+        "disabled": "deaktiviert"
+      },
+      "roles": {
+        "metrics_dashboard": "Metrik-Dashboard",
+        "trace_explorer": "Trace-Explorer",
+        "metrics_store": "Prometheus-Speicher",
+        "optional_llmops_cockpit": "Optionales LLMOps-Cockpit"
+      }
+    },
+    "traces": {
+      "title": "Trace-Synthese",
+      "recent": "Aktuelle Evidenzen",
+      "traceable": "Nachverfolgbar",
+      "complete": "Vollständig",
+      "degraded": "Degradiert",
+      "latest": "Letzter Trace",
+      "trace": "Trace",
+      "none": "keiner",
+      "noGaps": "Keine Trace-Lücke"
+    },
     "cards": {
       "profile": "Profil",
       "completeness": "Vollständigkeit",

@@ -1,11 +1,23 @@
 "use client";
 
-import { AlertTriangle, BookOpen, Check, Copy, Pencil, Sparkles, User2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import {
+  AlertTriangle,
+  BookOpen,
+  Check,
+  Copy,
+  ExternalLink,
+  FileText,
+  Pencil,
+  Sparkles,
+  User2,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
+import { dedupeCitations, sourceHref } from "@/lib/source-links";
 import type { ChatMessage } from "@/lib/stores/chat-store";
 import { Markdown } from "./markdown";
 
@@ -290,22 +302,41 @@ function CitationPills({
   citations: NonNullable<ChatMessage["citations"]>;
   sourcesLabel: string;
 }) {
+  const locale = useLocale();
+  const unique = dedupeCitations(citations);
   return (
-    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 px-1">
-      <span className="flex items-center gap-1 text-[0.65rem] text-[var(--muted-foreground)]">
+    <div className="mt-1.5 flex flex-col gap-1 px-1">
+      <span className="flex items-center gap-1 text-[0.65rem] font-medium uppercase text-[var(--muted-foreground)]">
         <BookOpen className="h-3 w-3" />
         {sourcesLabel}
       </span>
-      {citations.map((c, idx) => (
-        <span
-          key={`${c.source}-${c.locator}-${idx}`}
-          className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--muted)]/40 px-2 py-0.5 text-[0.65rem] text-[var(--foreground)] transition-colors hover:border-gold-500/40 hover:bg-gold-500/5"
-        >
-          <span className="h-1 w-1 rounded-full bg-gold-500/70 dark:bg-gold-400/70" />
-          <span className="font-medium">{c.source}</span>
-          {c.locator && <span className="text-[var(--muted-foreground)]">{c.locator}</span>}
-        </span>
-      ))}
+      <div className="grid gap-1">
+        {unique.map((c, idx) => (
+          <Link
+            key={`${c.source}-${c.locator}`}
+            href={sourceHref(locale, c)}
+            className={cn(
+              "group grid min-h-10 grid-cols-[1.5rem_minmax(0,1fr)_1rem] items-center gap-2 rounded-md border border-[var(--border)]",
+              "bg-[var(--muted)]/30 px-2 py-1.5 text-[0.68rem] transition-colors",
+              "hover:border-gold-500/50 hover:bg-gold-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/40",
+            )}
+          >
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--background)] text-[0.62rem] font-semibold text-[var(--muted-foreground)] group-hover:text-gold-700 dark:group-hover:text-gold-300">
+              {idx + 1}
+            </span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-1 font-medium text-[var(--foreground)]">
+                <FileText className="h-3 w-3 shrink-0 text-gold-600 dark:text-gold-400" />
+                <span className="truncate">{c.locator || c.source}</span>
+              </span>
+              <span className="block truncate font-mono text-[0.62rem] text-[var(--muted-foreground)]">
+                {c.source}
+              </span>
+            </span>
+            <ExternalLink className="h-3.5 w-3.5 text-[var(--muted-foreground)] transition-colors group-hover:text-gold-700 dark:group-hover:text-gold-300" />
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

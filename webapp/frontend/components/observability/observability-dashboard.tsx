@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   DatabaseZap,
+  ExternalLink,
   FilePlus2,
   Gauge,
   Link2,
@@ -103,6 +104,11 @@ export function ObservabilityDashboard() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1.15fr]">
         <AssurancePanel data={data} />
+        <TracePanel data={data} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <OperatorLinksPanel data={data} />
         <EvidencePanel
           data={data}
           onCommit={() => commit.mutate()}
@@ -119,7 +125,6 @@ function buildSyntheticEvidencePayload(): CommitEvidencePayload {
   return {
     conversation_id: crypto.randomUUID(),
     turn_id: crypto.randomUUID(),
-    trace_id: `dashboard-${Date.now()}`,
     model: "dashboard_synthetic",
     language: "fr",
     attributes: {
@@ -272,6 +277,102 @@ function AssurancePanel({ data }: { data: ObservabilityStatus }) {
   );
 }
 
+function TracePanel({ data }: { data: ObservabilityStatus }) {
+  const t = useTranslations("observability");
+  const summary = data.trace_summary;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("traces.title")}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <Metric label={t("traces.recent")} value={String(summary.recent_count)} />
+          <Metric label={t("traces.traceable")} value={String(summary.traceable_count)} />
+          <Metric label={t("traces.complete")} value={String(summary.complete_count)} />
+          <Metric label={t("traces.degraded")} value={String(summary.degraded_count)} />
+        </div>
+        <div className="rounded-md border border-[var(--border)] px-3 py-2 text-sm">
+          <p className="text-xs text-[var(--muted-foreground)]">{t("traces.latest")}</p>
+          {summary.latest_trace_id ? (
+            <a
+              href={summary.latest_trace_url ?? undefined}
+              target={summary.latest_trace_url ? "_blank" : undefined}
+              rel="noreferrer"
+              className="mt-1 inline-flex max-w-full items-center gap-1 font-mono text-xs text-blue-600 hover:underline dark:text-blue-400"
+            >
+              <span className="truncate">{summary.latest_trace_id}</span>
+              {summary.latest_trace_url ? <ExternalLink className="h-3 w-3 shrink-0" /> : null}
+            </a>
+          ) : (
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">{t("traces.none")}</p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {summary.gap_codes.length ? (
+            summary.gap_codes.map((gap) => (
+              <Badge key={gap} tone="warning">
+                {gap}
+              </Badge>
+            ))
+          ) : (
+            <Badge tone="success">{t("traces.noGaps")}</Badge>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OperatorLinksPanel({ data }: { data: ObservabilityStatus }) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("links.title")}</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-2">
+        {data.operator_links.map((link) => {
+          const active = Boolean(link.url);
+          const content = (
+            <>
+              <span key="label" className="min-w-0">
+                <span className="block truncate font-medium">{link.label}</span>
+                <span className="block truncate text-xs text-[var(--muted-foreground)]">
+                  {t(`links.roles.${link.role}`)}
+                </span>
+              </span>
+              <span key="status" className="flex items-center gap-2">
+                <Badge tone={active ? "success" : link.status === "disabled" ? "info" : "warning"}>
+                  {t(`links.status.${link.status}`)}
+                </Badge>
+                {active ? <ExternalLink className="h-3.5 w-3.5" /> : null}
+              </span>
+            </>
+          );
+          const className =
+            "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border border-[var(--border)] px-3 py-2 text-sm transition-colors";
+          return active ? (
+            <a
+              key={link.key}
+              href={link.url ?? "#"}
+              target="_blank"
+              rel="noreferrer"
+              className={`${className} hover:border-blue-500/40 hover:bg-blue-500/5`}
+            >
+              {content}
+            </a>
+          ) : (
+            <div key={link.key} className={`${className} bg-[var(--muted)]/20`}>
+              {content}
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
 function EvidencePanel({
   data,
   onCommit,
@@ -321,7 +422,20 @@ function EvidencePanel({
                   <span className="font-mono text-xs text-[var(--muted-foreground)]">
                     {item.proof_consensus}
                   </span>
+                  {item.trace_url ? (
+                    <a
+                      href={item.trace_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  ) : null}
                 </div>
+                <p className="col-span-2 font-mono text-[0.68rem] text-[var(--muted-foreground)]">
+                  {t("traces.trace")} {item.trace_id ?? t("traces.none")}
+                </p>
               </div>
             ))}
           </div>

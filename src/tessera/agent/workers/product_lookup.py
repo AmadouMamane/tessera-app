@@ -12,6 +12,7 @@ from tessera.agent.state import (
     AgentState,
     Citation,
     RetrievedDocument,
+    deduplicate_citations,
 )
 from tessera.observability.metrics import CITATIONS_TOTAL
 from tessera.retrieval import hybrid_search
@@ -58,7 +59,7 @@ async def run(state: AgentState) -> dict[str, object]:
         }
     update: dict[str, object] = {"retrieved_documents": documents}
     if documents:
-        citations = [_to_citation(doc) for doc in documents]
+        citations = deduplicate_citations(_to_citation(doc) for doc in documents)
         CITATIONS_TOTAL.labels(target=_CORPUS, language=state["language"].value).inc(len(citations))
         update["citations"] = citations
     return update

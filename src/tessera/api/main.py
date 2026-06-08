@@ -32,6 +32,7 @@ from tessera.api.routes import (
     memory,
     observability,
     settings as settings_routes,
+    sources,
 )
 from tessera.api.security import SecurityHeadersMiddleware, require_bearer
 from tessera.memory.governance import ensure_consent_schema
@@ -110,6 +111,7 @@ def build_app() -> FastAPI:
     app.include_router(memory.router, dependencies=[Depends(require_bearer)])
     app.include_router(observability.router, dependencies=[Depends(require_bearer)])
     app.include_router(settings_routes.router, dependencies=[Depends(require_bearer)])
+    app.include_router(sources.router, dependencies=[Depends(require_bearer)])
 
     FastAPIInstrumentor.instrument_app(app)
     return app

@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Final
 
 import yaml
 
-from tessera.agent.state import AgentState, Citation, ConversationMessage
+from tessera.agent.state import AgentState, Citation, ConversationMessage, deduplicate_citations
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.memory import get_memory_backend, scope_for
 from tessera.settings import LanguageCode
@@ -74,7 +74,7 @@ def load_prompts(language: LanguageCode) -> dict[str, str]:
 
 def format_citations(citations: Iterable[Citation], language: LanguageCode) -> str:
     """Render citations into a compact, language-aware footer."""
-    citations = list(citations)
+    citations = deduplicate_citations(citations)
     if not citations:
         return ""
 
