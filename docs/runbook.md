@@ -198,6 +198,12 @@ it to local tools:
 - Prometheus: `http://localhost:9091`
 - Grafana: `http://localhost:3001` (`admin` / `tessera`)
 
+The observability overlay uses project-scoped Docker images
+`tessera-observability-refinement-agent:local` and
+`tessera-observability-refinement-frontend:local`. This keeps the demo isolated
+from other Tessera worktrees that may also build `tessera-agent:local` or
+`tessera-frontend:local`.
+
 Expected dashboard posture for this demo:
 
 - profile `on_prem_standard`

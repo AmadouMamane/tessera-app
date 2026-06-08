@@ -16,6 +16,9 @@
 
 services:
   agent:
+    # Project-scoped image names prevent another Tessera worktree from
+    # overwriting the shared `tessera-agent:local` tag before a recreate.
+    image: tessera-observability-refinement-agent:local
     depends_on:
       otel-collector:
         condition: service_started
@@ -35,6 +38,9 @@ services:
       - "9190:9090"
 
   frontend:
+    # Project-scoped image names prevent another Tessera worktree from
+    # overwriting the shared `tessera-frontend:local` tag before a recreate.
+    image: tessera-observability-refinement-frontend:local
     ports: !override
       - "3190:3000"
 
