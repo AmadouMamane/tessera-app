@@ -203,6 +203,19 @@ class ObservabilitySettings(BaseSettings):
     # Data-residency tag attached to every span as a resource attribute and used
     # by the Collector to route EU-only (ADR 0010, idea #3).
     data_residency: str = "eu"
+    # LLM-as-judge model for online evaluation; None → the cheap summary backend
+    # (the sovereign local Llama on the on-prem path). (ADR 0010, Phase 4.)
+    judge_model: str | None = None
+    # Fraction of un-flagged turns scored online; flagged turns are always scored
+    # (tiered, cost-aware online eval — idea #6).
+    online_eval_sample_rate: float = 0.1
+
+    @field_validator("online_eval_sample_rate")
+    @classmethod
+    def _sample_rate_is_a_fraction(cls, value: float) -> float:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"online_eval_sample_rate must be in [0.0, 1.0]; got {value!r}")
+        return value
 
 
 class APISettings(BaseSettings):

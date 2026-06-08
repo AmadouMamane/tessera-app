@@ -22,6 +22,7 @@ __all__ = [
     "AGENT_TURN_DURATION",
     "AGENT_TURNS_TOTAL",
     "BUDGET_GAUGE",
+    "EVAL_SCORE",
     "GUARD_DECISIONS_TOTAL",
     "configure",
     "registry",
@@ -56,6 +57,14 @@ GUARD_DECISIONS_TOTAL = Counter(
 BUDGET_GAUGE = Gauge(
     "tessera_llm_estimated_cost_eur",
     "Running estimate of LLM cost for the active process.",
+    registry=registry,
+)
+
+EVAL_SCORE = Histogram(
+    "tessera_eval_score",
+    "Online evaluation scores, partitioned by metric and language (ADR 0010 #5).",
+    labelnames=("metric", "language"),
+    buckets=(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0),
     registry=registry,
 )
 

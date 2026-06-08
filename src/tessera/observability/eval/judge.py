@@ -1,0 +1,112 @@
+"""LLM-as-judge for online evaluation (ADR 0010, Phase 4, ideas #2/#6).
+
+Scores a turn against a rubric using a :class:`~tessera.llm.router.ChatBackend`.
+By default it uses the cheap *summary* backend, which on the on-prem profile is
+the **sovereign local Llama** — so customer data is never sent off-box to be
+evaluated (the sovereign-judge differentiator). The judge returns a structured
+verdict; callers route scores into telemetry via
+:mod:`tessera.observability.eval.scores`.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final, Protocol
+
+from tessera.llm.router import ChatMessage, get_summary_backend
+
+if TYPE_CHECKING:
+    from tessera.llm.router import ChatBackend
+
+__all__ = ["FAITHFULNESS", "Judge", "JudgeVerdict", "LLMJudge", "rubric_for"]
+
+FAITHFULNESS: Final = "faithfulness"
+
+_RUBRICS: Final[dict[str, str]] = {
+    FAITHFULNESS: (
+        "You are a strict evaluator. Score how FAITHFUL the ANSWER is to the "
+        "provided CONTEXT on a 0..1 scale: 1.0 = every claim is supported by the "
+        "context; 0.0 = the answer contradicts the context or invents facts not "
+        "present in it. Penalise unsupported amounts, identifiers, dates, and "
+        "regulatory citations."
+    ),
+}
+
+_FORMAT_INSTRUCTION: Final = (
+    ' Respond ONLY with JSON: {"score": <float between 0 and 1>, '
+    '"rationale": "<one short sentence>"}.'
+)
+
+
+def rubric_for(metric: str) -> str:
+    """Return the rubric prompt for ``metric`` or raise ``ValueError``."""
+    rubric = _RUBRICS.get(metric)
+    if rubric is None:
+        raise ValueError(f"unknown judge metric: {metric!r}")
+    return rubric
+
+
+@dataclass(frozen=True, slots=True)
+class JudgeVerdict:
+    """A single judge score for one metric."""
+
+    metric: str
+    score: float
+    rationale: str
+    judge_model: str
+
+
+class Judge(Protocol):
+    """The narrow scoring interface online evaluation depends on."""
+
+    async def score(
+        self, *, metric: str, question: str, answer: str, context: str
+    ) -> JudgeVerdict:
+        """Return a verdict scoring ``answer`` for ``metric`` given the context."""
+        ...
+
+
+def _extract_json(text: str) -> dict[str, object]:
+    """Pull the first JSON object out of a model response (robust to chatter)."""
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        raise ValueError("no JSON object found in judge output")
+    parsed: dict[str, object] = json.loads(text[start : end + 1])
+    return parsed
+
+
+def _coerce_score(value: object) -> float:
+    """Coerce a parsed score into a clamped float in [0, 1]."""
+    try:
+        score = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0.0
+    return min(1.0, max(0.0, score))
+
+
+class LLMJudge:
+    """Scores turns with a ChatBackend (default: the sovereign summary backend)."""
+
+    def __init__(self, backend: ChatBackend | None = None) -> None:
+        self._backend = backend or get_summary_backend()
+
+    async def score(self, *, metric: str, question: str, answer: str, context: str) -> JudgeVerdict:
+        """Score ``answer`` for ``metric`` given ``question`` and ``context``."""
+        rubric = rubric_for(metric)
+        messages = [
+            ChatMessage(role="system", content=rubric + _FORMAT_INSTRUCTION),
+            ChatMessage(
+                role="user",
+                content=f"CONTEXT:\n{context}\n\nQUESTION:\n{question}\n\nANSWER:\n{answer}",
+            ),
+        ]
+        response = await self._backend.chat(messages, temperature=0.0)
+        data = _extract_json(response.content)
+        return JudgeVerdict(
+            metric=metric,
+            score=_coerce_score(data.get("score")),
+            rationale=str(data.get("rationale", "")),
+            judge_model=response.model,
+        )
