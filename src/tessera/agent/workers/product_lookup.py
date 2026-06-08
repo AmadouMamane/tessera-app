@@ -3,21 +3,34 @@
 The product corpus is the fictional retail-banking catalogue under
 ``src/tessera/corpus/data/credit_aurore_{fr,de,en}.json``. The worker queries
 the retrieval layer with the user's input, scoped to the detected language,
-and writes the top-k chunks back into ``retrieved_documents``.
+and writes the top-k chunks plus their citations back into the graph state.
 """
 
 from __future__ import annotations
 
-from tessera.agent.state import (  # noqa: TCH001  — runtime introspection
+from tessera.agent.state import (
     AgentState,
+    Citation,
     RetrievedDocument,
 )
+from tessera.observability.metrics import CITATIONS_TOTAL
 from tessera.retrieval import hybrid_search
 
 NODE_NAME = "product_lookup"
 
 _TOP_K = 4
 _CORPUS = "credit_aurore"
+
+
+def _to_citation(doc: RetrievedDocument) -> Citation:
+    """Promote a product-corpus chunk into a citation."""
+    locator = doc.metadata.get("locator") or doc.chunk_id
+    return Citation(
+        source=doc.source,
+        locator=locator,
+        language=doc.language,
+        excerpt=doc.text[:280],
+    )
 
 
 async def _search(state: AgentState) -> list[RetrievedDocument]:
@@ -43,4 +56,9 @@ async def run(state: AgentState) -> dict[str, object]:
         return {
             "errors": [f"product_lookup failed: {exc}"],
         }
-    return {"retrieved_documents": documents}
+    update: dict[str, object] = {"retrieved_documents": documents}
+    if documents:
+        citations = [_to_citation(doc) for doc in documents]
+        CITATIONS_TOTAL.labels(target=_CORPUS, language=state["language"].value).inc(len(citations))
+        update["citations"] = citations
+    return update
