@@ -449,6 +449,12 @@
       "off": "Aus",
       "locales": "Sprachen"
     },
+    "why": {
+      "run": "Warum?",
+      "title": "Warum diese Antwort",
+      "confidence": "Konfidenz",
+      "unsupported": "keine Quelle im Kontext"
+    },
     "clusters": {
       "title": "Failure-Cluster (auto-thematisiert)",
       "unavailable": "Embedder nicht verfügbar.",

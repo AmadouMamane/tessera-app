@@ -8,6 +8,7 @@ import {
   Gavel,
   Globe,
   Heart,
+  HelpCircle,
   Layers3,
   Play,
   ScanSearch,
@@ -36,6 +37,7 @@ import {
   runReranking,
   runRobustness,
   runSycophancy,
+  runWhy,
 } from "@/lib/api/client";
 import type {
   AblationReport,
@@ -51,6 +53,7 @@ import type {
   RobustnessReport,
   StegoReport,
   SycophancyReport,
+  WhyExplanation,
 } from "@/lib/api/schemas";
 
 // Locally-available Ollama models to replay against (smallest first).
@@ -138,6 +141,12 @@ export function ReplayPanel() {
     onSuccess: (res, vars) => setAblation((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
+  const [why, setWhy] = useState<Record<string, WhyExplanation>>({});
+  const whyMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => runWhy(bundleId),
+    onSuccess: (res, vars) => setWhy((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
 
   return (
@@ -183,6 +192,7 @@ export function ReplayPanel() {
               const xl = xling[b.bundle_id];
               const rr = rerank[b.bundle_id];
               const abl = ablation[b.bundle_id];
+              const wh = why[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -335,6 +345,18 @@ export function ReplayPanel() {
                         variant="ghost"
                         className="gap-1.5"
                         disabled={
+                          whyMutation.isPending && whyMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => whyMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <HelpCircle className="h-3.5 w-3.5" />
+                        {t("why.run")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
                           robustMutation.isPending &&
                           robustMutation.variables?.bundleId === b.bundle_id
                         }
@@ -364,6 +386,7 @@ export function ReplayPanel() {
                   {xl ? <CrossLingualView report={xl} /> : null}
                   {rr ? <RerankingView report={rr} /> : null}
                   {abl ? <AblationView report={abl} /> : null}
+                  {wh ? <WhyView report={wh} /> : null}
                   {rob ? <RobustnessView report={rob} /> : null}
                   {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
@@ -476,6 +499,46 @@ function CorpusScanView({ report }: { report: CorpusScanReport }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function WhyView({ report }: { report: WhyExplanation }) {
+  const t = useTranslations("observability");
+  const confPct = Math.round(report.confidence * 100);
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <HelpCircle className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <span className="text-xs text-[var(--muted-foreground)]">{t("why.title")}</span>
+        <Badge tone={report.fully_grounded ? "success" : "warning"}>
+          {t("why.confidence")} {confPct}%
+        </Badge>
+      </div>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {report.claims.map((c, i) => (
+          <li key={`${i}-${c.claim.slice(0, 16)}`} className="flex items-start gap-2">
+            <span
+              aria-hidden
+              className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                c.supported ? "bg-emerald-500" : "bg-red-500"
+              }`}
+            />
+            <span className="min-w-0">
+              <span className={c.supported ? "" : "text-red-600 dark:text-red-400"}>{c.claim}</span>
+              {c.source ? (
+                <span className="block text-[0.65rem] text-[var(--muted-foreground)]">
+                  ← {c.source}
+                </span>
+              ) : (
+                <span className="block text-[0.65rem] text-red-600 dark:text-red-400">
+                  {t("why.unsupported")}
+                </span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

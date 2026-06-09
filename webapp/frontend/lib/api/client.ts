@@ -137,6 +137,8 @@ import {
   TrendReportSchema,
   type WhatChanged,
   WhatChangedSchema,
+  type WhyExplanation,
+  WhyExplanationSchema,
 } from "./schemas";
 
 const BASE = "/api";
@@ -496,6 +498,19 @@ export async function fetchSteganography(
     `/observability/steganography/${encodeURIComponent(bundleId)}`,
     { signal },
     StegoReportSchema,
+  );
+}
+
+/** Build a user-facing "why this answer" explanation from provenance (#133). */
+export async function runWhy(bundleId: string): Promise<WhyExplanation> {
+  return request(
+    "/observability/why",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId }),
+    },
+    WhyExplanationSchema,
   );
 }
 

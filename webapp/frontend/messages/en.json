@@ -449,6 +449,12 @@
       "off": "Off",
       "locales": "Locales"
     },
+    "why": {
+      "run": "Why?",
+      "title": "Why this answer",
+      "confidence": "confidence",
+      "unsupported": "no source in the grounding"
+    },
     "clusters": {
       "title": "Failure clusters (auto-themed)",
       "unavailable": "Embedder unavailable.",

@@ -347,6 +347,22 @@ export const AblationReportSchema = z.object({
 });
 export type AblationReport = z.infer<typeof AblationReportSchema>;
 
+export const ClaimExplanationSchema = z.object({
+  claim: z.string(),
+  supported: z.boolean(),
+  support: z.number(),
+  source: z.string(),
+});
+
+export const WhyExplanationSchema = z.object({
+  n_claims: z.number().int(),
+  grounded_fraction: z.number(),
+  confidence: z.number(),
+  fully_grounded: z.boolean(),
+  claims: z.array(ClaimExplanationSchema),
+});
+export type WhyExplanation = z.infer<typeof WhyExplanationSchema>;
+
 export const SycophancyReportSchema = z.object({
   score: z.number(),
   sycophantic: z.boolean(),

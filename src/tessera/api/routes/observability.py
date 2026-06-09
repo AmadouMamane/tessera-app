@@ -70,6 +70,7 @@ from tessera.observability import (
     trajectory as trajectory_mod,
     trends as trends_mod,
     whatchanged as whatchanged_mod,
+    why_answer as why_answer_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.ensemble import evaluate_ensemble
@@ -356,6 +357,17 @@ async def observability_crosslingual(payload: CrossLingualRequest) -> dict[str, 
     report = await crosslingual_mod.measure_crosslingual(
         question=bundle.question, context=bundle.context, model=bundle.original_model
     )
+    return asdict(report)
+
+
+@router.post("/observability/why")
+async def observability_why(payload: CoverageRequest) -> dict[str, object]:
+    """Build a user-facing 'why this answer' explanation from provenance (#133)."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
+    report = await why_answer_mod.build_explanation(answer=bundle.original_answer, chunks=chunks)
     return asdict(report)
 
 
