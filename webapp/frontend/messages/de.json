@@ -428,6 +428,13 @@
         "repetitive": "repetitiv",
         "looping": "Schleife"
       }
+    },
+    "refusal": {
+      "title": "Ablehnungskalibrierung",
+      "over": "Über-Ablehnung (legitim)",
+      "under": "Unter-Ablehnung (verboten)",
+      "legit": "legitime abgelehnt",
+      "forbidden": "verbotene durchgelassen"
     }
   }
 }

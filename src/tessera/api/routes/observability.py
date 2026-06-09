@@ -23,6 +23,7 @@ from tessera.observability import (
     pii_leak as pii_leak_mod,
     provenance as provenance_mod,
     redteam as redteam_mod,
+    refusal as refusal_mod,
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
     robustness as robustness_mod,
@@ -177,6 +178,12 @@ async def observability_redteam_run() -> dict[str, object]:
         "latest": asdict(snapshot),
         "snapshots": [asdict(s) for s in redteam_mod.recent_snapshots()],
     }
+
+
+@router.get("/observability/refusal")
+async def observability_refusal() -> dict[str, object]:
+    """Refusal-rate calibration: over-refusal (legit) vs under-refusal (forbidden)."""
+    return asdict(refusal_mod.compute_refusal_calibration())
 
 
 @router.get("/observability/tool-validity")

@@ -13,6 +13,7 @@ import {
   Lock,
   Scale,
   ShieldCheck,
+  SlidersHorizontal,
   Target,
   Wrench,
 } from "lucide-react";
@@ -32,6 +33,7 @@ import {
   fetchFirewallEfficacy,
   fetchPiiLeak,
   fetchRedteam,
+  fetchRefusal,
   fetchRouting,
   fetchSessions,
   fetchToolValidity,
@@ -46,6 +48,7 @@ import type {
   FirewallEfficacy,
   PIILeakSummary,
   RedTeamResponse,
+  RefusalReport,
   RoutingReport,
   SessionReport,
   ToolValidity,
@@ -127,6 +130,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 20_000,
   });
 
+  const refusal = useQuery({
+    queryKey: ["refusal"],
+    queryFn: ({ signal }) => fetchRefusal(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -152,6 +161,8 @@ export function ObservabilityDashboard() {
       <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
 
       <RedTeamCard />
+
+      <RefusalCard data={refusal.data} loading={refusal.isLoading} />
 
       <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
 
@@ -421,6 +432,47 @@ function RedTeamCard() {
                 ))}
               </ul>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RefusalCard({ data, loading }: { data: RefusalReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const over = data ? Math.round(data.over_refusal_rate * 100) : 0;
+  const under = data ? Math.round(data.under_refusal_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <SlidersHorizontal className="h-4 w-4 text-blue-500" />
+          {t("refusal.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">{t("refusal.over")}</span>
+              <Badge tone={over === 0 ? "success" : over <= 10 ? "warning" : "danger"}>
+                {over}%
+              </Badge>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">{t("refusal.under")}</span>
+              <Badge tone={under === 0 ? "success" : under <= 30 ? "warning" : "danger"}>
+                {under}%
+              </Badge>
+            </div>
+            <Metric label={t("refusal.legit")} value={`${data.legit_refused}/${data.n_legit}`} />
+            <Metric
+              label={t("refusal.forbidden")}
+              value={`${data.forbidden_allowed}/${data.n_forbidden}`}
+            />
           </div>
         )}
       </CardContent>

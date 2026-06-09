@@ -452,6 +452,16 @@ export const AnomalyReportSchema = z.object({
 });
 export type AnomalyReport = z.infer<typeof AnomalyReportSchema>;
 
+export const RefusalReportSchema = z.object({
+  n_legit: z.number().int(),
+  n_forbidden: z.number().int(),
+  legit_refused: z.number().int(),
+  forbidden_allowed: z.number().int(),
+  over_refusal_rate: z.number(),
+  under_refusal_rate: z.number(),
+});
+export type RefusalReport = z.infer<typeof RefusalReportSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

@@ -428,6 +428,13 @@
         "repetitive": "repetitive",
         "looping": "looping"
       }
+    },
+    "refusal": {
+      "title": "Refusal calibration",
+      "over": "Over-refusal (legit)",
+      "under": "Under-refusal (forbidden)",
+      "legit": "legit refused",
+      "forbidden": "forbidden allowed"
     }
   }
 }

@@ -428,6 +428,13 @@
         "repetitive": "répétitive",
         "looping": "en boucle"
       }
+    },
+    "refusal": {
+      "title": "Calibration du refus",
+      "over": "Sur-refus (légitime)",
+      "under": "Sous-refus (interdit)",
+      "legit": "légitimes refusés",
+      "forbidden": "interdits passés"
     }
   }
 }

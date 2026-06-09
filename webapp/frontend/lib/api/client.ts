@@ -43,6 +43,8 @@ import {
   ProvenanceReportSchema,
   type RedTeamResponse,
   RedTeamResponseSchema,
+  type RefusalReport,
+  RefusalReportSchema,
   type ReplayResult,
   ReplayResultSchema,
   type ReplaysResponse,
@@ -173,6 +175,11 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Refusal-rate calibration: over-refusal (legit) vs under-refusal (forbidden) (#58). */
+export async function fetchRefusal(signal?: AbortSignal): Promise<RefusalReport> {
+  return request("/observability/refusal", { signal }, RefusalReportSchema);
 }
 
 /** Anomalous-conversation detection: long/looping/repetitive sessions (#69). */
