@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.observability import (
     consistency as consistency_mod,
+    contradiction as contradiction_mod,
     corpus_injection as corpus_injection_mod,
     firewall_efficacy as firewall_mod,
     language_routing as language_routing_mod,
@@ -184,6 +185,30 @@ async def observability_sessions() -> dict[str, object]:
         raw = score.get("score", 0.0)
         turns.append((conv if isinstance(conv, str) else None, float(raw)))  # type: ignore[arg-type]
     return asdict(sessions_mod.aggregate_sessions(turns))
+
+
+@router.get("/observability/contradictions")
+async def observability_contradictions() -> dict[str, object]:
+    """Detect self-contradictions across the turns of each captured session."""
+    by_conversation: dict[str, list[tuple[str, str]]] = {}
+    for bundle in replay_mod.recent_bundles():
+        key = bundle.conversation_id or "<none>"
+        by_conversation.setdefault(key, []).append((bundle.question, bundle.original_answer))
+
+    n_turns = 0
+    pairs: list[dict[str, object]] = []
+    for conversation_id, turns in by_conversation.items():
+        n_turns += len(turns)
+        report = await contradiction_mod.detect_contradictions(turns)
+        for pair in report.contradictions:
+            pairs.append({"conversation_id": conversation_id, **asdict(pair)})
+
+    return {
+        "n_sessions": len(by_conversation),
+        "n_turns": n_turns,
+        "n_contradictions": len(pairs),
+        "pairs": pairs,
+    }
 
 
 @router.get("/observability/corpus-scan/{bundle_id}")

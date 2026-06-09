@@ -383,6 +383,24 @@ export const RedTeamResponseSchema = z.object({
 });
 export type RedTeamResponse = z.infer<typeof RedTeamResponseSchema>;
 
+export const ContradictionPairSchema = z.object({
+  conversation_id: z.string(),
+  i: z.number().int(),
+  j: z.number().int(),
+  topic_similarity: z.number(),
+  answer_similarity: z.number(),
+  question_i: z.string(),
+  question_j: z.string(),
+});
+
+export const ContradictionReportSchema = z.object({
+  n_sessions: z.number().int(),
+  n_turns: z.number().int(),
+  n_contradictions: z.number().int(),
+  pairs: z.array(ContradictionPairSchema),
+});
+export type ContradictionReport = z.infer<typeof ContradictionReportSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

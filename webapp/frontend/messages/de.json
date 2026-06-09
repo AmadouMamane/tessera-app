@@ -390,6 +390,16 @@
       "bypassed": "Umgehungen",
       "drift": "Drift (%)",
       "empty": "Starten Sie das Red-Team, um die Angriffserfolgsrate zu messen."
+    },
+    "contradiction": {
+      "title": "Mehrturn-Widerspruch",
+      "found": "Widersprüche",
+      "sessions": "Sitzungen",
+      "turns": "Turns",
+      "turn": "Turn",
+      "topic": "Thema",
+      "answers": "Antworten",
+      "empty": "Keine Mehrturn-Sitzung erfasst."
     }
   }
 }

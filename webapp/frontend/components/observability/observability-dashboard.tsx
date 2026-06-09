@@ -5,6 +5,7 @@ import {
   Crosshair,
   ExternalLink,
   Gauge,
+  GitCompareArrows,
   Languages,
   LineChart,
   Lock,
@@ -23,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchCalibration,
+  fetchContradictions,
   fetchEvalScores,
   fetchFirewallEfficacy,
   fetchPiiLeak,
@@ -34,6 +36,7 @@ import {
 } from "@/lib/api/client";
 import type {
   Calibration,
+  ContradictionReport,
   EvalScore,
   FirewallEfficacy,
   PIILeakSummary,
@@ -100,6 +103,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const contradictions = useQuery({
+    queryKey: ["contradictions"],
+    queryFn: ({ signal }) => fetchContradictions(signal),
+    refetchInterval: 20_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -133,6 +142,8 @@ export function ObservabilityDashboard() {
       <RoutingCard data={routing.data} loading={routing.isLoading} />
 
       <SessionCard data={sessions.data} loading={sessions.isLoading} />
+
+      <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
 
       <ReplayPanel />
 
@@ -540,6 +551,67 @@ function SessionCard({ data, loading }: { data: SessionReport | undefined; loadi
               value={`${Math.round(data.single_turn_rate * 100)}%`}
             />
             <Metric label={t("sessions.meanScore")} value={data.mean_score.toFixed(2)} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContradictionCard({
+  data,
+  loading,
+}: {
+  data: ContradictionReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <GitCompareArrows className="h-4 w-4 text-blue-500" />
+          {t("contradiction.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_turns === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("contradiction.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("contradiction.found")}
+                </span>
+                <Badge tone={data.n_contradictions === 0 ? "success" : "danger"}>
+                  {data.n_contradictions}
+                </Badge>
+              </div>
+              <Metric label={t("contradiction.sessions")} value={String(data.n_sessions)} />
+              <Metric label={t("contradiction.turns")} value={String(data.n_turns)} />
+            </div>
+            {data.pairs.length > 0 ? (
+              <ul className="flex flex-col gap-2 text-xs">
+                {data.pairs.slice(0, 5).map((p, idx) => (
+                  <li
+                    key={`${p.conversation_id}-${p.i}-${p.j}-${idx}`}
+                    className="rounded-md bg-[var(--muted)]/40 p-2"
+                  >
+                    <p className="text-[var(--muted-foreground)]">
+                      {t("contradiction.turn")} {p.i + 1} ↔ {p.j + 1} · {t("contradiction.topic")}{" "}
+                      {Math.round(p.topic_similarity * 100)}% · {t("contradiction.answers")}{" "}
+                      {Math.round(p.answer_similarity * 100)}%
+                    </p>
+                    <p className="mt-0.5 break-words">
+                      “{p.question_i}” / “{p.question_j}”
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         )}
       </CardContent>

@@ -23,6 +23,8 @@ import {
   CalibrationSchema,
   type ConsistencyReport,
   ConsistencyReportSchema,
+  type ContradictionReport,
+  ContradictionReportSchema,
   type CorpusScanReport,
   CorpusScanReportSchema,
   type EvalScoresResponse,
@@ -165,6 +167,11 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Multi-turn self-contradictions across captured sessions (#30). */
+export async function fetchContradictions(signal?: AbortSignal): Promise<ContradictionReport> {
+  return request("/observability/contradictions", { signal }, ContradictionReportSchema);
 }
 
 /** Recorded jailbreak-drift snapshots (continuous red-team, #24). */

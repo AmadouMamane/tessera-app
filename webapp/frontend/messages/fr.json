@@ -390,6 +390,16 @@
       "bypassed": "Contournements",
       "drift": "Dérive (%)",
       "empty": "Lancez le red-team pour mesurer le taux de réussite d'attaque."
+    },
+    "contradiction": {
+      "title": "Contradiction multi-tour",
+      "found": "Contradictions",
+      "sessions": "Sessions",
+      "turns": "Tours",
+      "turn": "tour",
+      "topic": "sujet",
+      "answers": "réponses",
+      "empty": "Aucun tour multi-session capturé."
     }
   }
 }

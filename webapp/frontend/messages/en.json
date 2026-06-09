@@ -390,6 +390,16 @@
       "bypassed": "Bypasses",
       "drift": "Drift (%)",
       "empty": "Run the red-team to measure the attack-success rate."
+    },
+    "contradiction": {
+      "title": "Multi-turn contradiction",
+      "found": "Contradictions",
+      "sessions": "Sessions",
+      "turns": "Turns",
+      "turn": "turn",
+      "topic": "topic",
+      "answers": "answers",
+      "empty": "No multi-turn session captured yet."
     }
   }
 }
