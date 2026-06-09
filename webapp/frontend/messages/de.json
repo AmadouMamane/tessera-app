@@ -400,6 +400,14 @@
       "topic": "Thema",
       "answers": "Antworten",
       "empty": "Keine Mehrturn-Sitzung erfasst."
+    },
+    "ensemble": {
+      "run": "Jury",
+      "mean": "Mittelwert",
+      "spread": "Spanne",
+      "hardCase": "Schwieriger Fall (Uneinigkeit)",
+      "agree": "Einigkeit",
+      "mistral": "mistral"
     }
   }
 }

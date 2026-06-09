@@ -30,6 +30,7 @@ from tessera.observability import (
     tool_validity as tool_validity_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
+from tessera.observability.eval.ensemble import evaluate_ensemble
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.scores import recent_scores
 
@@ -56,6 +57,14 @@ class ConsistencyRequest(BaseModel):
 
 class RobustnessRequest(BaseModel):
     """Measure robustness-under-noise of a captured turn."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bundle_id: str
+
+
+class EnsembleRequest(BaseModel):
+    """Score a captured turn with a multi-judge ensemble."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -130,6 +139,18 @@ async def observability_robustness(payload: RobustnessRequest) -> dict[str, obje
         raise HTTPException(status_code=404, detail="replay bundle not found")
     report = await robustness_mod.measure_robustness(
         question=bundle.question, context=bundle.context, model=bundle.original_model
+    )
+    return asdict(report)
+
+
+@router.post("/observability/ensemble")
+async def observability_ensemble(payload: EnsembleRequest) -> dict[str, object]:
+    """Score a captured turn with a multi-judge ensemble; flag disagreement."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    report = await evaluate_ensemble(
+        question=bundle.question, answer=bundle.original_answer, context=bundle.context
     )
     return asdict(report)
 

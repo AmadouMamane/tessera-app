@@ -296,6 +296,22 @@ export const ConsistencyReportSchema = z.object({
 });
 export type ConsistencyReport = z.infer<typeof ConsistencyReportSchema>;
 
+export const JudgeScoreSchema = z.object({
+  model: z.string(),
+  score: z.number(),
+  rationale: z.string(),
+});
+
+export const EnsembleReportSchema = z.object({
+  metric: z.string(),
+  mean_score: z.number(),
+  max_spread: z.number(),
+  agreement: z.number(),
+  disagreement: z.boolean(),
+  scores: z.array(JudgeScoreSchema),
+});
+export type EnsembleReport = z.infer<typeof EnsembleReportSchema>;
+
 export const PerturbationResultSchema = z.object({
   kind: z.string(),
   perturbed_question: z.string(),

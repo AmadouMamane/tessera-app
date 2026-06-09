@@ -400,6 +400,14 @@
       "topic": "topic",
       "answers": "answers",
       "empty": "No multi-turn session captured yet."
+    },
+    "ensemble": {
+      "run": "Jury",
+      "mean": "Mean score",
+      "spread": "spread",
+      "hardCase": "Hard case (disagreement)",
+      "agree": "Agreement",
+      "mistral": "mistral"
     }
   }
 }

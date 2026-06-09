@@ -400,6 +400,14 @@
       "topic": "sujet",
       "answers": "réponses",
       "empty": "Aucun tour multi-session capturé."
+    },
+    "ensemble": {
+      "run": "Jury",
+      "mean": "Score moyen",
+      "spread": "écart",
+      "hardCase": "Cas difficile (désaccord)",
+      "agree": "Accord",
+      "mistral": "mistral"
     }
   }
 }

@@ -27,6 +27,8 @@ import {
   ContradictionReportSchema,
   type CorpusScanReport,
   CorpusScanReportSchema,
+  type EnsembleReport,
+  EnsembleReportSchema,
   type EvalScoresResponse,
   EvalScoresResponseSchema,
   type FirewallEfficacy,
@@ -258,6 +260,19 @@ export async function runRobustness(bundleId: string): Promise<RobustnessReport>
       body: JSON.stringify({ bundle_id: bundleId }),
     },
     RobustnessReportSchema,
+  );
+}
+
+/** Score a captured turn with a multi-judge ensemble; flags disagreement (#95). */
+export async function runEnsemble(bundleId: string): Promise<EnsembleReport> {
+  return request(
+    "/observability/ensemble",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId }),
+    },
+    EnsembleReportSchema,
   );
 }
 

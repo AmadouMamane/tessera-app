@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { EyeOff, Play, ScanSearch, ShieldAlert, Shuffle, Waves } from "lucide-react";
+import { EyeOff, Gavel, Play, ScanSearch, ShieldAlert, Shuffle, Waves } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -15,12 +15,14 @@ import {
   fetchReplays,
   fetchSteganography,
   runConsistency,
+  runEnsemble,
   runReplay,
   runRobustness,
 } from "@/lib/api/client";
 import type {
   ConsistencyReport,
   CorpusScanReport,
+  EnsembleReport,
   ProvenanceReport,
   ReplayBundle,
   ReplayResult,
@@ -77,6 +79,12 @@ export function ReplayPanel() {
     onSuccess: (res, vars) => setStego((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
+  const [ensemble, setEnsemble] = useState<Record<string, EnsembleReport>>({});
+  const ensembleMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => runEnsemble(bundleId),
+    onSuccess: (res, vars) => setEnsemble((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
 
   return (
@@ -116,6 +124,7 @@ export function ReplayPanel() {
               const rob = robust[b.bundle_id];
               const scan = scans[b.bundle_id];
               const steg = stego[b.bundle_id];
+              const ens = ensemble[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -191,6 +200,19 @@ export function ReplayPanel() {
                         variant="ghost"
                         className="gap-1.5"
                         disabled={
+                          ensembleMutation.isPending &&
+                          ensembleMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => ensembleMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <Gavel className="h-3.5 w-3.5" />
+                        {t("ensemble.run")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
                           robustMutation.isPending &&
                           robustMutation.variables?.bundleId === b.bundle_id
                         }
@@ -214,6 +236,7 @@ export function ReplayPanel() {
                   {b.latency_ms ? <LatencyWaterfall timings={b.latency_ms} /> : null}
                   {scan ? <CorpusScanView report={scan} /> : null}
                   {steg ? <StegoView report={steg} /> : null}
+                  {ens ? <EnsembleView report={ens} /> : null}
                   {rob ? <RobustnessView report={rob} /> : null}
                   {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
@@ -326,6 +349,36 @@ function CorpusScanView({ report }: { report: CorpusScanReport }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function EnsembleView({ report }: { report: EnsembleReport }) {
+  const t = useTranslations("observability");
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <Gavel className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <span>
+          {t("ensemble.mean")}:{" "}
+          <span className="font-semibold tabular-nums">{report.mean_score.toFixed(2)}</span>
+        </span>
+        <span className="text-xs text-[var(--muted-foreground)]">
+          {t("ensemble.spread")}: {report.max_spread.toFixed(2)}
+        </span>
+        <Badge tone={report.disagreement ? "danger" : "success"}>
+          {report.disagreement ? t("ensemble.hardCase") : t("ensemble.agree")}
+        </Badge>
+      </div>
+      <ul className="mt-2 flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
+        {report.scores.map((s) => (
+          <li key={s.model} className="flex items-center gap-3">
+            <span className="w-28 shrink-0 font-mono">{s.model}</span>
+            <span className="tabular-nums">{s.score.toFixed(2)}</span>
+            <span className="min-w-0 truncate">{s.rationale}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
