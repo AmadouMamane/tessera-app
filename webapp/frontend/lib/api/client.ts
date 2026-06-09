@@ -23,6 +23,8 @@ import {
   CalibrationSchema,
   type EvalScoresResponse,
   EvalScoresResponseSchema,
+  type FirewallEfficacy,
+  FirewallEfficacySchema,
   type HealthResponse,
   HealthResponseSchema,
   type ProvenanceReport,
@@ -130,6 +132,11 @@ export async function fetchEvalScores(signal?: AbortSignal): Promise<EvalScoresR
 /** Judge calibration against the human gold set (computed server-side, cached). */
 export async function fetchCalibration(signal?: AbortSignal): Promise<Calibration> {
   return request("/observability/calibration", { signal }, CalibrationSchema);
+}
+
+/** Guard/firewall detection efficacy over injection vs benign inputs. */
+export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<FirewallEfficacy> {
+  return request("/observability/firewall-efficacy", { signal }, FirewallEfficacySchema);
 }
 
 /** Captured production turns available for regression replay. */

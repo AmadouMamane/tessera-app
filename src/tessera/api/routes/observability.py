@@ -13,6 +13,7 @@ from dataclasses import asdict
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict
 
+from tessera.observability import firewall_efficacy as firewall_mod
 from tessera.observability import provenance as provenance_mod
 from tessera.observability import replay as replay_mod
 from tessera.observability.eval.calibration import calibrate, load_gold_set
@@ -74,6 +75,12 @@ async def observability_replay(payload: ReplayRequest) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     result = await replay_mod.replay(bundle, model=payload.model)
     return asdict(result)
+
+
+@router.get("/observability/firewall-efficacy")
+async def observability_firewall_efficacy() -> dict[str, object]:
+    """Detection efficacy of the guard over injection vs benign inputs."""
+    return asdict(firewall_mod.compute_efficacy())
 
 
 @router.get("/observability/provenance/{bundle_id}")

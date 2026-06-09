@@ -314,6 +314,14 @@
     },
     "latency": {
       "title": "Latence"
+    },
+    "firewall": {
+      "title": "Efficacité du firewall (guard)",
+      "precision": "Précision",
+      "recall": "Rappel",
+      "f1": "F1",
+      "caught": "Détectés",
+      "falsePositive": "Faux positifs"
     }
   }
 }

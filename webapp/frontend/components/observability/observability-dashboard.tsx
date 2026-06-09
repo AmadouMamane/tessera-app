@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Gauge, LineChart, Scale } from "lucide-react";
+import { ExternalLink, Gauge, LineChart, Scale, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
@@ -9,8 +9,8 @@ import { ReplayPanel } from "@/components/observability/replay-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchCalibration, fetchEvalScores } from "@/lib/api/client";
-import type { Calibration, EvalScore } from "@/lib/api/schemas";
+import { fetchCalibration, fetchEvalScores, fetchFirewallEfficacy } from "@/lib/api/client";
+import type { Calibration, EvalScore, FirewallEfficacy } from "@/lib/api/schemas";
 
 const POLL_MS = 5_000;
 const PHOENIX_URL = process.env.NEXT_PUBLIC_PHOENIX_URL ?? "http://localhost:16006";
@@ -39,6 +39,12 @@ export function ObservabilityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
 
+  const firewall = useQuery({
+    queryKey: ["firewall-efficacy"],
+    queryFn: ({ signal }) => fetchFirewallEfficacy(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -60,6 +66,8 @@ export function ObservabilityDashboard() {
       </div>
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
+
+      <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
 
       <ReplayPanel />
 
@@ -183,6 +191,49 @@ function CalibrationCard({ data, loading }: { data: Calibration | undefined; loa
               </Badge>
             </div>
             <Metric label={t("calibration.judge")} value={data.judge_model ?? "—"} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FirewallEfficacyCard({
+  data,
+  loading,
+}: {
+  data: FirewallEfficacy | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <ShieldCheck className="h-4 w-4 text-blue-500" />
+          {t("firewall.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <Metric label={t("firewall.precision")} value={data.precision.toFixed(2)} />
+            <Metric label={t("firewall.recall")} value={data.recall.toFixed(2)} />
+            <Metric label={t("firewall.f1")} value={data.f1.toFixed(2)} />
+            <Metric
+              label={t("firewall.caught")}
+              value={`${data.true_positive}/${data.n_positive}`}
+            />
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("firewall.falsePositive")}
+              </span>
+              <Badge tone={data.false_positive === 0 ? "success" : "warning"}>
+                {data.false_positive}
+              </Badge>
+            </div>
           </div>
         )}
       </CardContent>

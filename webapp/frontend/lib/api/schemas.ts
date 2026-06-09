@@ -277,3 +277,16 @@ export const ProvenanceReportSchema = z.object({
   claims: z.array(ProvenanceClaimSchema),
 });
 export type ProvenanceReport = z.infer<typeof ProvenanceReportSchema>;
+
+export const FirewallEfficacySchema = z.object({
+  n_positive: z.number().int(),
+  n_negative: z.number().int(),
+  true_positive: z.number().int(),
+  false_negative: z.number().int(),
+  false_positive: z.number().int(),
+  true_negative: z.number().int(),
+  precision: z.number(),
+  recall: z.number(),
+  f1: z.number(),
+});
+export type FirewallEfficacy = z.infer<typeof FirewallEfficacySchema>;
