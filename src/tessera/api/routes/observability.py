@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.observability import (
+    ablation as ablation_mod,
     anomalies as anomalies_mod,
     citation_validity as citation_validity_mod,
     conformance as conformance_mod,
@@ -270,6 +271,21 @@ async def observability_reranking(payload: CoverageRequest) -> dict[str, object]
     chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
     report = await reranking_contribution_mod.measure_contribution(
         question=bundle.question, chunks=chunks
+    )
+    return asdict(report)
+
+
+@router.post("/observability/ablation")
+async def observability_ablation(payload: CoverageRequest) -> dict[str, object]:
+    """Re-answer a captured turn under no-RAG / no-rerank ablations and re-judge."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    report = await ablation_mod.measure_ablation(
+        question=bundle.question,
+        context=bundle.context,
+        model=bundle.original_model,
+        baseline=bundle.original_score,
     )
     return asdict(report)
 

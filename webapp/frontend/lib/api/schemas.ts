@@ -333,6 +333,20 @@ export const RerankContributionSchema = z.object({
 });
 export type RerankContribution = z.infer<typeof RerankContributionSchema>;
 
+export const AblationLayerSchema = z.object({
+  layer: z.string(),
+  score: z.number(),
+  worth: z.number(),
+});
+
+export const AblationReportSchema = z.object({
+  baseline: z.number(),
+  model: z.string(),
+  n_chunks: z.number().int(),
+  layers: z.array(AblationLayerSchema),
+});
+export type AblationReport = z.infer<typeof AblationReportSchema>;
+
 export const SycophancyReportSchema = z.object({
   score: z.number(),
   sycophantic: z.boolean(),

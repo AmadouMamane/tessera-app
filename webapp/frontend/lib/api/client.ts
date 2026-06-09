@@ -12,6 +12,8 @@
 import type { z } from "zod";
 
 import {
+  type AblationReport,
+  AblationReportSchema,
   type AnomalyReport,
   AnomalyReportSchema,
   type AuditIntegrity,
@@ -431,6 +433,19 @@ export async function runReranking(bundleId: string): Promise<RerankContribution
       body: JSON.stringify({ bundle_id: bundleId }),
     },
     RerankContributionSchema,
+  );
+}
+
+/** Re-answer a captured turn under no-RAG / no-rerank ablations, re-judge (#81). */
+export async function runAblation(bundleId: string): Promise<AblationReport> {
+  return request(
+    "/observability/ablation",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId }),
+    },
+    AblationReportSchema,
   );
 }
 

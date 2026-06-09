@@ -539,6 +539,14 @@
       "vector": "Vector",
       "lexical": "Lexical"
     },
+    "ablation": {
+      "run": "Ablate",
+      "title": "Ablation (layer worth)",
+      "baseline": "Full stack",
+      "no_rag": "no-RAG",
+      "no_rerank": "no-rerank",
+      "worth": "worth"
+    },
     "sycophancy": {
       "run": "Sycophancy",
       "title": "Sycophancy",

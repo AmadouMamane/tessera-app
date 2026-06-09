@@ -539,6 +539,14 @@
       "vector": "Vecteur",
       "lexical": "Lexical"
     },
+    "ablation": {
+      "run": "Ablation",
+      "title": "Ablation (valeur des couches)",
+      "baseline": "Pile complète",
+      "no_rag": "sans-RAG",
+      "no_rerank": "sans-rerank",
+      "worth": "valeur"
+    },
     "sycophancy": {
       "run": "Sycophantie",
       "title": "Sycophantie",
