@@ -375,6 +375,17 @@
       "stateStale": "périmé",
       "stateFresh": "frais"
     },
+    "memory": {
+      "title": "Couche mémoire (ADR 0007)",
+      "empty": "Aucune activité mémoire pour l'instant.",
+      "hitRate": "Taux de rappel",
+      "injectionCaught": "Injection captée",
+      "writes": "Écritures gardées",
+      "writesDenied": "Écritures refusées",
+      "reads": "Lectures",
+      "recalled": "Items rappelés",
+      "forgets": "Effacements"
+    },
     "roadmap": {
       "title": "Roadmap produit (depuis la télémétrie)",
       "empty": "Aucun item — la télémétrie est propre.",

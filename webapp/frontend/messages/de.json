@@ -375,6 +375,17 @@
       "stateStale": "veraltet",
       "stateFresh": "frisch"
     },
+    "memory": {
+      "title": "Memory-Schicht (ADR 0007)",
+      "empty": "Noch keine Memory-Aktivität.",
+      "hitRate": "Recall-Trefferrate",
+      "injectionCaught": "Injektion abgefangen",
+      "writes": "Schreibvorgänge behalten",
+      "writesDenied": "Schreibvorgänge abgelehnt",
+      "reads": "Lesevorgänge",
+      "recalled": "Erinnerte Items",
+      "forgets": "Löschungen"
+    },
     "roadmap": {
       "title": "Produkt-Roadmap (aus Telemetrie)",
       "empty": "Keine Backlog-Einträge — Telemetrie ist sauber.",

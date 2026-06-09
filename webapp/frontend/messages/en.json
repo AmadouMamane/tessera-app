@@ -375,6 +375,17 @@
       "stateStale": "stale",
       "stateFresh": "fresh"
     },
+    "memory": {
+      "title": "Memory layer (ADR 0007)",
+      "empty": "No memory activity yet.",
+      "hitRate": "Recall hit rate",
+      "injectionCaught": "Injection caught",
+      "writes": "Writes kept",
+      "writesDenied": "Writes denied",
+      "reads": "Reads",
+      "recalled": "Items recalled",
+      "forgets": "Erasures"
+    },
     "roadmap": {
       "title": "Product roadmap (from telemetry)",
       "empty": "No backlog items — telemetry is clean.",

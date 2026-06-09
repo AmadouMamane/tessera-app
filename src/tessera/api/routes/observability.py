@@ -31,6 +31,7 @@ from tessera.observability import (
     guard_explain as guard_explain_mod,
     language_routing as language_routing_mod,
     locale_format as locale_format_mod,
+    memory_obs as memory_obs_mod,
     obs_cost as obs_cost_mod,
     pii_leak as pii_leak_mod,
     provenance as provenance_mod,
@@ -373,6 +374,36 @@ async def observability_roadmap() -> dict[str, object]:
         languages_low=languages_low,
     )
     return asdict(roadmap_mod.build_roadmap(signals))
+
+
+def _read_audit_entries() -> list[dict[str, object]]:
+    """Read the guard audit log into a list of parsed entry dicts (best effort)."""
+    import json
+
+    from tessera.settings import get_settings
+
+    path = get_settings().guard.audit_file
+    entries: list[dict[str, object]] = []
+    if not path.exists():
+        return entries
+    with path.open("r", encoding="utf-8") as fp:
+        for raw in fp:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            try:
+                obj = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict) and obj.get("type") == "tessera.guard.audit":
+                entries.append(obj)
+    return entries
+
+
+@router.get("/observability/memory")
+async def observability_memory() -> dict[str, object]:
+    """Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23)."""
+    return asdict(memory_obs_mod.aggregate_memory_audit(_read_audit_entries()))
 
 
 @router.get("/observability/embedding-skew")

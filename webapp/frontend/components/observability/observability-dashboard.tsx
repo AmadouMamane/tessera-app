@@ -5,6 +5,7 @@ import {
   Activity,
   BookCheck,
   Boxes,
+  Brain,
   CalendarClock,
   Coins,
   Crosshair,
@@ -56,6 +57,7 @@ import {
   fetchGuardExplain,
   fetchIntent,
   fetchLocaleFormat,
+  fetchMemoryObs,
   fetchObsCost,
   fetchPiiLeak,
   fetchRedteam,
@@ -85,6 +87,7 @@ import type {
   GuardExplainReport,
   IntentReport,
   LocaleFormatSummary,
+  MemoryObsReport,
   ObsCostReport,
   PIILeakSummary,
   RedTeamResponse,
@@ -165,6 +168,12 @@ export function ObservabilityDashboard() {
     queryKey: ["roadmap"],
     queryFn: ({ signal }) => fetchRoadmap(signal),
     refetchInterval: 20_000,
+  });
+
+  const memoryObs = useQuery({
+    queryKey: ["memory-obs"],
+    queryFn: ({ signal }) => fetchMemoryObs(signal),
+    refetchInterval: 15_000,
   });
 
   // Calibration is computed server-side (slow, judge over a gold set) and cached,
@@ -306,6 +315,8 @@ export function ObservabilityDashboard() {
       <EmbeddingSkewCard data={embeddingSkew.data} loading={embeddingSkew.isLoading} />
 
       <CorpusFreshnessCard data={corpusFreshness.data} loading={corpusFreshness.isLoading} />
+
+      <MemoryObsCard data={memoryObs.data} loading={memoryObs.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -737,6 +748,48 @@ function RoadmapCard({ data, loading }: { data: RoadmapReport | undefined; loadi
               </li>
             ))}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MemoryObsCard({ data, loading }: { data: MemoryObsReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const hitPct = data ? Math.round(data.recall_hit_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Brain className="h-4 w-4 text-blue-500" />
+          {t("memory.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_actions === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("memory.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">{t("memory.hitRate")}</span>
+              <Badge tone={hitPct >= 50 ? "success" : "neutral"}>{hitPct}%</Badge>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("memory.injectionCaught")}
+              </span>
+              <Badge tone={data.items_screened_out === 0 ? "success" : "danger"}>
+                {data.items_screened_out}
+              </Badge>
+            </div>
+            <Metric label={t("memory.writes")} value={`${data.writes_allowed}/${data.n_writes}`} />
+            <Metric label={t("memory.writesDenied")} value={String(data.writes_denied)} />
+            <Metric label={t("memory.reads")} value={String(data.n_reads)} />
+            <Metric label={t("memory.recalled")} value={String(data.items_recalled)} />
+            <Metric label={t("memory.forgets")} value={String(data.n_forgets)} />
+          </div>
         )}
       </CardContent>
     </Card>

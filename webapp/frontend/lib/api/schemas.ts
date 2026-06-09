@@ -763,6 +763,21 @@ export const RoadmapReportSchema = z.object({
 });
 export type RoadmapReport = z.infer<typeof RoadmapReportSchema>;
 
+export const MemoryObsReportSchema = z.object({
+  n_actions: z.number().int(),
+  n_writes: z.number().int(),
+  writes_allowed: z.number().int(),
+  writes_denied: z.number().int(),
+  n_reads: z.number().int(),
+  recall_hits: z.number().int(),
+  recall_misses: z.number().int(),
+  recall_hit_rate: z.number(),
+  items_recalled: z.number().int(),
+  items_screened_out: z.number().int(),
+  n_forgets: z.number().int(),
+});
+export type MemoryObsReport = z.infer<typeof MemoryObsReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),
