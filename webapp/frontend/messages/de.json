@@ -328,6 +328,19 @@
       "kept": "Behalten",
       "baseRate": "Head-Sampling-Rate"
     },
+    "trend": {
+      "title": "Qualitätstrend (langfristig)",
+      "empty": "Noch keine Scores erfasst.",
+      "direction": "Richtung",
+      "improving": "Steigend",
+      "stable": "Stabil",
+      "degrading": "Fallend",
+      "slope": "Steigung / Turn",
+      "delta": "Δ Hälfte zu Hälfte",
+      "halves": "1. → 2. Hälfte",
+      "points": "Punkte",
+      "degradingNote": "Langsame Abwärtsdrift über beide Hälften bestätigt — vor dem Bruch untersuchen."
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

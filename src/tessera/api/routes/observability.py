@@ -43,6 +43,7 @@ from tessera.observability import (
     tail_sampling as tail_sampling_mod,
     tool_validity as tool_validity_mod,
     trajectory as trajectory_mod,
+    trends as trends_mod,
     whatchanged as whatchanged_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
@@ -155,6 +156,23 @@ async def observability_shadow(payload: ShadowRequest) -> dict[str, object]:
 async def observability_tail_sampling() -> dict[str, object]:
     """Tail-sampling retention: 100% of slow/low-score traces, sampled head."""
     return asdict(tail_sampling_mod.analyze_sampling(replay_mod.recent_bundles()))
+
+
+@router.get("/observability/trend")
+async def observability_trend() -> dict[str, object]:
+    """Long-horizon faithfulness trend over the recent score series (#150)."""
+    points: list[tuple[str, float]] = []
+    for s in recent_scores():
+        if s.get("metric") != "faithfulness":
+            continue
+        scored_at = s.get("scored_at")
+        points.append(
+            (
+                scored_at if isinstance(scored_at, str) else "",
+                float(s["score"]),  # type: ignore[arg-type]
+            )
+        )
+    return asdict(trends_mod.analyze_trend(points))
 
 
 @router.get("/observability/calibration")

@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Target,
+  TrendingDown,
   Wrench,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -57,6 +58,7 @@ import {
   fetchSessions,
   fetchTailSampling,
   fetchToolValidity,
+  fetchTrend,
   fetchWhatChanged,
   runRedteam,
   runShadow,
@@ -83,6 +85,7 @@ import type {
   ShadowReport,
   TailSamplingReport,
   ToolValidity,
+  TrendReport,
   WhatChanged,
 } from "@/lib/api/schemas";
 
@@ -117,6 +120,12 @@ export function ObservabilityDashboard() {
   const tailSampling = useQuery({
     queryKey: ["tail-sampling"],
     queryFn: ({ signal }) => fetchTailSampling(signal),
+    refetchInterval: 15_000,
+  });
+
+  const trend = useQuery({
+    queryKey: ["trend"],
+    queryFn: ({ signal }) => fetchTrend(signal),
     refetchInterval: 15_000,
   });
 
@@ -249,6 +258,8 @@ export function ObservabilityDashboard() {
       <ShadowCard />
 
       <TailSamplingCard data={tailSampling.data} loading={tailSampling.isLoading} />
+
+      <TrendCard data={trend.data} loading={trend.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -558,6 +569,85 @@ function TailSamplingCard({
               label={t("tailSampling.baseRate")}
               value={`${Math.round(data.base_rate * 100)}%`}
             />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TrendCard({ data, loading }: { data: TrendReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const directionTone =
+    data?.direction === "improving"
+      ? "success"
+      : data?.direction === "degrading"
+        ? "danger"
+        : "neutral";
+  // Sparkline scaling over the bucket means.
+  const means = data?.buckets.map((b) => b.mean) ?? [];
+  const lo = means.length > 0 ? Math.min(...means) : 0;
+  const hi = means.length > 0 ? Math.max(...means) : 1;
+  const span = hi - lo || 1;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <TrendingDown className="h-4 w-4 text-blue-500" />
+          {t("trend.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("trend.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("trend.direction")}
+                </span>
+                <Badge tone={directionTone}>{t(`trend.${data.direction}`)}</Badge>
+              </div>
+              <Metric label={t("trend.slope")} value={data.slope.toFixed(4)} />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">{t("trend.delta")}</span>
+                <span
+                  className={`font-semibold tabular-nums ${
+                    data.delta >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-red-600 dark:text-red-400"
+                  }`}
+                >
+                  {data.delta >= 0 ? "+" : ""}
+                  {data.delta.toFixed(2)}
+                </span>
+              </div>
+              <Metric
+                label={t("trend.halves")}
+                value={`${data.first_half_mean.toFixed(2)} → ${data.second_half_mean.toFixed(2)}`}
+              />
+              <Metric label={t("trend.points")} value={String(data.n)} />
+            </div>
+            {means.length > 1 ? (
+              <div className="flex h-10 items-end gap-1">
+                {data.buckets.map((b) => (
+                  <div
+                    key={b.index}
+                    className={`flex-1 rounded-t ${
+                      data.direction === "degrading" ? "bg-red-500/60" : "bg-blue-500/60"
+                    }`}
+                    style={{ height: `${10 + ((b.mean - lo) / span) * 90}%` }}
+                    title={`${b.mean.toFixed(2)} (n=${b.n})`}
+                  />
+                ))}
+              </div>
+            ) : null}
+            {data.degrading ? (
+              <p className="text-xs text-red-600 dark:text-red-400">{t("trend.degradingNote")}</p>
+            ) : null}
           </div>
         )}
       </CardContent>

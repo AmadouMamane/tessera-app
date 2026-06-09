@@ -328,6 +328,19 @@
       "kept": "Kept",
       "baseRate": "Head sample rate"
     },
+    "trend": {
+      "title": "Quality trend (long horizon)",
+      "empty": "No scores captured yet.",
+      "direction": "Direction",
+      "improving": "Improving",
+      "stable": "Stable",
+      "degrading": "Degrading",
+      "slope": "Slope / turn",
+      "delta": "Half-over-half Δ",
+      "halves": "First → second half",
+      "points": "Points",
+      "degradingNote": "Slow downward drift confirmed across both halves — investigate before it breaches."
+    },
     "replay": {
       "title": "Replay (regression from production)",
       "model": "Model",

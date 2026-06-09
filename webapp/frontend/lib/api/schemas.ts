@@ -659,6 +659,25 @@ export const TailSamplingReportSchema = z.object({
 });
 export type TailSamplingReport = z.infer<typeof TailSamplingReportSchema>;
 
+export const TrendBucketSchema = z.object({
+  index: z.number().int(),
+  n: z.number().int(),
+  mean: z.number(),
+});
+
+export const TrendReportSchema = z.object({
+  metric: z.string(),
+  n: z.number().int(),
+  slope: z.number(),
+  direction: z.enum(["improving", "stable", "degrading"]),
+  first_half_mean: z.number(),
+  second_half_mean: z.number(),
+  delta: z.number(),
+  degrading: z.boolean(),
+  buckets: z.array(TrendBucketSchema),
+});
+export type TrendReport = z.infer<typeof TrendReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

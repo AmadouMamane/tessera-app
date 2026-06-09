@@ -328,6 +328,19 @@
       "kept": "Conservées",
       "baseRate": "Taux d'échantillon (tête)"
     },
+    "trend": {
+      "title": "Tendance qualité (long horizon)",
+      "empty": "Aucun score capturé pour l'instant.",
+      "direction": "Direction",
+      "improving": "En hausse",
+      "stable": "Stable",
+      "degrading": "En baisse",
+      "slope": "Pente / tour",
+      "delta": "Δ moitié sur moitié",
+      "halves": "1re → 2e moitié",
+      "points": "Points",
+      "degradingNote": "Dérive lente à la baisse confirmée sur les deux moitiés — à investiguer avant rupture."
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",

@@ -87,6 +87,8 @@ import {
   ToolValiditySchema,
   type Trajectory,
   TrajectorySchema,
+  type TrendReport,
+  TrendReportSchema,
   type WhatChanged,
   WhatChangedSchema,
 } from "./schemas";
@@ -206,6 +208,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Tail-sampling retention: 100% of slow/low-score traces, sampled head (#32). */
 export async function fetchTailSampling(signal?: AbortSignal): Promise<TailSamplingReport> {
   return request("/observability/tail-sampling", { signal }, TailSamplingReportSchema);
+}
+
+/** Long-horizon faithfulness trend over the recent score series (#150). */
+export async function fetchTrend(signal?: AbortSignal): Promise<TrendReport> {
+  return request("/observability/trend", { signal }, TrendReportSchema);
 }
 
 /** Judge calibration against the human gold set (computed server-side, cached). */
