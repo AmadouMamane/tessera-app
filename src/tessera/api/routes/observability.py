@@ -568,10 +568,13 @@ _GRANTED_TOOLS = frozenset(
 @router.get("/observability/least-privilege")
 async def observability_least_privilege() -> dict[str, object]:
     """Tool least-privilege: granted vs actually-used tools from the audit (#101)."""
+    # Exclude non-tool audit targets: the input guard ("user_input") and the
+    # memory governance actions are audited too but are not tool invocations.
+    non_tools = {"user_input"}
     usage: dict[str, int] = {}
     for entry in _read_audit_entries():
         target = entry.get("target")
-        if isinstance(target, str) and not target.startswith("memory."):
+        if isinstance(target, str) and target not in non_tools and not target.startswith("memory."):
             usage[target] = usage.get(target, 0) + 1
     return asdict(least_privilege_mod.analyze_privilege(_GRANTED_TOOLS, usage))
 
