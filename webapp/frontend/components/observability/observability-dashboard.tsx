@@ -8,6 +8,7 @@ import {
   Crosshair,
   ExternalLink,
   Filter,
+  Flame,
   Gauge,
   GitCompareArrows,
   GitFork,
@@ -50,6 +51,7 @@ import {
   fetchRedteam,
   fetchRefusal,
   fetchRouting,
+  fetchSLO,
   fetchSessions,
   fetchToolValidity,
   fetchWhatChanged,
@@ -72,6 +74,7 @@ import type {
   RedTeamResponse,
   RefusalReport,
   RoutingReport,
+  SLOReport,
   SessionReport,
   ToolValidity,
   WhatChanged,
@@ -93,6 +96,12 @@ export function ObservabilityDashboard() {
   const scores = useQuery({
     queryKey: ["eval-scores"],
     queryFn: ({ signal }) => fetchEvalScores(signal),
+    refetchInterval: POLL_MS,
+  });
+
+  const slo = useQuery({
+    queryKey: ["slo"],
+    queryFn: ({ signal }) => fetchSLO(signal),
     refetchInterval: POLL_MS,
   });
 
@@ -220,6 +229,8 @@ export function ObservabilityDashboard() {
         />
       </div>
 
+      <SLOCard data={slo.data} loading={slo.isLoading} />
+
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
       <CitationCard data={citations.data} loading={citations.isLoading} />
@@ -342,6 +353,61 @@ function BackendCard({
         </CardContent>
       </Card>
     </a>
+  );
+}
+
+function SLOCard({ data, loading }: { data: SLOReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const remaining = data ? Math.round(data.budget_remaining * 100) : 100;
+  const burnTone = !data || data.burn_rate <= 1 ? "success" : data.breaching ? "danger" : "warning";
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Flame className="h-4 w-4 text-blue-500" />
+          {t("slo.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("slo.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">{t("slo.objective")}</span>
+                <span className="font-semibold tabular-nums">
+                  {Math.round(data.target * 100)}% ≥ {data.threshold.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">{t("slo.attained")}</span>
+                <span className={`font-semibold tabular-nums ${scoreTone(data.good_rate)}`}>
+                  {Math.round(data.good_rate * 100)}%
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">{t("slo.budget")}</span>
+                <Badge tone={remaining >= 50 ? "success" : remaining > 0 ? "warning" : "danger"}>
+                  {remaining}%
+                </Badge>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">{t("slo.burnRate")}</span>
+                <Badge tone={burnTone}>{data.burn_rate.toFixed(1)}×</Badge>
+              </div>
+              <Metric label={t("slo.fastBurn")} value={`${data.burn_rate_fast.toFixed(1)}×`} />
+              <Metric label={t("slo.bad")} value={`${data.n_bad}/${data.n}`} />
+            </div>
+            {data.breaching ? (
+              <p className="text-xs text-red-600 dark:text-red-400">{t("slo.breaching")}</p>
+            ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

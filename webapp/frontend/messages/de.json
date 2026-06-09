@@ -293,6 +293,17 @@
       "judge": "Judge",
       "unavailable": "Kalibrierung nicht verfügbar (Judge offline)."
     },
+    "slo": {
+      "title": "Qualitäts-SLO + Fehlerbudget",
+      "empty": "Noch keine Scores erfasst.",
+      "objective": "Ziel",
+      "attained": "Erreicht",
+      "budget": "Restbudget",
+      "burnRate": "Verbrauchsrate",
+      "fastBurn": "Kurzes Fenster",
+      "bad": "Unter Schwelle",
+      "breaching": "Das Fehlerbudget wird schneller verbraucht als es sich auffüllt — die Qualität verschlechtert sich."
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

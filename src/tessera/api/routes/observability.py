@@ -37,6 +37,7 @@ from tessera.observability import (
     robustness as robustness_mod,
     routing_intent as routing_intent_mod,
     sessions as sessions_mod,
+    slo as slo_mod,
     steganography as steganography_mod,
     tool_validity as tool_validity_mod,
     trajectory as trajectory_mod,
@@ -117,6 +118,17 @@ _calibration_cache: dict[str, object] | None = None
 async def observability_scores() -> dict[str, object]:
     """Return the most recent online-eval scores (newest last)."""
     return {"scores": recent_scores()}
+
+
+@router.get("/observability/slo")
+async def observability_slo() -> dict[str, object]:
+    """Quality SLO + error-budget burn-rate over the recent faithfulness scores."""
+    faithfulness = [
+        float(s["score"])  # type: ignore[arg-type]
+        for s in recent_scores()
+        if s.get("metric") == "faithfulness"
+    ]
+    return asdict(slo_mod.compute_slo(faithfulness))
 
 
 @router.get("/observability/calibration")

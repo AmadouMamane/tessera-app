@@ -293,6 +293,17 @@
       "judge": "Juge",
       "unavailable": "Calibration indisponible (juge hors-ligne)."
     },
+    "slo": {
+      "title": "SLO qualité + budget d'erreur",
+      "empty": "Aucun score capturé pour l'instant.",
+      "objective": "Objectif",
+      "attained": "Atteint",
+      "budget": "Budget restant",
+      "burnRate": "Taux de consommation",
+      "fastBurn": "Fenêtre courte",
+      "bad": "Sous le seuil",
+      "breaching": "Le budget d'erreur se consomme plus vite qu'il ne se reconstitue — la qualité régresse."
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",

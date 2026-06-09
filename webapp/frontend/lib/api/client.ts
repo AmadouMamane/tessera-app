@@ -71,6 +71,8 @@ import {
   RobustnessReportSchema,
   type RoutingReport,
   RoutingReportSchema,
+  type SLOReport,
+  SLOReportSchema,
   type SessionReport,
   SessionReportSchema,
   type StegoReport,
@@ -177,6 +179,11 @@ export async function fetchReadiness(signal?: AbortSignal): Promise<HealthRespon
 /** Recent online-eval scores (eval-as-telemetry; public aggregate surface). */
 export async function fetchEvalScores(signal?: AbortSignal): Promise<EvalScoresResponse> {
   return request("/observability/scores", { signal }, EvalScoresResponseSchema);
+}
+
+/** Quality SLO + error-budget burn-rate over the recent faithfulness scores (#15). */
+export async function fetchSLO(signal?: AbortSignal): Promise<SLOReport> {
+  return request("/observability/slo", { signal }, SLOReportSchema);
 }
 
 /** Judge calibration against the human gold set (computed server-side, cached). */

@@ -602,6 +602,23 @@ export const PIILeakSummarySchema = z.object({
 });
 export type PIILeakSummary = z.infer<typeof PIILeakSummarySchema>;
 
+export const SLOReportSchema = z.object({
+  metric: z.string(),
+  threshold: z.number(),
+  target: z.number(),
+  n: z.number().int(),
+  n_good: z.number().int(),
+  n_bad: z.number().int(),
+  good_rate: z.number(),
+  error_budget: z.number(),
+  budget_consumed: z.number(),
+  budget_remaining: z.number(),
+  burn_rate: z.number(),
+  burn_rate_fast: z.number(),
+  breaching: z.boolean(),
+});
+export type SLOReport = z.infer<typeof SLOReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

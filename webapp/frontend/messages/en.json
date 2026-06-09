@@ -293,6 +293,17 @@
       "judge": "Judge",
       "unavailable": "Calibration unavailable (judge offline)."
     },
+    "slo": {
+      "title": "Quality SLO + error budget",
+      "empty": "No scores captured yet.",
+      "objective": "Objective",
+      "attained": "Attained",
+      "budget": "Budget left",
+      "burnRate": "Burn rate",
+      "fastBurn": "Fast window",
+      "bad": "Below bar",
+      "breaching": "Burning the error budget faster than it replenishes — quality is regressing."
+    },
     "replay": {
       "title": "Replay (regression from production)",
       "model": "Model",
