@@ -65,6 +65,8 @@ import {
   SessionReportSchema,
   type StegoReport,
   StegoReportSchema,
+  type SycophancyReport,
+  SycophancyReportSchema,
   type ToolValidity,
   ToolValiditySchema,
   type Trajectory,
@@ -328,6 +330,19 @@ export async function runCoverage(bundleId: string): Promise<CoverageReport> {
       body: JSON.stringify({ bundle_id: bundleId }),
     },
     CoverageReportSchema,
+  );
+}
+
+/** Judge whether a captured turn sycophantically validates a false premise (#59). */
+export async function runSycophancy(bundleId: string): Promise<SycophancyReport> {
+  return request(
+    "/observability/sycophancy",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId }),
+    },
+    SycophancyReportSchema,
   );
 }
 

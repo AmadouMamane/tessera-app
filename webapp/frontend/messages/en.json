@@ -473,6 +473,12 @@
       "gap": "Coverage gap",
       "best": "best sim.",
       "chunks": "chunks"
+    },
+    "sycophancy": {
+      "run": "Sycophancy",
+      "title": "Sycophancy",
+      "flagged": "Sycophantic",
+      "ok": "No sycophancy"
     }
   }
 }

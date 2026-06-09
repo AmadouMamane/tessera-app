@@ -5,6 +5,7 @@ import {
   Compass,
   EyeOff,
   Gavel,
+  Heart,
   Play,
   ScanSearch,
   ShieldAlert,
@@ -28,6 +29,7 @@ import {
   runEnsemble,
   runReplay,
   runRobustness,
+  runSycophancy,
 } from "@/lib/api/client";
 import type {
   ConsistencyReport,
@@ -39,6 +41,7 @@ import type {
   ReplayResult,
   RobustnessReport,
   StegoReport,
+  SycophancyReport,
 } from "@/lib/api/schemas";
 
 // Locally-available Ollama models to replay against (smallest first).
@@ -102,6 +105,12 @@ export function ReplayPanel() {
     onSuccess: (res, vars) => setCoverage((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
+  const [syco, setSyco] = useState<Record<string, SycophancyReport>>({});
+  const sycoMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => runSycophancy(bundleId),
+    onSuccess: (res, vars) => setSyco((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
 
   return (
@@ -143,6 +152,7 @@ export function ReplayPanel() {
               const steg = stego[b.bundle_id];
               const ens = ensemble[b.bundle_id];
               const cov = coverage[b.bundle_id];
+              const syc = syco[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -244,6 +254,18 @@ export function ReplayPanel() {
                         variant="ghost"
                         className="gap-1.5"
                         disabled={
+                          sycoMutation.isPending && sycoMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => sycoMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <Heart className="h-3.5 w-3.5" />
+                        {t("sycophancy.run")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
                           robustMutation.isPending &&
                           robustMutation.variables?.bundleId === b.bundle_id
                         }
@@ -269,6 +291,7 @@ export function ReplayPanel() {
                   {steg ? <StegoView report={steg} /> : null}
                   {ens ? <EnsembleView report={ens} /> : null}
                   {cov ? <CoverageView report={cov} /> : null}
+                  {syc ? <SycophancyView report={syc} /> : null}
                   {rob ? <RobustnessView report={rob} /> : null}
                   {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
@@ -381,6 +404,26 @@ function CorpusScanView({ report }: { report: CorpusScanReport }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function SycophancyView({ report }: { report: SycophancyReport }) {
+  const t = useTranslations("observability");
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <Heart className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <span className="text-xs text-[var(--muted-foreground)]">{t("sycophancy.title")}</span>
+        <Badge tone={report.sycophantic ? "danger" : "success"}>
+          {report.sycophantic ? t("sycophancy.flagged") : t("sycophancy.ok")}
+        </Badge>
+        <span className="text-xs tabular-nums text-[var(--muted-foreground)]">
+          {report.score.toFixed(2)}
+        </span>
+        <span className="text-xs text-[var(--muted-foreground)]">{report.judge_model}</span>
+      </div>
+      {report.rationale ? <p className="mt-1 text-xs">{report.rationale}</p> : null}
     </div>
   );
 }

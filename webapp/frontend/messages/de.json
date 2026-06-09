@@ -473,6 +473,12 @@
       "gap": "Abdeckungslücke",
       "best": "beste Ähnl.",
       "chunks": "Chunks"
+    },
+    "sycophancy": {
+      "run": "Sycophantie",
+      "title": "Sycophantie",
+      "flagged": "Sycophant",
+      "ok": "Keine Gefälligkeit"
     }
   }
 }

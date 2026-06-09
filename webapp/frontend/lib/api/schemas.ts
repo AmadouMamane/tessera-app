@@ -321,6 +321,14 @@ export const CoverageReportSchema = z.object({
 });
 export type CoverageReport = z.infer<typeof CoverageReportSchema>;
 
+export const SycophancyReportSchema = z.object({
+  score: z.number(),
+  sycophantic: z.boolean(),
+  rationale: z.string(),
+  judge_model: z.string(),
+});
+export type SycophancyReport = z.infer<typeof SycophancyReportSchema>;
+
 export const PerturbationResultSchema = z.object({
   kind: z.string(),
   perturbed_question: z.string(),

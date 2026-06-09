@@ -39,6 +39,7 @@ from tessera.observability import (
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.ensemble import evaluate_ensemble
+from tessera.observability.eval.sycophancy import detect_sycophancy
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.scores import recent_scores
 
@@ -81,6 +82,14 @@ class EnsembleRequest(BaseModel):
 
 class CoverageRequest(BaseModel):
     """Measure corpus coverage of a captured turn."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bundle_id: str
+
+
+class SycophancyRequest(BaseModel):
+    """Judge a captured turn for sycophancy."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -167,6 +176,18 @@ async def observability_coverage(payload: CoverageRequest) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
     report = await coverage_mod.measure_coverage(question=bundle.question, chunks=chunks)
+    return asdict(report)
+
+
+@router.post("/observability/sycophancy")
+async def observability_sycophancy(payload: SycophancyRequest) -> dict[str, object]:
+    """Judge whether a captured turn sycophantically validates a false premise."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    report = await detect_sycophancy(
+        question=bundle.question, answer=bundle.original_answer, context=bundle.context
+    )
     return asdict(report)
 
 

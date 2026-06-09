@@ -473,6 +473,12 @@
       "gap": "Lacune de couverture",
       "best": "meilleure sim.",
       "chunks": "chunks"
+    },
+    "sycophancy": {
+      "run": "Sycophantie",
+      "title": "Sycophantie",
+      "flagged": "Sycophante",
+      "ok": "Pas de complaisance"
     }
   }
 }
