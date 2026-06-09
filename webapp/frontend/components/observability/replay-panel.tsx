@@ -7,6 +7,7 @@ import {
   Gavel,
   Globe,
   Heart,
+  Layers3,
   Play,
   ScanSearch,
   ShieldAlert,
@@ -30,6 +31,7 @@ import {
   runCrossLingual,
   runEnsemble,
   runReplay,
+  runReranking,
   runRobustness,
   runSycophancy,
 } from "@/lib/api/client";
@@ -42,6 +44,7 @@ import type {
   ProvenanceReport,
   ReplayBundle,
   ReplayResult,
+  RerankContribution,
   RobustnessReport,
   StegoReport,
   SycophancyReport,
@@ -120,6 +123,12 @@ export function ReplayPanel() {
     onSuccess: (res, vars) => setXling((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
+  const [rerank, setRerank] = useState<Record<string, RerankContribution>>({});
+  const rerankMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => runReranking(bundleId),
+    onSuccess: (res, vars) => setRerank((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
 
   return (
@@ -163,6 +172,7 @@ export function ReplayPanel() {
               const cov = coverage[b.bundle_id];
               const syc = syco[b.bundle_id];
               const xl = xling[b.bundle_id];
+              const rr = rerank[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -289,6 +299,19 @@ export function ReplayPanel() {
                         variant="ghost"
                         className="gap-1.5"
                         disabled={
+                          rerankMutation.isPending &&
+                          rerankMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => rerankMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <Layers3 className="h-3.5 w-3.5" />
+                        {t("reranking.run")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
                           robustMutation.isPending &&
                           robustMutation.variables?.bundleId === b.bundle_id
                         }
@@ -316,6 +339,7 @@ export function ReplayPanel() {
                   {cov ? <CoverageView report={cov} /> : null}
                   {syc ? <SycophancyView report={syc} /> : null}
                   {xl ? <CrossLingualView report={xl} /> : null}
+                  {rr ? <RerankingView report={rr} /> : null}
                   {rob ? <RobustnessView report={rob} /> : null}
                   {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
@@ -428,6 +452,46 @@ function CorpusScanView({ report }: { report: CorpusScanReport }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function RerankingView({ report }: { report: RerankContribution }) {
+  const t = useTranslations("observability");
+  const lexicalPct = Math.round(report.mean_lexical_share * 100);
+  const vectorPct = Math.round(report.mean_vector_share * 100);
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <Layers3 className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <span className="text-xs text-[var(--muted-foreground)]">{t("reranking.title")}</span>
+        <Badge tone={report.reranker_lift > 0 ? "success" : "neutral"}>
+          {t("reranking.lift")} {report.reranker_lift}
+        </Badge>
+        {report.top1_changed ? <Badge tone="warning">{t("reranking.top1Changed")}</Badge> : null}
+      </div>
+      <div className="mt-2 flex h-2 w-full overflow-hidden rounded-full bg-[var(--muted)]">
+        <div
+          className="bg-blue-500"
+          style={{ width: `${vectorPct}%` }}
+          title={`vector ${vectorPct}%`}
+        />
+        <div
+          className="bg-amber-500"
+          style={{ width: `${lexicalPct}%` }}
+          title={`lexical ${lexicalPct}%`}
+        />
+      </div>
+      <div className="mt-1 flex gap-4 text-xs text-[var(--muted-foreground)]">
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-blue-500" />
+          {t("reranking.vector")} <span className="tabular-nums">{vectorPct}%</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-amber-500" />
+          {t("reranking.lexical")} <span className="tabular-nums">{lexicalPct}%</span>
+        </span>
+      </div>
     </div>
   );
 }

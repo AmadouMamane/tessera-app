@@ -531,6 +531,14 @@
       "best": "best sim.",
       "chunks": "chunks"
     },
+    "reranking": {
+      "run": "Rerank",
+      "title": "Reranker contribution",
+      "lift": "Lift",
+      "top1Changed": "Top-1 changed",
+      "vector": "Vector",
+      "lexical": "Lexical"
+    },
     "sycophancy": {
       "run": "Sycophancy",
       "title": "Sycophancy",

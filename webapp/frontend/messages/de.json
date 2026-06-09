@@ -531,6 +531,14 @@
       "best": "beste Ähnl.",
       "chunks": "Chunks"
     },
+    "reranking": {
+      "run": "Rerank",
+      "title": "Reranker-Beitrag",
+      "lift": "Lift",
+      "top1Changed": "Top-1 geändert",
+      "vector": "Vektor",
+      "lexical": "Lexikalisch"
+    },
     "sycophancy": {
       "run": "Sycophantie",
       "title": "Sycophantie",

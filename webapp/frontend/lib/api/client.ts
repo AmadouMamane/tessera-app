@@ -69,6 +69,8 @@ import {
   ReplayResultSchema,
   type ReplaysResponse,
   ReplaysResponseSchema,
+  type RerankContribution,
+  RerankContributionSchema,
   type RobustnessReport,
   RobustnessReportSchema,
   type RoutingReport,
@@ -416,6 +418,19 @@ export async function runCoverage(bundleId: string): Promise<CoverageReport> {
       body: JSON.stringify({ bundle_id: bundleId }),
     },
     CoverageReportSchema,
+  );
+}
+
+/** Decompose a captured turn's fused ordering into vector vs lexical shares (#27). */
+export async function runReranking(bundleId: string): Promise<RerankContribution> {
+  return request(
+    "/observability/reranking",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId }),
+    },
+    RerankContributionSchema,
   );
 }
 

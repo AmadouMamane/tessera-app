@@ -34,6 +34,7 @@ from tessera.observability import (
     redteam as redteam_mod,
     refusal as refusal_mod,
     replay as replay_mod,
+    reranking_contribution as reranking_contribution_mod,
     retrieval_quality as retrieval_quality_mod,
     robustness as robustness_mod,
     routing_intent as routing_intent_mod,
@@ -257,6 +258,19 @@ async def observability_coverage(payload: CoverageRequest) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
     report = await coverage_mod.measure_coverage(question=bundle.question, chunks=chunks)
+    return asdict(report)
+
+
+@router.post("/observability/reranking")
+async def observability_reranking(payload: CoverageRequest) -> dict[str, object]:
+    """Decompose a captured turn's fused ordering into vector vs lexical shares."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
+    report = await reranking_contribution_mod.measure_contribution(
+        question=bundle.question, chunks=chunks
+    )
     return asdict(report)
 
 

@@ -321,6 +321,18 @@ export const CoverageReportSchema = z.object({
 });
 export type CoverageReport = z.infer<typeof CoverageReportSchema>;
 
+export const RerankContributionSchema = z.object({
+  n_chunks: z.number().int(),
+  top_k: z.number().int(),
+  reranker_lift: z.number().int(),
+  top1_changed: z.boolean(),
+  mean_vector_share: z.number(),
+  mean_lexical_share: z.number(),
+  vector_order: z.array(z.number().int()),
+  fused_order: z.array(z.number().int()),
+});
+export type RerankContribution = z.infer<typeof RerankContributionSchema>;
+
 export const SycophancyReportSchema = z.object({
   score: z.number(),
   sycophantic: z.boolean(),
