@@ -306,6 +306,11 @@
     "provenance": {
       "run": "Provenance",
       "grounded": "Grounded"
+    },
+    "lineage": {
+      "prompt": "prompt",
+      "policy": "policy",
+      "docs": "docs"
     }
   }
 }

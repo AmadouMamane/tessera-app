@@ -83,6 +83,13 @@ export function ReplayPanel() {
                         <span className="tabular-nums">{b.original_score.toFixed(2)}</span> ·{" "}
                         {b.original_model}
                       </p>
+                      {b.lineage ? (
+                        <p className="mt-0.5 text-[0.65rem] text-[var(--muted-foreground)]/80">
+                          {t("lineage.prompt")} {b.lineage.prompt_version} · {t("lineage.policy")}{" "}
+                          {b.lineage.guard_policy_version} · {b.lineage.doc_sources.length}{" "}
+                          {t("lineage.docs")}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex shrink-0 gap-2">
                       <Button

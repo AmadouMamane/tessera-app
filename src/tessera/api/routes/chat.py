@@ -27,11 +27,14 @@ from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, load_transcript
 from tessera.observability import replay
 from tessera.observability.eval import online as online_eval
+from tessera.observability.lineage import build_lineage
 from tessera.observability.metrics import AGENT_TURN_DURATION, AGENT_TURNS_TOTAL
 from tessera.settings import LanguageCode, get_settings
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Coroutine
+
+    from tessera.observability.lineage import Lineage
 
 router = APIRouter(tags=["chat"])
 
@@ -55,6 +58,7 @@ async def _run_online_eval(
     language: LanguageCode,
     conversation_id: uuid.UUID,
     model: str,
+    lineage: Lineage | None = None,
 ) -> None:
     """Score the turn off the hot path and capture it for replay (ADR 0010).
 
@@ -69,7 +73,8 @@ async def _run_online_eval(
             conversation_id=str(conversation_id),
             flagged=True,  # the dashboard demo scores every grounded turn
         )
-        # Capture the turn for regression-from-production replay (idea #1).
+        # Capture the turn for regression-from-production replay (idea #1) with
+        # its lineage / bill of materials (idea #10).
         if outcome.verdict is not None:
             replay.capture_bundle(
                 question=question,
@@ -79,6 +84,7 @@ async def _run_online_eval(
                 original_score=outcome.verdict.score,
                 original_model=model,
                 conversation_id=str(conversation_id),
+                lineage=lineage,
             )
     except Exception as exc:  # cold path must never break the response
         sys.stderr.write(f"tessera.observability.eval: online eval failed: {exc}\n")
@@ -283,6 +289,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     docs_for_eval = state.get("retrieved_documents", [])
     if docs_for_eval and final_response:
         context_text = "\n\n".join(getattr(doc, "text", "") for doc in docs_for_eval)
+        effective_model = request.model or get_settings().ollama.chat_model
         _spawn_background(
             _run_online_eval(
                 question=request.message,
@@ -290,7 +297,12 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
                 context=context_text,
                 language=resolved_language,
                 conversation_id=conversation_id,
-                model=request.model or get_settings().ollama.chat_model,
+                model=effective_model,
+                lineage=build_lineage(
+                    language=resolved_language.value,
+                    model=effective_model,
+                    documents=docs_for_eval,
+                ),
             )
         )
 

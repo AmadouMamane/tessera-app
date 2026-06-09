@@ -27,6 +27,7 @@ from tessera.observability.eval.judge import FAITHFULNESS, LLMJudge
 if TYPE_CHECKING:
     from tessera.llm.router import ChatBackend
     from tessera.observability.eval.judge import Judge
+    from tessera.observability.lineage import Lineage
 
 __all__ = [
     "ReplayBundle",
@@ -58,6 +59,7 @@ class ReplayBundle:
     original_answer: str
     original_model: str
     original_score: float
+    lineage: Lineage | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +85,7 @@ def capture_bundle(
     original_score: float,
     original_model: str,
     conversation_id: str | None = None,
+    lineage: Lineage | None = None,
 ) -> ReplayBundle:
     """Capture a grounded turn for later replay; returns the stored bundle."""
     bundle = ReplayBundle(
@@ -95,6 +98,7 @@ def capture_bundle(
         original_answer=original_answer,
         original_model=original_model,
         original_score=original_score,
+        lineage=lineage,
     )
     _BUNDLES.append(bundle)
     return bundle

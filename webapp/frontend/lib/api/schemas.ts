@@ -223,6 +223,14 @@ export const CalibrationSchema = z.object({
 });
 export type Calibration = z.infer<typeof CalibrationSchema>;
 
+export const LineageSchema = z.object({
+  model: z.string(),
+  prompt_version: z.string(),
+  guard_policy_version: z.string(),
+  doc_sources: z.array(z.string()),
+});
+export type Lineage = z.infer<typeof LineageSchema>;
+
 export const ReplayBundleSchema = z.object({
   bundle_id: z.string(),
   captured_at: z.string(),
@@ -233,6 +241,7 @@ export const ReplayBundleSchema = z.object({
   original_answer: z.string(),
   original_model: z.string(),
   original_score: z.number(),
+  lineage: LineageSchema.nullable().optional(),
 });
 export type ReplayBundle = z.infer<typeof ReplayBundleSchema>;
 
