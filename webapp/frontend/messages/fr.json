@@ -317,6 +317,17 @@
       "scores": "Original → candidat",
       "similarity": "Similarité moyenne"
     },
+    "tailSampling": {
+      "title": "Échantillonnage par la queue",
+      "empty": "Aucune trace capturée pour l'instant.",
+      "tailKept": "Queue conservée",
+      "retained": "Conservé",
+      "tail": "Traces de queue",
+      "slow": "Lentes",
+      "lowScore": "Score faible",
+      "kept": "Conservées",
+      "baseRate": "Taux d'échantillon (tête)"
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",

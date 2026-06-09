@@ -81,6 +81,8 @@ import {
   StegoReportSchema,
   type SycophancyReport,
   SycophancyReportSchema,
+  type TailSamplingReport,
+  TailSamplingReportSchema,
   type ToolValidity,
   ToolValiditySchema,
   type Trajectory,
@@ -199,6 +201,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
     },
     ShadowReportSchema,
   );
+}
+
+/** Tail-sampling retention: 100% of slow/low-score traces, sampled head (#32). */
+export async function fetchTailSampling(signal?: AbortSignal): Promise<TailSamplingReport> {
+  return request("/observability/tail-sampling", { signal }, TailSamplingReportSchema);
 }
 
 /** Judge calibration against the human gold set (computed server-side, cached). */

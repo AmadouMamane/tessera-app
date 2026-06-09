@@ -317,6 +317,17 @@
       "scores": "Original → Kandidat",
       "similarity": "Mittl. Ähnlichkeit"
     },
+    "tailSampling": {
+      "title": "Tail-basiertes Sampling",
+      "empty": "Noch keine erfassten Traces.",
+      "tailKept": "Tail behalten",
+      "retained": "Behalten",
+      "tail": "Tail-Traces",
+      "slow": "Langsam",
+      "lowScore": "Niedriger Score",
+      "kept": "Behalten",
+      "baseRate": "Head-Sampling-Rate"
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

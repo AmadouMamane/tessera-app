@@ -40,6 +40,7 @@ from tessera.observability import (
     shadow as shadow_mod,
     slo as slo_mod,
     steganography as steganography_mod,
+    tail_sampling as tail_sampling_mod,
     tool_validity as tool_validity_mod,
     trajectory as trajectory_mod,
     whatchanged as whatchanged_mod,
@@ -148,6 +149,12 @@ async def observability_shadow(payload: ShadowRequest) -> dict[str, object]:
         replay_mod.recent_bundles(), model=payload.model, limit=payload.limit
     )
     return asdict(report)
+
+
+@router.get("/observability/tail-sampling")
+async def observability_tail_sampling() -> dict[str, object]:
+    """Tail-sampling retention: 100% of slow/low-score traces, sampled head."""
+    return asdict(tail_sampling_mod.analyze_sampling(replay_mod.recent_bundles()))
 
 
 @router.get("/observability/calibration")

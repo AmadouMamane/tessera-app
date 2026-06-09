@@ -17,6 +17,7 @@ import {
   Languages,
   Layers,
   LineChart,
+  ListFilter,
   Lock,
   Receipt,
   Route,
@@ -54,6 +55,7 @@ import {
   fetchRouting,
   fetchSLO,
   fetchSessions,
+  fetchTailSampling,
   fetchToolValidity,
   fetchWhatChanged,
   runRedteam,
@@ -79,6 +81,7 @@ import type {
   SLOReport,
   SessionReport,
   ShadowReport,
+  TailSamplingReport,
   ToolValidity,
   WhatChanged,
 } from "@/lib/api/schemas";
@@ -109,6 +112,12 @@ export function ObservabilityDashboard() {
     queryKey: ["slo"],
     queryFn: ({ signal }) => fetchSLO(signal),
     refetchInterval: POLL_MS,
+  });
+
+  const tailSampling = useQuery({
+    queryKey: ["tail-sampling"],
+    queryFn: ({ signal }) => fetchTailSampling(signal),
+    refetchInterval: 15_000,
   });
 
   // Calibration is computed server-side (slow, judge over a gold set) and cached,
@@ -238,6 +247,8 @@ export function ObservabilityDashboard() {
       <SLOCard data={slo.data} loading={slo.isLoading} />
 
       <ShadowCard />
+
+      <TailSamplingCard data={tailSampling.data} loading={tailSampling.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -500,6 +511,53 @@ function ShadowCard() {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TailSamplingCard({
+  data,
+  loading,
+}: {
+  data: TailSamplingReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const tailKept = data ? Math.round(data.tail_retention_rate * 100) : 100;
+  const retained = data ? Math.round(data.retention_rate * 100) : 100;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <ListFilter className="h-4 w-4 text-blue-500" />
+          {t("tailSampling.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_traces === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("tailSampling.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("tailSampling.tailKept")}
+              </span>
+              <Badge tone={tailKept === 100 ? "success" : "danger"}>{tailKept}%</Badge>
+            </div>
+            <Metric label={t("tailSampling.retained")} value={`${retained}%`} />
+            <Metric label={t("tailSampling.tail")} value={`${data.n_tail}/${data.n_traces}`} />
+            <Metric label={t("tailSampling.slow")} value={String(data.n_slow)} />
+            <Metric label={t("tailSampling.lowScore")} value={String(data.n_low_score)} />
+            <Metric label={t("tailSampling.kept")} value={`${data.n_kept}/${data.n_traces}`} />
+            <Metric
+              label={t("tailSampling.baseRate")}
+              value={`${Math.round(data.base_rate * 100)}%`}
+            />
           </div>
         )}
       </CardContent>

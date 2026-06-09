@@ -643,6 +643,22 @@ export const ShadowReportSchema = z.object({
 });
 export type ShadowReport = z.infer<typeof ShadowReportSchema>;
 
+export const TailSamplingReportSchema = z.object({
+  n_traces: z.number().int(),
+  n_tail: z.number().int(),
+  n_head: z.number().int(),
+  n_kept: z.number().int(),
+  n_dropped: z.number().int(),
+  retention_rate: z.number(),
+  tail_retention_rate: z.number(),
+  base_rate: z.number(),
+  n_slow: z.number().int(),
+  n_low_score: z.number().int(),
+  slow_threshold_ms: z.number(),
+  score_threshold: z.number(),
+});
+export type TailSamplingReport = z.infer<typeof TailSamplingReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),
