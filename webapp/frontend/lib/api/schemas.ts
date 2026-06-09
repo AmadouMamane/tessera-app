@@ -839,6 +839,24 @@ export const InversionReportSchema = z.object({
 });
 export type InversionReport = z.infer<typeof InversionReportSchema>;
 
+export const FailureClusterSchema = z.object({
+  cluster_id: z.number().int(),
+  size: z.number().int(),
+  dominant_category: z.string(),
+  purity: z.number(),
+  categories: z.record(z.string(), z.number().int()),
+  members: z.array(z.string()),
+});
+
+export const ClusterReportSchema = z.object({
+  available: z.boolean().default(true),
+  n_failures: z.number().int().optional(),
+  k: z.number().int().optional(),
+  mean_purity: z.number().optional(),
+  clusters: z.array(FailureClusterSchema).optional(),
+});
+export type ClusterReport = z.infer<typeof ClusterReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

@@ -18,6 +18,7 @@ import {
   Gauge,
   GitCompareArrows,
   GitFork,
+  Grid3x3,
   Hash,
   Landmark,
   Languages,
@@ -58,6 +59,7 @@ import {
   fetchEmbeddingSkew,
   fetchErasureCoverage,
   fetchEvalScores,
+  fetchFailureClusters,
   fetchFirewallEfficacy,
   fetchFunnel,
   fetchGuardExplain,
@@ -85,6 +87,7 @@ import type {
   AnomalyReport,
   Calibration,
   CitationSummary,
+  ClusterReport,
   ConformanceReport,
   ContradictionReport,
   CostReport,
@@ -186,6 +189,13 @@ export function ObservabilityDashboard() {
     queryKey: ["memory-obs"],
     queryFn: ({ signal }) => fetchMemoryObs(signal),
     refetchInterval: 15_000,
+  });
+
+  // Failure clustering embeds the whole corpus and is cached server-side; fetch once.
+  const failureClusters = useQuery({
+    queryKey: ["failure-clusters"],
+    queryFn: ({ signal }) => fetchFailureClusters(signal),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
   const journey = useQuery({
@@ -340,6 +350,8 @@ export function ObservabilityDashboard() {
       <SLOCard data={slo.data} loading={slo.isLoading} />
 
       <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
+
+      <FailureClusterCard data={failureClusters.data} loading={failureClusters.isLoading} />
 
       <ShadowCard />
 
@@ -1011,6 +1023,71 @@ function JourneyCard({ data, loading }: { data: JourneyReport | undefined; loadi
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FailureClusterCard({
+  data,
+  loading,
+}: {
+  data: ClusterReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const purityPct = data?.mean_purity != null ? Math.round(data.mean_purity * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Grid3x3 className="h-4 w-4 text-blue-500" />
+          {t("clusters.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-12 w-full" />
+        ) : !data?.available ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("clusters.unavailable")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <Metric label={t("clusters.failures")} value={String(data.n_failures ?? 0)} />
+              <Metric label={t("clusters.themes")} value={String(data.k ?? 0)} />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("clusters.purity")}
+                </span>
+                <Badge tone={purityPct >= 80 ? "success" : purityPct >= 60 ? "warning" : "danger"}>
+                  {purityPct}%
+                </Badge>
+              </div>
+            </div>
+            <ul className="flex flex-col gap-2">
+              {(data.clusters ?? []).map((c) => (
+                <li
+                  key={c.cluster_id}
+                  className="flex flex-col gap-1 rounded-md border border-[var(--border)] p-2"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <Badge tone="neutral">{c.dominant_category}</Badge>
+                    <span className="text-[var(--muted-foreground)]">
+                      {c.size} {t("clusters.cases")} · {Math.round(c.purity * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 text-[0.65rem] text-[var(--muted-foreground)]">
+                    {Object.entries(c.categories).map(([cat, n]) => (
+                      <span key={cat} className="font-mono">
+                        {cat}:{n}
+                      </span>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </CardContent>

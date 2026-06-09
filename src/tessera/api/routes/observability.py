@@ -28,6 +28,7 @@ from tessera.observability import (
     embedding_inversion as embedding_inversion_mod,
     embedding_skew as embedding_skew_mod,
     erasure as erasure_mod,
+    failure_clustering as failure_clustering_mod,
     firewall_efficacy as firewall_mod,
     funnel as funnel_mod,
     guard_explain as guard_explain_mod,
@@ -139,6 +140,39 @@ _calibration_cache: dict[str, object] | None = None
 _obs_cost_cache: dict[str, object] | None = None
 # The embedding-inversion demo embeds a fixed corpus; cache it per process.
 _inversion_cache: dict[str, object] | None = None
+# Failure clustering embeds the whole failure corpus; cache it per process.
+_clustering_cache: dict[str, object] | None = None
+
+
+def _load_failure_items() -> list[failure_clustering_mod.FailureItem]:
+    """Load the documented failures as clustering items (English prompt)."""
+    import json
+    from pathlib import Path
+
+    items: list[failure_clustering_mod.FailureItem] = []
+    failures_dir = Path(__file__).resolve().parents[3] / "eval" / "failures"
+    for path in sorted(failures_dir.glob("[0-9]*.json")):
+        try:
+            obj = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        prompts = obj.get("prompts", {})
+        text = ""
+        if isinstance(prompts, dict):
+            for lang in ("en", "fr", "de"):
+                entry = prompts.get(lang)
+                if isinstance(entry, dict) and entry.get("user"):
+                    text = str(entry["user"])
+                    break
+        text = text or str(obj.get("title", ""))
+        items.append(
+            failure_clustering_mod.FailureItem(
+                case_id=str(obj.get("id", path.stem)),
+                category=str(obj.get("category", "unknown")),
+                text=text,
+            )
+        )
+    return items
 
 
 @router.get("/observability/scores")
@@ -489,6 +523,24 @@ async def observability_embedding_inversion() -> dict[str, object]:
             sys.stderr.write(f"tessera.observability.embedding_inversion: failed: {exc}\n")
             return {"available": False}
     return _inversion_cache
+
+
+@router.get("/observability/failure-clusters")
+async def observability_failure_clusters() -> dict[str, object]:
+    """Auto-clustered themes across the documented failure corpus (#123), cached."""
+    global _clustering_cache
+    if _clustering_cache is None:
+        from tessera.retrieval.embeddings import embed
+
+        try:
+            report = await failure_clustering_mod.cluster_failures(
+                _load_failure_items(), k=6, embedder=embed
+            )
+            _clustering_cache = {"available": True, **asdict(report)}
+        except Exception as exc:  # embedder offline — never break the dashboard
+            sys.stderr.write(f"tessera.observability.failure_clustering: failed: {exc}\n")
+            return {"available": False}
+    return _clustering_cache
 
 
 @router.get("/observability/embedding-skew")

@@ -429,6 +429,14 @@
         "low": "niedrig"
       }
     },
+    "clusters": {
+      "title": "Failure-Cluster (auto-thematisiert)",
+      "unavailable": "Embedder nicht verfügbar.",
+      "failures": "Failures",
+      "themes": "Themen",
+      "purity": "Mittlere Reinheit",
+      "cases": "Fälle"
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

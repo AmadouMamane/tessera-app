@@ -27,6 +27,8 @@ import {
   CalibrationSchema,
   type CitationSummary,
   CitationSummarySchema,
+  type ClusterReport,
+  ClusterReportSchema,
   type ConformanceReport,
   ConformanceReportSchema,
   type ConsistencyReport,
@@ -230,6 +232,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Auto-clustered themes across the documented failure corpus (#123). */
+export async function fetchFailureClusters(signal?: AbortSignal): Promise<ClusterReport> {
+  return request("/observability/failure-clusters", { signal }, ClusterReportSchema);
 }
 
 /** Embedding-inversion privacy risk over a demo corpus (#73). */

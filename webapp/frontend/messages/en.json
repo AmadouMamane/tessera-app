@@ -429,6 +429,14 @@
         "low": "low"
       }
     },
+    "clusters": {
+      "title": "Failure clusters (auto-themed)",
+      "unavailable": "Embedder unavailable.",
+      "failures": "Failures",
+      "themes": "Themes",
+      "purity": "Mean purity",
+      "cases": "cases"
+    },
     "replay": {
       "title": "Replay (regression from production)",
       "model": "Model",
