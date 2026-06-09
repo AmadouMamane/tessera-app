@@ -372,6 +372,14 @@
       "clean": "Keine versteckten Zeichen",
       "hidden": "versteckt",
       "decoded": "Geschmuggelte Nachricht dekodiert"
+    },
+    "piiLeak": {
+      "title": "PII-Leck in der Ausgabe",
+      "rate": "Leckrate",
+      "turns": "Turns",
+      "leaked": "Geleakte PII",
+      "examples": "Beispiele (maskiert)",
+      "empty": "Keine erfassten Turns."
     }
   }
 }

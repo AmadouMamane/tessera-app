@@ -6,6 +6,7 @@ import {
   Gauge,
   Languages,
   LineChart,
+  Lock,
   Scale,
   ShieldCheck,
   Target,
@@ -22,6 +23,7 @@ import {
   fetchCalibration,
   fetchEvalScores,
   fetchFirewallEfficacy,
+  fetchPiiLeak,
   fetchRouting,
   fetchSessions,
   fetchToolValidity,
@@ -30,6 +32,7 @@ import type {
   Calibration,
   EvalScore,
   FirewallEfficacy,
+  PIILeakSummary,
   RoutingReport,
   SessionReport,
   ToolValidity,
@@ -86,6 +89,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const piiLeak = useQuery({
+    queryKey: ["pii-leak"],
+    queryFn: ({ signal }) => fetchPiiLeak(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -109,6 +118,8 @@ export function ObservabilityDashboard() {
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
       <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
+
+      <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
 
       <ToolValidityCard data={tools.data} loading={tools.isLoading} />
 
@@ -281,6 +292,47 @@ function FirewallEfficacyCard({
                 {data.false_positive}
               </Badge>
             </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PiiLeakCard({ data, loading }: { data: PIILeakSummary | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const pct = data ? Math.round(data.leak_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Lock className="h-4 w-4 text-blue-500" />
+          {t("piiLeak.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_turns === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("piiLeak.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">{t("piiLeak.rate")}</span>
+              <Badge tone={pct === 0 ? "success" : pct <= 10 ? "warning" : "danger"}>{pct}%</Badge>
+            </div>
+            <Metric label={t("piiLeak.turns")} value={String(data.n_turns)} />
+            <Metric label={t("piiLeak.leaked")} value={String(data.total_leaked)} />
+            {data.examples.length > 0 ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("piiLeak.examples")}
+                </span>
+                <span className="font-mono text-xs text-red-600 dark:text-red-400">
+                  {data.examples.join(", ")}
+                </span>
+              </div>
+            ) : null}
           </div>
         )}
       </CardContent>

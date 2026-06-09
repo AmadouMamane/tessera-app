@@ -31,6 +31,8 @@ import {
   FirewallEfficacySchema,
   type HealthResponse,
   HealthResponseSchema,
+  type PIILeakSummary,
+  PIILeakSummarySchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
   type ReplayResult,
@@ -161,6 +163,11 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Output PII-leak rate: PII in answers absent from their grounding (#38). */
+export async function fetchPiiLeak(signal?: AbortSignal): Promise<PIILeakSummary> {
+  return request("/observability/pii-leak", { signal }, PIILeakSummarySchema);
 }
 
 /** Session-level goal-completion analytics. */

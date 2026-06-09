@@ -368,6 +368,15 @@ export const StegoReportSchema = z.object({
 });
 export type StegoReport = z.infer<typeof StegoReportSchema>;
 
+export const PIILeakSummarySchema = z.object({
+  n_turns: z.number().int(),
+  n_with_leak: z.number().int(),
+  leak_rate: z.number(),
+  total_leaked: z.number().int(),
+  examples: z.array(z.string()),
+});
+export type PIILeakSummary = z.infer<typeof PIILeakSummarySchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

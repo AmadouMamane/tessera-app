@@ -18,6 +18,7 @@ from tessera.observability import (
     corpus_injection as corpus_injection_mod,
     firewall_efficacy as firewall_mod,
     language_routing as language_routing_mod,
+    pii_leak as pii_leak_mod,
     provenance as provenance_mod,
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
@@ -148,6 +149,13 @@ async def observability_routing() -> dict[str, object]:
     """Language-routing health: served vs detected language, code-switching."""
     turns = [(b.question, b.language) for b in replay_mod.recent_bundles()]
     return asdict(language_routing_mod.aggregate_routing(turns))
+
+
+@router.get("/observability/pii-leak")
+async def observability_pii_leak() -> dict[str, object]:
+    """Output PII-leak rate: PII in answers absent from their grounding."""
+    turns = [(b.original_answer, f"{b.question}\n{b.context}") for b in replay_mod.recent_bundles()]
+    return asdict(pii_leak_mod.aggregate_leaks(turns))
 
 
 @router.get("/observability/sessions")

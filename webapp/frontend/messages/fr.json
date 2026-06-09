@@ -372,6 +372,14 @@
       "clean": "Aucun caractère caché",
       "hidden": "cachés",
       "decoded": "Message smuggle décodé"
+    },
+    "piiLeak": {
+      "title": "Fuite de PII en sortie",
+      "rate": "Taux de fuite",
+      "turns": "Tours",
+      "leaked": "PII fuitées",
+      "examples": "Exemples (masqués)",
+      "empty": "Aucun tour capturé."
     }
   }
 }

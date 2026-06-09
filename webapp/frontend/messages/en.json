@@ -372,6 +372,14 @@
       "clean": "No hidden characters",
       "hidden": "hidden",
       "decoded": "Smuggled message decoded"
+    },
+    "piiLeak": {
+      "title": "Output PII leak",
+      "rate": "Leak rate",
+      "turns": "Turns",
+      "leaked": "PII leaked",
+      "examples": "Examples (masked)",
+      "empty": "No captured turns yet."
     }
   }
 }
