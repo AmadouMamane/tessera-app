@@ -26,6 +26,7 @@ from tessera.observability import (
     coverage as coverage_mod,
     crosslingual as crosslingual_mod,
     embedding_skew as embedding_skew_mod,
+    erasure as erasure_mod,
     firewall_efficacy as firewall_mod,
     funnel as funnel_mod,
     guard_explain as guard_explain_mod,
@@ -406,6 +407,24 @@ def _read_audit_entries() -> list[dict[str, object]]:
 async def observability_memory() -> dict[str, object]:
     """Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23)."""
     return asdict(memory_obs_mod.aggregate_memory_audit(_read_audit_entries()))
+
+
+@router.get("/observability/erasure-coverage")
+async def observability_erasure_coverage() -> dict[str, object]:
+    """The telemetry-erasure surface: conversations, bundles, scores in scope (#180)."""
+    return asdict(erasure_mod.coverage(replay_mod.recent_bundles(), recent_scores()))
+
+
+@router.get("/observability/erasure/{conversation_id}")
+async def observability_erasure_preview(conversation_id: str) -> dict[str, object]:
+    """Preview the telemetry that a GDPR erasure of this subject would purge (#180)."""
+    return asdict(
+        erasure_mod.footprint(
+            conversation_id,
+            bundles=replay_mod.recent_bundles(),
+            scores=recent_scores(),
+        )
+    )
 
 
 @router.get("/observability/memory-inventory")

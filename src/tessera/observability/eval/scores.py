@@ -25,7 +25,7 @@ from tessera.observability.metrics import EVAL_SCORE
 if TYPE_CHECKING:
     from tessera.observability.eval.judge import JudgeVerdict
 
-__all__ = ["emit_score", "recent_scores"]
+__all__ = ["emit_score", "purge_conversation", "recent_scores"]
 
 _log = get_logger("tessera.eval")
 
@@ -38,6 +38,19 @@ _RECENT: deque[dict[str, object]] = deque(maxlen=200)
 def recent_scores() -> list[dict[str, object]]:
     """Return the most recent eval scores (newest last)."""
     return list(_RECENT)
+
+
+def purge_conversation(conversation_id: str) -> int:
+    """Drop all buffered scores for a conversation (GDPR erasure, #180).
+
+    Returns the number of score rows removed. Erasure must reach telemetry, not
+    just the system of record, so a deleted subject leaves no trace here either.
+    """
+    kept = [s for s in _RECENT if s.get("conversation_id") != conversation_id]
+    removed = len(_RECENT) - len(kept)
+    _RECENT.clear()
+    _RECENT.extend(kept)
+    return removed
 
 
 def emit_score(

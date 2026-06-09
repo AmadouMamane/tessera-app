@@ -404,6 +404,13 @@
       "subjects": "Subjekte",
       "expiringSoon": "Läuft bald ab"
     },
+    "erasure": {
+      "title": "Löschfläche (DSGVO Art. 17)",
+      "conversations": "Konversationen",
+      "bundles": "Replay-Bundles",
+      "scores": "Eval-Scores",
+      "note": "DELETE /memory löscht auch diese Telemetrie-Artefakte, nicht nur den Memory-Store."
+    },
     "roadmap": {
       "title": "Produkt-Roadmap (aus Telemetrie)",
       "empty": "Keine Backlog-Einträge — Telemetrie ist sauber.",

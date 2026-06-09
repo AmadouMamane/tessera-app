@@ -815,6 +815,13 @@ export const InventoryReportSchema = z.object({
 });
 export type InventoryReport = z.infer<typeof InventoryReportSchema>;
 
+export const ErasureCoverageSchema = z.object({
+  n_conversations: z.number().int(),
+  n_bundles: z.number().int(),
+  n_scores: z.number().int(),
+});
+export type ErasureCoverage = z.infer<typeof ErasureCoverageSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

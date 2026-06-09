@@ -404,6 +404,13 @@
       "subjects": "Sujets",
       "expiringSoon": "Expire bientôt"
     },
+    "erasure": {
+      "title": "Surface d'effacement (GDPR Art. 17)",
+      "conversations": "Conversations",
+      "bundles": "Bundles replay",
+      "scores": "Scores d'éval",
+      "note": "DELETE /memory purge aussi ces artefacts de télémétrie, pas seulement le store mémoire."
+    },
     "roadmap": {
       "title": "Roadmap produit (depuis la télémétrie)",
       "empty": "Aucun item — la télémétrie est propre.",

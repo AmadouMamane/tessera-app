@@ -43,6 +43,8 @@ import {
   CrossLingualReportSchema,
   type EnsembleReport,
   EnsembleReportSchema,
+  type ErasureCoverage,
+  ErasureCoverageSchema,
   type EvalScoresResponse,
   EvalScoresResponseSchema,
   type FirewallEfficacy,
@@ -226,6 +228,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** The telemetry-erasure surface: conversations, bundles, scores in scope (#180). */
+export async function fetchErasureCoverage(signal?: AbortSignal): Promise<ErasureCoverage> {
+  return request("/observability/erasure-coverage", { signal }, ErasureCoverageSchema);
 }
 
 /** What the agent remembers: long-term store inventory (GDPR access, #135). */

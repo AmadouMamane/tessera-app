@@ -74,8 +74,16 @@ class ConsentResponse(BaseModel):
 
 @router.delete("/memory/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def erase_memory(conversation_id: uuid.UUID) -> Response:
-    """Erase all stored memory for a subject (GDPR Art. 17)."""
+    """Erase all stored memory *and telemetry* for a subject (GDPR Art. 17).
+
+    Beyond the memory layers, this also purges the subject's captured replay
+    bundles and online-eval scores, so the deletion reaches telemetry and not
+    only the system of record (ADR 0010, #180).
+    """
     await governance.erase_subject(conversation_id)
+    from tessera.observability.erasure import purge_telemetry
+
+    purge_telemetry(str(conversation_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

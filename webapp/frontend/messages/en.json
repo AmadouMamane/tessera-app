@@ -404,6 +404,13 @@
       "subjects": "Subjects",
       "expiringSoon": "Expiring soon"
     },
+    "erasure": {
+      "title": "Erasure surface (GDPR Art. 17)",
+      "conversations": "Conversations",
+      "bundles": "Replay bundles",
+      "scores": "Eval scores",
+      "note": "DELETE /memory purges these telemetry artefacts too, not only the memory store."
+    },
     "roadmap": {
       "title": "Product roadmap (from telemetry)",
       "empty": "No backlog items — telemetry is clean.",

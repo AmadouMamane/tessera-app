@@ -10,6 +10,7 @@ import {
   CalendarClock,
   Coins,
   Crosshair,
+  Eraser,
   ExternalLink,
   Filter,
   Flame,
@@ -53,6 +54,7 @@ import {
   fetchCorpusFreshness,
   fetchCost,
   fetchEmbeddingSkew,
+  fetchErasureCoverage,
   fetchEvalScores,
   fetchFirewallEfficacy,
   fetchFunnel,
@@ -84,6 +86,7 @@ import type {
   ConformanceReport,
   ContradictionReport,
   CostReport,
+  ErasureCoverage,
   EvalScore,
   FirewallEfficacy,
   FreshnessReport,
@@ -191,6 +194,12 @@ export function ObservabilityDashboard() {
   const memoryInventory = useQuery({
     queryKey: ["memory-inventory"],
     queryFn: ({ signal }) => fetchMemoryInventory(signal),
+    refetchInterval: 20_000,
+  });
+
+  const erasureCoverage = useQuery({
+    queryKey: ["erasure-coverage"],
+    queryFn: ({ signal }) => fetchErasureCoverage(signal),
     refetchInterval: 20_000,
   });
 
@@ -339,6 +348,8 @@ export function ObservabilityDashboard() {
       <JourneyCard data={journey.data} loading={journey.isLoading} />
 
       <MemoryInventoryCard data={memoryInventory.data} loading={memoryInventory.isLoading} />
+
+      <ErasureCoverageCard data={erasureCoverage.data} loading={erasureCoverage.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -770,6 +781,40 @@ function RoadmapCard({ data, loading }: { data: RoadmapReport | undefined; loadi
               </li>
             ))}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ErasureCoverageCard({
+  data,
+  loading,
+}: {
+  data: ErasureCoverage | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Eraser className="h-4 w-4 text-blue-500" />
+          {t("erasure.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <Metric label={t("erasure.conversations")} value={String(data.n_conversations)} />
+              <Metric label={t("erasure.bundles")} value={String(data.n_bundles)} />
+              <Metric label={t("erasure.scores")} value={String(data.n_scores)} />
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)]">{t("erasure.note")}</p>
+          </div>
         )}
       </CardContent>
     </Card>

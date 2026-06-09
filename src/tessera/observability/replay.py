@@ -34,6 +34,7 @@ __all__ = [
     "ReplayResult",
     "capture_bundle",
     "get_bundle",
+    "purge_conversation",
     "recent_bundles",
     "replay",
 ]
@@ -115,6 +116,19 @@ def recent_bundles() -> list[ReplayBundle]:
 def get_bundle(bundle_id: str) -> ReplayBundle | None:
     """Return the bundle with ``bundle_id`` if still in the buffer."""
     return next((b for b in _BUNDLES if b.bundle_id == bundle_id), None)
+
+
+def purge_conversation(conversation_id: str) -> int:
+    """Drop all captured bundles for a conversation (GDPR erasure, #180).
+
+    Returns the number of bundles removed, so erasure reaches the replay
+    telemetry and not only the system of record.
+    """
+    kept = [b for b in _BUNDLES if b.conversation_id != conversation_id]
+    removed = len(_BUNDLES) - len(kept)
+    _BUNDLES.clear()
+    _BUNDLES.extend(kept)
+    return removed
 
 
 async def replay(
