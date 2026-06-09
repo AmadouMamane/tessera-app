@@ -14,6 +14,7 @@ import {
   LineChart,
   Lock,
   Receipt,
+  Route,
   Scale,
   ShieldCheck,
   SlidersHorizontal,
@@ -37,6 +38,7 @@ import {
   fetchContradictions,
   fetchEvalScores,
   fetchFirewallEfficacy,
+  fetchIntent,
   fetchLocaleFormat,
   fetchPiiLeak,
   fetchRedteam,
@@ -55,6 +57,7 @@ import type {
   ContradictionReport,
   EvalScore,
   FirewallEfficacy,
+  IntentReport,
   LocaleFormatSummary,
   PIILeakSummary,
   RedTeamResponse,
@@ -164,6 +167,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const intent = useQuery({
+    queryKey: ["intent"],
+    queryFn: ({ signal }) => fetchIntent(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -203,6 +212,8 @@ export function ObservabilityDashboard() {
       <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
 
       <RoutingCard data={routing.data} loading={routing.isLoading} />
+
+      <IntentCard data={intent.data} loading={intent.isLoading} />
 
       <SessionCard data={sessions.data} loading={sessions.isLoading} />
 
@@ -733,6 +744,51 @@ function ToolValidityCard({
             <Metric label={t("tools.allowed")} value={String(data.allowed)} />
             <Metric label={t("tools.denied")} value={String(data.denied)} />
             <Metric label={t("tools.argFailures")} value={String(data.arg_failures)} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function IntentCard({ data, loading }: { data: IntentReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const lowPct = data ? Math.round(data.low_confidence_rate * 100) : 0;
+  const entries = data ? Object.entries(data.distribution).sort((a, b) => b[1] - a[1]) : [];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Route className="h-4 w-4 text-blue-500" />
+          {t("intent.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("intent.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("intent.lowConfidence")}
+                </span>
+                <Badge tone={lowPct === 0 ? "success" : lowPct <= 25 ? "warning" : "danger"}>
+                  {lowPct}%
+                </Badge>
+              </div>
+              <Metric label={t("intent.turns")} value={String(data.n)} />
+              <Metric label={t("intent.unknown")} value={String(data.unknown)} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {entries.map(([name, count]) => (
+                <Badge key={name} tone="neutral">
+                  {name} · {count}
+                </Badge>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>

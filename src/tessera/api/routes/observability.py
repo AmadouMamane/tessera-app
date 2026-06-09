@@ -28,6 +28,7 @@ from tessera.observability import (
     provenance as provenance_mod,
     redteam as redteam_mod,
     refusal as refusal_mod,
+    routing_intent as routing_intent_mod,
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
     robustness as robustness_mod,
@@ -248,6 +249,13 @@ async def observability_routing() -> dict[str, object]:
     """Language-routing health: served vs detected language, code-switching."""
     turns = [(b.question, b.language) for b in replay_mod.recent_bundles()]
     return asdict(language_routing_mod.aggregate_routing(turns))
+
+
+@router.get("/observability/intent")
+async def observability_intent() -> dict[str, object]:
+    """Business-intent mix and routing confidence over captured questions."""
+    questions = [b.question for b in replay_mod.recent_bundles()]
+    return asdict(routing_intent_mod.aggregate_intents(questions))
 
 
 @router.get("/observability/citations")

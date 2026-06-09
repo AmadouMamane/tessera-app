@@ -479,6 +479,13 @@
       "title": "Sycophancy",
       "flagged": "Sycophantic",
       "ok": "No sycophancy"
+    },
+    "intent": {
+      "title": "Business intent & routing",
+      "lowConfidence": "Low confidence",
+      "turns": "Turns",
+      "unknown": "Unknown",
+      "empty": "No questions captured yet."
     }
   }
 }

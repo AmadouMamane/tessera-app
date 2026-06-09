@@ -479,6 +479,13 @@
       "title": "Sycophantie",
       "flagged": "Sycophant",
       "ok": "Keine Gefälligkeit"
+    },
+    "intent": {
+      "title": "Geschäftsintent & Routing",
+      "lowConfidence": "Geringe Konfidenz",
+      "turns": "Turns",
+      "unknown": "Unbekannt",
+      "empty": "Keine Fragen erfasst."
     }
   }
 }

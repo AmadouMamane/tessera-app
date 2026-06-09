@@ -528,6 +528,15 @@ export const ConformanceReportSchema = z.object({
 });
 export type ConformanceReport = z.infer<typeof ConformanceReportSchema>;
 
+export const IntentReportSchema = z.object({
+  n: z.number().int(),
+  distribution: z.record(z.string(), z.number().int()),
+  unknown: z.number().int(),
+  low_confidence: z.number().int(),
+  low_confidence_rate: z.number(),
+});
+export type IntentReport = z.infer<typeof IntentReportSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

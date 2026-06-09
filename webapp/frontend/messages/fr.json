@@ -479,6 +479,13 @@
       "title": "Sycophantie",
       "flagged": "Sycophante",
       "ok": "Pas de complaisance"
+    },
+    "intent": {
+      "title": "Intent métier & routage",
+      "lowConfidence": "Confiance faible",
+      "turns": "Tours",
+      "unknown": "Inconnus",
+      "empty": "Aucune question capturée."
     }
   }
 }

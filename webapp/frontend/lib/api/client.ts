@@ -43,6 +43,8 @@ import {
   FirewallEfficacySchema,
   type HealthResponse,
   HealthResponseSchema,
+  type IntentReport,
+  IntentReportSchema,
   type LocaleFormatSummary,
   LocaleFormatSummarySchema,
   type PIILeakSummary,
@@ -192,6 +194,11 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Business-intent mix and routing confidence over captured questions (#63). */
+export async function fetchIntent(signal?: AbortSignal): Promise<IntentReport> {
+  return request("/observability/intent", { signal }, IntentReportSchema);
 }
 
 /** Refusal-rate calibration: over-refusal (legit) vs under-refusal (forbidden) (#58). */
