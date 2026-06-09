@@ -311,6 +311,9 @@
       "prompt": "Prompt",
       "policy": "Policy",
       "docs": "Docs"
+    },
+    "latency": {
+      "title": "Latenz"
     }
   }
 }

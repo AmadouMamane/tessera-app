@@ -116,6 +116,7 @@ export function ReplayPanel() {
                       </Button>
                     </div>
                   </div>
+                  {b.latency_ms ? <LatencyWaterfall timings={b.latency_ms} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
                   {res ? <ReplayResultView res={res} /> : null}
                 </li>
@@ -148,6 +149,51 @@ function ReplayResultView({ res }: { res: ReplayResult }) {
         </span>
       </div>
       <p className="mt-2 whitespace-pre-wrap text-[var(--foreground)]">{res.candidate_answer}</p>
+    </div>
+  );
+}
+
+const LATENCY_COLORS = [
+  "bg-blue-500",
+  "bg-emerald-500",
+  "bg-amber-500",
+  "bg-violet-500",
+  "bg-rose-500",
+  "bg-cyan-500",
+  "bg-lime-500",
+];
+
+function LatencyWaterfall({ timings }: { timings: Record<string, number> }) {
+  const t = useTranslations("observability");
+  const entries = Object.entries(timings).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((sum, [, ms]) => sum + ms, 0);
+  if (total <= 0) {
+    return null;
+  }
+  return (
+    <div className="mt-2">
+      <div className="mb-1 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+        <span>{t("latency.title")}</span>
+        <span className="tabular-nums">{Math.round(total)} ms</span>
+      </div>
+      <div className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--muted)]">
+        {entries.map(([name, ms], i) => (
+          <div
+            key={name}
+            className={LATENCY_COLORS[i % LATENCY_COLORS.length]}
+            style={{ width: `${(ms / total) * 100}%` }}
+            title={`${name}: ${Math.round(ms)} ms`}
+          />
+        ))}
+      </div>
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.65rem] text-[var(--muted-foreground)]">
+        {entries.map(([name, ms], i) => (
+          <span key={name} className="flex items-center gap-1">
+            <span className={`h-2 w-2 rounded-full ${LATENCY_COLORS[i % LATENCY_COLORS.length]}`} />
+            {name} <span className="tabular-nums">{Math.round(ms)}ms</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

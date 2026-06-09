@@ -242,6 +242,7 @@ export const ReplayBundleSchema = z.object({
   original_model: z.string(),
   original_score: z.number(),
   lineage: LineageSchema.nullable().optional(),
+  latency_ms: z.record(z.string(), z.number()).nullable().optional(),
 });
 export type ReplayBundle = z.infer<typeof ReplayBundleSchema>;
 

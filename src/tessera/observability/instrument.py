@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import functools
 import inspect
+import time
 from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
 from tessera.observability import semconv
@@ -31,7 +33,33 @@ if TYPE_CHECKING:
 
     from tessera.settings import LanguageCode
 
-__all__ = ["instrument_node", "tool_span"]
+__all__ = ["collect_node_timings", "instrument_node", "tool_span"]
+
+# Per-turn node latencies (ms), collected via collect_node_timings (idea #48).
+_node_timings: ContextVar[dict[str, float] | None] = ContextVar(
+    "tessera_node_timings", default=None
+)
+
+
+@contextmanager
+def collect_node_timings() -> Iterator[dict[str, float]]:
+    """Collect per-node durations (ms) for the duration of the context.
+
+    The yielded dict is populated as instrumented nodes run within the same
+    async task; repeated runs of a node are summed.
+    """
+    timings: dict[str, float] = {}
+    token = _node_timings.set(timings)
+    try:
+        yield timings
+    finally:
+        _node_timings.reset(token)
+
+
+def _record_timing(name: str, elapsed_ms: float) -> None:
+    current = _node_timings.get()
+    if current is not None:
+        current[name] = current.get(name, 0.0) + elapsed_ms
 
 
 def _language_value(language: object) -> str:
@@ -75,7 +103,9 @@ def instrument_node(name: str, fn: Callable[..., Any]) -> Callable[..., Any]:
         async def _async(state: Any, *args: Any, **kwargs: Any) -> Any:
             with tracer().start_as_current_span(semconv.agent_span_name(name)) as span:
                 _annotate_node(span, name, state)
+                start = time.perf_counter()
                 result = await fn(state, *args, **kwargs)
+                _record_timing(name, (time.perf_counter() - start) * 1000.0)
                 _record_node_errors(span, result)
                 return result
 
@@ -85,7 +115,9 @@ def instrument_node(name: str, fn: Callable[..., Any]) -> Callable[..., Any]:
     def _sync(state: Any, *args: Any, **kwargs: Any) -> Any:
         with tracer().start_as_current_span(semconv.agent_span_name(name)) as span:
             _annotate_node(span, name, state)
+            start = time.perf_counter()
             result = fn(state, *args, **kwargs)
+            _record_timing(name, (time.perf_counter() - start) * 1000.0)
             _record_node_errors(span, result)
             return result
 

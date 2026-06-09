@@ -25,7 +25,7 @@ from tessera.guard.audit import current_model
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, load_transcript
-from tessera.observability import replay
+from tessera.observability import instrument, replay
 from tessera.observability.eval import online as online_eval
 from tessera.observability.lineage import build_lineage
 from tessera.observability.metrics import AGENT_TURN_DURATION, AGENT_TURNS_TOTAL
@@ -59,6 +59,7 @@ async def _run_online_eval(
     conversation_id: uuid.UUID,
     model: str,
     lineage: Lineage | None = None,
+    latency_ms: dict[str, float] | None = None,
 ) -> None:
     """Score the turn off the hot path and capture it for replay (ADR 0010).
 
@@ -85,6 +86,7 @@ async def _run_online_eval(
                 original_model=model,
                 conversation_id=str(conversation_id),
                 lineage=lineage,
+                latency_ms=latency_ms,
             )
     except Exception as exc:  # cold path must never break the response
         sys.stderr.write(f"tessera.observability.eval: online eval failed: {exc}\n")
@@ -217,13 +219,15 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     yield _sse("turn.start", {"conversation_id": str(conversation_id), "turn_id": str(turn_id)})
 
     # Phase 1: run graph up to (but not including) the reporter node.
-    # Escalation and injection-block paths complete fully here.
-    try:
-        await graph.ainvoke(initial, config=config)  # type: ignore[attr-defined]
-    except Exception as exc:
-        AGENT_TURNS_TOTAL.labels(language=language.value, outcome="error").inc()
-        yield _sse("turn.error", {"error": str(exc)})
-        return
+    # Escalation and injection-block paths complete fully here. Per-node latencies
+    # are collected for the critical-path breakdown (idea #48).
+    with instrument.collect_node_timings() as node_timings:
+        try:
+            await graph.ainvoke(initial, config=config)  # type: ignore[attr-defined]
+        except Exception as exc:
+            AGENT_TURNS_TOTAL.labels(language=language.value, outcome="error").inc()
+            yield _sse("turn.error", {"error": str(exc)})
+            return
 
     snapshot = graph.get_state(config)  # type: ignore[attr-defined]
     state = snapshot.values
@@ -303,6 +307,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
                     model=effective_model,
                     documents=docs_for_eval,
                 ),
+                latency_ms=dict(node_timings),
             )
         )
 

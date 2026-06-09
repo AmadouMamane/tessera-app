@@ -78,3 +78,15 @@ def test_tool_span_emits_execute_tool_span(in_memory_spans: InMemorySpanExporter
     assert span_data.attributes[semconv.GEN_AI_TOOL_NAME] == "account_balance"
     assert span_data.attributes[semconv.TESSERA_LANGUAGE] == LanguageCode.DE.value
     assert span_data.attributes[semconv.TESSERA_GUARD_DECISION] == "allowed"
+
+
+def test_collect_node_timings_records_duration(in_memory_spans: InMemorySpanExporter) -> None:
+    async def fake_run(state: dict[str, Any]) -> dict[str, object]:
+        return {}
+
+    wrapped = instrument.instrument_node("slow_node", fake_run)
+    with instrument.collect_node_timings() as timings:
+        asyncio.run(wrapped({"language": LanguageCode.FR}))
+
+    assert "slow_node" in timings
+    assert timings["slow_node"] >= 0.0

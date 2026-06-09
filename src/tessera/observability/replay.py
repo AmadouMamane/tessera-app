@@ -60,6 +60,7 @@ class ReplayBundle:
     original_model: str
     original_score: float
     lineage: Lineage | None = None
+    latency_ms: dict[str, float] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,6 +87,7 @@ def capture_bundle(
     original_model: str,
     conversation_id: str | None = None,
     lineage: Lineage | None = None,
+    latency_ms: dict[str, float] | None = None,
 ) -> ReplayBundle:
     """Capture a grounded turn for later replay; returns the stored bundle."""
     bundle = ReplayBundle(
@@ -99,6 +101,7 @@ def capture_bundle(
         original_model=original_model,
         original_score=original_score,
         lineage=lineage,
+        latency_ms=latency_ms,
     )
     _BUNDLES.append(bundle)
     return bundle
