@@ -43,6 +43,8 @@ import {
   CoverageReportSchema,
   type CrossLingualReport,
   CrossLingualReportSchema,
+  type CrossTenantReport,
+  CrossTenantReportSchema,
   type EnsembleReport,
   EnsembleReportSchema,
   type ErasureCoverage,
@@ -238,6 +240,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Cross-tenant leakage: foreign subject ids in a turn's context (#74). */
+export async function fetchCrossTenant(signal?: AbortSignal): Promise<CrossTenantReport> {
+  return request("/observability/cross-tenant", { signal }, CrossTenantReportSchema);
 }
 
 /** Toxicity / harmful-output rate over captured answers (#60). */

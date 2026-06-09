@@ -556,6 +556,12 @@
       "rate": "Toxische Rate",
       "flagged": "Markiert"
     },
+    "crossTenant": {
+      "title": "Tenant-übergreifendes Leck",
+      "empty": "Noch keine erfassten Turns.",
+      "rate": "Leck-Rate",
+      "leaks": "Lecks"
+    },
     "contradiction": {
       "title": "Mehrturn-Widerspruch",
       "found": "Widersprüche",

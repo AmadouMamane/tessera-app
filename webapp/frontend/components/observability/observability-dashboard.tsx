@@ -58,6 +58,7 @@ import {
   fetchContradictions,
   fetchCorpusFreshness,
   fetchCost,
+  fetchCrossTenant,
   fetchEmbeddingInversion,
   fetchEmbeddingSkew,
   fetchErasureCoverage,
@@ -97,6 +98,7 @@ import type {
   ConformanceReport,
   ContradictionReport,
   CostReport,
+  CrossTenantReport,
   ErasureCoverage,
   EvalScore,
   FirewallEfficacy,
@@ -222,6 +224,12 @@ export function ObservabilityDashboard() {
   const toxicity = useQuery({
     queryKey: ["toxicity"],
     queryFn: ({ signal }) => fetchToxicity(signal),
+    refetchInterval: 15_000,
+  });
+
+  const crossTenant = useQuery({
+    queryKey: ["cross-tenant"],
+    queryFn: ({ signal }) => fetchCrossTenant(signal),
     refetchInterval: 15_000,
   });
 
@@ -417,6 +425,8 @@ export function ObservabilityDashboard() {
       <RedTeamCard />
 
       <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
+
+      <CrossTenantCard data={crossTenant.data} loading={crossTenant.isLoading} />
 
       <RefusalCard data={refusal.data} loading={refusal.isLoading} />
 
@@ -1108,6 +1118,44 @@ function SftDatasetCard({ data, loading }: { data: SFTDataset | undefined; loadi
                 ))}
               </ul>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CrossTenantCard({
+  data,
+  loading,
+}: {
+  data: CrossTenantReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const pct = data ? Math.round(data.leak_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Lock className="h-4 w-4 text-blue-500" />
+          {t("crossTenant.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_turns === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("crossTenant.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("crossTenant.rate")}
+              </span>
+              <Badge tone={pct === 0 ? "success" : "danger"}>{pct}%</Badge>
+            </div>
+            <Metric label={t("crossTenant.leaks")} value={`${data.n_leaks}/${data.n_turns}`} />
           </div>
         )}
       </CardContent>

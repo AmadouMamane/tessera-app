@@ -556,6 +556,12 @@
       "rate": "Taux toxique",
       "flagged": "Signalés"
     },
+    "crossTenant": {
+      "title": "Fuite cross-tenant",
+      "empty": "Aucun tour capturé pour l'instant.",
+      "rate": "Taux de fuite",
+      "leaks": "Fuites"
+    },
     "contradiction": {
       "title": "Contradiction multi-tour",
       "found": "Contradictions",

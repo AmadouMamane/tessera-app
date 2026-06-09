@@ -556,6 +556,12 @@
       "rate": "Toxic rate",
       "flagged": "Flagged"
     },
+    "crossTenant": {
+      "title": "Cross-tenant leakage",
+      "empty": "No captured turns yet.",
+      "rate": "Leak rate",
+      "leaks": "Leaks"
+    },
     "contradiction": {
       "title": "Multi-turn contradiction",
       "found": "Contradictions",

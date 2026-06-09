@@ -24,6 +24,7 @@ from tessera.observability import (
     corpus_injection as corpus_injection_mod,
     cost_anomaly as cost_anomaly_mod,
     coverage as coverage_mod,
+    cross_tenant as cross_tenant_mod,
     crosslingual as crosslingual_mod,
     embedding_inversion as embedding_inversion_mod,
     embedding_skew as embedding_skew_mod,
@@ -554,6 +555,15 @@ async def observability_sft_dataset() -> dict[str, object]:
         for b in replay_mod.recent_bundles()
     ]
     return asdict(sft_export_mod.build_sft_dataset(turns))
+
+
+@router.get("/observability/cross-tenant")
+async def observability_cross_tenant() -> dict[str, object]:
+    """Cross-tenant leakage: foreign subject ids in a turn's context (#74)."""
+    turns = [
+        (b.conversation_id or "", b.context) for b in replay_mod.recent_bundles()
+    ]
+    return asdict(cross_tenant_mod.detect_cross_tenant(turns))
 
 
 @router.get("/observability/toxicity")

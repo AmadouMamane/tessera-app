@@ -900,6 +900,19 @@ export const ToxicityReportSchema = z.object({
 });
 export type ToxicityReport = z.infer<typeof ToxicityReportSchema>;
 
+export const CrossTenantLeakSchema = z.object({
+  conversation_id: z.string(),
+  foreign_ids: z.array(z.string()),
+});
+
+export const CrossTenantReportSchema = z.object({
+  n_turns: z.number().int(),
+  n_leaks: z.number().int(),
+  leak_rate: z.number(),
+  leaks: z.array(CrossTenantLeakSchema),
+});
+export type CrossTenantReport = z.infer<typeof CrossTenantReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),
