@@ -57,6 +57,8 @@ import {
   HealthResponseSchema,
   type IntentReport,
   IntentReportSchema,
+  type InventoryReport,
+  InventoryReportSchema,
   type JourneyReport,
   JourneyReportSchema,
   type LocaleFormatSummary,
@@ -224,6 +226,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** What the agent remembers: long-term store inventory (GDPR access, #135). */
+export async function fetchMemoryInventory(signal?: AbortSignal): Promise<InventoryReport> {
+  return request("/observability/memory-inventory", { signal }, InventoryReportSchema);
 }
 
 /** Cross-session customer journeys mined from the memory audit trail (#99). */

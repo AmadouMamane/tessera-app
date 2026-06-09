@@ -397,6 +397,13 @@
       "reads": "Lectures",
       "span": "Durée"
     },
+    "inventory": {
+      "title": "Inventaire mémoire (accès GDPR)",
+      "empty": "Aucune mémoire stockée.",
+      "memories": "Mémoires",
+      "subjects": "Sujets",
+      "expiringSoon": "Expire bientôt"
+    },
     "roadmap": {
       "title": "Roadmap produit (depuis la télémétrie)",
       "empty": "Aucun item — la télémétrie est propre.",

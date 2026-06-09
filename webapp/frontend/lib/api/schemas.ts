@@ -798,6 +798,23 @@ export const JourneyReportSchema = z.object({
 });
 export type JourneyReport = z.infer<typeof JourneyReportSchema>;
 
+export const InventorySampleSchema = z.object({
+  memory_id: z.number().int(),
+  subject: z.string(),
+  kind: z.string(),
+  preview: z.string(),
+  expires_in_days: z.number().int(),
+});
+
+export const InventoryReportSchema = z.object({
+  n_memories: z.number().int(),
+  n_subjects: z.number().int(),
+  by_kind: z.record(z.string(), z.number().int()),
+  n_expiring_soon: z.number().int(),
+  samples: z.array(InventorySampleSchema),
+});
+export type InventoryReport = z.infer<typeof InventoryReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

@@ -397,6 +397,13 @@
       "reads": "Reads",
       "span": "Span"
     },
+    "inventory": {
+      "title": "Memory inventory (GDPR access)",
+      "empty": "No stored memories.",
+      "memories": "Memories",
+      "subjects": "Subjects",
+      "expiringSoon": "Expiring soon"
+    },
     "roadmap": {
       "title": "Product roadmap (from telemetry)",
       "empty": "No backlog items — telemetry is clean.",

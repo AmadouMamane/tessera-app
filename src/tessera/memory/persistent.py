@@ -19,9 +19,9 @@ so a poisoned or PII-laden memory is screened before it reaches the prompt.
 from __future__ import annotations
 
 import sys
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from psycopg import sql
 from psycopg.rows import dict_row
@@ -42,11 +42,16 @@ if TYPE_CHECKING:
 
 __all__ = [
     "PersistentBackend",
+    "StoredMemory",
+    "delete_memory",
     "delete_subject",
     "ensure_longterm_schema",
+    "list_inventory",
+    "list_subject_memories",
     "purge_expired",
     "rank_memories",
     "search_memory",
+    "update_memory_text",
     "upsert_memory",
 ]
 
@@ -216,6 +221,105 @@ async def search_memory(*, subject_id: str, query: str, top_k: int) -> list[Memo
         for row in rows
     ]
     return rank_memories(candidates, top_k=top_k)
+
+
+@dataclass(frozen=True, slots=True)
+class StoredMemory:
+    """A long-term memory row, surfaced for GDPR access and rectification."""
+
+    memory_id: int
+    subject_id: str
+    kind: str
+    text: str
+    created_at: datetime
+    expires_at: datetime
+
+
+def _row_to_stored(row: dict[str, Any]) -> StoredMemory:
+    return StoredMemory(
+        memory_id=int(row["id"]),
+        subject_id=str(row["subject_id"]),
+        kind=str(row["kind"]),
+        text=str(row["text"]),
+        created_at=row["created_at"],
+        expires_at=row["expires_at"],
+    )
+
+
+async def list_subject_memories(subject_id: str) -> list[StoredMemory]:
+    """Return all non-expired memories held for ``subject_id`` (GDPR Art. 15)."""
+    query = sql.SQL(
+        """
+        SELECT id, subject_id, kind, text, created_at, expires_at
+        FROM {table}
+        WHERE subject_id = %s AND expires_at > now()
+        ORDER BY created_at DESC;
+        """
+    ).format(table=_TABLE)
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(query, (subject_id,))
+        rows = await cur.fetchall()
+    return [_row_to_stored(row) for row in rows]
+
+
+async def list_inventory(limit: int = 200) -> list[StoredMemory]:
+    """Return non-expired memories across all subjects, newest first."""
+    query = sql.SQL(
+        """
+        SELECT id, subject_id, kind, text, created_at, expires_at
+        FROM {table}
+        WHERE expires_at > now()
+        ORDER BY created_at DESC
+        LIMIT %s;
+        """
+    ).format(table=_TABLE)
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(query, (limit,))
+        rows = await cur.fetchall()
+    return [_row_to_stored(row) for row in rows]
+
+
+async def update_memory_text(memory_id: int, *, subject_id: str, text: str) -> bool:
+    """Rewrite one memory's text and re-embed it (GDPR Art. 16 rectification).
+
+    Scoped by ``subject_id`` so a subject can only rectify their own memory.
+    Returns ``True`` when a row was updated.
+    """
+    embedding = (await embeddings.embed([text]))[0]
+    query = sql.SQL(
+        """
+        UPDATE {table}
+        SET text = %s, embedding = %s::vector
+        WHERE id = %s AND subject_id = %s;
+        """
+    ).format(table=_TABLE)
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute(query, (text, embedding, memory_id, subject_id))
+        updated = (cur.rowcount or 0) > 0
+        await conn.commit()
+    return updated
+
+
+async def delete_memory(memory_id: int, *, subject_id: str) -> bool:
+    """Delete one memory of a subject; returns ``True`` when a row was removed."""
+    query = sql.SQL("DELETE FROM {table} WHERE id = %s AND subject_id = %s;").format(table=_TABLE)
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute(query, (memory_id, subject_id))
+        deleted = (cur.rowcount or 0) > 0
+        await conn.commit()
+    return deleted
 
 
 async def delete_subject(subject_id: str) -> int:

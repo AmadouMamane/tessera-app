@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  Archive,
   BookCheck,
   Boxes,
   Brain,
@@ -59,6 +60,7 @@ import {
   fetchIntent,
   fetchJourney,
   fetchLocaleFormat,
+  fetchMemoryInventory,
   fetchMemoryObs,
   fetchObsCost,
   fetchPiiLeak,
@@ -88,6 +90,7 @@ import type {
   FunnelReport,
   GuardExplainReport,
   IntentReport,
+  InventoryReport,
   JourneyReport,
   LocaleFormatSummary,
   MemoryObsReport,
@@ -182,6 +185,12 @@ export function ObservabilityDashboard() {
   const journey = useQuery({
     queryKey: ["journey"],
     queryFn: ({ signal }) => fetchJourney(signal),
+    refetchInterval: 20_000,
+  });
+
+  const memoryInventory = useQuery({
+    queryKey: ["memory-inventory"],
+    queryFn: ({ signal }) => fetchMemoryInventory(signal),
     refetchInterval: 20_000,
   });
 
@@ -328,6 +337,8 @@ export function ObservabilityDashboard() {
       <MemoryObsCard data={memoryObs.data} loading={memoryObs.isLoading} />
 
       <JourneyCard data={journey.data} loading={journey.isLoading} />
+
+      <MemoryInventoryCard data={memoryInventory.data} loading={memoryInventory.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -759,6 +770,67 @@ function RoadmapCard({ data, loading }: { data: RoadmapReport | undefined; loadi
               </li>
             ))}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MemoryInventoryCard({
+  data,
+  loading,
+}: {
+  data: InventoryReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const kinds = data ? Object.entries(data.by_kind) : [];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Archive className="h-4 w-4 text-blue-500" />
+          {t("inventory.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_memories === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("inventory.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <Metric label={t("inventory.memories")} value={String(data.n_memories)} />
+              <Metric label={t("inventory.subjects")} value={String(data.n_subjects)} />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("inventory.expiringSoon")}
+                </span>
+                <Badge tone={data.n_expiring_soon === 0 ? "neutral" : "warning"}>
+                  {data.n_expiring_soon}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {kinds.map(([kind, count]) => (
+                  <Badge key={kind} tone="neutral">
+                    {kind} · {count}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <ul className="flex flex-col gap-1 text-xs">
+              {data.samples.map((s) => (
+                <li key={s.memory_id} className="flex items-center gap-2">
+                  <span className="font-mono text-[var(--muted-foreground)]">{s.subject}…</span>
+                  <span className="min-w-0 flex-1 truncate">{s.preview}</span>
+                  <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">
+                    {s.expires_in_days}d
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </CardContent>
     </Card>

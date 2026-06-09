@@ -397,6 +397,13 @@
       "reads": "Lese.",
       "span": "Zeitraum"
     },
+    "inventory": {
+      "title": "Memory-Inventar (DSGVO-Auskunft)",
+      "empty": "Keine gespeicherten Memories.",
+      "memories": "Memories",
+      "subjects": "Subjekte",
+      "expiringSoon": "Läuft bald ab"
+    },
     "roadmap": {
       "title": "Produkt-Roadmap (aus Telemetrie)",
       "empty": "Keine Backlog-Einträge — Telemetrie ist sauber.",
