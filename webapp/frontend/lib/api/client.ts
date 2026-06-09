@@ -35,6 +35,8 @@ import {
   ReplayResultSchema,
   type ReplaysResponse,
   ReplaysResponseSchema,
+  type RobustnessReport,
+  RobustnessReportSchema,
 } from "./schemas";
 
 const BASE = "/api";
@@ -168,6 +170,19 @@ export async function runConsistency(bundleId: string, samples = 3): Promise<Con
       body: JSON.stringify({ bundle_id: bundleId, samples }),
     },
     ConsistencyReportSchema,
+  );
+}
+
+/** Measure robustness-under-noise of a captured turn (typos/homoglyphs/casing). */
+export async function runRobustness(bundleId: string): Promise<RobustnessReport> {
+  return request(
+    "/observability/robustness",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId }),
+    },
+    RobustnessReportSchema,
   );
 }
 

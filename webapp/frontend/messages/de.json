@@ -329,6 +329,12 @@
       "run": "Unsicherheit",
       "uncertainty": "Unsicherheit",
       "samples": "Samples"
+    },
+    "robustness": {
+      "run": "Robustheit",
+      "baseline": "Basis",
+      "similarity": "Stabilität",
+      "minFaith": "min. Faithfulness"
     }
   }
 }

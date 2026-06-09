@@ -296,6 +296,21 @@ export const ConsistencyReportSchema = z.object({
 });
 export type ConsistencyReport = z.infer<typeof ConsistencyReportSchema>;
 
+export const PerturbationResultSchema = z.object({
+  kind: z.string(),
+  perturbed_question: z.string(),
+  similarity: z.number(),
+  faithfulness: z.number(),
+});
+
+export const RobustnessReportSchema = z.object({
+  baseline_faithfulness: z.number(),
+  mean_similarity: z.number(),
+  min_faithfulness: z.number(),
+  results: z.array(PerturbationResultSchema),
+});
+export type RobustnessReport = z.infer<typeof RobustnessReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

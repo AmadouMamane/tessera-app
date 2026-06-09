@@ -19,6 +19,7 @@ from tessera.observability import (
     provenance as provenance_mod,
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
+    robustness as robustness_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.judge import LLMJudge
@@ -43,6 +44,14 @@ class ConsistencyRequest(BaseModel):
 
     bundle_id: str
     samples: int = Field(default=3, ge=2, le=8)
+
+
+class RobustnessRequest(BaseModel):
+    """Measure robustness-under-noise of a captured turn."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bundle_id: str
 
 
 # Calibration runs the judge over the gold set (slow), so cache it per process.
@@ -101,6 +110,18 @@ async def observability_consistency(payload: ConsistencyRequest) -> dict[str, ob
         context=bundle.context,
         model=bundle.original_model,
         samples=payload.samples,
+    )
+    return asdict(report)
+
+
+@router.post("/observability/robustness")
+async def observability_robustness(payload: RobustnessRequest) -> dict[str, object]:
+    """Measure how stable a captured turn is under input noise."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    report = await robustness_mod.measure_robustness(
+        question=bundle.question, context=bundle.context, model=bundle.original_model
     )
     return asdict(report)
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Play, ScanSearch, Shuffle } from "lucide-react";
+import { Play, ScanSearch, Shuffle, Waves } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -9,12 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchProvenance, fetchReplays, runConsistency, runReplay } from "@/lib/api/client";
+import {
+  fetchProvenance,
+  fetchReplays,
+  runConsistency,
+  runReplay,
+  runRobustness,
+} from "@/lib/api/client";
 import type {
   ConsistencyReport,
   ProvenanceReport,
   ReplayBundle,
   ReplayResult,
+  RobustnessReport,
 } from "@/lib/api/schemas";
 
 // Locally-available Ollama models to replay against (smallest first).
@@ -46,6 +53,12 @@ export function ReplayPanel() {
   const consistMutation = useMutation({
     mutationFn: ({ bundleId }: { bundleId: string }) => runConsistency(bundleId),
     onSuccess: (res, vars) => setConsist((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
+  const [robust, setRobust] = useState<Record<string, RobustnessReport>>({});
+  const robustMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => runRobustness(bundleId),
+    onSuccess: (res, vars) => setRobust((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
@@ -84,6 +97,7 @@ export function ReplayPanel() {
               const res = results[b.bundle_id];
               const prov = provs[b.bundle_id];
               const cons = consist[b.bundle_id];
+              const rob = robust[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -131,6 +145,19 @@ export function ReplayPanel() {
                       </Button>
                       <Button
                         size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
+                          robustMutation.isPending &&
+                          robustMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => robustMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <Waves className="h-3.5 w-3.5" />
+                        {t("robustness.run")}
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="outline"
                         className="gap-1.5"
                         disabled={pending}
@@ -142,6 +169,7 @@ export function ReplayPanel() {
                     </div>
                   </div>
                   {b.latency_ms ? <LatencyWaterfall timings={b.latency_ms} /> : null}
+                  {rob ? <RobustnessView report={rob} /> : null}
                   {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
                   {res ? <ReplayResultView res={res} /> : null}
@@ -220,6 +248,43 @@ function LatencyWaterfall({ timings }: { timings: Record<string, number> }) {
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+function RobustnessView({ report }: { report: RobustnessReport }) {
+  const t = useTranslations("observability");
+  const tone =
+    report.min_faithfulness >= 0.7
+      ? "success"
+      : report.min_faithfulness >= 0.5
+        ? "warning"
+        : "danger";
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-4">
+        <span>
+          {t("robustness.baseline")}:{" "}
+          <span className="font-semibold tabular-nums">
+            {report.baseline_faithfulness.toFixed(2)}
+          </span>
+        </span>
+        <span className="text-xs text-[var(--muted-foreground)]">
+          {t("robustness.similarity")}: {Math.round(report.mean_similarity * 100)}%
+        </span>
+        <Badge tone={tone}>
+          {t("robustness.minFaith")} {report.min_faithfulness.toFixed(2)}
+        </Badge>
+      </div>
+      <ul className="mt-2 flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
+        {report.results.map((r) => (
+          <li key={r.kind} className="flex items-center gap-3">
+            <span className="w-20 shrink-0">{r.kind}</span>
+            <span className="tabular-nums">sim {Math.round(r.similarity * 100)}%</span>
+            <span className="tabular-nums">faith {r.faithfulness.toFixed(2)}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
