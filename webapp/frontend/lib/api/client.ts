@@ -23,6 +23,8 @@ import {
   CalibrationSchema,
   type ConsistencyReport,
   ConsistencyReportSchema,
+  type CorpusScanReport,
+  CorpusScanReportSchema,
   type EvalScoresResponse,
   EvalScoresResponseSchema,
   type FirewallEfficacy,
@@ -167,6 +169,18 @@ export async function fetchSessions(signal?: AbortSignal): Promise<SessionReport
 /** Captured production turns available for regression replay. */
 export async function fetchReplays(signal?: AbortSignal): Promise<ReplaysResponse> {
   return request("/observability/replays", { signal }, ReplaysResponseSchema);
+}
+
+/** Screen a captured turn's retrieved chunks for indirect injection (#52). */
+export async function fetchCorpusScan(
+  bundleId: string,
+  signal?: AbortSignal,
+): Promise<CorpusScanReport> {
+  return request(
+    `/observability/corpus-scan/${encodeURIComponent(bundleId)}`,
+    { signal },
+    CorpusScanReportSchema,
+  );
 }
 
 /** Claim-level provenance of a captured turn against its retrieved chunks. */

@@ -358,6 +358,13 @@
       "singleTurn": "Tour unique",
       "meanScore": "Score moyen",
       "empty": "Aucune session pour l'instant."
+    },
+    "corpusScan": {
+      "run": "Corpus",
+      "title": "Scan du corpus (injection indirecte)",
+      "poisoned": "empoisonnés",
+      "clean": "Aucune injection détectée dans les chunks récupérés.",
+      "chunk": "chunk"
     }
   }
 }

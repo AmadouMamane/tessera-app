@@ -358,6 +358,13 @@
       "singleTurn": "Single-turn",
       "meanScore": "Mean score",
       "empty": "No sessions yet."
+    },
+    "corpusScan": {
+      "run": "Corpus",
+      "title": "Corpus scan (indirect injection)",
+      "poisoned": "poisoned",
+      "clean": "No injection found in the retrieved chunks.",
+      "chunk": "chunk"
     }
   }
 }

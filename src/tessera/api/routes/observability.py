@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.observability import (
     consistency as consistency_mod,
+    corpus_injection as corpus_injection_mod,
     firewall_efficacy as firewall_mod,
     language_routing as language_routing_mod,
     provenance as provenance_mod,
@@ -157,6 +158,16 @@ async def observability_sessions() -> dict[str, object]:
         raw = score.get("score", 0.0)
         turns.append((conv if isinstance(conv, str) else None, float(raw)))  # type: ignore[arg-type]
     return asdict(sessions_mod.aggregate_sessions(turns))
+
+
+@router.get("/observability/corpus-scan/{bundle_id}")
+async def observability_corpus_scan(bundle_id: str) -> dict[str, object]:
+    """Screen a captured turn's retrieved chunks for indirect injection."""
+    bundle = replay_mod.get_bundle(bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
+    return asdict(corpus_injection_mod.scan_chunks(chunks))
 
 
 @router.get("/observability/provenance/{bundle_id}")

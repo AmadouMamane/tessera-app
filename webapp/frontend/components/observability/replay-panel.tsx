@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Play, ScanSearch, Shuffle, Waves } from "lucide-react";
+import { Play, ScanSearch, ShieldAlert, Shuffle, Waves } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  fetchCorpusScan,
   fetchProvenance,
   fetchReplays,
   runConsistency,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/api/client";
 import type {
   ConsistencyReport,
+  CorpusScanReport,
   ProvenanceReport,
   ReplayBundle,
   ReplayResult,
@@ -61,6 +63,12 @@ export function ReplayPanel() {
     onSuccess: (res, vars) => setRobust((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
+  const [scans, setScans] = useState<Record<string, CorpusScanReport>>({});
+  const scanMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => fetchCorpusScan(bundleId),
+    onSuccess: (res, vars) => setScans((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
 
   return (
@@ -98,6 +106,7 @@ export function ReplayPanel() {
               const prov = provs[b.bundle_id];
               const cons = consist[b.bundle_id];
               const rob = robust[b.bundle_id];
+              const scan = scans[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -148,6 +157,18 @@ export function ReplayPanel() {
                         variant="ghost"
                         className="gap-1.5"
                         disabled={
+                          scanMutation.isPending && scanMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => scanMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <ShieldAlert className="h-3.5 w-3.5" />
+                        {t("corpusScan.run")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
                           robustMutation.isPending &&
                           robustMutation.variables?.bundleId === b.bundle_id
                         }
@@ -169,6 +190,7 @@ export function ReplayPanel() {
                     </div>
                   </div>
                   {b.latency_ms ? <LatencyWaterfall timings={b.latency_ms} /> : null}
+                  {scan ? <CorpusScanView report={scan} /> : null}
                   {rob ? <RobustnessView report={rob} /> : null}
                   {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
@@ -248,6 +270,39 @@ function LatencyWaterfall({ timings }: { timings: Record<string, number> }) {
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+function CorpusScanView({ report }: { report: CorpusScanReport }) {
+  const t = useTranslations("observability");
+  const clean = report.n_poisoned === 0;
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <ShieldAlert className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <span className="text-xs text-[var(--muted-foreground)]">{t("corpusScan.title")}</span>
+        <Badge tone={clean ? "success" : "danger"}>
+          {report.n_poisoned}/{report.n_chunks} {t("corpusScan.poisoned")}
+        </Badge>
+      </div>
+      {clean ? (
+        <p className="mt-2 text-xs text-[var(--muted-foreground)]">{t("corpusScan.clean")}</p>
+      ) : (
+        <ul className="mt-2 flex flex-col gap-1.5">
+          {report.findings.map((f, i) => (
+            <li key={`${f.index}-${i}`} className="flex items-start gap-2">
+              <span aria-hidden className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />
+              <span className="min-w-0">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("corpusScan.chunk")} #{f.index}
+                </span>{" "}
+                <span className="text-red-600 dark:text-red-400">{f.snippet}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

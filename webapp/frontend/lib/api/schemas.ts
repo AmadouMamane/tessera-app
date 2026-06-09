@@ -339,6 +339,20 @@ export const ToolValiditySchema = z.object({
 });
 export type ToolValidity = z.infer<typeof ToolValiditySchema>;
 
+export const ChunkFindingSchema = z.object({
+  index: z.number().int(),
+  pattern: z.string(),
+  snippet: z.string(),
+});
+
+export const CorpusScanReportSchema = z.object({
+  n_chunks: z.number().int(),
+  n_poisoned: z.number().int(),
+  poison_rate: z.number(),
+  findings: z.array(ChunkFindingSchema),
+});
+export type CorpusScanReport = z.infer<typeof CorpusScanReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),
