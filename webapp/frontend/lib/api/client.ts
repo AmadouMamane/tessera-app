@@ -55,6 +55,8 @@ import {
   StegoReportSchema,
   type ToolValidity,
   ToolValiditySchema,
+  type WhatChanged,
+  WhatChangedSchema,
 } from "./schemas";
 
 const BASE = "/api";
@@ -169,6 +171,11 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Root-cause "what changed": lineage diff + attribution of a score delta (#17). */
+export async function fetchWhatChanged(signal?: AbortSignal): Promise<WhatChanged> {
+  return request("/observability/what-changed", { signal }, WhatChangedSchema);
 }
 
 /** Multi-turn self-contradictions across captured sessions (#30). */

@@ -408,6 +408,15 @@
       "hardCase": "Hard case (disagreement)",
       "agree": "Agreement",
       "mistral": "mistral"
+    },
+    "whatChanged": {
+      "title": "Root-cause \"what changed\"",
+      "delta": "Δ score",
+      "attributed": "Regression attributed",
+      "unexplained": "Unexplained regression",
+      "stable": "Stable",
+      "docs": "docs",
+      "empty": "Needs two turns with lineage."
     }
   }
 }

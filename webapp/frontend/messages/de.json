@@ -408,6 +408,15 @@
       "hardCase": "Schwieriger Fall (Uneinigkeit)",
       "agree": "Einigkeit",
       "mistral": "mistral"
+    },
+    "whatChanged": {
+      "title": "Ursache „was sich geändert hat“",
+      "delta": "Δ Score",
+      "attributed": "Regression zugeordnet",
+      "unexplained": "Unerklärte Regression",
+      "stable": "Stabil",
+      "docs": "Dokumente",
+      "empty": "Zwei Turns mit Lineage erforderlich."
     }
   }
 }

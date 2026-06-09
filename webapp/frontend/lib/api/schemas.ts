@@ -417,6 +417,25 @@ export const ContradictionReportSchema = z.object({
 });
 export type ContradictionReport = z.infer<typeof ContradictionReportSchema>;
 
+export const FieldChangeSchema = z.object({
+  field: z.string(),
+  before: z.string(),
+  after: z.string(),
+});
+
+export const WhatChangedSchema = z.object({
+  available: z.boolean(),
+  score_before: z.number().optional(),
+  score_after: z.number().optional(),
+  score_delta: z.number().optional(),
+  regressed: z.boolean().optional(),
+  changes: z.array(FieldChangeSchema).optional(),
+  docs_added: z.array(z.string()).optional(),
+  docs_removed: z.array(z.string()).optional(),
+  attributed: z.boolean().optional(),
+});
+export type WhatChanged = z.infer<typeof WhatChangedSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

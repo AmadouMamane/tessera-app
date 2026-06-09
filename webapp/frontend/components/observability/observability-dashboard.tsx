@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Gauge,
   GitCompareArrows,
+  GitFork,
   Languages,
   LineChart,
   Lock,
@@ -32,6 +33,7 @@ import {
   fetchRouting,
   fetchSessions,
   fetchToolValidity,
+  fetchWhatChanged,
   runRedteam,
 } from "@/lib/api/client";
 import type {
@@ -44,6 +46,7 @@ import type {
   RoutingReport,
   SessionReport,
   ToolValidity,
+  WhatChanged,
 } from "@/lib/api/schemas";
 
 const POLL_MS = 5_000;
@@ -109,6 +112,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 20_000,
   });
 
+  const whatChanged = useQuery({
+    queryKey: ["what-changed"],
+    queryFn: ({ signal }) => fetchWhatChanged(signal),
+    refetchInterval: 20_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -144,6 +153,8 @@ export function ObservabilityDashboard() {
       <SessionCard data={sessions.data} loading={sessions.isLoading} />
 
       <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
+
+      <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
 
       <ReplayPanel />
 
@@ -551,6 +562,70 @@ function SessionCard({ data, loading }: { data: SessionReport | undefined; loadi
               value={`${Math.round(data.single_turn_rate * 100)}%`}
             />
             <Metric label={t("sessions.meanScore")} value={data.mean_score.toFixed(2)} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function WhatChangedCard({ data, loading }: { data: WhatChanged | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const changes = data?.changes ?? [];
+  const delta = data?.score_delta ?? 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <GitFork className="h-4 w-4 text-blue-500" />
+          {t("whatChanged.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-12 w-full" />
+        ) : !data?.available ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("whatChanged.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("whatChanged.delta")}
+                </span>
+                <Badge tone={delta >= 0 ? "success" : "danger"}>
+                  {delta >= 0 ? "+" : ""}
+                  {delta.toFixed(2)}
+                </Badge>
+              </div>
+              {data.attributed ? (
+                <Badge tone="warning">{t("whatChanged.attributed")}</Badge>
+              ) : (
+                <Badge tone="neutral">
+                  {data.regressed ? t("whatChanged.unexplained") : t("whatChanged.stable")}
+                </Badge>
+              )}
+            </div>
+            {changes.length > 0 ? (
+              <ul className="flex flex-col gap-1 text-xs">
+                {changes.map((c) => (
+                  <li key={c.field} className="flex items-center gap-2">
+                    <span className="w-32 shrink-0 font-mono text-[var(--muted-foreground)]">
+                      {c.field}
+                    </span>
+                    <span className="font-mono">{c.before}</span>
+                    <span className="text-[var(--muted-foreground)]">→</span>
+                    <span className="font-mono text-amber-600 dark:text-amber-400">{c.after}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {(data.docs_added?.length ?? 0) + (data.docs_removed?.length ?? 0) > 0 ? (
+              <p className="text-xs text-[var(--muted-foreground)]">
+                {t("whatChanged.docs")}: +{data.docs_added?.length ?? 0} / −
+                {data.docs_removed?.length ?? 0}
+              </p>
+            ) : null}
           </div>
         )}
       </CardContent>

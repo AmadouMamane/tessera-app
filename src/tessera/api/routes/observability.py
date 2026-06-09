@@ -28,6 +28,7 @@ from tessera.observability import (
     sessions as sessions_mod,
     steganography as steganography_mod,
     tool_validity as tool_validity_mod,
+    whatchanged as whatchanged_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.ensemble import evaluate_ensemble
@@ -195,6 +196,24 @@ async def observability_pii_leak() -> dict[str, object]:
     """Output PII-leak rate: PII in answers absent from their grounding."""
     turns = [(b.original_answer, f"{b.question}\n{b.context}") for b in replay_mod.recent_bundles()]
     return asdict(pii_leak_mod.aggregate_leaks(turns))
+
+
+@router.get("/observability/what-changed")
+async def observability_what_changed() -> dict[str, object]:
+    """Attribute a score change to the lineage diff of the last two turns."""
+    with_lineage = [b for b in replay_mod.recent_bundles() if b.lineage is not None]
+    if len(with_lineage) < 2:  # noqa: PLR2004 — need two turns to diff
+        return {"available": False}
+    prev, curr = with_lineage[-2], with_lineage[-1]
+    assert prev.lineage is not None  # narrowed by the filter above
+    assert curr.lineage is not None
+    report = whatchanged_mod.what_changed(
+        prev_lineage=prev.lineage,
+        prev_score=prev.original_score,
+        curr_lineage=curr.lineage,
+        curr_score=curr.original_score,
+    )
+    return {"available": True, **asdict(report)}
 
 
 @router.get("/observability/sessions")

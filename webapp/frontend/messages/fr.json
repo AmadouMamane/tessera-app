@@ -408,6 +408,15 @@
       "hardCase": "Cas difficile (désaccord)",
       "agree": "Accord",
       "mistral": "mistral"
+    },
+    "whatChanged": {
+      "title": "Root-cause « ce qui a changé »",
+      "delta": "Δ score",
+      "attributed": "Régression attribuée",
+      "unexplained": "Régression inexpliquée",
+      "stable": "Stable",
+      "docs": "docs",
+      "empty": "Deux tours avec lineage requis."
     }
   }
 }
