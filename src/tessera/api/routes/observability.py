@@ -36,6 +36,7 @@ from tessera.observability import (
     guard_explain as guard_explain_mod,
     journey as journey_mod,
     language_routing as language_routing_mod,
+    least_privilege as least_privilege_mod,
     locale_format as locale_format_mod,
     memory_inventory as memory_inventory_mod,
     memory_obs as memory_obs_mod,
@@ -555,6 +556,22 @@ async def observability_sft_dataset() -> dict[str, object]:
         for b in replay_mod.recent_bundles()
     ]
     return asdict(sft_export_mod.build_sft_dataset(turns))
+
+
+_GRANTED_TOOLS = frozenset(
+    {"account_balance", "card_block", "transaction_search", "loan_simulate", "ticket_escalate"}
+)
+
+
+@router.get("/observability/least-privilege")
+async def observability_least_privilege() -> dict[str, object]:
+    """Tool least-privilege: granted vs actually-used tools from the audit (#101)."""
+    usage: dict[str, int] = {}
+    for entry in _read_audit_entries():
+        target = entry.get("target")
+        if isinstance(target, str) and not target.startswith("memory."):
+            usage[target] = usage.get(target, 0) + 1
+    return asdict(least_privilege_mod.analyze_privilege(_GRANTED_TOOLS, usage))
 
 
 @router.get("/observability/cross-tenant")

@@ -562,6 +562,13 @@
       "rate": "Leck-Rate",
       "leaks": "Lecks"
     },
+    "privilege": {
+      "title": "Tool-Least-Privilege",
+      "utilization": "Auslastung",
+      "used": "Genutzt",
+      "violations": "Verstöße",
+      "overProvisioned": "Überprovisioniert"
+    },
     "contradiction": {
       "title": "Mehrturn-Widerspruch",
       "found": "Widersprüche",

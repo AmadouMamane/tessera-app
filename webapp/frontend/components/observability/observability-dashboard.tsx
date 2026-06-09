@@ -21,6 +21,7 @@ import {
   GitFork,
   Grid3x3,
   Hash,
+  KeyRound,
   Landmark,
   Languages,
   Layers,
@@ -70,6 +71,7 @@ import {
   fetchGuardExplain,
   fetchIntent,
   fetchJourney,
+  fetchLeastPrivilege,
   fetchLocaleFormat,
   fetchMemoryInventory,
   fetchMemoryObs,
@@ -114,6 +116,7 @@ import type {
   ObsCostReport,
   PIILeakSummary,
   PredictorEvaluation,
+  PrivilegeReport,
   RedTeamResponse,
   RefusalReport,
   RoadmapReport,
@@ -230,6 +233,12 @@ export function ObservabilityDashboard() {
   const crossTenant = useQuery({
     queryKey: ["cross-tenant"],
     queryFn: ({ signal }) => fetchCrossTenant(signal),
+    refetchInterval: 15_000,
+  });
+
+  const leastPrivilege = useQuery({
+    queryKey: ["least-privilege"],
+    queryFn: ({ signal }) => fetchLeastPrivilege(signal),
     refetchInterval: 15_000,
   });
 
@@ -427,6 +436,8 @@ export function ObservabilityDashboard() {
       <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
 
       <CrossTenantCard data={crossTenant.data} loading={crossTenant.isLoading} />
+
+      <LeastPrivilegeCard data={leastPrivilege.data} loading={leastPrivilege.isLoading} />
 
       <RefusalCard data={refusal.data} loading={refusal.isLoading} />
 
@@ -1117,6 +1128,62 @@ function SftDatasetCard({ data, loading }: { data: SFTDataset | undefined; loadi
                   </li>
                 ))}
               </ul>
+            ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LeastPrivilegeCard({
+  data,
+  loading,
+}: {
+  data: PrivilegeReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const utilPct = data ? Math.round(data.utilization_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <KeyRound className="h-4 w-4 text-blue-500" />
+          {t("privilege.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <Metric label={t("privilege.utilization")} value={`${utilPct}%`} />
+              <Metric label={t("privilege.used")} value={`${data.n_used}/${data.n_granted}`} />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("privilege.violations")}
+                </span>
+                <Badge tone={data.n_violations === 0 ? "success" : "danger"}>
+                  {data.n_violations}
+                </Badge>
+              </div>
+              {data.over_provisioned.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    {t("privilege.overProvisioned")}
+                  </span>
+                  <span className="font-mono text-xs text-amber-600 dark:text-amber-400">
+                    {data.over_provisioned.join(", ")}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+            {data.violations.length > 0 ? (
+              <p className="font-mono text-xs text-red-600 dark:text-red-400">
+                {data.violations.join(", ")}
+              </p>
             ) : null}
           </div>
         )}

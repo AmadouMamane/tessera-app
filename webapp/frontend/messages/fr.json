@@ -562,6 +562,13 @@
       "rate": "Taux de fuite",
       "leaks": "Fuites"
     },
+    "privilege": {
+      "title": "Moindre-privilège des outils",
+      "utilization": "Utilisation",
+      "used": "Utilisés",
+      "violations": "Violations",
+      "overProvisioned": "Sur-provisionnés"
+    },
     "contradiction": {
       "title": "Contradiction multi-tour",
       "found": "Contradictions",

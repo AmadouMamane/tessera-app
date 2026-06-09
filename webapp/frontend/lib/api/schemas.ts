@@ -913,6 +913,23 @@ export const CrossTenantReportSchema = z.object({
 });
 export type CrossTenantReport = z.infer<typeof CrossTenantReportSchema>;
 
+export const ToolUsageSchema = z.object({
+  tool: z.string(),
+  used: z.number().int(),
+});
+
+export const PrivilegeReportSchema = z.object({
+  n_granted: z.number().int(),
+  n_used: z.number().int(),
+  n_over_provisioned: z.number().int(),
+  n_violations: z.number().int(),
+  utilization_rate: z.number(),
+  over_provisioned: z.array(z.string()),
+  violations: z.array(z.string()),
+  usage: z.array(ToolUsageSchema),
+});
+export type PrivilegeReport = z.infer<typeof PrivilegeReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

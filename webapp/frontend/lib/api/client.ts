@@ -79,6 +79,8 @@ import {
   PIILeakSummarySchema,
   type PredictorEvaluation,
   PredictorEvaluationSchema,
+  type PrivilegeReport,
+  PrivilegeReportSchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
   type RedTeamResponse,
@@ -240,6 +242,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Tool least-privilege: granted vs actually-used tools from the audit (#101). */
+export async function fetchLeastPrivilege(signal?: AbortSignal): Promise<PrivilegeReport> {
+  return request("/observability/least-privilege", { signal }, PrivilegeReportSchema);
 }
 
 /** Cross-tenant leakage: foreign subject ids in a turn's context (#74). */
