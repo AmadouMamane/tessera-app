@@ -343,6 +343,13 @@
       "denied": "Denied",
       "argFailures": "Arg failures",
       "empty": "No tool calls yet."
+    },
+    "routing": {
+      "title": "Language routing",
+      "mismatch": "Mis-routing",
+      "codeSwitch": "Code-switching",
+      "turns": "Turns",
+      "empty": "No turns yet."
     }
   }
 }

@@ -343,6 +343,13 @@
       "denied": "Refusés",
       "argFailures": "Échecs d'args",
       "empty": "Aucun tool-call pour l'instant."
+    },
+    "routing": {
+      "title": "Routage de langue",
+      "mismatch": "Mauvais routage",
+      "codeSwitch": "Code-switching",
+      "turns": "Tours",
+      "empty": "Aucun tour pour l'instant."
     }
   }
 }

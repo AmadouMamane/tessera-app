@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tessera.observability import (
     consistency as consistency_mod,
     firewall_efficacy as firewall_mod,
+    language_routing as language_routing_mod,
     provenance as provenance_mod,
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
@@ -137,6 +138,13 @@ async def observability_firewall_efficacy() -> dict[str, object]:
 async def observability_tool_validity() -> dict[str, object]:
     """Validity of tool calls (allowed vs denied, argument failures)."""
     return asdict(tool_validity_mod.compute_tool_validity())
+
+
+@router.get("/observability/routing")
+async def observability_routing() -> dict[str, object]:
+    """Language-routing health: served vs detected language, code-switching."""
+    turns = [(b.question, b.language) for b in replay_mod.recent_bundles()]
+    return asdict(language_routing_mod.aggregate_routing(turns))
 
 
 @router.get("/observability/provenance/{bundle_id}")

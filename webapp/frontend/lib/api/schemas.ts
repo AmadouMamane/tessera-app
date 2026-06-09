@@ -311,6 +311,15 @@ export const RobustnessReportSchema = z.object({
 });
 export type RobustnessReport = z.infer<typeof RobustnessReportSchema>;
 
+export const RoutingReportSchema = z.object({
+  n: z.number().int(),
+  mismatches: z.number().int(),
+  code_switches: z.number().int(),
+  mismatch_rate: z.number(),
+  code_switch_rate: z.number(),
+});
+export type RoutingReport = z.infer<typeof RoutingReportSchema>;
+
 export const ToolValiditySchema = z.object({
   total: z.number().int(),
   allowed: z.number().int(),

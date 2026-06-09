@@ -1,7 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Gauge, LineChart, Scale, ShieldCheck, Wrench } from "lucide-react";
+import {
+  ExternalLink,
+  Gauge,
+  Languages,
+  LineChart,
+  Scale,
+  ShieldCheck,
+  Wrench,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
@@ -13,9 +21,16 @@ import {
   fetchCalibration,
   fetchEvalScores,
   fetchFirewallEfficacy,
+  fetchRouting,
   fetchToolValidity,
 } from "@/lib/api/client";
-import type { Calibration, EvalScore, FirewallEfficacy, ToolValidity } from "@/lib/api/schemas";
+import type {
+  Calibration,
+  EvalScore,
+  FirewallEfficacy,
+  RoutingReport,
+  ToolValidity,
+} from "@/lib/api/schemas";
 
 const POLL_MS = 5_000;
 const PHOENIX_URL = process.env.NEXT_PUBLIC_PHOENIX_URL ?? "http://localhost:16006";
@@ -56,6 +71,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const routing = useQuery({
+    queryKey: ["routing"],
+    queryFn: ({ signal }) => fetchRouting(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -81,6 +102,8 @@ export function ObservabilityDashboard() {
       <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
 
       <ToolValidityCard data={tools.data} loading={tools.isLoading} />
+
+      <RoutingCard data={routing.data} loading={routing.isLoading} />
 
       <ReplayPanel />
 
@@ -285,6 +308,45 @@ function ToolValidityCard({
             <Metric label={t("tools.allowed")} value={String(data.allowed)} />
             <Metric label={t("tools.denied")} value={String(data.denied)} />
             <Metric label={t("tools.argFailures")} value={String(data.arg_failures)} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RoutingCard({ data, loading }: { data: RoutingReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const mis = data ? Math.round(data.mismatch_rate * 100) : 0;
+  const cs = data ? Math.round(data.code_switch_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Languages className="h-4 w-4 text-blue-500" />
+          {t("routing.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("routing.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("routing.mismatch")}
+              </span>
+              <Badge tone={mis === 0 ? "success" : mis <= 20 ? "warning" : "danger"}>{mis}%</Badge>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("routing.codeSwitch")}
+              </span>
+              <Badge tone={cs === 0 ? "neutral" : "warning"}>{cs}%</Badge>
+            </div>
+            <Metric label={t("routing.turns")} value={String(data.n)} />
           </div>
         )}
       </CardContent>

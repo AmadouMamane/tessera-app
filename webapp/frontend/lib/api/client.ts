@@ -37,6 +37,8 @@ import {
   ReplaysResponseSchema,
   type RobustnessReport,
   RobustnessReportSchema,
+  type RoutingReport,
+  RoutingReportSchema,
   type ToolValidity,
   ToolValiditySchema,
 } from "./schemas";
@@ -148,6 +150,11 @@ export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<Firew
 /** Tool-call validity (allowed vs denied, argument failures) from the audit trail. */
 export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValidity> {
   return request("/observability/tool-validity", { signal }, ToolValiditySchema);
+}
+
+/** Language-routing health: served vs detected language + code-switching. */
+export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
+  return request("/observability/routing", { signal }, RoutingReportSchema);
 }
 
 /** Captured production turns available for regression replay. */
