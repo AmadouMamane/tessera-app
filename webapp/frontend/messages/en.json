@@ -486,6 +486,13 @@
       "turns": "Turns",
       "unknown": "Unknown",
       "empty": "No questions captured yet."
+    },
+    "crosslingual": {
+      "run": "Cross-lingual",
+      "title": "Cross-lingual consistency",
+      "consistent": "Consistent",
+      "divergent": "Divergence",
+      "min": "min sim."
     }
   }
 }

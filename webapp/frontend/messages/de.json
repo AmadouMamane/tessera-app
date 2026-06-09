@@ -486,6 +486,13 @@
       "turns": "Turns",
       "unknown": "Unbekannt",
       "empty": "Keine Fragen erfasst."
+    },
+    "crosslingual": {
+      "run": "Sprachübergr.",
+      "title": "Sprachübergreifende Konsistenz",
+      "consistent": "Konsistent",
+      "divergent": "Divergenz",
+      "min": "min. Ähnl."
     }
   }
 }

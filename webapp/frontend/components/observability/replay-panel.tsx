@@ -5,6 +5,7 @@ import {
   Compass,
   EyeOff,
   Gavel,
+  Globe,
   Heart,
   Play,
   ScanSearch,
@@ -26,6 +27,7 @@ import {
   fetchSteganography,
   runConsistency,
   runCoverage,
+  runCrossLingual,
   runEnsemble,
   runReplay,
   runRobustness,
@@ -35,6 +37,7 @@ import type {
   ConsistencyReport,
   CorpusScanReport,
   CoverageReport,
+  CrossLingualReport,
   EnsembleReport,
   ProvenanceReport,
   ReplayBundle,
@@ -111,6 +114,12 @@ export function ReplayPanel() {
     onSuccess: (res, vars) => setSyco((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
+  const [xling, setXling] = useState<Record<string, CrossLingualReport>>({});
+  const xlingMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => runCrossLingual(bundleId),
+    onSuccess: (res, vars) => setXling((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
 
   return (
@@ -153,6 +162,7 @@ export function ReplayPanel() {
               const ens = ensemble[b.bundle_id];
               const cov = coverage[b.bundle_id];
               const syc = syco[b.bundle_id];
+              const xl = xling[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -266,6 +276,19 @@ export function ReplayPanel() {
                         variant="ghost"
                         className="gap-1.5"
                         disabled={
+                          xlingMutation.isPending &&
+                          xlingMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => xlingMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <Globe className="h-3.5 w-3.5" />
+                        {t("crosslingual.run")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
                           robustMutation.isPending &&
                           robustMutation.variables?.bundleId === b.bundle_id
                         }
@@ -292,6 +315,7 @@ export function ReplayPanel() {
                   {ens ? <EnsembleView report={ens} /> : null}
                   {cov ? <CoverageView report={cov} /> : null}
                   {syc ? <SycophancyView report={syc} /> : null}
+                  {xl ? <CrossLingualView report={xl} /> : null}
                   {rob ? <RobustnessView report={rob} /> : null}
                   {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
@@ -404,6 +428,32 @@ function CorpusScanView({ report }: { report: CorpusScanReport }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function CrossLingualView({ report }: { report: CrossLingualReport }) {
+  const t = useTranslations("observability");
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <Globe className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <span className="text-xs text-[var(--muted-foreground)]">{t("crosslingual.title")}</span>
+        <Badge tone={report.consistent ? "success" : "danger"}>
+          {report.consistent ? t("crosslingual.consistent") : t("crosslingual.divergent")}
+        </Badge>
+        <span className="text-xs tabular-nums text-[var(--muted-foreground)]">
+          {t("crosslingual.min")} {Math.round(report.min_similarity * 100)}%
+        </span>
+      </div>
+      <ul className="mt-2 flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
+        {Object.entries(report.answers).map(([lang, answer]) => (
+          <li key={lang} className="flex items-start gap-2">
+            <span className="w-8 shrink-0 uppercase">{lang}</span>
+            <span className="min-w-0 break-words">{answer}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -35,6 +35,8 @@ import {
   CorpusScanReportSchema,
   type CoverageReport,
   CoverageReportSchema,
+  type CrossLingualReport,
+  CrossLingualReportSchema,
   type EnsembleReport,
   EnsembleReportSchema,
   type EvalScoresResponse,
@@ -324,6 +326,19 @@ export async function runRobustness(bundleId: string): Promise<RobustnessReport>
       body: JSON.stringify({ bundle_id: bundleId }),
     },
     RobustnessReportSchema,
+  );
+}
+
+/** Re-answer a captured turn in fr/de/en and measure cross-lingual agreement (#70). */
+export async function runCrossLingual(bundleId: string): Promise<CrossLingualReport> {
+  return request(
+    "/observability/crosslingual",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId }),
+    },
+    CrossLingualReportSchema,
   );
 }
 

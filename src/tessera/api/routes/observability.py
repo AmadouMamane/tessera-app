@@ -21,6 +21,7 @@ from tessera.observability import (
     contradiction as contradiction_mod,
     corpus_injection as corpus_injection_mod,
     coverage as coverage_mod,
+    crosslingual as crosslingual_mod,
     firewall_efficacy as firewall_mod,
     language_routing as language_routing_mod,
     locale_format as locale_format_mod,
@@ -91,6 +92,14 @@ class CoverageRequest(BaseModel):
 
 class SycophancyRequest(BaseModel):
     """Judge a captured turn for sycophancy."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bundle_id: str
+
+
+class CrossLingualRequest(BaseModel):
+    """Measure cross-lingual consistency of a captured turn."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -177,6 +186,18 @@ async def observability_coverage(payload: CoverageRequest) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
     report = await coverage_mod.measure_coverage(question=bundle.question, chunks=chunks)
+    return asdict(report)
+
+
+@router.post("/observability/crosslingual")
+async def observability_crosslingual(payload: CrossLingualRequest) -> dict[str, object]:
+    """Re-answer a captured turn in fr/de/en and measure cross-lingual agreement."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    report = await crosslingual_mod.measure_crosslingual(
+        question=bundle.question, context=bundle.context, model=bundle.original_model
+    )
     return asdict(report)
 
 

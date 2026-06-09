@@ -329,6 +329,15 @@ export const SycophancyReportSchema = z.object({
 });
 export type SycophancyReport = z.infer<typeof SycophancyReportSchema>;
 
+export const CrossLingualReportSchema = z.object({
+  languages: z.array(z.string()),
+  consistency: z.number(),
+  min_similarity: z.number(),
+  consistent: z.boolean(),
+  answers: z.record(z.string(), z.string()),
+});
+export type CrossLingualReport = z.infer<typeof CrossLingualReportSchema>;
+
 export const PerturbationResultSchema = z.object({
   kind: z.string(),
   perturbed_question: z.string(),

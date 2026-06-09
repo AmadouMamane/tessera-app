@@ -486,6 +486,13 @@
       "turns": "Tours",
       "unknown": "Inconnus",
       "empty": "Aucune question capturée."
+    },
+    "crosslingual": {
+      "run": "Cross-lingue",
+      "title": "Cohérence cross-lingue",
+      "consistent": "Cohérent",
+      "divergent": "Divergence",
+      "min": "sim. min"
     }
   }
 }
