@@ -25,6 +25,7 @@ from tessera.observability import (
     cost_anomaly as cost_anomaly_mod,
     coverage as coverage_mod,
     crosslingual as crosslingual_mod,
+    embedding_inversion as embedding_inversion_mod,
     embedding_skew as embedding_skew_mod,
     erasure as erasure_mod,
     firewall_efficacy as firewall_mod,
@@ -136,6 +137,8 @@ class ShadowRequest(BaseModel):
 _calibration_cache: dict[str, object] | None = None
 # The obs-cost micro-benchmark is stable per process, so compute it once.
 _obs_cost_cache: dict[str, object] | None = None
+# The embedding-inversion demo embeds a fixed corpus; cache it per process.
+_inversion_cache: dict[str, object] | None = None
 
 
 @router.get("/observability/scores")
@@ -466,6 +469,26 @@ async def observability_journey() -> dict[str, object]:
         if isinstance(subject, str) and isinstance(occurred_at, str):
             events.append((subject, target, occurred_at))
     return asdict(journey_mod.build_journeys(events))
+
+
+@router.get("/observability/embedding-inversion")
+async def observability_embedding_inversion() -> dict[str, object]:
+    """Embedding-inversion privacy risk over a demo corpus (#73), cached."""
+    global _inversion_cache
+    if _inversion_cache is None:
+        from tessera.retrieval.embeddings import embed
+
+        try:
+            report = await embedding_inversion_mod.assess_inversion_risk(
+                embedding_inversion_mod.DEMO_MEMORIES,
+                embedding_inversion_mod.DEMO_PROBES,
+                embedder=embed,
+            )
+            _inversion_cache = {"available": True, **asdict(report)}
+        except Exception as exc:  # embedder offline — never break the dashboard
+            sys.stderr.write(f"tessera.observability.embedding_inversion: failed: {exc}\n")
+            return {"available": False}
+    return _inversion_cache
 
 
 @router.get("/observability/embedding-skew")

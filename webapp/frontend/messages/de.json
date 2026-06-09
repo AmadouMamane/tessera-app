@@ -411,6 +411,14 @@
       "scores": "Eval-Scores",
       "note": "DELETE /memory löscht auch diese Telemetrie-Artefakte, nicht nur den Memory-Store."
     },
+    "inversion": {
+      "title": "Embedding-Inversions-Risiko",
+      "unavailable": "Embedder nicht verfügbar.",
+      "recoveryRate": "Wiederherstellungsrate",
+      "recoverable": "Wiederherstellbar",
+      "threshold": "Schwelle",
+      "note": "Gespeicherte Vektoren können von einem Angreifer mit demselben Embedder auf den Quelltext zurückgeführt werden. Vor dem Embedding maskieren; keine Rohvektoren sensibler Texte speichern."
+    },
     "roadmap": {
       "title": "Produkt-Roadmap (aus Telemetrie)",
       "empty": "Keine Backlog-Einträge — Telemetrie ist sauber.",

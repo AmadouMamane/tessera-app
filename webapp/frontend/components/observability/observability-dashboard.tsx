@@ -27,6 +27,7 @@ import {
   ListFilter,
   Lock,
   Microscope,
+  Radar,
   Receipt,
   Route,
   Scale,
@@ -53,6 +54,7 @@ import {
   fetchContradictions,
   fetchCorpusFreshness,
   fetchCost,
+  fetchEmbeddingInversion,
   fetchEmbeddingSkew,
   fetchErasureCoverage,
   fetchEvalScores,
@@ -94,6 +96,7 @@ import type {
   GuardExplainReport,
   IntentReport,
   InventoryReport,
+  InversionReport,
   JourneyReport,
   LocaleFormatSummary,
   MemoryObsReport,
@@ -201,6 +204,13 @@ export function ObservabilityDashboard() {
     queryKey: ["erasure-coverage"],
     queryFn: ({ signal }) => fetchErasureCoverage(signal),
     refetchInterval: 20_000,
+  });
+
+  // The inversion demo embeds a fixed corpus and is cached server-side; fetch once.
+  const embeddingInversion = useQuery({
+    queryKey: ["embedding-inversion"],
+    queryFn: ({ signal }) => fetchEmbeddingInversion(signal),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
   // Calibration is computed server-side (slow, judge over a gold set) and cached,
@@ -350,6 +360,8 @@ export function ObservabilityDashboard() {
       <MemoryInventoryCard data={memoryInventory.data} loading={memoryInventory.isLoading} />
 
       <ErasureCoverageCard data={erasureCoverage.data} loading={erasureCoverage.isLoading} />
+
+      <InversionCard data={embeddingInversion.data} loading={embeddingInversion.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -781,6 +793,67 @@ function RoadmapCard({ data, loading }: { data: RoadmapReport | undefined; loadi
               </li>
             ))}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function InversionCard({ data, loading }: { data: InversionReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const pct = data?.recovery_rate != null ? Math.round(data.recovery_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Radar className="h-4 w-4 text-blue-500" />
+          {t("inversion.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-12 w-full" />
+        ) : !data?.available ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("inversion.unavailable")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("inversion.recoveryRate")}
+                </span>
+                <Badge tone={pct === 0 ? "success" : pct <= 33 ? "warning" : "danger"}>
+                  {pct}%
+                </Badge>
+              </div>
+              <Metric
+                label={t("inversion.recoverable")}
+                value={`${data.n_recoverable ?? 0}/${data.n_memories ?? 0}`}
+              />
+              <Metric label={t("inversion.threshold")} value={(data.threshold ?? 0).toFixed(2)} />
+            </div>
+            <ul className="flex flex-col gap-1.5 text-xs">
+              {(data.matches ?? []).map((m, i) => (
+                <li key={`${i}-${m.memory.slice(0, 12)}`} className="flex items-start gap-2">
+                  <span
+                    aria-hidden
+                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                      m.recoverable ? "bg-red-500" : "bg-emerald-500"
+                    }`}
+                  />
+                  <span className="min-w-0">
+                    <span className={m.recoverable ? "text-red-600 dark:text-red-400" : ""}>
+                      {m.memory}
+                    </span>{" "}
+                    <span className="text-[var(--muted-foreground)]">
+                      ← “{m.probe}” ({m.cosine.toFixed(2)})
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-[var(--muted-foreground)]">{t("inversion.note")}</p>
+          </div>
         )}
       </CardContent>
     </Card>

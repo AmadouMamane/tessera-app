@@ -411,6 +411,14 @@
       "scores": "Eval scores",
       "note": "DELETE /memory purges these telemetry artefacts too, not only the memory store."
     },
+    "inversion": {
+      "title": "Embedding-inversion risk",
+      "unavailable": "Embedder unavailable.",
+      "recoveryRate": "Recovery rate",
+      "recoverable": "Recoverable",
+      "threshold": "Threshold",
+      "note": "Stored vectors can be matched back to source text by an attacker with the same embedder. Mask before embedding; don't persist raw vectors of sensitive text."
+    },
     "roadmap": {
       "title": "Product roadmap (from telemetry)",
       "empty": "No backlog items — telemetry is clean.",

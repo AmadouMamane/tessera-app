@@ -61,6 +61,8 @@ import {
   IntentReportSchema,
   type InventoryReport,
   InventoryReportSchema,
+  type InversionReport,
+  InversionReportSchema,
   type JourneyReport,
   JourneyReportSchema,
   type LocaleFormatSummary,
@@ -228,6 +230,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Embedding-inversion privacy risk over a demo corpus (#73). */
+export async function fetchEmbeddingInversion(signal?: AbortSignal): Promise<InversionReport> {
+  return request("/observability/embedding-inversion", { signal }, InversionReportSchema);
 }
 
 /** The telemetry-erasure surface: conversations, bundles, scores in scope (#180). */

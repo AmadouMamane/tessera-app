@@ -822,6 +822,23 @@ export const ErasureCoverageSchema = z.object({
 });
 export type ErasureCoverage = z.infer<typeof ErasureCoverageSchema>;
 
+export const InversionMatchSchema = z.object({
+  memory: z.string(),
+  probe: z.string(),
+  cosine: z.number(),
+  recoverable: z.boolean(),
+});
+
+export const InversionReportSchema = z.object({
+  available: z.boolean().default(true),
+  n_memories: z.number().int().optional(),
+  n_recoverable: z.number().int().optional(),
+  recovery_rate: z.number().optional(),
+  threshold: z.number().optional(),
+  matches: z.array(InversionMatchSchema).optional(),
+});
+export type InversionReport = z.infer<typeof InversionReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

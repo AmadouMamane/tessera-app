@@ -411,6 +411,14 @@
       "scores": "Scores d'éval",
       "note": "DELETE /memory purge aussi ces artefacts de télémétrie, pas seulement le store mémoire."
     },
+    "inversion": {
+      "title": "Risque d'inversion d'embedding",
+      "unavailable": "Embedder indisponible.",
+      "recoveryRate": "Taux de récupération",
+      "recoverable": "Récupérables",
+      "threshold": "Seuil",
+      "note": "Les vecteurs stockés peuvent être reliés au texte source par un attaquant disposant du même embedder. Masquer avant d'embedder ; ne pas persister de vecteurs bruts de texte sensible."
+    },
     "roadmap": {
       "title": "Roadmap produit (depuis la télémétrie)",
       "empty": "Aucun item — la télémétrie est propre.",
