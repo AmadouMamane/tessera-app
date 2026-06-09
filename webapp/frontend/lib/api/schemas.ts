@@ -857,6 +857,19 @@ export const ClusterReportSchema = z.object({
 });
 export type ClusterReport = z.infer<typeof ClusterReportSchema>;
 
+export const PredictorEvaluationSchema = z.object({
+  n: z.number().int(),
+  n_predicted_fail: z.number().int(),
+  n_actual_fail: z.number().int(),
+  true_positive: z.number().int(),
+  false_positive: z.number().int(),
+  false_negative: z.number().int(),
+  true_negative: z.number().int(),
+  precision: z.number(),
+  recall: z.number(),
+});
+export type PredictorEvaluation = z.infer<typeof PredictorEvaluationSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

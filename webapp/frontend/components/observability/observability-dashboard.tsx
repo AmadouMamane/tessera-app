@@ -34,6 +34,7 @@ import {
   Scale,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   Target,
   TrendingDown,
   Wrench,
@@ -60,6 +61,7 @@ import {
   fetchErasureCoverage,
   fetchEvalScores,
   fetchFailureClusters,
+  fetchFailurePredictor,
   fetchFirewallEfficacy,
   fetchFunnel,
   fetchGuardExplain,
@@ -105,6 +107,7 @@ import type {
   MemoryObsReport,
   ObsCostReport,
   PIILeakSummary,
+  PredictorEvaluation,
   RedTeamResponse,
   RefusalReport,
   RoadmapReport,
@@ -196,6 +199,12 @@ export function ObservabilityDashboard() {
     queryKey: ["failure-clusters"],
     queryFn: ({ signal }) => fetchFailureClusters(signal),
     staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const failurePredictor = useQuery({
+    queryKey: ["failure-predictor"],
+    queryFn: ({ signal }) => fetchFailurePredictor(signal),
+    refetchInterval: 15_000,
   });
 
   const journey = useQuery({
@@ -352,6 +361,8 @@ export function ObservabilityDashboard() {
       <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
 
       <FailureClusterCard data={failureClusters.data} loading={failureClusters.isLoading} />
+
+      <FailurePredictorCard data={failurePredictor.data} loading={failurePredictor.isLoading} />
 
       <ShadowCard />
 
@@ -1023,6 +1034,60 @@ function JourneyCard({ data, loading }: { data: JourneyReport | undefined; loadi
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FailurePredictorCard({
+  data,
+  loading,
+}: {
+  data: PredictorEvaluation | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const precPct = data ? Math.round(data.precision * 100) : 0;
+  const recallPct = data ? Math.round(data.recall * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Sparkles className="h-4 w-4 text-blue-500" />
+          {t("predictor.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("predictor.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("predictor.precision")}
+              </span>
+              <Badge tone={precPct >= 70 ? "success" : precPct >= 40 ? "warning" : "danger"}>
+                {precPct}%
+              </Badge>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("predictor.recall")}
+              </span>
+              <Badge tone={recallPct >= 70 ? "success" : recallPct >= 40 ? "warning" : "danger"}>
+                {recallPct}%
+              </Badge>
+            </div>
+            <Metric label={t("predictor.predicted")} value={`${data.n_predicted_fail}/${data.n}`} />
+            <Metric label={t("predictor.actual")} value={`${data.n_actual_fail}/${data.n}`} />
+            <Metric
+              label={t("predictor.confusion")}
+              value={`${data.true_positive}·${data.false_positive}·${data.false_negative}`}
+            />
           </div>
         )}
       </CardContent>

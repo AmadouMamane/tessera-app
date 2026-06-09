@@ -75,6 +75,8 @@ import {
   ObsCostReportSchema,
   type PIILeakSummary,
   PIILeakSummarySchema,
+  type PredictorEvaluation,
+  PredictorEvaluationSchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
   type RedTeamResponse,
@@ -232,6 +234,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Back-test the pre-judge failure predictor against captured turns (#121). */
+export async function fetchFailurePredictor(signal?: AbortSignal): Promise<PredictorEvaluation> {
+  return request("/observability/failure-predictor", { signal }, PredictorEvaluationSchema);
 }
 
 /** Auto-clustered themes across the documented failure corpus (#123). */

@@ -437,6 +437,15 @@
       "purity": "Mittlere Reinheit",
       "cases": "Fälle"
     },
+    "predictor": {
+      "title": "Pre-Judge-Failure-Prädiktor",
+      "empty": "Noch keine erfassten Turns.",
+      "precision": "Präzision",
+      "recall": "Recall",
+      "predicted": "Vorhergesagt",
+      "actual": "Tatsächlich",
+      "confusion": "TP·FP·FN"
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

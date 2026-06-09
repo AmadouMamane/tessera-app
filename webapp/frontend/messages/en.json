@@ -437,6 +437,15 @@
       "purity": "Mean purity",
       "cases": "cases"
     },
+    "predictor": {
+      "title": "Pre-judge failure predictor",
+      "empty": "No captured turns yet.",
+      "precision": "Precision",
+      "recall": "Recall",
+      "predicted": "Predicted fail",
+      "actual": "Actual fail",
+      "confusion": "TP·FP·FN"
+    },
     "replay": {
       "title": "Replay (regression from production)",
       "model": "Model",

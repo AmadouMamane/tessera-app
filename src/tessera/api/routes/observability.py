@@ -29,6 +29,7 @@ from tessera.observability import (
     embedding_skew as embedding_skew_mod,
     erasure as erasure_mod,
     failure_clustering as failure_clustering_mod,
+    failure_predictor as failure_predictor_mod,
     firewall_efficacy as firewall_mod,
     funnel as funnel_mod,
     guard_explain as guard_explain_mod,
@@ -541,6 +542,15 @@ async def observability_failure_clusters() -> dict[str, object]:
             sys.stderr.write(f"tessera.observability.failure_clustering: failed: {exc}\n")
             return {"available": False}
     return _clustering_cache
+
+
+@router.get("/observability/failure-predictor")
+async def observability_failure_predictor() -> dict[str, object]:
+    """Back-test the pre-judge failure predictor against captured turns (#121)."""
+    turns = [
+        (b.question, b.context, b.original_score) for b in replay_mod.recent_bundles()
+    ]
+    return asdict(failure_predictor_mod.evaluate_predictor(turns))
 
 
 @router.get("/observability/embedding-skew")

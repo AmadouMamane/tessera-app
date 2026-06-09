@@ -437,6 +437,15 @@
       "purity": "Pureté moyenne",
       "cases": "cas"
     },
+    "predictor": {
+      "title": "Prédicteur de failure (pré-juge)",
+      "empty": "Aucun tour capturé pour l'instant.",
+      "precision": "Précision",
+      "recall": "Rappel",
+      "predicted": "Échec prédit",
+      "actual": "Échec réel",
+      "confusion": "VP·FP·FN"
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",
