@@ -25,6 +25,8 @@ import {
   CalibrationSchema,
   type CitationSummary,
   CitationSummarySchema,
+  type ConformanceReport,
+  ConformanceReportSchema,
   type ConsistencyReport,
   ConsistencyReportSchema,
   type ContradictionReport,
@@ -171,6 +173,11 @@ export async function fetchCalibration(signal?: AbortSignal): Promise<Calibratio
 /** Guard/firewall detection efficacy over injection vs benign inputs. */
 export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<FirewallEfficacy> {
   return request("/observability/firewall-efficacy", { signal }, FirewallEfficacySchema);
+}
+
+/** Schema/format conformance of tool-call arguments from the audit trail (#47). */
+export async function fetchConformance(signal?: AbortSignal): Promise<ConformanceReport> {
+  return request("/observability/conformance", { signal }, ConformanceReportSchema);
 }
 
 /** Tool-call validity (allowed vs denied, argument failures) from the audit trail. */

@@ -457,6 +457,14 @@
       "violations": "Violations",
       "examples": "Exemples",
       "empty": "Aucun montant groupé capturé."
+    },
+    "conformance": {
+      "title": "Conformité des arguments d'outil",
+      "rate": "Conformité",
+      "fields": "Champs vérifiés",
+      "violations": "Violations",
+      "examples": "Exemples",
+      "empty": "Aucun argument d'outil observable."
     }
   }
 }

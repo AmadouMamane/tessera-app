@@ -457,6 +457,14 @@
       "violations": "Verstöße",
       "examples": "Beispiele",
       "empty": "Keine gruppierten Beträge erfasst."
+    },
+    "conformance": {
+      "title": "Konformität der Tool-Argumente",
+      "rate": "Konformität",
+      "fields": "Geprüfte Felder",
+      "violations": "Verstöße",
+      "examples": "Beispiele",
+      "empty": "Keine beobachtbaren Tool-Argumente."
     }
   }
 }

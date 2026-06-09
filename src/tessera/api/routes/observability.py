@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tessera.observability import (
     anomalies as anomalies_mod,
     citation_validity as citation_validity_mod,
+    conformance as conformance_mod,
     consistency as consistency_mod,
     contradiction as contradiction_mod,
     corpus_injection as corpus_injection_mod,
@@ -187,6 +188,12 @@ async def observability_redteam_run() -> dict[str, object]:
 async def observability_refusal() -> dict[str, object]:
     """Refusal-rate calibration: over-refusal (legit) vs under-refusal (forbidden)."""
     return asdict(refusal_mod.compute_refusal_calibration())
+
+
+@router.get("/observability/conformance")
+async def observability_conformance() -> dict[str, object]:
+    """Schema/format conformance of tool-call arguments from the audit trail."""
+    return asdict(conformance_mod.compute_conformance())
 
 
 @router.get("/observability/tool-validity")

@@ -501,6 +501,16 @@ export const LocaleFormatSummarySchema = z.object({
 });
 export type LocaleFormatSummary = z.infer<typeof LocaleFormatSummarySchema>;
 
+export const ConformanceReportSchema = z.object({
+  n_calls: z.number().int(),
+  n_fields_checked: z.number().int(),
+  n_conformant: z.number().int(),
+  n_violations: z.number().int(),
+  conformance_rate: z.number(),
+  violations: z.array(z.string()),
+});
+export type ConformanceReport = z.infer<typeof ConformanceReportSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

@@ -9,6 +9,7 @@ import {
   Gauge,
   GitCompareArrows,
   GitFork,
+  Hash,
   Languages,
   LineChart,
   Lock,
@@ -32,6 +33,7 @@ import {
   fetchAnomalies,
   fetchCalibration,
   fetchCitations,
+  fetchConformance,
   fetchContradictions,
   fetchEvalScores,
   fetchFirewallEfficacy,
@@ -49,6 +51,7 @@ import type {
   AnomalyReport,
   Calibration,
   CitationSummary,
+  ConformanceReport,
   ContradictionReport,
   EvalScore,
   FirewallEfficacy,
@@ -155,6 +158,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const conformance = useQuery({
+    queryKey: ["conformance"],
+    queryFn: ({ signal }) => fetchConformance(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -190,6 +199,8 @@ export function ObservabilityDashboard() {
       <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
 
       <ToolValidityCard data={tools.data} loading={tools.isLoading} />
+
+      <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
 
       <RoutingCard data={routing.data} loading={routing.isLoading} />
 
@@ -630,6 +641,57 @@ function PiiLeakCard({ data, loading }: { data: PIILeakSummary | undefined; load
                 </span>
                 <span className="font-mono text-xs text-red-600 dark:text-red-400">
                   {data.examples.join(", ")}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConformanceCard({
+  data,
+  loading,
+}: {
+  data: ConformanceReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const pct = data ? Math.round(data.conformance_rate * 100) : 100;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Hash className="h-4 w-4 text-blue-500" />
+          {t("conformance.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_fields_checked === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("conformance.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("conformance.rate")}
+              </span>
+              <Badge tone={pct === 100 ? "success" : pct >= 90 ? "warning" : "danger"}>
+                {pct}%
+              </Badge>
+            </div>
+            <Metric label={t("conformance.fields")} value={String(data.n_fields_checked)} />
+            <Metric label={t("conformance.violations")} value={String(data.n_violations)} />
+            {data.violations.length > 0 ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("conformance.examples")}
+                </span>
+                <span className="font-mono text-xs text-red-600 dark:text-red-400">
+                  {data.violations.join(", ")}
                 </span>
               </div>
             ) : null}
