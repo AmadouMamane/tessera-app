@@ -22,6 +22,7 @@ from tessera.observability import (
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
     robustness as robustness_mod,
+    steganography as steganography_mod,
     sessions as sessions_mod,
     tool_validity as tool_validity_mod,
 )
@@ -168,6 +169,15 @@ async def observability_corpus_scan(bundle_id: str) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
     return asdict(corpus_injection_mod.scan_chunks(chunks))
+
+
+@router.get("/observability/steganography/{bundle_id}")
+async def observability_steganography(bundle_id: str) -> dict[str, object]:
+    """Detect hidden unicode (zero-width/bidi/tag) in a captured turn."""
+    bundle = replay_mod.get_bundle(bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    return asdict(steganography_mod.scan_text(f"{bundle.question}\n{bundle.context}"))
 
 
 @router.get("/observability/provenance/{bundle_id}")

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Play, ScanSearch, ShieldAlert, Shuffle, Waves } from "lucide-react";
+import { EyeOff, Play, ScanSearch, ShieldAlert, Shuffle, Waves } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -13,6 +13,7 @@ import {
   fetchCorpusScan,
   fetchProvenance,
   fetchReplays,
+  fetchSteganography,
   runConsistency,
   runReplay,
   runRobustness,
@@ -24,6 +25,7 @@ import type {
   ReplayBundle,
   ReplayResult,
   RobustnessReport,
+  StegoReport,
 } from "@/lib/api/schemas";
 
 // Locally-available Ollama models to replay against (smallest first).
@@ -69,6 +71,12 @@ export function ReplayPanel() {
     onSuccess: (res, vars) => setScans((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
+  const [stego, setStego] = useState<Record<string, StegoReport>>({});
+  const stegoMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => fetchSteganography(bundleId),
+    onSuccess: (res, vars) => setStego((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
 
   return (
@@ -107,6 +115,7 @@ export function ReplayPanel() {
               const cons = consist[b.bundle_id];
               const rob = robust[b.bundle_id];
               const scan = scans[b.bundle_id];
+              const steg = stego[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -169,6 +178,19 @@ export function ReplayPanel() {
                         variant="ghost"
                         className="gap-1.5"
                         disabled={
+                          stegoMutation.isPending &&
+                          stegoMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => stegoMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <EyeOff className="h-3.5 w-3.5" />
+                        {t("stego.run")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
                           robustMutation.isPending &&
                           robustMutation.variables?.bundleId === b.bundle_id
                         }
@@ -191,6 +213,7 @@ export function ReplayPanel() {
                   </div>
                   {b.latency_ms ? <LatencyWaterfall timings={b.latency_ms} /> : null}
                   {scan ? <CorpusScanView report={scan} /> : null}
+                  {steg ? <StegoView report={steg} /> : null}
                   {rob ? <RobustnessView report={rob} /> : null}
                   {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
@@ -303,6 +326,32 @@ function CorpusScanView({ report }: { report: CorpusScanReport }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function StegoView({ report }: { report: StegoReport }) {
+  const t = useTranslations("observability");
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <EyeOff className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <span className="text-xs text-[var(--muted-foreground)]">{t("stego.title")}</span>
+        <Badge tone={report.clean ? "success" : "danger"}>
+          {report.clean ? t("stego.clean") : `${report.n_hidden} ${t("stego.hidden")}`}
+        </Badge>
+        {Object.entries(report.categories).map(([cat, count]) => (
+          <span key={cat} className="text-xs text-[var(--muted-foreground)]">
+            {cat}: <span className="tabular-nums">{count}</span>
+          </span>
+        ))}
+      </div>
+      {report.decoded_tags ? (
+        <p className="mt-2 text-xs">
+          <span className="text-[var(--muted-foreground)]">{t("stego.decoded")}:</span>{" "}
+          <span className="font-mono text-red-600 dark:text-red-400">{report.decoded_tags}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

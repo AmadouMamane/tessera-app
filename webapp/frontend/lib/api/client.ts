@@ -43,6 +43,8 @@ import {
   RoutingReportSchema,
   type SessionReport,
   SessionReportSchema,
+  type StegoReport,
+  StegoReportSchema,
   type ToolValidity,
   ToolValiditySchema,
 } from "./schemas";
@@ -180,6 +182,18 @@ export async function fetchCorpusScan(
     `/observability/corpus-scan/${encodeURIComponent(bundleId)}`,
     { signal },
     CorpusScanReportSchema,
+  );
+}
+
+/** Detect hidden unicode (zero-width/bidi/tag) in a captured turn (#72). */
+export async function fetchSteganography(
+  bundleId: string,
+  signal?: AbortSignal,
+): Promise<StegoReport> {
+  return request(
+    `/observability/steganography/${encodeURIComponent(bundleId)}`,
+    { signal },
+    StegoReportSchema,
   );
 }
 

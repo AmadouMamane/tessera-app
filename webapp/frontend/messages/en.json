@@ -365,6 +365,13 @@
       "poisoned": "poisoned",
       "clean": "No injection found in the retrieved chunks.",
       "chunk": "chunk"
+    },
+    "stego": {
+      "run": "Stego",
+      "title": "Unicode steganography",
+      "clean": "No hidden characters",
+      "hidden": "hidden",
+      "decoded": "Smuggled message decoded"
     }
   }
 }

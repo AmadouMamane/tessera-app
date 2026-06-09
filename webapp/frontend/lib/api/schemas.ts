@@ -353,6 +353,21 @@ export const CorpusScanReportSchema = z.object({
 });
 export type CorpusScanReport = z.infer<typeof CorpusScanReportSchema>;
 
+export const StegoFindingSchema = z.object({
+  codepoint: z.string(),
+  category: z.string(),
+  position: z.number().int(),
+});
+
+export const StegoReportSchema = z.object({
+  n_hidden: z.number().int(),
+  clean: z.boolean(),
+  categories: z.record(z.string(), z.number().int()),
+  decoded_tags: z.string(),
+  findings: z.array(StegoFindingSchema),
+});
+export type StegoReport = z.infer<typeof StegoReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),
