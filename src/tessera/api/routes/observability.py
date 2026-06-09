@@ -28,6 +28,7 @@ from tessera.observability import (
     guard_explain as guard_explain_mod,
     language_routing as language_routing_mod,
     locale_format as locale_format_mod,
+    obs_cost as obs_cost_mod,
     pii_leak as pii_leak_mod,
     provenance as provenance_mod,
     redteam as redteam_mod,
@@ -124,6 +125,8 @@ class ShadowRequest(BaseModel):
 
 # Calibration runs the judge over the gold set (slow), so cache it per process.
 _calibration_cache: dict[str, object] | None = None
+# The obs-cost micro-benchmark is stable per process, so compute it once.
+_obs_cost_cache: dict[str, object] | None = None
 
 
 @router.get("/observability/scores")
@@ -173,6 +176,15 @@ async def observability_trend() -> dict[str, object]:
             )
         )
     return asdict(trends_mod.analyze_trend(points))
+
+
+@router.get("/observability/obs-cost")
+async def observability_obs_cost() -> dict[str, object]:
+    """Measured instrumentation overhead vs the turn budget (#84), cached."""
+    global _obs_cost_cache
+    if _obs_cost_cache is None:
+        _obs_cost_cache = asdict(obs_cost_mod.measure_overhead())
+    return _obs_cost_cache
 
 
 @router.get("/observability/calibration")

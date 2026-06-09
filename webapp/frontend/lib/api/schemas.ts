@@ -678,6 +678,19 @@ export const TrendReportSchema = z.object({
 });
 export type TrendReport = z.infer<typeof TrendReportSchema>;
 
+export const ObsCostReportSchema = z.object({
+  iterations: z.number().int(),
+  span_overhead_us: z.number(),
+  spans_per_turn: z.number().int(),
+  overhead_per_turn_ms: z.number(),
+  turn_budget_ms: z.number(),
+  overhead_pct_of_budget: z.number(),
+  est_bytes_per_span: z.number().int(),
+  est_bytes_per_turn: z.number().int(),
+  within_budget: z.boolean(),
+});
+export type ObsCostReport = z.infer<typeof ObsCostReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

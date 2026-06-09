@@ -341,6 +341,15 @@
       "points": "Points",
       "degradingNote": "Dérive lente à la baisse confirmée sur les deux moitiés — à investiguer avant rupture."
     },
+    "obsCost": {
+      "title": "Coût de l'observabilité",
+      "withinBudget": "% du budget tour",
+      "perSpan": "Par span",
+      "perTurn": "Par tour",
+      "spansPerTurn": "Spans / tour",
+      "budget": "Budget tour",
+      "bytesPerTurn": "Télémétrie / tour"
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",

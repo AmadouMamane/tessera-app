@@ -19,6 +19,7 @@ import {
   LineChart,
   ListFilter,
   Lock,
+  Microscope,
   Receipt,
   Route,
   Scale,
@@ -50,6 +51,7 @@ import {
   fetchGuardExplain,
   fetchIntent,
   fetchLocaleFormat,
+  fetchObsCost,
   fetchPiiLeak,
   fetchRedteam,
   fetchRefusal,
@@ -76,6 +78,7 @@ import type {
   GuardExplainReport,
   IntentReport,
   LocaleFormatSummary,
+  ObsCostReport,
   PIILeakSummary,
   RedTeamResponse,
   RefusalReport,
@@ -127,6 +130,13 @@ export function ObservabilityDashboard() {
     queryKey: ["trend"],
     queryFn: ({ signal }) => fetchTrend(signal),
     refetchInterval: 15_000,
+  });
+
+  // The obs-cost benchmark is stable per process and cached server-side; fetch once.
+  const obsCost = useQuery({
+    queryKey: ["obs-cost"],
+    queryFn: ({ signal }) => fetchObsCost(signal),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
   // Calibration is computed server-side (slow, judge over a gold set) and cached,
@@ -260,6 +270,8 @@ export function ObservabilityDashboard() {
       <TailSamplingCard data={tailSampling.data} loading={tailSampling.isLoading} />
 
       <TrendCard data={trend.data} loading={trend.isLoading} />
+
+      <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -648,6 +660,50 @@ function TrendCard({ data, loading }: { data: TrendReport | undefined; loading: 
             {data.degrading ? (
               <p className="text-xs text-red-600 dark:text-red-400">{t("trend.degradingNote")}</p>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ObsCostCard({ data, loading }: { data: ObsCostReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Microscope className="h-4 w-4 text-blue-500" />
+          {t("obsCost.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("obsCost.withinBudget")}
+              </span>
+              <Badge tone={data.within_budget ? "success" : "warning"}>
+                {data.overhead_pct_of_budget < 0.01
+                  ? "<0.01"
+                  : data.overhead_pct_of_budget.toFixed(2)}
+                %
+              </Badge>
+            </div>
+            <Metric label={t("obsCost.perSpan")} value={`${data.span_overhead_us.toFixed(2)} µs`} />
+            <Metric
+              label={t("obsCost.perTurn")}
+              value={`${data.overhead_per_turn_ms.toFixed(3)} ms`}
+            />
+            <Metric label={t("obsCost.spansPerTurn")} value={String(data.spans_per_turn)} />
+            <Metric label={t("obsCost.budget")} value={`${Math.round(data.turn_budget_ms)} ms`} />
+            <Metric
+              label={t("obsCost.bytesPerTurn")}
+              value={`${(data.est_bytes_per_turn / 1024).toFixed(1)} KiB`}
+            />
           </div>
         )}
       </CardContent>

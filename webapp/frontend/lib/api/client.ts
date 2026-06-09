@@ -55,6 +55,8 @@ import {
   IntentReportSchema,
   type LocaleFormatSummary,
   LocaleFormatSummarySchema,
+  type ObsCostReport,
+  ObsCostReportSchema,
   type PIILeakSummary,
   PIILeakSummarySchema,
   type ProvenanceReport,
@@ -213,6 +215,11 @@ export async function fetchTailSampling(signal?: AbortSignal): Promise<TailSampl
 /** Long-horizon faithfulness trend over the recent score series (#150). */
 export async function fetchTrend(signal?: AbortSignal): Promise<TrendReport> {
   return request("/observability/trend", { signal }, TrendReportSchema);
+}
+
+/** Measured instrumentation overhead vs the turn budget (cost of obs, #84). */
+export async function fetchObsCost(signal?: AbortSignal): Promise<ObsCostReport> {
+  return request("/observability/obs-cost", { signal }, ObsCostReportSchema);
 }
 
 /** Judge calibration against the human gold set (computed server-side, cached). */

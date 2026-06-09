@@ -341,6 +341,15 @@
       "points": "Points",
       "degradingNote": "Slow downward drift confirmed across both halves — investigate before it breaches."
     },
+    "obsCost": {
+      "title": "Cost of observability",
+      "withinBudget": "% of turn budget",
+      "perSpan": "Per span",
+      "perTurn": "Per turn",
+      "spansPerTurn": "Spans / turn",
+      "budget": "Turn budget",
+      "bytesPerTurn": "Telemetry / turn"
+    },
     "replay": {
       "title": "Replay (regression from production)",
       "model": "Model",

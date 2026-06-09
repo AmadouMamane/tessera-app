@@ -341,6 +341,15 @@
       "points": "Punkte",
       "degradingNote": "Langsame Abwärtsdrift über beide Hälften bestätigt — vor dem Bruch untersuchen."
     },
+    "obsCost": {
+      "title": "Kosten der Observability",
+      "withinBudget": "% des Turn-Budgets",
+      "perSpan": "Pro Span",
+      "perTurn": "Pro Turn",
+      "spansPerTurn": "Spans / Turn",
+      "budget": "Turn-Budget",
+      "bytesPerTurn": "Telemetrie / Turn"
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",
