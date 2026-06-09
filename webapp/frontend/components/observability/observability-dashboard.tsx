@@ -5,6 +5,7 @@ import {
   Activity,
   BookCheck,
   Boxes,
+  CalendarClock,
   Coins,
   Crosshair,
   ExternalLink,
@@ -45,6 +46,7 @@ import {
   fetchCitations,
   fetchConformance,
   fetchContradictions,
+  fetchCorpusFreshness,
   fetchCost,
   fetchEmbeddingSkew,
   fetchEvalScores,
@@ -76,6 +78,7 @@ import type {
   CostReport,
   EvalScore,
   FirewallEfficacy,
+  FreshnessReport,
   FunnelReport,
   GuardExplainReport,
   IntentReport,
@@ -147,6 +150,12 @@ export function ObservabilityDashboard() {
     queryKey: ["embedding-skew"],
     queryFn: ({ signal }) => fetchEmbeddingSkew(signal),
     staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const corpusFreshness = useQuery({
+    queryKey: ["corpus-freshness"],
+    queryFn: ({ signal }) => fetchCorpusFreshness(signal),
+    refetchInterval: 60_000,
   });
 
   // Calibration is computed server-side (slow, judge over a gold set) and cached,
@@ -284,6 +293,8 @@ export function ObservabilityDashboard() {
       <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
 
       <EmbeddingSkewCard data={embeddingSkew.data} loading={embeddingSkew.isLoading} />
+
+      <CorpusFreshnessCard data={corpusFreshness.data} loading={corpusFreshness.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -672,6 +683,78 @@ function TrendCard({ data, loading }: { data: TrendReport | undefined; loading: 
             {data.degrading ? (
               <p className="text-xs text-red-600 dark:text-red-400">{t("trend.degradingNote")}</p>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CorpusFreshnessCard({
+  data,
+  loading,
+}: {
+  data: FreshnessReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <CalendarClock className="h-4 w-4 text-blue-500" />
+          {t("freshness.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_corpora === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("freshness.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("freshness.stale")}
+                </span>
+                <Badge tone={data.n_stale === 0 ? "success" : "warning"}>
+                  {data.n_stale}/{data.n_corpora}
+                </Badge>
+              </div>
+              <Metric label={t("freshness.horizon")} value={`${data.max_age_days} d`} />
+              <Metric label={t("freshness.oldest")} value={`${data.oldest_age_days} d`} />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                    <th className="py-2 pr-4 font-medium">{t("freshness.corpus")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("freshness.docs")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("freshness.age")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("freshness.asOf")}</th>
+                    <th className="py-2 font-medium">{t("freshness.state")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.regulations.map((r) => (
+                    <tr key={r.name} className="border-b border-[var(--border)]/50">
+                      <td className="py-2 pr-4 uppercase">{r.corpus}</td>
+                      <td className="py-2 pr-4 tabular-nums">{r.n_docs}</td>
+                      <td className="py-2 pr-4 tabular-nums">{r.age_days} d</td>
+                      <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
+                        {r.as_of ?? "—"}
+                      </td>
+                      <td className="py-2">
+                        <Badge tone={r.stale ? "warning" : "success"}>
+                          {r.stale ? t("freshness.stateStale") : t("freshness.stateFresh")}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </CardContent>

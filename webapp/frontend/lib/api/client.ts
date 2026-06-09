@@ -47,6 +47,8 @@ import {
   EvalScoresResponseSchema,
   type FirewallEfficacy,
   FirewallEfficacySchema,
+  type FreshnessReport,
+  FreshnessReportSchema,
   type FunnelReport,
   FunnelReportSchema,
   type GuardExplainReport,
@@ -211,6 +213,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
     },
     ShadowReportSchema,
   );
+}
+
+/** Staleness of the ingested regulatory corpora vs their review horizon (#50). */
+export async function fetchCorpusFreshness(signal?: AbortSignal): Promise<FreshnessReport> {
+  return request("/observability/corpus-freshness", { signal }, FreshnessReportSchema);
 }
 
 /** Embedding-version skew between the query-time and corpus embedders (#64). */

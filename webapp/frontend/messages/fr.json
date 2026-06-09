@@ -361,6 +361,20 @@
         "hard": "Skew dur"
       }
     },
+    "freshness": {
+      "title": "Fraîcheur du corpus",
+      "empty": "Aucun corpus réglementaire trouvé.",
+      "stale": "Périmés",
+      "horizon": "Horizon de revue",
+      "oldest": "Plus ancien",
+      "corpus": "Corpus",
+      "docs": "Docs",
+      "age": "Âge",
+      "asOf": "Date de référence",
+      "state": "État",
+      "stateStale": "périmé",
+      "stateFresh": "frais"
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",

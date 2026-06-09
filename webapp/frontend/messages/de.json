@@ -361,6 +361,20 @@
         "hard": "Harter Skew"
       }
     },
+    "freshness": {
+      "title": "Korpus-Aktualität",
+      "empty": "Keine regulatorischen Korpora gefunden.",
+      "stale": "Veraltet",
+      "horizon": "Prüfhorizont",
+      "oldest": "Ältester",
+      "corpus": "Korpus",
+      "docs": "Docs",
+      "age": "Alter",
+      "asOf": "Stichtag",
+      "state": "Status",
+      "stateStale": "veraltet",
+      "stateFresh": "frisch"
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

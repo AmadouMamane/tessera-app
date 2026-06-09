@@ -361,6 +361,20 @@
         "hard": "Hard skew"
       }
     },
+    "freshness": {
+      "title": "Corpus freshness",
+      "empty": "No regulatory corpora found.",
+      "stale": "Stale",
+      "horizon": "Review horizon",
+      "oldest": "Oldest",
+      "corpus": "Corpus",
+      "docs": "Docs",
+      "age": "Age",
+      "asOf": "Authoritative as-of",
+      "state": "State",
+      "stateStale": "stale",
+      "stateFresh": "fresh"
+    },
     "replay": {
       "title": "Replay (regression from production)",
       "model": "Model",

@@ -20,6 +20,7 @@ from tessera.observability import (
     conformance as conformance_mod,
     consistency as consistency_mod,
     contradiction as contradiction_mod,
+    corpus_freshness as corpus_freshness_mod,
     corpus_injection as corpus_injection_mod,
     cost_anomaly as cost_anomaly_mod,
     coverage as coverage_mod,
@@ -325,6 +326,16 @@ async def observability_ensemble(payload: EnsembleRequest) -> dict[str, object]:
         question=bundle.question, answer=bundle.original_answer, context=bundle.context
     )
     return asdict(report)
+
+
+@router.get("/observability/corpus-freshness")
+async def observability_corpus_freshness() -> dict[str, object]:
+    """Staleness of the ingested regulatory corpora vs their review horizon (#50)."""
+    from importlib import resources
+    from pathlib import Path
+
+    data_dir = Path(str(resources.files("tessera.corpus.data")))
+    return asdict(corpus_freshness_mod.load_corpus_freshness(data_dir))
 
 
 @router.get("/observability/embedding-skew")

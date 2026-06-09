@@ -730,6 +730,24 @@ export const SkewReportSchema = z.object({
 });
 export type SkewReport = z.infer<typeof SkewReportSchema>;
 
+export const RegulationFreshnessSchema = z.object({
+  name: z.string(),
+  corpus: z.string(),
+  n_docs: z.number().int(),
+  age_days: z.number().int(),
+  as_of: z.string().nullable(),
+  stale: z.boolean(),
+});
+
+export const FreshnessReportSchema = z.object({
+  n_corpora: z.number().int(),
+  n_stale: z.number().int(),
+  max_age_days: z.number().int(),
+  oldest_age_days: z.number().int(),
+  regulations: z.array(RegulationFreshnessSchema),
+});
+export type FreshnessReport = z.infer<typeof FreshnessReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),
