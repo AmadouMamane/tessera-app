@@ -887,6 +887,19 @@ export const SFTDatasetSchema = z.object({
 });
 export type SFTDataset = z.infer<typeof SFTDatasetSchema>;
 
+export const ToxicTurnSchema = z.object({
+  question: z.string(),
+  terms: z.array(z.string()),
+});
+
+export const ToxicityReportSchema = z.object({
+  n_turns: z.number().int(),
+  n_toxic: z.number().int(),
+  toxicity_rate: z.number(),
+  flagged: z.array(ToxicTurnSchema),
+});
+export type ToxicityReport = z.infer<typeof ToxicityReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

@@ -113,6 +113,8 @@ import {
   TailSamplingReportSchema,
   type ToolValidity,
   ToolValiditySchema,
+  type ToxicityReport,
+  ToxicityReportSchema,
   type Trajectory,
   TrajectorySchema,
   type TrendReport,
@@ -236,6 +238,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Toxicity / harmful-output rate over captured answers (#60). */
+export async function fetchToxicity(signal?: AbortSignal): Promise<ToxicityReport> {
+  return request("/observability/toxicity", { signal }, ToxicityReportSchema);
 }
 
 /** Distil high-scoring captured turns into an SFT dataset (#122). */

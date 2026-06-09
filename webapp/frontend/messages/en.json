@@ -550,6 +550,12 @@
       "drift": "Drift (%)",
       "empty": "Run the red-team to measure the attack-success rate."
     },
+    "toxicity": {
+      "title": "Toxicity / harmful output",
+      "empty": "No captured answers yet.",
+      "rate": "Toxic rate",
+      "flagged": "Flagged"
+    },
     "contradiction": {
       "title": "Multi-turn contradiction",
       "found": "Contradictions",

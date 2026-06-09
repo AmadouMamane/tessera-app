@@ -56,6 +56,7 @@ from tessera.observability import (
     steganography as steganography_mod,
     tail_sampling as tail_sampling_mod,
     tool_validity as tool_validity_mod,
+    toxicity as toxicity_mod,
     trajectory as trajectory_mod,
     trends as trends_mod,
     whatchanged as whatchanged_mod,
@@ -553,6 +554,13 @@ async def observability_sft_dataset() -> dict[str, object]:
         for b in replay_mod.recent_bundles()
     ]
     return asdict(sft_export_mod.build_sft_dataset(turns))
+
+
+@router.get("/observability/toxicity")
+async def observability_toxicity() -> dict[str, object]:
+    """Toxicity / harmful-output rate over captured answers (#60)."""
+    turns = [(b.question, b.original_answer) for b in replay_mod.recent_bundles()]
+    return asdict(toxicity_mod.scan_toxicity(turns))
 
 
 @router.get("/observability/failure-predictor")

@@ -550,6 +550,12 @@
       "drift": "Dérive (%)",
       "empty": "Lancez le red-team pour mesurer le taux de réussite d'attaque."
     },
+    "toxicity": {
+      "title": "Toxicité / sortie nuisible",
+      "empty": "Aucune réponse capturée pour l'instant.",
+      "rate": "Taux toxique",
+      "flagged": "Signalés"
+    },
     "contradiction": {
       "title": "Contradiction multi-tour",
       "found": "Contradictions",

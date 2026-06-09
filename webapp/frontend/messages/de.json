@@ -550,6 +550,12 @@
       "drift": "Drift (%)",
       "empty": "Starten Sie das Red-Team, um die Angriffserfolgsrate zu messen."
     },
+    "toxicity": {
+      "title": "Toxizität / schädliche Ausgabe",
+      "empty": "Noch keine erfassten Antworten.",
+      "rate": "Toxische Rate",
+      "flagged": "Markiert"
+    },
     "contradiction": {
       "title": "Mehrturn-Widerspruch",
       "found": "Widersprüche",

@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   Archive,
+  Ban,
   BookCheck,
   Boxes,
   Brain,
@@ -82,6 +83,7 @@ import {
   fetchSftDataset,
   fetchTailSampling,
   fetchToolValidity,
+  fetchToxicity,
   fetchTrend,
   fetchWhatChanged,
   runRedteam,
@@ -121,6 +123,7 @@ import type {
   SkewReport,
   TailSamplingReport,
   ToolValidity,
+  ToxicityReport,
   TrendReport,
   WhatChanged,
 } from "@/lib/api/schemas";
@@ -213,6 +216,12 @@ export function ObservabilityDashboard() {
   const sftDataset = useQuery({
     queryKey: ["sft-dataset"],
     queryFn: ({ signal }) => fetchSftDataset(signal),
+    refetchInterval: 15_000,
+  });
+
+  const toxicity = useQuery({
+    queryKey: ["toxicity"],
+    queryFn: ({ signal }) => fetchToxicity(signal),
     refetchInterval: 15_000,
   });
 
@@ -406,6 +415,8 @@ export function ObservabilityDashboard() {
       <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
 
       <RedTeamCard />
+
+      <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
 
       <RefusalCard data={refusal.data} loading={refusal.isLoading} />
 
@@ -1093,6 +1104,52 @@ function SftDatasetCard({ data, loading }: { data: SFTDataset | undefined; loadi
                     <span className="uppercase">{s.language}</span>
                     <span className="tabular-nums">{s.score.toFixed(2)}</span>
                     <span className="min-w-0 truncate">{s.output}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ToxicityCard({ data, loading }: { data: ToxicityReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const pct = data ? Math.round(data.toxicity_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Ban className="h-4 w-4 text-blue-500" />
+          {t("toxicity.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_turns === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("toxicity.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">{t("toxicity.rate")}</span>
+                <Badge tone={pct === 0 ? "success" : "danger"}>{pct}%</Badge>
+              </div>
+              <Metric label={t("toxicity.flagged")} value={`${data.n_toxic}/${data.n_turns}`} />
+            </div>
+            {data.flagged.length > 0 ? (
+              <ul className="flex flex-col gap-1 text-xs">
+                {data.flagged.slice(0, 5).map((f, i) => (
+                  <li key={`${i}-${f.question.slice(0, 12)}`} className="flex items-center gap-2">
+                    <span className="font-mono text-red-600 dark:text-red-400">
+                      {f.terms.join(", ")}
+                    </span>
+                    <span className="min-w-0 truncate text-[var(--muted-foreground)]">
+                      {f.question}
+                    </span>
                   </li>
                 ))}
               </ul>
