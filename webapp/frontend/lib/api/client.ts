@@ -39,6 +39,8 @@ import {
   RobustnessReportSchema,
   type RoutingReport,
   RoutingReportSchema,
+  type SessionReport,
+  SessionReportSchema,
   type ToolValidity,
   ToolValiditySchema,
 } from "./schemas";
@@ -155,6 +157,11 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Session-level goal-completion analytics. */
+export async function fetchSessions(signal?: AbortSignal): Promise<SessionReport> {
+  return request("/observability/sessions", { signal }, SessionReportSchema);
 }
 
 /** Captured production turns available for regression replay. */

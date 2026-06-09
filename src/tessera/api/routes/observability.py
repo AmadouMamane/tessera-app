@@ -21,6 +21,7 @@ from tessera.observability import (
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
     robustness as robustness_mod,
+    sessions as sessions_mod,
     tool_validity as tool_validity_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
@@ -145,6 +146,17 @@ async def observability_routing() -> dict[str, object]:
     """Language-routing health: served vs detected language, code-switching."""
     turns = [(b.question, b.language) for b in replay_mod.recent_bundles()]
     return asdict(language_routing_mod.aggregate_routing(turns))
+
+
+@router.get("/observability/sessions")
+async def observability_sessions() -> dict[str, object]:
+    """Session-level goal-completion analytics from scored turns."""
+    turns: list[tuple[str | None, float]] = []
+    for score in recent_scores():
+        conv = score.get("conversation_id")
+        raw = score.get("score", 0.0)
+        turns.append((conv if isinstance(conv, str) else None, float(raw)))  # type: ignore[arg-type]
+    return asdict(sessions_mod.aggregate_sessions(turns))
 
 
 @router.get("/observability/provenance/{bundle_id}")

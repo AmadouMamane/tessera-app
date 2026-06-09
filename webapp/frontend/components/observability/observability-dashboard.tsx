@@ -8,6 +8,7 @@ import {
   LineChart,
   Scale,
   ShieldCheck,
+  Target,
   Wrench,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -22,6 +23,7 @@ import {
   fetchEvalScores,
   fetchFirewallEfficacy,
   fetchRouting,
+  fetchSessions,
   fetchToolValidity,
 } from "@/lib/api/client";
 import type {
@@ -29,6 +31,7 @@ import type {
   EvalScore,
   FirewallEfficacy,
   RoutingReport,
+  SessionReport,
   ToolValidity,
 } from "@/lib/api/schemas";
 
@@ -77,6 +80,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const sessions = useQuery({
+    queryKey: ["sessions"],
+    queryFn: ({ signal }) => fetchSessions(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -104,6 +113,8 @@ export function ObservabilityDashboard() {
       <ToolValidityCard data={tools.data} loading={tools.isLoading} />
 
       <RoutingCard data={routing.data} loading={routing.isLoading} />
+
+      <SessionCard data={sessions.data} loading={sessions.isLoading} />
 
       <ReplayPanel />
 
@@ -347,6 +358,40 @@ function RoutingCard({ data, loading }: { data: RoutingReport | undefined; loadi
               <Badge tone={cs === 0 ? "neutral" : "warning"}>{cs}%</Badge>
             </div>
             <Metric label={t("routing.turns")} value={String(data.n)} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SessionCard({ data, loading }: { data: SessionReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Target className="h-4 w-4 text-blue-500" />
+          {t("sessions.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_sessions === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("sessions.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <Metric label={t("sessions.sessions")} value={String(data.n_sessions)} />
+            <Metric
+              label={t("sessions.turnsPerSession")}
+              value={data.mean_turns_per_session.toFixed(1)}
+            />
+            <Metric
+              label={t("sessions.singleTurn")}
+              value={`${Math.round(data.single_turn_rate * 100)}%`}
+            />
+            <Metric label={t("sessions.meanScore")} value={data.mean_score.toFixed(2)} />
           </div>
         )}
       </CardContent>

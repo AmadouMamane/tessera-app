@@ -350,6 +350,14 @@
       "codeSwitch": "Code-Switching",
       "turns": "Turns",
       "empty": "Noch keine Turns."
+    },
+    "sessions": {
+      "title": "Session-Zielerreichung",
+      "sessions": "Sessions",
+      "turnsPerSession": "Turns / Session",
+      "singleTurn": "Ein-Turn",
+      "meanScore": "Ø Score",
+      "empty": "Noch keine Sessions."
     }
   }
 }

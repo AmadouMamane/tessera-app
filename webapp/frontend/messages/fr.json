@@ -350,6 +350,14 @@
       "codeSwitch": "Code-switching",
       "turns": "Tours",
       "empty": "Aucun tour pour l'instant."
+    },
+    "sessions": {
+      "title": "Complétion par session",
+      "sessions": "Sessions",
+      "turnsPerSession": "Tours / session",
+      "singleTurn": "Tour unique",
+      "meanScore": "Score moyen",
+      "empty": "Aucune session pour l'instant."
     }
   }
 }

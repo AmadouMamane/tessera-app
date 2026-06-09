@@ -311,6 +311,15 @@ export const RobustnessReportSchema = z.object({
 });
 export type RobustnessReport = z.infer<typeof RobustnessReportSchema>;
 
+export const SessionReportSchema = z.object({
+  n_sessions: z.number().int(),
+  total_turns: z.number().int(),
+  mean_turns_per_session: z.number(),
+  single_turn_rate: z.number(),
+  mean_score: z.number(),
+});
+export type SessionReport = z.infer<typeof SessionReportSchema>;
+
 export const RoutingReportSchema = z.object({
   n: z.number().int(),
   mismatches: z.number().int(),
