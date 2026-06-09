@@ -443,6 +443,12 @@
       "compliance": "Obligations remplies",
       "riskClass": "Classe de risque"
     },
+    "disclosure": {
+      "title": "Disclosure IA (Art. 50)",
+      "active": "Active",
+      "off": "Inactive",
+      "locales": "Locales"
+    },
     "clusters": {
       "title": "Clusters de failures (auto-thématisés)",
       "unavailable": "Embedder indisponible.",

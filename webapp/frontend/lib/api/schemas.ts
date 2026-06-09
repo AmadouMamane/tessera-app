@@ -1007,6 +1007,16 @@ export const CitationResolutionSchema = z.object({
 });
 export type CitationResolution = z.infer<typeof CitationResolutionSchema>;
 
+export const DisclosureReportSchema = z.object({
+  enabled: z.boolean(),
+  article: z.string(),
+  n_locales: z.number().int(),
+  all_covered: z.boolean(),
+  missing_locales: z.array(z.string()),
+  texts: z.record(z.string(), z.string()),
+});
+export type DisclosureReport = z.infer<typeof DisclosureReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

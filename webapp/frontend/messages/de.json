@@ -443,6 +443,12 @@
       "compliance": "Erfüllte Pflichten",
       "riskClass": "Risikoklasse"
     },
+    "disclosure": {
+      "title": "KI-Hinweis (Art. 50)",
+      "active": "Aktiv",
+      "off": "Aus",
+      "locales": "Sprachen"
+    },
     "clusters": {
       "title": "Failure-Cluster (auto-thematisiert)",
       "unavailable": "Embedder nicht verfügbar.",

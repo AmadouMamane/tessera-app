@@ -31,6 +31,7 @@ import {
   ListChecks,
   ListFilter,
   Lock,
+  Megaphone,
   Microscope,
   Radar,
   Radio,
@@ -46,7 +47,7 @@ import {
   TrendingDown,
   Wrench,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { ReplayPanel } from "@/components/observability/replay-panel";
@@ -66,6 +67,7 @@ import {
   fetchCorpusFreshness,
   fetchCost,
   fetchCrossTenant,
+  fetchDisclosure,
   fetchEmbeddingInversion,
   fetchEmbeddingSkew,
   fetchErasureCoverage,
@@ -112,6 +114,7 @@ import type {
   ContradictionReport,
   CostReport,
   CrossTenantReport,
+  DisclosureReport,
   ErasureCoverage,
   EvalScore,
   FirewallEfficacy,
@@ -286,6 +289,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const disclosure = useQuery({
+    queryKey: ["disclosure"],
+    queryFn: ({ signal }) => fetchDisclosure(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
   const journey = useQuery({
     queryKey: ["journey"],
     queryFn: ({ signal }) => fetchJourney(signal),
@@ -438,6 +447,8 @@ export function ObservabilityDashboard() {
       <SLOCard data={slo.data} loading={slo.isLoading} />
 
       <AIActCard data={aiAct.data} loading={aiAct.isLoading} />
+
+      <DisclosureCard data={disclosure.data} loading={disclosure.isLoading} />
 
       <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
 
@@ -1183,6 +1194,47 @@ function SftDatasetCard({ data, loading }: { data: SFTDataset | undefined; loadi
                 ))}
               </ul>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DisclosureCard({
+  data,
+  loading,
+}: {
+  data: DisclosureReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const locale = useLocale();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Megaphone className="h-4 w-4 text-blue-500" />
+          {t("disclosure.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <Badge tone={data.enabled && data.all_covered ? "success" : "danger"}>
+                {data.enabled ? t("disclosure.active") : t("disclosure.off")}
+              </Badge>
+              <span className="font-mono text-xs text-[var(--muted-foreground)]">
+                {data.article}
+              </span>
+              <Metric label={t("disclosure.locales")} value={String(data.n_locales)} />
+            </div>
+            <p className="rounded-md bg-[var(--muted)]/40 p-3 text-xs italic">
+              “{data.texts[locale] ?? data.texts.en}”
+            </p>
           </div>
         )}
       </CardContent>

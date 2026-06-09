@@ -30,6 +30,7 @@ from tessera.observability import (
     coverage as coverage_mod,
     cross_tenant as cross_tenant_mod,
     crosslingual as crosslingual_mod,
+    disclosure as disclosure_mod,
     embedding_inversion as embedding_inversion_mod,
     embedding_skew as embedding_skew_mod,
     erasure as erasure_mod,
@@ -622,6 +623,12 @@ async def observability_citation_links() -> dict[str, object]:
             m.group(0).strip() for m in _CITATION_SENTENCE.finditer(bundle.original_answer)
         )
     return asdict(citation_resolver_mod.resolve_citations(citations, sources))
+
+
+@router.get("/observability/disclosure")
+async def observability_disclosure() -> dict[str, object]:
+    """AI-interaction disclosure status and per-locale text (Art. 50, #134)."""
+    return asdict(disclosure_mod.disclosure_status())
 
 
 @router.get("/observability/ai-act")

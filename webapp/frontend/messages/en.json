@@ -443,6 +443,12 @@
       "compliance": "Obligations met",
       "riskClass": "Risk class"
     },
+    "disclosure": {
+      "title": "AI disclosure (Art. 50)",
+      "active": "Active",
+      "off": "Off",
+      "locales": "Locales"
+    },
     "clusters": {
       "title": "Failure clusters (auto-themed)",
       "unavailable": "Embedder unavailable.",

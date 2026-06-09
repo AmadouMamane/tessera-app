@@ -49,6 +49,8 @@ import {
   CrossLingualReportSchema,
   type CrossTenantReport,
   CrossTenantReportSchema,
+  type DisclosureReport,
+  DisclosureReportSchema,
   type EnsembleReport,
   EnsembleReportSchema,
   type ErasureCoverage,
@@ -262,6 +264,11 @@ export async function fetchSiem(signal?: AbortSignal): Promise<SiemExport> {
 /** Resolve answer citations to verifiable corpus sources (clickable, #132). */
 export async function fetchCitationLinks(signal?: AbortSignal): Promise<CitationResolution> {
   return request("/observability/citation-links", { signal }, CitationResolutionSchema);
+}
+
+/** AI-interaction disclosure status and per-locale text (Art. 50, #134). */
+export async function fetchDisclosure(signal?: AbortSignal): Promise<DisclosureReport> {
+  return request("/observability/disclosure", { signal }, DisclosureReportSchema);
 }
 
 /** EU AI Act compliance posture: transparency, oversight, traceability (#76). */
