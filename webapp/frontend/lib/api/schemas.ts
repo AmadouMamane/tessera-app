@@ -312,6 +312,15 @@ export const EnsembleReportSchema = z.object({
 });
 export type EnsembleReport = z.infer<typeof EnsembleReportSchema>;
 
+export const CoverageReportSchema = z.object({
+  n_chunks: z.number().int(),
+  max_similarity: z.number(),
+  mean_similarity: z.number(),
+  covered: z.boolean(),
+  similarities: z.array(z.number()),
+});
+export type CoverageReport = z.infer<typeof CoverageReportSchema>;
+
 export const PerturbationResultSchema = z.object({
   kind: z.string(),
   perturbed_question: z.string(),

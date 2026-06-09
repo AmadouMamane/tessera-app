@@ -465,6 +465,14 @@
       "violations": "Violations",
       "examples": "Exemples",
       "empty": "Aucun argument d'outil observable."
+    },
+    "coverage": {
+      "run": "Couverture",
+      "title": "Couverture du corpus",
+      "covered": "Couvert",
+      "gap": "Lacune de couverture",
+      "best": "meilleure sim.",
+      "chunks": "chunks"
     }
   }
 }

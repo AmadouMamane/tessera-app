@@ -1,7 +1,16 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { EyeOff, Gavel, Play, ScanSearch, ShieldAlert, Shuffle, Waves } from "lucide-react";
+import {
+  Compass,
+  EyeOff,
+  Gavel,
+  Play,
+  ScanSearch,
+  ShieldAlert,
+  Shuffle,
+  Waves,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -15,6 +24,7 @@ import {
   fetchReplays,
   fetchSteganography,
   runConsistency,
+  runCoverage,
   runEnsemble,
   runReplay,
   runRobustness,
@@ -22,6 +32,7 @@ import {
 import type {
   ConsistencyReport,
   CorpusScanReport,
+  CoverageReport,
   EnsembleReport,
   ProvenanceReport,
   ReplayBundle,
@@ -85,6 +96,12 @@ export function ReplayPanel() {
     onSuccess: (res, vars) => setEnsemble((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
+  const [coverage, setCoverage] = useState<Record<string, CoverageReport>>({});
+  const coverageMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => runCoverage(bundleId),
+    onSuccess: (res, vars) => setCoverage((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
 
   return (
@@ -125,6 +142,7 @@ export function ReplayPanel() {
               const scan = scans[b.bundle_id];
               const steg = stego[b.bundle_id];
               const ens = ensemble[b.bundle_id];
+              const cov = coverage[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -213,6 +231,19 @@ export function ReplayPanel() {
                         variant="ghost"
                         className="gap-1.5"
                         disabled={
+                          coverageMutation.isPending &&
+                          coverageMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => coverageMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <Compass className="h-3.5 w-3.5" />
+                        {t("coverage.run")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
                           robustMutation.isPending &&
                           robustMutation.variables?.bundleId === b.bundle_id
                         }
@@ -237,6 +268,7 @@ export function ReplayPanel() {
                   {scan ? <CorpusScanView report={scan} /> : null}
                   {steg ? <StegoView report={steg} /> : null}
                   {ens ? <EnsembleView report={ens} /> : null}
+                  {cov ? <CoverageView report={cov} /> : null}
                   {rob ? <RobustnessView report={rob} /> : null}
                   {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
@@ -349,6 +381,26 @@ function CorpusScanView({ report }: { report: CorpusScanReport }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function CoverageView({ report }: { report: CoverageReport }) {
+  const t = useTranslations("observability");
+  const pct = Math.round(report.max_similarity * 100);
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <Compass className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <span className="text-xs text-[var(--muted-foreground)]">{t("coverage.title")}</span>
+        <Badge tone={report.covered ? "success" : "danger"}>
+          {report.covered ? t("coverage.covered") : t("coverage.gap")}
+        </Badge>
+        <span className="text-xs text-[var(--muted-foreground)]">
+          {t("coverage.best")}: <span className="tabular-nums">{pct}%</span> · {report.n_chunks}{" "}
+          {t("coverage.chunks")}
+        </span>
+      </div>
     </div>
   );
 }

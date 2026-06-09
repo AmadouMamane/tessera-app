@@ -465,6 +465,14 @@
       "violations": "Verstöße",
       "examples": "Beispiele",
       "empty": "Keine beobachtbaren Tool-Argumente."
+    },
+    "coverage": {
+      "run": "Abdeckung",
+      "title": "Korpus-Abdeckung",
+      "covered": "Abgedeckt",
+      "gap": "Abdeckungslücke",
+      "best": "beste Ähnl.",
+      "chunks": "Chunks"
     }
   }
 }

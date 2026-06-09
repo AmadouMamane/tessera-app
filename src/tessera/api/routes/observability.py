@@ -20,6 +20,7 @@ from tessera.observability import (
     consistency as consistency_mod,
     contradiction as contradiction_mod,
     corpus_injection as corpus_injection_mod,
+    coverage as coverage_mod,
     firewall_efficacy as firewall_mod,
     language_routing as language_routing_mod,
     locale_format as locale_format_mod,
@@ -72,6 +73,14 @@ class RobustnessRequest(BaseModel):
 
 class EnsembleRequest(BaseModel):
     """Score a captured turn with a multi-judge ensemble."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bundle_id: str
+
+
+class CoverageRequest(BaseModel):
+    """Measure corpus coverage of a captured turn."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -147,6 +156,17 @@ async def observability_robustness(payload: RobustnessRequest) -> dict[str, obje
     report = await robustness_mod.measure_robustness(
         question=bundle.question, context=bundle.context, model=bundle.original_model
     )
+    return asdict(report)
+
+
+@router.post("/observability/coverage")
+async def observability_coverage(payload: CoverageRequest) -> dict[str, object]:
+    """Measure how well a captured turn's retrieved chunks cover its question."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
+    report = await coverage_mod.measure_coverage(question=bundle.question, chunks=chunks)
     return asdict(report)
 
 

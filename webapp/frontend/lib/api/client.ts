@@ -33,6 +33,8 @@ import {
   ContradictionReportSchema,
   type CorpusScanReport,
   CorpusScanReportSchema,
+  type CoverageReport,
+  CoverageReportSchema,
   type EnsembleReport,
   EnsembleReportSchema,
   type EvalScoresResponse,
@@ -313,6 +315,19 @@ export async function runRobustness(bundleId: string): Promise<RobustnessReport>
       body: JSON.stringify({ bundle_id: bundleId }),
     },
     RobustnessReportSchema,
+  );
+}
+
+/** Measure how well a captured turn's chunks cover its question (#28). */
+export async function runCoverage(bundleId: string): Promise<CoverageReport> {
+  return request(
+    "/observability/coverage",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId }),
+    },
+    CoverageReportSchema,
   );
 }
 
