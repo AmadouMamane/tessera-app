@@ -271,10 +271,20 @@ export const ProvenanceClaimSchema = z.object({
 });
 export type ProvenanceClaim = z.infer<typeof ProvenanceClaimSchema>;
 
+export const UtilizationSchema = z.object({
+  n_chunks: z.number().int(),
+  used_chunks: z.number().int(),
+  dead_chunks: z.number().int(),
+  utilization: z.number(),
+  used_indices: z.array(z.number().int()),
+});
+export type Utilization = z.infer<typeof UtilizationSchema>;
+
 export const ProvenanceReportSchema = z.object({
   n_claims: z.number().int(),
   grounded_fraction: z.number(),
   claims: z.array(ProvenanceClaimSchema),
+  utilization: UtilizationSchema.optional(),
 });
 export type ProvenanceReport = z.infer<typeof ProvenanceReportSchema>;
 

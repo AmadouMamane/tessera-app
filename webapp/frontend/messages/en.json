@@ -305,7 +305,9 @@
     },
     "provenance": {
       "run": "Provenance",
-      "grounded": "Grounded"
+      "grounded": "Grounded",
+      "chunksUsed": "chunks used",
+      "deadContext": "dead context"
     },
     "lineage": {
       "prompt": "prompt",

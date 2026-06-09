@@ -18,6 +18,7 @@ from tessera.observability import (
     firewall_efficacy as firewall_mod,
     provenance as provenance_mod,
     replay as replay_mod,
+    retrieval_quality as retrieval_quality_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.judge import LLMJudge
@@ -118,4 +119,5 @@ async def observability_provenance(bundle_id: str) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
     report = await provenance_mod.attribute(bundle.original_answer, chunks)
-    return asdict(report)
+    util = retrieval_quality_mod.utilization(report, len(chunks))
+    return {**asdict(report), "utilization": asdict(util)}

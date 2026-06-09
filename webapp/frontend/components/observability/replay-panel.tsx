@@ -254,9 +254,16 @@ function ProvenanceView({ report }: { report: ProvenanceReport }) {
   const pct = Math.round(report.grounded_fraction * 100);
   return (
     <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="text-xs text-[var(--muted-foreground)]">{t("provenance.grounded")}</span>
         <Badge tone={pct >= 80 ? "success" : pct >= 50 ? "warning" : "danger"}>{pct}%</Badge>
+        {report.utilization ? (
+          <span className="text-xs text-[var(--muted-foreground)]">
+            · {t("provenance.chunksUsed")} {report.utilization.used_chunks}/
+            {report.utilization.n_chunks} · {t("provenance.deadContext")}{" "}
+            {report.utilization.dead_chunks}
+          </span>
+        ) : null}
       </div>
       <ul className="flex flex-col gap-1.5">
         {report.claims.map((c, i) => (
