@@ -11,11 +11,14 @@ import sys
 from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from tessera.observability import firewall_efficacy as firewall_mod
-from tessera.observability import provenance as provenance_mod
-from tessera.observability import replay as replay_mod
+from tessera.observability import (
+    consistency as consistency_mod,
+    firewall_efficacy as firewall_mod,
+    provenance as provenance_mod,
+    replay as replay_mod,
+)
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.scores import recent_scores
@@ -30,6 +33,15 @@ class ReplayRequest(BaseModel):
 
     bundle_id: str
     model: str
+
+
+class ConsistencyRequest(BaseModel):
+    """Measure self-consistency of a captured turn."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bundle_id: str
+    samples: int = Field(default=3, ge=2, le=8)
 
 
 # Calibration runs the judge over the gold set (slow), so cache it per process.
@@ -75,6 +87,21 @@ async def observability_replay(payload: ReplayRequest) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     result = await replay_mod.replay(bundle, model=payload.model)
     return asdict(result)
+
+
+@router.post("/observability/consistency")
+async def observability_consistency(payload: ConsistencyRequest) -> dict[str, object]:
+    """Measure the self-consistency / uncertainty of a captured turn."""
+    bundle = replay_mod.get_bundle(payload.bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    report = await consistency_mod.measure_consistency(
+        question=bundle.question,
+        context=bundle.context,
+        model=bundle.original_model,
+        samples=payload.samples,
+    )
+    return asdict(report)
 
 
 @router.get("/observability/firewall-efficacy")

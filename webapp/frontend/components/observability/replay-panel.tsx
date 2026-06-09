@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Play, ScanSearch } from "lucide-react";
+import { Play, ScanSearch, Shuffle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -9,8 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchProvenance, fetchReplays, runReplay } from "@/lib/api/client";
-import type { ProvenanceReport, ReplayBundle, ReplayResult } from "@/lib/api/schemas";
+import { fetchProvenance, fetchReplays, runConsistency, runReplay } from "@/lib/api/client";
+import type {
+  ConsistencyReport,
+  ProvenanceReport,
+  ReplayBundle,
+  ReplayResult,
+} from "@/lib/api/schemas";
 
 // Locally-available Ollama models to replay against (smallest first).
 const MODELS = ["llama3.2:3b", "mistral:7b", "gemma3:27b", "llama3.3:70b"] as const;
@@ -35,6 +40,12 @@ export function ReplayPanel() {
   const provMutation = useMutation({
     mutationFn: ({ bundleId }: { bundleId: string }) => fetchProvenance(bundleId),
     onSuccess: (res, vars) => setProvs((prev) => ({ ...prev, [vars.bundleId]: res })),
+  });
+
+  const [consist, setConsist] = useState<Record<string, ConsistencyReport>>({});
+  const consistMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => runConsistency(bundleId),
+    onSuccess: (res, vars) => setConsist((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
@@ -72,6 +83,7 @@ export function ReplayPanel() {
             {bundles.map((b) => {
               const res = results[b.bundle_id];
               const prov = provs[b.bundle_id];
+              const cons = consist[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -106,6 +118,19 @@ export function ReplayPanel() {
                       </Button>
                       <Button
                         size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
+                          consistMutation.isPending &&
+                          consistMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => consistMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <Shuffle className="h-3.5 w-3.5" />
+                        {t("consistency.run")}
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="outline"
                         className="gap-1.5"
                         disabled={pending}
@@ -117,6 +142,7 @@ export function ReplayPanel() {
                     </div>
                   </div>
                   {b.latency_ms ? <LatencyWaterfall timings={b.latency_ms} /> : null}
+                  {cons ? <ConsistencyView report={cons} /> : null}
                   {prov ? <ProvenanceView report={prov} /> : null}
                   {res ? <ReplayResultView res={res} /> : null}
                 </li>
@@ -194,6 +220,31 @@ function LatencyWaterfall({ timings }: { timings: Record<string, number> }) {
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+function ConsistencyView({ report }: { report: ConsistencyReport }) {
+  const t = useTranslations("observability");
+  const pct = Math.round(report.uncertainty * 100);
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-[var(--muted-foreground)]">
+          {t("consistency.uncertainty")}
+        </span>
+        <Badge tone={pct <= 20 ? "success" : pct <= 50 ? "warning" : "danger"}>{pct}%</Badge>
+        <span className="text-xs text-[var(--muted-foreground)]">
+          {report.samples} {t("consistency.samples")}
+        </span>
+      </div>
+      <ul className="mt-2 flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
+        {report.answers.map((a, i) => (
+          <li key={`${i}-${a.slice(0, 16)}`} className="break-words">
+            • {a}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

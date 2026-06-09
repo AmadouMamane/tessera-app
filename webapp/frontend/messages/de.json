@@ -322,6 +322,11 @@
       "f1": "F1",
       "caught": "Erkannt",
       "falsePositive": "Falsch-Positive"
+    },
+    "consistency": {
+      "run": "Unsicherheit",
+      "uncertainty": "Unsicherheit",
+      "samples": "Samples"
     }
   }
 }

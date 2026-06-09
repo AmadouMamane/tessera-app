@@ -21,6 +21,8 @@ import {
   BudgetSnapshotSchema,
   type Calibration,
   CalibrationSchema,
+  type ConsistencyReport,
+  ConsistencyReportSchema,
   type EvalScoresResponse,
   EvalScoresResponseSchema,
   type FirewallEfficacy,
@@ -153,6 +155,19 @@ export async function fetchProvenance(
     `/observability/provenance/${encodeURIComponent(bundleId)}`,
     { signal },
     ProvenanceReportSchema,
+  );
+}
+
+/** Measure self-consistency / uncertainty of a captured turn (samples it N times). */
+export async function runConsistency(bundleId: string, samples = 3): Promise<ConsistencyReport> {
+  return request(
+    "/observability/consistency",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bundle_id: bundleId, samples }),
+    },
+    ConsistencyReportSchema,
   );
 }
 
