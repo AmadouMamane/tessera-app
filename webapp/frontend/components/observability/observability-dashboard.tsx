@@ -19,6 +19,7 @@ import {
   Languages,
   Layers,
   LineChart,
+  ListChecks,
   ListFilter,
   Lock,
   Microscope,
@@ -59,6 +60,7 @@ import {
   fetchPiiLeak,
   fetchRedteam,
   fetchRefusal,
+  fetchRoadmap,
   fetchRouting,
   fetchSLO,
   fetchSessions,
@@ -87,6 +89,7 @@ import type {
   PIILeakSummary,
   RedTeamResponse,
   RefusalReport,
+  RoadmapReport,
   RoutingReport,
   SLOReport,
   SessionReport,
@@ -156,6 +159,12 @@ export function ObservabilityDashboard() {
     queryKey: ["corpus-freshness"],
     queryFn: ({ signal }) => fetchCorpusFreshness(signal),
     refetchInterval: 60_000,
+  });
+
+  const roadmap = useQuery({
+    queryKey: ["roadmap"],
+    queryFn: ({ signal }) => fetchRoadmap(signal),
+    refetchInterval: 20_000,
   });
 
   // Calibration is computed server-side (slow, judge over a gold set) and cached,
@@ -283,6 +292,8 @@ export function ObservabilityDashboard() {
       </div>
 
       <SLOCard data={slo.data} loading={slo.isLoading} />
+
+      <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
 
       <ShadowCard />
 
@@ -684,6 +695,48 @@ function TrendCard({ data, loading }: { data: TrendReport | undefined; loading: 
               <p className="text-xs text-red-600 dark:text-red-400">{t("trend.degradingNote")}</p>
             ) : null}
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RoadmapCard({ data, loading }: { data: RoadmapReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const sevTone = (s: string) => (s === "high" ? "danger" : s === "medium" ? "warning" : "neutral");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <ListChecks className="h-4 w-4 text-blue-500" />
+          {t("roadmap.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_items === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("roadmap.empty")}</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {data.items.map((item) => (
+              <li
+                key={item.signal}
+                className="flex flex-col gap-1 rounded-md border border-[var(--border)] p-3"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={sevTone(item.severity)}>
+                    {t(`roadmap.severity.${item.severity}`)}
+                  </Badge>
+                  <span className="font-medium">{item.theme}</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    {item.evidence} {t("roadmap.evidence")}
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--muted-foreground)]">{item.suggestion}</p>
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>

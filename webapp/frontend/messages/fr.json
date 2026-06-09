@@ -375,6 +375,16 @@
       "stateStale": "périmé",
       "stateFresh": "frais"
     },
+    "roadmap": {
+      "title": "Roadmap produit (depuis la télémétrie)",
+      "empty": "Aucun item — la télémétrie est propre.",
+      "evidence": "obs.",
+      "severity": {
+        "high": "haute",
+        "medium": "moyenne",
+        "low": "basse"
+      }
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",

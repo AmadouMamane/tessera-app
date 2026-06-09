@@ -75,6 +75,8 @@ import {
   ReplaysResponseSchema,
   type RerankContribution,
   RerankContributionSchema,
+  type RoadmapReport,
+  RoadmapReportSchema,
   type RobustnessReport,
   RobustnessReportSchema,
   type RoutingReport,
@@ -213,6 +215,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
     },
     ShadowReportSchema,
   );
+}
+
+/** Telemetry-mined product backlog: ranked roadmap items (#124). */
+export async function fetchRoadmap(signal?: AbortSignal): Promise<RoadmapReport> {
+  return request("/observability/roadmap", { signal }, RoadmapReportSchema);
 }
 
 /** Staleness of the ingested regulatory corpora vs their review horizon (#50). */

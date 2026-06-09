@@ -39,6 +39,7 @@ from tessera.observability import (
     replay as replay_mod,
     reranking_contribution as reranking_contribution_mod,
     retrieval_quality as retrieval_quality_mod,
+    roadmap as roadmap_mod,
     robustness as robustness_mod,
     routing_intent as routing_intent_mod,
     sessions as sessions_mod,
@@ -336,6 +337,42 @@ async def observability_corpus_freshness() -> dict[str, object]:
 
     data_dir = Path(str(resources.files("tessera.corpus.data")))
     return asdict(corpus_freshness_mod.load_corpus_freshness(data_dir))
+
+
+@router.get("/observability/roadmap")
+async def observability_roadmap() -> dict[str, object]:
+    """Mine telemetry signals into a ranked product backlog (#124)."""
+    from importlib import resources
+    from pathlib import Path
+
+    low_threshold = 0.80
+    n_turns = 0
+    n_low = 0
+    languages_low: dict[str, int] = {}
+    for score in recent_scores():
+        if score.get("metric") != "faithfulness":
+            continue
+        n_turns += 1
+        if float(score["score"]) < low_threshold:  # type: ignore[arg-type]
+            n_low += 1
+            lang = score.get("language")
+            key = lang if isinstance(lang, str) else "unknown"
+            languages_low[key] = languages_low.get(key, 0) + 1
+
+    questions = [b.question for b in replay_mod.recent_bundles()]
+    intents = routing_intent_mod.aggregate_intents(questions)
+
+    data_dir = Path(str(resources.files("tessera.corpus.data")))
+    freshness = corpus_freshness_mod.load_corpus_freshness(data_dir)
+
+    signals = roadmap_mod.RoadmapSignals(
+        n_turns=n_turns,
+        n_low_score=n_low,
+        n_unknown_intent=intents.unknown,
+        n_stale_corpora=freshness.n_stale,
+        languages_low=languages_low,
+    )
+    return asdict(roadmap_mod.build_roadmap(signals))
 
 
 @router.get("/observability/embedding-skew")

@@ -375,6 +375,16 @@
       "stateStale": "stale",
       "stateFresh": "fresh"
     },
+    "roadmap": {
+      "title": "Product roadmap (from telemetry)",
+      "empty": "No backlog items — telemetry is clean.",
+      "evidence": "obs.",
+      "severity": {
+        "high": "high",
+        "medium": "medium",
+        "low": "low"
+      }
+    },
     "replay": {
       "title": "Replay (regression from production)",
       "model": "Model",

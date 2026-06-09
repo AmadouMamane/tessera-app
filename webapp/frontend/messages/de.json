@@ -375,6 +375,16 @@
       "stateStale": "veraltet",
       "stateFresh": "frisch"
     },
+    "roadmap": {
+      "title": "Produkt-Roadmap (aus Telemetrie)",
+      "empty": "Keine Backlog-Einträge — Telemetrie ist sauber.",
+      "evidence": "Beob.",
+      "severity": {
+        "high": "hoch",
+        "medium": "mittel",
+        "low": "niedrig"
+      }
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

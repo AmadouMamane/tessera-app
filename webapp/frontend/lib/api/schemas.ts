@@ -748,6 +748,21 @@ export const FreshnessReportSchema = z.object({
 });
 export type FreshnessReport = z.infer<typeof FreshnessReportSchema>;
 
+export const RoadmapItemSchema = z.object({
+  theme: z.string(),
+  signal: z.string(),
+  evidence: z.number().int(),
+  severity: z.enum(["high", "medium", "low"]),
+  suggestion: z.string(),
+});
+
+export const RoadmapReportSchema = z.object({
+  n_turns: z.number().int(),
+  n_items: z.number().int(),
+  items: z.array(RoadmapItemSchema),
+});
+export type RoadmapReport = z.infer<typeof RoadmapReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),
