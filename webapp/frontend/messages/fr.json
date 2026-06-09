@@ -350,6 +350,17 @@
       "budget": "Budget tour",
       "bytesPerTurn": "Télémétrie / tour"
     },
+    "embeddingSkew": {
+      "title": "Skew de version d'embedding",
+      "status": "État",
+      "query": "Embedder requête",
+      "corpus": "Embedder corpus",
+      "severity": {
+        "none": "Synchronisé",
+        "soft": "Skew léger",
+        "hard": "Skew dur"
+      }
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",

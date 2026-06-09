@@ -717,6 +717,19 @@ export const ObsCostReportSchema = z.object({
 });
 export type ObsCostReport = z.infer<typeof ObsCostReportSchema>;
 
+export const SkewReportSchema = z.object({
+  query_model: z.string(),
+  query_dimension: z.number().int(),
+  corpus_model: z.string(),
+  corpus_dimension: z.number().int(),
+  dimension_mismatch: z.boolean(),
+  model_mismatch: z.boolean(),
+  skew: z.boolean(),
+  severity: z.enum(["none", "soft", "hard"]),
+  reason: z.string(),
+});
+export type SkewReport = z.infer<typeof SkewReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

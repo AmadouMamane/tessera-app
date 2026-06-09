@@ -350,6 +350,17 @@
       "budget": "Turn-Budget",
       "bytesPerTurn": "Telemetrie / Turn"
     },
+    "embeddingSkew": {
+      "title": "Embedding-Versions-Skew",
+      "status": "Status",
+      "query": "Query-Embedder",
+      "corpus": "Korpus-Embedder",
+      "severity": {
+        "none": "Synchron",
+        "soft": "Leichter Skew",
+        "hard": "Harter Skew"
+      }
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

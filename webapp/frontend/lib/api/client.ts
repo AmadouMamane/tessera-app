@@ -83,6 +83,8 @@ import {
   SessionReportSchema,
   type ShadowReport,
   ShadowReportSchema,
+  type SkewReport,
+  SkewReportSchema,
   type StegoReport,
   StegoReportSchema,
   type SycophancyReport,
@@ -209,6 +211,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
     },
     ShadowReportSchema,
   );
+}
+
+/** Embedding-version skew between the query-time and corpus embedders (#64). */
+export async function fetchEmbeddingSkew(signal?: AbortSignal): Promise<SkewReport> {
+  return request("/observability/embedding-skew", { signal }, SkewReportSchema);
 }
 
 /** Tail-sampling retention: 100% of slow/low-score traces, sampled head (#32). */

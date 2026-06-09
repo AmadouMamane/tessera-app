@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   BookCheck,
+  Boxes,
   Coins,
   Crosshair,
   ExternalLink,
@@ -45,6 +46,7 @@ import {
   fetchConformance,
   fetchContradictions,
   fetchCost,
+  fetchEmbeddingSkew,
   fetchEvalScores,
   fetchFirewallEfficacy,
   fetchFunnel,
@@ -86,6 +88,7 @@ import type {
   SLOReport,
   SessionReport,
   ShadowReport,
+  SkewReport,
   TailSamplingReport,
   ToolValidity,
   TrendReport,
@@ -136,6 +139,13 @@ export function ObservabilityDashboard() {
   const obsCost = useQuery({
     queryKey: ["obs-cost"],
     queryFn: ({ signal }) => fetchObsCost(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  // Embedding fingerprint is stable per process; fetch once.
+  const embeddingSkew = useQuery({
+    queryKey: ["embedding-skew"],
+    queryFn: ({ signal }) => fetchEmbeddingSkew(signal),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -272,6 +282,8 @@ export function ObservabilityDashboard() {
       <TrendCard data={trend.data} loading={trend.isLoading} />
 
       <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
+
+      <EmbeddingSkewCard data={embeddingSkew.data} loading={embeddingSkew.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -660,6 +672,47 @@ function TrendCard({ data, loading }: { data: TrendReport | undefined; loading: 
             {data.degrading ? (
               <p className="text-xs text-red-600 dark:text-red-400">{t("trend.degradingNote")}</p>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmbeddingSkewCard({ data, loading }: { data: SkewReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const tone =
+    !data || data.severity === "none" ? "success" : data.severity === "soft" ? "warning" : "danger";
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Boxes className="h-4 w-4 text-blue-500" />
+          {t("embeddingSkew.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("embeddingSkew.status")}
+                </span>
+                <Badge tone={tone}>{t(`embeddingSkew.severity.${data.severity}`)}</Badge>
+              </div>
+              <Metric
+                label={t("embeddingSkew.query")}
+                value={`${data.query_model} · ${data.query_dimension}d`}
+              />
+              <Metric
+                label={t("embeddingSkew.corpus")}
+                value={`${data.corpus_model} · ${data.corpus_dimension}d`}
+              />
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)]">{data.reason}</p>
           </div>
         )}
       </CardContent>

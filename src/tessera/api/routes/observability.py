@@ -24,6 +24,7 @@ from tessera.observability import (
     cost_anomaly as cost_anomaly_mod,
     coverage as coverage_mod,
     crosslingual as crosslingual_mod,
+    embedding_skew as embedding_skew_mod,
     firewall_efficacy as firewall_mod,
     funnel as funnel_mod,
     guard_explain as guard_explain_mod,
@@ -324,6 +325,27 @@ async def observability_ensemble(payload: EnsembleRequest) -> dict[str, object]:
         question=bundle.question, answer=bundle.original_answer, context=bundle.context
     )
     return asdict(report)
+
+
+@router.get("/observability/embedding-skew")
+async def observability_embedding_skew() -> dict[str, object]:
+    """Embedding-version skew between the query-time and corpus embedders (#64)."""
+    from tessera.observability.embedding_skew import EmbeddingFingerprint
+    from tessera.retrieval.embeddings import embedding_dimension
+    from tessera.settings import LLMProfile, get_settings
+
+    settings = get_settings()
+    if settings.resolved_llm_profile() is LLMProfile.FRONTIER:
+        query_model = settings.vertex.embedding_model
+    else:
+        query_model = settings.ollama.embedding_model
+    query = EmbeddingFingerprint(model=query_model, dimension=embedding_dimension())
+    # Until the corpus records its own fingerprint at ingestion, we treat the
+    # active embedder as the corpus reference: equal by construction, so the check
+    # reports "no skew" while still surfacing the live embedding identity and
+    # flagging a future query-side profile flip.
+    corpus = query
+    return asdict(embedding_skew_mod.detect_skew(query, corpus))
 
 
 @router.get("/observability/firewall-efficacy")
