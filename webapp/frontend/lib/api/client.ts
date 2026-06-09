@@ -77,6 +77,8 @@ import {
   ObsCostReportSchema,
   type PIILeakSummary,
   PIILeakSummarySchema,
+  type PlaybookReport,
+  PlaybookReportSchema,
   type PredictorEvaluation,
   PredictorEvaluationSchema,
   type PrivilegeReport,
@@ -242,6 +244,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Incident playbooks triggered by the current live signals (#115). */
+export async function fetchPlaybooks(signal?: AbortSignal): Promise<PlaybookReport> {
+  return request("/observability/playbooks", { signal }, PlaybookReportSchema);
 }
 
 /** Tool least-privilege: granted vs actually-used tools from the audit (#101). */

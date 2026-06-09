@@ -930,6 +930,19 @@ export const PrivilegeReportSchema = z.object({
 });
 export type PrivilegeReport = z.infer<typeof PrivilegeReportSchema>;
 
+export const PlaybookSchema = z.object({
+  incident: z.string(),
+  severity: z.enum(["critical", "high", "medium"]),
+  trigger: z.string(),
+  steps: z.array(z.string()),
+});
+
+export const PlaybookReportSchema = z.object({
+  n_triggered: z.number().int(),
+  playbooks: z.array(PlaybookSchema),
+});
+export type PlaybookReport = z.infer<typeof PlaybookReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

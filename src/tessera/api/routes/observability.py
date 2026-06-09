@@ -42,6 +42,7 @@ from tessera.observability import (
     memory_obs as memory_obs_mod,
     obs_cost as obs_cost_mod,
     pii_leak as pii_leak_mod,
+    playbooks as playbooks_mod,
     provenance as provenance_mod,
     redteam as redteam_mod,
     refusal as refusal_mod,
@@ -572,6 +573,36 @@ async def observability_least_privilege() -> dict[str, object]:
         if isinstance(target, str) and not target.startswith("memory."):
             usage[target] = usage.get(target, 0) + 1
     return asdict(least_privilege_mod.analyze_privilege(_GRANTED_TOOLS, usage))
+
+
+@router.get("/observability/playbooks")
+async def observability_playbooks() -> dict[str, object]:
+    """Incident playbooks triggered by the current live signals (#115)."""
+    bundles = replay_mod.recent_bundles()
+    faithfulness = [
+        float(s["score"])  # type: ignore[arg-type]
+        for s in recent_scores()
+        if s.get("metric") == "faithfulness"
+    ]
+    low_rate = (
+        sum(1 for s in faithfulness if s < 0.80) / len(faithfulness) if faithfulness else 0.0
+    )
+    snapshots = redteam_mod.recent_snapshots()
+    jailbreak_rate = snapshots[-1].attack_success_rate if snapshots else 0.0
+    pii = pii_leak_mod.aggregate_leaks(
+        [(b.original_answer, f"{b.question}\n{b.context}") for b in bundles]
+    )
+    cost = cost_anomaly_mod.analyze_costs(
+        [(b.question, f"{b.question}\n{b.context}\n{b.original_answer}") for b in bundles]
+    )
+    signals = playbooks_mod.PlaybookSignals(
+        low_score_rate=low_rate,
+        n_scores=len(faithfulness),
+        jailbreak_success_rate=jailbreak_rate,
+        pii_leak_rate=pii.leak_rate,
+        cost_anomalies=cost.n_anomalies,
+    )
+    return asdict(playbooks_mod.trigger_playbooks(signals))
 
 
 @router.get("/observability/cross-tenant")

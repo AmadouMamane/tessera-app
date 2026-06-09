@@ -429,6 +429,15 @@
         "low": "niedrig"
       }
     },
+    "playbooks": {
+      "title": "Incident-Playbooks",
+      "clear": "Keine aktiven Vorfälle — alles in Ordnung.",
+      "severity": {
+        "critical": "kritisch",
+        "high": "hoch",
+        "medium": "mittel"
+      }
+    },
     "clusters": {
       "title": "Failure-Cluster (auto-thematisiert)",
       "unavailable": "Embedder nicht verfügbar.",

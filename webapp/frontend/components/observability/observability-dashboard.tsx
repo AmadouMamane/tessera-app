@@ -35,6 +35,7 @@ import {
   Route,
   Scale,
   ShieldCheck,
+  Siren,
   SlidersHorizontal,
   Sparkles,
   Sprout,
@@ -77,6 +78,7 @@ import {
   fetchMemoryObs,
   fetchObsCost,
   fetchPiiLeak,
+  fetchPlaybooks,
   fetchRedteam,
   fetchRefusal,
   fetchRoadmap,
@@ -115,6 +117,7 @@ import type {
   MemoryObsReport,
   ObsCostReport,
   PIILeakSummary,
+  PlaybookReport,
   PredictorEvaluation,
   PrivilegeReport,
   RedTeamResponse,
@@ -239,6 +242,12 @@ export function ObservabilityDashboard() {
   const leastPrivilege = useQuery({
     queryKey: ["least-privilege"],
     queryFn: ({ signal }) => fetchLeastPrivilege(signal),
+    refetchInterval: 15_000,
+  });
+
+  const playbooks = useQuery({
+    queryKey: ["playbooks"],
+    queryFn: ({ signal }) => fetchPlaybooks(signal),
     refetchInterval: 15_000,
   });
 
@@ -392,6 +401,8 @@ export function ObservabilityDashboard() {
       </div>
 
       <SLOCard data={slo.data} loading={slo.isLoading} />
+
+      <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
 
       <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
 
@@ -1130,6 +1141,49 @@ function SftDatasetCard({ data, loading }: { data: SFTDataset | undefined; loadi
               </ul>
             ) : null}
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlaybooksCard({ data, loading }: { data: PlaybookReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const sevTone = (s: string) =>
+    s === "critical" ? "danger" : s === "high" ? "warning" : "neutral";
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Siren className="h-4 w-4 text-blue-500" />
+          {t("playbooks.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_triggered === 0 ? (
+          <p className="text-sm text-emerald-600 dark:text-emerald-400">{t("playbooks.clear")}</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {data.playbooks.map((p) => (
+              <li
+                key={p.incident}
+                className="flex flex-col gap-1.5 rounded-md border border-[var(--border)] p-3"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={sevTone(p.severity)}>{t(`playbooks.severity.${p.severity}`)}</Badge>
+                  <span className="font-medium">{p.incident}</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">{p.trigger}</span>
+                </div>
+                <ol className="ml-4 flex list-decimal flex-col gap-0.5 text-xs text-[var(--muted-foreground)]">
+                  {p.steps.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ol>
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>

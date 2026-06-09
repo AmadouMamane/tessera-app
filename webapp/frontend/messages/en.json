@@ -429,6 +429,15 @@
         "low": "low"
       }
     },
+    "playbooks": {
+      "title": "Incident playbooks",
+      "clear": "No active incidents — all clear.",
+      "severity": {
+        "critical": "critical",
+        "high": "high",
+        "medium": "medium"
+      }
+    },
     "clusters": {
       "title": "Failure clusters (auto-themed)",
       "unavailable": "Embedder unavailable.",
