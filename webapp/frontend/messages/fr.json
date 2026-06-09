@@ -380,6 +380,16 @@
       "leaked": "PII fuitées",
       "examples": "Exemples (masqués)",
       "empty": "Aucun tour capturé."
+    },
+    "redteam": {
+      "title": "Red-team continu (dérive jailbreak)",
+      "run": "Lancer",
+      "running": "Test…",
+      "successRate": "Taux de réussite d'attaque",
+      "blocked": "Bloqués",
+      "bypassed": "Contournements",
+      "drift": "Dérive (%)",
+      "empty": "Lancez le red-team pour mesurer le taux de réussite d'attaque."
     }
   }
 }

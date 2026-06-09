@@ -380,6 +380,16 @@
       "leaked": "Geleakte PII",
       "examples": "Beispiele (maskiert)",
       "empty": "Keine erfassten Turns."
+    },
+    "redteam": {
+      "title": "Kontinuierliches Red-Teaming (Jailbreak-Drift)",
+      "run": "Starten",
+      "running": "Test…",
+      "successRate": "Angriffserfolgsrate",
+      "blocked": "Blockiert",
+      "bypassed": "Umgehungen",
+      "drift": "Drift (%)",
+      "empty": "Starten Sie das Red-Team, um die Angriffserfolgsrate zu messen."
     }
   }
 }

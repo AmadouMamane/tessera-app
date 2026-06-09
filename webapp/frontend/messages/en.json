@@ -380,6 +380,16 @@
       "leaked": "PII leaked",
       "examples": "Examples (masked)",
       "empty": "No captured turns yet."
+    },
+    "redteam": {
+      "title": "Continuous red-team (jailbreak drift)",
+      "run": "Run",
+      "running": "Testing…",
+      "successRate": "Attack-success rate",
+      "blocked": "Blocked",
+      "bypassed": "Bypasses",
+      "drift": "Drift (%)",
+      "empty": "Run the red-team to measure the attack-success rate."
     }
   }
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  Crosshair,
   ExternalLink,
   Gauge,
   Languages,
@@ -17,6 +18,7 @@ import type { ReactNode } from "react";
 
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -24,15 +26,18 @@ import {
   fetchEvalScores,
   fetchFirewallEfficacy,
   fetchPiiLeak,
+  fetchRedteam,
   fetchRouting,
   fetchSessions,
   fetchToolValidity,
+  runRedteam,
 } from "@/lib/api/client";
 import type {
   Calibration,
   EvalScore,
   FirewallEfficacy,
   PIILeakSummary,
+  RedTeamResponse,
   RoutingReport,
   SessionReport,
   ToolValidity,
@@ -118,6 +123,8 @@ export function ObservabilityDashboard() {
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
       <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
+
+      <RedTeamCard />
 
       <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
 
@@ -292,6 +299,95 @@ function FirewallEfficacyCard({
                 {data.false_positive}
               </Badge>
             </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RedTeamCard() {
+  const t = useTranslations("observability");
+  const query = useQuery({
+    queryKey: ["redteam"],
+    queryFn: ({ signal }) => fetchRedteam(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const mutation = useMutation({
+    mutationFn: () => runRedteam(),
+    onSuccess: (res: RedTeamResponse) => query.refetch().then(() => res),
+  });
+
+  const data = mutation.data ?? query.data;
+  const snapshots = data?.snapshots ?? [];
+  const latest = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
+  const pct = latest ? Math.round(latest.attack_success_rate * 100) : 0;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="flex items-center gap-2">
+            <Crosshair className="h-4 w-4 text-blue-500" />
+            {t("redteam.title")}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending ? t("redteam.running") : t("redteam.run")}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {!latest ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("redteam.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("redteam.successRate")}
+                </span>
+                <Badge tone={pct === 0 ? "success" : pct <= 20 ? "warning" : "danger"}>
+                  {pct}%
+                </Badge>
+              </div>
+              <Metric
+                label={t("redteam.blocked")}
+                value={`${latest.n_blocked}/${latest.n_attacks}`}
+              />
+              <Metric label={t("redteam.bypassed")} value={String(latest.n_bypassed)} />
+              {snapshots.length > 1 ? (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    {t("redteam.drift")}
+                  </span>
+                  <span className="flex items-center gap-1 font-mono text-xs tabular-nums">
+                    {snapshots.slice(-8).map((s, i) => (
+                      <span key={`${s.ran_at}-${i}`}>
+                        {Math.round(s.attack_success_rate * 100)}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+            {latest.bypassed_samples.length > 0 ? (
+              <ul className="flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
+                {latest.bypassed_samples.map((s, i) => (
+                  <li key={`${i}-${s.slice(0, 16)}`} className="flex items-start gap-2">
+                    <span
+                      aria-hidden
+                      className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500"
+                    />
+                    <span className="min-w-0 break-words">{s}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         )}
       </CardContent>

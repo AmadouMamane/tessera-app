@@ -35,6 +35,8 @@ import {
   PIILeakSummarySchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
+  type RedTeamResponse,
+  RedTeamResponseSchema,
   type ReplayResult,
   ReplayResultSchema,
   type ReplaysResponse,
@@ -163,6 +165,16 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Recorded jailbreak-drift snapshots (continuous red-team, #24). */
+export async function fetchRedteam(signal?: AbortSignal): Promise<RedTeamResponse> {
+  return request("/observability/redteam", { signal }, RedTeamResponseSchema);
+}
+
+/** Run the adversarial corpus through the guard and record a snapshot (#24). */
+export async function runRedteam(): Promise<RedTeamResponse> {
+  return request("/observability/redteam", { method: "POST" }, RedTeamResponseSchema);
 }
 
 /** Output PII-leak rate: PII in answers absent from their grounding (#38). */

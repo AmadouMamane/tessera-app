@@ -20,11 +20,12 @@ from tessera.observability import (
     language_routing as language_routing_mod,
     pii_leak as pii_leak_mod,
     provenance as provenance_mod,
+    redteam as redteam_mod,
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
     robustness as robustness_mod,
-    steganography as steganography_mod,
     sessions as sessions_mod,
+    steganography as steganography_mod,
     tool_validity as tool_validity_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
@@ -136,6 +137,22 @@ async def observability_robustness(payload: RobustnessRequest) -> dict[str, obje
 async def observability_firewall_efficacy() -> dict[str, object]:
     """Detection efficacy of the guard over injection vs benign inputs."""
     return asdict(firewall_mod.compute_efficacy())
+
+
+@router.get("/observability/redteam")
+async def observability_redteam() -> dict[str, object]:
+    """Return the recorded jailbreak-drift snapshots (newest last)."""
+    return {"snapshots": [asdict(s) for s in redteam_mod.recent_snapshots()]}
+
+
+@router.post("/observability/redteam")
+async def observability_redteam_run() -> dict[str, object]:
+    """Run the adversarial corpus through the guard and record a snapshot."""
+    snapshot = redteam_mod.run_redteam()
+    return {
+        "latest": asdict(snapshot),
+        "snapshots": [asdict(s) for s in redteam_mod.recent_snapshots()],
+    }
 
 
 @router.get("/observability/tool-validity")

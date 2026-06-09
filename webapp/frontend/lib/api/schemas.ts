@@ -368,6 +368,21 @@ export const StegoReportSchema = z.object({
 });
 export type StegoReport = z.infer<typeof StegoReportSchema>;
 
+export const RedTeamSnapshotSchema = z.object({
+  ran_at: z.string(),
+  n_attacks: z.number().int(),
+  n_blocked: z.number().int(),
+  n_bypassed: z.number().int(),
+  attack_success_rate: z.number(),
+  bypassed_samples: z.array(z.string()),
+});
+export type RedTeamSnapshot = z.infer<typeof RedTeamSnapshotSchema>;
+
+export const RedTeamResponseSchema = z.object({
+  snapshots: z.array(RedTeamSnapshotSchema),
+});
+export type RedTeamResponse = z.infer<typeof RedTeamResponseSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),
