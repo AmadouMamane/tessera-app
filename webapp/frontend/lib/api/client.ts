@@ -59,6 +59,8 @@ import {
   StegoReportSchema,
   type ToolValidity,
   ToolValiditySchema,
+  type Trajectory,
+  TrajectorySchema,
   type WhatChanged,
   WhatChangedSchema,
 } from "./schemas";
@@ -215,6 +217,15 @@ export async function fetchPiiLeak(signal?: AbortSignal): Promise<PIILeakSummary
 /** Session-level goal-completion analytics. */
 export async function fetchSessions(signal?: AbortSignal): Promise<SessionReport> {
   return request("/observability/sessions", { signal }, SessionReportSchema);
+}
+
+/** Step-by-step trajectory of a captured turn — session theater (#40/#113). */
+export async function fetchTrajectory(bundleId: string, signal?: AbortSignal): Promise<Trajectory> {
+  return request(
+    `/observability/trajectory/${encodeURIComponent(bundleId)}`,
+    { signal },
+    TrajectorySchema,
+  );
 }
 
 /** Captured production turns available for regression replay. */

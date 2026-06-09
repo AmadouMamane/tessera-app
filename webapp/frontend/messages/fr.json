@@ -435,6 +435,12 @@
       "under": "Sous-refus (interdit)",
       "legit": "légitimes refusés",
       "forbidden": "interdits passés"
+    },
+    "theater": {
+      "title": "Session Theater (time-travel)",
+      "empty": "Aucun tour capturé — chatte pour en capturer.",
+      "loading": "Chargement de la trajectoire…",
+      "score": "score"
     }
   }
 }

@@ -435,6 +435,12 @@
       "under": "Under-refusal (forbidden)",
       "legit": "legit refused",
       "forbidden": "forbidden allowed"
+    },
+    "theater": {
+      "title": "Session Theater (time-travel)",
+      "empty": "No captured turns — chat to capture some.",
+      "loading": "Loading trajectory…",
+      "score": "score"
     }
   }
 }

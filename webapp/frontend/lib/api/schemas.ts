@@ -462,6 +462,27 @@ export const RefusalReportSchema = z.object({
 });
 export type RefusalReport = z.infer<typeof RefusalReportSchema>;
 
+export const TrajectoryStepSchema = z.object({
+  index: z.number().int(),
+  kind: z.string(),
+  title: z.string(),
+  detail: z.string(),
+  duration_ms: z.number(),
+  status: z.string(),
+});
+
+export const TrajectorySchema = z.object({
+  bundle_id: z.string(),
+  language: z.string(),
+  model: z.string(),
+  score: z.number(),
+  total_ms: z.number(),
+  n_steps: z.number().int(),
+  steps: z.array(TrajectoryStepSchema),
+});
+export type Trajectory = z.infer<typeof TrajectorySchema>;
+export type TrajectoryStep = z.infer<typeof TrajectoryStepSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

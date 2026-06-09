@@ -30,6 +30,7 @@ from tessera.observability import (
     sessions as sessions_mod,
     steganography as steganography_mod,
     tool_validity as tool_validity_mod,
+    trajectory as trajectory_mod,
     whatchanged as whatchanged_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
@@ -286,6 +287,15 @@ async def observability_steganography(bundle_id: str) -> dict[str, object]:
     if bundle is None:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     return asdict(steganography_mod.scan_text(f"{bundle.question}\n{bundle.context}"))
+
+
+@router.get("/observability/trajectory/{bundle_id}")
+async def observability_trajectory(bundle_id: str) -> dict[str, object]:
+    """Step-by-step trajectory of a captured turn (session theater)."""
+    bundle = replay_mod.get_bundle(bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    return asdict(trajectory_mod.build_trajectory(bundle))
 
 
 @router.get("/observability/provenance/{bundle_id}")

@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { ReplayPanel } from "@/components/observability/replay-panel";
+import { SessionTheater } from "@/components/observability/session-theater";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,6 +178,8 @@ export function ObservabilityDashboard() {
       <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
 
       <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
+
+      <SessionTheater />
 
       <ReplayPanel />
 
