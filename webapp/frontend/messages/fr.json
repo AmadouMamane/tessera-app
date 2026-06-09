@@ -304,6 +304,19 @@
       "bad": "Sous le seuil",
       "breaching": "Le budget d'erreur se consomme plus vite qu'il ne se reconstitue — la qualité régresse."
     },
+    "shadow": {
+      "title": "Trafic fantôme (shadow)",
+      "run": "Lancer le shadow",
+      "running": "Réplication…",
+      "empty": "Choisissez un modèle candidat et lancez pour répliquer le trafic récent.",
+      "noTraffic": "Aucun tour capturé à répliquer pour l'instant.",
+      "delta": "Δ moyen",
+      "wins": "Gains",
+      "losses": "Pertes",
+      "ties": "Nuls",
+      "scores": "Original → candidat",
+      "similarity": "Similarité moyenne"
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",

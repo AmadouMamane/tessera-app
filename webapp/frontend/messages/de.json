@@ -304,6 +304,19 @@
       "bad": "Unter Schwelle",
       "breaching": "Das Fehlerbudget wird schneller verbraucht als es sich auffüllt — die Qualität verschlechtert sich."
     },
+    "shadow": {
+      "title": "Shadow-/Spiegelverkehr",
+      "run": "Shadow starten",
+      "running": "Spiegelung…",
+      "empty": "Kandidatenmodell wählen und starten, um aktuellen Verkehr zu spiegeln.",
+      "noTraffic": "Noch keine erfassten Turns zum Spiegeln.",
+      "delta": "Mittl. Δ",
+      "wins": "Gewinne",
+      "losses": "Verluste",
+      "ties": "Unentschieden",
+      "scores": "Original → Kandidat",
+      "similarity": "Mittl. Ähnlichkeit"
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

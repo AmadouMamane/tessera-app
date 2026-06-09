@@ -619,6 +619,30 @@ export const SLOReportSchema = z.object({
 });
 export type SLOReport = z.infer<typeof SLOReportSchema>;
 
+export const ShadowComparisonSchema = z.object({
+  question: z.string(),
+  language: z.string(),
+  original_score: z.number(),
+  candidate_score: z.number(),
+  score_delta: z.number(),
+  similarity: z.number(),
+  outcome: z.enum(["win", "loss", "tie"]),
+});
+
+export const ShadowReportSchema = z.object({
+  candidate_model: z.string(),
+  n_compared: z.number().int(),
+  wins: z.number().int(),
+  losses: z.number().int(),
+  ties: z.number().int(),
+  mean_delta: z.number(),
+  mean_similarity: z.number(),
+  mean_original_score: z.number(),
+  mean_candidate_score: z.number(),
+  comparisons: z.array(ShadowComparisonSchema),
+});
+export type ShadowReport = z.infer<typeof ShadowReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

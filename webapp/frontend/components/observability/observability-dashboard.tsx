@@ -15,6 +15,7 @@ import {
   Hash,
   Landmark,
   Languages,
+  Layers,
   LineChart,
   Lock,
   Receipt,
@@ -26,7 +27,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
@@ -56,6 +57,7 @@ import {
   fetchToolValidity,
   fetchWhatChanged,
   runRedteam,
+  runShadow,
 } from "@/lib/api/client";
 import type {
   AnomalyReport,
@@ -76,9 +78,13 @@ import type {
   RoutingReport,
   SLOReport,
   SessionReport,
+  ShadowReport,
   ToolValidity,
   WhatChanged,
 } from "@/lib/api/schemas";
+
+// Locally-available Ollama models to shadow against (smallest first).
+const SHADOW_MODELS = ["llama3.2:3b", "mistral:7b", "gemma3:27b", "llama3.3:70b"] as const;
 
 const POLL_MS = 5_000;
 const PHOENIX_URL = process.env.NEXT_PUBLIC_PHOENIX_URL ?? "http://localhost:16006";
@@ -230,6 +236,8 @@ export function ObservabilityDashboard() {
       </div>
 
       <SLOCard data={slo.data} loading={slo.isLoading} />
+
+      <ShadowCard />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -404,6 +412,94 @@ function SLOCard({ data, loading }: { data: SLOReport | undefined; loading: bool
             {data.breaching ? (
               <p className="text-xs text-red-600 dark:text-red-400">{t("slo.breaching")}</p>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ShadowCard() {
+  const t = useTranslations("observability");
+  const [model, setModel] = useState<string>(SHADOW_MODELS[1]);
+  const mutation = useMutation({
+    mutationFn: () => runShadow(model),
+  });
+  const data: ShadowReport | undefined = mutation.data;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-blue-500" />
+            {t("shadow.title")}
+          </span>
+          <div className="flex items-center gap-2">
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs"
+            >
+              {SHADOW_MODELS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? t("shadow.running") : t("shadow.run")}
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {!data ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("shadow.empty")}</p>
+        ) : data.n_compared === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("shadow.noTraffic")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">{t("shadow.delta")}</span>
+                <Badge tone={data.mean_delta >= 0 ? "success" : "danger"}>
+                  {data.mean_delta >= 0 ? "+" : ""}
+                  {data.mean_delta.toFixed(2)}
+                </Badge>
+              </div>
+              <Metric label={t("shadow.wins")} value={String(data.wins)} />
+              <Metric label={t("shadow.losses")} value={String(data.losses)} />
+              <Metric label={t("shadow.ties")} value={String(data.ties)} />
+              <Metric
+                label={t("shadow.scores")}
+                value={`${data.mean_original_score.toFixed(2)} → ${data.mean_candidate_score.toFixed(2)}`}
+              />
+              <Metric
+                label={t("shadow.similarity")}
+                value={`${Math.round(data.mean_similarity * 100)}%`}
+              />
+            </div>
+            <ul className="flex flex-col gap-1 text-xs">
+              {data.comparisons.map((c, i) => (
+                <li key={`${i}-${c.question.slice(0, 12)}`} className="flex items-center gap-2">
+                  <Badge
+                    tone={
+                      c.outcome === "win" ? "success" : c.outcome === "loss" ? "danger" : "neutral"
+                    }
+                  >
+                    {c.outcome === "win" ? "+" : c.outcome === "loss" ? "" : "±"}
+                    {c.score_delta.toFixed(2)}
+                  </Badge>
+                  <span className="uppercase text-[var(--muted-foreground)]">{c.language}</span>
+                  <span className="min-w-0 truncate">{c.question}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </CardContent>

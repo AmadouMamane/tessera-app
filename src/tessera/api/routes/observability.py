@@ -37,6 +37,7 @@ from tessera.observability import (
     robustness as robustness_mod,
     routing_intent as routing_intent_mod,
     sessions as sessions_mod,
+    shadow as shadow_mod,
     slo as slo_mod,
     steganography as steganography_mod,
     tool_validity as tool_validity_mod,
@@ -110,6 +111,15 @@ class CrossLingualRequest(BaseModel):
     bundle_id: str
 
 
+class ShadowRequest(BaseModel):
+    """Mirror a batch of captured turns to a candidate model (shadow)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    model: str
+    limit: int = Field(default=10, ge=1, le=50)
+
+
 # Calibration runs the judge over the gold set (slow), so cache it per process.
 _calibration_cache: dict[str, object] | None = None
 
@@ -129,6 +139,15 @@ async def observability_slo() -> dict[str, object]:
         if s.get("metric") == "faithfulness"
     ]
     return asdict(slo_mod.compute_slo(faithfulness))
+
+
+@router.post("/observability/shadow")
+async def observability_shadow(payload: ShadowRequest) -> dict[str, object]:
+    """Mirror recent captured turns to a candidate model and compare (shadow)."""
+    report = await shadow_mod.run_shadow(
+        replay_mod.recent_bundles(), model=payload.model, limit=payload.limit
+    )
+    return asdict(report)
 
 
 @router.get("/observability/calibration")

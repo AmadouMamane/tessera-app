@@ -304,6 +304,19 @@
       "bad": "Below bar",
       "breaching": "Burning the error budget faster than it replenishes — quality is regressing."
     },
+    "shadow": {
+      "title": "Shadow / mirror traffic",
+      "run": "Run shadow",
+      "running": "Mirroring…",
+      "empty": "Pick a candidate model and run to mirror recent traffic.",
+      "noTraffic": "No captured turns to mirror yet.",
+      "delta": "Mean Δ",
+      "wins": "Wins",
+      "losses": "Losses",
+      "ties": "Ties",
+      "scores": "Original → candidate",
+      "similarity": "Mean similarity"
+    },
     "replay": {
       "title": "Replay (regression from production)",
       "model": "Model",

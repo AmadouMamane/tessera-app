@@ -75,6 +75,8 @@ import {
   SLOReportSchema,
   type SessionReport,
   SessionReportSchema,
+  type ShadowReport,
+  ShadowReportSchema,
   type StegoReport,
   StegoReportSchema,
   type SycophancyReport,
@@ -184,6 +186,19 @@ export async function fetchEvalScores(signal?: AbortSignal): Promise<EvalScoresR
 /** Quality SLO + error-budget burn-rate over the recent faithfulness scores (#15). */
 export async function fetchSLO(signal?: AbortSignal): Promise<SLOReport> {
   return request("/observability/slo", { signal }, SLOReportSchema);
+}
+
+/** Mirror recent captured turns to a candidate model and compare (shadow, #16). */
+export async function runShadow(model: string, limit = 10): Promise<ShadowReport> {
+  return request(
+    "/observability/shadow",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model, limit }),
+    },
+    ShadowReportSchema,
+  );
 }
 
 /** Judge calibration against the human gold set (computed server-side, cached). */
