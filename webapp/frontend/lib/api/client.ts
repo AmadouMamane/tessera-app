@@ -37,6 +37,8 @@ import {
   ReplaysResponseSchema,
   type RobustnessReport,
   RobustnessReportSchema,
+  type ToolValidity,
+  ToolValiditySchema,
 } from "./schemas";
 
 const BASE = "/api";
@@ -141,6 +143,11 @@ export async function fetchCalibration(signal?: AbortSignal): Promise<Calibratio
 /** Guard/firewall detection efficacy over injection vs benign inputs. */
 export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<FirewallEfficacy> {
   return request("/observability/firewall-efficacy", { signal }, FirewallEfficacySchema);
+}
+
+/** Tool-call validity (allowed vs denied, argument failures) from the audit trail. */
+export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValidity> {
+  return request("/observability/tool-validity", { signal }, ToolValiditySchema);
 }
 
 /** Captured production turns available for regression replay. */

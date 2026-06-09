@@ -335,6 +335,14 @@
       "baseline": "Baseline",
       "similarity": "stability",
       "minFaith": "min faithfulness"
+    },
+    "tools": {
+      "title": "Tool-call validity",
+      "validity": "Validity",
+      "allowed": "Allowed",
+      "denied": "Denied",
+      "argFailures": "Arg failures",
+      "empty": "No tool calls yet."
     }
   }
 }

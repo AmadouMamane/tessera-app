@@ -311,6 +311,16 @@ export const RobustnessReportSchema = z.object({
 });
 export type RobustnessReport = z.infer<typeof RobustnessReportSchema>;
 
+export const ToolValiditySchema = z.object({
+  total: z.number().int(),
+  allowed: z.number().int(),
+  denied: z.number().int(),
+  errored: z.number().int(),
+  arg_failures: z.number().int(),
+  validity_rate: z.number(),
+});
+export type ToolValidity = z.infer<typeof ToolValiditySchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

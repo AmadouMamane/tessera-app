@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Gauge, LineChart, Scale, ShieldCheck } from "lucide-react";
+import { ExternalLink, Gauge, LineChart, Scale, ShieldCheck, Wrench } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
@@ -9,8 +9,13 @@ import { ReplayPanel } from "@/components/observability/replay-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchCalibration, fetchEvalScores, fetchFirewallEfficacy } from "@/lib/api/client";
-import type { Calibration, EvalScore, FirewallEfficacy } from "@/lib/api/schemas";
+import {
+  fetchCalibration,
+  fetchEvalScores,
+  fetchFirewallEfficacy,
+  fetchToolValidity,
+} from "@/lib/api/client";
+import type { Calibration, EvalScore, FirewallEfficacy, ToolValidity } from "@/lib/api/schemas";
 
 const POLL_MS = 5_000;
 const PHOENIX_URL = process.env.NEXT_PUBLIC_PHOENIX_URL ?? "http://localhost:16006";
@@ -45,6 +50,12 @@ export function ObservabilityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
 
+  const tools = useQuery({
+    queryKey: ["tool-validity"],
+    queryFn: ({ signal }) => fetchToolValidity(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -68,6 +79,8 @@ export function ObservabilityDashboard() {
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
       <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
+
+      <ToolValidityCard data={tools.data} loading={tools.isLoading} />
 
       <ReplayPanel />
 
@@ -234,6 +247,44 @@ function FirewallEfficacyCard({
                 {data.false_positive}
               </Badge>
             </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ToolValidityCard({
+  data,
+  loading,
+}: {
+  data: ToolValidity | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const pct = data ? Math.round(data.validity_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Wrench className="h-4 w-4 text-blue-500" />
+          {t("tools.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.total === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("tools.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">{t("tools.validity")}</span>
+              <Badge tone={pct >= 90 ? "success" : pct >= 70 ? "warning" : "danger"}>{pct}%</Badge>
+            </div>
+            <Metric label={t("tools.allowed")} value={String(data.allowed)} />
+            <Metric label={t("tools.denied")} value={String(data.denied)} />
+            <Metric label={t("tools.argFailures")} value={String(data.arg_failures)} />
           </div>
         )}
       </CardContent>

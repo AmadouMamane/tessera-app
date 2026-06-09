@@ -335,6 +335,14 @@
       "baseline": "Référence",
       "similarity": "stabilité",
       "minFaith": "faithfulness min"
+    },
+    "tools": {
+      "title": "Validité des tool-calls",
+      "validity": "Validité",
+      "allowed": "Autorisés",
+      "denied": "Refusés",
+      "argFailures": "Échecs d'args",
+      "empty": "Aucun tool-call pour l'instant."
     }
   }
 }

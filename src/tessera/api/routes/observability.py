@@ -20,6 +20,7 @@ from tessera.observability import (
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
     robustness as robustness_mod,
+    tool_validity as tool_validity_mod,
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.judge import LLMJudge
@@ -130,6 +131,12 @@ async def observability_robustness(payload: RobustnessRequest) -> dict[str, obje
 async def observability_firewall_efficacy() -> dict[str, object]:
     """Detection efficacy of the guard over injection vs benign inputs."""
     return asdict(firewall_mod.compute_efficacy())
+
+
+@router.get("/observability/tool-validity")
+async def observability_tool_validity() -> dict[str, object]:
+    """Validity of tool calls (allowed vs denied, argument failures)."""
+    return asdict(tool_validity_mod.compute_tool_validity())
 
 
 @router.get("/observability/provenance/{bundle_id}")
