@@ -45,6 +45,8 @@ import {
   EvalScoresResponseSchema,
   type FirewallEfficacy,
   FirewallEfficacySchema,
+  type GuardExplainReport,
+  GuardExplainReportSchema,
   type HealthResponse,
   HealthResponseSchema,
   type IntentReport,
@@ -188,6 +190,11 @@ export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<Firew
 /** Schema/format conformance of tool-call arguments from the audit trail (#47). */
 export async function fetchConformance(signal?: AbortSignal): Promise<ConformanceReport> {
   return request("/observability/conformance", { signal }, ConformanceReportSchema);
+}
+
+/** Ranked breakdown of which guard rules fired across the audit trail (#19). */
+export async function fetchGuardExplain(signal?: AbortSignal): Promise<GuardExplainReport> {
+  return request("/observability/guard-explain", { signal }, GuardExplainReportSchema);
 }
 
 /** Tool-call validity (allowed vs denied, argument failures) from the audit trail. */

@@ -501,6 +501,12 @@
       "max": "Max",
       "total": "Total",
       "empty": "Aucun tour capturé."
+    },
+    "guardExplain": {
+      "title": "Explicabilité du guard",
+      "decisions": "Décisions",
+      "denials": "Refus",
+      "empty": "Aucune décision du guard."
     }
   }
 }

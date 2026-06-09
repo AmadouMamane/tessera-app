@@ -564,6 +564,20 @@ export const CostReportSchema = z.object({
 });
 export type CostReport = z.infer<typeof CostReportSchema>;
 
+export const RuleCountSchema = z.object({
+  rule: z.string(),
+  decision: z.string(),
+  count: z.number().int(),
+});
+
+export const GuardExplainReportSchema = z.object({
+  n_entries: z.number().int(),
+  n_decisions: z.number().int(),
+  n_denials: z.number().int(),
+  rules: z.array(RuleCountSchema),
+});
+export type GuardExplainReport = z.infer<typeof GuardExplainReportSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

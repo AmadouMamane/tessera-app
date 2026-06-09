@@ -11,6 +11,7 @@ import {
   GitCompareArrows,
   GitFork,
   Hash,
+  Landmark,
   Languages,
   LineChart,
   Lock,
@@ -40,6 +41,7 @@ import {
   fetchCost,
   fetchEvalScores,
   fetchFirewallEfficacy,
+  fetchGuardExplain,
   fetchIntent,
   fetchLocaleFormat,
   fetchPiiLeak,
@@ -60,6 +62,7 @@ import type {
   CostReport,
   EvalScore,
   FirewallEfficacy,
+  GuardExplainReport,
   IntentReport,
   LocaleFormatSummary,
   PIILeakSummary,
@@ -182,6 +185,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const guardExplain = useQuery({
+    queryKey: ["guard-explain"],
+    queryFn: ({ signal }) => fetchGuardExplain(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -219,6 +228,8 @@ export function ObservabilityDashboard() {
       <ToolValidityCard data={tools.data} loading={tools.isLoading} />
 
       <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
+
+      <GuardExplainCard data={guardExplain.data} loading={guardExplain.isLoading} />
 
       <RoutingCard data={routing.data} loading={routing.isLoading} />
 
@@ -666,6 +677,61 @@ function PiiLeakCard({ data, loading }: { data: PIILeakSummary | undefined; load
                 </span>
               </div>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function GuardExplainCard({
+  data,
+  loading,
+}: {
+  data: GuardExplainReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Landmark className="h-4 w-4 text-blue-500" />
+          {t("guardExplain.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_decisions === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("guardExplain.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <Metric label={t("guardExplain.decisions")} value={String(data.n_decisions)} />
+              <Metric label={t("guardExplain.denials")} value={String(data.n_denials)} />
+            </div>
+            <ul className="flex flex-col gap-1 text-xs">
+              {data.rules.map((r) => (
+                <li key={`${r.rule}-${r.decision}`} className="flex items-center gap-2">
+                  <Badge
+                    tone={
+                      r.decision === "deny"
+                        ? "danger"
+                        : r.decision === "transform"
+                          ? "warning"
+                          : "neutral"
+                    }
+                  >
+                    {r.decision}
+                  </Badge>
+                  <span className="min-w-0 flex-1 truncate font-mono text-[var(--muted-foreground)]">
+                    {r.rule}
+                  </span>
+                  <span className="tabular-nums">{r.count}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </CardContent>

@@ -24,6 +24,7 @@ from tessera.observability import (
     coverage as coverage_mod,
     crosslingual as crosslingual_mod,
     firewall_efficacy as firewall_mod,
+    guard_explain as guard_explain_mod,
     language_routing as language_routing_mod,
     locale_format as locale_format_mod,
     pii_leak as pii_leak_mod,
@@ -268,6 +269,12 @@ async def observability_cost() -> dict[str, object]:
         for b in replay_mod.recent_bundles()
     ]
     return asdict(cost_anomaly_mod.analyze_costs(turns))
+
+
+@router.get("/observability/guard-explain")
+async def observability_guard_explain() -> dict[str, object]:
+    """Ranked breakdown of which guard rules fired across the audit trail."""
+    return asdict(guard_explain_mod.compute_guard_explain())
 
 
 @router.get("/observability/tool-validity")

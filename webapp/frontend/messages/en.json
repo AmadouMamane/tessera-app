@@ -501,6 +501,12 @@
       "max": "Max",
       "total": "Total",
       "empty": "No captured turns yet."
+    },
+    "guardExplain": {
+      "title": "Guard explainability",
+      "decisions": "Decisions",
+      "denials": "Denials",
+      "empty": "No guard decisions yet."
     }
   }
 }

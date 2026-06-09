@@ -501,6 +501,12 @@
       "max": "Max",
       "total": "Gesamt",
       "empty": "Keine erfassten Turns."
+    },
+    "guardExplain": {
+      "title": "Guard-Erklärbarkeit",
+      "decisions": "Entscheidungen",
+      "denials": "Ablehnungen",
+      "empty": "Keine Guard-Entscheidungen."
     }
   }
 }
