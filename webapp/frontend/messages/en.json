@@ -446,6 +446,12 @@
       "actual": "Actual fail",
       "confusion": "TP·FP·FN"
     },
+    "sft": {
+      "title": "Traces → SFT data (improvement flywheel)",
+      "empty": "No captured turns yet.",
+      "eligible": "Eligible",
+      "minScore": "Min score"
+    },
     "replay": {
       "title": "Replay (regression from production)",
       "model": "Model",

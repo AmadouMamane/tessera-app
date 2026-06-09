@@ -446,6 +446,12 @@
       "actual": "Tatsächlich",
       "confusion": "TP·FP·FN"
     },
+    "sft": {
+      "title": "Traces → SFT-Daten (Verbesserungs-Flywheel)",
+      "empty": "Noch keine erfassten Turns.",
+      "eligible": "Geeignet",
+      "minScore": "Min-Score"
+    },
     "replay": {
       "title": "Replay (Regression aus der Produktion)",
       "model": "Modell",

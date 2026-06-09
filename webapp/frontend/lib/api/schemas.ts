@@ -870,6 +870,23 @@ export const PredictorEvaluationSchema = z.object({
 });
 export type PredictorEvaluation = z.infer<typeof PredictorEvaluationSchema>;
 
+export const SFTRecordSchema = z.object({
+  instruction: z.string(),
+  input: z.string(),
+  output: z.string(),
+  language: z.string(),
+  score: z.number(),
+});
+
+export const SFTDatasetSchema = z.object({
+  n_total: z.number().int(),
+  n_eligible: z.number().int(),
+  min_score: z.number(),
+  by_language: z.record(z.string(), z.number().int()),
+  samples: z.array(SFTRecordSchema),
+});
+export type SFTDataset = z.infer<typeof SFTDatasetSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

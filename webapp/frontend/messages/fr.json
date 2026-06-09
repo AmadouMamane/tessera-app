@@ -446,6 +446,12 @@
       "actual": "Échec réel",
       "confusion": "VP·FP·FN"
     },
+    "sft": {
+      "title": "Traces → données SFT (flywheel d'amélioration)",
+      "empty": "Aucun tour capturé pour l'instant.",
+      "eligible": "Éligibles",
+      "minScore": "Score min"
+    },
     "replay": {
       "title": "Replay (régression depuis la prod)",
       "model": "Modèle",

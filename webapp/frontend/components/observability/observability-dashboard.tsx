@@ -35,6 +35,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Sprout,
   Target,
   TrendingDown,
   Wrench,
@@ -78,6 +79,7 @@ import {
   fetchRouting,
   fetchSLO,
   fetchSessions,
+  fetchSftDataset,
   fetchTailSampling,
   fetchToolValidity,
   fetchTrend,
@@ -112,6 +114,7 @@ import type {
   RefusalReport,
   RoadmapReport,
   RoutingReport,
+  SFTDataset,
   SLOReport,
   SessionReport,
   ShadowReport,
@@ -204,6 +207,12 @@ export function ObservabilityDashboard() {
   const failurePredictor = useQuery({
     queryKey: ["failure-predictor"],
     queryFn: ({ signal }) => fetchFailurePredictor(signal),
+    refetchInterval: 15_000,
+  });
+
+  const sftDataset = useQuery({
+    queryKey: ["sft-dataset"],
+    queryFn: ({ signal }) => fetchSftDataset(signal),
     refetchInterval: 15_000,
   });
 
@@ -363,6 +372,8 @@ export function ObservabilityDashboard() {
       <FailureClusterCard data={failureClusters.data} loading={failureClusters.isLoading} />
 
       <FailurePredictorCard data={failurePredictor.data} loading={failurePredictor.isLoading} />
+
+      <SftDatasetCard data={sftDataset.data} loading={sftDataset.isLoading} />
 
       <ShadowCard />
 
@@ -1034,6 +1045,58 @@ function JourneyCard({ data, loading }: { data: JourneyReport | undefined; loadi
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SftDatasetCard({ data, loading }: { data: SFTDataset | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const langs = data ? Object.entries(data.by_language) : [];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Sprout className="h-4 w-4 text-blue-500" />
+          {t("sft.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_total === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("sft.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">{t("sft.eligible")}</span>
+                <Badge tone={data.n_eligible > 0 ? "success" : "neutral"}>
+                  {data.n_eligible}/{data.n_total}
+                </Badge>
+              </div>
+              <Metric label={t("sft.minScore")} value={data.min_score.toFixed(2)} />
+              <div className="flex flex-wrap gap-2">
+                {langs.map(([lang, count]) => (
+                  <Badge key={lang} tone="neutral">
+                    {lang} · {count}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            {data.samples.length > 0 ? (
+              <ul className="flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
+                {data.samples.slice(0, 4).map((s, i) => (
+                  <li key={`${i}-${s.output.slice(0, 12)}`} className="flex items-center gap-2">
+                    <span className="uppercase">{s.language}</span>
+                    <span className="tabular-nums">{s.score.toFixed(2)}</span>
+                    <span className="min-w-0 truncate">{s.output}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         )}
       </CardContent>

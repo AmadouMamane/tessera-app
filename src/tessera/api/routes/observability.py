@@ -50,6 +50,7 @@ from tessera.observability import (
     robustness as robustness_mod,
     routing_intent as routing_intent_mod,
     sessions as sessions_mod,
+    sft_export as sft_export_mod,
     shadow as shadow_mod,
     slo as slo_mod,
     steganography as steganography_mod,
@@ -542,6 +543,16 @@ async def observability_failure_clusters() -> dict[str, object]:
             sys.stderr.write(f"tessera.observability.failure_clustering: failed: {exc}\n")
             return {"available": False}
     return _clustering_cache
+
+
+@router.get("/observability/sft-dataset")
+async def observability_sft_dataset() -> dict[str, object]:
+    """Distil high-scoring captured turns into an SFT dataset (#122)."""
+    turns = [
+        (b.question, b.context, b.original_answer, b.language, b.original_score)
+        for b in replay_mod.recent_bundles()
+    ]
+    return asdict(sft_export_mod.build_sft_dataset(turns))
 
 
 @router.get("/observability/failure-predictor")

@@ -95,6 +95,8 @@ import {
   RobustnessReportSchema,
   type RoutingReport,
   RoutingReportSchema,
+  type SFTDataset,
+  SFTDatasetSchema,
   type SLOReport,
   SLOReportSchema,
   type SessionReport,
@@ -234,6 +236,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Distil high-scoring captured turns into an SFT dataset (#122). */
+export async function fetchSftDataset(signal?: AbortSignal): Promise<SFTDataset> {
+  return request("/observability/sft-dataset", { signal }, SFTDatasetSchema);
 }
 
 /** Back-test the pre-judge failure predictor against captured turns (#121). */
