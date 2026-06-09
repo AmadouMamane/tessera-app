@@ -7,6 +7,7 @@ import {
   Coins,
   Crosshair,
   ExternalLink,
+  Filter,
   Gauge,
   GitCompareArrows,
   GitFork,
@@ -41,6 +42,7 @@ import {
   fetchCost,
   fetchEvalScores,
   fetchFirewallEfficacy,
+  fetchFunnel,
   fetchGuardExplain,
   fetchIntent,
   fetchLocaleFormat,
@@ -62,6 +64,7 @@ import type {
   CostReport,
   EvalScore,
   FirewallEfficacy,
+  FunnelReport,
   GuardExplainReport,
   IntentReport,
   LocaleFormatSummary,
@@ -191,6 +194,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const funnel = useQuery({
+    queryKey: ["funnel"],
+    queryFn: ({ signal }) => fetchFunnel(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -236,6 +245,8 @@ export function ObservabilityDashboard() {
       <IntentCard data={intent.data} loading={intent.isLoading} />
 
       <SessionCard data={sessions.data} loading={sessions.isLoading} />
+
+      <FunnelCard data={funnel.data} loading={funnel.isLoading} />
 
       <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
 
@@ -905,6 +916,60 @@ function RoutingCard({ data, loading }: { data: RoutingReport | undefined; loadi
               <Badge tone={cs === 0 ? "neutral" : "warning"}>{cs}%</Badge>
             </div>
             <Metric label={t("routing.turns")} value={String(data.n)} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FunnelCard({ data, loading }: { data: FunnelReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Filter className="h-4 w-4 text-blue-500" />
+          {t("funnel.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.languages.length === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("funnel.empty")}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                  <th className="py-2 pr-4 font-medium">{t("funnel.language")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("funnel.turns")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("funnel.sessions")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("funnel.meanScore")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("funnel.singleTurn")}</th>
+                  <th className="py-2 font-medium">{t("funnel.lowScore")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.languages.map((l) => (
+                  <tr key={l.language} className="border-b border-[var(--border)]/50">
+                    <td className="py-2 pr-4 uppercase">{l.language}</td>
+                    <td className="py-2 pr-4 tabular-nums">{l.n_turns}</td>
+                    <td className="py-2 pr-4 tabular-nums">{l.n_sessions}</td>
+                    <td
+                      className={`py-2 pr-4 font-semibold tabular-nums ${scoreTone(l.mean_score)}`}
+                    >
+                      {l.mean_score.toFixed(2)}
+                    </td>
+                    <td className="py-2 pr-4 tabular-nums">
+                      {Math.round(l.single_turn_rate * 100)}%
+                    </td>
+                    <td className="py-2 tabular-nums">{Math.round(l.low_score_rate * 100)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>

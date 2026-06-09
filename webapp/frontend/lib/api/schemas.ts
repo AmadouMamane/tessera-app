@@ -578,6 +578,21 @@ export const GuardExplainReportSchema = z.object({
 });
 export type GuardExplainReport = z.infer<typeof GuardExplainReportSchema>;
 
+export const LanguageFunnelSchema = z.object({
+  language: z.string(),
+  n_turns: z.number().int(),
+  n_sessions: z.number().int(),
+  mean_score: z.number(),
+  single_turn_rate: z.number(),
+  low_score_rate: z.number(),
+});
+
+export const FunnelReportSchema = z.object({
+  n_turns: z.number().int(),
+  languages: z.array(LanguageFunnelSchema),
+});
+export type FunnelReport = z.infer<typeof FunnelReportSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

@@ -507,6 +507,16 @@
       "decisions": "Décisions",
       "denials": "Refus",
       "empty": "Aucune décision du guard."
+    },
+    "funnel": {
+      "title": "Funnel par langue",
+      "language": "Langue",
+      "turns": "Tours",
+      "sessions": "Sessions",
+      "meanScore": "Score moy.",
+      "singleTurn": "Mono-tour",
+      "lowScore": "Faible score",
+      "empty": "Aucun score capturé."
     }
   }
 }

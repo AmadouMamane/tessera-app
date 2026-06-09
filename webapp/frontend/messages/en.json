@@ -507,6 +507,16 @@
       "decisions": "Decisions",
       "denials": "Denials",
       "empty": "No guard decisions yet."
+    },
+    "funnel": {
+      "title": "Funnel per language",
+      "language": "Language",
+      "turns": "Turns",
+      "sessions": "Sessions",
+      "meanScore": "Mean score",
+      "singleTurn": "Single-turn",
+      "lowScore": "Low score",
+      "empty": "No scores captured yet."
     }
   }
 }

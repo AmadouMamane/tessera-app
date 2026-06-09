@@ -24,6 +24,7 @@ from tessera.observability import (
     coverage as coverage_mod,
     crosslingual as crosslingual_mod,
     firewall_efficacy as firewall_mod,
+    funnel as funnel_mod,
     guard_explain as guard_explain_mod,
     language_routing as language_routing_mod,
     locale_format as locale_format_mod,
@@ -344,6 +345,24 @@ async def observability_what_changed() -> dict[str, object]:
         curr_score=curr.original_score,
     )
     return {"available": True, **asdict(report)}
+
+
+@router.get("/observability/funnel")
+async def observability_funnel() -> dict[str, object]:
+    """Per-language conversation funnel from scored turns."""
+    turns: list[tuple[str, str | None, float]] = []
+    for score in recent_scores():
+        lang = score.get("language")
+        conv = score.get("conversation_id")
+        raw = score.get("score", 0.0)
+        turns.append(
+            (
+                lang if isinstance(lang, str) else "unknown",
+                conv if isinstance(conv, str) else None,
+                float(raw),  # type: ignore[arg-type]
+            )
+        )
+    return asdict(funnel_mod.aggregate_funnel(turns))
 
 
 @router.get("/observability/sessions")

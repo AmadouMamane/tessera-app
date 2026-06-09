@@ -45,6 +45,8 @@ import {
   EvalScoresResponseSchema,
   type FirewallEfficacy,
   FirewallEfficacySchema,
+  type FunnelReport,
+  FunnelReportSchema,
   type GuardExplainReport,
   GuardExplainReportSchema,
   type HealthResponse,
@@ -260,6 +262,11 @@ export async function fetchLocaleFormat(signal?: AbortSignal): Promise<LocaleFor
 /** Output PII-leak rate: PII in answers absent from their grounding (#38). */
 export async function fetchPiiLeak(signal?: AbortSignal): Promise<PIILeakSummary> {
   return request("/observability/pii-leak", { signal }, PIILeakSummarySchema);
+}
+
+/** Per-language conversation funnel from scored turns (#66). */
+export async function fetchFunnel(signal?: AbortSignal): Promise<FunnelReport> {
+  return request("/observability/funnel", { signal }, FunnelReportSchema);
 }
 
 /** Session-level goal-completion analytics. */
