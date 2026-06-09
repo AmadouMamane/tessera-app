@@ -39,6 +39,8 @@ import {
   FirewallEfficacySchema,
   type HealthResponse,
   HealthResponseSchema,
+  type LocaleFormatSummary,
+  LocaleFormatSummarySchema,
   type PIILeakSummary,
   PIILeakSummarySchema,
   type ProvenanceReport,
@@ -214,6 +216,11 @@ export async function runRedteam(): Promise<RedTeamResponse> {
 /** Regulatory citation validity: cited articles absent from the grounding (#49). */
 export async function fetchCitations(signal?: AbortSignal): Promise<CitationSummary> {
   return request("/observability/citations", { signal }, CitationSummarySchema);
+}
+
+/** Locale-formatting correctness: amounts whose style mismatches the locale (#51). */
+export async function fetchLocaleFormat(signal?: AbortSignal): Promise<LocaleFormatSummary> {
+  return request("/observability/locale-format", { signal }, LocaleFormatSummarySchema);
 }
 
 /** Output PII-leak rate: PII in answers absent from their grounding (#38). */

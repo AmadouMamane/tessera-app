@@ -492,6 +492,15 @@ export const CitationSummarySchema = z.object({
 });
 export type CitationSummary = z.infer<typeof CitationSummarySchema>;
 
+export const LocaleFormatSummarySchema = z.object({
+  n_turns: z.number().int(),
+  n_amounts: z.number().int(),
+  n_violations: z.number().int(),
+  correctness_rate: z.number(),
+  examples: z.array(z.string()),
+});
+export type LocaleFormatSummary = z.infer<typeof LocaleFormatSummarySchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

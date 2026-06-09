@@ -449,6 +449,14 @@
       "fabricated": "Erfunden",
       "examples": "Beispiele",
       "empty": "Keine Artikelzitate erfasst."
+    },
+    "localeFormat": {
+      "title": "Lokalisierte Betragsformatierung",
+      "correct": "Korrekt",
+      "amounts": "Beträge",
+      "violations": "Verstöße",
+      "examples": "Beispiele",
+      "empty": "Keine gruppierten Beträge erfasst."
     }
   }
 }

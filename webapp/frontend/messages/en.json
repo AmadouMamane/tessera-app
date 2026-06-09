@@ -449,6 +449,14 @@
       "fabricated": "Fabricated",
       "examples": "Examples",
       "empty": "No article citations captured yet."
+    },
+    "localeFormat": {
+      "title": "Locale amount formatting",
+      "correct": "Correct",
+      "amounts": "Amounts",
+      "violations": "Violations",
+      "examples": "Examples",
+      "empty": "No grouped amounts captured yet."
     }
   }
 }

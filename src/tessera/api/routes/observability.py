@@ -21,6 +21,7 @@ from tessera.observability import (
     corpus_injection as corpus_injection_mod,
     firewall_efficacy as firewall_mod,
     language_routing as language_routing_mod,
+    locale_format as locale_format_mod,
     pii_leak as pii_leak_mod,
     provenance as provenance_mod,
     redteam as redteam_mod,
@@ -206,6 +207,13 @@ async def observability_citations() -> dict[str, object]:
     """Regulatory citation validity: cited articles absent from the grounding."""
     turns = [(b.original_answer, b.context) for b in replay_mod.recent_bundles()]
     return asdict(citation_validity_mod.aggregate_citations(turns))
+
+
+@router.get("/observability/locale-format")
+async def observability_locale_format() -> dict[str, object]:
+    """Locale-formatting correctness: amounts whose style mismatches the locale."""
+    turns = [(b.original_answer, b.language) for b in replay_mod.recent_bundles()]
+    return asdict(locale_format_mod.aggregate_formatting(turns))
 
 
 @router.get("/observability/pii-leak")

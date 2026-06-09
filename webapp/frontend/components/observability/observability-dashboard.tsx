@@ -12,6 +12,7 @@ import {
   Languages,
   LineChart,
   Lock,
+  Receipt,
   Scale,
   ShieldCheck,
   SlidersHorizontal,
@@ -34,6 +35,7 @@ import {
   fetchContradictions,
   fetchEvalScores,
   fetchFirewallEfficacy,
+  fetchLocaleFormat,
   fetchPiiLeak,
   fetchRedteam,
   fetchRefusal,
@@ -50,6 +52,7 @@ import type {
   ContradictionReport,
   EvalScore,
   FirewallEfficacy,
+  LocaleFormatSummary,
   PIILeakSummary,
   RedTeamResponse,
   RefusalReport,
@@ -146,6 +149,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const localeFormat = useQuery({
+    queryKey: ["locale-format"],
+    queryFn: ({ signal }) => fetchLocaleFormat(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -169,6 +178,8 @@ export function ObservabilityDashboard() {
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
       <CitationCard data={citations.data} loading={citations.isLoading} />
+
+      <LocaleFormatCard data={localeFormat.data} loading={localeFormat.isLoading} />
 
       <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
 
@@ -445,6 +456,57 @@ function RedTeamCard() {
                   </li>
                 ))}
               </ul>
+            ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LocaleFormatCard({
+  data,
+  loading,
+}: {
+  data: LocaleFormatSummary | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const pct = data ? Math.round(data.correctness_rate * 100) : 100;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Receipt className="h-4 w-4 text-blue-500" />
+          {t("localeFormat.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_amounts === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("localeFormat.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {t("localeFormat.correct")}
+              </span>
+              <Badge tone={pct === 100 ? "success" : pct >= 80 ? "warning" : "danger"}>
+                {pct}%
+              </Badge>
+            </div>
+            <Metric label={t("localeFormat.amounts")} value={String(data.n_amounts)} />
+            <Metric label={t("localeFormat.violations")} value={String(data.n_violations)} />
+            {data.examples.length > 0 ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("localeFormat.examples")}
+                </span>
+                <span className="font-mono text-xs text-red-600 dark:text-red-400">
+                  {data.examples.join(", ")}
+                </span>
+              </div>
             ) : null}
           </div>
         )}

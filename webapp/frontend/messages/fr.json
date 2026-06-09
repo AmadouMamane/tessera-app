@@ -449,6 +449,14 @@
       "fabricated": "Fabriquées",
       "examples": "Exemples",
       "empty": "Aucune citation d'article capturée."
+    },
+    "localeFormat": {
+      "title": "Formatage localisé des montants",
+      "correct": "Corrects",
+      "amounts": "Montants",
+      "violations": "Violations",
+      "examples": "Exemples",
+      "empty": "Aucun montant groupé capturé."
     }
   }
 }
