@@ -584,6 +584,11 @@
       "events": "Events",
       "high": "High severity"
     },
+    "localization": {
+      "title": "Localization completeness",
+      "keys": "Default keys",
+      "missing": "missing"
+    },
     "contradiction": {
       "title": "Multi-turn contradiction",
       "found": "Contradictions",

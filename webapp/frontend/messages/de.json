@@ -584,6 +584,11 @@
       "events": "Ereignisse",
       "high": "Hohe Schwere"
     },
+    "localization": {
+      "title": "Lokalisierungs-Vollständigkeit",
+      "keys": "Standard-Schlüssel",
+      "missing": "fehlend"
+    },
     "contradiction": {
       "title": "Mehrturn-Widerspruch",
       "found": "Widersprüche",

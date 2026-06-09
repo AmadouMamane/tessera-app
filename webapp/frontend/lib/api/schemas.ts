@@ -961,6 +961,22 @@ export const SiemExportSchema = z.object({
 });
 export type SiemExport = z.infer<typeof SiemExportSchema>;
 
+export const LocaleCompletenessSchema = z.object({
+  locale: z.string(),
+  n_keys: z.number().int(),
+  n_missing: z.number().int(),
+  completeness: z.number(),
+  fallback_rate: z.number(),
+  missing_sample: z.array(z.string()),
+});
+
+export const LocalizationReportSchema = z.object({
+  default_locale: z.string(),
+  n_default_keys: z.number().int(),
+  locales: z.array(LocaleCompletenessSchema),
+});
+export type LocalizationReport = z.infer<typeof LocalizationReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

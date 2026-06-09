@@ -38,6 +38,7 @@ from tessera.observability import (
     language_routing as language_routing_mod,
     least_privilege as least_privilege_mod,
     locale_format as locale_format_mod,
+    localization as localization_mod,
     memory_inventory as memory_inventory_mod,
     memory_obs as memory_obs_mod,
     obs_cost as obs_cost_mod,
@@ -583,6 +584,23 @@ async def observability_least_privilege() -> dict[str, object]:
 async def observability_siem() -> dict[str, object]:
     """Security audit events normalised to ECS/SIEM shape for the SOC (#172)."""
     return asdict(siem_mod.to_siem_events(_read_audit_entries()))
+
+
+@router.get("/observability/localization")
+async def observability_localization() -> dict[str, object]:
+    """Per-locale message completeness vs the default locale (#77)."""
+    import json
+    from pathlib import Path
+
+    messages_dir = Path(__file__).resolve().parents[4] / "webapp" / "frontend" / "messages"
+    catalogues: dict[str, dict[str, object]] = {}
+    for locale in ("en", "fr", "de"):
+        path = messages_dir / f"{locale}.json"
+        try:
+            catalogues[locale] = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            catalogues[locale] = {}
+    return asdict(localization_mod.assess_localization(catalogues))
 
 
 @router.get("/observability/playbooks")

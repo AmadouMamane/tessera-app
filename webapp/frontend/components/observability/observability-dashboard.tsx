@@ -19,6 +19,7 @@ import {
   Gauge,
   GitCompareArrows,
   GitFork,
+  Globe,
   Grid3x3,
   Hash,
   KeyRound,
@@ -75,6 +76,7 @@ import {
   fetchJourney,
   fetchLeastPrivilege,
   fetchLocaleFormat,
+  fetchLocalization,
   fetchMemoryInventory,
   fetchMemoryObs,
   fetchObsCost,
@@ -116,6 +118,7 @@ import type {
   InversionReport,
   JourneyReport,
   LocaleFormatSummary,
+  LocalizationReport,
   MemoryObsReport,
   ObsCostReport,
   PIILeakSummary,
@@ -258,6 +261,12 @@ export function ObservabilityDashboard() {
     queryKey: ["siem"],
     queryFn: ({ signal }) => fetchSiem(signal),
     refetchInterval: 15_000,
+  });
+
+  const localization = useQuery({
+    queryKey: ["localization"],
+    queryFn: ({ signal }) => fetchLocalization(signal),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
   const journey = useQuery({
@@ -460,6 +469,8 @@ export function ObservabilityDashboard() {
       <LeastPrivilegeCard data={leastPrivilege.data} loading={leastPrivilege.isLoading} />
 
       <SiemCard data={siem.data} loading={siem.isLoading} />
+
+      <LocalizationCard data={localization.data} loading={localization.isLoading} />
 
       <RefusalCard data={refusal.data} loading={refusal.isLoading} />
 
@@ -1195,6 +1206,64 @@ function PlaybooksCard({ data, loading }: { data: PlaybookReport | undefined; lo
               </li>
             ))}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LocalizationCard({
+  data,
+  loading,
+}: {
+  data: LocalizationReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Globe className="h-4 w-4 text-blue-500" />
+          {t("localization.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <Metric label={t("localization.keys")} value={String(data.n_default_keys)} />
+            <div className="flex flex-wrap gap-6 text-sm">
+              {data.locales.map((lc) => {
+                const pct = Math.round(lc.completeness * 100);
+                return (
+                  <div key={lc.locale} className="flex flex-col gap-1">
+                    <span className="text-xs text-[var(--muted-foreground)] uppercase">
+                      {lc.locale}
+                    </span>
+                    <Badge tone={pct === 100 ? "success" : pct >= 90 ? "warning" : "danger"}>
+                      {pct}%
+                    </Badge>
+                    {lc.n_missing > 0 ? (
+                      <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+                        −{lc.n_missing} {t("localization.missing")}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+            {data.locales.some((lc) => lc.missing_sample.length > 0) ? (
+              <ul className="flex flex-col gap-0.5 font-mono text-[0.65rem] text-red-600 dark:text-red-400">
+                {data.locales.flatMap((lc) =>
+                  lc.missing_sample
+                    .slice(0, 3)
+                    .map((k) => <li key={`${lc.locale}-${k}`}>{`${lc.locale}: ${k}`}</li>),
+                )}
+              </ul>
+            ) : null}
+          </div>
         )}
       </CardContent>
     </Card>

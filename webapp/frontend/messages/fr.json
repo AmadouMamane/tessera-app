@@ -584,6 +584,11 @@
       "events": "Événements",
       "high": "Sévérité haute"
     },
+    "localization": {
+      "title": "Complétude de localisation",
+      "keys": "Clés par défaut",
+      "missing": "manquantes"
+    },
     "contradiction": {
       "title": "Contradiction multi-tour",
       "found": "Contradictions",

@@ -71,6 +71,8 @@ import {
   JourneyReportSchema,
   type LocaleFormatSummary,
   LocaleFormatSummarySchema,
+  type LocalizationReport,
+  LocalizationReportSchema,
   type MemoryObsReport,
   MemoryObsReportSchema,
   type ObsCostReport,
@@ -251,6 +253,11 @@ export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsRep
 /** Security audit events normalised to ECS/SIEM shape for the SOC (#172). */
 export async function fetchSiem(signal?: AbortSignal): Promise<SiemExport> {
   return request("/observability/siem", { signal }, SiemExportSchema);
+}
+
+/** Per-locale message completeness vs the default locale (#77). */
+export async function fetchLocalization(signal?: AbortSignal): Promise<LocalizationReport> {
+  return request("/observability/localization", { signal }, LocalizationReportSchema);
 }
 
 /** Incident playbooks triggered by the current live signals (#115). */
