@@ -27,6 +27,8 @@ import {
   BudgetSnapshotSchema,
   type Calibration,
   CalibrationSchema,
+  type CitationResolution,
+  CitationResolutionSchema,
   type CitationSummary,
   CitationSummarySchema,
   type ClusterReport,
@@ -255,6 +257,11 @@ export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsRep
 /** Security audit events normalised to ECS/SIEM shape for the SOC (#172). */
 export async function fetchSiem(signal?: AbortSignal): Promise<SiemExport> {
   return request("/observability/siem", { signal }, SiemExportSchema);
+}
+
+/** Resolve answer citations to verifiable corpus sources (clickable, #132). */
+export async function fetchCitationLinks(signal?: AbortSignal): Promise<CitationResolution> {
+  return request("/observability/citation-links", { signal }, CitationResolutionSchema);
 }
 
 /** EU AI Act compliance posture: transparency, oversight, traceability (#76). */

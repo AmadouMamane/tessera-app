@@ -653,6 +653,13 @@
       "examples": "Beispiele",
       "empty": "Keine Artikelzitate erfasst."
     },
+    "citationLinks": {
+      "title": "Überprüfbare Zitate",
+      "empty": "Keine Zitate in erfassten Antworten.",
+      "resolvable": "Auflösbar",
+      "resolved": "Aufgelöst",
+      "dangling": "verwaist"
+    },
     "localeFormat": {
       "title": "Lokalisierte Betragsformatierung",
       "correct": "Korrekt",

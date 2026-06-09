@@ -653,6 +653,13 @@
       "examples": "Examples",
       "empty": "No article citations captured yet."
     },
+    "citationLinks": {
+      "title": "Verifiable citations",
+      "empty": "No citations in captured answers.",
+      "resolvable": "Resolvable",
+      "resolved": "Resolved",
+      "dangling": "dangling"
+    },
     "localeFormat": {
       "title": "Locale amount formatting",
       "correct": "Correct",

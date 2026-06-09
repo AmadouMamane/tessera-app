@@ -993,6 +993,20 @@ export const AIActReportSchema = z.object({
 });
 export type AIActReport = z.infer<typeof AIActReportSchema>;
 
+export const CitationLinkSchema = z.object({
+  citation: z.string(),
+  resolved: z.boolean(),
+  source: z.string().nullable(),
+});
+
+export const CitationResolutionSchema = z.object({
+  n_citations: z.number().int(),
+  n_resolved: z.number().int(),
+  resolvable_rate: z.number(),
+  links: z.array(CitationLinkSchema),
+});
+export type CitationResolution = z.infer<typeof CitationResolutionSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

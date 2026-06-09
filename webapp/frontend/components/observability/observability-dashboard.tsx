@@ -59,6 +59,7 @@ import {
   fetchAIAct,
   fetchAnomalies,
   fetchCalibration,
+  fetchCitationLinks,
   fetchCitations,
   fetchConformance,
   fetchContradictions,
@@ -104,6 +105,7 @@ import type {
   AIActReport,
   AnomalyReport,
   Calibration,
+  CitationResolution,
   CitationSummary,
   ClusterReport,
   ConformanceReport,
@@ -276,6 +278,12 @@ export function ObservabilityDashboard() {
     queryKey: ["ai-act"],
     queryFn: ({ signal }) => fetchAIAct(signal),
     refetchInterval: 30_000,
+  });
+
+  const citationLinks = useQuery({
+    queryKey: ["citation-links"],
+    queryFn: ({ signal }) => fetchCitationLinks(signal),
+    refetchInterval: 15_000,
   });
 
   const journey = useQuery({
@@ -466,6 +474,8 @@ export function ObservabilityDashboard() {
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
       <CitationCard data={citations.data} loading={citations.isLoading} />
+
+      <CitationLinksCard data={citationLinks.data} loading={citationLinks.isLoading} />
 
       <LocaleFormatCard data={localeFormat.data} loading={localeFormat.isLoading} />
 
@@ -2078,6 +2088,73 @@ function LocaleFormatCard({
                 </span>
               </div>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CitationLinksCard({
+  data,
+  loading,
+}: {
+  data: CitationResolution | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const pct = data ? Math.round(data.resolvable_rate * 100) : 100;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <BookCheck className="h-4 w-4 text-blue-500" />
+          {t("citationLinks.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_citations === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("citationLinks.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("citationLinks.resolvable")}
+                </span>
+                <Badge tone={pct === 100 ? "success" : pct >= 70 ? "warning" : "danger"}>
+                  {pct}%
+                </Badge>
+              </div>
+              <Metric
+                label={t("citationLinks.resolved")}
+                value={`${data.n_resolved}/${data.n_citations}`}
+              />
+            </div>
+            <ul className="flex flex-col gap-1 text-xs">
+              {data.links.slice(0, 6).map((l, i) => (
+                <li key={`${i}-${l.citation.slice(0, 16)}`} className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      l.resolved ? "bg-emerald-500" : "bg-red-500"
+                    }`}
+                  />
+                  {l.source ? (
+                    <span className="font-mono text-[var(--muted-foreground)]">{l.source}</span>
+                  ) : (
+                    <span className="text-red-600 dark:text-red-400">
+                      {t("citationLinks.dangling")}
+                    </span>
+                  )}
+                  <span className="min-w-0 truncate text-[var(--muted-foreground)]">
+                    {l.citation}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </CardContent>

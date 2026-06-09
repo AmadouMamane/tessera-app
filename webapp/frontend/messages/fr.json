@@ -653,6 +653,13 @@
       "examples": "Exemples",
       "empty": "Aucune citation d'article capturée."
     },
+    "citationLinks": {
+      "title": "Citations vérifiables",
+      "empty": "Aucune citation dans les réponses capturées.",
+      "resolvable": "Résolvables",
+      "resolved": "Résolues",
+      "dangling": "orpheline"
+    },
     "localeFormat": {
       "title": "Formatage localisé des montants",
       "correct": "Corrects",

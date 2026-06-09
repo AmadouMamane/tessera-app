@@ -7,8 +7,10 @@ eval-as-telemetry live. Aggregate quality scores are a public surface
 
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import asdict
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -17,6 +19,7 @@ from tessera.observability import (
     ablation as ablation_mod,
     ai_act as ai_act_mod,
     anomalies as anomalies_mod,
+    citation_resolver as citation_resolver_mod,
     citation_validity as citation_validity_mod,
     conformance as conformance_mod,
     consistency as consistency_mod,
@@ -587,6 +590,40 @@ async def observability_siem() -> dict[str, object]:
     return asdict(siem_mod.to_siem_events(_read_audit_entries()))
 
 
+def _corpus_sources() -> set[str]:
+    """Collect the regulatory corpus source ids (e.g. 'DORA/art-5')."""
+    import json
+    from importlib import resources
+
+    sources: set[str] = set()
+    data_dir = Path(str(resources.files("tessera.corpus.data")))
+    for path in data_dir.glob("regulations_*.json"):
+        try:
+            docs = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(docs, list):
+            for doc in docs:
+                if isinstance(doc, dict) and doc.get("source"):
+                    sources.add(str(doc["source"]))
+    return sources
+
+
+_CITATION_SENTENCE = re.compile(r"[^.!?\n]*\bart(?:icle|\.)?\s*\d+[^.!?\n]*", re.IGNORECASE)
+
+
+@router.get("/observability/citation-links")
+async def observability_citation_links() -> dict[str, object]:
+    """Resolve answer citations to verifiable corpus sources (clickable, #132)."""
+    sources = _corpus_sources()
+    citations: list[str] = []
+    for bundle in replay_mod.recent_bundles():
+        citations.extend(
+            m.group(0).strip() for m in _CITATION_SENTENCE.finditer(bundle.original_answer)
+        )
+    return asdict(citation_resolver_mod.resolve_citations(citations, sources))
+
+
 @router.get("/observability/ai-act")
 async def observability_ai_act() -> dict[str, object]:
     """EU AI Act compliance posture: transparency, oversight, traceability (#76)."""
@@ -636,9 +673,7 @@ async def observability_playbooks() -> dict[str, object]:
         if s.get("metric") == "faithfulness"
     ]
     bar = 0.80
-    low_rate = (
-        sum(1 for s in faithfulness if s < bar) / len(faithfulness) if faithfulness else 0.0
-    )
+    low_rate = sum(1 for s in faithfulness if s < bar) / len(faithfulness) if faithfulness else 0.0
     snapshots = redteam_mod.recent_snapshots()
     jailbreak_rate = snapshots[-1].attack_success_rate if snapshots else 0.0
     pii = pii_leak_mod.aggregate_leaks(
@@ -660,9 +695,7 @@ async def observability_playbooks() -> dict[str, object]:
 @router.get("/observability/cross-tenant")
 async def observability_cross_tenant() -> dict[str, object]:
     """Cross-tenant leakage: foreign subject ids in a turn's context (#74)."""
-    turns = [
-        (b.conversation_id or "", b.context) for b in replay_mod.recent_bundles()
-    ]
+    turns = [(b.conversation_id or "", b.context) for b in replay_mod.recent_bundles()]
     return asdict(cross_tenant_mod.detect_cross_tenant(turns))
 
 
@@ -676,9 +709,7 @@ async def observability_toxicity() -> dict[str, object]:
 @router.get("/observability/failure-predictor")
 async def observability_failure_predictor() -> dict[str, object]:
     """Back-test the pre-judge failure predictor against captured turns (#121)."""
-    turns = [
-        (b.question, b.context, b.original_score) for b in replay_mod.recent_bundles()
-    ]
+    turns = [(b.question, b.context, b.original_score) for b in replay_mod.recent_bundles()]
     return asdict(failure_predictor_mod.evaluate_predictor(turns))
 
 
