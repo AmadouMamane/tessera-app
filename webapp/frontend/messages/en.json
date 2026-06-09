@@ -578,6 +578,12 @@
       "violations": "Violations",
       "overProvisioned": "Over-provisioned"
     },
+    "siem": {
+      "title": "SIEM feed (SOC)",
+      "empty": "No security events yet.",
+      "events": "Events",
+      "high": "High severity"
+    },
     "contradiction": {
       "title": "Multi-turn contradiction",
       "found": "Contradictions",

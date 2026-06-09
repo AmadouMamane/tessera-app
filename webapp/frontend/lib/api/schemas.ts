@@ -943,6 +943,24 @@ export const PlaybookReportSchema = z.object({
 });
 export type PlaybookReport = z.infer<typeof PlaybookReportSchema>;
 
+export const SiemEventSchema = z.object({
+  timestamp: z.string(),
+  category: z.string(),
+  action: z.string(),
+  outcome: z.string(),
+  severity: z.number().int(),
+  actor: z.string(),
+  message: z.string(),
+});
+
+export const SiemExportSchema = z.object({
+  n_events: z.number().int(),
+  n_high_severity: z.number().int(),
+  by_category: z.record(z.string(), z.number().int()),
+  events: z.array(SiemEventSchema),
+});
+export type SiemExport = z.infer<typeof SiemExportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

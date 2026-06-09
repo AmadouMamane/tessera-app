@@ -109,6 +109,8 @@ import {
   SessionReportSchema,
   type ShadowReport,
   ShadowReportSchema,
+  type SiemExport,
+  SiemExportSchema,
   type SkewReport,
   SkewReportSchema,
   type StegoReport,
@@ -244,6 +246,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Security audit events normalised to ECS/SIEM shape for the SOC (#172). */
+export async function fetchSiem(signal?: AbortSignal): Promise<SiemExport> {
+  return request("/observability/siem", { signal }, SiemExportSchema);
 }
 
 /** Incident playbooks triggered by the current live signals (#115). */

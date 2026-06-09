@@ -55,6 +55,7 @@ from tessera.observability import (
     sessions as sessions_mod,
     sft_export as sft_export_mod,
     shadow as shadow_mod,
+    siem as siem_mod,
     slo as slo_mod,
     steganography as steganography_mod,
     tail_sampling as tail_sampling_mod,
@@ -575,6 +576,12 @@ async def observability_least_privilege() -> dict[str, object]:
     return asdict(least_privilege_mod.analyze_privilege(_GRANTED_TOOLS, usage))
 
 
+@router.get("/observability/siem")
+async def observability_siem() -> dict[str, object]:
+    """Security audit events normalised to ECS/SIEM shape for the SOC (#172)."""
+    return asdict(siem_mod.to_siem_events(_read_audit_entries()))
+
+
 @router.get("/observability/playbooks")
 async def observability_playbooks() -> dict[str, object]:
     """Incident playbooks triggered by the current live signals (#115)."""
@@ -584,8 +591,9 @@ async def observability_playbooks() -> dict[str, object]:
         for s in recent_scores()
         if s.get("metric") == "faithfulness"
     ]
+    bar = 0.80
     low_rate = (
-        sum(1 for s in faithfulness if s < 0.80) / len(faithfulness) if faithfulness else 0.0
+        sum(1 for s in faithfulness if s < bar) / len(faithfulness) if faithfulness else 0.0
     )
     snapshots = redteam_mod.recent_snapshots()
     jailbreak_rate = snapshots[-1].attack_success_rate if snapshots else 0.0

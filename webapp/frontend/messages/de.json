@@ -578,6 +578,12 @@
       "violations": "Verstöße",
       "overProvisioned": "Überprovisioniert"
     },
+    "siem": {
+      "title": "SIEM-Feed (SOC)",
+      "empty": "Noch keine Sicherheitsereignisse.",
+      "events": "Ereignisse",
+      "high": "Hohe Schwere"
+    },
     "contradiction": {
       "title": "Mehrturn-Widerspruch",
       "found": "Widersprüche",

@@ -578,6 +578,12 @@
       "violations": "Violations",
       "overProvisioned": "Sur-provisionnés"
     },
+    "siem": {
+      "title": "Flux SIEM (SOC)",
+      "empty": "Aucun événement de sécurité pour l'instant.",
+      "events": "Événements",
+      "high": "Sévérité haute"
+    },
     "contradiction": {
       "title": "Contradiction multi-tour",
       "found": "Contradictions",

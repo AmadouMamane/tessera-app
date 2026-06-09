@@ -31,6 +31,7 @@ import {
   Lock,
   Microscope,
   Radar,
+  Radio,
   Receipt,
   Route,
   Scale,
@@ -86,6 +87,7 @@ import {
   fetchSLO,
   fetchSessions,
   fetchSftDataset,
+  fetchSiem,
   fetchTailSampling,
   fetchToolValidity,
   fetchToxicity,
@@ -128,6 +130,7 @@ import type {
   SLOReport,
   SessionReport,
   ShadowReport,
+  SiemExport,
   SkewReport,
   TailSamplingReport,
   ToolValidity,
@@ -248,6 +251,12 @@ export function ObservabilityDashboard() {
   const playbooks = useQuery({
     queryKey: ["playbooks"],
     queryFn: ({ signal }) => fetchPlaybooks(signal),
+    refetchInterval: 15_000,
+  });
+
+  const siem = useQuery({
+    queryKey: ["siem"],
+    queryFn: ({ signal }) => fetchSiem(signal),
     refetchInterval: 15_000,
   });
 
@@ -449,6 +458,8 @@ export function ObservabilityDashboard() {
       <CrossTenantCard data={crossTenant.data} loading={crossTenant.isLoading} />
 
       <LeastPrivilegeCard data={leastPrivilege.data} loading={leastPrivilege.isLoading} />
+
+      <SiemCard data={siem.data} loading={siem.isLoading} />
 
       <RefusalCard data={refusal.data} loading={refusal.isLoading} />
 
@@ -1184,6 +1195,70 @@ function PlaybooksCard({ data, loading }: { data: PlaybookReport | undefined; lo
               </li>
             ))}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SiemCard({ data, loading }: { data: SiemExport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const cats = data ? Object.entries(data.by_category) : [];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Radio className="h-4 w-4 text-blue-500" />
+          {t("siem.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_events === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("siem.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <Metric label={t("siem.events")} value={String(data.n_events)} />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">{t("siem.high")}</span>
+                <Badge tone={data.n_high_severity === 0 ? "success" : "danger"}>
+                  {data.n_high_severity}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {cats.map(([cat, n]) => (
+                  <Badge key={cat} tone="neutral">
+                    {cat} · {n}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <ul className="flex flex-col gap-1 font-mono text-xs">
+              {data.events
+                .slice(-5)
+                .reverse()
+                .map((e, i) => (
+                  <li key={`${i}-${e.action}`} className="flex items-center gap-2">
+                    <span
+                      className={
+                        e.severity >= 7
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-[var(--muted-foreground)]"
+                      }
+                    >
+                      [{e.severity}]
+                    </span>
+                    <span>{e.action}</span>
+                    <span className="text-[var(--muted-foreground)]">{e.outcome}</span>
+                    <span className="min-w-0 truncate text-[var(--muted-foreground)]">
+                      {e.message}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          </div>
         )}
       </CardContent>
     </Card>
