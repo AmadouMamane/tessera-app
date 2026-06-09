@@ -977,6 +977,22 @@ export const LocalizationReportSchema = z.object({
 });
 export type LocalizationReport = z.infer<typeof LocalizationReportSchema>;
 
+export const ObligationSchema = z.object({
+  name: z.string(),
+  article: z.string(),
+  satisfied: z.boolean(),
+  evidence: z.string(),
+});
+
+export const AIActReportSchema = z.object({
+  risk_class: z.string(),
+  n_obligations: z.number().int(),
+  n_satisfied: z.number().int(),
+  compliance_rate: z.number(),
+  obligations: z.array(ObligationSchema),
+});
+export type AIActReport = z.infer<typeof AIActReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

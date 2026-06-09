@@ -438,6 +438,11 @@
         "medium": "medium"
       }
     },
+    "aiAct": {
+      "title": "EU AI Act compliance",
+      "compliance": "Obligations met",
+      "riskClass": "Risk class"
+    },
     "clusters": {
       "title": "Failure clusters (auto-themed)",
       "unavailable": "Embedder unavailable.",

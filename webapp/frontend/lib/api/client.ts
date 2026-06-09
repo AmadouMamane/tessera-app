@@ -12,6 +12,8 @@
 import type { z } from "zod";
 
 import {
+  type AIActReport,
+  AIActReportSchema,
   type AblationReport,
   AblationReportSchema,
   type AnomalyReport,
@@ -253,6 +255,11 @@ export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsRep
 /** Security audit events normalised to ECS/SIEM shape for the SOC (#172). */
 export async function fetchSiem(signal?: AbortSignal): Promise<SiemExport> {
   return request("/observability/siem", { signal }, SiemExportSchema);
+}
+
+/** EU AI Act compliance posture: transparency, oversight, traceability (#76). */
+export async function fetchAIAct(signal?: AbortSignal): Promise<AIActReport> {
+  return request("/observability/ai-act", { signal }, AIActReportSchema);
 }
 
 /** Per-locale message completeness vs the default locale (#77). */

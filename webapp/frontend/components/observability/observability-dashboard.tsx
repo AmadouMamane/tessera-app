@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   Archive,
+  BadgeCheck,
   Ban,
   BookCheck,
   Boxes,
@@ -55,6 +56,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  fetchAIAct,
   fetchAnomalies,
   fetchCalibration,
   fetchCitations,
@@ -99,6 +101,7 @@ import {
   runShadow,
 } from "@/lib/api/client";
 import type {
+  AIActReport,
   AnomalyReport,
   Calibration,
   CitationSummary,
@@ -269,6 +272,12 @@ export function ObservabilityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
 
+  const aiAct = useQuery({
+    queryKey: ["ai-act"],
+    queryFn: ({ signal }) => fetchAIAct(signal),
+    refetchInterval: 30_000,
+  });
+
   const journey = useQuery({
     queryKey: ["journey"],
     queryFn: ({ signal }) => fetchJourney(signal),
@@ -419,6 +428,8 @@ export function ObservabilityDashboard() {
       </div>
 
       <SLOCard data={slo.data} loading={slo.isLoading} />
+
+      <AIActCard data={aiAct.data} loading={aiAct.isLoading} />
 
       <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
 
@@ -1162,6 +1173,63 @@ function SftDatasetCard({ data, loading }: { data: SFTDataset | undefined; loadi
                 ))}
               </ul>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AIActCard({ data, loading }: { data: AIActReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const pct = data ? Math.round(data.compliance_rate * 100) : 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <BadgeCheck className="h-4 w-4 text-blue-500" />
+          {t("aiAct.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("aiAct.compliance")}
+                </span>
+                <Badge tone={pct === 100 ? "success" : pct >= 80 ? "warning" : "danger"}>
+                  {data.n_satisfied}/{data.n_obligations}
+                </Badge>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("aiAct.riskClass")}
+                </span>
+                <Badge tone="neutral">{data.risk_class}</Badge>
+              </div>
+            </div>
+            <ul className="flex flex-col gap-1 text-xs">
+              {data.obligations.map((o) => (
+                <li key={o.name} className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      o.satisfied ? "bg-emerald-500" : "bg-red-500"
+                    }`}
+                  />
+                  <span className="font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                    {o.article}
+                  </span>
+                  <span className={o.satisfied ? "" : "text-red-600 dark:text-red-400"}>
+                    {o.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </CardContent>

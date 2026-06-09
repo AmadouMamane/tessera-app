@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.observability import (
     ablation as ablation_mod,
+    ai_act as ai_act_mod,
     anomalies as anomalies_mod,
     citation_validity as citation_validity_mod,
     conformance as conformance_mod,
@@ -584,6 +585,28 @@ async def observability_least_privilege() -> dict[str, object]:
 async def observability_siem() -> dict[str, object]:
     """Security audit events normalised to ECS/SIEM shape for the SOC (#172)."""
     return asdict(siem_mod.to_siem_events(_read_audit_entries()))
+
+
+@router.get("/observability/ai-act")
+async def observability_ai_act() -> dict[str, object]:
+    """EU AI Act compliance posture: transparency, oversight, traceability (#76)."""
+    from tessera.guard.audit import verify_audit_chain
+    from tessera.settings import get_settings
+
+    entries = _read_audit_entries()
+    oversight = sum(1 for e in entries if e.get("target") == "ticket_escalate")
+    audit_path = get_settings().guard.audit_file
+    chain = verify_audit_chain(audit_path)
+    signals = ai_act_mod.AIActSignals(
+        disclosure_enabled=True,  # disclosure shipped on the chat UI (#134)
+        n_turns=len(replay_mod.recent_bundles()),
+        oversight_events=oversight,
+        escalation_available=True,
+        audit_present=audit_path.exists(),
+        audit_chain_verified=chain.verified,
+        data_governance_enabled=True,
+    )
+    return asdict(ai_act_mod.assess_compliance(signals))
 
 
 @router.get("/observability/localization")

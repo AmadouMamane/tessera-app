@@ -438,6 +438,11 @@
         "medium": "mittel"
       }
     },
+    "aiAct": {
+      "title": "EU-KI-Gesetz-Konformität",
+      "compliance": "Erfüllte Pflichten",
+      "riskClass": "Risikoklasse"
+    },
     "clusters": {
       "title": "Failure-Cluster (auto-thematisiert)",
       "unavailable": "Embedder nicht verfügbar.",
