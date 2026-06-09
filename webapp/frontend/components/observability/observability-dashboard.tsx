@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Filter,
   Flame,
+  Footprints,
   Gauge,
   GitCompareArrows,
   GitFork,
@@ -56,6 +57,7 @@ import {
   fetchFunnel,
   fetchGuardExplain,
   fetchIntent,
+  fetchJourney,
   fetchLocaleFormat,
   fetchMemoryObs,
   fetchObsCost,
@@ -86,6 +88,7 @@ import type {
   FunnelReport,
   GuardExplainReport,
   IntentReport,
+  JourneyReport,
   LocaleFormatSummary,
   MemoryObsReport,
   ObsCostReport,
@@ -174,6 +177,12 @@ export function ObservabilityDashboard() {
     queryKey: ["memory-obs"],
     queryFn: ({ signal }) => fetchMemoryObs(signal),
     refetchInterval: 15_000,
+  });
+
+  const journey = useQuery({
+    queryKey: ["journey"],
+    queryFn: ({ signal }) => fetchJourney(signal),
+    refetchInterval: 20_000,
   });
 
   // Calibration is computed server-side (slow, judge over a gold set) and cached,
@@ -317,6 +326,8 @@ export function ObservabilityDashboard() {
       <CorpusFreshnessCard data={corpusFreshness.data} loading={corpusFreshness.isLoading} />
 
       <MemoryObsCard data={memoryObs.data} loading={memoryObs.isLoading} />
+
+      <JourneyCard data={journey.data} loading={journey.isLoading} />
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
 
@@ -748,6 +759,69 @@ function RoadmapCard({ data, loading }: { data: RoadmapReport | undefined; loadi
               </li>
             ))}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function JourneyCard({ data, loading }: { data: JourneyReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Footprints className="h-4 w-4 text-blue-500" />
+          {t("journey.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_subjects === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("journey.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <Metric label={t("journey.subjects")} value={String(data.n_subjects)} />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("journey.returning")}
+                </span>
+                <Badge tone={data.n_returning > 0 ? "success" : "neutral"}>
+                  {data.n_returning}
+                </Badge>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                    <th className="py-2 pr-4 font-medium">{t("journey.subject")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("journey.sessions")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("journey.writes")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("journey.reads")}</th>
+                    <th className="py-2 font-medium">{t("journey.span")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.subjects.slice(0, 8).map((j) => (
+                    <tr key={j.subject} className="border-b border-[var(--border)]/50">
+                      <td className="py-2 pr-4 font-mono text-xs">{j.subject}…</td>
+                      <td className="py-2 pr-4 tabular-nums">
+                        {j.returning ? <Badge tone="success">{j.n_sessions}</Badge> : j.n_sessions}
+                      </td>
+                      <td className="py-2 pr-4 tabular-nums">{j.n_writes}</td>
+                      <td className="py-2 pr-4 tabular-nums">{j.n_reads}</td>
+                      <td className="py-2 tabular-nums text-[var(--muted-foreground)]">
+                        {j.span_days.toFixed(1)} d
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>

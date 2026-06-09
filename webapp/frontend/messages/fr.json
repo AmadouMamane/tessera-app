@@ -386,6 +386,17 @@
       "recalled": "Items rappelés",
       "forgets": "Effacements"
     },
+    "journey": {
+      "title": "Parcours cross-session",
+      "empty": "Aucun parcours mémoire pour l'instant.",
+      "subjects": "Sujets",
+      "returning": "Récurrents",
+      "subject": "Sujet",
+      "sessions": "Sessions",
+      "writes": "Écritures",
+      "reads": "Lectures",
+      "span": "Durée"
+    },
     "roadmap": {
       "title": "Roadmap produit (depuis la télémétrie)",
       "empty": "Aucun item — la télémétrie est propre.",

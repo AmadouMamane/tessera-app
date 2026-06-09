@@ -386,6 +386,17 @@
       "recalled": "Erinnerte Items",
       "forgets": "Löschungen"
     },
+    "journey": {
+      "title": "Sitzungsübergreifende Reise",
+      "empty": "Noch keine Memory-Reisen.",
+      "subjects": "Subjekte",
+      "returning": "Wiederkehrend",
+      "subject": "Subjekt",
+      "sessions": "Sitzungen",
+      "writes": "Schreib.",
+      "reads": "Lese.",
+      "span": "Zeitraum"
+    },
     "roadmap": {
       "title": "Produkt-Roadmap (aus Telemetrie)",
       "empty": "Keine Backlog-Einträge — Telemetrie ist sauber.",

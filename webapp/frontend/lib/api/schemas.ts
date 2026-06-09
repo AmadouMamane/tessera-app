@@ -778,6 +778,26 @@ export const MemoryObsReportSchema = z.object({
 });
 export type MemoryObsReport = z.infer<typeof MemoryObsReportSchema>;
 
+export const JourneySchema = z.object({
+  subject: z.string(),
+  n_sessions: z.number().int(),
+  n_actions: z.number().int(),
+  n_writes: z.number().int(),
+  n_reads: z.number().int(),
+  first_seen: z.string(),
+  last_seen: z.string(),
+  span_days: z.number(),
+  returning: z.boolean(),
+});
+
+export const JourneyReportSchema = z.object({
+  n_subjects: z.number().int(),
+  n_returning: z.number().int(),
+  n_events: z.number().int(),
+  subjects: z.array(JourneySchema),
+});
+export type JourneyReport = z.infer<typeof JourneyReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

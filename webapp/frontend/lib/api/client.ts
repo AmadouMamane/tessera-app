@@ -57,6 +57,8 @@ import {
   HealthResponseSchema,
   type IntentReport,
   IntentReportSchema,
+  type JourneyReport,
+  JourneyReportSchema,
   type LocaleFormatSummary,
   LocaleFormatSummarySchema,
   type MemoryObsReport,
@@ -222,6 +224,11 @@ export async function runShadow(model: string, limit = 10): Promise<ShadowReport
 /** Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23). */
 export async function fetchMemoryObs(signal?: AbortSignal): Promise<MemoryObsReport> {
   return request("/observability/memory", { signal }, MemoryObsReportSchema);
+}
+
+/** Cross-session customer journeys mined from the memory audit trail (#99). */
+export async function fetchJourney(signal?: AbortSignal): Promise<JourneyReport> {
+  return request("/observability/journey", { signal }, JourneyReportSchema);
 }
 
 /** Telemetry-mined product backlog: ranked roadmap items (#124). */

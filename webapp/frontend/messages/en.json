@@ -386,6 +386,17 @@
       "recalled": "Items recalled",
       "forgets": "Erasures"
     },
+    "journey": {
+      "title": "Cross-session journey",
+      "empty": "No memory journeys yet.",
+      "subjects": "Subjects",
+      "returning": "Returning",
+      "subject": "Subject",
+      "sessions": "Sessions",
+      "writes": "Writes",
+      "reads": "Reads",
+      "span": "Span"
+    },
     "roadmap": {
       "title": "Product roadmap (from telemetry)",
       "empty": "No backlog items — telemetry is clean.",

@@ -29,6 +29,7 @@ from tessera.observability import (
     firewall_efficacy as firewall_mod,
     funnel as funnel_mod,
     guard_explain as guard_explain_mod,
+    journey as journey_mod,
     language_routing as language_routing_mod,
     locale_format as locale_format_mod,
     memory_obs as memory_obs_mod,
@@ -404,6 +405,22 @@ def _read_audit_entries() -> list[dict[str, object]]:
 async def observability_memory() -> dict[str, object]:
     """Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23)."""
     return asdict(memory_obs_mod.aggregate_memory_audit(_read_audit_entries()))
+
+
+@router.get("/observability/journey")
+async def observability_journey() -> dict[str, object]:
+    """Cross-session customer journeys mined from the memory audit trail (#99)."""
+    events: list[tuple[str, str, str]] = []
+    for entry in _read_audit_entries():
+        target = entry.get("target")
+        if not (isinstance(target, str) and target.startswith("memory.")):
+            continue
+        args = entry.get("arguments")
+        subject = args.get("subject_id") if isinstance(args, dict) else None
+        occurred_at = entry.get("occurred_at")
+        if isinstance(subject, str) and isinstance(occurred_at, str):
+            events.append((subject, target, occurred_at))
+    return asdict(journey_mod.build_journeys(events))
 
 
 @router.get("/observability/embedding-skew")
