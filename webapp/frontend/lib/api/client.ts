@@ -23,6 +23,8 @@ import {
   BudgetSnapshotSchema,
   type Calibration,
   CalibrationSchema,
+  type CitationSummary,
+  CitationSummarySchema,
   type ConsistencyReport,
   ConsistencyReportSchema,
   type ContradictionReport,
@@ -207,6 +209,11 @@ export async function fetchRedteam(signal?: AbortSignal): Promise<RedTeamRespons
 /** Run the adversarial corpus through the guard and record a snapshot (#24). */
 export async function runRedteam(): Promise<RedTeamResponse> {
   return request("/observability/redteam", { method: "POST" }, RedTeamResponseSchema);
+}
+
+/** Regulatory citation validity: cited articles absent from the grounding (#49). */
+export async function fetchCitations(signal?: AbortSignal): Promise<CitationSummary> {
+  return request("/observability/citations", { signal }, CitationSummarySchema);
 }
 
 /** Output PII-leak rate: PII in answers absent from their grounding (#38). */

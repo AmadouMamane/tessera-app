@@ -483,6 +483,15 @@ export const TrajectorySchema = z.object({
 export type Trajectory = z.infer<typeof TrajectorySchema>;
 export type TrajectoryStep = z.infer<typeof TrajectoryStepSchema>;
 
+export const CitationSummarySchema = z.object({
+  n_turns: z.number().int(),
+  n_citations: z.number().int(),
+  n_unsupported: z.number().int(),
+  validity_rate: z.number(),
+  unsupported_examples: z.array(z.string()),
+});
+export type CitationSummary = z.infer<typeof CitationSummarySchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

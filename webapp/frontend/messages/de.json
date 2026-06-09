@@ -441,6 +441,14 @@
       "empty": "Keine erfassten Turns — chatte, um welche zu erfassen.",
       "loading": "Trajektorie wird geladen…",
       "score": "Score"
+    },
+    "citations": {
+      "title": "Gültigkeit regulatorischer Zitate",
+      "valid": "Gültig",
+      "total": "Zitate",
+      "fabricated": "Erfunden",
+      "examples": "Beispiele",
+      "empty": "Keine Artikelzitate erfasst."
     }
   }
 }

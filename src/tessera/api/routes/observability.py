@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.observability import (
     anomalies as anomalies_mod,
+    citation_validity as citation_validity_mod,
     consistency as consistency_mod,
     contradiction as contradiction_mod,
     corpus_injection as corpus_injection_mod,
@@ -198,6 +199,13 @@ async def observability_routing() -> dict[str, object]:
     """Language-routing health: served vs detected language, code-switching."""
     turns = [(b.question, b.language) for b in replay_mod.recent_bundles()]
     return asdict(language_routing_mod.aggregate_routing(turns))
+
+
+@router.get("/observability/citations")
+async def observability_citations() -> dict[str, object]:
+    """Regulatory citation validity: cited articles absent from the grounding."""
+    turns = [(b.original_answer, b.context) for b in replay_mod.recent_bundles()]
+    return asdict(citation_validity_mod.aggregate_citations(turns))
 
 
 @router.get("/observability/pii-leak")

@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  BookCheck,
   Crosshair,
   ExternalLink,
   Gauge,
@@ -29,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchAnomalies,
   fetchCalibration,
+  fetchCitations,
   fetchContradictions,
   fetchEvalScores,
   fetchFirewallEfficacy,
@@ -44,6 +46,7 @@ import {
 import type {
   AnomalyReport,
   Calibration,
+  CitationSummary,
   ContradictionReport,
   EvalScore,
   FirewallEfficacy,
@@ -137,6 +140,12 @@ export function ObservabilityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
 
+  const citations = useQuery({
+    queryKey: ["citations"],
+    queryFn: ({ signal }) => fetchCitations(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -158,6 +167,8 @@ export function ObservabilityDashboard() {
       </div>
 
       <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
+
+      <CitationCard data={citations.data} loading={citations.isLoading} />
 
       <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
 
@@ -434,6 +445,49 @@ function RedTeamCard() {
                   </li>
                 ))}
               </ul>
+            ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CitationCard({ data, loading }: { data: CitationSummary | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const pct = data ? Math.round(data.validity_rate * 100) : 100;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <BookCheck className="h-4 w-4 text-blue-500" />
+          {t("citations.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_citations === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("citations.empty")}</p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-6 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--muted-foreground)]">{t("citations.valid")}</span>
+              <Badge tone={pct === 100 ? "success" : pct >= 80 ? "warning" : "danger"}>
+                {pct}%
+              </Badge>
+            </div>
+            <Metric label={t("citations.total")} value={String(data.n_citations)} />
+            <Metric label={t("citations.fabricated")} value={String(data.n_unsupported)} />
+            {data.unsupported_examples.length > 0 ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("citations.examples")}
+                </span>
+                <span className="font-mono text-xs text-red-600 dark:text-red-400">
+                  {data.unsupported_examples.join(", ")}
+                </span>
+              </div>
             ) : null}
           </div>
         )}

@@ -441,6 +441,14 @@
       "empty": "No captured turns — chat to capture some.",
       "loading": "Loading trajectory…",
       "score": "score"
+    },
+    "citations": {
+      "title": "Regulatory citation validity",
+      "valid": "Valid",
+      "total": "Citations",
+      "fabricated": "Fabricated",
+      "examples": "Examples",
+      "empty": "No article citations captured yet."
     }
   }
 }

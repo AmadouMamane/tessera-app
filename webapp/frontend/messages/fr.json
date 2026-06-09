@@ -441,6 +441,14 @@
       "empty": "Aucun tour capturé — chatte pour en capturer.",
       "loading": "Chargement de la trajectoire…",
       "score": "score"
+    },
+    "citations": {
+      "title": "Validité des citations réglementaires",
+      "valid": "Valides",
+      "total": "Citations",
+      "fabricated": "Fabriquées",
+      "examples": "Exemples",
+      "empty": "Aucune citation d'article capturée."
     }
   }
 }
