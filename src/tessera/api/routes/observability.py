@@ -13,6 +13,7 @@ from dataclasses import asdict
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict
 
+from tessera.observability import provenance as provenance_mod
 from tessera.observability import replay as replay_mod
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.judge import LLMJudge
@@ -73,3 +74,14 @@ async def observability_replay(payload: ReplayRequest) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     result = await replay_mod.replay(bundle, model=payload.model)
     return asdict(result)
+
+
+@router.get("/observability/provenance/{bundle_id}")
+async def observability_provenance(bundle_id: str) -> dict[str, object]:
+    """Claim-level attribution of a captured turn to its retrieved chunks."""
+    bundle = replay_mod.get_bundle(bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="replay bundle not found")
+    chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
+    report = await provenance_mod.attribute(bundle.original_answer, chunks)
+    return asdict(report)

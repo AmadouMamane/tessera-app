@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Play } from "lucide-react";
+import { Play, ScanSearch } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchReplays, runReplay } from "@/lib/api/client";
-import type { ReplayBundle, ReplayResult } from "@/lib/api/schemas";
+import { fetchProvenance, fetchReplays, runReplay } from "@/lib/api/client";
+import type { ProvenanceReport, ReplayBundle, ReplayResult } from "@/lib/api/schemas";
 
 // Locally-available Ollama models to replay against (smallest first).
 const MODELS = ["llama3.2:3b", "mistral:7b", "gemma3:27b", "llama3.3:70b"] as const;
@@ -29,6 +29,12 @@ export function ReplayPanel() {
   const mutation = useMutation({
     mutationFn: ({ bundleId }: { bundleId: string }) => runReplay(bundleId, model),
     onSuccess: (res) => setResults((prev) => ({ ...prev, [res.bundle_id]: res })),
+  });
+
+  const [provs, setProvs] = useState<Record<string, ProvenanceReport>>({});
+  const provMutation = useMutation({
+    mutationFn: ({ bundleId }: { bundleId: string }) => fetchProvenance(bundleId),
+    onSuccess: (res, vars) => setProvs((prev) => ({ ...prev, [vars.bundleId]: res })),
   });
 
   const bundles: ReplayBundle[] = replays.data ? [...replays.data.bundles].reverse() : [];
@@ -65,6 +71,7 @@ export function ReplayPanel() {
           <ul className="flex flex-col gap-3">
             {bundles.map((b) => {
               const res = results[b.bundle_id];
+              const prov = provs[b.bundle_id];
               const pending = mutation.isPending && mutation.variables?.bundleId === b.bundle_id;
               return (
                 <li key={b.bundle_id} className="rounded-lg border border-[var(--border)] p-3">
@@ -77,17 +84,32 @@ export function ReplayPanel() {
                         {b.original_model}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5"
-                      disabled={pending}
-                      onClick={() => mutation.mutate({ bundleId: b.bundle_id })}
-                    >
-                      <Play className="h-3.5 w-3.5" />
-                      {pending ? t("replay.running") : t("replay.run")}
-                    </Button>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5"
+                        disabled={
+                          provMutation.isPending && provMutation.variables?.bundleId === b.bundle_id
+                        }
+                        onClick={() => provMutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <ScanSearch className="h-3.5 w-3.5" />
+                        {t("provenance.run")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        disabled={pending}
+                        onClick={() => mutation.mutate({ bundleId: b.bundle_id })}
+                      >
+                        <Play className="h-3.5 w-3.5" />
+                        {pending ? t("replay.running") : t("replay.run")}
+                      </Button>
+                    </div>
                   </div>
+                  {prov ? <ProvenanceView report={prov} /> : null}
                   {res ? <ReplayResultView res={res} /> : null}
                 </li>
               );
@@ -119,6 +141,37 @@ function ReplayResultView({ res }: { res: ReplayResult }) {
         </span>
       </div>
       <p className="mt-2 whitespace-pre-wrap text-[var(--foreground)]">{res.candidate_answer}</p>
+    </div>
+  );
+}
+
+function ProvenanceView({ report }: { report: ProvenanceReport }) {
+  const t = useTranslations("observability");
+  const pct = Math.round(report.grounded_fraction * 100);
+  return (
+    <div className="mt-3 rounded-md bg-[var(--muted)]/40 p-3 text-sm">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-xs text-[var(--muted-foreground)]">{t("provenance.grounded")}</span>
+        <Badge tone={pct >= 80 ? "success" : pct >= 50 ? "warning" : "danger"}>{pct}%</Badge>
+      </div>
+      <ul className="flex flex-col gap-1.5">
+        {report.claims.map((c, i) => (
+          <li key={`${i}-${c.text.slice(0, 16)}`} className="flex items-start gap-2">
+            <span
+              aria-hidden
+              className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                c.supported ? "bg-emerald-500" : "bg-red-500"
+              }`}
+            />
+            <span className="min-w-0">
+              <span className={c.supported ? "" : "text-red-600 dark:text-red-400"}>{c.text}</span>{" "}
+              <span className="text-xs text-[var(--muted-foreground)] tabular-nums">
+                ({c.support.toFixed(2)})
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

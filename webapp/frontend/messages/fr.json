@@ -302,6 +302,10 @@
       "running": "Replay…",
       "candidate": "candidat",
       "similarity": "similarité"
+    },
+    "provenance": {
+      "run": "Provenance",
+      "grounded": "Ancré"
     }
   }
 }

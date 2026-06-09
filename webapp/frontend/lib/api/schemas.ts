@@ -252,3 +252,18 @@ export const ReplayResultSchema = z.object({
   similarity: z.number(),
 });
 export type ReplayResult = z.infer<typeof ReplayResultSchema>;
+
+export const ProvenanceClaimSchema = z.object({
+  text: z.string(),
+  support: z.number(),
+  supported: z.boolean(),
+  best_chunk: z.number().int(),
+});
+export type ProvenanceClaim = z.infer<typeof ProvenanceClaimSchema>;
+
+export const ProvenanceReportSchema = z.object({
+  n_claims: z.number().int(),
+  grounded_fraction: z.number(),
+  claims: z.array(ProvenanceClaimSchema),
+});
+export type ProvenanceReport = z.infer<typeof ProvenanceReportSchema>;

@@ -25,6 +25,8 @@ import {
   EvalScoresResponseSchema,
   type HealthResponse,
   HealthResponseSchema,
+  type ProvenanceReport,
+  ProvenanceReportSchema,
   type ReplayResult,
   ReplayResultSchema,
   type ReplaysResponse,
@@ -133,6 +135,18 @@ export async function fetchCalibration(signal?: AbortSignal): Promise<Calibratio
 /** Captured production turns available for regression replay. */
 export async function fetchReplays(signal?: AbortSignal): Promise<ReplaysResponse> {
   return request("/observability/replays", { signal }, ReplaysResponseSchema);
+}
+
+/** Claim-level provenance of a captured turn against its retrieved chunks. */
+export async function fetchProvenance(
+  bundleId: string,
+  signal?: AbortSignal,
+): Promise<ProvenanceReport> {
+  return request(
+    `/observability/provenance/${encodeURIComponent(bundleId)}`,
+    { signal },
+    ProvenanceReportSchema,
+  );
 }
 
 /** Replay a captured turn against a candidate model and diff the result. */

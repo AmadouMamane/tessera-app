@@ -302,6 +302,10 @@
       "running": "Läuft…",
       "candidate": "Kandidat",
       "similarity": "Ähnlichkeit"
+    },
+    "provenance": {
+      "run": "Provenance",
+      "grounded": "Fundiert"
     }
   }
 }
