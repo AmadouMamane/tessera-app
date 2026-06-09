@@ -156,6 +156,153 @@ resource "google_monitoring_alert_policy" "faithfulness_below_slo" {
   user_labels = local.common_labels
 }
 
+# ── Lakehouse substrate — traces + feedback + curated tables (idea #120) ──────
+# Beyond eval scores, the lakehouse holds the raw trace spans and human feedback,
+# so traces / evals / feedback live in one warehouse as the analytical substrate
+# the dashboards and the curation jobs query. Code-only like the rest of this file.
+
+resource "google_bigquery_table" "traces" {
+  dataset_id          = google_bigquery_dataset.observability.dataset_id
+  table_id            = "traces"
+  deletion_protection = false
+  labels              = local.common_labels
+
+  time_partitioning {
+    type  = "DAY"
+    field = "start_time"
+  }
+  clustering = ["conversation_id", "name"]
+
+  schema = jsonencode([
+    { name = "trace_id", type = "STRING", mode = "REQUIRED" },
+    { name = "span_id", type = "STRING", mode = "REQUIRED" },
+    { name = "parent_span_id", type = "STRING", mode = "NULLABLE" },
+    { name = "name", type = "STRING", mode = "REQUIRED" },
+    { name = "kind", type = "STRING", mode = "NULLABLE" },
+    { name = "start_time", type = "TIMESTAMP", mode = "REQUIRED" },
+    { name = "duration_ms", type = "FLOAT", mode = "NULLABLE" },
+    { name = "conversation_id", type = "STRING", mode = "NULLABLE" },
+    { name = "language", type = "STRING", mode = "NULLABLE" },
+    { name = "model", type = "STRING", mode = "NULLABLE" },
+    { name = "gen_ai_system", type = "STRING", mode = "NULLABLE" },
+    { name = "status", type = "STRING", mode = "NULLABLE" },
+    { name = "attributes", type = "JSON", mode = "NULLABLE" },
+  ])
+}
+
+# Human feedback on a turn (thumbs / escalation outcome) — substrate for HITL
+# analytics and judge calibration against human labels.
+resource "google_bigquery_table" "feedback" {
+  dataset_id          = google_bigquery_dataset.observability.dataset_id
+  table_id            = "feedback"
+  deletion_protection = false
+  labels              = local.common_labels
+
+  time_partitioning {
+    type  = "DAY"
+    field = "received_at"
+  }
+
+  schema = jsonencode([
+    { name = "received_at", type = "TIMESTAMP", mode = "REQUIRED" },
+    { name = "trace_id", type = "STRING", mode = "NULLABLE" },
+    { name = "conversation_id", type = "STRING", mode = "NULLABLE" },
+    { name = "language", type = "STRING", mode = "NULLABLE" },
+    { name = "rating", type = "STRING", mode = "NULLABLE" },
+    { name = "comment", type = "STRING", mode = "NULLABLE" },
+    { name = "reviewer", type = "STRING", mode = "NULLABLE" },
+  ])
+}
+
+# Logging sink — gen_ai spans → BigQuery traces table (idea #120).
+resource "google_logging_project_sink" "traces_bq" {
+  name        = "${var.service_name}-traces-bq"
+  description = "Routes tessera.trace.span log entries into the observability dataset."
+  destination = "bigquery.googleapis.com/projects/${var.project_id}/datasets/${google_bigquery_dataset.observability.dataset_id}"
+
+  filter = <<-EOT
+    resource.type="cloud_run_revision"
+    resource.labels.service_name="${var.service_name}"
+    jsonPayload.type="tessera.trace.span"
+  EOT
+
+  unique_writer_identity = true
+
+  bigquery_options {
+    use_partitioned_tables = true
+  }
+}
+
+resource "google_bigquery_dataset_iam_member" "traces_sink_writer" {
+  dataset_id = google_bigquery_dataset.observability.dataset_id
+  role       = "roles/bigquery.dataEditor"
+  member     = google_logging_project_sink.traces_bq.writer_identity
+}
+
+# ── Analytical views — the queryable lakehouse surface (idea #120) ─────────────
+# Daily faithfulness by language: the time series the SLO and trends (#150) read.
+resource "google_bigquery_table" "v_quality_by_language_daily" {
+  dataset_id          = google_bigquery_dataset.observability.dataset_id
+  table_id            = "v_quality_by_language_daily"
+  deletion_protection = false
+
+  view {
+    use_legacy_sql = false
+    query          = <<-SQL
+      SELECT
+        DATE(scored_at)            AS day,
+        language,
+        metric,
+        COUNT(*)                   AS n,
+        AVG(score)                 AS mean_score,
+        COUNTIF(score < 0.80) / COUNT(*) AS fail_rate
+      FROM `${var.project_id}.${google_bigquery_dataset.observability.dataset_id}.eval_scores`
+      GROUP BY day, language, metric
+    SQL
+  }
+}
+
+# Quality by model — joins eval scores to the model recorded on the root span,
+# so a model swap's quality delta is one query (root-cause #17, what-changed).
+resource "google_bigquery_table" "v_quality_by_model" {
+  dataset_id          = google_bigquery_dataset.observability.dataset_id
+  table_id            = "v_quality_by_model"
+  deletion_protection = false
+
+  view {
+    use_legacy_sql = false
+    query          = <<-SQL
+      SELECT
+        t.model,
+        s.metric,
+        COUNT(*)     AS n,
+        AVG(s.score) AS mean_score
+      FROM `${var.project_id}.${google_bigquery_dataset.observability.dataset_id}.eval_scores` AS s
+      JOIN `${var.project_id}.${google_bigquery_dataset.observability.dataset_id}.traces` AS t
+        ON s.trace_id = t.trace_id AND t.parent_span_id IS NULL
+      GROUP BY t.model, s.metric
+    SQL
+  }
+}
+
+# Low-scoring turns — the curation queue feeding eval/failures (#123) and the
+# improvement flywheel SFT export (#122).
+resource "google_bigquery_table" "v_low_score_turns" {
+  dataset_id          = google_bigquery_dataset.observability.dataset_id
+  table_id            = "v_low_score_turns"
+  deletion_protection = false
+
+  view {
+    use_legacy_sql = false
+    query          = <<-SQL
+      SELECT scored_at, conversation_id, language, metric, score, judge_model, trace_id
+      FROM `${var.project_id}.${google_bigquery_dataset.observability.dataset_id}.eval_scores`
+      WHERE score < 0.80
+      ORDER BY scored_at DESC
+    SQL
+  }
+}
+
 # ── GenAI-quality dashboard ────────────────────────────────────────────────────
 
 resource "google_monitoring_dashboard" "genai_quality" {
