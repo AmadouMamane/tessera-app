@@ -493,6 +493,14 @@
       "consistent": "Konsistent",
       "divergent": "Divergenz",
       "min": "min. Ähnl."
+    },
+    "cost": {
+      "title": "Kosten / Token-Burn",
+      "anomalies": "Anomalien",
+      "mean": "Ø Tokens",
+      "max": "Max",
+      "total": "Gesamt",
+      "empty": "Keine erfassten Turns."
     }
   }
 }

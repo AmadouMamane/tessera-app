@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   BookCheck,
+  Coins,
   Crosshair,
   ExternalLink,
   Gauge,
@@ -36,6 +37,7 @@ import {
   fetchCitations,
   fetchConformance,
   fetchContradictions,
+  fetchCost,
   fetchEvalScores,
   fetchFirewallEfficacy,
   fetchIntent,
@@ -55,6 +57,7 @@ import type {
   CitationSummary,
   ConformanceReport,
   ContradictionReport,
+  CostReport,
   EvalScore,
   FirewallEfficacy,
   IntentReport,
@@ -173,6 +176,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const cost = useQuery({
+    queryKey: ["cost"],
+    queryFn: ({ signal }) => fetchCost(signal),
+    refetchInterval: 15_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -220,6 +229,8 @@ export function ObservabilityDashboard() {
       <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
 
       <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
+
+      <CostCard data={cost.data} loading={cost.isLoading} />
 
       <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
 
@@ -862,6 +873,59 @@ function SessionCard({ data, loading }: { data: SessionReport | undefined; loadi
               value={`${Math.round(data.single_turn_rate * 100)}%`}
             />
             <Metric label={t("sessions.meanScore")} value={data.mean_score.toFixed(2)} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CostCard({ data, loading }: { data: CostReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Coins className="h-4 w-4 text-blue-500" />
+          {t("cost.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_turns === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("cost.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("cost.anomalies")}
+                </span>
+                <Badge tone={data.n_anomalies === 0 ? "success" : "warning"}>
+                  {data.n_anomalies}
+                </Badge>
+              </div>
+              <Metric
+                label={t("cost.mean")}
+                value={Math.round(data.mean_tokens).toLocaleString()}
+              />
+              <Metric label={t("cost.max")} value={data.max_tokens.toLocaleString()} />
+              <Metric label={t("cost.total")} value={data.total_tokens.toLocaleString()} />
+            </div>
+            {data.anomalies.length > 0 ? (
+              <ul className="flex flex-col gap-1 text-xs">
+                {data.anomalies.slice(0, 5).map((a, i) => (
+                  <li key={`${i}-${a.question.slice(0, 12)}`} className="flex items-center gap-2">
+                    <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                    <span className="tabular-nums text-[var(--muted-foreground)]">
+                      {a.tokens.toLocaleString()}
+                    </span>
+                    <span className="min-w-0 truncate">{a.question}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         )}
       </CardContent>

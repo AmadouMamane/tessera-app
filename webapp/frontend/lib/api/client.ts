@@ -33,6 +33,8 @@ import {
   ContradictionReportSchema,
   type CorpusScanReport,
   CorpusScanReportSchema,
+  type CostReport,
+  CostReportSchema,
   type CoverageReport,
   CoverageReportSchema,
   type CrossLingualReport,
@@ -196,6 +198,11 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Token-cost distribution and token-burn anomalies over captured turns (#33). */
+export async function fetchCost(signal?: AbortSignal): Promise<CostReport> {
+  return request("/observability/cost", { signal }, CostReportSchema);
 }
 
 /** Business-intent mix and routing confidence over captured questions (#63). */

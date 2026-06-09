@@ -493,6 +493,14 @@
       "consistent": "Consistent",
       "divergent": "Divergence",
       "min": "min sim."
+    },
+    "cost": {
+      "title": "Cost / token burn",
+      "anomalies": "Anomalies",
+      "mean": "Mean tokens",
+      "max": "Max",
+      "total": "Total",
+      "empty": "No captured turns yet."
     }
   }
 }

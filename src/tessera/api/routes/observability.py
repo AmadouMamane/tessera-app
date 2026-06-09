@@ -20,6 +20,7 @@ from tessera.observability import (
     consistency as consistency_mod,
     contradiction as contradiction_mod,
     corpus_injection as corpus_injection_mod,
+    cost_anomaly as cost_anomaly_mod,
     coverage as coverage_mod,
     crosslingual as crosslingual_mod,
     firewall_efficacy as firewall_mod,
@@ -29,10 +30,10 @@ from tessera.observability import (
     provenance as provenance_mod,
     redteam as redteam_mod,
     refusal as refusal_mod,
-    routing_intent as routing_intent_mod,
     replay as replay_mod,
     retrieval_quality as retrieval_quality_mod,
     robustness as robustness_mod,
+    routing_intent as routing_intent_mod,
     sessions as sessions_mod,
     steganography as steganography_mod,
     tool_validity as tool_validity_mod,
@@ -41,9 +42,9 @@ from tessera.observability import (
 )
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.ensemble import evaluate_ensemble
-from tessera.observability.eval.sycophancy import detect_sycophancy
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.scores import recent_scores
+from tessera.observability.eval.sycophancy import detect_sycophancy
 
 router = APIRouter(tags=["observability"])
 
@@ -257,6 +258,16 @@ async def observability_refusal() -> dict[str, object]:
 async def observability_conformance() -> dict[str, object]:
     """Schema/format conformance of tool-call arguments from the audit trail."""
     return asdict(conformance_mod.compute_conformance())
+
+
+@router.get("/observability/cost")
+async def observability_cost() -> dict[str, object]:
+    """Token-cost distribution and token-burn anomalies over captured turns."""
+    turns = [
+        (b.question, f"{b.question}\n{b.context}\n{b.original_answer}")
+        for b in replay_mod.recent_bundles()
+    ]
+    return asdict(cost_anomaly_mod.analyze_costs(turns))
 
 
 @router.get("/observability/tool-validity")

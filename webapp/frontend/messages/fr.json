@@ -493,6 +493,14 @@
       "consistent": "Cohérent",
       "divergent": "Divergence",
       "min": "sim. min"
+    },
+    "cost": {
+      "title": "Coût / token-burn",
+      "anomalies": "Anomalies",
+      "mean": "Tokens moy.",
+      "max": "Max",
+      "total": "Total",
+      "empty": "Aucun tour capturé."
     }
   }
 }

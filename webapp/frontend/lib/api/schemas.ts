@@ -546,6 +546,24 @@ export const IntentReportSchema = z.object({
 });
 export type IntentReport = z.infer<typeof IntentReportSchema>;
 
+export const TurnCostSchema = z.object({
+  question: z.string(),
+  tokens: z.number().int(),
+  anomaly: z.boolean(),
+});
+
+export const CostReportSchema = z.object({
+  n_turns: z.number().int(),
+  total_tokens: z.number().int(),
+  mean_tokens: z.number(),
+  max_tokens: z.number().int(),
+  threshold_tokens: z.number(),
+  estimated_cost_eur: z.number(),
+  n_anomalies: z.number().int(),
+  anomalies: z.array(TurnCostSchema),
+});
+export type CostReport = z.infer<typeof CostReportSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),
