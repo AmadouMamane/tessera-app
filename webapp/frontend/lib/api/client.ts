@@ -12,6 +12,8 @@
 import type { z } from "zod";
 
 import {
+  type AnomalyReport,
+  AnomalyReportSchema,
   type AuditIntegrity,
   AuditIntegritySchema,
   type AuditOutcome,
@@ -171,6 +173,11 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Anomalous-conversation detection: long/looping/repetitive sessions (#69). */
+export async function fetchAnomalies(signal?: AbortSignal): Promise<AnomalyReport> {
+  return request("/observability/anomalies", { signal }, AnomalyReportSchema);
 }
 
 /** Root-cause "what changed": lineage diff + attribution of a score delta (#17). */

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  Activity,
   Crosshair,
   ExternalLink,
   Gauge,
@@ -24,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  fetchAnomalies,
   fetchCalibration,
   fetchContradictions,
   fetchEvalScores,
@@ -37,6 +39,7 @@ import {
   runRedteam,
 } from "@/lib/api/client";
 import type {
+  AnomalyReport,
   Calibration,
   ContradictionReport,
   EvalScore,
@@ -118,6 +121,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 20_000,
   });
 
+  const anomalies = useQuery({
+    queryKey: ["anomalies"],
+    queryFn: ({ signal }) => fetchAnomalies(signal),
+    refetchInterval: 20_000,
+  });
+
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
@@ -153,6 +162,8 @@ export function ObservabilityDashboard() {
       <SessionCard data={sessions.data} loading={sessions.isLoading} />
 
       <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
+
+      <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
 
       <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
 
@@ -562,6 +573,57 @@ function SessionCard({ data, loading }: { data: SessionReport | undefined; loadi
               value={`${Math.round(data.single_turn_rate * 100)}%`}
             />
             <Metric label={t("sessions.meanScore")} value={data.mean_score.toFixed(2)} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AnomalyCard({ data, loading }: { data: AnomalyReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const flagged = data?.sessions.filter((s) => s.anomalous) ?? [];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Activity className="h-4 w-4 text-blue-500" />
+          {t("anomalies.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_sessions === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("anomalies.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("anomalies.flagged")}
+                </span>
+                <Badge tone={data.n_anomalous === 0 ? "success" : "warning"}>
+                  {data.n_anomalous}/{data.n_sessions}
+                </Badge>
+              </div>
+            </div>
+            {flagged.length > 0 ? (
+              <ul className="flex flex-col gap-1 text-xs">
+                {flagged.slice(0, 5).map((s) => (
+                  <li key={s.conversation_id} className="flex items-center gap-2">
+                    <span className="text-[var(--muted-foreground)]">
+                      {s.n_turns} {t("anomalies.turns")}
+                    </span>
+                    {s.reasons.map((r) => (
+                      <Badge key={r} tone="warning">
+                        {t(`anomalies.reason.${r}`)}
+                      </Badge>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         )}
       </CardContent>

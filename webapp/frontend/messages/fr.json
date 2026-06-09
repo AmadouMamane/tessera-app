@@ -417,6 +417,17 @@
       "stable": "Stable",
       "docs": "docs",
       "empty": "Deux tours avec lineage requis."
+    },
+    "anomalies": {
+      "title": "Conversations anormales",
+      "flagged": "Signalées",
+      "turns": "tours",
+      "empty": "Aucune session capturée.",
+      "reason": {
+        "long": "longue",
+        "repetitive": "répétitive",
+        "looping": "en boucle"
+      }
     }
   }
 }

@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.observability import (
+    anomalies as anomalies_mod,
     consistency as consistency_mod,
     contradiction as contradiction_mod,
     corpus_injection as corpus_injection_mod,
@@ -196,6 +197,16 @@ async def observability_pii_leak() -> dict[str, object]:
     """Output PII-leak rate: PII in answers absent from their grounding."""
     turns = [(b.original_answer, f"{b.question}\n{b.context}") for b in replay_mod.recent_bundles()]
     return asdict(pii_leak_mod.aggregate_leaks(turns))
+
+
+@router.get("/observability/anomalies")
+async def observability_anomalies() -> dict[str, object]:
+    """Detect long/looping/repetitive sessions among captured turns."""
+    by_conversation: dict[str, list[str]] = {}
+    for bundle in replay_mod.recent_bundles():
+        key = bundle.conversation_id or "<none>"
+        by_conversation.setdefault(key, []).append(bundle.question)
+    return asdict(anomalies_mod.detect_anomalies(by_conversation))
 
 
 @router.get("/observability/what-changed")

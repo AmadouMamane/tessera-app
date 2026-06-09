@@ -417,6 +417,17 @@
       "stable": "Stabil",
       "docs": "Dokumente",
       "empty": "Zwei Turns mit Lineage erforderlich."
+    },
+    "anomalies": {
+      "title": "Anomale Konversationen",
+      "flagged": "Markiert",
+      "turns": "Turns",
+      "empty": "Keine erfasste Sitzung.",
+      "reason": {
+        "long": "lang",
+        "repetitive": "repetitiv",
+        "looping": "Schleife"
+      }
     }
   }
 }

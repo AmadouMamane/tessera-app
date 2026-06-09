@@ -436,6 +436,22 @@ export const WhatChangedSchema = z.object({
 });
 export type WhatChanged = z.infer<typeof WhatChangedSchema>;
 
+export const SessionAnomalySchema = z.object({
+  conversation_id: z.string(),
+  n_turns: z.number().int(),
+  repeated_pairs: z.number().int(),
+  distinct_ratio: z.number(),
+  anomalous: z.boolean(),
+  reasons: z.array(z.string()),
+});
+
+export const AnomalyReportSchema = z.object({
+  n_sessions: z.number().int(),
+  n_anomalous: z.number().int(),
+  sessions: z.array(SessionAnomalySchema),
+});
+export type AnomalyReport = z.infer<typeof AnomalyReportSchema>;
+
 export const PIILeakSummarySchema = z.object({
   n_turns: z.number().int(),
   n_with_leak: z.number().int(),

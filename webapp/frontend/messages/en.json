@@ -417,6 +417,17 @@
       "stable": "Stable",
       "docs": "docs",
       "empty": "Needs two turns with lineage."
+    },
+    "anomalies": {
+      "title": "Anomalous conversations",
+      "flagged": "Flagged",
+      "turns": "turns",
+      "empty": "No captured session yet.",
+      "reason": {
+        "long": "long",
+        "repetitive": "repetitive",
+        "looping": "looping"
+      }
     }
   }
 }
