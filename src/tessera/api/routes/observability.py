@@ -152,7 +152,7 @@ def _load_failure_items() -> list[failure_clustering_mod.FailureItem]:
     from pathlib import Path
 
     items: list[failure_clustering_mod.FailureItem] = []
-    failures_dir = Path(__file__).resolve().parents[3] / "eval" / "failures"
+    failures_dir = Path(__file__).resolve().parents[4] / "eval" / "failures"
     for path in sorted(failures_dir.glob("[0-9]*.json")):
         try:
             obj = json.loads(path.read_text(encoding="utf-8"))
