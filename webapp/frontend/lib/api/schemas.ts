@@ -1133,6 +1133,24 @@ export const ReproReportSchema = z.object({
 });
 export type ReproReport = z.infer<typeof ReproReportSchema>;
 
+export const TurnSnapshotSchema = z.object({
+  question: z.string(),
+  executed: z.array(z.string()),
+  unknown_nodes: z.array(z.string()),
+  missing_required: z.array(z.string()),
+  matches_golden: z.boolean(),
+});
+
+export const SnapshotDiffReportSchema = z.object({
+  n_turns: z.number().int(),
+  n_matching: z.number().int(),
+  n_drifted: z.number().int(),
+  known_nodes: z.array(z.string()),
+  required_backbone: z.array(z.string()),
+  drifts: z.array(TurnSnapshotSchema),
+});
+export type SnapshotDiffReport = z.infer<typeof SnapshotDiffReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

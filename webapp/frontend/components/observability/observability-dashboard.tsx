@@ -108,6 +108,7 @@ import {
   fetchToolLoops,
   fetchToolValidity,
   fetchToxicity,
+  fetchTraceSnapshot,
   fetchTrend,
   fetchWhatChanged,
   runRedteam,
@@ -158,6 +159,7 @@ import type {
   ShadowReport,
   SiemExport,
   SkewReport,
+  SnapshotDiffReport,
   TailSamplingReport,
   ToolLoopReport,
   ToolValidity,
@@ -472,6 +474,12 @@ export function ObservabilityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
 
+  const traceSnapshot = useQuery({
+    queryKey: ["trace-snapshot"],
+    queryFn: ({ signal }) => fetchTraceSnapshot(signal),
+    refetchInterval: 20_000,
+  });
+
   const funnel = useQuery({
     queryKey: ["funnel"],
     queryFn: ({ signal }) => fetchFunnel(signal),
@@ -573,6 +581,8 @@ export function ObservabilityDashboard() {
       <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
 
       <GraphTopologyCard data={graphTopology.data} loading={graphTopology.isLoading} />
+
+      <TraceSnapshotCard data={traceSnapshot.data} loading={traceSnapshot.isLoading} />
 
       <GuardRetractionCard data={guardRetraction.data} loading={guardRetraction.isLoading} />
 
@@ -3217,6 +3227,69 @@ function GuardRetractionCard({
               </ul>
             )}
             <p className="text-xs text-[var(--muted-foreground)]">{t("retraction.note")}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TraceSnapshotCard({
+  data,
+  loading,
+}: {
+  data: SnapshotDiffReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <GitCompareArrows className="h-4 w-4 text-blue-500" />
+          {t("snapshot.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_turns === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("snapshot.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("snapshot.drifted")}
+                </span>
+                <Badge tone={data.n_drifted === 0 ? "success" : "danger"}>
+                  {data.n_drifted}/{data.n_turns}
+                </Badge>
+              </div>
+              <Metric label={t("snapshot.matching")} value={String(data.n_matching)} />
+              <Metric label={t("snapshot.knownNodes")} value={String(data.known_nodes.length)} />
+            </div>
+            {data.n_drifted === 0 ? (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                {t("snapshot.clear")}
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1 text-xs">
+                {data.drifts.slice(0, 5).map((d, i) => (
+                  <li key={`${i}-${d.question.slice(0, 12)}`} className="flex items-center gap-2">
+                    {d.unknown_nodes.length > 0 ? (
+                      <Badge tone="danger">+{d.unknown_nodes.join(",")}</Badge>
+                    ) : null}
+                    {d.missing_required.length > 0 ? (
+                      <Badge tone="warning">−{d.missing_required.join(",")}</Badge>
+                    ) : null}
+                    <span className="min-w-0 truncate text-[var(--muted-foreground)]">
+                      {d.question}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </CardContent>

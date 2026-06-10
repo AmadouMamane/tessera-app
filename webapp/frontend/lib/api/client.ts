@@ -131,6 +131,8 @@ import {
   SiemExportSchema,
   type SkewReport,
   SkewReportSchema,
+  type SnapshotDiffReport,
+  SnapshotDiffReportSchema,
   type StegoReport,
   StegoReportSchema,
   type SycophancyReport,
@@ -512,6 +514,11 @@ export async function fetchTrajectory(bundleId: string, signal?: AbortSignal): P
     { signal },
     TrajectorySchema,
   );
+}
+
+/** Golden-trace snapshot diff of executed-node shapes across turns (#41). */
+export async function fetchTraceSnapshot(signal?: AbortSignal): Promise<SnapshotDiffReport> {
+  return request("/observability/trace-snapshot", { signal }, SnapshotDiffReportSchema);
 }
 
 /** Captured production turns available for regression replay. */

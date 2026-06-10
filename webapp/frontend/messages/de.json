@@ -812,6 +812,14 @@
       "clear": "Jede wiederholte Frage lief mit derselben Trace-Form.",
       "note": "Gleiche Eingabe sollte dieselbe Knoten-Form ergeben (Voraussetzung für Replay).",
       "empty": "Noch keine Turns erfasst."
+    },
+    "snapshot": {
+      "title": "Golden-Trace-Snapshot",
+      "drifted": "Abgewichen",
+      "matching": "Übereinstimmend",
+      "knownNodes": "Bekannte Knoten",
+      "clear": "Jede Trace entsprach der Golden-Knoten-Form.",
+      "empty": "Noch keine Turns erfasst."
     }
   }
 }

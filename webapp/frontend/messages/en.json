@@ -812,6 +812,14 @@
       "clear": "Every repeated question ran the same trace shape.",
       "note": "Same input should yield the same executed-node shape (prereq of replay).",
       "empty": "No turns captured yet."
+    },
+    "snapshot": {
+      "title": "Golden-trace snapshot",
+      "drifted": "Drifted",
+      "matching": "Matching",
+      "knownNodes": "Known nodes",
+      "clear": "Every trace matched the golden node shape.",
+      "empty": "No turns captured yet."
     }
   }
 }

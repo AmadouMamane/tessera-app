@@ -812,6 +812,14 @@
       "clear": "Chaque question répétée a exécuté la même forme de trace.",
       "note": "Une même entrée doit produire la même forme de nœuds (prérequis du replay).",
       "empty": "Aucun tour capturé."
+    },
+    "snapshot": {
+      "title": "Snapshot golden de trace",
+      "drifted": "En dérive",
+      "matching": "Conformes",
+      "knownNodes": "Nœuds connus",
+      "clear": "Chaque trace correspond à la forme de nœuds golden.",
+      "empty": "Aucun tour capturé."
     }
   }
 }

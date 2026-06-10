@@ -73,6 +73,7 @@ from tessera.observability import (
     tool_loops as tool_loops_mod,
     tool_validity as tool_validity_mod,
     toxicity as toxicity_mod,
+    trace_snapshot as trace_snapshot_mod,
     trajectory as trajectory_mod,
     trends as trends_mod,
     whatchanged as whatchanged_mod,
@@ -1018,6 +1019,15 @@ async def observability_steganography(bundle_id: str) -> dict[str, object]:
     if bundle is None:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     return asdict(steganography_mod.scan_text(f"{bundle.question}\n{bundle.context}"))
+
+
+@router.get("/observability/trace-snapshot")
+async def observability_trace_snapshot() -> dict[str, object]:
+    """Golden-trace snapshot diff of executed-node shapes across turns (#41)."""
+    turns = [
+        (b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()
+    ]
+    return asdict(trace_snapshot_mod.diff_traces(turns))
 
 
 @router.get("/observability/trajectory/{bundle_id}")
