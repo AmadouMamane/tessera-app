@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   Copy,
+  FileText,
   Pencil,
   Sparkles,
   User2,
@@ -314,9 +315,10 @@ function CitationList({
             <li key={`${c.source}-${c.locator}-${idx}`}>
               <details className="group rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 transition-colors open:border-gold-500/40 open:bg-gold-500/5 hover:border-gold-500/30">
                 <summary className="flex cursor-pointer list-none items-center gap-2 px-2.5 py-1.5 [&::-webkit-details-marker]:hidden">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gold-500/15 text-[0.6rem] font-semibold text-gold-700 tabular-nums dark:text-gold-300">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[var(--muted)] text-[0.65rem] font-semibold text-[var(--muted-foreground)] tabular-nums">
                     {idx + 1}
                   </span>
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-[var(--foreground)] text-xs">
                       {title}
