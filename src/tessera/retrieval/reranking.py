@@ -23,12 +23,18 @@ __all__ = ["RerankedHit", "lexical_score", "rerank"]
 
 
 _RRF_K: Final[int] = 60
+# A document ranked first by *both* signals scores ``2 / (k + 1)``; we divide by
+# this maximum so ``fused_score`` lands in ``[0, 1]`` (1.0 = top of both lists,
+# 0.5 = top of one only). Normalising keeps the ordering identical but makes the
+# score an interpretable confidence on a stable scale, so downstream thresholds
+# do not silently break when the fusion method changes.
+_MAX_FUSED: Final[float] = 2.0 / (_RRF_K + 1)
 _TOKEN_RE = re.compile(r"\w+", re.UNICODE)
 
 
 @dataclass(frozen=True, slots=True)
 class RerankedHit:
-    """A vector hit with a fused score."""
+    """A vector hit with a fused score in ``[0, 1]`` (1.0 = ranked first by both signals)."""
 
     hit: VectorHit
     fused_score: float
@@ -86,7 +92,7 @@ def rerank(
     fused: list[RerankedHit] = []
     for hit in hits:
         key = (hit.source, hit.chunk_id)
-        score = _rrf(vector_ranking[key]) + _rrf(lexical_ranking[key])
+        score = (_rrf(vector_ranking[key]) + _rrf(lexical_ranking[key])) / _MAX_FUSED
         fused.append(RerankedHit(hit=hit, fused_score=score))
 
     fused.sort(key=lambda item: item.fused_score, reverse=True)
