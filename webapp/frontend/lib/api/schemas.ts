@@ -23,6 +23,7 @@ export const ChatCitationSchema = z.object({
   source: z.string(),
   locator: z.string(),
   language: LocaleSchema,
+  excerpt: z.string().default(""),
 });
 export type ChatCitation = z.infer<typeof ChatCitationSchema>;
 

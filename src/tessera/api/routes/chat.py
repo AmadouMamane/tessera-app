@@ -319,7 +319,12 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
         needs_escalation=needs_escalation,
         confidence=state.get("confidence"),
         citations=[
-            {"source": c.source, "locator": c.locator, "language": c.language.value}
+            {
+                "source": c.source,
+                "locator": c.locator,
+                "language": c.language.value,
+                "excerpt": c.excerpt,
+            }
             for c in state.get("citations", [])
         ],
         finish_reason=outcome,

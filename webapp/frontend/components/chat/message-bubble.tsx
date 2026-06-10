@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/lib/stores/chat-store";
 import { Markdown } from "./markdown";
@@ -290,22 +291,56 @@ function CitationPills({
   citations: NonNullable<ChatMessage["citations"]>;
   sourcesLabel: string;
 }) {
+  const t = useTranslations("chat");
   return (
-    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 px-1">
+    <div className="mt-1 flex flex-col gap-1 px-1">
       <span className="flex items-center gap-1 text-[0.65rem] text-[var(--muted-foreground)]">
         <BookOpen className="h-3 w-3" />
         {sourcesLabel}
       </span>
-      {citations.map((c, idx) => (
-        <span
-          key={`${c.source}-${c.locator}-${idx}`}
-          className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--muted)]/40 px-2 py-0.5 text-[0.65rem] text-[var(--foreground)] transition-colors hover:border-gold-500/40 hover:bg-gold-500/5"
-        >
-          <span className="h-1 w-1 rounded-full bg-gold-500/70 dark:bg-gold-400/70" />
-          <span className="font-medium">{c.source}</span>
-          {c.locator && <span className="text-[var(--muted-foreground)]">{c.locator}</span>}
-        </span>
-      ))}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {citations.map((c, idx) => (
+          <Popover key={`${c.source}-${c.locator}-${idx}`}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("viewSource", { source: c.source })}
+                className="inline-flex max-w-full items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--muted)]/40 px-2 py-0.5 text-[0.65rem] text-[var(--foreground)] transition-colors hover:border-gold-500/40 hover:bg-gold-500/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/50 data-[state=open]:border-gold-500/50 data-[state=open]:bg-gold-500/10"
+              >
+                <span className="h-1 w-1 shrink-0 rounded-full bg-gold-500/70 dark:bg-gold-400/70" />
+                <span className="max-w-[220px] truncate font-medium">{c.source}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-start gap-1.5">
+                  <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
+                  <div className="min-w-0">
+                    <p className="break-words font-medium text-xs text-[var(--foreground)]">
+                      {c.source}
+                    </p>
+                    {c.locator && (
+                      <p className="break-words text-[0.7rem] text-[var(--muted-foreground)]">
+                        {c.locator}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <span className="shrink-0 rounded border border-[var(--border)] px-1 py-px text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                  {c.language}
+                </span>
+              </div>
+              <div className="my-2 h-px bg-[var(--border)]" />
+              <p className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+                {t("sourceExcerpt")}
+              </p>
+              <p className="mt-1 max-h-56 overflow-y-auto whitespace-pre-wrap break-words pr-1 text-xs leading-relaxed text-[var(--foreground)]/90">
+                {c.excerpt?.trim() ? c.excerpt : t("noExcerpt")}
+              </p>
+            </PopoverContent>
+          </Popover>
+        ))}
+      </div>
     </div>
   );
 }
