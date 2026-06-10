@@ -121,6 +121,12 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
             {t("composerHint")}
           </p>
         </form>
+        {/* AI Act Art. 50 disclosure — must always be visible to the user, so it
+            is persistent (never toggled) and rendered from bundled i18n rather
+            than a network call. Mirrors tessera.observability.disclosure. */}
+        <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[0.6rem] text-[var(--muted-foreground)]/70">
+          {t("disclosure")}
+        </p>
       </div>
     );
   },
