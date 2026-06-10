@@ -15,21 +15,57 @@ from tessera.retrieval import hybrid_search
 NODE_NAME = "regulation_lookup"
 
 _TOP_K = 6
-_CITATION_THRESHOLD = 0.75
+# ``hybrid_search`` exposes a reciprocal-rank-fusion (RRF) score, not a cosine
+# similarity: the theoretical maximum is ``2 / (RRF_K + 1) ≈ 0.033`` (see
+# :mod:`tessera.retrieval.reranking`). An absolute 0.75 cut — calibrated for a
+# [0, 1] cosine scale — was therefore unreachable and silently suppressed every
+# citation. We instead keep the hits that rank close to the best fused result,
+# which is robust to corpus size. See ADR 0010 / insights.
+_CITATION_SCORE_RATIO = 0.6
+_MAX_CITATIONS = 3
 _CORPUS = "regulations"
 
 
-def _to_citation(doc: RetrievedDocument) -> Citation | None:
-    """Promote a high-scoring chunk into a citation."""
-    if doc.score < _CITATION_THRESHOLD:
-        return None
+def _to_citation(doc: RetrievedDocument) -> Citation:
+    """Render a retrieved chunk as a citation.
+
+    The excerpt is the full retrieved chunk verbatim — never truncated here.
+    The retrieval-time chunk size already bounds its length, and the UI shows
+    it in a scrollable panel, so the citation reproduces exactly the grounding
+    text rather than an arbitrary slice.
+    """
     locator = doc.metadata.get("locator") or doc.chunk_id
     return Citation(
         source=doc.source,
         locator=locator,
         language=doc.language,
-        excerpt=doc.text[:280],
+        excerpt=doc.text,
     )
+
+
+def _select_citations(documents: list[RetrievedDocument]) -> list[Citation]:
+    """Pick the strongest hits relative to the best fused score.
+
+    Hits are kept while they score within :data:`_CITATION_SCORE_RATIO` of the
+    top result, deduplicated by source so the same regulation is not cited
+    twice, and capped at :data:`_MAX_CITATIONS` to keep the answer footer and
+    the chat UI legible.
+    """
+    if not documents:
+        return []
+    cutoff = documents[0].score * _CITATION_SCORE_RATIO
+    citations: list[Citation] = []
+    seen: set[str] = set()
+    for doc in documents:
+        if doc.score < cutoff:
+            break
+        if doc.source in seen:
+            continue
+        seen.add(doc.source)
+        citations.append(_to_citation(doc))
+        if len(citations) >= _MAX_CITATIONS:
+            break
+    return citations
 
 
 async def run(state: AgentState) -> dict[str, object]:
@@ -44,7 +80,7 @@ async def run(state: AgentState) -> dict[str, object]:
     except Exception as exc:
         return {"errors": [f"regulation_lookup failed: {exc}"]}
 
-    citations = [c for c in (_to_citation(doc) for doc in documents) if c is not None]
+    citations = _select_citations(documents)
     update: dict[str, object] = {"retrieved_documents": documents}
     if citations:
         update["citations"] = citations
