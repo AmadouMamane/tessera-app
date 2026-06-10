@@ -1,15 +1,21 @@
 """Grounding-based citation selection.
 
-Instead of citing the top *retrieved* chunks, this attributes the answer's
-claims to the chunks that actually support them — reusing the provenance
-attributor (idea #11) — and cites only those. Two consequences follow:
+Cite the retrieved chunks that best back the answer, drawn from *every* worker's
+context (so a product answer gets product sources, not only regulatory ones).
 
-* citations reflect what the answer *used*, not merely what retrieval surfaced;
-* every worker's retrieved context is eligible, so a product-grounded answer
-  gets product sources, not only regulatory ones.
+Two cheap, dependency-free signals are blended — no embeddings on the hot path,
+which is what made an earlier attribution pass add ~900 ms per turn:
 
-The caller falls back to the worker-selected citations when attribution yields
-nothing, so this never regresses a turn that previously had sources.
+* **retrieval relevance** — the normalised RRF score already on each chunk. It
+  is semantic, hence cross-lingual: a French answer can still surface an English
+  GDPR chunk that retrieval ranked highly.
+* **lexical usage** — a BM25-lite overlap between the answer's claims and the
+  chunk. It nudges chunks the answer visibly draws on above incidentally
+  retrieved ones, but cannot by itself drop a strongly-retrieved chunk just
+  because it is in another language.
+
+The richer embedding-based provenance (idea #11) stays on the offline
+observability dashboard, where latency does not matter.
 """
 
 from __future__ import annotations
@@ -17,7 +23,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from tessera.agent.state import Citation
-from tessera.observability.provenance import attribute
+from tessera.observability.provenance import split_claims
+from tessera.retrieval.reranking import lexical_score
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -27,52 +34,60 @@ if TYPE_CHECKING:
 __all__ = ["select_grounded_citations"]
 
 _MAX_CITATIONS = 3
-_SUPPORT_THRESHOLD = 0.55
+# How much a fully answer-used chunk can climb past a more-retrieved one. Kept
+# below 1.0 so retrieval relevance (also in [0, 1]) stays the dominant signal.
+_LEXICAL_BOOST = 0.5
 
 
 def _locator(doc: RetrievedDocument) -> str:
     return doc.metadata.get("locator") or doc.chunk_id
 
 
-async def select_grounded_citations(
+def _lexical_usage(answer: str, texts: Sequence[str]) -> dict[int, float]:
+    """Accumulate, per chunk, the lexical overlap of the claims it best matches."""
+    usage: dict[int, float] = {}
+    if not answer.strip():
+        return usage
+    for claim in split_claims(answer):
+        scores = [lexical_score(claim, text) for text in texts]
+        best = max(range(len(scores)), key=scores.__getitem__)
+        if scores[best] > 0.0:
+            usage[best] = usage.get(best, 0.0) + scores[best]
+    return usage
+
+
+def select_grounded_citations(
     answer: str,
     documents: Sequence[RetrievedDocument],
     *,
     max_citations: int = _MAX_CITATIONS,
-    threshold: float = _SUPPORT_THRESHOLD,
 ) -> list[Citation]:
-    """Cite the retrieved chunks that actually ground the answer's claims.
+    """Cite the chunks that best back the answer, deduplicated by source.
 
-    Each claim is attributed to its best-supporting chunk; a chunk that supports
-    at least one claim above ``threshold`` becomes a citation. Citations are
-    ranked by their strongest supporting claim, deduplicated by source, and
-    capped at ``max_citations``. The excerpt is the full chunk verbatim.
+    Chunks are ranked by ``retrieval_score + boost * normalised_lexical_usage``,
+    deduplicated by source and capped at ``max_citations``. The excerpt is the
+    full chunk verbatim.
 
     Args:
-        answer: The agent's final answer (without the citations footer).
+        answer: The agent's final answer (without any citations footer).
         documents: All retrieved chunks for the turn, across every worker.
         max_citations: Upper bound on the number of citations returned.
-        threshold: Minimum claim→chunk cosine support to count as grounding.
 
     Returns:
-        The grounding citations, or an empty list when nothing is supported.
+        The citations, or an empty list when there are no retrieved chunks.
     """
-    if not answer.strip() or not documents:
+    if not documents:
         return []
 
-    report = await attribute(answer, [d.text for d in documents], threshold=threshold)
+    texts = [doc.text for doc in documents]
+    usage = _lexical_usage(answer, texts)
+    max_usage = max(usage.values()) if usage else 0.0
 
-    best_support: dict[int, float] = {}
-    for claim in report.claims:
-        if claim.supported and 0 <= claim.best_chunk < len(documents):
-            idx = claim.best_chunk
-            if claim.support > best_support.get(idx, 0.0):
-                best_support[idx] = claim.support
+    def rank(idx: int) -> float:
+        norm_usage = usage.get(idx, 0.0) / max_usage if max_usage > 0.0 else 0.0
+        return documents[idx].score + _LEXICAL_BOOST * norm_usage
 
-    if not best_support:
-        return []
-
-    ordered = sorted(best_support, key=lambda i: best_support[i], reverse=True)
+    ordered = sorted(range(len(documents)), key=rank, reverse=True)
     citations: list[Citation] = []
     seen: set[str] = set()
     for idx in ordered:

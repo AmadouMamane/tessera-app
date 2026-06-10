@@ -252,7 +252,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
             # UI pills), so we deliberately do not also append a text "Sources:"
             # footer to the answer — that duplicated them in the bubble.
             final_response = "".join(tokens)
-            grounded = await select_grounded_citations(final_response, docs)
+            grounded = select_grounded_citations(final_response, docs)
             if grounded:
                 turn_citations = grounded
         elif draft:
