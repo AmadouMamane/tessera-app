@@ -76,6 +76,7 @@ import {
   fetchFailurePredictor,
   fetchFirewallEfficacy,
   fetchFunnel,
+  fetchGraphTopology,
   fetchGuardExplain,
   fetchIntent,
   fetchJourney,
@@ -120,6 +121,7 @@ import type {
   FirewallEfficacy,
   FreshnessReport,
   FunnelReport,
+  GraphTopology,
   GuardExplainReport,
   IntentReport,
   InventoryReport,
@@ -418,6 +420,13 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  // Graph topology is stable per process unless the deploy reshapes the graph.
+  const graphTopology = useQuery({
+    queryKey: ["graph-topology"],
+    queryFn: ({ signal }) => fetchGraphTopology(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
   const funnel = useQuery({
     queryKey: ["funnel"],
     queryFn: ({ signal }) => fetchFunnel(signal),
@@ -511,6 +520,8 @@ export function ObservabilityDashboard() {
       <ToolValidityCard data={tools.data} loading={tools.isLoading} />
 
       <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
+
+      <GraphTopologyCard data={graphTopology.data} loading={graphTopology.isLoading} />
 
       <GuardExplainCard data={guardExplain.data} loading={guardExplain.isLoading} />
 
@@ -2877,6 +2888,65 @@ function ContradictionCard({
                 ))}
               </ul>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function GraphTopologyCard({
+  data,
+  loading,
+}: {
+  data: GraphTopology | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <GitFork className="h-4 w-4 text-blue-500" />
+          {t("topology.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("topology.status")}
+                </span>
+                <Badge tone={data.drift.drifted ? "danger" : "success"}>
+                  {data.drift.drifted ? t("topology.drifted") : t("topology.pinned")}
+                </Badge>
+              </div>
+              <Metric label={t("topology.nodes")} value={String(data.n_nodes)} />
+              <Metric label={t("topology.edges")} value={String(data.n_edges)} />
+            </div>
+            <p className="font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+              {data.fingerprint.slice(0, 16)}…
+            </p>
+            {data.drift.drifted ? (
+              <ul className="flex flex-col gap-0.5 font-mono text-[0.65rem]">
+                {data.drift.added_nodes.map((n) => (
+                  <li key={`+n-${n}`} className="text-emerald-600 dark:text-emerald-400">
+                    + {n}
+                  </li>
+                ))}
+                {data.drift.removed_nodes.map((n) => (
+                  <li key={`-n-${n}`} className="text-red-600 dark:text-red-400">
+                    − {n}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-[var(--muted-foreground)]">{t("topology.note")}</p>
+            )}
           </div>
         )}
       </CardContent>

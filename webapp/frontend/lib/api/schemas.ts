@@ -1033,6 +1033,28 @@ export const DisclosureReportSchema = z.object({
 });
 export type DisclosureReport = z.infer<typeof DisclosureReportSchema>;
 
+export const TopologyDriftSchema = z.object({
+  drifted: z.boolean(),
+  fingerprint: z.string(),
+  golden_fingerprint: z.string(),
+  added_nodes: z.array(z.string()),
+  removed_nodes: z.array(z.string()),
+  added_edges: z.array(z.string()),
+  removed_edges: z.array(z.string()),
+  n_nodes: z.number().int(),
+  n_edges: z.number().int(),
+});
+
+export const GraphTopologySchema = z.object({
+  nodes: z.array(z.string()),
+  edges: z.array(z.string()),
+  n_nodes: z.number().int(),
+  n_edges: z.number().int(),
+  fingerprint: z.string(),
+  drift: TopologyDriftSchema,
+});
+export type GraphTopology = z.infer<typeof GraphTopologySchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

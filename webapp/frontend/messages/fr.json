@@ -755,6 +755,15 @@
       "singleTurn": "Mono-tour",
       "lowScore": "Faible score",
       "empty": "Aucun score capturé."
+    },
+    "topology": {
+      "title": "Version de topologie du graphe",
+      "status": "Statut",
+      "pinned": "Conforme au golden",
+      "drifted": "Dérive de topologie",
+      "nodes": "Nœuds",
+      "edges": "Arêtes",
+      "note": "Le graphe de l'agent correspond au fingerprint golden épinglé."
     }
   }
 }

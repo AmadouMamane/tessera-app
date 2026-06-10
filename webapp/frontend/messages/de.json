@@ -755,6 +755,15 @@
       "singleTurn": "Ein-Turn",
       "lowScore": "Niedrig",
       "empty": "Keine Scores erfasst."
+    },
+    "topology": {
+      "title": "Graph-Topologie-Version",
+      "status": "Status",
+      "pinned": "Entspricht Golden",
+      "drifted": "Topologie-Drift",
+      "nodes": "Knoten",
+      "edges": "Kanten",
+      "note": "Der Live-Agentengraph entspricht dem fixierten Golden-Fingerprint."
     }
   }
 }

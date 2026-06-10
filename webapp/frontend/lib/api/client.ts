@@ -63,6 +63,8 @@ import {
   FreshnessReportSchema,
   type FunnelReport,
   FunnelReportSchema,
+  type GraphTopology,
+  GraphTopologySchema,
   type GuardExplainReport,
   GuardExplainReportSchema,
   type HealthResponse,
@@ -381,6 +383,11 @@ export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<Firew
 /** Schema/format conformance of tool-call arguments from the audit trail (#47). */
 export async function fetchConformance(signal?: AbortSignal): Promise<ConformanceReport> {
   return request("/observability/conformance", { signal }, ConformanceReportSchema);
+}
+
+/** Topology fingerprint of the live agent graph vs the golden pin (#87). */
+export async function fetchGraphTopology(signal?: AbortSignal): Promise<GraphTopology> {
+  return request("/observability/graph-topology", { signal }, GraphTopologySchema);
 }
 
 /** Ranked breakdown of which guard rules fired across the audit trail (#19). */

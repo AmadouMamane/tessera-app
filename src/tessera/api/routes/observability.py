@@ -38,6 +38,7 @@ from tessera.observability import (
     failure_predictor as failure_predictor_mod,
     firewall_efficacy as firewall_mod,
     funnel as funnel_mod,
+    graph_topology as graph_topology_mod,
     guard_explain as guard_explain_mod,
     journey as journey_mod,
     language_routing as language_routing_mod,
@@ -795,6 +796,18 @@ async def observability_cost() -> dict[str, object]:
         for b in replay_mod.recent_bundles()
     ]
     return asdict(cost_anomaly_mod.analyze_costs(turns))
+
+
+@router.get("/observability/graph-topology")
+async def observability_graph_topology() -> dict[str, object]:
+    """Topology fingerprint of the live agent graph vs the golden pin (#87)."""
+    from tessera.agent.graph import build_graph
+
+    snapshot = graph_topology_mod.topology_snapshot(build_graph())
+    drift = graph_topology_mod.compare_topology(
+        snapshot, golden=graph_topology_mod.GOLDEN_FINGERPRINT
+    )
+    return {**asdict(snapshot), "drift": asdict(drift)}
 
 
 @router.get("/observability/guard-explain")

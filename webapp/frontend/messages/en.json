@@ -755,6 +755,15 @@
       "singleTurn": "Single-turn",
       "lowScore": "Low score",
       "empty": "No scores captured yet."
+    },
+    "topology": {
+      "title": "Graph topology version",
+      "status": "Status",
+      "pinned": "Matches golden",
+      "drifted": "Topology drift",
+      "nodes": "Nodes",
+      "edges": "Edges",
+      "note": "The live agent graph matches the pinned golden fingerprint."
     }
   }
 }
