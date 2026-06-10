@@ -774,6 +774,14 @@
       "oscillation": "Oszillation",
       "clear": "Keine Schleifen oder Oszillationen erkannt.",
       "empty": "Noch keine Tool-Aufrufe erfasst."
+    },
+    "overflow": {
+      "title": "Kontext-Überlauf",
+      "overflowed": "Übergelaufen",
+      "window": "Nutzbares Fenster",
+      "peak": "Max. Kontext",
+      "clear": "Kein Turn hat das Eingabefenster überschritten.",
+      "empty": "Noch keine Turns erfasst."
     }
   }
 }

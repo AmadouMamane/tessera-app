@@ -774,6 +774,14 @@
       "oscillation": "oscillation",
       "clear": "No loops or oscillations detected.",
       "empty": "No tool calls recorded yet."
+    },
+    "overflow": {
+      "title": "Context overflow",
+      "overflowed": "Overflowed",
+      "window": "Usable window",
+      "peak": "Peak context",
+      "clear": "No turn exceeded the input window.",
+      "empty": "No turns captured yet."
     }
   }
 }

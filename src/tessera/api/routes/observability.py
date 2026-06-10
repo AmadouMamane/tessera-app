@@ -23,6 +23,7 @@ from tessera.observability import (
     citation_validity as citation_validity_mod,
     conformance as conformance_mod,
     consistency as consistency_mod,
+    context_overflow as context_overflow_mod,
     contradiction as contradiction_mod,
     corpus_freshness as corpus_freshness_mod,
     corpus_injection as corpus_injection_mod,
@@ -787,6 +788,16 @@ async def observability_refusal() -> dict[str, object]:
 async def observability_conformance() -> dict[str, object]:
     """Schema/format conformance of tool-call arguments from the audit trail."""
     return asdict(conformance_mod.compute_conformance())
+
+
+@router.get("/observability/context-overflow")
+async def observability_context_overflow() -> dict[str, object]:
+    """Context truncation/overflow vs the input window across captured turns (#89)."""
+    turns = [
+        (b.question, [c for c in b.context.split("\n\n") if c.strip()])
+        for b in replay_mod.recent_bundles()
+    ]
+    return asdict(context_overflow_mod.analyze_overflow(turns))
 
 
 @router.get("/observability/cost")

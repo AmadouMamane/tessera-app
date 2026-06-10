@@ -85,6 +85,8 @@ import {
   MemoryObsReportSchema,
   type ObsCostReport,
   ObsCostReportSchema,
+  type OverflowReport,
+  OverflowReportSchema,
   type PIILeakSummary,
   PIILeakSummarySchema,
   type PlaybookReport,
@@ -410,6 +412,11 @@ export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValid
 /** Language-routing health: served vs detected language + code-switching. */
 export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
   return request("/observability/routing", { signal }, RoutingReportSchema);
+}
+
+/** Context truncation/overflow vs the input window across captured turns (#89). */
+export async function fetchContextOverflow(signal?: AbortSignal): Promise<OverflowReport> {
+  return request("/observability/context-overflow", { signal }, OverflowReportSchema);
 }
 
 /** Token-cost distribution and token-burn anomalies over captured turns (#33). */

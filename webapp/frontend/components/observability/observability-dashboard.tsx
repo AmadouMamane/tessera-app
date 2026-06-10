@@ -39,6 +39,7 @@ import {
   Repeat,
   Route,
   Scale,
+  Scissors,
   ShieldCheck,
   Siren,
   SlidersHorizontal,
@@ -64,6 +65,7 @@ import {
   fetchCitationLinks,
   fetchCitations,
   fetchConformance,
+  fetchContextOverflow,
   fetchContradictions,
   fetchCorpusFreshness,
   fetchCost,
@@ -133,6 +135,7 @@ import type {
   LocalizationReport,
   MemoryObsReport,
   ObsCostReport,
+  OverflowReport,
   PIILeakSummary,
   PlaybookReport,
   PredictorEvaluation,
@@ -423,6 +426,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const contextOverflow = useQuery({
+    queryKey: ["context-overflow"],
+    queryFn: ({ signal }) => fetchContextOverflow(signal),
+    refetchInterval: 15_000,
+  });
+
   const guardExplain = useQuery({
     queryKey: ["guard-explain"],
     queryFn: ({ signal }) => fetchGuardExplain(signal),
@@ -549,6 +558,8 @@ export function ObservabilityDashboard() {
       <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
 
       <CostCard data={cost.data} loading={cost.isLoading} />
+
+      <ContextOverflowCard data={contextOverflow.data} loading={contextOverflow.isLoading} />
 
       <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
 
@@ -2899,6 +2910,66 @@ function ContradictionCard({
                 ))}
               </ul>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContextOverflowCard({
+  data,
+  loading,
+}: {
+  data: OverflowReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  const overflowed = data?.turns.filter((x) => x.overflowed) ?? [];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Scissors className="h-4 w-4 text-blue-500" />
+          {t("overflow.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_turns === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("overflow.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("overflow.overflowed")}
+                </span>
+                <Badge tone={data.n_overflowed === 0 ? "success" : "danger"}>
+                  {data.n_overflowed}/{data.n_turns}
+                </Badge>
+              </div>
+              <Metric label={t("overflow.window")} value={`${data.usable_tokens} tok`} />
+              <Metric label={t("overflow.peak")} value={`${data.max_context_tokens} tok`} />
+            </div>
+            {overflowed.length === 0 ? (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                {t("overflow.clear")}
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1 text-xs">
+                {overflowed.slice(0, 5).map((x, i) => (
+                  <li key={`${i}-${x.question.slice(0, 12)}`} className="flex items-center gap-2">
+                    <Badge tone="danger">−{x.n_dropped}</Badge>
+                    <span className="tabular-nums text-[var(--muted-foreground)]">
+                      {x.context_tokens} tok
+                    </span>
+                    <span className="min-w-0 truncate">{x.question}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </CardContent>

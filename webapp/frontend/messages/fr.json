@@ -774,6 +774,14 @@
       "oscillation": "oscillation",
       "clear": "Aucune boucle ni oscillation détectée.",
       "empty": "Aucun appel d'outil enregistré."
+    },
+    "overflow": {
+      "title": "Débordement de contexte",
+      "overflowed": "En débordement",
+      "window": "Fenêtre utile",
+      "peak": "Contexte max",
+      "clear": "Aucun tour n'a dépassé la fenêtre d'entrée.",
+      "empty": "Aucun tour capturé."
     }
   }
 }

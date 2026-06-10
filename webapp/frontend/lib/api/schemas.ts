@@ -1071,6 +1071,25 @@ export const ToolLoopReportSchema = z.object({
 });
 export type ToolLoopReport = z.infer<typeof ToolLoopReportSchema>;
 
+export const TurnOverflowSchema = z.object({
+  question: z.string(),
+  n_chunks: z.number().int(),
+  context_tokens: z.number().int(),
+  n_dropped: z.number().int(),
+  overflowed: z.boolean(),
+});
+
+export const OverflowReportSchema = z.object({
+  n_turns: z.number().int(),
+  n_overflowed: z.number().int(),
+  overflow_rate: z.number(),
+  window_tokens: z.number().int(),
+  usable_tokens: z.number().int(),
+  max_context_tokens: z.number().int(),
+  turns: z.array(TurnOverflowSchema),
+});
+export type OverflowReport = z.infer<typeof OverflowReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),
