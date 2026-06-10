@@ -803,6 +803,15 @@
       "fanout": "Paralleles Fan-out",
       "orphans": "Waisen",
       "note": "Live-Sonde: parallele Worker-Spans liegen unter einer Request-Wurzel."
+    },
+    "repro": {
+      "title": "Trace-Reproduzierbarkeit",
+      "nondeterministic": "Nicht deterministisch",
+      "turns": "Turns",
+      "repeated": "Wiederholte Eingaben",
+      "clear": "Jede wiederholte Frage lief mit derselben Trace-Form.",
+      "note": "Gleiche Eingabe sollte dieselbe Knoten-Form ergeben (Voraussetzung für Replay).",
+      "empty": "Noch keine Turns erfasst."
     }
   }
 }

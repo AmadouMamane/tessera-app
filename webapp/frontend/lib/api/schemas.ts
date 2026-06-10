@@ -1117,6 +1117,22 @@ export const PropagationReportSchema = z.object({
 });
 export type PropagationReport = z.infer<typeof PropagationReportSchema>;
 
+export const DivergenceSchema = z.object({
+  question: z.string(),
+  n_runs: z.number().int(),
+  n_variants: z.number().int(),
+  shapes: z.array(z.string()),
+});
+
+export const ReproReportSchema = z.object({
+  n_turns: z.number().int(),
+  n_groups: z.number().int(),
+  n_repeated_inputs: z.number().int(),
+  n_nondeterministic: z.number().int(),
+  divergences: z.array(DivergenceSchema),
+});
+export type ReproReport = z.infer<typeof ReproReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

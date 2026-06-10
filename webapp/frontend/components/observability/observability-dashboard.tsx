@@ -96,6 +96,7 @@ import {
   fetchPlaybooks,
   fetchRedteam,
   fetchRefusal,
+  fetchReproducibility,
   fetchRoadmap,
   fetchRouting,
   fetchSLO,
@@ -147,6 +148,7 @@ import type {
   PropagationReport,
   RedTeamResponse,
   RefusalReport,
+  ReproReport,
   RetractionReport,
   RoadmapReport,
   RoutingReport,
@@ -209,6 +211,12 @@ export function ObservabilityDashboard() {
     queryKey: ["trend"],
     queryFn: ({ signal }) => fetchTrend(signal),
     refetchInterval: 15_000,
+  });
+
+  const reproducibility = useQuery({
+    queryKey: ["reproducibility"],
+    queryFn: ({ signal }) => fetchReproducibility(signal),
+    refetchInterval: 20_000,
   });
 
   // The obs-cost benchmark is stable per process and cached server-side; fetch once.
@@ -513,6 +521,8 @@ export function ObservabilityDashboard() {
       <SpanPropagationCard data={spanPropagation.data} loading={spanPropagation.isLoading} />
 
       <TrendCard data={trend.data} loading={trend.isLoading} />
+
+      <ReproducibilityCard data={reproducibility.data} loading={reproducibility.isLoading} />
 
       <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
 
@@ -3042,6 +3052,61 @@ function ToolLoopsCard({ data, loading }: { data: ToolLoopReport | undefined; lo
                 ))}
               </ul>
             )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReproducibilityCard({
+  data,
+  loading,
+}: {
+  data: ReproReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Hash className="h-4 w-4 text-blue-500" />
+          {t("repro.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_turns === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("repro.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("repro.nondeterministic")}
+                </span>
+                <Badge tone={data.n_nondeterministic === 0 ? "success" : "danger"}>
+                  {data.n_nondeterministic}
+                </Badge>
+              </div>
+              <Metric label={t("repro.turns")} value={String(data.n_turns)} />
+              <Metric label={t("repro.repeated")} value={String(data.n_repeated_inputs)} />
+            </div>
+            {data.n_nondeterministic === 0 ? (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">{t("repro.clear")}</p>
+            ) : (
+              <ul className="flex flex-col gap-1 text-xs">
+                {data.divergences.slice(0, 5).map((d, i) => (
+                  <li key={`${i}-${d.question.slice(0, 12)}`} className="flex items-center gap-2">
+                    <Badge tone="danger">×{d.n_variants}</Badge>
+                    <span className="min-w-0 truncate">{d.question}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-[var(--muted-foreground)]">{t("repro.note")}</p>
           </div>
         )}
       </CardContent>

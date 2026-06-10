@@ -107,6 +107,8 @@ import {
   ReplayResultSchema,
   type ReplaysResponse,
   ReplaysResponseSchema,
+  type ReproReport,
+  ReproReportSchema,
   type RerankContribution,
   RerankContributionSchema,
   type RetractionReport,
@@ -371,6 +373,11 @@ export async function fetchSpanPropagation(signal?: AbortSignal): Promise<Propag
 /** Tail-sampling retention: 100% of slow/low-score traces, sampled head (#32). */
 export async function fetchTailSampling(signal?: AbortSignal): Promise<TailSamplingReport> {
   return request("/observability/tail-sampling", { signal }, TailSamplingReportSchema);
+}
+
+/** Trace-shape reproducibility / non-determinism across repeated questions (#86). */
+export async function fetchReproducibility(signal?: AbortSignal): Promise<ReproReport> {
+  return request("/observability/reproducibility", { signal }, ReproReportSchema);
 }
 
 /** Long-horizon faithfulness trend over the recent score series (#150). */

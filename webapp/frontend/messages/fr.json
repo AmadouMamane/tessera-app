@@ -803,6 +803,15 @@
       "fanout": "Fan-out parallèle",
       "orphans": "Orphelins",
       "note": "Sonde live : les spans des workers parallèles s'imbriquent sous une racine unique."
+    },
+    "repro": {
+      "title": "Reproductibilité des traces",
+      "nondeterministic": "Non déterministe",
+      "turns": "Tours",
+      "repeated": "Entrées répétées",
+      "clear": "Chaque question répétée a exécuté la même forme de trace.",
+      "note": "Une même entrée doit produire la même forme de nœuds (prérequis du replay).",
+      "empty": "Aucun tour capturé."
     }
   }
 }

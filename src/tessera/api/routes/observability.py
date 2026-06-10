@@ -56,6 +56,7 @@ from tessera.observability import (
     redteam as redteam_mod,
     refusal as refusal_mod,
     replay as replay_mod,
+    reproducibility as reproducibility_mod,
     reranking_contribution as reranking_contribution_mod,
     retrieval_quality as retrieval_quality_mod,
     roadmap as roadmap_mod,
@@ -235,6 +236,15 @@ async def observability_span_propagation() -> dict[str, object]:
 async def observability_tail_sampling() -> dict[str, object]:
     """Tail-sampling retention: 100% of slow/low-score traces, sampled head."""
     return asdict(tail_sampling_mod.analyze_sampling(replay_mod.recent_bundles()))
+
+
+@router.get("/observability/reproducibility")
+async def observability_reproducibility() -> dict[str, object]:
+    """Trace-shape reproducibility / non-determinism across repeated questions (#86)."""
+    turns = [
+        (b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()
+    ]
+    return asdict(reproducibility_mod.detect_nondeterminism(turns))
 
 
 @router.get("/observability/trend")

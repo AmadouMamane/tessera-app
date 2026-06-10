@@ -803,6 +803,15 @@
       "fanout": "Parallel fan-out",
       "orphans": "Orphans",
       "note": "Live probe: parallel worker spans nest under one request root."
+    },
+    "repro": {
+      "title": "Trace reproducibility",
+      "nondeterministic": "Non-deterministic",
+      "turns": "Turns",
+      "repeated": "Repeated inputs",
+      "clear": "Every repeated question ran the same trace shape.",
+      "note": "Same input should yield the same executed-node shape (prereq of replay).",
+      "empty": "No turns captured yet."
     }
   }
 }
