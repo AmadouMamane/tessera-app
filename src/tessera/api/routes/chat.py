@@ -20,7 +20,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import StreamingResponse
 
 from tessera.agent import build_graph, reporter as reporter_module
-from tessera.agent.state import ConversationMessage, NodeName, new_state
+from tessera.agent.grounding import select_grounded_citations
+from tessera.agent.state import Citation, ConversationMessage, NodeName, new_state
 from tessera.guard.audit import current_model
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
@@ -235,6 +236,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     # Phase 2: stream reporter when the graph is paused before it.
     # Otherwise (escalation / injection block) final_response is already set.
     final_response: str
+    turn_citations: list[Citation] = list(state.get("citations", []))
     if NodeName.REPORTER.value in (snapshot.next or ()):
         docs = state.get("retrieved_documents", [])
         draft = state.get("draft_response", "")
@@ -243,10 +245,15 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
             async for token in reporter_module.astream_synthesise(state):
                 tokens.append(token)
                 yield _sse("turn.token", {"token": token})
-            citations_footer = reporter_module.format_citations(
-                state.get("citations", []), state["language"]
-            )
-            final_response = "".join(tokens) + citations_footer
+            body = "".join(tokens)
+            # Cite the chunks that actually ground the answer's claims (across
+            # every worker), falling back to the worker-selected citations when
+            # attribution finds nothing so a turn never loses its sources.
+            grounded = await select_grounded_citations(body, docs)
+            if grounded:
+                turn_citations = grounded
+            citations_footer = reporter_module.format_citations(turn_citations, state["language"])
+            final_response = body + citations_footer
         elif draft:
             final_response = reporter_module.render(state)
         else:
@@ -325,7 +332,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
                 "language": c.language.value,
                 "excerpt": c.excerpt,
             }
-            for c in state.get("citations", [])
+            for c in turn_citations
         ],
         finish_reason=outcome,
     )
