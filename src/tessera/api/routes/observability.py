@@ -66,6 +66,7 @@ from tessera.observability import (
     shadow as shadow_mod,
     siem as siem_mod,
     slo as slo_mod,
+    span_propagation as span_propagation_mod,
     steganography as steganography_mod,
     tail_sampling as tail_sampling_mod,
     tool_loops as tool_loops_mod,
@@ -160,6 +161,8 @@ _obs_cost_cache: dict[str, object] | None = None
 _inversion_cache: dict[str, object] | None = None
 # Failure clustering embeds the whole failure corpus; cache it per process.
 _clustering_cache: dict[str, object] | None = None
+# The span-propagation probe is stable per process; run it once.
+_propagation_cache: dict[str, object] | None = None
 
 
 def _load_failure_items() -> list[failure_clustering_mod.FailureItem]:
@@ -217,6 +220,15 @@ async def observability_shadow(payload: ShadowRequest) -> dict[str, object]:
         replay_mod.recent_bundles(), model=payload.model, limit=payload.limit
     )
     return asdict(report)
+
+
+@router.get("/observability/span-propagation")
+async def observability_span_propagation() -> dict[str, object]:
+    """Async/parallel span-propagation health from a live isolated probe (#85), cached."""
+    global _propagation_cache
+    if _propagation_cache is None:
+        _propagation_cache = asdict(await span_propagation_mod.probe_propagation())
+    return _propagation_cache
 
 
 @router.get("/observability/tail-sampling")

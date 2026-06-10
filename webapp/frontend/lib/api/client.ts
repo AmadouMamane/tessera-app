@@ -95,6 +95,8 @@ import {
   PredictorEvaluationSchema,
   type PrivilegeReport,
   PrivilegeReportSchema,
+  type PropagationReport,
+  PropagationReportSchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
   type RedTeamResponse,
@@ -359,6 +361,11 @@ export async function fetchCorpusFreshness(signal?: AbortSignal): Promise<Freshn
 /** Embedding-version skew between the query-time and corpus embedders (#64). */
 export async function fetchEmbeddingSkew(signal?: AbortSignal): Promise<SkewReport> {
   return request("/observability/embedding-skew", { signal }, SkewReportSchema);
+}
+
+/** Async/parallel span-propagation health from a live isolated probe (#85). */
+export async function fetchSpanPropagation(signal?: AbortSignal): Promise<PropagationReport> {
+  return request("/observability/span-propagation", { signal }, PropagationReportSchema);
 }
 
 /** Tail-sampling retention: 100% of slow/low-score traces, sampled head (#32). */

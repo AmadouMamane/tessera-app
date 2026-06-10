@@ -48,6 +48,7 @@ import {
   Target,
   TrendingDown,
   Undo2,
+  Workflow,
   Wrench,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -101,6 +102,7 @@ import {
   fetchSessions,
   fetchSftDataset,
   fetchSiem,
+  fetchSpanPropagation,
   fetchTailSampling,
   fetchToolLoops,
   fetchToolValidity,
@@ -142,6 +144,7 @@ import type {
   PlaybookReport,
   PredictorEvaluation,
   PrivilegeReport,
+  PropagationReport,
   RedTeamResponse,
   RefusalReport,
   RetractionReport,
@@ -193,6 +196,13 @@ export function ObservabilityDashboard() {
     queryKey: ["tail-sampling"],
     queryFn: ({ signal }) => fetchTailSampling(signal),
     refetchInterval: 15_000,
+  });
+
+  // The span-propagation probe is stable per process and cached server-side.
+  const spanPropagation = useQuery({
+    queryKey: ["span-propagation"],
+    queryFn: ({ signal }) => fetchSpanPropagation(signal),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
   const trend = useQuery({
@@ -499,6 +509,8 @@ export function ObservabilityDashboard() {
       <ShadowCard />
 
       <TailSamplingCard data={tailSampling.data} loading={tailSampling.isLoading} />
+
+      <SpanPropagationCard data={spanPropagation.data} loading={spanPropagation.isLoading} />
 
       <TrendCard data={trend.data} loading={trend.isLoading} />
 
@@ -3030,6 +3042,53 @@ function ToolLoopsCard({ data, loading }: { data: ToolLoopReport | undefined; lo
                 ))}
               </ul>
             )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SpanPropagationCard({
+  data,
+  loading,
+}: {
+  data: PropagationReport | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Workflow className="h-4 w-4 text-blue-500" />
+          {t("propagation.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("propagation.status")}
+                </span>
+                <Badge tone={data.propagated_ok ? "success" : "danger"}>
+                  {data.propagated_ok ? t("propagation.ok") : t("propagation.broken")}
+                </Badge>
+              </div>
+              <Metric label={t("propagation.spans")} value={String(data.n_spans)} />
+              <Metric label={t("propagation.fanout")} value={String(data.max_fanout)} />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("propagation.orphans")}
+                </span>
+                <Badge tone={data.n_orphans === 0 ? "success" : "danger"}>{data.n_orphans}</Badge>
+              </div>
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)]">{t("propagation.note")}</p>
           </div>
         )}
       </CardContent>

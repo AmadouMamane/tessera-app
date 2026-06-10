@@ -793,6 +793,16 @@
       "clear": "Keine Antwort würde eine Rücknahme im Stream erfordern.",
       "note": "Bereits gestreamte Tokens, bevor der Ausgabe-Guard eingreifen konnte.",
       "empty": "Noch keine Antworten erfasst."
+    },
+    "propagation": {
+      "title": "Span-Propagation (async)",
+      "status": "Status",
+      "ok": "Keine Waisen",
+      "broken": "Kontext verloren",
+      "spans": "Spans",
+      "fanout": "Paralleles Fan-out",
+      "orphans": "Waisen",
+      "note": "Live-Sonde: parallele Worker-Spans liegen unter einer Request-Wurzel."
     }
   }
 }

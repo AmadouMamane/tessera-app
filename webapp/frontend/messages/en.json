@@ -793,6 +793,16 @@
       "clear": "No answer would require a mid-stream retraction.",
       "note": "Tokens already streamed before the output guard could intervene.",
       "empty": "No answers captured yet."
+    },
+    "propagation": {
+      "title": "Span propagation (async)",
+      "status": "Status",
+      "ok": "No orphans",
+      "broken": "Context lost",
+      "spans": "Spans",
+      "fanout": "Parallel fan-out",
+      "orphans": "Orphans",
+      "note": "Live probe: parallel worker spans nest under one request root."
     }
   }
 }

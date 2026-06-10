@@ -793,6 +793,16 @@
       "clear": "Aucune réponse ne nécessiterait une rétractation en flux.",
       "note": "Tokens déjà diffusés avant que le guard de sortie n'intervienne.",
       "empty": "Aucune réponse capturée."
+    },
+    "propagation": {
+      "title": "Propagation des spans (async)",
+      "status": "Statut",
+      "ok": "Aucun orphelin",
+      "broken": "Contexte perdu",
+      "spans": "Spans",
+      "fanout": "Fan-out parallèle",
+      "orphans": "Orphelins",
+      "note": "Sonde live : les spans des workers parallèles s'imbriquent sous une racine unique."
     }
   }
 }

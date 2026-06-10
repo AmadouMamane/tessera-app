@@ -1107,6 +1107,16 @@ export const RetractionReportSchema = z.object({
 });
 export type RetractionReport = z.infer<typeof RetractionReportSchema>;
 
+export const PropagationReportSchema = z.object({
+  n_spans: z.number().int(),
+  n_roots: z.number().int(),
+  n_orphans: z.number().int(),
+  max_fanout: z.number().int(),
+  propagated_ok: z.boolean(),
+  orphan_names: z.array(z.string()),
+});
+export type PropagationReport = z.infer<typeof PropagationReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),
