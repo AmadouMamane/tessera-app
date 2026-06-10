@@ -107,6 +107,8 @@ import {
   ReplaysResponseSchema,
   type RerankContribution,
   RerankContributionSchema,
+  type RetractionReport,
+  RetractionReportSchema,
   type RoadmapReport,
   RoadmapReportSchema,
   type RobustnessReport,
@@ -392,6 +394,11 @@ export async function fetchConformance(signal?: AbortSignal): Promise<Conformanc
 /** Topology fingerprint of the live agent graph vs the golden pin (#87). */
 export async function fetchGraphTopology(signal?: AbortSignal): Promise<GraphTopology> {
   return request("/observability/graph-topology", { signal }, GraphTopologySchema);
+}
+
+/** Streamed-token exposure before an output-guard trigger fires (#90). */
+export async function fetchGuardRetraction(signal?: AbortSignal): Promise<RetractionReport> {
+  return request("/observability/guard-retraction", { signal }, RetractionReportSchema);
 }
 
 /** Ranked breakdown of which guard rules fired across the audit trail (#19). */

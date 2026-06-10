@@ -782,6 +782,17 @@
       "peak": "Max. Kontext",
       "clear": "Kein Turn hat das Eingabefenster überschritten.",
       "empty": "Noch keine Turns erfasst."
+    },
+    "retraction": {
+      "title": "Guard-Rücknahme im Stream",
+      "retractions": "Rücknahmen",
+      "maxExposed": "Max. exponiert",
+      "meanExposed": "Ø exponiert",
+      "injection_echo": "Injection-Echo",
+      "pii": "PII",
+      "clear": "Keine Antwort würde eine Rücknahme im Stream erfordern.",
+      "note": "Bereits gestreamte Tokens, bevor der Ausgabe-Guard eingreifen konnte.",
+      "empty": "Noch keine Antworten erfasst."
     }
   }
 }

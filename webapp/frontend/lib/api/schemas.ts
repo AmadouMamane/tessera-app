@@ -1090,6 +1090,23 @@ export const OverflowReportSchema = z.object({
 });
 export type OverflowReport = z.infer<typeof OverflowReportSchema>;
 
+export const RetractionEventSchema = z.object({
+  kind: z.enum(["injection_echo", "pii"]),
+  tokens_before: z.number().int(),
+  total_tokens: z.number().int(),
+  exposure_rate: z.number(),
+});
+
+export const RetractionReportSchema = z.object({
+  n_answers: z.number().int(),
+  n_retractions: z.number().int(),
+  retraction_rate: z.number(),
+  max_tokens_exposed: z.number().int(),
+  mean_tokens_exposed: z.number(),
+  events: z.array(RetractionEventSchema),
+});
+export type RetractionReport = z.infer<typeof RetractionReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

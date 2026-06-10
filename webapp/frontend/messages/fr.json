@@ -782,6 +782,17 @@
       "peak": "Contexte max",
       "clear": "Aucun tour n'a dépassé la fenêtre d'entrée.",
       "empty": "Aucun tour capturé."
+    },
+    "retraction": {
+      "title": "Rétractation du guard en flux",
+      "retractions": "Rétractations",
+      "maxExposed": "Exposition max",
+      "meanExposed": "Exposition moy.",
+      "injection_echo": "écho d'injection",
+      "pii": "PII",
+      "clear": "Aucune réponse ne nécessiterait une rétractation en flux.",
+      "note": "Tokens déjà diffusés avant que le guard de sortie n'intervienne.",
+      "empty": "Aucune réponse capturée."
     }
   }
 }

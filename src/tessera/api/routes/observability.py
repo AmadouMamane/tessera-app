@@ -41,6 +41,7 @@ from tessera.observability import (
     funnel as funnel_mod,
     graph_topology as graph_topology_mod,
     guard_explain as guard_explain_mod,
+    guard_retraction as guard_retraction_mod,
     journey as journey_mod,
     language_routing as language_routing_mod,
     least_privilege as least_privilege_mod,
@@ -820,6 +821,15 @@ async def observability_graph_topology() -> dict[str, object]:
         snapshot, golden=graph_topology_mod.GOLDEN_FINGERPRINT
     )
     return {**asdict(snapshot), "drift": asdict(drift)}
+
+
+@router.get("/observability/guard-retraction")
+async def observability_guard_retraction() -> dict[str, object]:
+    """Streamed-token exposure before an output-guard trigger fires (#90)."""
+    from tessera.guard.decisions import load_policy
+
+    answers = [b.original_answer for b in replay_mod.recent_bundles()]
+    return asdict(guard_retraction_mod.analyze_retractions(answers, policy=load_policy()))
 
 
 @router.get("/observability/guard-explain")

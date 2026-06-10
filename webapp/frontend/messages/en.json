@@ -782,6 +782,17 @@
       "peak": "Peak context",
       "clear": "No turn exceeded the input window.",
       "empty": "No turns captured yet."
+    },
+    "retraction": {
+      "title": "Mid-stream guard retraction",
+      "retractions": "Retractions",
+      "maxExposed": "Max exposed",
+      "meanExposed": "Mean exposed",
+      "injection_echo": "injection echo",
+      "pii": "PII",
+      "clear": "No answer would require a mid-stream retraction.",
+      "note": "Tokens already streamed before the output guard could intervene.",
+      "empty": "No answers captured yet."
     }
   }
 }
