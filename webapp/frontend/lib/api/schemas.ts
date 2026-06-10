@@ -1151,6 +1151,23 @@ export const SnapshotDiffReportSchema = z.object({
 });
 export type SnapshotDiffReport = z.infer<typeof SnapshotDiffReportSchema>;
 
+export const HandoffTurnSchema = z.object({
+  question: z.string(),
+  n_handoffs: z.number().int(),
+  n_broken: z.number().int(),
+  broken: z.array(z.string()),
+});
+
+export const HandoffReportSchema = z.object({
+  n_turns: z.number().int(),
+  n_broken_turns: z.number().int(),
+  total_handoffs: z.number().int(),
+  total_broken: z.number().int(),
+  broken_by_type: z.record(z.string(), z.number().int()),
+  turns: z.array(HandoffTurnSchema),
+});
+export type HandoffReport = z.infer<typeof HandoffReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

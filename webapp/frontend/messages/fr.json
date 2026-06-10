@@ -820,6 +820,15 @@
       "knownNodes": "Nœuds connus",
       "clear": "Chaque trace correspond à la forme de nœuds golden.",
       "empty": "Aucun tour capturé."
+    },
+    "handoffs": {
+      "title": "Traçage des handoffs",
+      "broken": "Handoffs rompus",
+      "turns": "Tours",
+      "brokenTurns": "Tours touchés",
+      "clear": "Chaque handoff de délégation s'est complété.",
+      "note": "Chaîne de délégation router → planner → workers → reviewer.",
+      "empty": "Aucun tour capturé."
     }
   }
 }

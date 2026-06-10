@@ -820,6 +820,15 @@
       "knownNodes": "Known nodes",
       "clear": "Every trace matched the golden node shape.",
       "empty": "No turns captured yet."
+    },
+    "handoffs": {
+      "title": "Handoff tracing",
+      "broken": "Broken handoffs",
+      "turns": "Turns",
+      "brokenTurns": "Affected turns",
+      "clear": "Every delegation handoff completed.",
+      "note": "router → planner → workers → reviewer delegation chain.",
+      "empty": "No turns captured yet."
     }
   }
 }

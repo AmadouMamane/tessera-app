@@ -84,6 +84,7 @@ import {
   fetchGraphTopology,
   fetchGuardExplain,
   fetchGuardRetraction,
+  fetchHandoffs,
   fetchIntent,
   fetchJourney,
   fetchLeastPrivilege,
@@ -133,6 +134,7 @@ import type {
   FunnelReport,
   GraphTopology,
   GuardExplainReport,
+  HandoffReport,
   IntentReport,
   InventoryReport,
   InversionReport,
@@ -480,6 +482,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 20_000,
   });
 
+  const handoffs = useQuery({
+    queryKey: ["handoffs"],
+    queryFn: ({ signal }) => fetchHandoffs(signal),
+    refetchInterval: 20_000,
+  });
+
   const funnel = useQuery({
     queryKey: ["funnel"],
     queryFn: ({ signal }) => fetchFunnel(signal),
@@ -583,6 +591,8 @@ export function ObservabilityDashboard() {
       <GraphTopologyCard data={graphTopology.data} loading={graphTopology.isLoading} />
 
       <TraceSnapshotCard data={traceSnapshot.data} loading={traceSnapshot.isLoading} />
+
+      <HandoffsCard data={handoffs.data} loading={handoffs.isLoading} />
 
       <GuardRetractionCard data={guardRetraction.data} loading={guardRetraction.isLoading} />
 
@@ -3227,6 +3237,59 @@ function GuardRetractionCard({
               </ul>
             )}
             <p className="text-xs text-[var(--muted-foreground)]">{t("retraction.note")}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function HandoffsCard({ data, loading }: { data: HandoffReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  const types = data ? Object.entries(data.broken_by_type) : [];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Route className="h-4 w-4 text-blue-500" />
+          {t("handoffs.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_turns === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("handoffs.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("handoffs.broken")}
+                </span>
+                <Badge tone={data.total_broken === 0 ? "success" : "danger"}>
+                  {data.total_broken}/{data.total_handoffs}
+                </Badge>
+              </div>
+              <Metric label={t("handoffs.turns")} value={String(data.n_turns)} />
+              <Metric label={t("handoffs.brokenTurns")} value={String(data.n_broken_turns)} />
+            </div>
+            {data.total_broken === 0 ? (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                {t("handoffs.clear")}
+              </p>
+            ) : (
+              <ul className="flex flex-wrap gap-2 text-xs">
+                {types.map(([edge, n]) => (
+                  <li key={edge}>
+                    <Badge tone="danger">
+                      {edge} · {n}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-[var(--muted-foreground)]">{t("handoffs.note")}</p>
           </div>
         )}
       </CardContent>

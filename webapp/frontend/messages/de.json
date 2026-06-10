@@ -820,6 +820,15 @@
       "knownNodes": "Bekannte Knoten",
       "clear": "Jede Trace entsprach der Golden-Knoten-Form.",
       "empty": "Noch keine Turns erfasst."
+    },
+    "handoffs": {
+      "title": "Handoff-Tracing",
+      "broken": "Defekte Handoffs",
+      "turns": "Turns",
+      "brokenTurns": "Betroffene Turns",
+      "clear": "Jeder Delegations-Handoff wurde abgeschlossen.",
+      "note": "Delegationskette router → planner → workers → reviewer.",
+      "empty": "Noch keine Turns erfasst."
     }
   }
 }

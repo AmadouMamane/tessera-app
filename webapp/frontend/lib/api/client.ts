@@ -67,6 +67,8 @@ import {
   GraphTopologySchema,
   type GuardExplainReport,
   GuardExplainReportSchema,
+  type HandoffReport,
+  HandoffReportSchema,
   type HealthResponse,
   HealthResponseSchema,
   type IntentReport,
@@ -345,6 +347,11 @@ export async function fetchErasureCoverage(signal?: AbortSignal): Promise<Erasur
 /** What the agent remembers: long-term store inventory (GDPR access, #135). */
 export async function fetchMemoryInventory(signal?: AbortSignal): Promise<InventoryReport> {
   return request("/observability/memory-inventory", { signal }, InventoryReportSchema);
+}
+
+/** Delegation-chain handoff tracing and broken-handoff detection (#189). */
+export async function fetchHandoffs(signal?: AbortSignal): Promise<HandoffReport> {
+  return request("/observability/handoffs", { signal }, HandoffReportSchema);
 }
 
 /** Cross-session customer journeys mined from the memory audit trail (#99). */

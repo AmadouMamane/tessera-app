@@ -42,6 +42,7 @@ from tessera.observability import (
     graph_topology as graph_topology_mod,
     guard_explain as guard_explain_mod,
     guard_retraction as guard_retraction_mod,
+    handoffs as handoffs_mod,
     journey as journey_mod,
     language_routing as language_routing_mod,
     least_privilege as least_privilege_mod,
@@ -539,6 +540,15 @@ async def observability_memory_inventory() -> dict[str, object]:
         for row in rows
     ]
     return asdict(memory_inventory_mod.summarize_inventory(items))
+
+
+@router.get("/observability/handoffs")
+async def observability_handoffs() -> dict[str, object]:
+    """Delegation-chain handoff tracing and broken-handoff detection (#189)."""
+    turns = [
+        (b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()
+    ]
+    return asdict(handoffs_mod.analyze_handoffs(turns))
 
 
 @router.get("/observability/journey")
