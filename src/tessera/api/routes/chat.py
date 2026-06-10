@@ -245,15 +245,16 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
             async for token in reporter_module.astream_synthesise(state):
                 tokens.append(token)
                 yield _sse("turn.token", {"token": token})
-            body = "".join(tokens)
             # Cite the chunks that actually ground the answer's claims (across
             # every worker), falling back to the worker-selected citations when
             # attribution finds nothing so a turn never loses its sources.
-            grounded = await select_grounded_citations(body, docs)
+            # Sources are surfaced as structured citations (turn.end payload +
+            # UI pills), so we deliberately do not also append a text "Sources:"
+            # footer to the answer — that duplicated them in the bubble.
+            final_response = "".join(tokens)
+            grounded = await select_grounded_citations(final_response, docs)
             if grounded:
                 turn_citations = grounded
-            citations_footer = reporter_module.format_citations(turn_citations, state["language"])
-            final_response = body + citations_footer
         elif draft:
             final_response = reporter_module.render(state)
         else:
