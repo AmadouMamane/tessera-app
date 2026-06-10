@@ -66,6 +66,7 @@ from tessera.observability import (
     slo as slo_mod,
     steganography as steganography_mod,
     tail_sampling as tail_sampling_mod,
+    tool_loops as tool_loops_mod,
     tool_validity as tool_validity_mod,
     toxicity as toxicity_mod,
     trajectory as trajectory_mod,
@@ -814,6 +815,25 @@ async def observability_graph_topology() -> dict[str, object]:
 async def observability_guard_explain() -> dict[str, object]:
     """Ranked breakdown of which guard rules fired across the audit trail."""
     return asdict(guard_explain_mod.compute_guard_explain())
+
+
+@router.get("/observability/tool-loops")
+async def observability_tool_loops() -> dict[str, object]:
+    """Tool-call loop/oscillation detection over the audit invocation stream (#88)."""
+    non_tools = {"user_input"}
+    ordered: list[tuple[str, str]] = []  # (occurred_at, tool)
+    for entry in _read_audit_entries():
+        target = entry.get("target")
+        if not (isinstance(target, str) and target not in non_tools):
+            continue
+        if target.startswith("memory."):
+            continue
+        occurred = entry.get("occurred_at")
+        ordered.append((occurred if isinstance(occurred, str) else "", target))
+    ordered.sort(key=lambda pair: pair[0])
+    # The audit trail is not conversation-scoped, so analyse one global stream.
+    streams = {"global": [tool for _at, tool in ordered]}
+    return asdict(tool_loops_mod.detect_loops(streams))
 
 
 @router.get("/observability/tool-validity")

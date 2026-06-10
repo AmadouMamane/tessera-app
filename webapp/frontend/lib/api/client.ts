@@ -129,6 +129,8 @@ import {
   SycophancyReportSchema,
   type TailSamplingReport,
   TailSamplingReportSchema,
+  type ToolLoopReport,
+  ToolLoopReportSchema,
   type ToolValidity,
   ToolValiditySchema,
   type ToxicityReport,
@@ -393,6 +395,11 @@ export async function fetchGraphTopology(signal?: AbortSignal): Promise<GraphTop
 /** Ranked breakdown of which guard rules fired across the audit trail (#19). */
 export async function fetchGuardExplain(signal?: AbortSignal): Promise<GuardExplainReport> {
   return request("/observability/guard-explain", { signal }, GuardExplainReportSchema);
+}
+
+/** Tool-call loop/oscillation detection over the audit invocation stream (#88). */
+export async function fetchToolLoops(signal?: AbortSignal): Promise<ToolLoopReport> {
+  return request("/observability/tool-loops", { signal }, ToolLoopReportSchema);
 }
 
 /** Tool-call validity (allowed vs denied, argument failures) from the audit trail. */

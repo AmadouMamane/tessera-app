@@ -1055,6 +1055,22 @@ export const GraphTopologySchema = z.object({
 });
 export type GraphTopology = z.infer<typeof GraphTopologySchema>;
 
+export const ToolLoopSchema = z.object({
+  stream: z.string(),
+  kind: z.enum(["repeat", "oscillation"]),
+  tools: z.array(z.string()),
+  length: z.number().int(),
+});
+
+export const ToolLoopReportSchema = z.object({
+  n_streams: z.number().int(),
+  n_calls: z.number().int(),
+  n_loops: z.number().int(),
+  repeat_threshold: z.number().int(),
+  loops: z.array(ToolLoopSchema),
+});
+export type ToolLoopReport = z.infer<typeof ToolLoopReportSchema>;
+
 export const FirewallEfficacySchema = z.object({
   n_positive: z.number().int(),
   n_negative: z.number().int(),

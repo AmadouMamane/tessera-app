@@ -36,6 +36,7 @@ import {
   Radar,
   Radio,
   Receipt,
+  Repeat,
   Route,
   Scale,
   ShieldCheck,
@@ -97,6 +98,7 @@ import {
   fetchSftDataset,
   fetchSiem,
   fetchTailSampling,
+  fetchToolLoops,
   fetchToolValidity,
   fetchToxicity,
   fetchTrend,
@@ -146,6 +148,7 @@ import type {
   SiemExport,
   SkewReport,
   TailSamplingReport,
+  ToolLoopReport,
   ToolValidity,
   ToxicityReport,
   TrendReport,
@@ -342,6 +345,12 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
+  const toolLoops = useQuery({
+    queryKey: ["tool-loops"],
+    queryFn: ({ signal }) => fetchToolLoops(signal),
+    refetchInterval: 15_000,
+  });
+
   const routing = useQuery({
     queryKey: ["routing"],
     queryFn: ({ signal }) => fetchRouting(signal),
@@ -518,6 +527,8 @@ export function ObservabilityDashboard() {
       <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
 
       <ToolValidityCard data={tools.data} loading={tools.isLoading} />
+
+      <ToolLoopsCard data={toolLoops.data} loading={toolLoops.isLoading} />
 
       <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
 
@@ -2888,6 +2899,55 @@ function ContradictionCard({
                 ))}
               </ul>
             ) : null}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ToolLoopsCard({ data, loading }: { data: ToolLoopReport | undefined; loading: boolean }) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Repeat className="h-4 w-4 text-blue-500" />
+          {t("toolLoops.title")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading || !data ? (
+          <Skeleton className="h-12 w-full" />
+        ) : data.n_calls === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">{t("toolLoops.empty")}</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-6 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("toolLoops.loops")}
+                </span>
+                <Badge tone={data.n_loops === 0 ? "success" : "danger"}>{data.n_loops}</Badge>
+              </div>
+              <Metric label={t("toolLoops.calls")} value={String(data.n_calls)} />
+              <Metric label={t("toolLoops.threshold")} value={`≥${data.repeat_threshold}`} />
+            </div>
+            {data.n_loops === 0 ? (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                {t("toolLoops.clear")}
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1 text-xs">
+                {data.loops.map((l, i) => (
+                  <li key={`${i}-${l.tools.join("-")}`} className="flex items-center gap-2">
+                    <Badge tone="danger">{t(`toolLoops.${l.kind}`)}</Badge>
+                    <span className="font-mono">{l.tools.join(" ↔ ")}</span>
+                    <span className="text-[var(--muted-foreground)]">×{l.length}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </CardContent>

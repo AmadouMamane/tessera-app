@@ -764,6 +764,16 @@
       "nodes": "Knoten",
       "edges": "Kanten",
       "note": "Der Live-Agentengraph entspricht dem fixierten Golden-Fingerprint."
+    },
+    "toolLoops": {
+      "title": "Tool-Aufruf-Schleifen",
+      "loops": "Schleifen",
+      "calls": "Aufrufe",
+      "threshold": "Wiederholungsschwelle",
+      "repeat": "Wiederholung",
+      "oscillation": "Oszillation",
+      "clear": "Keine Schleifen oder Oszillationen erkannt.",
+      "empty": "Noch keine Tool-Aufrufe erfasst."
     }
   }
 }

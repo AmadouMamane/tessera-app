@@ -764,6 +764,16 @@
       "nodes": "Nodes",
       "edges": "Edges",
       "note": "The live agent graph matches the pinned golden fingerprint."
+    },
+    "toolLoops": {
+      "title": "Tool-call loops",
+      "loops": "Loops",
+      "calls": "Calls",
+      "threshold": "Repeat threshold",
+      "repeat": "repeat",
+      "oscillation": "oscillation",
+      "clear": "No loops or oscillations detected.",
+      "empty": "No tool calls recorded yet."
     }
   }
 }

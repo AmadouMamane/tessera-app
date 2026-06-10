@@ -764,6 +764,16 @@
       "nodes": "Nœuds",
       "edges": "Arêtes",
       "note": "Le graphe de l'agent correspond au fingerprint golden épinglé."
+    },
+    "toolLoops": {
+      "title": "Boucles d'appels d'outils",
+      "loops": "Boucles",
+      "calls": "Appels",
+      "threshold": "Seuil de répétition",
+      "repeat": "répétition",
+      "oscillation": "oscillation",
+      "clear": "Aucune boucle ni oscillation détectée.",
+      "empty": "Aucun appel d'outil enregistré."
     }
   }
 }
