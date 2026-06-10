@@ -59,7 +59,7 @@
     "scrollToBottom": "Scroll to bottom",
     "startWith": "Try asking",
     "composerHint": "Enter to send · Shift+Enter for new line",
-    "disclosure": "You are chatting with Tessera, an AI assistant. Responses are generated automatically and may be imperfect; for binding advice, ask to speak to a human.",
+    "disclosure": "Tessera is an AI assistant. Check important information before making any decision.",
     "streamingPlaceholder": "Tessera is responding…",
     "regenerate": "Regenerate",
     "edit": "Edit",

@@ -24,20 +24,11 @@ __all__ = ["DISCLOSURE_TEXT", "DisclosureReport", "disclosure_status"]
 # Canonical Art. 50 disclosure, per locale. The chat UI renders the active
 # locale's text; the dashboard observes that all locales are covered.
 DISCLOSURE_TEXT: dict[str, str] = {
-    "en": (
-        "You are chatting with Tessera, an AI assistant. Responses are generated "
-        "automatically and may be imperfect; for binding advice, ask to speak to a human."
-    ),
+    "en": "Tessera is an AI assistant. Check important information before making any decision.",
     "fr": (
-        "Vous discutez avec Tessera, un assistant IA. Les réponses sont générées "
-        "automatiquement et peuvent être imparfaites ; pour un conseil engageant, "
-        "demandez à parler à un conseiller."
+        "Tessera est un assistant IA. Vérifiez les informations importantes avant toute décision."
     ),
-    "de": (
-        "Sie chatten mit Tessera, einem KI-Assistenten. Antworten werden automatisch "
-        "erzeugt und können fehlerhaft sein; für verbindliche Auskünfte bitten Sie um "
-        "ein Gespräch mit einem Menschen."
-    ),
+    "de": "Tessera ist ein KI-Assistent. Prüfen Sie wichtige Informationen vor jeder Entscheidung.",
 }
 
 _REQUIRED = ("fr", "de", "en")

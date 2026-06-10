@@ -59,7 +59,7 @@
     "scrollToBottom": "Nach unten scrollen",
     "startWith": "Zum Einstieg",
     "composerHint": "Eingabe zum Senden · Umschalt+Eingabe für neue Zeile",
-    "disclosure": "Sie chatten mit Tessera, einem KI-Assistenten. Antworten werden automatisch erzeugt und können fehlerhaft sein; für verbindliche Auskünfte bitten Sie um ein Gespräch mit einem Menschen.",
+    "disclosure": "Tessera ist ein KI-Assistent. Prüfen Sie wichtige Informationen vor jeder Entscheidung.",
     "streamingPlaceholder": "Tessera antwortet…",
     "regenerate": "Neu generieren",
     "edit": "Bearbeiten",
