@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <title>Tessera cockpit — curation eval set</title>
+  <style>
+    .s{fill:#ffffff;stroke:#e3e1db;stroke-width:1}
+    .t1{fill:#1a1915}.t2{fill:#5f5e5a}.t3{fill:#969590}
+    .td{fill:#a32d2d}.ts{fill:#0f6e56}.tw{fill:#854f0b}.ti{fill:#185fa5}.tp{fill:#3c3489}
+    .bd{fill:#fcebeb}.bs{fill:#e1f5ee}.bw{fill:#faeeda}.bi{fill:#e6f1fb}.bp{fill:#eeedfe}.bg{fill:#f1efe8}
+    .mono{font-family:'SF Mono', Menlo, monospace}
+    text{font-size:13px}
+  </style>
+  <rect width="1280" height="800" fill="#f7f6f3"/>
+  <rect width="1280" height="52" fill="#ffffff"/>
+  <line x1="0" y1="52" x2="1280" y2="52" stroke="#e3e1db"/>
+  <text x="24" y="33" class="t1" font-size="16" font-weight="600">Tessera</text>
+  <rect x="110" y="14" width="112" height="24" rx="12" class="bg"/>
+  <text x="128" y="30" class="t3" font-size="11">CI</text>
+  <rect x="152" y="16" width="66" height="20" rx="10" fill="#ffffff" stroke="#e3e1db"/>
+  <text x="166" y="30" class="t1" font-size="11" font-weight="600">Prod</text>
+  <rect x="238" y="14" width="44" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="251" y="30" class="t2" font-size="11">7 j</text>
+  <rect x="290" y="14" width="40" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="302" y="30" class="t2" font-size="11">FR</text>
+  <rect x="338" y="14" width="98" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="350" y="30" class="t2" font-size="11">llama3.2:3b</text>
+  <rect x="1006" y="14" width="148" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="1020" y="30" class="t3" font-size="11">⌘K · 200 signaux</text>
+  <rect x="1166" y="14" width="90" height="24" rx="12" class="bp"/>
+  <text x="1182" y="30" class="tp" font-size="11" font-weight="600">operator</text>
+
+  <rect x="0" y="52" width="216" height="748" fill="#ffffff"/>
+  <line x1="216" y1="52" x2="216" y2="800" stroke="#e3e1db"/>
+  <text x="20" y="88" class="t3" font-size="11">Produit</text>
+  <text x="20" y="112" class="t2">Assistant</text>
+  <text x="20" y="140" class="t2">À traiter</text>
+  <rect x="168" y="126" width="28" height="18" rx="9" class="bd"/>
+  <text x="178" y="139" class="td" font-size="11" font-weight="600">3</text>
+  <text x="20" y="170" class="t3" font-size="11">Surveiller</text>
+  <text x="20" y="194" class="t2">Vue d'ensemble</text>
+  <text x="20" y="220" class="t2">Qualité</text>
+  <circle cx="196" cy="216" r="4" fill="#e24b4a"/>
+  <text x="20" y="246" class="t2">Sécurité</text>
+  <circle cx="196" cy="242" r="4" fill="#ef9f27"/>
+  <text x="20" y="272" class="t2">Conformité</text>
+  <circle cx="196" cy="268" r="4" fill="#1d9e75"/>
+  <text x="20" y="298" class="t2">Fiabilité &amp; coût</text>
+  <circle cx="196" cy="294" r="4" fill="#1d9e75"/>
+  <text x="20" y="328" class="t3" font-size="11">Agir</text>
+  <text x="20" y="352" class="t2">Incidents &amp; playbooks</text>
+  <text x="20" y="378" class="t2">Replay &amp; shadow</text>
+  <rect x="8" y="385" width="200" height="28" rx="8" class="bp"/>
+  <text x="20" y="404" class="tp" font-weight="600">Curation eval set</text>
+  <text x="20" y="434" class="t3" font-size="11">Plateforme</text>
+  <text x="20" y="458" class="t2">Preuves &amp; exporteurs</text>
+  <text x="20" y="484" class="t2">Registre des signaux</text>
+
+  <text x="240" y="94" class="t1" font-size="19" font-weight="600">Curation eval set</text>
+  <text x="424" y="94" class="t3" font-size="12">11 candidats · eval set : 63 cas · 6 thèmes · pureté 54%</text>
+  <text x="240" y="114" class="t3" font-size="12">chaque cas accepté devient eval/failures/NN_nom.json, validé contre _schema.json en CI</text>
+
+  <rect x="240" y="134" width="672" height="92" rx="10" class="s"/>
+  <text x="258" y="160" class="t1" font-weight="600">Tour fr-08:09 — « garantie des dépôts »</text>
+  <rect x="640" y="146" width="96" height="20" rx="10" class="bd"/>
+  <text x="652" y="160" class="td" font-size="11" font-weight="600">score 0.10</text>
+  <text x="258" y="182" class="t3" font-size="11">raisons : sous le SLO · désaccord juges 0.75 · 7 claims sans source</text>
+  <text x="258" y="200" class="t3" font-size="11">thème suggéré : hallucination · cible : 64_deposit_guarantee.json</text>
+  <rect x="752" y="146" width="92" height="26" rx="10" fill="#ffffff" stroke="#0f6e56"/>
+  <text x="770" y="164" class="ts" font-size="12" font-weight="600">Accepter</text>
+  <rect x="752" y="180" width="92" height="26" rx="10" fill="#ffffff" stroke="#c9c7c0"/>
+  <text x="774" y="198" class="t2" font-size="12">Rejeter</text>
+  <rect x="240" y="236" width="672" height="92" rx="10" class="s"/>
+  <text x="258" y="262" class="t1" font-weight="600">Tour fr-07:42 — « virement SEPA international »</text>
+  <rect x="640" y="248" width="96" height="20" rx="10" class="bw"/>
+  <text x="652" y="262" class="tw" font-size="11" font-weight="600">prédit ✗</text>
+  <text x="258" y="284" class="t3" font-size="11">raisons : flaggé par le pré-juge (#121) · intent inconnu au router</text>
+  <text x="258" y="302" class="t3" font-size="11">thème suggéré : intent_coverage · cible : 65_sepa_intent.json</text>
+  <rect x="752" y="248" width="92" height="26" rx="10" fill="#ffffff" stroke="#0f6e56"/>
+  <text x="770" y="266" class="ts" font-size="12" font-weight="600">Accepter</text>
+  <rect x="752" y="282" width="92" height="26" rx="10" fill="#ffffff" stroke="#c9c7c0"/>
+  <text x="774" y="300" class="t2" font-size="12">Rejeter</text>
+  <rect x="240" y="338" width="672" height="92" rx="10" class="s"/>
+  <text x="258" y="364" class="t1" font-weight="600">Tour de-11:03 — « Kartensperrung » (session shadow)</text>
+  <rect x="640" y="350" width="96" height="20" rx="10" class="bw"/>
+  <text x="652" y="364" class="tw" font-size="11" font-weight="600">désaccord</text>
+  <text x="258" y="386" class="t3" font-size="11">raisons : juges 0.30 vs 0.75 · routé vers annotation humaine (#6)</text>
+  <text x="258" y="404" class="t3" font-size="11">en attente d'annotation — IAA requis avant acceptation (#55)</text>
+  <rect x="752" y="350" width="92" height="26" rx="10" fill="none" stroke="#c9c7c0" stroke-dasharray="4 3"/>
+  <text x="762" y="368" class="t3" font-size="11">en attente</text>
+  <rect x="240" y="440" width="672" height="34" rx="8" class="s"/>
+  <text x="258" y="462" class="t2" font-size="12">▸ 8 autres candidats — score faible 1 · prédits 6 · désaccord 1</text>
+
+  <rect x="940" y="134" width="316" height="180" rx="10" class="s"/>
+  <text x="958" y="160" class="t1" font-size="14" font-weight="600">Flywheel SFT</text>
+  <text x="958" y="186" class="t2" font-size="12">éligibles : 1 tour (score ≥ 0.80, FR)</text>
+  <text x="958" y="208" class="t3" font-size="11">les bons tours deviennent des données</text>
+  <text x="958" y="224" class="t3" font-size="11">d'entraînement du modèle local (#122)</text>
+  <rect x="958" y="240" width="180" height="30" rx="10" fill="#ffffff" stroke="#c9c7c0"/>
+  <text x="976" y="260" class="t1" font-size="12" font-weight="600">Exporter en parquet</text>
+  <text x="958" y="296" class="t3" font-size="11">dernier export : jamais · 0 dataset publié</text>
+
+  <rect x="940" y="334" width="316" height="140" rx="10" class="s"/>
+  <text x="958" y="360" class="t1" font-size="14" font-weight="600">Santé de l'eval set</text>
+  <text x="958" y="386" class="t2" font-size="12">63 cas · 6 thèmes · pureté 54%</text>
+  <rect x="1148" y="372" width="92" height="20" rx="10" class="bw"/>
+  <text x="1160" y="386" class="tw" font-size="11" font-weight="600">re-cluster</text>
+  <text x="958" y="410" class="t3" font-size="11">pureté &lt; 70% → re-clustering proposé (#123)</text>
+  <text x="958" y="430" class="t3" font-size="11">staleness des golden answers : 0 périmée (#82)</text>
+  <text x="958" y="450" class="t3" font-size="11">rendement annotation : à mesurer (#97)</text>
+
+  <rect x="240" y="494" width="1016" height="64" rx="10" class="s"/>
+  <text x="258" y="520" class="t1" font-size="13" font-weight="600">Boucle complète</text>
+  <text x="258" y="542" class="t2" font-size="12">prod → exception → curation → eval/failures/ → gate CI (#9) → le même échec ne revient jamais silencieusement</text>
+
+  <rect x="240" y="578" width="1016" height="56" rx="10" fill="none" stroke="#c9c7c0" stroke-dasharray="4 3"/>
+  <text x="258" y="602" class="t2" font-size="12">#175 — auto-tickets Jira/ServiceNow depuis les clusters · #176 — webhooks pour outils d'annotation externes</text>
+  <text x="258" y="622" class="t3" font-size="11">planifié — intégrations sortantes du flywheel</text>
+</svg>

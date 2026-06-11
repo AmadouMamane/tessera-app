@@ -1,0 +1,216 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 1330" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <title>Où vit la dimension temps — même écran, deux états</title>
+  <style>
+    .t1{fill:#e7eaee}.t2{fill:#9aa4b0}.t3{fill:#66707c}
+    .gold{fill:#e3c585}.golddim{fill:#9b8757}
+    .red{fill:#f0716c}.green{fill:#4ed3a4}.amber{fill:#f0b35c}.purple{fill:#a79bf0}
+    .frame{fill:#0d1117;stroke:#2c3642;stroke-width:1.5}
+    .bar{fill:#10151c}.panel{fill:#151b23;stroke:#222a34}
+    .callout{fill:none;stroke:#e3c585;stroke-width:1.2}
+  </style>
+  <rect width="1280" height="1330" fill="#070a0f"/>
+  <text x="40" y="30" class="t1" font-size="17" font-weight="600">Où vit la dimension temps — un seul écran, deux états</text>
+
+  <text x="40" y="62" class="golddim" font-size="11" font-weight="600">ÉTAT 1 · MODE LIVE (PAR DÉFAUT) = TON IMAGE DE RÉFÉRENCE, TELLE QUELLE</text>
+  <rect x="40" y="74" width="900" height="450" rx="10" class="frame"/>
+  <rect x="40" y="74" width="900" height="32" rx="10" class="bar"/>
+  <text x="56" y="95" class="t1" font-size="11" font-weight="600">Tessera · AI Control Plane</text>
+  <text x="260" y="95" class="t3" font-size="9.5">Scope · Environnement · Agent · Modèle · Langue</text>
+  <rect x="40" y="106" width="140" height="418" class="bar"/>
+  <text x="52" y="128" class="t3" font-size="8.5">PRODUIT</text>
+  <text x="52" y="144" class="t2" font-size="9.5">Assistant · À traiter 24</text>
+  <text x="52" y="166" class="t3" font-size="8.5">COCKPIT</text>
+  <rect x="46" y="174" width="128" height="16" rx="5" fill="#251f44"/>
+  <text x="52" y="186" class="purple" font-size="9.5" font-weight="600">Vue d'ensemble</text>
+  <text x="52" y="204" class="t2" font-size="9.5">Qualité IA</text>
+  <text x="52" y="220" class="t2" font-size="9.5">Sécurité &amp; Privacy</text>
+  <text x="52" y="236" class="t2" font-size="9.5">Conformité · Fiabilité…</text>
+  <text x="52" y="258" class="t3" font-size="8.5">AGIR</text>
+  <text x="52" y="274" class="t2" font-size="9.5">Incidents · Replay…</text>
+  <text x="52" y="296" class="t3" font-size="8.5">PROUVER</text>
+  <text x="52" y="312" class="t2" font-size="9.5">Journal · Preuves…</text>
+  <text x="52" y="334" class="t3" font-size="8.5">CONFIGURER</text>
+  <text x="52" y="350" class="t2" font-size="9.5">Signal Catalog…</text>
+  <text x="196" y="132" class="t1" font-size="13" font-weight="600">Vue d'ensemble</text>
+  <rect x="650" y="116" width="276" height="22" rx="11" fill="none" stroke="#e3c585" stroke-width="1.4" stroke-dasharray="5 3"/>
+  <circle cx="664" cy="127" r="3" fill="#27c08d"/>
+  <text x="673" y="131" class="t2" font-size="9.5">Données en temps réel · 10:42:31 UTC ⟳</text>
+  <g>
+    <rect x="196" y="150" width="118" height="52" rx="7" class="panel"/>
+    <text x="206" y="166" class="t3" font-size="8">Score global</text>
+    <text x="206" y="186" class="amber" font-size="14" font-weight="600">62/100</text>
+    <rect x="320" y="150" width="118" height="52" rx="7" class="panel"/>
+    <text x="330" y="166" class="t3" font-size="8">Contrôles critiques</text>
+    <text x="330" y="186" class="red" font-size="14" font-weight="600">5/18</text>
+    <rect x="444" y="150" width="118" height="52" rx="7" class="panel"/>
+    <text x="454" y="166" class="t3" font-size="8">Risques ouverts</text>
+    <text x="454" y="186" class="t1" font-size="14" font-weight="600">14</text>
+    <rect x="568" y="150" width="118" height="52" rx="7" class="panel"/>
+    <text x="578" y="166" class="t3" font-size="8">Releases</text>
+    <text x="578" y="186" class="red" font-size="14" font-weight="600">1 bloquée</text>
+    <rect x="692" y="150" width="118" height="52" rx="7" class="panel"/>
+    <text x="702" y="166" class="t3" font-size="8">Signaux surveillés</text>
+    <text x="702" y="186" class="t1" font-size="14" font-weight="600">200</text>
+    <rect x="816" y="150" width="110" height="52" rx="7" class="panel"/>
+    <text x="826" y="166" class="t3" font-size="8">Preuves 24h</text>
+    <text x="826" y="186" class="t1" font-size="14" font-weight="600">128</text>
+  </g>
+  <rect x="196" y="216" width="730" height="146" rx="8" class="panel"/>
+  <text x="210" y="238" class="t1" font-size="11" font-weight="600">Contrôles critiques</text>
+  <text x="210" y="258" class="t3" font-size="8">SIGNAL</text><text x="400" y="258" class="t3" font-size="8">ÉTAT</text><text x="465" y="258" class="t3" font-size="8">VALEUR</text><text x="530" y="258" class="t3" font-size="8">OBJECTIF</text><text x="600" y="258" class="t3" font-size="8">TENDANCE (7J)</text><text x="710" y="258" class="t3" font-size="8">ACTION</text><text x="860" y="258" class="t3" font-size="8">CASE</text>
+  <text x="210" y="280" class="t1" font-size="9.5">Faithfulness (SLO)</text><text x="400" y="280" class="red" font-size="9">Échec</text><text x="465" y="280" class="red" font-size="9.5" font-weight="600">0.45</text><text x="530" y="280" class="t2" font-size="9.5">≥ 0.80</text>
+  <polyline points="600,276 620,278 640,277 660,280 680,282" fill="none" stroke="#e24b4a" stroke-width="1.5"/>
+  <text x="710" y="280" fill="#6cb1f5" font-size="8.5">▶ playbook hallucination</text><text x="860" y="280" class="red" font-size="8">CASE-0042</text>
+  <text x="210" y="304" class="t1" font-size="9.5">Ancrage (Grounding)</text><text x="400" y="304" class="amber" font-size="9">Élevé</text><text x="465" y="304" class="amber" font-size="9.5" font-weight="600">60%</text><text x="530" y="304" class="t2" font-size="9.5">≥ 70%</text>
+  <polyline points="600,300 620,301 640,300 660,303 680,303" fill="none" stroke="#ef9f27" stroke-width="1.5"/>
+  <text x="710" y="304" fill="#6cb1f5" font-size="8.5">▤ vérifier corpus</text><text x="860" y="304" class="amber" font-size="8">CASE-0045</text>
+  <text x="210" y="328" class="t1" font-size="9.5">Toxicité masquée · erreurs · PII…</text><text x="400" y="328" class="green" font-size="9">OK</text><text x="465" y="328" class="t2" font-size="9.5">0.02%</text><text x="530" y="328" class="t2" font-size="9.5">≤ 0.10%</text>
+  <text x="600" y="328" class="t3" font-size="8.5">+ 2 lignes…</text>
+  <rect x="196" y="376" width="358" height="106" rx="8" class="panel"/>
+  <text x="210" y="398" class="t1" font-size="10.5" font-weight="600">Évolution des scores (7 j)</text>
+  <line x1="210" y1="440" x2="540" y2="440" stroke="#1a212b"/>
+  <polyline points="214,418 268,422 322,420 376,430 430,436 484,448 536,452" fill="none" stroke="#e24b4a" stroke-width="2"/>
+  <polyline points="214,436 268,434 322,438 376,436 430,440 484,438 536,442" fill="none" stroke="#ef9f27" stroke-width="2"/>
+  <text x="210" y="474" class="t3" font-size="8">5 nov. ——————— 11 nov.</text>
+  <rect x="568" y="376" width="358" height="106" rx="8" class="panel"/>
+  <text x="582" y="398" class="t1" font-size="10.5" font-weight="600">Incidents · Release · Actions · Activités</text>
+  <text x="582" y="418" class="t3" font-size="9">INC-27 · INC-24 · INC-22 · INC-19</text>
+  <text x="582" y="436" class="t3" font-size="9">R-2024.11.07-1 bloquée · gates</text>
+  <text x="582" y="454" class="t3" font-size="9">red-team · geler · replay · ticket · evidence</text>
+  <rect x="196" y="494" width="730" height="20" rx="6" class="panel"/>
+  <text x="210" y="508" class="t3" font-size="8.5">Confiance des signaux 92% · Chaîne d'audit intacte · Tous les systèmes opérationnels</text>
+
+  <circle cx="990" cy="127" r="13" class="callout"/>
+  <text x="986" y="131" class="gold" font-size="11" font-weight="600">1</text>
+  <line x1="940" y1="127" x2="975" y2="127" stroke="#e3c585" stroke-width="1.2"/>
+  <text x="1012" y="123" class="gold" font-size="11" font-weight="600">le temps est replié ICI</text>
+  <text x="1012" y="139" class="t2" font-size="10">T = maintenant · comparaison off</text>
+  <text x="1012" y="155" class="t3" font-size="9.5">la colonne Tendance (7j) et les sparklines</text>
+  <text x="1012" y="169" class="t3" font-size="9.5">sont déjà du temps, en arrière-plan</text>
+
+  <line x1="490" y1="536" x2="490" y2="592" stroke="#e3c585" stroke-width="2"/>
+  <path d="M483,584 L490,598 L497,584 z" fill="#e3c585"/>
+  <circle cx="530" cy="566" r="13" class="callout"/>
+  <text x="526" y="570" class="gold" font-size="11" font-weight="600">2</text>
+  <text x="552" y="562" class="gold" font-size="12" font-weight="600">un clic sur le bandeau</text>
+  <text x="552" y="578" class="t2" font-size="10">la même page se déplie — rien ne navigue ailleurs</text>
+
+  <text x="40" y="628" class="golddim" font-size="11" font-weight="600">ÉTAT 2 · MODE TIME-TRAVEL = LA PAGE D'OPUS, DÉPLIÉE DANS LE MÊME ÉCRAN</text>
+  <rect x="40" y="640" width="900" height="610" rx="10" class="frame"/>
+  <rect x="40" y="640" width="900" height="32" rx="10" class="bar"/>
+  <text x="56" y="661" class="t1" font-size="11" font-weight="600">Tessera · AI Control Plane</text>
+  <text x="260" y="661" class="t3" font-size="9.5">Scope · Environnement · Agent · Modèle · Langue</text>
+  <rect x="40" y="672" width="140" height="578" class="bar"/>
+  <text x="52" y="694" class="t3" font-size="8.5">PRODUIT</text>
+  <text x="52" y="710" class="t2" font-size="9.5">Assistant · À traiter 24</text>
+  <text x="52" y="732" class="t3" font-size="8.5">COCKPIT</text>
+  <rect x="46" y="740" width="128" height="16" rx="5" fill="#251f44"/>
+  <text x="52" y="752" class="purple" font-size="9.5" font-weight="600">Vue d'ensemble</text>
+  <text x="52" y="770" class="t2" font-size="9.5">Qualité IA · Sécurité…</text>
+  <text x="52" y="792" class="t3" font-size="8.5">AGIR · PROUVER · CONFIGURER</text>
+  <text x="52" y="808" class="t2" font-size="9.5">…</text>
+  <text x="196" y="698" class="t1" font-size="13" font-weight="600">Vue d'ensemble</text>
+  <text x="820" y="698" class="gold" font-size="9.5" font-weight="600">time-travel actif</text>
+
+  <rect x="196" y="710" width="730" height="86" rx="9" fill="#151b23" stroke="#e3c585" stroke-width="1.5"/>
+  <rect x="208" y="720" width="112" height="20" rx="6" fill="#1a212b"/>
+  <text x="216" y="734" class="t2" font-size="9">◷ Période <tspan class="t1" font-weight="600">7 jours</tspan></text>
+  <rect x="328" y="720" width="226" height="20" rx="6" fill="#1a212b"/>
+  <text x="336" y="734" class="t2" font-size="9">⚑ Tu regardes <tspan class="t1" font-weight="600">mar. 10 juin · 14:32</tspan> (time-travel)</text>
+  <rect x="562" y="720" width="212" height="20" rx="6" fill="#1a212b"/>
+  <text x="570" y="734" class="t2" font-size="9">⇄ Comparer à <tspan class="t1" font-weight="600">semaine précédente</tspan></text>
+  <rect x="782" y="720" width="132" height="20" rx="6" fill="#1a212b"/>
+  <text x="792" y="734" class="gold" font-size="9">⏮ ⏯ ⏭ rejouer</text>
+  <line x1="216" y1="764" x2="700" y2="764" stroke="#39424f" stroke-width="3" stroke-linecap="round"/>
+  <line x1="700" y1="764" x2="906" y2="764" stroke="#e3c585" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="280" cy="764" r="5" fill="#828c99"/>
+  <text x="280" y="784" class="t3" font-size="8" text-anchor="middle">baseline · 3 juin</text>
+  <line x1="540" y1="757" x2="540" y2="771" stroke="#6cb1f5" stroke-width="2"/>
+  <text x="540" y="784" class="t3" font-size="8" text-anchor="middle">8 · v2</text>
+  <line x1="620" y1="757" x2="620" y2="771" stroke="#6cb1f5" stroke-width="2"/>
+  <text x="620" y="784" class="t3" font-size="8" text-anchor="middle">9 · prompt</text>
+  <line x1="700" y1="757" x2="700" y2="771" stroke="#6cb1f5" stroke-width="2"/>
+  <text x="700" y="784" class="t3" font-size="8" text-anchor="middle">10 · juge</text>
+  <circle cx="760" cy="764" r="6" fill="none" stroke="#e3c585" stroke-width="2.5"/>
+  <text x="760" y="784" class="gold" font-size="8" text-anchor="middle" font-weight="600">T</text>
+  <circle cx="894" cy="764" r="5" fill="#e3c585"/>
+  <text x="894" y="784" class="t3" font-size="8" text-anchor="middle">maintenant</text>
+
+  <g>
+    <rect x="196" y="808" width="118" height="60" rx="7" class="panel"/>
+    <text x="206" y="824" class="t3" font-size="8">Score global</text>
+    <text x="206" y="842" class="amber" font-size="13" font-weight="600">58/100 à T</text>
+    <text x="206" y="858" class="gold" font-size="8">▼ −4 vs baseline</text>
+    <rect x="320" y="808" width="118" height="60" rx="7" class="panel"/>
+    <text x="330" y="824" class="t3" font-size="8">Contrôles critiques</text>
+    <text x="330" y="842" class="red" font-size="13" font-weight="600">4/18 à T</text>
+    <text x="330" y="858" class="gold" font-size="8">▲ +2 vs baseline</text>
+    <rect x="444" y="808" width="118" height="60" rx="7" class="panel"/>
+    <text x="454" y="824" class="t3" font-size="8">Risques ouverts</text>
+    <text x="454" y="842" class="t1" font-size="13" font-weight="600">11 à T</text>
+    <text x="454" y="858" class="gold" font-size="8">▲ +3 vs baseline</text>
+    <rect x="568" y="808" width="118" height="60" rx="7" class="panel"/>
+    <text x="578" y="824" class="t3" font-size="8">Releases</text>
+    <text x="578" y="842" class="t1" font-size="13" font-weight="600">1 gated à T</text>
+    <text x="578" y="858" class="gold" font-size="8">= vs baseline</text>
+    <rect x="692" y="808" width="118" height="60" rx="7" class="panel"/>
+    <text x="702" y="824" class="t3" font-size="8">Signaux surveillés</text>
+    <text x="702" y="842" class="t1" font-size="13" font-weight="600">188 à T</text>
+    <text x="702" y="858" class="gold" font-size="8">▲ +12 depuis</text>
+    <rect x="816" y="808" width="110" height="60" rx="7" class="panel"/>
+    <text x="826" y="824" class="t3" font-size="8">Preuves 24h</text>
+    <text x="826" y="842" class="t1" font-size="13" font-weight="600">96 à T</text>
+    <text x="826" y="858" class="gold" font-size="8">▲ +32 depuis</text>
+  </g>
+
+  <rect x="196" y="882" width="730" height="120" rx="8" class="panel"/>
+  <text x="210" y="904" class="t1" font-size="11" font-weight="600">Contrôles critiques — lus à T</text>
+  <text x="210" y="924" class="t3" font-size="8">SIGNAL</text><text x="400" y="924" class="t3" font-size="8">ÉTAT À T</text><text x="480" y="924" class="t3" font-size="8">VALEUR À T</text><text x="570" y="924" class="t3" font-size="8">OBJECTIF</text><text x="660" y="924" class="gold" font-size="8" font-weight="600">VS BASELINE</text><text x="790" y="924" class="t3" font-size="8">CASE</text>
+  <text x="210" y="946" class="t1" font-size="9.5">Faithfulness (SLO)</text><text x="400" y="946" class="amber" font-size="9">Alerte</text><text x="480" y="946" class="amber" font-size="9.5" font-weight="600">0.86</text><text x="570" y="946" class="t2" font-size="9.5">≥ 0.80</text><text x="660" y="946" class="gold" font-size="9.5">0.89 → 0.86 ▼</text><text x="790" y="946" class="t3" font-size="8">—</text>
+  <text x="210" y="968" class="t1" font-size="9.5">ASR red-team</text><text x="400" y="968" class="amber" font-size="9">Élevé</text><text x="480" y="968" class="amber" font-size="9.5" font-weight="600">18/33</text><text x="570" y="968" class="t2" font-size="9.5">≤ 14/33</text><text x="660" y="968" class="gold" font-size="9.5">14/33 → 18/33 ▲</text><text x="790" y="968" class="t3" font-size="8">—</text>
+  <text x="210" y="990" class="t1" font-size="9.5">Topologie du graphe</text><text x="400" y="990" class="green" font-size="9">OK</text><text x="480" y="990" class="green" font-size="9.5">golden ✓</text><text x="570" y="990" class="t2" font-size="9.5">—</text><text x="660" y="990" class="gold" font-size="9.5">conforme depuis v2</text><text x="790" y="990" class="t3" font-size="8">—</text>
+
+  <rect x="196" y="1016" width="730" height="130" rx="8" class="panel"/>
+  <text x="210" y="1038" class="t1" font-size="11" font-weight="600">Évolution — avec les marqueurs d'événements du scrubber</text>
+  <line x1="210" y1="1100" x2="916" y2="1100" stroke="#1a212b"/>
+  <polyline points="214,1066 314,1070 414,1068 514,1078 614,1086 714,1098 814,1104 904,1108" fill="none" stroke="#e24b4a" stroke-width="2"/>
+  <line x1="514" y1="1052" x2="514" y2="1118" stroke="#6cb1f5" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="514" y="1132" fill="#6cb1f5" font-size="8" text-anchor="middle">8 · v2</text>
+  <line x1="614" y1="1052" x2="614" y2="1118" stroke="#6cb1f5" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="614" y="1132" fill="#6cb1f5" font-size="8" text-anchor="middle">9 · prompt</text>
+  <line x1="714" y1="1052" x2="714" y2="1118" stroke="#6cb1f5" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="714" y="1132" fill="#6cb1f5" font-size="8" text-anchor="middle">10 · juge</text>
+  <line x1="764" y1="1052" x2="764" y2="1118" stroke="#e3c585" stroke-width="2"/>
+  <text x="764" y="1132" class="gold" font-size="8" text-anchor="middle" font-weight="600">T</text>
+  <rect x="196" y="1160" width="730" height="20" rx="6" class="panel"/>
+  <text x="210" y="1174" class="t3" font-size="8.5">Confiance des signaux 92% · Chaîne d'audit intacte · preuves lisibles « as-of T » (bi-temporalité)</text>
+
+  <circle cx="990" cy="752" r="13" class="callout"/>
+  <text x="986" y="756" class="gold" font-size="11" font-weight="600">3</text>
+  <line x1="940" y1="752" x2="975" y2="752" stroke="#e3c585" stroke-width="1.2"/>
+  <text x="1012" y="744" class="gold" font-size="11" font-weight="600">la barre d'Opus se déplie ici</text>
+  <text x="1012" y="760" class="t2" font-size="10">Période × T × Comparer à</text>
+  <text x="1012" y="776" class="t3" font-size="9.5">le scrubber porte les événements :</text>
+  <text x="1012" y="790" class="t3" font-size="9.5">v2, prompt, juge — et T ≠ maintenant</text>
+  <circle cx="990" cy="838" r="13" class="callout"/>
+  <text x="986" y="842" class="gold" font-size="11" font-weight="600">4</text>
+  <line x1="940" y1="838" x2="975" y2="838" stroke="#e3c585" stroke-width="1.2"/>
+  <text x="1012" y="832" class="gold" font-size="11" font-weight="600">les KPIs se relisent</text>
+  <text x="1012" y="848" class="t2" font-size="10">valeur à T + Δ vs baseline</text>
+  <circle cx="990" cy="940" r="13" class="callout"/>
+  <text x="986" y="944" class="gold" font-size="11" font-weight="600">5</text>
+  <line x1="940" y1="940" x2="975" y2="940" stroke="#e3c585" stroke-width="1.2"/>
+  <text x="1012" y="934" class="gold" font-size="11" font-weight="600">la table gagne « vs baseline »</text>
+  <text x="1012" y="950" class="t2" font-size="10">0.89 → 0.86 ▼ : le diff de période</text>
+  <text x="1012" y="966" class="t3" font-size="9.5">d'Opus, fusionné dans la table existante</text>
+  <circle cx="990" cy="1080" r="13" class="callout"/>
+  <text x="986" y="1084" class="gold" font-size="11" font-weight="600">6</text>
+  <line x1="940" y1="1080" x2="975" y2="1080" stroke="#e3c585" stroke-width="1.2"/>
+  <text x="1012" y="1074" class="gold" font-size="11" font-weight="600">les courbes gagnent les événements</text>
+  <text x="1012" y="1090" class="t2" font-size="10">what-changed (#17) devient visuel</text>
+  <text x="1012" y="1106" class="t3" font-size="9.5">chaque cassure s'explique par un marqueur</text>
+
+  <rect x="40" y="1272" width="1216" height="40" rx="9" fill="#151b23" stroke="#5c4f2e"/>
+  <text x="58" y="1297" class="gold" font-size="12" font-weight="600">Même écran, deux états.</text>
+  <text x="240" y="1297" class="t2" font-size="11">Le temps n'est pas une page : T est un paramètre de la requête. Ton image = T:maintenant, replié · La page d'Opus = le contrôle déployé · Session theater = le même geste, zoomé sur une session.</text>
+</svg>

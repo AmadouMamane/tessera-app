@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <title>Tessera — assistant (surface produit)</title>
+  <style>
+    .s{fill:#ffffff;stroke:#e3e1db;stroke-width:1}
+    .t1{fill:#1a1915}.t2{fill:#5f5e5a}.t3{fill:#969590}
+    .td{fill:#a32d2d}.ts{fill:#0f6e56}.tw{fill:#854f0b}.ti{fill:#185fa5}.tp{fill:#3c3489}
+    .bd{fill:#fcebeb}.bs{fill:#e1f5ee}.bw{fill:#faeeda}.bi{fill:#e6f1fb}.bp{fill:#eeedfe}.bg{fill:#f1efe8}
+    text{font-size:13px}
+  </style>
+  <rect width="1280" height="800" fill="#f7f6f3"/>
+  <rect width="1280" height="52" fill="#ffffff"/>
+  <line x1="0" y1="52" x2="1280" y2="52" stroke="#e3e1db"/>
+  <text x="24" y="33" class="t1" font-size="16" font-weight="600">Tessera</text>
+  <rect x="110" y="14" width="112" height="24" rx="12" class="bg"/>
+  <text x="128" y="30" class="t3" font-size="11">CI</text>
+  <rect x="152" y="16" width="66" height="20" rx="10" fill="#ffffff" stroke="#e3e1db"/>
+  <text x="166" y="30" class="t1" font-size="11" font-weight="600">Prod</text>
+  <rect x="238" y="14" width="44" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="251" y="30" class="t2" font-size="11">7 j</text>
+  <rect x="290" y="14" width="40" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="302" y="30" class="t2" font-size="11">FR</text>
+  <rect x="338" y="14" width="98" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="350" y="30" class="t2" font-size="11">llama3.2:3b</text>
+  <rect x="1006" y="14" width="148" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="1020" y="30" class="t3" font-size="11">⌘K · 200 signaux</text>
+  <rect x="1166" y="14" width="90" height="24" rx="12" class="bp"/>
+  <text x="1182" y="30" class="tp" font-size="11" font-weight="600">operator</text>
+
+  <rect x="0" y="52" width="216" height="748" fill="#ffffff"/>
+  <line x1="216" y1="52" x2="216" y2="800" stroke="#e3e1db"/>
+  <text x="20" y="88" class="t3" font-size="11">Produit</text>
+  <rect x="8" y="93" width="200" height="28" rx="8" class="bp"/>
+  <text x="20" y="112" class="tp" font-weight="600">Assistant</text>
+  <text x="20" y="140" class="t2">À traiter</text>
+  <rect x="168" y="126" width="28" height="18" rx="9" class="bd"/>
+  <text x="178" y="139" class="td" font-size="11" font-weight="600">3</text>
+  <text x="20" y="170" class="t3" font-size="11">Surveiller</text>
+  <text x="20" y="194" class="t2">Vue d'ensemble</text>
+  <text x="20" y="220" class="t2">Qualité</text>
+  <circle cx="196" cy="216" r="4" fill="#e24b4a"/>
+  <text x="20" y="246" class="t2">Sécurité</text>
+  <circle cx="196" cy="242" r="4" fill="#ef9f27"/>
+  <text x="20" y="272" class="t2">Conformité</text>
+  <circle cx="196" cy="268" r="4" fill="#1d9e75"/>
+  <text x="20" y="298" class="t2">Fiabilité &amp; coût</text>
+  <circle cx="196" cy="294" r="4" fill="#1d9e75"/>
+  <text x="20" y="328" class="t3" font-size="11">Agir</text>
+  <text x="20" y="352" class="t2">Incidents &amp; playbooks</text>
+  <text x="20" y="378" class="t2">Replay &amp; shadow</text>
+  <text x="20" y="404" class="t2">Curation eval set</text>
+  <text x="20" y="434" class="t3" font-size="11">Plateforme</text>
+  <text x="20" y="458" class="t2">Preuves &amp; exporteurs</text>
+  <text x="20" y="484" class="t2">Registre des signaux</text>
+
+  <rect x="300" y="84" width="700" height="40" rx="10" class="bi"/>
+  <text x="320" y="109" class="ti" font-size="12">Tessera est un assistant IA. Vérifiez les informations importantes avant toute décision. — Art. 50</text>
+
+  <rect x="560" y="148" width="440" height="44" rx="14" class="bg"/>
+  <text x="582" y="175" class="t1" font-size="13">Expliquez-moi la garantie des dépôts en France.</text>
+
+  <rect x="300" y="216" width="560" height="232" rx="14" class="s"/>
+  <text x="322" y="246" class="t1" font-size="13">La garantie des dépôts est fixée à 100 000 € par déposant et</text>
+  <text x="322" y="268" class="t1" font-size="13">par établissement. Elle est mise en œuvre par le FGDR dans un</text>
+  <text x="322" y="290" class="t1" font-size="13">délai de 7 jours ouvrables.</text>
+  <rect x="322" y="308" width="208" height="24" rx="12" class="bi"/>
+  <text x="336" y="324" class="ti" font-size="11">Directive 2014/49/UE (DGSD) ↗</text>
+  <rect x="542" y="308" width="120" height="24" rx="12" class="bi"/>
+  <text x="556" y="324" class="ti" font-size="11">FGDR — fiche ↗</text>
+  <line x1="322" y1="350" x2="838" y2="350" stroke="#e3e1db"/>
+  <rect x="322" y="364" width="166" height="24" rx="12" class="bw"/>
+  <text x="336" y="380" class="tw" font-size="11">confiance 59% — vérifier</text>
+  <rect x="500" y="364" width="140" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="514" y="380" class="t2" font-size="11">voir les sources</text>
+  <rect x="652" y="364" width="172" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="666" y="380" class="t2" font-size="11">parler à un conseiller</text>
+  <text x="322" y="420" class="t3" font-size="11">les passages incertains sont soulignés · l'incertitude vient de #12/#18</text>
+  <text x="322" y="438" class="t3" font-size="11">escalade humaine : délai estimé 4 min · raison affichée (#136)</text>
+
+  <rect x="300" y="472" width="700" height="40" rx="10" class="bg"/>
+  <text x="320" y="497" class="t2" font-size="12">Mémorisé : vous préférez le français · communication écrite</text>
+  <rect x="812" y="480" width="170" height="24" rx="12" fill="none" stroke="#c9c7c0"/>
+  <text x="826" y="496" class="t2" font-size="11">gérer ma mémoire (GDPR)</text>
+
+  <rect x="300" y="536" width="700" height="44" rx="14" class="s"/>
+  <text x="322" y="563" class="t3" font-size="13">Écrivez votre message…</text>
+  <rect x="912" y="544" width="76" height="28" rx="10" fill="#534ab7"/>
+  <text x="936" y="563" fill="#ffffff" font-size="12" font-weight="600">Envoyer</text>
+  <rect x="300" y="592" width="46" height="22" rx="11" class="bp"/>
+  <text x="314" y="607" class="tp" font-size="11" font-weight="600">FR</text>
+  <rect x="354" y="592" width="46" height="22" rx="11" fill="none" stroke="#e3e1db"/>
+  <text x="368" y="607" class="t2" font-size="11">DE</text>
+  <rect x="408" y="592" width="46" height="22" rx="11" fill="none" stroke="#e3e1db"/>
+  <text x="422" y="607" class="t2" font-size="11">EN</text>
+
+  <rect x="1032" y="84" width="224" height="300" rx="10" class="s"/>
+  <text x="1050" y="110" class="t1" font-size="13" font-weight="600">Surfaces produit</text>
+  <text x="1050" y="132" class="t3" font-size="11">issues du catalogue · page: produit</text>
+  <text x="1050" y="160" class="t2" font-size="11">#134 disclosure Art. 50</text>
+  <rect x="1196" y="148" width="44" height="18" rx="9" class="bs"/>
+  <text x="1206" y="161" class="ts" font-size="10" font-weight="600">actif</text>
+  <text x="1050" y="188" class="t2" font-size="11">#132 citations cliquables</text>
+  <rect x="1196" y="176" width="44" height="18" rx="9" class="bs"/>
+  <text x="1206" y="189" class="ts" font-size="10" font-weight="600">actif</text>
+  <text x="1050" y="216" class="t2" font-size="11">#131 indicateur de confiance</text>
+  <rect x="1190" y="204" width="52" height="18" rx="9" class="bg"/>
+  <text x="1198" y="217" class="t3" font-size="10">planifié</text>
+  <text x="1050" y="244" class="t2" font-size="11">#135 mémoire corrigeable</text>
+  <rect x="1190" y="232" width="52" height="18" rx="9" class="bg"/>
+  <text x="1198" y="245" class="t3" font-size="10">planifié</text>
+  <text x="1050" y="272" class="t2" font-size="11">#136 escalade transparente</text>
+  <rect x="1190" y="260" width="52" height="18" rx="9" class="bg"/>
+  <text x="1198" y="273" class="t3" font-size="10">planifié</text>
+  <text x="1050" y="304" class="t3" font-size="11">chaque surface émet ses signaux</text>
+  <text x="1050" y="322" class="t3" font-size="11">vers le cockpit : disclosure vue,</text>
+  <text x="1050" y="340" class="t3" font-size="11">citation cliquée, escalade, refus —</text>
+  <text x="1050" y="358" class="t3" font-size="11">la frontière produit/cockpit en action</text>
+
+  <rect x="300" y="640" width="956" height="56" rx="10" class="s"/>
+  <text x="320" y="666" class="t1" font-size="13" font-weight="600">Ce que voit le cockpit pendant cette conversation</text>
+  <text x="320" y="688" class="t2" font-size="12">guard : input screené ✓ · retrieval : 10 chunks · juge : faithfulness asynchrone · mémoire : 1 écriture gardée · trace : 8 spans signés</text>
+</svg>

@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <title>Tessera cockpit — page Conformité</title>
+  <style>
+    .s{fill:#ffffff;stroke:#e3e1db;stroke-width:1}
+    .t1{fill:#1a1915}.t2{fill:#5f5e5a}.t3{fill:#969590}
+    .td{fill:#a32d2d}.ts{fill:#0f6e56}.tw{fill:#854f0b}.ti{fill:#185fa5}.tp{fill:#3c3489}
+    .bd{fill:#fcebeb}.bs{fill:#e1f5ee}.bw{fill:#faeeda}.bi{fill:#e6f1fb}.bp{fill:#eeedfe}.bg{fill:#f1efe8}
+    text{font-size:13px}
+  </style>
+  <rect width="1280" height="800" fill="#f7f6f3"/>
+  <rect width="1280" height="52" fill="#ffffff"/>
+  <line x1="0" y1="52" x2="1280" y2="52" stroke="#e3e1db"/>
+  <text x="24" y="33" class="t1" font-size="16" font-weight="600">Tessera</text>
+  <rect x="110" y="14" width="112" height="24" rx="12" class="bg"/>
+  <text x="128" y="30" class="t3" font-size="11">CI</text>
+  <rect x="152" y="16" width="66" height="20" rx="10" fill="#ffffff" stroke="#e3e1db"/>
+  <text x="166" y="30" class="t1" font-size="11" font-weight="600">Prod</text>
+  <rect x="238" y="14" width="44" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="251" y="30" class="t2" font-size="11">7 j</text>
+  <rect x="290" y="14" width="40" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="302" y="30" class="t2" font-size="11">FR</text>
+  <rect x="338" y="14" width="98" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="350" y="30" class="t2" font-size="11">llama3.2:3b</text>
+  <rect x="1006" y="14" width="148" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="1020" y="30" class="t3" font-size="11">⌘K · 200 signaux</text>
+  <rect x="1166" y="14" width="90" height="24" rx="12" class="bp"/>
+  <text x="1182" y="30" class="tp" font-size="11" font-weight="600">auditor</text>
+
+  <rect x="0" y="52" width="216" height="748" fill="#ffffff"/>
+  <line x1="216" y1="52" x2="216" y2="800" stroke="#e3e1db"/>
+  <text x="20" y="88" class="t3" font-size="11">Produit</text>
+  <text x="20" y="112" class="t2">Assistant</text>
+  <text x="20" y="140" class="t2">À traiter</text>
+  <rect x="168" y="126" width="28" height="18" rx="9" class="bd"/>
+  <text x="178" y="139" class="td" font-size="11" font-weight="600">3</text>
+  <text x="20" y="170" class="t3" font-size="11">Surveiller</text>
+  <text x="20" y="194" class="t2">Vue d'ensemble</text>
+  <text x="20" y="220" class="t2">Qualité</text>
+  <circle cx="196" cy="216" r="4" fill="#e24b4a"/>
+  <text x="20" y="246" class="t2">Sécurité</text>
+  <circle cx="196" cy="242" r="4" fill="#ef9f27"/>
+  <rect x="8" y="253" width="200" height="28" rx="8" class="bp"/>
+  <text x="20" y="272" class="tp" font-weight="600">Conformité</text>
+  <circle cx="196" cy="268" r="4" fill="#1d9e75"/>
+  <text x="20" y="298" class="t2">Fiabilité &amp; coût</text>
+  <circle cx="196" cy="294" r="4" fill="#1d9e75"/>
+  <text x="20" y="328" class="t3" font-size="11">Agir</text>
+  <text x="20" y="352" class="t2">Incidents &amp; playbooks</text>
+  <text x="20" y="378" class="t2">Replay &amp; shadow</text>
+  <text x="20" y="404" class="t2">Curation eval set</text>
+  <text x="20" y="434" class="t3" font-size="11">Plateforme</text>
+  <text x="20" y="458" class="t2">Preuves &amp; exporteurs</text>
+  <text x="20" y="484" class="t2">Registre des signaux</text>
+
+  <text x="240" y="94" class="t1" font-size="19" font-weight="600">Conformité</text>
+  <text x="368" y="94" class="t3" font-size="12">0 exception · 6 actifs sains · 6 planifiés</text>
+  <text x="240" y="114" class="t3" font-size="12">rôle auditor : lecture + export de preuves · PII pseudonymisée</text>
+
+  <text x="240" y="148" class="t3" font-size="11">ÉTAT — DESCRIPTIF · OBLIGATIONS</text>
+  <rect x="240" y="158" width="242" height="92" rx="10" class="s"/>
+  <text x="258" y="184" class="t3" font-size="11">EU AI Act — obligations</text>
+  <text x="258" y="214" class="t1" font-size="26" font-weight="600">5/5</text>
+  <rect x="350" y="196" width="92" height="20" rx="10" class="bs"/>
+  <text x="362" y="210" class="ts" font-size="11" font-weight="600">conforme ✓</text>
+  <text x="258" y="240" class="t3" font-size="11">classe de risque : limited</text>
+  <rect x="498" y="158" width="242" height="92" rx="10" class="s"/>
+  <text x="516" y="184" class="t3" font-size="11">Disclosure IA (Art. 50)</text>
+  <text x="516" y="214" class="t1" font-size="26" font-weight="600">active</text>
+  <rect x="624" y="196" width="92" height="20" rx="10" class="bs"/>
+  <text x="636" y="210" class="ts" font-size="11" font-weight="600">3 locales ✓</text>
+  <text x="516" y="240" class="t3" font-size="11">affichée à chaque session</text>
+  <rect x="756" y="158" width="242" height="92" rx="10" class="s"/>
+  <text x="774" y="184" class="t3" font-size="11">Effacements GDPR (Art. 17)</text>
+  <text x="774" y="214" class="t1" font-size="26" font-weight="600">0</text>
+  <rect x="884" y="196" width="100" height="20" rx="10" class="bs"/>
+  <text x="896" y="210" class="ts" font-size="11" font-weight="600">en attente ✓</text>
+  <text x="774" y="240" class="t3" font-size="11">SLA de purge : 72 h</text>
+  <rect x="1014" y="158" width="242" height="92" rx="10" class="s"/>
+  <text x="1032" y="184" class="t3" font-size="11">Citations vérifiables</text>
+  <text x="1032" y="214" class="t1" font-size="26" font-weight="600">n=0</text>
+  <rect x="1124" y="196" width="110" height="20" rx="10" class="bg"/>
+  <text x="1136" y="210" class="t3" font-size="11">aucune capturée</text>
+  <text x="1032" y="240" class="t3" font-size="11">validité Art. cité : à mesurer (#49)</text>
+
+  <text x="240" y="288" class="t3" font-size="11">DIAGNOSTIC — DÉTAIL DES OBLIGATIONS</text>
+  <rect x="240" y="298" width="500" height="170" rx="10" class="s"/>
+  <text x="258" y="324" class="t1" font-weight="600">Registre AI Act</text>
+  <text x="258" y="350" class="t2" font-size="12">Art. 50 — transparency disclosure</text>
+  <text x="700" y="350" class="ts" font-size="12" font-weight="600">✓</text>
+  <text x="258" y="374" class="t2" font-size="12">Art. 14 — human oversight (escalade + dual control)</text>
+  <text x="700" y="374" class="ts" font-size="12" font-weight="600">✓</text>
+  <text x="258" y="398" class="t2" font-size="12">Art. 12 — logging &amp; traceability (preuves signées)</text>
+  <text x="700" y="398" class="ts" font-size="12" font-weight="600">✓</text>
+  <text x="258" y="422" class="t2" font-size="12">Annex III — risk classification logged</text>
+  <text x="700" y="422" class="ts" font-size="12" font-weight="600">✓</text>
+  <text x="258" y="446" class="t2" font-size="12">Art. 10 / GDPR — data governance (consent + erasure)</text>
+  <text x="700" y="446" class="ts" font-size="12" font-weight="600">✓</text>
+  <rect x="756" y="298" width="500" height="170" rx="10" class="s"/>
+  <text x="774" y="324" class="t1" font-weight="600">Inventaire mémoire — accès GDPR</text>
+  <text x="774" y="350" class="t2" font-size="12">200 mémoires · 21 sujets · 0 expirant sous 30 j</text>
+  <text x="774" y="374" class="t2" font-size="12">écritures gardées 33/33 · 0 refus consentement</text>
+  <text x="774" y="398" class="t3" font-size="11">surface d'effacement : 2 conversations · 2 bundles replay · 2 scores</text>
+  <text x="774" y="418" class="t3" font-size="11">DELETE /memory purge aussi la télémétrie (#180)</text>
+  <text x="774" y="446" class="ti" font-size="11">→ fiche mémoire · → preuves d'effacement</text>
+
+  <text x="240" y="506" class="t3" font-size="11">PLANIFIÉ — PROCHAINS SIGNAUX</text>
+  <rect x="240" y="516" width="500" height="56" rx="10" fill="none" stroke="#c9c7c0" stroke-dasharray="4 3"/>
+  <text x="258" y="540" class="t2" font-size="12">#179 — audit des accès aux traces (qui a vu quoi)</text>
+  <text x="258" y="560" class="t3" font-size="11">auditer les auditeurs · pré-requis : RBAC télémétrie (#177)</text>
+  <rect x="756" y="516" width="500" height="56" rx="10" fill="none" stroke="#c9c7c0" stroke-dasharray="4 3"/>
+  <text x="774" y="540" class="t2" font-size="12">#39 — k-anonymity sur les dashboards publics</text>
+  <text x="774" y="560" class="t3" font-size="11">aucune ré-identification possible depuis les agrégats</text>
+
+  <text x="240" y="610" class="t3" font-size="11">ACTIONS — PRESCRIPTIF</text>
+  <rect x="240" y="622" width="246" height="34" rx="10" fill="#ffffff" stroke="#c9c7c0"/>
+  <text x="258" y="644" class="t1" font-size="12" font-weight="600">Exporter le dossier de preuves</text>
+  <rect x="500" y="622" width="246" height="34" rx="10" fill="#ffffff" stroke="#c9c7c0"/>
+  <text x="518" y="644" class="t1" font-size="12" font-weight="600">Exécuter un effacement (dual)</text>
+  <rect x="760" y="622" width="216" height="34" rx="10" fill="#ffffff" stroke="#c9c7c0"/>
+  <text x="778" y="644" class="t1" font-size="12" font-weight="600">Revue de consentement</text>
+
+  <rect x="240" y="680" width="1016" height="32" rx="8" class="s"/>
+  <text x="258" y="701" class="t2" font-size="12">▸ état — 2 autres signaux sains (formatage localisé, fraîcheur corpus réglementaire)</text>
+</svg>

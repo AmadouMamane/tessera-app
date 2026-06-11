@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tessera — le temps en contrôle global · prototype</title>
+<style>
+:root{
+  --bg:#0b0f15; --panel:#141a23; --panel2:#10151c; --line:#232b36; --line2:#2e3845;
+  --t1:#e7eaee; --t2:#9aa4b0; --t3:#66707c;
+  --red:#f0716c; --redbg:#36191b;
+  --amber:#f0b35c; --amberbg:#332512;
+  --green:#4ed3a4; --greenbg:#11271f;
+  --blue:#6cb1f5; --purple:#a79bf0; --purplebg:#251f44;
+  --gold:#e3c585; --golddim:#9b8757; --goldline:#5c4f2e;
+  --brand:#27c08d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif}
+.serif{font-family:Georgia,"Times New Roman",serif}
+.mono{font-family:"SF Mono",Menlo,Consolas,monospace}
+
+.topbar{display:flex;align-items:center;gap:18px;height:60px;padding:0 16px;background:var(--panel2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:10px;min-width:170px}
+.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#1f6f54,#27c08d);display:grid;place-items:center;font-weight:700;color:#06281c}
+.brand b{font-size:14px;display:block;letter-spacing:2px}
+.brand span{font-size:9.5px;color:var(--t3);letter-spacing:.4px;text-transform:uppercase}
+.sel{display:flex;flex-direction:column;gap:3px}
+.sel label{font-size:9px;color:var(--t3);letter-spacing:.5px;text-transform:uppercase}
+.sel .v{display:flex;align-items:center;gap:7px;background:#1a212b;border:1px solid var(--line);border-radius:7px;padding:4px 10px;font-size:11.5px;cursor:pointer}
+.sel .v:hover{border-color:var(--line2)}
+.sel .v .dot{width:6px;height:6px;border-radius:50%;background:var(--brand)}
+.sel .v .car{color:var(--t3);font-size:9px}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.icbtn{position:relative;width:30px;height:30px;border-radius:50%;background:#1a212b;border:1px solid var(--line);display:grid;place-items:center;color:var(--t2);cursor:pointer}
+.icbtn .n{position:absolute;top:-4px;right:-4px;background:#e24b4a;color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 5px}
+
+.shell{display:grid;grid-template-columns:208px 1fr;min-height:calc(100vh - 60px)}
+.side{background:var(--panel2);border-right:1px solid var(--line);padding:12px 10px;display:flex;flex-direction:column;gap:1px}
+.side .grp{font-size:9px;color:var(--t3);letter-spacing:.8px;margin:10px 8px 4px}
+.side .it{display:flex;align-items:center;gap:9px;padding:5px 9px;border-radius:7px;color:var(--t2);font-size:12px;cursor:pointer}
+.side .it:hover{background:#1a212b;color:var(--t1)}
+.side .it.on{background:var(--purplebg);color:var(--purple);font-weight:600}
+.side .it .bg{margin-left:auto;font-size:10px;font-weight:700;border-radius:8px;padding:1px 7px}
+.bg.r{background:var(--redbg);color:var(--red)}.bg.a{background:var(--amberbg);color:var(--amber)}
+.user{margin-top:auto;display:flex;gap:10px;align-items:center;background:#1a212b;border:1px solid var(--line);border-radius:9px;padding:9px}
+.user .av{width:30px;height:30px;border-radius:50%;background:var(--purplebg);color:var(--purple);display:grid;place-items:center;font-weight:700;font-size:12px}
+.user b{font-size:11.5px;display:block}
+.user span{font-size:10px;color:var(--t3)}
+
+main{padding:20px 24px;display:flex;flex-direction:column;gap:16px;min-width:0;max-width:1480px}
+h1{font-size:27px;font-weight:600}
+.sub{font-size:12.5px;color:var(--t3);margin-top:6px}
+
+.timectl{border:1px solid var(--goldline);border-radius:12px;background:var(--panel);padding:16px 18px}
+.tcrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.tcsel{display:flex;align-items:center;gap:8px;background:#1a212b;border:1px solid var(--line);border-radius:9px;padding:7px 13px;font-size:12px;color:var(--t2);cursor:pointer}
+.tcsel b{color:var(--t1);font-weight:650}
+.tcsel:hover{border-color:var(--line2)}
+.tcsel .ic{color:var(--golddim)}
+.play{margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:7px 13px;font-size:12px;color:var(--t2);cursor:pointer}
+.play:hover{border-color:var(--goldline);color:var(--gold)}
+.scrub{position:relative;height:54px;margin-top:18px}
+.track{position:absolute;left:0;right:0;top:10px;height:4px;border-radius:2px;background:linear-gradient(90deg,#39424f 0%,#56503c 55%,#e3c585 92%,#39424f 96%)}
+.mk{position:absolute;top:4px;width:2px;height:16px;background:#6cb1f5;opacity:.85}
+.mklab{position:absolute;top:28px;font-size:10px;color:var(--t3);transform:translateX(-50%);white-space:nowrap}
+.dotnow{position:absolute;top:3px;width:15px;height:15px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px rgba(227,197,133,.15)}
+.dotbase{position:absolute;top:5px;width:11px;height:11px;border-radius:50%;background:#828c99;box-shadow:0 0 0 4px rgba(130,140,153,.15)}
+
+.seclab{font-size:10px;color:var(--t3);letter-spacing:1.2px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px 17px}
+.kpi .l{font-size:10px;color:var(--t3);letter-spacing:.8px}
+.kpi .v{font-size:34px;margin:8px 0 6px;font-weight:600}
+.kpi .d{font-size:11px;color:var(--t3)}
+.kpi .d b{font-weight:650}
+.up{color:var(--green)}.dn{color:var(--red)}
+
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px 17px}
+.card h2{font-size:13.5px;font-weight:650;display:flex;align-items:center;gap:8px}
+.ev{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid #1a212b}
+.ev:last-child{border-bottom:none;padding-bottom:2px}
+.ev .tt b{font-size:12px;display:block}
+.ev .tt span{font-size:10.5px;color:var(--t3)}
+.ev .tag{margin-left:auto;font-size:10px;font-weight:600;border:1px solid var(--line2);border-radius:9px;padding:3px 9px;white-space:nowrap}
+.tag.g{color:var(--green);border-color:#2c4a3e}
+.tag.r{color:var(--red);border-color:#4a2c2c}
+.tag.go{color:var(--gold);border-color:var(--goldline)}
+.diff{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #1a212b;font-size:12px}
+.diff:last-child{border-bottom:none;padding-bottom:2px}
+.diff .lab{color:var(--t2)}
+.diff .val{color:var(--t3)}
+.diff .val b{font-weight:650}
+
+.why{border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:13px 17px;font-size:12px;color:var(--t2);line-height:1.6}
+.why b.gold{color:var(--gold)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><div class="logo">T</div><div><b>TESSERA</b><span>AI control plane</span></div></div>
+  <div class="sel"><label>Scope</label><div class="v">Prod · Crédit Aurore <span class="car">▼</span></div></div>
+  <div class="sel"><label>Environnement</label><div class="v"><span class="dot"></span>Production <span class="car">▼</span></div></div>
+  <div class="sel"><label>Agent</label><div class="v">Assistant Bancaire <span class="car">▼</span></div></div>
+  <div class="sel"><label>Modèle</label><div class="v">Llama 3.2 3B · on-prem <span class="car">▼</span></div></div>
+  <div class="sel"><label>Langue</label><div class="v">Français <span class="car">▼</span></div></div>
+  <div class="tb-right">
+    <div class="icbtn">⌕</div>
+    <div class="icbtn"><svg width="13" height="13" viewBox="0 0 16 16"><path d="M8 2a4 4 0 0 0-4 4v3l-1.4 2.2a.6.6 0 0 0 .5.9h9.8a.6.6 0 0 0 .5-.9L12 9V6a4 4 0 0 0-4-4z" fill="#9aa4b0"/><circle cx="8" cy="13.6" r="1.4" fill="#9aa4b0"/></svg><span class="n">9</span></div>
+    <div class="icbtn">?</div>
+    <div class="sel"><label>Voir comme</label><div class="v">Admin <span class="car">▼</span></div></div>
+  </div>
+</header>
+
+<div class="shell">
+<aside class="side">
+  <div class="grp">PRODUIT</div>
+  <div class="it">Assistant</div>
+  <div class="it">À traiter <span class="bg r">3</span></div>
+  <div class="grp">COCKPIT</div>
+  <div class="it on">Vue d'ensemble</div>
+  <div class="it">Qualité IA</div>
+  <div class="it">Sécurité &amp; Privacy</div>
+  <div class="it">Conformité</div>
+  <div class="it">Fiabilité &amp; coût</div>
+  <div class="it">Amélioration</div>
+  <div class="grp">AGIR</div>
+  <div class="it">Incidents &amp; playbooks <span class="bg r">1</span></div>
+  <div class="it">Replay &amp; shadow</div>
+  <div class="it">Curation eval set <span class="bg a">11</span></div>
+  <div class="it">Release Control</div>
+  <div class="it">Automations</div>
+  <div class="grp">PROUVER</div>
+  <div class="it">Journal d'audit</div>
+  <div class="it">Preuves &amp; exporteurs</div>
+  <div class="it">Evidence Pack</div>
+  <div class="grp">CONFIGURER</div>
+  <div class="it">Signal Catalog</div>
+  <div class="it">Policies &amp; garde-fous</div>
+  <div class="it">Sources &amp; mémoire</div>
+  <div class="it">Rôles &amp; accès</div>
+  <div class="it">Intégrations</div>
+  <div class="it">Profil système</div>
+  <div class="user"><div class="av">A</div><div><b>Amadou D.</b><span>ML engineer · admin · on-prem</span></div></div>
+</aside>
+
+<main>
+  <div>
+    <h1 class="serif">Le temps, en contrôle global</h1>
+    <p class="sub">Toute vue se lit à un instant T et se compare à une baseline — sans changer le modèle : T est juste un paramètre de la requête.</p>
+  </div>
+
+  <section class="timectl">
+    <div class="tcrow">
+      <div class="tcsel"><span class="ic">◷</span> Période <b>7 jours</b> <span style="color:var(--t3);font-size:9px">▼</span></div>
+      <div class="tcsel"><span class="ic">⚑</span> Tu regardes <b>mar. 10 juin · 14:32</b> <span style="color:var(--t3)">(time-travel)</span></div>
+      <div class="tcsel"><span class="ic">⇄</span> Comparer à <b>semaine précédente</b> <span style="color:var(--t3);font-size:9px">▼</span></div>
+      <div class="play">⏮ ⏯ ⏭ rejouer</div>
+    </div>
+    <div class="scrub">
+      <div class="track"></div>
+      <span class="mklab" style="left:1.5%">3 juin</span>
+      <div class="dotbase" style="left:14%"></div>
+      <span class="mklab" style="left:15%">baseline · 3 juin</span>
+      <div class="mk" style="left:33%"></div>
+      <span class="mklab" style="left:33%">5</span>
+      <div class="mk" style="left:48%"></div>
+      <span class="mklab" style="left:48%">7</span>
+      <div class="mk" style="left:62%"></div>
+      <span class="mklab" style="left:62%">8 · v2</span>
+      <div class="mk" style="left:75%"></div>
+      <span class="mklab" style="left:75%">9 · prompt</span>
+      <div class="mk" style="left:86%"></div>
+      <span class="mklab" style="left:86%">10 · juge</span>
+      <div class="dotnow" style="left:92%"></div>
+      <span class="mklab" style="left:93%;color:var(--gold)">maintenant</span>
+      <span class="mklab" style="left:99%">auj.</span>
+    </div>
+  </section>
+
+  <div class="seclab">LES 4 COUCHES QUALITÉ — VALEUR À T, AVEC DELTA VS BASELINE</div>
+  <section class="kpis">
+    <div class="kpi"><div class="l">GUARD · F1</div><div class="v serif" style="color:var(--gold)">0.71</div><div class="d"><b class="up">▲ +0.04</b> vs baseline</div></div>
+    <div class="kpi"><div class="l">ÉVAL · TAUX</div><div class="v serif" style="color:var(--red)">65%</div><div class="d"><b class="dn">▼ −3 pts</b> vs baseline</div></div>
+    <div class="kpi"><div class="l">AUDIT · PREUVE</div><div class="v serif" style="color:var(--green)">signé</div><div class="d"><b>= inchangé</b> vs baseline</div></div>
+    <div class="kpi"><div class="l">ESCALADE</div><div class="v serif" style="color:var(--gold)">prête</div><div class="d"><b class="up">▲ +2 résolues</b> vs baseline</div></div>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <h2>⌕ Ce qui a changé (root-cause · #17)</h2>
+      <div style="margin-top:6px">
+        <div class="ev"><div class="tt"><b>8 juin · déploiement v2</b><span>graphe 8→9 nœuds</span></div><span class="tag g">corrélé Guard ▲</span></div>
+        <div class="ev"><div class="tt"><b>9 juin · prompt fr v2→v3</b><span>contexte RAG remanié</span></div><span class="tag r">corrélé Éval ▼</span></div>
+        <div class="ev"><div class="tt"><b>10 juin · juge llama upgrade</b><span>re-calibration κ requise</span></div><span class="tag go">à ré-ancrer</span></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>⇄ Diff de période</h2>
+      <div style="margin-top:6px">
+        <div class="diff"><span class="lab">Faithfulness moyenne</span><span class="val">0.89 → <b class="dn">0.86 ▼</b></span></div>
+        <div class="diff"><span class="lab">ASR red-team</span><span class="val">14/33 → <b style="color:var(--amber)">18/33 ▲</b></span></div>
+        <div class="diff"><span class="lab">Coût / tour</span><span class="val">0.084 → <b style="color:var(--amber)">0.096 ms</b></span></div>
+        <div class="diff"><span class="lab">Topologie du graphe</span><span class="val"><b class="up">golden ✓</b> <span style="color:var(--green)">(depuis v2)</span></span></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="why"><b class="gold">Pourquoi ce n'est pas une couche de plus</b> — le time-picker ne fait qu'ajouter T à la requête : <b style="color:var(--t1)">vue = Registre(état+actions) × Backend(valeurs à T)</b>. Le modèle absorbe le temps comme il absorbe l'identité. C'est le signe qu'il est fini.</div>
+
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <title>Tessera cockpit — incidents et playbooks</title>
+  <style>
+    .s{fill:#ffffff;stroke:#e3e1db;stroke-width:1}
+    .t1{fill:#1a1915}.t2{fill:#5f5e5a}.t3{fill:#969590}
+    .td{fill:#a32d2d}.ts{fill:#0f6e56}.tw{fill:#854f0b}.ti{fill:#185fa5}.tp{fill:#3c3489}
+    .bd{fill:#fcebeb}.bs{fill:#e1f5ee}.bw{fill:#faeeda}.bi{fill:#e6f1fb}.bp{fill:#eeedfe}.bg{fill:#f1efe8}
+    text{font-size:13px}
+  </style>
+  <rect width="1280" height="800" fill="#f7f6f3"/>
+  <rect width="1280" height="52" fill="#ffffff"/>
+  <line x1="0" y1="52" x2="1280" y2="52" stroke="#e3e1db"/>
+  <text x="24" y="33" class="t1" font-size="16" font-weight="600">Tessera</text>
+  <rect x="110" y="14" width="112" height="24" rx="12" class="bg"/>
+  <text x="128" y="30" class="t3" font-size="11">CI</text>
+  <rect x="152" y="16" width="66" height="20" rx="10" fill="#ffffff" stroke="#e3e1db"/>
+  <text x="166" y="30" class="t1" font-size="11" font-weight="600">Prod</text>
+  <rect x="238" y="14" width="44" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="251" y="30" class="t2" font-size="11">7 j</text>
+  <rect x="290" y="14" width="40" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="302" y="30" class="t2" font-size="11">FR</text>
+  <rect x="338" y="14" width="98" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="350" y="30" class="t2" font-size="11">llama3.2:3b</text>
+  <rect x="1006" y="14" width="148" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="1020" y="30" class="t3" font-size="11">⌘K · 200 signaux</text>
+  <rect x="1166" y="14" width="90" height="24" rx="12" class="bp"/>
+  <text x="1182" y="30" class="tp" font-size="11" font-weight="600">operator</text>
+
+  <rect x="0" y="52" width="216" height="748" fill="#ffffff"/>
+  <line x1="216" y1="52" x2="216" y2="800" stroke="#e3e1db"/>
+  <text x="20" y="88" class="t3" font-size="11">Produit</text>
+  <text x="20" y="112" class="t2">Assistant</text>
+  <text x="20" y="140" class="t2">À traiter</text>
+  <rect x="168" y="126" width="28" height="18" rx="9" class="bd"/>
+  <text x="178" y="139" class="td" font-size="11" font-weight="600">3</text>
+  <text x="20" y="170" class="t3" font-size="11">Surveiller</text>
+  <text x="20" y="194" class="t2">Vue d'ensemble</text>
+  <text x="20" y="220" class="t2">Qualité</text>
+  <circle cx="196" cy="216" r="4" fill="#e24b4a"/>
+  <text x="20" y="246" class="t2">Sécurité</text>
+  <circle cx="196" cy="242" r="4" fill="#ef9f27"/>
+  <text x="20" y="272" class="t2">Conformité</text>
+  <circle cx="196" cy="268" r="4" fill="#1d9e75"/>
+  <text x="20" y="298" class="t2">Fiabilité &amp; coût</text>
+  <circle cx="196" cy="294" r="4" fill="#1d9e75"/>
+  <text x="20" y="328" class="t3" font-size="11">Agir</text>
+  <rect x="8" y="333" width="200" height="28" rx="8" class="bp"/>
+  <text x="20" y="352" class="tp" font-weight="600">Incidents &amp; playbooks</text>
+  <text x="20" y="378" class="t2">Replay &amp; shadow</text>
+  <text x="20" y="404" class="t2">Curation eval set</text>
+  <text x="20" y="434" class="t3" font-size="11">Plateforme</text>
+  <text x="20" y="458" class="t2">Preuves &amp; exporteurs</text>
+  <text x="20" y="484" class="t2">Registre des signaux</text>
+
+  <text x="240" y="94" class="t1" font-size="19" font-weight="600">Incidents &amp; playbooks</text>
+  <text x="466" y="94" class="t3" font-size="12">1 incident ouvert · 4 playbooks prêts</text>
+  <text x="240" y="114" class="t3" font-size="12">chaque étape exécutée émet un événement d'audit signé → preuves &amp; SIEM</text>
+
+  <rect x="240" y="134" width="640" height="360" rx="10" class="s"/>
+  <rect x="258" y="152" width="76" height="22" rx="11" class="bd"/>
+  <text x="272" y="167" class="td" font-size="11" font-weight="600">critique</text>
+  <text x="344" y="168" class="t1" font-size="15" font-weight="600">INC-7 — hallucination / quality spike</text>
+  <text x="258" y="196" class="t3" font-size="11">ouvert il y a 14 min · SLO #15 · commandant d'incident : amadou</text>
+  <line x1="276" y1="216" x2="276" y2="430" stroke="#e3e1db" stroke-width="2"/>
+  <circle cx="276" cy="226" r="5" fill="#e24b4a"/>
+  <text x="294" y="231" class="t1" font-size="12" font-weight="600">08:09 — alerte SLO déclenchée</text>
+  <text x="294" y="249" class="t3" font-size="11">burn rate 10× · 50% des tours sous 0.80 · auto</text>
+  <circle cx="276" cy="274" r="5" fill="#888780"/>
+  <text x="294" y="279" class="t1" font-size="12" font-weight="600">08:11 — playbook hallucination ouvert</text>
+  <text x="294" y="297" class="t3" font-size="11">par operator · étape 1/4 : vérifier les changements récents (lineage #17)</text>
+  <circle cx="276" cy="322" r="5" fill="#888780"/>
+  <text x="294" y="327" class="t1" font-size="12" font-weight="600">08:14 — cause identifiée : docs +9/−9</text>
+  <text x="294" y="345" class="t3" font-size="11">what-changed attribue la régression à l'ingestion corpus d'hier</text>
+  <circle cx="276" cy="370" r="5" fill="#ef9f27"/>
+  <text x="294" y="375" class="t1" font-size="12" font-weight="600">08:16 — gel des deploys proposé</text>
+  <rect x="294" y="385" width="170" height="20" rx="10" class="bw"/>
+  <text x="306" y="399" class="tw" font-size="11" font-weight="600">1/2 approbations (dual)</text>
+  <text x="474" y="399" class="t3" font-size="11">en attente d'un admin</text>
+  <circle cx="276" cy="430" r="5" fill="#d3d1c7"/>
+  <text x="294" y="435" class="t3" font-size="12">prochaine étape — curer les pires tours vers eval/failures (#123)</text>
+  <rect x="258" y="452" width="170" height="26" rx="10" class="bi"/>
+  <text x="272" y="470" class="ti" font-size="11" font-weight="600">→ traces low-score</text>
+  <rect x="440" y="452" width="150" height="26" rx="10" class="bi"/>
+  <text x="454" y="470" class="ti" font-size="11" font-weight="600">→ what-changed</text>
+  <rect x="602" y="452" width="190" height="26" rx="10" class="bi"/>
+  <text x="616" y="470" class="ti" font-size="11" font-weight="600">→ postmortem (modèle)</text>
+
+  <text x="920" y="158" class="t1" font-size="14" font-weight="600">Playbooks</text>
+  <rect x="920" y="172" width="336" height="74" rx="10" class="s"/>
+  <text x="938" y="196" class="t1" font-size="12" font-weight="600">Hallucination / quality spike</text>
+  <rect x="1156" y="182" width="84" height="20" rx="10" class="bd"/>
+  <text x="1168" y="196" class="td" font-size="11" font-weight="600">en cours</text>
+  <text x="938" y="216" class="t3" font-size="11">4 étapes · lineage → traces → gel → curation</text>
+  <text x="938" y="234" class="t3" font-size="11">déclencheur : SLO faithfulness (#15)</text>
+  <rect x="920" y="254" width="336" height="60" rx="10" class="s"/>
+  <text x="938" y="278" class="t1" font-size="12" font-weight="600">Jailbreak / injection réussie</text>
+  <rect x="1186" y="264" width="54" height="20" rx="10" class="bs"/>
+  <text x="1198" y="278" class="ts" font-size="11" font-weight="600">prêt</text>
+  <text x="938" y="298" class="t3" font-size="11">déclencheur : red-team drift (#24) · guard bypass</text>
+  <rect x="920" y="322" width="336" height="60" rx="10" class="s"/>
+  <text x="938" y="346" class="t1" font-size="12" font-weight="600">Fuite PII</text>
+  <rect x="1186" y="332" width="54" height="20" rx="10" class="bs"/>
+  <text x="1198" y="346" class="ts" font-size="11" font-weight="600">prêt</text>
+  <text x="938" y="366" class="t3" font-size="11">déclencheur : fuite sortie (#38) · purge + notification</text>
+  <rect x="920" y="390" width="336" height="60" rx="10" class="s"/>
+  <text x="938" y="414" class="t1" font-size="12" font-weight="600">Emballement de coût</text>
+  <rect x="1186" y="400" width="54" height="20" rx="10" class="bs"/>
+  <text x="1198" y="414" class="ts" font-size="11" font-weight="600">prêt</text>
+  <text x="938" y="434" class="t3" font-size="11">déclencheur : anomalie tokens (#33) · cap + breaker</text>
+  <rect x="920" y="458" width="336" height="36" rx="10" fill="none" stroke="#c9c7c0" stroke-dasharray="4 3"/>
+  <text x="938" y="481" class="t3" font-size="11">#116 runbook-as-code — versionné &amp; testé en CI (planifié)</text>
+
+  <rect x="240" y="514" width="1016" height="64" rx="10" class="s"/>
+  <text x="258" y="540" class="t1" font-size="13" font-weight="600">Après l'incident</text>
+  <text x="258" y="562" class="t2" font-size="12">postmortem blameless avec trace + replay attachés (#118) · les pires tours rejoignent eval/failures/ (#123) · revue du budget d'erreur (#117)</text>
+
+  <rect x="240" y="598" width="1016" height="56" rx="10" fill="none" stroke="#c9c7c0" stroke-dasharray="4 3"/>
+  <text x="258" y="622" class="t2" font-size="12">#119 — game days : injecter un doc empoisonné / dégrader le modèle / latence aval, et observer la résilience</text>
+  <text x="258" y="642" class="t3" font-size="11">planifié — exercice trimestriel proposé, hors trafic réel</text>
+</svg>

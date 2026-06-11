@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tessera — AI control plane · vue d'ensemble (verbatim image de référence)</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#151b23; --panel2:#10151c; --line:#222a34; --line2:#2c3642;
+  --t1:#e7eaee; --t2:#9aa4b0; --t3:#66707c;
+  --red:#f0716c; --redbg:#36191b; --redline:#5a2a2a;
+  --amber:#f0b35c; --amberbg:#332512; --amberline:#54421e;
+  --yellow:#e3c94f; --yellowbg:#332d12;
+  --green:#4ed3a4; --greenbg:#11271f;
+  --blue:#6cb1f5; --bluebg:#14283d;
+  --purple:#a79bf0; --purplebg:#251f44;
+  --brand:#27c08d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.mono{font-family:"SF Mono",Menlo,Consolas,monospace}
+
+.topbar{display:flex;align-items:center;gap:18px;height:60px;padding:0 16px;background:var(--panel2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:10px;min-width:170px}
+.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#1f6f54,#27c08d);display:grid;place-items:center;font-weight:700;color:#06281c}
+.brand b{font-size:14px;display:block}
+.brand span{font-size:9.5px;color:var(--t3);letter-spacing:.4px;text-transform:uppercase}
+.sel{display:flex;flex-direction:column;gap:3px}
+.sel label{font-size:9px;color:var(--t3);letter-spacing:.5px;text-transform:uppercase}
+.sel .v{display:flex;align-items:center;gap:7px;background:#1a212b;border:1px solid var(--line);border-radius:7px;padding:4px 10px;font-size:11.5px;cursor:pointer}
+.sel .v:hover{border-color:var(--line2)}
+.sel .v .dot{width:6px;height:6px;border-radius:50%;background:var(--brand)}
+.sel .v .car{color:var(--t3);font-size:9px}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.icbtn{position:relative;width:30px;height:30px;border-radius:50%;background:#1a212b;border:1px solid var(--line);display:grid;place-items:center;color:var(--t2);cursor:pointer}
+.icbtn:hover{border-color:var(--line2)}
+.icbtn .n{position:absolute;top:-4px;right:-4px;background:#e24b4a;color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 5px}
+
+.shell{display:grid;grid-template-columns:208px 1fr;min-height:calc(100vh - 60px)}
+.side{background:var(--panel2);border-right:1px solid var(--line);padding:12px 10px;display:flex;flex-direction:column;gap:1px}
+.side .grp{font-size:9px;color:var(--t3);letter-spacing:.8px;margin:10px 8px 4px}
+.side .it{display:flex;align-items:center;gap:9px;padding:5px 9px;border-radius:7px;color:var(--t2);font-size:12px;cursor:pointer}
+.side .it:hover{background:#1a212b;color:var(--t1)}
+.side .it.on{background:var(--purplebg);color:var(--purple);font-weight:600}
+.side .it .bg{margin-left:auto;font-size:10px;font-weight:700;border-radius:8px;padding:1px 7px}
+.bg.r{background:var(--redbg);color:var(--red)}.bg.a{background:var(--amberbg);color:var(--amber)}
+.user{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.user .u1{display:flex;gap:10px;align-items:center;background:#1a212b;border:1px solid var(--line);border-radius:9px;padding:9px}
+.user .av{width:30px;height:30px;border-radius:50%;background:var(--purplebg);color:var(--purple);display:grid;place-items:center;font-weight:700;font-size:12px}
+.user b{font-size:11.5px;display:block}
+.user span{font-size:10px;color:var(--t3)}
+.user .u2{background:#1a212b;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:10.5px;color:var(--t2)}
+.user .u2 .adm{color:var(--green);font-weight:600;font-size:10.5px}
+
+main{padding:16px 18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.phead{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.phead h1{font-size:19px;font-weight:650}
+.phead p{font-size:11.5px;color:var(--t3);margin-top:3px}
+.phead .right{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:11px;color:var(--t2)}
+.phead .right .live{display:flex;align-items:center;gap:7px}
+.phead .right .live i{width:7px;height:7px;border-radius:50%;background:var(--brand);font-style:normal}
+.phead .right .sep{color:var(--line2)}
+
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+.kpi:hover{border-color:var(--line2)}
+.kpi .l{font-size:10px;color:var(--t3)}
+.kpi .v{font-size:21px;font-weight:650;margin:3px 0 2px}
+.kpi .v small{font-size:11px;color:var(--t3);font-weight:500}
+.kpi .s{font-size:10.5px;margin-bottom:4px}
+.kpi .d{font-size:10px;color:var(--t3)}
+.up{color:var(--green)}.dn{color:var(--red)}.wa{color:var(--amber)}
+
+.cols{display:grid;grid-template-columns:1fr 286px;gap:14px;align-items:start;min-width:0}
+.colmain{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card h2{font-size:13.5px;font-weight:650;display:flex;align-items:center;gap:10px}
+.card h2 .lnk{margin-left:auto;font-size:10.5px;font-weight:500}
+
+table{width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed}
+th{font-size:9px;color:var(--t3);letter-spacing:.6px;text-align:left;padding:0 8px 7px 0;border-bottom:1px solid var(--line)}
+td{padding:9px 8px 9px 0;border-bottom:1px solid #1a212b;font-size:11.5px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#171e27}
+.sig b{display:block;font-size:11.5px;font-weight:600}
+.sig span{font-size:9.5px;color:var(--t3)}
+.pill{display:inline-block;font-size:10px;font-weight:700;border-radius:9px;padding:2px 9px}
+.pill.fail{background:var(--redbg);color:var(--red)}
+.pill.warn{background:var(--amberbg);color:var(--amber)}
+.pill.ok{background:var(--greenbg);color:var(--green)}
+.pill.att{background:var(--yellowbg);color:var(--yellow)}
+.case{display:inline-block;font-size:9px;font-weight:700;border-radius:4px;padding:2px 6px;letter-spacing:.3px}
+.case.r{background:var(--redbg);color:var(--red)}.case.a{background:var(--amberbg);color:var(--amber)}.case.y{background:var(--yellowbg);color:var(--yellow)}
+.vr{font-weight:650}.vr.bad{color:var(--red)}.vr.mid{color:var(--amber)}.vr.dim{color:var(--t3);font-weight:400}
+.imp{font-size:11px}
+.imp.r{color:var(--red)}.imp.a{color:var(--amber)}.imp.g{color:var(--green)}.imp.y{color:var(--yellow)}
+.act{font-size:10.5px;color:var(--blue);cursor:pointer}
+.tfoot{text-align:center;margin-top:10px;font-size:11px}
+
+.chips{display:flex;gap:7px;margin-left:14px}
+.chip{font-size:10px;font-weight:600;border-radius:10px;padding:3px 10px;background:#1a212b;color:var(--t3);cursor:pointer;border:1px solid transparent}
+.chip:hover{color:var(--t1)}
+.chip.on{background:var(--purplebg);color:var(--purple)}
+.cases{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.cc{border-radius:9px;padding:11px 12px;border:1px solid var(--line);background:#141a22;min-width:0}
+.cc.crit{background:#191316;border-color:var(--redline)}
+.cc.high{background:#181410;border-color:var(--amberline)}
+.cc.moy{background:#17150f;border-color:#4a4420}
+.cc .row1{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.cc b{font-size:11px;display:block;margin-bottom:5px}
+.cc .meta{font-size:9.5px;color:var(--t3);line-height:1.65}
+.cc .meta em{font-style:normal;color:var(--t2)}
+.cc .foot{display:flex;align-items:center;gap:8px;font-size:9.5px;color:var(--t3);margin-top:8px;border-top:1px solid #1f2630;padding-top:7px}
+.owner{display:inline-flex;align-items:center;gap:4px}
+.owner i{width:13px;height:13px;border-radius:50%;background:var(--purplebg);color:var(--purple);font-style:normal;font-size:7.5px;font-weight:700;display:inline-grid;place-items:center}
+
+.charts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.chart h3{font-size:11.5px;font-weight:650;margin-bottom:8px}
+.chart h3 small{color:var(--t3);font-weight:400;font-size:10px}
+.legend{display:flex;gap:10px;font-size:9px;color:var(--t3);margin-bottom:6px;flex-wrap:wrap}
+.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
+.xlab{display:flex;justify-content:space-between;font-size:8.5px;color:var(--t3);margin-top:3px}
+.donutwrap{display:flex;gap:14px;align-items:center}
+.dlg{font-size:10px;line-height:2}
+.bars .br{display:grid;grid-template-columns:96px 1fr 36px;gap:8px;align-items:center;margin-top:7px;font-size:9.5px;color:var(--t3)}
+.bars .tr{height:7px;border-radius:3px;background:#1a212b;overflow:hidden}
+.bars .tr i{display:block;height:100%;border-radius:3px}
+
+.rail{display:flex;flex-direction:column;gap:14px}
+.inc{display:flex;flex-direction:column;gap:3px;padding:9px 0;border-bottom:1px solid #1a212b}
+.inc:last-child{border-bottom:none;padding-bottom:0}
+.inc .h{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600}
+.inc .h .d{width:7px;height:7px;border-radius:50%;flex:none}
+.inc .m{font-size:10px;color:var(--t3)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.btn{font-size:10.5px;font-weight:600;color:var(--t2);background:#1a212b;border:1px solid var(--line);border-radius:7px;padding:7px 9px;text-align:center;cursor:pointer}
+.btn:hover{border-color:var(--line2);color:var(--t1)}
+.btn.wide{grid-column:1 / -1}
+.feed{margin-top:8px}
+.feed .f{display:flex;gap:8px;font-size:10.5px;color:var(--t2);padding:5px 0;border-bottom:1px solid #1a212b}
+.feed .f:last-child{border-bottom:none}
+.feed .f i{color:var(--green);font-style:normal}
+.feed .f .t{margin-left:auto;color:var(--t3);font-size:9.5px;white-space:nowrap}
+
+.trust{display:flex;align-items:center;gap:26px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:10.5px;color:var(--t2)}
+.trust .ti{display:flex;align-items:center;gap:8px}
+.trust .ti i{width:7px;height:7px;border-radius:50%;font-style:normal}
+.trust .pb{width:130px;height:5px;border-radius:3px;background:#1a212b;overflow:hidden}
+.trust .pb i{display:block;height:100%;width:92%;background:var(--brand)}
+.trust a{margin-left:auto;font-size:10.5px}
+.release .rh{display:flex;align-items:center;gap:10px;margin-top:8px}
+.release .rh .mono{font-size:12px}
+.release p{font-size:10.5px;color:var(--t3);margin-top:6px}
+.release p.bad{color:var(--red)}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.cols{grid-template-columns:1fr}.cases{grid-template-columns:1fr 1fr}.charts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><div class="logo">T</div><div><b>Tessera</b><span>AI Control Plane</span></div></div>
+  <div class="sel"><label>Scope</label><div class="v">Prod · Crédit Aurore <span class="car">▼</span></div></div>
+  <div class="sel"><label>Environnement</label><div class="v"><span class="dot"></span>Production <span class="car">▼</span></div></div>
+  <div class="sel"><label>Agent</label><div class="v">Assistant Bancaire <span class="car">▼</span></div></div>
+  <div class="sel"><label>Modèle</label><div class="v">Llama 3.2 70B <span class="car">▼</span></div></div>
+  <div class="sel"><label>Langue</label><div class="v">Français <span class="car">▼</span></div></div>
+  <div class="tb-right">
+    <div class="icbtn">⌕</div>
+    <div class="icbtn"><svg width="13" height="13" viewBox="0 0 16 16"><path d="M8 2a4 4 0 0 0-4 4v3l-1.4 2.2a.6.6 0 0 0 .5.9h9.8a.6.6 0 0 0 .5-.9L12 9V6a4 4 0 0 0-4-4z" fill="#9aa4b0"/><circle cx="8" cy="13.6" r="1.4" fill="#9aa4b0"/></svg><span class="n">9</span></div>
+    <div class="icbtn">?</div>
+    <div class="sel"><label>Voir comme</label><div class="v">Admin <span class="car">▼</span></div></div>
+  </div>
+</header>
+
+<div class="shell">
+<aside class="side">
+  <div class="grp">PRODUIT</div>
+  <div class="it">Assistant</div>
+  <div class="it">À traiter <span class="bg r">24</span></div>
+  <div class="grp">COCKPIT</div>
+  <div class="it on">Vue d'ensemble</div>
+  <div class="it">Qualité IA</div>
+  <div class="it">Sécurité &amp; Privacy</div>
+  <div class="it">Conformité</div>
+  <div class="it">Fiabilité &amp; coût</div>
+  <div class="it">Amélioration</div>
+  <div class="grp">AGIR</div>
+  <div class="it">Incidents &amp; playbooks <span class="bg r">7</span></div>
+  <div class="it">Replay &amp; shadow</div>
+  <div class="it">Curation eval set <span class="bg a">11</span></div>
+  <div class="it">Release Control</div>
+  <div class="it">Automations</div>
+  <div class="grp">PROUVER</div>
+  <div class="it">Journal d'audit</div>
+  <div class="it">Preuves &amp; exporteurs</div>
+  <div class="it">Evidence Pack</div>
+  <div class="grp">CONFIGURER</div>
+  <div class="it">Signal Catalog</div>
+  <div class="it">Policies &amp; garde-fous</div>
+  <div class="it">Sources &amp; mémoire</div>
+  <div class="it">Rôles &amp; accès</div>
+  <div class="it">Intégrations</div>
+  <div class="it">Profil système</div>
+  <div class="user">
+    <div class="u1"><div class="av">A</div><div><b>Amadou D.</b><span>ML Engineer</span></div></div>
+    <div class="u2"><span class="adm">Admin</span><br>Prod · Crédit Aurore<br>FR · on-prem ▾</div>
+  </div>
+</aside>
+
+<main>
+  <div class="phead">
+    <div>
+      <h1>Vue d'ensemble</h1>
+      <p>État global de votre système IA et actions prioritaires</p>
+    </div>
+    <div class="right">
+      <span class="live"><i></i>Données en temps réel</span>
+      <span class="sep">|</span>
+      <span>Dernière mise à jour : 10:42:31 UTC</span>
+      <span style="cursor:pointer">⟳</span>
+    </div>
+  </div>
+
+  <section class="kpis">
+    <div class="kpi"><div class="l">Score global</div><div class="v wa">62<small>/100</small></div><div class="s dn">▼ 14 pts vs hier</div><svg width="100%" height="16" viewBox="0 0 100 16" preserveAspectRatio="none"><polyline points="2,6 16,9 30,7 44,10 58,9 72,12 84,11 98,13" fill="none" stroke="#ef9f27" stroke-width="1.6"/></svg></div>
+    <div class="kpi"><div class="l">Contrôles critiques</div><div class="v">5<small>/18</small></div><div class="s dn">En échec · ▲ 2 vs hier</div><svg width="100%" height="16" viewBox="0 0 100 16" preserveAspectRatio="none"><polyline points="2,5 16,7 30,6 44,9 58,8 72,11 84,12 98,13" fill="none" stroke="#e24b4a" stroke-width="1.6"/></svg></div>
+    <div class="kpi"><div class="l">Risques ouverts</div><div class="v">14</div><div class="s"><span class="dn">Dont 4 critiques</span> · <span class="dn">▲ 3 vs hier</span></div><svg width="100%" height="16" viewBox="0 0 100 16" preserveAspectRatio="none"><polyline points="2,11 16,9 30,10 44,7 58,8 72,5 84,6 98,4" fill="none" stroke="#e24b4a" stroke-width="1.6"/></svg></div>
+    <div class="kpi"><div class="l">Releases</div><div class="v">1</div><div class="s"><span class="dn">Bloquée</span> · <span class="up">▲ 1 vs hier</span></div><svg width="100%" height="16" viewBox="0 0 100 16" preserveAspectRatio="none"><polyline points="2,10 16,10 30,9 44,10 58,9 72,9 84,8 98,8" fill="none" stroke="#ef9f27" stroke-width="1.6"/></svg></div>
+    <div class="kpi"><div class="l">Signaux surveillés</div><div class="v">200</div><div class="s">Actifs · <span class="up">▲ 12 vs hier</span></div><svg width="100%" height="16" viewBox="0 0 100 16" preserveAspectRatio="none"><polyline points="2,12 16,11 30,9 44,10 58,7 72,8 84,5 98,4" fill="none" stroke="#2dbd8e" stroke-width="1.6"/></svg></div>
+    <div class="kpi"><div class="l">Preuves générées</div><div class="v">128</div><div class="s">24h · <span class="up">▲ 32 vs hier</span></div><svg width="100%" height="16" viewBox="0 0 100 16" preserveAspectRatio="none"><polyline points="2,12 16,10 30,11 44,8 58,9 72,6 84,7 98,4" fill="none" stroke="#2dbd8e" stroke-width="1.6"/></svg></div>
+  </section>
+
+  <div class="cols">
+  <div class="colmain">
+
+    <section class="card">
+      <h2>Contrôles critiques</h2>
+      <table>
+        <colgroup><col style="width:23%"><col style="width:10%"><col style="width:10%"><col style="width:9%"><col style="width:13%"><col style="width:11%"><col style="width:24%"><col style="width:10%"></colgroup>
+        <thead><tr><th>SIGNAL</th><th>ÉTAT</th><th>VALEUR (ACTUELLE)</th><th>OBJECTIF</th><th>TENDANCE (7J)</th><th>IMPACT</th><th>ACTION RECOMMANDÉE</th><th>CASE</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="sig"><b>Faithfulness (SLO)</b><span class="mono">rag.faithfulness.mean</span></td>
+            <td><span class="pill fail">Échec</span></td>
+            <td><span class="vr bad">0.45</span></td><td>≥ 0.80</td>
+            <td><svg width="86" height="20"><polyline points="2,6 16,8 30,7 44,11 58,13 72,16 84,18" fill="none" stroke="#e24b4a" stroke-width="1.8"/></svg></td>
+            <td><span class="imp r">Release bloquée</span></td>
+            <td><span class="act">▶ Ouvrir playbook hallucination</span></td>
+            <td><span class="case r">CASE-0042</span></td>
+          </tr>
+          <tr>
+            <td class="sig"><b>Ancrage (Grounding)</b><span class="mono">rag.grounding.mean</span></td>
+            <td><span class="pill warn">Élevé</span></td>
+            <td><span class="vr mid">60%</span></td><td>≥ 70%</td>
+            <td><svg width="86" height="20"><polyline points="2,8 16,9 30,8 44,11 58,10 72,12 84,12" fill="none" stroke="#ef9f27" stroke-width="1.8"/></svg></td>
+            <td><span class="imp a">Élevé</span></td>
+            <td><span class="act">▤ Vérifier corpus &amp; chunking</span></td>
+            <td><span class="case a">CASE-0045</span></td>
+          </tr>
+          <tr>
+            <td class="sig"><b>Toxicité masquée</b><span class="mono">safety.toxicity_masked</span></td>
+            <td><span class="pill ok">OK</span></td>
+            <td><span class="vr">0.02%</span></td><td>≤ 0.10%</td>
+            <td><svg width="86" height="20"><polyline points="2,12 16,11 30,12 44,10 58,11 72,9 84,10" fill="none" stroke="#2dbd8e" stroke-width="1.8"/></svg></td>
+            <td><span class="imp g">Faible</span></td>
+            <td><span class="act">◎ Surveiller</span></td>
+            <td class="vr dim">—</td>
+          </tr>
+          <tr>
+            <td class="sig"><b>Taux d'erreurs critiques</b><span class="mono">quality.critical_error_rate</span></td>
+            <td><span class="pill warn">Élevé</span></td>
+            <td><span class="vr mid">2.1%</span></td><td>≤ 1%</td>
+            <td><svg width="86" height="20"><polyline points="2,12 16,9 30,12 44,8 58,11 72,8 84,10" fill="none" stroke="#ef9f27" stroke-width="1.8"/></svg></td>
+            <td><span class="imp a">Élevé</span></td>
+            <td><span class="act">▦ Analyser traces erreurs</span></td>
+            <td><span class="case a">CASE-0041</span></td>
+          </tr>
+          <tr>
+            <td class="sig"><b>PII - Surface mémoire</b><span class="mono">privacy.memory.pii_surface</span></td>
+            <td><span class="pill att">Attention</span></td>
+            <td><span class="vr mid">1.7%</span></td><td>≤ 1%</td>
+            <td><svg width="86" height="20"><polyline points="2,13 16,11 30,12 44,9 58,10 72,8 84,9" fill="none" stroke="#e3c94f" stroke-width="1.8"/></svg></td>
+            <td><span class="imp y">Moyen</span></td>
+            <td><span class="act">⬡ Lancer scan mémoire</span></td>
+            <td><span class="case y">CASE-0043</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tfoot"><a href="#">Voir tous les contrôles (18)</a></div>
+    </section>
+
+    <section class="card">
+      <h2>Control Cases à traiter
+        <span class="chips" id="chips">
+          <span class="chip on" data-f="all">Tous <b>24</b></span>
+          <span class="chip" data-f="crit">Critiques <b>5</b></span>
+          <span class="chip" data-f="high">Élevés <b>11</b></span>
+          <span class="chip" data-f="moy">Moyens <b>6</b></span>
+          <span class="chip" data-f="aut">Autres <b>2</b></span>
+        </span>
+        <a class="lnk" href="#">Voir tous les cases</a>
+      </h2>
+      <div class="cases" id="cases">
+        <div class="cc crit" data-k="crit">
+          <div class="row1"><span class="case r">CASE-0042</span><span class="pill fail">Critique</span></div>
+          <b>Régression faithfulness FR</b>
+          <div class="meta">Signal <em class="mono">rag.faithfulness.mean</em><br>Impact <em>Release bloquée</em><br>Owner <span class="owner"><i>ML</i><em>ML Engineer</em></span><br>Statut <em>En traitement</em></div>
+          <div class="foot">Créé il y a 42 min <span style="margin-left:auto">◍ 3 ▤</span></div>
+        </div>
+        <div class="cc high" data-k="high">
+          <div class="row1"><span class="case a">CASE-0045</span><span class="pill warn">Élevé</span></div>
+          <b>Ancrage insuffisant — Docs</b>
+          <div class="meta">Signal <em class="mono">rag.grounding.mean</em><br>Impact <em>Élevé</em><br>Owner <span class="owner"><i>ML</i><em>ML Engineer</em></span><br>Statut <em>Assigné</em></div>
+          <div class="foot">Créé il y a 1 h 12 min <span style="margin-left:auto">◍ 2 ▤</span></div>
+        </div>
+        <div class="cc high" data-k="high">
+          <div class="row1"><span class="case a">CASE-0041</span><span class="pill warn">Élevé</span></div>
+          <b>Erreurs critiques en hausse</b>
+          <div class="meta">Signal <em class="mono">quality.critical_error_rate</em><br>Impact <em>Élevé</em><br>Owner <span class="owner"><i>SR</i><em>SRE</em></span><br>Statut <em>En traitement</em></div>
+          <div class="foot">Créé il y a 2 h 05 min <span style="margin-left:auto">◍ 4 ▤</span></div>
+        </div>
+        <div class="cc moy" data-k="moy">
+          <div class="row1"><span class="case y">CASE-0043</span><span class="pill att">Moyen</span></div>
+          <b>PII détectée en mémoire</b>
+          <div class="meta">Signal <em class="mono">privacy.memory.pii_surface</em><br>Impact <em>Moyen</em><br>Owner <span class="owner"><i>SE</i><em>Security</em></span><br>Statut <em>À vérifier</em></div>
+          <div class="foot">Créé il y a 3 h 18 min <span style="margin-left:auto">◍ 1 ▤</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="charts">
+      <div class="card chart">
+        <h3>Évolution des scores <small>(7 derniers jours)</small></h3>
+        <div class="legend"><span><i style="background:#e24b4a"></i>Faithfulness</span><span><i style="background:#ef9f27"></i>Ancrage</span><span><i style="background:#e3c94f"></i>Toxicité masquée</span><span><i style="background:#2dbd8e"></i>Erreurs critiques</span></div>
+        <svg width="100%" height="86" viewBox="0 0 230 86" preserveAspectRatio="none">
+          <line x1="0" y1="21" x2="230" y2="21" stroke="#1a212b"/><line x1="0" y1="43" x2="230" y2="43" stroke="#1a212b"/><line x1="0" y1="65" x2="230" y2="65" stroke="#1a212b"/>
+          <polyline points="6,26 43,30 80,28 117,34 154,38 191,46 224,50" fill="none" stroke="#e24b4a" stroke-width="2"/>
+          <polyline points="6,40 43,38 80,42 117,40 154,44 191,42 224,46" fill="none" stroke="#ef9f27" stroke-width="2"/>
+          <polyline points="6,58 43,60 80,57 117,59 154,58 191,60 224,59" fill="none" stroke="#e3c94f" stroke-width="2"/>
+          <polyline points="6,72 43,70 80,73 117,69 154,71 191,67 224,69" fill="none" stroke="#2dbd8e" stroke-width="2"/>
+        </svg>
+        <div class="xlab"><span>5 nov.</span><span>6 nov.</span><span>7 nov.</span><span>8 nov.</span><span>9 nov.</span><span>10 nov.</span><span>11 nov.</span></div>
+      </div>
+      <div class="card chart">
+        <h3>Répartition des Control Cases</h3>
+        <div class="donutwrap">
+          <svg width="92" height="92" viewBox="0 0 92 92">
+            <circle cx="46" cy="46" r="34" fill="none" stroke="#e24b4a" stroke-width="12" stroke-dasharray="45 169" transform="rotate(-90 46 46)"/>
+            <circle cx="46" cy="46" r="34" fill="none" stroke="#ef9f27" stroke-width="12" stroke-dasharray="80 134" stroke-dashoffset="-45" transform="rotate(-90 46 46)"/>
+            <circle cx="46" cy="46" r="34" fill="none" stroke="#e3c94f" stroke-width="12" stroke-dasharray="53 161" stroke-dashoffset="-125" transform="rotate(-90 46 46)"/>
+            <circle cx="46" cy="46" r="34" fill="none" stroke="#2dbd8e" stroke-width="12" stroke-dasharray="36 178" stroke-dashoffset="-178" transform="rotate(-90 46 46)"/>
+            <text x="46" y="44" text-anchor="middle" fill="#e7eaee" font-size="16" font-weight="650">24</text>
+            <text x="46" y="58" text-anchor="middle" fill="#66707c" font-size="9">total</text>
+          </svg>
+          <div class="dlg">
+            <span style="color:var(--red)">● Critique</span> <span style="color:var(--t3)">5 (21%)</span><br>
+            <span style="color:var(--amber)">● Élevé</span> <span style="color:var(--t3)">9 (38%)</span><br>
+            <span style="color:var(--yellow)">● Moyen</span> <span style="color:var(--t3)">6 (25%)</span><br>
+            <span style="color:var(--green)">● Faible</span> <span style="color:var(--t3)">4 (16%)</span>
+          </div>
+        </div>
+      </div>
+      <div class="card chart bars">
+        <h3>Impact par domaine <small>(sur les 7 derniers jours)</small></h3>
+        <div class="br"><span>RAG / Connaissances</span><div class="tr"><i style="width:100%;background:#e24b4a"></i></div><span>−0.42</span></div>
+        <div class="br"><span>Réponses / Qualité</span><div class="tr"><i style="width:64%;background:#ef9f27"></i></div><span>−0.27</span></div>
+        <div class="br"><span>Outils / Agents</span><div class="tr"><i style="width:50%;background:#ef9f27"></i></div><span>−0.21</span></div>
+        <div class="br"><span>Sécurité / Privacy</span><div class="tr"><i style="width:45%;background:#ef9f27"></i></div><span>−0.19</span></div>
+        <div class="br"><span>Fiabilité / Infra</span><div class="tr"><i style="width:26%;background:#e3c94f"></i></div><span>−0.11</span></div>
+        <div class="br"><span>Coûts / FinOps</span><div class="tr"><i style="width:14%;background:#2dbd8e"></i></div><span>−0.06</span></div>
+      </div>
+    </section>
+
+  </div>
+
+  <aside class="rail">
+    <section class="card">
+      <h2>Incidents actifs <a class="lnk" href="#">Voir tout</a></h2>
+      <div class="inc">
+        <div class="h"><span class="d" style="background:#e24b4a"></span>INC-27</div>
+        <div class="m"><b style="color:var(--t2)">Hallucinations multiples</b><br>Depuis 32 min · Prod · FR</div>
+        <svg width="140" height="16"><polyline points="2,5 25,7 48,5 71,9 94,11 117,13 138,14" fill="none" stroke="#e24b4a" stroke-width="1.6"/></svg>
+      </div>
+      <div class="inc">
+        <div class="h"><span class="d" style="background:#ef9f27"></span>INC-24</div>
+        <div class="m"><b style="color:var(--t2)">Timeouts API Tool</b><br>Depuis 1 h 08 · Prod</div>
+        <svg width="140" height="16"><polyline points="2,9 25,7 48,10 71,8 94,11 117,9 138,11" fill="none" stroke="#ef9f27" stroke-width="1.6"/></svg>
+      </div>
+      <div class="inc">
+        <div class="h"><span class="d" style="background:#ef9f27"></span>INC-22</div>
+        <div class="m"><b style="color:var(--t2)">PII in logs</b><br>Depuis 2 h 14 · Prod</div>
+        <svg width="140" height="16"><polyline points="2,8 25,10 48,7 71,10 94,8 117,11 138,9" fill="none" stroke="#ef9f27" stroke-width="1.6"/></svg>
+      </div>
+      <div class="inc">
+        <div class="h"><span class="d" style="background:#ef9f27"></span>INC-19</div>
+        <div class="m"><b style="color:var(--t2)">Coût anormal détecté</b><br>Depuis 3 h 45 · Prod</div>
+        <svg width="140" height="16"><polyline points="2,11 25,9 48,11 71,8 94,10 117,7 138,9" fill="none" stroke="#ef9f27" stroke-width="1.6"/></svg>
+      </div>
+    </section>
+
+    <section class="card release">
+      <h2>Release actuelle</h2>
+      <div class="rh"><span class="mono">R-2024.11.07-1</span><span class="pill fail">Bloquée</span></div>
+      <p>Déployée le 07/11/2024 à 10:42</p>
+      <p class="bad">Échec sur 2 contrôles critiques</p>
+      <p><a href="#">Voir les gates et détails</a></p>
+    </section>
+
+    <section class="card">
+      <h2>Actions rapides</h2>
+      <div class="btns">
+        <div class="btn">▶ Lancer red-team</div>
+        <div class="btn">❄ Geler les releases</div>
+        <div class="btn">▷ Ouvrir replay</div>
+        <div class="btn">⊞ Créer un ticket</div>
+        <div class="btn wide">▤ Générer evidence pack</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Activités récentes <a class="lnk" href="#">Voir tout</a></h2>
+      <div class="feed">
+        <div class="f"><i>●</i> Release R-2024.11.07-1 bloquée <span class="t">10:41</span></div>
+        <div class="f"><i>●</i> CASE-0042 créé <span class="t">10:40</span></div>
+        <div class="f"><i>●</i> Hallucination playbook exécuté <span class="t">10:36</span></div>
+        <div class="f"><i>●</i> Nouveau scan mémoire terminé <span class="t">10:29</span></div>
+        <div class="f"><i>●</i> 21 preuves générées <span class="t">10:21</span></div>
+      </div>
+    </section>
+  </aside>
+  </div>
+
+  <footer class="trust">
+    <span class="ti"><i style="background:#2dbd8e"></i>Confiance des signaux : 92% ⓘ</span>
+    <span class="pb"><i></i></span>
+    <span class="ti"><i style="background:#2dbd8e"></i>Chaîne d'audit intacte</span>
+    <span class="ti"><i style="background:#2dbd8e"></i>Tous les systèmes opérationnels</span>
+    <a href="#">Voir les composants santé →</a>
+  </footer>
+
+</main>
+</div>
+
+<script>
+const chips=document.querySelectorAll('#chips .chip');
+const cards=document.querySelectorAll('#cases .cc');
+chips.forEach(c=>c.addEventListener('click',()=>{
+  chips.forEach(x=>x.classList.remove('on'));c.classList.add('on');
+  const f=c.dataset.f;
+  cards.forEach(k=>{k.style.display=(f==='all'||k.dataset.k===f)?'':'none';});
+}));
+</script>
+</body>
+</html>

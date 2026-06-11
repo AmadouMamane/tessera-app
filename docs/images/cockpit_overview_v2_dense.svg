@@ -1,0 +1,294 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <title>Tessera AI control plane — vue d'ensemble v2 dense (mode sombre)</title>
+  <style>
+    .c{fill:#161b22;stroke:#262c35;stroke-width:1}
+    .t1{fill:#e8eaed}.t2{fill:#9aa3ad}.t3{fill:#6b7480}
+    .td{fill:#f08884}.ts{fill:#5ecfa8}.tw{fill:#f0b35c}.ti{fill:#6cb1f5}.tp{fill:#a79bf0}
+    .bd{fill:#3b1d1d}.bs{fill:#143028}.bw{fill:#3a2a12}.bi{fill:#14283d}.bp{fill:#251f44}.bg{fill:#1f2630}
+    text{font-size:12px}
+  </style>
+  <rect width="1280" height="800" fill="#0e1116"/>
+  <rect width="1280" height="60" fill="#11151b"/>
+  <line x1="0" y1="60" x2="1280" y2="60" stroke="#262c35"/>
+  <rect x="16" y="16" width="28" height="28" rx="7" fill="#1f6f54"/>
+  <text x="25" y="36" fill="#5ecfa8" font-size="15" font-weight="600">T</text>
+  <text x="54" y="28" class="t1" font-size="14" font-weight="600">Tessera</text>
+  <text x="54" y="44" class="t3" font-size="9">AI control plane</text>
+  <text x="210" y="22" class="t3" font-size="9">Scope</text>
+  <rect x="210" y="28" width="172" height="24" rx="7" class="bg"/>
+  <text x="222" y="44" class="t1" font-size="11">Prod · Crédit Aurore ▾</text>
+  <text x="398" y="22" class="t3" font-size="9">Environnement</text>
+  <rect x="398" y="28" width="140" height="24" rx="7" class="bg"/>
+  <circle cx="412" cy="40" r="3" fill="#2dbd8e"/>
+  <text x="422" y="44" class="t1" font-size="11">Production ▾</text>
+  <text x="554" y="22" class="t3" font-size="9">Agent</text>
+  <rect x="554" y="28" width="160" height="24" rx="7" class="bg"/>
+  <text x="566" y="44" class="t1" font-size="11">Assistant bancaire ▾</text>
+  <text x="730" y="22" class="t3" font-size="9">Modèle</text>
+  <rect x="730" y="28" width="186" height="24" rx="7" class="bg"/>
+  <text x="742" y="44" class="t1" font-size="11">Llama 3.2 3B · on-prem ▾</text>
+  <text x="932" y="22" class="t3" font-size="9">Langue</text>
+  <rect x="932" y="28" width="72" height="24" rx="7" class="bg"/>
+  <text x="944" y="44" class="t1" font-size="11">FR ▾</text>
+  <circle cx="1054" cy="40" r="12" fill="#1f2630"/>
+  <text x="1049" y="44" class="t2" font-size="11">⌕</text>
+  <circle cx="1088" cy="40" r="12" fill="#1f2630"/>
+  <path d="M1083,43 a5,5 0 0 1 10,0 l1.5,2.5 h-13 z" fill="#9aa3ad"/>
+  <circle cx="1088" cy="47.5" r="1.5" fill="#9aa3ad"/>
+  <circle cx="1098" cy="30" r="7" fill="#e24b4a"/>
+  <text x="1095" y="34" fill="#ffffff" font-size="9" font-weight="600">3</text>
+  <text x="1124" y="26" class="t3" font-size="9">Voir comme</text>
+  <rect x="1124" y="28" width="132" height="24" rx="7" class="bg"/>
+  <text x="1136" y="44" class="t1" font-size="11">Admin ▾</text>
+
+  <rect x="0" y="60" width="200" height="740" fill="#11151b"/>
+  <line x1="200" y1="60" x2="200" y2="800" stroke="#262c35"/>
+  <text x="16" y="90" class="t3" font-size="9">PRODUIT</text>
+  <text x="16" y="112" class="t2">Assistant</text>
+  <text x="16" y="138" class="t2">À traiter</text>
+  <rect x="158" y="124" width="26" height="17" rx="8" class="bd"/>
+  <text x="167" y="136" class="td" font-size="10" font-weight="600">3</text>
+  <text x="16" y="168" class="t3" font-size="9">SURVEILLER</text>
+  <rect x="8" y="176" width="184" height="26" rx="7" class="bp"/>
+  <text x="16" y="194" class="tp" font-weight="600" font-size="12">Vue d'ensemble</text>
+  <text x="16" y="220" class="t2">Qualité</text>
+  <circle cx="182" cy="216" r="3.5" fill="#e24b4a"/>
+  <text x="16" y="246" class="t2">Sécurité &amp; privacy</text>
+  <circle cx="182" cy="242" r="3.5" fill="#ef9f27"/>
+  <text x="16" y="272" class="t2">Conformité</text>
+  <circle cx="182" cy="268" r="3.5" fill="#2dbd8e"/>
+  <text x="16" y="298" class="t2">Fiabilité &amp; coût</text>
+  <circle cx="182" cy="294" r="3.5" fill="#ef9f27"/>
+  <text x="16" y="328" class="t3" font-size="9">AGIR</text>
+  <text x="16" y="350" class="t2">Incidents &amp; playbooks</text>
+  <rect x="158" y="336" width="26" height="17" rx="8" class="bd"/>
+  <text x="167" y="348" class="td" font-size="10" font-weight="600">1</text>
+  <text x="16" y="376" class="t2">Replay &amp; shadow</text>
+  <text x="16" y="402" class="t2">Curation eval set</text>
+  <rect x="152" y="388" width="32" height="17" rx="8" class="bw"/>
+  <text x="160" y="400" class="tw" font-size="10" font-weight="600">11</text>
+  <text x="16" y="428" class="t2">Release control</text>
+  <circle cx="182" cy="424" r="3.5" fill="#e24b4a"/>
+  <text x="16" y="458" class="t3" font-size="9">PROUVER</text>
+  <text x="16" y="480" class="t2">Journal d'audit</text>
+  <text x="16" y="506" class="t2">Preuves &amp; exporteurs</text>
+  <text x="16" y="536" class="t3" font-size="9">CONFIGURER</text>
+  <text x="16" y="558" class="t2">Registre des signaux</text>
+  <text x="16" y="584" class="t2">Rôles &amp; accès</text>
+  <text x="16" y="610" class="t2">Profil système</text>
+  <rect x="8" y="732" width="184" height="56" rx="8" class="bg"/>
+  <circle cx="30" cy="760" r="13" fill="#251f44"/>
+  <text x="24" y="765" class="tp" font-size="11" font-weight="600">A</text>
+  <text x="52" y="756" class="t1" font-size="11" font-weight="600">Amadou D.</text>
+  <text x="52" y="772" class="t3" font-size="10">ML engineer · admin</text>
+
+  <text x="232" y="92" class="t1" font-size="18" font-weight="600">Vue d'ensemble</text>
+  <text x="232" y="110" class="t3" font-size="11">état global du système et actions prioritaires · maj 10:42 UTC</text>
+  <rect x="780" y="78" width="252" height="22" rx="11" class="bw"/>
+  <text x="792" y="93" class="tw" font-size="10" font-weight="600">données démo — scénario « semaine de drift »</text>
+  <rect x="1044" y="78" width="212" height="22" rx="11" class="bg"/>
+  <text x="1056" y="93" class="t3" font-size="10">seed reproductible · make seed-demo</text>
+
+  <rect x="232" y="122" width="164" height="64" rx="9" class="c"/>
+  <text x="244" y="140" class="t3" font-size="10">Score global</text>
+  <text x="244" y="164" class="tw" font-size="21" font-weight="600">62<tspan class="t3" font-size="11">/100</tspan></text>
+  <text x="244" y="179" class="td" font-size="10">▼14 vs hier · pondération registre v1</text>
+  <rect x="404" y="122" width="164" height="64" rx="9" class="c"/>
+  <text x="416" y="140" class="t3" font-size="10">Contrôles en échec</text>
+  <text x="416" y="164" class="td" font-size="21" font-weight="600">2<tspan class="t3" font-size="11">/18</tspan></text>
+  <text x="416" y="179" class="t3" font-size="10">+ 2 en avertissement</text>
+  <rect x="576" y="122" width="164" height="64" rx="9" class="c"/>
+  <text x="588" y="140" class="t3" font-size="10">Cases ouverts</text>
+  <text x="588" y="164" class="t1" font-size="21" font-weight="600">3</text>
+  <text x="588" y="179" class="t3" font-size="10">1 critique · 2 élevés · 0 sans owner</text>
+  <rect x="748" y="122" width="164" height="64" rx="9" class="c"/>
+  <text x="760" y="140" class="t3" font-size="10">Release</text>
+  <text x="760" y="164" class="td" font-size="16" font-weight="600">bloquée</text>
+  <text x="760" y="179" class="t3" font-size="10">R-2026.06.11-1 · 2 gates ✗</text>
+  <rect x="920" y="122" width="164" height="64" rx="9" class="c"/>
+  <text x="932" y="140" class="t3" font-size="10">Signaux actifs</text>
+  <text x="932" y="164" class="t1" font-size="21" font-weight="600">76<tspan class="t3" font-size="11">/200</tspan></text>
+  <text x="932" y="179" class="ts" font-size="10">▲4 cette semaine · cible v1 : 90</text>
+  <rect x="1092" y="122" width="164" height="64" rx="9" class="c"/>
+  <text x="1104" y="140" class="t3" font-size="10">Preuves générées · 24 h</text>
+  <text x="1104" y="164" class="t1" font-size="21" font-weight="600">128</text>
+  <text x="1104" y="179" class="ts" font-size="10">chaîne intacte · consensus 100%</text>
+
+  <rect x="232" y="198" width="732" height="246" rx="9" class="c"/>
+  <text x="248" y="222" class="t1" font-size="13" font-weight="600">Contrôles critiques</text>
+  <text x="404" y="222" class="t3" font-size="10">contrôle = signal + engagement (registre)</text>
+  <text x="248" y="246" class="t3" font-size="9">SIGNAL</text>
+  <text x="438" y="246" class="t3" font-size="9">ÉTAT</text>
+  <text x="510" y="246" class="t3" font-size="9">VALEUR</text>
+  <text x="572" y="246" class="t3" font-size="9">OBJECTIF</text>
+  <text x="640" y="246" class="t3" font-size="9">TENDANCE 7 J</text>
+  <text x="740" y="246" class="t3" font-size="9">ACTION</text>
+  <text x="894" y="246" class="t3" font-size="9">CASE</text>
+  <line x1="248" y1="254" x2="948" y2="254" stroke="#262c35"/>
+  <text x="248" y="276" class="t1" font-size="11">Faithfulness (SLO)</text>
+  <text x="248" y="289" class="t3" font-size="9">span.eval.faithfulness.mean · #15</text>
+  <rect x="438" y="264" width="52" height="18" rx="9" class="bd"/>
+  <text x="448" y="277" class="td" font-size="10" font-weight="600">échec</text>
+  <text x="510" y="278" class="td" font-size="11" font-weight="600">0.45</text>
+  <text x="572" y="278" class="t2" font-size="11">≥ 0.80</text>
+  <polyline points="640,270 654,272 668,271 682,276 696,278 710,282 722,284" fill="none" stroke="#e24b4a" stroke-width="1.8"/>
+  <text x="740" y="278" class="ti" font-size="10">ouvrir playbook hallucination</text>
+  <rect x="894" y="264" width="62" height="18" rx="4" class="bd"/>
+  <text x="900" y="277" class="td" font-size="9" font-weight="600">CASE-0042</text>
+  <text x="248" y="312" class="t1" font-size="11">Sous-refus (interdit passé)</text>
+  <text x="248" y="325" class="t3" font-size="9">guard.refusal.under_rate · #58</text>
+  <rect x="438" y="300" width="52" height="18" rx="9" class="bd"/>
+  <text x="448" y="313" class="td" font-size="10" font-weight="600">échec</text>
+  <text x="510" y="314" class="td" font-size="11" font-weight="600">60%</text>
+  <text x="572" y="314" class="t2" font-size="11">0%</text>
+  <polyline points="640,306 654,306 668,310 682,310 696,314 710,316 722,318" fill="none" stroke="#e24b4a" stroke-width="1.8"/>
+  <text x="740" y="314" class="ti" font-size="10">recalibrer le refus · red-team</text>
+  <rect x="894" y="300" width="62" height="18" rx="4" class="bd"/>
+  <text x="900" y="313" class="td" font-size="9" font-weight="600">CASE-0044</text>
+  <text x="248" y="348" class="t1" font-size="11">Ancrage (grounding)</text>
+  <text x="248" y="361" class="t3" font-size="9">rag.grounding.mean · #26</text>
+  <rect x="438" y="336" width="52" height="18" rx="9" class="bw"/>
+  <text x="446" y="349" class="tw" font-size="10" font-weight="600">élevé</text>
+  <text x="510" y="350" class="tw" font-size="11" font-weight="600">60%</text>
+  <text x="572" y="350" class="t2" font-size="11">≥ 70%</text>
+  <polyline points="640,342 654,344 668,343 682,346 696,345 710,348 722,348" fill="none" stroke="#ef9f27" stroke-width="1.8"/>
+  <text x="740" y="350" class="ti" font-size="10">vérifier corpus &amp; chunking</text>
+  <rect x="894" y="336" width="62" height="18" rx="4" class="bw"/>
+  <text x="900" y="349" class="tw" font-size="9" font-weight="600">CASE-0045</text>
+  <text x="248" y="384" class="t1" font-size="11">Latence p95 / tour</text>
+  <text x="248" y="397" class="t3" font-size="9">turn.latency.p95 · #48</text>
+  <rect x="438" y="372" width="70" height="18" rx="9" class="bw"/>
+  <text x="446" y="385" class="tw" font-size="10" font-weight="600">attention</text>
+  <text x="510" y="386" class="tw" font-size="11" font-weight="600">2 557</text>
+  <text x="572" y="386" class="t2" font-size="11">≤ 2 000 ms</text>
+  <polyline points="640,380 654,378 668,381 682,380 696,383 710,382 722,384" fill="none" stroke="#ef9f27" stroke-width="1.8"/>
+  <text x="740" y="386" class="ti" font-size="10">voir waterfall · LLM domine</text>
+  <text x="894" y="386" class="t3" font-size="10">—</text>
+  <text x="248" y="420" class="t2" font-size="11">Toxicité</text>
+  <text x="248" y="433" class="t3" font-size="9">safety.toxicity.rate · #60</text>
+  <rect x="438" y="408" width="62" height="18" rx="9" class="bg"/>
+  <text x="446" y="421" class="t3" font-size="10">masqué</text>
+  <text x="510" y="422" class="t3" font-size="11">n=2 &lt; 50</text>
+  <text x="572" y="422" class="t2" font-size="11">≤ 0.1%</text>
+  <text x="640" y="422" class="t3" font-size="10">pas de valeur sous n_min</text>
+  <text x="740" y="422" class="t3" font-size="10">collecter du trafic</text>
+  <text x="894" y="422" class="t3" font-size="10">—</text>
+
+  <rect x="232" y="456" width="732" height="146" rx="9" class="c"/>
+  <text x="248" y="480" class="t1" font-size="13" font-weight="600">Control cases à traiter</text>
+  <rect x="424" y="466" width="58" height="19" rx="9" class="bp"/>
+  <text x="434" y="479" class="tp" font-size="10" font-weight="600">tous · 3</text>
+  <rect x="490" y="466" width="76" height="19" rx="9" class="bg"/>
+  <text x="500" y="479" class="t3" font-size="10">critiques · 1</text>
+  <rect x="574" y="466" width="68" height="19" rx="9" class="bg"/>
+  <text x="584" y="479" class="t3" font-size="10">élevés · 2</text>
+  <rect x="248" y="494" width="226" height="94" rx="8" fill="#1a1416" stroke="#5a2624"/>
+  <rect x="260" y="504" width="74" height="17" rx="4" class="bd"/>
+  <text x="266" y="516" class="td" font-size="9" font-weight="600">CASE-0042</text>
+  <rect x="340" y="504" width="54" height="17" rx="8" class="bd"/>
+  <text x="348" y="516" class="td" font-size="9" font-weight="600">critique</text>
+  <text x="260" y="538" class="t1" font-size="11" font-weight="600">Régression faithfulness FR</text>
+  <text x="260" y="554" class="t3" font-size="10">impact : release bloquée · owner : ML eng.</text>
+  <text x="260" y="570" class="t3" font-size="10">statut : en traitement · créé il y a 42 min</text>
+  <text x="260" y="584" class="ti" font-size="10">→ playbook · → what-changed</text>
+  <rect x="486" y="494" width="226" height="94" rx="8" fill="#1c1812" stroke="#54421e"/>
+  <rect x="498" y="504" width="74" height="17" rx="4" class="bw"/>
+  <text x="504" y="516" class="tw" font-size="9" font-weight="600">CASE-0044</text>
+  <rect x="578" y="504" width="44" height="17" rx="8" class="bw"/>
+  <text x="586" y="516" class="tw" font-size="9" font-weight="600">élevé</text>
+  <text x="498" y="538" class="t1" font-size="11" font-weight="600">Sous-refus — 6/10 passent</text>
+  <text x="498" y="554" class="t3" font-size="10">impact : sécurité · owner : security</text>
+  <text x="498" y="570" class="t3" font-size="10">statut : assigné · créé il y a 1 h 12</text>
+  <text x="498" y="584" class="ti" font-size="10">→ red-team · → policy PR</text>
+  <rect x="724" y="494" width="226" height="94" rx="8" fill="#1c1812" stroke="#54421e"/>
+  <rect x="736" y="504" width="74" height="17" rx="4" class="bw"/>
+  <text x="742" y="516" class="tw" font-size="9" font-weight="600">CASE-0045</text>
+  <rect x="816" y="504" width="44" height="17" rx="8" class="bw"/>
+  <text x="824" y="516" class="tw" font-size="9" font-weight="600">élevé</text>
+  <text x="736" y="538" class="t1" font-size="11" font-weight="600">Ancrage insuffisant — docs</text>
+  <text x="736" y="554" class="t3" font-size="10">impact : qualité RAG · owner : ML eng.</text>
+  <text x="736" y="570" class="t3" font-size="10">statut : à vérifier · créé il y a 2 h 05</text>
+  <text x="736" y="584" class="ti" font-size="10">→ fiche corpus · → curation</text>
+
+  <rect x="232" y="614" width="238" height="124" rx="9" class="c"/>
+  <text x="244" y="636" class="t1" font-size="12" font-weight="600">Évolution des scores · 7 j</text>
+  <polyline points="248,668 280,672 312,670 344,680 376,684 408,694 444,700" fill="none" stroke="#e24b4a" stroke-width="2"/>
+  <polyline points="248,690 280,688 312,692 344,690 376,694 408,692 444,696" fill="none" stroke="#ef9f27" stroke-width="2"/>
+  <circle cx="252" cy="722" r="3" fill="#e24b4a"/>
+  <text x="260" y="726" class="t3" font-size="9">faithfulness</text>
+  <circle cx="330" cy="722" r="3" fill="#ef9f27"/>
+  <text x="338" y="726" class="t3" font-size="9">ancrage</text>
+  <rect x="478" y="614" width="238" height="124" rx="9" class="c"/>
+  <text x="490" y="636" class="t1" font-size="12" font-weight="600">Répartition des cases</text>
+  <circle cx="540" cy="690" r="34" fill="none" stroke="#ef9f27" stroke-width="11" stroke-dasharray="142 72" transform="rotate(-90 540 690)"/>
+  <circle cx="540" cy="690" r="34" fill="none" stroke="#e24b4a" stroke-width="11" stroke-dasharray="71 143" stroke-dashoffset="-142" transform="rotate(-90 540 690)"/>
+  <text x="533" y="695" class="t1" font-size="14" font-weight="600">3</text>
+  <text x="600" y="676" class="td" font-size="10">● critique · 1</text>
+  <text x="600" y="696" class="tw" font-size="10">● élevés · 2</text>
+  <text x="600" y="716" class="t3" font-size="10">0 sans owner</text>
+  <rect x="724" y="614" width="240" height="124" rx="9" class="c"/>
+  <text x="736" y="636" class="t1" font-size="12" font-weight="600">Impact par domaine · 7 j</text>
+  <text x="736" y="660" class="t3" font-size="10">RAG / corpus</text>
+  <rect x="826" y="652" width="118" height="9" rx="2" fill="#e24b4a"/>
+  <text x="736" y="680" class="t3" font-size="10">réponses</text>
+  <rect x="826" y="672" width="76" height="9" rx="2" fill="#ef9f27"/>
+  <text x="736" y="700" class="t3" font-size="10">sécurité</text>
+  <rect x="826" y="692" width="54" height="9" rx="2" fill="#ef9f27"/>
+  <text x="736" y="720" class="t3" font-size="10">infra / coûts</text>
+  <rect x="826" y="712" width="30" height="9" rx="2" fill="#2dbd8e"/>
+
+  <rect x="980" y="198" width="284" height="158" rx="9" class="c"/>
+  <text x="996" y="222" class="t1" font-size="13" font-weight="600">Incidents actifs</text>
+  <text x="1196" y="222" class="ti" font-size="10">voir tout</text>
+  <circle cx="1002" cy="246" r="4" fill="#e24b4a"/>
+  <text x="1014" y="250" class="t1" font-size="11" font-weight="600">INC-7 · hallucinations multiples</text>
+  <text x="1014" y="266" class="t3" font-size="10">depuis 32 min · prod · FR · CASE-0042</text>
+  <polyline points="1014,284 1040,286 1066,284 1092,290 1118,292 1144,296" fill="none" stroke="#e24b4a" stroke-width="1.6"/>
+  <line x1="996" y1="306" x2="1248" y2="306" stroke="#262c35"/>
+  <circle cx="1002" cy="326" r="4" fill="#ef9f27"/>
+  <text x="1014" y="330" class="t1" font-size="11" font-weight="600">SUIVI · latence p95 &gt; budget</text>
+  <text x="1014" y="346" class="t3" font-size="10">depuis 1 h 08 · pas encore d'incident</text>
+
+  <rect x="980" y="368" width="284" height="116" rx="9" class="c"/>
+  <text x="996" y="392" class="t1" font-size="13" font-weight="600">Release actuelle</text>
+  <text x="996" y="414" class="t2" font-size="11">R-2026.06.11-1</text>
+  <rect x="1180" y="400" width="68" height="19" rx="9" class="bd"/>
+  <text x="1190" y="413" class="td" font-size="10" font-weight="600">bloquée</text>
+  <text x="996" y="436" class="td" font-size="10">échec sur 2 contrôles critiques (#15, #58)</text>
+  <text x="996" y="454" class="t3" font-size="10">gel automatique · déblocage : dual control</text>
+  <text x="996" y="472" class="ti" font-size="10">→ voir les gates et l'historique</text>
+
+  <rect x="980" y="496" width="284" height="120" rx="9" class="c"/>
+  <text x="996" y="520" class="t1" font-size="13" font-weight="600">Actions rapides</text>
+  <rect x="996" y="532" width="128" height="28" rx="7" class="bg"/>
+  <text x="1008" y="550" class="t2" font-size="10">Lancer red-team</text>
+  <rect x="1132" y="532" width="118" height="28" rx="7" class="bg"/>
+  <text x="1144" y="550" class="t2" font-size="10">Geler releases ⧉</text>
+  <rect x="996" y="568" width="128" height="28" rx="7" class="bg"/>
+  <text x="1008" y="586" class="t2" font-size="10">Ouvrir replay</text>
+  <rect x="1132" y="568" width="118" height="28" rx="7" class="bg"/>
+  <text x="1144" y="586" class="t2" font-size="10">Evidence pack</text>
+  <text x="996" y="610" class="t3" font-size="9">⧉ = dual control · chaque action émet une preuve</text>
+
+  <rect x="980" y="628" width="284" height="110" rx="9" class="c"/>
+  <text x="996" y="652" class="t1" font-size="13" font-weight="600">Activités récentes</text>
+  <text x="996" y="674" class="t3" font-size="10"><tspan class="ts">●</tspan> CASE-0042 créé — auto, SLO #15</text>
+  <text x="1216" y="674" class="t3" font-size="9">10:41</text>
+  <text x="996" y="692" class="t3" font-size="10"><tspan class="ts">●</tspan> playbook hallucination exécuté — amadou</text>
+  <text x="1216" y="692" class="t3" font-size="9">10:36</text>
+  <text x="996" y="710" class="t3" font-size="10"><tspan class="ts">●</tspan> release R-…11-1 bloquée — gate auto</text>
+  <text x="1216" y="710" class="t3" font-size="9">10:35</text>
+  <text x="996" y="728" class="t3" font-size="10"><tspan class="ts">●</tspan> 21 preuves générées — collector</text>
+  <text x="1216" y="728" class="t3" font-size="9">10:21</text>
+
+  <rect x="232" y="752" width="1032" height="34" rx="9" class="c"/>
+  <circle cx="252" cy="769" r="4" fill="#2dbd8e"/>
+  <text x="264" y="773" class="t2" font-size="10">confiance des signaux : 92% (contrats de schéma)</text>
+  <circle cx="540" cy="769" r="4" fill="#2dbd8e"/>
+  <text x="552" y="773" class="t2" font-size="10">chaîne d'audit intacte</text>
+  <circle cx="744" cy="769" r="4" fill="#ef9f27"/>
+  <text x="756" y="773" class="t2" font-size="10">1 signal masqué (n_min)</text>
+  <circle cx="952" cy="769" r="4" fill="#2dbd8e"/>
+  <text x="964" y="773" class="t2" font-size="10">composants opérationnels</text>
+  <text x="1166" y="773" class="ti" font-size="10">→ santé détaillée</text>
+</svg>

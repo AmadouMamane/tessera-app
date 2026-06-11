@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <title>Tessera cockpit — registre des signaux</title>
+  <style>
+    .s{fill:#ffffff;stroke:#e3e1db;stroke-width:1}
+    .t1{fill:#1a1915}.t2{fill:#5f5e5a}.t3{fill:#969590}
+    .td{fill:#a32d2d}.ts{fill:#0f6e56}.tw{fill:#854f0b}.ti{fill:#185fa5}.tp{fill:#3c3489}
+    .bd{fill:#fcebeb}.bs{fill:#e1f5ee}.bw{fill:#faeeda}.bi{fill:#e6f1fb}.bp{fill:#eeedfe}.bg{fill:#f1efe8}
+    .mono{font-family:'SF Mono', Menlo, monospace}
+    text{font-size:13px}
+  </style>
+  <rect width="1280" height="800" fill="#f7f6f3"/>
+  <rect width="1280" height="52" fill="#ffffff"/>
+  <line x1="0" y1="52" x2="1280" y2="52" stroke="#e3e1db"/>
+  <text x="24" y="33" class="t1" font-size="16" font-weight="600">Tessera</text>
+  <rect x="110" y="14" width="112" height="24" rx="12" class="bg"/>
+  <text x="128" y="30" class="t3" font-size="11">CI</text>
+  <rect x="152" y="16" width="66" height="20" rx="10" fill="#ffffff" stroke="#e3e1db"/>
+  <text x="166" y="30" class="t1" font-size="11" font-weight="600">Prod</text>
+  <rect x="238" y="14" width="44" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="251" y="30" class="t2" font-size="11">7 j</text>
+  <rect x="290" y="14" width="40" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="302" y="30" class="t2" font-size="11">FR</text>
+  <rect x="338" y="14" width="98" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="350" y="30" class="t2" font-size="11">llama3.2:3b</text>
+  <rect x="1006" y="14" width="148" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="1020" y="30" class="t3" font-size="11">⌘K · 200 signaux</text>
+  <rect x="1166" y="14" width="104" height="24" rx="12" class="bp"/>
+  <text x="1180" y="30" class="tp" font-size="11" font-weight="600">superadmin</text>
+
+  <rect x="0" y="52" width="216" height="748" fill="#ffffff"/>
+  <line x1="216" y1="52" x2="216" y2="800" stroke="#e3e1db"/>
+  <text x="20" y="88" class="t3" font-size="11">Produit</text>
+  <text x="20" y="112" class="t2">Assistant</text>
+  <text x="20" y="140" class="t2">À traiter</text>
+  <rect x="168" y="126" width="28" height="18" rx="9" class="bd"/>
+  <text x="178" y="139" class="td" font-size="11" font-weight="600">3</text>
+  <text x="20" y="170" class="t3" font-size="11">Surveiller</text>
+  <text x="20" y="194" class="t2">Vue d'ensemble</text>
+  <text x="20" y="220" class="t2">Qualité</text>
+  <circle cx="196" cy="216" r="4" fill="#e24b4a"/>
+  <text x="20" y="246" class="t2">Sécurité</text>
+  <circle cx="196" cy="242" r="4" fill="#ef9f27"/>
+  <text x="20" y="272" class="t2">Conformité</text>
+  <circle cx="196" cy="268" r="4" fill="#1d9e75"/>
+  <text x="20" y="298" class="t2">Fiabilité &amp; coût</text>
+  <circle cx="196" cy="294" r="4" fill="#1d9e75"/>
+  <text x="20" y="328" class="t3" font-size="11">Agir</text>
+  <text x="20" y="352" class="t2">Incidents &amp; playbooks</text>
+  <text x="20" y="378" class="t2">Replay &amp; shadow</text>
+  <text x="20" y="404" class="t2">Curation eval set</text>
+  <text x="20" y="434" class="t3" font-size="11">Plateforme</text>
+  <text x="20" y="458" class="t2">Preuves &amp; exporteurs</text>
+  <rect x="8" y="465" width="200" height="28" rx="8" class="bp"/>
+  <text x="20" y="484" class="tp" font-weight="600">Registre des signaux</text>
+
+  <text x="240" y="94" class="t1" font-size="19" font-weight="600">Registre des signaux</text>
+  <text x="462" y="94" class="t3" font-size="12">docs/signal-catalog.yaml · 200 entrées · versionné git</text>
+  <text x="240" y="114" class="t3" font-size="12">les pages du cockpit sont générées depuis ce fichier · un seuil se change par PR reviewée</text>
+
+  <rect x="240" y="132" width="560" height="34" rx="10" class="s"/>
+  <text x="258" y="154" class="t3" font-size="12">rechercher un signal, une entité, un engagement…  (⌘K)</text>
+  <rect x="816" y="132" width="110" height="34" rx="10" fill="none" stroke="#e3e1db"/>
+  <text x="832" y="154" class="t2" font-size="12">page : toutes</text>
+  <rect x="938" y="132" width="106" height="34" rx="10" fill="none" stroke="#e3e1db"/>
+  <text x="954" y="154" class="t2" font-size="12">statut : tous</text>
+  <rect x="1056" y="132" width="100" height="34" rx="10" fill="none" stroke="#e3e1db"/>
+  <text x="1072" y="154" class="t2" font-size="12">kind : tous</text>
+
+  <text x="258" y="196" class="t3" font-size="11">ID</text>
+  <text x="310" y="196" class="t3" font-size="11">SIGNAL</text>
+  <text x="640" y="196" class="t3" font-size="11">PAGE · SECTION</text>
+  <text x="816" y="196" class="t3" font-size="11">CYCLE</text>
+  <text x="908" y="196" class="t3" font-size="11">ENGAGEMENT</text>
+  <text x="1052" y="196" class="t3" font-size="11">STATUT</text>
+  <rect x="240" y="206" width="1016" height="40" rx="8" class="s"/>
+  <text x="258" y="231" class="ti mono" font-size="11">#15</text>
+  <text x="310" y="231" class="t1" font-size="12">quality-slo-error-budget</text>
+  <text x="640" y="231" class="t3" font-size="11">qualité · état</text>
+  <text x="816" y="231" class="t3" font-size="11">online</text>
+  <rect x="908" y="216" width="110" height="20" rx="10" class="bi"/>
+  <text x="920" y="230" class="ti" font-size="11">slo ≥ 0.80 · 7 j</text>
+  <rect x="1052" y="216" width="60" height="20" rx="10" class="bs"/>
+  <text x="1066" y="230" class="ts" font-size="11" font-weight="600">actif</text>
+  <rect x="240" y="252" width="1016" height="40" rx="8" class="s"/>
+  <text x="258" y="277" class="ti mono" font-size="11">#58</text>
+  <text x="310" y="277" class="t1" font-size="12">refusal-calibration</text>
+  <text x="640" y="277" class="t3" font-size="11">sécurité · état</text>
+  <text x="816" y="277" class="t3" font-size="11">online</text>
+  <rect x="908" y="262" width="110" height="20" rx="10" class="bi"/>
+  <text x="920" y="276" class="ti" font-size="11">slo · 0% interdit</text>
+  <rect x="1052" y="262" width="60" height="20" rx="10" class="bs"/>
+  <text x="1066" y="276" class="ts" font-size="11" font-weight="600">actif</text>
+  <rect x="240" y="298" width="1016" height="40" rx="8" class="s"/>
+  <text x="258" y="323" class="ti mono" font-size="11">#122</text>
+  <text x="310" y="323" class="t1" font-size="12">traces-to-sft</text>
+  <text x="640" y="323" class="t3" font-size="11">agir · prescriptif</text>
+  <text x="816" y="323" class="t3" font-size="11">flywheel</text>
+  <text x="908" y="323" class="t3" font-size="11">—</text>
+  <rect x="1052" y="308" width="60" height="20" rx="10" class="bs"/>
+  <text x="1066" y="322" class="ts" font-size="11" font-weight="600">actif</text>
+  <rect x="240" y="344" width="1016" height="40" rx="8" class="s"/>
+  <text x="258" y="369" class="ti mono" font-size="11">#180</text>
+  <text x="310" y="369" class="t1" font-size="12">gdpr-erasure-telemetry</text>
+  <text x="640" y="369" class="t3" font-size="11">conformité · état</text>
+  <text x="816" y="369" class="t3" font-size="11">online</text>
+  <rect x="908" y="354" width="78" height="20" rx="10" class="bi"/>
+  <text x="920" y="368" class="ti" font-size="11">légal · 72 h</text>
+  <rect x="1052" y="354" width="60" height="20" rx="10" class="bs"/>
+  <text x="1066" y="368" class="ts" font-size="11" font-weight="600">actif</text>
+  <rect x="240" y="390" width="1016" height="40" rx="8" fill="none" stroke="#c9c7c0" stroke-dasharray="4 3"/>
+  <text x="258" y="415" class="t3 mono" font-size="11">#103</text>
+  <text x="310" y="415" class="t2" font-size="12">span-contract-tests</text>
+  <text x="640" y="415" class="t3" font-size="11">plateforme · état</text>
+  <text x="816" y="415" class="t3" font-size="11">ci</text>
+  <rect x="908" y="400" width="60" height="20" rx="10" class="bi"/>
+  <text x="920" y="414" class="ti" font-size="11">gate</text>
+  <rect x="1052" y="400" width="72" height="20" rx="10" class="bg"/>
+  <text x="1064" y="414" class="t3" font-size="11">planifié</text>
+  <rect x="240" y="436" width="1016" height="40" rx="8" fill="none" stroke="#c9c7c0" stroke-dasharray="4 3"/>
+  <text x="258" y="461" class="t3 mono" font-size="11">#79</text>
+  <text x="310" y="461" class="t2" font-size="12">judge-model-drift</text>
+  <text x="640" y="461" class="t3" font-size="11">qualité · prédictif</text>
+  <text x="816" y="461" class="t3" font-size="11">online</text>
+  <text x="908" y="461" class="t3" font-size="11">—</text>
+  <rect x="1052" y="446" width="72" height="20" rx="10" class="bg"/>
+  <text x="1064" y="460" class="t3" font-size="11">planifié</text>
+  <text x="240" y="502" class="t3" font-size="11">1–6 sur 200 · trié par page puis id</text>
+
+  <rect x="240" y="524" width="500" height="120" rx="10" class="s"/>
+  <text x="258" y="550" class="t1" font-size="14" font-weight="600">Couverture par page</text>
+  <text x="258" y="576" class="t2" font-size="12">qualité 25/44 · sécurité 16/24 · fiabilité &amp; coût 12/39</text>
+  <text x="258" y="598" class="t2" font-size="12">conformité 6/12 · agir 7/23 · plateforme 9/29</text>
+  <text x="258" y="620" class="t2" font-size="12">produit 1/4 · repo 0/25 — total 76/200</text>
+  <rect x="756" y="524" width="500" height="120" rx="10" class="s"/>
+  <text x="774" y="550" class="t1" font-size="14" font-weight="600">Schéma d'une entrée</text>
+  <text x="774" y="576" class="t2 mono" font-size="11">id · key · kind · entite · page · section · cycle</text>
+  <text x="774" y="596" class="t2 mono" font-size="11">engagement · n_min · source · runbook · owner · status</text>
+  <text x="774" y="620" class="t3" font-size="11">exposé aussi en MCP : list_exceptions, get_signal, run_playbook</text>
+
+  <rect x="240" y="664" width="1016" height="56" rx="10" class="s"/>
+  <text x="258" y="690" class="t1" font-size="13" font-weight="600">Gouvernance</text>
+  <text x="258" y="710" class="t2" font-size="12">modification d'un seuil = PR + review + entrée what-changed · dépréciation = status: deprecated, jamais de suppression d'ID (IDs canoniques)</text>
+</svg>

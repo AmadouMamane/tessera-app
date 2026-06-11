@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <title>Tessera cockpit — vue d'ensemble</title>
+  <style>
+    .s{fill:#ffffff;stroke:#e3e1db;stroke-width:1}
+    .t1{fill:#1a1915}.t2{fill:#5f5e5a}.t3{fill:#969590}
+    .td{fill:#a32d2d}.ts{fill:#0f6e56}.tw{fill:#854f0b}.ti{fill:#185fa5}.tp{fill:#3c3489}
+    .bd{fill:#fcebeb}.bs{fill:#e1f5ee}.bw{fill:#faeeda}.bi{fill:#e6f1fb}.bp{fill:#eeedfe}.bg{fill:#f1efe8}
+    text{font-size:13px}
+  </style>
+  <rect width="1280" height="800" fill="#f7f6f3"/>
+  <rect width="1280" height="52" fill="#ffffff"/>
+  <line x1="0" y1="52" x2="1280" y2="52" stroke="#e3e1db"/>
+  <text x="24" y="33" class="t1" font-size="16" font-weight="600">Tessera</text>
+  <rect x="110" y="14" width="112" height="24" rx="12" class="bg"/>
+  <text x="128" y="30" class="t3" font-size="11">CI</text>
+  <rect x="152" y="16" width="66" height="20" rx="10" fill="#ffffff" stroke="#e3e1db"/>
+  <text x="166" y="30" class="t1" font-size="11" font-weight="600">Prod</text>
+  <rect x="238" y="14" width="44" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="251" y="30" class="t2" font-size="11">7 j</text>
+  <rect x="290" y="14" width="40" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="302" y="30" class="t2" font-size="11">FR</text>
+  <rect x="338" y="14" width="98" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="350" y="30" class="t2" font-size="11">llama3.2:3b</text>
+  <rect x="1006" y="14" width="148" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="1020" y="30" class="t3" font-size="11">⌘K · 200 signaux</text>
+  <rect x="1166" y="14" width="90" height="24" rx="12" class="bp"/>
+  <text x="1182" y="30" class="tp" font-size="11" font-weight="600">operator</text>
+
+  <rect x="0" y="52" width="216" height="748" fill="#ffffff"/>
+  <line x1="216" y1="52" x2="216" y2="800" stroke="#e3e1db"/>
+  <text x="20" y="88" class="t3" font-size="11">Produit</text>
+  <text x="20" y="112" class="t2">Assistant</text>
+  <text x="20" y="140" class="t1" font-weight="600">À traiter</text>
+  <rect x="168" y="126" width="28" height="18" rx="9" class="bd"/>
+  <text x="178" y="139" class="td" font-size="11" font-weight="600">3</text>
+  <text x="20" y="170" class="t3" font-size="11">Surveiller</text>
+  <rect x="8" y="178" width="200" height="28" rx="8" class="bp"/>
+  <text x="20" y="197" class="tp" font-weight="600">Vue d'ensemble</text>
+  <text x="20" y="224" class="t2">Qualité</text>
+  <circle cx="196" cy="220" r="4" fill="#e24b4a"/>
+  <text x="20" y="250" class="t2">Sécurité</text>
+  <circle cx="196" cy="246" r="4" fill="#ef9f27"/>
+  <text x="20" y="276" class="t2">Conformité</text>
+  <circle cx="196" cy="272" r="4" fill="#1d9e75"/>
+  <text x="20" y="302" class="t2">Fiabilité &amp; coût</text>
+  <circle cx="196" cy="298" r="4" fill="#1d9e75"/>
+  <text x="20" y="332" class="t3" font-size="11">Agir</text>
+  <text x="20" y="356" class="t2">Incidents &amp; playbooks</text>
+  <text x="20" y="382" class="t2">Replay &amp; shadow</text>
+  <text x="20" y="408" class="t2">Curation eval set</text>
+  <text x="20" y="438" class="t3" font-size="11">Plateforme</text>
+  <text x="20" y="462" class="t2">Preuves &amp; exporteurs</text>
+  <text x="20" y="488" class="t2">Registre des signaux</text>
+
+  <text x="240" y="94" class="t1" font-size="19" font-weight="600">Vue d'ensemble</text>
+  <text x="240" y="114" class="t3" font-size="12">Prod · 7 j · FR · mise à jour il y a 2 min</text>
+
+  <rect x="240" y="130" width="242" height="92" rx="10" class="s"/>
+  <text x="258" y="156" class="t3" font-size="11">Faithfulness moy.</text>
+  <text x="258" y="186" class="t1" font-size="26" font-weight="600">0.45</text>
+  <rect x="350" y="168" width="116" height="20" rx="10" class="bd"/>
+  <text x="360" y="182" class="td" font-size="11" font-weight="600">SLO ≥ 0.80 ✗</text>
+  <rect x="498" y="130" width="242" height="92" rx="10" class="s"/>
+  <text x="516" y="156" class="t3" font-size="11">Budget d'erreur</text>
+  <text x="516" y="186" class="t1" font-size="26" font-weight="600">0%</text>
+  <rect x="608" y="168" width="92" height="20" rx="10" class="bd"/>
+  <text x="618" y="182" class="td" font-size="11" font-weight="600">burn 10×</text>
+  <rect x="756" y="130" width="242" height="92" rx="10" class="s"/>
+  <text x="774" y="156" class="t3" font-size="11">Rappel guard</text>
+  <text x="774" y="186" class="t1" font-size="26" font-weight="600">0.55</text>
+  <rect x="866" y="168" width="92" height="20" rx="10" class="bw"/>
+  <text x="876" y="182" class="tw" font-size="11" font-weight="600">sous cible</text>
+  <rect x="1014" y="130" width="242" height="92" rx="10" class="s"/>
+  <text x="1032" y="156" class="t3" font-size="11">EU AI Act</text>
+  <text x="1032" y="186" class="t1" font-size="26" font-weight="600">5/5</text>
+  <rect x="1124" y="168" width="92" height="20" rx="10" class="bs"/>
+  <text x="1134" y="182" class="ts" font-size="11" font-weight="600">conforme ✓</text>
+
+  <text x="240" y="262" class="t1" font-size="14" font-weight="600">À traiter</text>
+  <text x="312" y="262" class="t3" font-size="12">3 exceptions · triées par sévérité</text>
+  <rect x="240" y="276" width="1016" height="54" rx="10" class="s"/>
+  <circle cx="264" cy="303" r="5" fill="#e24b4a"/>
+  <text x="282" y="298" class="t1" font-weight="600">Hallucination / quality spike — 50% des tours sous le SLO</text>
+  <text x="282" y="317" class="t3" font-size="11">déclenché il y a 12 min · burn rate 10×</text>
+  <rect x="940" y="291" width="72" height="22" rx="11" class="bg"/>
+  <text x="954" y="306" class="t2" font-size="11">Qualité</text>
+  <rect x="1022" y="291" width="216" height="22" rx="11" class="bi"/>
+  <text x="1036" y="306" class="ti" font-size="11">→ playbook hallucination</text>
+  <rect x="240" y="340" width="1016" height="54" rx="10" class="s"/>
+  <circle cx="264" cy="367" r="5" fill="#ef9f27"/>
+  <text x="282" y="362" class="t1" font-weight="600">Sous-refus — 6/10 requêtes interdites passent</text>
+  <text x="282" y="381" class="t3" font-size="11">calibration du refus · cible 0/10</text>
+  <rect x="940" y="355" width="72" height="22" rx="11" class="bg"/>
+  <text x="952" y="370" class="t2" font-size="11">Sécurité</text>
+  <rect x="1022" y="355" width="216" height="22" rx="11" class="bi"/>
+  <text x="1036" y="370" class="ti" font-size="11">→ calibration du refus</text>
+  <rect x="240" y="404" width="1016" height="54" rx="10" class="s"/>
+  <circle cx="264" cy="431" r="5" fill="#ef9f27"/>
+  <text x="282" y="426" class="t1" font-weight="600">Prédicteur de failure non entraîné — rappel 0%</text>
+  <text x="282" y="445" class="t3" font-size="11">11 tours candidats en attente de curation</text>
+  <rect x="940" y="419" width="72" height="22" rx="11" class="bg"/>
+  <text x="956" y="434" class="t2" font-size="11">Qualité</text>
+  <rect x="1022" y="419" width="216" height="22" rx="11" class="bi"/>
+  <text x="1036" y="434" class="ti" font-size="11">→ curation eval set</text>
+
+  <rect x="240" y="486" width="500" height="160" rx="10" class="s"/>
+  <text x="258" y="512" class="t1" font-size="14" font-weight="600">Statut par page</text>
+  <circle cx="266" cy="536" r="4" fill="#e24b4a"/>
+  <text x="282" y="541" class="t2">Qualité — 3 exceptions, SLO en violation</text>
+  <circle cx="266" cy="562" r="4" fill="#ef9f27"/>
+  <text x="282" y="567" class="t2">Sécurité — 1 exception (sous-refus)</text>
+  <circle cx="266" cy="588" r="4" fill="#1d9e75"/>
+  <text x="282" y="593" class="t2">Conformité — 12 signaux sains</text>
+  <circle cx="266" cy="614" r="4" fill="#1d9e75"/>
+  <text x="282" y="619" class="t2">Fiabilité &amp; coût — 27 signaux sains</text>
+  <circle cx="266" cy="640" r="4" fill="#1d9e75"/>
+  <text x="282" y="645" class="t2">Plateforme — exporteurs signés, preuves 3/3</text>
+
+  <rect x="756" y="486" width="500" height="160" rx="10" class="s"/>
+  <text x="774" y="512" class="t1" font-size="14" font-weight="600">Tendance qualité — 30 j</text>
+  <polyline points="774,556 824,562 874,560 924,572 974,576 1024,590 1074,596 1124,604 1174,610" fill="none" stroke="#e24b4a" stroke-width="2.5"/>
+  <text x="774" y="634" class="t2" font-size="12">Δ −0.70 moitié sur moitié · régression attribuée : docs +9/−9</text>
+
+  <rect x="240" y="666" width="1016" height="104" rx="10" class="s"/>
+  <text x="258" y="694" class="t1" font-size="14" font-weight="600">Catalogue des signaux</text>
+  <text x="430" y="694" class="t3" font-size="12">76 actifs / 200 · 124 planifiés · source : docs/signal-catalog.yaml</text>
+  <rect x="258" y="712" width="600" height="10" rx="5" class="bg"/>
+  <rect x="258" y="712" width="228" height="10" rx="5" fill="#534ab7"/>
+  <text x="872" y="721" class="tp" font-size="12" font-weight="600">38%</text>
+  <text x="258" y="750" class="t3" font-size="11">prochaine cible v1 : 90 signaux actifs — voir registre des signaux</text>
+</svg>

@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <title>Tessera cockpit — page Qualité (template exception-first)</title>
+  <style>
+    .s{fill:#ffffff;stroke:#e3e1db;stroke-width:1}
+    .t1{fill:#1a1915}.t2{fill:#5f5e5a}.t3{fill:#969590}
+    .td{fill:#a32d2d}.ts{fill:#0f6e56}.tw{fill:#854f0b}.ti{fill:#185fa5}.tp{fill:#3c3489}
+    .bd{fill:#fcebeb}.bs{fill:#e1f5ee}.bw{fill:#faeeda}.bi{fill:#e6f1fb}.bp{fill:#eeedfe}.bg{fill:#f1efe8}
+    text{font-size:13px}
+  </style>
+  <rect width="1280" height="800" fill="#f7f6f3"/>
+  <rect width="1280" height="52" fill="#ffffff"/>
+  <line x1="0" y1="52" x2="1280" y2="52" stroke="#e3e1db"/>
+  <text x="24" y="33" class="t1" font-size="16" font-weight="600">Tessera</text>
+  <rect x="110" y="14" width="112" height="24" rx="12" class="bg"/>
+  <text x="128" y="30" class="t3" font-size="11">CI</text>
+  <rect x="152" y="16" width="66" height="20" rx="10" fill="#ffffff" stroke="#e3e1db"/>
+  <text x="166" y="30" class="t1" font-size="11" font-weight="600">Prod</text>
+  <rect x="238" y="14" width="44" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="251" y="30" class="t2" font-size="11">7 j</text>
+  <rect x="290" y="14" width="40" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="302" y="30" class="t2" font-size="11">FR</text>
+  <rect x="338" y="14" width="98" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="350" y="30" class="t2" font-size="11">llama3.2:3b</text>
+  <rect x="1006" y="14" width="148" height="24" rx="12" fill="none" stroke="#e3e1db"/>
+  <text x="1020" y="30" class="t3" font-size="11">⌘K · 200 signaux</text>
+  <rect x="1166" y="14" width="90" height="24" rx="12" class="bp"/>
+  <text x="1182" y="30" class="tp" font-size="11" font-weight="600">operator</text>
+
+  <rect x="0" y="52" width="216" height="748" fill="#ffffff"/>
+  <line x1="216" y1="52" x2="216" y2="800" stroke="#e3e1db"/>
+  <text x="20" y="88" class="t3" font-size="11">Produit</text>
+  <text x="20" y="112" class="t2">Assistant</text>
+  <text x="20" y="140" class="t2">À traiter</text>
+  <rect x="168" y="126" width="28" height="18" rx="9" class="bd"/>
+  <text x="178" y="139" class="td" font-size="11" font-weight="600">3</text>
+  <text x="20" y="170" class="t3" font-size="11">Surveiller</text>
+  <text x="20" y="194" class="t2">Vue d'ensemble</text>
+  <rect x="8" y="204" width="200" height="28" rx="8" class="bp"/>
+  <text x="20" y="223" class="tp" font-weight="600">Qualité</text>
+  <circle cx="196" cy="219" r="4" fill="#e24b4a"/>
+  <text x="20" y="250" class="t2">Sécurité</text>
+  <circle cx="196" cy="246" r="4" fill="#ef9f27"/>
+  <text x="20" y="276" class="t2">Conformité</text>
+  <circle cx="196" cy="272" r="4" fill="#1d9e75"/>
+  <text x="20" y="302" class="t2">Fiabilité &amp; coût</text>
+  <circle cx="196" cy="298" r="4" fill="#1d9e75"/>
+  <text x="20" y="332" class="t3" font-size="11">Agir</text>
+  <text x="20" y="356" class="t2">Incidents &amp; playbooks</text>
+  <text x="20" y="382" class="t2">Replay &amp; shadow</text>
+  <text x="20" y="408" class="t2">Curation eval set</text>
+  <text x="20" y="438" class="t3" font-size="11">Plateforme</text>
+  <text x="20" y="462" class="t2">Preuves &amp; exporteurs</text>
+  <text x="20" y="488" class="t2">Registre des signaux</text>
+
+  <text x="240" y="94" class="t1" font-size="19" font-weight="600">Qualité</text>
+  <text x="332" y="94" class="t3" font-size="12">3 exceptions · 48 sains · 1 masqué (n_min)</text>
+  <text x="240" y="114" class="t3" font-size="12">44 signaux au catalogue · 25 actifs · fiches : juge, corpus, réponse</text>
+
+  <text x="240" y="148" class="t3" font-size="11">ÉTAT — DESCRIPTIF · ENGAGEMENTS</text>
+  <rect x="240" y="158" width="328" height="92" rx="10" class="s"/>
+  <text x="258" y="184" class="t3" font-size="11">Faithfulness moy.</text>
+  <text x="258" y="214" class="t1" font-size="26" font-weight="600">0.45</text>
+  <rect x="360" y="196" width="116" height="20" rx="10" class="bd"/>
+  <text x="370" y="210" class="td" font-size="11" font-weight="600">SLO ≥ 0.80 ✗</text>
+  <text x="258" y="240" class="t3" font-size="11">burn 10× · budget 0% · fenêtre 7 j</text>
+  <rect x="584" y="158" width="328" height="92" rx="10" class="s"/>
+  <text x="602" y="184" class="t3" font-size="11">κ juge (Cohen)</text>
+  <text x="602" y="214" class="t1" font-size="26" font-weight="600">1.00</text>
+  <rect x="704" y="196" width="92" height="20" rx="10" class="bs"/>
+  <text x="714" y="210" class="ts" font-size="11" font-weight="600">calibré ✓</text>
+  <text x="602" y="240" class="t3" font-size="11">accord 100% · → fiche juge</text>
+  <rect x="928" y="158" width="328" height="92" rx="10" class="s"/>
+  <text x="946" y="184" class="t3" font-size="11">Ancrage (groundedness)</text>
+  <text x="946" y="214" class="t1" font-size="26" font-weight="600">60%</text>
+  <rect x="1048" y="196" width="92" height="20" rx="10" class="bs"/>
+  <text x="1058" y="210" class="ts" font-size="11" font-weight="600">gate CI ✓</text>
+  <text x="946" y="240" class="t3" font-size="11">chunks utilisés 2/10 · dead context 8</text>
+
+  <text x="240" y="288" class="t3" font-size="11">DIAGNOSTIC — POURQUOI</text>
+  <rect x="240" y="298" width="328" height="100" rx="10" class="s"/>
+  <text x="258" y="324" class="t1" font-weight="600">Clusters de failures</text>
+  <text x="258" y="344" class="t2" font-size="12">63 cas · 6 thèmes · pureté 54%</text>
+  <text x="258" y="364" class="t3" font-size="11">dominant : prompt_injection (23 cas)</text>
+  <text x="258" y="384" class="ti" font-size="11">→ tours sources</text>
+  <rect x="584" y="298" width="328" height="100" rx="10" class="s"/>
+  <text x="602" y="324" class="t1" font-weight="600">What-changed (root cause)</text>
+  <text x="602" y="344" class="t2" font-size="12">Δ −0.70 · attribué : docs +9/−9</text>
+  <text x="602" y="364" class="t3" font-size="11">prompt et policy inchangés</text>
+  <text x="602" y="384" class="ti" font-size="11">→ fiche corpus</text>
+  <rect x="928" y="298" width="328" height="100" rx="10" class="s"/>
+  <text x="946" y="324" class="t1" font-weight="600">Calibration du juge</text>
+  <text x="946" y="344" class="t2" font-size="12">biais verbosité 0.29 · clémence ok</text>
+  <text x="946" y="364" class="t3" font-size="11">désaccord ensemble : 0.75 (1 cas dur)</text>
+  <text x="946" y="384" class="ti" font-size="11">→ fiche juge</text>
+
+  <text x="240" y="436" class="t3" font-size="11">SIGNAUX FAIBLES — PRÉDICTIF</text>
+  <rect x="240" y="446" width="500" height="86" rx="10" class="s"/>
+  <text x="258" y="472" class="t1" font-weight="600">Tendance 30 j</text>
+  <text x="258" y="492" class="t2" font-size="12">Δ −0.70 moitié sur moitié</text>
+  <polyline points="560,470 590,474 620,472 650,482 680,486 710,496 724,500" fill="none" stroke="#e24b4a" stroke-width="2.5"/>
+  <text x="258" y="516" class="t3" font-size="11">pente / tour −0.004 · 2 points sous le seuil</text>
+  <rect x="756" y="446" width="500" height="86" rx="10" class="s"/>
+  <text x="774" y="472" class="t1" font-weight="600">Prédicteur de failure (pré-juge)</text>
+  <text x="774" y="492" class="t2" font-size="12">rappel 0% · précision 0% · VP·FP·FN 0·0·1</text>
+  <rect x="1130" y="458" width="98" height="20" rx="10" class="bw"/>
+  <text x="1142" y="472" class="tw" font-size="11" font-weight="600">à entraîner</text>
+  <text x="774" y="516" class="t3" font-size="11">11 tours candidats · entraînement après curation</text>
+
+  <text x="240" y="570" class="t3" font-size="11">ACTIONS — PRESCRIPTIF</text>
+  <rect x="240" y="582" width="222" height="34" rx="10" fill="#ffffff" stroke="#c9c7c0"/>
+  <text x="258" y="604" class="t1" font-size="12" font-weight="600">Curer 11 tours → eval set</text>
+  <rect x="476" y="582" width="160" height="34" rx="10" fill="#ffffff" stroke="#c9c7c0"/>
+  <text x="494" y="604" class="t1" font-size="12" font-weight="600">Geler les deploys</text>
+  <rect x="650" y="582" width="196" height="34" rx="10" fill="#ffffff" stroke="#c9c7c0"/>
+  <text x="668" y="604" class="t1" font-size="12" font-weight="600">Playbook hallucination</text>
+  <text x="862" y="604" class="t3" font-size="11">actions critiques : dual control (admin)</text>
+
+  <rect x="240" y="640" width="1016" height="32" rx="8" class="s"/>
+  <text x="258" y="661" class="t2" font-size="12">▸ état — 14 signaux sains, inchangés sur 7 j</text>
+  <rect x="240" y="680" width="1016" height="32" rx="8" class="s"/>
+  <text x="258" y="701" class="t2" font-size="12">▸ diagnostic — 18 signaux sans changement notable</text>
+  <rect x="240" y="720" width="1016" height="32" rx="8" class="s"/>
+  <text x="258" y="741" class="t2" font-size="12">▸ robustesse &amp; incertitude — 16 sains</text>
+  <rect x="240" y="760" width="1016" height="32" rx="8" fill="none" stroke="#c9c7c0" stroke-dasharray="4 3"/>
+  <text x="258" y="781" class="t3" font-size="12">cohérence cross-lingue masquée — n=2 &lt; n_min 50, non significatif</text>
+</svg>
