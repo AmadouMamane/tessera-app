@@ -1238,8 +1238,13 @@ function KpiCard({
           </span>
         </div>
         {delta ? <p className={cn("mt-1 text-[0.7rem]", toneText[tone])}>{delta}</p> : null}
-        {trend && trend.length > 1 ? (
-          <MetricSparkline values={trend} tone={tone} className="mt-2" />
+        {/* Reserve the sparkline's height whenever this card tracks a trend, so
+            scrubbing to a T with ≤1 point (no drawable curve) doesn't shrink the
+            card and jolt the KPI row. */}
+        {trend ? (
+          <div className="mt-2 h-8">
+            {trend.length > 1 ? <MetricSparkline values={trend} tone={tone} /> : null}
+          </div>
         ) : null}
       </CardContent>
     </Card>
