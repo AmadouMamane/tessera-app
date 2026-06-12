@@ -1062,5 +1062,76 @@
       "note": "Chaîne de délégation router → planner → workers → reviewer.",
       "empty": "Aucun tour capturé."
     }
+  },
+  "quality": {
+    "title": "Qualité IA",
+    "subtitle": "Fidélité, citations et calibration de l'agent, par signal.",
+    "tabs": {
+      "dashboard": "Tableau de bord",
+      "signals": "Signaux détaillés"
+    },
+    "empty": "Aucune donnée pour l'instant.",
+    "kpi": {
+      "quality": "Score qualité (SLO)",
+      "qualitySub": "{n} évaluations",
+      "evals": "Évaluations",
+      "evalsSub": "fenêtre récente",
+      "citations": "Citations valides",
+      "citationsSub": "{n} non étayées",
+      "locale": "Localisation",
+      "localeSub": "{n} écarts de format",
+      "conformance": "Conformité outils",
+      "conformanceSub": "{n} appels",
+      "calibration": "Calibration juge (κ)",
+      "calibrationSub": "vs jeu humain",
+      "calibrationNa": "indisponible"
+    },
+    "perf": {
+      "title": "Performance par signal",
+      "count": "{n} signaux",
+      "signal": "Signal",
+      "state": "État",
+      "current": "Actuel",
+      "target": "Objectif",
+      "trend": "Tendance"
+    },
+    "states": {
+      "ok": "OK",
+      "warn": "Vigilance",
+      "fail": "Critique"
+    },
+    "signals": {
+      "fidelity": "Fidélité (faithfulness)",
+      "citations": "Citations valides",
+      "locale": "Format localisé",
+      "refusal": "Calibration des refus",
+      "conformance": "Conformité des outils",
+      "routing": "Routage langue"
+    },
+    "dimensions": {
+      "title": "Répartition par dimension"
+    },
+    "diagnostic": {
+      "title": "Diagnostic qualité",
+      "empty": "Aucune action recommandée."
+    },
+    "evolution": {
+      "title": "Évolution des scores",
+      "empty": "Pas assez de points pour une courbe.",
+      "points": "{n} points",
+      "improving": "en amélioration",
+      "degrading": "en dégradation",
+      "stable": "stable"
+    },
+    "languages": {
+      "title": "Répartition par langue"
+    },
+    "intents": {
+      "title": "Répartition par mission"
+    },
+    "activity": {
+      "title": "Activité récente",
+      "empty": "Aucune évaluation récente."
+    }
   }
 }

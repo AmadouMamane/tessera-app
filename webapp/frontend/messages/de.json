@@ -1062,5 +1062,76 @@
       "note": "Delegationskette router → planner → workers → reviewer.",
       "empty": "Noch keine Turns erfasst."
     }
+  },
+  "quality": {
+    "title": "KI-Qualität",
+    "subtitle": "Treue, Zitate und Kalibrierung des Agenten, je Signal.",
+    "tabs": {
+      "dashboard": "Übersicht",
+      "signals": "Detailsignale"
+    },
+    "empty": "Noch keine Daten.",
+    "kpi": {
+      "quality": "Qualitätswert (SLO)",
+      "qualitySub": "{n} Bewertungen",
+      "evals": "Bewertungen",
+      "evalsSub": "jüngstes Fenster",
+      "citations": "Gültige Zitate",
+      "citationsSub": "{n} ohne Beleg",
+      "locale": "Lokalisierung",
+      "localeSub": "{n} Formatfehler",
+      "conformance": "Tool-Konformität",
+      "conformanceSub": "{n} Aufrufe",
+      "calibration": "Richter-Kalibrierung (κ)",
+      "calibrationSub": "vs. Humanset",
+      "calibrationNa": "nicht verfügbar"
+    },
+    "perf": {
+      "title": "Leistung je Signal",
+      "count": "{n} Signale",
+      "signal": "Signal",
+      "state": "Status",
+      "current": "Aktuell",
+      "target": "Ziel",
+      "trend": "Trend"
+    },
+    "states": {
+      "ok": "OK",
+      "warn": "Achtung",
+      "fail": "Kritisch"
+    },
+    "signals": {
+      "fidelity": "Treue (faithfulness)",
+      "citations": "Gültige Zitate",
+      "locale": "Lokalisiertes Format",
+      "refusal": "Ablehnungskalibrierung",
+      "conformance": "Tool-Konformität",
+      "routing": "Sprach-Routing"
+    },
+    "dimensions": {
+      "title": "Aufschlüsselung nach Dimension"
+    },
+    "diagnostic": {
+      "title": "Qualitätsdiagnose",
+      "empty": "Keine empfohlene Aktion."
+    },
+    "evolution": {
+      "title": "Score-Verlauf",
+      "empty": "Zu wenige Punkte für eine Kurve.",
+      "points": "{n} Punkte",
+      "improving": "verbessert sich",
+      "degrading": "verschlechtert sich",
+      "stable": "stabil"
+    },
+    "languages": {
+      "title": "Aufschlüsselung nach Sprache"
+    },
+    "intents": {
+      "title": "Aufschlüsselung nach Mission"
+    },
+    "activity": {
+      "title": "Letzte Aktivität",
+      "empty": "Keine jüngste Bewertung."
+    }
   }
 }
