@@ -155,6 +155,29 @@ Evidence/audit must be readable "as known at T": the audit log is
 append-only/hash-chained, so "entries with `occurred_at ≤ T`" is exact and free.
 The evidence pack is scoped to `(period, asOf)`.
 
+## Implementation status (2026-06-12)
+
+**Phase 0 and Phase 1 are shipped** on `feature/redesign`, plus more of the page
+than Phase 1 originally scoped:
+
+- Durable append-only stores `scores.jsonl` and `bundles.jsonl` next to the
+  audit log; `recent_bundles()` warms from its store after a restart so history
+  survives (idea #202).
+- **A (`?at=` recompute)** ships as the primary mechanism across the score-,
+  bundle- and audit-backed endpoints (`/scores`, `/slo`, `/trend`, `/timeline`,
+  `/toxicity`, `/pii-leak`, `/anomalies`, `/cost`, `/what-changed`, `/funnel`,
+  `/playbooks`, `/roadmap`, `/conformance`, `/tool-validity`, `/ai-act`), via the
+  shared `occurred_before` comparator.
+- Frontend: global `TemporalState` (mode/period/asOf), every capable block reads
+  "à T" with honest `à T` / `live` chips, action governance (§3), and the
+  evidence pack/report scoped to `(period, asOf)` (§5).
+- **Stays live by nature:** firewall-efficacy + refusal (fixed-corpus probes),
+  the structural audit-chain integrity check, system health.
+
+**Left for Phase 2:** snapshots (**B**) only when recompute latency matters
+(A is fast at current scale); extend `TemporalState` to the other cockpit pages;
+the dedicated Replay / shadow / time-travel workbench (**C**, image 11).
+
 ## Sequencing (answers "must point 1 be settled first?")
 
 **Decide** the strategy (this ADR) before wiring **any** block "à T". You need
