@@ -80,6 +80,7 @@ from tessera.observability import (
     whatchanged as whatchanged_mod,
     why_answer as why_answer_mod,
 )
+from tessera.observability._asof import occurred_before
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.ensemble import evaluate_ensemble
 from tessera.observability.eval.judge import LLMJudge
@@ -267,7 +268,7 @@ async def observability_timeline(at: str | None = None) -> dict[str, object]:
         ts = str(entry.get("occurred_at", ""))
         if not ts:
             continue
-        if at is not None and ts > at:
+        if not occurred_before(ts, at):
             continue
         outcome = str(entry.get("outcome", ""))
         if outcome not in ("allowed", "allow"):
@@ -551,8 +552,12 @@ async def observability_corpus_freshness() -> dict[str, object]:
 
 
 @router.get("/observability/roadmap")
-async def observability_roadmap() -> dict[str, object]:
-    """Mine telemetry signals into a ranked product backlog (#124)."""
+async def observability_roadmap(at: str | None = None) -> dict[str, object]:
+    """Mine telemetry signals into a ranked product backlog (#124), live or as of T.
+
+    Score- and bundle-derived inputs honour T; corpus freshness is a property of
+    the ingested data today, so it stays live.
+    """
     from importlib import resources
     from pathlib import Path
 
@@ -560,7 +565,7 @@ async def observability_roadmap() -> dict[str, object]:
     n_turns = 0
     n_low = 0
     languages_low: dict[str, int] = {}
-    for score in recent_scores():
+    for score in _scores_for(at):
         if score.get("metric") != "faithfulness":
             continue
         n_turns += 1
@@ -570,7 +575,7 @@ async def observability_roadmap() -> dict[str, object]:
             key = lang if isinstance(lang, str) else "unknown"
             languages_low[key] = languages_low.get(key, 0) + 1
 
-    questions = [b.question for b in replay_mod.recent_bundles()]
+    questions = [b.question for b in replay_mod.recent_bundles(at)]
     intents = routing_intent_mod.aggregate_intents(questions)
 
     data_dir = Path(str(resources.files("tessera.corpus.data")))
@@ -796,18 +801,26 @@ async def observability_disclosure() -> dict[str, object]:
 
 
 @router.get("/observability/ai-act")
-async def observability_ai_act() -> dict[str, object]:
-    """EU AI Act compliance posture: transparency, oversight, traceability (#76)."""
+async def observability_ai_act(at: str | None = None) -> dict[str, object]:
+    """EU AI Act compliance posture: transparency, oversight, traceability (#76).
+
+    Turn and oversight counts honour T; the audit-chain integrity check is a
+    structural property of the whole log, so it stays live.
+    """
     from tessera.guard.audit import verify_audit_chain
     from tessera.settings import get_settings
 
     entries = _read_audit_entries()
-    oversight = sum(1 for e in entries if e.get("target") == "ticket_escalate")
+    oversight = sum(
+        1
+        for e in entries
+        if e.get("target") == "ticket_escalate" and occurred_before(e.get("occurred_at"), at)
+    )
     audit_path = get_settings().guard.audit_file
     chain = verify_audit_chain(audit_path)
     signals = ai_act_mod.AIActSignals(
         disclosure_enabled=True,  # disclosure shipped on the chat UI (#134)
-        n_turns=len(replay_mod.recent_bundles()),
+        n_turns=len(replay_mod.recent_bundles(at)),
         oversight_events=oversight,
         escalation_available=True,
         audit_present=audit_path.exists(),
@@ -835,12 +848,16 @@ async def observability_localization() -> dict[str, object]:
 
 
 @router.get("/observability/playbooks")
-async def observability_playbooks() -> dict[str, object]:
-    """Incident playbooks triggered by the current live signals (#115)."""
-    bundles = replay_mod.recent_bundles()
+async def observability_playbooks(at: str | None = None) -> dict[str, object]:
+    """Incident playbooks triggered by the live (or as-of-T) signals (#115).
+
+    Bundle- and score-derived inputs honour T; the jailbreak rate is the latest
+    red-team snapshot (a periodic probe, not a per-turn event), so it stays live.
+    """
+    bundles = replay_mod.recent_bundles(at)
     faithfulness = [
         float(s["score"])  # type: ignore[arg-type]
-        for s in recent_scores()
+        for s in _scores_for(at)
         if s.get("metric") == "faithfulness"
     ]
     bar = 0.80
@@ -871,9 +888,9 @@ async def observability_cross_tenant() -> dict[str, object]:
 
 
 @router.get("/observability/toxicity")
-async def observability_toxicity() -> dict[str, object]:
-    """Toxicity / harmful-output rate over captured answers (#60)."""
-    turns = [(b.question, b.original_answer) for b in replay_mod.recent_bundles()]
+async def observability_toxicity(at: str | None = None) -> dict[str, object]:
+    """Toxicity / harmful-output rate over captured answers (#60), live or as of T."""
+    turns = [(b.question, b.original_answer) for b in replay_mod.recent_bundles(at)]
     return asdict(toxicity_mod.scan_toxicity(turns))
 
 
@@ -934,9 +951,9 @@ async def observability_refusal() -> dict[str, object]:
 
 
 @router.get("/observability/conformance")
-async def observability_conformance() -> dict[str, object]:
-    """Schema/format conformance of tool-call arguments from the audit trail."""
-    return asdict(conformance_mod.compute_conformance())
+async def observability_conformance(at: str | None = None) -> dict[str, object]:
+    """Schema/format conformance of tool-call arguments from the audit trail, live or as of T."""
+    return asdict(conformance_mod.compute_conformance(at=at))
 
 
 @router.get("/observability/context-overflow")
@@ -950,11 +967,11 @@ async def observability_context_overflow() -> dict[str, object]:
 
 
 @router.get("/observability/cost")
-async def observability_cost() -> dict[str, object]:
-    """Token-cost distribution and token-burn anomalies over captured turns."""
+async def observability_cost(at: str | None = None) -> dict[str, object]:
+    """Token-cost distribution and token-burn anomalies over captured turns, live or as of T."""
     turns = [
         (b.question, f"{b.question}\n{b.context}\n{b.original_answer}")
-        for b in replay_mod.recent_bundles()
+        for b in replay_mod.recent_bundles(at)
     ]
     return asdict(cost_anomaly_mod.analyze_costs(turns))
 
@@ -1006,9 +1023,9 @@ async def observability_tool_loops() -> dict[str, object]:
 
 
 @router.get("/observability/tool-validity")
-async def observability_tool_validity() -> dict[str, object]:
-    """Validity of tool calls (allowed vs denied, argument failures)."""
-    return asdict(tool_validity_mod.compute_tool_validity())
+async def observability_tool_validity(at: str | None = None) -> dict[str, object]:
+    """Validity of tool calls (allowed vs denied, argument failures), live or as of T."""
+    return asdict(tool_validity_mod.compute_tool_validity(at=at))
 
 
 @router.get("/observability/routing")
@@ -1040,26 +1057,28 @@ async def observability_locale_format() -> dict[str, object]:
 
 
 @router.get("/observability/pii-leak")
-async def observability_pii_leak() -> dict[str, object]:
-    """Output PII-leak rate: PII in answers absent from their grounding."""
-    turns = [(b.original_answer, f"{b.question}\n{b.context}") for b in replay_mod.recent_bundles()]
+async def observability_pii_leak(at: str | None = None) -> dict[str, object]:
+    """Output PII-leak rate: PII in answers absent from their grounding, live or as of T."""
+    turns = [
+        (b.original_answer, f"{b.question}\n{b.context}") for b in replay_mod.recent_bundles(at)
+    ]
     return asdict(pii_leak_mod.aggregate_leaks(turns))
 
 
 @router.get("/observability/anomalies")
-async def observability_anomalies() -> dict[str, object]:
-    """Detect long/looping/repetitive sessions among captured turns."""
+async def observability_anomalies(at: str | None = None) -> dict[str, object]:
+    """Detect long/looping/repetitive sessions among captured turns, live or as of T."""
     by_conversation: dict[str, list[str]] = {}
-    for bundle in replay_mod.recent_bundles():
+    for bundle in replay_mod.recent_bundles(at):
         key = bundle.conversation_id or "<none>"
         by_conversation.setdefault(key, []).append(bundle.question)
     return asdict(anomalies_mod.detect_anomalies(by_conversation))
 
 
 @router.get("/observability/what-changed")
-async def observability_what_changed() -> dict[str, object]:
-    """Attribute a score change to the lineage diff of the last two turns."""
-    with_lineage = [b for b in replay_mod.recent_bundles() if b.lineage is not None]
+async def observability_what_changed(at: str | None = None) -> dict[str, object]:
+    """Attribute a score change to the lineage diff of the last two turns, live or as of T."""
+    with_lineage = [b for b in replay_mod.recent_bundles(at) if b.lineage is not None]
     if len(with_lineage) < 2:  # noqa: PLR2004 — need two turns to diff
         return {"available": False}
     prev, curr = with_lineage[-2], with_lineage[-1]
@@ -1075,10 +1094,10 @@ async def observability_what_changed() -> dict[str, object]:
 
 
 @router.get("/observability/funnel")
-async def observability_funnel() -> dict[str, object]:
-    """Per-language conversation funnel from scored turns."""
+async def observability_funnel(at: str | None = None) -> dict[str, object]:
+    """Per-language conversation funnel from scored turns, live or as of T."""
     turns: list[tuple[str, str | None, float]] = []
-    for score in recent_scores():
+    for score in _scores_for(at):
         lang = score.get("language")
         conv = score.get("conversation_id")
         raw = score.get("score", 0.0)

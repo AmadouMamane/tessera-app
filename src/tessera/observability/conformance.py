@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from tessera.guard.decisions import load_policy
+from tessera.observability._asof import occurred_before
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -70,9 +71,13 @@ def check_arguments(
 
 
 def compute_conformance(
-    path: Path | None = None, *, policy: Policy | None = None
+    path: Path | None = None, *, policy: Policy | None = None, at: str | None = None
 ) -> ConformanceReport:
-    """Compute tool-argument conformance from the audit log at ``path``."""
+    """Compute tool-argument conformance from the audit log at ``path``.
+
+    With ``at`` set, only entries that occurred at or before instant T are
+    counted — the as-of-T read for the cockpit time rail (ADR 0011).
+    """
     active_policy = policy or load_policy()
     audit_path = path or get_settings().guard.audit_file
     n_calls = 0
@@ -92,6 +97,8 @@ def compute_conformance(
                     continue
                 tool = obj.get("target")
                 if obj.get("type") != "tessera.guard.audit" or tool == "user_input":
+                    continue
+                if not occurred_before(obj.get("occurred_at"), at):
                     continue
                 arguments = obj.get("arguments")
                 if not isinstance(arguments, dict) or not isinstance(tool, str):

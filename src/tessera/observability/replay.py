@@ -108,9 +108,29 @@ def capture_bundle(
     return bundle
 
 
-def recent_bundles() -> list[ReplayBundle]:
-    """Return the captured bundles (newest last)."""
-    return list(_BUNDLES)
+def recent_bundles(at: str | None = None) -> list[ReplayBundle]:
+    """Return the captured bundles (newest last).
+
+    With ``at`` set (ISO instant), only bundles captured at or before T are
+    returned — the as-of-T read behind the cockpit time rail (ADR 0011). The
+    capture buffer is in-process (volatile), so a restart shrinks the history
+    available at an old T; values are never fabricated, only filtered.
+    """
+    bundles = list(_BUNDLES)
+    if at is None:
+        return bundles
+    try:
+        cutoff = datetime.fromisoformat(at)
+    except ValueError:
+        return bundles
+    kept: list[ReplayBundle] = []
+    for bundle in bundles:
+        try:
+            if datetime.fromisoformat(bundle.captured_at) <= cutoff:
+                kept.append(bundle)
+        except ValueError:
+            kept.append(bundle)
+    return kept
 
 
 def get_bundle(bundle_id: str) -> ReplayBundle | None:
