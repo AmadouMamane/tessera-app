@@ -13,6 +13,7 @@ The effect: quality becomes a time series you can alert on, exactly like latency
 
 from __future__ import annotations
 
+import json
 from collections import deque
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -23,9 +24,11 @@ from tessera.observability.logging import get_logger
 from tessera.observability.metrics import EVAL_SCORE
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from tessera.observability.eval.judge import JudgeVerdict
 
-__all__ = ["emit_score", "purge_conversation", "recent_scores"]
+__all__ = ["emit_score", "persisted_scores", "purge_conversation", "recent_scores"]
 
 _log = get_logger("tessera.eval")
 
@@ -35,9 +38,70 @@ _log = get_logger("tessera.eval")
 _RECENT: deque[dict[str, object]] = deque(maxlen=200)
 
 
+def _scores_path() -> Path:
+    """Durable append-only store for scores — the event log behind as-of-T reads.
+
+    Lives next to the guard audit log (ADR 0011). Unlike ``_RECENT`` (volatile,
+    bounded), this survives restarts and lets ``/observability/*?at=`` recompute
+    quality/SLO/trend as of any instant T.
+    """
+    from tessera.settings import get_settings
+
+    return get_settings().guard.audit_file.parent / "scores.jsonl"
+
+
+def _persist(row: dict[str, object]) -> None:
+    """Append one score to the durable store (best effort; never blocks a turn)."""
+    try:
+        path = _scores_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fp:
+            fp.write(json.dumps(row) + "\n")
+    except OSError:
+        pass
+
+
 def recent_scores() -> list[dict[str, object]]:
     """Return the most recent eval scores (newest last)."""
     return list(_RECENT)
+
+
+def persisted_scores(at: str | None = None) -> list[dict[str, object]]:
+    """All durably-stored scores, optionally only those as of instant T.
+
+    Returns rows oldest→newest; when ``at`` is set, only those with
+    ``scored_at <= at`` — the as-of-T read for the cockpit time rail (ADR 0011).
+    """
+    cutoff: datetime | None = None
+    if at:
+        try:
+            cutoff = datetime.fromisoformat(at)
+        except ValueError:
+            cutoff = None
+    rows: list[dict[str, object]] = []
+    try:
+        path = _scores_path()
+        if not path.exists():
+            return rows
+        with path.open("r", encoding="utf-8") as fp:
+            for raw in fp:
+                stripped = raw.strip()
+                if not stripped:
+                    continue
+                try:
+                    obj = json.loads(stripped)
+                except ValueError:
+                    continue
+                if cutoff is not None:
+                    try:
+                        if datetime.fromisoformat(str(obj.get("scored_at", ""))) > cutoff:
+                            continue
+                    except ValueError:
+                        pass
+                rows.append(obj)
+    except OSError:
+        return rows
+    return rows
 
 
 def purge_conversation(conversation_id: str) -> int:
@@ -50,6 +114,20 @@ def purge_conversation(conversation_id: str) -> int:
     removed = len(_RECENT) - len(kept)
     _RECENT.clear()
     _RECENT.extend(kept)
+    # Erasure must reach the durable event log too (ADR 0011, #180).
+    try:
+        path = _scores_path()
+        if path.exists():
+            surviving = [
+                row
+                for row in persisted_scores()
+                if row.get("conversation_id") != conversation_id
+            ]
+            with path.open("w", encoding="utf-8") as fp:
+                for row in surviving:
+                    fp.write(json.dumps(row) + "\n")
+    except OSError:
+        pass
     return removed
 
 
@@ -86,15 +164,15 @@ def emit_score(
     EVAL_SCORE.labels(metric=verdict.metric, language=language).observe(verdict.score)
     span.set_attribute(f"tessera.eval.{verdict.metric}", verdict.score)
 
-    _RECENT.append(
-        {
-            "scored_at": datetime.now(UTC).isoformat(),
-            "metric": verdict.metric,
-            "score": verdict.score,
-            "language": language,
-            "judge_model": verdict.judge_model,
-            "conversation_id": conversation_id,
-            "trace_id": trace_id,
-            "sampled": sampled,
-        }
-    )
+    row: dict[str, object] = {
+        "scored_at": datetime.now(UTC).isoformat(),
+        "metric": verdict.metric,
+        "score": verdict.score,
+        "language": language,
+        "judge_model": verdict.judge_model,
+        "conversation_id": conversation_id,
+        "trace_id": trace_id,
+        "sampled": sampled,
+    }
+    _RECENT.append(row)
+    _persist(row)  # durable event log for as-of-T reads (ADR 0011)

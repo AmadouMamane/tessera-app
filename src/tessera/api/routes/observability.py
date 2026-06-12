@@ -83,7 +83,7 @@ from tessera.observability import (
 from tessera.observability.eval.calibration import calibrate, load_gold_set
 from tessera.observability.eval.ensemble import evaluate_ensemble
 from tessera.observability.eval.judge import LLMJudge
-from tessera.observability.eval.scores import recent_scores
+from tessera.observability.eval.scores import persisted_scores, recent_scores
 from tessera.observability.eval.sycophancy import detect_sycophancy
 
 router = APIRouter(tags=["observability"])
@@ -199,39 +199,45 @@ def _load_failure_items() -> list[failure_clustering_mod.FailureItem]:
     return items
 
 
+def _scores_for(at: str | None) -> list[dict[str, object]]:
+    """Scores to read: the live ring buffer, or the durable log as-of T (ADR 0011)."""
+    return persisted_scores(at) if at else recent_scores()
+
+
 @router.get("/observability/scores")
-async def observability_scores() -> dict[str, object]:
-    """Return the most recent online-eval scores (newest last)."""
-    return {"scores": recent_scores()}
+async def observability_scores(at: str | None = None) -> dict[str, object]:
+    """Online-eval scores — live (newest last), or as of instant ``at`` (ISO)."""
+    return {"scores": _scores_for(at), "as_of": at}
 
 
 @router.get("/observability/timeline")
-async def observability_timeline() -> dict[str, object]:
+async def observability_timeline(at: str | None = None) -> dict[str, object]:
     """Temporal control backbone — dated lineage events for the cockpit time rail.
 
     Every cockpit view reads at an instant T and compares to a baseline; this is
     the event scrubber behind that control. Events are *derived from real
     signals*, never fabricated: quality points (online-eval scores), judge-model
     changes, agent-model changes and guard denials (the tamper-evident audit
-    log). Powers the "what changed (#17)" / lineage (#10) narrative on the rail.
+    log). With ``?at=`` the window ends at T (as-of-T read, ADR 0011): only
+    events with timestamp ≤ T are returned.
     """
     from datetime import UTC, datetime
 
     events: list[dict[str, object]] = []
 
-    # Quality points + judge-model change detection (scores are newest last).
-    ordered = sorted(recent_scores(), key=lambda s: str(s.get("scored_at", "")))
+    # Quality points + judge-model change detection (scores oldest→newest, ≤ T).
+    ordered = sorted(_scores_for(at), key=lambda s: str(s.get("scored_at", "")))
     prev_judge: str | None = None
     for s in ordered:
-        at = str(s.get("scored_at", ""))
-        if not at:
+        ts = str(s.get("scored_at", ""))
+        if not ts:
             continue
         score = float(s.get("score", 0.0))  # type: ignore[arg-type]
         good, fair = 0.8, 0.5
         tone = "success" if score >= good else "warning" if score >= fair else "danger"
         events.append(
             {
-                "at": at,
+                "at": ts,
                 "kind": "score",
                 "label": f"Score {score:.2f}",
                 "detail": f"{s.get('metric', '')} · {str(s.get('language', '')).upper()}",
@@ -243,7 +249,7 @@ async def observability_timeline() -> dict[str, object]:
             if prev_judge is not None:
                 events.append(
                     {
-                        "at": at,
+                        "at": ts,
                         "kind": "judge_change",
                         "label": "Juge mis à jour",
                         "detail": f"{prev_judge} → {judge} — re-calibration κ requise",
@@ -252,29 +258,32 @@ async def observability_timeline() -> dict[str, object]:
                 )
             prev_judge = judge
 
-    # Guard denials + agent-model changes from the tamper-evident audit log.
-    # Denials are clustered by hour so a busy log becomes a few legible scrubber
-    # markers (count carried in the label) rather than hundreds of dots.
+    # Guard denials + agent-model changes from the tamper-evident audit log,
+    # filtered to occurrences ≤ T. Denials are clustered by hour so a busy log
+    # becomes a few legible scrubber markers rather than hundreds of dots.
     prev_model: str | None = None
     denials: dict[str, dict[str, object]] = {}
     for entry in _read_audit_entries():
-        at = str(entry.get("occurred_at", ""))
-        if not at:
+        ts = str(entry.get("occurred_at", ""))
+        if not ts:
+            continue
+        if at is not None and ts > at:
             continue
         outcome = str(entry.get("outcome", ""))
         if outcome not in ("allowed", "allow"):
-            bucket = at[:13]  # YYYY-MM-DDTHH
+            bucket = ts[:13]  # YYYY-MM-DDTHH
             agg = denials.setdefault(
-                bucket, {"at": at, "count": 0, "target": entry.get("target", "")}
+                bucket, {"at": ts, "count": 0, "target": entry.get("target", "")}
             )
-            agg["count"] = int(agg["count"]) + 1  # type: ignore[arg-type]
-            agg["at"] = at  # latest occurrence in the hour
+            count = agg["count"]
+            agg["count"] = (count if isinstance(count, int) else 0) + 1
+            agg["at"] = ts  # latest occurrence in the hour
         model = entry.get("model")
         if isinstance(model, str) and model and model != prev_model:
             if prev_model is not None:
                 events.append(
                     {
-                        "at": at,
+                        "at": ts,
                         "kind": "model_change",
                         "label": "Modèle déployé",
                         "detail": f"{prev_model} → {model}",
@@ -295,26 +304,31 @@ async def observability_timeline() -> dict[str, object]:
         )
 
     events.sort(key=lambda e: str(e["at"]))
-    now = datetime.now(UTC).isoformat()
-    window_start = str(events[0]["at"]) if events else now
+    window_end = at or datetime.now(UTC).isoformat()
+    window_start = str(events[0]["at"]) if events else window_end
     return {
         "window_start": window_start,
-        "window_end": now,
+        "window_end": window_end,
         "baseline_at": window_start,
         "n_events": len(events),
         "events": events[-60:],
+        "as_of": at,
     }
 
 
 @router.get("/observability/slo")
-async def observability_slo() -> dict[str, object]:
-    """Quality SLO + error-budget burn-rate over the recent faithfulness scores."""
+async def observability_slo(at: str | None = None) -> dict[str, object]:
+    """Quality SLO + error-budget burn-rate over the faithfulness scores.
+
+    Live by default; with ``?at=`` the SLO is recomputed over the durable score
+    log as of instant T (as-of-T read, ADR 0011).
+    """
     faithfulness = [
         float(s["score"])  # type: ignore[arg-type]
-        for s in recent_scores()
+        for s in _scores_for(at)
         if s.get("metric") == "faithfulness"
     ]
-    return asdict(slo_mod.compute_slo(faithfulness))
+    return {**asdict(slo_mod.compute_slo(faithfulness)), "as_of": at}
 
 
 @router.post("/observability/shadow")
@@ -349,10 +363,14 @@ async def observability_reproducibility() -> dict[str, object]:
 
 
 @router.get("/observability/trend")
-async def observability_trend() -> dict[str, object]:
-    """Long-horizon faithfulness trend over the recent score series (#150)."""
+async def observability_trend(at: str | None = None) -> dict[str, object]:
+    """Long-horizon faithfulness trend over the score series (#150).
+
+    Live by default; with ``?at=`` the trend is recomputed over the durable
+    score log as of instant T (as-of-T read, ADR 0011).
+    """
     points: list[tuple[str, float]] = []
-    for s in recent_scores():
+    for s in _scores_for(at):
         if s.get("metric") != "faithfulness":
             continue
         scored_at = s.get("scored_at")
@@ -362,7 +380,7 @@ async def observability_trend() -> dict[str, object]:
                 float(s["score"]),  # type: ignore[arg-type]
             )
         )
-    return asdict(trends_mod.analyze_trend(points))
+    return {**asdict(trends_mod.analyze_trend(points)), "as_of": at}
 
 
 @router.get("/observability/obs-cost")
