@@ -22,7 +22,15 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +94,18 @@ const POLL_FAST_MS = 10_000;
 export function OverviewDashboard() {
   const t = useTranslations("overview");
   const [mode, setMode] = useState<"live" | "replay">("live");
+  // T being viewed, lifted out of the rail so the whole page reads "à T" (ADR
+  // 0011). null = live (now); a number is a paused instant on the rail.
+  const [selectedAt, setSelectedAt] = useState<number | null>(null);
+  // ISO instant fed to the as-of-T-capable queries (slo/trend/scores). null in
+  // live mode → the backend reads the live buffer; set → it recomputes ≤ T.
+  const asOf = mode === "replay" && selectedAt != null ? new Date(selectedAt).toISOString() : null;
+  const historyMode = asOf != null;
+  // Returning to live clears the focused instant so every block re-reads "now".
+  function changeMode(next: "live" | "replay") {
+    if (next === "live") setSelectedAt(null);
+    setMode(next);
+  }
 
   // --- Liveness ------------------------------------------------------------
   const health = useQuery({
@@ -101,13 +121,13 @@ export function OverviewDashboard() {
 
   // --- Quality / SRE -------------------------------------------------------
   const slo = useQuery({
-    queryKey: ["ov-slo"],
-    queryFn: ({ signal }) => fetchSLO(signal),
+    queryKey: ["ov-slo", asOf],
+    queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined),
     refetchInterval: POLL_MS,
   });
   const trend = useQuery({
-    queryKey: ["ov-trend"],
-    queryFn: ({ signal }) => fetchTrend(signal),
+    queryKey: ["ov-trend", asOf],
+    queryFn: ({ signal }) => fetchTrend(signal, asOf ?? undefined),
     refetchInterval: POLL_MS,
   });
   const whatChanged = useQuery({
@@ -187,10 +207,12 @@ export function OverviewDashboard() {
     refetchInterval: POLL_MS,
   });
   const scores = useQuery({
-    queryKey: ["ov-scores"],
-    queryFn: ({ signal }) => fetchEvalScores(signal),
+    queryKey: ["ov-scores", asOf],
+    queryFn: ({ signal }) => fetchEvalScores(signal, asOf ?? undefined),
     refetchInterval: POLL_MS,
   });
+  // The rail's own axis stays live (the full scrubbable window); moving its
+  // cursor sets `selectedAt`, which is what re-reads the other blocks "à T".
   const timeline = useQuery({
     queryKey: ["ov-timeline"],
     queryFn: ({ signal }) => fetchTimeline(signal),
@@ -239,18 +261,27 @@ export function OverviewDashboard() {
         liveStatus={liveStatus}
         timeline={timeline.data}
         sloTarget={slo.data?.threshold}
-        onModeChange={setMode}
+        selectedAt={selectedAt}
+        onSelectedAtChange={setSelectedAt}
+        onModeChange={changeMode}
       />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <KpiCard
           label={t("kpi.quality")}
           value={slo.data ? score100(slo.data.good_rate) : "—"}
-          delta={slo.data ? t("kpi.qualityDelta", { burn: slo.data.burn_rate.toFixed(1) }) : ""}
+          delta={
+            slo.data
+              ? historyMode
+                ? t("kpi.vsBaseline", { delta: signedPts(slo.data.good_rate - slo.data.target) })
+                : t("kpi.qualityDelta", { burn: slo.data.burn_rate.toFixed(1) })
+              : ""
+          }
           tone={slo.data ? rateTone(slo.data.good_rate) : "neutral"}
           icon={Activity}
           trend={trend.data?.buckets.map((b) => b.mean)}
           loading={slo.isLoading}
+          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
         />
         <KpiCard
           label={t("kpi.failingControls")}
@@ -265,6 +296,7 @@ export function OverviewDashboard() {
           }
           icon={ShieldAlert}
           loading={controls.length === 0 && slo.isLoading}
+          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
         />
         <KpiCard
           label={t("kpi.openRisks")}
@@ -276,6 +308,7 @@ export function OverviewDashboard() {
           tone={openRisks === 0 ? "success" : openRisks > 3 ? "danger" : "warning"}
           icon={TriangleAlert}
           loading={anomalies.isLoading && playbooks.isLoading}
+          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
         />
         <KpiCard
           label={t("kpi.regression")}
@@ -300,6 +333,7 @@ export function OverviewDashboard() {
           }
           icon={GitBranch}
           loading={whatChanged.isLoading}
+          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
         />
         <KpiCard
           label={t("kpi.cost")}
@@ -310,6 +344,7 @@ export function OverviewDashboard() {
           tone={cost.data && cost.data.n_anomalies > 0 ? "warning" : "info"}
           icon={Coins}
           loading={cost.isLoading}
+          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
         />
         <KpiCard
           label={t("kpi.audit")}
@@ -318,6 +353,7 @@ export function OverviewDashboard() {
           tone={audit.data ? (audit.data.verified ? "success" : "danger") : "neutral"}
           icon={ShieldCheck}
           loading={audit.isLoading}
+          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
         />
       </section>
 
@@ -326,9 +362,15 @@ export function OverviewDashboard() {
           <CriticalControlsTable
             controls={controls}
             loading={slo.isLoading && controls.length === 0}
+            historyMode={historyMode}
           />
           <ControlCasesSection playbooks={playbooks.data} loading={playbooks.isLoading} />
-          <AnalyticsSection trend={trend.data} funnel={funnel.data} controls={controls} />
+          <AnalyticsSection
+            trend={trend.data}
+            funnel={funnel.data}
+            controls={controls}
+            historyMode={historyMode}
+          />
           <GovernanceSection roadmap={roadmap.data} loading={roadmap.isLoading} />
         </div>
         <aside className="flex min-w-0 flex-col gap-4">
@@ -345,8 +387,16 @@ export function OverviewDashboard() {
             aiActRate={aiAct.data?.compliance_rate}
             conformance={conformance.data}
           />
-          <QuickActionsCard onReplayAt={() => setMode("replay")} />
-          <RecentActivitiesCard scores={scores.data?.scores} loading={scores.isLoading} />
+          <QuickActionsCard
+            onReplayAt={() => setMode("replay")}
+            historyMode={historyMode}
+            onBackToLive={() => changeMode("live")}
+          />
+          <RecentActivitiesCard
+            scores={scores.data?.scores}
+            loading={scores.isLoading}
+            historyMode={historyMode}
+          />
         </aside>
       </div>
 
@@ -355,6 +405,7 @@ export function OverviewDashboard() {
         verified={audit.data?.verified}
         auditLength={audit.data?.length}
         systemsOk={!health.isError && !readiness.isError && readiness.data?.status === "ready"}
+        asOf={historyMode ? (selectedAt as number) : null}
       />
     </div>
   );
@@ -373,6 +424,8 @@ interface ControlRow {
   severity: number;
   impactKey: string;
   trend?: number[];
+  /** True when the row's source is persisted, so it can be read "à T" (ADR 0011). */
+  asOfCapable: boolean;
 }
 
 function buildControls(d: {
@@ -398,6 +451,7 @@ function buildControls(d: {
       severity: 1 - d.slo.good_rate,
       impactKey: "rag",
       trend: d.trend?.buckets.map((b) => b.mean),
+      asOfCapable: true, // backed by the durable score log
     });
   }
   if (d.toxicity && d.toxicity.n_turns > 0) {
@@ -408,6 +462,7 @@ function buildControls(d: {
       state: controlState(d.toxicity.toxicity_rate, 0.001, "lower"),
       severity: Math.min(d.toxicity.toxicity_rate * 50, 1),
       impactKey: "safety",
+      asOfCapable: false,
     });
   }
   if (d.pii && d.pii.n_turns > 0) {
@@ -418,6 +473,7 @@ function buildControls(d: {
       state: controlState(d.pii.leak_rate, 0.005, "lower"),
       severity: Math.min(d.pii.leak_rate * 20, 1),
       impactKey: "privacy",
+      asOfCapable: false,
     });
   }
   if (d.refusal && d.refusal.n_legit + d.refusal.n_forbidden > 0) {
@@ -429,6 +485,7 @@ function buildControls(d: {
       state: controlState(worst, 0.05, "lower"),
       severity: Math.min(worst, 1),
       impactKey: "quality",
+      asOfCapable: false,
     });
   }
   if (d.conformance && d.conformance.n_calls > 0) {
@@ -439,6 +496,7 @@ function buildControls(d: {
       state: controlState(d.conformance.conformance_rate, 0.95, "higher"),
       severity: 1 - d.conformance.conformance_rate,
       impactKey: "tools",
+      asOfCapable: false,
     });
   }
   if (d.tools && d.tools.total > 0) {
@@ -449,6 +507,7 @@ function buildControls(d: {
       state: controlState(d.tools.validity_rate, 0.95, "higher"),
       severity: 1 - d.tools.validity_rate,
       impactKey: "tools",
+      asOfCapable: false,
     });
   }
   if (d.firewall && d.firewall.n_positive > 0) {
@@ -459,6 +518,7 @@ function buildControls(d: {
       state: controlState(d.firewall.recall, 0.9, "higher"),
       severity: 1 - d.firewall.recall,
       impactKey: "security",
+      asOfCapable: false,
     });
   }
   return rows;
@@ -500,19 +560,24 @@ function TemporalRail({
   liveStatus,
   timeline,
   sloTarget,
+  selectedAt,
+  onSelectedAtChange,
   onModeChange,
 }: {
   mode: "live" | "replay";
   liveStatus: string;
   timeline?: TimelineReport;
   sloTarget?: number;
+  // Controlled by the page so the focused instant T drives every block (ADR 0011).
+  selectedAt: number | null;
+  onSelectedAtChange: Dispatch<SetStateAction<number | null>>;
   onModeChange: (mode: "live" | "replay") => void;
 }) {
   const t = useTranslations("overview.time");
   const [periodKey, setPeriodKey] = useState("d7");
   const [compare, setCompare] = useState("target");
-  // T being viewed; null = live (now). A number is a paused instant on the rail.
-  const [selectedAt, setSelectedAt] = useState<number | null>(null);
+  // T being viewed lives at page level now; this is the rail's write handle.
+  const setSelectedAt = onSelectedAtChange;
   const [playing, setPlaying] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -584,7 +649,7 @@ function TemporalRail({
       });
     }, 60);
     return () => window.clearInterval(id);
-  }, [playing, mode, dataStart, span, end]);
+  }, [playing, mode, dataStart, span, end, setSelectedAt]);
   useEffect(() => {
     if (selectedAt == null && playing) setPlaying(false);
   }, [selectedAt, playing]);
@@ -779,7 +844,7 @@ function TemporalRail({
           if (e.key === "ArrowLeft") step(-1);
         }}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-2.5 h-1 rounded-full bg-[linear-gradient(90deg,#363d48,#454e5d)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-2.5 h-0.5 rounded-full bg-[linear-gradient(90deg,#363d48,#454e5d)]" />
         {/* "real data begins here" / baseline marker */}
         {timeline && dataStart > viewStart + span * 0.01 ? (
           <RailMarker
@@ -996,6 +1061,31 @@ function RailEvent({
 // KPI cards
 // ---------------------------------------------------------------------------
 
+/** A small "à T" / "live" provenance chip shown on blocks in history mode. */
+type TimeTag = { label: string; kind: "atT" | "live" };
+
+function TimeTagChip({ tag, className }: { tag: TimeTag; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "rounded px-1.5 py-0.5 text-[0.58rem] font-medium uppercase leading-none tracking-wide",
+        tag.kind === "atT"
+          ? "border border-gold-500/40 bg-gold-500/10 text-gold-300"
+          : "border border-[var(--border)] bg-[var(--muted)]/40 text-[var(--muted-foreground)]",
+        className,
+      )}
+    >
+      {tag.label}
+    </span>
+  );
+}
+
+/** Signed /100-point delta (e.g. −4 / +3) for an "à T vs baseline" reading. */
+function signedPts(fraction: number): string {
+  const pts = Math.round(fraction * 100);
+  return `${pts >= 0 ? "+" : ""}${pts}`;
+}
+
 function KpiCard({
   label,
   value,
@@ -1004,6 +1094,7 @@ function KpiCard({
   icon: Icon,
   trend,
   loading,
+  tag,
 }: {
   label: string;
   value: string;
@@ -1012,6 +1103,7 @@ function KpiCard({
   icon: typeof Activity;
   trend?: number[];
   loading?: boolean;
+  tag?: TimeTag;
 }) {
   return (
     <Card className="group relative overflow-hidden rounded-lg">
@@ -1019,7 +1111,10 @@ function KpiCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs text-[var(--muted-foreground)]">{label}</p>
+            <p className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+              {label}
+              {tag ? <TimeTagChip tag={tag} /> : null}
+            </p>
             {loading ? (
               <Skeleton className="mt-2 h-7 w-16" />
             ) : (
@@ -1046,16 +1141,21 @@ function KpiCard({
 function CriticalControlsTable({
   controls,
   loading,
-}: { controls: ControlRow[]; loading: boolean }) {
+  historyMode,
+}: { controls: ControlRow[]; loading: boolean; historyMode: boolean }) {
   const t = useTranslations("overview.criticalControls");
   const ts = useTranslations("overview.signals");
   const tst = useTranslations("overview.states");
   const ti = useTranslations("overview.impact");
+  const tt = useTranslations("overview.time");
 
   return (
     <Card className="overflow-hidden rounded-lg">
       <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
-        <CardTitle className="text-sm">{t("title")}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {t("title")}
+          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+        </CardTitle>
         <span className="text-xs text-[var(--muted-foreground)]">
           {t("count", { n: controls.length })}
         </span>
@@ -1098,7 +1198,20 @@ function CriticalControlsTable({
                         {tst(c.state.key)}
                       </span>
                     </td>
-                    <td className="py-2 pr-4 tabular-nums">{c.value}</td>
+                    <td className="py-2 pr-4 tabular-nums">
+                      <span className="inline-flex items-center gap-1.5">
+                        {c.value}
+                        {historyMode ? (
+                          <TimeTagChip
+                            tag={
+                              c.asOfCapable
+                                ? { label: tt("atT"), kind: "atT" }
+                                : { label: tt("liveSignal"), kind: "live" }
+                            }
+                          />
+                        ) : null}
+                      </span>
+                    </td>
                     <td className="py-2 pr-4 text-[var(--muted-foreground)]">{c.target}</td>
                     <td className="w-24 py-2 pr-4">
                       {c.trend && c.trend.length > 1 ? (
@@ -1319,7 +1432,11 @@ function ReleaseCard({
   );
 }
 
-function QuickActionsCard({ onReplayAt }: { onReplayAt: () => void }) {
+function QuickActionsCard({
+  onReplayAt,
+  historyMode,
+  onBackToLive,
+}: { onReplayAt: () => void; historyMode: boolean; onBackToLive: () => void }) {
   const t = useTranslations("overview.quick");
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
@@ -1330,7 +1447,16 @@ function QuickActionsCard({ onReplayAt }: { onReplayAt: () => void }) {
     onError: () => setStatus(t("redteamErr")),
   });
 
+  // "Risk governs execution" (ADR 0011 §3): write/dangerous actions cannot run
+  // against the past, so in history mode they are disabled; the freeze toggle
+  // transforms into a read-only "compare to live" that returns to now.
+  const writeKeys = new Set(["redteam", "ticket"]);
+
   function handle(key: string) {
+    if (historyMode && key === "freezeReleases") {
+      onBackToLive();
+      return;
+    }
     switch (key) {
       case "redteam":
         setStatus(t("redteamRunning"));
@@ -1361,21 +1487,30 @@ function QuickActionsCard({ onReplayAt }: { onReplayAt: () => void }) {
         {quickActions.map((action) => {
           const Icon = action.icon;
           const busy = action.key === "redteam" && redteam.isPending;
+          const histDisabled = historyMode && writeKeys.has(action.key);
+          const label =
+            historyMode && action.key === "freezeReleases" ? t("compareLive") : t(action.key);
           return (
             <button
               key={action.key}
               type="button"
-              disabled={busy}
+              disabled={busy || histDisabled}
+              title={histDisabled ? t("histDisabled") : undefined}
               onClick={() => handle(action.key)}
-              className="rounded-md border border-[var(--border)] bg-[var(--muted)]/25 px-3 py-2 text-left transition-colors hover:border-blue-400/40 hover:bg-blue-500/10 disabled:opacity-60"
+              className="rounded-md border border-[var(--border)] bg-[var(--muted)]/25 px-3 py-2 text-left transition-colors hover:border-blue-400/40 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span className="flex items-center gap-2 text-sm">
                 <Icon className={cn("h-4 w-4", toneText[action.tone])} />
-                {t(action.key)}
-                {action.key === "freezeReleases" && frozen ? (
+                {label}
+                {action.key === "freezeReleases" && frozen && !historyMode ? (
                   <Badge tone="warning" className="ml-auto">
                     {t("frozenBadge")}
                   </Badge>
+                ) : null}
+                {histDisabled ? (
+                  <span className="ml-auto text-[0.6rem] uppercase text-[var(--muted-foreground)]">
+                    {t("histTag")}
+                  </span>
                 ) : null}
               </span>
             </button>
@@ -1392,16 +1527,22 @@ function QuickActionsCard({ onReplayAt }: { onReplayAt: () => void }) {
 function RecentActivitiesCard({
   scores,
   loading,
+  historyMode,
 }: {
   scores?: import("@/lib/api/schemas").EvalScore[];
   loading: boolean;
+  historyMode: boolean;
 }) {
   const t = useTranslations("overview.rightColumn");
+  const tt = useTranslations("overview.time");
   const rows = scores ? [...scores].reverse().slice(0, 6) : [];
   return (
     <Card className="rounded-lg">
       <CardHeader className="flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm">{t("activities")}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {t("activities")}
+          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {loading ? (
@@ -1439,13 +1580,16 @@ function AnalyticsSection({
   trend,
   funnel,
   controls,
+  historyMode,
 }: {
   trend?: TrendReport;
   funnel?: import("@/lib/api/schemas").FunnelReport;
   controls: ControlRow[];
+  historyMode: boolean;
 }) {
   const t = useTranslations("overview.analytics");
   const ts = useTranslations("overview.signals");
+  const tt = useTranslations("overview.time");
   const directionTone: OverviewTone =
     trend?.direction === "improving"
       ? "success"
@@ -1457,7 +1601,10 @@ function AnalyticsSection({
     <section className="grid gap-4 xl:grid-cols-3">
       <Card className="rounded-lg">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("scores")}</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            {t("scores")}
+            {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {trend && trend.buckets.length > 1 ? (
@@ -1483,7 +1630,10 @@ function AnalyticsSection({
 
       <Card className="rounded-lg">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("distribution")}</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            {t("distribution")}
+            {historyMode ? <TimeTagChip tag={{ label: tt("liveSignal"), kind: "live" }} /> : null}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-xs">
           {funnel && funnel.languages.length > 0 ? (
@@ -1515,7 +1665,10 @@ function AnalyticsSection({
 
       <Card className="rounded-lg">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("impact")}</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            {t("impact")}
+            {historyMode ? <TimeTagChip tag={{ label: tt("liveSignal"), kind: "live" }} /> : null}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {controls.length > 0 ? (
@@ -1606,13 +1759,16 @@ function TrustFooter({
   verified,
   auditLength,
   systemsOk,
+  asOf,
 }: {
   controls: ControlRow[];
   verified?: boolean;
   auditLength?: number;
   systemsOk?: boolean;
+  asOf: number | null;
 }) {
   const t = useTranslations("overview.footer");
+  const tt = useTranslations("overview.time");
   // Signal confidence = share of tracked signals currently meeting their target.
   const ok = controls.filter((c) => c.state.key === "ok").length;
   const confidence = controls.length ? Math.round((ok / controls.length) * 100) : null;
@@ -1627,6 +1783,12 @@ function TrustFooter({
 
   return (
     <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-[var(--border)] bg-[var(--card)]/70 px-4 py-3 text-[0.8rem] text-[var(--muted-foreground)] shadow-[var(--shadow-card)]">
+      {asOf != null ? (
+        <span className="flex items-center gap-2">
+          <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} />
+          <span className="tabular-nums">{tt("asOfEvidence", { time: fmtStamp(asOf) })}</span>
+        </span>
+      ) : null}
       <span className="flex items-center gap-2">
         <span className={cn("h-2 w-2 rounded-full", dotBg[confTone])} />
         {t("confidence")} :{" "}

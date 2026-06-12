@@ -248,19 +248,35 @@ export async function fetchReadiness(signal?: AbortSignal): Promise<HealthRespon
   return request("/readyz", { signal }, HealthResponseSchema);
 }
 
-/** Recent online-eval scores (eval-as-telemetry; public aggregate surface). */
-export async function fetchEvalScores(signal?: AbortSignal): Promise<EvalScoresResponse> {
-  return request("/observability/scores", { signal }, EvalScoresResponseSchema);
+/** Append an optional `?at=<ISO>` as-of-T instant to an observability path (ADR 0011). */
+function withAsOf(path: string, at?: string): string {
+  return at ? `${path}?at=${encodeURIComponent(at)}` : path;
+}
+
+/**
+ * Recent online-eval scores (eval-as-telemetry; public aggregate surface).
+ *
+ * With `at` set, the durable score log is read as of that instant (ADR 0011).
+ */
+export async function fetchEvalScores(
+  signal?: AbortSignal,
+  at?: string,
+): Promise<EvalScoresResponse> {
+  return request(withAsOf("/observability/scores", at), { signal }, EvalScoresResponseSchema);
 }
 
 /** Temporal lineage timeline — dated events for the cockpit time rail (#201). */
-export async function fetchTimeline(signal?: AbortSignal): Promise<TimelineReport> {
-  return request("/observability/timeline", { signal }, TimelineReportSchema);
+export async function fetchTimeline(signal?: AbortSignal, at?: string): Promise<TimelineReport> {
+  return request(withAsOf("/observability/timeline", at), { signal }, TimelineReportSchema);
 }
 
-/** Quality SLO + error-budget burn-rate over the recent faithfulness scores (#15). */
-export async function fetchSLO(signal?: AbortSignal): Promise<SLOReport> {
-  return request("/observability/slo", { signal }, SLOReportSchema);
+/**
+ * Quality SLO + error-budget burn-rate over the faithfulness scores (#15).
+ *
+ * With `at` set, the SLO is recomputed over the durable log as of T (ADR 0011).
+ */
+export async function fetchSLO(signal?: AbortSignal, at?: string): Promise<SLOReport> {
+  return request(withAsOf("/observability/slo", at), { signal }, SLOReportSchema);
 }
 
 /** Mirror recent captured turns to a candidate model and compare (shadow, #16). */
@@ -396,9 +412,13 @@ export async function fetchReproducibility(signal?: AbortSignal): Promise<ReproR
   return request("/observability/reproducibility", { signal }, ReproReportSchema);
 }
 
-/** Long-horizon faithfulness trend over the recent score series (#150). */
-export async function fetchTrend(signal?: AbortSignal): Promise<TrendReport> {
-  return request("/observability/trend", { signal }, TrendReportSchema);
+/**
+ * Long-horizon faithfulness trend over the score series (#150).
+ *
+ * With `at` set, the trend is recomputed over the durable log as of T (ADR 0011).
+ */
+export async function fetchTrend(signal?: AbortSignal, at?: string): Promise<TrendReport> {
+  return request(withAsOf("/observability/trend", at), { signal }, TrendReportSchema);
 }
 
 /** Measured instrumentation overhead vs the turn budget (cost of obs, #84). */

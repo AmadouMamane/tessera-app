@@ -139,7 +139,10 @@
       "baselineStart": "début de période",
       "baselineMean": "moyenne période",
       "baselineTarget": "objectif (cible)",
-      "baselineNow": "présent"
+      "baselineNow": "présent",
+      "atT": "à T",
+      "liveSignal": "live",
+      "asOfEvidence": "Vue relue à {time}"
     },
     "kpi": {
       "quality": "Score qualité (SLO)",
@@ -155,7 +158,8 @@
       "costDelta": "{tokens} tokens",
       "audit": "Preuves d’audit",
       "auditOk": "chaîne vérifiée",
-      "auditBroken": "chaîne rompue"
+      "auditBroken": "chaîne rompue",
+      "vsBaseline": "{delta} vs objectif"
     },
     "criticalControls": {
       "title": "Contrôles critiques",
@@ -223,7 +227,10 @@
       "frozen": "Releases gelées.",
       "unfrozen": "Releases dégelées.",
       "frozenBadge": "Gelées",
-      "ticketCreated": "Ticket créé."
+      "ticketCreated": "Ticket créé.",
+      "compareLive": "Comparer au Live",
+      "histDisabled": "Indisponible en relecture",
+      "histTag": "relecture"
     },
     "analytics": {
       "scores": "Évolution qualité",

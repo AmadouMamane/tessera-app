@@ -139,7 +139,10 @@
       "baselineStart": "period start",
       "baselineMean": "period average",
       "baselineTarget": "target",
-      "baselineNow": "present"
+      "baselineNow": "present",
+      "atT": "as of T",
+      "liveSignal": "live",
+      "asOfEvidence": "View as of {time}"
     },
     "kpi": {
       "quality": "Quality score (SLO)",
@@ -155,7 +158,8 @@
       "costDelta": "{tokens} tokens",
       "audit": "Audit evidence",
       "auditOk": "chain verified",
-      "auditBroken": "chain broken"
+      "auditBroken": "chain broken",
+      "vsBaseline": "{delta} vs target"
     },
     "criticalControls": {
       "title": "Critical controls",
@@ -223,7 +227,10 @@
       "frozen": "Releases frozen.",
       "unfrozen": "Releases unfrozen.",
       "frozenBadge": "Frozen",
-      "ticketCreated": "Ticket created."
+      "ticketCreated": "Ticket created.",
+      "compareLive": "Compare to Live",
+      "histDisabled": "Unavailable in replay",
+      "histTag": "history"
     },
     "analytics": {
       "scores": "Quality trend",
