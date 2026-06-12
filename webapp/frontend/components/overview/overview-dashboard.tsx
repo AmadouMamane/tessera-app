@@ -87,6 +87,7 @@ import {
   toneBg,
   toneText,
 } from "@/lib/overview";
+import { setTemporalContext } from "@/lib/temporal-context";
 
 const POLL_MS = 15_000;
 const POLL_FAST_MS = 10_000;
@@ -101,6 +102,9 @@ export function OverviewDashboard() {
   // settle, not one per pixel (the backend is rate-limited).
   const [selectedAt, setSelectedAt] = useState<number | null>(null);
   const [committedAt, setCommittedAt] = useState<number | null>(null);
+  // The visible window; lifted from the rail so the shared temporal context
+  // (and thus the topbar evidence pack) knows the active period.
+  const [periodKey, setPeriodKey] = useState("d7");
   useEffect(() => {
     const id = window.setTimeout(() => setCommittedAt(selectedAt), 250);
     return () => window.clearTimeout(id);
@@ -110,6 +114,11 @@ export function OverviewDashboard() {
   const asOf =
     mode === "replay" && committedAt != null ? new Date(committedAt).toISOString() : null;
   const historyMode = asOf != null;
+  // Mirror the temporal context so the topbar's evidence pack / report export is
+  // scoped to (period, asOf), not just "now" (ADR 0011 §3/§5).
+  useEffect(() => {
+    setTemporalContext({ asOf, period: periodKey });
+  }, [asOf, periodKey]);
   // Returning to live clears the focused instant so every block re-reads "now".
   function changeMode(next: "live" | "replay") {
     if (next === "live") setSelectedAt(null);
@@ -315,6 +324,8 @@ export function OverviewDashboard() {
           sloTarget={slo.data?.threshold}
           selectedAt={selectedAt}
           onSelectedAtChange={setSelectedAt}
+          periodKey={periodKey}
+          onPeriodChange={setPeriodKey}
           onModeChange={changeMode}
         />
       </div>
@@ -680,6 +691,8 @@ function TemporalRail({
   sloTarget,
   selectedAt,
   onSelectedAtChange,
+  periodKey,
+  onPeriodChange,
   onModeChange,
 }: {
   mode: "live" | "replay";
@@ -689,13 +702,16 @@ function TemporalRail({
   // Controlled by the page so the focused instant T drives every block (ADR 0011).
   selectedAt: number | null;
   onSelectedAtChange: Dispatch<SetStateAction<number | null>>;
+  periodKey: string;
+  onPeriodChange: (period: string) => void;
   onModeChange: (mode: "live" | "replay") => void;
 }) {
   const t = useTranslations("overview.time");
-  const [periodKey, setPeriodKey] = useState("d7");
   const [compare, setCompare] = useState("target");
-  // T being viewed lives at page level now; this is the rail's write handle.
+  // T being viewed and the period live at page level now; these are the rail's
+  // write handles into them.
   const setSelectedAt = onSelectedAtChange;
+  const setPeriodKey = onPeriodChange;
   const [playing, setPlaying] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -787,7 +803,7 @@ function TemporalRail({
         <span className="h-5 w-px bg-[var(--tessera-border)]" />
         <span className="text-sm text-[var(--tessera-text-muted)]">
           {t("period")} :{" "}
-          <span className="font-semibold text-[var(--tessera-text)]">{t("sevenDays")}</span>
+          <span className="font-semibold text-[var(--tessera-text)]">{t(periodKey)}</span>
         </span>
         {last ? (
           <span className="hidden text-xs text-[var(--tessera-text-muted)] md:inline">

@@ -47,6 +47,7 @@ import {
   getStoredModel,
   setStoredModel,
 } from "@/lib/models";
+import { getTemporalContext } from "@/lib/temporal-context";
 
 export interface TopbarContextItem {
   label: string;
@@ -85,21 +86,31 @@ function downloadJson(name: string, obj: unknown) {
   URL.revokeObjectURL(url);
 }
 
-/** Snapshot the live cockpit signals and download them as a report / evidence pack. */
+/**
+ * Snapshot the cockpit signals and download them as a report / evidence pack.
+ *
+ * Scoped to the cockpit's current temporal context `(period, asOf)` (ADR 0011
+ * §3/§5): in history mode the pack reflects the state as of T, not just "now".
+ * Audit integrity and the disclosure text are structural/static, so they stay
+ * live and are labelled as such.
+ */
 async function runAction(kind: "export" | "evidence") {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const { asOf, period } = getTemporalContext();
+  const at = asOf ?? undefined;
+  const scope = { generated_at: new Date().toISOString(), as_of: asOf, period };
   const settle = async <T,>(p: Promise<T>) => p.catch(() => null);
   if (kind === "evidence") {
     const [audit, aiAct, disclosure, pii] = await Promise.all([
       settle(fetchAuditIntegrity()),
-      settle(fetchAIAct()),
+      settle(fetchAIAct(undefined, at)),
       settle(fetchDisclosure()),
-      settle(fetchPiiLeak()),
+      settle(fetchPiiLeak(undefined, at)),
     ]);
     downloadJson(`tessera-evidence-pack-${stamp}.json`, {
-      generated_at: new Date().toISOString(),
+      ...scope,
       kind: "evidence_pack",
-      audit_integrity: audit,
+      audit_integrity: audit, // structural hash-chain check — always live
       ai_act: aiAct,
       disclosure,
       pii_leak: pii,
@@ -107,12 +118,12 @@ async function runAction(kind: "export" | "evidence") {
     return;
   }
   const [slo, cost, toxicity] = await Promise.all([
-    settle(fetchSLO()),
-    settle(fetchCost()),
-    settle(fetchToxicity()),
+    settle(fetchSLO(undefined, at)),
+    settle(fetchCost(undefined, at)),
+    settle(fetchToxicity(undefined, at)),
   ]);
   downloadJson(`tessera-report-${stamp}.json`, {
-    generated_at: new Date().toISOString(),
+    ...scope,
     kind: "overview_report",
     slo,
     cost,
