@@ -160,7 +160,8 @@
       "auditOk": "chain verified",
       "auditBroken": "chain broken",
       "vsBaseline": "{delta} vs target",
-      "noDataAtT": "No data as of T"
+      "noDataAtT": "No data as of T",
+      "noTrend": "no data"
     },
     "criticalControls": {
       "title": "Critical controls",

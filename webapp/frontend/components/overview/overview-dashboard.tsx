@@ -327,6 +327,7 @@ export function OverviewDashboard() {
           tone={sloReady ? rateTone(sloReady.good_rate) : "neutral"}
           icon={Activity}
           trend={trend.data?.buckets.map((b) => b.mean)}
+          trendEmptyLabel={t("kpi.noTrend")}
           loading={slo.isLoading && !slo.data}
           tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
         />
@@ -1205,6 +1206,7 @@ function KpiCard({
   tone,
   icon: Icon,
   trend,
+  trendEmptyLabel,
   loading,
   tag,
 }: {
@@ -1214,6 +1216,7 @@ function KpiCard({
   tone: OverviewTone;
   icon: typeof Activity;
   trend?: number[];
+  trendEmptyLabel?: string;
   loading?: boolean;
   tag?: TimeTag;
 }) {
@@ -1238,12 +1241,18 @@ function KpiCard({
           </span>
         </div>
         {delta ? <p className={cn("mt-1 text-[0.7rem]", toneText[tone])}>{delta}</p> : null}
-        {/* Reserve the sparkline's height whenever this card tracks a trend, so
-            scrubbing to a T with ≤1 point (no drawable curve) doesn't shrink the
-            card and jolt the KPI row. */}
+        {/* The card always reserves the chart slot when it tracks a trend, and
+            keeps a permanent horizontal axis: a real curve when there are enough
+            points, otherwise the bare axis + an "aucune donnée" label — so
+            scrubbing never shrinks the card or pops the curve in and out. */}
         {trend ? (
-          <div className="mt-2 h-8">
-            {trend.length > 1 ? <MetricSparkline values={trend} tone={tone} /> : null}
+          <div className="relative mt-2 h-8">
+            <MetricSparkline values={trend.length > 1 ? trend : []} tone={tone} />
+            {trend.length <= 1 ? (
+              <span className="absolute inset-0 flex items-center justify-center text-[0.58rem] text-[var(--muted-foreground)]">
+                {trendEmptyLabel}
+              </span>
+            ) : null}
           </div>
         ) : null}
       </CardContent>
@@ -1331,16 +1340,14 @@ function CriticalControlsTable({
                     </td>
                     <td className="py-2 pr-4 text-[var(--muted-foreground)]">{c.target}</td>
                     <td className="w-24 py-2 pr-4">
-                      {c.trend && c.trend.length > 1 ? (
-                        <MetricSparkline
-                          values={c.trend}
-                          tone={c.state.tone}
-                          className="h-6"
-                          height={26}
-                        />
-                      ) : (
-                        <span className="text-[var(--muted-foreground)]">—</span>
-                      )}
+                      {/* permanent axis on every row → constant cell height; a
+                          curve only where there's a real trend to draw */}
+                      <MetricSparkline
+                        values={c.trend && c.trend.length > 1 ? c.trend : []}
+                        tone={c.trend && c.trend.length > 1 ? c.state.tone : "neutral"}
+                        className="h-6"
+                        height={26}
+                      />
                     </td>
                     <td className="py-2 pr-4 text-[var(--muted-foreground)]">{ti(c.impactKey)}</td>
                   </tr>

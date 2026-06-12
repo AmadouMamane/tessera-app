@@ -160,7 +160,8 @@
       "auditOk": "Kette verifiziert",
       "auditBroken": "Kette unterbrochen",
       "vsBaseline": "{delta} vs Ziel",
-      "noDataAtT": "Keine Daten zu T"
+      "noDataAtT": "Keine Daten zu T",
+      "noTrend": "keine Daten"
     },
     "criticalControls": {
       "title": "Kritische Kontrollen",
