@@ -301,15 +301,20 @@ export function OverviewDashboard() {
 
   return (
     <div className="flex w-full flex-col gap-4 pb-8">
-      <TemporalRail
-        mode={mode}
-        liveStatus={liveStatus}
-        timeline={timeline.data}
-        sloTarget={slo.data?.threshold}
-        selectedAt={selectedAt}
-        onSelectedAtChange={setSelectedAt}
-        onModeChange={changeMode}
-      />
+      {/* The time rail stays pinned while the cockpit scrolls, so you can scrub
+          T and watch every block below update. -mx-4/px-4 + the canvas bg bleed
+          over the main's padding so cards never peek past it. */}
+      <div className="sticky top-0 z-30 -mx-4 bg-[var(--tessera-bg)] px-4 pb-2 pt-1">
+        <TemporalRail
+          mode={mode}
+          liveStatus={liveStatus}
+          timeline={timeline.data}
+          sloTarget={slo.data?.threshold}
+          selectedAt={selectedAt}
+          onSelectedAtChange={setSelectedAt}
+          onModeChange={changeMode}
+        />
+      </div>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <KpiCard
@@ -1248,7 +1253,10 @@ function KpiCard({
         {trend ? (
           <div className="relative mt-2 h-8">
             <MetricSparkline values={trend.length > 1 ? trend : []} tone={tone} />
-            {trend.length <= 1 ? (
+            {/* Only label the chart when the KPI itself has a value but no
+                drawable trend yet; when there's no data at all the delta line
+                already says "Aucune donnée à T", so don't repeat it here. */}
+            {trend.length <= 1 && value !== "—" ? (
               <span className="absolute inset-0 flex items-center justify-center text-[0.58rem] text-[var(--muted-foreground)]">
                 {trendEmptyLabel}
               </span>
