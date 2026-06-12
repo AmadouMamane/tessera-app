@@ -238,6 +238,7 @@ export function OverviewDashboard() {
         mode={mode}
         liveStatus={liveStatus}
         timeline={timeline.data}
+        sloTarget={slo.data?.threshold}
         onModeChange={setMode}
       />
 
@@ -498,16 +499,18 @@ function TemporalRail({
   mode,
   liveStatus,
   timeline,
+  sloTarget,
   onModeChange,
 }: {
   mode: "live" | "replay";
   liveStatus: string;
   timeline?: TimelineReport;
+  sloTarget?: number;
   onModeChange: (mode: "live" | "replay") => void;
 }) {
   const t = useTranslations("overview.time");
   const [periodKey, setPeriodKey] = useState("d7");
-  const [compare, setCompare] = useState("prev");
+  const [compare, setCompare] = useState("target");
   // T being viewed; null = live (now). A number is a paused instant on the rail.
   const [selectedAt, setSelectedAt] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -538,16 +541,18 @@ function TemporalRail({
       v: Number.parseFloat(e.label.replace(/[^0-9.]/g, "")),
     }))
     .filter((p) => Number.isFinite(p.v));
-  const baselineScore = scorePoints[0]?.v ?? null;
+  // Natural, computable baselines: the quality target (SLO), or the present value.
+  const presentScore = scorePoints.length
+    ? scorePoints.reduce((best, p) => (Math.abs(p.at - end) < Math.abs(best.at - end) ? p : best)).v
+    : null;
+  const baseline =
+    compare === "none" ? null : compare === "now" ? presentScore : (sloTarget ?? 0.8); // "target"
   // Score nearest the focused instant (present included), for the vs-baseline delta.
   const nearestScore = scorePoints.reduce<{ v: number; d: number } | null>((best, p) => {
     const d = Math.abs(p.at - currentT);
     return !best || d < best.d ? { v: p.v, d } : best;
   }, null);
-  const baselineDelta =
-    compare !== "none" && baselineScore != null && nearestScore != null
-      ? nearestScore.v - baselineScore
-      : null;
+  const baselineDelta = baseline != null && nearestScore != null ? nearestScore.v - baseline : null;
 
   function seekToClientX(clientX: number) {
     const el = trackRef.current;
@@ -672,11 +677,11 @@ function TemporalRail({
             onChange={(e) => setCompare(e.target.value)}
             className="cursor-pointer rounded bg-transparent font-semibold text-[var(--foreground)] outline-none"
           >
-            <option value="prev" className="bg-[var(--card)]">
-              {t("previousWeek")}
+            <option value="target" className="bg-[var(--card)]">
+              {t("baselineTarget")}
             </option>
-            <option value="period" className="bg-[var(--card)]">
-              {t("previousPeriod")}
+            <option value="now" className="bg-[var(--card)]">
+              {t("baselineNow")}
             </option>
             <option value="none" className="bg-[var(--card)]">
               {t("noBaseline")}
@@ -869,10 +874,10 @@ function TemporalRail({
         ) : (
           <span className="text-[var(--muted-foreground)]">{t("noEventNear")}</span>
         )}
-        {baselineDelta != null ? (
+        {baselineDelta != null && baseline != null ? (
           <Badge tone={baselineDelta >= 0 ? "success" : "danger"}>
             {baselineDelta >= 0 ? "+" : ""}
-            {baselineDelta.toFixed(2)} {t("vsBaseline")}
+            {baselineDelta.toFixed(2)} {t("vsBaseline")} {baseline.toFixed(2)}
           </Badge>
         ) : null}
         {selectedAt != null ? (

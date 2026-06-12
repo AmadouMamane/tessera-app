@@ -135,7 +135,11 @@
       "exitReplay": "Exit replay",
       "play": "Play",
       "pause": "Pause",
-      "liveState": "Live state"
+      "liveState": "Live state",
+      "baselineStart": "period start",
+      "baselineMean": "period average",
+      "baselineTarget": "target",
+      "baselineNow": "present"
     },
     "kpi": {
       "quality": "Quality score (SLO)",

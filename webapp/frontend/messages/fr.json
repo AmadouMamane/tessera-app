@@ -135,7 +135,11 @@
       "exitReplay": "Quitter le replay",
       "play": "Lecture",
       "pause": "Pause",
-      "liveState": "État live"
+      "liveState": "État live",
+      "baselineStart": "début de période",
+      "baselineMean": "moyenne période",
+      "baselineTarget": "objectif (cible)",
+      "baselineNow": "présent"
     },
     "kpi": {
       "quality": "Score qualité (SLO)",
