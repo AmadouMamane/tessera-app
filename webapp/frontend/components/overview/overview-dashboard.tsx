@@ -145,21 +145,26 @@ export function OverviewDashboard() {
     placeholderData: keepPreviousData,
   });
   const whatChanged = useQuery({
-    queryKey: ["ov-what-changed"],
-    queryFn: ({ signal }) => fetchWhatChanged(signal),
-    refetchInterval: 20_000,
+    queryKey: ["ov-what-changed", asOf],
+    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : 20_000,
+    placeholderData: keepPreviousData,
   });
 
   // --- Safety / guard signals ---------------------------------------------
+  // refusal + firewall measure a FIXED corpus through the guard "now" — a
+  // property of the current policy, identical at any T — so they stay live.
   const toxicity = useQuery({
-    queryKey: ["ov-toxicity"],
-    queryFn: ({ signal }) => fetchToxicity(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["ov-toxicity", asOf],
+    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const piiLeak = useQuery({
-    queryKey: ["ov-pii"],
-    queryFn: ({ signal }) => fetchPiiLeak(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["ov-pii", asOf],
+    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const refusal = useQuery({
     queryKey: ["ov-refusal"],
@@ -167,14 +172,16 @@ export function OverviewDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
   const conformance = useQuery({
-    queryKey: ["ov-conformance"],
-    queryFn: ({ signal }) => fetchConformance(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["ov-conformance", asOf],
+    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const tools = useQuery({
-    queryKey: ["ov-tools"],
-    queryFn: ({ signal }) => fetchToolValidity(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["ov-tools", asOf],
+    queryFn: ({ signal }) => fetchToolValidity(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const firewall = useQuery({
     queryKey: ["ov-firewall"],
@@ -184,31 +191,38 @@ export function OverviewDashboard() {
 
   // --- Incidents / risk ----------------------------------------------------
   const anomalies = useQuery({
-    queryKey: ["ov-anomalies"],
-    queryFn: ({ signal }) => fetchAnomalies(signal),
-    refetchInterval: 20_000,
+    queryKey: ["ov-anomalies", asOf],
+    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : 20_000,
+    placeholderData: keepPreviousData,
   });
   const playbooks = useQuery({
-    queryKey: ["ov-playbooks"],
-    queryFn: ({ signal }) => fetchPlaybooks(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["ov-playbooks", asOf],
+    queryFn: ({ signal }) => fetchPlaybooks(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const roadmap = useQuery({
-    queryKey: ["ov-roadmap"],
-    queryFn: ({ signal }) => fetchRoadmap(signal),
-    refetchInterval: 20_000,
+    queryKey: ["ov-roadmap", asOf],
+    queryFn: ({ signal }) => fetchRoadmap(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : 20_000,
+    placeholderData: keepPreviousData,
   });
 
   // --- Cost / compliance / audit ------------------------------------------
+  // audit integrity is a structural hash-chain check (a "now" property) and is
+  // bearer-gated, so it stays live.
   const cost = useQuery({
-    queryKey: ["ov-cost"],
-    queryFn: ({ signal }) => fetchCost(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["ov-cost", asOf],
+    queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const aiAct = useQuery({
-    queryKey: ["ov-ai-act"],
-    queryFn: ({ signal }) => fetchAIAct(signal),
-    refetchInterval: 30_000,
+    queryKey: ["ov-ai-act", asOf],
+    queryFn: ({ signal }) => fetchAIAct(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : 30_000,
+    placeholderData: keepPreviousData,
   });
   const audit = useQuery({
     queryKey: ["ov-audit"],
@@ -216,9 +230,10 @@ export function OverviewDashboard() {
     refetchInterval: POLL_MS,
   });
   const funnel = useQuery({
-    queryKey: ["ov-funnel"],
-    queryFn: ({ signal }) => fetchFunnel(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["ov-funnel", asOf],
+    queryFn: ({ signal }) => fetchFunnel(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const scores = useQuery({
     queryKey: ["ov-scores", asOf],
@@ -318,7 +333,7 @@ export function OverviewDashboard() {
           }
           icon={ShieldAlert}
           loading={controls.length === 0 && slo.isLoading}
-          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
+          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
         />
         <KpiCard
           label={t("kpi.openRisks")}
@@ -330,7 +345,7 @@ export function OverviewDashboard() {
           tone={openRisks === 0 ? "success" : openRisks > 3 ? "danger" : "warning"}
           icon={TriangleAlert}
           loading={anomalies.isLoading && playbooks.isLoading}
-          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
+          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
         />
         <KpiCard
           label={t("kpi.regression")}
@@ -355,7 +370,7 @@ export function OverviewDashboard() {
           }
           icon={GitBranch}
           loading={whatChanged.isLoading}
-          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
+          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
         />
         <KpiCard
           label={t("kpi.cost")}
@@ -366,7 +381,7 @@ export function OverviewDashboard() {
           tone={cost.data && cost.data.n_anomalies > 0 ? "warning" : "info"}
           icon={Coins}
           loading={cost.isLoading}
-          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
+          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
         />
         <KpiCard
           label={t("kpi.audit")}
@@ -386,20 +401,29 @@ export function OverviewDashboard() {
             loading={slo.isLoading && controls.length === 0}
             historyMode={historyMode}
           />
-          <ControlCasesSection playbooks={playbooks.data} loading={playbooks.isLoading} />
+          <ControlCasesSection
+            playbooks={playbooks.data}
+            loading={playbooks.isLoading}
+            historyMode={historyMode}
+          />
           <AnalyticsSection
             trend={trend.data}
             funnel={funnel.data}
             controls={controls}
             historyMode={historyMode}
           />
-          <GovernanceSection roadmap={roadmap.data} loading={roadmap.isLoading} />
+          <GovernanceSection
+            roadmap={roadmap.data}
+            loading={roadmap.isLoading}
+            historyMode={historyMode}
+          />
         </div>
         <aside className="flex min-w-0 flex-col gap-4">
           <IncidentsCard
             playbooks={playbooks.data}
             anomalies={anomalies.data}
             loading={playbooks.isLoading && anomalies.isLoading}
+            historyMode={historyMode}
           />
           <ReleaseCard
             whatChanged={whatChanged.data}
@@ -408,6 +432,7 @@ export function OverviewDashboard() {
             pii={piiLeak.data}
             aiActRate={aiAct.data?.compliance_rate}
             conformance={conformance.data}
+            historyMode={historyMode}
           />
           <QuickActionsCard
             onReplayAt={() => setMode("replay")}
@@ -484,7 +509,7 @@ function buildControls(d: {
       state: controlState(d.toxicity.toxicity_rate, 0.001, "lower"),
       severity: Math.min(d.toxicity.toxicity_rate * 50, 1),
       impactKey: "safety",
-      asOfCapable: false,
+      asOfCapable: true, // bundle-backed (captured_at filterable)
     });
   }
   if (d.pii && d.pii.n_turns > 0) {
@@ -495,7 +520,7 @@ function buildControls(d: {
       state: controlState(d.pii.leak_rate, 0.005, "lower"),
       severity: Math.min(d.pii.leak_rate * 20, 1),
       impactKey: "privacy",
-      asOfCapable: false,
+      asOfCapable: true, // bundle-backed (captured_at filterable)
     });
   }
   if (d.refusal && d.refusal.n_legit + d.refusal.n_forbidden > 0) {
@@ -507,7 +532,7 @@ function buildControls(d: {
       state: controlState(worst, 0.05, "lower"),
       severity: Math.min(worst, 1),
       impactKey: "quality",
-      asOfCapable: false,
+      asOfCapable: false, // fixed-corpus probe of the current policy → live by nature
     });
   }
   if (d.conformance && d.conformance.n_calls > 0) {
@@ -518,7 +543,7 @@ function buildControls(d: {
       state: controlState(d.conformance.conformance_rate, 0.95, "higher"),
       severity: 1 - d.conformance.conformance_rate,
       impactKey: "tools",
-      asOfCapable: false,
+      asOfCapable: true, // audit-log-backed (occurred_at filterable)
     });
   }
   if (d.tools && d.tools.total > 0) {
@@ -529,7 +554,7 @@ function buildControls(d: {
       state: controlState(d.tools.validity_rate, 0.95, "higher"),
       severity: 1 - d.tools.validity_rate,
       impactKey: "tools",
-      asOfCapable: false,
+      asOfCapable: true, // audit-log-backed (occurred_at filterable)
     });
   }
   if (d.firewall && d.firewall.n_positive > 0) {
@@ -540,7 +565,7 @@ function buildControls(d: {
       state: controlState(d.firewall.recall, 0.9, "higher"),
       severity: 1 - d.firewall.recall,
       impactKey: "security",
-      asOfCapable: false,
+      asOfCapable: false, // fixed adversarial-corpus probe → live by nature
     });
   }
   return rows;
@@ -1283,12 +1308,17 @@ const caseBorder: Record<OverviewTone, string> = {
 function ControlCasesSection({
   playbooks,
   loading,
-}: { playbooks?: PlaybookReport; loading: boolean }) {
+  historyMode,
+}: { playbooks?: PlaybookReport; loading: boolean; historyMode: boolean }) {
   const t = useTranslations("overview.controlCases");
+  const tt = useTranslations("overview.time");
   return (
     <Card className="rounded-lg">
       <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
-        <CardTitle className="text-sm">{t("title")}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {t("title")}
+          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+        </CardTitle>
         <span className="text-xs text-[var(--muted-foreground)]">
           {t("count", { n: playbooks?.n_triggered ?? 0 })}
         </span>
@@ -1335,12 +1365,15 @@ function IncidentsCard({
   playbooks,
   anomalies,
   loading,
+  historyMode,
 }: {
   playbooks?: PlaybookReport;
   anomalies?: AnomalyReport;
   loading: boolean;
+  historyMode: boolean;
 }) {
   const t = useTranslations("overview.rightColumn");
+  const tt = useTranslations("overview.time");
   const items: { label: string; tone: OverviewTone; meta: string }[] = [];
   for (const p of playbooks?.playbooks ?? []) {
     items.push({
@@ -1361,7 +1394,10 @@ function IncidentsCard({
   return (
     <Card className="rounded-lg">
       <CardHeader className="flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm">{t("incidents")}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {t("incidents")}
+          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {loading ? (
@@ -1392,6 +1428,7 @@ function ReleaseCard({
   pii,
   aiActRate,
   conformance,
+  historyMode,
 }: {
   whatChanged?: import("@/lib/api/schemas").WhatChanged;
   slo?: SLOReport;
@@ -1399,8 +1436,10 @@ function ReleaseCard({
   pii?: PIILeakSummary;
   aiActRate?: number;
   conformance?: ConformanceReport;
+  historyMode: boolean;
 }) {
   const t = useTranslations("overview.rightColumn");
+  const tt = useTranslations("overview.time");
 
   const qualityPass = slo ? !slo.breaching : undefined;
   const securityPass =
@@ -1422,7 +1461,10 @@ function ReleaseCard({
     <Card className="rounded-lg">
       <CardHeader className="flex-row items-start justify-between pb-2">
         <div>
-          <CardTitle className="text-sm">{t("release")}</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            {t("release")}
+            {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+          </CardTitle>
           {whatChanged?.available &&
           whatChanged.score_before != null &&
           whatChanged.score_after != null ? (
@@ -1657,7 +1699,7 @@ function AnalyticsSection({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("distribution")}
-            {historyMode ? <TimeTagChip tag={{ label: tt("liveSignal"), kind: "live" }} /> : null}
+            {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-xs">
@@ -1692,7 +1734,7 @@ function AnalyticsSection({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("impact")}
-            {historyMode ? <TimeTagChip tag={{ label: tt("liveSignal"), kind: "live" }} /> : null}
+            {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
@@ -1736,15 +1778,21 @@ const severityTone: Record<string, OverviewTone> = {
 function GovernanceSection({
   roadmap,
   loading,
+  historyMode,
 }: {
   roadmap?: import("@/lib/api/schemas").RoadmapReport;
   loading: boolean;
+  historyMode: boolean;
 }) {
   const t = useTranslations("overview.governance");
+  const tt = useTranslations("overview.time");
   return (
     <Card className="rounded-lg">
       <CardHeader className="flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm">{t("title")}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {t("title")}
+          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+        </CardTitle>
         <Badge tone="neutral">{t("subtitle")}</Badge>
       </CardHeader>
       <CardContent className="grid gap-2 sm:grid-cols-2">

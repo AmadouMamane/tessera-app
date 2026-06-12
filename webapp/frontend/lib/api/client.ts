@@ -312,9 +312,9 @@ export async function fetchDisclosure(signal?: AbortSignal): Promise<DisclosureR
   return request("/observability/disclosure", { signal }, DisclosureReportSchema);
 }
 
-/** EU AI Act compliance posture: transparency, oversight, traceability (#76). */
-export async function fetchAIAct(signal?: AbortSignal): Promise<AIActReport> {
-  return request("/observability/ai-act", { signal }, AIActReportSchema);
+/** EU AI Act compliance posture: transparency, oversight, traceability (#76), live or as of T. */
+export async function fetchAIAct(signal?: AbortSignal, at?: string): Promise<AIActReport> {
+  return request(withAsOf("/observability/ai-act", at), { signal }, AIActReportSchema);
 }
 
 /** Per-locale message completeness vs the default locale (#77). */
@@ -322,9 +322,9 @@ export async function fetchLocalization(signal?: AbortSignal): Promise<Localizat
   return request("/observability/localization", { signal }, LocalizationReportSchema);
 }
 
-/** Incident playbooks triggered by the current live signals (#115). */
-export async function fetchPlaybooks(signal?: AbortSignal): Promise<PlaybookReport> {
-  return request("/observability/playbooks", { signal }, PlaybookReportSchema);
+/** Incident playbooks triggered by the live (or as-of-T) signals (#115). */
+export async function fetchPlaybooks(signal?: AbortSignal, at?: string): Promise<PlaybookReport> {
+  return request(withAsOf("/observability/playbooks", at), { signal }, PlaybookReportSchema);
 }
 
 /** Tool least-privilege: granted vs actually-used tools from the audit (#101). */
@@ -337,9 +337,9 @@ export async function fetchCrossTenant(signal?: AbortSignal): Promise<CrossTenan
   return request("/observability/cross-tenant", { signal }, CrossTenantReportSchema);
 }
 
-/** Toxicity / harmful-output rate over captured answers (#60). */
-export async function fetchToxicity(signal?: AbortSignal): Promise<ToxicityReport> {
-  return request("/observability/toxicity", { signal }, ToxicityReportSchema);
+/** Toxicity / harmful-output rate over captured answers (#60), live or as of T. */
+export async function fetchToxicity(signal?: AbortSignal, at?: string): Promise<ToxicityReport> {
+  return request(withAsOf("/observability/toxicity", at), { signal }, ToxicityReportSchema);
 }
 
 /** Distil high-scoring captured turns into an SFT dataset (#122). */
@@ -382,9 +382,9 @@ export async function fetchJourney(signal?: AbortSignal): Promise<JourneyReport>
   return request("/observability/journey", { signal }, JourneyReportSchema);
 }
 
-/** Telemetry-mined product backlog: ranked roadmap items (#124). */
-export async function fetchRoadmap(signal?: AbortSignal): Promise<RoadmapReport> {
-  return request("/observability/roadmap", { signal }, RoadmapReportSchema);
+/** Telemetry-mined product backlog: ranked roadmap items (#124), live or as of T. */
+export async function fetchRoadmap(signal?: AbortSignal, at?: string): Promise<RoadmapReport> {
+  return request(withAsOf("/observability/roadmap", at), { signal }, RoadmapReportSchema);
 }
 
 /** Staleness of the ingested regulatory corpora vs their review horizon (#50). */
@@ -436,9 +436,12 @@ export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<Firew
   return request("/observability/firewall-efficacy", { signal }, FirewallEfficacySchema);
 }
 
-/** Schema/format conformance of tool-call arguments from the audit trail (#47). */
-export async function fetchConformance(signal?: AbortSignal): Promise<ConformanceReport> {
-  return request("/observability/conformance", { signal }, ConformanceReportSchema);
+/** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */
+export async function fetchConformance(
+  signal?: AbortSignal,
+  at?: string,
+): Promise<ConformanceReport> {
+  return request(withAsOf("/observability/conformance", at), { signal }, ConformanceReportSchema);
 }
 
 /** Topology fingerprint of the live agent graph vs the golden pin (#87). */
@@ -461,9 +464,9 @@ export async function fetchToolLoops(signal?: AbortSignal): Promise<ToolLoopRepo
   return request("/observability/tool-loops", { signal }, ToolLoopReportSchema);
 }
 
-/** Tool-call validity (allowed vs denied, argument failures) from the audit trail. */
-export async function fetchToolValidity(signal?: AbortSignal): Promise<ToolValidity> {
-  return request("/observability/tool-validity", { signal }, ToolValiditySchema);
+/** Tool-call validity (allowed vs denied, argument failures) from the audit trail, live or as of T. */
+export async function fetchToolValidity(signal?: AbortSignal, at?: string): Promise<ToolValidity> {
+  return request(withAsOf("/observability/tool-validity", at), { signal }, ToolValiditySchema);
 }
 
 /** Language-routing health: served vs detected language + code-switching. */
@@ -476,9 +479,9 @@ export async function fetchContextOverflow(signal?: AbortSignal): Promise<Overfl
   return request("/observability/context-overflow", { signal }, OverflowReportSchema);
 }
 
-/** Token-cost distribution and token-burn anomalies over captured turns (#33). */
-export async function fetchCost(signal?: AbortSignal): Promise<CostReport> {
-  return request("/observability/cost", { signal }, CostReportSchema);
+/** Token-cost distribution and token-burn anomalies over captured turns (#33), live or as of T. */
+export async function fetchCost(signal?: AbortSignal, at?: string): Promise<CostReport> {
+  return request(withAsOf("/observability/cost", at), { signal }, CostReportSchema);
 }
 
 /** Business-intent mix and routing confidence over captured questions (#63). */
@@ -491,14 +494,14 @@ export async function fetchRefusal(signal?: AbortSignal): Promise<RefusalReport>
   return request("/observability/refusal", { signal }, RefusalReportSchema);
 }
 
-/** Anomalous-conversation detection: long/looping/repetitive sessions (#69). */
-export async function fetchAnomalies(signal?: AbortSignal): Promise<AnomalyReport> {
-  return request("/observability/anomalies", { signal }, AnomalyReportSchema);
+/** Anomalous-conversation detection: long/looping/repetitive sessions (#69), live or as of T. */
+export async function fetchAnomalies(signal?: AbortSignal, at?: string): Promise<AnomalyReport> {
+  return request(withAsOf("/observability/anomalies", at), { signal }, AnomalyReportSchema);
 }
 
-/** Root-cause "what changed": lineage diff + attribution of a score delta (#17). */
-export async function fetchWhatChanged(signal?: AbortSignal): Promise<WhatChanged> {
-  return request("/observability/what-changed", { signal }, WhatChangedSchema);
+/** Root-cause "what changed": lineage diff + attribution of a score delta (#17), live or as of T. */
+export async function fetchWhatChanged(signal?: AbortSignal, at?: string): Promise<WhatChanged> {
+  return request(withAsOf("/observability/what-changed", at), { signal }, WhatChangedSchema);
 }
 
 /** Multi-turn self-contradictions across captured sessions (#30). */
@@ -526,14 +529,14 @@ export async function fetchLocaleFormat(signal?: AbortSignal): Promise<LocaleFor
   return request("/observability/locale-format", { signal }, LocaleFormatSummarySchema);
 }
 
-/** Output PII-leak rate: PII in answers absent from their grounding (#38). */
-export async function fetchPiiLeak(signal?: AbortSignal): Promise<PIILeakSummary> {
-  return request("/observability/pii-leak", { signal }, PIILeakSummarySchema);
+/** Output PII-leak rate: PII in answers absent from their grounding (#38), live or as of T. */
+export async function fetchPiiLeak(signal?: AbortSignal, at?: string): Promise<PIILeakSummary> {
+  return request(withAsOf("/observability/pii-leak", at), { signal }, PIILeakSummarySchema);
 }
 
-/** Per-language conversation funnel from scored turns (#66). */
-export async function fetchFunnel(signal?: AbortSignal): Promise<FunnelReport> {
-  return request("/observability/funnel", { signal }, FunnelReportSchema);
+/** Per-language conversation funnel from scored turns (#66), live or as of T. */
+export async function fetchFunnel(signal?: AbortSignal, at?: string): Promise<FunnelReport> {
+  return request(withAsOf("/observability/funnel", at), { signal }, FunnelReportSchema);
 }
 
 /** Session-level goal-completion analytics. */
