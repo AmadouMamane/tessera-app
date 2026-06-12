@@ -63,6 +63,7 @@ ideas (e.g. "ties #48") point at these. Do not renumber.
 | 44. Edge / real-time | 182–187 |
 | 45. Multi-agent / swarm | 188–193 |
 | 46. Formal / verification | 194–200 |
+| 47. Temporal control (cockpit time rail) | 201 |
 
 ---
 
@@ -363,3 +364,6 @@ ideas (e.g. "ties #48") point at these. Do not renumber.
 198. **Conformance to a behavioural spec** — a formal "must / must-never" spec verified against the trace stream.
 199. **Differential verification across versions** — prove v2 preserves v1's safety properties (regression of *properties*, #15).
 200. **Model checking of the agent graph** — explore reachable LangGraph states for safety violations offline.
+
+## 47. Temporal control (cockpit time rail)
+201. **Temporal lineage timeline** — a single dated event stream powering the cockpit's time rail: quality points (online-eval scores), judge-model changes, agent-model deploys and clustered guard denials, derived from the score buffer + tamper-evident audit log. The rail reads every view at an instant T against a baseline (*vue = Registre(état) × Backend(valeurs à T)*); this timeline is the scrubber's event source. Extends "what changed" (#17) and lineage/SBOM (#10) into a continuous temporal axis. Endpoint: `GET /observability/timeline`. *Status: active (events derived from real signals); the value-at-T / compare-to-baseline query parameter on every endpoint is the planned next step.*

@@ -227,3 +227,4 @@ signals:
   - {id: 198, key: behavioural-spec, label: "Behavioural-spec conformance", axis: 46, kind: capability, entite: graphe, page: conformite, section: na, cycle: ci, engagement: gate, status: planned}
   - {id: 199, key: differential-verification, label: "Differential safety verification", axis: 46, kind: capability, entite: modele, page: securite, section: na, cycle: ci, engagement: gate, status: planned}
   - {id: 200, key: model-checking-graph, label: "Model checking of the agent graph", axis: 46, kind: capability, entite: graphe, page: fiabilite, section: na, cycle: ci, engagement: gate, status: planned}
+  - {id: 201, key: temporal-timeline, label: "Temporal lineage timeline (cockpit time rail)", axis: 47, kind: signal, entite: cockpit, page: plateforme, section: etat, cycle: online, engagement: none, status: active}

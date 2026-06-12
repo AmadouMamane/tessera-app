@@ -205,6 +205,107 @@ async def observability_scores() -> dict[str, object]:
     return {"scores": recent_scores()}
 
 
+@router.get("/observability/timeline")
+async def observability_timeline() -> dict[str, object]:
+    """Temporal control backbone — dated lineage events for the cockpit time rail.
+
+    Every cockpit view reads at an instant T and compares to a baseline; this is
+    the event scrubber behind that control. Events are *derived from real
+    signals*, never fabricated: quality points (online-eval scores), judge-model
+    changes, agent-model changes and guard denials (the tamper-evident audit
+    log). Powers the "what changed (#17)" / lineage (#10) narrative on the rail.
+    """
+    from datetime import UTC, datetime
+
+    events: list[dict[str, object]] = []
+
+    # Quality points + judge-model change detection (scores are newest last).
+    ordered = sorted(recent_scores(), key=lambda s: str(s.get("scored_at", "")))
+    prev_judge: str | None = None
+    for s in ordered:
+        at = str(s.get("scored_at", ""))
+        if not at:
+            continue
+        score = float(s.get("score", 0.0))  # type: ignore[arg-type]
+        good, fair = 0.8, 0.5
+        tone = "success" if score >= good else "warning" if score >= fair else "danger"
+        events.append(
+            {
+                "at": at,
+                "kind": "score",
+                "label": f"Score {score:.2f}",
+                "detail": f"{s.get('metric', '')} · {str(s.get('language', '')).upper()}",
+                "tone": tone,
+            }
+        )
+        judge = s.get("judge_model")
+        if isinstance(judge, str) and judge and judge != prev_judge:
+            if prev_judge is not None:
+                events.append(
+                    {
+                        "at": at,
+                        "kind": "judge_change",
+                        "label": "Juge mis à jour",
+                        "detail": f"{prev_judge} → {judge} — re-calibration κ requise",
+                        "tone": "gold",
+                    }
+                )
+            prev_judge = judge
+
+    # Guard denials + agent-model changes from the tamper-evident audit log.
+    # Denials are clustered by hour so a busy log becomes a few legible scrubber
+    # markers (count carried in the label) rather than hundreds of dots.
+    prev_model: str | None = None
+    denials: dict[str, dict[str, object]] = {}
+    for entry in _read_audit_entries():
+        at = str(entry.get("occurred_at", ""))
+        if not at:
+            continue
+        outcome = str(entry.get("outcome", ""))
+        if outcome not in ("allowed", "allow"):
+            bucket = at[:13]  # YYYY-MM-DDTHH
+            agg = denials.setdefault(
+                bucket, {"at": at, "count": 0, "target": entry.get("target", "")}
+            )
+            agg["count"] = int(agg["count"]) + 1  # type: ignore[arg-type]
+            agg["at"] = at  # latest occurrence in the hour
+        model = entry.get("model")
+        if isinstance(model, str) and model and model != prev_model:
+            if prev_model is not None:
+                events.append(
+                    {
+                        "at": at,
+                        "kind": "model_change",
+                        "label": "Modèle déployé",
+                        "detail": f"{prev_model} → {model}",
+                        "tone": "info",
+                    }
+                )
+            prev_model = model
+
+    for agg in denials.values():
+        events.append(
+            {
+                "at": str(agg["at"]),
+                "kind": "guard_denial",
+                "label": f"Garde — {agg['count']} refus",
+                "detail": str(agg["target"]),
+                "tone": "danger",
+            }
+        )
+
+    events.sort(key=lambda e: str(e["at"]))
+    now = datetime.now(UTC).isoformat()
+    window_start = str(events[0]["at"]) if events else now
+    return {
+        "window_start": window_start,
+        "window_end": now,
+        "baseline_at": window_start,
+        "n_events": len(events),
+        "events": events[-60:],
+    }
+
+
 @router.get("/observability/slo")
 async def observability_slo() -> dict[str, object]:
     """Quality SLO + error-budget burn-rate over the recent faithfulness scores."""
@@ -243,9 +344,7 @@ async def observability_tail_sampling() -> dict[str, object]:
 @router.get("/observability/reproducibility")
 async def observability_reproducibility() -> dict[str, object]:
     """Trace-shape reproducibility / non-determinism across repeated questions (#86)."""
-    turns = [
-        (b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()
-    ]
+    turns = [(b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()]
     return asdict(reproducibility_mod.detect_nondeterminism(turns))
 
 
@@ -545,9 +644,7 @@ async def observability_memory_inventory() -> dict[str, object]:
 @router.get("/observability/handoffs")
 async def observability_handoffs() -> dict[str, object]:
     """Delegation-chain handoff tracing and broken-handoff detection (#189)."""
-    turns = [
-        (b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()
-    ]
+    turns = [(b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()]
     return asdict(handoffs_mod.analyze_handoffs(turns))
 
 
@@ -1034,9 +1131,7 @@ async def observability_steganography(bundle_id: str) -> dict[str, object]:
 @router.get("/observability/trace-snapshot")
 async def observability_trace_snapshot() -> dict[str, object]:
     """Golden-trace snapshot diff of executed-node shapes across turns (#41)."""
-    turns = [
-        (b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()
-    ]
+    turns = [(b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()]
     return asdict(trace_snapshot_mod.diff_traces(turns))
 
 
