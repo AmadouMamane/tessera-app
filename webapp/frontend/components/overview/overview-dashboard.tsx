@@ -255,20 +255,27 @@ export function OverviewDashboard() {
     return health.data?.status ?? t("status.live");
   }, [health.data?.status, health.isError, readiness.data?.status, readiness.isError, t]);
 
-  // Derived signal rows — only signals that returned data are included.
+  // Derived signal rows. At live, only signals that returned data are shown. In
+  // history mode we keep a stable row for every tracked signal — empty ones read
+  // "—" at T instead of vanishing — so scrubbing doesn't make the table jump
+  // (no row pop-in/out → no page-level yoyo).
   const controls = useMemo(
     () =>
-      buildControls({
-        slo: slo.data,
-        trend: trend.data,
-        toxicity: toxicity.data,
-        pii: piiLeak.data,
-        refusal: refusal.data,
-        conformance: conformance.data,
-        tools: tools.data,
-        firewall: firewall.data,
-      }),
+      buildControls(
+        {
+          slo: slo.data,
+          trend: trend.data,
+          toxicity: toxicity.data,
+          pii: piiLeak.data,
+          refusal: refusal.data,
+          conformance: conformance.data,
+          tools: tools.data,
+          firewall: firewall.data,
+        },
+        historyMode,
+      ),
     [
+      historyMode,
       slo.data,
       trend.data,
       toxicity.data,
@@ -280,9 +287,12 @@ export function OverviewDashboard() {
     ],
   );
 
-  const failing = controls.filter((c) => c.state.key !== "ok");
+  // Counts/derived metrics ignore the "no data at T" placeholder rows so the
+  // numbers stay honest; only the table renders the full, stable row set.
+  const activeControls = controls.filter((c) => !c.noData);
+  const failing = activeControls.filter((c) => c.state.key !== "ok");
   const openRisks = (anomalies.data?.n_anomalous ?? 0) + (playbooks.data?.n_triggered ?? 0);
-  const signalsLive = controls.length;
+  const signalsLive = activeControls.length;
   // Only treat the SLO as readable when it actually scored turns: at a T before
   // any data, the backend honestly returns n=0 / good_rate=0 — showing "0/100"
   // there would fabricate a bad score, so the card reads "—" instead (matching
@@ -409,7 +419,7 @@ export function OverviewDashboard() {
           <AnalyticsSection
             trend={trend.data}
             funnel={funnel.data}
-            controls={controls}
+            controls={activeControls}
             historyMode={historyMode}
           />
           <GovernanceSection
@@ -448,7 +458,7 @@ export function OverviewDashboard() {
       </div>
 
       <TrustFooter
-        controls={controls}
+        controls={activeControls}
         verified={audit.data?.verified}
         auditLength={audit.data?.length}
         systemsOk={!health.isError && !readiness.isError && readiness.data?.status === "ready"}
@@ -473,58 +483,98 @@ interface ControlRow {
   trend?: number[];
   /** True when the row's source is persisted, so it can be read "à T" (ADR 0011). */
   asOfCapable: boolean;
+  /** Placeholder row: the signal is tracked but has no data at the focused T. */
+  noData?: boolean;
 }
 
-function buildControls(d: {
-  slo?: SLOReport;
-  trend?: TrendReport;
-  toxicity?: ToxicityReport;
-  pii?: PIILeakSummary;
-  refusal?: RefusalReport;
-  conformance?: ConformanceReport;
-  tools?: ToolValidity;
-  firewall?: FirewallEfficacy;
-}): ControlRow[] {
+const NEUTRAL_STATE: ControlState = { key: "ok", tone: "neutral" };
+
+/** Stable "—" placeholder so a tracked-but-empty-at-T signal keeps its row. */
+function noDataRow(
+  id: string,
+  target: string,
+  impactKey: string,
+  asOfCapable: boolean,
+): ControlRow {
+  return {
+    id,
+    value: "—",
+    target,
+    state: NEUTRAL_STATE,
+    severity: 0,
+    impactKey,
+    asOfCapable,
+    noData: true,
+  };
+}
+
+function buildControls(
+  d: {
+    slo?: SLOReport;
+    trend?: TrendReport;
+    toxicity?: ToxicityReport;
+    pii?: PIILeakSummary;
+    refusal?: RefusalReport;
+    conformance?: ConformanceReport;
+    tools?: ToolValidity;
+    firewall?: FirewallEfficacy;
+  },
+  historyMode: boolean,
+): ControlRow[] {
   const rows: ControlRow[] = [];
 
-  if (d.slo && d.slo.n > 0) {
+  // Each signal: a real row when it has data; in history mode, a stable "—"
+  // placeholder when the source is present but empty at T, so the table keeps
+  // the same rows across the scrub (no pop-in/out → no page yoyo).
+  const { slo, toxicity, pii, refusal, conformance, tools, firewall } = d;
+
+  if (slo && slo.n > 0) {
     rows.push({
       id: "faithfulness",
-      value: pct(d.slo.good_rate),
-      target: `≥ ${pct(d.slo.target)}`,
-      state: d.slo.breaching
+      value: pct(slo.good_rate),
+      target: `≥ ${pct(slo.target)}`,
+      state: slo.breaching
         ? { key: "fail", tone: "danger" }
-        : controlState(d.slo.good_rate, d.slo.target, "higher"),
-      severity: 1 - d.slo.good_rate,
+        : controlState(slo.good_rate, slo.target, "higher"),
+      severity: 1 - slo.good_rate,
       impactKey: "rag",
       trend: d.trend?.buckets.map((b) => b.mean),
       asOfCapable: true, // backed by the durable score log
     });
+  } else if (historyMode && slo) {
+    rows.push(noDataRow("faithfulness", `≥ ${pct(slo.target)}`, "rag", true));
   }
-  if (d.toxicity && d.toxicity.n_turns > 0) {
+
+  if (toxicity && toxicity.n_turns > 0) {
     rows.push({
       id: "toxicity",
-      value: pct(d.toxicity.toxicity_rate, 2),
+      value: pct(toxicity.toxicity_rate, 2),
       target: "≤ 0.10%",
-      state: controlState(d.toxicity.toxicity_rate, 0.001, "lower"),
-      severity: Math.min(d.toxicity.toxicity_rate * 50, 1),
+      state: controlState(toxicity.toxicity_rate, 0.001, "lower"),
+      severity: Math.min(toxicity.toxicity_rate * 50, 1),
       impactKey: "safety",
       asOfCapable: true, // bundle-backed (captured_at filterable)
     });
+  } else if (historyMode && toxicity) {
+    rows.push(noDataRow("toxicity", "≤ 0.10%", "safety", true));
   }
-  if (d.pii && d.pii.n_turns > 0) {
+
+  if (pii && pii.n_turns > 0) {
     rows.push({
       id: "pii",
-      value: pct(d.pii.leak_rate, 2),
+      value: pct(pii.leak_rate, 2),
       target: "≤ 0.50%",
-      state: controlState(d.pii.leak_rate, 0.005, "lower"),
-      severity: Math.min(d.pii.leak_rate * 20, 1),
+      state: controlState(pii.leak_rate, 0.005, "lower"),
+      severity: Math.min(pii.leak_rate * 20, 1),
       impactKey: "privacy",
       asOfCapable: true, // bundle-backed (captured_at filterable)
     });
+  } else if (historyMode && pii) {
+    rows.push(noDataRow("pii", "≤ 0.50%", "privacy", true));
   }
-  if (d.refusal && d.refusal.n_legit + d.refusal.n_forbidden > 0) {
-    const worst = Math.max(d.refusal.over_refusal_rate, d.refusal.under_refusal_rate);
+
+  if (refusal && refusal.n_legit + refusal.n_forbidden > 0) {
+    const worst = Math.max(refusal.over_refusal_rate, refusal.under_refusal_rate);
     rows.push({
       id: "refusal",
       value: pct(worst),
@@ -534,40 +584,52 @@ function buildControls(d: {
       impactKey: "quality",
       asOfCapable: false, // fixed-corpus probe of the current policy → live by nature
     });
+  } else if (historyMode && refusal) {
+    rows.push(noDataRow("refusal", "≤ 5%", "quality", false));
   }
-  if (d.conformance && d.conformance.n_calls > 0) {
+
+  if (conformance && conformance.n_calls > 0) {
     rows.push({
       id: "conformance",
-      value: pct(d.conformance.conformance_rate),
+      value: pct(conformance.conformance_rate),
       target: "≥ 95%",
-      state: controlState(d.conformance.conformance_rate, 0.95, "higher"),
-      severity: 1 - d.conformance.conformance_rate,
+      state: controlState(conformance.conformance_rate, 0.95, "higher"),
+      severity: 1 - conformance.conformance_rate,
       impactKey: "tools",
       asOfCapable: true, // audit-log-backed (occurred_at filterable)
     });
+  } else if (historyMode && conformance) {
+    rows.push(noDataRow("conformance", "≥ 95%", "tools", true));
   }
-  if (d.tools && d.tools.total > 0) {
+
+  if (tools && tools.total > 0) {
     rows.push({
       id: "tools",
-      value: pct(d.tools.validity_rate),
+      value: pct(tools.validity_rate),
       target: "≥ 95%",
-      state: controlState(d.tools.validity_rate, 0.95, "higher"),
-      severity: 1 - d.tools.validity_rate,
+      state: controlState(tools.validity_rate, 0.95, "higher"),
+      severity: 1 - tools.validity_rate,
       impactKey: "tools",
       asOfCapable: true, // audit-log-backed (occurred_at filterable)
     });
+  } else if (historyMode && tools) {
+    rows.push(noDataRow("tools", "≥ 95%", "tools", true));
   }
-  if (d.firewall && d.firewall.n_positive > 0) {
+
+  if (firewall && firewall.n_positive > 0) {
     rows.push({
       id: "firewall",
-      value: pct(d.firewall.recall),
+      value: pct(firewall.recall),
       target: "≥ 90%",
-      state: controlState(d.firewall.recall, 0.9, "higher"),
-      severity: 1 - d.firewall.recall,
+      state: controlState(firewall.recall, 0.9, "higher"),
+      severity: 1 - firewall.recall,
       impactKey: "security",
       asOfCapable: false, // fixed adversarial-corpus probe → live by nature
     });
+  } else if (historyMode && firewall) {
+    rows.push(noDataRow("firewall", "≥ 90%", "security", false));
   }
+
   return rows;
 }
 
@@ -1245,13 +1307,13 @@ function CriticalControlsTable({
                           toneBg[c.state.tone],
                         )}
                       >
-                        {tst(c.state.key)}
+                        {c.noData ? "—" : tst(c.state.key)}
                       </span>
                     </td>
                     <td className="py-2 pr-4 tabular-nums">
                       <span className="inline-flex items-center gap-1.5">
                         {c.value}
-                        {historyMode ? (
+                        {historyMode && !c.noData ? (
                           <TimeTagChip
                             tag={
                               c.asOfCapable
@@ -1323,7 +1385,7 @@ function ControlCasesSection({
           {t("count", { n: playbooks?.n_triggered ?? 0 })}
         </span>
       </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <CardContent className="grid min-h-[4.5rem] gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {loading ? (
           <Skeleton className="h-28 w-full sm:col-span-2 xl:col-span-3" />
         ) : !playbooks || playbooks.n_triggered === 0 ? (
@@ -1399,7 +1461,7 @@ function IncidentsCard({
           {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-2">
+      <CardContent className="flex min-h-[4.5rem] flex-col gap-2">
         {loading ? (
           <Skeleton className="h-16 w-full" />
         ) : items.length === 0 ? (
@@ -1611,7 +1673,7 @@ function RecentActivitiesCard({
           {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-2">
+      <CardContent className="flex min-h-[9.5rem] flex-col gap-2">
         {loading ? (
           <Skeleton className="h-16 w-full" />
         ) : rows.length === 0 ? (
@@ -1795,7 +1857,7 @@ function GovernanceSection({
         </CardTitle>
         <Badge tone="neutral">{t("subtitle")}</Badge>
       </CardHeader>
-      <CardContent className="grid gap-2 sm:grid-cols-2">
+      <CardContent className="grid min-h-[4.5rem] gap-2 sm:grid-cols-2">
         {loading ? (
           <Skeleton className="h-20 w-full sm:col-span-2" />
         ) : !roadmap || roadmap.n_items === 0 ? (
