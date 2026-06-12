@@ -141,6 +141,8 @@ import {
   SycophancyReportSchema,
   type TailSamplingReport,
   TailSamplingReportSchema,
+  type TimelineReport,
+  TimelineReportSchema,
   type ToolLoopReport,
   ToolLoopReportSchema,
   type ToolValidity,
@@ -249,6 +251,11 @@ export async function fetchReadiness(signal?: AbortSignal): Promise<HealthRespon
 /** Recent online-eval scores (eval-as-telemetry; public aggregate surface). */
 export async function fetchEvalScores(signal?: AbortSignal): Promise<EvalScoresResponse> {
   return request("/observability/scores", { signal }, EvalScoresResponseSchema);
+}
+
+/** Temporal lineage timeline — dated events for the cockpit time rail (#201). */
+export async function fetchTimeline(signal?: AbortSignal): Promise<TimelineReport> {
+  return request("/observability/timeline", { signal }, TimelineReportSchema);
 }
 
 /** Quality SLO + error-budget burn-rate over the recent faithfulness scores (#15). */

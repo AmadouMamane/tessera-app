@@ -211,6 +211,25 @@ export const EvalScoresResponseSchema = z.object({
 });
 export type EvalScoresResponse = z.infer<typeof EvalScoresResponseSchema>;
 
+// Temporal control backbone (#201) — dated lineage events for the time rail.
+export const TimelineEventSchema = z.object({
+  at: z.string(),
+  kind: z.enum(["score", "judge_change", "model_change", "guard_denial"]),
+  label: z.string(),
+  detail: z.string().default(""),
+  tone: z.enum(["success", "warning", "danger", "info", "gold", "neutral"]).default("neutral"),
+});
+export type TimelineEvent = z.infer<typeof TimelineEventSchema>;
+
+export const TimelineReportSchema = z.object({
+  window_start: z.string(),
+  window_end: z.string(),
+  baseline_at: z.string(),
+  n_events: z.number().int(),
+  events: z.array(TimelineEventSchema),
+});
+export type TimelineReport = z.infer<typeof TimelineReportSchema>;
+
 export const CalibrationSchema = z.object({
   available: z.boolean(),
   n: z.number().int().optional(),

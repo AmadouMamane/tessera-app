@@ -1,15 +1,50 @@
 {
   "app": {
     "title": "Tessera",
-    "subtitle": "Assistance bancaire",
+    "subtitle": "AI Control Plane",
     "bank": "Crédit Aurore",
     "tagline": "Pare-feu actif · Ancrage réglementaire UE",
     "operational": "Opérationnel",
     "disclaimer": "Crédit Aurore — démo non destinée à la production. Données fictives."
   },
   "nav": {
-    "chat": "Conversation",
+    "groups": {
+      "product": "Produit",
+      "cockpit": "Cockpit",
+      "act": "Agir",
+      "prove": "Prouver",
+      "configure": "Configurer"
+    },
+    "assistant": "Assistant",
+    "inbox": "À traiter",
+    "overview": "Vue d’ensemble",
+    "quality": "Qualité IA",
+    "security": "Sécurité & Privacy",
+    "compliance": "Conformité",
+    "reliability": "Fiabilité & coût",
+    "improvement": "Amélioration",
+    "incidents": "Incidents & playbooks",
+    "replay": "Replay, shadow & time travel",
+    "curation": "Curation eval set",
+    "release": "Release Control",
+    "automations": "Automations",
     "audit": "Journal d'audit",
+    "proofExporters": "Preuves & exporteurs",
+    "evidencePack": "Evidence Pack",
+    "signalCatalog": "Signal Catalog",
+    "policies": "Policies & garde-fous",
+    "sourcesMemory": "Sources & mémoire",
+    "rolesAccess": "Rôles & accès",
+    "integrations": "Intégrations",
+    "systemProfile": "Profil système",
+    "identity": {
+      "person": "Amadou D.",
+      "persona": "ML Engineer",
+      "role": "Admin",
+      "scope": "Prod · Crédit Aurore",
+      "localeRuntime": "FR · on-prem"
+    },
+    "chat": "Conversation",
     "eval": "Score de non-régression",
     "health": "État du service",
     "settings": "Paramètres",
@@ -35,6 +70,186 @@
       "light": "Clair",
       "dark": "Sombre",
       "system": "Système"
+    }
+  },
+  "overview": {
+    "title": "Vue d’ensemble",
+    "subtitle": "Control · état, risques, actions et preuves",
+    "context": {
+      "environment": "Environnement",
+      "lifecycle": "Cycle de vie",
+      "lifecycleValue": "7 derniers jours",
+      "agent": "Agent",
+      "agentValue": "Assistant Bancaire",
+      "model": "Modèle",
+      "language": "Langue",
+      "lifecycle24h": "24 heures",
+      "lifecycle30d": "30 jours",
+      "agentSupport": "Support Client"
+    },
+    "actions": {
+      "exportReport": "Exporter rapport",
+      "generateEvidencePack": "Générer evidence pack"
+    },
+    "status": {
+      "live": "Données en temps réel",
+      "ready": "Agent prêt",
+      "degraded": "Service dégradé"
+    },
+    "time": {
+      "live": "Live",
+      "realtime": "Données en temps réel",
+      "period": "Période",
+      "sevenDays": "7 derniers jours",
+      "replayAtT": "Relire à T",
+      "historyMode": "Mode : Historique / Replay",
+      "backLive": "Retour au Live",
+      "replay": "Rejouer",
+      "replayHint": "Le mode replay rejouera une trace de production capturée contre le modèle ou le prompt courant.",
+      "lastUpdate": "Dernière mise à jour",
+      "viewingAt": "Tu regardes",
+      "timeTravel": "time-travel",
+      "compareTo": "Comparer à",
+      "previousWeek": "semaine précédente",
+      "baseline": "baseline",
+      "now": "maintenant",
+      "h24": "24 heures",
+      "d7": "7 jours",
+      "d30": "30 jours",
+      "nowLive": "maintenant (live)",
+      "previousPeriod": "période précédente",
+      "noBaseline": "aucune",
+      "first": "Début",
+      "prev": "Précédent",
+      "next": "Suivant",
+      "relitAtBadge": "État à l’instant relu",
+      "noEventNear": "Aucun événement à proximité",
+      "dataStart": "début données",
+      "vsBaseline": "vs baseline",
+      "legendScores": "Qualité",
+      "legendGood": "bon (≥0,8)",
+      "legendFair": "moyen",
+      "legendBad": "faible (<0,5)",
+      "legendGuard": "filtrages garde",
+      "backToNow": "Revenir au présent",
+      "exitReplay": "Quitter le replay",
+      "play": "Lecture",
+      "pause": "Pause",
+      "liveState": "État live"
+    },
+    "kpi": {
+      "quality": "Score qualité (SLO)",
+      "qualityDelta": "burn-rate {burn}×",
+      "failingControls": "Contrôles en échec",
+      "failingDelta": "{n} hors objectif",
+      "openRisks": "Risques ouverts",
+      "openRisksDelta": "{anomalies} anomalies · {playbooks} playbooks",
+      "regression": "Régression release",
+      "regressed": "Régression",
+      "stable": "Stable",
+      "cost": "Coût LLM (7j)",
+      "costDelta": "{tokens} tokens",
+      "audit": "Preuves d’audit",
+      "auditOk": "chaîne vérifiée",
+      "auditBroken": "chaîne rompue"
+    },
+    "criticalControls": {
+      "title": "Contrôles critiques",
+      "count": "{n} signaux suivis",
+      "empty": "Aucun signal disponible — backend hors ligne ou aucune donnée.",
+      "signal": "Signal",
+      "state": "État",
+      "current": "Valeur actuelle",
+      "target": "Objectif",
+      "trend": "Tendance",
+      "impact": "Impact"
+    },
+    "signals": {
+      "faithfulness": "Faithfulness SLO",
+      "toxicity": "Toxicité",
+      "pii": "Fuite PII (sortie)",
+      "refusal": "Calibration des refus",
+      "conformance": "Conformité format",
+      "tools": "Validité des outils",
+      "firewall": "Efficacité firewall"
+    },
+    "states": {
+      "ok": "OK",
+      "warn": "Attention",
+      "fail": "Échec"
+    },
+    "impact": {
+      "rag": "RAG / Ancrage",
+      "safety": "Sécurité réponse",
+      "privacy": "Privacy / mémoire",
+      "quality": "Qualité réponse",
+      "tools": "Outils / Agents",
+      "security": "Sécurité / Guard"
+    },
+    "controlCases": {
+      "title": "Incidents à traiter (playbooks)",
+      "count": "{n} déclenchés",
+      "clear": "Aucun playbook déclenché — situation nominale."
+    },
+    "rightColumn": {
+      "incidents": "Incidents actifs ou récents",
+      "noIncidents": "Aucun incident actif.",
+      "release": "Release / what-changed",
+      "blocked": "Bloquée",
+      "clear": "OK",
+      "noBaseline": "Aucune baseline à comparer.",
+      "gates": {
+        "quality": "Quality gate",
+        "security": "Security gate",
+        "compliance": "Compliance gate"
+      },
+      "activities": "Scores récents",
+      "noActivity": "Aucun score récent."
+    },
+    "quick": {
+      "title": "Actions rapides",
+      "redteam": "Lancer red-team",
+      "freezeReleases": "Geler les releases",
+      "replay": "Ouvrir replay",
+      "ticket": "Créer un ticket",
+      "replayAt": "Rejouer à T",
+      "redteamRunning": "Red-team en cours…",
+      "redteamDone": "Red-team terminé.",
+      "redteamErr": "Échec du red-team.",
+      "frozen": "Releases gelées.",
+      "unfrozen": "Releases dégelées.",
+      "frozenBadge": "Gelées",
+      "ticketCreated": "Ticket créé."
+    },
+    "analytics": {
+      "scores": "Évolution qualité",
+      "distribution": "Trafic par langue",
+      "impact": "Impact par signal",
+      "empty": "Pas encore de données.",
+      "direction": {
+        "improving": "En amélioration",
+        "stable": "Stable",
+        "degrading": "En dégradation"
+      }
+    },
+    "governance": {
+      "title": "Actions gouvernées (roadmap)",
+      "subtitle": "Sévérité · signal",
+      "empty": "Aucune action recommandée."
+    },
+    "footer": {
+      "critical": "critiques",
+      "warnings": "alertes",
+      "ok": "OK",
+      "signals": "signaux",
+      "auditIntact": "Chaîne d’audit intacte ({n} entrées)",
+      "auditBroken": "Chaîne d’audit rompue",
+      "auditUnknown": "Chaîne d’audit : état inconnu",
+      "source": "Source de vérité : backend live",
+      "confidence": "Confiance des signaux",
+      "systemsOk": "Tous les systèmes opérationnels",
+      "systemsDegraded": "Systèmes dégradés",
+      "viewHealth": "Voir les composants santé"
     }
   },
   "chat": {

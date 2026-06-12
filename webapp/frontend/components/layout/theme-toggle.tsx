@@ -13,6 +13,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface ThemeToggleProps {
+  className?: string;
+}
+
 function withTransition(callback: () => void) {
   document.documentElement.classList.add("theme-transitioning");
   callback();
@@ -23,7 +27,7 @@ function withTransition(callback: () => void) {
   return () => clearTimeout(timer);
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: ThemeToggleProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const t = useTranslations("common.theme");
   const [mounted, setMounted] = useState(false);
@@ -35,7 +39,13 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={t("label")} aria-haspopup="menu">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={className}
+          aria-label={t("label")}
+          aria-haspopup="menu"
+        >
           <Icon className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>

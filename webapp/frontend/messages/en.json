@@ -1,15 +1,50 @@
 {
   "app": {
     "title": "Tessera",
-    "subtitle": "Banking support",
+    "subtitle": "AI Control Plane",
     "bank": "Crédit Aurore",
     "tagline": "Active firewall · EU regulatory grounding",
     "operational": "Operational",
     "disclaimer": "Crédit Aurore — demo, not for production use. Fictitious data."
   },
   "nav": {
-    "chat": "Chat",
+    "groups": {
+      "product": "Product",
+      "cockpit": "Cockpit",
+      "act": "Act",
+      "prove": "Prove",
+      "configure": "Configure"
+    },
+    "assistant": "Assistant",
+    "inbox": "To process",
+    "overview": "Overview",
+    "quality": "AI quality",
+    "security": "Security & Privacy",
+    "compliance": "Compliance",
+    "reliability": "Reliability & cost",
+    "improvement": "Improvement",
+    "incidents": "Incidents & playbooks",
+    "replay": "Replay, shadow & time travel",
+    "curation": "Eval-set curation",
+    "release": "Release Control",
+    "automations": "Automations",
     "audit": "Audit trail",
+    "proofExporters": "Proofs & exporters",
+    "evidencePack": "Evidence Pack",
+    "signalCatalog": "Signal Catalog",
+    "policies": "Policies & guardrails",
+    "sourcesMemory": "Sources & memory",
+    "rolesAccess": "Roles & access",
+    "integrations": "Integrations",
+    "systemProfile": "System profile",
+    "identity": {
+      "person": "Amadou D.",
+      "persona": "ML Engineer",
+      "role": "Admin",
+      "scope": "Prod · Crédit Aurore",
+      "localeRuntime": "FR · on-prem"
+    },
+    "chat": "Chat",
     "eval": "Regression scorecard",
     "health": "Service health",
     "settings": "Settings",
@@ -35,6 +70,186 @@
       "light": "Light",
       "dark": "Dark",
       "system": "System"
+    }
+  },
+  "overview": {
+    "title": "Overview",
+    "subtitle": "Control · state, risks, actions and evidence",
+    "context": {
+      "environment": "Environment",
+      "lifecycle": "Lifecycle",
+      "lifecycleValue": "Last 7 days",
+      "agent": "Agent",
+      "agentValue": "Banking Assistant",
+      "model": "Model",
+      "language": "Language",
+      "lifecycle24h": "24 hours",
+      "lifecycle30d": "30 days",
+      "agentSupport": "Customer Support"
+    },
+    "actions": {
+      "exportReport": "Export report",
+      "generateEvidencePack": "Generate evidence pack"
+    },
+    "status": {
+      "live": "Real-time data",
+      "ready": "Agent ready",
+      "degraded": "Degraded service"
+    },
+    "time": {
+      "live": "Live",
+      "realtime": "Real-time data",
+      "period": "Period",
+      "sevenDays": "Last 7 days",
+      "replayAtT": "Replay at T",
+      "historyMode": "Mode: History / Replay",
+      "backLive": "Back to live",
+      "replay": "Replay",
+      "replayHint": "Replay mode re-runs a captured production trace against the current model or prompt.",
+      "lastUpdate": "Last update",
+      "viewingAt": "Viewing",
+      "timeTravel": "time-travel",
+      "compareTo": "Compare to",
+      "previousWeek": "previous week",
+      "baseline": "baseline",
+      "now": "now",
+      "h24": "24 hours",
+      "d7": "7 days",
+      "d30": "30 days",
+      "nowLive": "now (live)",
+      "previousPeriod": "previous period",
+      "noBaseline": "none",
+      "first": "Start",
+      "prev": "Previous",
+      "next": "Next",
+      "relitAtBadge": "State at replayed instant",
+      "noEventNear": "No event nearby",
+      "dataStart": "data starts",
+      "vsBaseline": "vs baseline",
+      "legendScores": "Quality",
+      "legendGood": "good (≥0.8)",
+      "legendFair": "fair",
+      "legendBad": "low (<0.5)",
+      "legendGuard": "guard filters",
+      "backToNow": "Back to now",
+      "exitReplay": "Exit replay",
+      "play": "Play",
+      "pause": "Pause",
+      "liveState": "Live state"
+    },
+    "kpi": {
+      "quality": "Quality score (SLO)",
+      "qualityDelta": "burn-rate {burn}×",
+      "failingControls": "Failing controls",
+      "failingDelta": "{n} off target",
+      "openRisks": "Open risks",
+      "openRisksDelta": "{anomalies} anomalies · {playbooks} playbooks",
+      "regression": "Release regression",
+      "regressed": "Regressed",
+      "stable": "Stable",
+      "cost": "LLM cost (7d)",
+      "costDelta": "{tokens} tokens",
+      "audit": "Audit evidence",
+      "auditOk": "chain verified",
+      "auditBroken": "chain broken"
+    },
+    "criticalControls": {
+      "title": "Critical controls",
+      "count": "{n} signals tracked",
+      "empty": "No signal available — backend offline or no data.",
+      "signal": "Signal",
+      "state": "State",
+      "current": "Current",
+      "target": "Target",
+      "trend": "Trend",
+      "impact": "Impact"
+    },
+    "signals": {
+      "faithfulness": "Faithfulness SLO",
+      "toxicity": "Toxicity",
+      "pii": "PII leak (output)",
+      "refusal": "Refusal calibration",
+      "conformance": "Format conformance",
+      "tools": "Tool validity",
+      "firewall": "Firewall efficacy"
+    },
+    "states": {
+      "ok": "OK",
+      "warn": "Warning",
+      "fail": "Fail"
+    },
+    "impact": {
+      "rag": "RAG / Grounding",
+      "safety": "Response safety",
+      "privacy": "Privacy / memory",
+      "quality": "Response quality",
+      "tools": "Tools / Agents",
+      "security": "Security / Guard"
+    },
+    "controlCases": {
+      "title": "Incidents to handle (playbooks)",
+      "count": "{n} triggered",
+      "clear": "No playbook triggered — nominal."
+    },
+    "rightColumn": {
+      "incidents": "Active or recent incidents",
+      "noIncidents": "No active incident.",
+      "release": "Release / what-changed",
+      "blocked": "Blocked",
+      "clear": "OK",
+      "noBaseline": "No baseline to compare.",
+      "gates": {
+        "quality": "Quality gate",
+        "security": "Security gate",
+        "compliance": "Compliance gate"
+      },
+      "activities": "Recent scores",
+      "noActivity": "No recent score."
+    },
+    "quick": {
+      "title": "Quick actions",
+      "redteam": "Run red-team",
+      "freezeReleases": "Freeze releases",
+      "replay": "Open replay",
+      "ticket": "Create a ticket",
+      "replayAt": "Replay at T",
+      "redteamRunning": "Red-team running…",
+      "redteamDone": "Red-team complete.",
+      "redteamErr": "Red-team failed.",
+      "frozen": "Releases frozen.",
+      "unfrozen": "Releases unfrozen.",
+      "frozenBadge": "Frozen",
+      "ticketCreated": "Ticket created."
+    },
+    "analytics": {
+      "scores": "Quality trend",
+      "distribution": "Traffic by language",
+      "impact": "Impact by signal",
+      "empty": "No data yet.",
+      "direction": {
+        "improving": "Improving",
+        "stable": "Stable",
+        "degrading": "Degrading"
+      }
+    },
+    "governance": {
+      "title": "Governed actions (roadmap)",
+      "subtitle": "Severity · signal",
+      "empty": "No recommended action."
+    },
+    "footer": {
+      "critical": "critical",
+      "warnings": "warnings",
+      "ok": "OK",
+      "signals": "signals",
+      "auditIntact": "Audit chain intact ({n} entries)",
+      "auditBroken": "Audit chain broken",
+      "auditUnknown": "Audit chain: unknown",
+      "source": "Source of truth: live backend",
+      "confidence": "Signal confidence",
+      "systemsOk": "All systems operational",
+      "systemsDegraded": "Systems degraded",
+      "viewHealth": "View health components"
     }
   },
   "chat": {
