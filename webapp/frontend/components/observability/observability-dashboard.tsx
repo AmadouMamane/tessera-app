@@ -185,6 +185,7 @@ function scoreTone(score: number): string {
 
 export function ObservabilityDashboard() {
   const t = useTranslations("observability");
+  const tq = useTranslations("quality");
 
   const scores = useQuery({
     queryKey: ["eval-scores"],
@@ -498,8 +499,149 @@ export function ObservabilityDashboard() {
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="flex flex-col gap-8">
+      <SectionNav />
+
+      <Section id="q-quality" icon={BadgeCheck} title={tq("sections.quality")}>
+        <FullWidth>
+          <SLOCard data={slo.data} loading={slo.isLoading} />
+        </FullWidth>
+        <TrendCard data={trend.data} loading={trend.isLoading} />
+        <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
+        <CitationCard data={citations.data} loading={citations.isLoading} />
+        <CitationLinksCard data={citationLinks.data} loading={citationLinks.isLoading} />
+        <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
+        <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
+        <FailurePredictorCard data={failurePredictor.data} loading={failurePredictor.isLoading} />
+        <FailureClusterCard data={failureClusters.data} loading={failureClusters.isLoading} />
+        <FullWidth>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                {t("scores.title")}
+                <Badge tone="neutral">{t("scores.metric")}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {scores.isLoading ? (
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              ) : rows.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
+                  {t("scores.empty")}
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                        <th className="py-2 pr-4 font-medium">{t("scores.time")}</th>
+                        <th className="py-2 pr-4 font-medium">{t("scores.metricCol")}</th>
+                        <th className="py-2 pr-4 font-medium">{t("scores.score")}</th>
+                        <th className="py-2 pr-4 font-medium">{t("scores.language")}</th>
+                        <th className="py-2 font-medium">{t("scores.judge")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((s, i) => (
+                        <tr
+                          key={`${s.scored_at}-${i}`}
+                          className="border-b border-[var(--border)]/50"
+                        >
+                          <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
+                            {new Date(s.scored_at).toLocaleTimeString()}
+                          </td>
+                          <td className="py-2 pr-4">{s.metric}</td>
+                          <td
+                            className={`py-2 pr-4 font-semibold tabular-nums ${scoreTone(s.score)}`}
+                          >
+                            {s.score.toFixed(2)}
+                          </td>
+                          <td className="py-2 pr-4 uppercase">{s.language}</td>
+                          <td className="py-2 text-[var(--muted-foreground)]">{s.judge_model}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </FullWidth>
+      </Section>
+
+      <Section id="q-security" icon={Lock} title={tq("sections.security")}>
+        <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
+        <RedTeamCard />
+        <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
+        <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
+        <CrossTenantCard data={crossTenant.data} loading={crossTenant.isLoading} />
+        <LeastPrivilegeCard data={leastPrivilege.data} loading={leastPrivilege.isLoading} />
+        <GuardRetractionCard data={guardRetraction.data} loading={guardRetraction.isLoading} />
+        <GuardExplainCard data={guardExplain.data} loading={guardExplain.isLoading} />
+        <InversionCard data={embeddingInversion.data} loading={embeddingInversion.isLoading} />
+        <FullWidth>
+          <SiemCard data={siem.data} loading={siem.isLoading} />
+        </FullWidth>
+      </Section>
+
+      <Section id="q-compliance" icon={Landmark} title={tq("sections.compliance")}>
+        <AIActCard data={aiAct.data} loading={aiAct.isLoading} />
+        <DisclosureCard data={disclosure.data} loading={disclosure.isLoading} />
+        <LocalizationCard data={localization.data} loading={localization.isLoading} />
+        <LocaleFormatCard data={localeFormat.data} loading={localeFormat.isLoading} />
+        <RefusalCard data={refusal.data} loading={refusal.isLoading} />
+        <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
+      </Section>
+
+      <Section id="q-reliability" icon={Activity} title={tq("sections.reliability")}>
+        <CostCard data={cost.data} loading={cost.isLoading} />
+        <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
+        <ContextOverflowCard data={contextOverflow.data} loading={contextOverflow.isLoading} />
+        <TailSamplingCard data={tailSampling.data} loading={tailSampling.isLoading} />
+        <SpanPropagationCard data={spanPropagation.data} loading={spanPropagation.isLoading} />
+        <ReproducibilityCard data={reproducibility.data} loading={reproducibility.isLoading} />
+        <GraphTopologyCard data={graphTopology.data} loading={graphTopology.isLoading} />
+        <TraceSnapshotCard data={traceSnapshot.data} loading={traceSnapshot.isLoading} />
+        <HandoffsCard data={handoffs.data} loading={handoffs.isLoading} />
+        <ToolLoopsCard data={toolLoops.data} loading={toolLoops.isLoading} />
+        <ToolValidityCard data={tools.data} loading={tools.isLoading} />
+      </Section>
+
+      <Section id="q-sessions" icon={Route} title={tq("sections.sessions")}>
+        <RoutingCard data={routing.data} loading={routing.isLoading} />
+        <IntentCard data={intent.data} loading={intent.isLoading} />
+        <SessionCard data={sessions.data} loading={sessions.isLoading} />
+        <FunnelCard data={funnel.data} loading={funnel.isLoading} />
+        <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
+        <JourneyCard data={journey.data} loading={journey.isLoading} />
+      </Section>
+
+      <Section id="q-memory" icon={Brain} title={tq("sections.memory")}>
+        <MemoryObsCard data={memoryObs.data} loading={memoryObs.isLoading} />
+        <MemoryInventoryCard data={memoryInventory.data} loading={memoryInventory.isLoading} />
+        <ErasureCoverageCard data={erasureCoverage.data} loading={erasureCoverage.isLoading} />
+      </Section>
+
+      <Section id="q-act" icon={Repeat} title={tq("sections.act")}>
+        <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
+        <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
+        <SftDatasetCard data={sftDataset.data} loading={sftDataset.isLoading} />
+        <FullWidth>
+          <ShadowCard />
+        </FullWidth>
+        <FullWidth>
+          <SessionTheater />
+        </FullWidth>
+        <FullWidth>
+          <ReplayPanel />
+        </FullWidth>
+      </Section>
+
+      <Section id="q-platform" icon={Layers} title={tq("sections.platform")}>
         <BackendCard
           title="Arize Phoenix"
           subtitle={t("phoenix")}
@@ -512,166 +654,62 @@ export function ObservabilityDashboard() {
           href={LANGFUSE_URL}
           icon={<Gauge className="h-5 w-5 text-blue-500" />}
         />
-      </div>
-
-      <SLOCard data={slo.data} loading={slo.isLoading} />
-
-      <AIActCard data={aiAct.data} loading={aiAct.isLoading} />
-
-      <DisclosureCard data={disclosure.data} loading={disclosure.isLoading} />
-
-      <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
-
-      <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
-
-      <FailureClusterCard data={failureClusters.data} loading={failureClusters.isLoading} />
-
-      <FailurePredictorCard data={failurePredictor.data} loading={failurePredictor.isLoading} />
-
-      <SftDatasetCard data={sftDataset.data} loading={sftDataset.isLoading} />
-
-      <ShadowCard />
-
-      <TailSamplingCard data={tailSampling.data} loading={tailSampling.isLoading} />
-
-      <SpanPropagationCard data={spanPropagation.data} loading={spanPropagation.isLoading} />
-
-      <TrendCard data={trend.data} loading={trend.isLoading} />
-
-      <ReproducibilityCard data={reproducibility.data} loading={reproducibility.isLoading} />
-
-      <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
-
-      <EmbeddingSkewCard data={embeddingSkew.data} loading={embeddingSkew.isLoading} />
-
-      <CorpusFreshnessCard data={corpusFreshness.data} loading={corpusFreshness.isLoading} />
-
-      <MemoryObsCard data={memoryObs.data} loading={memoryObs.isLoading} />
-
-      <JourneyCard data={journey.data} loading={journey.isLoading} />
-
-      <MemoryInventoryCard data={memoryInventory.data} loading={memoryInventory.isLoading} />
-
-      <ErasureCoverageCard data={erasureCoverage.data} loading={erasureCoverage.isLoading} />
-
-      <InversionCard data={embeddingInversion.data} loading={embeddingInversion.isLoading} />
-
-      <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
-
-      <CitationCard data={citations.data} loading={citations.isLoading} />
-
-      <CitationLinksCard data={citationLinks.data} loading={citationLinks.isLoading} />
-
-      <LocaleFormatCard data={localeFormat.data} loading={localeFormat.isLoading} />
-
-      <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
-
-      <RedTeamCard />
-
-      <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
-
-      <CrossTenantCard data={crossTenant.data} loading={crossTenant.isLoading} />
-
-      <LeastPrivilegeCard data={leastPrivilege.data} loading={leastPrivilege.isLoading} />
-
-      <SiemCard data={siem.data} loading={siem.isLoading} />
-
-      <LocalizationCard data={localization.data} loading={localization.isLoading} />
-
-      <RefusalCard data={refusal.data} loading={refusal.isLoading} />
-
-      <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
-
-      <ToolValidityCard data={tools.data} loading={tools.isLoading} />
-
-      <ToolLoopsCard data={toolLoops.data} loading={toolLoops.isLoading} />
-
-      <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
-
-      <GraphTopologyCard data={graphTopology.data} loading={graphTopology.isLoading} />
-
-      <TraceSnapshotCard data={traceSnapshot.data} loading={traceSnapshot.isLoading} />
-
-      <HandoffsCard data={handoffs.data} loading={handoffs.isLoading} />
-
-      <GuardRetractionCard data={guardRetraction.data} loading={guardRetraction.isLoading} />
-
-      <GuardExplainCard data={guardExplain.data} loading={guardExplain.isLoading} />
-
-      <RoutingCard data={routing.data} loading={routing.isLoading} />
-
-      <IntentCard data={intent.data} loading={intent.isLoading} />
-
-      <SessionCard data={sessions.data} loading={sessions.isLoading} />
-
-      <FunnelCard data={funnel.data} loading={funnel.isLoading} />
-
-      <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
-
-      <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
-
-      <CostCard data={cost.data} loading={cost.isLoading} />
-
-      <ContextOverflowCard data={contextOverflow.data} loading={contextOverflow.isLoading} />
-
-      <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
-
-      <SessionTheater />
-
-      <ReplayPanel />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            {t("scores.title")}
-            <Badge tone="neutral">{t("scores.metric")}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {scores.isLoading ? (
-            <div className="flex flex-col gap-2">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-            </div>
-          ) : rows.length === 0 ? (
-            <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-              {t("scores.empty")}
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                    <th className="py-2 pr-4 font-medium">{t("scores.time")}</th>
-                    <th className="py-2 pr-4 font-medium">{t("scores.metricCol")}</th>
-                    <th className="py-2 pr-4 font-medium">{t("scores.score")}</th>
-                    <th className="py-2 pr-4 font-medium">{t("scores.language")}</th>
-                    <th className="py-2 font-medium">{t("scores.judge")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((s, i) => (
-                    <tr key={`${s.scored_at}-${i}`} className="border-b border-[var(--border)]/50">
-                      <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
-                        {new Date(s.scored_at).toLocaleTimeString()}
-                      </td>
-                      <td className="py-2 pr-4">{s.metric}</td>
-                      <td className={`py-2 pr-4 font-semibold tabular-nums ${scoreTone(s.score)}`}>
-                        {s.score.toFixed(2)}
-                      </td>
-                      <td className="py-2 pr-4 uppercase">{s.language}</td>
-                      <td className="py-2 text-[var(--muted-foreground)]">{s.judge_model}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <EmbeddingSkewCard data={embeddingSkew.data} loading={embeddingSkew.isLoading} />
+        <CorpusFreshnessCard data={corpusFreshness.data} loading={corpusFreshness.isLoading} />
+      </Section>
     </div>
   );
+}
+
+const SECTION_DEFS = [
+  "quality",
+  "security",
+  "compliance",
+  "reliability",
+  "sessions",
+  "memory",
+  "act",
+  "platform",
+] as const;
+
+/** Sticky in-page nav: jump to a signal group. Mirrors the overview sub-header. */
+function SectionNav() {
+  const tq = useTranslations("quality");
+  return (
+    <nav className="sticky top-0 z-20 -mx-4 flex flex-wrap items-center gap-1 border-b border-[var(--border)] bg-[var(--tessera-bg)] px-4 py-2 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+      {SECTION_DEFS.map((key) => (
+        <a
+          key={key}
+          href={`#q-${key}`}
+          className="rounded-md px-3 py-1 text-xs text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+        >
+          {tq(`sections.${key}`)}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function Section({
+  id,
+  icon: Icon,
+  title,
+  children,
+}: { id: string; icon: typeof Gauge; title: string; children: ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-16">
+      <div className="mb-3 flex items-center gap-2 border-b border-[var(--border)] pb-2">
+        <Icon className="h-4 w-4 text-gold-400" />
+        <h2 className="font-serif text-base font-semibold text-[var(--foreground)]">{title}</h2>
+      </div>
+      <div className="grid items-start gap-4 lg:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+/** Span both columns of a section grid (for wide tables / panels). */
+function FullWidth({ children }: { children: ReactNode }) {
+  return <div className="lg:col-span-2">{children}</div>;
 }
 
 function BackendCard({

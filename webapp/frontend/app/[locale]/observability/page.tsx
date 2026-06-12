@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { QualityDashboard } from "@/components/quality/quality-dashboard";
+import { ObservabilityDashboard } from "@/components/observability/observability-dashboard";
 
 interface ObservabilityPageProps {
   params: Promise<{ locale: string }>;
@@ -19,7 +19,7 @@ export default async function ObservabilityPage({ params }: ObservabilityPagePro
   const t = await getTranslations({ locale, namespace: "quality" });
   return (
     <AppShell title={t("title")} description={t("subtitle")} contentWidth="wide">
-      <QualityDashboard />
+      <ObservabilityDashboard />
     </AppShell>
   );
 }

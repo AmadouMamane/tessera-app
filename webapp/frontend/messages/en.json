@@ -1065,73 +1065,16 @@
   },
   "quality": {
     "title": "AI Quality",
-    "subtitle": "The agent's faithfulness, citations and calibration, by signal.",
-    "tabs": {
-      "dashboard": "Dashboard",
-      "signals": "Detailed signals"
-    },
-    "empty": "No data yet.",
-    "kpi": {
-      "quality": "Quality score (SLO)",
-      "qualitySub": "{n} evaluations",
-      "evals": "Evaluations",
-      "evalsSub": "recent window",
-      "citations": "Valid citations",
-      "citationsSub": "{n} unsupported",
-      "locale": "Localisation",
-      "localeSub": "{n} format violations",
-      "conformance": "Tool conformance",
-      "conformanceSub": "{n} calls",
-      "calibration": "Judge calibration (κ)",
-      "calibrationSub": "vs human set",
-      "calibrationNa": "unavailable"
-    },
-    "perf": {
-      "title": "Performance by signal",
-      "count": "{n} signals",
-      "signal": "Signal",
-      "state": "State",
-      "current": "Current",
-      "target": "Target",
-      "trend": "Trend"
-    },
-    "states": {
-      "ok": "OK",
-      "warn": "Watch",
-      "fail": "Critical"
-    },
-    "signals": {
-      "fidelity": "Faithfulness",
-      "citations": "Valid citations",
-      "locale": "Localised format",
-      "refusal": "Refusal calibration",
-      "conformance": "Tool conformance",
-      "routing": "Language routing"
-    },
-    "dimensions": {
-      "title": "Breakdown by dimension"
-    },
-    "diagnostic": {
-      "title": "Quality diagnostic",
-      "empty": "No recommended action."
-    },
-    "evolution": {
-      "title": "Score evolution",
-      "empty": "Not enough points for a curve.",
-      "points": "{n} points",
-      "improving": "improving",
-      "degrading": "degrading",
-      "stable": "stable"
-    },
-    "languages": {
-      "title": "Breakdown by language"
-    },
-    "intents": {
-      "title": "Breakdown by intent"
-    },
-    "activity": {
-      "title": "Recent activity",
-      "empty": "No recent evaluation."
+    "subtitle": "All the agent's observability signals, grouped by theme.",
+    "sections": {
+      "quality": "Faithfulness & evaluation",
+      "security": "Security & guard",
+      "compliance": "Compliance & localisation",
+      "reliability": "Reliability, tools & cost",
+      "sessions": "Sessions & journeys",
+      "memory": "Memory & GDPR",
+      "act": "Act — replay, shadow, curation",
+      "platform": "Platform & corpus"
     }
   }
 }
