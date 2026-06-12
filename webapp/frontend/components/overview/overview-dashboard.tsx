@@ -302,9 +302,10 @@ export function OverviewDashboard() {
   return (
     <div className="flex w-full flex-col gap-4 pb-8">
       {/* The time rail stays pinned while the cockpit scrolls, so you can scrub
-          T and watch every block below update. -mx-4/px-4 + the canvas bg bleed
-          over the main's padding so cards never peek past it. */}
-      <div className="sticky top-0 z-30 -mx-4 bg-[var(--tessera-bg)] px-4 pb-2 pt-1">
+          T and watch every block below update. The negative margins bleed the
+          opaque canvas bg over the main's padding (top + sides) so nothing scrolls
+          into view past it; the bottom shadow separates it once pinned. */}
+      <div className="sticky top-0 z-30 -mx-4 -mt-3 bg-[var(--tessera-bg)] px-4 pb-2 pt-3 shadow-[0_10px_18px_-14px_rgba(0,0,0,0.7)]">
         <TemporalRail
           mode={mode}
           liveStatus={liveStatus}
@@ -1037,28 +1038,37 @@ function TemporalRail({
           event so stepping prev/next gives clear feedback even when ticks cluster. */}
       <div
         className={cn(
-          "mt-2 flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-xs",
+          "mt-2 flex items-center gap-3 rounded-md border px-3 py-2 text-xs",
           selectedAt == null
             ? "border-emerald-500/30 bg-emerald-500/5"
             : "border-gold-500/30 bg-gold-500/5",
         )}
       >
-        <Badge tone={selectedAt == null ? "success" : "gold"}>
+        <Badge tone={selectedAt == null ? "success" : "gold"} className="shrink-0">
           {selectedAt == null ? t("liveState") : t("relitAtBadge")}
         </Badge>
+        {/* The focused-event label takes the flexible middle and truncates, so a
+            varying count (e.g. "Garde — 22 refus") never shifts the badge/button
+            on the right. */}
         {nearest ? (
-          <span className="flex items-center gap-2 text-[var(--muted-foreground)]">
-            <span className={cn("h-2 w-2 rounded-full", dotBg[nearest.tone as OverviewTone])} />
-            {nearest.label}
-            {nearest.detail && nearest.kind !== "guard_denial" ? (
-              <span className="opacity-70">· {nearest.detail}</span>
-            ) : null}
+          <span className="flex min-w-0 flex-1 items-center gap-2 text-[var(--muted-foreground)]">
+            <span
+              className={cn("h-2 w-2 shrink-0 rounded-full", dotBg[nearest.tone as OverviewTone])}
+            />
+            <span className="truncate">
+              {nearest.label}
+              {nearest.detail && nearest.kind !== "guard_denial" ? (
+                <span className="opacity-70"> · {nearest.detail}</span>
+              ) : null}
+            </span>
           </span>
         ) : (
-          <span className="text-[var(--muted-foreground)]">{t("noEventNear")}</span>
+          <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
+            {t("noEventNear")}
+          </span>
         )}
         {baselineDelta != null && baseline != null ? (
-          <Badge tone={baselineDelta >= 0 ? "success" : "danger"}>
+          <Badge tone={baselineDelta >= 0 ? "success" : "danger"} className="shrink-0 tabular-nums">
             {baselineDelta >= 0 ? "+" : ""}
             {baselineDelta.toFixed(2)} {t("vsBaseline")} {baseline.toFixed(2)}
           </Badge>
@@ -1066,7 +1076,7 @@ function TemporalRail({
         {selectedAt != null ? (
           <button
             type="button"
-            className="ml-auto text-blue-300 hover:underline"
+            className="shrink-0 whitespace-nowrap text-blue-300 hover:underline"
             onClick={() => {
               setPlaying(false);
               setSelectedAt(null);
