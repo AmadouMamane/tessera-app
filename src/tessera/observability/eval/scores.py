@@ -36,6 +36,7 @@ _log = get_logger("tessera.eval")
 # show live eval-as-telemetry without standing up Prometheus/BigQuery locally.
 # This is a convenience view, not the system of record (that is logs + metrics).
 _RECENT: deque[dict[str, object]] = deque(maxlen=200)
+_WARMED = False
 
 
 def _scores_path() -> Path:
@@ -61,8 +62,25 @@ def _persist(row: dict[str, object]) -> None:
         pass
 
 
+def _warm_recent() -> None:
+    """Seed the empty live buffer from the durable store after a restart.
+
+    Mirrors the replay buffer's warm: without it, a fresh process shows no
+    score-backed signals (SLO, trend, funnel…) until new traffic arrives. We load
+    the most recent ``maxlen`` rows so "live" and "as of now" agree immediately.
+    """
+    global _WARMED
+    if _WARMED or _RECENT:
+        _WARMED = True
+        return
+    _WARMED = True
+    for row in persisted_scores()[-(_RECENT.maxlen or 200) :]:
+        _RECENT.append(row)
+
+
 def recent_scores() -> list[dict[str, object]]:
     """Return the most recent eval scores (newest last)."""
+    _warm_recent()
     return list(_RECENT)
 
 
