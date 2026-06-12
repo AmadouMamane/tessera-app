@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ArrowLeftRight,
@@ -95,11 +95,20 @@ export function OverviewDashboard() {
   const t = useTranslations("overview");
   const [mode, setMode] = useState<"live" | "replay">("live");
   // T being viewed, lifted out of the rail so the whole page reads "à T" (ADR
-  // 0011). null = live (now); a number is a paused instant on the rail.
+  // 0011). null = live (now); a number is a paused instant on the rail. The
+  // cursor (`selectedAt`) moves continuously for a smooth UI; the value fed to
+  // the backend (`committedAt`) is debounced so dragging fires one request per
+  // settle, not one per pixel (the backend is rate-limited).
   const [selectedAt, setSelectedAt] = useState<number | null>(null);
+  const [committedAt, setCommittedAt] = useState<number | null>(null);
+  useEffect(() => {
+    const id = window.setTimeout(() => setCommittedAt(selectedAt), 250);
+    return () => window.clearTimeout(id);
+  }, [selectedAt]);
   // ISO instant fed to the as-of-T-capable queries (slo/trend/scores). null in
   // live mode → the backend reads the live buffer; set → it recomputes ≤ T.
-  const asOf = mode === "replay" && selectedAt != null ? new Date(selectedAt).toISOString() : null;
+  const asOf =
+    mode === "replay" && committedAt != null ? new Date(committedAt).toISOString() : null;
   const historyMode = asOf != null;
   // Returning to live clears the focused instant so every block re-reads "now".
   function changeMode(next: "live" | "replay") {
@@ -120,15 +129,20 @@ export function OverviewDashboard() {
   });
 
   // --- Quality / SRE -------------------------------------------------------
+  // As-of-T queries re-key on `asOf`, so scrubbing the rail would normally blank
+  // them to "—" on every step (a fresh key has no cache). keepPreviousData holds
+  // the last value while the new T resolves, so the cockpit reads smoothly.
   const slo = useQuery({
     queryKey: ["ov-slo", asOf],
     queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined),
-    refetchInterval: POLL_MS,
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const trend = useQuery({
     queryKey: ["ov-trend", asOf],
     queryFn: ({ signal }) => fetchTrend(signal, asOf ?? undefined),
-    refetchInterval: POLL_MS,
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const whatChanged = useQuery({
     queryKey: ["ov-what-changed"],
@@ -209,7 +223,8 @@ export function OverviewDashboard() {
   const scores = useQuery({
     queryKey: ["ov-scores", asOf],
     queryFn: ({ signal }) => fetchEvalScores(signal, asOf ?? undefined),
-    refetchInterval: POLL_MS,
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   // The rail's own axis stays live (the full scrubbable window); moving its
   // cursor sets `selectedAt`, which is what re-reads the other blocks "à T".
@@ -253,6 +268,11 @@ export function OverviewDashboard() {
   const failing = controls.filter((c) => c.state.key !== "ok");
   const openRisks = (anomalies.data?.n_anomalous ?? 0) + (playbooks.data?.n_triggered ?? 0);
   const signalsLive = controls.length;
+  // Only treat the SLO as readable when it actually scored turns: at a T before
+  // any data, the backend honestly returns n=0 / good_rate=0 — showing "0/100"
+  // there would fabricate a bad score, so the card reads "—" instead (matching
+  // the controls table, which drops the row when n=0).
+  const sloReady = slo.data && slo.data.n > 0 ? slo.data : undefined;
 
   return (
     <div className="flex w-full flex-col gap-4 pb-8">
@@ -269,18 +289,20 @@ export function OverviewDashboard() {
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <KpiCard
           label={t("kpi.quality")}
-          value={slo.data ? score100(slo.data.good_rate) : "—"}
+          value={sloReady ? score100(sloReady.good_rate) : "—"}
           delta={
-            slo.data
+            sloReady
               ? historyMode
-                ? t("kpi.vsBaseline", { delta: signedPts(slo.data.good_rate - slo.data.target) })
-                : t("kpi.qualityDelta", { burn: slo.data.burn_rate.toFixed(1) })
-              : ""
+                ? t("kpi.vsBaseline", { delta: signedPts(sloReady.good_rate - sloReady.target) })
+                : t("kpi.qualityDelta", { burn: sloReady.burn_rate.toFixed(1) })
+              : historyMode
+                ? t("kpi.noDataAtT")
+                : ""
           }
-          tone={slo.data ? rateTone(slo.data.good_rate) : "neutral"}
+          tone={sloReady ? rateTone(sloReady.good_rate) : "neutral"}
           icon={Activity}
           trend={trend.data?.buckets.map((b) => b.mean)}
-          loading={slo.isLoading}
+          loading={slo.isLoading && !slo.data}
           tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
         />
         <KpiCard
@@ -845,11 +867,14 @@ function TemporalRail({
         }}
       >
         <div className="pointer-events-none absolute inset-x-0 top-2.5 h-0.5 rounded-full bg-[linear-gradient(90deg,#363d48,#454e5d)]" />
-        {/* "real data begins here" / baseline marker */}
+        {/* "real data begins here" marker — this is where the timeline data
+            starts, NOT the comparison baseline. The baseline (target / present)
+            is a value, shown in the detail-panel delta, so it has no fixed point
+            on the time axis; pinning a "baseline" dot here was misleading. */}
         {timeline && dataStart > viewStart + span * 0.01 ? (
           <RailMarker
             pos={railPos(new Date(dataStart).toISOString(), viewStart, span)}
-            label={compare === "none" ? t("dataStart") : t("baseline")}
+            label={t("dataStart")}
             variant="baseline"
           />
         ) : null}

@@ -159,7 +159,8 @@
       "audit": "Audit evidence",
       "auditOk": "chain verified",
       "auditBroken": "chain broken",
-      "vsBaseline": "{delta} vs target"
+      "vsBaseline": "{delta} vs target",
+      "noDataAtT": "No data as of T"
     },
     "criticalControls": {
       "title": "Critical controls",
