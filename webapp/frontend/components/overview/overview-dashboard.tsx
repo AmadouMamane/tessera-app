@@ -1812,7 +1812,7 @@ function AnalyticsSection({
             {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2 text-xs">
+        <CardContent className="flex min-h-[7.5rem] flex-col gap-2 text-xs">
           {funnel && funnel.languages.length > 0 ? (
             funnel.languages.map((lang) => {
               const share = funnel.n_turns ? lang.n_turns / funnel.n_turns : 0;
@@ -1847,7 +1847,7 @@ function AnalyticsSection({
             {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="flex min-h-[7.5rem] flex-col gap-2">
           {controls.length > 0 ? (
             [...controls]
               .sort((a, b) => b.severity - a.severity)
