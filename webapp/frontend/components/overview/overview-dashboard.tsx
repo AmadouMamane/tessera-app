@@ -302,11 +302,12 @@ export function OverviewDashboard() {
   return (
     <div className="flex w-full flex-col gap-4 pb-8">
       {/* A second header row: the time rail pins flush under the page topbar and
-          stays there while the cockpit scrolls behind it. It matches the topbar
-          (same opaque bg + bottom border). -mx-4 bleeds the bg over the side
-          padding; the upward bg box-shadow fills the strip left by the main's
-          top padding (clipped by main's overflow) so nothing shows through. */}
-      <div className="sticky top-0 z-40 -mx-4 border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-4 pb-3 pt-3 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+          stays there while the cockpit scrolls behind it. The rail keeps its own
+          framed border (border-y); the wrapper only supplies the opaque bg that
+          hides scrolled content. -mx-4 bleeds the bg over the side padding; the
+          upward bg box-shadow fills the strip left by the main's top padding
+          (clipped by main's overflow) so nothing shows through. */}
+      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pb-3 pt-3 shadow-[0_-16px_0_0_var(--tessera-bg)]">
         <TemporalRail
           mode={mode}
           liveStatus={liveStatus}
@@ -775,7 +776,7 @@ function TemporalRail({
   if (mode === "live") {
     const last = timeline ? new Date(timeline.window_end) : null;
     return (
-      <section className="flex min-h-[42px] flex-wrap items-center gap-3 bg-transparent px-1 py-1">
+      <section className="flex min-h-[42px] flex-wrap items-center gap-3 border-y border-[var(--tessera-border)] bg-transparent px-1 py-2">
         <Badge className="rounded-md border-[#005c42] bg-[#003f30] px-3 py-1 text-[#7ff0b6]">
           {t("live")}
         </Badge>
