@@ -1282,7 +1282,13 @@
         "category": "Catégorie",
         "severity": "Sévérité",
         "lang": "Langue",
-        "example": "Exemple"
+        "example": "Exemple",
+        "prompt": "Prompt extrait",
+        "score": "Score",
+        "run": "Dataset / run",
+        "model": "Modèle",
+        "owner": "Owner",
+        "status": "Statut"
       },
       "sev": {
         "critical": "Critique",
@@ -1301,6 +1307,60 @@
         "policy_violation": "Violation de politique",
         "language_mixing": "Mélange de langues",
         "escalation_failure": "Échec d'escalade"
+      },
+      "kpi": {
+        "total": "Cas échoués",
+        "critical": "Critiques",
+        "new": "Nouveaux",
+        "recurrent": "Récurrents"
+      },
+      "filters": {
+        "severity": "Criticité",
+        "category": "Catégorie",
+        "model": "Modèle",
+        "lang": "Langue",
+        "status": "Statut",
+        "search": "Rechercher un cas ou un prompt…"
+      },
+      "bulk": {
+        "selected": "{n} sélectionné(s)",
+        "export": "Exporter sélection",
+        "addDataset": "Ajouter au dataset",
+        "createCase": "Créer case",
+        "assignOwner": "Assigner owner"
+      },
+      "status": {
+        "new": "Nouveau",
+        "recurrent": "Récurrent"
+      },
+      "page": {
+        "range": "{from}–{to} sur {total}"
+      },
+      "charts": {
+        "evolution": "Évolution des cas échoués",
+        "causes": "Top causes racines",
+        "sla": "SLA & triage"
+      },
+      "sla": {
+        "meanLatency": "Latence moyenne",
+        "critical": "Part critiques",
+        "new": "Part nouveaux",
+        "models": "Modèles touchés"
+      },
+      "rail": {
+        "none": "Aucun cas",
+        "empty": "Sélectionnez un cas échoué.",
+        "category": "Catégorie",
+        "model": "Modèle",
+        "lang": "Langue",
+        "owner": "Owner",
+        "status": "Statut",
+        "prompt": "Prompt",
+        "expected": "Réponse attendue",
+        "response": "Réponse du modèle",
+        "rootCause": "Cause racine",
+        "run": "Run",
+        "evidence": "Voir preuves qualité"
       }
     },
     "judge": {

@@ -1282,7 +1282,13 @@
         "category": "Category",
         "severity": "Severity",
         "lang": "Language",
-        "example": "Example"
+        "example": "Example",
+        "prompt": "Prompt excerpt",
+        "score": "Score",
+        "run": "Dataset / run",
+        "model": "Model",
+        "owner": "Owner",
+        "status": "Status"
       },
       "sev": {
         "critical": "Critical",
@@ -1301,6 +1307,60 @@
         "policy_violation": "Policy violation",
         "language_mixing": "Language mixing",
         "escalation_failure": "Escalation failure"
+      },
+      "kpi": {
+        "total": "Failed cases",
+        "critical": "Critical",
+        "new": "New",
+        "recurrent": "Recurrent"
+      },
+      "filters": {
+        "severity": "Severity",
+        "category": "Category",
+        "model": "Model",
+        "lang": "Language",
+        "status": "Status",
+        "search": "Search a case or prompt…"
+      },
+      "bulk": {
+        "selected": "{n} selected",
+        "export": "Export selection",
+        "addDataset": "Add to dataset",
+        "createCase": "Create case",
+        "assignOwner": "Assign owner"
+      },
+      "status": {
+        "new": "New",
+        "recurrent": "Recurrent"
+      },
+      "page": {
+        "range": "{from}–{to} of {total}"
+      },
+      "charts": {
+        "evolution": "Failed cases over time",
+        "causes": "Top root causes",
+        "sla": "SLA & triage"
+      },
+      "sla": {
+        "meanLatency": "Mean latency",
+        "critical": "Critical share",
+        "new": "New share",
+        "models": "Models affected"
+      },
+      "rail": {
+        "none": "No case",
+        "empty": "Select a failed case.",
+        "category": "Category",
+        "model": "Model",
+        "lang": "Language",
+        "owner": "Owner",
+        "status": "Status",
+        "prompt": "Prompt",
+        "expected": "Expected answer",
+        "response": "Model answer",
+        "rootCause": "Root cause",
+        "run": "Run",
+        "evidence": "View quality evidence"
       }
     },
     "judge": {

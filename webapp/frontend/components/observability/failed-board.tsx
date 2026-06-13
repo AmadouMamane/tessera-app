@@ -1,0 +1,792 @@
+"use client";
+
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileDown,
+  FilePlus2,
+  GitBranch,
+  Layers,
+  Repeat,
+  Sparkles,
+  UserPlus,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { FailedRunCase, FailedRunsReport } from "@/lib/api/schemas";
+
+const DASH = "—";
+const PAGE_SIZE = 25;
+
+const KNOWN_CATEGORIES = [
+  "prompt_injection",
+  "pii_leak",
+  "hallucination",
+  "overconfidence",
+  "regulatory_misstatement",
+  "citation_fabrication",
+  "tool_misuse",
+  "policy_violation",
+  "language_mixing",
+  "escalation_failure",
+];
+
+const SEV_TONE: Record<string, "danger" | "warning" | "neutral"> = {
+  critical: "danger",
+  high: "warning",
+  medium: "neutral",
+  low: "neutral",
+};
+
+const DONUT_COLORS = [
+  "#ef4444",
+  "#f59e0b",
+  "#3b82f6",
+  "#8b5cf6",
+  "#10b981",
+  "#ec4899",
+  "#14b8a6",
+  "#f97316",
+  "#64748b",
+  "#a3a3a3",
+];
+
+function useCatLabel() {
+  const tq = useTranslations("quality");
+  return (c: string) =>
+    KNOWN_CATEGORIES.includes(c) ? tq(`failed.cat.${c}`) : c.replace(/_/g, " ");
+}
+
+function pct(n: number, total: number): string {
+  if (total <= 0) return "0%";
+  return `${Math.round((n / total) * 100)}%`;
+}
+
+function shortModel(model: string): string {
+  return model || DASH;
+}
+
+function fmtDay(stamp: string): string {
+  const m = stamp.match(/^(\d{4})(\d{2})(\d{2})/);
+  if (!m) return stamp;
+  const [, , mo, d] = m;
+  return `${d}/${mo}`;
+}
+
+// ───────────────────────────────── sparkline ─────────────────────────────────
+
+/** Tiny filled-area sparkline of the daily failure trend. */
+function Spark({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return <div className="h-6" />;
+  const max = Math.max(...values, 1);
+  const w = 96;
+  const h = 24;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w;
+    const y = h - 2 - (v / max) * (h - 4);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className="h-6 w-full"
+      aria-hidden="true"
+      preserveAspectRatio="none"
+    >
+      <polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth={1.5} />
+    </svg>
+  );
+}
+
+// ──────────────────────────────── KPI strip ──────────────────────────────────
+
+function KpiTile({
+  icon,
+  label,
+  value,
+  sub,
+  tone,
+  spark,
+  sparkColor,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: string;
+  spark?: number[];
+  sparkColor?: string;
+}) {
+  return (
+    <Card className="flex flex-col gap-1 p-2.5">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1 text-[0.65rem] text-[var(--muted-foreground)]">
+          <span className="opacity-70">{icon}</span>
+          {label}
+        </span>
+        {sub ? <span className="text-[0.6rem] text-[var(--muted-foreground)]">{sub}</span> : null}
+      </div>
+      <div className="flex items-end justify-between gap-2">
+        <span className={`text-2xl font-semibold leading-none tabular-nums ${tone ?? ""}`}>
+          {value}
+        </span>
+        {spark && sparkColor ? (
+          <span className="w-24 shrink-0">
+            <Spark values={spark} color={sparkColor} />
+          </span>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
+function FailedKpis({ report }: { report: FailedRunsReport | undefined }) {
+  const tq = useTranslations("quality");
+  const total = report?.n ?? 0;
+  const trend = (report?.trend ?? []).map((t) => t.n);
+  return (
+    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <KpiTile
+        icon={<AlertCircle className="h-3.5 w-3.5" />}
+        label={tq("failed.kpi.total")}
+        value={String(total)}
+        tone="text-red-500 dark:text-red-400"
+        spark={trend}
+        sparkColor="#ef4444"
+      />
+      <KpiTile
+        icon={<AlertCircle className="h-3.5 w-3.5" />}
+        label={tq("failed.kpi.critical")}
+        value={String(report?.n_critical ?? 0)}
+        sub={pct(report?.n_critical ?? 0, total)}
+        tone="text-red-500 dark:text-red-400"
+        spark={trend}
+        sparkColor="#f87171"
+      />
+      <KpiTile
+        icon={<Sparkles className="h-3.5 w-3.5" />}
+        label={tq("failed.kpi.new")}
+        value={String(report?.n_new ?? 0)}
+        sub={pct(report?.n_new ?? 0, total)}
+        tone="text-amber-500 dark:text-amber-400"
+        spark={trend}
+        sparkColor="#f59e0b"
+      />
+      <KpiTile
+        icon={<Repeat className="h-3.5 w-3.5" />}
+        label={tq("failed.kpi.recurrent")}
+        value={String(report?.n_recurrent ?? 0)}
+        sub={pct(report?.n_recurrent ?? 0, total)}
+        tone="text-violet-500 dark:text-violet-400"
+        spark={trend}
+        sparkColor="#8b5cf6"
+      />
+    </div>
+  );
+}
+
+// ──────────────────────────────── filter bar ─────────────────────────────────
+
+function Select({
+  value,
+  onChange,
+  children,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[0.7rem] text-[var(--foreground)]"
+    >
+      {children}
+    </select>
+  );
+}
+
+// ─────────────────────────────── bottom charts ───────────────────────────────
+
+function MiniDonut({
+  items,
+  center,
+  label,
+}: {
+  items: { key: string; label: string; value: number }[];
+  center: string;
+  label: string;
+}) {
+  const total = items.reduce((a, b) => a + b.value, 0);
+  if (total === 0) return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  let offset = 0;
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative h-16 w-16 shrink-0">
+        <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90" aria-hidden="true">
+          {items.map((it, i) => {
+            const len = (it.value / total) * c;
+            const seg = (
+              <circle
+                key={it.key}
+                cx="32"
+                cy="32"
+                r={r}
+                fill="none"
+                stroke={DONUT_COLORS[i % DONUT_COLORS.length]}
+                strokeWidth={9}
+                strokeDasharray={`${len} ${c - len}`}
+                strokeDashoffset={-offset}
+              />
+            );
+            offset += len;
+            return seg;
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-sm font-semibold tabular-nums">{center}</span>
+          <span className="text-[0.55rem] text-[var(--muted-foreground)]">{label}</span>
+        </div>
+      </div>
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.6rem]">
+        {items.slice(0, 5).map((it, i) => (
+          <li key={it.key} className="flex items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-1">
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }}
+              />
+              <span className="truncate text-[var(--muted-foreground)]">{it.label}</span>
+            </span>
+            <span className="shrink-0 tabular-nums">{Math.round((it.value / total) * 100)}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TrendBars({ points }: { points: { date: string; n: number }[] }) {
+  if (points.length === 0)
+    return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
+  const max = Math.max(...points.map((p) => p.n), 1);
+  return (
+    <div className="flex h-20 items-end gap-1.5">
+      {points.map((p) => (
+        <div key={p.date} className="flex flex-1 flex-col items-center gap-1">
+          <span className="text-[0.55rem] tabular-nums text-[var(--muted-foreground)]">{p.n}</span>
+          <div
+            className="w-full rounded-sm bg-violet-500/70"
+            style={{ height: `${Math.max(4, (p.n / max) * 56)}px` }}
+            title={`${p.date}: ${p.n}`}
+          />
+          <span className="text-[0.5rem] text-[var(--muted-foreground)]">{fmtDay(p.date)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CauseBars({ items }: { items: { key: string; label: string; value: number }[] }) {
+  if (items.length === 0)
+    return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
+  const max = Math.max(...items.map((i) => i.value), 1);
+  return (
+    <div className="flex flex-col gap-1">
+      {items.map((it) => (
+        <div key={it.key} className="flex items-center gap-1.5 text-[0.6rem]">
+          <span className="w-24 shrink-0 truncate text-[var(--muted-foreground)]">{it.label}</span>
+          <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--muted)]/40">
+            <div
+              className="h-full rounded-sm bg-amber-500"
+              style={{ width: `${(it.value / max) * 100}%` }}
+            />
+          </div>
+          <span className="w-6 shrink-0 text-right tabular-nums">{it.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ──────────────────────────────── the board ──────────────────────────────────
+
+/** The full Cas échoués board — KPI, filters, table, charts (reference image 03). */
+export function FailedBoard({
+  report,
+  selectedId,
+  onSelect,
+}: {
+  report: FailedRunsReport | undefined;
+  selectedId: string | null;
+  onSelect: (c: FailedRunCase) => void;
+}) {
+  const tq = useTranslations("quality");
+  const catLabel = useCatLabel();
+  const [sev, setSev] = useState("all");
+  const [cat, setCat] = useState("all");
+  const [model, setModel] = useState("all");
+  const [lang, setLang] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+
+  const cases = report?.cases ?? [];
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return cases.filter(
+      (c) =>
+        (sev === "all" || c.severity === sev) &&
+        (cat === "all" || c.category === cat) &&
+        (model === "all" || c.model === model) &&
+        (lang === "all" || c.language === lang) &&
+        (status === "all" || c.status === status) &&
+        (q === "" ||
+          c.id.toLowerCase().includes(q) ||
+          c.prompt.toLowerCase().includes(q) ||
+          c.response.toLowerCase().includes(q)),
+    );
+  }, [cases, sev, cat, model, lang, status, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const rows = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+
+  const rowKey = (c: FailedRunCase) => `${c.run_id}:${c.id}`;
+  const toggle = (c: FailedRunCase) => {
+    const k = rowKey(c);
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
+  };
+
+  const exportSelection = () => {
+    const chosen = filtered.filter((c) => picked.has(rowKey(c)));
+    const payload = chosen.length ? chosen : filtered;
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tessera-cas-echoues.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const total = report?.n ?? 0;
+  const dist = Object.entries(report?.by_category ?? {})
+    .map(([key, value]) => ({ key, label: catLabel(key), value }))
+    .sort((a, b) => b.value - a.value);
+  const causes = dist.slice(0, 5);
+  const meanLatency = report?.mean_latency_ms ?? null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <FailedKpis report={report} />
+
+      {/* filters + bulk actions */}
+      <Card className="flex flex-col gap-2 p-2.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Select value={sev} onChange={setSev}>
+            <option value="all">{tq("failed.filters.severity")}</option>
+            {["critical", "high", "medium", "low"].map((s) => (
+              <option key={s} value={s}>
+                {tq(`failed.sev.${s}`)}
+              </option>
+            ))}
+          </Select>
+          <Select value={cat} onChange={setCat}>
+            <option value="all">{tq("failed.filters.category")}</option>
+            {Object.keys(report?.by_category ?? {}).map((c) => (
+              <option key={c} value={c}>
+                {catLabel(c)}
+              </option>
+            ))}
+          </Select>
+          <Select value={model} onChange={setModel}>
+            <option value="all">{tq("failed.filters.model")}</option>
+            {(report?.models ?? []).map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </Select>
+          <Select value={lang} onChange={setLang}>
+            <option value="all">{tq("failed.filters.lang")}</option>
+            {(report?.languages ?? []).map((l) => (
+              <option key={l} value={l}>
+                {l.toUpperCase()}
+              </option>
+            ))}
+          </Select>
+          <Select value={status} onChange={setStatus}>
+            <option value="all">{tq("failed.filters.status")}</option>
+            <option value="new">{tq("failed.status.new")}</option>
+            <option value="recurrent">{tq("failed.status.recurrent")}</option>
+          </Select>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={tq("failed.filters.search")}
+            className="min-w-[12rem] flex-1 rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[0.7rem]"
+          />
+          <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+            {tq("failed.count", { shown: filtered.length, total })}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] pt-2 text-[0.68rem]">
+          <span className="text-[var(--muted-foreground)]">
+            {tq("failed.bulk.selected", { n: picked.size })}
+          </span>
+          <button
+            type="button"
+            onClick={exportSelection}
+            className="inline-flex items-center gap-1 text-[var(--primary)] hover:underline"
+          >
+            <Download className="h-3 w-3" />
+            {tq("failed.bulk.export")}
+          </button>
+          <span className="inline-flex items-center gap-1 text-[var(--muted-foreground)]">
+            <Layers className="h-3 w-3" />
+            {tq("failed.bulk.addDataset")}
+            <Badge tone="neutral" className="text-[0.55rem]">
+              Admin+
+            </Badge>
+          </span>
+          <span className="inline-flex items-center gap-1 text-[var(--muted-foreground)]">
+            <FilePlus2 className="h-3 w-3" />
+            {tq("failed.bulk.createCase")}
+            <Badge tone="neutral" className="text-[0.55rem]">
+              Admin+
+            </Badge>
+          </span>
+          <span className="inline-flex items-center gap-1 text-[var(--muted-foreground)]">
+            <UserPlus className="h-3 w-3" />
+            {tq("failed.bulk.assignOwner")}
+            <Badge tone="neutral" className="text-[0.55rem]">
+              Admin+
+            </Badge>
+          </span>
+        </div>
+      </Card>
+
+      {/* main table */}
+      <Card>
+        <CardContent className="overflow-x-auto py-2">
+          {rows.length === 0 ? (
+            <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
+              {tq("failed.empty")}
+            </p>
+          ) : (
+            <table className="w-full text-left text-[0.7rem]">
+              <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+                <tr className="border-b border-[var(--border)]">
+                  <th className="w-6 py-1.5" />
+                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.id")}</th>
+                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.severity")}</th>
+                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.category")}</th>
+                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.prompt")}</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">{tq("failed.cols.score")}</th>
+                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.run")}</th>
+                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.model")}</th>
+                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.owner")}</th>
+                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.status")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((c) => {
+                  const k = rowKey(c);
+                  const selected = c.id === selectedId;
+                  return (
+                    <tr
+                      key={k}
+                      onClick={() => onSelect(c)}
+                      className={`cursor-pointer border-b border-[var(--border)]/50 transition-colors hover:bg-[var(--accent)]/40 ${
+                        selected ? "bg-[var(--accent)]/60" : ""
+                      }`}
+                    >
+                      <td className="py-1.5">
+                        <input
+                          type="checkbox"
+                          checked={picked.has(k)}
+                          onChange={() => toggle(c)}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={c.id}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2 font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                        {c.id}
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        <Badge tone={SEV_TONE[c.severity] ?? "neutral"} className="text-[0.6rem]">
+                          {tq(`failed.sev.${c.severity}`)}
+                        </Badge>
+                      </td>
+                      <td className="py-1.5 pr-2 whitespace-nowrap">{catLabel(c.category)}</td>
+                      <td className="max-w-[20rem] truncate py-1.5 pr-2 text-[var(--muted-foreground)]">
+                        {c.prompt}
+                      </td>
+                      <td className="py-1.5 pr-2 text-right tabular-nums text-[var(--muted-foreground)]">
+                        {DASH}
+                      </td>
+                      <td className="py-1.5 pr-2 font-mono text-[0.62rem] text-[var(--muted-foreground)]">
+                        {c.catalogue_version ? `v${c.catalogue_version.split("-")[0]}` : DASH}
+                      </td>
+                      <td className="py-1.5 pr-2 whitespace-nowrap">{shortModel(c.model)}</td>
+                      <td className="py-1.5 pr-2 text-[var(--muted-foreground)]">{c.owner}</td>
+                      <td className="py-1.5 pr-2">
+                        <span
+                          className={`inline-flex items-center gap-1 text-[0.62rem] ${
+                            c.status === "new"
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-violet-600 dark:text-violet-400"
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              c.status === "new" ? "bg-amber-500" : "bg-violet-500"
+                            }`}
+                          />
+                          {tq(`failed.status.${c.status}`)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+        {filtered.length > PAGE_SIZE ? (
+          <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-3 py-1.5 text-[0.65rem] text-[var(--muted-foreground)]">
+            <span>
+              {tq("failed.page.range", {
+                from: safePage * PAGE_SIZE + 1,
+                to: Math.min(filtered.length, (safePage + 1) * PAGE_SIZE),
+                total: filtered.length,
+              })}
+            </span>
+            <button
+              type="button"
+              disabled={safePage === 0}
+              onClick={() => setPage(safePage - 1)}
+              className="rounded p-0.5 disabled:opacity-40"
+              aria-label="prev"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              disabled={safePage >= pageCount - 1}
+              onClick={() => setPage(safePage + 1)}
+              className="rounded p-0.5 disabled:opacity-40"
+              aria-label="next"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : null}
+      </Card>
+
+      {/* bottom analytics row */}
+      <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+              {tq("failed.distribution")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-1">
+            <MiniDonut items={dist} center={String(total)} label={tq("failed.casesLabel")} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+              {tq("failed.charts.evolution")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-1">
+            <TrendBars points={report?.trend ?? []} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+              {tq("failed.charts.causes")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-1">
+            <CauseBars items={causes} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+              {tq("failed.charts.sla")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1 pt-1 text-[0.7rem]">
+            <SlaRow label={tq("failed.sla.meanLatency")} value={fmtLatency(meanLatency)} />
+            <SlaRow label={tq("failed.sla.critical")} value={pct(report?.n_critical ?? 0, total)} />
+            <SlaRow label={tq("failed.sla.new")} value={pct(report?.n_new ?? 0, total)} />
+            <SlaRow label={tq("failed.sla.models")} value={String(report?.models.length ?? 0)} />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function fmtLatency(ms: number | null): string {
+  if (ms == null) return DASH;
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
+function SlaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[var(--muted-foreground)]">{label}</span>
+      <span className="font-medium tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+// ──────────────────────────────── selected rail ──────────────────────────────
+
+/** Right-rail fiche for the selected failed case (reference image 03). */
+export function FailedRail({
+  failedCase,
+  onEvidence,
+}: {
+  failedCase: FailedRunCase | undefined;
+  onEvidence: () => void;
+}) {
+  const tq = useTranslations("quality");
+  const catLabel = useCatLabel();
+  return (
+    <aside className="flex w-full flex-col gap-2 2xl:w-80">
+      <Card>
+        <CardHeader className="pb-1">
+          <CardTitle className="flex items-center justify-between gap-2 text-[0.8rem]">
+            <span className="font-mono text-[0.72rem]">
+              {failedCase?.id ?? tq("failed.rail.none")}
+            </span>
+            {failedCase ? (
+              <Badge tone={SEV_TONE[failedCase.severity] ?? "neutral"} className="text-[0.6rem]">
+                {tq(`failed.sev.${failedCase.severity}`)}
+              </Badge>
+            ) : null}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-1">
+          {failedCase == null ? (
+            <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+              {tq("failed.rail.empty")}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2 text-[0.7rem]">
+              <RailKV k={tq("failed.rail.category")} v={catLabel(failedCase.category)} />
+              <RailKV k={tq("failed.rail.model")} v={failedCase.model} />
+              <RailKV k={tq("failed.rail.lang")} v={failedCase.language.toUpperCase()} />
+              <RailKV k={tq("failed.rail.owner")} v={failedCase.owner} />
+              <RailKV k={tq("failed.rail.status")} v={tq(`failed.status.${failedCase.status}`)} />
+
+              <Section title={tq("failed.rail.prompt")}>{failedCase.prompt || DASH}</Section>
+              <Section title={tq("failed.rail.expected")}>{failedCase.expected || DASH}</Section>
+              <Section title={tq("failed.rail.response")} tone="bad">
+                {failedCase.response || DASH}
+              </Section>
+              {failedCase.reasons.length ? (
+                <div>
+                  <p className="mb-0.5 text-[0.62rem] font-medium uppercase text-[var(--muted-foreground)]">
+                    {tq("failed.rail.rootCause")}
+                  </p>
+                  <ul className="flex flex-col gap-1">
+                    {failedCase.reasons.map((r) => (
+                      <li
+                        key={r}
+                        className="flex items-start gap-1 rounded bg-red-500/10 px-1.5 py-1 text-[0.65rem] text-red-700 dark:text-red-300"
+                      >
+                        <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              <div className="flex flex-col gap-1 border-t border-[var(--border)] pt-2">
+                <span className="inline-flex items-center justify-between gap-2 text-[0.65rem] text-[var(--muted-foreground)]">
+                  <span className="flex items-center gap-1">
+                    <GitBranch className="h-3 w-3" />
+                    {tq("failed.rail.run")}
+                  </span>
+                  <span className="font-mono text-[0.62rem] text-[var(--foreground)]">
+                    {failedCase.run_id}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={onEvidence}
+                  className="inline-flex items-center gap-1 self-start text-[0.7rem] font-medium text-[var(--primary)] hover:underline"
+                >
+                  <FileDown className="h-3 w-3" />
+                  {tq("failed.rail.evidence")}
+                </button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </aside>
+  );
+}
+
+function RailKV({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[var(--muted-foreground)]">{k}</span>
+      <span className="font-medium text-[var(--foreground)]">{v}</span>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  tone,
+  children,
+}: {
+  title: string;
+  tone?: "bad";
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="mb-0.5 text-[0.62rem] font-medium uppercase text-[var(--muted-foreground)]">
+        {title}
+      </p>
+      <p
+        className={`line-clamp-4 rounded px-1.5 py-1 text-[0.65rem] ${
+          tone === "bad"
+            ? "bg-red-500/5 text-[var(--foreground)]"
+            : "bg-[var(--muted)]/30 text-[var(--muted-foreground)]"
+        }`}
+      >
+        {children}
+      </p>
+    </div>
+  );
+}

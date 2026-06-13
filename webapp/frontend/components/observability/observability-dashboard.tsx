@@ -3,32 +3,29 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
-  Ban,
   Boxes,
   CalendarClock,
   ChevronRight,
   FileDown,
   Gauge,
   GitCompareArrows,
-  Grid3x3,
   Landmark,
   Layers,
   ListChecks,
-  Lock,
   Play,
   Radio,
   Route,
   Scale,
   ShieldCheck,
   Siren,
-  Sparkles,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { ModelComparisonTable } from "@/components/observability/eval-runs";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
-import { FailedCasesTable, FailureDistribution } from "@/components/observability/failed-cases";
+import { FailedBoard, FailedRail } from "@/components/observability/failed-board";
+import { FailureDistribution } from "@/components/observability/failed-cases";
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
 import {
   CostQualityScatter,
@@ -81,6 +78,7 @@ import {
   fetchCost,
   fetchEvalDatasets,
   fetchFailedCases,
+  fetchFailedRuns,
   fetchFailureClusters,
   fetchFailurePredictor,
   fetchFirewallEfficacy,
@@ -108,16 +106,12 @@ import {
 } from "@/lib/api/client";
 import type {
   Calibration,
-  ClusterReport,
-  ContradictionReport,
   FailedCasesReport,
-  PIILeakSummary,
-  PredictorEvaluation,
+  FailedRunCase,
   ReleaseStatus,
   RunRegistry,
   RunSummary,
   ShadowReport,
-  ToxicityReport,
   WhatChanged,
 } from "@/lib/api/schemas";
 
@@ -142,6 +136,7 @@ export function ObservabilityDashboard() {
   const [tab, setTab] = useState<TabKey>("overview");
   const [selectedSignal, setSelectedSignal] = useState<SignalRow | null>(null);
   const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
+  const [selectedFailed, setSelectedFailed] = useState<FailedRunCase | null>(null);
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
@@ -187,6 +182,13 @@ export function ObservabilityDashboard() {
     queryKey: ["failed-cases", locale],
     queryFn: ({ signal }) => fetchFailedCases(signal, locale),
     staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  // Real failed cases from the run archive (Cas échoués tab) — refresh slowly.
+  const failedRuns = useQuery({
+    queryKey: ["failed-runs"],
+    queryFn: ({ signal }) => fetchFailedRuns(signal),
+    refetchInterval: 60_000,
   });
 
   // Eval run archive — refreshes slowly; the report files change rarely.
@@ -623,20 +625,11 @@ export function ObservabilityDashboard() {
           )}
 
           {tab === "failed" && (
-            <TabGrid>
-              <FullWidth>
-                <FailedCasesTable report={failedCases.data} loading={failedCases.isLoading} />
-              </FullWidth>
-              <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
-              <FailureClusterCard data={failureClusters.data} loading={failureClusters.isLoading} />
-              <FailurePredictorCard
-                data={failurePredictor.data}
-                loading={failurePredictor.isLoading}
-              />
-              <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
-              <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
-              <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
-            </TabGrid>
+            <FailedBoard
+              report={failedRuns.data}
+              selectedId={(selectedFailed ?? failedRuns.data?.cases[0])?.id ?? null}
+              onSelect={setSelectedFailed}
+            />
           )}
 
           {tab === "models" && (
@@ -679,6 +672,11 @@ export function ObservabilityDashboard() {
             registry={runs.data}
             datasets={evalDatasets.data}
             release={releaseStatus.data}
+          />
+        ) : tab === "failed" ? (
+          <FailedRail
+            failedCase={selectedFailed ?? failedRuns.data?.cases[0]}
+            onEvidence={downloadQualityEvidence}
           />
         ) : (
           <RightRail
@@ -1074,171 +1072,6 @@ function ShadowCard() {
   );
 }
 
-function ToxicityCard({ data, loading }: { data: ToxicityReport | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  const pct = data ? Math.round(data.toxicity_rate * 100) : 0;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Ban className="h-4 w-4 text-blue-500" />
-          {t("toxicity.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n_turns === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("toxicity.empty")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">{t("toxicity.rate")}</span>
-                <Badge tone={pct === 0 ? "success" : "danger"}>{pct}%</Badge>
-              </div>
-              <Metric label={t("toxicity.flagged")} value={`${data.n_toxic}/${data.n_turns}`} />
-            </div>
-            {data.flagged.length > 0 ? (
-              <ul className="flex flex-col gap-1 text-xs">
-                {data.flagged.slice(0, 5).map((f, i) => (
-                  <li key={`${i}-${f.question.slice(0, 12)}`} className="flex items-center gap-2">
-                    <span className="font-mono text-red-600 dark:text-red-400">
-                      {f.terms.join(", ")}
-                    </span>
-                    <span className="min-w-0 truncate text-[var(--muted-foreground)]">
-                      {f.question}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function FailurePredictorCard({
-  data,
-  loading,
-}: {
-  data: PredictorEvaluation | undefined;
-  loading: boolean;
-}) {
-  const t = useTranslations("observability");
-  const precPct = data ? Math.round(data.precision * 100) : 0;
-  const recallPct = data ? Math.round(data.recall * 100) : 0;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Sparkles className="h-4 w-4 text-blue-500" />
-          {t("predictor.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("predictor.empty")}</p>
-        ) : (
-          <div className="flex flex-wrap items-end gap-6 text-sm">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-[var(--muted-foreground)]">
-                {t("predictor.precision")}
-              </span>
-              <Badge tone={precPct >= 70 ? "success" : precPct >= 40 ? "warning" : "danger"}>
-                {precPct}%
-              </Badge>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-[var(--muted-foreground)]">
-                {t("predictor.recall")}
-              </span>
-              <Badge tone={recallPct >= 70 ? "success" : recallPct >= 40 ? "warning" : "danger"}>
-                {recallPct}%
-              </Badge>
-            </div>
-            <Metric label={t("predictor.predicted")} value={`${data.n_predicted_fail}/${data.n}`} />
-            <Metric label={t("predictor.actual")} value={`${data.n_actual_fail}/${data.n}`} />
-            <Metric
-              label={t("predictor.confusion")}
-              value={`${data.true_positive}·${data.false_positive}·${data.false_negative}`}
-            />
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function FailureClusterCard({
-  data,
-  loading,
-}: {
-  data: ClusterReport | undefined;
-  loading: boolean;
-}) {
-  const t = useTranslations("observability");
-  const purityPct = data?.mean_purity != null ? Math.round(data.mean_purity * 100) : 0;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Grid3x3 className="h-4 w-4 text-blue-500" />
-          {t("clusters.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-12 w-full" />
-        ) : !data?.available ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("clusters.unavailable")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <Metric label={t("clusters.failures")} value={String(data.n_failures ?? 0)} />
-              <Metric label={t("clusters.themes")} value={String(data.k ?? 0)} />
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {t("clusters.purity")}
-                </span>
-                <Badge tone={purityPct >= 80 ? "success" : purityPct >= 60 ? "warning" : "danger"}>
-                  {purityPct}%
-                </Badge>
-              </div>
-            </div>
-            <ul className="flex flex-col gap-2">
-              {(data.clusters ?? []).map((c) => (
-                <li
-                  key={c.cluster_id}
-                  className="flex flex-col gap-1 rounded-md border border-[var(--border)] p-2"
-                >
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <Badge tone="neutral">{c.dominant_category}</Badge>
-                    <span className="text-[var(--muted-foreground)]">
-                      {c.size} {t("clusters.cases")} · {Math.round(c.purity * 100)}%
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 text-[0.65rem] text-[var(--muted-foreground)]">
-                    {Object.entries(c.categories).map(([cat, n]) => (
-                      <span key={cat} className="font-mono">
-                        {cat}:{n}
-                      </span>
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 // Open speedometer gauge (the normative "arc"): a ~240° sweep, wider than a
 // semicircle, with the endpoints angled downward. Tuned to the 100×72 viewBox.
 const _GAUGE_SWEEP = 240; // degrees
@@ -1344,108 +1177,6 @@ function CalibrationCard({ data, loading }: { data: Calibration | undefined; loa
                 <span className="truncate font-mono text-[0.7rem]">{data.judge_model ?? "—"}</span>
               </div>
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function PiiLeakCard({ data, loading }: { data: PIILeakSummary | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  const pct = data ? Math.round(data.leak_rate * 100) : 0;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Lock className="h-4 w-4 text-blue-500" />
-          {t("piiLeak.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n_turns === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("piiLeak.empty")}</p>
-        ) : (
-          <div className="flex flex-wrap items-end gap-6 text-sm">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-[var(--muted-foreground)]">{t("piiLeak.rate")}</span>
-              <Badge tone={pct === 0 ? "success" : pct <= 10 ? "warning" : "danger"}>{pct}%</Badge>
-            </div>
-            <Metric label={t("piiLeak.turns")} value={String(data.n_turns)} />
-            <Metric label={t("piiLeak.leaked")} value={String(data.total_leaked)} />
-            {data.examples.length > 0 ? (
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {t("piiLeak.examples")}
-                </span>
-                <span className="font-mono text-xs text-red-600 dark:text-red-400">
-                  {data.examples.join(", ")}
-                </span>
-              </div>
-            ) : null}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ContradictionCard({
-  data,
-  loading,
-}: {
-  data: ContradictionReport | undefined;
-  loading: boolean;
-}) {
-  const t = useTranslations("observability");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <GitCompareArrows className="h-4 w-4 text-blue-500" />
-          {t("contradiction.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n_turns === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("contradiction.empty")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {t("contradiction.found")}
-                </span>
-                <Badge tone={data.n_contradictions === 0 ? "success" : "danger"}>
-                  {data.n_contradictions}
-                </Badge>
-              </div>
-              <Metric label={t("contradiction.sessions")} value={String(data.n_sessions)} />
-              <Metric label={t("contradiction.turns")} value={String(data.n_turns)} />
-            </div>
-            {data.pairs.length > 0 ? (
-              <ul className="flex flex-col gap-2 text-xs">
-                {data.pairs.slice(0, 5).map((p, idx) => (
-                  <li
-                    key={`${p.conversation_id}-${p.i}-${p.j}-${idx}`}
-                    className="rounded-md bg-[var(--muted)]/40 p-2"
-                  >
-                    <p className="text-[var(--muted-foreground)]">
-                      {t("contradiction.turn")} {p.i + 1} ↔ {p.j + 1} · {t("contradiction.topic")}{" "}
-                      {Math.round(p.topic_similarity * 100)}% · {t("contradiction.answers")}{" "}
-                      {Math.round(p.answer_similarity * 100)}%
-                    </p>
-                    <p className="mt-0.5 break-words">
-                      “{p.question_i}” / “{p.question_j}”
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
           </div>
         )}
       </CardContent>

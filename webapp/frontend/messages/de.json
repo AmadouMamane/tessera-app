@@ -1282,7 +1282,13 @@
         "category": "Kategorie",
         "severity": "Schweregrad",
         "lang": "Sprache",
-        "example": "Beispiel"
+        "example": "Beispiel",
+        "prompt": "Prompt-Auszug",
+        "score": "Score",
+        "run": "Datensatz / Lauf",
+        "model": "Modell",
+        "owner": "Owner",
+        "status": "Status"
       },
       "sev": {
         "critical": "Kritisch",
@@ -1301,6 +1307,60 @@
         "policy_violation": "Richtlinienverstoß",
         "language_mixing": "Sprachmischung",
         "escalation_failure": "Eskalationsfehler"
+      },
+      "kpi": {
+        "total": "Fehlerfälle",
+        "critical": "Kritisch",
+        "new": "Neu",
+        "recurrent": "Wiederkehrend"
+      },
+      "filters": {
+        "severity": "Kritikalität",
+        "category": "Kategorie",
+        "model": "Modell",
+        "lang": "Sprache",
+        "status": "Status",
+        "search": "Fall oder Prompt suchen…"
+      },
+      "bulk": {
+        "selected": "{n} ausgewählt",
+        "export": "Auswahl exportieren",
+        "addDataset": "Zum Datensatz",
+        "createCase": "Case erstellen",
+        "assignOwner": "Owner zuweisen"
+      },
+      "status": {
+        "new": "Neu",
+        "recurrent": "Wiederkehrend"
+      },
+      "page": {
+        "range": "{from}–{to} von {total}"
+      },
+      "charts": {
+        "evolution": "Fehlerfälle im Zeitverlauf",
+        "causes": "Top-Ursachen",
+        "sla": "SLA & Triage"
+      },
+      "sla": {
+        "meanLatency": "Mittlere Latenz",
+        "critical": "Kritisch-Anteil",
+        "new": "Neu-Anteil",
+        "models": "Betroffene Modelle"
+      },
+      "rail": {
+        "none": "Kein Fall",
+        "empty": "Wählen Sie einen Fehlerfall.",
+        "category": "Kategorie",
+        "model": "Modell",
+        "lang": "Sprache",
+        "owner": "Owner",
+        "status": "Status",
+        "prompt": "Prompt",
+        "expected": "Erwartete Antwort",
+        "response": "Modellantwort",
+        "rootCause": "Ursache",
+        "run": "Lauf",
+        "evidence": "Qualitätsnachweise ansehen"
       }
     },
     "judge": {

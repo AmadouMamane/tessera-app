@@ -59,6 +59,8 @@ import {
   EvalScoresResponseSchema,
   type FailedCasesReport,
   FailedCasesReportSchema,
+  type FailedRunsReport,
+  FailedRunsReportSchema,
   type FirewallEfficacy,
   FirewallEfficacySchema,
   type FreshnessReport,
@@ -561,6 +563,11 @@ export async function fetchFailedCases(
     { signal },
     FailedCasesReportSchema,
   );
+}
+
+/** Real failed cases from the run archive (Cas échoués tab, image 03). */
+export async function fetchFailedRuns(signal?: AbortSignal): Promise<FailedRunsReport> {
+  return request("/observability/failed-runs", { signal }, FailedRunsReportSchema);
 }
 
 /** Measured instrumentation overhead vs the turn budget (cost of obs, #84). */

@@ -1027,6 +1027,50 @@ export const QualityDatasetsReportSchema = z.object({
 });
 export type QualityDatasetsReport = z.infer<typeof QualityDatasetsReportSchema>;
 
+export const FailedRunCaseSchema = z.object({
+  id: z.string(),
+  category: z.string(),
+  severity: z.string(),
+  language: z.string(),
+  title: z.string(),
+  prompt: z.string(),
+  expected: z.string(),
+  response: z.string(),
+  reasons: z.array(z.string()),
+  model: z.string(),
+  run_id: z.string(),
+  run_at: z.string(),
+  catalogue_version: z.string().nullable(),
+  latency_ms: z.number().nullable(),
+  owner: z.string(),
+  status: z.string(),
+});
+export type FailedRunCase = z.infer<typeof FailedRunCaseSchema>;
+
+export const FailedTrendPointSchema = z.object({
+  date: z.string(),
+  n: z.number().int(),
+});
+export type FailedTrendPoint = z.infer<typeof FailedTrendPointSchema>;
+
+export const FailedRunsReportSchema = z.object({
+  n: z.number().int(),
+  cases: z.array(FailedRunCaseSchema),
+  by_category: z.record(z.string(), z.number().int()),
+  by_severity: z.record(z.string(), z.number().int()),
+  by_model: z.record(z.string(), z.number().int()),
+  by_language: z.record(z.string(), z.number().int()),
+  n_critical: z.number().int(),
+  n_new: z.number().int(),
+  n_recurrent: z.number().int(),
+  trend: z.array(FailedTrendPointSchema),
+  models: z.array(z.string()),
+  languages: z.array(z.string()),
+  catalogue_version: z.string().nullable(),
+  mean_latency_ms: z.number().nullable(),
+});
+export type FailedRunsReport = z.infer<typeof FailedRunsReportSchema>;
+
 export const RoadmapItemSchema = z.object({
   theme: z.string(),
   signal: z.string(),

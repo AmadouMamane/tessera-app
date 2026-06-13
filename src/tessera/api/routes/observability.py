@@ -922,6 +922,21 @@ async def observability_runs() -> dict[str, object]:
     return asdict(load_runs())
 
 
+@router.get("/observability/failed-runs")
+async def observability_failed_runs() -> dict[str, object]:
+    """Real failed cases from the run archive (Cas échoués tab, image 03).
+
+    Every ``passed: false`` result in each model/language's most recent
+    full-catalogue run, joined with ``eval/failures`` for the triggering prompt
+    and expected behaviour. Per-case ``status`` is ``new`` (a fresh regression vs
+    the previous run) or ``recurrent``; ``owner`` is the documented governance
+    team. There is no per-case judge score in the reports, so none is invented.
+    """
+    from tessera.observability.eval.failed_runs import load_failed_runs
+
+    return asdict(load_failed_runs())
+
+
 @router.get("/observability/eval-datasets")
 async def observability_eval_datasets() -> dict[str, object]:
     """Themed quality datasets from the failure catalogue joined to runs (image 02).
