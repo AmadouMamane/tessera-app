@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from tessera.observability.eval.judge import Judge
 
 __all__ = [
+    "CalibrationPoint",
     "CalibrationReport",
     "GoldCase",
     "agreement_rate",
@@ -60,6 +61,22 @@ class GoldCase:
 
 
 @dataclass(frozen=True, slots=True)
+class CalibrationPoint:
+    """One gold case: the judge's score against the human label.
+
+    The per-sample detail behind the calibration scatter and disagreement table
+    (Qualité IA "Calibration juge" tab, reference image 05).
+    """
+
+    question: str  # truncated for display
+    human_label: str  # "good" | "bad"
+    judge_label: str  # "good" | "bad" (judge score thresholded)
+    judge_score: float
+    length: int  # answer length (for the verbosity-bias scatter)
+    match: bool  # judge and human agree
+
+
+@dataclass(frozen=True, slots=True)
 class CalibrationReport:
     """The judge's calibration against the gold set."""
 
@@ -71,6 +88,7 @@ class CalibrationReport:
     verbosity_corr: float
     lenient: bool
     judge_model: str
+    points: list[CalibrationPoint] = field(default_factory=list)
 
 
 def cohen_kappa(pairs: Sequence[tuple[str, str]]) -> float:
@@ -133,6 +151,7 @@ async def calibrate(judge: Judge, gold: Sequence[GoldCase]) -> CalibrationReport
     bad_scores: list[float] = []
     lengths: list[float] = []
     scores: list[float] = []
+    points: list[CalibrationPoint] = []
     judge_model = ""
 
     for case in gold:
@@ -148,6 +167,16 @@ async def calibrate(judge: Judge, gold: Sequence[GoldCase]) -> CalibrationReport
         lengths.append(float(len(case.answer)))
         scores.append(verdict.score)
         (good_scores if case.human_label == "good" else bad_scores).append(verdict.score)
+        points.append(
+            CalibrationPoint(
+                question=case.question[:90],
+                human_label=case.human_label,
+                judge_label=judge_label,
+                judge_score=verdict.score,
+                length=len(case.answer),
+                match=judge_label == case.human_label,
+            )
+        )
 
     mean_good = sum(good_scores) / len(good_scores) if good_scores else 0.0
     mean_bad = sum(bad_scores) / len(bad_scores) if bad_scores else 0.0
@@ -160,4 +189,5 @@ async def calibrate(judge: Judge, gold: Sequence[GoldCase]) -> CalibrationReport
         verbosity_corr=pearson(lengths, scores),
         lenient=mean_bad >= _PASS_THRESHOLD,
         judge_model=judge_model,
+        points=points,
     )

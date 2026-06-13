@@ -77,6 +77,25 @@ def test_calibrate_flags_lenient_judge() -> None:
     assert report.mean_score_bad == pytest.approx(0.9)
 
 
+def test_calibrate_emits_per_sample_points() -> None:
+    report = asyncio.run(cal.calibrate(_KeywordJudge(), _GOLD))
+    assert len(report.points) == 4
+    first = report.points[0]
+    assert first.human_label == "good"
+    assert first.judge_label == "good"
+    assert first.judge_score == pytest.approx(0.9)
+    assert first.length == len("good answer")
+    assert all(p.match for p in report.points)
+
+
+def test_calibrate_points_record_disagreement() -> None:
+    report = asyncio.run(cal.calibrate(_LenientJudge(), _GOLD))
+    # The lenient judge calls the two human-"bad" cases "good" → 2 disagreements.
+    disagreements = [p for p in report.points if not p.match]
+    assert len(disagreements) == 2
+    assert all(p.human_label == "bad" and p.judge_label == "good" for p in disagreements)
+
+
 def test_bundled_gold_set_loads() -> None:
     gold = cal.load_gold_set()
     assert len(gold) >= 4
