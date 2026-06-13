@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Fragment, useMemo, useState } from "react";
 
@@ -14,6 +14,7 @@ import type {
   ConformanceReport,
   ContradictionReport,
   CostReport,
+  FailedCasesReport,
   FirewallEfficacy,
   FunnelReport,
   IntentReport,
@@ -21,11 +22,17 @@ import type {
   PIILeakSummary,
   PredictorEvaluation,
   RefusalReport,
+  ReleaseStatus,
   RoutingReport,
   SLOReport,
+  ScoreSeries,
   ToolValidity,
   ToxicityReport,
+  WhatChanged,
 } from "@/lib/api/schemas";
+
+/** Tabs a signals-rail link can route to (mirrors the dashboard TabKey). */
+export type SignalsTab = "overview" | "signals" | "runs" | "failed" | "models" | "judge";
 
 export type SignalStatus = "ok" | "warn" | "crit" | "na";
 export type SignalCategory = "fidelity" | "security" | "compliance" | "reliability" | "sessions";
@@ -539,11 +546,26 @@ const COLS = 10;
 
 /** "Registre des signaux qualité" — the full registry table grouped by severity,
  * with search + entity/status filter chips (reference image 01). */
-export function SignalsTable({ rows }: { rows: SignalRow[] }) {
+export function SignalsTable({
+  rows,
+  selectedKey,
+  onSelect,
+}: {
+  rows: SignalRow[];
+  selectedKey?: string | null;
+  onSelect?: (row: SignalRow) => void;
+}) {
   const tq = useTranslations("quality");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<SignalStatus | "all">("all");
   const [entity, setEntity] = useState<SignalEntity | "all">("all");
+  const [collapsed, setCollapsed] = useState<Set<SignalStatus>>(new Set());
+  const toggle = (s: SignalStatus) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(s) ? next.delete(s) : next.add(s);
+      return next;
+    });
 
   const entities = useMemo(() => Array.from(new Set(rows.map((r) => r.entity))).sort(), [rows]);
 
@@ -643,68 +665,87 @@ export function SignalsTable({ rows }: { rows: SignalRow[] }) {
                 </tr>
               </thead>
               <tbody>
-                {groups.map((g) => (
-                  <Fragment key={g.status}>
-                    <tr>
-                      <td colSpan={COLS} className="pt-3 pb-1">
-                        <span
-                          className={`text-[0.7rem] font-semibold ${
-                            g.status === "crit"
-                              ? "text-red-500"
-                              : g.status === "warn"
-                                ? "text-amber-500"
-                                : g.status === "ok"
-                                  ? "text-emerald-500"
-                                  : "text-[var(--muted-foreground)]"
-                          }`}
-                        >
-                          {tq(`signalsTable.group.${g.status}`)} ({g.rows.length})
-                        </span>
-                      </td>
-                    </tr>
-                    {g.rows.map((r) => (
-                      <tr key={r.key} className="border-[var(--border)]/50 border-b">
-                        <td className="py-1.5 pr-3 font-mono text-[var(--muted-foreground)]">
-                          {r.id}
-                        </td>
-                        <td className="py-1.5 pr-3">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-[var(--foreground)]">{r.name}</span>
-                            <span className="font-mono text-[0.65rem] text-[var(--muted-foreground)]">
-                              {r.metric}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
-                          {tq(`signalsTable.cat.${r.category}`)}
-                        </td>
-                        <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
-                          {tq(`signalsTable.entity.${r.entity}`)}
-                        </td>
-                        <td className="py-1.5 pr-3 font-semibold tabular-nums">{r.score}</td>
-                        <td className="py-1.5 pr-3 tabular-nums text-[var(--muted-foreground)]">
-                          {r.threshold}
-                        </td>
-                        <td className="py-1.5 pr-3">
-                          <Badge tone={STATUS_TONE[r.status]}>
-                            {tq(`signalsTable.status.${r.status}`)}
-                          </Badge>
-                        </td>
-                        <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
-                          {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}
-                        </td>
-                        <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
-                          {tq(`signalsTable.action.${r.action}`)}
-                        </td>
-                        <td className="py-1.5">
-                          <Badge tone={r.role === "admin" ? "warning" : "success"}>
-                            {r.role === "admin" ? "Admin+" : "Operator+"}
-                          </Badge>
+                {groups.map((g) => {
+                  const open = !collapsed.has(g.status);
+                  const tone =
+                    g.status === "crit"
+                      ? "text-red-500"
+                      : g.status === "warn"
+                        ? "text-amber-500"
+                        : g.status === "ok"
+                          ? "text-emerald-500"
+                          : "text-[var(--muted-foreground)]";
+                  return (
+                    <Fragment key={g.status}>
+                      <tr>
+                        <td colSpan={COLS} className="pt-3 pb-1">
+                          <button
+                            type="button"
+                            onClick={() => toggle(g.status)}
+                            className={`flex items-center gap-1 text-[0.7rem] font-semibold ${tone}`}
+                          >
+                            {open ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3" />
+                            )}
+                            {tq(`signalsTable.group.${g.status}`)} ({g.rows.length})
+                          </button>
                         </td>
                       </tr>
-                    ))}
-                  </Fragment>
-                ))}
+                      {open &&
+                        g.rows.map((r) => (
+                          <tr
+                            key={r.key}
+                            onClick={() => onSelect?.(r)}
+                            className={`cursor-pointer border-[var(--border)]/50 border-b transition-colors hover:bg-[var(--tessera-muted)] ${
+                              selectedKey === r.key ? "bg-[var(--tessera-muted)]" : ""
+                            }`}
+                          >
+                            <td className="py-1.5 pr-3 font-mono text-[var(--muted-foreground)]">
+                              {r.id}
+                            </td>
+                            <td className="py-1.5 pr-3">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-[var(--foreground)]">
+                                  {r.name}
+                                </span>
+                                <span className="font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                                  {r.metric}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
+                              {tq(`signalsTable.cat.${r.category}`)}
+                            </td>
+                            <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
+                              {tq(`signalsTable.entity.${r.entity}`)}
+                            </td>
+                            <td className="py-1.5 pr-3 font-semibold tabular-nums">{r.score}</td>
+                            <td className="py-1.5 pr-3 tabular-nums text-[var(--muted-foreground)]">
+                              {r.threshold}
+                            </td>
+                            <td className="py-1.5 pr-3">
+                              <Badge tone={STATUS_TONE[r.status]}>
+                                {tq(`signalsTable.status.${r.status}`)}
+                              </Badge>
+                            </td>
+                            <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
+                              {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}
+                            </td>
+                            <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
+                              {tq(`signalsTable.action.${r.action}`)}
+                            </td>
+                            <td className="py-1.5">
+                              <Badge tone={r.role === "admin" ? "warning" : "success"}>
+                                {r.role === "admin" ? "Admin+" : "Operator+"}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -906,5 +947,364 @@ export function SignalHeatmap({ rows }: { rows: SignalRow[] }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+const STATUS_HEX: Record<SignalStatus, string> = {
+  ok: "#10b981",
+  warn: "#f59e0b",
+  crit: "#ef4444",
+  na: "#64748b",
+};
+
+/** Tiny sparkline from a score series' bucket means (signal KPI tiles, image 01). */
+function Spark({ series, color }: { series: ScoreSeries | undefined; color: string }) {
+  const pts = (series?.buckets ?? []).map((b) => b.mean).filter((m): m is number => m != null);
+  if (pts.length < 2) return <div className="h-7" />;
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const span = max - min || 1;
+  const w = 120;
+  const h = 28;
+  const d = pts
+    .map((v, i) => {
+      const x = (i / (pts.length - 1)) * w;
+      const y = h - ((v - min) / span) * h;
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className="h-7 w-full"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** The top KPI row of the Signaux tab: active-signal count + per-status counts,
+ * each with the real quality sparkline / a proportion bar (image 01). */
+export function SignalKpis({
+  rows,
+  series,
+  catalogue = 200,
+}: {
+  rows: SignalRow[];
+  series: ScoreSeries | undefined;
+  catalogue?: number;
+}) {
+  const tq = useTranslations("quality");
+  const s = summarizeSignals(rows);
+  const total = s.total || 1;
+  const tiles: {
+    key: string;
+    label: string;
+    value: string;
+    status: SignalStatus;
+    count: number;
+  }[] = [
+    {
+      key: "active",
+      label: tq("signalsKpi.active"),
+      value: `${s.total}/${catalogue}`,
+      status: "ok",
+      count: s.total,
+    },
+    {
+      key: "crit",
+      label: tq("signalsTable.group.crit"),
+      value: String(s.crit),
+      status: "crit",
+      count: s.crit,
+    },
+    {
+      key: "warn",
+      label: tq("signalsTable.group.warn"),
+      value: String(s.warn),
+      status: "warn",
+      count: s.warn,
+    },
+    {
+      key: "ok",
+      label: tq("signalsTable.group.ok"),
+      value: String(s.ok),
+      status: "ok",
+      count: s.ok,
+    },
+    {
+      key: "na",
+      label: tq("signalsTable.group.na"),
+      value: String(s.na),
+      status: "na",
+      count: s.na,
+    },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
+      {tiles.map((t) => (
+        <Card key={t.key} className="flex flex-col gap-1 p-2.5">
+          <div className="flex items-center gap-1.5 text-[0.7rem] text-[var(--muted-foreground)]">
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: STATUS_HEX[t.status] }}
+            />
+            <span className="truncate">{t.label}</span>
+          </div>
+          <div className="flex items-end justify-between gap-2">
+            <span
+              className="text-xl font-semibold tabular-nums"
+              style={{ color: t.key === "active" ? undefined : STATUS_HEX[t.status] }}
+            >
+              {t.value}
+            </span>
+          </div>
+          {t.key === "active" ? (
+            <Spark series={series} color={STATUS_HEX.ok} />
+          ) : (
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${Math.max(2, (t.count / total) * 100)}%`,
+                  background: STATUS_HEX[t.status],
+                }}
+              />
+            </div>
+          )}
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+const SEV_BADGE: Record<string, "danger" | "warning" | "neutral"> = {
+  critical: "danger",
+  high: "warning",
+  medium: "neutral",
+  low: "neutral",
+};
+
+function gate(rows: SignalRow[], cat: SignalCategory): boolean {
+  // PASS unless a signal of this category is in a critical state.
+  return !rows.some((r) => r.category === cat && r.status === "crit");
+}
+
+/** Right rail of the Signaux tab (image 01): Fiche signal · Cas liés · Release
+ * qualité (gates) · Activités récentes · Actions prescriptives. */
+export function SignalsRail({
+  selected,
+  rows,
+  failed,
+  release,
+  whatChanged,
+  onOpen,
+  onEvidence,
+}: {
+  selected: SignalRow | null;
+  rows: SignalRow[];
+  failed: FailedCasesReport | undefined;
+  release: ReleaseStatus | undefined;
+  whatChanged: WhatChanged | undefined;
+  onOpen: (tab: SignalsTab) => void;
+  onEvidence: () => void;
+}) {
+  const tq = useTranslations("quality");
+  const sig = selected ?? rows.find((r) => r.status === "crit") ?? rows[0] ?? null;
+  const current = release?.current ?? null;
+  const blocked = (release?.n_regressions ?? 0) > 0;
+  const cases = (failed?.cases ?? []).slice(0, 4);
+  const gates: { key: string; cat: SignalCategory }[] = [
+    { key: "quality", cat: "fidelity" },
+    { key: "security", cat: "security" },
+    { key: "compliance", cat: "compliance" },
+  ];
+  const activity: { key: string; label: string; detail: string }[] = [];
+  if (current)
+    activity.push({
+      key: "release",
+      label: tq(blocked ? "rr.actReleaseBlocked" : "rr.actReleaseDeployed", { v: current.version }),
+      detail: current.date ?? "",
+    });
+  for (const c of whatChanged?.changes ?? [])
+    activity.push({
+      key: c.field,
+      label: c.field,
+      detail: `${c.before.slice(0, 8)} → ${c.after.slice(0, 8)}`,
+    });
+  const fiche = sig;
+  return (
+    <aside className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-col gap-2 xl:sticky xl:top-28">
+        {/* Fiche signal */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{tq("signalsRail.fiche")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1.5 text-[0.7rem]">
+            {fiche ? (
+              <>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-[var(--foreground)]">{fiche.name}</span>
+                  <Badge tone={STATUS_TONE[fiche.status]}>
+                    {tq(`signalsTable.status.${fiche.status}`)}
+                  </Badge>
+                </div>
+                <span className="font-mono text-[var(--muted-foreground)]">{fiche.metric}</span>
+                <RailKV
+                  k={tq("signalsTable.cols.value")}
+                  v={`${fiche.score} (${fiche.threshold})`}
+                />
+                <RailKV
+                  k={tq("signalsTable.cols.entity")}
+                  v={tq(`signalsTable.entity.${fiche.entity}`)}
+                />
+                <RailKV k={tq("signalsRail.source")} v="Signal Catalog · YAML" />
+                <RailKV k={tq("signalsRail.collector")} v="tessera-eval" />
+                <RailKV k={tq("signalsRail.scope")} v="Prod · Crédit Aurore" />
+              </>
+            ) : (
+              <span className="text-[var(--muted-foreground)]">—</span>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Cas liés */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between gap-2 text-sm">
+              {tq("signalsRail.cases")}
+              <RailLink onClick={() => onOpen("failed")}>{tq("rr.seeCases")}</RailLink>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1.5">
+            {cases.length === 0 ? (
+              <p className="text-xs text-[var(--muted-foreground)]">{tq("failed.empty")}</p>
+            ) : (
+              cases.map((c) => (
+                <div key={c.case_id} className="flex items-center gap-2 text-[0.7rem]">
+                  <span className="shrink-0 font-mono text-[var(--tessera-green)]">
+                    {c.case_id}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
+                    {c.title}
+                  </span>
+                  <Badge tone={SEV_BADGE[c.severity] ?? "neutral"}>{c.severity}</Badge>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Release qualité — gates */}
+        {current ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">{tq("signalsRail.release")}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-1.5 text-[0.7rem]">
+              <div className="flex items-center gap-2">
+                <span className="font-serif text-base font-semibold tabular-nums">
+                  {current.version}
+                </span>
+                <Badge tone={blocked ? "danger" : "success"}>
+                  {blocked ? tq("rr.blocked") : tq("rr.inProd")}
+                </Badge>
+              </div>
+              {gates.map((g) => {
+                const pass = gate(rows, g.cat);
+                return (
+                  <div key={g.key} className="flex items-center justify-between gap-2">
+                    <span className="text-[var(--muted-foreground)]">
+                      {tq(`signalsRail.gate_${g.key}`)}
+                    </span>
+                    <Badge tone={pass ? "success" : "danger"}>{pass ? "PASS" : "FAIL"}</Badge>
+                  </div>
+                );
+              })}
+              <RailLink onClick={() => onOpen("models")}>{tq("rr.seeReleases")}</RailLink>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {/* Activités récentes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{tq("rr.activity")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1.5">
+            {activity.length === 0 ? (
+              <p className="text-xs text-[var(--muted-foreground)]">{tq("rr.noActivity")}</p>
+            ) : (
+              activity.slice(0, 3).map((a) => (
+                <div key={a.key} className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--tessera-green)]" />
+                  <span className="min-w-0 flex-1 truncate text-[0.7rem]">{a.label}</span>
+                  <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                    {a.detail}
+                  </span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Actions prescriptives */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{tq("signalsRail.actions")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            <RailAction onClick={() => onOpen("failed")}>{tq("signalsRail.createCase")}</RailAction>
+            <RailAction onClick={() => onOpen("failed")}>
+              {tq("signalsRail.assignOwner")}
+            </RailAction>
+            <RailAction onClick={() => onOpen("signals")}>{tq("reco.catalog")}</RailAction>
+            <RailAction onClick={onEvidence}>{tq("reco.seeEvidence")}</RailAction>
+            <div className="mt-0.5 flex items-center justify-between gap-2 rounded-md border border-red-500/40 px-2 py-1 text-[0.7rem]">
+              <span className="text-red-400">{tq("reco.block")}</span>
+              <Badge tone="warning">{tq("signalsRail.dualControl")}</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </aside>
+  );
+}
+
+function RailKV({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[var(--muted-foreground)]">{k}</span>
+      <span className="truncate text-right">{v}</span>
+    </div>
+  );
+}
+
+function RailLink({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 text-[0.7rem] text-[var(--tessera-green)] hover:underline"
+    >
+      {children}
+      <ChevronRight className="h-3 w-3" />
+    </button>
+  );
+}
+
+function RailAction({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-md px-1.5 py-0.5 text-left text-[0.7rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
+    >
+      <ChevronRight className="h-3 w-3 shrink-0" />
+      <span className="truncate">{children}</span>
+    </button>
   );
 }

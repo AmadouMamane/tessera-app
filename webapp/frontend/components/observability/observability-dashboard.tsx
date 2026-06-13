@@ -52,6 +52,9 @@ import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
 import {
   SignalHeatmap,
+  SignalKpis,
+  type SignalRow,
+  SignalsRail,
   SignalsTable,
   ThemeDistribution,
   buildSignalRows,
@@ -146,6 +149,7 @@ export function ObservabilityDashboard() {
   const tq = useTranslations("quality");
   const locale = useLocale();
   const [tab, setTab] = useState<TabKey>("overview");
+  const [selectedSignal, setSelectedSignal] = useState<SignalRow | null>(null);
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
@@ -580,8 +584,17 @@ export function ObservabilityDashboard() {
 
           {tab === "signals" && (
             <div className="flex flex-col gap-2">
-              {/* Registre des signaux qualité + analytics row only (normative 01). */}
-              <SignalsTable rows={signalRows} />
+              {/* KPI strip + registre + analytics row (normative 01). */}
+              <SignalKpis
+                rows={signalRows}
+                series={scoreSeries.data}
+                catalogue={QUALITY_CATALOGUE}
+              />
+              <SignalsTable
+                rows={signalRows}
+                selectedKey={selectedSignal?.key ?? null}
+                onSelect={setSelectedSignal}
+              />
               <div className="grid gap-2 lg:grid-cols-3">
                 <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
                 <ThemeDistribution rows={signalRows} />
@@ -656,14 +669,26 @@ export function ObservabilityDashboard() {
           )}
         </div>
 
-        <RightRail
-          failed={failedCases.data}
-          release={releaseStatus.data}
-          whatChanged={whatChanged.data}
-          runs={runs.data}
-          onOpen={setTab}
-          onEvidence={downloadQualityEvidence}
-        />
+        {tab === "signals" ? (
+          <SignalsRail
+            selected={selectedSignal}
+            rows={signalRows}
+            failed={failedCases.data}
+            release={releaseStatus.data}
+            whatChanged={whatChanged.data}
+            onOpen={setTab}
+            onEvidence={downloadQualityEvidence}
+          />
+        ) : (
+          <RightRail
+            failed={failedCases.data}
+            release={releaseStatus.data}
+            whatChanged={whatChanged.data}
+            runs={runs.data}
+            onOpen={setTab}
+            onEvidence={downloadQualityEvidence}
+          />
+        )}
       </div>
 
       {/* Full-width analytics row below the [main · rail] grid (image normative):

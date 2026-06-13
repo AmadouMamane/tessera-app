@@ -1472,6 +1472,24 @@
       "predictorUntrained": "untrained",
       "intents": "At-risk intents",
       "langs": "At-risk languages"
+    },
+    "signalsKpi": {
+      "active": "Active signals"
+    },
+    "signalsRail": {
+      "fiche": "Signal sheet",
+      "source": "Source",
+      "collector": "Collector",
+      "scope": "Scope",
+      "cases": "Linked cases",
+      "release": "Release quality",
+      "gate_quality": "Quality gate",
+      "gate_security": "Security gate",
+      "gate_compliance": "Compliance gate",
+      "actions": "Prescriptive actions",
+      "createCase": "Create a case",
+      "assignOwner": "Assign an owner",
+      "dualControl": "Dual control · Admin+"
     }
   }
 }

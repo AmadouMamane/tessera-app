@@ -1472,6 +1472,24 @@
       "predictorUntrained": "nicht trainiert",
       "intents": "Risiko-Intents",
       "langs": "Risiko-Sprachen"
+    },
+    "signalsKpi": {
+      "active": "Aktive Signale"
+    },
+    "signalsRail": {
+      "fiche": "Signal-Steckbrief",
+      "source": "Quelle",
+      "collector": "Collector",
+      "scope": "Scope",
+      "cases": "Verknüpfte Cases",
+      "release": "Release-Qualität",
+      "gate_quality": "Quality Gate",
+      "gate_security": "Security Gate",
+      "gate_compliance": "Compliance Gate",
+      "actions": "Verordnete Aktionen",
+      "createCase": "Case erstellen",
+      "assignOwner": "Owner zuweisen",
+      "dualControl": "Dual control · Admin+"
     }
   }
 }
