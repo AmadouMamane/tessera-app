@@ -57,7 +57,12 @@ import { type ReactNode, useState } from "react";
 
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
-import { SignalsTable, buildSignalRows } from "@/components/observability/signals-table";
+import {
+  QualityGauge,
+  SignalsTable,
+  buildSignalRows,
+  summarizeSignals,
+} from "@/components/observability/signals-table";
 import {
   TemporalRail,
   useRailTimeline,
@@ -553,6 +558,7 @@ export function ObservabilityDashboard() {
     anomalies: anomalies.data,
     intent: intent.data,
   });
+  const signalSummary = summarizeSignals(signalRows);
 
   // --- Real derived headline metrics (no fabrication — null ⇒ "—") -----------
   const sloPct = slo.data && slo.data.n > 0 ? Math.round(slo.data.good_rate * 100) : null;
@@ -632,9 +638,8 @@ export function ObservabilityDashboard() {
                 failed={failedCount}
               />
               <TabGrid>
-                <FullWidth>
-                  <SLOCard data={slo.data} loading={slo.isLoading} />
-                </FullWidth>
+                <QualityGauge summary={signalSummary} />
+                <SLOCard data={slo.data} loading={slo.isLoading} />
                 <TrendCard data={trend.data} loading={trend.isLoading} />
                 <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
                 <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />

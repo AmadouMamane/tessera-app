@@ -364,6 +364,72 @@ export function summarizeSignals(
   return s;
 }
 
+const GAUGE_COLORS: Record<SignalStatus, string> = {
+  ok: "#10b981",
+  warn: "#f59e0b",
+  crit: "#ef4444",
+  na: "#64748b",
+};
+
+/** Radial health gauge: green signals over total, ring split by status (image 00). */
+export function QualityGauge({ summary }: { summary: ReturnType<typeof summarizeSignals> }) {
+  const tq = useTranslations("quality");
+  const total = summary.total || 1;
+  const r = 54;
+  const circ = 2 * Math.PI * r;
+  let acc = 0;
+  return (
+    <Card className="flex flex-col items-center gap-4 p-5">
+      <div className="relative h-[150px] w-[150px]">
+        <svg viewBox="0 0 150 150" className="h-full w-full -rotate-90" aria-hidden="true">
+          <circle
+            cx="75"
+            cy="75"
+            r={r}
+            fill="none"
+            stroke="var(--tessera-border)"
+            strokeWidth="13"
+          />
+          {STATUSES.map((key) => {
+            const len = (summary[key] / total) * circ;
+            const seg = (
+              <circle
+                key={key}
+                cx="75"
+                cy="75"
+                r={r}
+                fill="none"
+                stroke={GAUGE_COLORS[key]}
+                strokeWidth="13"
+                strokeDasharray={`${len} ${circ - len}`}
+                strokeDashoffset={-acc}
+              />
+            );
+            acc += len;
+            return seg;
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-serif text-4xl font-semibold tabular-nums text-emerald-500">
+            {summary.ok}
+          </span>
+          <span className="text-[0.7rem] text-[var(--muted-foreground)]">
+            / {summary.total} {tq("signalsTable.status.ok").toLowerCase()}
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
+        {STATUSES.map((key) => (
+          <span key={key} className="flex items-center gap-1.5 text-[var(--muted-foreground)]">
+            <span className="h-2 w-2 rounded-full" style={{ background: GAUGE_COLORS[key] }} />
+            {tq(`signalsTable.status.${key}`)} {summary[key]}
+          </span>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 /** Filterable, sortable catalogue of every quality signal (reference image 01). */
 export function SignalsTable({ rows }: { rows: SignalRow[] }) {
   const tq = useTranslations("quality");
