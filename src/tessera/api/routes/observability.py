@@ -797,6 +797,20 @@ async def observability_model_comparison() -> dict[str, object]:
     return {"models": [asdict(s) for s in compare_models(registry.runs)], "n_runs": registry.n}
 
 
+@router.get("/observability/release-status")
+async def observability_release_status() -> dict[str, object]:
+    """Current release + real open quality regressions (Vue d'ensemble rail).
+
+    Releases are parsed from ``CHANGELOG.md``; regressions are derived from the
+    eval report archive (pass-rate drops between a model's two most recent
+    full-catalogue runs). The release's status is a fact — ``n_regressions``
+    open — not an invented flag.
+    """
+    from tessera.observability.eval.releases import release_status
+
+    return asdict(release_status())
+
+
 @router.get("/observability/sft-dataset")
 async def observability_sft_dataset() -> dict[str, object]:
     """Distil high-scoring captured turns into an SFT dataset (#122)."""
