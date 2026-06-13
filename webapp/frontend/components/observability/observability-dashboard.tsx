@@ -2290,8 +2290,64 @@ function ObsCostCard({ data, loading }: { data: ObsCostReport | undefined; loadi
   );
 }
 
+// Open speedometer gauge (the normative "arc"): a ~240° sweep, wider than a
+// semicircle, with the endpoints angled downward. Tuned to the 100×72 viewBox.
+const _GAUGE_SWEEP = 240; // degrees
+const _GAUGE_CX = 50;
+const _GAUGE_CY = 44;
+const _GAUGE_R = 38;
+
+/** Point on the gauge arc at fraction ``t`` (0 = left end, 1 = right end). */
+function gaugePoint(t: number): [number, number] {
+  const half = _GAUGE_SWEEP / 2;
+  const deg = 90 + half - t * _GAUGE_SWEEP; // left (210°) → top (90°) → right (-30°)
+  const a = (deg * Math.PI) / 180;
+  return [_GAUGE_CX + _GAUGE_R * Math.cos(a), _GAUGE_CY - _GAUGE_R * Math.sin(a)];
+}
+
+/** Open agreement gauge: a >180° arc whose green fill reaches κ over a grey
+ * track, value centred — the normative "Calibration du juge" arc. */
+function OpenGauge({ value, color }: { value: number; color: string }) {
+  const f = Math.max(0, Math.min(1, value));
+  const [lx, ly] = gaugePoint(0);
+  const [rx, ry] = gaugePoint(1);
+  const [ex, ey] = gaugePoint(f);
+  const large = _GAUGE_SWEEP > 180 ? 1 : 0; // track is the major arc
+  const fillLarge = f * _GAUGE_SWEEP > 180 ? 1 : 0;
+  const track = `M ${lx.toFixed(2)} ${ly.toFixed(2)} A ${_GAUGE_R} ${_GAUGE_R} 0 ${large} 1 ${rx.toFixed(2)} ${ry.toFixed(2)}`;
+  const fill = `M ${lx.toFixed(2)} ${ly.toFixed(2)} A ${_GAUGE_R} ${_GAUGE_R} 0 ${fillLarge} 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+  return (
+    <div className="relative h-[92px] w-[160px]">
+      <svg viewBox="0 0 100 72" className="h-full w-full" aria-hidden="true">
+        <path
+          d={track}
+          fill="none"
+          stroke="var(--tessera-border)"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+        {f > 0 ? (
+          <path d={fill} fill="none" stroke={color} strokeWidth="8" strokeLinecap="round" />
+        ) : null}
+      </svg>
+      <div className="absolute inset-x-0 top-[42%] flex flex-col items-center">
+        <span
+          className="font-serif text-2xl font-semibold leading-none tabular-nums"
+          style={{ color }}
+        >
+          {value.toFixed(2)}
+        </span>
+        <span className="mt-0.5 text-[0.6rem] text-[var(--muted-foreground)]">κ</span>
+      </div>
+    </div>
+  );
+}
+
 function CalibrationCard({ data, loading }: { data: Calibration | undefined; loading: boolean }) {
   const t = useTranslations("observability");
+  const kappa = data?.kappa ?? 0;
+  const good = kappa >= 0.6;
+  const color = kappa >= 0.8 ? "#10b981" : kappa >= 0.6 ? "#f59e0b" : "#ef4444";
   return (
     <Card>
       <CardHeader>
@@ -2306,25 +2362,39 @@ function CalibrationCard({ data, loading }: { data: Calibration | undefined; loa
         ) : !data?.available ? (
           <p className="text-sm text-[var(--muted-foreground)]">{t("calibration.unavailable")}</p>
         ) : (
-          <div className="flex flex-wrap items-end gap-6 text-sm">
-            <Metric label={t("calibration.kappa")} value={(data.kappa ?? 0).toFixed(2)} />
-            <Metric
-              label={t("calibration.agreement")}
-              value={`${Math.round((data.agreement ?? 0) * 100)}%`}
-            />
-            <Metric
-              label={t("calibration.verbosity")}
-              value={(data.verbosity_corr ?? 0).toFixed(2)}
-            />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-[var(--muted-foreground)]">
-                {t("calibration.lenient")}
-              </span>
-              <Badge tone={data.lenient ? "warning" : "success"}>
-                {data.lenient ? t("calibration.lenientYes") : t("calibration.lenientNo")}
-              </Badge>
+          <div className="flex flex-col items-center gap-1">
+            <OpenGauge value={kappa} color={color} />
+            <div className="-mt-2 flex w-[160px] items-center justify-between text-[0.7rem] text-[var(--muted-foreground)]">
+              <span>0</span>
+              <span className="truncate px-1 text-center">{t("calibration.interJudge")}</span>
+              <span>1</span>
             </div>
-            <Metric label={t("calibration.judge")} value={data.judge_model ?? "—"} />
+            <Badge tone={good ? "success" : "warning"} className="mt-1">
+              {good ? t("calibration.verdictGood") : t("calibration.verdictBad")}
+            </Badge>
+            <div className="mt-2 grid w-full grid-cols-2 gap-x-4 gap-y-1.5 border-t border-[var(--tessera-border)] pt-2 text-xs">
+              <Metric
+                label={t("calibration.agreement")}
+                value={`${Math.round((data.agreement ?? 0) * 100)}%`}
+              />
+              <Metric
+                label={t("calibration.verbosity")}
+                value={(data.verbosity_corr ?? 0).toFixed(2)}
+              />
+              <Metric label={t("calibration.samples")} value={String(data.n ?? 0)} />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {t("calibration.lenient")}
+                </span>
+                <Badge tone={data.lenient ? "warning" : "success"}>
+                  {data.lenient ? t("calibration.lenientYes") : t("calibration.lenientNo")}
+                </Badge>
+              </div>
+              <div className="col-span-2 flex items-center justify-between gap-2">
+                <span className="text-[var(--muted-foreground)]">{t("calibration.judge")}</span>
+                <span className="truncate font-mono text-[0.7rem]">{data.judge_model ?? "—"}</span>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>

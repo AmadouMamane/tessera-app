@@ -523,7 +523,11 @@
       "lenientYes": "Zu nachsichtig",
       "lenientNo": "Kalibriert",
       "judge": "Judge",
-      "unavailable": "Kalibrierung nicht verfügbar (Judge offline)."
+      "unavailable": "Kalibrierung nicht verfügbar (Judge offline).",
+      "verdictGood": "Gut kalibriert",
+      "verdictBad": "Neu kalibrieren",
+      "interJudge": "Inter-Judge-Übereinstimmung (κ)",
+      "samples": "Stichproben"
     },
     "slo": {
       "title": "Qualitäts-SLO + Fehlerbudget",
@@ -1258,7 +1262,12 @@
       "noDisagreements": "Keine Judge ↔ Mensch-Abweichung.",
       "humanGood": "Mensch: gut",
       "humanBad": "Mensch: schlecht",
-      "cols": { "case": "Fall", "human": "Mensch", "judge": "Judge", "score": "Score" },
+      "cols": {
+        "case": "Fall",
+        "human": "Mensch",
+        "judge": "Judge",
+        "score": "Score"
+      },
       "kappaTitle": "Inter-Judge-Übereinstimmung",
       "agreementGlobal": "Gesamtübereinstimmung",
       "fp": "Falsch positiv (Typ I)",

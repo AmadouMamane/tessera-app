@@ -523,7 +523,11 @@
       "lenientYes": "Too lenient",
       "lenientNo": "Calibrated",
       "judge": "Judge",
-      "unavailable": "Calibration unavailable (judge offline)."
+      "unavailable": "Calibration unavailable (judge offline).",
+      "verdictGood": "Well calibrated",
+      "verdictBad": "Recalibrate",
+      "interJudge": "Inter-judge agreement (κ)",
+      "samples": "Samples"
     },
     "slo": {
       "title": "Quality SLO + error budget",
@@ -1258,7 +1262,12 @@
       "noDisagreements": "No judge ↔ human disagreement.",
       "humanGood": "Human: good",
       "humanBad": "Human: bad",
-      "cols": { "case": "Case", "human": "Human", "judge": "Judge", "score": "Score" },
+      "cols": {
+        "case": "Case",
+        "human": "Human",
+        "judge": "Judge",
+        "score": "Score"
+      },
       "kappaTitle": "Inter-judge agreement",
       "agreementGlobal": "Overall agreement",
       "fp": "False positives (Type I)",
