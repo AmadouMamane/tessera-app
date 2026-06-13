@@ -37,10 +37,10 @@ export function MetricKpi({
   const mean = series?.mean ?? null;
   const delta = series?.delta ?? null;
   return (
-    <Card className="p-3">
-      <div className="truncate text-xs text-[var(--muted-foreground)]">{label}</div>
-      <div className="mt-1 flex items-end justify-between gap-2">
-        <span className="text-2xl font-semibold tabular-nums">
+    <Card className="p-2">
+      <div className="text-[0.7rem] leading-tight text-[var(--muted-foreground)]">{label}</div>
+      <div className="mt-0.5 flex items-end justify-between gap-2">
+        <span className="text-lg font-semibold tabular-nums">
           {mean != null ? `${Math.round(mean * 100)}%` : "—"}
         </span>
         {delta != null ? (
@@ -50,7 +50,7 @@ export function MetricKpi({
           </Badge>
         ) : null}
       </div>
-      <div className="mt-1 h-6">
+      <div className="mt-0.5 h-3">
         {loading && !series ? (
           <Skeleton className="h-full w-full" />
         ) : (
@@ -126,10 +126,10 @@ export function EvolutionChart({
       </CardHeader>
       <CardContent>
         {loading && !series ? (
-          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-16 w-full" />
         ) : (
           <div className="flex flex-col gap-2">
-            <div className="relative h-28 w-full">
+            <div className="relative h-16 w-full">
               <svg
                 viewBox={`0 0 ${W} ${H}`}
                 preserveAspectRatio="none"

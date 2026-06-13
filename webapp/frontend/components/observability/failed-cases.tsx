@@ -208,8 +208,8 @@ export function FailureDistribution({
         <CardTitle className="text-sm">{tq("failed.distribution")}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap items-center gap-5">
-          <div className="relative h-[150px] w-[150px] shrink-0">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative h-[104px] w-[104px] shrink-0">
             <svg viewBox="0 0 150 150" className="h-full w-full -rotate-90" aria-hidden="true">
               <circle
                 cx="75"
@@ -245,12 +245,12 @@ export function FailureDistribution({
               </span>
             </div>
           </div>
-          <ul className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
-            {entries.map(([key, n], i) => (
+          <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.7rem]">
+            {entries.slice(0, 6).map(([key, n], i) => (
               <li key={key} className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span
-                    className="h-2 w-2 shrink-0 rounded-full"
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }}
                   />
                   <span className="truncate">{catLabel(key)}</span>

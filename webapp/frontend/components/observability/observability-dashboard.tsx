@@ -660,17 +660,17 @@ export function ObservabilityDashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {/* Sticky chrome: tab bar + business actions on one row (image normative),
           the shared compact temporal rail (Live/Replay) below. */}
-      <div className="sticky top-0 z-30 -mx-3 flex flex-col gap-2 bg-[var(--tessera-bg)] px-3 pb-2 pt-2 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+      <div className="sticky top-0 z-30 -mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-16px_0_0_var(--tessera-bg)]">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <TabBar active={tab} onChange={setTab} />
           <div className="flex shrink-0 items-center gap-2">
             <Button
               size="sm"
               onClick={() => setTab("runs")}
-              className="h-9 gap-2 border border-[#007a55] bg-[#005c42] text-xs text-[#d6f0e3] hover:bg-[#006d4e]"
+              className="h-8 gap-2 border border-[#007a55] bg-[#005c42] text-xs text-[#d6f0e3] hover:bg-[#006d4e]"
             >
               <Play className="h-3.5 w-3.5" />
               {tq("cta.runEval")}
@@ -679,7 +679,7 @@ export function ObservabilityDashboard() {
               size="sm"
               variant="outline"
               onClick={() => setTab("models")}
-              className="h-9 gap-2 text-xs"
+              className="h-8 gap-2 text-xs"
             >
               <GitCompareArrows className="h-3.5 w-3.5" />
               {tq("cta.compareModels")}
@@ -688,12 +688,12 @@ export function ObservabilityDashboard() {
               size="sm"
               variant="outline"
               onClick={() => setTab("runs")}
-              className="h-9 gap-2 text-xs"
+              className="h-8 gap-2 text-xs"
             >
               <Boxes className="h-3.5 w-3.5" />
               {tq("cta.openDataset")}
             </Button>
-            <Button size="sm" onClick={downloadQualityEvidence} className="h-9 gap-2 text-xs">
+            <Button size="sm" onClick={downloadQualityEvidence} className="h-8 gap-2 text-xs">
               <FileDown className="h-3.5 w-3.5" />
               {tq("cta.evidence")}
             </Button>
@@ -712,26 +712,28 @@ export function ObservabilityDashboard() {
         />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex min-w-0 flex-col gap-3">
+      {/* KPI strip (unlabeled, full page width above the zones+rail — image normative) */}
+      {tab === "overview" ? (
+        <OverviewKpis
+          sloPct={sloPct}
+          faithfulness={scoreSeries.data}
+          grounding={groundingSeries.data}
+          hallucination={hallucinationSeries.data}
+          nonRegression={releaseStatus.data?.non_regression_rate ?? null}
+          nRegressions={releaseStatus.data?.n_regressions ?? null}
+          kappa={calibration.data?.kappa ?? null}
+          failedCount={failedCases.data?.n ?? null}
+          loading={scoreSeries.isLoading}
+        />
+      ) : null}
+
+      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-2">
           {tab === "overview" && (
             <>
-              {/* KPI strip (unlabeled, full width of the content column — image normative) */}
-              <OverviewKpis
-                sloPct={sloPct}
-                faithfulness={scoreSeries.data}
-                grounding={groundingSeries.data}
-                hallucination={hallucinationSeries.data}
-                nonRegression={releaseStatus.data?.non_regression_rate ?? null}
-                nRegressions={releaseStatus.data?.n_regressions ?? null}
-                kappa={calibration.data?.kappa ?? null}
-                failedCount={failedCases.data?.n ?? null}
-                loading={scoreSeries.isLoading}
-              />
-
               {/* A · B · C · D as four side-by-side zones (image normative). The zones
                   are deliberately different heights ⇒ items-start (no stretch). */}
-              <div className="grid items-start gap-3 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.3fr)]">
+              <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.45fr)]">
                 {/* A. État actuel */}
                 <EtatActuel
                   summary={signalSummary}
@@ -743,9 +745,9 @@ export function ObservabilityDashboard() {
 
                 {/* B. Diagnostic racine — Répartition | Calibration | Cas prioritaires,
                     then the "Qu'est-ce qui a changé / Causes probables" diagnostic. */}
-                <div className="flex min-w-0 flex-col gap-3">
+                <div className="flex min-w-0 flex-col gap-2">
                   <SectionLabel>{tq("sec.diagnostic")}</SectionLabel>
-                  <div className="grid items-start gap-3 sm:grid-cols-3">
+                  <div className="grid items-start gap-2 sm:grid-cols-3">
                     <FailureBars report={failedCases.data} loading={failedCases.isLoading} />
                     <JudgeMini data={calibration.data} loading={calibration.isLoading} />
                     <PriorityCases
@@ -948,7 +950,7 @@ export function ObservabilityDashboard() {
           Pass-rate des runs | Évolution | Répartition | Faith×Grounding | Régressions
           par release | Coût vs qualité — six charts spanning the whole page width. */}
       {tab === "overview" ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           <RunsPassRateTable registry={runs.data} loading={runs.isLoading} />
           <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
           <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
@@ -1042,14 +1044,6 @@ function TabGrid({ children }: { children: ReactNode }) {
   return <div className="grid items-start gap-4 lg:grid-cols-2">{children}</div>;
 }
 
-/** Persistent right rail: score summary, top failing categories, sensitive actions, evidence. */
-const SEV_TONE: Record<string, "danger" | "warning" | "neutral"> = {
-  critical: "danger",
-  high: "warning",
-  medium: "neutral",
-  low: "neutral",
-};
-
 /** Right rail (image normative): Derniers problèmes · Release actuelle · Actions
  * rapides · Activités récentes — all fed by live data, links into the tabs. */
 function RightRail({
@@ -1072,7 +1066,7 @@ function RightRail({
   const nReg = release?.n_regressions ?? 0;
   const blocked = nReg > 0;
   const impact = nReg === 0 ? "low" : nReg <= 2 ? "medium" : "high";
-  const problems = (failed?.cases ?? []).slice(0, 5);
+  const problems = (failed?.cases ?? []).slice(0, 4);
   const quick: { label: string; icon: typeof Activity; action: () => void }[] = [
     { label: tq("rr.linkRuns"), icon: Activity, action: () => onOpen("runs") },
     { label: tq("rr.linkTraces"), icon: Route, action: () => onOpen("runs") },
@@ -1107,26 +1101,32 @@ function RightRail({
   }
 
   return (
-    <aside className="flex min-w-0 flex-col gap-3">
-      <div className="flex flex-col gap-3 xl:sticky xl:top-28">
+    <aside className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-col gap-2 xl:sticky xl:top-28">
         {/* Derniers problèmes */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">{tq("rr.problems")}</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+          <CardContent className="flex flex-col gap-1">
             {problems.length === 0 ? (
               <p className="text-xs text-[var(--muted-foreground)]">{tq("rr.noProblems")}</p>
             ) : (
               problems.map((p) => (
-                <div key={p.case_id} className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-sm">{p.title}</span>
-                    <span className="truncate text-[0.7rem] text-[var(--muted-foreground)]">
-                      {p.category}
-                    </span>
-                  </div>
-                  <Badge tone={SEV_TONE[p.severity] ?? "neutral"}>{p.severity}</Badge>
+                <div key={p.case_id} className="flex items-center gap-1.5 text-[0.7rem]">
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                      p.severity === "critical"
+                        ? "bg-red-500"
+                        : p.severity === "high"
+                          ? "bg-amber-500"
+                          : "bg-[var(--muted-foreground)]"
+                    }`}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{p.title}</span>
+                  <span className="shrink-0 text-[0.6rem] text-[var(--muted-foreground)]">
+                    {p.severity}
+                  </span>
                 </div>
               ))
             )}
@@ -1140,9 +1140,9 @@ function RightRail({
             <CardHeader>
               <CardTitle className="text-sm">{tq("rr.release")}</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2 text-sm">
+            <CardContent className="flex flex-col gap-1 text-[0.7rem]">
               <div className="flex items-center gap-2">
-                <span className="font-serif text-xl font-semibold tabular-nums">
+                <span className="font-serif text-base font-semibold tabular-nums">
                   {current.version}
                 </span>
                 <Badge tone={blocked ? "danger" : "success"}>
@@ -1179,15 +1179,15 @@ function RightRail({
           <CardHeader>
             <CardTitle className="text-sm">{tq("rr.actions")}</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-1">
+          <CardContent className="flex flex-col gap-0.5">
             {quick.map((q) => (
               <button
                 key={q.label}
                 type="button"
                 onClick={q.action}
-                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
+                className="flex items-center gap-2 rounded-md px-1.5 py-0.5 text-left text-[0.7rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
               >
-                <q.icon className="h-3.5 w-3.5 shrink-0" />
+                <q.icon className="h-3 w-3 shrink-0" />
                 <span className="truncate">{q.label}</span>
               </button>
             ))}
@@ -1199,15 +1199,15 @@ function RightRail({
           <CardHeader>
             <CardTitle className="text-sm">{tq("rr.activity")}</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+          <CardContent className="flex flex-col gap-1">
             {activity.length === 0 ? (
               <p className="text-xs text-[var(--muted-foreground)]">{tq("rr.noActivity")}</p>
             ) : (
-              activity.slice(0, 4).map((a) => (
+              activity.slice(0, 3).map((a) => (
                 <div key={a.key} className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--tessera-green)]" />
-                  <span className="min-w-0 flex-1 truncate text-sm">{a.label}</span>
-                  <span className="shrink-0 font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                  <span className="min-w-0 flex-1 truncate text-[0.7rem]">{a.label}</span>
+                  <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
                     {a.detail}
                   </span>
                 </div>

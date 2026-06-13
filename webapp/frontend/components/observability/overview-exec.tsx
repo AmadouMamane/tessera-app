@@ -54,12 +54,12 @@ function ValueKpi({
   hint?: string;
 }) {
   return (
-    <Card className="flex flex-col gap-1 p-3">
-      <div className="truncate text-xs text-[var(--muted-foreground)]">{label}</div>
-      <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
+    <Card className="flex flex-col gap-0.5 p-2">
+      <div className="text-[0.7rem] leading-tight text-[var(--muted-foreground)]">{label}</div>
+      <div className={`text-lg font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
         {value}
       </div>
-      {hint ? <div className="text-[0.65rem] text-[var(--muted-foreground)]">{hint}</div> : null}
+      {hint ? <div className="text-[0.6rem] text-[var(--muted-foreground)]">{hint}</div> : null}
     </Card>
   );
 }
@@ -123,7 +123,7 @@ export function OverviewKpis({
     nonRegression == null ? MUTED : nonRegression >= 0.9 ? GOOD : nonRegression >= 0.7 ? WARN : BAD;
   const regTone = nRegressions == null ? MUTED : nRegressions === 0 ? GOOD : WARN;
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-8">
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4 2xl:grid-cols-8">
       <ValueKpi
         label={tq("exec.kpi.scoreGlobal")}
         value={sloPct == null ? "—" : `${sloPct}`}
@@ -180,7 +180,7 @@ export function EtatActuel({
       <CardHeader>
         <CardTitle className="text-sm">{tq("sec.etat")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm">
+      <CardContent className="flex flex-col gap-2 text-xs">
         <Row label={tq("exec.etat.globalQuality")}>
           <span className={`tabular-nums font-semibold ${scoreTone}`}>
             {scorePct == null ? "—" : `${scorePct}/100`}
@@ -217,11 +217,11 @@ export function EtatActuel({
             </Badge>
           )}
         </Row>
-        <div className="flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] pt-2">
+        <div className="flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] pt-1.5">
           <span className="text-[var(--muted-foreground)]">{tq("exec.etat.releaseLabel")}</span>
           {current ? (
             <span className="flex items-center gap-1.5">
-              <span className="font-mono text-xs tabular-nums">{current.version}</span>
+              <span className="font-mono tabular-nums">{current.version}</span>
               <Badge tone={blocked ? "danger" : "success"}>
                 {blocked ? tq("rr.blocked") : tq("rr.inProd")}
               </Badge>
@@ -230,14 +230,16 @@ export function EtatActuel({
             <span className={MUTED}>—</span>
           )}
         </div>
-        <div className="flex flex-col gap-1 border-t border-[var(--tessera-border)] pt-2">
-          <span className="text-[var(--muted-foreground)]">{tq("exec.etat.evolutionVsPrev")}</span>
-          <div className="flex items-center justify-between gap-2">
-            <span className={`text-lg font-semibold tabular-nums ${evoTone}`}>
+        <div className="flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] pt-1.5">
+          <div className="flex min-w-0 flex-col">
+            <span className="text-[var(--muted-foreground)]">
+              {tq("exec.etat.evolutionVsPrev")}
+            </span>
+            <span className={`text-base font-semibold tabular-nums ${evoTone}`}>
               {evoPts == null ? "—" : `${evoPts >= 0 ? "+" : ""}${evoPts} pts`}
             </span>
-            <MiniSpark series={series} />
           </div>
+          <MiniSpark series={series} />
         </div>
       </CardContent>
     </Card>
@@ -363,53 +365,55 @@ export function RootCauseDiagnostic({
       <CardHeader>
         <CardTitle className="text-sm">{tq("charts.diagnostic")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm">
-        <section>
-          <h4 className="mb-1 text-xs font-semibold text-[var(--muted-foreground)]">
-            {tq("charts.whatChangedTitle")}
-          </h4>
-          <ul className="flex flex-col gap-1">
-            {changes.map((c) => (
-              <li key={c.field} className="font-mono text-xs">
-                {c.field}: {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
-              </li>
-            ))}
-            {docsAdded.length ? (
-              <li className="text-xs text-emerald-500">+{docsAdded.length} docs</li>
-            ) : null}
-            {docsRemoved.length ? (
-              <li className="text-xs text-red-500">−{docsRemoved.length} docs</li>
-            ) : null}
-          </ul>
-        </section>
-        <section>
-          <h4 className="mb-1 text-xs font-semibold text-[var(--muted-foreground)]">
-            {tq("charts.causes")}
-          </h4>
-          <ul className="flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
-            {causes.map((c) => (
-              <li key={c}>• {c}</li>
-            ))}
-          </ul>
-        </section>
-        <section>
-          <h4 className="mb-1 text-xs font-semibold text-[var(--muted-foreground)]">
+      <CardContent className="flex flex-col gap-2 text-[0.7rem]">
+        <div className="grid grid-cols-2 gap-3">
+          <section className="min-w-0">
+            <h4 className="mb-1 font-semibold text-[var(--muted-foreground)]">
+              {tq("charts.whatChangedTitle")}
+            </h4>
+            <ul className="flex flex-col gap-0.5">
+              {changes.map((c) => (
+                <li key={c.field} className="truncate font-mono">
+                  {c.field}: {c.before.slice(0, 6)} → {c.after.slice(0, 6)}
+                </li>
+              ))}
+              {docsAdded.length ? (
+                <li className="text-emerald-500">+{docsAdded.length} docs</li>
+              ) : null}
+              {docsRemoved.length ? (
+                <li className="text-red-500">−{docsRemoved.length} docs</li>
+              ) : null}
+            </ul>
+          </section>
+          <section className="min-w-0">
+            <h4 className="mb-1 font-semibold text-[var(--muted-foreground)]">
+              {tq("charts.causes")}
+            </h4>
+            <ul className="flex flex-col gap-0.5 text-[var(--muted-foreground)]">
+              {causes.map((c) => (
+                <li key={c} className="truncate">
+                  • {c}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--tessera-border)] pt-1.5">
+          <span className="font-semibold text-[var(--muted-foreground)]">
             {tq("charts.impact")}
-          </h4>
-          <div className="flex flex-wrap items-center gap-2">
-            {delta != null ? (
-              <Badge tone={delta >= 0 ? "success" : "danger"} className="tabular-nums">
-                {delta >= 0 ? "+" : ""}
-                {Math.round(delta * 100)} pts
-              </Badge>
-            ) : null}
-            {regressions.map((r) => (
-              <span key={r.model} className="text-xs text-red-500">
-                {r.model} {Math.round(r.prev_rate * 100)}→{Math.round(r.last_rate * 100)}%
-              </span>
-            ))}
-          </div>
-        </section>
+          </span>
+          {delta != null ? (
+            <Badge tone={delta >= 0 ? "success" : "danger"} className="tabular-nums">
+              {delta >= 0 ? "+" : ""}
+              {Math.round(delta * 100)} pts
+            </Badge>
+          ) : null}
+          {regressions.map((r) => (
+            <span key={r.model} className="text-red-500">
+              {r.model} {Math.round(r.prev_rate * 100)}→{Math.round(r.last_rate * 100)}%
+            </span>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
@@ -494,22 +498,22 @@ export function RecommendedActions({
       <CardHeader>
         <CardTitle className="text-sm">{tq("sec.actions")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-1.5">
+      <CardContent className="flex flex-col gap-1">
         {actions.map((a) => (
           <button
             key={a.key}
             type="button"
             onClick={() => onOpen(a.target)}
-            className="group flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2.5 py-1.5 text-left text-sm transition-colors hover:border-[var(--tessera-border-strong)] hover:bg-[var(--tessera-muted)]"
+            className="group flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] px-2 py-1 text-left text-[0.7rem] transition-colors hover:border-[var(--tessera-border-strong)] hover:bg-[var(--tessera-muted)]"
           >
-            <a.icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
+            <a.icon className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
             <span className="min-w-0 flex-1 truncate">{a.label}</span>
             {a.ctx ? (
-              <span className="shrink-0 truncate text-[0.7rem] text-[var(--muted-foreground)]">
+              <span className="shrink-0 tabular-nums text-[0.6rem] text-[var(--muted-foreground)]">
                 {a.ctx}
               </span>
             ) : null}
-            <Badge tone={a.role === "admin" ? "warning" : "success"}>
+            <Badge tone={a.role === "admin" ? "warning" : "success"} className="px-1 text-[0.6rem]">
               {a.role === "admin" ? "Admin+" : "Operator+"}
             </Badge>
           </button>
@@ -517,7 +521,7 @@ export function RecommendedActions({
         <button
           type="button"
           onClick={onEvidence}
-          className="mt-1 inline-flex items-center gap-1 self-start text-xs text-[var(--tessera-green)] hover:underline"
+          className="mt-0.5 inline-flex items-center gap-1 self-start text-[0.7rem] text-[var(--tessera-green)] hover:underline"
         >
           {tq("reco.seeEvidence")}
           <ChevronRight className="h-3 w-3" />
@@ -550,7 +554,7 @@ export function CostQualityScatter({
           <Skeleton className="h-32 w-full" />
         ) : (
           <>
-            <div className="relative h-32 w-full">
+            <div className="relative h-16 w-full">
               <svg
                 viewBox={`0 0 100 ${H + top * 2}`}
                 preserveAspectRatio="none"
@@ -579,18 +583,18 @@ export function CostQualityScatter({
                 ))}
               </svg>
             </div>
-            <div className="mt-1 flex justify-between text-[0.65rem] text-[var(--muted-foreground)]">
+            <div className="mt-0.5 flex justify-between text-[0.6rem] text-[var(--muted-foreground)]">
               <span>↑ {tq("charts.qualityAxis")}</span>
               <span>{tq("charts.costAxis")} →</span>
             </div>
-            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            <ul className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[0.6rem]">
               {models.map((m) => (
                 <li
                   key={m.model}
                   className="flex items-center gap-1 text-[var(--muted-foreground)]"
                 >
                   <span
-                    className="h-2 w-2 rounded-full"
+                    className="h-1.5 w-1.5 rounded-full"
                     style={{ background: VERDICT_COLOR[m.verdict] ?? "#64748b" }}
                   />
                   {m.model}
@@ -680,7 +684,7 @@ export function FaithGroundingScatter({
           </p>
         ) : (
           <>
-            <div className="relative h-32 w-full">
+            <div className="relative h-16 w-full">
               <svg
                 viewBox={`0 0 100 ${H + top * 2}`}
                 preserveAspectRatio="none"
@@ -718,21 +722,21 @@ export function FaithGroundingScatter({
                 ))}
               </svg>
             </div>
-            <div className="mt-1 flex justify-between text-[0.65rem] text-[var(--muted-foreground)]">
+            <div className="mt-0.5 flex justify-between text-[0.6rem] text-[var(--muted-foreground)]">
               <span>↑ {tq("metrics.grounding")}</span>
               <span>{tq("metrics.faithfulness")} →</span>
             </div>
-            <ul className="mt-2 flex flex-wrap gap-x-3 text-xs text-[var(--muted-foreground)]">
+            <ul className="mt-1 flex flex-wrap gap-x-2 text-[0.6rem] text-[var(--muted-foreground)]">
               <li className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 {tq("charts.good")}
               </li>
               <li className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 {tq("charts.mid")}
               </li>
               <li className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                 {tq("charts.low")}
               </li>
             </ul>
@@ -791,7 +795,7 @@ export function FailureBars({
   const catLabel = useCatLabel();
   const entries = Object.entries(report?.by_category ?? {})
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+    .slice(0, 5);
   const max = Math.max(1, ...entries.map(([, n]) => n));
   return (
     <Card>
@@ -806,14 +810,14 @@ export function FailureBars({
             {tq("failed.empty")}
           </p>
         ) : (
-          <ul className="flex flex-col gap-2 text-xs">
+          <ul className="flex flex-col gap-1.5 text-[0.65rem]">
             {entries.map(([key, n], i) => (
-              <li key={key} className="flex flex-col gap-1">
-                <div className="flex items-center justify-between gap-2">
+              <li key={key} className="flex flex-col gap-0.5">
+                <div className="flex items-center justify-between gap-1.5">
                   <span className="truncate">{catLabel(key)}</span>
                   <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{n}</span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
+                <div className="h-1 w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
                   <div
                     className="h-full rounded-full"
                     style={{
@@ -849,9 +853,9 @@ export function JudgeMini({ data, loading }: { data: Calibration | undefined; lo
             {tq("judge.unavailable")}
           </p>
         ) : (
-          <div className="flex flex-col gap-2 text-xs">
+          <div className="flex flex-col gap-1 text-[0.7rem]">
             <div className="flex items-baseline gap-1.5">
-              <span className={`font-serif text-2xl font-semibold tabular-nums ${tone}`}>
+              <span className={`font-serif text-xl font-semibold tabular-nums ${tone}`}>
                 {kappa == null ? "—" : kappa.toFixed(2)}
               </span>
               <span className="text-[var(--muted-foreground)]">{tq("judge.kappa")}</span>
@@ -883,6 +887,7 @@ export function PriorityCases({
   onOpen: (tab: OverviewTab) => void;
 }) {
   const tq = useTranslations("quality");
+  const catLabel = useCatLabel();
   const cases = [...(report?.cases ?? [])]
     .sort(
       (a, b) =>
@@ -895,7 +900,7 @@ export function PriorityCases({
       <CardHeader>
         <CardTitle className="text-sm">{tq("exec.priorityCases")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-2">
+      <CardContent className="flex flex-col gap-1.5">
         {loading && !report ? (
           <Skeleton className="h-32 w-full" />
         ) : cases.length === 0 ? (
@@ -905,18 +910,20 @@ export function PriorityCases({
         ) : (
           <>
             {cases.map((c) => (
-              <div key={c.case_id} className="flex items-center gap-2 text-xs">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${SEV_DOT[c.severity] ?? ""}`} />
-                <span className="shrink-0 font-mono text-[var(--muted-foreground)]">
-                  {c.case_id}
+              <div key={c.case_id} className="flex items-center gap-1.5 text-[0.65rem]">
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${SEV_DOT[c.severity] ?? ""}`}
+                />
+                <span className="shrink-0 font-mono text-[var(--tessera-green)]">{c.case_id}</span>
+                <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
+                  {catLabel(c.category)}
                 </span>
-                <span className="min-w-0 flex-1 truncate">{c.title}</span>
               </div>
             ))}
             <button
               type="button"
               onClick={() => onOpen("failed")}
-              className="mt-1 inline-flex items-center gap-1 self-start text-xs text-[var(--tessera-green)] hover:underline"
+              className="mt-0.5 inline-flex items-center gap-1 self-start text-[0.65rem] text-[var(--tessera-green)] hover:underline"
             >
               {tq("rr.seeCases")}
               <ChevronRight className="h-3 w-3" />
@@ -937,7 +944,7 @@ function MiniBarRow({
 }: { label: string; value: string; pct: number; color: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex items-center justify-between gap-2 text-xs">
+      <div className="flex items-center justify-between gap-2 text-[0.65rem]">
         <span className="min-w-0 truncate">{label}</span>
         <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{value}</span>
       </div>
@@ -999,7 +1006,7 @@ export function PredictiveSignals({
       <CardHeader>
         <CardTitle className="text-sm">{tq("sec.predictive")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm">
+      <CardContent className="flex flex-col gap-2 text-xs">
         {loading && !risk ? (
           <Skeleton className="h-48 w-full" />
         ) : (
@@ -1007,7 +1014,7 @@ export function PredictiveSignals({
             <Row label={tq("pred.trend")}>
               <Badge tone={trendTone}>{tq(`pred.trend_${trend}`)}</Badge>
             </Row>
-            <div className="flex flex-col gap-2 border-t border-[var(--tessera-border)] pt-2 text-xs">
+            <div className="flex flex-col gap-1.5 border-t border-[var(--tessera-border)] pt-1.5">
               <Row label={tq("pred.prob7")}>
                 <span className="tabular-nums">
                   {prob == null ? "—" : `${Math.round(prob * 100)}%`}
@@ -1046,9 +1053,9 @@ export function PredictiveSignals({
                 )}
               </Row>
             </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-[var(--tessera-border)] pt-2">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[0.7rem] font-medium text-[var(--muted-foreground)]">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 border-t border-[var(--tessera-border)] pt-1.5">
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] font-medium text-[var(--muted-foreground)]">
                   {tq("pred.intents")}
                 </span>
                 {intents.length === 0 ? (
@@ -1065,8 +1072,8 @@ export function PredictiveSignals({
                   ))
                 )}
               </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[0.7rem] font-medium text-[var(--muted-foreground)]">
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] font-medium text-[var(--muted-foreground)]">
                   {tq("pred.langs")}
                 </span>
                 {langs.length === 0 ? (
@@ -1102,7 +1109,7 @@ export function RunsPassRateTable({
   const tq = useTranslations("quality");
   const runs = [...(registry?.runs ?? [])]
     .sort((a, b) => b.run_at.localeCompare(a.run_at))
-    .slice(0, 5);
+    .slice(0, 4);
   return (
     <Card>
       <CardHeader>
@@ -1120,25 +1127,25 @@ export function RunsPassRateTable({
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                  <th className="py-1.5 pr-3 font-medium">{tq("runs.cols.model")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("charts.dataset")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("runs.cols.rate")}</th>
-                  <th className="py-1.5 font-medium">{tq("charts.passTotal")}</th>
+                  <th className="py-1 pr-3 font-medium">{tq("runs.cols.model")}</th>
+                  <th className="py-1 pr-3 font-medium">{tq("charts.dataset")}</th>
+                  <th className="py-1 pr-3 font-medium">{tq("runs.cols.rate")}</th>
+                  <th className="py-1 font-medium">{tq("charts.passTotal")}</th>
                 </tr>
               </thead>
               <tbody>
                 {runs.map((r) => (
                   <tr key={r.run_id} className="border-b border-[var(--border)]/50">
-                    <td className="py-1.5 pr-3 font-medium whitespace-nowrap">{r.model}</td>
-                    <td className="py-1.5 pr-3 font-mono text-[var(--muted-foreground)] whitespace-nowrap">
+                    <td className="py-1 pr-3 font-medium whitespace-nowrap">{r.model}</td>
+                    <td className="py-1 pr-3 font-mono text-[var(--muted-foreground)] whitespace-nowrap">
                       regression-{r.language}
                     </td>
                     <td
-                      className={`py-1.5 pr-3 font-semibold tabular-nums ${r.pass_rate >= 0.8 ? GOOD : r.pass_rate >= 0.5 ? WARN : BAD}`}
+                      className={`py-1 pr-3 font-semibold tabular-nums ${r.pass_rate >= 0.8 ? GOOD : r.pass_rate >= 0.5 ? WARN : BAD}`}
                     >
                       {Math.round(r.pass_rate * 100)}%
                     </td>
-                    <td className="py-1.5 tabular-nums text-[var(--muted-foreground)]">
+                    <td className="py-1 tabular-nums text-[var(--muted-foreground)]">
                       {r.passed}/{r.total}
                     </td>
                   </tr>
