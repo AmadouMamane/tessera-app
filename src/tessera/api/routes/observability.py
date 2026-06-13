@@ -486,6 +486,32 @@ async def observability_regression_risk(
     return {**asdict(risk), "as_of": at}
 
 
+@router.get("/observability/signal-status-trend")
+async def observability_signal_status_trend(
+    at: str | None = None,
+    metric: str = "faithfulness",
+    days: int = 7,
+) -> dict[str, object]:
+    """Per-severity-band score counts bucketed by day (Signaux KPI strip, image 01).
+
+    Classifies each judged score of ``metric`` into crit / warn / ok against the
+    SLO thresholds and counts them per day, so every KPI tile gets a real
+    sparkline + a real vs-previous-day delta from the durable score log. Honours
+    as-of-T. Empty days are real zeros, never fabricated.
+    """
+    import contextlib
+    from datetime import UTC, datetime
+
+    from tessera.observability.eval.series import compute_status_counts_trend
+
+    end = datetime.now(UTC)
+    if at:
+        with contextlib.suppress(ValueError):
+            end = datetime.fromisoformat(at)
+    trend = compute_status_counts_trend(persisted_scores(at), metric=metric, end=end, days=days)
+    return {**asdict(trend), "as_of": at}
+
+
 @router.get("/observability/metric-pairs")
 async def observability_metric_pairs(
     x: str = "faithfulness",

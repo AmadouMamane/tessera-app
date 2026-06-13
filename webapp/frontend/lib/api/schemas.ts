@@ -725,6 +725,26 @@ export const JudgeDriftSchema = z.object({
 });
 export type JudgeDrift = z.infer<typeof JudgeDriftSchema>;
 
+export const StatusBandSchema = z.object({
+  counts: z.array(z.number().int()),
+  current: z.number().int(),
+  total: z.number().int(),
+  delta: z.number().int().nullable(),
+});
+export const StatusCountsTrendSchema = z.object({
+  metric: z.string(),
+  window_start: z.string(),
+  window_end: z.string(),
+  n_buckets: z.number().int(),
+  active: StatusBandSchema,
+  crit: StatusBandSchema,
+  warn: StatusBandSchema,
+  ok: StatusBandSchema,
+  as_of: z.string().nullable().optional(),
+});
+export type StatusBand = z.infer<typeof StatusBandSchema>;
+export type StatusCountsTrend = z.infer<typeof StatusCountsTrendSchema>;
+
 export const RegressionRiskSchema = z.object({
   metric: z.string(),
   window_start: z.string(),

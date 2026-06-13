@@ -153,6 +153,8 @@ import {
   SkewReportSchema,
   type SnapshotDiffReport,
   SnapshotDiffReportSchema,
+  type StatusCountsTrend,
+  StatusCountsTrendSchema,
   type StegoReport,
   StegoReportSchema,
   type SycophancyReport,
@@ -487,6 +489,21 @@ export async function fetchRegressionRisk(
     `/observability/regression-risk${query ? `?${query}` : ""}`,
     { signal },
     RegressionRiskSchema,
+  );
+}
+
+/** Per-severity-band score-count trend (Signaux KPI strip, image 01). */
+export async function fetchSignalStatusTrend(
+  signal?: AbortSignal,
+  at?: string,
+): Promise<StatusCountsTrend> {
+  const params = new URLSearchParams();
+  if (at) params.set("at", at);
+  const query = params.toString();
+  return request(
+    `/observability/signal-status-trend${query ? `?${query}` : ""}`,
+    { signal },
+    StatusCountsTrendSchema,
   );
 }
 

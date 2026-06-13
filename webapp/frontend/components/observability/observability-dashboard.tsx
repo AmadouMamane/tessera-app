@@ -100,6 +100,7 @@ import {
   fetchSLO,
   fetchScoreSeries,
   fetchSftDataset,
+  fetchSignalStatusTrend,
   fetchToolValidity,
   fetchToxicity,
   fetchWhatChanged,
@@ -294,6 +295,14 @@ export function ObservabilityDashboard() {
   const regressionRisk = useQuery({
     queryKey: ["regression-risk", asOf],
     queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 30_000,
+  });
+
+  // Per-severity-band score-count trend for the Signaux KPI tiles (image 01).
+  const signalStatusTrend = useQuery({
+    queryKey: ["signal-status-trend", asOf],
+    queryFn: ({ signal }) => fetchSignalStatusTrend(signal, asOf ?? undefined),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
   });
@@ -587,7 +596,7 @@ export function ObservabilityDashboard() {
               {/* KPI strip + registre + analytics row (normative 01). */}
               <SignalKpis
                 rows={signalRows}
-                series={scoreSeries.data}
+                trend={signalStatusTrend.data}
                 catalogue={QUALITY_CATALOGUE}
               />
               <SignalsTable

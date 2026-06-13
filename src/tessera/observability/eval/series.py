@@ -19,9 +19,12 @@ __all__ = [
     "MetricPoint",
     "ScoreSeries",
     "SeriesBucket",
+    "StatusBand",
+    "StatusCountsTrend",
     "compute_judge_drift",
     "compute_metric_pairs",
     "compute_score_series",
+    "compute_status_counts_trend",
 ]
 
 
@@ -318,4 +321,114 @@ def compute_judge_drift(
         delta=delta,
         level=_drift_level(divergence),
         buckets=series.buckets,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class StatusBand:
+    """One severity band's per-bucket counts over the window, with a vs-previous delta."""
+
+    counts: list[int]  # one count per time bucket (the sparkline)
+    current: int  # count in the last bucket
+    total: int  # count over the whole window
+    delta: int | None  # last bucket - previous bucket ("vs hier" when buckets are daily)
+
+
+@dataclass(frozen=True, slots=True)
+class StatusCountsTrend:
+    """Per-severity-band score counts bucketed over time (Signaux KPI strip, image 01).
+
+    Computed from the durable score event log: each judged score of ``metric`` is
+    classified into ``crit`` / ``warn`` / ``ok`` against the SLO thresholds, then
+    counted per time bucket. Gives every KPI tile a real sparkline + a real
+    period-over-period delta — no fabricated history.
+    """
+
+    metric: str
+    window_start: str
+    window_end: str
+    n_buckets: int
+    active: StatusBand
+    crit: StatusBand
+    warn: StatusBand
+    ok: StatusBand
+
+
+def _band(buckets: list[int]) -> StatusBand:
+    """Wrap per-bucket counts into a :class:`StatusBand` with current/total/delta."""
+    current = buckets[-1] if buckets else 0
+    prev = buckets[-2] if len(buckets) >= _MIN_DRIFT_BUCKETS else None
+    return StatusBand(
+        counts=buckets,
+        current=current,
+        total=sum(buckets),
+        delta=(current - prev) if prev is not None else None,
+    )
+
+
+def compute_status_counts_trend(
+    rows: list[dict[str, object]],
+    *,
+    metric: str = "faithfulness",
+    end: datetime,
+    days: int = 7,
+    warn_threshold: float = 0.8,
+    crit_threshold: float = 0.6,
+) -> StatusCountsTrend:
+    """Count judged scores per severity band, bucketed by day over the window.
+
+    Args:
+        rows: Persisted score rows (any order) with ``scored_at``, ``metric`` and
+            ``score`` — the same durable log the rest of the cockpit reads, so the
+            trend honours as-of-T when ``end`` is a past instant.
+        metric: The judged metric whose score distribution drives the bands.
+        end: Right edge of the window — instant T, or "now".
+        days: Window length in days; one bucket per day.
+        warn_threshold: Scores at/above this are ``ok``; below are at least ``warn``.
+        crit_threshold: Scores below this are ``crit``.
+
+    Returns:
+        A :class:`StatusCountsTrend` with one :class:`StatusBand` per band, each
+        carrying its per-bucket counts (sparkline), current/total and vs-previous
+        delta. Empty buckets are real zeros (no score that day), never fabricated.
+    """
+    n_buckets = max(1, days)
+    window = timedelta(days=max(1, days))
+    start = end - window
+    span = window.total_seconds() or 1.0
+
+    active = [0] * n_buckets
+    crit = [0] * n_buckets
+    warn = [0] * n_buckets
+    ok = [0] * n_buckets
+
+    for row in rows:
+        if row.get("metric") != metric:
+            continue
+        ts = _parse(row.get("scored_at"))
+        if ts is None or not (start <= ts <= end):
+            continue
+        try:
+            score = float(row["score"])  # type: ignore[arg-type]
+        except (KeyError, TypeError, ValueError):
+            continue
+        frac = (ts - start).total_seconds() / span
+        idx = min(n_buckets - 1, max(0, int(frac * n_buckets)))
+        active[idx] += 1
+        if score < crit_threshold:
+            crit[idx] += 1
+        elif score < warn_threshold:
+            warn[idx] += 1
+        else:
+            ok[idx] += 1
+
+    return StatusCountsTrend(
+        metric=metric,
+        window_start=start.isoformat(),
+        window_end=end.isoformat(),
+        n_buckets=n_buckets,
+        active=_band(active),
+        crit=_band(crit),
+        warn=_band(warn),
+        ok=_band(ok),
     )

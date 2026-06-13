@@ -1474,7 +1474,9 @@
       "langs": "Risiko-Sprachen"
     },
     "signalsKpi": {
-      "active": "Aktive Signale"
+      "active": "Aktive Signale",
+      "vsYesterday": "vs. gestern",
+      "stable": "stabil"
     },
     "signalsRail": {
       "fiche": "Signal-Steckbrief",

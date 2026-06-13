@@ -25,7 +25,8 @@ import type {
   ReleaseStatus,
   RoutingReport,
   SLOReport,
-  ScoreSeries,
+  StatusBand,
+  StatusCountsTrend,
   ToolValidity,
   ToxicityReport,
   WhatChanged,
@@ -957,89 +958,130 @@ const STATUS_HEX: Record<SignalStatus, string> = {
   na: "#64748b",
 };
 
-/** Tiny sparkline from a score series' bucket means (signal KPI tiles, image 01). */
-function Spark({ series, color }: { series: ScoreSeries | undefined; color: string }) {
-  const pts = (series?.buckets ?? []).map((b) => b.mean).filter((m): m is number => m != null);
-  if (pts.length < 2) return <div className="h-7" />;
-  const min = Math.min(...pts);
-  const max = Math.max(...pts);
-  const span = max - min || 1;
+/** A filled-area sparkline over a band's per-bucket counts (signal KPI tiles, image 01). */
+function AreaSpark({ counts, color }: { counts: number[]; color: string }) {
+  if (counts.length < 2) return <div className="h-9 w-full" />;
+  const max = Math.max(1, ...counts);
   const w = 120;
-  const h = 28;
-  const d = pts
-    .map((v, i) => {
-      const x = (i / (pts.length - 1)) * w;
-      const y = h - ((v - min) / span) * h;
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
+  const h = 36;
+  const xy = counts.map((v, i) => ({
+    x: (i / (counts.length - 1)) * w,
+    y: h - (v / max) * (h - 2) - 1,
+  }));
+  const line = xy
+    .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
     .join(" ");
+  const area = `${line} L${w},${h} L0,${h} Z`;
+  const gid = `area-${color.replace("#", "")}`;
   return (
     <svg
       viewBox={`0 0 ${w} ${h}`}
-      className="h-7 w-full"
+      className="h-9 w-full"
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" />
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gid})`} stroke="none" />
+      <path d={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" />
     </svg>
   );
 }
 
-/** The top KPI row of the Signaux tab: active-signal count + per-status counts,
- * each with the real quality sparkline / a proportion bar (image 01). */
+/** A "▲/▼ +N vs hier" delta label under a KPI number (image 01). */
+function DeltaVsYesterday({
+  delta,
+  color,
+  goodUp,
+}: {
+  delta: number | null;
+  color: string;
+  goodUp: boolean;
+}) {
+  const tq = useTranslations("quality");
+  if (delta == null)
+    return <span className="text-[0.65rem] text-[var(--muted-foreground)]">—</span>;
+  if (delta === 0)
+    return (
+      <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+        — {tq("signalsKpi.stable")}
+      </span>
+    );
+  const up = delta > 0;
+  const tone = up === goodUp ? "#10b981" : color;
+  return (
+    <span className="flex items-center gap-1 text-[0.65rem] tabular-nums" style={{ color: tone }}>
+      {up ? "▲" : "▼"} {up ? "+" : ""}
+      {delta} {tq("signalsKpi.vsYesterday")}
+    </span>
+  );
+}
+
+/** The top KPI row of the Signaux tab: active-signal count + per-severity counts,
+ * each with a REAL filled-area sparkline + a vs-yesterday delta from the durable
+ * score log (image 01). */
 export function SignalKpis({
   rows,
-  series,
+  trend,
   catalogue = 200,
 }: {
   rows: SignalRow[];
-  series: ScoreSeries | undefined;
+  trend: StatusCountsTrend | undefined;
   catalogue?: number;
 }) {
   const tq = useTranslations("quality");
   const s = summarizeSignals(rows);
-  const total = s.total || 1;
   const tiles: {
     key: string;
     label: string;
     value: string;
     status: SignalStatus;
-    count: number;
+    band: StatusBand | undefined;
+    goodUp: boolean;
   }[] = [
     {
       key: "active",
       label: tq("signalsKpi.active"),
       value: `${s.total}/${catalogue}`,
       status: "ok",
-      count: s.total,
+      band: trend?.active,
+      goodUp: true,
     },
     {
       key: "crit",
       label: tq("signalsTable.group.crit"),
       value: String(s.crit),
       status: "crit",
-      count: s.crit,
+      band: trend?.crit,
+      goodUp: false,
     },
     {
       key: "warn",
       label: tq("signalsTable.group.warn"),
       value: String(s.warn),
       status: "warn",
-      count: s.warn,
+      band: trend?.warn,
+      goodUp: false,
     },
     {
       key: "ok",
       label: tq("signalsTable.group.ok"),
       value: String(s.ok),
       status: "ok",
-      count: s.ok,
+      band: trend?.ok,
+      goodUp: true,
     },
     {
       key: "na",
       label: tq("signalsTable.group.na"),
       value: String(s.na),
       status: "na",
-      count: s.na,
+      band: undefined,
+      goodUp: true,
     },
   ];
   return (
@@ -1054,26 +1096,23 @@ export function SignalKpis({
             <span className="truncate">{t.label}</span>
           </div>
           <div className="flex items-end justify-between gap-2">
-            <span
-              className="text-xl font-semibold tabular-nums"
-              style={{ color: t.key === "active" ? undefined : STATUS_HEX[t.status] }}
-            >
-              {t.value}
-            </span>
-          </div>
-          {t.key === "active" ? (
-            <Spark series={series} color={STATUS_HEX.ok} />
-          ) : (
-            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${Math.max(2, (t.count / total) * 100)}%`,
-                  background: STATUS_HEX[t.status],
-                }}
+            <div className="flex flex-col">
+              <span
+                className="text-xl font-semibold tabular-nums leading-none"
+                style={{ color: t.key === "active" ? undefined : STATUS_HEX[t.status] }}
+              >
+                {t.value}
+              </span>
+              <DeltaVsYesterday
+                delta={t.band?.delta ?? null}
+                color={STATUS_HEX[t.status]}
+                goodUp={t.goodUp}
               />
             </div>
-          )}
+            <div className="h-9 w-[42%] shrink-0">
+              {t.band ? <AreaSpark counts={t.band.counts} color={STATUS_HEX[t.status]} /> : null}
+            </div>
+          </div>
         </Card>
       ))}
     </div>

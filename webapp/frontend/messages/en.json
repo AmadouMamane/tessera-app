@@ -1474,7 +1474,9 @@
       "langs": "At-risk languages"
     },
     "signalsKpi": {
-      "active": "Active signals"
+      "active": "Active signals",
+      "vsYesterday": "vs yesterday",
+      "stable": "stable"
     },
     "signalsRail": {
       "fiche": "Signal sheet",
