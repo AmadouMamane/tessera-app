@@ -1450,7 +1450,14 @@
       "curveY": "Observed good-rate",
       "curveActual": "Current judge",
       "curveIdeal": "Ideal",
-      "noData": "No data"
+      "noData": "No data",
+      "riskSummary": "Calibration risk summary",
+      "riskKappa": "Judge↔human disagreement",
+      "riskDrift": "Judge drift",
+      "riskConsensus": "Multi-judge disagreement",
+      "riskLow": "low",
+      "riskMod": "moderate",
+      "riskHigh": "high"
     },
     "runs": {
       "title": "Runs & datasets",

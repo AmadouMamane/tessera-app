@@ -1450,7 +1450,14 @@
       "curveY": "Taux réel « bon »",
       "curveActual": "Juge actuel",
       "curveIdeal": "Idéal",
-      "noData": "Aucune donnée"
+      "noData": "Aucune donnée",
+      "riskSummary": "Résumé du risque de calibration",
+      "riskKappa": "Désaccord juge↔humain",
+      "riskDrift": "Drift du juge",
+      "riskConsensus": "Désaccord multi-juges",
+      "riskLow": "faible",
+      "riskMod": "modéré",
+      "riskHigh": "élevé"
     },
     "runs": {
       "title": "Runs & datasets",

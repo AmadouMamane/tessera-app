@@ -1450,7 +1450,14 @@
       "curveY": "Beobachtete Gut-Rate",
       "curveActual": "Aktueller Richter",
       "curveIdeal": "Ideal",
-      "noData": "Keine Daten"
+      "noData": "Keine Daten",
+      "riskSummary": "Kalibrierungs-Risiko",
+      "riskKappa": "Richter↔Mensch-Uneinigkeit",
+      "riskDrift": "Richter-Drift",
+      "riskConsensus": "Multi-Richter-Uneinigkeit",
+      "riskLow": "niedrig",
+      "riskMod": "moderat",
+      "riskHigh": "hoch"
     },
     "runs": {
       "title": "Runs & Datensätze",

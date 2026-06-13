@@ -205,6 +205,62 @@ function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
   );
 }
 
+/** Calibration risk summary — a transparent 0-100 composite of the real signals:
+ *  judge↔human disagreement (1−κ), judge drift divergence and multi-judge
+ *  disagreement (1−consensus). Each factor is shown so nothing is a black box. */
+function RiskSummary({
+  kappa,
+  drift,
+  consensus,
+}: {
+  kappa: number;
+  drift?: JudgeDrift;
+  consensus?: JudgeConsensus;
+}) {
+  const tq = useTranslations("quality");
+  const factors: { label: string; risk: number }[] = [];
+  factors.push({ label: tq("judge.riskKappa"), risk: Math.max(0, Math.min(1, 1 - kappa)) });
+  if (drift?.divergence != null)
+    factors.push({ label: tq("judge.riskDrift"), risk: Math.min(1, drift.divergence / 0.1) });
+  if (consensus?.available && consensus.consensus_rate != null)
+    factors.push({
+      label: tq("judge.riskConsensus"),
+      risk: Math.max(0, Math.min(1, 1 - consensus.consensus_rate)),
+    });
+  const score = Math.round((factors.reduce((s, f) => s + f.risk, 0) / factors.length) * 100);
+  const tone = score >= 50 ? BAD : score >= 25 ? WARN : GOOD;
+  const level =
+    score >= 50 ? tq("judge.riskHigh") : score >= 25 ? tq("judge.riskMod") : tq("judge.riskLow");
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-end gap-2">
+        <span className={`text-3xl font-semibold tabular-nums ${tone}`}>{score}</span>
+        <span className="pb-1 text-xs text-[var(--muted-foreground)]">/100</span>
+        <span className={`pb-1 text-xs ${tone}`}>· {level}</span>
+      </div>
+      <ul className="flex flex-col gap-1">
+        {factors.map((f) => (
+          <li key={f.label} className="flex items-center gap-1.5 text-[0.65rem]">
+            <span className="w-28 shrink-0 truncate text-[var(--muted-foreground)]">{f.label}</span>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-[var(--muted)]/40">
+              <div
+                className="h-full rounded-sm"
+                style={{
+                  width: `${f.risk * 100}%`,
+                  background: f.risk >= 0.5 ? MISS : f.risk >= 0.25 ? "#f59e0b" : MATCH,
+                }}
+              />
+            </div>
+            <span className="w-8 shrink-0 text-right tabular-nums">
+              {Math.round(f.risk * 100)}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** Verbosity-bias scatter: answer length (x) vs judge score (y), coloured by agreement. */
 function VerbosityScatter({ points }: { points: CalibrationPoint[] }) {
   const tq = useTranslations("quality");
@@ -671,6 +727,15 @@ export function JudgeCalibration({
                   {data.lenient ? tq("judge.lenientYes") : tq("judge.lenientNo")}
                 </Badge>
               </Row>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">{tq("judge.riskSummary")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RiskSummary kappa={kappa} drift={drift} consensus={consensus} />
             </CardContent>
           </Card>
 
