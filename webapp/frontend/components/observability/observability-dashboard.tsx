@@ -25,7 +25,12 @@ import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedBoard, FailedRail } from "@/components/observability/failed-board";
 import { FailureDistribution } from "@/components/observability/failed-cases";
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
-import { ModelsBoard } from "@/components/observability/models-board";
+import {
+  DEFAULT_PERIOD,
+  ModelsBoard,
+  type ModelsPeriod,
+  ModelsPeriodRail,
+} from "@/components/observability/models-board";
 import {
   CostQualityScatter,
   EtatActuel,
@@ -129,6 +134,7 @@ export function ObservabilityDashboard() {
   const [selectedSignal, setSelectedSignal] = useState<SignalRow | null>(null);
   const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
   const [selectedFailed, setSelectedFailed] = useState<FailedRunCase | null>(null);
+  const [modelsPeriod, setModelsPeriod] = useState<ModelsPeriod>(DEFAULT_PERIOD);
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
@@ -641,6 +647,7 @@ export function ObservabilityDashboard() {
               faithDrift={judgeDrift.data}
               groundingDrift={groundingDrift.data}
               consensus={judgeConsensus.data}
+              period={modelsPeriod}
             />
           )}
 
@@ -676,6 +683,8 @@ export function ObservabilityDashboard() {
             release={releaseStatus.data}
             onEvidence={downloadQualityEvidence}
           />
+        ) : tab === "models" ? (
+          <ModelsPeriodRail registry={runs.data} period={modelsPeriod} onApply={setModelsPeriod} />
         ) : (
           <RightRail
             failed={failedCases.data}

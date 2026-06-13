@@ -1694,7 +1694,15 @@
         "rate": "Rate",
         "date": "Date"
       },
-      "noRegressions": "No regression detected"
+      "noRegressions": "No regression detected",
+      "period": {
+        "title": "Analysis period selector",
+        "selected": "Selected period",
+        "days": "Last {n} days",
+        "all": "All history",
+        "from": "Window",
+        "apply": "Open window"
+      }
     },
     "metrics": {
       "faithfulness": "Faithfulness",

@@ -1694,7 +1694,15 @@
         "rate": "Taux",
         "date": "Date"
       },
-      "noRegressions": "Aucune régression détectée"
+      "noRegressions": "Aucune régression détectée",
+      "period": {
+        "title": "Sélecteur de période d'analyse",
+        "selected": "Période sélectionnée",
+        "days": "{n} derniers jours",
+        "all": "Tout l'historique",
+        "from": "Fenêtre",
+        "apply": "Ouvrir la fenêtre"
+      }
     },
     "metrics": {
       "faithfulness": "Faithfulness",

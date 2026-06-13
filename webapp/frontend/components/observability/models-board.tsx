@@ -13,6 +13,7 @@ import {
   Target,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,10 @@ import type {
 } from "@/lib/api/schemas";
 
 const DASH = "—";
+
+/** Analysis window selected in the period rail (days; anchor = upper-bound run). */
+export type ModelsPeriod = { days: number; anchor: string | null };
+export const DEFAULT_PERIOD: ModelsPeriod = { days: 7, anchor: null };
 
 const CATEGORIES = [
   "prompt_injection",
@@ -203,15 +208,35 @@ function ModelsKpis({
 
 // ───────────────────────────── score over time ───────────────────────────────
 
-/** Multi-line of per-model pass-rate evolution (oldest→newest run). */
-function ScoreLines({ models }: { models: ModelStat[] }) {
+/** One model's pass-rate series within the selected window. */
+export type ModelSeries = { model: string; values: number[] };
+
+/** Per-model pass-rate series from the run archive, restricted to ``period``. */
+function buildSeries(registry: RunRegistry | undefined, period: ModelsPeriod): ModelSeries[] {
+  const runs = (registry?.runs ?? []).filter((r) => r.total >= 10);
+  const [start, newest] = windowBounds(registry, period);
+  const byModel = new Map<string, { t: number; rate: number }[]>();
+  for (const r of runs) {
+    const t = parseRunAt(r.run_at);
+    if (!t || t > newest || t < start) continue;
+    const arr = byModel.get(r.model) ?? [];
+    arr.push({ t, rate: r.pass_rate });
+    byModel.set(r.model, arr);
+  }
+  return [...byModel.entries()]
+    .map(([model, pts]) => ({ model, values: pts.sort((a, b) => a.t - b.t).map((p) => p.rate) }))
+    .filter((s) => s.values.length >= 1);
+}
+
+/** Multi-line of per-model pass-rate over time (within the selected period). */
+function ScoreLines({ series }: { series: ModelSeries[] }) {
   const tq = useTranslations("quality");
-  const series = models.filter((m) => (m.evolution?.length ?? 0) >= 2);
-  if (series.length === 0)
+  const usable = series.filter((s) => s.values.length >= 2);
+  if (usable.length === 0)
     return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
   const w = 220;
   const h = 96;
-  const maxLen = Math.max(...series.map((m) => m.evolution?.length ?? 0));
+  const maxLen = Math.max(...usable.map((s) => s.values.length));
   return (
     <div className="flex flex-col gap-1">
       <svg
@@ -231,9 +256,8 @@ function ScoreLines({ models }: { models: ModelStat[] }) {
             strokeWidth="0.5"
           />
         ))}
-        {series.map((m, mi) => {
-          const evo = m.evolution ?? [];
-          const d = evo
+        {usable.map((s, mi) => {
+          const d = s.values
             .map((v, i) => {
               const x = (i / Math.max(1, maxLen - 1)) * w;
               const y = h - 4 - v * (h - 8);
@@ -242,7 +266,7 @@ function ScoreLines({ models }: { models: ModelStat[] }) {
             .join(" ");
           return (
             <path
-              key={m.model}
+              key={s.model}
               d={d}
               fill="none"
               stroke={LINE_COLORS[mi % LINE_COLORS.length]}
@@ -252,12 +276,12 @@ function ScoreLines({ models }: { models: ModelStat[] }) {
           );
         })}
       </svg>
-      <ModelLegend models={series} />
+      <ModelLegend models={usable} />
     </div>
   );
 }
 
-function ModelLegend({ models }: { models: ModelStat[] }) {
+function ModelLegend({ models }: { models: { model: string }[] }) {
   return (
     <ul className="flex flex-wrap gap-x-2 gap-y-0.5 text-[0.55rem] text-[var(--muted-foreground)]">
       {models.map((m, i) => (
@@ -473,10 +497,33 @@ function fmtDay(stamp: string): string {
   return `${p(dt.getUTCDate())}/${p(dt.getUTCMonth() + 1)}`;
 }
 
-function PassRateRuns({ registry }: { registry: RunRegistry | undefined }) {
+/** [start, newest] epoch-ms bounds of the selected analysis window. */
+function windowBounds(registry: RunRegistry | undefined, period: ModelsPeriod): [number, number] {
+  const stamps = (registry?.runs ?? []).map((r) => parseRunAt(r.run_at)).filter((t) => t > 0);
+  const newest = period.anchor
+    ? parseRunAt(period.anchor)
+    : stamps.length
+      ? Math.max(...stamps)
+      : 0;
+  const start = period.days > 0 ? newest - period.days * 86_400_000 : 0;
+  return [start, newest];
+}
+
+function PassRateRuns({
+  registry,
+  period,
+}: {
+  registry: RunRegistry | undefined;
+  period: ModelsPeriod;
+}) {
   const tq = useTranslations("quality");
+  const [start, newest] = windowBounds(registry, period);
   const runs = [...(registry?.runs ?? [])]
     .filter((r) => r.total >= 10)
+    .filter((r) => {
+      const t = parseRunAt(r.run_at);
+      return t > 0 && t >= start && t <= newest;
+    })
     .sort((a, b) => parseRunAt(b.run_at) - parseRunAt(a.run_at))
     .slice(0, 7);
   if (runs.length === 0)
@@ -584,12 +631,12 @@ function DriftStability({
   faithDrift,
   groundingDrift,
   consensus,
-  models,
+  series,
 }: {
   faithDrift: JudgeDrift | undefined;
   groundingDrift: JudgeDrift | undefined;
   consensus: JudgeConsensus | undefined;
-  models: ModelStat[];
+  series: ModelSeries[];
 }) {
   const tq = useTranslations("quality");
   const disagree = consensus?.consensus_rate != null ? 1 - consensus.consensus_rate : null;
@@ -612,7 +659,7 @@ function DriftStability({
           level={disagree == null ? null : disagree >= 0.2 ? "moderate" : "stable"}
         />
       </div>
-      <ScoreLines models={models} />
+      <ScoreLines series={series} />
     </div>
   );
 }
@@ -771,6 +818,139 @@ function IntentUnavailable() {
   );
 }
 
+// ───────────────────────────── period rail (image 04) ────────────────────────
+
+const PERIOD_PRESETS = [7, 14, 30, 0] as const;
+
+function fmtFullDate(ms: number): string {
+  if (!ms) return DASH;
+  const dt = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(dt.getUTCDate())}/${p(dt.getUTCMonth() + 1)}/${String(dt.getUTCFullYear()).slice(2)}`;
+}
+
+/** Distinct run days (newest first), each carrying that day's latest run stamp. */
+function runDays(registry: RunRegistry | undefined): { day: string; stamp: string }[] {
+  const byDay = new Map<string, string>();
+  for (const r of registry?.runs ?? []) {
+    const t = parseRunAt(r.run_at);
+    if (!t) continue;
+    const day = fmtDay(r.run_at);
+    const cur = byDay.get(day);
+    if (!cur || parseRunAt(r.run_at) > parseRunAt(cur)) byDay.set(day, r.run_at);
+  }
+  return [...byDay.values()]
+    .sort((a, b) => parseRunAt(b) - parseRunAt(a))
+    .slice(0, 8)
+    .map((stamp) => ({ day: fmtDay(stamp), stamp }));
+}
+
+/** Right-rail analysis-period selector (reference image 04). Real run dates;
+ *  applying narrows the score-over-time and recent-runs views to the window. */
+export function ModelsPeriodRail({
+  registry,
+  period,
+  onApply,
+}: {
+  registry: RunRegistry | undefined;
+  period: ModelsPeriod;
+  onApply: (p: ModelsPeriod) => void;
+}) {
+  const tq = useTranslations("quality");
+  const [days, setDays] = useState(period.days);
+  const [anchor, setAnchor] = useState<string | null>(period.anchor);
+  const days_label = (d: number) =>
+    d === 0 ? tq("models.period.all") : tq("models.period.days", { n: d });
+  const items = runDays(registry);
+  const selectedStamp = anchor ?? items[0]?.stamp ?? null;
+  const newest = selectedStamp ? parseRunAt(selectedStamp) : 0;
+  const start = days > 0 ? newest - days * 86_400_000 : 0;
+
+  return (
+    <aside className="flex w-full flex-col gap-2 2xl:w-72">
+      <Card>
+        <CardHeader className="pb-1">
+          <CardTitle className="text-[0.8rem]">{tq("models.period.title")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2 pt-1">
+          <div className="flex flex-col gap-1">
+            <span className="text-[0.6rem] text-[var(--muted-foreground)]">
+              {tq("models.period.selected")}
+            </span>
+            <select
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+              className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 text-[0.72rem]"
+            >
+              {PERIOD_PRESETS.map((d) => (
+                <option key={d} value={d}>
+                  {days_label(d)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {items.length === 0 ? (
+            <p className="py-2 text-[0.7rem] text-[var(--muted-foreground)]">
+              {tq("models.noData")}
+            </p>
+          ) : (
+            <ol className="flex flex-col">
+              {items.map((it, i) => {
+                const sel = it.stamp === selectedStamp;
+                const last = i === items.length - 1;
+                return (
+                  <li key={it.stamp} className="flex items-stretch gap-2">
+                    <div className="flex flex-col items-center">
+                      <button
+                        type="button"
+                        onClick={() => setAnchor(it.stamp)}
+                        aria-label={it.day}
+                        className={`h-3 w-3 rounded-full border-2 ${
+                          sel
+                            ? "border-[var(--primary)] bg-[var(--primary)]"
+                            : "border-[var(--border)] bg-[var(--card)]"
+                        }`}
+                      />
+                      {last ? null : <span className="w-px flex-1 bg-[var(--border)]" />}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAnchor(it.stamp)}
+                      className={`mb-1.5 flex-1 rounded-md px-2 py-1 text-left text-[0.72rem] tabular-nums ${
+                        sel
+                          ? "bg-[var(--primary)] font-medium text-white"
+                          : "text-[var(--muted-foreground)] hover:bg-[var(--accent)]/40"
+                      }`}
+                    >
+                      {fmtFullDate(parseRunAt(it.stamp))}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+
+          <div className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] px-2 py-1.5 text-[0.62rem] text-[var(--muted-foreground)]">
+            <span>{tq("models.period.from")}</span>
+            <span className="tabular-nums text-[var(--foreground)]">
+              {days > 0 ? fmtFullDate(start) : DASH} → {fmtFullDate(newest)}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onApply({ days, anchor })}
+            className="rounded-md bg-[var(--primary)] px-3 py-1.5 text-[0.72rem] font-medium text-white hover:brightness-110"
+          >
+            {tq("models.period.apply")}
+          </button>
+        </CardContent>
+      </Card>
+    </aside>
+  );
+}
+
 // ──────────────────────────────── the board ──────────────────────────────────
 
 /** Full Comparaison des modèles board (reference image 04) — real data only. */
@@ -782,6 +962,7 @@ export function ModelsBoard({
   faithDrift,
   groundingDrift,
   consensus,
+  period,
 }: {
   comparison: ModelComparison | undefined;
   calibration: Calibration | undefined;
@@ -790,9 +971,11 @@ export function ModelsBoard({
   faithDrift: JudgeDrift | undefined;
   groundingDrift: JudgeDrift | undefined;
   consensus: JudgeConsensus | undefined;
+  period: ModelsPeriod;
 }) {
   const tq = useTranslations("quality");
   const models = comparison?.models ?? [];
+  const series = buildSeries(registry, period);
   return (
     <div className="flex flex-col gap-2">
       <ModelsKpis comparison={comparison} calibration={calibration} release={release} />
@@ -800,7 +983,7 @@ export function ModelsBoard({
       {/* Row 1: score over time · radar · category heatmap · faith×grounding */}
       <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
         <ChartCard title={tq("models.charts.scoreByModel")}>
-          <ScoreLines models={models} />
+          <ScoreLines series={series} />
         </ChartCard>
         <ChartCard title={tq("models.charts.radar")}>
           <QualityRadar models={models} />
@@ -837,7 +1020,7 @@ export function ModelsBoard({
       {/* Row 3: recent runs · regressions by model · drift & stability */}
       <div className="grid gap-2 2xl:grid-cols-3">
         <ChartCard title={tq("models.charts.recentRuns")}>
-          <PassRateRuns registry={registry} />
+          <PassRateRuns registry={registry} period={period} />
         </ChartCard>
         <ChartCard title={tq("models.charts.regressions")}>
           <RegressionsByModel release={release} />
@@ -854,7 +1037,7 @@ export function ModelsBoard({
               faithDrift={faithDrift}
               groundingDrift={groundingDrift}
               consensus={consensus}
-              models={models}
+              series={series}
             />
           </CardContent>
         </Card>
