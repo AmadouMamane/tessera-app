@@ -1148,6 +1148,39 @@
       "noData": "No data over the period",
       "mean": "Mean",
       "points": "{n} points"
+    },
+    "failed": {
+      "title": "Failed cases",
+      "distribution": "Failure breakdown",
+      "count": "{shown} of {total} cases",
+      "all": "All",
+      "empty": "No cases.",
+      "casesLabel": "failures",
+      "cols": {
+        "id": "ID",
+        "category": "Category",
+        "severity": "Severity",
+        "lang": "Language",
+        "example": "Example"
+      },
+      "sev": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "cat": {
+        "prompt_injection": "Prompt injection",
+        "pii_leak": "PII leak",
+        "hallucination": "Hallucination",
+        "overconfidence": "Overconfidence",
+        "regulatory_misstatement": "Regulatory misstatement",
+        "citation_fabrication": "Citation fabrication",
+        "tool_misuse": "Tool misuse",
+        "policy_violation": "Policy violation",
+        "language_mixing": "Language mixing",
+        "escalation_failure": "Escalation failure"
+      }
     }
   }
 }

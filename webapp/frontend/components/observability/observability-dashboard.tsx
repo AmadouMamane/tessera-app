@@ -56,6 +56,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { EvolutionChart } from "@/components/observability/evolution-chart";
+import { FailedCasesTable, FailureDistribution } from "@/components/observability/failed-cases";
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
 import {
@@ -90,6 +91,7 @@ import {
   fetchEmbeddingSkew,
   fetchErasureCoverage,
   fetchEvalScores,
+  fetchFailedCases,
   fetchFailureClusters,
   fetchFailurePredictor,
   fetchFirewallEfficacy,
@@ -209,6 +211,7 @@ function scoreTone(score: number): string {
 export function ObservabilityDashboard() {
   const t = useTranslations("observability");
   const tq = useTranslations("quality");
+  const locale = useLocale();
   const [tab, setTab] = useState<TabKey>("overview");
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
@@ -253,6 +256,13 @@ export function ObservabilityDashboard() {
     queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
+  });
+
+  // Documented failure catalogue is static per locale (no polling, no as-of).
+  const failedCases = useQuery({
+    queryKey: ["failed-cases", locale],
+    queryFn: ({ signal }) => fetchFailedCases(signal, locale),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
   const reproducibility = useQuery({
@@ -664,9 +674,8 @@ export function ObservabilityDashboard() {
                 <JourneyCard data={journey.data} loading={journey.isLoading} />
                 <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
                 <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
-                <FullWidth>
-                  <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
-                </FullWidth>
+                <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+                <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
               </TabGrid>
             </>
           )}
@@ -781,11 +790,10 @@ export function ObservabilityDashboard() {
           {tab === "failed" && (
             <TabGrid>
               <FullWidth>
-                <FailureClusterCard
-                  data={failureClusters.data}
-                  loading={failureClusters.isLoading}
-                />
+                <FailedCasesTable report={failedCases.data} loading={failedCases.isLoading} />
               </FullWidth>
+              <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
+              <FailureClusterCard data={failureClusters.data} loading={failureClusters.isLoading} />
               <FailurePredictorCard
                 data={failurePredictor.data}
                 loading={failurePredictor.isLoading}
@@ -793,13 +801,6 @@ export function ObservabilityDashboard() {
               <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
               <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
               <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
-              <FullWidth>
-                <HeroPlaceholder
-                  icon={ListChecks}
-                  title={tq("tabs.failed")}
-                  note={tq("empty.noBackend")}
-                />
-              </FullWidth>
             </TabGrid>
           )}
 

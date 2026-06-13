@@ -57,6 +57,8 @@ import {
   ErasureCoverageSchema,
   type EvalScoresResponse,
   EvalScoresResponseSchema,
+  type FailedCasesReport,
+  FailedCasesReportSchema,
   type FirewallEfficacy,
   FirewallEfficacySchema,
   type FreshnessReport,
@@ -426,6 +428,23 @@ export async function fetchTrend(signal?: AbortSignal, at?: string): Promise<Tre
 /** Calendar-time faithfulness series for the Vue d'ensemble evolution chart. */
 export async function fetchScoreSeries(signal?: AbortSignal, at?: string): Promise<ScoreSeries> {
   return request(withAsOf("/observability/score-series", at), { signal }, ScoreSeriesSchema);
+}
+
+/** Documented failed-case catalogue + distributions (Cas échoués tab, image 03). */
+export async function fetchFailedCases(
+  signal?: AbortSignal,
+  language?: string,
+  limit?: number,
+): Promise<FailedCasesReport> {
+  const params = new URLSearchParams();
+  if (language) params.set("language", language);
+  if (limit != null) params.set("limit", String(limit));
+  const query = params.toString();
+  return request(
+    `/observability/failed-cases${query ? `?${query}` : ""}`,
+    { signal },
+    FailedCasesReportSchema,
+  );
 }
 
 /** Measured instrumentation overhead vs the turn budget (cost of obs, #84). */

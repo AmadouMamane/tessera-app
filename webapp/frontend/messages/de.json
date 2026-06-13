@@ -1148,6 +1148,39 @@
       "noData": "Keine Daten im Zeitraum",
       "mean": "Mittel",
       "points": "{n} Punkte"
+    },
+    "failed": {
+      "title": "Fehlgeschlagene Fälle",
+      "distribution": "Fehlerverteilung",
+      "count": "{shown} von {total} Fällen",
+      "all": "Alle",
+      "empty": "Keine Fälle.",
+      "casesLabel": "Fehler",
+      "cols": {
+        "id": "ID",
+        "category": "Kategorie",
+        "severity": "Schweregrad",
+        "lang": "Sprache",
+        "example": "Beispiel"
+      },
+      "sev": {
+        "critical": "Kritisch",
+        "high": "Hoch",
+        "medium": "Mittel",
+        "low": "Niedrig"
+      },
+      "cat": {
+        "prompt_injection": "Prompt-Injection",
+        "pii_leak": "PII-Leck",
+        "hallucination": "Halluzination",
+        "overconfidence": "Selbstüberschätzung",
+        "regulatory_misstatement": "Regulatorische Falschaussage",
+        "citation_fabrication": "Zitat-Fabrikation",
+        "tool_misuse": "Tool-Missbrauch",
+        "policy_violation": "Richtlinienverstoß",
+        "language_mixing": "Sprachmischung",
+        "escalation_failure": "Eskalationsfehler"
+      }
     }
   }
 }

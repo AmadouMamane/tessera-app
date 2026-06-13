@@ -699,6 +699,26 @@ export const ScoreSeriesSchema = z.object({
 });
 export type ScoreSeries = z.infer<typeof ScoreSeriesSchema>;
 
+export const FailedCaseSchema = z.object({
+  case_id: z.string(),
+  title: z.string(),
+  category: z.string(),
+  severity: z.string(),
+  language: z.string(),
+  example: z.string(),
+  expected: z.string(),
+  tags: z.array(z.string()),
+});
+export type FailedCase = z.infer<typeof FailedCaseSchema>;
+
+export const FailedCasesReportSchema = z.object({
+  n: z.number().int(),
+  cases: z.array(FailedCaseSchema),
+  by_category: z.record(z.string(), z.number().int()),
+  by_severity: z.record(z.string(), z.number().int()),
+});
+export type FailedCasesReport = z.infer<typeof FailedCasesReportSchema>;
+
 export const ShadowComparisonSchema = z.object({
   question: z.string(),
   language: z.string(),

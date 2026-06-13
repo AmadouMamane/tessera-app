@@ -1148,6 +1148,39 @@
       "noData": "Aucune donnée sur la période",
       "mean": "Moyenne",
       "points": "{n} points"
+    },
+    "failed": {
+      "title": "Cas échoués",
+      "distribution": "Répartition des échecs",
+      "count": "{shown} sur {total} cas",
+      "all": "Tous",
+      "empty": "Aucun cas.",
+      "casesLabel": "échecs",
+      "cols": {
+        "id": "ID",
+        "category": "Catégorie",
+        "severity": "Sévérité",
+        "lang": "Langue",
+        "example": "Exemple"
+      },
+      "sev": {
+        "critical": "Critique",
+        "high": "Élevé",
+        "medium": "Moyen",
+        "low": "Faible"
+      },
+      "cat": {
+        "prompt_injection": "Injection de prompt",
+        "pii_leak": "Fuite de PII",
+        "hallucination": "Hallucination",
+        "overconfidence": "Excès de confiance",
+        "regulatory_misstatement": "Erreur réglementaire",
+        "citation_fabrication": "Citation fabriquée",
+        "tool_misuse": "Mauvais usage d'outil",
+        "policy_violation": "Violation de politique",
+        "language_mixing": "Mélange de langues",
+        "escalation_failure": "Échec d'escalade"
+      }
     }
   }
 }
