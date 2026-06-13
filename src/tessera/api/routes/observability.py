@@ -753,6 +753,23 @@ async def observability_failure_clusters() -> dict[str, object]:
     return _clustering_cache
 
 
+@router.get("/observability/failed-cases")
+async def observability_failed_cases(
+    language: str = "fr", limit: int | None = None
+) -> dict[str, object]:
+    """Structured failed-case catalogue + category/severity distributions (image 03).
+
+    Reads the documented-failure corpus (``eval/failures``) — real in-repo cases.
+    Severity is a documented triage heuristic over the category, not a runtime
+    score. Sorted worst-severity first; ``limit`` caps the rows (the distributions
+    always count the full catalogue).
+    """
+    from tessera.observability.eval.failed_cases import load_failed_cases
+
+    report = load_failed_cases(language=language, limit=limit)
+    return asdict(report)
+
+
 @router.get("/observability/sft-dataset")
 async def observability_sft_dataset() -> dict[str, object]:
     """Distil high-scoring captured turns into an SFT dataset (#122)."""
