@@ -57,6 +57,7 @@ import { type ReactNode, useState } from "react";
 
 import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedCasesTable, FailureDistribution } from "@/components/observability/failed-cases";
+import { JudgeCalibration } from "@/components/observability/judge-calibration";
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
 import {
@@ -821,18 +822,7 @@ export function ObservabilityDashboard() {
           )}
 
           {tab === "judge" && (
-            <TabGrid>
-              <FullWidth>
-                <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
-              </FullWidth>
-              <FullWidth>
-                <HeroPlaceholder
-                  icon={Scale}
-                  title={tq("tabs.judge")}
-                  note={tq("empty.noBackend")}
-                />
-              </FullWidth>
-            </TabGrid>
+            <JudgeCalibration data={calibration.data} loading={calibration.isLoading} />
           )}
         </div>
 

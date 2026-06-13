@@ -1181,6 +1181,24 @@
         "language_mixing": "Mélange de langues",
         "escalation_failure": "Échec d'escalade"
       }
+    },
+    "judge": {
+      "title": "Calibration juge",
+      "unavailable": "Calibration indisponible (juge hors-ligne).",
+      "kappa": "Cohen κ",
+      "agreement": "Accord",
+      "separation": "Séparation bon/mauvais",
+      "verbosity": "Biais verbosité",
+      "lenientYes": "Clément",
+      "lenientNo": "Calibré",
+      "judge": "Juge",
+      "scatter": "Accord juge ↔ humain",
+      "distribution": "Distribution des scores juge",
+      "disagreements": "Désaccords",
+      "noDisagreements": "Aucun désaccord juge ↔ humain.",
+      "humanGood": "Humain : bon",
+      "humanBad": "Humain : mauvais",
+      "cols": { "case": "Cas", "human": "Humain", "judge": "Juge", "score": "Score" }
     }
   }
 }

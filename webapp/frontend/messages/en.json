@@ -1181,6 +1181,24 @@
         "language_mixing": "Language mixing",
         "escalation_failure": "Escalation failure"
       }
+    },
+    "judge": {
+      "title": "Judge calibration",
+      "unavailable": "Calibration unavailable (judge offline).",
+      "kappa": "Cohen κ",
+      "agreement": "Agreement",
+      "separation": "Good/bad separation",
+      "verbosity": "Verbosity bias",
+      "lenientYes": "Lenient",
+      "lenientNo": "Calibrated",
+      "judge": "Judge",
+      "scatter": "Judge ↔ human agreement",
+      "distribution": "Judge score distribution",
+      "disagreements": "Disagreements",
+      "noDisagreements": "No judge ↔ human disagreement.",
+      "humanGood": "Human: good",
+      "humanBad": "Human: bad",
+      "cols": { "case": "Case", "human": "Human", "judge": "Judge", "score": "Score" }
     }
   }
 }

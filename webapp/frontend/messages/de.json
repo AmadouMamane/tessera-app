@@ -1181,6 +1181,24 @@
         "language_mixing": "Sprachmischung",
         "escalation_failure": "Eskalationsfehler"
       }
+    },
+    "judge": {
+      "title": "Judge-Kalibrierung",
+      "unavailable": "Kalibrierung nicht verfügbar (Judge offline).",
+      "kappa": "Cohen κ",
+      "agreement": "Übereinstimmung",
+      "separation": "Trennung gut/schlecht",
+      "verbosity": "Verbositäts-Bias",
+      "lenientYes": "Nachsichtig",
+      "lenientNo": "Kalibriert",
+      "judge": "Judge",
+      "scatter": "Judge ↔ Mensch Übereinstimmung",
+      "distribution": "Verteilung der Judge-Scores",
+      "disagreements": "Abweichungen",
+      "noDisagreements": "Keine Judge ↔ Mensch-Abweichung.",
+      "humanGood": "Mensch: gut",
+      "humanBad": "Mensch: schlecht",
+      "cols": { "case": "Fall", "human": "Mensch", "judge": "Judge", "score": "Score" }
     }
   }
 }

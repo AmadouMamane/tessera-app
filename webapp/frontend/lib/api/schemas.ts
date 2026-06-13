@@ -230,6 +230,16 @@ export const TimelineReportSchema = z.object({
 });
 export type TimelineReport = z.infer<typeof TimelineReportSchema>;
 
+export const CalibrationPointSchema = z.object({
+  question: z.string(),
+  human_label: z.string(),
+  judge_label: z.string(),
+  judge_score: z.number(),
+  length: z.number().int(),
+  match: z.boolean(),
+});
+export type CalibrationPoint = z.infer<typeof CalibrationPointSchema>;
+
 export const CalibrationSchema = z.object({
   available: z.boolean(),
   n: z.number().int().optional(),
@@ -240,6 +250,7 @@ export const CalibrationSchema = z.object({
   verbosity_corr: z.number().optional(),
   lenient: z.boolean().optional(),
   judge_model: z.string().optional(),
+  points: z.array(CalibrationPointSchema).optional(),
 });
 export type Calibration = z.infer<typeof CalibrationSchema>;
 
