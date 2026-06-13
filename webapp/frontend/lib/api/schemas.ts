@@ -725,6 +725,27 @@ export const JudgeDriftSchema = z.object({
 });
 export type JudgeDrift = z.infer<typeof JudgeDriftSchema>;
 
+export const RegressionRiskSchema = z.object({
+  metric: z.string(),
+  window_start: z.string(),
+  window_end: z.string(),
+  n: z.number().int(),
+  score_delta: z.number().nullable(),
+  divergence: z.number().nullable(),
+  regression_rate: z.number().nullable(),
+  models_compared: z.number().int(),
+  n_regressions: z.number().int(),
+  score_component: z.number(),
+  drift_component: z.number(),
+  regression_component: z.number(),
+  risk_score: z.number().nullable(),
+  probability_7d: z.number().nullable(),
+  level: z.string(),
+  buckets_used: z.number().int(),
+  as_of: z.string().nullable().optional(),
+});
+export type RegressionRisk = z.infer<typeof RegressionRiskSchema>;
+
 export const JudgeAgreementSchema = z.object({
   judge_model: z.string(),
   agreement: z.number(),

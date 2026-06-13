@@ -1102,12 +1102,17 @@
     },
     "reco": {
       "title": "Recommended actions",
-      "curate": "Curate to eval set",
+      "curate": "Add failed cases to regression set",
       "freeze": "Freeze releases",
-      "playbook": "Hallucination playbook",
+      "playbook": "Open hallucination playbook",
       "shadow": "Replay a shadow",
       "ticket": "Open compliance ticket",
-      "caption": "Sensitive actions under dual control (Admin + Operator)"
+      "caption": "Sensitive actions under dual control (Admin + Operator)",
+      "corpus": "Check corpus & RAG",
+      "rerun": "Run targeted evaluation",
+      "catalog": "Update Signal Catalog",
+      "block": "Block current release",
+      "seeEvidence": "View quality evidence"
     },
     "rr": {
       "problems": "Latest problems",
@@ -1125,7 +1130,18 @@
       "activity": "Recent activity",
       "seeActivity": "See all activity",
       "noActivity": "No recent activity",
-      "noProblems": "No open problem"
+      "noProblems": "No open problem",
+      "actions": "Quick actions",
+      "linkRuns": "View all runs",
+      "linkTraces": "Explore traces",
+      "linkDataset": "Open active dataset",
+      "linkEvidence": "Generate quality evidence pack",
+      "blocked": "blocked",
+      "impact": "Impact",
+      "openedAt": "Opened on",
+      "actRun": "Quality run completed ({n} cases)",
+      "actReleaseBlocked": "Release {v} blocked",
+      "actReleaseDeployed": "Release {v} deployed"
     },
     "statusbar": {
       "realtime": "Data: real-time",
@@ -1211,7 +1227,11 @@
       "faithGrounding": "Faithfulness vs Grounding (7d)",
       "good": "Good",
       "mid": "Fair",
-      "low": "Poor"
+      "low": "Poor",
+      "dataset": "Dataset",
+      "passTotal": "Pass/Total",
+      "regressionsByRelease": "Regressions per release",
+      "noRegressions": "No open regressions"
     },
     "failed": {
       "title": "Failed cases",
@@ -1274,7 +1294,7 @@
       "fn": "False negatives (Type II)",
       "verbosityBias": "Verbosity bias",
       "severityBias": "Severity bias",
-      "samples": "Evaluated samples",
+      "samples": "Samples",
       "excellent": "Excellent",
       "low": "Low",
       "moderate": "Moderate",
@@ -1314,7 +1334,13 @@
       "driftModerate": "Moderate",
       "driftHigh": "High",
       "driftCritical": "Critical",
-      "driftUnknown": "Unknown"
+      "driftUnknown": "Unknown",
+      "drift_stable": "stable",
+      "drift_low": "low",
+      "drift_moderate": "moderate",
+      "drift_high": "high",
+      "drift_critical": "critical",
+      "drift_unknown": "n/a"
     },
     "runs": {
       "title": "Runs & datasets",
@@ -1374,7 +1400,8 @@
         "nonRegression": "Non-regression rate",
         "regressionsOpen": "Open regressions",
         "judgeKappa": "Judge agreement κ",
-        "casEval": "Cases evaluated (7d)"
+        "casEval": "Cases evaluated (7d)",
+        "casFailed": "Failed cases"
       },
       "etat": {
         "title": "Current state",
@@ -1387,10 +1414,27 @@
         "high": "High",
         "rising": "Rising",
         "falling": "Falling",
-        "flat": "Flat"
+        "flat": "Flat",
+        "globalQuality": "Global quality",
+        "releaseLabel": "Current release",
+        "evolutionVsPrev": "Evolution vs previous period"
       },
       "topProblems": "Quality signals — top problems",
-      "noProblems": "No open problem."
+      "noProblems": "No open problem.",
+      "priorityCases": "Priority failed cases"
+    },
+    "pred": {
+      "trend": "30-day trend",
+      "trend_up": "Improving",
+      "trend_down": "Slight regression",
+      "trend_flat": "Stable",
+      "prob7": "7-day regression probability",
+      "risk": "Risk score",
+      "drift": "Judge drift",
+      "predictor": "Failure predictor",
+      "predictorUntrained": "untrained",
+      "intents": "At-risk intents",
+      "langs": "At-risk languages"
     }
   }
 }

@@ -59,12 +59,17 @@ import { FailedCasesTable, FailureDistribution } from "@/components/observabilit
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
 import {
   CostQualityScatter,
+  EtatActuel,
+  FailureBars,
   FaithGroundingScatter,
+  JudgeMini,
   OverviewKpis,
+  PredictiveSignals,
+  PriorityCases,
   RecommendedActions,
+  RegressionsByRelease,
   RootCauseDiagnostic,
-  RunsBars,
-  TopProblems,
+  RunsPassRateTable,
 } from "@/components/observability/overview-exec";
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
@@ -118,6 +123,7 @@ import {
   fetchPiiLeak,
   fetchRedteam,
   fetchRefusal,
+  fetchRegressionRisk,
   fetchReleaseStatus,
   fetchReproducibility,
   fetchRouting,
@@ -175,6 +181,7 @@ import type {
   ReproReport,
   RetractionReport,
   RoutingReport,
+  RunRegistry,
   SFTDataset,
   SessionReport,
   ShadowReport,
@@ -436,6 +443,14 @@ export function ObservabilityDashboard() {
     refetchInterval: historyMode ? false : 30_000,
   });
 
+  // Forward-looking regression risk for the "Signaux prédictifs" column (image 00).
+  const regressionRisk = useQuery({
+    queryKey: ["regression-risk", asOf],
+    queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 30_000,
+  });
+
   // Multi-judge consensus runs a panel of local judges server-side and is cached;
   // fetch once (it is slow and stable per process).
   const judgeConsensus = useQuery({
@@ -610,10 +625,15 @@ export function ObservabilityDashboard() {
   });
 
   // --- Real derived headline metrics (no fabrication — null ⇒ "—") -----------
+  const signalSummary = signalRows.reduce(
+    (acc, r) => {
+      acc[r.status] += 1;
+      acc.total += 1;
+      return acc;
+    },
+    { ok: 0, warn: 0, crit: 0, na: 0, total: 0 },
+  );
   const sloPct = slo.data && slo.data.n > 0 ? Math.round(slo.data.good_rate * 100) : null;
-  const topFailing = failureClusters.data?.available
-    ? [...(failureClusters.data.clusters ?? [])].sort((a, b) => b.size - a.size).slice(0, 4)
-    : [];
 
   function downloadQualityEvidence() {
     const bundle = {
@@ -696,8 +716,7 @@ export function ObservabilityDashboard() {
         <div className="flex min-w-0 flex-col gap-3">
           {tab === "overview" && (
             <>
-              {/* A. État actuel — KPI métriques compacts (image normative) */}
-              <SectionLabel>{tq("sec.etat")}</SectionLabel>
+              {/* KPI strip (unlabeled, full width of the content column — image normative) */}
               <OverviewKpis
                 sloPct={sloPct}
                 faithfulness={scoreSeries.data}
@@ -706,49 +725,59 @@ export function ObservabilityDashboard() {
                 nonRegression={releaseStatus.data?.non_regression_rate ?? null}
                 nRegressions={releaseStatus.data?.n_regressions ?? null}
                 kappa={calibration.data?.kappa ?? null}
-                casEvalues={scoreSeries.data?.n ?? null}
+                failedCount={failedCases.data?.n ?? null}
                 loading={scoreSeries.isLoading}
               />
 
-              {/* B. Diagnostic racine — Clusters | Ce qui a changé | Calibration | Exemples.
-                  No items-start ⇒ all cards stretch to the row's tallest (equal heights). */}
-              <SectionLabel>{tq("sec.diagnostic")}</SectionLabel>
-              <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
-                <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
-                <RootCauseDiagnostic
-                  whatChanged={whatChanged.data}
-                  regressions={releaseStatus.data?.regressions ?? []}
+              {/* A · B · C · D as four side-by-side zones (image normative). The zones
+                  are deliberately different heights ⇒ items-start (no stretch). */}
+              <div className="grid items-start gap-3 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.3fr)]">
+                {/* A. État actuel */}
+                <EtatActuel
+                  summary={signalSummary}
+                  release={releaseStatus.data}
+                  evolutionDelta={scoreSeries.data?.delta ?? null}
+                  scorePct={sloPct}
+                  series={scoreSeries.data}
                 />
-                <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
-                <FailedCasesTable
-                  report={failedCases.data}
-                  loading={failedCases.isLoading}
-                  limit={4}
-                />
-              </div>
 
-              {/* C. Signaux prédictifs — Prédicteur | Intents | Langues (Évolution moves to
-                  the full-width analytics row below the grid). */}
-              <SectionLabel>{tq("sec.predictive")}</SectionLabel>
-              <div className="grid gap-3 lg:grid-cols-3">
-                <FailurePredictorCard
-                  data={failurePredictor.data}
-                  loading={failurePredictor.isLoading}
-                />
-                <IntentCard data={intent.data} loading={intent.isLoading} />
-                <LocalizationCard data={localization.data} loading={localization.isLoading} />
-              </div>
+                {/* B. Diagnostic racine — Répartition | Calibration | Cas prioritaires,
+                    then the "Qu'est-ce qui a changé / Causes probables" diagnostic. */}
+                <div className="flex min-w-0 flex-col gap-3">
+                  <SectionLabel>{tq("sec.diagnostic")}</SectionLabel>
+                  <div className="grid items-start gap-3 sm:grid-cols-3">
+                    <FailureBars report={failedCases.data} loading={failedCases.isLoading} />
+                    <JudgeMini data={calibration.data} loading={calibration.isLoading} />
+                    <PriorityCases
+                      report={failedCases.data}
+                      loading={failedCases.isLoading}
+                      onOpen={setTab}
+                    />
+                  </div>
+                  <RootCauseDiagnostic
+                    whatChanged={whatChanged.data}
+                    regressions={releaseStatus.data?.regressions ?? []}
+                  />
+                </div>
 
-              {/* D. Actions recommandées — actions gouvernées (rôle + lien), pas de charts */}
-              <SectionLabel>{tq("sec.actions")}</SectionLabel>
-              <div className="grid gap-3 lg:grid-cols-2">
+                {/* C. Signaux prédictifs */}
+                <PredictiveSignals
+                  series={scoreSeries.data}
+                  risk={regressionRisk.data}
+                  drift={judgeDrift.data}
+                  predictor={failurePredictor.data}
+                  intent={intent.data}
+                  localization={localization.data}
+                  loading={regressionRisk.isLoading}
+                />
+
+                {/* D. Actions recommandées */}
                 <RecommendedActions
                   regressions={releaseStatus.data?.regressions ?? []}
-                  topFailing={topFailing}
                   failed={failedCases.data}
                   onOpen={setTab}
+                  onEvidence={downloadQualityEvidence}
                 />
-                <TopProblems rows={signalRows} />
               </div>
             </>
           )}
@@ -909,18 +938,22 @@ export function ObservabilityDashboard() {
           failed={failedCases.data}
           release={releaseStatus.data}
           whatChanged={whatChanged.data}
+          runs={runs.data}
           onOpen={setTab}
+          onEvidence={downloadQualityEvidence}
         />
       </div>
 
       {/* Full-width analytics row below the [main · rail] grid (image normative):
-          Évolution de la qualité | Faith×Grounding | Pass-rate des runs | Coût vs qualité.
-          Spanning the whole width lets the right rail's last card align with D above. */}
+          Pass-rate des runs | Évolution | Répartition | Faith×Grounding | Régressions
+          par release | Coût vs qualité — six charts spanning the whole page width. */}
       {tab === "overview" ? (
-        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+          <RunsPassRateTable registry={runs.data} loading={runs.isLoading} />
           <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+          <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
           <FaithGroundingScatter pairs={metricPairs.data} loading={metricPairs.isLoading} />
-          <RunsBars registry={runs.data} loading={runs.isLoading} />
+          <RegressionsByRelease release={releaseStatus.data} loading={releaseStatus.isLoading} />
           <CostQualityScatter data={modelComparison.data} loading={modelComparison.isLoading} />
         </div>
       ) : null}
@@ -1017,35 +1050,51 @@ const SEV_TONE: Record<string, "danger" | "warning" | "neutral"> = {
   low: "neutral",
 };
 
-/** Right rail (image normative): Derniers problèmes · Release actuelle · Liens
+/** Right rail (image normative): Derniers problèmes · Release actuelle · Actions
  * rapides · Activités récentes — all fed by live data, links into the tabs. */
 function RightRail({
   failed,
   release,
   whatChanged,
+  runs,
   onOpen,
+  onEvidence,
 }: {
   failed: FailedCasesReport | undefined;
   release: ReleaseStatus | undefined;
   whatChanged: WhatChanged | undefined;
+  runs: RunRegistry | undefined;
   onOpen: (tab: TabKey) => void;
+  onEvidence: () => void;
 }) {
   const tq = useTranslations("quality");
   const current = release?.current ?? null;
   const nReg = release?.n_regressions ?? 0;
-  const problems = (failed?.cases ?? []).slice(0, 3);
-  const quick: { label: string; icon: typeof Activity; tab: TabKey }[] = [
-    { label: tq("rr.quickRun"), icon: Activity, tab: "runs" },
-    { label: tq("rr.quickPolicies"), icon: ShieldCheck, tab: "signals" },
-    { label: tq("rr.quickScheduled"), icon: CalendarClock, tab: "runs" },
-    { label: tq("rr.quickCatalog"), icon: ListChecks, tab: "signals" },
+  const blocked = nReg > 0;
+  const impact = nReg === 0 ? "low" : nReg <= 2 ? "medium" : "high";
+  const problems = (failed?.cases ?? []).slice(0, 5);
+  const quick: { label: string; icon: typeof Activity; action: () => void }[] = [
+    { label: tq("rr.linkRuns"), icon: Activity, action: () => onOpen("runs") },
+    { label: tq("rr.linkTraces"), icon: Route, action: () => onOpen("runs") },
+    { label: tq("rr.linkDataset"), icon: Boxes, action: () => onOpen("runs") },
+    { label: tq("rr.linkEvidence"), icon: FileDown, action: onEvidence },
   ];
-  // Recent activity, derived from the real "what changed" diff + the release.
+  // Recent activity, derived from real data: the latest run, the release, the diff.
+  const latestRun = [...(runs?.runs ?? [])].sort((a, b) => b.run_at.localeCompare(a.run_at))[0];
   const activity: { key: string; label: string; detail: string }[] = [];
+  if (latestRun) {
+    activity.push({
+      key: "run",
+      label: tq("rr.actRun", { n: latestRun.total }),
+      detail: latestRun.run_at.slice(0, 10),
+    });
+  }
   if (current) {
     activity.push({
       key: "release",
-      label: `${current.version} · ${tq("rr.since")}`,
+      label: tq(blocked ? "rr.actReleaseBlocked" : "rr.actReleaseDeployed", {
+        v: current.version,
+      }),
       detail: current.date ?? "",
     });
   }
@@ -1089,47 +1138,56 @@ function RightRail({
         {current ? (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between gap-2 text-sm">
-                {tq("rr.release")}
-                <Badge tone={nReg === 0 ? "success" : "warning"}>{tq("rr.inProd")}</Badge>
-              </CardTitle>
+              <CardTitle className="text-sm">{tq("rr.release")}</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div className="flex items-end gap-2">
+            <CardContent className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center gap-2">
                 <span className="font-serif text-xl font-semibold tabular-nums">
                   {current.version}
                 </span>
-                {current.date ? (
-                  <span className="pb-1 text-xs text-[var(--muted-foreground)]">
-                    {current.date}
-                  </span>
-                ) : null}
+                <Badge tone={blocked ? "danger" : "success"}>
+                  {blocked ? tq("rr.blocked") : tq("rr.inProd")}
+                </Badge>
               </div>
-              <p className="text-xs text-[var(--muted-foreground)]">
-                {tq("release.changes", { n: current.added + current.changed + current.fixed })}
-                {release && release.models_compared > 0
-                  ? ` · ${Math.round(release.non_regression_rate * 100)}%`
-                  : ""}
-              </p>
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-[var(--muted-foreground)]">{tq("rr.impact")}</span>
+                <span
+                  className={
+                    impact === "high"
+                      ? "text-red-500"
+                      : impact === "medium"
+                        ? "text-amber-500"
+                        : "text-[var(--muted-foreground)]"
+                  }
+                >
+                  {tq(`exec.etat.${impact}`)}
+                </span>
+              </div>
+              {current.date ? (
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="text-[var(--muted-foreground)]">{tq("rr.openedAt")}</span>
+                  <span className="tabular-nums">{current.date}</span>
+                </div>
+              ) : null}
               <RailLink onClick={() => onOpen("models")}>{tq("rr.seeReleases")}</RailLink>
             </CardContent>
           </Card>
         ) : null}
 
-        {/* Liens rapides */}
+        {/* Actions rapides */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">{tq("rr.quick")}</CardTitle>
+            <CardTitle className="text-sm">{tq("rr.actions")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
             {quick.map((q) => (
               <button
                 key={q.label}
                 type="button"
-                onClick={() => onOpen(q.tab)}
-                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm transition-colors hover:bg-[var(--tessera-muted)]"
+                onClick={q.action}
+                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
               >
-                <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
+                <q.icon className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{q.label}</span>
               </button>
             ))}

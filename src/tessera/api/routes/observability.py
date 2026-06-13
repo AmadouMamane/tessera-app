@@ -447,6 +447,45 @@ async def observability_judge_drift(
     return {**asdict(drift), "as_of": at}
 
 
+@router.get("/observability/regression-risk")
+async def observability_regression_risk(
+    at: str | None = None,
+    metric: str = "faithfulness",
+    days: int = 7,
+    buckets: int = 7,
+) -> dict[str, object]:
+    """Forward-looking regression risk for the "Signaux prédictifs" column.
+
+    Composes a transparent risk score from real signals only — the recent judge
+    score trend (``score-series`` delta), judge drift divergence, and the
+    empirical share of compared models that regressed run-over-run
+    (``release-status``). The 7-day regression probability is that empirical base
+    rate, not an invented forecast. Honours as-of-T via the durable score log;
+    every component is returned alongside the composite so the risk is explainable.
+    With neither judge scores nor compared models the composite is ``null`` and the
+    level is ``"unknown"`` rather than fabricated.
+    """
+    import contextlib
+    from datetime import UTC, datetime
+
+    from tessera.observability.eval.releases import release_status
+    from tessera.observability.eval.risk import compute_regression_risk
+
+    end = datetime.now(UTC)
+    if at:
+        with contextlib.suppress(ValueError):
+            end = datetime.fromisoformat(at)
+    risk = compute_regression_risk(
+        persisted_scores(at),
+        release_status(),
+        end=end,
+        metric=metric,
+        days=days,
+        n_buckets=buckets,
+    )
+    return {**asdict(risk), "as_of": at}
+
+
 @router.get("/observability/metric-pairs")
 async def observability_metric_pairs(
     x: str = "faithfulness",

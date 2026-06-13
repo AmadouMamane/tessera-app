@@ -115,6 +115,8 @@ import {
   RedTeamResponseSchema,
   type RefusalReport,
   RefusalReportSchema,
+  type RegressionRisk,
+  RegressionRiskSchema,
   type ReleaseStatus,
   ReleaseStatusSchema,
   type ReplayResult,
@@ -468,6 +470,23 @@ export async function fetchJudgeDrift(
     `/observability/judge-drift${query ? `?${query}` : ""}`,
     { signal },
     JudgeDriftSchema,
+  );
+}
+
+/** Forward-looking regression risk (Vue d'ensemble — Signaux prédictifs, image 00). */
+export async function fetchRegressionRisk(
+  signal?: AbortSignal,
+  at?: string,
+  metric?: string,
+): Promise<RegressionRisk> {
+  const params = new URLSearchParams();
+  if (at) params.set("at", at);
+  if (metric) params.set("metric", metric);
+  const query = params.toString();
+  return request(
+    `/observability/regression-risk${query ? `?${query}` : ""}`,
+    { signal },
+    RegressionRiskSchema,
   );
 }
 

@@ -1102,12 +1102,17 @@
     },
     "reco": {
       "title": "Empfohlene Aktionen",
-      "curate": "In Eval-Set kuratieren",
+      "curate": "Fehlerfälle zum Regression-Set",
       "freeze": "Releases einfrieren",
-      "playbook": "Halluzinations-Playbook",
+      "playbook": "Halluzinations-Playbook öffnen",
       "shadow": "Shadow erneut abspielen",
       "ticket": "Compliance-Ticket erstellen",
-      "caption": "Sensible Aktionen unter Dual Control (Admin + Operator)"
+      "caption": "Sensible Aktionen unter Dual Control (Admin + Operator)",
+      "corpus": "Korpus & RAG prüfen",
+      "rerun": "Gezielte Evaluierung starten",
+      "catalog": "Signal Catalog aktualisieren",
+      "block": "Aktuelles Release sperren",
+      "seeEvidence": "Qualitätsnachweise ansehen"
     },
     "rr": {
       "problems": "Letzte Probleme",
@@ -1125,7 +1130,18 @@
       "activity": "Letzte Aktivitäten",
       "seeActivity": "Alle Aktivitäten ansehen",
       "noActivity": "Keine aktuelle Aktivität",
-      "noProblems": "Kein offenes Problem"
+      "noProblems": "Kein offenes Problem",
+      "actions": "Schnellaktionen",
+      "linkRuns": "Alle Runs ansehen",
+      "linkTraces": "Traces erkunden",
+      "linkDataset": "Aktives Dataset öffnen",
+      "linkEvidence": "Qualitäts-Evidence-Pack erstellen",
+      "blocked": "gesperrt",
+      "impact": "Auswirkung",
+      "openedAt": "Geöffnet am",
+      "actRun": "Qualitäts-Run abgeschlossen ({n} Fälle)",
+      "actReleaseBlocked": "Release {v} gesperrt",
+      "actReleaseDeployed": "Release {v} bereitgestellt"
     },
     "statusbar": {
       "realtime": "Daten: Echtzeit",
@@ -1211,7 +1227,11 @@
       "faithGrounding": "Faithfulness vs Grounding (7 T)",
       "good": "Gut",
       "mid": "Mittel",
-      "low": "Schlecht"
+      "low": "Schlecht",
+      "dataset": "Dataset",
+      "passTotal": "Pass/Total",
+      "regressionsByRelease": "Regressionen pro Release",
+      "noRegressions": "Keine offenen Regressionen"
     },
     "failed": {
       "title": "Fehlgeschlagene Fälle",
@@ -1274,7 +1294,7 @@
       "fn": "Falsch negativ (Typ II)",
       "verbosityBias": "Verbosity-Bias",
       "severityBias": "Strenge-Bias",
-      "samples": "Bewertete Stichproben",
+      "samples": "Stichproben",
       "excellent": "Exzellent",
       "low": "Niedrig",
       "moderate": "Moderat",
@@ -1314,7 +1334,13 @@
       "driftModerate": "Moderat",
       "driftHigh": "Hoch",
       "driftCritical": "Kritisch",
-      "driftUnknown": "Unbestimmt"
+      "driftUnknown": "Unbestimmt",
+      "drift_stable": "stabil",
+      "drift_low": "gering",
+      "drift_moderate": "moderat",
+      "drift_high": "hoch",
+      "drift_critical": "kritisch",
+      "drift_unknown": "k.A."
     },
     "runs": {
       "title": "Runs & Datensätze",
@@ -1374,7 +1400,8 @@
         "nonRegression": "Nicht-Regressionsrate",
         "regressionsOpen": "Offene Regressionen",
         "judgeKappa": "Judge-Übereinstimmung κ",
-        "casEval": "Bewertete Fälle (7T)"
+        "casEval": "Bewertete Fälle (7T)",
+        "casFailed": "Fehlerfälle"
       },
       "etat": {
         "title": "Aktueller Stand",
@@ -1387,10 +1414,27 @@
         "high": "Hoch",
         "rising": "Steigend",
         "falling": "Fallend",
-        "flat": "Stabil"
+        "flat": "Stabil",
+        "globalQuality": "Gesamtqualität",
+        "releaseLabel": "Aktuelles Release",
+        "evolutionVsPrev": "Entwicklung vs. Vorperiode"
       },
       "topProblems": "Qualitätssignale — Top-Probleme",
-      "noProblems": "Kein offenes Problem."
+      "noProblems": "Kein offenes Problem.",
+      "priorityCases": "Priorisierte Fehlerfälle"
+    },
+    "pred": {
+      "trend": "Trend 30 Tage",
+      "trend_up": "Verbesserung",
+      "trend_down": "Leichte Regression",
+      "trend_flat": "Stabil",
+      "prob7": "Regressionswahrscheinlichkeit 7 T",
+      "risk": "Risikowert",
+      "drift": "Judge-Drift",
+      "predictor": "Fehler-Prädiktor",
+      "predictorUntrained": "nicht trainiert",
+      "intents": "Risiko-Intents",
+      "langs": "Risiko-Sprachen"
     }
   }
 }

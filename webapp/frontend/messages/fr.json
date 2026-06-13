@@ -1102,12 +1102,17 @@
     },
     "reco": {
       "title": "Actions recommandées",
-      "curate": "Curer vers eval set",
+      "curate": "Ajouter cas échoués au regression-set",
       "freeze": "Geler les releases",
-      "playbook": "Playbook hallucination",
+      "playbook": "Ouvrir playbook hallucination",
       "shadow": "Rejouer un shadow",
       "ticket": "Créer ticket conformité",
-      "caption": "Actions sensibles en dual control (Admin + Operator)"
+      "caption": "Actions sensibles en dual control (Admin + Operator)",
+      "corpus": "Vérifier corpus & RAG",
+      "rerun": "Relancer évaluation ciblée",
+      "catalog": "Mettre à jour Signal Catalog",
+      "block": "Bloquer release actuelle",
+      "seeEvidence": "Voir preuves qualité"
     },
     "rr": {
       "problems": "Derniers problèmes",
@@ -1125,7 +1130,18 @@
       "activity": "Activités récentes",
       "seeActivity": "Voir toutes les activités",
       "noActivity": "Aucune activité récente",
-      "noProblems": "Aucun problème ouvert"
+      "noProblems": "Aucun problème ouvert",
+      "actions": "Actions rapides",
+      "linkRuns": "Voir tous les runs",
+      "linkTraces": "Explorer les traces",
+      "linkDataset": "Ouvrir le dataset actif",
+      "linkEvidence": "Générer evidence pack qualité",
+      "blocked": "bloquée",
+      "impact": "Impact",
+      "openedAt": "Ouverte le",
+      "actRun": "Run qualité terminé ({n} cas)",
+      "actReleaseBlocked": "Release {v} bloquée",
+      "actReleaseDeployed": "Release {v} déployée"
     },
     "statusbar": {
       "realtime": "Données : temps réel",
@@ -1211,7 +1227,11 @@
       "faithGrounding": "Faithfulness vs Grounding (7 j)",
       "good": "Bon",
       "mid": "Moyen",
-      "low": "Faible"
+      "low": "Faible",
+      "dataset": "Dataset",
+      "passTotal": "Pass/Total",
+      "regressionsByRelease": "Régressions par release",
+      "noRegressions": "Aucune régression ouverte"
     },
     "failed": {
       "title": "Cas échoués",
@@ -1274,7 +1294,7 @@
       "fn": "Faux négatifs (Type II)",
       "verbosityBias": "Biais de verbosité",
       "severityBias": "Biais de sévérité",
-      "samples": "Échantillons évalués",
+      "samples": "Échantillons",
       "excellent": "Excellent",
       "low": "Bas",
       "moderate": "Modéré",
@@ -1314,7 +1334,13 @@
       "driftModerate": "Modéré",
       "driftHigh": "Élevé",
       "driftCritical": "Critique",
-      "driftUnknown": "Indéterminé"
+      "driftUnknown": "Indéterminé",
+      "drift_stable": "stable",
+      "drift_low": "faible",
+      "drift_moderate": "modérée",
+      "drift_high": "élevée",
+      "drift_critical": "critique",
+      "drift_unknown": "n/a"
     },
     "runs": {
       "title": "Runs & datasets",
@@ -1374,7 +1400,8 @@
         "nonRegression": "Taux non-régression",
         "regressionsOpen": "Régressions ouvertes",
         "judgeKappa": "Accord juge κ",
-        "casEval": "Cas évalués (7j)"
+        "casEval": "Cas évalués (7j)",
+        "casFailed": "Cas échoués"
       },
       "etat": {
         "title": "État actuel",
@@ -1387,10 +1414,27 @@
         "high": "Élevé",
         "rising": "En hausse",
         "falling": "En baisse",
-        "flat": "Stable"
+        "flat": "Stable",
+        "globalQuality": "Qualité globale",
+        "releaseLabel": "Release actuelle",
+        "evolutionVsPrev": "Évolution vs période précédente"
       },
       "topProblems": "Signaux qualité — top problèmes",
-      "noProblems": "Aucun problème ouvert."
+      "noProblems": "Aucun problème ouvert.",
+      "priorityCases": "Cas échoués prioritaires"
+    },
+    "pred": {
+      "trend": "Tendance 30 jours",
+      "trend_up": "Amélioration",
+      "trend_down": "Régression légère",
+      "trend_flat": "Stable",
+      "prob7": "Probabilité de régression 7 j",
+      "risk": "Score de risque",
+      "drift": "Dérive du juge",
+      "predictor": "Prédicteur d'échec",
+      "predictorUntrained": "non entraîné",
+      "intents": "Intents à risque",
+      "langs": "Langues à risque"
     }
   }
 }
