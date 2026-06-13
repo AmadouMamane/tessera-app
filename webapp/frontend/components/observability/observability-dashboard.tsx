@@ -7,17 +7,14 @@ import {
   Boxes,
   CalendarClock,
   ChevronRight,
-  Coins,
   FileDown,
   Gauge,
   GitCompareArrows,
   Grid3x3,
-  Hash,
   Landmark,
   Layers,
   ListChecks,
   Lock,
-  Microscope,
   Play,
   Radio,
   Route,
@@ -25,12 +22,11 @@ import {
   ShieldCheck,
   Siren,
   Sparkles,
-  Sprout,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
-import { ModelComparisonTable, RunsTable } from "@/components/observability/eval-runs";
+import { ModelComparisonTable } from "@/components/observability/eval-runs";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedCasesTable, FailureDistribution } from "@/components/observability/failed-cases";
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
@@ -48,8 +44,14 @@ import {
   RootCauseDiagnostic,
   RunsPassRateTable,
 } from "@/components/observability/overview-exec";
-import { ReplayPanel } from "@/components/observability/replay-panel";
-import { SessionTheater } from "@/components/observability/session-theater";
+import {
+  DatasetsTable,
+  RunContextPanel,
+  RunsCharts,
+  RunsEvalTable,
+  RunsKpis,
+  RunsRail,
+} from "@/components/observability/runs-datasets";
 import {
   SignalHeatmap,
   SignalKpis,
@@ -75,8 +77,8 @@ import {
   fetchCitations,
   fetchConformance,
   fetchContradictions,
+  fetchCorpusFreshness,
   fetchCost,
-  fetchEvalScores,
   fetchFailedCases,
   fetchFailureClusters,
   fetchFailurePredictor,
@@ -89,17 +91,14 @@ import {
   fetchLocalization,
   fetchMetricPairs,
   fetchModelComparison,
-  fetchObsCost,
   fetchPiiLeak,
   fetchRefusal,
   fetchRegressionRisk,
   fetchReleaseStatus,
-  fetchReproducibility,
   fetchRouting,
   fetchRuns,
   fetchSLO,
   fetchScoreSeries,
-  fetchSftDataset,
   fetchSignalStatusTrend,
   fetchToolValidity,
   fetchToxicity,
@@ -110,16 +109,12 @@ import type {
   Calibration,
   ClusterReport,
   ContradictionReport,
-  CostReport,
-  EvalScore,
   FailedCasesReport,
-  ObsCostReport,
   PIILeakSummary,
   PredictorEvaluation,
   ReleaseStatus,
-  ReproReport,
   RunRegistry,
-  SFTDataset,
+  RunSummary,
   ShadowReport,
   ToxicityReport,
   WhatChanged,
@@ -139,28 +134,16 @@ const QUALITY_CATALOGUE = 200;
 const TAB_DEFS = ["overview", "signals", "runs", "failed", "models", "judge"] as const;
 type TabKey = (typeof TAB_DEFS)[number];
 
-function scoreTone(score: number): string {
-  if (score >= 0.8) return "text-emerald-600 dark:text-emerald-400";
-  if (score >= 0.5) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
-}
-
 export function ObservabilityDashboard() {
   const t = useTranslations("observability");
   const tq = useTranslations("quality");
   const locale = useLocale();
   const [tab, setTab] = useState<TabKey>("overview");
   const [selectedSignal, setSelectedSignal] = useState<SignalRow | null>(null);
+  const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
-
-  const scores = useQuery({
-    queryKey: ["eval-scores", asOf],
-    queryFn: ({ signal }) => fetchEvalScores(signal, asOf ?? undefined),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : POLL_MS,
-  });
 
   const slo = useQuery({
     queryKey: ["slo", asOf],
@@ -218,23 +201,17 @@ export function ObservabilityDashboard() {
     refetchInterval: 60_000,
   });
 
+  // Real corpus inventory — the honest "datasets" of the Runs & datasets tab.
+  const corpusFreshness = useQuery({
+    queryKey: ["corpus-freshness"],
+    queryFn: ({ signal }) => fetchCorpusFreshness(signal),
+    refetchInterval: 60_000,
+  });
+
   const releaseStatus = useQuery({
     queryKey: ["release-status"],
     queryFn: ({ signal }) => fetchReleaseStatus(signal),
     refetchInterval: 60_000,
-  });
-
-  const reproducibility = useQuery({
-    queryKey: ["reproducibility"],
-    queryFn: ({ signal }) => fetchReproducibility(signal),
-    refetchInterval: 20_000,
-  });
-
-  // The obs-cost benchmark is stable per process and cached server-side; fetch once.
-  const obsCost = useQuery({
-    queryKey: ["obs-cost"],
-    queryFn: ({ signal }) => fetchObsCost(signal),
-    staleTime: Number.POSITIVE_INFINITY,
   });
 
   // Failure clustering embeds the whole corpus and is cached server-side; fetch once.
@@ -247,12 +224,6 @@ export function ObservabilityDashboard() {
   const failurePredictor = useQuery({
     queryKey: ["failure-predictor"],
     queryFn: ({ signal }) => fetchFailurePredictor(signal),
-    refetchInterval: 15_000,
-  });
-
-  const sftDataset = useQuery({
-    queryKey: ["sft-dataset"],
-    queryFn: ({ signal }) => fetchSftDataset(signal),
     refetchInterval: 15_000,
   });
 
@@ -407,7 +378,6 @@ export function ObservabilityDashboard() {
   });
 
   // Newest first for display.
-  const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
   // Unified signal catalogue derived from the live reports (reference image 01).
   const signalRows = buildSignalRows(t, {
@@ -613,27 +583,34 @@ export function ObservabilityDashboard() {
           )}
 
           {tab === "runs" && (
-            <TabGrid>
-              <FullWidth>
-                <RunsTable registry={runs.data} loading={runs.isLoading} />
-              </FullWidth>
-              <FullWidth>
-                <ScoresTable rows={rows} loading={scores.isLoading} />
-              </FullWidth>
-              <SftDatasetCard data={sftDataset.data} loading={sftDataset.isLoading} />
-              <CostCard data={cost.data} loading={cost.isLoading} />
-              <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
-              <ReproducibilityCard
-                data={reproducibility.data}
-                loading={reproducibility.isLoading}
+            <div className="flex flex-col gap-2">
+              {/* KPI strip + [runs · datasets | contexte] + six mini-charts (image 02). */}
+              <RunsKpis
+                registry={runs.data}
+                release={releaseStatus.data}
+                freshness={corpusFreshness.data}
               />
-              <FullWidth>
-                <SessionTheater />
-              </FullWidth>
-              <FullWidth>
-                <ReplayPanel />
-              </FullWidth>
-            </TabGrid>
+              <div className="grid gap-2 2xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)] 2xl:items-start">
+                <div className="flex flex-col gap-2">
+                  <RunsEvalTable
+                    registry={runs.data}
+                    selectedId={(selectedRun ?? runs.data?.runs[0])?.run_id ?? null}
+                    onSelect={setSelectedRun}
+                  />
+                  <DatasetsTable freshness={corpusFreshness.data} />
+                </div>
+                <RunContextPanel
+                  run={selectedRun ?? runs.data?.runs[0]}
+                  release={releaseStatus.data}
+                  onEvidence={downloadQualityEvidence}
+                />
+              </div>
+              <RunsCharts
+                registry={runs.data}
+                models={modelComparison.data}
+                freshness={corpusFreshness.data}
+              />
+            </div>
           )}
 
           {tab === "failed" && (
@@ -687,6 +664,12 @@ export function ObservabilityDashboard() {
             whatChanged={whatChanged.data}
             onOpen={setTab}
             onEvidence={downloadQualityEvidence}
+          />
+        ) : tab === "runs" ? (
+          <RunsRail
+            registry={runs.data}
+            freshness={corpusFreshness.data}
+            release={releaseStatus.data}
           />
         ) : (
           <RightRail
@@ -989,62 +972,6 @@ function RailLink({ onClick, children }: { onClick: () => void; children: ReactN
 }
 
 /** Recent eval scores table — reused on Overview and Runs & datasets. */
-function ScoresTable({ rows, loading }: { rows: EvalScore[]; loading: boolean }) {
-  const t = useTranslations("observability");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          {t("scores.title")}
-          <Badge tone="neutral">{t("scores.metric")}</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-          </div>
-        ) : rows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-            {t("scores.empty")}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                  <th className="py-2 pr-4 font-medium">{t("scores.time")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("scores.metricCol")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("scores.score")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("scores.language")}</th>
-                  <th className="py-2 font-medium">{t("scores.judge")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((s, i) => (
-                  <tr key={`${s.scored_at}-${i}`} className="border-b border-[var(--border)]/50">
-                    <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
-                      {new Date(s.scored_at).toLocaleTimeString()}
-                    </td>
-                    <td className="py-2 pr-4">{s.metric}</td>
-                    <td className={`py-2 pr-4 font-semibold tabular-nums ${scoreTone(s.score)}`}>
-                      {s.score.toFixed(2)}
-                    </td>
-                    <td className="py-2 pr-4 uppercase">{s.language}</td>
-                    <td className="py-2 text-[var(--muted-foreground)]">{s.judge_model}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 /** Span both columns of a section grid (for wide tables / panels). */
 function FullWidth({ children }: { children: ReactNode }) {
   return <div className="lg:col-span-2">{children}</div>;
@@ -1131,58 +1058,6 @@ function ShadowCard() {
                 </li>
               ))}
             </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function SftDatasetCard({ data, loading }: { data: SFTDataset | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  const langs = data ? Object.entries(data.by_language) : [];
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Sprout className="h-4 w-4 text-blue-500" />
-          {t("sft.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n_total === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("sft.empty")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">{t("sft.eligible")}</span>
-                <Badge tone={data.n_eligible > 0 ? "success" : "neutral"}>
-                  {data.n_eligible}/{data.n_total}
-                </Badge>
-              </div>
-              <Metric label={t("sft.minScore")} value={data.min_score.toFixed(2)} />
-              <div className="flex flex-wrap gap-2">
-                {langs.map(([lang, count]) => (
-                  <Badge key={lang} tone="neutral">
-                    {lang} · {count}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            {data.samples.length > 0 ? (
-              <ul className="flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
-                {data.samples.slice(0, 4).map((s, i) => (
-                  <li key={`${i}-${s.output.slice(0, 12)}`} className="flex items-center gap-2">
-                    <span className="uppercase">{s.language}</span>
-                    <span className="tabular-nums">{s.score.toFixed(2)}</span>
-                    <span className="min-w-0 truncate">{s.output}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
           </div>
         )}
       </CardContent>
@@ -1355,50 +1230,6 @@ function FailureClusterCard({
   );
 }
 
-function ObsCostCard({ data, loading }: { data: ObsCostReport | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Microscope className="h-4 w-4 text-blue-500" />
-          {t("obsCost.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : (
-          <div className="flex flex-wrap items-end gap-6 text-sm">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-[var(--muted-foreground)]">
-                {t("obsCost.withinBudget")}
-              </span>
-              <Badge tone={data.within_budget ? "success" : "warning"}>
-                {data.overhead_pct_of_budget < 0.01
-                  ? "<0.01"
-                  : data.overhead_pct_of_budget.toFixed(2)}
-                %
-              </Badge>
-            </div>
-            <Metric label={t("obsCost.perSpan")} value={`${data.span_overhead_us.toFixed(2)} µs`} />
-            <Metric
-              label={t("obsCost.perTurn")}
-              value={`${data.overhead_per_turn_ms.toFixed(3)} ms`}
-            />
-            <Metric label={t("obsCost.spansPerTurn")} value={String(data.spans_per_turn)} />
-            <Metric label={t("obsCost.budget")} value={`${Math.round(data.turn_budget_ms)} ms`} />
-            <Metric
-              label={t("obsCost.bytesPerTurn")}
-              value={`${(data.est_bytes_per_turn / 1024).toFixed(1)} KiB`}
-            />
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 // Open speedometer gauge (the normative "arc"): a ~240° sweep, wider than a
 // semicircle, with the endpoints angled downward. Tuned to the 100×72 viewBox.
 const _GAUGE_SWEEP = 240; // degrees
@@ -1552,59 +1383,6 @@ function PiiLeakCard({ data, loading }: { data: PIILeakSummary | undefined; load
   );
 }
 
-function CostCard({ data, loading }: { data: CostReport | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Coins className="h-4 w-4 text-blue-500" />
-          {t("cost.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n_turns === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("cost.empty")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {t("cost.anomalies")}
-                </span>
-                <Badge tone={data.n_anomalies === 0 ? "success" : "warning"}>
-                  {data.n_anomalies}
-                </Badge>
-              </div>
-              <Metric
-                label={t("cost.mean")}
-                value={Math.round(data.mean_tokens).toLocaleString()}
-              />
-              <Metric label={t("cost.max")} value={data.max_tokens.toLocaleString()} />
-              <Metric label={t("cost.total")} value={data.total_tokens.toLocaleString()} />
-            </div>
-            {data.anomalies.length > 0 ? (
-              <ul className="flex flex-col gap-1 text-xs">
-                {data.anomalies.slice(0, 5).map((a, i) => (
-                  <li key={`${i}-${a.question.slice(0, 12)}`} className="flex items-center gap-2">
-                    <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
-                    <span className="tabular-nums text-[var(--muted-foreground)]">
-                      {a.tokens.toLocaleString()}
-                    </span>
-                    <span className="min-w-0 truncate">{a.question}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 function ContradictionCard({
   data,
   loading,
@@ -1659,61 +1437,6 @@ function ContradictionCard({
                 ))}
               </ul>
             ) : null}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ReproducibilityCard({
-  data,
-  loading,
-}: {
-  data: ReproReport | undefined;
-  loading: boolean;
-}) {
-  const t = useTranslations("observability");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Hash className="h-4 w-4 text-blue-500" />
-          {t("repro.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n_turns === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("repro.empty")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {t("repro.nondeterministic")}
-                </span>
-                <Badge tone={data.n_nondeterministic === 0 ? "success" : "danger"}>
-                  {data.n_nondeterministic}
-                </Badge>
-              </div>
-              <Metric label={t("repro.turns")} value={String(data.n_turns)} />
-              <Metric label={t("repro.repeated")} value={String(data.n_repeated_inputs)} />
-            </div>
-            {data.n_nondeterministic === 0 ? (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400">{t("repro.clear")}</p>
-            ) : (
-              <ul className="flex flex-col gap-1 text-xs">
-                {data.divergences.slice(0, 5).map((d, i) => (
-                  <li key={`${i}-${d.question.slice(0, 12)}`} className="flex items-center gap-2">
-                    <Badge tone="danger">×{d.n_variants}</Badge>
-                    <span className="min-w-0 truncate">{d.question}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="text-xs text-[var(--muted-foreground)]">{t("repro.note")}</p>
           </div>
         )}
       </CardContent>
