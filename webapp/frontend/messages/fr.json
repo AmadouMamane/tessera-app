@@ -1645,7 +1645,9 @@
         "kappaGlobal": "global (calibration)",
         "cases": "Cas évalués",
         "active": "{n} modèles actifs",
-        "vsPrev": "{d} vs préc."
+        "vsPrev": "{d} vs préc.",
+        "nonReg": "Taux non-régression",
+        "pts": "pts"
       },
       "table": {
         "title": "Comparaison détaillée des modèles",
@@ -1655,9 +1657,44 @@
         "scoreByModel": "Score qualité par modèle",
         "faithGrounding": "Faithfulness vs Grounding",
         "costQuality": "Coût vs qualité",
-        "nonReg": "Non-régression par modèle"
+        "nonReg": "Non-régression par modèle",
+        "radar": "Radar qualité",
+        "heatmap": "Pass-rate par catégorie",
+        "recentRuns": "Pass-rate des derniers runs",
+        "regressions": "Régressions par modèle",
+        "drift": "Drift & stabilité"
       },
-      "noData": "Aucune donnée"
+      "noData": "Aucune donnée",
+      "radar": {
+        "score": "Score",
+        "faith": "Faithfulness",
+        "grounding": "Grounding",
+        "nonReg": "Non-régression",
+        "antiHallu": "Anti-hallucination"
+      },
+      "drift": {
+        "faith": "Drift faithfulness",
+        "ground": "Drift grounding",
+        "consistency": "Désaccord self-consistency",
+        "stable": "stable",
+        "low": "faible",
+        "moderate": "modéré",
+        "high": "élevé",
+        "critical": "critique",
+        "unknown": "n/d"
+      },
+      "intent": {
+        "title": "Performance par intent",
+        "unavailable": "Aucune classification d'intent par cas et par modèle dans Tessera — donnée indisponible."
+      },
+      "runs": {
+        "model": "Modèle",
+        "cases": "Cas",
+        "passed": "Réussis",
+        "rate": "Taux",
+        "date": "Date"
+      },
+      "noRegressions": "Aucune régression détectée"
     },
     "metrics": {
       "faithfulness": "Faithfulness",

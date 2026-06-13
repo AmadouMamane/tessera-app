@@ -264,6 +264,14 @@ export function ObservabilityDashboard() {
     refetchInterval: historyMode ? false : 30_000,
   });
 
+  // Grounding-metric drift for the Comparaison des modèles "Drift & stabilité" panel.
+  const groundingDrift = useQuery({
+    queryKey: ["judge-drift", "grounding", asOf],
+    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, "grounding"),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 30_000,
+  });
+
   // Forward-looking regression risk for the "Signaux prédictifs" column (image 00).
   const regressionRisk = useQuery({
     queryKey: ["regression-risk", asOf],
@@ -629,6 +637,10 @@ export function ObservabilityDashboard() {
               comparison={modelComparison.data}
               calibration={calibration.data}
               release={releaseStatus.data}
+              registry={runs.data}
+              faithDrift={judgeDrift.data}
+              groundingDrift={groundingDrift.data}
+              consensus={judgeConsensus.data}
             />
           )}
 

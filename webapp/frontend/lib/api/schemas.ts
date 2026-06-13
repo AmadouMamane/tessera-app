@@ -856,6 +856,7 @@ export const ModelStatSchema = z.object({
   hallucination: z.number().nullable().optional(),
   evolution: z.array(z.number()).optional(),
   non_regression: z.number().nullable().optional(),
+  categories: z.record(z.string(), z.number()).optional(),
 });
 export type ModelStat = z.infer<typeof ModelStatSchema>;
 

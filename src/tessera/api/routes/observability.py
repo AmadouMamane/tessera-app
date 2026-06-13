@@ -964,11 +964,13 @@ async def observability_model_comparison() -> dict[str, object]:
     the backfill runs), a pass-rate ``evolution`` sparkline, and a run-over-run
     ``non_regression`` retention ratio. Nothing is fabricated.
     """
+    from tessera.observability.eval.model_categories import load_model_category_rates
     from tessera.observability.eval.model_judge import load_model_judge
     from tessera.observability.eval.runs import compare_models, load_runs
 
     registry = load_runs()
     judge = load_model_judge()
+    categories = load_model_category_rates()
 
     min_run_cases = 10  # ignore tiny smoke runs in the per-model sparkline
 
@@ -989,12 +991,14 @@ async def observability_model_comparison() -> dict[str, object]:
         row = asdict(stat)
         mj = judge.models.get(stat.model)
         evolution, non_reg = _evolution_and_nonreg(stat.model)
+        cats = categories.get(stat.model)
         row.update(
             faithfulness=mj.faithfulness if mj else None,
             grounding=mj.grounding if mj else None,
             hallucination=mj.hallucination if mj else None,
             evolution=evolution,
             non_regression=non_reg,
+            categories=cats.rates if cats else {},
         )
         models.append(row)
     return {"models": models, "n_runs": registry.n, "judge_model": judge.judge_model}

@@ -1645,7 +1645,9 @@
         "kappaGlobal": "global (calibration)",
         "cases": "Cases evaluated",
         "active": "{n} active models",
-        "vsPrev": "{d} vs prev."
+        "vsPrev": "{d} vs prev.",
+        "nonReg": "Non-regression rate",
+        "pts": "pts"
       },
       "table": {
         "title": "Detailed model comparison",
@@ -1655,9 +1657,44 @@
         "scoreByModel": "Quality score by model",
         "faithGrounding": "Faithfulness vs Grounding",
         "costQuality": "Cost vs quality",
-        "nonReg": "Non-regression by model"
+        "nonReg": "Non-regression by model",
+        "radar": "Quality radar",
+        "heatmap": "Pass-rate by category",
+        "recentRuns": "Pass-rate of recent runs",
+        "regressions": "Regressions by model",
+        "drift": "Drift & stability"
       },
-      "noData": "No data"
+      "noData": "No data",
+      "radar": {
+        "score": "Score",
+        "faith": "Faithfulness",
+        "grounding": "Grounding",
+        "nonReg": "Non-regression",
+        "antiHallu": "Anti-hallucination"
+      },
+      "drift": {
+        "faith": "Faithfulness drift",
+        "ground": "Grounding drift",
+        "consistency": "Self-consistency disagreement",
+        "stable": "stable",
+        "low": "low",
+        "moderate": "moderate",
+        "high": "high",
+        "critical": "critical",
+        "unknown": "n/a"
+      },
+      "intent": {
+        "title": "Performance by intent",
+        "unavailable": "No per-case, per-model intent labels in Tessera — data unavailable."
+      },
+      "runs": {
+        "model": "Model",
+        "cases": "Cases",
+        "passed": "Passed",
+        "rate": "Rate",
+        "date": "Date"
+      },
+      "noRegressions": "No regression detected"
     },
     "metrics": {
       "faithfulness": "Faithfulness",

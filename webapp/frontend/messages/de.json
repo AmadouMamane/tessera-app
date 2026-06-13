@@ -1645,7 +1645,9 @@
         "kappaGlobal": "global (Kalibrierung)",
         "cases": "Bewertete Fälle",
         "active": "{n} aktive Modelle",
-        "vsPrev": "{d} vs. vorh."
+        "vsPrev": "{d} vs. vorh.",
+        "nonReg": "Nicht-Regressionsrate",
+        "pts": "Pkt"
       },
       "table": {
         "title": "Detaillierter Modellvergleich",
@@ -1655,9 +1657,44 @@
         "scoreByModel": "Qualitätsscore je Modell",
         "faithGrounding": "Faithfulness vs Grounding",
         "costQuality": "Kosten vs Qualität",
-        "nonReg": "Nicht-Regression je Modell"
+        "nonReg": "Nicht-Regression je Modell",
+        "radar": "Qualitäts-Radar",
+        "heatmap": "Pass-Rate je Kategorie",
+        "recentRuns": "Pass-Rate letzter Läufe",
+        "regressions": "Regressionen je Modell",
+        "drift": "Drift & Stabilität"
       },
-      "noData": "Keine Daten"
+      "noData": "Keine Daten",
+      "radar": {
+        "score": "Score",
+        "faith": "Faithfulness",
+        "grounding": "Grounding",
+        "nonReg": "Nicht-Regression",
+        "antiHallu": "Anti-Halluzination"
+      },
+      "drift": {
+        "faith": "Faithfulness-Drift",
+        "ground": "Grounding-Drift",
+        "consistency": "Self-Consistency-Uneinigkeit",
+        "stable": "stabil",
+        "low": "niedrig",
+        "moderate": "moderat",
+        "high": "hoch",
+        "critical": "kritisch",
+        "unknown": "k.A."
+      },
+      "intent": {
+        "title": "Leistung nach Intent",
+        "unavailable": "Keine Intent-Labels je Fall und Modell in Tessera — Daten nicht verfügbar."
+      },
+      "runs": {
+        "model": "Modell",
+        "cases": "Fälle",
+        "passed": "Bestanden",
+        "rate": "Rate",
+        "date": "Datum"
+      },
+      "noRegressions": "Keine Regression erkannt"
     },
     "metrics": {
       "faithfulness": "Treue",
