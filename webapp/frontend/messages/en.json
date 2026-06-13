@@ -1866,5 +1866,149 @@
       "assignOwner": "Assign an owner",
       "dualControl": "Dual control · Admin+"
     }
+  },
+  "security": {
+    "title": "Security & Privacy",
+    "subtitle": "Attacks, PII, least privilege, memory and runtime compliance.",
+    "live": "Real-time",
+    "period": "Window: 7 days",
+    "dualControl": "Dual control",
+    "cta": {
+      "redteam": "Run red-team",
+      "report": "Export report"
+    },
+    "sec": {
+      "actual": "A. Current state",
+      "controls": "B. Critical controls",
+      "diagnostic": "C. Root-cause diagnostic",
+      "predictive": "D. Predictive signals",
+      "privacy": "E. Privacy / Memory (7 days)",
+      "actions": "F. Recommended actions"
+    },
+    "kpi": {
+      "attackRate": "Attack success rate",
+      "blocked": "Prompt injections blocked",
+      "piiLeak": "PII leak in output",
+      "leastPriv": "Least-privilege tools",
+      "leastPrivHint": "tools used / granted",
+      "sensitiveMemory": "Sensitive memory",
+      "sensitiveMemoryHint": "cases at risk",
+      "guard": "Guard efficacy",
+      "recall": "recall"
+    },
+    "col": {
+      "signal": "Signal",
+      "state": "State",
+      "value": "Current value",
+      "target": "Target",
+      "action": "Action required",
+      "role": "Required role",
+      "case": "Case"
+    },
+    "ctrl": {
+      "promptInjection": "Prompt injection",
+      "piiLeak": "PII leak",
+      "crossTenant": "Cross-tenant leak",
+      "toolMisuse": "Tool misuse",
+      "inversion": "Embedding inversion",
+      "toxicity": "Harmful output toxicity",
+      "promptInjectionAction": "Harden deny patterns",
+      "piiLeakAction": "Keep redaction control",
+      "crossTenantAction": "Isolation tests & monitoring",
+      "toolMisuseAction": "Freeze the sensitive tool",
+      "inversionAction": "Mask before embedding",
+      "toxicityAction": "Check output guardrails"
+    },
+    "state": {
+      "ok": "Good",
+      "warn": "Medium",
+      "high": "High",
+      "crit": "Critical"
+    },
+    "role": {
+      "security": "Security",
+      "privacy": "Privacy",
+      "ml": "ML"
+    },
+    "domain": {
+      "promptInj": "Prompt injection",
+      "privacy": "Privacy / PII",
+      "tools": "Tools",
+      "memory": "Memory",
+      "compliance": "Compliance"
+    },
+    "level": {
+      "low": "Low risk",
+      "moderate": "Moderate risk",
+      "medium": "Moderate risk",
+      "high": "High risk",
+      "critical": "Critical risk"
+    },
+    "panel": {
+      "refusal": "Refusal calibration",
+      "overRefusal": "Over-refusal",
+      "underRefusal": "Under-refusal",
+      "legit": "Legitimate requests",
+      "forbidden": "Forbidden requests",
+      "domainRisk": "Risk by domain",
+      "overPriv": "Over-privileged tools",
+      "priorityCases": "Priority failed cases",
+      "trend": "30-day trend",
+      "trendNote": "proxy: hallucination failure rate over the window",
+      "regression": "Security regression predictor",
+      "regression7d": "7-day probability",
+      "erasure": "GDPR erasure",
+      "conversations": "Conversations",
+      "bundles": "Erased bundles",
+      "scores": "Linked scores",
+      "purgeCta": "Run targeted purge",
+      "erasureSurface": "GDPR erasure surface",
+      "completeness": "Completeness",
+      "gdprArt17": "GDPR Art. 17",
+      "inversion": "Embedding-inversion risk",
+      "computing": "Computing…",
+      "recoverable": "Recoverable vectors",
+      "recoveryRate": "Recovery rate",
+      "threshold": "Threshold"
+    },
+    "overProvisioned": "Over-privileged",
+    "act": {
+      "redteamTitle": "Fix red-team turns",
+      "redteamDesc": "Enrich the attack set and replay.",
+      "redteamCta": "Run red-team",
+      "freezeTitle": "Freeze sensitive tools",
+      "freezeDesc": "Reduce the high-risk tool surface.",
+      "freezeCta": "Freeze tools",
+      "playbookTitle": "Prompt-injection incident playbook",
+      "playbookDesc": "Run the remediation playbook.",
+      "playbookCta": "Run playbook",
+      "purgeTitle": "Purge GDPR memory",
+      "purgeDesc": "Run targeted data erasure.",
+      "purgeCta": "Purge memory"
+    },
+    "status": {
+      "realtime": "Real-time data",
+      "chain": "Audit chain intact",
+      "signals": "{n} signals"
+    },
+    "gate": {
+      "security": "Security gate",
+      "privacy": "Privacy gate",
+      "compliance": "Compliance gate",
+      "audit": "Audit gate"
+    },
+    "rail": {
+      "incidents": "Recent incidents",
+      "noIncidents": "No recent incidents",
+      "privacyEvidence": "Privacy & evidence",
+      "evidenceCta": "Generate security evidence pack",
+      "tools": "Tools",
+      "tool": "Tool",
+      "used": "Used",
+      "risk": "Risk",
+      "siem": "SIEM / SOC (24h)",
+      "exportSiem": "Export to SIEM",
+      "anomalies": "{n} session anomalies detected"
+    }
   }
 }

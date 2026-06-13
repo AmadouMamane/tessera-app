@@ -1866,5 +1866,149 @@
       "assignOwner": "Owner zuweisen",
       "dualControl": "Dual control · Admin+"
     }
+  },
+  "security": {
+    "title": "Sicherheit & Datenschutz",
+    "subtitle": "Angriffe, PII, Least Privilege, Speicher und Runtime-Compliance.",
+    "live": "Echtzeit",
+    "period": "Zeitraum: 7 Tage",
+    "dualControl": "Dual Control",
+    "cta": {
+      "redteam": "Red-Team starten",
+      "report": "Bericht exportieren"
+    },
+    "sec": {
+      "actual": "A. Aktueller Stand",
+      "controls": "B. Kritische Kontrollen",
+      "diagnostic": "C. Ursachen-Diagnose",
+      "predictive": "D. Prädiktive Signale",
+      "privacy": "E. Datenschutz / Speicher (7 Tage)",
+      "actions": "F. Empfohlene Maßnahmen"
+    },
+    "kpi": {
+      "attackRate": "Angriffs-Erfolgsrate",
+      "blocked": "Geblockte Prompt-Injektionen",
+      "piiLeak": "PII-Leak in Ausgabe",
+      "leastPriv": "Least-Privilege-Tools",
+      "leastPrivHint": "genutzt / gewährt",
+      "sensitiveMemory": "Sensibler Speicher",
+      "sensitiveMemoryHint": "Risikofälle",
+      "guard": "Guard-Wirksamkeit",
+      "recall": "Recall"
+    },
+    "col": {
+      "signal": "Signal",
+      "state": "Status",
+      "value": "Aktueller Wert",
+      "target": "Ziel",
+      "action": "Erforderliche Aktion",
+      "role": "Erforderliche Rolle",
+      "case": "Case"
+    },
+    "ctrl": {
+      "promptInjection": "Prompt-Injektion",
+      "piiLeak": "PII-Leak",
+      "crossTenant": "Cross-Tenant-Leak",
+      "toolMisuse": "Tool-Missbrauch",
+      "inversion": "Embedding-Inversion",
+      "toxicity": "Schädliche Ausgabe-Toxizität",
+      "promptInjectionAction": "Deny-Patterns härten",
+      "piiLeakAction": "Redaction-Kontrolle beibehalten",
+      "crossTenantAction": "Isolations-Tests & Monitoring",
+      "toolMisuseAction": "Sensibles Tool einfrieren",
+      "inversionAction": "Vor Embedding maskieren",
+      "toxicityAction": "Ausgabe-Guardrails prüfen"
+    },
+    "state": {
+      "ok": "Gut",
+      "warn": "Mittel",
+      "high": "Hoch",
+      "crit": "Kritisch"
+    },
+    "role": {
+      "security": "Sicherheit",
+      "privacy": "Datenschutz",
+      "ml": "ML"
+    },
+    "domain": {
+      "promptInj": "Prompt-Injektion",
+      "privacy": "Datenschutz / PII",
+      "tools": "Tools",
+      "memory": "Speicher",
+      "compliance": "Compliance"
+    },
+    "level": {
+      "low": "Geringes Risiko",
+      "moderate": "Moderates Risiko",
+      "medium": "Moderates Risiko",
+      "high": "Hohes Risiko",
+      "critical": "Kritisches Risiko"
+    },
+    "panel": {
+      "refusal": "Verweigerungs-Kalibrierung",
+      "overRefusal": "Über-Verweigerung",
+      "underRefusal": "Unter-Verweigerung",
+      "legit": "Legitime Anfragen",
+      "forbidden": "Verbotene Anfragen",
+      "domainRisk": "Risiko nach Domäne",
+      "overPriv": "Über-privilegierte Tools",
+      "priorityCases": "Priorisierte Fehlerfälle",
+      "trend": "30-Tage-Trend",
+      "trendNote": "Proxy: Halluzinations-Fehlerrate im Fenster",
+      "regression": "Sicherheits-Regressionsprädiktor",
+      "regression7d": "7-Tage-Wahrscheinlichkeit",
+      "erasure": "GDPR-Löschung",
+      "conversations": "Konversationen",
+      "bundles": "Gelöschte Bundles",
+      "scores": "Verknüpfte Scores",
+      "purgeCta": "Gezielte Löschung starten",
+      "erasureSurface": "GDPR-Löschfläche",
+      "completeness": "Vollständigkeit",
+      "gdprArt17": "GDPR Art. 17",
+      "inversion": "Embedding-Inversions-Risiko",
+      "computing": "Berechnung läuft…",
+      "recoverable": "Wiederherstellbare Vektoren",
+      "recoveryRate": "Wiederherstellungsrate",
+      "threshold": "Schwelle"
+    },
+    "overProvisioned": "Über-privilegiert",
+    "act": {
+      "redteamTitle": "Red-Team-Fälle beheben",
+      "redteamDesc": "Angriffsset erweitern und erneut spielen.",
+      "redteamCta": "Red-Team starten",
+      "freezeTitle": "Sensible Tools einfrieren",
+      "freezeDesc": "Hochriskante Tool-Fläche reduzieren.",
+      "freezeCta": "Tools einfrieren",
+      "playbookTitle": "Prompt-Injektion-Incident-Playbook",
+      "playbookDesc": "Remediations-Playbook ausführen.",
+      "playbookCta": "Playbook ausführen",
+      "purgeTitle": "GDPR-Speicher löschen",
+      "purgeDesc": "Gezielte Datenlöschung ausführen.",
+      "purgeCta": "Speicher löschen"
+    },
+    "status": {
+      "realtime": "Echtzeitdaten",
+      "chain": "Audit-Kette intakt",
+      "signals": "{n} Signale"
+    },
+    "gate": {
+      "security": "Security Gate",
+      "privacy": "Privacy Gate",
+      "compliance": "Compliance Gate",
+      "audit": "Audit Gate"
+    },
+    "rail": {
+      "incidents": "Aktuelle Vorfälle",
+      "noIncidents": "Keine aktuellen Vorfälle",
+      "privacyEvidence": "Datenschutz & Nachweise",
+      "evidenceCta": "Sicherheits-Evidence-Pack erzeugen",
+      "tools": "Tools",
+      "tool": "Tool",
+      "used": "Genutzt",
+      "risk": "Risiko",
+      "siem": "SIEM / SOC (24h)",
+      "exportSiem": "An SIEM exportieren",
+      "anomalies": "{n} Session-Anomalien erkannt"
+    }
   }
 }

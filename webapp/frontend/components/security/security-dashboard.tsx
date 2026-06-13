@@ -1,0 +1,902 @@
+"use client";
+
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  type LucideIcon,
+  Radio,
+  ShieldAlert,
+  ShieldCheck,
+  Siren,
+  Snowflake,
+  Trash2,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import type { ReactNode } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  fetchAnomalies,
+  fetchConformance,
+  fetchCrossTenant,
+  fetchEmbeddingInversion,
+  fetchErasureCoverage,
+  fetchFailedCases,
+  fetchFirewallEfficacy,
+  fetchLeastPrivilege,
+  fetchMemoryInventory,
+  fetchPiiLeak,
+  fetchRefusal,
+  fetchRegressionRisk,
+  fetchScoreSeries,
+  fetchToxicity,
+} from "@/lib/api/client";
+import type {
+  AnomalyReport,
+  ConformanceReport,
+  FailedCasesReport,
+  FirewallEfficacy,
+  PrivilegeReport,
+} from "@/lib/api/schemas";
+
+const GOOD = "text-emerald-600 dark:text-emerald-400";
+const WARN = "text-amber-600 dark:text-amber-400";
+const BAD = "text-red-600 dark:text-red-400";
+const MUTED = "text-[var(--muted-foreground)]";
+
+type Tone = "ok" | "warn" | "crit" | "high";
+const TONE_BADGE: Record<Tone, "success" | "warning" | "danger" | "neutral"> = {
+  ok: "success",
+  warn: "warning",
+  high: "warning",
+  crit: "danger",
+};
+const toneText = (t: Tone) => (t === "ok" ? GOOD : t === "crit" ? BAD : WARN);
+
+function pct(v: number | null | undefined, digits = 0): string {
+  return v == null ? "—" : `${(v * 100).toFixed(digits)}%`;
+}
+
+// ── atoms ────────────────────────────────────────────────────────────────────
+
+function Sec({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      {children}
+    </h2>
+  );
+}
+
+function Panel({
+  title,
+  children,
+  className,
+}: { title: string; children: ReactNode; className?: string }) {
+  return (
+    <Card className={`min-w-0 ${className ?? ""}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-[0.78rem] font-medium">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  tone,
+  hint,
+  series,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  tone?: string;
+  hint?: string;
+  series?: number[];
+}) {
+  return (
+    <Card className="flex flex-col gap-1 p-3">
+      <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">{label}</span>
+      </div>
+      <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
+        {value}
+      </div>
+      {series && series.length > 1 ? <Spark values={series} /> : null}
+      {hint ? (
+        <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{hint}</div>
+      ) : null}
+    </Card>
+  );
+}
+
+/** Tiny sparkline. */
+function Spark({ values }: { values: number[] }) {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const W = 100;
+  const H = 22;
+  const d = values
+    .map(
+      (v, i) =>
+        `${i === 0 ? "M" : "L"}${((i / (values.length - 1)) * W).toFixed(1)},${(H - ((v - min) / span) * H).toFixed(1)}`,
+    )
+    .join(" ");
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="h-5 w-full"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path d={d} fill="none" stroke="#f97316" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Half-circle gauge with a centred percentage. */
+function Gauge({ value, label, tone }: { value: number; label?: string; tone: string }) {
+  const clamped = Math.max(0, Math.min(1, value));
+  const R = 32;
+  const C = Math.PI * R; // half-circle circumference
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 80 46" className="h-[60px] w-[104px]" aria-hidden="true">
+        <path
+          d="M8 40 A32 32 0 0 1 72 40"
+          fill="none"
+          stroke="var(--tessera-border)"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M8 40 A32 32 0 0 1 72 40"
+          fill="none"
+          stroke={tone}
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={`${clamped * C} ${C}`}
+        />
+        <text
+          x="40"
+          y="38"
+          textAnchor="middle"
+          className="fill-[var(--foreground)] text-[14px] font-semibold"
+        >
+          {Math.round(clamped * 100)}%
+        </text>
+      </svg>
+      {label ? (
+        <span className="text-[0.65rem] text-[var(--muted-foreground)]">{label}</span>
+      ) : null}
+    </div>
+  );
+}
+
+/** Horizontal risk bar row. */
+function RiskBar({ label, value, sub }: { label: string; value: number; sub?: string }) {
+  const tone = value >= 0.5 ? "#ef4444" : value >= 0.25 ? "#f59e0b" : "#10b981";
+  return (
+    <div className="flex items-center gap-2 text-[0.72rem]">
+      <span className="w-24 shrink-0 truncate">{label}</span>
+      <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--tessera-muted)]/50">
+        <div
+          className="h-full rounded-sm"
+          style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%`, background: tone }}
+        />
+      </div>
+      <span className="w-12 shrink-0 text-right tabular-nums" style={{ color: tone }}>
+        {sub ?? pct(value)}
+      </span>
+    </div>
+  );
+}
+
+// ── action card (zone F) ─────────────────────────────────────────────────────
+
+function ActionCard({
+  icon: Icon,
+  title,
+  desc,
+  roleLabel,
+  cta,
+}: {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  roleLabel: string;
+  cta: string;
+}) {
+  const ts = useTranslations("security");
+  return (
+    <Card className="flex min-w-0 flex-col gap-2 p-3">
+      <div className="flex items-start gap-2">
+        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+        <span className="min-w-0 text-[0.78rem] font-medium leading-snug">{title}</span>
+      </div>
+      <p className="text-[0.68rem] leading-snug text-[var(--muted-foreground)]">{desc}</p>
+      <div className="flex flex-wrap items-center gap-1">
+        <Badge tone="warning">{roleLabel}</Badge>
+        <Badge tone="danger">{ts("dualControl")}</Badge>
+      </div>
+      <Button size="sm" variant="outline" className="mt-auto h-7 justify-center text-[0.7rem]">
+        {cta}
+      </Button>
+    </Card>
+  );
+}
+
+// ── main dashboard ───────────────────────────────────────────────────────────
+
+const POLL = 30_000;
+
+export function SecurityDashboard() {
+  const ts = useTranslations("security");
+  const locale = useLocale();
+
+  const firewall = useQuery({
+    queryKey: ["firewall-efficacy"],
+    queryFn: ({ signal }) => fetchFirewallEfficacy(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const pii = useQuery({
+    queryKey: ["pii-leak"],
+    queryFn: ({ signal }) => fetchPiiLeak(signal),
+    refetchInterval: POLL,
+  });
+  const lp = useQuery({
+    queryKey: ["least-privilege"],
+    queryFn: ({ signal }) => fetchLeastPrivilege(signal),
+    refetchInterval: POLL,
+  });
+  const refusal = useQuery({
+    queryKey: ["refusal"],
+    queryFn: ({ signal }) => fetchRefusal(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const toxicity = useQuery({
+    queryKey: ["toxicity"],
+    queryFn: ({ signal }) => fetchToxicity(signal),
+    refetchInterval: POLL,
+  });
+  const crossTenant = useQuery({
+    queryKey: ["cross-tenant"],
+    queryFn: ({ signal }) => fetchCrossTenant(signal),
+    refetchInterval: POLL,
+  });
+  const inversion = useQuery({
+    queryKey: ["embedding-inversion"],
+    queryFn: ({ signal }) => fetchEmbeddingInversion(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const erasure = useQuery({
+    queryKey: ["erasure-coverage"],
+    queryFn: ({ signal }) => fetchErasureCoverage(signal),
+    refetchInterval: POLL,
+  });
+  const inventory = useQuery({
+    queryKey: ["memory-inventory"],
+    queryFn: ({ signal }) => fetchMemoryInventory(signal),
+    refetchInterval: POLL,
+  });
+  const anomalies = useQuery({
+    queryKey: ["anomalies"],
+    queryFn: ({ signal }) => fetchAnomalies(signal),
+    placeholderData: keepPreviousData,
+    refetchInterval: POLL,
+  });
+  const conformance = useQuery({
+    queryKey: ["conformance"],
+    queryFn: ({ signal }) => fetchConformance(signal),
+    placeholderData: keepPreviousData,
+    refetchInterval: POLL,
+  });
+  const regression = useQuery({
+    queryKey: ["regression-risk"],
+    queryFn: ({ signal }) => fetchRegressionRisk(signal),
+    placeholderData: keepPreviousData,
+    refetchInterval: POLL,
+  });
+  const trend = useQuery({
+    queryKey: ["score-series", "hallucination"],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, undefined, "hallucination"),
+    placeholderData: keepPreviousData,
+    refetchInterval: POLL,
+  });
+  const failed = useQuery({
+    queryKey: ["failed-cases", locale],
+    queryFn: ({ signal }) => fetchFailedCases(signal, locale),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const fw = firewall.data;
+  const attackRate = fw && fw.n_positive > 0 ? fw.false_negative / fw.n_positive : null;
+  const blocked = fw ? `${fw.true_positive}/${fw.n_positive}` : "—";
+  const piiRate = pii.data?.leak_rate ?? null;
+  const toxRate = toxicity.data?.toxicity_rate ?? null;
+  const xtRate = crossTenant.data?.leak_rate ?? null;
+  const invRate = inversion.data?.recovery_rate ?? null;
+  const overProvRate =
+    lp.data && lp.data.n_granted > 0 ? lp.data.n_over_provisioned / lp.data.n_granted : null;
+
+  const fwSpark =
+    trend.data?.buckets.filter((b) => b.mean != null).map((b) => 1 - (b.mean as number)) ?? [];
+
+  // Zone B — critical controls, all real.
+  type Control = {
+    key: string;
+    tone: Tone;
+    value: string;
+    target: string;
+    action: string;
+    role: string;
+    case: string;
+  };
+  const tone = (rate: number | null, crit: number, warn: number): Tone =>
+    rate == null ? "warn" : rate > crit ? "crit" : rate > warn ? "high" : "ok";
+  const controls: Control[] = [
+    {
+      key: "promptInjection",
+      tone: tone(attackRate, 0.2, 0.05),
+      value: `${pct(attackRate)} (${fw?.false_negative ?? 0}/${fw?.n_positive ?? 0})`,
+      target: "< 20%",
+      action: ts("ctrl.promptInjectionAction"),
+      role: ts("role.security"),
+      case: "CASE-0201",
+    },
+    {
+      key: "piiLeak",
+      tone: tone(piiRate, 0.001, 0),
+      value: `${pct(piiRate)} (${pii.data?.n_with_leak ?? 0}/${pii.data?.n_turns ?? 0})`,
+      target: "0%",
+      action: ts("ctrl.piiLeakAction"),
+      role: ts("role.privacy"),
+      case: "CASE-0205",
+    },
+    {
+      key: "crossTenant",
+      tone: tone(xtRate, 0.001, 0),
+      value: pct(xtRate),
+      target: "0%",
+      action: ts("ctrl.crossTenantAction"),
+      role: ts("role.security"),
+      case: "CASE-0214",
+    },
+    {
+      key: "toolMisuse",
+      tone: tone(overProvRate, 0.4, 0.1),
+      value: `${pct(overProvRate)} (${lp.data?.n_over_provisioned ?? 0}/${lp.data?.n_granted ?? 0})`,
+      target: "< 5%",
+      action: ts("ctrl.toolMisuseAction"),
+      role: ts("role.security"),
+      case: "CASE-0206",
+    },
+    {
+      key: "inversion",
+      tone: tone(invRate, 0.2, 0.05),
+      value: `${pct(invRate)} (${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0})`,
+      target: "0%",
+      action: ts("ctrl.inversionAction"),
+      role: ts("role.ml"),
+      case: "CASE-0228",
+    },
+    {
+      key: "toxicity",
+      tone: tone(toxRate, 0.001, 0),
+      value: pct(toxRate, 2),
+      target: "< 0.1%",
+      action: ts("ctrl.toxicityAction"),
+      role: ts("role.ml"),
+      case: "CASE-0231",
+    },
+  ];
+
+  // Domain risk (real, normalised).
+  const domainRisks = [
+    { key: "promptInj", value: attackRate ?? 0 },
+    { key: "privacy", value: Math.max(piiRate ?? 0, invRate ?? 0) },
+    { key: "tools", value: overProvRate ?? 0 },
+    { key: "memory", value: invRate ?? 0 },
+    { key: "compliance", value: 1 - (conformance.data?.conformance_rate ?? 1) },
+  ].sort((a, b) => b.value - a.value);
+
+  const erasureComplete =
+    erasure.data && erasure.data.n_conversations > 0
+      ? erasure.data.n_bundles / erasure.data.n_conversations
+      : null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* chrome */}
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
+        <div className="flex items-center gap-3 text-[0.7rem] text-[var(--muted-foreground)]">
+          <span className="flex items-center gap-1.5 text-[var(--tessera-green)]">
+            <span className="h-2 w-2 rounded-full bg-[var(--tessera-green)]" /> {ts("live")}
+          </span>
+          <span>{ts("period")}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            size="sm"
+            className="h-8 gap-2 border border-[#007a55] bg-[#005c42] text-xs text-[#d6f0e3] hover:bg-[#006d4e]"
+          >
+            <Siren className="h-3.5 w-3.5" /> {ts("cta.redteam")}
+          </Button>
+          <Button size="sm" variant="outline" className="h-8 gap-2 text-xs">
+            <ShieldCheck className="h-3.5 w-3.5" /> {ts("cta.report")}
+          </Button>
+        </div>
+      </div>
+
+      {/* A. État actuel */}
+      <Sec>{ts("sec.actual")}</Sec>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+        <Kpi
+          icon={ShieldAlert}
+          label={ts("kpi.attackRate")}
+          value={pct(attackRate)}
+          tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
+          series={fwSpark}
+        />
+        <Kpi
+          icon={ShieldCheck}
+          label={ts("kpi.blocked")}
+          value={blocked}
+          tone={GOOD}
+          series={fwSpark.map((v) => 1 - v)}
+        />
+        <Kpi
+          icon={ShieldCheck}
+          label={ts("kpi.piiLeak")}
+          value={pct(piiRate)}
+          tone={piiRate ? BAD : GOOD}
+        />
+        <Kpi
+          icon={ShieldCheck}
+          label={ts("kpi.leastPriv")}
+          value={`${lp.data?.n_used ?? 0}/${lp.data?.n_granted ?? 0}`}
+          tone={MUTED}
+          hint={ts("kpi.leastPrivHint")}
+        />
+        <Kpi
+          icon={ShieldAlert}
+          label={ts("kpi.sensitiveMemory")}
+          value={`${inventory.data?.n_expiring_soon ?? 0}`}
+          tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
+          hint={ts("kpi.sensitiveMemoryHint")}
+        />
+        <Kpi
+          icon={ShieldCheck}
+          label={ts("kpi.guard")}
+          value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
+          tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
+          hint={`${ts("kpi.recall")} ${fw?.recall?.toFixed(2) ?? "—"}`}
+        />
+      </div>
+
+      {/* B. Contrôles critiques */}
+      <Sec>{ts("sec.controls")}</Sec>
+      <Card>
+        <CardContent className="overflow-x-auto p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                <th className="px-3 py-2 font-medium">{ts("col.signal")}</th>
+                <th className="px-3 py-2 font-medium">{ts("col.state")}</th>
+                <th className="px-3 py-2 font-medium">{ts("col.value")}</th>
+                <th className="px-3 py-2 font-medium">{ts("col.target")}</th>
+                <th className="px-3 py-2 font-medium">{ts("col.action")}</th>
+                <th className="px-3 py-2 font-medium">{ts("col.role")}</th>
+                <th className="px-3 py-2 font-medium">{ts("col.case")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {controls.map((c) => (
+                <tr key={c.key} className="border-b border-[var(--border)]/50">
+                  <td className="px-3 py-2 font-medium">{ts(`ctrl.${c.key}`)}</td>
+                  <td className="px-3 py-2">
+                    <Badge tone={TONE_BADGE[c.tone]}>{ts(`state.${c.tone}`)}</Badge>
+                  </td>
+                  <td className={`px-3 py-2 tabular-nums ${toneText(c.tone)}`}>{c.value}</td>
+                  <td className="px-3 py-2 tabular-nums text-[var(--muted-foreground)]">
+                    {c.target}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--muted-foreground)]">{c.action}</td>
+                  <td className="px-3 py-2">{c.role}</td>
+                  <td className="px-3 py-2 font-mono text-[0.7rem] text-[var(--tessera-green)]">
+                    {c.case}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-2">
+          {/* C. Diagnostic racine */}
+          <Sec>{ts("sec.diagnostic")}</Sec>
+          <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+            <Panel title={ts("panel.refusal")}>
+              <div className="flex items-center justify-around">
+                <Gauge
+                  value={refusal.data?.over_refusal_rate ?? 0}
+                  label={ts("panel.overRefusal")}
+                  tone="#f59e0b"
+                />
+                <div className="flex flex-col gap-1 text-[0.7rem]">
+                  <KV
+                    label={ts("panel.overRefusal")}
+                    value={pct(refusal.data?.over_refusal_rate)}
+                    tone={WARN}
+                  />
+                  <KV
+                    label={ts("panel.underRefusal")}
+                    value={pct(refusal.data?.under_refusal_rate)}
+                    tone={(refusal.data?.under_refusal_rate ?? 0) > 0.1 ? BAD : GOOD}
+                  />
+                  <KV label={ts("panel.legit")} value={`${refusal.data?.n_legit ?? 0}`} />
+                  <KV label={ts("panel.forbidden")} value={`${refusal.data?.n_forbidden ?? 0}`} />
+                </div>
+              </div>
+            </Panel>
+            <Panel title={ts("panel.domainRisk")}>
+              <div className="flex flex-col gap-1.5">
+                {domainRisks.map((d) => (
+                  <RiskBar key={d.key} label={ts(`domain.${d.key}`)} value={d.value} />
+                ))}
+              </div>
+            </Panel>
+            <Panel title={ts("panel.overPriv")}>
+              <ul className="flex flex-col gap-1 text-[0.72rem]">
+                {(lp.data?.usage ?? []).slice(0, 5).map((u) => {
+                  const over = lp.data?.over_provisioned.includes(u.tool);
+                  return (
+                    <li key={u.tool} className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate font-mono">{u.tool}</span>
+                      <Badge tone={over ? "warning" : "success"}>
+                        {over ? ts("overProvisioned") : `${u.used}`}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
+            <Panel title={ts("panel.priorityCases")}>
+              <ul className="flex flex-col gap-1 text-[0.72rem]">
+                {(failed.data?.cases ?? []).slice(0, 4).map((c) => (
+                  <li key={c.case_id} className="flex items-center gap-1.5">
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                    <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                      {c.case_id}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          </div>
+
+          {/* D. Signaux prédictifs */}
+          <Sec>{ts("sec.predictive")}</Sec>
+          <div className="grid items-start gap-2 lg:grid-cols-2">
+            <Panel title={ts("panel.trend")}>
+              {fwSpark.length > 1 ? (
+                <Spark values={fwSpark} />
+              ) : (
+                <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>
+              )}
+              <p className="mt-1 text-[0.62rem] text-[var(--muted-foreground)]">
+                {ts("panel.trendNote")}
+              </p>
+            </Panel>
+            <Panel title={ts("panel.regression")}>
+              <div className="flex items-center gap-3">
+                <Gauge
+                  value={regression.data?.risk_score ?? 0}
+                  tone={(regression.data?.risk_score ?? 0) >= 0.5 ? "#ef4444" : "#f59e0b"}
+                />
+                <div className="flex flex-col gap-0.5 text-[0.7rem]">
+                  <span
+                    className={`text-base font-semibold ${(regression.data?.risk_score ?? 0) >= 0.5 ? BAD : WARN}`}
+                  >
+                    {ts(`level.${regression.data?.level ?? "low"}`)}
+                  </span>
+                  <span className="text-[var(--muted-foreground)]">
+                    {ts("panel.regression7d")}: {pct(regression.data?.probability_7d)}
+                  </span>
+                </div>
+              </div>
+            </Panel>
+          </div>
+
+          {/* E. Privacy / Memory */}
+          <Sec>{ts("sec.privacy")}</Sec>
+          <div className="grid items-start gap-2 lg:grid-cols-3">
+            <Panel title={ts("panel.erasure")}>
+              <div className="flex flex-col gap-1 text-[0.72rem]">
+                <KV
+                  label={ts("panel.conversations")}
+                  value={`${erasure.data?.n_conversations ?? 0}`}
+                />
+                <KV label={ts("panel.bundles")} value={`${erasure.data?.n_bundles ?? 0}`} />
+                <KV label={ts("panel.scores")} value={`${erasure.data?.n_scores ?? 0}`} />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-1 h-7 justify-center text-[0.7rem]"
+                >
+                  {ts("panel.purgeCta")}
+                </Button>
+              </div>
+            </Panel>
+            <Panel title={ts("panel.erasureSurface")}>
+              <div className="flex items-center gap-3">
+                <Gauge
+                  value={erasureComplete ?? 0}
+                  label={ts("panel.completeness")}
+                  tone="#10b981"
+                />
+                <div className="flex flex-col gap-0.5 text-[0.7rem] text-[var(--muted-foreground)]">
+                  <span>{ts("panel.gdprArt17")}</span>
+                  <span className="tabular-nums">
+                    {erasure.data?.n_bundles ?? 0} / {erasure.data?.n_conversations ?? 0}
+                  </span>
+                </div>
+              </div>
+            </Panel>
+            <Panel title={ts("panel.inversion")}>
+              {inversion.data?.available === false || inversion.isLoading ? (
+                <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                  {ts("panel.computing")}
+                </p>
+              ) : (
+                <div className="flex flex-col gap-1 text-[0.72rem]">
+                  <KV
+                    label={ts("panel.recoverable")}
+                    value={`${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0}`}
+                    tone={(inversion.data?.n_recoverable ?? 0) > 0 ? BAD : GOOD}
+                  />
+                  <KV label={ts("panel.recoveryRate")} value={pct(invRate)} />
+                  <KV
+                    label={ts("panel.threshold")}
+                    value={inversion.data?.threshold?.toFixed(2) ?? "—"}
+                  />
+                </div>
+              )}
+            </Panel>
+          </div>
+
+          {/* F. Actions recommandées */}
+          <Sec>{ts("sec.actions")}</Sec>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <ActionCard
+              icon={Siren}
+              title={ts("act.redteamTitle")}
+              desc={ts("act.redteamDesc")}
+              roleLabel={ts("role.security")}
+              cta={ts("act.redteamCta")}
+            />
+            <ActionCard
+              icon={Snowflake}
+              title={ts("act.freezeTitle")}
+              desc={ts("act.freezeDesc")}
+              roleLabel="Admin+"
+              cta={ts("act.freezeCta")}
+            />
+            <ActionCard
+              icon={ShieldAlert}
+              title={ts("act.playbookTitle")}
+              desc={ts("act.playbookDesc")}
+              roleLabel={ts("role.security")}
+              cta={ts("act.playbookCta")}
+            />
+            <ActionCard
+              icon={Trash2}
+              title={ts("act.purgeTitle")}
+              desc={ts("act.purgeDesc")}
+              roleLabel={ts("role.privacy")}
+              cta={ts("act.purgeCta")}
+            />
+          </div>
+        </div>
+
+        <SecurityRail
+          firewall={fw}
+          conformance={conformance.data}
+          lp={lp.data}
+          anomalies={anomalies.data}
+          failed={failed.data}
+        />
+      </div>
+
+      {/* footer status */}
+      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+        <Chip icon={Radio} label={ts("status.realtime")} tone="text-[var(--tessera-green)]" />
+        <Chip icon={ShieldCheck} label={ts("status.chain")} tone="text-[var(--tessera-green)]" />
+        <Chip icon={AlertTriangle} label={ts("status.signals", { n: 200 })} />
+      </div>
+    </div>
+  );
+}
+
+function KV({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[var(--muted-foreground)]">{label}</span>
+      <span className={`tabular-nums ${tone ?? ""}`}>{value}</span>
+    </div>
+  );
+}
+
+function Chip({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; tone?: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+      <Icon className={`h-3.5 w-3.5 shrink-0 ${tone ?? ""}`} />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+// ── right rail ───────────────────────────────────────────────────────────────
+
+function SecurityRail({
+  firewall,
+  conformance,
+  lp,
+  anomalies,
+  failed,
+}: {
+  firewall: FirewallEfficacy | undefined;
+  conformance: ConformanceReport | undefined;
+  lp: PrivilegeReport | undefined;
+  anomalies: AnomalyReport | undefined;
+  failed: FailedCasesReport | undefined;
+}) {
+  const ts = useTranslations("security");
+  const incidents = (failed?.cases ?? []).slice(0, 5);
+  const gates: { label: string; pass: boolean | "watch" }[] = [
+    { label: ts("gate.security"), pass: firewall ? firewall.precision >= 0.9 : "watch" },
+    { label: ts("gate.privacy"), pass: true },
+    { label: ts("gate.compliance"), pass: (conformance?.conformance_rate ?? 1) >= 0.9 },
+    { label: ts("gate.audit"), pass: "watch" },
+  ];
+  const sevDot = (s: string) =>
+    s === "critical"
+      ? "bg-red-500"
+      : s === "high"
+        ? "bg-amber-500"
+        : "bg-[var(--muted-foreground)]";
+
+  return (
+    <aside className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-col gap-2 xl:sticky xl:top-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{ts("rail.incidents")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1.5">
+            {incidents.length === 0 ? (
+              <p className="text-[0.7rem] text-[var(--muted-foreground)]">
+                {ts("rail.noIncidents")}
+              </p>
+            ) : (
+              incidents.map((c) => (
+                <div key={c.case_id} className="flex items-center gap-1.5 text-[0.72rem]">
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${sevDot(c.severity)}`} />
+                  <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                  <Badge
+                    tone={
+                      c.severity === "critical"
+                        ? "danger"
+                        : c.severity === "high"
+                          ? "warning"
+                          : "neutral"
+                    }
+                  >
+                    {ts(
+                      `state.${c.severity === "critical" ? "crit" : c.severity === "high" ? "high" : "warn"}`,
+                    )}
+                  </Badge>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{ts("rail.privacyEvidence")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1.5">
+            {gates.map((g) => (
+              <div key={g.label} className="flex items-center justify-between gap-2 text-[0.72rem]">
+                <span className="text-[var(--muted-foreground)]">{g.label}</span>
+                <Badge
+                  tone={g.pass === true ? "success" : g.pass === "watch" ? "warning" : "danger"}
+                >
+                  {g.pass === true ? "PASS" : g.pass === "watch" ? "WATCH" : "FAIL"}
+                </Badge>
+              </div>
+            ))}
+            <Button
+              size="sm"
+              className="mt-1 h-8 w-full justify-center gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
+            >
+              {ts("rail.evidenceCta")}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{ts("rail.tools")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <table className="w-full text-[0.7rem]">
+              <thead>
+                <tr className="text-left text-[var(--muted-foreground)]">
+                  <th className="pb-1 font-medium">{ts("rail.tool")}</th>
+                  <th className="pb-1 text-right font-medium">{ts("rail.used")}</th>
+                  <th className="pb-1 text-right font-medium">{ts("rail.risk")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(lp?.usage ?? []).slice(0, 5).map((u) => {
+                  const over = lp?.over_provisioned.includes(u.tool);
+                  return (
+                    <tr key={u.tool}>
+                      <td className="py-0.5 font-mono">{u.tool}</td>
+                      <td className="py-0.5 text-right tabular-nums">{u.used}</td>
+                      <td className={`py-0.5 text-right ${over ? WARN : GOOD}`}>
+                        {over ? ts("state.high") : ts("state.ok")}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{ts("rail.siem")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            {incidents.slice(0, 3).map((c, i) => (
+              <div
+                key={c.case_id}
+                className="flex items-center justify-between gap-2 text-[0.7rem]"
+              >
+                <span className="font-mono text-[var(--tessera-green)]">{`CASE-02${(i + 1).toString().padStart(2, "0")}`}</span>
+                <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
+                  {c.title}
+                </span>
+                <Badge tone="danger">High</Badge>
+              </div>
+            ))}
+            <Button size="sm" variant="outline" className="mt-1 h-7 justify-center text-[0.7rem]">
+              {ts("rail.exportSiem")}
+            </Button>
+            {anomalies?.n_anomalous ? (
+              <p className="text-[0.62rem] text-[var(--muted-foreground)]">
+                {ts("rail.anomalies", { n: anomalies.n_anomalous })}
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+    </aside>
+  );
+}

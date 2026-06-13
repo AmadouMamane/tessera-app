@@ -30,7 +30,15 @@ import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
-type RouteHref = "/" | "/chat" | "/audit" | "/eval" | "/observability" | "/health" | "/settings";
+type RouteHref =
+  | "/"
+  | "/chat"
+  | "/audit"
+  | "/eval"
+  | "/observability"
+  | "/security"
+  | "/health"
+  | "/settings";
 
 interface NavItem {
   href?: RouteHref;
@@ -59,7 +67,7 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     items: [
       { href: "/", icon: Home, labelKey: "overview" },
       { href: "/observability", icon: ShieldHalf, labelKey: "quality", badge: "52" },
-      { icon: LockKeyhole, labelKey: "security", pulse: true },
+      { href: "/security", icon: LockKeyhole, labelKey: "security", pulse: true },
       { icon: FileCheck2, labelKey: "compliance", pulse: true },
       { href: "/health", icon: Gauge, labelKey: "reliability", pulse: true },
       { href: "/eval", icon: Sparkles, labelKey: "improvement" },
