@@ -627,7 +627,7 @@ export function ObservabilityDashboard() {
           {tab === "failed" && (
             <FailedBoard
               report={failedRuns.data}
-              selectedId={(selectedFailed ?? failedRuns.data?.cases[0])?.id ?? null}
+              selected={selectedFailed ?? failedRuns.data?.cases[0] ?? null}
               onSelect={setSelectedFailed}
             />
           )}

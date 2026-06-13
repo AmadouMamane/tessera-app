@@ -287,23 +287,55 @@ function MiniDonut({
   );
 }
 
-function TrendBars({ points }: { points: { date: string; n: number }[] }) {
+/** Failed-cases-over-time as a filled area line — suited to a time series. */
+function TrendArea({ points }: { points: { date: string; n: number }[] }) {
   if (points.length === 0)
     return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
   const max = Math.max(...points.map((p) => p.n), 1);
+  const w = 240;
+  const h = 60;
+  const padY = 8;
+  const single = points.length === 1;
+  const xy = (p: { n: number }, i: number): [number, number] => {
+    const x = single ? w / 2 : (i / (points.length - 1)) * w;
+    const y = h - padY - (p.n / max) * (h - 2 * padY);
+    return [x, y];
+  };
+  const pts = points.map((p, i) => ({ date: p.date, xy: xy(p, i) }));
+  const line = pts
+    .map(({ xy: [x, y] }, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
+  const firstX = pts[0]?.xy[0] ?? 0;
+  const lastX = pts[pts.length - 1]?.xy[0] ?? w;
+  const area = `${line} L${lastX.toFixed(1)},${h} L${firstX.toFixed(1)},${h} Z`;
   return (
-    <div className="flex h-20 items-end gap-1.5">
-      {points.map((p) => (
-        <div key={p.date} className="flex flex-1 flex-col items-center gap-1">
-          <span className="text-[0.55rem] tabular-nums text-[var(--muted-foreground)]">{p.n}</span>
-          <div
-            className="w-full rounded-sm bg-violet-500/70"
-            style={{ height: `${Math.max(4, (p.n / max) * 56)}px` }}
-            title={`${p.date}: ${p.n}`}
-          />
-          <span className="text-[0.5rem] text-[var(--muted-foreground)]">{fmtDay(p.date)}</span>
-        </div>
-      ))}
+    <div className="flex flex-col gap-1">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="h-[60px] w-full"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <title>{points.map((p) => `${p.date}: ${p.n}`).join(", ")}</title>
+        <defs>
+          <linearGradient id="failTrend" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#failTrend)" stroke="none" />
+        <path d={line} fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeLinejoin="round" />
+        {pts.map(({ date, xy: [x, y] }) => (
+          <circle key={date} cx={x} cy={y} r="1.8" fill="#8b5cf6" />
+        ))}
+      </svg>
+      <div className="flex justify-between text-[0.5rem] text-[var(--muted-foreground)]">
+        {points.map((p) => (
+          <span key={p.date} className="tabular-nums">
+            {fmtDay(p.date)}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -346,11 +378,11 @@ function CauseBars({ items }: { items: { key: string; label: string; value: numb
 /** The full Cas échoués board — KPI, filters, table, charts (reference image 03). */
 export function FailedBoard({
   report,
-  selectedId,
+  selected,
   onSelect,
 }: {
   report: FailedRunsReport | undefined;
-  selectedId: string | null;
+  selected: FailedRunCase | null;
   onSelect: (c: FailedRunCase) => void;
 }) {
   const tq = useTranslations("quality");
@@ -386,6 +418,7 @@ export function FailedBoard({
   const rows = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
 
   const rowKey = (c: FailedRunCase) => `${c.run_id}:${c.id}`;
+  const selectedKey = selected ? rowKey(selected) : null;
   const toggle = (c: FailedRunCase) => {
     const k = rowKey(c);
     setPicked((prev) => {
@@ -524,13 +557,13 @@ export function FailedBoard({
               <tbody>
                 {rows.map((c) => {
                   const k = rowKey(c);
-                  const selected = c.id === selectedId;
+                  const isSelected = k === selectedKey;
                   return (
                     <tr
                       key={k}
                       onClick={() => onSelect(c)}
                       className={`cursor-pointer border-b border-[var(--border)]/50 transition-colors hover:bg-[var(--accent)]/40 ${
-                        selected ? "bg-[var(--accent)]/60" : ""
+                        isSelected ? "bg-[var(--accent)]/60" : ""
                       }`}
                     >
                       <td className="py-1.5">
@@ -635,7 +668,7 @@ export function FailedBoard({
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-1">
-            <TrendBars points={report?.trend ?? []} />
+            <TrendArea points={report?.trend ?? []} />
           </CardContent>
         </Card>
         <Card>
