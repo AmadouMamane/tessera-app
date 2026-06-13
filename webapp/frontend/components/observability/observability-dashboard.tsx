@@ -56,9 +56,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { ModelComparisonTable, RunsTable } from "@/components/observability/eval-runs";
-import { EvolutionChart, MetricKpi } from "@/components/observability/evolution-chart";
+import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedCasesTable, FailureDistribution } from "@/components/observability/failed-cases";
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
+import { EtatActuel, OverviewKpis, TopProblems } from "@/components/observability/overview-exec";
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
 import {
@@ -620,17 +621,6 @@ export function ObservabilityDashboard() {
 
   // --- Real derived headline metrics (no fabrication — null ⇒ "—") -----------
   const sloPct = slo.data && slo.data.n > 0 ? Math.round(slo.data.good_rate * 100) : null;
-  const refusalOver = refusal.data ? Math.round(refusal.data.over_refusal_rate * 100) : null;
-  const confPct =
-    conformance.data && conformance.data.n_fields_checked > 0
-      ? Math.round(conformance.data.conformance_rate * 100)
-      : null;
-  const judgePct = calibration.data?.available
-    ? Math.round((calibration.data.agreement ?? 0) * 100)
-    : null;
-  const failedCount = failureClusters.data?.available
-    ? (failureClusters.data.n_failures ?? 0)
-    : null;
   const topFailing = failureClusters.data?.available
     ? [...(failureClusters.data.clusters ?? [])].sort((a, b) => b.size - a.size).slice(0, 4)
     : [];
@@ -688,32 +678,34 @@ export function ObservabilityDashboard() {
         <div className="flex min-w-0 flex-col gap-4">
           {tab === "overview" && (
             <>
-              <KpiStrip
-                score={sloPct}
-                refusal={refusalOver}
-                conformance={confPct}
-                judge={judgePct}
-                failed={failedCount}
+              <OverviewKpis
+                sloPct={sloPct}
+                faithfulness={scoreSeries.data}
+                grounding={groundingSeries.data}
+                hallucination={hallucinationSeries.data}
+                nonRegression={releaseStatus.data?.non_regression_rate ?? null}
+                nRegressions={releaseStatus.data?.n_regressions ?? null}
+                kappa={calibration.data?.kappa ?? null}
+                casEvalues={scoreSeries.data?.n ?? null}
+                loading={scoreSeries.isLoading}
               />
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <MetricKpi
-                  label={tq("metrics.faithfulness")}
-                  series={scoreSeries.data}
-                  loading={scoreSeries.isLoading}
-                />
-                <MetricKpi
-                  label={tq("metrics.grounding")}
-                  series={groundingSeries.data}
-                  loading={groundingSeries.isLoading}
-                />
-                <MetricKpi
-                  label={tq("metrics.hallucination")}
-                  series={hallucinationSeries.data}
-                  loading={hallucinationSeries.isLoading}
-                />
-              </div>
               <TabGrid>
                 <QualityGauge summary={signalSummary} />
+                <EtatActuel
+                  summary={signalSummary}
+                  release={releaseStatus.data}
+                  evolutionDelta={scoreSeries.data?.delta ?? null}
+                />
+                <FullWidth>
+                  <TopProblems rows={signalRows} />
+                </FullWidth>
+                <FullWidth>
+                  <FailedCasesTable
+                    report={failedCases.data}
+                    loading={failedCases.isLoading}
+                    limit={5}
+                  />
+                </FullWidth>
                 <SLOCard data={slo.data} loading={slo.isLoading} />
                 <TrendCard data={trend.data} loading={trend.isLoading} />
                 <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
@@ -952,62 +944,6 @@ const KPI_MUTED = "text-[var(--muted-foreground)]";
 function highTone(v: number | null): string {
   if (v == null) return KPI_MUTED;
   return v >= 80 ? KPI_GOOD : v >= 60 ? KPI_WARN : KPI_BAD;
-}
-
-function KpiTile({ label, value, tone }: { label: string; value: string; tone?: string }) {
-  return (
-    <Card className="p-3">
-      <div className="truncate text-xs text-[var(--muted-foreground)]">{label}</div>
-      <div
-        className={`mt-1 text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}
-      >
-        {value}
-      </div>
-    </Card>
-  );
-}
-
-function KpiStrip({
-  score,
-  refusal,
-  conformance,
-  judge,
-  failed,
-}: {
-  score: number | null;
-  refusal: number | null;
-  conformance: number | null;
-  judge: number | null;
-  failed: number | null;
-}) {
-  const tq = useTranslations("quality");
-  const pct = (v: number | null) => (v == null ? "—" : `${v}%`);
-  const refusalTone =
-    refusal == null ? KPI_MUTED : refusal <= 5 ? KPI_GOOD : refusal <= 15 ? KPI_WARN : KPI_BAD;
-  const confTone =
-    conformance == null
-      ? KPI_MUTED
-      : conformance === 100
-        ? KPI_GOOD
-        : conformance >= 90
-          ? KPI_WARN
-          : KPI_BAD;
-  const failTone =
-    failed == null ? KPI_MUTED : failed === 0 ? KPI_GOOD : failed <= 5 ? KPI_WARN : KPI_BAD;
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-      <KpiTile label={tq("kpi.score")} value={pct(score)} tone={highTone(score)} />
-      <KpiTile label={tq("tabs.signals")} value={`${QUALITY_SIGNALS}/${QUALITY_CATALOGUE}`} />
-      <KpiTile label={tq("kpi.refusal")} value={pct(refusal)} tone={refusalTone} />
-      <KpiTile label={tq("kpi.conformance")} value={pct(conformance)} tone={confTone} />
-      <KpiTile label={tq("kpi.judge")} value={pct(judge)} tone={highTone(judge)} />
-      <KpiTile
-        label={tq("kpi.failed")}
-        value={failed == null ? "—" : String(failed)}
-        tone={failTone}
-      />
-    </div>
-  );
 }
 
 /** Persistent right rail: score summary, top failing categories, sensitive actions, evidence. */

@@ -1251,6 +1251,30 @@
       "openRegressions": "{n} regression(s)",
       "nonRegression": "Non-regression",
       "regressions": "Critical regressions"
+    },
+    "exec": {
+      "kpi": {
+        "scoreGlobal": "Global quality score",
+        "nonRegression": "Non-regression rate",
+        "regressionsOpen": "Open regressions",
+        "judgeKappa": "Judge agreement κ",
+        "casEval": "Cases evaluated (7d)"
+      },
+      "etat": {
+        "title": "Current state",
+        "failing": "Failing signals",
+        "alert": "At-risk signals",
+        "impact": "Release impact",
+        "evolution": "Evolution",
+        "low": "Low",
+        "medium": "Moderate",
+        "high": "High",
+        "rising": "Rising",
+        "falling": "Falling",
+        "flat": "Flat"
+      },
+      "topProblems": "Quality signals — top problems",
+      "noProblems": "No open problem."
     }
   }
 }

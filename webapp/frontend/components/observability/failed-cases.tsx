@@ -53,9 +53,12 @@ function useCatLabel() {
 export function FailedCasesTable({
   report,
   loading,
+  limit,
 }: {
   report: FailedCasesReport | undefined;
   loading: boolean;
+  /** Preview mode: cap the rows and hide the filter chips. */
+  limit?: number;
 }) {
   const tq = useTranslations("quality");
   const catLabel = useCatLabel();
@@ -64,20 +67,18 @@ export function FailedCasesTable({
 
   const cases = report?.cases ?? [];
   const categories = useMemo(() => Object.keys(report?.by_category ?? {}), [report]);
+  const preview = limit != null;
 
-  const shown = useMemo(
-    () =>
-      cases
-        .filter(
-          (c) => (sev === "all" || c.severity === sev) && (cat === "all" || c.category === cat),
-        )
-        .sort(
-          (a, b) =>
-            (SEV_RANK[a.severity] ?? 9) - (SEV_RANK[b.severity] ?? 9) ||
-            a.case_id.localeCompare(b.case_id),
-        ),
-    [cases, sev, cat],
-  );
+  const shown = useMemo(() => {
+    const sorted = cases
+      .filter((c) => (sev === "all" || c.severity === sev) && (cat === "all" || c.category === cat))
+      .sort(
+        (a, b) =>
+          (SEV_RANK[a.severity] ?? 9) - (SEV_RANK[b.severity] ?? 9) ||
+          a.case_id.localeCompare(b.case_id),
+      );
+    return limit != null ? sorted.slice(0, limit) : sorted;
+  }, [cases, sev, cat, limit]);
 
   if (loading && !report) {
     return (
@@ -101,26 +102,30 @@ export function FailedCasesTable({
             {tq("failed.count", { shown: shown.length, total: report?.n ?? 0 })}
           </span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Chip active={sev === "all"} onClick={() => setSev("all")}>
-            {tq("failed.all")}
-          </Chip>
-          {SEVERITIES.map((s) => (
-            <Chip key={s} active={sev === s} onClick={() => setSev(s)} tone={SEV_TONE[s]}>
-              {tq(`failed.sev.${s}`)} · {report?.by_severity?.[s] ?? 0}
-            </Chip>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Chip active={cat === "all"} onClick={() => setCat("all")}>
-            {tq("failed.all")}
-          </Chip>
-          {categories.map((c) => (
-            <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
-              {catLabel(c)} · {report?.by_category?.[c] ?? 0}
-            </Chip>
-          ))}
-        </div>
+        {preview ? null : (
+          <>
+            <div className="flex flex-wrap gap-1.5">
+              <Chip active={sev === "all"} onClick={() => setSev("all")}>
+                {tq("failed.all")}
+              </Chip>
+              {SEVERITIES.map((s) => (
+                <Chip key={s} active={sev === s} onClick={() => setSev(s)} tone={SEV_TONE[s]}>
+                  {tq(`failed.sev.${s}`)} · {report?.by_severity?.[s] ?? 0}
+                </Chip>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <Chip active={cat === "all"} onClick={() => setCat("all")}>
+                {tq("failed.all")}
+              </Chip>
+              {categories.map((c) => (
+                <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
+                  {catLabel(c)} · {report?.by_category?.[c] ?? 0}
+                </Chip>
+              ))}
+            </div>
+          </>
+        )}
       </CardHeader>
       <CardContent>
         {shown.length === 0 ? (

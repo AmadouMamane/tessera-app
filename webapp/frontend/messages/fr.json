@@ -1251,6 +1251,30 @@
       "openRegressions": "{n} régression(s)",
       "nonRegression": "Non-régression",
       "regressions": "Régressions critiques"
+    },
+    "exec": {
+      "kpi": {
+        "scoreGlobal": "Score qualité global",
+        "nonRegression": "Taux non-régression",
+        "regressionsOpen": "Régressions ouvertes",
+        "judgeKappa": "Accord juge κ",
+        "casEval": "Cas évalués (7j)"
+      },
+      "etat": {
+        "title": "État actuel",
+        "failing": "Signaux en échec",
+        "alert": "Signaux en alerte",
+        "impact": "Impact release",
+        "evolution": "Évolution",
+        "low": "Faible",
+        "medium": "Modéré",
+        "high": "Élevé",
+        "rising": "En hausse",
+        "falling": "En baisse",
+        "flat": "Stable"
+      },
+      "topProblems": "Signaux qualité — top problèmes",
+      "noProblems": "Aucun problème ouvert."
     }
   }
 }
