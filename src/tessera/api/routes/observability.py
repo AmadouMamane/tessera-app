@@ -384,6 +384,34 @@ async def observability_trend(at: str | None = None) -> dict[str, object]:
     return {**asdict(trends_mod.analyze_trend(points)), "as_of": at}
 
 
+@router.get("/observability/score-series")
+async def observability_score_series(
+    at: str | None = None,
+    metric: str = "faithfulness",
+    days: int = 7,
+    buckets: int = 7,
+) -> dict[str, object]:
+    """Calendar-time score series + period-over-period delta for the evolution chart.
+
+    Buckets the durable score log into equal time slices over the last ``days``,
+    ending now or — with ``?at=`` — at instant T (as-of-T read, ADR 0011). Empty
+    buckets carry ``mean=null`` so the chart shows a gap, never a fabricated zero.
+    """
+    import contextlib
+    from datetime import UTC, datetime
+
+    from tessera.observability.eval.series import compute_score_series
+
+    end = datetime.now(UTC)
+    if at:
+        with contextlib.suppress(ValueError):
+            end = datetime.fromisoformat(at)
+    series = compute_score_series(
+        persisted_scores(at), metric=metric, end=end, days=days, n_buckets=buckets
+    )
+    return {**asdict(series), "as_of": at}
+
+
 @router.get("/observability/obs-cost")
 async def observability_obs_cost() -> dict[str, object]:
     """Measured instrumentation overhead vs the turn budget (#84), cached."""
