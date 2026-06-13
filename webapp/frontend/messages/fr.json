@@ -1619,14 +1619,45 @@
         "rate": "Taux",
         "cost": "Coût/run",
         "latency": "Latence",
-        "verdict": "Verdict"
+        "verdict": "Verdict",
+        "score": "Score",
+        "faith": "Faithfulness",
+        "grounding": "Grounding",
+        "nonReg": "Non-régression",
+        "hallu": "Hallu. critiques",
+        "kappa": "Accord juge (κ)",
+        "evolution": "Évolution"
       },
       "verdict": {
         "best": "Meilleur",
         "balanced": "Équilibré",
         "economic": "Économique",
         "avoid": "À éviter"
-      }
+      },
+      "kpi": {
+        "referent": "Modèle référent",
+        "referentBadge": "Référent",
+        "score": "Score qualité global",
+        "faithfulness": "Faithfulness",
+        "grounding": "Grounding / ancrage",
+        "hallucination": "Hallucinations critiques",
+        "kappa": "Accord juge (κ)",
+        "kappaGlobal": "global (calibration)",
+        "cases": "Cas évalués",
+        "active": "{n} modèles actifs",
+        "vsPrev": "{d} vs préc."
+      },
+      "table": {
+        "title": "Comparaison détaillée des modèles",
+        "judge": "juge : {m}"
+      },
+      "charts": {
+        "scoreByModel": "Score qualité par modèle",
+        "faithGrounding": "Faithfulness vs Grounding",
+        "costQuality": "Coût vs qualité",
+        "nonReg": "Non-régression par modèle"
+      },
+      "noData": "Aucune donnée"
     },
     "metrics": {
       "faithfulness": "Faithfulness",

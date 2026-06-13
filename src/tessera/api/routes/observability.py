@@ -958,13 +958,46 @@ async def observability_model_comparison() -> dict[str, object]:
     """Per-model comparison from the latest run of each model (image 04).
 
     Aggregates the real report archive: pass rate, cost, latency and a documented
-    verdict per model (best / balanced / economic / avoid). Includes the frontier
-    model when a run exists.
+    verdict per model. Each row is enriched with real per-model signals: the
+    judge metrics (faithfulness / grounding / hallucination) replayed offline over
+    the model's stored answers (``eval/reports/_model_judge.json``; ``null`` until
+    the backfill runs), a pass-rate ``evolution`` sparkline, and a run-over-run
+    ``non_regression`` retention ratio. Nothing is fabricated.
     """
+    from tessera.observability.eval.model_judge import load_model_judge
     from tessera.observability.eval.runs import compare_models, load_runs
 
     registry = load_runs()
-    return {"models": [asdict(s) for s in compare_models(registry.runs)], "n_runs": registry.n}
+    judge = load_model_judge()
+
+    min_run_cases = 10  # ignore tiny smoke runs in the per-model sparkline
+
+    def _evolution_and_nonreg(model: str) -> tuple[list[float], float | None]:
+        runs = sorted(
+            (r for r in registry.runs if r.model == model and r.total >= min_run_cases),
+            key=lambda r: r.run_at,
+        )
+        evolution = [round(r.pass_rate, 4) for r in runs][-8:]
+        non_reg: float | None = None
+        if len(runs) >= 2:  # noqa: PLR2004 — needs a pair to compare
+            prev, last = runs[-2].pass_rate, runs[-1].pass_rate
+            non_reg = round(min(1.0, last / prev), 4) if prev > 0 else None
+        return evolution, non_reg
+
+    models: list[dict[str, object]] = []
+    for stat in compare_models(registry.runs):
+        row = asdict(stat)
+        mj = judge.models.get(stat.model)
+        evolution, non_reg = _evolution_and_nonreg(stat.model)
+        row.update(
+            faithfulness=mj.faithfulness if mj else None,
+            grounding=mj.grounding if mj else None,
+            hallucination=mj.hallucination if mj else None,
+            evolution=evolution,
+            non_regression=non_reg,
+        )
+        models.append(row)
+    return {"models": models, "n_runs": registry.n, "judge_model": judge.judge_model}
 
 
 @router.get("/observability/release-status")

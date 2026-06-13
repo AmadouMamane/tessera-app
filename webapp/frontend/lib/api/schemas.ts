@@ -849,12 +849,20 @@ export const ModelStatSchema = z.object({
   mean_latency_ms: z.number().nullable(),
   last_run_at: z.string(),
   verdict: z.string(),
+  // Enrichments (image 04): judge metrics replayed per model (null until the
+  // backfill runs), a pass-rate sparkline, and run-over-run non-regression.
+  faithfulness: z.number().nullable().optional(),
+  grounding: z.number().nullable().optional(),
+  hallucination: z.number().nullable().optional(),
+  evolution: z.array(z.number()).optional(),
+  non_regression: z.number().nullable().optional(),
 });
 export type ModelStat = z.infer<typeof ModelStatSchema>;
 
 export const ModelComparisonSchema = z.object({
   models: z.array(ModelStatSchema),
   n_runs: z.number().int(),
+  judge_model: z.string().nullable().optional(),
 });
 export type ModelComparison = z.infer<typeof ModelComparisonSchema>;
 

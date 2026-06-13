@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   Boxes,
@@ -10,7 +10,6 @@ import {
   Gauge,
   GitCompareArrows,
   Landmark,
-  Layers,
   ListChecks,
   Play,
   Radio,
@@ -22,11 +21,11 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
-import { ModelComparisonTable } from "@/components/observability/eval-runs";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedBoard, FailedRail } from "@/components/observability/failed-board";
 import { FailureDistribution } from "@/components/observability/failed-cases";
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
+import { ModelsBoard } from "@/components/observability/models-board";
 import {
   CostQualityScatter,
   EtatActuel,
@@ -66,7 +65,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchAIAct,
   fetchAnomalies,
@@ -102,21 +100,15 @@ import {
   fetchToolValidity,
   fetchToxicity,
   fetchWhatChanged,
-  runShadow,
 } from "@/lib/api/client";
 import type {
-  Calibration,
   FailedCasesReport,
   FailedRunCase,
   ReleaseStatus,
   RunRegistry,
   RunSummary,
-  ShadowReport,
   WhatChanged,
 } from "@/lib/api/schemas";
-
-// Locally-available Ollama models to shadow against (smallest first).
-const SHADOW_MODELS = ["llama3.2:3b", "mistral:7b", "gemma3:27b", "llama3.3:70b"] as const;
 
 const POLL_MS = 5_000;
 
@@ -633,18 +625,11 @@ export function ObservabilityDashboard() {
           )}
 
           {tab === "models" && (
-            <TabGrid>
-              <FullWidth>
-                <ModelComparisonTable
-                  data={modelComparison.data}
-                  loading={modelComparison.isLoading}
-                />
-              </FullWidth>
-              <FullWidth>
-                <ShadowCard />
-              </FullWidth>
-              <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
-            </TabGrid>
+            <ModelsBoard
+              comparison={modelComparison.data}
+              calibration={calibration.data}
+              release={releaseStatus.data}
+            />
           )}
 
           {tab === "judge" && (
@@ -782,11 +767,6 @@ function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) 
       })}
     </nav>
   );
-}
-
-/** Responsive two-column signal grid. FullWidth spans both columns. */
-function TabGrid({ children }: { children: ReactNode }) {
-  return <div className="grid items-start gap-4 lg:grid-cols-2">{children}</div>;
 }
 
 /** Right rail (image normative): Derniers problèmes · Release actuelle · Actions
@@ -976,220 +956,5 @@ function RailLink({ onClick, children }: { onClick: () => void; children: ReactN
       {children}
       <ChevronRight className="h-3 w-3" />
     </button>
-  );
-}
-
-/** Recent eval scores table — reused on Overview and Runs & datasets. */
-/** Span both columns of a section grid (for wide tables / panels). */
-function FullWidth({ children }: { children: ReactNode }) {
-  return <div className="lg:col-span-2">{children}</div>;
-}
-
-function ShadowCard() {
-  const t = useTranslations("observability");
-  const [model, setModel] = useState<string>(SHADOW_MODELS[1]);
-  const mutation = useMutation({
-    mutationFn: () => runShadow(model),
-  });
-  const data: ShadowReport | undefined = mutation.data;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <span className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-blue-500" />
-            {t("shadow.title")}
-          </span>
-          <div className="flex items-center gap-2">
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs"
-            >
-              {SHADOW_MODELS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={mutation.isPending}
-              onClick={() => mutation.mutate()}
-            >
-              {mutation.isPending ? t("shadow.running") : t("shadow.run")}
-            </Button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {!data ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("shadow.empty")}</p>
-        ) : data.n_compared === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("shadow.noTraffic")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">{t("shadow.delta")}</span>
-                <Badge tone={data.mean_delta >= 0 ? "success" : "danger"}>
-                  {data.mean_delta >= 0 ? "+" : ""}
-                  {data.mean_delta.toFixed(2)}
-                </Badge>
-              </div>
-              <Metric label={t("shadow.wins")} value={String(data.wins)} />
-              <Metric label={t("shadow.losses")} value={String(data.losses)} />
-              <Metric label={t("shadow.ties")} value={String(data.ties)} />
-              <Metric
-                label={t("shadow.scores")}
-                value={`${data.mean_original_score.toFixed(2)} → ${data.mean_candidate_score.toFixed(2)}`}
-              />
-              <Metric
-                label={t("shadow.similarity")}
-                value={`${Math.round(data.mean_similarity * 100)}%`}
-              />
-            </div>
-            <ul className="flex flex-col gap-1 text-xs">
-              {data.comparisons.map((c, i) => (
-                <li key={`${i}-${c.question.slice(0, 12)}`} className="flex items-center gap-2">
-                  <Badge
-                    tone={
-                      c.outcome === "win" ? "success" : c.outcome === "loss" ? "danger" : "neutral"
-                    }
-                  >
-                    {c.outcome === "win" ? "+" : c.outcome === "loss" ? "" : "±"}
-                    {c.score_delta.toFixed(2)}
-                  </Badge>
-                  <span className="uppercase text-[var(--muted-foreground)]">{c.language}</span>
-                  <span className="min-w-0 truncate">{c.question}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Open speedometer gauge (the normative "arc"): a ~240° sweep, wider than a
-// semicircle, with the endpoints angled downward. Tuned to the 100×72 viewBox.
-const _GAUGE_SWEEP = 240; // degrees
-const _GAUGE_CX = 50;
-const _GAUGE_CY = 44;
-const _GAUGE_R = 38;
-
-/** Point on the gauge arc at fraction ``t`` (0 = left end, 1 = right end). */
-function gaugePoint(t: number): [number, number] {
-  const half = _GAUGE_SWEEP / 2;
-  const deg = 90 + half - t * _GAUGE_SWEEP; // left (210°) → top (90°) → right (-30°)
-  const a = (deg * Math.PI) / 180;
-  return [_GAUGE_CX + _GAUGE_R * Math.cos(a), _GAUGE_CY - _GAUGE_R * Math.sin(a)];
-}
-
-/** Open agreement gauge: a >180° arc whose green fill reaches κ over a grey
- * track, value centred — the normative "Calibration du juge" arc. */
-function OpenGauge({ value, color }: { value: number; color: string }) {
-  const f = Math.max(0, Math.min(1, value));
-  const [lx, ly] = gaugePoint(0);
-  const [rx, ry] = gaugePoint(1);
-  const [ex, ey] = gaugePoint(f);
-  const large = _GAUGE_SWEEP > 180 ? 1 : 0; // track is the major arc
-  const fillLarge = f * _GAUGE_SWEEP > 180 ? 1 : 0;
-  const track = `M ${lx.toFixed(2)} ${ly.toFixed(2)} A ${_GAUGE_R} ${_GAUGE_R} 0 ${large} 1 ${rx.toFixed(2)} ${ry.toFixed(2)}`;
-  const fill = `M ${lx.toFixed(2)} ${ly.toFixed(2)} A ${_GAUGE_R} ${_GAUGE_R} 0 ${fillLarge} 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
-  return (
-    <div className="relative h-[92px] w-[160px]">
-      <svg viewBox="0 0 100 72" className="h-full w-full" aria-hidden="true">
-        <path
-          d={track}
-          fill="none"
-          stroke="var(--tessera-border)"
-          strokeWidth="8"
-          strokeLinecap="round"
-        />
-        {f > 0 ? (
-          <path d={fill} fill="none" stroke={color} strokeWidth="8" strokeLinecap="round" />
-        ) : null}
-      </svg>
-      <div className="absolute inset-x-0 top-[42%] flex flex-col items-center">
-        <span
-          className="font-serif text-2xl font-semibold leading-none tabular-nums"
-          style={{ color }}
-        >
-          {value.toFixed(2)}
-        </span>
-        <span className="mt-0.5 text-[0.6rem] text-[var(--muted-foreground)]">κ</span>
-      </div>
-    </div>
-  );
-}
-
-function CalibrationCard({ data, loading }: { data: Calibration | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  const kappa = data?.kappa ?? 0;
-  const good = kappa >= 0.6;
-  const color = kappa >= 0.8 ? "#10b981" : kappa >= 0.6 ? "#f59e0b" : "#ef4444";
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Scale className="h-4 w-4 text-blue-500" />
-          {t("calibration.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-12 w-full" />
-        ) : !data?.available ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("calibration.unavailable")}</p>
-        ) : (
-          <div className="flex flex-col items-center gap-1">
-            <OpenGauge value={kappa} color={color} />
-            <div className="-mt-2 flex w-[160px] items-center justify-between text-[0.7rem] text-[var(--muted-foreground)]">
-              <span>0</span>
-              <span className="truncate px-1 text-center">{t("calibration.interJudge")}</span>
-              <span>1</span>
-            </div>
-            <Badge tone={good ? "success" : "warning"} className="mt-1">
-              {good ? t("calibration.verdictGood") : t("calibration.verdictBad")}
-            </Badge>
-            <div className="mt-2 grid w-full grid-cols-2 gap-x-4 gap-y-1.5 border-t border-[var(--tessera-border)] pt-2 text-xs">
-              <Metric
-                label={t("calibration.agreement")}
-                value={`${Math.round((data.agreement ?? 0) * 100)}%`}
-              />
-              <Metric
-                label={t("calibration.verbosity")}
-                value={(data.verbosity_corr ?? 0).toFixed(2)}
-              />
-              <Metric label={t("calibration.samples")} value={String(data.n ?? 0)} />
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {t("calibration.lenient")}
-                </span>
-                <Badge tone={data.lenient ? "warning" : "success"}>
-                  {data.lenient ? t("calibration.lenientYes") : t("calibration.lenientNo")}
-                </Badge>
-              </div>
-              <div className="col-span-2 flex items-center justify-between gap-2">
-                <span className="text-[var(--muted-foreground)]">{t("calibration.judge")}</span>
-                <span className="truncate font-mono text-[0.7rem]">{data.judge_model ?? "—"}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-xs text-[var(--muted-foreground)]">{label}</span>
-      <span className="font-semibold tabular-nums">{value}</span>
-    </div>
   );
 }

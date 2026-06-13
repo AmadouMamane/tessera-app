@@ -1619,14 +1619,45 @@
         "rate": "Pass rate",
         "cost": "Cost/run",
         "latency": "Latency",
-        "verdict": "Verdict"
+        "verdict": "Verdict",
+        "score": "Score",
+        "faith": "Faithfulness",
+        "grounding": "Grounding",
+        "nonReg": "Non-regression",
+        "hallu": "Critical hallu.",
+        "kappa": "Judge agreement (κ)",
+        "evolution": "Trend"
       },
       "verdict": {
         "best": "Best",
         "balanced": "Balanced",
         "economic": "Economic",
         "avoid": "Avoid"
-      }
+      },
+      "kpi": {
+        "referent": "Reference model",
+        "referentBadge": "Reference",
+        "score": "Global quality score",
+        "faithfulness": "Faithfulness",
+        "grounding": "Grounding",
+        "hallucination": "Critical hallucinations",
+        "kappa": "Judge agreement (κ)",
+        "kappaGlobal": "global (calibration)",
+        "cases": "Cases evaluated",
+        "active": "{n} active models",
+        "vsPrev": "{d} vs prev."
+      },
+      "table": {
+        "title": "Detailed model comparison",
+        "judge": "judge: {m}"
+      },
+      "charts": {
+        "scoreByModel": "Quality score by model",
+        "faithGrounding": "Faithfulness vs Grounding",
+        "costQuality": "Cost vs quality",
+        "nonReg": "Non-regression by model"
+      },
+      "noData": "No data"
     },
     "metrics": {
       "faithfulness": "Faithfulness",
