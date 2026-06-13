@@ -87,6 +87,8 @@ import {
   LocalizationReportSchema,
   type MemoryObsReport,
   MemoryObsReportSchema,
+  type ModelComparison,
+  ModelComparisonSchema,
   type ObsCostReport,
   ObsCostReportSchema,
   type OverflowReport,
@@ -123,6 +125,8 @@ import {
   RobustnessReportSchema,
   type RoutingReport,
   RoutingReportSchema,
+  type RunRegistry,
+  RunRegistrySchema,
   type SFTDataset,
   SFTDatasetSchema,
   type SLOReport,
@@ -428,6 +432,16 @@ export async function fetchTrend(signal?: AbortSignal, at?: string): Promise<Tre
 /** Calendar-time faithfulness series for the Vue d'ensemble evolution chart. */
 export async function fetchScoreSeries(signal?: AbortSignal, at?: string): Promise<ScoreSeries> {
   return request(withAsOf("/observability/score-series", at), { signal }, ScoreSeriesSchema);
+}
+
+/** Eval run registry from the report archive (Runs & datasets tab, image 02). */
+export async function fetchRuns(signal?: AbortSignal): Promise<RunRegistry> {
+  return request("/observability/runs", { signal }, RunRegistrySchema);
+}
+
+/** Per-model comparison from the report archive (Comparaisons modèles tab, image 04). */
+export async function fetchModelComparison(signal?: AbortSignal): Promise<ModelComparison> {
+  return request("/observability/model-comparison", { signal }, ModelComparisonSchema);
 }
 
 /** Documented failed-case catalogue + distributions (Cas échoués tab, image 03). */

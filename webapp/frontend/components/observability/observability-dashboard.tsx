@@ -55,6 +55,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { ModelComparisonTable, RunsTable } from "@/components/observability/eval-runs";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedCasesTable, FailureDistribution } from "@/components/observability/failed-cases";
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
@@ -108,6 +109,7 @@ import {
   fetchLocalization,
   fetchMemoryInventory,
   fetchMemoryObs,
+  fetchModelComparison,
   fetchObsCost,
   fetchPiiLeak,
   fetchPlaybooks,
@@ -116,6 +118,7 @@ import {
   fetchReproducibility,
   fetchRoadmap,
   fetchRouting,
+  fetchRuns,
   fetchSLO,
   fetchScoreSeries,
   fetchSessions,
@@ -264,6 +267,19 @@ export function ObservabilityDashboard() {
     queryKey: ["failed-cases", locale],
     queryFn: ({ signal }) => fetchFailedCases(signal, locale),
     staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  // Eval run archive — refreshes slowly; the report files change rarely.
+  const runs = useQuery({
+    queryKey: ["runs"],
+    queryFn: ({ signal }) => fetchRuns(signal),
+    refetchInterval: 60_000,
+  });
+
+  const modelComparison = useQuery({
+    queryKey: ["model-comparison"],
+    queryFn: ({ signal }) => fetchModelComparison(signal),
+    refetchInterval: 60_000,
   });
 
   const reproducibility = useQuery({
@@ -677,6 +693,15 @@ export function ObservabilityDashboard() {
                 <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
                 <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
                 <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
+                <FullWidth>
+                  <ModelComparisonTable
+                    data={modelComparison.data}
+                    loading={modelComparison.isLoading}
+                  />
+                </FullWidth>
+                <FullWidth>
+                  <RunsTable registry={runs.data} loading={runs.isLoading} limit={5} />
+                </FullWidth>
               </TabGrid>
             </>
           )}
@@ -770,6 +795,9 @@ export function ObservabilityDashboard() {
           {tab === "runs" && (
             <TabGrid>
               <FullWidth>
+                <RunsTable registry={runs.data} loading={runs.isLoading} />
+              </FullWidth>
+              <FullWidth>
                 <ScoresTable rows={rows} loading={scores.isLoading} />
               </FullWidth>
               <SftDatasetCard data={sftDataset.data} loading={sftDataset.isLoading} />
@@ -808,16 +836,15 @@ export function ObservabilityDashboard() {
           {tab === "models" && (
             <TabGrid>
               <FullWidth>
+                <ModelComparisonTable
+                  data={modelComparison.data}
+                  loading={modelComparison.isLoading}
+                />
+              </FullWidth>
+              <FullWidth>
                 <ShadowCard />
               </FullWidth>
               <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
-              <FullWidth>
-                <HeroPlaceholder
-                  icon={GitCompareArrows}
-                  title={tq("tabs.models")}
-                  note={tq("empty.noBackend")}
-                />
-              </FullWidth>
             </TabGrid>
           )}
 
@@ -936,23 +963,6 @@ function KpiStrip({
         tone={failTone}
       />
     </div>
-  );
-}
-
-/** Honest placeholder for a tab hero whose backend is not wired yet (no mock). */
-function HeroPlaceholder({
-  icon: Icon,
-  title,
-  note,
-}: { icon: typeof Gauge; title: string; note: string }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-        <Icon className="h-6 w-6 text-[var(--muted-foreground)]" />
-        <p className="font-serif text-sm font-semibold text-[var(--foreground)]">{title}</p>
-        <p className="max-w-sm text-xs text-[var(--muted-foreground)]">{note}</p>
-      </CardContent>
-    </Card>
   );
 }
 

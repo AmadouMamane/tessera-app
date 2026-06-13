@@ -1199,6 +1199,44 @@
       "humanGood": "Human: good",
       "humanBad": "Human: bad",
       "cols": { "case": "Case", "human": "Human", "judge": "Judge", "score": "Score" }
+    },
+    "runs": {
+      "title": "Runs & datasets",
+      "catalogue": "Non-regression catalogue",
+      "cases": "{n} cases",
+      "version": "v{v}",
+      "count": "{n} runs",
+      "empty": "No run.",
+      "free": "free",
+      "modelsLabel": "models",
+      "cols": {
+        "model": "Model",
+        "lang": "Language",
+        "cases": "Cases",
+        "rate": "Pass rate",
+        "cost": "Cost",
+        "latency": "Latency",
+        "date": "Date"
+      }
+    },
+    "models": {
+      "title": "Model comparison",
+      "count": "{n} models",
+      "empty": "No comparison.",
+      "cols": {
+        "model": "Model",
+        "cases": "Cases",
+        "rate": "Pass rate",
+        "cost": "Cost/run",
+        "latency": "Latency",
+        "verdict": "Verdict"
+      },
+      "verdict": {
+        "best": "Best",
+        "balanced": "Balanced",
+        "economic": "Economic",
+        "avoid": "Avoid"
+      }
     }
   }
 }

@@ -1199,6 +1199,44 @@
       "humanGood": "Humain : bon",
       "humanBad": "Humain : mauvais",
       "cols": { "case": "Cas", "human": "Humain", "judge": "Juge", "score": "Score" }
+    },
+    "runs": {
+      "title": "Runs & datasets",
+      "catalogue": "Catalogue non-régression",
+      "cases": "{n} cas",
+      "version": "v{v}",
+      "count": "{n} runs",
+      "empty": "Aucun run.",
+      "free": "gratuit",
+      "modelsLabel": "modèles",
+      "cols": {
+        "model": "Modèle",
+        "lang": "Langue",
+        "cases": "Cas",
+        "rate": "Taux",
+        "cost": "Coût",
+        "latency": "Latence",
+        "date": "Date"
+      }
+    },
+    "models": {
+      "title": "Comparaisons modèles",
+      "count": "{n} modèles",
+      "empty": "Aucune comparaison.",
+      "cols": {
+        "model": "Modèle",
+        "cases": "Cas",
+        "rate": "Taux",
+        "cost": "Coût/run",
+        "latency": "Latence",
+        "verdict": "Verdict"
+      },
+      "verdict": {
+        "best": "Meilleur",
+        "balanced": "Équilibré",
+        "economic": "Économique",
+        "avoid": "À éviter"
+      }
     }
   }
 }

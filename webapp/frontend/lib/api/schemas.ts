@@ -730,6 +730,49 @@ export const FailedCasesReportSchema = z.object({
 });
 export type FailedCasesReport = z.infer<typeof FailedCasesReportSchema>;
 
+export const RunSummarySchema = z.object({
+  run_id: z.string(),
+  run_at: z.string(),
+  model: z.string(),
+  language: z.string(),
+  total: z.number().int(),
+  passed: z.number().int(),
+  failed: z.number().int(),
+  pass_rate: z.number(),
+  est_cost_eur: z.number().nullable(),
+  mean_latency_ms: z.number().nullable(),
+  catalogue_version: z.string().nullable(),
+});
+export type RunSummary = z.infer<typeof RunSummarySchema>;
+
+export const RunRegistrySchema = z.object({
+  n: z.number().int(),
+  runs: z.array(RunSummarySchema),
+  catalogue_cases: z.number().int(),
+  catalogue_version: z.string().nullable(),
+  models: z.array(z.string()),
+  languages: z.array(z.string()),
+});
+export type RunRegistry = z.infer<typeof RunRegistrySchema>;
+
+export const ModelStatSchema = z.object({
+  model: z.string(),
+  n_runs: z.number().int(),
+  total_cases: z.number().int(),
+  pass_rate: z.number(),
+  est_cost_eur: z.number().nullable(),
+  mean_latency_ms: z.number().nullable(),
+  last_run_at: z.string(),
+  verdict: z.string(),
+});
+export type ModelStat = z.infer<typeof ModelStatSchema>;
+
+export const ModelComparisonSchema = z.object({
+  models: z.array(ModelStatSchema),
+  n_runs: z.number().int(),
+});
+export type ModelComparison = z.infer<typeof ModelComparisonSchema>;
+
 export const ShadowComparisonSchema = z.object({
   question: z.string(),
   language: z.string(),
