@@ -7,6 +7,7 @@ eval-as-telemetry live. Aggregate quality scores are a public surface
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from dataclasses import asdict
@@ -158,7 +159,14 @@ class ShadowRequest(BaseModel):
 
 
 # Calibration runs the judge over the gold set (slow), so cache it per process.
+# A backfill (scripts/backfill_calibration.py, llama3.2:3b) writes the report to
+# this file so the API serves it instantly without scoring at request time.
 _calibration_cache: dict[str, object] | None = None
+_CALIBRATION_FILE = (
+    Path(__file__).resolve().parents[4] / "eval" / "calibration" / "_calibration.json"
+)
+# The calibration backfill scores with the small, fast sovereign judge (idea #2).
+_CALIBRATION_JUDGE_MODEL = "llama3.2:3b"
 _consensus_cache: dict[str, object] | None = None
 # A small panel of different local judges for the multi-judge consensus signal.
 # All three are sovereign (served by Ollama on-box); different lineages so their
@@ -548,12 +556,21 @@ async def observability_calibration() -> dict[str, object]:
     """
     global _calibration_cache
     if _calibration_cache is None:
-        try:
-            report = await calibrate(LLMJudge(), load_gold_set())
-            _calibration_cache = {"available": True, **asdict(report)}
-        except Exception as exc:  # never break the dashboard on a judge/IO error
-            sys.stderr.write(f"tessera.observability.calibration: failed: {exc}\n")
-            return {"available": False}
+        # Prefer the precomputed backfill (real llama3.2:3b scores over the gold set).
+        if _CALIBRATION_FILE.exists():
+            try:
+                _calibration_cache = json.loads(_CALIBRATION_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                sys.stderr.write(f"tessera.observability.calibration: cache read failed: {exc}\n")
+        if _calibration_cache is None:
+            try:
+                report = await calibrate(
+                    LLMJudge(model=_CALIBRATION_JUDGE_MODEL), load_gold_set()
+                )
+                _calibration_cache = {"available": True, **asdict(report)}
+            except Exception as exc:  # never break the dashboard on a judge/IO error
+                sys.stderr.write(f"tessera.observability.calibration: failed: {exc}\n")
+                return {"available": False}
     return _calibration_cache
 
 

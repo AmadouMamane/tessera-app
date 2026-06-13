@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from tessera.observability.eval.judge import FAITHFULNESS
+from tessera.observability.eval.judge import FAITHFULNESS, GROUNDING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -37,6 +37,7 @@ __all__ = [
     "CalibrationReport",
     "ConsensusReport",
     "GoldCase",
+    "GroupAgreement",
     "JudgeAgreement",
     "agreement_rate",
     "calibrate",
@@ -44,8 +45,26 @@ __all__ = [
     "fleiss_kappa_binary",
     "gold_consensus",
     "load_gold_set",
+    "metric_for_category",
     "pearson",
 ]
+
+# Display category → judge rubric. PII, citation and style cases have no dedicated
+# rubric, so they are scored on FAITHFULNESS (does the answer hold up against the
+# policy/source context) while keeping their display category for the breakdowns.
+_CATEGORY_METRIC: dict[str, str] = {
+    "faithfulness": FAITHFULNESS,
+    "grounding": GROUNDING,
+    "pii": FAITHFULNESS,
+    "citations": FAITHFULNESS,
+    "style": FAITHFULNESS,
+}
+
+
+def metric_for_category(category: str) -> str:
+    """Return the judge rubric used to score a gold case in ``category``."""
+    return _CATEGORY_METRIC.get(category, FAITHFULNESS)
+
 
 # src/tessera/observability/eval/calibration.py → parents[4] is the repo root.
 _DEFAULT_GOLD = Path(__file__).resolve().parents[4] / "eval" / "calibration" / "judge_gold.json"
@@ -57,12 +76,28 @@ _MIN_RATERS = 2
 
 @dataclass(frozen=True, slots=True)
 class GoldCase:
-    """One human-labelled calibration case."""
+    """One human-labelled calibration case.
+
+    The optional metadata (``language``/``category``/``segment``/``human_override``)
+    powers the per-language, per-rubric and per-segment disagreement breakdowns of
+    the "Calibration juge" tab (reference image 05). They default sensibly so the
+    legacy four-field constructor and any older gold file keep working.
+    """
 
     question: str
     answer: str
     context: str
     human_label: str  # "good" | "bad"
+    case_id: str = ""
+    language: str = "fr"  # "fr" | "en" | "de"
+    category: str = "faithfulness"  # display rubric bucket
+    segment: str = ""  # business segment label
+    human_override: bool = False  # a human overrode the judge on this case
+
+    @property
+    def metric(self) -> str:
+        """The judge rubric this case is scored against."""
+        return metric_for_category(self.category)
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +114,22 @@ class CalibrationPoint:
     judge_score: float
     length: int  # answer length (for the verbosity-bias scatter)
     match: bool  # judge and human agree
+    case_id: str = ""
+    language: str = "fr"
+    category: str = "faithfulness"
+    segment: str = ""
+    human_override: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class GroupAgreement:
+    """Judge↔human agreement within one slice (a language, rubric or segment)."""
+
+    label: str
+    n: int
+    agreement: float
+    kappa: float
+    n_disagree: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +145,38 @@ class CalibrationReport:
     lenient: bool
     judge_model: str
     points: list[CalibrationPoint] = field(default_factory=list)
+    fp: int = 0  # judge "good", human "bad" (false positive)
+    fn: int = 0  # judge "bad", human "good" (false negative)
+    n_disagree: int = 0
+    n_overrides: int = 0
+    by_language: list[GroupAgreement] = field(default_factory=list)
+    by_category: list[GroupAgreement] = field(default_factory=list)
+    by_segment: list[GroupAgreement] = field(default_factory=list)
+    disagreement_by_category: dict[str, int] = field(default_factory=dict)
+
+
+def _group_agreement(points: Sequence[CalibrationPoint], key: str) -> list[GroupAgreement]:
+    """Per-slice agreement/κ over ``points`` grouped by attribute ``key``.
+
+    Sorted by descending disagreement count then descending size, so the most
+    problematic slices surface first (the "Segments en désaccord" panel).
+    """
+    buckets: dict[str, list[CalibrationPoint]] = {}
+    for p in points:
+        buckets.setdefault(str(getattr(p, key)), []).append(p)
+    groups = [
+        GroupAgreement(
+            label=label,
+            n=len(ps),
+            agreement=sum(1 for p in ps if p.match) / len(ps),
+            kappa=cohen_kappa([(p.judge_label, p.human_label) for p in ps]),
+            n_disagree=sum(1 for p in ps if not p.match),
+        )
+        for label, ps in buckets.items()
+        if label
+    ]
+    groups.sort(key=lambda g: (-g.n_disagree, -g.n, g.label))
+    return groups
 
 
 def cohen_kappa(pairs: Sequence[tuple[str, str]]) -> float:
@@ -144,6 +227,11 @@ def load_gold_set(path: Path | None = None) -> list[GoldCase]:
             answer=item["answer"],
             context=item["context"],
             human_label=item["human_label"],
+            case_id=str(item.get("id", "")),
+            language=str(item.get("language", "fr")),
+            category=str(item.get("category", "faithfulness")),
+            segment=str(item.get("segment", "")),
+            human_override=bool(item.get("human_override", False)),
         )
         for item in raw
     ]
@@ -161,7 +249,7 @@ async def calibrate(judge: Judge, gold: Sequence[GoldCase]) -> CalibrationReport
 
     for case in gold:
         verdict = await judge.score(
-            metric=FAITHFULNESS,
+            metric=case.metric,
             question=case.question,
             answer=case.answer,
             context=case.context,
@@ -180,11 +268,20 @@ async def calibrate(judge: Judge, gold: Sequence[GoldCase]) -> CalibrationReport
                 judge_score=verdict.score,
                 length=len(case.answer),
                 match=judge_label == case.human_label,
+                case_id=case.case_id,
+                language=case.language,
+                category=case.category,
+                segment=case.segment,
+                human_override=case.human_override,
             )
         )
 
     mean_good = sum(good_scores) / len(good_scores) if good_scores else 0.0
     mean_bad = sum(bad_scores) / len(bad_scores) if bad_scores else 0.0
+    disagreements = [p for p in points if not p.match]
+    disagree_by_cat: dict[str, int] = {}
+    for p in disagreements:
+        disagree_by_cat[p.category] = disagree_by_cat.get(p.category, 0) + 1
     return CalibrationReport(
         n=len(gold),
         kappa=cohen_kappa(pairs),
@@ -195,6 +292,14 @@ async def calibrate(judge: Judge, gold: Sequence[GoldCase]) -> CalibrationReport
         lenient=mean_bad >= _PASS_THRESHOLD,
         judge_model=judge_model,
         points=points,
+        fp=sum(1 for p in points if p.judge_label == "good" and p.human_label != "good"),
+        fn=sum(1 for p in points if p.judge_label != "good" and p.human_label == "good"),
+        n_disagree=len(disagreements),
+        n_overrides=sum(1 for p in points if p.human_override),
+        by_language=_group_agreement(points, "language"),
+        by_category=_group_agreement(points, "category"),
+        by_segment=_group_agreement(points, "segment"),
+        disagreement_by_category=disagree_by_cat,
     )
 
 
@@ -246,9 +351,9 @@ def fleiss_kappa_binary(votes: Sequence[tuple[int, int]]) -> float:
     if n_raters < _MIN_RATERS or any((g + b) != n_raters for g, b in votes):
         return 0.0
     # Per-item agreement P_i, then the mean over items.
-    p_bar = sum(
-        (g * (g - 1) + b * (b - 1)) / (n_raters * (n_raters - 1)) for g, b in votes
-    ) / n_items
+    p_bar = (
+        sum((g * (g - 1) + b * (b - 1)) / (n_raters * (n_raters - 1)) for g, b in votes) / n_items
+    )
     # Category marginals and expected agreement P_e.
     total = n_items * n_raters
     p_good = sum(g for g, _ in votes) / total

@@ -24,7 +24,7 @@ import { type ReactNode, useState } from "react";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedBoard, FailedRail } from "@/components/observability/failed-board";
 import { FailureDistribution } from "@/components/observability/failed-cases";
-import { JudgeCalibration } from "@/components/observability/judge-calibration";
+import { JudgeCalibration, JudgeRail } from "@/components/observability/judge-calibration";
 import {
   DEFAULT_PERIOD,
   ModelsBoard,
@@ -685,6 +685,13 @@ export function ObservabilityDashboard() {
           />
         ) : tab === "models" ? (
           <ModelsPeriodRail registry={runs.data} period={modelsPeriod} onApply={setModelsPeriod} />
+        ) : tab === "judge" ? (
+          <JudgeRail
+            data={calibration.data}
+            drift={judgeDrift.data}
+            release={releaseStatus.data}
+            onEvidence={downloadQualityEvidence}
+          />
         ) : (
           <RightRail
             failed={failedCases.data}

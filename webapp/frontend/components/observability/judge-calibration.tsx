@@ -1,39 +1,73 @@
 "use client";
 
 import {
-  Download,
-  FileText,
+  Boxes,
+  CalendarClock,
   GitCompareArrows,
+  Landmark,
   type LucideIcon,
   RefreshCw,
-  SlidersHorizontal,
+  ShieldCheck,
+  Snowflake,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Calibration, CalibrationPoint, JudgeConsensus, JudgeDrift } from "@/lib/api/schemas";
+import type {
+  Calibration,
+  CalibrationPoint,
+  GroupAgreement,
+  JudgeConsensus,
+  JudgeDrift,
+  ReleaseStatus,
+  SeriesBucket,
+} from "@/lib/api/schemas";
 
-const MATCH = "#10b981";
-const MISS = "#ef4444";
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
 const BAD = "text-red-600 dark:text-red-400";
 const MUTED = "text-[var(--muted-foreground)]";
+const MATCH = "#10b981";
+const MISS = "#ef4444";
 
-/** A compact KPI tile for the calibration headline strip (image normative). */
+/** Stable colour per display category (donut, bars, top-disagreement list). */
+const CAT_COLOR: Record<string, string> = {
+  faithfulness: "#60a5fa",
+  grounding: "#34d399",
+  pii: "#f472b6",
+  citations: "#fbbf24",
+  style: "#a78bfa",
+};
+const catColor = (c: string) => CAT_COLOR[c] ?? "#94a3b8";
+
+// ── small shared atoms ───────────────────────────────────────────────────────
+
+/** Section heading (A. / B. / C. / D.). */
+function Sec({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      {children}
+    </h2>
+  );
+}
+
+/** A compact KPI tile for the calibration headline strip (image 05, zone A). */
 function Kpi({
   label,
   value,
   tone,
   hint,
+  hintTone,
 }: {
   label: string;
   value: string;
   tone?: string;
   hint?: string;
+  hintTone?: string;
 }) {
   return (
     <Card className="flex flex-col gap-1 p-3">
@@ -41,25 +75,13 @@ function Kpi({
       <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
         {value}
       </div>
-      {hint ? (
-        <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{hint}</div>
-      ) : null}
+      {hint ? <div className={`truncate text-[0.65rem] ${hintTone ?? MUTED}`}>{hint}</div> : null}
     </Card>
   );
 }
 
 /** 2×2 confusion matrix (judge × human reference) built from the gold points. */
-function ConfusionMatrix({
-  tp,
-  fp,
-  fn,
-  tn,
-}: {
-  tp: number;
-  fp: number;
-  fn: number;
-  tn: number;
-}) {
+function ConfusionMatrix({ tp, fp, fn, tn }: { tp: number; fp: number; fn: number; tn: number }) {
   const tq = useTranslations("quality");
   const total = tp + fp + fn + tn || 1;
   const cell = (n: number, diag: boolean) => (
@@ -105,43 +127,11 @@ function ConfusionMatrix({
   );
 }
 
-/** Histogram of judge scores in five bins. */
-function ScoreDistribution({ points }: { points: CalibrationPoint[] }) {
-  const bins = [0, 0, 0, 0, 0];
-  for (const p of points) {
-    const idx = Math.min(4, Math.max(0, Math.floor(p.judge_score * 5)));
-    bins[idx] = (bins[idx] ?? 0) + 1;
-  }
-  const max = Math.max(1, ...bins);
-  return (
-    <div className="flex h-40 items-end gap-2">
-      {bins.map((c, i) => (
-        <div key={(i * 0.2).toFixed(1)} className="flex flex-1 flex-col items-center gap-1">
-          <span className="text-[0.65rem] tabular-nums text-[var(--muted-foreground)]">{c}</span>
-          <div
-            className="w-full rounded-t bg-blue-500/70"
-            style={{ height: `${(c / max) * 100}%`, minHeight: c > 0 ? "4px" : "0" }}
-          />
-          <span className="text-[0.6rem] tabular-nums text-[var(--muted-foreground)]">
-            {(i * 0.2).toFixed(1)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** Reliability curve: mean judge score (x) vs observed good-rate (y) per bin,
- *  against the ideal diagonal. A well-calibrated judge tracks the diagonal. */
+/** Reliability curve: mean judge score (x) vs observed good-rate (y) per bin. */
 function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
   const tq = useTranslations("quality");
   if (points.length === 0)
-    return (
-      <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
-        {tq("judge.noData")}
-      </p>
-    );
-  // Bin by judge score; each bin → (mean score, fraction whose human label is good).
+    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
   const bins = new Map<number, { sum: number; good: number; n: number }>();
   for (const p of points) {
     const b = Math.min(4, Math.max(0, Math.floor(p.judge_score * 5)));
@@ -187,9 +177,6 @@ function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
         >
           {tq("judge.curveX")}
         </text>
-        <text x={2} y={8} className="fill-[var(--muted-foreground)] text-[6px]">
-          {tq("judge.curveY")}
-        </text>
       </svg>
       <div className="flex gap-3 text-[0.55rem] text-[var(--muted-foreground)]">
         <span className="flex items-center gap-1">
@@ -205,170 +192,250 @@ function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
   );
 }
 
-/** Calibration risk summary — a transparent 0-100 composite of the real signals:
- *  judge↔human disagreement (1−κ), judge drift divergence and multi-judge
- *  disagreement (1−consensus). Each factor is shown so nothing is a black box. */
-function RiskSummary({
-  kappa,
-  drift,
-  consensus,
+/** Histogram of judge scores in five bins, with mean/median footer. */
+function ScoreDistribution({ points }: { points: CalibrationPoint[] }) {
+  const tq = useTranslations("quality");
+  const bins = [0, 0, 0, 0, 0];
+  for (const p of points) {
+    const idx = Math.min(4, Math.max(0, Math.floor(p.judge_score * 5)));
+    bins[idx] = (bins[idx] ?? 0) + 1;
+  }
+  const max = Math.max(1, ...bins);
+  const scores = points.map((p) => p.judge_score).sort((a, b) => a - b);
+  const mean = scores.length ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
+  const median = scores.length ? (scores[Math.floor((scores.length - 1) / 2)] ?? 0) : 0;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex h-36 items-end gap-2">
+        {bins.map((c, i) => (
+          <div key={(i * 0.2).toFixed(1)} className="flex flex-1 flex-col items-center gap-1">
+            <span className="text-[0.6rem] tabular-nums text-[var(--muted-foreground)]">{c}</span>
+            <div
+              className="w-full rounded-t bg-[#818cf8]/70"
+              style={{ height: `${(c / max) * 100}%`, minHeight: c > 0 ? "4px" : "0" }}
+            />
+            <span className="text-[0.55rem] tabular-nums text-[var(--muted-foreground)]">
+              {(i * 0.2).toFixed(1)}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="text-[0.65rem] text-[var(--muted-foreground)]">
+        {tq("judge.meanMedian", { m: mean.toFixed(2), md: median.toFixed(2) })}
+      </p>
+    </div>
+  );
+}
+
+/** Donut of disagreements per display category. */
+function DisagreementDonut({
+  data,
+  total,
 }: {
-  kappa: number;
-  drift?: JudgeDrift;
-  consensus?: JudgeConsensus;
+  data: { label: string; count: number; color: string }[];
+  total: number;
 }) {
   const tq = useTranslations("quality");
-  const factors: { label: string; risk: number }[] = [];
-  factors.push({ label: tq("judge.riskKappa"), risk: Math.max(0, Math.min(1, 1 - kappa)) });
-  if (drift?.divergence != null)
-    factors.push({ label: tq("judge.riskDrift"), risk: Math.min(1, drift.divergence / 0.1) });
-  if (consensus?.available && consensus.consensus_rate != null)
-    factors.push({
-      label: tq("judge.riskConsensus"),
-      risk: Math.max(0, Math.min(1, 1 - consensus.consensus_rate)),
-    });
-  const score = Math.round((factors.reduce((s, f) => s + f.risk, 0) / factors.length) * 100);
-  const tone = score >= 50 ? BAD : score >= 25 ? WARN : GOOD;
-  const level =
-    score >= 50 ? tq("judge.riskHigh") : score >= 25 ? tq("judge.riskMod") : tq("judge.riskLow");
+  const R = 26;
+  const C = 2 * Math.PI * R;
+  let offset = 0;
+  const arcs =
+    total > 0
+      ? data.map((d) => {
+          const frac = d.count / total;
+          const seg = { ...d, dash: frac * C, gap: C - frac * C, off: -offset * C };
+          offset += frac;
+          return seg;
+        })
+      : [];
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-end gap-2">
-        <span className={`text-3xl font-semibold tabular-nums ${tone}`}>{score}</span>
-        <span className="pb-1 text-xs text-[var(--muted-foreground)]">/100</span>
-        <span className={`pb-1 text-xs ${tone}`}>· {level}</span>
+    <div className="flex items-center gap-3">
+      <div className="relative h-[72px] w-[72px] shrink-0">
+        <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90" aria-hidden="true">
+          <circle
+            cx="36"
+            cy="36"
+            r={R}
+            fill="none"
+            stroke="var(--tessera-border)"
+            strokeWidth="9"
+          />
+          {arcs.map((a) => (
+            <circle
+              key={a.label}
+              cx="36"
+              cy="36"
+              r={R}
+              fill="none"
+              stroke={a.color}
+              strokeWidth="9"
+              strokeDasharray={`${a.dash} ${a.gap}`}
+              strokeDashoffset={a.off}
+            />
+          ))}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-base font-semibold tabular-nums">{total}</span>
+          <span className="text-[0.5rem] uppercase text-[var(--muted-foreground)]">
+            {tq("judge.casDisagree")}
+          </span>
+        </div>
       </div>
-      <ul className="flex flex-col gap-1">
-        {factors.map((f) => (
-          <li key={f.label} className="flex items-center gap-1.5 text-[0.65rem]">
-            <span className="w-28 shrink-0 truncate text-[var(--muted-foreground)]">{f.label}</span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-[var(--muted)]/40">
-              <div
-                className="h-full rounded-sm"
-                style={{
-                  width: `${f.risk * 100}%`,
-                  background: f.risk >= 0.5 ? MISS : f.risk >= 0.25 ? "#f59e0b" : MATCH,
-                }}
-              />
-            </div>
-            <span className="w-8 shrink-0 text-right tabular-nums">
-              {Math.round(f.risk * 100)}%
-            </span>
+      <ul className="flex min-w-0 flex-1 flex-col gap-1">
+        {data.length === 0 ? (
+          <li className="text-[0.7rem] text-[var(--muted-foreground)]">
+            {tq("judge.noDisagreements")}
           </li>
-        ))}
+        ) : (
+          data.map((d) => (
+            <li key={d.label} className="flex items-center gap-1.5 text-[0.7rem]">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: d.color }} />
+              <span className="min-w-0 flex-1 truncate">{tq(`judge.cat.${d.label}`)}</span>
+              <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">
+                {d.count} · {total > 0 ? Math.round((d.count / total) * 100) : 0}%
+              </span>
+            </li>
+          ))
+        )}
       </ul>
     </div>
   );
 }
 
-/** Verbosity-bias scatter: answer length (x) vs judge score (y), coloured by agreement. */
-function VerbosityScatter({ points }: { points: CalibrationPoint[] }) {
-  const tq = useTranslations("quality");
-  const H = 52;
-  const top = 4;
-  const maxLen = Math.max(1, ...points.map((p) => p.length));
+/** Per-slice agreement rows (language / metric) with a mini agreement bar. */
+function GroupRows({
+  groups,
+  labelKey,
+  showKappa = false,
+}: {
+  groups: GroupAgreement[];
+  labelKey?: (label: string) => string;
+  showKappa?: boolean;
+}) {
   return (
-    <div className="flex flex-col gap-1">
-      <div className="relative h-40 w-full">
-        <svg
-          viewBox={`0 0 100 ${H + top * 2}`}
-          preserveAspectRatio="none"
-          className="h-full w-full"
-          aria-hidden="true"
-        >
-          {[0, 0.5, 1].map((g) => (
-            <line
-              key={g}
-              x1={0}
-              x2={100}
-              y1={top + (1 - g) * H}
-              y2={top + (1 - g) * H}
-              stroke="var(--tessera-border)"
-              strokeWidth={0.3}
-            />
-          ))}
-          {points.map((p, i) => (
-            <circle
-              key={`${p.question}-${i}`}
-              cx={2 + (p.length / maxLen) * 96}
-              cy={top + (1 - p.judge_score) * H}
-              r={1.4}
-              fill={p.match ? MATCH : MISS}
-            />
-          ))}
-        </svg>
-      </div>
-      <div className="flex justify-between text-[0.65rem] text-[var(--muted-foreground)]">
-        <span>↑ {tq("judge.cols.score")}</span>
-        <span>{tq("judge.lengthAxis")} →</span>
-      </div>
-    </div>
+    <ul className="flex flex-col gap-1.5">
+      {groups.map((g) => {
+        const tone = g.agreement >= 0.95 ? MATCH : g.agreement >= 0.8 ? "#f59e0b" : MISS;
+        return (
+          <li key={g.label} className="flex items-center gap-2 text-[0.72rem]">
+            <span className="w-24 shrink-0 truncate">{labelKey ? labelKey(g.label) : g.label}</span>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-[var(--tessera-muted)]/50">
+              <div
+                className="h-full rounded-sm"
+                style={{ width: `${g.agreement * 100}%`, background: tone }}
+              />
+            </div>
+            <span className="w-9 shrink-0 text-right tabular-nums" style={{ color: tone }}>
+              {Math.round(g.agreement * 100)}%
+            </span>
+            {showKappa ? (
+              <span className="w-12 shrink-0 text-right tabular-nums text-[var(--muted-foreground)]">
+                κ {g.kappa.toFixed(2)}
+              </span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
-/** Horizontal band gauge: a segmented track with a marker at the value, the
- * "Stable→Critique" / "Trop sévère↔Trop permissif" arcs of the normative tab. */
-function BandGauge({
-  pct,
-  segments,
-  leftLabel,
-  rightLabel,
-}: {
-  pct: number | null; // marker position 0..1 (null ⇒ unknown, no marker)
-  segments: { frac: number; color: string; label?: string }[];
-  leftLabel?: string;
-  rightLabel?: string;
-}) {
-  const hasLabels = segments.some((s) => s.label);
+/** Small line of judge-metric drift buckets — the κ-evolution stability proxy. */
+function MiniLine({ buckets, baseline }: { buckets: SeriesBucket[]; baseline?: number }) {
+  const pts = buckets.filter((b) => b.mean != null).map((b) => b.mean as number);
+  if (pts.length < 2)
+    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
+  const W = 200;
+  const H = 56;
+  const min = Math.min(...pts, baseline ?? 1);
+  const max = Math.max(...pts, baseline ?? 0);
+  const span = max - min || 1;
+  const x = (i: number) => (i / (pts.length - 1)) * W;
+  const y = (v: number) => H - 4 - ((v - min) / span) * (H - 8);
+  const line = pts
+    .map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+    .join(" ");
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="relative py-1">
-        <div className="flex h-2 w-full overflow-hidden rounded-full">
-          {segments.map((s, i) => (
-            <div
-              key={`${s.color}-${i}`}
-              style={{ flexBasis: `${s.frac * 100}%`, background: s.color }}
-            />
-          ))}
-        </div>
-        {pct != null ? (
-          <div
-            className="absolute top-0 h-4 w-4 -translate-x-1/2 rounded-full border-2 border-[var(--tessera-surface)] bg-[var(--tessera-text)] shadow"
-            style={{ left: `${Math.max(0, Math.min(1, pct)) * 100}%` }}
-          />
-        ) : null}
-      </div>
-      {leftLabel || rightLabel ? (
-        <div className="flex justify-between text-[0.65rem] text-[var(--muted-foreground)]">
-          <span>{leftLabel}</span>
-          <span>{rightLabel}</span>
-        </div>
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="h-14 w-full"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      {baseline != null ? (
+        <line
+          x1={0}
+          x2={W}
+          y1={y(baseline)}
+          y2={y(baseline)}
+          stroke="var(--muted-foreground)"
+          strokeWidth="0.6"
+          strokeDasharray="3 3"
+        />
       ) : null}
-      {hasLabels ? (
-        <div className="flex justify-between text-[0.6rem]">
-          {segments.map((s, i) =>
-            s.label ? (
-              <span key={`${s.color}-${i}-l`} style={{ color: s.color }}>
-                {s.label}
-              </span>
-            ) : null,
-          )}
-        </div>
-      ) : null}
-    </div>
+      <path d={line} fill="none" stroke="#a78bfa" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
   );
 }
+
+/** A governed recommended-action card (zone D), faithful to image 05. */
+function ActionCard({
+  n,
+  title,
+  desc,
+  roles,
+  cta,
+  ctaTone = "outline",
+}: {
+  n: number;
+  title: string;
+  desc: string;
+  roles: { label: string; tone: "warning" | "success" | "neutral" | "danger" }[];
+  cta: string;
+  ctaTone?: "outline" | "danger";
+}) {
+  return (
+    <Card className="flex min-w-0 flex-col gap-2 p-3">
+      <div className="flex items-start gap-2">
+        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-muted)] text-[0.6rem] font-semibold tabular-nums">
+          {n}
+        </span>
+        <span className="min-w-0 text-[0.78rem] font-medium leading-snug">{title}</span>
+      </div>
+      <p className="text-[0.68rem] leading-snug text-[var(--muted-foreground)]">{desc}</p>
+      <div className="flex flex-wrap gap-1">
+        {roles.map((r) => (
+          <Badge key={r.label} tone={r.tone}>
+            {r.label}
+          </Badge>
+        ))}
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        className={`mt-auto h-7 justify-center text-[0.7rem] ${
+          ctaTone === "danger"
+            ? "border-[#b45309] bg-[#78350f]/40 text-amber-200 hover:bg-[#78350f]/60"
+            : ""
+        }`}
+      >
+        {cta}
+      </Button>
+    </Card>
+  );
+}
+
+// ── main hero (zones A · B · C · D) ──────────────────────────────────────────
 
 /** Full judge-calibration hero, faithful to the normative tab (image 05):
- * KPI strip · confusion matrix · score distribution · verbosity-bias scatter ·
- * ambiguous cases · judge profile + calibration actions. All real: the gold-set
- * points feed the matrix/scatter/bias, `drift` comes from the durable score log
- * (GET /observability/judge-drift) and `consensus` from a live local judge panel
- * (GET /observability/judge-consensus). */
+ * A. État actuel · B. Diagnostic de calibration · C. Segments à risque & dérive ·
+ * D. Actions recommandées. Everything is real: the gold-set points (scored by the
+ * sovereign llama3.2:3b judge, backfilled to eval/calibration/_calibration.json)
+ * feed the matrix/curve/distribution and the per-language/-metric/-segment
+ * breakdowns; `drift` is the durable judge-score drift over the window. */
 export function JudgeCalibration({
   data,
   drift,
-  consensus,
   loading,
 }: {
   data: Calibration | undefined;
@@ -408,410 +475,489 @@ export function JudgeCalibration({
 
   const points = data.points ?? [];
   const total = points.length || 1;
-  // Confusion matrix from the gold points (judge label × human label).
   const tp = points.filter((p) => p.judge_label === "good" && p.human_label === "good").length;
-  const fp = points.filter((p) => p.judge_label === "good" && p.human_label !== "good").length;
-  const fn = points.filter((p) => p.judge_label !== "good" && p.human_label === "good").length;
   const tn = points.filter((p) => p.judge_label !== "good" && p.human_label !== "good").length;
-  const fpRate = fp / total;
-  const fnRate = fn / total;
-  // Severity bias: judge mean score minus human pass-rate (>0 ⇒ lenient/permissive).
-  const meanScore = points.reduce((s, p) => s + p.judge_score, 0) / total;
-  const humanGoodRate = points.filter((p) => p.human_label === "good").length / total;
-  const severityBias = points.length > 0 ? meanScore - humanGoodRate : null;
-  const verbosity = data.verbosity_corr ?? 0;
+  const fp =
+    data.fp ?? points.filter((p) => p.judge_label === "good" && p.human_label !== "good").length;
+  const fn =
+    data.fn ?? points.filter((p) => p.judge_label !== "good" && p.human_label === "good").length;
   const kappa = data.kappa ?? 0;
-  const disagreements = points.filter((p) => !p.match);
+  const verbosity = data.verbosity_corr ?? 0;
+  const clemency = data.mean_score_bad ?? 0;
+  const nDisagree = data.n_disagree ?? points.filter((p) => !p.match).length;
+  const driftDiv = drift?.divergence ?? null;
 
   const kappaTone = kappa >= 0.8 ? GOOD : kappa >= 0.6 ? WARN : BAD;
   const verbTone = Math.abs(verbosity) < 0.2 ? GOOD : Math.abs(verbosity) < 0.4 ? WARN : BAD;
-  const verbHint =
-    Math.abs(verbosity) < 0.2
-      ? tq("judge.low")
-      : Math.abs(verbosity) < 0.4
-        ? tq("judge.moderate")
-        : tq("judge.strong");
-  const sevTone = severityBias == null ? MUTED : Math.abs(severityBias) < 0.1 ? GOOD : WARN;
-  const matches = total - disagreements.length;
 
-  // Judge drift (real, from the durable score log) and multi-judge consensus
-  // (real, from the local judge panel) — null/unknown when their source is absent.
-  const driftDiv = drift?.divergence ?? null;
-  const driftLevel = drift?.level ?? "unknown";
-  const driftLabel = tq(
-    `judge.drift${driftLevel.charAt(0).toUpperCase()}${driftLevel.slice(1)}` as "judge.driftStable",
-  );
-  const driftTone =
-    driftDiv == null
-      ? MUTED
-      : driftLevel === "stable" || driftLevel === "low"
-        ? GOOD
-        : driftLevel === "moderate"
-          ? WARN
-          : BAD;
-  const consensusOk = consensus?.available === true;
-  const consensusRate = consensusOk ? (consensus?.consensus_rate ?? null) : null;
+  const donutData = Object.entries(data.disagreement_by_category ?? {})
+    .map(([label, count]) => ({ label, count, color: catColor(label) }))
+    .sort((a, b) => b.count - a.count);
 
-  // Band-gauge marker positions (the normative "arc"). Drift maps 0..0.25 across
-  // Stable→Critique; severity maps -0.6..+0.6 across Trop sévère↔Trop permissif.
-  const _DRIFT_MAX = 0.25;
-  const driftPct = driftDiv == null ? null : driftDiv / _DRIFT_MAX;
-  const driftDelta = drift?.delta ?? null;
-  const _SEV_RANGE = 0.6;
-  const sevPct = severityBias == null ? null : (severityBias + _SEV_RANGE) / (2 * _SEV_RANGE);
-  const driftSegments = [
-    { frac: 0.12, color: "#10b981", label: tq("judge.driftStable") },
-    { frac: 0.12, color: "#65a30d", label: tq("judge.driftLow") },
-    { frac: 0.24, color: "#f59e0b", label: tq("judge.driftModerate") },
-    { frac: 0.32, color: "#f97316", label: tq("judge.driftHigh") },
-    { frac: 0.2, color: "#ef4444", label: tq("judge.driftCritical") },
-  ];
-  const sevSegments = [
-    { frac: 1 / 3, color: "#ef4444" },
-    { frac: 1 / 3, color: "#10b981" },
-    { frac: 1 / 3, color: "#f59e0b" },
-  ];
-
-  function exportCalibration() {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tessera-judge-calibration-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  const disagreements = points.filter((p) => !p.match);
+  const overrides = points.filter((p) => p.human_override);
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+    <div className="flex flex-col gap-2">
+      {/* A. État actuel ── KPI strip (8 tiles) */}
+      <Sec>{tq("judge.secActual")}</Sec>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
         <Kpi
           label={tq("judge.kappaTitle")}
           value={kappa.toFixed(2)}
           tone={kappaTone}
-          hint={`κ Cohen · ${kappa >= 0.8 ? tq("judge.excellent") : tq("judge.moderate")}`}
+          hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.agreementGlobal")}
           value={data.agreement == null ? "—" : `${Math.round(data.agreement * 100)}%`}
           tone={data.agreement != null && data.agreement >= 0.8 ? GOOD : WARN}
+          hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.fp")}
-          value={`${(fpRate * 100).toFixed(1)}%`}
-          tone={fpRate < 0.05 ? GOOD : WARN}
+          value={`${((fp / total) * 100).toFixed(1)}%`}
+          tone={fp / total < 0.05 ? GOOD : WARN}
           hint={`${fp}/${total}`}
         />
         <Kpi
           label={tq("judge.fn")}
-          value={`${(fnRate * 100).toFixed(1)}%`}
-          tone={fnRate < 0.05 ? GOOD : WARN}
+          value={`${((fn / total) * 100).toFixed(1)}%`}
+          tone={fn / total < 0.05 ? GOOD : WARN}
           hint={`${fn}/${total}`}
         />
         <Kpi
           label={tq("judge.verbosityBias")}
           value={verbosity.toFixed(2)}
           tone={verbTone}
-          hint={verbHint}
+          hint={tq("judge.vsBaseline")}
         />
         <Kpi
-          label={tq("judge.severityBias")}
-          value={
-            severityBias == null ? "—" : `${severityBias >= 0 ? "+" : ""}${severityBias.toFixed(2)}`
-          }
-          tone={sevTone}
-          hint={
-            severityBias == null
-              ? undefined
-              : severityBias > 0
-                ? tq("judge.tooLenient")
-                : tq("judge.tooStrict")
-          }
+          label={tq("judge.clemency")}
+          value={clemency.toFixed(2)}
+          tone={clemency < 0.2 ? GOOD : clemency < 0.4 ? WARN : BAD}
+          hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.drift")}
           value={driftDiv == null ? "—" : driftDiv.toFixed(2)}
-          tone={driftTone}
-          hint={driftLabel}
+          tone={driftDiv == null ? MUTED : driftDiv < 0.05 ? GOOD : driftDiv < 0.1 ? WARN : BAD}
+          hint={tq("judge.vsBaseline")}
         />
         <Kpi
-          label={tq("judge.consensus")}
-          value={consensusRate == null ? "—" : `${Math.round(consensusRate * 100)}%`}
-          tone={consensusRate != null && consensusRate >= 0.8 ? GOOD : WARN}
-          hint={
-            consensusOk && consensus?.n_judges
-              ? tq("judge.consensusJudges", { n: consensus.n_judges })
-              : undefined
-          }
+          label={tq("judge.casDisagree")}
+          value={`${nDisagree}`}
+          tone={nDisagree === 0 ? GOOD : WARN}
+          hint={`${tq("judge.overrides")}: ${data.n_overrides ?? 0}`}
         />
       </div>
 
-      {/* Confusion matrix · calibration curve · distribution · verbosity scatter */}
-      <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("judge.confusion")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ConfusionMatrix tp={tp} fp={fp} fn={fn} tn={tn} />
-            <div className="mt-2 flex flex-wrap gap-x-4 text-[0.7rem] text-[var(--muted-foreground)]">
-              <span>
-                {tq("judge.fp")}: <span className={BAD}>{fp}</span>
-              </span>
-              <span>
-                {tq("judge.fn")}: <span className={BAD}>{fn}</span>
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("judge.curve")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CalibrationCurve points={points} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("judge.distribution")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {points.length === 0 ? (
-              <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">—</p>
-            ) : (
-              <ScoreDistribution points={points} />
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("judge.verbScatter")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {points.length === 0 ? (
-              <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">—</p>
-            ) : (
-              <>
-                <VerbosityScatter points={points} />
-                <p className="mt-1 text-[0.7rem] text-[var(--muted-foreground)]">
-                  {tq("judge.verbCorr")} :{" "}
-                  <span className={`tabular-nums ${verbTone}`}>{verbosity.toFixed(2)}</span> ·{" "}
-                  {verbHint}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+      {/* B. Diagnostic de calibration ── matrix · curve · distribution · donut */}
+      <Sec>{tq("judge.secDiag")}</Sec>
+      <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+        <Panel title={`1) ${tq("judge.confusion")}`}>
+          <ConfusionMatrix tp={tp} fp={fp} fn={fn} tn={tn} />
+        </Panel>
+        <Panel title={`2) ${tq("judge.curve")}`}>
+          <CalibrationCurve points={points} />
+        </Panel>
+        <Panel title={`3) ${tq("judge.distribution")}`}>
+          <ScoreDistribution points={points} />
+        </Panel>
+        <Panel title={`4) ${tq("judge.disagreeDist")}`}>
+          <DisagreementDonut data={donutData} total={nDisagree} />
+        </Panel>
       </div>
 
-      {/* Band gauges (the normative "arc"): severity bias and judge drift */}
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("judge.severityBias")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div className="flex items-end gap-2">
-              <span className={`font-serif text-2xl font-semibold tabular-nums ${sevTone}`}>
-                {severityBias == null
-                  ? "—"
-                  : `${severityBias >= 0 ? "+" : ""}${severityBias.toFixed(2)}`}
-              </span>
-              <span className="pb-1 text-xs text-[var(--muted-foreground)]">
-                {severityBias == null
-                  ? ""
-                  : severityBias > 0
-                    ? tq("judge.tooLenient")
-                    : tq("judge.tooStrict")}
-              </span>
-            </div>
-            <BandGauge
-              pct={sevPct}
-              segments={sevSegments}
-              leftLabel={tq("judge.tooStrict")}
-              rightLabel={tq("judge.tooLenient")}
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("judge.drift")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div className="flex items-end gap-2">
-              <span className={`font-serif text-2xl font-semibold tabular-nums ${driftTone}`}>
-                {driftDiv == null ? "—" : driftDiv.toFixed(2)}
-              </span>
-              <span className="pb-1 text-xs text-[var(--muted-foreground)]">{driftLabel}</span>
-              {driftDelta != null ? (
-                <span
-                  className={`pb-1 text-xs tabular-nums ${driftDelta <= 0 ? GOOD : BAD}`}
-                  title={tq("judge.deltaCol")}
-                >
-                  {driftDelta >= 0 ? "↑" : "↓"} {Math.abs(driftDelta).toFixed(2)}
-                </span>
+      {/* C. Segments à risque & dérive */}
+      <Sec>{tq("judge.secSegments")}</Sec>
+      <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+        <Panel title={`1) ${tq("judge.kappaEvolution")}`} className="2xl:col-span-1">
+          <MiniLine buckets={drift?.buckets ?? []} baseline={drift?.mean ?? undefined} />
+          <p className="mt-1 text-[0.62rem] text-[var(--muted-foreground)]">
+            {tq("judge.kappaEvolutionNote")}
+          </p>
+        </Panel>
+        <Panel title={`2) ${tq("judge.byLanguage")}`}>
+          <GroupRows groups={data.by_language ?? []} labelKey={(l) => l.toUpperCase()} showKappa />
+        </Panel>
+        <Panel title={`3) ${tq("judge.byMetric")}`}>
+          <GroupRows groups={data.by_category ?? []} labelKey={(l) => tq(`judge.cat.${l}`)} />
+        </Panel>
+        <div className="flex flex-col gap-2">
+          <Panel title={`4) ${tq("judge.topSegments")}`}>
+            <ul className="flex flex-col gap-1 text-[0.72rem]">
+              {(data.by_segment ?? [])
+                .filter((s) => s.n_disagree > 0)
+                .slice(0, 4)
+                .map((s) => (
+                  <li key={s.label} className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate">{s.label}</span>
+                    <Badge tone="warning">
+                      {s.n_disagree}/{s.n}
+                    </Badge>
+                  </li>
+                ))}
+              {(data.by_segment ?? []).every((s) => s.n_disagree === 0) ? (
+                <li className="text-[var(--muted-foreground)]">{tq("judge.noDisagreements")}</li>
               ) : null}
+            </ul>
+          </Panel>
+          <Panel title={`5) ${tq("judge.overrides")}`}>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-semibold tabular-nums">{data.n_overrides ?? 0}</span>
+              <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+                {total > 0 ? `${(((data.n_overrides ?? 0) / total) * 100).toFixed(1)}%` : "—"}
+              </span>
             </div>
-            <BandGauge pct={driftPct} segments={driftSegments} />
-          </CardContent>
-        </Card>
+            <ul className="mt-1 flex flex-col gap-0.5">
+              {overrides.slice(0, 3).map((o) => (
+                <li
+                  key={o.case_id}
+                  className="truncate font-mono text-[0.62rem] text-[var(--muted-foreground)]"
+                >
+                  {o.case_id}
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
       </div>
 
-      {/* Ambiguous cases · judge profile + calibration actions */}
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              {tq("judge.ambiguous")}
-              <Badge tone={disagreements.length === 0 ? "success" : "warning"}>
-                {disagreements.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {disagreements.length === 0 ? (
-              <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">
-                {tq("judge.noDisagreements")}
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                      <th className="py-2 pr-4 font-medium">{tq("judge.cols.case")}</th>
-                      <th className="py-2 pr-4 font-medium">{tq("judge.cols.human")}</th>
-                      <th className="py-2 pr-4 font-medium">{tq("judge.cols.judge")}</th>
-                      <th className="py-2 font-medium">{tq("judge.cols.score")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {disagreements.map((p, i) => (
-                      <tr key={`${p.question}-${i}`} className="border-b border-[var(--border)]/50">
-                        <td className="py-2 pr-4 text-[var(--muted-foreground)]">
-                          <span className="line-clamp-1 max-w-md">{p.question}</span>
-                        </td>
-                        <td className="py-2 pr-4">{p.human_label}</td>
-                        <td className="py-2 pr-4">{p.judge_label}</td>
-                        <td className="py-2 tabular-nums">{p.judge_score.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-col gap-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">{tq("judge.fiche")}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 text-sm">
-              <Row label={tq("judge.model")}>
-                <span className="font-mono text-xs">{data.judge_model ?? "—"}</span>
-              </Row>
-              <Row label={tq("judge.annotated")}>
-                <span className="tabular-nums">{data.n ?? total}</span>
-              </Row>
-              <Row label={tq("judge.byHumans")}>
-                <span className="tabular-nums">{total}</span>
-              </Row>
-              <Row label={tq("judge.matches")}>
-                <Badge tone="success">{matches}</Badge>
-              </Row>
-              <Row label={tq("judge.lenientNo")}>
-                <Badge tone={data.lenient ? "warning" : "success"}>
-                  {data.lenient ? tq("judge.lenientYes") : tq("judge.lenientNo")}
-                </Badge>
-              </Row>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">{tq("judge.riskSummary")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RiskSummary kappa={kappa} drift={drift} consensus={consensus} />
-            </CardContent>
-          </Card>
-
-          {consensusOk && consensus ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between gap-2 text-sm">
-                  {tq("judge.panel")}
-                  <Badge tone="neutral">
-                    {tq("judge.consensusJudges", { n: consensus.n_judges ?? 0 })}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2 text-sm">
-                <Row label={tq("judge.consensus")}>
-                  <span className="tabular-nums">
-                    {Math.round((consensus.consensus_rate ?? 0) * 100)}%
-                  </span>
-                </Row>
-                <Row label={tq("judge.pairwise")}>
-                  <span className="tabular-nums">
-                    {Math.round((consensus.mean_pairwise_agreement ?? 0) * 100)}%
-                  </span>
-                </Row>
-                <Row label={tq("judge.fleiss")}>
-                  <span className="tabular-nums">{(consensus.fleiss_kappa ?? 0).toFixed(2)}</span>
-                </Row>
-                <div className="mt-1 flex flex-col gap-1.5">
-                  {(consensus.per_judge ?? []).map((j) => (
-                    <div key={j.judge_model} className="flex items-center gap-2">
-                      <span className="w-24 shrink-0 truncate font-mono text-[0.7rem] text-[var(--muted-foreground)]">
-                        {j.judge_model}
-                      </span>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--tessera-muted)]">
-                        <div
-                          className="h-full rounded-full bg-[var(--tessera-green)]"
-                          style={{ width: `${Math.round(j.agreement * 100)}%` }}
+      {/* 6) Cas échoués représentatifs */}
+      <Panel title={`6) ${tq("judge.repCases")}`}>
+        {disagreements.length === 0 ? (
+          <p className="py-3 text-center text-sm text-[var(--muted-foreground)]">
+            {tq("judge.noDisagreements")}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                  <th className="py-2 pr-3 font-medium">{tq("judge.cols.id")}</th>
+                  <th className="py-2 pr-3 font-medium">{tq("judge.cols.statement")}</th>
+                  <th className="py-2 pr-3 font-medium">{tq("judge.cols.category")}</th>
+                  <th className="py-2 pr-3 font-medium">{tq("judge.cols.judgeScore")}</th>
+                  <th className="py-2 pr-3 font-medium">{tq("judge.cols.humanAgree")}</th>
+                  <th className="py-2 font-medium">{tq("judge.cols.status")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {disagreements.map((p) => (
+                  <tr key={p.case_id || p.question} className="border-b border-[var(--border)]/50">
+                    <td className="py-2 pr-3 font-mono text-[0.7rem]">{p.case_id || "—"}</td>
+                    <td className="py-2 pr-3 text-[var(--muted-foreground)]">
+                      <span className="line-clamp-1 max-w-sm">{p.question}</span>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className="inline-flex items-center gap-1">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ background: catColor(p.category ?? "") }}
                         />
-                      </div>
-                      <span className="w-9 shrink-0 text-right text-[0.7rem] tabular-nums">
-                        {Math.round(j.agreement * 100)}%
+                        {tq(`judge.cat.${p.category}`)}
                       </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
+                    </td>
+                    <td className="py-2 pr-3 tabular-nums">{p.judge_score.toFixed(2)}</td>
+                    <td className="py-2 pr-3">
+                      <Badge tone="danger">{tq("judge.disagree")}</Badge>
+                    </td>
+                    <td className="py-2">
+                      <Badge tone="warning">{tq("judge.status.review")}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">{tq("judge.actions")}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1.5">
-              <ActionRow icon={RefreshCw} label={tq("judge.recalibrate")} level="admin" />
-              <ActionRow icon={GitCompareArrows} label={tq("judge.compare")} level="operator" />
-              <ActionRow icon={SlidersHorizontal} label={tq("judge.rubrics")} level="admin" />
-              <ActionRow icon={FileText} label={tq("judge.report")} level="operator" />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={exportCalibration}
-                className="mt-1 h-8 justify-start gap-2 text-xs"
-              >
-                <Download className="h-3.5 w-3.5" />
-                {tq("judge.export")}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+      {/* D. Actions recommandées ── 6 governed cards */}
+      <Sec>{tq("judge.secActions")}</Sec>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+        <ActionCard
+          n={1}
+          title={tq("judge.act.recalTitle")}
+          desc={tq("judge.act.recalDesc")}
+          roles={[{ label: "Operator+", tone: "success" }]}
+          cta={tq("judge.act.recalCta")}
+        />
+        <ActionCard
+          n={2}
+          title={tq("judge.act.curateTitle", { n: nDisagree })}
+          desc={tq("judge.act.curateDesc")}
+          roles={[{ label: "Admin+", tone: "warning" }]}
+          cta={tq("judge.act.curateCta")}
+        />
+        <ActionCard
+          n={3}
+          title={tq("judge.act.shadowTitle")}
+          desc={tq("judge.act.shadowDesc")}
+          roles={[{ label: "Operator+", tone: "success" }]}
+          cta={tq("judge.act.shadowCta")}
+        />
+        <ActionCard
+          n={4}
+          title={tq("judge.act.freezeTitle")}
+          desc={tq("judge.act.freezeDesc")}
+          roles={[
+            { label: "Admin+", tone: "warning" },
+            { label: "Dual control", tone: "danger" },
+          ]}
+          cta={tq("judge.act.freezeCta")}
+          ctaTone="danger"
+        />
+        <ActionCard
+          n={5}
+          title={tq("judge.act.complianceTitle")}
+          desc={tq("judge.act.complianceDesc")}
+          roles={[{ label: "Compliance+", tone: "neutral" }]}
+          cta={tq("judge.act.complianceCta")}
+        />
+        <ActionCard
+          n={6}
+          title={tq("judge.act.evidenceTitle")}
+          desc={tq("judge.act.evidenceDesc")}
+          roles={[{ label: "Auditor+", tone: "neutral" }]}
+          cta={tq("judge.act.evidenceCta")}
+        />
+      </div>
+
+      {/* Footer chips */}
+      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+        <Chip
+          icon={Boxes}
+          label={`${tq("judge.chip.dataset")}: judge-gold-v1`}
+          tone="text-[var(--tessera-green)]"
+        />
+        <Chip
+          icon={CalendarClock}
+          label={`${tq("judge.chip.judge")}: ${data.judge_model ?? "—"}`}
+        />
+        <Chip icon={Landmark} label={tq("judge.chip.truth")} />
+        <Chip
+          icon={ShieldCheck}
+          label={tq("judge.chip.chain")}
+          tone="text-[var(--tessera-green)]"
+        />
       </div>
     </div>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+/** A bordered, titled mini-card used across zones B/C. */
+function Panel({
+  title,
+  children,
+  className,
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Card className={`min-w-0 ${className ?? ""}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-[0.78rem] font-medium">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
+function Chip({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; tone?: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+      <Icon className={`h-3.5 w-3.5 shrink-0 ${tone ?? ""}`} />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+// ── dedicated right rail (JudgeRail) ─────────────────────────────────────────
+
+/** The Calibration-juge right rail (image 05): judge fiche · quality gates ·
+ * risk summary · top disagreement categories · recent activity · sensitive
+ * actions · evidence pack. Driven by the real calibration + drift signals. */
+export function JudgeRail({
+  data,
+  drift,
+  release,
+  onEvidence,
+}: {
+  data: Calibration | undefined;
+  drift?: JudgeDrift;
+  release?: ReleaseStatus | undefined;
+  onEvidence: () => void;
+}) {
+  const tq = useTranslations("quality");
+  const kappa = data?.kappa ?? null;
+  const agreement = data?.agreement ?? null;
+  const driftDiv = drift?.divergence ?? null;
+  const nDisagree = data?.n_disagree ?? 0;
+
+  // Transparent 0-100 composite of the real signals (1−κ, drift, 1−agreement).
+  const factors: number[] = [];
+  if (kappa != null) factors.push(Math.max(0, 1 - kappa));
+  if (driftDiv != null) factors.push(Math.min(1, driftDiv / 0.1));
+  if (agreement != null) factors.push(Math.max(0, 1 - agreement));
+  const risk = factors.length
+    ? Math.round((factors.reduce((s, f) => s + f, 0) / factors.length) * 100)
+    : 0;
+  const riskTone = risk >= 50 ? BAD : risk >= 25 ? WARN : GOOD;
+  const riskLevel =
+    risk >= 50 ? tq("judge.riskHigh") : risk >= 25 ? tq("judge.riskMod") : tq("judge.riskLow");
+
+  const gates: { label: string; value: string; pass: boolean }[] = [
+    {
+      label: tq("judge.gateCalibration"),
+      value: kappa == null ? "—" : kappa.toFixed(2),
+      pass: (kappa ?? 0) >= 0.8,
+    },
+    {
+      label: tq("judge.gateAgreement"),
+      value: agreement == null ? "—" : `${Math.round(agreement * 100)}%`,
+      pass: (agreement ?? 0) >= 0.8,
+    },
+    {
+      label: tq("judge.gateDrift"),
+      value: driftDiv == null ? "—" : driftDiv.toFixed(2),
+      pass: (driftDiv ?? 0) < 0.1,
+    },
+  ];
+
+  const topCats = Object.entries(data?.disagreement_by_category ?? {})
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+  const maxCat = Math.max(1, ...topCats.map((c) => c.count));
+
+  return (
+    <aside className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-col gap-2 xl:sticky xl:top-28">
+        {/* Fiche juge */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{tq("judge.fiche")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1 text-[0.72rem]">
+            <RailRow label={tq("judge.model")}>
+              <span className="font-mono text-[0.7rem]">{data?.judge_model ?? "—"}</span>
+            </RailRow>
+            <RailRow label={tq("judge.byHumans")}>
+              <span className="tabular-nums">{data?.n ?? "—"}</span>
+            </RailRow>
+            {release?.current ? (
+              <RailRow label={tq("rr.release")}>
+                <span className="tabular-nums">{release.current.version}</span>
+              </RailRow>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        {/* Gates qualité */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{tq("judge.qualityGates")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1.5">
+            {gates.map((g) => (
+              <div key={g.label} className="flex items-center justify-between gap-2 text-[0.72rem]">
+                <span className="min-w-0 truncate text-[var(--muted-foreground)]">{g.label}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="tabular-nums">{g.value}</span>
+                  <Badge tone={g.pass ? "success" : "warning"}>
+                    {g.pass ? tq("judge.pass") : tq("judge.watch")}
+                  </Badge>
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Résumé du risque */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{tq("judge.riskSummary")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <div className="flex items-end gap-2">
+              <span className={`text-3xl font-semibold tabular-nums ${riskTone}`}>{risk}</span>
+              <span className="pb-1 text-xs text-[var(--muted-foreground)]">/100</span>
+              <span className={`pb-1 text-xs ${riskTone}`}>· {riskLevel}</span>
+            </div>
+            <ul className="flex flex-col gap-1 text-[0.68rem] text-[var(--muted-foreground)]">
+              <li>• {tq("judge.attnOverconfidence")}</li>
+              <li>• {tq("judge.attnRegCases")}</li>
+              <li>• {tq("judge.attnDe")}</li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* Top catégories en désaccord */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{tq("judge.topDisagree")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1.5">
+            {topCats.length === 0 ? (
+              <p className="text-[0.7rem] text-[var(--muted-foreground)]">
+                {tq("judge.noDisagreements")}
+              </p>
+            ) : (
+              topCats.map((c) => (
+                <div key={c.label} className="flex items-center gap-2 text-[0.72rem]">
+                  <span className="w-20 shrink-0 truncate">{tq(`judge.cat.${c.label}`)}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-[var(--tessera-muted)]/50">
+                    <div
+                      className="h-full rounded-sm"
+                      style={{
+                        width: `${(c.count / maxCat) * 100}%`,
+                        background: catColor(c.label),
+                      }}
+                    />
+                  </div>
+                  <span className="w-12 shrink-0 text-right tabular-nums text-[var(--muted-foreground)]">
+                    {c.count} · {nDisagree > 0 ? Math.round((c.count / nDisagree) * 100) : 0}%
+                  </span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Actions sensibles */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{tq("judge.sensitiveActions")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1.5">
+            <SensitiveAction icon={Snowflake} label={tq("judge.act.freezeTitle")} />
+            <SensitiveAction icon={RefreshCw} label={tq("judge.changeThresholds")} />
+          </CardContent>
+        </Card>
+
+        {/* Evidence pack */}
+        <button
+          type="button"
+          onClick={onEvidence}
+          className="flex items-center gap-3 rounded-lg border border-[#5b4bbd] bg-gradient-to-br from-[#4c3fb0]/40 to-[#3a2f8a]/30 px-3 py-3 text-left transition-colors hover:from-[#4c3fb0]/60"
+        >
+          <GitCompareArrows className="h-5 w-5 shrink-0 text-[#c4b5fd]" />
+          <span className="flex min-w-0 flex-col">
+            <span className="text-[0.8rem] font-medium">{tq("judge.evidencePack")}</span>
+            <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+              {tq("judge.evidencePackHint")}
+            </span>
+          </span>
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function RailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-[var(--muted-foreground)]">{label}</span>
@@ -820,23 +966,13 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/** A governed calibration action: icon + label + required-role badge. */
-function ActionRow({
-  icon: Icon,
-  label,
-  level,
-}: {
-  icon: LucideIcon;
-  label: string;
-  level: "operator" | "admin";
-}) {
+function SensitiveAction({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2.5 py-1.5 text-sm">
+    <div className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 text-[0.72rem]">
       <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      <Badge tone={level === "admin" ? "warning" : "success"}>
-        {level === "admin" ? "Admin+" : "Operator+"}
-      </Badge>
+      <Badge tone="warning">Admin+</Badge>
+      <Badge tone="danger">Dual</Badge>
     </div>
   );
 }

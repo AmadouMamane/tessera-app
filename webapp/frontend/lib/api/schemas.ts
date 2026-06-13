@@ -237,8 +237,22 @@ export const CalibrationPointSchema = z.object({
   judge_score: z.number(),
   length: z.number().int(),
   match: z.boolean(),
+  case_id: z.string().optional(),
+  language: z.string().optional(),
+  category: z.string().optional(),
+  segment: z.string().optional(),
+  human_override: z.boolean().optional(),
 });
 export type CalibrationPoint = z.infer<typeof CalibrationPointSchema>;
+
+export const GroupAgreementSchema = z.object({
+  label: z.string(),
+  n: z.number().int(),
+  agreement: z.number(),
+  kappa: z.number(),
+  n_disagree: z.number().int(),
+});
+export type GroupAgreement = z.infer<typeof GroupAgreementSchema>;
 
 export const CalibrationSchema = z.object({
   available: z.boolean(),
@@ -251,6 +265,14 @@ export const CalibrationSchema = z.object({
   lenient: z.boolean().optional(),
   judge_model: z.string().optional(),
   points: z.array(CalibrationPointSchema).optional(),
+  fp: z.number().int().optional(),
+  fn: z.number().int().optional(),
+  n_disagree: z.number().int().optional(),
+  n_overrides: z.number().int().optional(),
+  by_language: z.array(GroupAgreementSchema).optional(),
+  by_category: z.array(GroupAgreementSchema).optional(),
+  by_segment: z.array(GroupAgreementSchema).optional(),
+  disagreement_by_category: z.record(z.string(), z.number()).optional(),
 });
 export type Calibration = z.infer<typeof CalibrationSchema>;
 
@@ -697,6 +719,7 @@ export const SeriesBucketSchema = z.object({
   n: z.number().int(),
   mean: z.number().nullable(),
 });
+export type SeriesBucket = z.infer<typeof SeriesBucketSchema>;
 
 export const ScoreSeriesSchema = z.object({
   metric: z.string(),
