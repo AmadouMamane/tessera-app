@@ -1242,6 +1242,15 @@
       "faithfulness": "Treue",
       "grounding": "Grounding",
       "hallucination": "Faktentreue"
+    },
+    "release": {
+      "title": "Aktuelle Release",
+      "deployed": "Bereitgestellt",
+      "changes": "{n} Änderungen",
+      "stable": "Stabil",
+      "openRegressions": "{n} Regression(en)",
+      "nonRegression": "Nicht-Regression",
+      "regressions": "Kritische Regressionen"
     }
   }
 }

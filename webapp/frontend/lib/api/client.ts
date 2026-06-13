@@ -109,6 +109,8 @@ import {
   RedTeamResponseSchema,
   type RefusalReport,
   RefusalReportSchema,
+  type ReleaseStatus,
+  ReleaseStatusSchema,
   type ReplayResult,
   ReplayResultSchema,
   type ReplaysResponse,
@@ -454,6 +456,11 @@ export async function fetchRuns(signal?: AbortSignal): Promise<RunRegistry> {
 /** Per-model comparison from the report archive (Comparaisons modèles tab, image 04). */
 export async function fetchModelComparison(signal?: AbortSignal): Promise<ModelComparison> {
   return request("/observability/model-comparison", { signal }, ModelComparisonSchema);
+}
+
+/** Current release + real open regressions, for the Vue d'ensemble rail (image 00). */
+export async function fetchReleaseStatus(signal?: AbortSignal): Promise<ReleaseStatus> {
+  return request("/observability/release-status", { signal }, ReleaseStatusSchema);
 }
 
 /** Documented failed-case catalogue + distributions (Cas échoués tab, image 03). */

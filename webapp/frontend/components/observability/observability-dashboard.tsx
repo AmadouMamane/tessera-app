@@ -115,6 +115,7 @@ import {
   fetchPlaybooks,
   fetchRedteam,
   fetchRefusal,
+  fetchReleaseStatus,
   fetchReproducibility,
   fetchRoadmap,
   fetchRouting,
@@ -171,6 +172,7 @@ import type {
   PropagationReport,
   RedTeamResponse,
   RefusalReport,
+  ReleaseStatus,
   ReproReport,
   RetractionReport,
   RoadmapReport,
@@ -293,6 +295,12 @@ export function ObservabilityDashboard() {
   const modelComparison = useQuery({
     queryKey: ["model-comparison"],
     queryFn: ({ signal }) => fetchModelComparison(signal),
+    refetchInterval: 60_000,
+  });
+
+  const releaseStatus = useQuery({
+    queryKey: ["release-status"],
+    queryFn: ({ signal }) => fetchReleaseStatus(signal),
     refetchInterval: 60_000,
   });
 
@@ -884,7 +892,12 @@ export function ObservabilityDashboard() {
           )}
         </div>
 
-        <RightRail scorePct={sloPct} topFailing={topFailing} onEvidence={downloadQualityEvidence} />
+        <RightRail
+          scorePct={sloPct}
+          topFailing={topFailing}
+          release={releaseStatus.data}
+          onEvidence={downloadQualityEvidence}
+        />
       </div>
     </div>
   );
@@ -1001,13 +1014,18 @@ function KpiStrip({
 function RightRail({
   scorePct,
   topFailing,
+  release,
   onEvidence,
 }: {
   scorePct: number | null;
   topFailing: { cluster_id: number | string; dominant_category: string; size: number }[];
+  release: ReleaseStatus | undefined;
   onEvidence: () => void;
 }) {
   const tq = useTranslations("quality");
+  const current = release?.current ?? null;
+  const nReg = release?.n_regressions ?? 0;
+  const regTone: "success" | "warning" = nReg === 0 ? "success" : "warning";
   const tone: "success" | "warning" | "danger" | "neutral" =
     scorePct == null
       ? "neutral"
@@ -1024,6 +1042,62 @@ function RightRail({
   return (
     <aside className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-col gap-4 xl:sticky xl:top-28">
+        {current ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between gap-2 text-sm">
+                {tq("release.title")}
+                <Badge tone={regTone}>
+                  {nReg === 0 ? tq("release.stable") : tq("release.openRegressions", { n: nReg })}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <div className="flex items-end gap-2">
+                <span className="font-serif text-2xl font-semibold tabular-nums">
+                  {current.version}
+                </span>
+                {current.date ? (
+                  <span className="pb-1 text-xs text-[var(--muted-foreground)]">
+                    {tq("release.deployed")} {current.date}
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                {tq("release.changes", {
+                  n: current.added + current.changed + current.fixed,
+                })}
+                {release && release.models_compared > 0
+                  ? ` · ${tq("release.nonRegression")} ${Math.round(release.non_regression_rate * 100)}%`
+                  : ""}
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {release && release.regressions.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                {tq("release.regressions")}
+                <Badge tone="warning">{release.regressions.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="flex flex-col gap-2">
+                {release.regressions.map((r) => (
+                  <li key={r.model} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="truncate">{r.model}</span>
+                    <span className="shrink-0 tabular-nums text-red-500">
+                      {Math.round(r.prev_rate * 100)}→{Math.round(r.last_rate * 100)}%
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">{tq("rail.scoreTitle")}</CardTitle>

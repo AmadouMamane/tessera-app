@@ -1242,6 +1242,15 @@
       "faithfulness": "Faithfulness",
       "grounding": "Grounding",
       "hallucination": "Factual reliability"
+    },
+    "release": {
+      "title": "Current release",
+      "deployed": "Deployed",
+      "changes": "{n} changes",
+      "stable": "Stable",
+      "openRegressions": "{n} regression(s)",
+      "nonRegression": "Non-regression",
+      "regressions": "Critical regressions"
     }
   }
 }

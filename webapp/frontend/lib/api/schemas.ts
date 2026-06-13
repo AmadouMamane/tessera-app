@@ -773,6 +773,36 @@ export const ModelComparisonSchema = z.object({
 });
 export type ModelComparison = z.infer<typeof ModelComparisonSchema>;
 
+export const ReleaseSchema = z.object({
+  version: z.string(),
+  date: z.string().nullable(),
+  added: z.number().int(),
+  changed: z.number().int(),
+  fixed: z.number().int(),
+});
+export type Release = z.infer<typeof ReleaseSchema>;
+
+export const RegressionSchema = z.object({
+  model: z.string(),
+  prev_run_at: z.string(),
+  last_run_at: z.string(),
+  prev_rate: z.number(),
+  last_rate: z.number(),
+  delta: z.number(),
+  total: z.number().int(),
+});
+export type Regression = z.infer<typeof RegressionSchema>;
+
+export const ReleaseStatusSchema = z.object({
+  current: ReleaseSchema.nullable(),
+  releases: z.array(ReleaseSchema),
+  regressions: z.array(RegressionSchema),
+  n_regressions: z.number().int(),
+  models_compared: z.number().int(),
+  non_regression_rate: z.number(),
+});
+export type ReleaseStatus = z.infer<typeof ReleaseStatusSchema>;
+
 export const ShadowComparisonSchema = z.object({
   question: z.string(),
   language: z.string(),
