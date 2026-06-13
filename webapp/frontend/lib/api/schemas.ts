@@ -1050,6 +1050,7 @@ export type FailedRunCase = z.infer<typeof FailedRunCaseSchema>;
 export const FailedTrendPointSchema = z.object({
   date: z.string(),
   n: z.number().int(),
+  by_severity: z.record(z.string(), z.number().int()),
 });
 export type FailedTrendPoint = z.infer<typeof FailedTrendPointSchema>;
 

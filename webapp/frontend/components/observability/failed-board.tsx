@@ -287,52 +287,53 @@ function MiniDonut({
   );
 }
 
-/** Failed-cases-over-time as a filled area line — suited to a time series. */
-function TrendArea({ points }: { points: { date: string; n: number }[] }) {
+// Severity stack order (bottom → top) + colours for the failures-over-time chart.
+const SEV_STACK = [
+  { key: "critical", color: "#ef4444" },
+  { key: "high", color: "#f59e0b" },
+  { key: "medium", color: "#3b82f6" },
+  { key: "low", color: "#64748b" },
+] as const;
+
+type TrendPt = { date: string; n: number; by_severity: Record<string, number> };
+
+/** Failed cases per day as severity-stacked bars; the day total sits above each
+ *  bar so volume, composition and the count are all visible at once. */
+function TrendStacked({ points }: { points: TrendPt[] }) {
+  const tq = useTranslations("quality");
   if (points.length === 0)
     return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
   const max = Math.max(...points.map((p) => p.n), 1);
-  const w = 240;
-  const h = 60;
-  const padY = 8;
-  const single = points.length === 1;
-  const xy = (p: { n: number }, i: number): [number, number] => {
-    const x = single ? w / 2 : (i / (points.length - 1)) * w;
-    const y = h - padY - (p.n / max) * (h - 2 * padY);
-    return [x, y];
-  };
-  const pts = points.map((p, i) => ({ date: p.date, xy: xy(p, i) }));
-  const line = pts
-    .map(({ xy: [x, y] }, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
-    .join(" ");
-  const firstX = pts[0]?.xy[0] ?? 0;
-  const lastX = pts[pts.length - 1]?.xy[0] ?? w;
-  const area = `${line} L${lastX.toFixed(1)},${h} L${firstX.toFixed(1)},${h} Z`;
   return (
     <div className="flex flex-col gap-1">
-      <svg
-        viewBox={`0 0 ${w} ${h}`}
-        className="h-[60px] w-full"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <title>{points.map((p) => `${p.date}: ${p.n}`).join(", ")}</title>
-        <defs>
-          <linearGradient id="failTrend" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={area} fill="url(#failTrend)" stroke="none" />
-        <path d={line} fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeLinejoin="round" />
-        {pts.map(({ date, xy: [x, y] }) => (
-          <circle key={date} cx={x} cy={y} r="1.8" fill="#8b5cf6" />
-        ))}
-      </svg>
-      <div className="flex justify-between text-[0.5rem] text-[var(--muted-foreground)]">
+      <div className="flex h-20 items-end justify-around gap-3">
         {points.map((p) => (
-          <span key={p.date} className="tabular-nums">
-            {fmtDay(p.date)}
+          <div key={p.date} className="flex w-12 flex-col items-center gap-0.5">
+            <span className="text-[0.6rem] font-medium tabular-nums">{p.n}</span>
+            <div
+              className="flex w-7 flex-col justify-end overflow-hidden rounded-sm"
+              style={{ height: `${Math.max(4, (p.n / max) * 56)}px` }}
+              title={SEV_STACK.map((s) => `${s.key}: ${p.by_severity[s.key] ?? 0}`).join(" · ")}
+            >
+              {SEV_STACK.map((s) => {
+                const v = p.by_severity[s.key] ?? 0;
+                if (v === 0) return null;
+                return (
+                  <div key={s.key} style={{ height: `${(v / p.n) * 100}%`, background: s.color }} />
+                );
+              })}
+            </div>
+            <span className="text-[0.5rem] tabular-nums text-[var(--muted-foreground)]">
+              {fmtDay(p.date)}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[0.5rem] text-[var(--muted-foreground)]">
+        {SEV_STACK.map((s) => (
+          <span key={s.key} className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.color }} />
+            {tq(`failed.sev.${s.key}`)}
           </span>
         ))}
       </div>
@@ -668,7 +669,7 @@ export function FailedBoard({
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-1">
-            <TrendArea points={report?.trend ?? []} />
+            <TrendStacked points={report?.trend ?? []} />
           </CardContent>
         </Card>
         <Card>

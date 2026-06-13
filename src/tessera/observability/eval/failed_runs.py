@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -103,10 +103,11 @@ class FailedRunCase:
 
 @dataclass(frozen=True, slots=True)
 class TrendPoint:
-    """Failed-case count for one calendar day."""
+    """Failed-case count for one calendar day, split by triage severity."""
 
     date: str  # YYYY-MM-DD
     n: int
+    by_severity: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -262,22 +263,37 @@ def _parse_day(stamp: str) -> str | None:
 
 
 def _build_trend(runs: list[_Run]) -> list[TrendPoint]:
-    """Failed-case count per calendar day, over the most recent runs.
+    """Failed-case count per calendar day, split by severity, over recent runs.
 
-    For each day we take the failed count of the **largest** run that day (so a
-    smoke run doesn't dilute a full evaluation), then keep the last ``_TREND_DAYS``.
+    For each day we keep the **largest** full run that day (so a smoke run doesn't
+    dilute a full evaluation), then the last ``_TREND_DAYS`` days. Each point also
+    carries the day's failures broken down by triage severity.
     """
-    by_day: dict[str, int] = {}
+    chosen: dict[str, _Run] = {}
+    failed_n: dict[str, int] = {}
     for run in runs:
         day = _parse_day(run.run_at)
         if day is None or not _is_full(run):
             continue
         failed = sum(1 for r in run.results if not r.get("passed"))
-        # Keep the day's most substantive full run.
-        if day not in by_day or failed > by_day[day]:
-            by_day[day] = failed
-    days = sorted(by_day)[-_TREND_DAYS:]
-    return [TrendPoint(date=d, n=by_day[d]) for d in days]
+        if day not in failed_n or failed > failed_n[day]:
+            failed_n[day] = failed
+            chosen[day] = run
+    points: list[TrendPoint] = []
+    for day in sorted(chosen)[-_TREND_DAYS:]:
+        sev = Counter(
+            _SEVERITY.get(str(r.get("category", "")), "medium")
+            for r in chosen[day].results
+            if not r.get("passed")
+        )
+        points.append(
+            TrendPoint(
+                date=day,
+                n=failed_n[day],
+                by_severity={k: sev.get(k, 0) for k in _SEVERITY_RANK},
+            )
+        )
+    return points
 
 
 # ─────────────────────────────── public API ──────────────────────────────────
