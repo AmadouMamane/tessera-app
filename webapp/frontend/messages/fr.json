@@ -1075,6 +1075,47 @@
       "memory": "Mémoire & RGPD",
       "act": "Agir — replay, shadow, curation",
       "platform": "Plateforme & corpus"
+    },
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "signals": "Signaux qualité",
+      "runs": "Runs & datasets",
+      "failed": "Cas échoués",
+      "models": "Comparaisons modèles",
+      "judge": "Calibration juge"
+    },
+    "cta": {
+      "evidence": "Générer evidence pack qualité",
+      "runEval": "Lancer évaluation",
+      "compareModels": "Comparer modèles"
+    },
+    "temporal": {
+      "live": "Live",
+      "replay": "Relire à T",
+      "window": "7 derniers jours"
+    },
+    "rail": {
+      "scoreTitle": "Résumé du score",
+      "scoreCaption": "SLO qualité (fidélité)",
+      "topFailing": "Top catégories en échec",
+      "sensitive": "Actions sensibles",
+      "role": "Rôle",
+      "safety": "Sûreté",
+      "evidenceCaption": "Un bundle signé pour la période courante.",
+      "signals": "{n}/200 signaux qualité",
+      "noFailing": "Aucune catégorie en échec",
+      "live": "live"
+    },
+    "kpi": {
+      "score": "Score qualité",
+      "green": "Signaux au vert",
+      "refusal": "Taux de refus",
+      "failed": "Cas échoués",
+      "judge": "Calibration juge",
+      "conformance": "Conformité"
+    },
+    "empty": {
+      "noBackend": "Pas encore relié à un backend — aucune donnée inventée."
     }
   }
 }

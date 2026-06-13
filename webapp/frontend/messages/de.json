@@ -1075,6 +1075,47 @@
       "memory": "Speicher & DSGVO",
       "act": "Handeln — Replay, Shadow, Kuratierung",
       "platform": "Plattform & Korpus"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "signals": "Qualitätssignale",
+      "runs": "Runs & Datensätze",
+      "failed": "Fehlgeschlagene Fälle",
+      "models": "Modellvergleich",
+      "judge": "Judge-Kalibrierung"
+    },
+    "cta": {
+      "evidence": "Qualitäts-Evidence-Pack erzeugen",
+      "runEval": "Bewertung starten",
+      "compareModels": "Modelle vergleichen"
+    },
+    "temporal": {
+      "live": "Live",
+      "replay": "Wiedergabe bei T",
+      "window": "Letzte 7 Tage"
+    },
+    "rail": {
+      "scoreTitle": "Score-Zusammenfassung",
+      "scoreCaption": "Qualitäts-SLO (Treue)",
+      "topFailing": "Top-Fehlerkategorien",
+      "sensitive": "Sensible Aktionen",
+      "role": "Rolle",
+      "safety": "Sicherheit",
+      "evidenceCaption": "Ein signiertes Bundle für den aktuellen Zeitraum.",
+      "signals": "{n}/200 Qualitätssignale",
+      "noFailing": "Keine fehlerhafte Kategorie",
+      "live": "live"
+    },
+    "kpi": {
+      "score": "Qualitätsscore",
+      "green": "Signale grün",
+      "refusal": "Ablehnungsrate",
+      "failed": "Fehlgeschlagene Fälle",
+      "judge": "Judge-Kalibrierung",
+      "conformance": "Konformität"
+    },
+    "empty": {
+      "noBackend": "Noch nicht an ein Backend angebunden — keine Daten erfunden."
     }
   }
 }

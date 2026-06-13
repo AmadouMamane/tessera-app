@@ -14,6 +14,7 @@ import {
   Crosshair,
   Eraser,
   ExternalLink,
+  FileDown,
   Filter,
   Flame,
   Footprints,
@@ -174,6 +175,15 @@ import type {
 const SHADOW_MODELS = ["llama3.2:3b", "mistral:7b", "gemma3:27b", "llama3.3:70b"] as const;
 
 const POLL_MS = 5_000;
+
+// The Qualité IA page covers 42 of the 200-signal global catalogue (normative — see
+// docs/ui-reference/qualite-ia-ui-reference/README.md). This is a coverage framing,
+// not a live count, so it is a constant rather than a fabricated metric.
+const QUALITY_SIGNALS = 42;
+const QUALITY_CATALOGUE = 200;
+
+const TAB_DEFS = ["overview", "signals", "runs", "failed", "models", "judge"] as const;
+type TabKey = (typeof TAB_DEFS)[number];
 const PHOENIX_URL = process.env.NEXT_PUBLIC_PHOENIX_URL ?? "http://localhost:16006";
 const LANGFUSE_URL = process.env.NEXT_PUBLIC_LANGFUSE_URL ?? "http://localhost:3900";
 
@@ -186,6 +196,7 @@ function scoreTone(score: number): string {
 export function ObservabilityDashboard() {
   const t = useTranslations("observability");
   const tq = useTranslations("quality");
+  const [tab, setTab] = useState<TabKey>("overview");
 
   const scores = useQuery({
     queryKey: ["eval-scores"],
@@ -498,212 +509,570 @@ export function ObservabilityDashboard() {
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
+  // --- Real derived headline metrics (no fabrication — null ⇒ "—") -----------
+  const sloPct = slo.data && slo.data.n > 0 ? Math.round(slo.data.good_rate * 100) : null;
+  const refusalOver = refusal.data ? Math.round(refusal.data.over_refusal_rate * 100) : null;
+  const confPct =
+    conformance.data && conformance.data.n_fields_checked > 0
+      ? Math.round(conformance.data.conformance_rate * 100)
+      : null;
+  const judgePct = calibration.data?.available
+    ? Math.round((calibration.data.agreement ?? 0) * 100)
+    : null;
+  const failedCount = failureClusters.data?.available
+    ? (failureClusters.data.n_failures ?? 0)
+    : null;
+  const topFailing = failureClusters.data?.available
+    ? [...(failureClusters.data.clusters ?? [])].sort((a, b) => b.size - a.size).slice(0, 4)
+    : [];
+
+  function downloadQualityEvidence() {
+    const bundle = {
+      generated_at: new Date().toISOString(),
+      page: "quality",
+      window: tq("temporal.window"),
+      signals_covered: `${QUALITY_SIGNALS}/${QUALITY_CATALOGUE}`,
+      slo: slo.data ?? null,
+      refusal: refusal.data ?? null,
+      conformance: conformance.data ?? null,
+      calibration: calibration.data ?? null,
+      toxicity: toxicity.data ?? null,
+      pii_leak: piiLeak.data ?? null,
+      ai_act: aiAct.data ?? null,
+      failure_clusters: failureClusters.data ?? null,
+    };
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tessera-quality-evidence-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
-    <div className="flex flex-col gap-8">
-      <SectionNav />
+    <div className="flex flex-col gap-5">
+      {/* Sticky chrome: compact temporal bar + single evidence CTA + tabs. */}
+      <div className="sticky top-0 z-30 -mx-4 flex flex-col gap-3 bg-[var(--tessera-bg)] px-4 pb-3 pt-1 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TemporalBar />
+          <Button onClick={downloadQualityEvidence} className="gap-2">
+            <FileDown className="h-4 w-4" />
+            {tq("cta.evidence")}
+          </Button>
+        </div>
+        <TabBar active={tab} onChange={setTab} />
+      </div>
 
-      <Section id="q-quality" icon={BadgeCheck} title={tq("sections.quality")}>
-        <FullWidth>
-          <SLOCard data={slo.data} loading={slo.isLoading} />
-        </FullWidth>
-        <TrendCard data={trend.data} loading={trend.isLoading} />
-        <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
-        <CitationCard data={citations.data} loading={citations.isLoading} />
-        <CitationLinksCard data={citationLinks.data} loading={citationLinks.isLoading} />
-        <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
-        <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
-        <FailurePredictorCard data={failurePredictor.data} loading={failurePredictor.isLoading} />
-        <FailureClusterCard data={failureClusters.data} loading={failureClusters.isLoading} />
-        <FullWidth>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                {t("scores.title")}
-                <Badge tone="neutral">{t("scores.metric")}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {scores.isLoading ? (
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                </div>
-              ) : rows.length === 0 ? (
-                <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-                  {t("scores.empty")}
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                        <th className="py-2 pr-4 font-medium">{t("scores.time")}</th>
-                        <th className="py-2 pr-4 font-medium">{t("scores.metricCol")}</th>
-                        <th className="py-2 pr-4 font-medium">{t("scores.score")}</th>
-                        <th className="py-2 pr-4 font-medium">{t("scores.language")}</th>
-                        <th className="py-2 font-medium">{t("scores.judge")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((s, i) => (
-                        <tr
-                          key={`${s.scored_at}-${i}`}
-                          className="border-b border-[var(--border)]/50"
-                        >
-                          <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
-                            {new Date(s.scored_at).toLocaleTimeString()}
-                          </td>
-                          <td className="py-2 pr-4">{s.metric}</td>
-                          <td
-                            className={`py-2 pr-4 font-semibold tabular-nums ${scoreTone(s.score)}`}
-                          >
-                            {s.score.toFixed(2)}
-                          </td>
-                          <td className="py-2 pr-4 uppercase">{s.language}</td>
-                          <td className="py-2 text-[var(--muted-foreground)]">{s.judge_model}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </FullWidth>
-      </Section>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
+        <div className="flex min-w-0 flex-col gap-4">
+          {tab === "overview" && (
+            <>
+              <KpiStrip
+                score={sloPct}
+                refusal={refusalOver}
+                conformance={confPct}
+                judge={judgePct}
+                failed={failedCount}
+              />
+              <TabGrid>
+                <FullWidth>
+                  <SLOCard data={slo.data} loading={slo.isLoading} />
+                </FullWidth>
+                <TrendCard data={trend.data} loading={trend.isLoading} />
+                <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
+                <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
+                <FailurePredictorCard
+                  data={failurePredictor.data}
+                  loading={failurePredictor.isLoading}
+                />
+                <FailureClusterCard
+                  data={failureClusters.data}
+                  loading={failureClusters.isLoading}
+                />
+                <FunnelCard data={funnel.data} loading={funnel.isLoading} />
+                <JourneyCard data={journey.data} loading={journey.isLoading} />
+                <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
+                <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
+              </TabGrid>
+            </>
+          )}
 
-      <Section id="q-security" icon={Lock} title={tq("sections.security")}>
-        <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
-        <RedTeamCard />
-        <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
-        <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
-        <CrossTenantCard data={crossTenant.data} loading={crossTenant.isLoading} />
-        <LeastPrivilegeCard data={leastPrivilege.data} loading={leastPrivilege.isLoading} />
-        <GuardRetractionCard data={guardRetraction.data} loading={guardRetraction.isLoading} />
-        <GuardExplainCard data={guardExplain.data} loading={guardExplain.isLoading} />
-        <InversionCard data={embeddingInversion.data} loading={embeddingInversion.isLoading} />
-        <FullWidth>
-          <SiemCard data={siem.data} loading={siem.isLoading} />
-        </FullWidth>
-      </Section>
+          {tab === "signals" && (
+            <TabGrid>
+              <CitationCard data={citations.data} loading={citations.isLoading} />
+              <CitationLinksCard data={citationLinks.data} loading={citationLinks.isLoading} />
+              <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
+              <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
+              <FirewallEfficacyCard data={firewall.data} loading={firewall.isLoading} />
+              <RedTeamCard />
+              <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
+              <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
+              <CrossTenantCard data={crossTenant.data} loading={crossTenant.isLoading} />
+              <LeastPrivilegeCard data={leastPrivilege.data} loading={leastPrivilege.isLoading} />
+              <GuardRetractionCard
+                data={guardRetraction.data}
+                loading={guardRetraction.isLoading}
+              />
+              <GuardExplainCard data={guardExplain.data} loading={guardExplain.isLoading} />
+              <InversionCard
+                data={embeddingInversion.data}
+                loading={embeddingInversion.isLoading}
+              />
+              <FullWidth>
+                <SiemCard data={siem.data} loading={siem.isLoading} />
+              </FullWidth>
+              <AIActCard data={aiAct.data} loading={aiAct.isLoading} />
+              <DisclosureCard data={disclosure.data} loading={disclosure.isLoading} />
+              <LocalizationCard data={localization.data} loading={localization.isLoading} />
+              <LocaleFormatCard data={localeFormat.data} loading={localeFormat.isLoading} />
+              <RefusalCard data={refusal.data} loading={refusal.isLoading} />
+              <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
+              <CostCard data={cost.data} loading={cost.isLoading} />
+              <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
+              <ContextOverflowCard
+                data={contextOverflow.data}
+                loading={contextOverflow.isLoading}
+              />
+              <TailSamplingCard data={tailSampling.data} loading={tailSampling.isLoading} />
+              <SpanPropagationCard
+                data={spanPropagation.data}
+                loading={spanPropagation.isLoading}
+              />
+              <ReproducibilityCard
+                data={reproducibility.data}
+                loading={reproducibility.isLoading}
+              />
+              <GraphTopologyCard data={graphTopology.data} loading={graphTopology.isLoading} />
+              <TraceSnapshotCard data={traceSnapshot.data} loading={traceSnapshot.isLoading} />
+              <HandoffsCard data={handoffs.data} loading={handoffs.isLoading} />
+              <ToolLoopsCard data={toolLoops.data} loading={toolLoops.isLoading} />
+              <ToolValidityCard data={tools.data} loading={tools.isLoading} />
+              <RoutingCard data={routing.data} loading={routing.isLoading} />
+              <IntentCard data={intent.data} loading={intent.isLoading} />
+              <SessionCard data={sessions.data} loading={sessions.isLoading} />
+              <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
+              <MemoryObsCard data={memoryObs.data} loading={memoryObs.isLoading} />
+              <MemoryInventoryCard
+                data={memoryInventory.data}
+                loading={memoryInventory.isLoading}
+              />
+              <ErasureCoverageCard
+                data={erasureCoverage.data}
+                loading={erasureCoverage.isLoading}
+              />
+              <EmbeddingSkewCard data={embeddingSkew.data} loading={embeddingSkew.isLoading} />
+              <CorpusFreshnessCard
+                data={corpusFreshness.data}
+                loading={corpusFreshness.isLoading}
+              />
+              <BackendCard
+                title="Arize Phoenix"
+                subtitle={t("phoenix")}
+                href={PHOENIX_URL}
+                icon={<LineChart className="h-5 w-5 text-blue-500" />}
+              />
+              <BackendCard
+                title="Langfuse"
+                subtitle={t("langfuse")}
+                href={LANGFUSE_URL}
+                icon={<Gauge className="h-5 w-5 text-blue-500" />}
+              />
+            </TabGrid>
+          )}
 
-      <Section id="q-compliance" icon={Landmark} title={tq("sections.compliance")}>
-        <AIActCard data={aiAct.data} loading={aiAct.isLoading} />
-        <DisclosureCard data={disclosure.data} loading={disclosure.isLoading} />
-        <LocalizationCard data={localization.data} loading={localization.isLoading} />
-        <LocaleFormatCard data={localeFormat.data} loading={localeFormat.isLoading} />
-        <RefusalCard data={refusal.data} loading={refusal.isLoading} />
-        <ConformanceCard data={conformance.data} loading={conformance.isLoading} />
-      </Section>
+          {tab === "runs" && (
+            <TabGrid>
+              <FullWidth>
+                <ScoresTable rows={rows} loading={scores.isLoading} />
+              </FullWidth>
+              <SftDatasetCard data={sftDataset.data} loading={sftDataset.isLoading} />
+              <CostCard data={cost.data} loading={cost.isLoading} />
+              <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
+              <ReproducibilityCard
+                data={reproducibility.data}
+                loading={reproducibility.isLoading}
+              />
+              <FullWidth>
+                <SessionTheater />
+              </FullWidth>
+              <FullWidth>
+                <ReplayPanel />
+              </FullWidth>
+            </TabGrid>
+          )}
 
-      <Section id="q-reliability" icon={Activity} title={tq("sections.reliability")}>
-        <CostCard data={cost.data} loading={cost.isLoading} />
-        <ObsCostCard data={obsCost.data} loading={obsCost.isLoading} />
-        <ContextOverflowCard data={contextOverflow.data} loading={contextOverflow.isLoading} />
-        <TailSamplingCard data={tailSampling.data} loading={tailSampling.isLoading} />
-        <SpanPropagationCard data={spanPropagation.data} loading={spanPropagation.isLoading} />
-        <ReproducibilityCard data={reproducibility.data} loading={reproducibility.isLoading} />
-        <GraphTopologyCard data={graphTopology.data} loading={graphTopology.isLoading} />
-        <TraceSnapshotCard data={traceSnapshot.data} loading={traceSnapshot.isLoading} />
-        <HandoffsCard data={handoffs.data} loading={handoffs.isLoading} />
-        <ToolLoopsCard data={toolLoops.data} loading={toolLoops.isLoading} />
-        <ToolValidityCard data={tools.data} loading={tools.isLoading} />
-      </Section>
+          {tab === "failed" && (
+            <TabGrid>
+              <FullWidth>
+                <FailureClusterCard
+                  data={failureClusters.data}
+                  loading={failureClusters.isLoading}
+                />
+              </FullWidth>
+              <FailurePredictorCard
+                data={failurePredictor.data}
+                loading={failurePredictor.isLoading}
+              />
+              <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />
+              <ToxicityCard data={toxicity.data} loading={toxicity.isLoading} />
+              <PiiLeakCard data={piiLeak.data} loading={piiLeak.isLoading} />
+              <FullWidth>
+                <HeroPlaceholder
+                  icon={ListChecks}
+                  title={tq("tabs.failed")}
+                  note={tq("empty.noBackend")}
+                />
+              </FullWidth>
+            </TabGrid>
+          )}
 
-      <Section id="q-sessions" icon={Route} title={tq("sections.sessions")}>
-        <RoutingCard data={routing.data} loading={routing.isLoading} />
-        <IntentCard data={intent.data} loading={intent.isLoading} />
-        <SessionCard data={sessions.data} loading={sessions.isLoading} />
-        <FunnelCard data={funnel.data} loading={funnel.isLoading} />
-        <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
-        <JourneyCard data={journey.data} loading={journey.isLoading} />
-      </Section>
+          {tab === "models" && (
+            <TabGrid>
+              <FullWidth>
+                <ShadowCard />
+              </FullWidth>
+              <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
+              <FullWidth>
+                <HeroPlaceholder
+                  icon={GitCompareArrows}
+                  title={tq("tabs.models")}
+                  note={tq("empty.noBackend")}
+                />
+              </FullWidth>
+            </TabGrid>
+          )}
 
-      <Section id="q-memory" icon={Brain} title={tq("sections.memory")}>
-        <MemoryObsCard data={memoryObs.data} loading={memoryObs.isLoading} />
-        <MemoryInventoryCard data={memoryInventory.data} loading={memoryInventory.isLoading} />
-        <ErasureCoverageCard data={erasureCoverage.data} loading={erasureCoverage.isLoading} />
-      </Section>
+          {tab === "judge" && (
+            <TabGrid>
+              <FullWidth>
+                <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
+              </FullWidth>
+              <FullWidth>
+                <HeroPlaceholder
+                  icon={Scale}
+                  title={tq("tabs.judge")}
+                  note={tq("empty.noBackend")}
+                />
+              </FullWidth>
+            </TabGrid>
+          )}
+        </div>
 
-      <Section id="q-act" icon={Repeat} title={tq("sections.act")}>
-        <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
-        <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
-        <SftDatasetCard data={sftDataset.data} loading={sftDataset.isLoading} />
-        <FullWidth>
-          <ShadowCard />
-        </FullWidth>
-        <FullWidth>
-          <SessionTheater />
-        </FullWidth>
-        <FullWidth>
-          <ReplayPanel />
-        </FullWidth>
-      </Section>
-
-      <Section id="q-platform" icon={Layers} title={tq("sections.platform")}>
-        <BackendCard
-          title="Arize Phoenix"
-          subtitle={t("phoenix")}
-          href={PHOENIX_URL}
-          icon={<LineChart className="h-5 w-5 text-blue-500" />}
-        />
-        <BackendCard
-          title="Langfuse"
-          subtitle={t("langfuse")}
-          href={LANGFUSE_URL}
-          icon={<Gauge className="h-5 w-5 text-blue-500" />}
-        />
-        <EmbeddingSkewCard data={embeddingSkew.data} loading={embeddingSkew.isLoading} />
-        <CorpusFreshnessCard data={corpusFreshness.data} loading={corpusFreshness.isLoading} />
-      </Section>
+        <RightRail scorePct={sloPct} topFailing={topFailing} onEvidence={downloadQualityEvidence} />
+      </div>
     </div>
   );
 }
 
-const SECTION_DEFS = [
-  "quality",
-  "security",
-  "compliance",
-  "reliability",
-  "sessions",
-  "memory",
-  "act",
-  "platform",
-] as const;
-
-/** Sticky in-page nav: jump to a signal group. Mirrors the overview sub-header. */
-function SectionNav() {
+/** Compact live temporal bar (Replay rail expansion is Stage 5 — see memory). */
+function TemporalBar() {
   const tq = useTranslations("quality");
   return (
-    <nav className="sticky top-0 z-20 -mx-4 flex flex-wrap items-center gap-1 border-b border-[var(--border)] bg-[var(--tessera-bg)] px-4 py-2 shadow-[0_-16px_0_0_var(--tessera-bg)]">
-      {SECTION_DEFS.map((key) => (
-        <a
-          key={key}
-          href={`#q-${key}`}
-          className="rounded-md px-3 py-1 text-xs text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
-        >
-          {tq(`sections.${key}`)}
-        </a>
-      ))}
+    <div className="flex items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-1.5 text-sm">
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        <span className="font-medium text-[var(--foreground)]">{tq("temporal.live")}</span>
+      </span>
+      <span className="text-[var(--muted-foreground)]">·</span>
+      <span className="text-[var(--muted-foreground)]">{tq("temporal.window")}</span>
+      <span className="text-[var(--muted-foreground)]">·</span>
+      <button
+        type="button"
+        disabled
+        title={tq("empty.noBackend")}
+        className="flex cursor-not-allowed items-center gap-1 text-[var(--muted-foreground)] opacity-70"
+      >
+        <Undo2 className="h-3.5 w-3.5" />
+        {tq("temporal.replay")}
+      </button>
+    </div>
+  );
+}
+
+const TAB_META: Record<TabKey, typeof Gauge> = {
+  overview: Gauge,
+  signals: ListChecks,
+  runs: Boxes,
+  failed: Siren,
+  models: GitCompareArrows,
+  judge: Scale,
+};
+
+function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) => void }) {
+  const tq = useTranslations("quality");
+  return (
+    <nav className="flex flex-wrap items-center gap-1 border-b border-[var(--tessera-border)]">
+      {TAB_DEFS.map((key) => {
+        const Icon = TAB_META[key];
+        const on = key === active;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(key)}
+            className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors ${
+              on
+                ? "border-gold-400 font-medium text-[var(--foreground)]"
+                : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {tq(`tabs.${key}`)}
+          </button>
+        );
+      })}
     </nav>
   );
 }
 
-function Section({
-  id,
+/** Responsive two-column signal grid. FullWidth spans both columns. */
+function TabGrid({ children }: { children: ReactNode }) {
+  return <div className="grid items-start gap-4 lg:grid-cols-2">{children}</div>;
+}
+
+const KPI_GOOD = "text-emerald-600 dark:text-emerald-400";
+const KPI_WARN = "text-amber-600 dark:text-amber-400";
+const KPI_BAD = "text-red-600 dark:text-red-400";
+const KPI_MUTED = "text-[var(--muted-foreground)]";
+
+function highTone(v: number | null): string {
+  if (v == null) return KPI_MUTED;
+  return v >= 80 ? KPI_GOOD : v >= 60 ? KPI_WARN : KPI_BAD;
+}
+
+function KpiTile({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <Card className="p-3">
+      <div className="truncate text-xs text-[var(--muted-foreground)]">{label}</div>
+      <div
+        className={`mt-1 text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}
+      >
+        {value}
+      </div>
+    </Card>
+  );
+}
+
+function KpiStrip({
+  score,
+  refusal,
+  conformance,
+  judge,
+  failed,
+}: {
+  score: number | null;
+  refusal: number | null;
+  conformance: number | null;
+  judge: number | null;
+  failed: number | null;
+}) {
+  const tq = useTranslations("quality");
+  const pct = (v: number | null) => (v == null ? "—" : `${v}%`);
+  const refusalTone =
+    refusal == null ? KPI_MUTED : refusal <= 5 ? KPI_GOOD : refusal <= 15 ? KPI_WARN : KPI_BAD;
+  const confTone =
+    conformance == null
+      ? KPI_MUTED
+      : conformance === 100
+        ? KPI_GOOD
+        : conformance >= 90
+          ? KPI_WARN
+          : KPI_BAD;
+  const failTone =
+    failed == null ? KPI_MUTED : failed === 0 ? KPI_GOOD : failed <= 5 ? KPI_WARN : KPI_BAD;
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <KpiTile label={tq("kpi.score")} value={pct(score)} tone={highTone(score)} />
+      <KpiTile label={tq("tabs.signals")} value={`${QUALITY_SIGNALS}/${QUALITY_CATALOGUE}`} />
+      <KpiTile label={tq("kpi.refusal")} value={pct(refusal)} tone={refusalTone} />
+      <KpiTile label={tq("kpi.conformance")} value={pct(conformance)} tone={confTone} />
+      <KpiTile label={tq("kpi.judge")} value={pct(judge)} tone={highTone(judge)} />
+      <KpiTile
+        label={tq("kpi.failed")}
+        value={failed == null ? "—" : String(failed)}
+        tone={failTone}
+      />
+    </div>
+  );
+}
+
+/** Honest placeholder for a tab hero whose backend is not wired yet (no mock). */
+function HeroPlaceholder({
   icon: Icon,
   title,
-  children,
-}: { id: string; icon: typeof Gauge; title: string; children: ReactNode }) {
+  note,
+}: { icon: typeof Gauge; title: string; note: string }) {
   return (
-    <section id={id} className="scroll-mt-16">
-      <div className="mb-3 flex items-center gap-2 border-b border-[var(--border)] pb-2">
-        <Icon className="h-4 w-4 text-gold-400" />
-        <h2 className="font-serif text-base font-semibold text-[var(--foreground)]">{title}</h2>
+    <Card>
+      <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
+        <Icon className="h-6 w-6 text-[var(--muted-foreground)]" />
+        <p className="font-serif text-sm font-semibold text-[var(--foreground)]">{title}</p>
+        <p className="max-w-sm text-xs text-[var(--muted-foreground)]">{note}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Persistent right rail: score summary, top failing categories, sensitive actions, evidence. */
+function RightRail({
+  scorePct,
+  topFailing,
+  onEvidence,
+}: {
+  scorePct: number | null;
+  topFailing: { cluster_id: number | string; dominant_category: string; size: number }[];
+  onEvidence: () => void;
+}) {
+  const tq = useTranslations("quality");
+  const tone: "success" | "warning" | "danger" | "neutral" =
+    scorePct == null
+      ? "neutral"
+      : scorePct >= 80
+        ? "success"
+        : scorePct >= 60
+          ? "warning"
+          : "danger";
+  const sensitive = [
+    { label: tq("cta.runEval"), role: "analyst", safety: "S2" },
+    { label: tq("cta.compareModels"), role: "analyst", safety: "S2" },
+    { label: tq("cta.evidence"), role: "auditor", safety: "S1" },
+  ];
+  return (
+    <aside className="flex min-w-0 flex-col gap-4">
+      <div className="flex flex-col gap-4 xl:sticky xl:top-28">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{tq("rail.scoreTitle")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <div className="flex items-end gap-2">
+              <span className={`text-4xl font-semibold tabular-nums ${highTone(scorePct)}`}>
+                {scorePct == null ? "—" : `${scorePct}%`}
+              </span>
+              <Badge tone={tone}>SLO</Badge>
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)]">{tq("rail.scoreCaption")}</p>
+            <p className="text-xs text-[var(--muted-foreground)]">
+              {tq("rail.signals", { n: QUALITY_SIGNALS })}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{tq("rail.topFailing")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topFailing.length === 0 ? (
+              <p className="text-xs text-[var(--muted-foreground)]">{tq("rail.noFailing")}</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {topFailing.map((c) => (
+                  <li
+                    key={c.cluster_id}
+                    className="flex items-center justify-between gap-2 text-sm"
+                  >
+                    <span className="truncate">{c.dominant_category}</span>
+                    <Badge tone="neutral">{c.size}</Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{tq("rail.sensitive")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-3">
+              {sensitive.map((a) => (
+                <li key={a.label} className="flex flex-col gap-1">
+                  <span className="text-sm text-[var(--foreground)]">{a.label}</span>
+                  <span className="flex flex-wrap items-center gap-1.5 text-[0.7rem]">
+                    <Badge tone="neutral">
+                      {tq("rail.role")}: {a.role}
+                    </Badge>
+                    <Badge tone="warning">
+                      {tq("rail.safety")}: {a.safety}
+                    </Badge>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex flex-col gap-2 py-4">
+            <Button onClick={onEvidence} className="w-full justify-center gap-2">
+              <FileDown className="h-4 w-4" />
+              {tq("cta.evidence")}
+            </Button>
+            <p className="text-xs text-[var(--muted-foreground)]">{tq("rail.evidenceCaption")}</p>
+          </CardContent>
+        </Card>
       </div>
-      <div className="grid items-start gap-4 lg:grid-cols-2">{children}</div>
-    </section>
+    </aside>
+  );
+}
+
+/** Recent eval scores table — reused on Overview and Runs & datasets. */
+function ScoresTable({ rows, loading }: { rows: EvalScore[]; loading: boolean }) {
+  const t = useTranslations("observability");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {t("scores.title")}
+          <Badge tone="neutral">{t("scores.metric")}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
+            {t("scores.empty")}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                  <th className="py-2 pr-4 font-medium">{t("scores.time")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("scores.metricCol")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("scores.score")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("scores.language")}</th>
+                  <th className="py-2 font-medium">{t("scores.judge")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((s, i) => (
+                  <tr key={`${s.scored_at}-${i}`} className="border-b border-[var(--border)]/50">
+                    <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
+                      {new Date(s.scored_at).toLocaleTimeString()}
+                    </td>
+                    <td className="py-2 pr-4">{s.metric}</td>
+                    <td className={`py-2 pr-4 font-semibold tabular-nums ${scoreTone(s.score)}`}>
+                      {s.score.toFixed(2)}
+                    </td>
+                    <td className="py-2 pr-4 uppercase">{s.language}</td>
+                    <td className="py-2 text-[var(--muted-foreground)]">{s.judge_model}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1075,6 +1075,47 @@
       "memory": "Memory & GDPR",
       "act": "Act — replay, shadow, curation",
       "platform": "Platform & corpus"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "signals": "Quality signals",
+      "runs": "Runs & datasets",
+      "failed": "Failed cases",
+      "models": "Model comparison",
+      "judge": "Judge calibration"
+    },
+    "cta": {
+      "evidence": "Generate quality evidence pack",
+      "runEval": "Run evaluation",
+      "compareModels": "Compare models"
+    },
+    "temporal": {
+      "live": "Live",
+      "replay": "Replay at T",
+      "window": "Last 7 days"
+    },
+    "rail": {
+      "scoreTitle": "Score summary",
+      "scoreCaption": "Quality SLO (faithfulness)",
+      "topFailing": "Top failing categories",
+      "sensitive": "Sensitive actions",
+      "role": "Role",
+      "safety": "Safety",
+      "evidenceCaption": "One signed bundle for the current period.",
+      "signals": "{n}/200 quality signals",
+      "noFailing": "No failing category",
+      "live": "live"
+    },
+    "kpi": {
+      "score": "Quality score",
+      "green": "Signals green",
+      "refusal": "Refusal rate",
+      "failed": "Failed cases",
+      "judge": "Judge calibration",
+      "conformance": "Conformance"
+    },
+    "empty": {
+      "noBackend": "Not wired to a backend yet — no data fabricated."
     }
   }
 }
