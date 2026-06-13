@@ -131,6 +131,80 @@ function ScoreDistribution({ points }: { points: CalibrationPoint[] }) {
   );
 }
 
+/** Reliability curve: mean judge score (x) vs observed good-rate (y) per bin,
+ *  against the ideal diagonal. A well-calibrated judge tracks the diagonal. */
+function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
+  const tq = useTranslations("quality");
+  if (points.length === 0)
+    return (
+      <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+        {tq("judge.noData")}
+      </p>
+    );
+  // Bin by judge score; each bin → (mean score, fraction whose human label is good).
+  const bins = new Map<number, { sum: number; good: number; n: number }>();
+  for (const p of points) {
+    const b = Math.min(4, Math.max(0, Math.floor(p.judge_score * 5)));
+    const cur = bins.get(b) ?? { sum: 0, good: 0, n: 0 };
+    cur.sum += p.judge_score;
+    cur.good += p.human_label === "good" ? 1 : 0;
+    cur.n += 1;
+    bins.set(b, cur);
+  }
+  const pts = [...bins.values()]
+    .map((v) => ({ x: v.sum / v.n, y: v.good / v.n }))
+    .sort((a, b) => a.x - b.x);
+  const W = 160;
+  const H = 120;
+  const px = (v: number) => 8 + v * (W - 16);
+  const py = (v: number) => H - 12 - v * (H - 20);
+  const line = pts
+    .map((p, i) => `${i === 0 ? "M" : "L"}${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`)
+    .join(" ");
+  return (
+    <div className="flex flex-col gap-1">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-32 w-full" aria-hidden="true">
+        <line
+          x1={px(0)}
+          y1={py(0)}
+          x2={px(1)}
+          y2={py(1)}
+          stroke="var(--border)"
+          strokeWidth="1"
+          strokeDasharray="3 3"
+        />
+        {pts.length >= 2 ? (
+          <path d={line} fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeLinejoin="round" />
+        ) : null}
+        {pts.map((p) => (
+          <circle key={`${p.x}-${p.y}`} cx={px(p.x)} cy={py(p.y)} r="2.5" fill="#60a5fa" />
+        ))}
+        <text
+          x={W / 2}
+          y={H - 1}
+          textAnchor="middle"
+          className="fill-[var(--muted-foreground)] text-[6px]"
+        >
+          {tq("judge.curveX")}
+        </text>
+        <text x={2} y={8} className="fill-[var(--muted-foreground)] text-[6px]">
+          {tq("judge.curveY")}
+        </text>
+      </svg>
+      <div className="flex gap-3 text-[0.55rem] text-[var(--muted-foreground)]">
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-3 rounded-full bg-[#60a5fa]" />
+          {tq("judge.curveActual")}
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-px w-3 border-t border-dashed border-[var(--muted-foreground)]" />
+          {tq("judge.curveIdeal")}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /** Verbosity-bias scatter: answer length (x) vs judge score (y), coloured by agreement. */
 function VerbosityScatter({ points }: { points: CalibrationPoint[] }) {
   const tq = useTranslations("quality");
@@ -417,8 +491,8 @@ export function JudgeCalibration({
         />
       </div>
 
-      {/* Confusion matrix · distribution · verbosity scatter */}
-      <div className="grid gap-3 lg:grid-cols-3">
+      {/* Confusion matrix · calibration curve · distribution · verbosity scatter */}
+      <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">{tq("judge.confusion")}</CardTitle>
@@ -433,6 +507,14 @@ export function JudgeCalibration({
                 {tq("judge.fn")}: <span className={BAD}>{fn}</span>
               </span>
             </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{tq("judge.curve")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CalibrationCurve points={points} />
           </CardContent>
         </Card>
         <Card>

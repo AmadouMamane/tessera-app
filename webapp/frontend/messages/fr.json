@@ -1444,7 +1444,13 @@
       "drift_moderate": "modérée",
       "drift_high": "élevée",
       "drift_critical": "critique",
-      "drift_unknown": "n/a"
+      "drift_unknown": "n/a",
+      "curve": "Courbe de calibration",
+      "curveX": "Score juge moyen",
+      "curveY": "Taux réel « bon »",
+      "curveActual": "Juge actuel",
+      "curveIdeal": "Idéal",
+      "noData": "Aucune donnée"
     },
     "runs": {
       "title": "Runs & datasets",

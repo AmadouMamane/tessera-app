@@ -1444,7 +1444,13 @@
       "drift_moderate": "moderat",
       "drift_high": "hoch",
       "drift_critical": "kritisch",
-      "drift_unknown": "k.A."
+      "drift_unknown": "k.A.",
+      "curve": "Kalibrierungskurve",
+      "curveX": "Mittlerer Richter-Score",
+      "curveY": "Beobachtete Gut-Rate",
+      "curveActual": "Aktueller Richter",
+      "curveIdeal": "Ideal",
+      "noData": "Keine Daten"
     },
     "runs": {
       "title": "Runs & Datensätze",
