@@ -1360,7 +1360,14 @@
         "response": "Model answer",
         "rootCause": "Root cause",
         "run": "Run",
-        "evidence": "View quality evidence"
+        "evidence": "View quality evidence",
+        "actions": "Actions",
+        "addDataset": "Add to dataset",
+        "controlCase": "Create / link Control Case",
+        "exportReport": "Export report",
+        "genEvidence": "Generate quality evidence pack",
+        "release": "Release",
+        "safety": "Required role · high safety level"
       }
     },
     "judge": {

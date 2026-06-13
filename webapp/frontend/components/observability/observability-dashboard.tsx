@@ -676,6 +676,7 @@ export function ObservabilityDashboard() {
         ) : tab === "failed" ? (
           <FailedRail
             failedCase={selectedFailed ?? failedRuns.data?.cases[0]}
+            release={releaseStatus.data}
             onEvidence={downloadQualityEvidence}
           />
         ) : (

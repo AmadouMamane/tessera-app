@@ -1360,7 +1360,14 @@
         "response": "Modellantwort",
         "rootCause": "Ursache",
         "run": "Lauf",
-        "evidence": "Qualitätsnachweise ansehen"
+        "evidence": "Qualitätsnachweise ansehen",
+        "actions": "Aktionen",
+        "addDataset": "Zum Datensatz hinzufügen",
+        "controlCase": "Control Case erstellen / verknüpfen",
+        "exportReport": "Bericht exportieren",
+        "genEvidence": "Qualitäts-Evidence-Pack erzeugen",
+        "release": "Release",
+        "safety": "Erforderliche Rolle · hohe Sicherheitsstufe"
       }
     },
     "judge": {

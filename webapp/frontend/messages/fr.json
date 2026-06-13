@@ -1360,7 +1360,14 @@
         "response": "Réponse du modèle",
         "rootCause": "Cause racine",
         "run": "Run",
-        "evidence": "Voir preuves qualité"
+        "evidence": "Voir preuves qualité",
+        "actions": "Actions",
+        "addDataset": "Ajouter au dataset",
+        "controlCase": "Créer / lier Control Case",
+        "exportReport": "Exporter rapport",
+        "genEvidence": "Générer evidence pack qualité",
+        "release": "Release",
+        "safety": "Rôle requis · niveau de sûreté élevé"
       }
     },
     "judge": {

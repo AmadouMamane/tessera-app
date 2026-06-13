@@ -9,7 +9,9 @@ import {
   FilePlus2,
   GitBranch,
   Layers,
+  LinkIcon,
   Repeat,
+  ShieldCheck,
   Sparkles,
   UserPlus,
 } from "lucide-react";
@@ -18,10 +20,21 @@ import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { FailedRunCase, FailedRunsReport } from "@/lib/api/schemas";
+import type { FailedRunCase, FailedRunsReport, ReleaseStatus } from "@/lib/api/schemas";
 
 const DASH = "—";
 const PAGE_SIZE = 25;
+
+/** Trigger a client-side JSON download (no server round-trip). */
+function downloadJson(name: string, payload: unknown): void {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const KNOWN_CATEGORIES = [
   "prompt_injection",
@@ -374,14 +387,7 @@ export function FailedBoard({
 
   const exportSelection = () => {
     const chosen = filtered.filter((c) => picked.has(rowKey(c)));
-    const payload = chosen.length ? chosen : filtered;
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "tessera-cas-echoues.json";
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadJson("tessera-cas-echoues.json", chosen.length ? chosen : filtered);
   };
 
   const total = report?.n ?? 0;
@@ -666,16 +672,56 @@ function SlaRow({ label, value }: { label: string; value: string }) {
 
 // ──────────────────────────────── selected rail ──────────────────────────────
 
+/** Build the eval-failure-shaped candidate for "Ajouter au dataset". */
+function datasetCandidate(c: FailedRunCase): Record<string, unknown> {
+  return {
+    id: c.id,
+    category: c.category,
+    title: c.title,
+    severity: c.severity,
+    prompts: { [c.language]: { user: c.prompt } },
+    expected_behavior: c.expected,
+    observed_failure: {
+      model: c.model,
+      run_id: c.run_id,
+      response: c.response,
+      reasons: c.reasons,
+    },
+  };
+}
+
 /** Right-rail fiche for the selected failed case (reference image 03). */
 export function FailedRail({
   failedCase,
+  release,
   onEvidence,
 }: {
   failedCase: FailedRunCase | undefined;
+  release?: ReleaseStatus | undefined;
   onEvidence: () => void;
 }) {
   const tq = useTranslations("quality");
   const catLabel = useCatLabel();
+
+  const exportReport = () => {
+    if (failedCase) downloadJson(`tessera-cas-${failedCase.id}.json`, failedCase);
+  };
+  const addToDataset = () => {
+    if (failedCase)
+      downloadJson(`eval-failure-${failedCase.id}.json`, datasetCandidate(failedCase));
+  };
+  const createControlCase = () => {
+    if (failedCase)
+      downloadJson(`control-case-${failedCase.id}.json`, {
+        kind: "control_case",
+        case_id: failedCase.id,
+        category: failedCase.category,
+        run_id: failedCase.run_id,
+        release: release?.current?.version ?? null,
+        expected: failedCase.expected,
+      });
+  };
+
   return (
     <aside className="flex w-full flex-col gap-2 2xl:w-80">
       <Card>
@@ -684,11 +730,33 @@ export function FailedRail({
             <span className="font-mono text-[0.72rem]">
               {failedCase?.id ?? tq("failed.rail.none")}
             </span>
-            {failedCase ? (
-              <Badge tone={SEV_TONE[failedCase.severity] ?? "neutral"} className="text-[0.6rem]">
-                {tq(`failed.sev.${failedCase.severity}`)}
-              </Badge>
-            ) : null}
+            <span className="flex items-center gap-1.5">
+              {failedCase ? (
+                <Badge tone={SEV_TONE[failedCase.severity] ?? "neutral"} className="text-[0.6rem]">
+                  {tq(`failed.sev.${failedCase.severity}`)}
+                </Badge>
+              ) : null}
+              {failedCase ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={exportReport}
+                    title={tq("failed.rail.exportReport")}
+                    className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onEvidence}
+                    title={tq("failed.rail.genEvidence")}
+                    className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  >
+                    <FileDown className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              ) : null}
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
@@ -738,20 +806,95 @@ export function FailedRail({
                     {failedCase.run_id}
                   </span>
                 </span>
-                <button
-                  type="button"
+                <span className="inline-flex items-center justify-between gap-2 text-[0.65rem] text-[var(--muted-foreground)]">
+                  <span>{tq("failed.rail.release")}</span>
+                  <span className="text-[0.62rem] text-[var(--foreground)]">
+                    {release?.current?.version ?? DASH}
+                  </span>
+                </span>
+              </div>
+
+              {/* Governed actions — every button produces a real artifact; applying
+                  to the repo requires the stated role (no fake success state). */}
+              <div className="flex flex-col gap-1.5 border-t border-[var(--border)] pt-2">
+                <p className="text-[0.62rem] font-medium uppercase text-[var(--muted-foreground)]">
+                  {tq("failed.rail.actions")}
+                </p>
+                <ActionButton
+                  icon={<Layers className="h-3.5 w-3.5" />}
+                  label={tq("failed.rail.addDataset")}
+                  requiredRole="Admin+"
+                  tone="primary"
+                  onClick={addToDataset}
+                />
+                <ActionButton
+                  icon={<LinkIcon className="h-3.5 w-3.5" />}
+                  label={tq("failed.rail.controlCase")}
+                  requiredRole="Admin+"
+                  tone="info"
+                  onClick={createControlCase}
+                />
+                <ActionButton
+                  icon={<Download className="h-3.5 w-3.5" />}
+                  label={tq("failed.rail.exportReport")}
+                  requiredRole="Operator+"
+                  tone="outline"
+                  onClick={exportReport}
+                />
+                <ActionButton
+                  icon={<FileDown className="h-3.5 w-3.5" />}
+                  label={tq("failed.rail.genEvidence")}
+                  requiredRole="Operator+"
+                  tone="accent"
                   onClick={onEvidence}
-                  className="inline-flex items-center gap-1 self-start text-[0.7rem] font-medium text-[var(--primary)] hover:underline"
-                >
-                  <FileDown className="h-3 w-3" />
-                  {tq("failed.rail.evidence")}
-                </button>
+                />
+                <p className="flex items-center gap-1 pt-0.5 text-[0.58rem] text-[var(--muted-foreground)]">
+                  <ShieldCheck className="h-3 w-3" />
+                  {tq("failed.rail.safety")}
+                </p>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
     </aside>
+  );
+}
+
+const ACTION_TONE: Record<string, string> = {
+  primary: "border-emerald-600/40 bg-emerald-600/15 text-emerald-700 dark:text-emerald-300",
+  info: "border-blue-600/40 bg-blue-600/15 text-blue-700 dark:text-blue-300",
+  accent: "border-[var(--primary)]/40 bg-[var(--primary)]/10 text-[var(--primary)]",
+  outline: "border-[var(--border)] text-[var(--foreground)]",
+};
+
+function ActionButton({
+  icon,
+  label,
+  requiredRole,
+  tone,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  requiredRole: string;
+  tone: "primary" | "info" | "accent" | "outline";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[0.7rem] font-medium transition-colors hover:brightness-110 ${ACTION_TONE[tone]}`}
+    >
+      <span className="flex items-center gap-1.5">
+        {icon}
+        {label}
+      </span>
+      <Badge tone="neutral" className="text-[0.55rem]">
+        {requiredRole}
+      </Badge>
+    </button>
   );
 }
 
