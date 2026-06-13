@@ -73,7 +73,12 @@ import {
 } from "@/components/observability/overview-exec";
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
-import { SignalsTable, buildSignalRows } from "@/components/observability/signals-table";
+import {
+  SignalHeatmap,
+  SignalsTable,
+  ThemeDistribution,
+  buildSignalRows,
+} from "@/components/observability/signals-table";
 import {
   TemporalRail,
   useRailTimeline,
@@ -788,6 +793,15 @@ export function ObservabilityDashboard() {
             <TabGrid>
               <FullWidth>
                 <SignalsTable rows={signalRows} />
+              </FullWidth>
+              {/* Analytics row matching the normative 01: signal evolution, theme
+                  distribution donut, entity × severity heatmap. */}
+              <FullWidth>
+                <div className="grid gap-2 lg:grid-cols-3">
+                  <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+                  <ThemeDistribution rows={signalRows} />
+                  <SignalHeatmap rows={signalRows} />
+                </div>
               </FullWidth>
               <CitationCard data={citations.data} loading={citations.isLoading} />
               <CitationLinksCard data={citationLinks.data} loading={citationLinks.isLoading} />

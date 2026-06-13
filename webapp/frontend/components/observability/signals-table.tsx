@@ -1,7 +1,8 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,17 @@ import type {
 
 export type SignalStatus = "ok" | "warn" | "crit" | "na";
 export type SignalCategory = "fidelity" | "security" | "compliance" | "reliability" | "sessions";
+/** Owning entity of a signal (image 01 "Entité" column / filter chips). */
+export type SignalEntity =
+  | "judge"
+  | "answer"
+  | "corpus"
+  | "model"
+  | "session"
+  | "graph"
+  | "retrieval"
+  | "guard"
+  | "tool";
 
 export interface SignalRow {
   key: string;
@@ -37,7 +49,85 @@ export interface SignalRow {
   score: string;
   threshold: string;
   sample: string;
+  /** Enriched on output for the image-01 registry table. */
+  id: string;
+  metric: string;
+  entity: SignalEntity;
+  delta: number | null;
+  action: string;
+  role: "operator" | "admin";
 }
+
+/** Per-signal registry metadata (image 01): metric code, owning entity, the
+ * governed remediation + required role. Labels/routing only — no fabricated data. */
+const SIGNAL_META: Record<
+  string,
+  { metric: string; entity: SignalEntity; action: string; role: "operator" | "admin" }
+> = {
+  slo: { metric: "rag.faithfulness.mean", entity: "answer", action: "playbook", role: "operator" },
+  calibration: {
+    metric: "judge.cohen_kappa",
+    entity: "judge",
+    action: "recalibrate",
+    role: "admin",
+  },
+  citations: {
+    metric: "citation.validity",
+    entity: "retrieval",
+    action: "corpus",
+    role: "operator",
+  },
+  contradiction: {
+    metric: "answer.contradiction",
+    entity: "answer",
+    action: "review",
+    role: "operator",
+  },
+  predictor: {
+    metric: "failure.predictor.precision",
+    entity: "model",
+    action: "review",
+    role: "operator",
+  },
+  clusters: { metric: "failure.clusters", entity: "answer", action: "curate", role: "operator" },
+  firewall: { metric: "guard.firewall.f1", entity: "guard", action: "policy", role: "admin" },
+  toxicity: { metric: "safety.toxicity.rate", entity: "answer", action: "policy", role: "admin" },
+  piiLeak: { metric: "privacy.pii_leak.rate", entity: "answer", action: "policy", role: "admin" },
+  refusal: { metric: "policy.refusal.rate", entity: "answer", action: "review", role: "operator" },
+  conformance: {
+    metric: "schema.conformance.rate",
+    entity: "tool",
+    action: "review",
+    role: "operator",
+  },
+  localeFormat: {
+    metric: "locale.format.rate",
+    entity: "answer",
+    action: "review",
+    role: "operator",
+  },
+  tools: { metric: "tool.validity.rate", entity: "tool", action: "review", role: "operator" },
+  cost: { metric: "cost.tokens.mean", entity: "model", action: "review", role: "operator" },
+  routing: { metric: "routing.mismatch.rate", entity: "graph", action: "review", role: "operator" },
+  funnel: {
+    metric: "funnel.low_score.rate",
+    entity: "session",
+    action: "curate",
+    role: "operator",
+  },
+  anomalies: {
+    metric: "session.anomaly.count",
+    entity: "session",
+    action: "review",
+    role: "operator",
+  },
+  intent: {
+    metric: "intent.low_confidence.rate",
+    entity: "session",
+    action: "review",
+    role: "operator",
+  },
+};
 
 /** Raw report data already fetched by the dashboard, bundled for row derivation. */
 export interface SignalData {
@@ -68,8 +158,10 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
  * status/score is computed from real fields — a signal with no data reads "na"
  * and "—" rather than a fabricated value (Tessera no-mock discipline).
  */
+type RawRow = Omit<SignalRow, "id" | "metric" | "entity" | "delta" | "action" | "role">;
+
 export function buildSignalRows(t: (key: string) => string, d: SignalData): SignalRow[] {
-  const rows: SignalRow[] = [];
+  const rows: RawRow[] = [];
 
   if (d.slo) {
     const n = d.slo.n;
@@ -337,23 +429,33 @@ export function buildSignalRows(t: (key: string) => string, d: SignalData): Sign
     });
   }
 
-  return rows;
+  // Enrich each row with its registry metadata + a stable id (image 01).
+  const fallback = {
+    metric: "—",
+    entity: "answer" as SignalEntity,
+    action: "review" as const,
+    role: "operator" as const,
+  };
+  return rows.map((r, i) => {
+    const meta = SIGNAL_META[r.key] ?? fallback;
+    return {
+      ...r,
+      id: `#${String(i + 1).padStart(3, "0")}`,
+      metric: meta.metric,
+      entity: meta.entity,
+      delta: null,
+      action: meta.action,
+      role: meta.role,
+    };
+  });
 }
 
-const STATUS_RANK: Record<SignalStatus, number> = { crit: 0, warn: 1, ok: 2, na: 3 };
 const STATUS_TONE: Record<SignalStatus, "success" | "warning" | "danger" | "neutral"> = {
   ok: "success",
   warn: "warning",
   crit: "danger",
   na: "neutral",
 };
-const CATEGORIES: SignalCategory[] = [
-  "fidelity",
-  "security",
-  "compliance",
-  "reliability",
-  "sessions",
-];
 const STATUSES: SignalStatus[] = ["ok", "warn", "crit", "na"];
 
 export function summarizeSignals(
@@ -431,51 +533,89 @@ export function QualityGauge({ summary }: { summary: ReturnType<typeof summarize
 }
 
 /** Filterable, sortable catalogue of every quality signal (reference image 01). */
+/** Display order of the severity groups in the registry (crit first, image 01). */
+const GROUP_ORDER: SignalStatus[] = ["crit", "warn", "ok", "na"];
+const COLS = 10;
+
+/** "Registre des signaux qualité" — the full registry table grouped by severity,
+ * with search + entity/status filter chips (reference image 01). */
 export function SignalsTable({ rows }: { rows: SignalRow[] }) {
   const tq = useTranslations("quality");
-  const [cat, setCat] = useState<SignalCategory | "all">("all");
+  const [query, setQuery] = useState("");
   const [status, setStatus] = useState<SignalStatus | "all">("all");
+  const [entity, setEntity] = useState<SignalEntity | "all">("all");
+
+  const entities = useMemo(() => Array.from(new Set(rows.map((r) => r.entity))).sort(), [rows]);
 
   const shown = useMemo(() => {
-    return rows
-      .filter(
-        (r) => (cat === "all" || r.category === cat) && (status === "all" || r.status === status),
-      )
-      .sort(
-        (a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || a.name.localeCompare(b.name),
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (status !== "all" && r.status !== status) return false;
+      if (entity !== "all" && r.entity !== entity) return false;
+      if (!q) return true;
+      return (
+        r.name.toLowerCase().includes(q) ||
+        r.metric.toLowerCase().includes(q) ||
+        r.id.toLowerCase().includes(q) ||
+        r.entity.toLowerCase().includes(q)
       );
-  }, [rows, cat, status]);
+    });
+  }, [rows, query, status, entity]);
 
   const summary = summarizeSignals(rows);
+  const groups = GROUP_ORDER.map((s) => ({
+    status: s,
+    rows: shown.filter((r) => r.status === s).sort((a, b) => a.name.localeCompare(b.name)),
+  })).filter((g) => g.rows.length > 0);
 
   return (
     <Card>
-      <CardHeader className="gap-3">
+      <CardHeader className="gap-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-sm">{tq("tabs.signals")}</CardTitle>
+          <CardTitle className="text-sm">{tq("signalsTable.title")}</CardTitle>
           <span className="text-xs text-[var(--muted-foreground)]">
             {tq("signalsTable.count", { shown: shown.length, total: summary.total })}
           </span>
         </div>
-        {/* Category chips */}
-        <div className="flex flex-wrap gap-1.5">
-          <Chip active={cat === "all"} onClick={() => setCat("all")}>
-            {tq("signalsTable.all")}
-          </Chip>
-          {CATEGORIES.map((c) => (
-            <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
-              {tq(`signalsTable.cat.${c}`)}
+        {/* Search + status filter on one row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="-translate-y-1/2 absolute top-1/2 left-2.5 h-3.5 w-3.5 text-[var(--muted-foreground)]" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={tq("signalsTable.search")}
+              className="h-8 w-full rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pr-2 pl-8 text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:border-[var(--tessera-border-strong)] focus:outline-none"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <Chip active={status === "all"} onClick={() => setStatus("all")}>
+              {tq("signalsTable.all")}
             </Chip>
-          ))}
+            {GROUP_ORDER.map((s) => (
+              <Chip
+                key={s}
+                active={status === s}
+                onClick={() => setStatus(s)}
+                tone={STATUS_TONE[s]}
+              >
+                {tq(`signalsTable.status.${s}`)} · {summary[s]}
+              </Chip>
+            ))}
+          </div>
         </div>
-        {/* Status filter */}
-        <div className="flex flex-wrap gap-1.5">
-          <Chip active={status === "all"} onClick={() => setStatus("all")}>
+        {/* Entity filter chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[0.7rem] text-[var(--muted-foreground)]">
+            {tq("signalsTable.cols.entity")} :
+          </span>
+          <Chip active={entity === "all"} onClick={() => setEntity("all")}>
             {tq("signalsTable.all")}
           </Chip>
-          {STATUSES.map((s) => (
-            <Chip key={s} active={status === s} onClick={() => setStatus(s)} tone={STATUS_TONE[s]}>
-              {tq(`signalsTable.status.${s}`)} · {summary[s]}
+          {entities.map((e) => (
+            <Chip key={e} active={entity === e} onClick={() => setEntity(e)}>
+              {tq(`signalsTable.entity.${e}`)}
             </Chip>
           ))}
         </div>
@@ -487,35 +627,83 @@ export function SignalsTable({ rows }: { rows: SignalRow[] }) {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                  <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.signal")}</th>
-                  <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.category")}</th>
-                  <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.status")}</th>
-                  <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.score")}</th>
-                  <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.threshold")}</th>
-                  <th className="py-2 font-medium">{tq("signalsTable.cols.sample")}</th>
+                <tr className="border-[var(--border)] border-b text-left text-[0.7rem] text-[var(--muted-foreground)]">
+                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.id")}</th>
+                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.signal")}</th>
+                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.theme")}</th>
+                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.entity")}</th>
+                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.value")}</th>
+                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.threshold")}</th>
+                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.status")}</th>
+                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.trend")}</th>
+                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.action")}</th>
+                  <th className="py-1.5 font-medium">{tq("signalsTable.cols.role")}</th>
                 </tr>
               </thead>
               <tbody>
-                {shown.map((r) => (
-                  <tr key={r.key} className="border-b border-[var(--border)]/50">
-                    <td className="py-2 pr-4 font-medium text-[var(--foreground)]">{r.name}</td>
-                    <td className="py-2 pr-4 text-[var(--muted-foreground)]">
-                      {tq(`signalsTable.cat.${r.category}`)}
-                    </td>
-                    <td className="py-2 pr-4">
-                      <Badge tone={STATUS_TONE[r.status]}>
-                        {tq(`signalsTable.status.${r.status}`)}
-                      </Badge>
-                    </td>
-                    <td className="py-2 pr-4 font-semibold tabular-nums">{r.score}</td>
-                    <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
-                      {r.threshold}
-                    </td>
-                    <td className="py-2 tabular-nums text-[var(--muted-foreground)]">{r.sample}</td>
-                  </tr>
+                {groups.map((g) => (
+                  <Fragment key={g.status}>
+                    <tr>
+                      <td colSpan={COLS} className="pt-3 pb-1">
+                        <span
+                          className={`text-[0.7rem] font-semibold ${
+                            g.status === "crit"
+                              ? "text-red-500"
+                              : g.status === "warn"
+                                ? "text-amber-500"
+                                : g.status === "ok"
+                                  ? "text-emerald-500"
+                                  : "text-[var(--muted-foreground)]"
+                          }`}
+                        >
+                          {tq(`signalsTable.group.${g.status}`)} ({g.rows.length})
+                        </span>
+                      </td>
+                    </tr>
+                    {g.rows.map((r) => (
+                      <tr key={r.key} className="border-[var(--border)]/50 border-b">
+                        <td className="py-1.5 pr-3 font-mono text-[var(--muted-foreground)]">
+                          {r.id}
+                        </td>
+                        <td className="py-1.5 pr-3">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-[var(--foreground)]">{r.name}</span>
+                            <span className="font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                              {r.metric}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
+                          {tq(`signalsTable.cat.${r.category}`)}
+                        </td>
+                        <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
+                          {tq(`signalsTable.entity.${r.entity}`)}
+                        </td>
+                        <td className="py-1.5 pr-3 font-semibold tabular-nums">{r.score}</td>
+                        <td className="py-1.5 pr-3 tabular-nums text-[var(--muted-foreground)]">
+                          {r.threshold}
+                        </td>
+                        <td className="py-1.5 pr-3">
+                          <Badge tone={STATUS_TONE[r.status]}>
+                            {tq(`signalsTable.status.${r.status}`)}
+                          </Badge>
+                        </td>
+                        <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
+                          {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}
+                        </td>
+                        <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
+                          {tq(`signalsTable.action.${r.action}`)}
+                        </td>
+                        <td className="py-1.5">
+                          <Badge tone={r.role === "admin" ? "warning" : "success"}>
+                            {r.role === "admin" ? "Admin+" : "Operator+"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -560,5 +748,163 @@ function Chip({
       {dot ? <span className={`h-1.5 w-1.5 rounded-full ${dot}`} /> : null}
       {children}
     </button>
+  );
+}
+
+const CATEGORY_LIST: SignalCategory[] = [
+  "fidelity",
+  "security",
+  "compliance",
+  "reliability",
+  "sessions",
+];
+const THEME_COLORS: Record<SignalCategory, string> = {
+  fidelity: "#3b82f6",
+  security: "#ef4444",
+  compliance: "#f59e0b",
+  reliability: "#10b981",
+  sessions: "#8b5cf6",
+};
+
+/** "Répartition par thème" — signal counts per category as a donut (image 01). */
+export function ThemeDistribution({ rows }: { rows: SignalRow[] }) {
+  const tq = useTranslations("quality");
+  const counts = CATEGORY_LIST.map((c) => ({
+    cat: c,
+    n: rows.filter((r) => r.category === c).length,
+  })).filter((e) => e.n > 0);
+  const total = counts.reduce((s, e) => s + e.n, 0) || 1;
+  const r = 46;
+  const circ = 2 * Math.PI * r;
+  let acc = 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{tq("signalsTable.themeTitle")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative h-[104px] w-[104px] shrink-0">
+            <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
+              <circle
+                cx="60"
+                cy="60"
+                r={r}
+                fill="none"
+                stroke="var(--tessera-border)"
+                strokeWidth="12"
+              />
+              {counts.map((e) => {
+                const len = (e.n / total) * circ;
+                const seg = (
+                  <circle
+                    key={e.cat}
+                    cx="60"
+                    cy="60"
+                    r={r}
+                    fill="none"
+                    stroke={THEME_COLORS[e.cat]}
+                    strokeWidth="12"
+                    strokeDasharray={`${len} ${circ - len}`}
+                    strokeDashoffset={-acc}
+                  />
+                );
+                acc += len;
+                return seg;
+              })}
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="font-serif text-xl font-semibold tabular-nums">{total}</span>
+              <span className="text-[0.6rem] text-[var(--muted-foreground)]">
+                {tq("signalsTable.signalsLabel")}
+              </span>
+            </div>
+          </div>
+          <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.7rem]">
+            {counts.map((e) => (
+              <li key={e.cat} className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ background: THEME_COLORS[e.cat] }}
+                  />
+                  <span className="truncate">{tq(`signalsTable.cat.${e.cat}`)}</span>
+                </span>
+                <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">
+                  {Math.round((e.n / total) * 100)}% · {e.n}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Heatmap of signal counts per entity × severity (image 01). */
+export function SignalHeatmap({ rows }: { rows: SignalRow[] }) {
+  const tq = useTranslations("quality");
+  const cols: SignalStatus[] = ["ok", "warn", "crit"];
+  const entities = Array.from(new Set(rows.map((r) => r.entity))).sort();
+  const cell = (e: SignalEntity, s: SignalStatus) =>
+    rows.filter((r) => r.entity === e && r.status === s).length;
+  const max = Math.max(1, ...entities.flatMap((e) => cols.map((s) => cell(e, s))));
+  const tone: Record<SignalStatus, string> = {
+    ok: "16, 185, 129",
+    warn: "245, 158, 11",
+    crit: "239, 68, 68",
+    na: "100, 116, 139",
+  };
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{tq("signalsTable.heatmapTitle")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[0.65rem]">
+            <thead>
+              <tr className="text-[var(--muted-foreground)]">
+                <th className="pb-1 text-left font-medium">{tq("signalsTable.cols.entity")}</th>
+                {cols.map((s) => (
+                  <th key={s} className="pb-1 px-1 text-center font-medium">
+                    {tq(`signalsTable.status.${s}`)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {entities.map((e) => (
+                <tr key={e}>
+                  <td className="py-0.5 pr-2 text-[var(--muted-foreground)]">
+                    {tq(`signalsTable.entity.${e}`)}
+                  </td>
+                  {cols.map((s) => {
+                    const n = cell(e, s);
+                    return (
+                      <td key={s} className="px-0.5 py-0.5">
+                        <div
+                          className="flex h-5 items-center justify-center rounded tabular-nums"
+                          style={{
+                            background:
+                              n === 0
+                                ? "var(--tessera-border)"
+                                : `rgba(${tone[s]}, ${0.25 + (n / max) * 0.6})`,
+                            color: n === 0 ? "var(--muted-foreground)" : "#fff",
+                          }}
+                        >
+                          {n || ""}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

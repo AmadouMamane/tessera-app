@@ -1191,7 +1191,14 @@
         "status": "Statut",
         "score": "Score",
         "threshold": "Seuil",
-        "sample": "Échantillon"
+        "sample": "Échantillon",
+        "id": "ID",
+        "theme": "Thème",
+        "entity": "Entité",
+        "value": "Valeur",
+        "trend": "Tendance",
+        "action": "Action recommandée",
+        "role": "Rôle requis"
       },
       "status": {
         "ok": "Au vert",
@@ -1205,7 +1212,37 @@
         "compliance": "Conformité",
         "reliability": "Fiabilité",
         "sessions": "Sessions"
-      }
+      },
+      "title": "Registre des signaux qualité",
+      "search": "Rechercher un signal, un ID, une entité…",
+      "entity": {
+        "judge": "Juge",
+        "answer": "Réponse",
+        "corpus": "Corpus",
+        "model": "Modèle",
+        "session": "Session",
+        "graph": "Graphe",
+        "retrieval": "Retrieval",
+        "guard": "Garde",
+        "tool": "Outil"
+      },
+      "group": {
+        "crit": "Critiques",
+        "warn": "Élevés",
+        "ok": "Au vert",
+        "na": "Indisponibles"
+      },
+      "action": {
+        "playbook": "Ouvrir playbook hallucination",
+        "recalibrate": "Recalibrer le juge",
+        "corpus": "Vérifier corpus & RAG",
+        "review": "Examiner le signal",
+        "curate": "Curer le dataset",
+        "policy": "Revoir la politique"
+      },
+      "themeTitle": "Répartition par thème",
+      "heatmapTitle": "Carte entité × sévérité",
+      "signalsLabel": "signaux"
     },
     "charts": {
       "evolution": "Évolution du score qualité (7 j)",

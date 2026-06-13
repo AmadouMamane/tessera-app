@@ -1191,7 +1191,14 @@
         "status": "Status",
         "score": "Score",
         "threshold": "Schwelle",
-        "sample": "Stichprobe"
+        "sample": "Stichprobe",
+        "id": "ID",
+        "theme": "Thema",
+        "entity": "Entität",
+        "value": "Wert",
+        "trend": "Trend",
+        "action": "Empfohlene Aktion",
+        "role": "Erforderliche Rolle"
       },
       "status": {
         "ok": "Grün",
@@ -1205,7 +1212,37 @@
         "compliance": "Konformität",
         "reliability": "Zuverlässigkeit",
         "sessions": "Sessions"
-      }
+      },
+      "title": "Register der Qualitätssignale",
+      "search": "Signal, ID oder Entität suchen…",
+      "entity": {
+        "judge": "Judge",
+        "answer": "Antwort",
+        "corpus": "Korpus",
+        "model": "Modell",
+        "session": "Session",
+        "graph": "Graph",
+        "retrieval": "Retrieval",
+        "guard": "Guard",
+        "tool": "Tool"
+      },
+      "group": {
+        "crit": "Kritisch",
+        "warn": "Erhöht",
+        "ok": "Im grünen Bereich",
+        "na": "Nicht verfügbar"
+      },
+      "action": {
+        "playbook": "Halluzinations-Playbook öffnen",
+        "recalibrate": "Judge neu kalibrieren",
+        "corpus": "Korpus & RAG prüfen",
+        "review": "Signal prüfen",
+        "curate": "Dataset kuratieren",
+        "policy": "Richtlinie überprüfen"
+      },
+      "themeTitle": "Verteilung nach Thema",
+      "heatmapTitle": "Heatmap Entität × Schweregrad",
+      "signalsLabel": "Signale"
     },
     "charts": {
       "evolution": "Entwicklung des Qualitätsscores (7 T)",

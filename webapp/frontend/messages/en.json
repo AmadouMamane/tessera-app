@@ -1191,7 +1191,14 @@
         "status": "Status",
         "score": "Score",
         "threshold": "Threshold",
-        "sample": "Sample"
+        "sample": "Sample",
+        "id": "ID",
+        "theme": "Theme",
+        "entity": "Entity",
+        "value": "Value",
+        "trend": "Trend",
+        "action": "Recommended action",
+        "role": "Required role"
       },
       "status": {
         "ok": "Green",
@@ -1205,7 +1212,37 @@
         "compliance": "Compliance",
         "reliability": "Reliability",
         "sessions": "Sessions"
-      }
+      },
+      "title": "Quality signal registry",
+      "search": "Search a signal, an ID, an entity…",
+      "entity": {
+        "judge": "Judge",
+        "answer": "Answer",
+        "corpus": "Corpus",
+        "model": "Model",
+        "session": "Session",
+        "graph": "Graph",
+        "retrieval": "Retrieval",
+        "guard": "Guard",
+        "tool": "Tool"
+      },
+      "group": {
+        "crit": "Critical",
+        "warn": "Elevated",
+        "ok": "Healthy",
+        "na": "Unavailable"
+      },
+      "action": {
+        "playbook": "Open hallucination playbook",
+        "recalibrate": "Recalibrate the judge",
+        "corpus": "Check corpus & RAG",
+        "review": "Review the signal",
+        "curate": "Curate the dataset",
+        "policy": "Review the policy"
+      },
+      "themeTitle": "Distribution by theme",
+      "heatmapTitle": "Entity × severity heatmap",
+      "signalsLabel": "signals"
     },
     "charts": {
       "evolution": "Quality score evolution (7d)",
