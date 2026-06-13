@@ -12,7 +12,14 @@ import pytest
 
 from tessera.llm.router import ChatMessage, ChatResponse
 from tessera.observability.eval import flywheel, online
-from tessera.observability.eval.judge import FAITHFULNESS, JudgeVerdict, LLMJudge, rubric_for
+from tessera.observability.eval.judge import (
+    FAITHFULNESS,
+    GROUNDING,
+    HALLUCINATION,
+    JudgeVerdict,
+    LLMJudge,
+    rubric_for,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
@@ -151,6 +158,42 @@ def test_evaluate_turn_no_disagreement_when_grounded() -> None:
         )
     )
     assert outcome.disagreement is False
+
+
+def test_new_metric_rubrics_exist() -> None:
+    assert "GROUNDING" in rubric_for(GROUNDING).upper()
+    assert "HALLUCINATION" in rubric_for(HALLUCINATION).upper()
+
+
+class _RecordingJudge:
+    """Records which metrics it was asked to score."""
+
+    def __init__(self) -> None:
+        self.metrics: list[str] = []
+
+    async def score(self, *, metric: str, question: str, answer: str, context: str) -> JudgeVerdict:
+        self.metrics.append(metric)
+        return JudgeVerdict(metric=metric, score=0.9, rationale="stub", judge_model="stub")
+
+
+def test_evaluate_turn_scores_faithfulness_grounding_hallucination(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Isolate from the durable store: count emissions without writing a file.
+    emitted: list[str] = []
+    monkeypatch.setattr(
+        online.scores,
+        "emit_score",
+        lambda verdict, **_: emitted.append(verdict.metric),
+    )
+    judge = _RecordingJudge()
+    asyncio.run(
+        online.evaluate_turn(
+            question="q", answer="a", context="c", language="fr", judge=judge, roll=0.0
+        )
+    )
+    assert judge.metrics == [FAITHFULNESS, GROUNDING, HALLUCINATION]
+    assert emitted == [FAITHFULNESS, GROUNDING, HALLUCINATION]
 
 
 # ── flywheel (curation into the harness) ───────────────────────────────────────

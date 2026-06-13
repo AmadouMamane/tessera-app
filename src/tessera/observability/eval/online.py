@@ -15,7 +15,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from tessera.observability.eval import scores
-from tessera.observability.eval.judge import FAITHFULNESS, LLMJudge
+from tessera.observability.eval.judge import FAITHFULNESS, GROUNDING, HALLUCINATION, LLMJudge
+from tessera.observability.logging import get_logger
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -23,10 +24,17 @@ if TYPE_CHECKING:
 
 __all__ = ["OnlineEvalOutcome", "evaluate_turn", "should_judge"]
 
+_log = get_logger("tessera.eval")
+
 # Below this faithfulness an allowed turn is considered a miss; at/above this an
 # otherwise-denied turn looks fine. The gap between them is the disagreement zone.
 _LOW_SCORE: float = 0.5
 _HIGH_SCORE: float = 0.8
+
+# Faithfulness drives the guard↔judge disagreement signal; grounding and
+# hallucination are scored alongside it as extra quality telemetry (best-effort —
+# a failure on one never drops the turn). All use the same (swappable) judge.
+_EXTRA_METRICS: tuple[str, ...] = (GROUNDING, HALLUCINATION)
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,6 +96,19 @@ async def evaluate_turn(
     scores.emit_score(
         verdict, language=language, conversation_id=conversation_id, sampled=not must_judge
     )
+
+    # Extra quality metrics on the same turn (best-effort; never fail the turn).
+    for metric in _EXTRA_METRICS:
+        try:
+            extra = await active_judge.score(
+                metric=metric, question=question, answer=answer, context=context
+            )
+        except Exception as exc:  # a judge hiccup must not drop the turn's telemetry
+            _log.warning("online.extra_metric_failed", metric=metric, error=str(exc))
+            continue
+        scores.emit_score(
+            extra, language=language, conversation_id=conversation_id, sampled=not must_judge
+        )
 
     disagreement = (not guard_denied and verdict.score < _LOW_SCORE) or (
         guard_denied and verdict.score >= _HIGH_SCORE
