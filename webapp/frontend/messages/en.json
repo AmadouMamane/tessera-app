@@ -1412,7 +1412,8 @@
         "regOpen": "{n} regression(s)",
         "ok": "OK",
         "avgDuration": "Mean duration",
-        "staleCorpora": "{n} stale corpora"
+        "staleCorpora": "{n} stale corpora",
+        "driftMean": "mean per dataset"
       },
       "table": {
         "title": "Evaluation runs",
@@ -1459,12 +1460,18 @@
       },
       "charts": {
         "passrate": "Pass-rate of recent runs",
-        "coverage": "Docs per corpus",
+        "coverage": "Coverage per dataset",
         "age": "Corpus age (d)",
         "distribution": "Case distribution",
         "costQuality": "Cost vs quality",
         "perfByModel": "Performance by model",
-        "noData": "No data"
+        "noData": "No data",
+        "drift": "Mean drift per dataset",
+        "bandGood": "Good ≥ 0.8",
+        "bandMid": "Fair 0.5–0.8",
+        "bandLow": "Low < 0.5",
+        "legendCost": "Cost",
+        "legendPass": "Pass-rate"
       },
       "rail": {
         "release": "Current release",
@@ -1476,12 +1483,63 @@
         "allFresh": "All fresh",
         "activity": "Recent activity",
         "runDone": "{model} — {rate}",
-        "health": "Pipeline health",
+        "health": "Evaluation pipeline health",
         "hRuns": "Archived runs",
         "hModels": "Models",
         "hLangs": "Languages",
         "hCorpora": "Corpora",
-        "hStale": "Stale"
+        "hStale": "Stale",
+        "covered": "{p}% covered",
+        "pJobs": "Executions (24h)",
+        "pWorkers": "Workers",
+        "pQueue": "Queue",
+        "pFreshness": "Data freshness",
+        "pRetention": "Evidence retention",
+        "pOk": "OK",
+        "pWatch": "Watch"
+      },
+      "qdatasets": {
+        "title": "Quality datasets",
+        "count": "{n} datasets",
+        "empty": "No dataset.",
+        "dataset": "Dataset",
+        "description": "Description",
+        "langs": "Language(s)",
+        "cases": "Cases",
+        "updated": "Last update",
+        "version": "Version",
+        "drift": "Drift",
+        "coverage": "Coverage",
+        "owner": "Owner",
+        "status": "Status",
+        "st_good": "Good",
+        "st_watch": "Watch",
+        "st_alert": "Critical",
+        "st_unknown": "—"
+      },
+      "theme": {
+        "prompt_injection": "Prompt injection",
+        "pii_leak": "Personal-data leak",
+        "hallucination": "Factual hallucination",
+        "overconfidence": "Overconfidence",
+        "regulatory_misstatement": "Regulatory misstatement",
+        "citation_fabrication": "Citation fabrication",
+        "tool_misuse": "Tool misuse",
+        "policy_violation": "Policy violation",
+        "language_mixing": "Language mixing",
+        "escalation_failure": "Escalation failure"
+      },
+      "themeDesc": {
+        "prompt_injection": "Instruction hijacking and jailbreaks",
+        "pii_leak": "Personal-data exfiltration (GDPR)",
+        "hallucination": "False or invented claims",
+        "overconfidence": "Risky actions without confirmation",
+        "regulatory_misstatement": "Incorrect regulatory claims",
+        "citation_fabrication": "Invented sources and references",
+        "tool_misuse": "Inappropriate or risky tool calls",
+        "policy_violation": "Bypassing internal guardrails",
+        "language_mixing": "Answers in the wrong language",
+        "escalation_failure": "No escalation to a human"
       }
     },
     "models": {

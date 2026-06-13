@@ -79,6 +79,7 @@ import {
   fetchContradictions,
   fetchCorpusFreshness,
   fetchCost,
+  fetchEvalDatasets,
   fetchFailedCases,
   fetchFailureClusters,
   fetchFailurePredictor,
@@ -201,10 +202,17 @@ export function ObservabilityDashboard() {
     refetchInterval: 60_000,
   });
 
-  // Real corpus inventory — the honest "datasets" of the Runs & datasets tab.
+  // Real corpus inventory — feeds the KPI strip + pipeline freshness fallback.
   const corpusFreshness = useQuery({
     queryKey: ["corpus-freshness"],
     queryFn: ({ signal }) => fetchCorpusFreshness(signal),
+    refetchInterval: 60_000,
+  });
+
+  // Themed quality datasets (failure-catalogue themes × runs) — the Runs tab table.
+  const evalDatasets = useQuery({
+    queryKey: ["eval-datasets"],
+    queryFn: ({ signal }) => fetchEvalDatasets(signal),
     refetchInterval: 60_000,
   });
 
@@ -589,6 +597,7 @@ export function ObservabilityDashboard() {
                 registry={runs.data}
                 release={releaseStatus.data}
                 freshness={corpusFreshness.data}
+                datasets={evalDatasets.data}
               />
               <div className="grid gap-2 2xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)] 2xl:items-start">
                 <div className="flex flex-col gap-2">
@@ -597,7 +606,7 @@ export function ObservabilityDashboard() {
                     selectedId={(selectedRun ?? runs.data?.runs[0])?.run_id ?? null}
                     onSelect={setSelectedRun}
                   />
-                  <DatasetsTable freshness={corpusFreshness.data} />
+                  <DatasetsTable report={evalDatasets.data} />
                 </div>
                 <RunContextPanel
                   run={selectedRun ?? runs.data?.runs[0]}
@@ -608,7 +617,7 @@ export function ObservabilityDashboard() {
               <RunsCharts
                 registry={runs.data}
                 models={modelComparison.data}
-                freshness={corpusFreshness.data}
+                datasets={evalDatasets.data}
               />
             </div>
           )}
@@ -668,7 +677,7 @@ export function ObservabilityDashboard() {
         ) : tab === "runs" ? (
           <RunsRail
             registry={runs.data}
-            freshness={corpusFreshness.data}
+            datasets={evalDatasets.data}
             release={releaseStatus.data}
           />
         ) : (

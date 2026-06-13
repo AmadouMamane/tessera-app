@@ -111,6 +111,8 @@ import {
   PropagationReportSchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
+  type QualityDatasetsReport,
+  QualityDatasetsReportSchema,
   type RedTeamResponse,
   RedTeamResponseSchema,
   type RefusalReport,
@@ -515,6 +517,11 @@ export async function fetchJudgeConsensus(signal?: AbortSignal): Promise<JudgeCo
 /** Eval run registry from the report archive (Runs & datasets tab, image 02). */
 export async function fetchRuns(signal?: AbortSignal): Promise<RunRegistry> {
   return request("/observability/runs", { signal }, RunRegistrySchema);
+}
+
+/** Themed quality datasets (catalogue × runs) for the Runs & datasets tab (image 02). */
+export async function fetchEvalDatasets(signal?: AbortSignal): Promise<QualityDatasetsReport> {
+  return request("/observability/eval-datasets", { signal }, QualityDatasetsReportSchema);
 }
 
 /** Per-model comparison from the report archive (Comparaisons modèles tab, image 04). */

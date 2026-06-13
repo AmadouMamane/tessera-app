@@ -991,6 +991,42 @@ export const FreshnessReportSchema = z.object({
 });
 export type FreshnessReport = z.infer<typeof FreshnessReportSchema>;
 
+export const QualityDatasetSchema = z.object({
+  key: z.string(),
+  cases: z.number().int(),
+  languages: z.array(z.string()),
+  version: z.string().nullable(),
+  pass_rate: z.number().nullable(),
+  drift: z.number().nullable(),
+  coverage: z.number().nullable(),
+  updated_at: z.string().nullable(),
+  owner: z.string(),
+});
+export type QualityDataset = z.infer<typeof QualityDatasetSchema>;
+
+export const PipelineStatusSchema = z.object({
+  jobs_window: z.number().int(),
+  runs_total: z.number().int(),
+  data_freshness_seconds: z.number().nullable(),
+  catalogue_coverage: z.number().nullable(),
+  evidence_retention_days: z.number().int().nullable(),
+  workers: z.number().int().nullable(),
+  queue_depth: z.number().int().nullable(),
+});
+export type PipelineStatus = z.infer<typeof PipelineStatusSchema>;
+
+export const QualityDatasetsReportSchema = z.object({
+  n: z.number().int(),
+  datasets: z.array(QualityDatasetSchema),
+  catalogue_version: z.string().nullable(),
+  total_cases: z.number().int(),
+  languages: z.array(z.string()),
+  monitored: z.number().int(),
+  coverage_pct: z.number().nullable(),
+  pipeline: PipelineStatusSchema,
+});
+export type QualityDatasetsReport = z.infer<typeof QualityDatasetsReportSchema>;
+
 export const RoadmapItemSchema = z.object({
   theme: z.string(),
   signal: z.string(),

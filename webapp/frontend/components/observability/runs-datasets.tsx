@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   FreshnessReport,
   ModelComparison,
+  QualityDatasetsReport,
   ReleaseStatus,
   RunRegistry,
   RunSummary,
@@ -92,6 +93,45 @@ function langBadges(langs: string[]): string {
   return langs.length ? langs.map((l) => l.toUpperCase()).join(" ") : DASH;
 }
 
+/** Coverage band: ≥0.8 good, ≥0.5 watch, else low — drives the per-dataset colour. */
+function coverageBand(c: number | null | undefined): "good" | "mid" | "low" | "none" {
+  if (c == null) return "none";
+  if (c >= 0.8) return "good";
+  if (c >= 0.5) return "mid";
+  return "low";
+}
+
+const BAND_FILL: Record<"good" | "mid" | "low" | "none", string> = {
+  good: "#34d399",
+  mid: "#f59e0b",
+  low: "#f87171",
+  none: "var(--muted)",
+};
+
+/** Drift magnitude colour: small=teal, moderate=amber, large=red (abs value). */
+function driftFill(absDrift: number): string {
+  if (absDrift >= 0.3) return "#f87171";
+  if (absDrift >= 0.15) return "#f59e0b";
+  return "#34d399";
+}
+
+/** Pass-rate band → status key for the datasets table. */
+function statusBand(rate: number | null | undefined): "good" | "watch" | "alert" | "unknown" {
+  if (rate == null) return "unknown";
+  if (rate >= 0.8) return "good";
+  if (rate >= 0.5) return "watch";
+  return "alert";
+}
+
+/** Humanise a freshness age in seconds (days / hours / minutes). */
+function fmtFreshness(seconds: number | null | undefined): string {
+  if (seconds == null) return DASH;
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  if (seconds < 86_400) return `${Math.round(seconds / 3600)}h`;
+  return `${Math.round(seconds / 86_400)}j`;
+}
+
 // ──────────────────────────────── KPI strip ──────────────────────────────────
 
 /** Compact KPI tile — label, big value, optional sub-line. */
@@ -131,10 +171,12 @@ export function RunsKpis({
   registry,
   release,
   freshness,
+  datasets,
 }: {
   registry: RunRegistry | undefined;
   release: ReleaseStatus | undefined;
   freshness: FreshnessReport | undefined;
+  datasets: QualityDatasetsReport | undefined;
 }) {
   const tq = useTranslations("quality");
   const win = windowRuns(registry);
@@ -149,8 +191,13 @@ export function RunsKpis({
   const rel = release?.current ?? null;
   const regOpen = release?.n_regressions ?? null;
   const relTone = regOpen == null ? MUTED : regOpen > 0 ? WARN : GOOD;
-  // Per-corpus drift has no real source in Tessera — surfaced as "n/d", never invented.
   const staleN = freshness?.n_stale ?? null;
+  // Mean absolute run-over-run drift across the themed datasets (real, or n/d).
+  const drifts = (datasets?.datasets ?? [])
+    .map((d) => d.drift)
+    .filter((x): x is number => x != null)
+    .map((x) => Math.abs(x));
+  const meanDrift = drifts.length ? drifts.reduce((a, b) => a + b, 0) / drifts.length : null;
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
@@ -175,9 +222,9 @@ export function RunsKpis({
       <Kpi
         icon={<GitBranch className="h-3 w-3" />}
         label={tq("runs.kpi.drift")}
-        value={DASH}
-        tone={MUTED}
-        sub={tq("runs.kpi.driftNa")}
+        value={meanDrift == null ? DASH : meanDrift.toFixed(2)}
+        tone={meanDrift == null ? MUTED : meanDrift >= 0.3 ? WARN : undefined}
+        sub={meanDrift == null ? tq("runs.kpi.driftNa") : tq("runs.kpi.driftMean")}
       />
       <Kpi
         icon={<Coins className="h-3 w-3" />}
@@ -421,57 +468,116 @@ export function RunContextPanel({
 
 // ──────────────────────────────── Datasets table ─────────────────────────────
 
-/** Real corpus inventory (regulatory corpora), the honest "datasets" of Tessera. */
-export function DatasetsTable({ freshness }: { freshness: FreshnessReport | undefined }) {
+/** Short theme date (no time) for the "Dernière maj" column. */
+function fmtDay(stamp: string | null): string {
+  if (stamp == null) return DASH;
+  const t = parseRunAt(stamp);
+  if (t == null) return stamp;
+  const dt = new Date(t);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(dt.getUTCDate())}/${p(dt.getUTCMonth() + 1)}/${String(dt.getUTCFullYear()).slice(2)}`;
+}
+
+function DriftCell({ drift }: { drift: number | null }) {
+  if (drift == null) return <span className={MUTED}>{DASH}</span>;
+  const up = drift >= 0;
+  const tone = Math.abs(drift) < 0.005 ? MUTED : up ? GOOD : BAD;
+  return (
+    <span className={`tabular-nums ${tone}`}>
+      {up ? "+" : "−"}
+      {Math.abs(drift).toFixed(2)}
+    </span>
+  );
+}
+
+function CoverageCell({ coverage }: { coverage: number | null }) {
+  if (coverage == null) return <span className={MUTED}>{DASH}</span>;
+  const band = coverageBand(coverage);
+  const tone = band === "good" ? GOOD : band === "mid" ? WARN : BAD;
+  return <span className={`tabular-nums ${tone}`}>{Math.round(coverage * 100)}%</span>;
+}
+
+const STATUS_DOT: Record<"good" | "watch" | "alert" | "unknown", string> = {
+  good: "bg-emerald-500",
+  watch: "bg-amber-500",
+  alert: "bg-red-500",
+  unknown: "bg-[var(--muted-foreground)]",
+};
+
+/** The real "Datasets de qualité" table — one row per failure-catalogue theme. */
+export function DatasetsTable({ report }: { report: QualityDatasetsReport | undefined }) {
   const tq = useTranslations("quality");
-  const rows = freshness?.regulations ?? [];
+  const rows = report?.datasets ?? [];
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-sm">{tq("runs.datasets.title")}</CardTitle>
+        <CardTitle className="text-sm">{tq("runs.qdatasets.title")}</CardTitle>
         <Badge tone="neutral" className="text-[0.65rem]">
-          {tq("runs.datasets.count", { n: freshness?.n_corpora ?? 0 })}
+          {tq("runs.qdatasets.count", { n: report?.n ?? 0 })}
         </Badge>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {rows.length === 0 ? (
           <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">
-            {tq("runs.datasets.empty")}
+            {tq("runs.qdatasets.empty")}
           </p>
         ) : (
           <table className="w-full text-left text-[0.7rem]">
-            <thead className="text-[0.62rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+            <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
               <tr className="border-b border-[var(--border)]">
-                <th className="py-1 pr-2 font-medium">{tq("runs.datasets.corpus")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.datasets.docs")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.datasets.updated")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.datasets.age")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.datasets.status")}</th>
+                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.dataset")}</th>
+                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.description")}</th>
+                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.langs")}</th>
+                <th className="py-1 pr-2 text-right font-medium">{tq("runs.qdatasets.cases")}</th>
+                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.updated")}</th>
+                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.version")}</th>
+                <th className="py-1 pr-2 text-right font-medium">{tq("runs.qdatasets.drift")}</th>
+                <th className="py-1 pr-2 text-right font-medium">
+                  {tq("runs.qdatasets.coverage")}
+                </th>
+                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.owner")}</th>
+                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.status")}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((c) => (
-                <tr key={c.name} className="border-b border-[var(--border)]/60">
-                  <td className="py-1 pr-2 font-medium uppercase text-[var(--foreground)]">
-                    {c.corpus}
-                  </td>
-                  <td className="py-1 pr-2 text-right tabular-nums">{c.n_docs}</td>
-                  <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
-                    {c.as_of ?? DASH}
-                  </td>
-                  <td className="py-1 pr-2 text-right tabular-nums text-[var(--muted-foreground)]">
-                    {tq("runs.datasets.ageDays", { n: c.age_days })}
-                  </td>
-                  <td className="py-1 pr-2">
-                    <span className={`inline-flex items-center gap-1 ${c.stale ? WARN : GOOD}`}>
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${c.stale ? "bg-amber-500" : "bg-emerald-500"}`}
-                      />
-                      {c.stale ? tq("runs.datasets.stale") : tq("runs.datasets.fresh")}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((d) => {
+                const status = statusBand(d.pass_rate);
+                return (
+                  <tr key={d.key} className="border-b border-[var(--border)]/60">
+                    <td className="py-1 pr-2 font-medium text-[var(--foreground)]">
+                      {tq(`runs.theme.${d.key}`)}
+                    </td>
+                    <td className="max-w-[15rem] truncate py-1 pr-2 text-[var(--muted-foreground)]">
+                      {tq(`runs.themeDesc.${d.key}`)}
+                    </td>
+                    <td className="py-1 pr-2 uppercase text-[var(--muted-foreground)]">
+                      {langBadges(d.languages)}
+                    </td>
+                    <td className="py-1 pr-2 text-right tabular-nums">{d.cases}</td>
+                    <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
+                      {fmtDay(d.updated_at)}
+                    </td>
+                    <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
+                      {d.version ? `v${d.version.split("-")[0]}` : DASH}
+                    </td>
+                    <td className="py-1 pr-2 text-right">
+                      <DriftCell drift={d.drift} />
+                    </td>
+                    <td className="py-1 pr-2 text-right">
+                      <CoverageCell coverage={d.coverage} />
+                    </td>
+                    <td className="py-1 pr-2 text-[var(--muted-foreground)]">{d.owner}</td>
+                    <td className="py-1 pr-2">
+                      <span className="inline-flex items-center gap-1">
+                        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status]}`} />
+                        <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+                          {tq(`runs.qdatasets.st_${status}`)}
+                        </span>
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -482,8 +588,19 @@ export function DatasetsTable({ freshness }: { freshness: FreshnessReport | unde
 
 // ──────────────────────────────── mini-charts ────────────────────────────────
 
-/** Tiny line chart of recent run pass-rates (oldest→newest). */
-function MiniLine({ values, color = "#10b981" }: { values: number[]; color?: string }) {
+/** Tiny line chart of recent run pass-rates (oldest→newest).
+ *
+ * With ``band`` set, the line stays neutral (trend) while each point is coloured
+ * by its value's quality band (value read as a 0–1 ratio), so weak runs stand out. */
+function MiniLine({
+  values,
+  color = "#10b981",
+  band = false,
+}: {
+  values: number[];
+  color?: string;
+  band?: boolean;
+}) {
   if (values.length < 2) return <ChartEmpty />;
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -499,6 +616,7 @@ function MiniLine({ values, color = "#10b981" }: { values: number[]; color?: str
     const [x, y] = pt(v, i);
     return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
   });
+  const stroke = band ? "var(--muted-foreground)" : color;
   return (
     <svg
       viewBox={`0 0 ${w} ${h}`}
@@ -509,25 +627,39 @@ function MiniLine({ values, color = "#10b981" }: { values: number[]; color?: str
       <path
         d={line.join(" ")}
         fill="none"
-        stroke={color}
+        stroke={stroke}
+        strokeOpacity={band ? 0.6 : 1}
         strokeWidth={1.5}
         strokeLinejoin="round"
       />
       {values.map((v, i) => {
         const [x, y] = pt(v, i);
-        return <circle key={`${x}-${y}`} cx={x} cy={y} r={1.6} fill={color} />;
+        return (
+          <circle
+            key={`${x}-${y}`}
+            cx={x}
+            cy={y}
+            r={1.8}
+            fill={band ? BAND_FILL[coverageBand(v)] : color}
+          />
+        );
       })}
     </svg>
   );
 }
 
-/** Vertical bars (one per category) with a value label underneath. */
+/** Vertical bars (one per category) with a value label underneath.
+ *
+ * With ``band`` set, each bar is coloured by its value's quality band (the value
+ * is read as a 0–100 percentage), so a weak model reads red, not green. */
 function MiniBars({
   items,
   color = "#34d399",
+  band = false,
 }: {
   items: { label: string; value: number }[];
   color?: string;
+  band?: boolean;
 }) {
   if (items.length === 0) return <ChartEmpty />;
   const max = Math.max(...items.map((i) => i.value), 1);
@@ -537,7 +669,10 @@ function MiniBars({
         <div key={it.label} className="flex flex-1 flex-col items-center gap-0.5">
           <div
             className="w-full rounded-sm"
-            style={{ height: `${Math.max(4, (it.value / max) * 44)}px`, backgroundColor: color }}
+            style={{
+              height: `${Math.max(4, (it.value / max) * 44)}px`,
+              backgroundColor: band ? BAND_FILL[coverageBand(it.value / 100)] : color,
+            }}
             title={`${it.label}: ${it.value}`}
           />
           <span className="max-w-full truncate text-[0.52rem] text-[var(--muted-foreground)]">
@@ -549,37 +684,141 @@ function MiniBars({
   );
 }
 
-/** Horizontal bars with a trailing numeric value (oldest/biggest first). */
-function MiniHBars({
-  items,
-  color = "#60a5fa",
-  unit = "",
-}: {
-  items: { label: string; value: number }[];
-  color?: string;
-  unit?: string;
-}) {
+/** Per-dataset coverage bars, each coloured by its band (Bien / Moyen / Faible). */
+function CoverageBars({ items }: { items: { label: string; value: number }[] }) {
+  const tq = useTranslations("quality");
   if (items.length === 0) return <ChartEmpty />;
-  const max = Math.max(...items.map((i) => i.value), 1);
   return (
     <div className="flex flex-col gap-1">
-      {items.map((it) => (
-        <div key={it.label} className="flex items-center gap-1.5 text-[0.6rem]">
-          <span className="w-14 shrink-0 truncate uppercase text-[var(--muted-foreground)]">
-            {it.label}
-          </span>
-          <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--muted)]/40">
+      <div className="flex h-16 items-end gap-0.5">
+        {items.map((it) => (
+          <div key={it.label} className="flex flex-1 flex-col items-center justify-end">
             <div
-              className="h-full rounded-sm"
-              style={{ width: `${(it.value / max) * 100}%`, backgroundColor: color }}
+              className="w-full rounded-sm"
+              style={{
+                height: `${Math.max(3, it.value * 60)}px`,
+                backgroundColor: BAND_FILL[coverageBand(it.value)],
+              }}
+              title={`${it.label}: ${Math.round(it.value * 100)}%`}
             />
           </div>
-          <span className="w-9 shrink-0 text-right tabular-nums text-[var(--foreground)]">
-            {it.value}
-            {unit}
-          </span>
-        </div>
-      ))}
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[0.55rem] text-[var(--muted-foreground)]">
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: BAND_FILL.good }} />
+          {tq("runs.charts.bandGood")}
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: BAND_FILL.mid }} />
+          {tq("runs.charts.bandMid")}
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: BAND_FILL.low }} />
+          {tq("runs.charts.bandLow")}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Per-dataset mean drift, horizontal bars coloured by magnitude (teal→amber→red). */
+function DriftBars({ items }: { items: { label: string; value: number }[] }) {
+  if (items.length === 0) return <ChartEmpty />;
+  const max = Math.max(...items.map((i) => Math.abs(i.value)), 0.1);
+  return (
+    <div className="flex flex-col gap-1">
+      {items.map((it) => {
+        const abs = Math.abs(it.value);
+        return (
+          <div key={it.label} className="flex items-center gap-1.5 text-[0.6rem]">
+            <span className="w-16 shrink-0 truncate text-[var(--muted-foreground)]">
+              {it.label}
+            </span>
+            <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--muted)]/40">
+              <div
+                className="h-full rounded-sm"
+                style={{ width: `${(abs / max) * 100}%`, backgroundColor: driftFill(abs) }}
+              />
+            </div>
+            <span className="w-8 shrink-0 text-right tabular-nums text-[var(--foreground)]">
+              {abs.toFixed(2)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Two independently-scaled lines over shared x labels (cost + pass-rate). */
+function DualLine({
+  labels,
+  costs,
+  rates,
+}: {
+  labels: string[];
+  costs: (number | null)[];
+  rates: (number | null)[];
+}) {
+  const tq = useTranslations("quality");
+  const n = labels.length;
+  if (n < 2) return <ChartEmpty />;
+  const w = 200;
+  const h = 52;
+  const norm = (vals: (number | null)[]): (number | null)[] => {
+    const known = vals.filter((v): v is number => v != null);
+    if (known.length === 0) return vals.map(() => null);
+    const min = Math.min(...known);
+    const max = Math.max(...known);
+    const span = max - min || 1;
+    return vals.map((v) => (v == null ? null : (v - min) / span));
+  };
+  const path = (vals: (number | null)[]): string => {
+    const parts: string[] = [];
+    vals.forEach((v, i) => {
+      if (v == null) return;
+      const x = (i / (n - 1)) * w;
+      const y = h - 4 - v * (h - 8);
+      parts.push(`${parts.length === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`);
+    });
+    return parts.join(" ");
+  };
+  const costN = norm(costs);
+  const rateN = norm(rates);
+  return (
+    <div className="flex flex-col gap-1">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="h-13 w-full"
+        aria-hidden="true"
+        preserveAspectRatio="none"
+      >
+        <path
+          d={path(rateN)}
+          fill="none"
+          stroke="#34d399"
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+        />
+        <path
+          d={path(costN)}
+          fill="none"
+          stroke="#22d3ee"
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+        />
+      </svg>
+      <div className="flex gap-2 text-[0.55rem] text-[var(--muted-foreground)]">
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#22d3ee]" />
+          {tq("runs.charts.legendCost")}
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#34d399]" />
+          {tq("runs.charts.legendPass")}
+        </span>
+      </div>
     </div>
   );
 }
@@ -672,44 +911,49 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-/** The six mini-charts row — every series derived from a real endpoint. */
+/** The six mini-charts row — every series derived from a real endpoint (image 02). */
 export function RunsCharts({
   registry,
   models,
-  freshness,
+  datasets,
 }: {
   registry: RunRegistry | undefined;
   models: ModelComparison | undefined;
-  freshness: FreshnessReport | undefined;
+  datasets: QualityDatasetsReport | undefined;
 }) {
   const tq = useTranslations("quality");
+  const themeLabel = (key: string) => tq(`runs.theme.${key}`);
+
   // 1. Pass-rate of the most recent full-catalogue runs, oldest→newest.
   const recent = [...(registry?.runs ?? [])]
     .filter((r) => r.total >= 10)
     .sort((a, b) => (parseRunAt(a.run_at) ?? 0) - (parseRunAt(b.run_at) ?? 0))
     .slice(-12)
     .map((r) => r.pass_rate);
-  // 2. Docs per corpus.
-  const docs = (freshness?.regulations ?? []).map((c) => ({ label: c.corpus, value: c.n_docs }));
-  // 3. Corpus age (days) — mirrors the normative "drift par dataset" horizontal bars.
-  const ages = [...(freshness?.regulations ?? [])]
-    .sort((a, b) => b.age_days - a.age_days)
-    .map((c) => ({ label: c.corpus, value: c.age_days }));
-  // 4. Cases evaluated by language (window-independent: whole archive).
-  const byLang = new Map<string, number>();
-  for (const r of registry?.runs ?? []) {
-    const lang = r.language && r.language !== "None" ? r.language : "n/d";
-    byLang.set(lang, (byLang.get(lang) ?? 0) + r.total);
-  }
-  const langDist = [...byLang.entries()].map(([label, value]) => ({ label, value }));
-  const totalCases = langDist.reduce((a, b) => a + b.value, 0);
-  // 5. Cost vs quality — one point per model with a known cost.
-  const costPts = (models?.models ?? [])
-    .filter((m) => m.est_cost_eur != null)
-    .map((m) => ({
-      label: m.model.split(":")[0] ?? m.model,
-      value: Math.round(m.pass_rate * 100),
-    }));
+
+  // 2. Coverage per dataset (theme), banded.
+  const coverage = (datasets?.datasets ?? [])
+    .filter((d) => d.coverage != null)
+    .map((d) => ({ label: themeLabel(d.key), value: d.coverage ?? 0 }));
+
+  // 3. Mean drift per dataset, largest magnitude first.
+  const drift = (datasets?.datasets ?? [])
+    .filter((d) => d.drift != null)
+    .map((d) => ({ label: themeLabel(d.key), value: d.drift ?? 0 }))
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+
+  // 4. Case distribution by theme, donut centre = total catalogue cases.
+  const caseDist = (datasets?.datasets ?? [])
+    .map((d) => ({ label: themeLabel(d.key), value: d.cases }))
+    .sort((a, b) => b.value - a.value);
+  const totalCases = datasets?.total_cases ?? 0;
+
+  // 5. Cost vs quality — per model, ordered by pass-rate; cost line skips nulls.
+  const byRate = [...(models?.models ?? [])].sort((a, b) => a.pass_rate - b.pass_rate);
+  const costLabels = byRate.map((m) => m.model.split(":")[0] ?? m.model);
+  const costs = byRate.map((m) => m.est_cost_eur);
+  const rates = byRate.map((m) => m.pass_rate * 100);
+
   // 6. Pass-rate per model.
   const perfPts = (models?.models ?? []).map((m) => ({
     label: m.model.split(":")[0] ?? m.model,
@@ -719,22 +963,22 @@ export function RunsCharts({
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
       <ChartCard title={tq("runs.charts.passrate")}>
-        <MiniLine values={recent} />
+        <MiniLine values={recent} band />
       </ChartCard>
       <ChartCard title={tq("runs.charts.coverage")}>
-        <MiniBars items={docs} />
+        <CoverageBars items={coverage} />
       </ChartCard>
-      <ChartCard title={tq("runs.charts.age")}>
-        <MiniHBars items={ages} color="#f59e0b" unit="j" />
+      <ChartCard title={tq("runs.charts.drift")}>
+        <DriftBars items={drift} />
       </ChartCard>
       <ChartCard title={tq("runs.charts.distribution")}>
-        <MiniDonut items={langDist} center={totalCases.toLocaleString("fr-FR")} />
+        <MiniDonut items={caseDist} center={totalCases.toLocaleString("fr-FR")} />
       </ChartCard>
       <ChartCard title={tq("runs.charts.costQuality")}>
-        <MiniBars items={costPts} color="#22d3ee" />
+        <DualLine labels={costLabels} costs={costs} rates={rates} />
       </ChartCard>
       <ChartCard title={tq("runs.charts.perfByModel")}>
-        <MiniBars items={perfPts} color="#34d399" />
+        <MiniBars items={perfPts} band />
       </ChartCard>
     </div>
   );
@@ -742,31 +986,48 @@ export function RunsCharts({
 
 // ──────────────────────────────── right rail ─────────────────────────────────
 
-function RailKV({ k, v, tone }: { k: string; v: string; tone?: string }) {
+/** One pipeline-health row: label, value (or "—") and an OK/—/state pill. */
+function HealthRow({
+  label,
+  value,
+  ok,
+}: {
+  label: string;
+  value: string;
+  ok: boolean | null; // null → no real source (renders neutral, never a fake OK)
+}) {
+  const tq = useTranslations("quality");
+  const tone = ok == null ? MUTED : ok ? GOOD : WARN;
   return (
     <div className="flex items-center justify-between gap-2 py-0.5 text-[0.7rem]">
-      <span className="text-[var(--muted-foreground)]">{k}</span>
-      <span className={`font-medium tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>{v}</span>
+      <span className="text-[var(--muted-foreground)]">{label}</span>
+      <span className="flex items-center gap-1.5">
+        <span className="tabular-nums text-[var(--foreground)]">{value}</span>
+        <span className={`text-[0.6rem] font-medium ${tone}`}>
+          {ok == null ? DASH : ok ? tq("runs.rail.pOk") : tq("runs.rail.pWatch")}
+        </span>
+      </span>
     </div>
   );
 }
 
-/** Tab-specific right rail for Runs & datasets (reference image 02). */
+/** Tab-specific right rail for Runs & datasets — four cards (reference image 02). */
 export function RunsRail({
   registry,
-  freshness,
+  datasets,
   release,
 }: {
   registry: RunRegistry | undefined;
-  freshness: FreshnessReport | undefined;
+  datasets: QualityDatasetsReport | undefined;
   release: ReleaseStatus | undefined;
 }) {
   const tq = useTranslations("quality");
   const rel = release?.current ?? null;
   const regOpen = release?.n_regressions ?? null;
   const relTone = regOpen == null ? MUTED : regOpen > 0 ? WARN : GOOD;
-  const nCorpora = freshness?.n_corpora ?? 0;
-  const nStale = freshness?.n_stale ?? 0;
+  const monitored = datasets?.monitored ?? 0;
+  const coveragePct = datasets?.coverage_pct ?? null;
+  const pipe = datasets?.pipeline;
   // Recent activity from the real archive — newest runs first.
   const activity = [...(registry?.runs ?? [])]
     .sort((a, b) => (parseRunAt(b.run_at) ?? 0) - (parseRunAt(a.run_at) ?? 0))
@@ -814,14 +1075,16 @@ export function RunsRail({
         <CardContent className="pt-1">
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-semibold tabular-nums text-[var(--foreground)]">
-              {nCorpora}
+              {monitored}
             </span>
             <span className="text-[0.65rem] text-[var(--muted-foreground)]">
               {tq("runs.rail.active")}
             </span>
           </div>
-          <p className={`text-[0.65rem] ${nStale > 0 ? WARN : GOOD}`}>
-            {nStale > 0 ? tq("runs.rail.staleN", { n: nStale }) : tq("runs.rail.allFresh")}
+          <p className="text-[0.65rem] text-[var(--muted-foreground)]">
+            {coveragePct == null
+              ? DASH
+              : tq("runs.rail.covered", { p: Math.round(coveragePct * 100) })}
           </p>
         </CardContent>
       </Card>
@@ -864,11 +1127,39 @@ export function RunsRail({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
-          <RailKV k={tq("runs.rail.hRuns")} v={String(registry?.n ?? 0)} />
-          <RailKV k={tq("runs.rail.hModels")} v={String(registry?.models.length ?? 0)} />
-          <RailKV k={tq("runs.rail.hLangs")} v={String(registry?.languages.length ?? 0)} />
-          <RailKV k={tq("runs.rail.hCorpora")} v={String(nCorpora)} />
-          <RailKV k={tq("runs.rail.hStale")} v={String(nStale)} tone={nStale > 0 ? WARN : GOOD} />
+          {/* Real signals: executions in window, data freshness, catalogue coverage.
+              Workers / queue / evidence-retention have no source → "—", never faked. */}
+          <HealthRow
+            label={tq("runs.rail.pJobs")}
+            value={pipe ? String(pipe.jobs_window) : DASH}
+            ok={pipe ? pipe.jobs_window > 0 : null}
+          />
+          <HealthRow
+            label={tq("runs.rail.pWorkers")}
+            value={pipe?.workers != null ? String(pipe.workers) : DASH}
+            ok={pipe?.workers != null ? pipe.workers > 0 : null}
+          />
+          <HealthRow
+            label={tq("runs.rail.pQueue")}
+            value={pipe?.queue_depth != null ? String(pipe.queue_depth) : DASH}
+            ok={pipe?.queue_depth != null ? pipe.queue_depth === 0 : null}
+          />
+          <HealthRow
+            label={tq("runs.rail.pFreshness")}
+            value={fmtFreshness(pipe?.data_freshness_seconds)}
+            ok={
+              pipe?.data_freshness_seconds != null
+                ? pipe.data_freshness_seconds < 14 * 86_400
+                : null
+            }
+          />
+          <HealthRow
+            label={tq("runs.rail.pRetention")}
+            value={
+              pipe?.evidence_retention_days != null ? `${pipe.evidence_retention_days} j` : DASH
+            }
+            ok={pipe?.evidence_retention_days != null ? true : null}
+          />
         </CardContent>
       </Card>
     </aside>

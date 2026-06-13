@@ -1412,7 +1412,8 @@
         "regOpen": "{n} Regression(en)",
         "ok": "OK",
         "avgDuration": "Ø Dauer",
-        "staleCorpora": "{n} veraltete Korpora"
+        "staleCorpora": "{n} veraltete Korpora",
+        "driftMean": "Mittel pro Datensatz"
       },
       "table": {
         "title": "Evaluierungs-Runs",
@@ -1459,12 +1460,18 @@
       },
       "charts": {
         "passrate": "Pass-Rate der letzten Runs",
-        "coverage": "Dok. pro Korpus",
+        "coverage": "Abdeckung pro Datensatz",
         "age": "Korpus-Alter (T)",
         "distribution": "Fallverteilung",
         "costQuality": "Kosten vs. Qualität",
         "perfByModel": "Leistung pro Modell",
-        "noData": "Keine Daten"
+        "noData": "Keine Daten",
+        "drift": "Mittlerer Drift pro Datensatz",
+        "bandGood": "Gut ≥ 0,8",
+        "bandMid": "Mittel 0,5–0,8",
+        "bandLow": "Niedrig < 0,5",
+        "legendCost": "Kosten",
+        "legendPass": "Pass-Rate"
       },
       "rail": {
         "release": "Aktuelle Release",
@@ -1476,12 +1483,63 @@
         "allFresh": "Alle aktuell",
         "activity": "Letzte Aktivitäten",
         "runDone": "{model} — {rate}",
-        "health": "Pipeline-Zustand",
+        "health": "Zustand der Evaluations-Pipeline",
         "hRuns": "Archivierte Runs",
         "hModels": "Modelle",
         "hLangs": "Sprachen",
         "hCorpora": "Korpora",
-        "hStale": "Veraltet"
+        "hStale": "Veraltet",
+        "covered": "{p}% abgedeckt",
+        "pJobs": "Ausführungen (24 Std.)",
+        "pWorkers": "Workers",
+        "pQueue": "Warteschlange",
+        "pFreshness": "Datenaktualität",
+        "pRetention": "Evidence-Aufbewahrung",
+        "pOk": "OK",
+        "pWatch": "Beobachten"
+      },
+      "qdatasets": {
+        "title": "Qualitätsdatensätze",
+        "count": "{n} Datensätze",
+        "empty": "Kein Datensatz.",
+        "dataset": "Datensatz",
+        "description": "Beschreibung",
+        "langs": "Sprache(n)",
+        "cases": "Fälle",
+        "updated": "Letzte Aktualisierung",
+        "version": "Version",
+        "drift": "Drift",
+        "coverage": "Abdeckung",
+        "owner": "Eigentümer",
+        "status": "Status",
+        "st_good": "Gut",
+        "st_watch": "Beobachten",
+        "st_alert": "Kritisch",
+        "st_unknown": "—"
+      },
+      "theme": {
+        "prompt_injection": "Prompt-Injektion",
+        "pii_leak": "Verlust personenbezogener Daten",
+        "hallucination": "Faktische Halluzination",
+        "overconfidence": "Selbstüberschätzung",
+        "regulatory_misstatement": "Regulatorische Falschaussage",
+        "citation_fabrication": "Erfundene Quellenangaben",
+        "tool_misuse": "Falsche Tool-Nutzung",
+        "policy_violation": "Richtlinienverstoß",
+        "language_mixing": "Sprachvermischung",
+        "escalation_failure": "Eskalationsfehler"
+      },
+      "themeDesc": {
+        "prompt_injection": "Anweisungs-Hijacking und Jailbreaks",
+        "pii_leak": "Exfiltration personenbezogener Daten (DSGVO)",
+        "hallucination": "Falsche oder erfundene Aussagen",
+        "overconfidence": "Riskante Aktionen ohne Bestätigung",
+        "regulatory_misstatement": "Falsche regulatorische Aussagen",
+        "citation_fabrication": "Erfundene Quellen und Referenzen",
+        "tool_misuse": "Unangemessene oder riskante Tool-Aufrufe",
+        "policy_violation": "Umgehung interner Schutzmechanismen",
+        "language_mixing": "Antworten in der falschen Sprache",
+        "escalation_failure": "Keine Eskalation an einen Menschen"
       }
     },
     "models": {

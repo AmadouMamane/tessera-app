@@ -1412,7 +1412,8 @@
         "regOpen": "{n} régression(s)",
         "ok": "OK",
         "avgDuration": "Durée moyenne",
-        "staleCorpora": "{n} corpus périmé(s)"
+        "staleCorpora": "{n} corpus périmé(s)",
+        "driftMean": "moy. par dataset"
       },
       "table": {
         "title": "Runs d'évaluation",
@@ -1459,12 +1460,18 @@
       },
       "charts": {
         "passrate": "Pass-rate des derniers runs",
-        "coverage": "Docs par corpus",
+        "coverage": "Couverture par dataset",
         "age": "Âge des corpus (j)",
         "distribution": "Répartition des cas",
         "costQuality": "Coût vs qualité",
         "perfByModel": "Performance par modèle",
-        "noData": "Aucune donnée"
+        "noData": "Aucune donnée",
+        "drift": "Drift par dataset (moy.)",
+        "bandGood": "Bien ≥ 0,8",
+        "bandMid": "Moyen 0,5–0,8",
+        "bandLow": "Faible < 0,5",
+        "legendCost": "Coût",
+        "legendPass": "Pass-rate"
       },
       "rail": {
         "release": "Release actuelle",
@@ -1476,12 +1483,63 @@
         "allFresh": "Tous à jour",
         "activity": "Activités récentes",
         "runDone": "{model} — {rate}",
-        "health": "Santé du pipeline",
+        "health": "Santé du pipeline d'évaluation",
         "hRuns": "Runs archivés",
         "hModels": "Modèles",
         "hLangs": "Langues",
         "hCorpora": "Corpus",
-        "hStale": "Périmés"
+        "hStale": "Périmés",
+        "covered": "{p}% couverts",
+        "pJobs": "Exécutions (24 h)",
+        "pWorkers": "Workers",
+        "pQueue": "File d'attente",
+        "pFreshness": "Fraîcheur des données",
+        "pRetention": "Rétention evidence",
+        "pOk": "OK",
+        "pWatch": "À surveiller"
+      },
+      "qdatasets": {
+        "title": "Datasets de qualité",
+        "count": "{n} datasets",
+        "empty": "Aucun dataset.",
+        "dataset": "Dataset",
+        "description": "Description",
+        "langs": "Langue(s)",
+        "cases": "Cas",
+        "updated": "Dernière maj",
+        "version": "Version",
+        "drift": "Drift",
+        "coverage": "Couverture",
+        "owner": "Propriétaire",
+        "status": "Statut",
+        "st_good": "Bien",
+        "st_watch": "À surveiller",
+        "st_alert": "Critique",
+        "st_unknown": "—"
+      },
+      "theme": {
+        "prompt_injection": "Injection de prompt",
+        "pii_leak": "Fuite de données personnelles",
+        "hallucination": "Hallucination factuelle",
+        "overconfidence": "Excès de confiance",
+        "regulatory_misstatement": "Erreur réglementaire",
+        "citation_fabrication": "Fabrication de citations",
+        "tool_misuse": "Mauvais usage des outils",
+        "policy_violation": "Violation de politique",
+        "language_mixing": "Mélange de langues",
+        "escalation_failure": "Échec d'escalade"
+      },
+      "themeDesc": {
+        "prompt_injection": "Détournement d'instructions et jailbreaks",
+        "pii_leak": "Exfiltration d'informations personnelles (RGPD)",
+        "hallucination": "Affirmations fausses ou inventées",
+        "overconfidence": "Actions risquées sans confirmation",
+        "regulatory_misstatement": "Affirmations réglementaires incorrectes",
+        "citation_fabrication": "Sources et références inventées",
+        "tool_misuse": "Appels d'outils inappropriés ou risqués",
+        "policy_violation": "Contournement des garde-fous internes",
+        "language_mixing": "Réponses dans la mauvaise langue",
+        "escalation_failure": "Absence d'escalade vers un humain"
       }
     },
     "models": {

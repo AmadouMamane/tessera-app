@@ -922,6 +922,22 @@ async def observability_runs() -> dict[str, object]:
     return asdict(load_runs())
 
 
+@router.get("/observability/eval-datasets")
+async def observability_eval_datasets() -> dict[str, object]:
+    """Themed quality datasets from the failure catalogue joined to runs (image 02).
+
+    Tessera's real "eval datasets" are the failure-catalogue **themes** (categories):
+    per theme we derive case count, languages, version, latest-run pass rate, drift
+    (delta between the two most recent full-catalogue runs), coverage and last-run
+    timestamp — all from ``eval/failures`` joined with ``eval/reports``. Absent
+    signals (a theme not in the latest run, pipeline workers/queue/evidence TTL)
+    stay ``null`` so the dashboard renders "—", never an invented value.
+    """
+    from tessera.observability.eval.datasets import load_quality_datasets
+
+    return asdict(load_quality_datasets())
+
+
 @router.get("/observability/model-comparison")
 async def observability_model_comparison() -> dict[str, object]:
     """Per-model comparison from the latest run of each model (image 04).
