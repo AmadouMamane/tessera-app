@@ -770,6 +770,33 @@ async def observability_failed_cases(
     return asdict(report)
 
 
+@router.get("/observability/runs")
+async def observability_runs() -> dict[str, object]:
+    """Eval run registry from the report archive (Runs & datasets tab, image 02).
+
+    One row per real report under ``eval/reports`` (model, language, pass rate,
+    cost, latency, catalogue version), newest first. No fabrication — a free
+    local run keeps ``est_cost_eur: null``.
+    """
+    from tessera.observability.eval.runs import load_runs
+
+    return asdict(load_runs())
+
+
+@router.get("/observability/model-comparison")
+async def observability_model_comparison() -> dict[str, object]:
+    """Per-model comparison from the latest run of each model (image 04).
+
+    Aggregates the real report archive: pass rate, cost, latency and a documented
+    verdict per model (best / balanced / economic / avoid). Includes the frontier
+    model when a run exists.
+    """
+    from tessera.observability.eval.runs import compare_models, load_runs
+
+    registry = load_runs()
+    return {"models": [asdict(s) for s in compare_models(registry.runs)], "n_runs": registry.n}
+
+
 @router.get("/observability/sft-dataset")
 async def observability_sft_dataset() -> dict[str, object]:
     """Distil high-scoring captured turns into an SFT dataset (#122)."""
