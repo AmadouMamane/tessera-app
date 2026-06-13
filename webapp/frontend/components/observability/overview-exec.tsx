@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
+  MetricPairs,
   ModelComparison,
   Regression,
   ReleaseStatus,
@@ -446,6 +447,96 @@ export function RunsBars({
               </div>
             ))}
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** "Faithfulness vs Grounding" scatter from per-turn metric pairs (image 00). */
+export function FaithGroundingScatter({
+  pairs,
+  loading,
+}: {
+  pairs: MetricPairs | undefined;
+  loading: boolean;
+}) {
+  const tq = useTranslations("quality");
+  const points = pairs?.points ?? [];
+  const H = 56;
+  const top = 4;
+  const bucketColor = (m: number) => (m >= 0.7 ? "#10b981" : m >= 0.4 ? "#f59e0b" : "#ef4444");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{tq("charts.faithGrounding")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading && !pairs ? (
+          <Skeleton className="h-44 w-full" />
+        ) : points.length === 0 ? (
+          <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
+            {tq("charts.noData")}
+          </p>
+        ) : (
+          <>
+            <div className="relative h-44 w-full">
+              <svg
+                viewBox={`0 0 100 ${H + top * 2}`}
+                preserveAspectRatio="none"
+                className="h-full w-full"
+                aria-hidden="true"
+              >
+                {[0, 0.5, 1].map((g) => (
+                  <line
+                    key={g}
+                    x1={0}
+                    x2={100}
+                    y1={top + (1 - g) * H}
+                    y2={top + (1 - g) * H}
+                    stroke="var(--tessera-border)"
+                    strokeWidth={0.3}
+                  />
+                ))}
+                <line
+                  x1={0}
+                  y1={top + H}
+                  x2={100}
+                  y2={top}
+                  stroke="var(--tessera-border)"
+                  strokeDasharray="2 2"
+                  strokeWidth={0.4}
+                />
+                {points.map((p, i) => (
+                  <circle
+                    key={`${p.x.toFixed(3)}:${p.y.toFixed(3)}:${i}`}
+                    cx={p.x * 100}
+                    cy={top + (1 - p.y) * H}
+                    r={1.6}
+                    fill={bucketColor((p.x + p.y) / 2)}
+                  />
+                ))}
+              </svg>
+            </div>
+            <div className="mt-1 flex justify-between text-[0.65rem] text-[var(--muted-foreground)]">
+              <span>↑ {tq("metrics.grounding")}</span>
+              <span>{tq("metrics.faithfulness")} →</span>
+            </div>
+            <ul className="mt-2 flex flex-wrap gap-x-3 text-xs text-[var(--muted-foreground)]">
+              <li className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                {tq("charts.good")}
+              </li>
+              <li className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                {tq("charts.mid")}
+              </li>
+              <li className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                {tq("charts.low")}
+              </li>
+            </ul>
+          </>
         )}
       </CardContent>
     </Card>

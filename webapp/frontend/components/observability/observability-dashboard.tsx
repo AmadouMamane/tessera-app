@@ -62,6 +62,7 @@ import { JudgeCalibration } from "@/components/observability/judge-calibration";
 import {
   CostQualityScatter,
   EtatActuel,
+  FaithGroundingScatter,
   OverviewKpis,
   RootCauseDiagnostic,
   RunsBars,
@@ -117,6 +118,7 @@ import {
   fetchLocalization,
   fetchMemoryInventory,
   fetchMemoryObs,
+  fetchMetricPairs,
   fetchModelComparison,
   fetchObsCost,
   fetchPiiLeak,
@@ -274,6 +276,14 @@ export function ObservabilityDashboard() {
   const groundingSeries = useQuery({
     queryKey: ["score-series", "grounding", asOf],
     queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding"),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
+  });
+
+  const metricPairs = useQuery({
+    queryKey: ["metric-pairs", "faithfulness", "grounding", asOf],
+    queryFn: ({ signal }) =>
+      fetchMetricPairs(signal, "faithfulness", "grounding", asOf ?? undefined),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -732,6 +742,7 @@ export function ObservabilityDashboard() {
                 <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
                 <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
                 <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+                <FaithGroundingScatter pairs={metricPairs.data} loading={metricPairs.isLoading} />
                 <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
                 <CostQualityScatter
                   data={modelComparison.data}

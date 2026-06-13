@@ -1159,7 +1159,11 @@
       "costQuality": "Coût évaluation vs Qualité",
       "costAxis": "Coût/run",
       "qualityAxis": "Qualité",
-      "runsBars": "Pass-rate des derniers runs"
+      "runsBars": "Pass-rate des derniers runs",
+      "faithGrounding": "Faithfulness vs Grounding (7 j)",
+      "good": "Bon",
+      "mid": "Moyen",
+      "low": "Faible"
     },
     "failed": {
       "title": "Cas échoués",

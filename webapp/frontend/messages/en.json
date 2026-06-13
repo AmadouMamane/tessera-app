@@ -1159,7 +1159,11 @@
       "costQuality": "Eval cost vs Quality",
       "costAxis": "Cost/run",
       "qualityAxis": "Quality",
-      "runsBars": "Recent runs pass-rate"
+      "runsBars": "Recent runs pass-rate",
+      "faithGrounding": "Faithfulness vs Grounding (7d)",
+      "good": "Good",
+      "mid": "Fair",
+      "low": "Poor"
     },
     "failed": {
       "title": "Failed cases",

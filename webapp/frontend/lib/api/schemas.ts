@@ -710,6 +710,19 @@ export const ScoreSeriesSchema = z.object({
 });
 export type ScoreSeries = z.infer<typeof ScoreSeriesSchema>;
 
+export const MetricPointSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  language: z.string(),
+});
+export const MetricPairsSchema = z.object({
+  x_metric: z.string(),
+  y_metric: z.string(),
+  n: z.number().int(),
+  points: z.array(MetricPointSchema),
+});
+export type MetricPairs = z.infer<typeof MetricPairsSchema>;
+
 export const FailedCaseSchema = z.object({
   case_id: z.string(),
   title: z.string(),

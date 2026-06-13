@@ -87,6 +87,8 @@ import {
   LocalizationReportSchema,
   type MemoryObsReport,
   MemoryObsReportSchema,
+  type MetricPairs,
+  MetricPairsSchema,
   type ModelComparison,
   ModelComparisonSchema,
   type ObsCostReport,
@@ -461,6 +463,18 @@ export async function fetchModelComparison(signal?: AbortSignal): Promise<ModelC
 /** Current release + real open regressions, for the Vue d'ensemble rail (image 00). */
 export async function fetchReleaseStatus(signal?: AbortSignal): Promise<ReleaseStatus> {
   return request("/observability/release-status", { signal }, ReleaseStatusSchema);
+}
+
+/** Per-turn metric pairs for a scatter, e.g. faithfulness vs grounding (image 00). */
+export async function fetchMetricPairs(
+  signal?: AbortSignal,
+  x = "faithfulness",
+  y = "grounding",
+  at?: string,
+): Promise<MetricPairs> {
+  const params = new URLSearchParams({ x, y });
+  if (at) params.set("at", at);
+  return request(`/observability/metric-pairs?${params.toString()}`, { signal }, MetricPairsSchema);
 }
 
 /** Documented failed-case catalogue + distributions (Cas échoués tab, image 03). */
