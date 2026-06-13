@@ -57,6 +57,7 @@ import { type ReactNode, useState } from "react";
 
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
+import { SignalsTable, buildSignalRows } from "@/components/observability/signals-table";
 import {
   TemporalRail,
   useRailTimeline,
@@ -531,6 +532,28 @@ export function ObservabilityDashboard() {
   // Newest first for display.
   const rows: EvalScore[] = scores.data ? [...scores.data.scores].reverse() : [];
 
+  // Unified signal catalogue derived from the live reports (reference image 01).
+  const signalRows = buildSignalRows(t, {
+    slo: slo.data,
+    calibration: calibration.data,
+    citations: citations.data,
+    contradiction: contradictions.data,
+    predictor: failurePredictor.data,
+    clusters: failureClusters.data,
+    firewall: firewall.data,
+    toxicity: toxicity.data,
+    pii: piiLeak.data,
+    refusal: refusal.data,
+    conformance: conformance.data,
+    localeFormat: localeFormat.data,
+    tools: tools.data,
+    cost: cost.data,
+    routing: routing.data,
+    funnel: funnel.data,
+    anomalies: anomalies.data,
+    intent: intent.data,
+  });
+
   // --- Real derived headline metrics (no fabrication — null ⇒ "—") -----------
   const sloPct = slo.data && slo.data.n > 0 ? Math.round(slo.data.good_rate * 100) : null;
   const refusalOver = refusal.data ? Math.round(refusal.data.over_refusal_rate * 100) : null;
@@ -633,6 +656,9 @@ export function ObservabilityDashboard() {
 
           {tab === "signals" && (
             <TabGrid>
+              <FullWidth>
+                <SignalsTable rows={signalRows} />
+              </FullWidth>
               <CitationCard data={citations.data} loading={citations.isLoading} />
               <CitationLinksCard data={citationLinks.data} loading={citationLinks.isLoading} />
               <ContradictionCard data={contradictions.data} loading={contradictions.isLoading} />

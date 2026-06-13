@@ -1116,6 +1116,32 @@
     },
     "empty": {
       "noBackend": "Pas encore relié à un backend — aucune donnée inventée."
+    },
+    "signalsTable": {
+      "all": "Tous",
+      "empty": "Aucun signal ne correspond.",
+      "count": "{shown} sur {total} signaux",
+      "cols": {
+        "signal": "Signal",
+        "category": "Catégorie",
+        "status": "Statut",
+        "score": "Score",
+        "threshold": "Seuil",
+        "sample": "Échantillon"
+      },
+      "status": {
+        "ok": "Au vert",
+        "warn": "À surveiller",
+        "crit": "Critique",
+        "na": "Indispo."
+      },
+      "cat": {
+        "fidelity": "Fidélité",
+        "security": "Sécurité",
+        "compliance": "Conformité",
+        "reliability": "Fiabilité",
+        "sessions": "Sessions"
+      }
     }
   }
 }

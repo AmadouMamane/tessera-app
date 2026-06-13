@@ -1116,6 +1116,32 @@
     },
     "empty": {
       "noBackend": "Not wired to a backend yet — no data fabricated."
+    },
+    "signalsTable": {
+      "all": "All",
+      "empty": "No signal matches.",
+      "count": "{shown} of {total} signals",
+      "cols": {
+        "signal": "Signal",
+        "category": "Category",
+        "status": "Status",
+        "score": "Score",
+        "threshold": "Threshold",
+        "sample": "Sample"
+      },
+      "status": {
+        "ok": "Green",
+        "warn": "Watch",
+        "crit": "Critical",
+        "na": "No data"
+      },
+      "cat": {
+        "fidelity": "Faithfulness",
+        "security": "Security",
+        "compliance": "Compliance",
+        "reliability": "Reliability",
+        "sessions": "Sessions"
+      }
     }
   }
 }
