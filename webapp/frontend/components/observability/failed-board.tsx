@@ -308,19 +308,30 @@ function TrendBars({ points }: { points: { date: string; n: number }[] }) {
   );
 }
 
+/** Top root causes — bars share the donut's per-category colours so a category
+ *  keeps the same identity colour across "Répartition" and "Top causes". */
 function CauseBars({ items }: { items: { key: string; label: string; value: number }[] }) {
   if (items.length === 0)
     return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
   const max = Math.max(...items.map((i) => i.value), 1);
   return (
     <div className="flex flex-col gap-1">
-      {items.map((it) => (
+      {items.map((it, i) => (
         <div key={it.key} className="flex items-center gap-1.5 text-[0.6rem]">
-          <span className="w-24 shrink-0 truncate text-[var(--muted-foreground)]">{it.label}</span>
+          <span className="flex w-24 shrink-0 items-center gap-1 truncate text-[var(--muted-foreground)]">
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }}
+            />
+            <span className="truncate">{it.label}</span>
+          </span>
           <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--muted)]/40">
             <div
-              className="h-full rounded-sm bg-amber-500"
-              style={{ width: `${(it.value / max) * 100}%` }}
+              className="h-full rounded-sm"
+              style={{
+                width: `${(it.value / max) * 100}%`,
+                background: DONUT_COLORS[i % DONUT_COLORS.length],
+              }}
             />
           </div>
           <span className="w-6 shrink-0 text-right tabular-nums">{it.value}</span>
