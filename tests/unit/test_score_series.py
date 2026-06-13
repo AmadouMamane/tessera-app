@@ -93,3 +93,51 @@ def test_metric_pairs_averages_multi_turn_conversations() -> None:
     assert pairs.n == 1
     assert pairs.points[0].x == 0.7  # mean of 0.6, 0.8
     assert pairs.points[0].y == 0.5
+
+
+# ── judge drift ─────────────────────────────────────────────────────────────────
+
+
+def _jrow(ts: datetime, score: float, judge: str = "llama3.2:3b") -> dict[str, object]:
+    return {
+        "scored_at": ts.isoformat(),
+        "metric": "faithfulness",
+        "score": score,
+        "judge_model": judge,
+    }
+
+
+def test_judge_drift_unknown_with_too_few_buckets() -> None:
+    from tessera.observability.eval.series import compute_judge_drift
+
+    end = datetime(2026, 6, 12, 12, 0, tzinfo=UTC)
+    drift = compute_judge_drift([_jrow(end - timedelta(hours=1), 0.9)], end=end, days=7, n_buckets=7)
+    assert drift.level == "unknown"
+    assert drift.divergence is None
+    assert drift.delta is None
+    assert drift.judge_model == "llama3.2:3b"
+
+
+def test_judge_drift_stable_when_score_constant() -> None:
+    from tessera.observability.eval.series import compute_judge_drift
+
+    end = datetime(2026, 6, 12, 12, 0, tzinfo=UTC)
+    # One score in each of the seven daily buckets, all identical → no drift.
+    rows = [_jrow(end - timedelta(days=6 - i, hours=1), 0.8) for i in range(7)]
+    drift = compute_judge_drift(rows, end=end, days=7, n_buckets=7)
+    assert drift.divergence == 0.0
+    assert drift.delta == 0.0
+    assert drift.level == "stable"
+
+
+def test_judge_drift_detects_movement() -> None:
+    from tessera.observability.eval.series import compute_judge_drift
+
+    end = datetime(2026, 6, 12, 12, 0, tzinfo=UTC)
+    # Judge mean ramps from 0.9 down to 0.3 across the buckets → clear drift.
+    scores = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3]
+    rows = [_jrow(end - timedelta(days=6 - i, hours=1), s) for i, s in enumerate(scores)]
+    drift = compute_judge_drift(rows, end=end, days=7, n_buckets=7)
+    assert drift.divergence is not None and drift.divergence > 0.1
+    assert drift.delta is not None and drift.delta < 0  # net downward
+    assert drift.level in {"moderate", "high", "critical"}

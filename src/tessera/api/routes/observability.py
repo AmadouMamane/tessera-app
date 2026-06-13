@@ -81,7 +81,7 @@ from tessera.observability import (
     why_answer as why_answer_mod,
 )
 from tessera.observability._asof import occurred_before
-from tessera.observability.eval.calibration import calibrate, load_gold_set
+from tessera.observability.eval.calibration import calibrate, gold_consensus, load_gold_set
 from tessera.observability.eval.ensemble import evaluate_ensemble
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.scores import persisted_scores, recent_scores
@@ -159,6 +159,11 @@ class ShadowRequest(BaseModel):
 
 # Calibration runs the judge over the gold set (slow), so cache it per process.
 _calibration_cache: dict[str, object] | None = None
+_consensus_cache: dict[str, object] | None = None
+# A small panel of different local judges for the multi-judge consensus signal.
+# All three are sovereign (served by Ollama on-box); different lineages so their
+# agreement is meaningful rather than an echo (ADR 0010, idea #95).
+_CONSENSUS_PANEL: tuple[str, ...] = ("llama3.2:3b", "mistral:7b", "gemma3:27b")
 # The obs-cost micro-benchmark is stable per process, so compute it once.
 _obs_cost_cache: dict[str, object] | None = None
 # The embedding-inversion demo embeds a fixed corpus; cache it per process.
@@ -412,6 +417,36 @@ async def observability_score_series(
     return {**asdict(series), "as_of": at}
 
 
+@router.get("/observability/judge-drift")
+async def observability_judge_drift(
+    at: str | None = None,
+    metric: str = "faithfulness",
+    days: int = 7,
+    buckets: int = 7,
+) -> dict[str, object]:
+    """Judge score-drift for ``metric`` over the window ending now or at instant T.
+
+    Measures how much the judge's per-bucket mean disperses over time (the drift
+    magnitude) plus its net direction, from the same durable score log — so it
+    honours as-of-T (ADR 0011). Powers the "Drift du juge" signal on the
+    Calibration juge tab. ``divergence=null``/``level="unknown"`` when there are
+    too few populated buckets to judge drift, never a fabricated value.
+    """
+    import contextlib
+    from datetime import UTC, datetime
+
+    from tessera.observability.eval.series import compute_judge_drift
+
+    end = datetime.now(UTC)
+    if at:
+        with contextlib.suppress(ValueError):
+            end = datetime.fromisoformat(at)
+    drift = compute_judge_drift(
+        persisted_scores(at), metric=metric, end=end, days=days, n_buckets=buckets
+    )
+    return {**asdict(drift), "as_of": at}
+
+
 @router.get("/observability/metric-pairs")
 async def observability_metric_pairs(
     x: str = "faithfulness",
@@ -455,6 +490,28 @@ async def observability_calibration() -> dict[str, object]:
             sys.stderr.write(f"tessera.observability.calibration: failed: {exc}\n")
             return {"available": False}
     return _calibration_cache
+
+
+@router.get("/observability/judge-consensus")
+async def observability_judge_consensus() -> dict[str, object]:
+    """Multi-judge consensus over the gold set (cached).
+
+    Runs a panel of different local judges over the human gold set and reports how
+    often they concur — the unanimous-consensus rate, mean pairwise agreement and
+    Fleiss' κ. The first call scores the panel and may take a while; later calls
+    return the cache. Degrades to ``available: false`` if a judge model is missing
+    so the dashboard never errors.
+    """
+    global _consensus_cache
+    if _consensus_cache is None:
+        try:
+            judges = [LLMJudge(model=m) for m in _CONSENSUS_PANEL]
+            report = await gold_consensus(judges, load_gold_set(), labels=list(_CONSENSUS_PANEL))
+            _consensus_cache = {"available": True, **asdict(report)}
+        except Exception as exc:  # never break the dashboard on a judge/IO error
+            sys.stderr.write(f"tessera.observability.judge_consensus: failed: {exc}\n")
+            return {"available": False}
+    return _consensus_cache
 
 
 @router.get("/observability/replays")

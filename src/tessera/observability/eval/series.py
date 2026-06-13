@@ -9,14 +9,17 @@ honours as-of-T: a T in the past yields the series exactly as it stood then.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 __all__ = [
+    "JudgeDrift",
     "MetricPairs",
     "MetricPoint",
     "ScoreSeries",
     "SeriesBucket",
+    "compute_judge_drift",
     "compute_metric_pairs",
     "compute_score_series",
 ]
@@ -199,3 +202,120 @@ def compute_metric_pairs(
             )
         )
     return MetricPairs(x_metric=x_metric, y_metric=y_metric, n=len(points), points=points)
+
+
+# Drift bands on the per-bucket dispersion of the judge's mean score. A calibrated
+# judge scores consistently over time; rising dispersion = the judge is drifting.
+_DRIFT_BANDS: tuple[tuple[float, str], ...] = (
+    (0.03, "stable"),
+    (0.06, "low"),
+    (0.12, "moderate"),
+    (0.20, "high"),
+)
+_MIN_DRIFT_BUCKETS = 2
+
+
+@dataclass(frozen=True, slots=True)
+class JudgeDrift:
+    """How much the judge's scoring of one metric drifts across a time window.
+
+    Computed from the durable score event log, so it honours as-of-T like the
+    rest of the cockpit. ``divergence`` is the population standard deviation of
+    the per-bucket means — a calibrated, stable judge keeps this near zero.
+    """
+
+    metric: str
+    judge_model: str | None
+    window_start: str
+    window_end: str
+    n: int
+    mean: float | None  # judge mean over the window
+    divergence: float | None  # stdev of the per-bucket means (drift magnitude)
+    delta: float | None  # last non-empty bucket mean - first (directional drift)
+    level: str  # stable | low | moderate | high | critical | unknown
+    buckets: list[SeriesBucket] = field(default_factory=list)
+
+
+def _drift_level(divergence: float | None) -> str:
+    """Classify a drift magnitude into a band label."""
+    if divergence is None:
+        return "unknown"
+    for threshold, label in _DRIFT_BANDS:
+        if divergence < threshold:
+            return label
+    return "critical"
+
+
+def compute_judge_drift(
+    rows: list[dict[str, object]],
+    *,
+    metric: str = "faithfulness",
+    end: datetime,
+    days: int = 7,
+    n_buckets: int = 7,
+) -> JudgeDrift:
+    """Measure the judge's score drift for ``metric`` over the window ending at T.
+
+    Reuses :func:`compute_score_series` to bucket the scores, then measures how
+    much the per-bucket means disperse (population stdev) and the net change from
+    the first to the last non-empty bucket. With fewer than two non-empty buckets
+    the drift is undefined (``level="unknown"``) rather than fabricated.
+
+    Args:
+        rows: Persisted score rows (any order) with ``scored_at``, ``metric``,
+            ``score`` and ``judge_model``.
+        metric: The judged metric to track.
+        end: Right edge of the window — instant T, or "now".
+        days: Window length in days.
+        n_buckets: Number of equal time slices.
+
+    Returns:
+        A :class:`JudgeDrift` with the drift magnitude, direction and bucket series.
+    """
+    series = compute_score_series(rows, metric=metric, end=end, days=days, n_buckets=n_buckets)
+
+    # Dominant judge model over the window (most-scored), for display.
+    judge_counts: dict[str, int] = {}
+    start = datetime.fromisoformat(series.window_start)
+    for row in rows:
+        if row.get("metric") != metric:
+            continue
+        ts = _parse(row.get("scored_at"))
+        if ts is None or not (start <= ts <= end):
+            continue
+        model = row.get("judge_model")
+        if isinstance(model, str) and model:
+            judge_counts[model] = judge_counts.get(model, 0) + 1
+    judge_model = max(judge_counts, key=lambda m: judge_counts[m]) if judge_counts else None
+
+    means = [b.mean for b in series.buckets if b.mean is not None]
+    if len(means) < _MIN_DRIFT_BUCKETS:
+        return JudgeDrift(
+            metric=metric,
+            judge_model=judge_model,
+            window_start=series.window_start,
+            window_end=series.window_end,
+            n=series.n,
+            mean=series.mean,
+            divergence=None,
+            delta=None,
+            level="unknown",
+            buckets=series.buckets,
+        )
+
+    bucket_mean = sum(means) / len(means)
+    variance = sum((m - bucket_mean) ** 2 for m in means) / len(means)
+    divergence = math.sqrt(variance)
+    delta = means[-1] - means[0]
+    return JudgeDrift(
+        metric=metric,
+        judge_model=judge_model,
+        window_start=series.window_start,
+        window_end=series.window_end,
+        n=series.n,
+        mean=series.mean,
+        divergence=divergence,
+        delta=delta,
+        level=_drift_level(divergence),
+        buckets=series.buckets,
+    )

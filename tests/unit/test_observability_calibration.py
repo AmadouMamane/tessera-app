@@ -100,3 +100,49 @@ def test_bundled_gold_set_loads() -> None:
     gold = cal.load_gold_set()
     assert len(gold) >= 4
     assert all(c.human_label in {"good", "bad"} for c in gold)
+
+
+# ── multi-judge consensus ───────────────────────────────────────────────────────
+
+
+class _ContrarianJudge:
+    """Inverts the keyword judge: low when the answer contains 'good'."""
+
+    async def score(self, *, metric: str, question: str, answer: str, context: str) -> JudgeVerdict:
+        score = 0.1 if "good" in answer else 0.9
+        return JudgeVerdict(metric=metric, score=score, rationale="", judge_model="stub")
+
+
+def test_fleiss_kappa_perfect_agreement() -> None:
+    # Every item unanimous (3 raters): two all-good, two all-bad.
+    assert cal.fleiss_kappa_binary([(3, 0), (3, 0), (0, 3), (0, 3)]) == pytest.approx(1.0)
+
+
+def test_fleiss_kappa_empty_or_single_rater_is_zero() -> None:
+    assert cal.fleiss_kappa_binary([]) == 0.0
+    assert cal.fleiss_kappa_binary([(1, 0), (1, 0)]) == 0.0
+
+
+def test_gold_consensus_unanimous_panel() -> None:
+    judges = [_KeywordJudge(), _KeywordJudge(), _KeywordJudge()]
+    report = asyncio.run(cal.gold_consensus(judges, _GOLD, labels=["a", "b", "c"]))
+    assert report.n_judges == 3
+    assert report.n_cases == 4
+    assert report.consensus_rate == pytest.approx(1.0)
+    assert report.mean_pairwise_agreement == pytest.approx(1.0)
+    assert report.fleiss_kappa == pytest.approx(1.0)
+    assert [j.agreement for j in report.per_judge] == pytest.approx([1.0, 1.0, 1.0])
+    assert report.judge_models == ["a", "b", "c"]
+
+
+def test_gold_consensus_split_panel_lowers_agreement() -> None:
+    # Two judges agree, one inverts every call → never unanimous.
+    judges = [_KeywordJudge(), _KeywordJudge(), _ContrarianJudge()]
+    report = asyncio.run(cal.gold_consensus(judges, _GOLD, labels=["a", "b", "c"]))
+    assert report.consensus_rate == pytest.approx(0.0)
+    # Pairwise: a↔b agree (1.0), a↔c and b↔c disagree (0.0) → mean 1/3.
+    assert report.mean_pairwise_agreement == pytest.approx(1.0 / 3.0)
+    # The contrarian disagrees with the 2-vs-1 majority on every case.
+    by_model = {j.judge_model: j.agreement for j in report.per_judge}
+    assert by_model["a"] == pytest.approx(1.0)
+    assert by_model["c"] == pytest.approx(0.0)
