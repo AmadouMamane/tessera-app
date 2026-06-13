@@ -1065,7 +1065,7 @@
   },
   "quality": {
     "title": "KI-Qualität",
-    "subtitle": "Alle Observability-Signale des Agenten, nach Thema gruppiert.",
+    "subtitle": "Bewertungen, Regressionen, Halluzinationen, Grounding und Verbesserung der Antworten.",
     "sections": {
       "quality": "Treue & Bewertung",
       "security": "Sicherheit & Schutz",
@@ -1087,12 +1087,56 @@
     "cta": {
       "evidence": "Qualitäts-Evidence-Pack erzeugen",
       "runEval": "Bewertung starten",
-      "compareModels": "Modelle vergleichen"
+      "compareModels": "Modelle vergleichen",
+      "openDataset": "Dataset öffnen"
+    },
+    "sec": {
+      "etat": "A. Aktueller Zustand",
+      "diagnostic": "B. Ursachenanalyse",
+      "predictive": "C. Prädiktive Signale",
+      "actions": "D. Empfohlene Aktionen"
+    },
+    "reco": {
+      "title": "Empfohlene Aktionen",
+      "curate": "In Eval-Set kuratieren",
+      "freeze": "Releases einfrieren",
+      "playbook": "Halluzinations-Playbook",
+      "shadow": "Shadow erneut abspielen",
+      "ticket": "Compliance-Ticket erstellen",
+      "caption": "Sensible Aktionen unter Dual Control (Admin + Operator)"
+    },
+    "rr": {
+      "problems": "Letzte Probleme",
+      "seeCases": "Alle fehlgeschlagenen Fälle ansehen",
+      "release": "Aktuelles Release",
+      "inProd": "In Produktion",
+      "seeReleases": "Releases ansehen",
+      "since": "ausgerollt",
+      "quick": "Schnelllinks",
+      "quickRun": "Laufender Run",
+      "quickPolicies": "Policies & Schutz",
+      "quickScheduled": "Geplante Runs",
+      "quickCatalog": "Signal Catalog",
+      "seeLinks": "Alle Links ansehen",
+      "activity": "Letzte Aktivitäten",
+      "seeActivity": "Alle Aktivitäten ansehen",
+      "noActivity": "Keine aktuelle Aktivität",
+      "noProblems": "Kein offenes Problem"
+    },
+    "statusbar": {
+      "realtime": "Daten: Echtzeit",
+      "dataset": "Aktives Dataset",
+      "truthChain": "Wahrheitskette",
+      "truthSource": "Wahrheitsquelle: YAML/Git",
+      "lastUpdate": "Letzte Aktualisierung",
+      "signals": "{n}/200 Qualitätssignale",
+      "systemOk": "System OK"
     },
     "temporal": {
       "live": "Live",
       "replay": "Wiedergabe bei T",
-      "window": "Letzte 7 Tage"
+      "window": "Letzte 7 Tage",
+      "liveData": "Echtzeitdaten"
     },
     "rail": {
       "scoreTitle": "Score-Zusammenfassung",
@@ -1214,7 +1258,54 @@
       "noDisagreements": "Keine Judge ↔ Mensch-Abweichung.",
       "humanGood": "Mensch: gut",
       "humanBad": "Mensch: schlecht",
-      "cols": { "case": "Fall", "human": "Mensch", "judge": "Judge", "score": "Score" }
+      "cols": { "case": "Fall", "human": "Mensch", "judge": "Judge", "score": "Score" },
+      "kappaTitle": "Inter-Judge-Übereinstimmung",
+      "agreementGlobal": "Gesamtübereinstimmung",
+      "fp": "Falsch positiv (Typ I)",
+      "fn": "Falsch negativ (Typ II)",
+      "verbosityBias": "Verbosity-Bias",
+      "severityBias": "Strenge-Bias",
+      "samples": "Bewertete Stichproben",
+      "excellent": "Exzellent",
+      "low": "Niedrig",
+      "moderate": "Moderat",
+      "strong": "Stark",
+      "confusion": "Konfusionsmatrix",
+      "refHuman": "Menschliche Referenz",
+      "correct": "Korrekt",
+      "incorrect": "Inkorrekt",
+      "total": "Gesamt",
+      "verbScatter": "Verbosity-Bias (Länge ↔ Score)",
+      "verbCorr": "Korrelation Länge ↔ Score",
+      "lengthAxis": "Antwortlänge",
+      "tooStrict": "Zu streng",
+      "tooLenient": "Zu nachsichtig",
+      "ambiguous": "Mehrdeutige Fälle (hohe Judge ↔ Mensch-Divergenz)",
+      "fiche": "Judge-Profil",
+      "model": "Modell",
+      "annotated": "Annotierte Stichproben",
+      "byHumans": "Durch Menschen",
+      "matches": "Übereinstimmungen",
+      "actions": "Kalibrierungsaktionen",
+      "recalibrate": "Judge neu kalibrieren",
+      "compare": "Mit anderen Judges vergleichen",
+      "viewAmbiguous": "Mehrdeutige Fälle ansehen",
+      "rubrics": "Rubriken & Schwellen anpassen",
+      "report": "Kalibrierungsbericht erzeugen",
+      "export": "Kalibrierungsdaten exportieren",
+      "deltaCol": "Δ Score",
+      "drift": "Judge-Drift",
+      "consensus": "Multi-Judge-Konsens",
+      "consensusJudges": "{n} Judges",
+      "fleiss": "Fleiss κ",
+      "pairwise": "Paarweise Übereinstimmung",
+      "panel": "Judge-Panel",
+      "driftStable": "Stabil",
+      "driftLow": "Gering",
+      "driftModerate": "Moderat",
+      "driftHigh": "Hoch",
+      "driftCritical": "Kritisch",
+      "driftUnknown": "Unbestimmt"
     },
     "runs": {
       "title": "Runs & Datensätze",
@@ -1257,7 +1348,7 @@
     "metrics": {
       "faithfulness": "Treue",
       "grounding": "Grounding",
-      "hallucination": "Faktentreue"
+      "hallucination": "Kritische Halluzinationen"
     },
     "release": {
       "title": "Aktuelle Release",

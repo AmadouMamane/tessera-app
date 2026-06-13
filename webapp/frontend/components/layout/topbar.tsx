@@ -9,6 +9,7 @@ import {
   Globe2,
   PackageCheck,
   RotateCcw,
+  Search,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -220,9 +221,17 @@ export function Topbar({ title, description, contextItems = [], actions = [] }: 
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
         <StatusBadge />
         <ModelBadge />
-        <AuthControl />
+        <HeaderIconButton icon={Search} label="Recherche" className="hidden lg:inline-flex" />
+        <HeaderIconButton
+          icon={Bell}
+          label="Notifications"
+          badge="7"
+          className="hidden lg:inline-flex"
+        />
+        <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
         <LanguageSwitcher />
         <ThemeToggle className="h-9 w-9 rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]" />
+        <AuthControl />
       </div>
     </header>
   );

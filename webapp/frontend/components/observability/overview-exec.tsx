@@ -1,5 +1,6 @@
 "use client";
 
+import { BookCheck, ChevronRight, Lock, Receipt, Repeat, Scissors } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { MetricKpi } from "@/components/observability/evolution-chart";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
+  FailedCasesReport,
   MetricPairs,
   ModelComparison,
   Regression,
@@ -16,6 +18,9 @@ import type {
   ScoreSeries,
   WhatChanged,
 } from "@/lib/api/schemas";
+
+/** Overview target tabs that a recommended action can route to. */
+export type OverviewTab = "overview" | "signals" | "runs" | "failed" | "models" | "judge";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
@@ -102,15 +107,55 @@ export function OverviewKpis({
   );
 }
 
-/** "État actuel" — failing/alert counts, release impact, period evolution (image 00). */
+/** Compact single-arc score donut shown inside État actuel (image 00). */
+function ScoreDonut({ scorePct, dir }: { scorePct: number | null; dir: string }) {
+  const tq = useTranslations("quality");
+  const r = 46;
+  const circ = 2 * Math.PI * r;
+  const pct = scorePct == null ? 0 : Math.max(0, Math.min(100, scorePct));
+  const arc = (pct / 100) * circ;
+  const color =
+    scorePct == null ? "#64748b" : pct >= 80 ? "#10b981" : pct >= 60 ? "#f59e0b" : "#ef4444";
+  const dirTone = dir === "rising" ? GOOD : dir === "falling" ? BAD : MUTED;
+  return (
+    <div className="relative h-[128px] w-[128px] shrink-0">
+      <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90" aria-hidden="true">
+        <circle cx="64" cy="64" r={r} fill="none" stroke="var(--tessera-border)" strokeWidth="11" />
+        <circle
+          cx="64"
+          cy="64"
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth="11"
+          strokeLinecap="round"
+          strokeDasharray={`${arc} ${circ - arc}`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-serif text-3xl font-semibold tabular-nums" style={{ color }}>
+          {scorePct == null ? "—" : scorePct}
+        </span>
+        <span className="text-[0.65rem] text-[var(--muted-foreground)]">/ 100</span>
+        <span className={`mt-0.5 text-[0.65rem] ${dirTone}`}>
+          {dir === "rising" ? "↑" : dir === "falling" ? "↓" : "→"} {tq(`exec.etat.${dir}`)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** "État actuel" — failing/alert counts, release impact, evolution + score donut (image 00). */
 export function EtatActuel({
   summary,
   release,
   evolutionDelta,
+  scorePct,
 }: {
   summary: { ok: number; warn: number; crit: number; na: number; total: number };
   release: ReleaseStatus | undefined;
   evolutionDelta: number | null;
+  scorePct: number | null;
 }) {
   const tq = useTranslations("quality");
   const nReg = release?.n_regressions ?? null;
@@ -123,34 +168,36 @@ export function EtatActuel({
       <CardHeader>
         <CardTitle className="text-sm">{tq("exec.etat.title")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm">
-        <Row label={tq("exec.etat.failing")}>
-          <span className={summary.crit > 0 ? BAD : MUTED}>
-            {summary.crit} {tq("signalsTable.status.crit").toLowerCase()}
-          </span>
-        </Row>
-        <Row label={tq("exec.etat.alert")}>
-          <span className={summary.warn > 0 ? WARN : MUTED}>
-            {summary.warn} {tq("signalsTable.status.warn").toLowerCase()}
-          </span>
-        </Row>
-        <Row label={tq("exec.etat.impact")}>
-          {impact == null ? (
-            <span className={MUTED}>—</span>
-          ) : (
-            <Badge
-              tone={impact === "high" ? "danger" : impact === "medium" ? "warning" : "success"}
-            >
-              {tq(`exec.etat.${impact}`)}
-            </Badge>
-          )}
-        </Row>
-        <Row label={tq("exec.etat.evolution")}>
-          <span className={`tabular-nums ${evoTone}`}>
-            {evoPts == null ? "—" : `${evoPts >= 0 ? "+" : ""}${evoPts} pts`} ·{" "}
-            {tq(`exec.etat.${evoDir}`)}
-          </span>
-        </Row>
+      <CardContent className="flex items-center gap-4 text-sm">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <Row label={tq("exec.etat.failing")}>
+            <span className={summary.crit > 0 ? BAD : MUTED}>
+              {summary.crit} {tq("signalsTable.status.crit").toLowerCase()}
+            </span>
+          </Row>
+          <Row label={tq("exec.etat.alert")}>
+            <span className={summary.warn > 0 ? WARN : MUTED}>
+              {summary.warn} {tq("signalsTable.status.warn").toLowerCase()}
+            </span>
+          </Row>
+          <Row label={tq("exec.etat.impact")}>
+            {impact == null ? (
+              <span className={MUTED}>—</span>
+            ) : (
+              <Badge
+                tone={impact === "high" ? "danger" : impact === "medium" ? "warning" : "success"}
+              >
+                {tq(`exec.etat.${impact}`)}
+              </Badge>
+            )}
+          </Row>
+          <Row label={tq("exec.etat.evolution")}>
+            <span className={`tabular-nums ${evoTone}`}>
+              {evoPts == null ? "—" : `${evoPts >= 0 ? "+" : ""}${evoPts} pts`}
+            </span>
+          </Row>
+        </div>
+        <ScoreDonut scorePct={scorePct} dir={evoDir} />
       </CardContent>
     </Card>
   );
@@ -322,6 +369,103 @@ export function RootCauseDiagnostic({
             ))}
           </div>
         </section>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** "D. Actions recommandées" — governed actions derived from the live signals,
+ * each carrying the required role and a link into the relevant tab (image 00). */
+export function RecommendedActions({
+  regressions,
+  topFailing,
+  failed,
+  onOpen,
+}: {
+  regressions: Regression[];
+  topFailing: { dominant_category: string; size: number }[];
+  failed: FailedCasesReport | undefined;
+  onOpen: (tab: OverviewTab) => void;
+}) {
+  const tq = useTranslations("quality");
+  const top = topFailing[0];
+  const failedTotal = failed?.n ?? null;
+  const actions: {
+    key: string;
+    icon: typeof Scissors;
+    label: string;
+    role: "operator" | "admin";
+    ctx: string | null;
+    target: OverviewTab;
+  }[] = [
+    {
+      key: "curate",
+      icon: Scissors,
+      label: tq("reco.curate"),
+      role: "operator",
+      ctx: failedTotal != null ? `${failedTotal}` : null,
+      target: "failed",
+    },
+    {
+      key: "freeze",
+      icon: Lock,
+      label: tq("reco.freeze"),
+      role: "admin",
+      ctx: regressions.length > 0 ? `${regressions.length}` : null,
+      target: "models",
+    },
+    {
+      key: "playbook",
+      icon: BookCheck,
+      label: tq("reco.playbook"),
+      role: "operator",
+      ctx: top ? top.dominant_category : null,
+      target: "failed",
+    },
+    {
+      key: "shadow",
+      icon: Repeat,
+      label: tq("reco.shadow"),
+      role: "operator",
+      ctx: null,
+      target: "runs",
+    },
+    {
+      key: "ticket",
+      icon: Receipt,
+      label: tq("reco.ticket"),
+      role: "admin",
+      ctx: null,
+      target: "failed",
+    },
+  ];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{tq("reco.title")}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-1.5">
+        {actions.map((a) => (
+          <button
+            key={a.key}
+            type="button"
+            onClick={() => onOpen(a.target)}
+            className="group flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2.5 py-1.5 text-left text-sm transition-colors hover:border-[var(--tessera-border-strong)] hover:bg-[var(--tessera-muted)]"
+          >
+            <a.icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
+            <span className="min-w-0 flex-1 truncate">{a.label}</span>
+            {a.ctx ? (
+              <span className="shrink-0 truncate text-[0.7rem] text-[var(--muted-foreground)]">
+                {a.ctx}
+              </span>
+            ) : null}
+            <Badge tone={a.role === "admin" ? "warning" : "success"}>
+              {a.role === "admin" ? "Admin+" : "Operator+"}
+            </Badge>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover:opacity-100" />
+          </button>
+        ))}
+        <p className="mt-1 text-[0.7rem] text-[var(--muted-foreground)]">{tq("reco.caption")}</p>
       </CardContent>
     </Card>
   );

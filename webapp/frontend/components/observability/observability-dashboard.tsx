@@ -10,14 +10,12 @@ import {
   Boxes,
   Brain,
   CalendarClock,
+  ChevronRight,
   Coins,
   Crosshair,
   Eraser,
   ExternalLink,
   FileDown,
-  Filter,
-  Flame,
-  Footprints,
   Gauge,
   GitCompareArrows,
   GitFork,
@@ -34,6 +32,7 @@ import {
   Lock,
   Megaphone,
   Microscope,
+  Play,
   Radar,
   Radio,
   Receipt,
@@ -47,7 +46,6 @@ import {
   Sparkles,
   Sprout,
   Target,
-  TrendingDown,
   Undo2,
   Workflow,
   Wrench,
@@ -61,21 +59,16 @@ import { FailedCasesTable, FailureDistribution } from "@/components/observabilit
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
 import {
   CostQualityScatter,
-  EtatActuel,
   FaithGroundingScatter,
   OverviewKpis,
+  RecommendedActions,
   RootCauseDiagnostic,
   RunsBars,
   TopProblems,
 } from "@/components/observability/overview-exec";
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
-import {
-  QualityGauge,
-  SignalsTable,
-  buildSignalRows,
-  summarizeSignals,
-} from "@/components/observability/signals-table";
+import { SignalsTable, buildSignalRows } from "@/components/observability/signals-table";
 import {
   TemporalRail,
   useRailTimeline,
@@ -112,7 +105,8 @@ import {
   fetchGuardRetraction,
   fetchHandoffs,
   fetchIntent,
-  fetchJourney,
+  fetchJudgeConsensus,
+  fetchJudgeDrift,
   fetchLeastPrivilege,
   fetchLocaleFormat,
   fetchLocalization,
@@ -122,12 +116,10 @@ import {
   fetchModelComparison,
   fetchObsCost,
   fetchPiiLeak,
-  fetchPlaybooks,
   fetchRedteam,
   fetchRefusal,
   fetchReleaseStatus,
   fetchReproducibility,
-  fetchRoadmap,
   fetchRouting,
   fetchRuns,
   fetchSLO,
@@ -141,7 +133,6 @@ import {
   fetchToolValidity,
   fetchToxicity,
   fetchTraceSnapshot,
-  fetchTrend,
   fetchWhatChanged,
   runRedteam,
   runShadow,
@@ -160,23 +151,21 @@ import type {
   DisclosureReport,
   ErasureCoverage,
   EvalScore,
+  FailedCasesReport,
   FirewallEfficacy,
   FreshnessReport,
-  FunnelReport,
   GraphTopology,
   GuardExplainReport,
   HandoffReport,
   IntentReport,
   InventoryReport,
   InversionReport,
-  JourneyReport,
   LocaleFormatSummary,
   LocalizationReport,
   MemoryObsReport,
   ObsCostReport,
   OverflowReport,
   PIILeakSummary,
-  PlaybookReport,
   PredictorEvaluation,
   PrivilegeReport,
   PropagationReport,
@@ -185,10 +174,8 @@ import type {
   ReleaseStatus,
   ReproReport,
   RetractionReport,
-  RoadmapReport,
   RoutingReport,
   SFTDataset,
-  SLOReport,
   SessionReport,
   ShadowReport,
   SiemExport,
@@ -198,7 +185,7 @@ import type {
   ToolLoopReport,
   ToolValidity,
   ToxicityReport,
-  TrendReport,
+  WhatChanged,
 } from "@/lib/api/schemas";
 
 // Locally-available Ollama models to shadow against (smallest first).
@@ -257,13 +244,6 @@ export function ObservabilityDashboard() {
     queryKey: ["span-propagation"],
     queryFn: ({ signal }) => fetchSpanPropagation(signal),
     staleTime: Number.POSITIVE_INFINITY,
-  });
-
-  const trend = useQuery({
-    queryKey: ["trend", asOf],
-    queryFn: ({ signal }) => fetchTrend(signal, asOf ?? undefined),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : 15_000,
   });
 
   const scoreSeries = useQuery({
@@ -347,13 +327,6 @@ export function ObservabilityDashboard() {
     refetchInterval: 60_000,
   });
 
-  const roadmap = useQuery({
-    queryKey: ["roadmap", asOf],
-    queryFn: ({ signal }) => fetchRoadmap(signal, asOf ?? undefined),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : 20_000,
-  });
-
   const memoryObs = useQuery({
     queryKey: ["memory-obs"],
     queryFn: ({ signal }) => fetchMemoryObs(signal),
@@ -398,13 +371,6 @@ export function ObservabilityDashboard() {
     refetchInterval: 15_000,
   });
 
-  const playbooks = useQuery({
-    queryKey: ["playbooks", asOf],
-    queryFn: ({ signal }) => fetchPlaybooks(signal, asOf ?? undefined),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : 15_000,
-  });
-
   const siem = useQuery({
     queryKey: ["siem"],
     queryFn: ({ signal }) => fetchSiem(signal),
@@ -436,12 +402,6 @@ export function ObservabilityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const journey = useQuery({
-    queryKey: ["journey"],
-    queryFn: ({ signal }) => fetchJourney(signal),
-    refetchInterval: 20_000,
-  });
-
   const memoryInventory = useQuery({
     queryKey: ["memory-inventory"],
     queryFn: ({ signal }) => fetchMemoryInventory(signal),
@@ -466,6 +426,21 @@ export function ObservabilityDashboard() {
   const calibration = useQuery({
     queryKey: ["calibration"],
     queryFn: ({ signal }) => fetchCalibration(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const judgeDrift = useQuery({
+    queryKey: ["judge-drift", asOf],
+    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 30_000,
+  });
+
+  // Multi-judge consensus runs a panel of local judges server-side and is cached;
+  // fetch once (it is slow and stable per process).
+  const judgeConsensus = useQuery({
+    queryKey: ["judge-consensus"],
+    queryFn: ({ signal }) => fetchJudgeConsensus(signal),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -633,7 +608,6 @@ export function ObservabilityDashboard() {
     anomalies: anomalies.data,
     intent: intent.data,
   });
-  const signalSummary = summarizeSignals(signalRows);
 
   // --- Real derived headline metrics (no fabrication — null ⇒ "—") -----------
   const sloPct = slo.data && slo.data.n > 0 ? Math.round(slo.data.good_rate * 100) : null;
@@ -666,13 +640,48 @@ export function ObservabilityDashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Sticky chrome: the shared temporal rail (Live/Replay) pins under the page
-          header; below it the tab bar + the single evidence-pack CTA. */}
-      <div className="sticky top-0 z-30 -mx-4 flex flex-col gap-3 bg-[var(--tessera-bg)] px-4 pb-3 pt-3 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+    <div className="flex flex-col gap-3">
+      {/* Sticky chrome: tab bar + business actions on one row (image normative),
+          the shared compact temporal rail (Live/Replay) below. */}
+      <div className="sticky top-0 z-30 -mx-3 flex flex-col gap-2 bg-[var(--tessera-bg)] px-3 pb-2 pt-2 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <TabBar active={tab} onChange={setTab} />
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => setTab("runs")}
+              className="h-9 gap-2 border border-[#007a55] bg-[#005c42] text-xs text-[#d6f0e3] hover:bg-[#006d4e]"
+            >
+              <Play className="h-3.5 w-3.5" />
+              {tq("cta.runEval")}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setTab("models")}
+              className="h-9 gap-2 text-xs"
+            >
+              <GitCompareArrows className="h-3.5 w-3.5" />
+              {tq("cta.compareModels")}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setTab("runs")}
+              className="h-9 gap-2 text-xs"
+            >
+              <Boxes className="h-3.5 w-3.5" />
+              {tq("cta.openDataset")}
+            </Button>
+            <Button size="sm" onClick={downloadQualityEvidence} className="h-9 gap-2 text-xs">
+              <FileDown className="h-3.5 w-3.5" />
+              {tq("cta.evidence")}
+            </Button>
+          </div>
+        </div>
         <TemporalRail
           mode={temporal.mode}
-          liveStatus={tq("rail.signals", { n: QUALITY_SIGNALS })}
+          liveStatus={tq("temporal.liveData")}
           timeline={railTimeline.data}
           sloTarget={slo.data?.target}
           selectedAt={temporal.selectedAt}
@@ -681,19 +690,14 @@ export function ObservabilityDashboard() {
           onPeriodChange={temporal.setPeriodKey}
           onModeChange={temporal.changeMode}
         />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <TabBar active={tab} onChange={setTab} />
-          <Button onClick={downloadQualityEvidence} className="gap-2">
-            <FileDown className="h-4 w-4" />
-            {tq("cta.evidence")}
-          </Button>
-        </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
-        <div className="flex min-w-0 flex-col gap-4">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-3">
           {tab === "overview" && (
             <>
+              {/* A. État actuel — KPI métriques compacts (image normative) */}
+              <SectionLabel>{tq("sec.etat")}</SectionLabel>
               <OverviewKpis
                 sloPct={sloPct}
                 faithfulness={scoreSeries.data}
@@ -705,60 +709,47 @@ export function ObservabilityDashboard() {
                 casEvalues={scoreSeries.data?.n ?? null}
                 loading={scoreSeries.isLoading}
               />
-              <TabGrid>
-                <QualityGauge summary={signalSummary} />
-                <EtatActuel
-                  summary={signalSummary}
-                  release={releaseStatus.data}
-                  evolutionDelta={scoreSeries.data?.delta ?? null}
-                />
-                <FullWidth>
-                  <TopProblems rows={signalRows} />
-                </FullWidth>
-                <FullWidth>
-                  <FailedCasesTable
-                    report={failedCases.data}
-                    loading={failedCases.isLoading}
-                    limit={5}
-                  />
-                </FullWidth>
+
+              {/* B. Diagnostic racine — Clusters | Ce qui a changé | Calibration | Exemples.
+                  No items-start ⇒ all cards stretch to the row's tallest (equal heights). */}
+              <SectionLabel>{tq("sec.diagnostic")}</SectionLabel>
+              <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+                <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
                 <RootCauseDiagnostic
                   whatChanged={whatChanged.data}
                   regressions={releaseStatus.data?.regressions ?? []}
                 />
-                <SLOCard data={slo.data} loading={slo.isLoading} />
-                <TrendCard data={trend.data} loading={trend.isLoading} />
-                <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
+                <CalibrationCard data={calibration.data} loading={calibration.isLoading} />
+                <FailedCasesTable
+                  report={failedCases.data}
+                  loading={failedCases.isLoading}
+                  limit={4}
+                />
+              </div>
+
+              {/* C. Signaux prédictifs — Prédicteur | Intents | Langues (Évolution moves to
+                  the full-width analytics row below the grid). */}
+              <SectionLabel>{tq("sec.predictive")}</SectionLabel>
+              <div className="grid gap-3 lg:grid-cols-3">
                 <FailurePredictorCard
                   data={failurePredictor.data}
                   loading={failurePredictor.isLoading}
                 />
-                <FailureClusterCard
-                  data={failureClusters.data}
-                  loading={failureClusters.isLoading}
+                <IntentCard data={intent.data} loading={intent.isLoading} />
+                <LocalizationCard data={localization.data} loading={localization.isLoading} />
+              </div>
+
+              {/* D. Actions recommandées — actions gouvernées (rôle + lien), pas de charts */}
+              <SectionLabel>{tq("sec.actions")}</SectionLabel>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <RecommendedActions
+                  regressions={releaseStatus.data?.regressions ?? []}
+                  topFailing={topFailing}
+                  failed={failedCases.data}
+                  onOpen={setTab}
                 />
-                <FunnelCard data={funnel.data} loading={funnel.isLoading} />
-                <JourneyCard data={journey.data} loading={journey.isLoading} />
-                <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
-                <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
-                <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
-                <FaithGroundingScatter pairs={metricPairs.data} loading={metricPairs.isLoading} />
-                <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
-                <CostQualityScatter
-                  data={modelComparison.data}
-                  loading={modelComparison.isLoading}
-                />
-                <RunsBars registry={runs.data} loading={runs.isLoading} />
-                <FullWidth>
-                  <ModelComparisonTable
-                    data={modelComparison.data}
-                    loading={modelComparison.isLoading}
-                  />
-                </FullWidth>
-                <FullWidth>
-                  <RunsTable registry={runs.data} loading={runs.isLoading} limit={5} />
-                </FullWidth>
-              </TabGrid>
+                <TopProblems rows={signalRows} />
+              </div>
             </>
           )}
 
@@ -905,17 +896,74 @@ export function ObservabilityDashboard() {
           )}
 
           {tab === "judge" && (
-            <JudgeCalibration data={calibration.data} loading={calibration.isLoading} />
+            <JudgeCalibration
+              data={calibration.data}
+              drift={judgeDrift.data}
+              consensus={judgeConsensus.data}
+              loading={calibration.isLoading}
+            />
           )}
         </div>
 
         <RightRail
-          scorePct={sloPct}
-          topFailing={topFailing}
+          failed={failedCases.data}
           release={releaseStatus.data}
-          onEvidence={downloadQualityEvidence}
+          whatChanged={whatChanged.data}
+          onOpen={setTab}
         />
       </div>
+
+      {/* Full-width analytics row below the [main · rail] grid (image normative):
+          Évolution de la qualité | Faith×Grounding | Pass-rate des runs | Coût vs qualité.
+          Spanning the whole width lets the right rail's last card align with D above. */}
+      {tab === "overview" ? (
+        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+          <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+          <FaithGroundingScatter pairs={metricPairs.data} loading={metricPairs.isLoading} />
+          <RunsBars registry={runs.data} loading={runs.isLoading} />
+          <CostQualityScatter data={modelComparison.data} loading={modelComparison.isLoading} />
+        </div>
+      ) : null}
+
+      <StatusBar release={releaseStatus.data} />
+    </div>
+  );
+}
+
+/** Compact section heading (A. / B. / C. / D.) above each overview row. */
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      {children}
+    </h2>
+  );
+}
+
+/** Thin sticky status bar pinned to the bottom of the page (image normative). */
+function StatusBar({ release }: { release: ReleaseStatus | undefined }) {
+  const tq = useTranslations("quality");
+  const dataset = release?.current ? `Llama · ${release.current.version}` : "—";
+  const updated = release?.current?.date ?? "—";
+  const items = [
+    { icon: Radio, label: tq("statusbar.realtime"), tone: "text-[var(--tessera-green)]" },
+    { icon: Boxes, label: `${tq("statusbar.dataset")} : ${dataset}` },
+    { icon: ShieldCheck, label: tq("statusbar.truthChain") },
+    { icon: Landmark, label: tq("statusbar.truthSource") },
+    { icon: CalendarClock, label: `${tq("statusbar.lastUpdate")} : ${updated}` },
+    { icon: ListChecks, label: tq("statusbar.signals", { n: QUALITY_SIGNALS }) },
+  ];
+  return (
+    <div className="sticky bottom-0 z-20 -mx-3 flex h-9 items-center gap-4 overflow-hidden border-t border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      {items.map((it) => (
+        <span key={it.label} className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+          <it.icon className={`h-3.5 w-3.5 shrink-0 ${it.tone ?? ""}`} />
+          <span className="truncate">{it.label}</span>
+        </span>
+      ))}
+      <span className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[var(--tessera-green)]">
+        <span className="h-2 w-2 rounded-full bg-[var(--tessera-green)]" />
+        {tq("statusbar.systemOk")}
+      </span>
     </div>
   );
 }
@@ -932,7 +980,7 @@ const TAB_META: Record<TabKey, typeof Gauge> = {
 function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) => void }) {
   const tq = useTranslations("quality");
   return (
-    <nav className="flex flex-wrap items-center gap-1 border-b border-[var(--tessera-border)]">
+    <nav className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-[var(--tessera-border)]">
       {TAB_DEFS.map((key) => {
         const Icon = TAB_META[key];
         const on = key === active;
@@ -941,9 +989,9 @@ function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) 
             key={key}
             type="button"
             onClick={() => onChange(key)}
-            className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors ${
+            className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[0.8rem] transition-colors ${
               on
-                ? "border-gold-400 font-medium text-[var(--foreground)]"
+                ? "border-[var(--tessera-green)] font-medium text-[var(--tessera-text)]"
                 : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
             }`}
           >
@@ -961,179 +1009,170 @@ function TabGrid({ children }: { children: ReactNode }) {
   return <div className="grid items-start gap-4 lg:grid-cols-2">{children}</div>;
 }
 
-const KPI_GOOD = "text-emerald-600 dark:text-emerald-400";
-const KPI_WARN = "text-amber-600 dark:text-amber-400";
-const KPI_BAD = "text-red-600 dark:text-red-400";
-const KPI_MUTED = "text-[var(--muted-foreground)]";
-
-function highTone(v: number | null): string {
-  if (v == null) return KPI_MUTED;
-  return v >= 80 ? KPI_GOOD : v >= 60 ? KPI_WARN : KPI_BAD;
-}
-
 /** Persistent right rail: score summary, top failing categories, sensitive actions, evidence. */
+const SEV_TONE: Record<string, "danger" | "warning" | "neutral"> = {
+  critical: "danger",
+  high: "warning",
+  medium: "neutral",
+  low: "neutral",
+};
+
+/** Right rail (image normative): Derniers problèmes · Release actuelle · Liens
+ * rapides · Activités récentes — all fed by live data, links into the tabs. */
 function RightRail({
-  scorePct,
-  topFailing,
+  failed,
   release,
-  onEvidence,
+  whatChanged,
+  onOpen,
 }: {
-  scorePct: number | null;
-  topFailing: { cluster_id: number | string; dominant_category: string; size: number }[];
+  failed: FailedCasesReport | undefined;
   release: ReleaseStatus | undefined;
-  onEvidence: () => void;
+  whatChanged: WhatChanged | undefined;
+  onOpen: (tab: TabKey) => void;
 }) {
   const tq = useTranslations("quality");
   const current = release?.current ?? null;
   const nReg = release?.n_regressions ?? 0;
-  const regTone: "success" | "warning" = nReg === 0 ? "success" : "warning";
-  const tone: "success" | "warning" | "danger" | "neutral" =
-    scorePct == null
-      ? "neutral"
-      : scorePct >= 80
-        ? "success"
-        : scorePct >= 60
-          ? "warning"
-          : "danger";
-  const sensitive = [
-    { label: tq("cta.runEval"), role: "analyst", safety: "S2" },
-    { label: tq("cta.compareModels"), role: "analyst", safety: "S2" },
-    { label: tq("cta.evidence"), role: "auditor", safety: "S1" },
+  const problems = (failed?.cases ?? []).slice(0, 3);
+  const quick: { label: string; icon: typeof Activity; tab: TabKey }[] = [
+    { label: tq("rr.quickRun"), icon: Activity, tab: "runs" },
+    { label: tq("rr.quickPolicies"), icon: ShieldCheck, tab: "signals" },
+    { label: tq("rr.quickScheduled"), icon: CalendarClock, tab: "runs" },
+    { label: tq("rr.quickCatalog"), icon: ListChecks, tab: "signals" },
   ];
+  // Recent activity, derived from the real "what changed" diff + the release.
+  const activity: { key: string; label: string; detail: string }[] = [];
+  if (current) {
+    activity.push({
+      key: "release",
+      label: `${current.version} · ${tq("rr.since")}`,
+      detail: current.date ?? "",
+    });
+  }
+  for (const c of whatChanged?.changes ?? []) {
+    activity.push({
+      key: c.field,
+      label: c.field,
+      detail: `${c.before.slice(0, 8)} → ${c.after.slice(0, 8)}`,
+    });
+  }
+
   return (
-    <aside className="flex min-w-0 flex-col gap-4">
-      <div className="flex flex-col gap-4 xl:sticky xl:top-28">
+    <aside className="flex min-w-0 flex-col gap-3">
+      <div className="flex flex-col gap-3 xl:sticky xl:top-28">
+        {/* Derniers problèmes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{tq("rr.problems")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {problems.length === 0 ? (
+              <p className="text-xs text-[var(--muted-foreground)]">{tq("rr.noProblems")}</p>
+            ) : (
+              problems.map((p) => (
+                <div key={p.case_id} className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate text-sm">{p.title}</span>
+                    <span className="truncate text-[0.7rem] text-[var(--muted-foreground)]">
+                      {p.category}
+                    </span>
+                  </div>
+                  <Badge tone={SEV_TONE[p.severity] ?? "neutral"}>{p.severity}</Badge>
+                </div>
+              ))
+            )}
+            <RailLink onClick={() => onOpen("failed")}>{tq("rr.seeCases")}</RailLink>
+          </CardContent>
+        </Card>
+
+        {/* Release actuelle */}
         {current ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between gap-2 text-sm">
-                {tq("release.title")}
-                <Badge tone={regTone}>
-                  {nReg === 0 ? tq("release.stable") : tq("release.openRegressions", { n: nReg })}
-                </Badge>
+                {tq("rr.release")}
+                <Badge tone={nReg === 0 ? "success" : "warning"}>{tq("rr.inProd")}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
               <div className="flex items-end gap-2">
-                <span className="font-serif text-2xl font-semibold tabular-nums">
+                <span className="font-serif text-xl font-semibold tabular-nums">
                   {current.version}
                 </span>
                 {current.date ? (
                   <span className="pb-1 text-xs text-[var(--muted-foreground)]">
-                    {tq("release.deployed")} {current.date}
+                    {current.date}
                   </span>
                 ) : null}
               </div>
               <p className="text-xs text-[var(--muted-foreground)]">
-                {tq("release.changes", {
-                  n: current.added + current.changed + current.fixed,
-                })}
+                {tq("release.changes", { n: current.added + current.changed + current.fixed })}
                 {release && release.models_compared > 0
-                  ? ` · ${tq("release.nonRegression")} ${Math.round(release.non_regression_rate * 100)}%`
+                  ? ` · ${Math.round(release.non_regression_rate * 100)}%`
                   : ""}
               </p>
+              <RailLink onClick={() => onOpen("models")}>{tq("rr.seeReleases")}</RailLink>
             </CardContent>
           </Card>
         ) : null}
 
-        {release && release.regressions.length > 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                {tq("release.regressions")}
-                <Badge tone="warning">{release.regressions.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="flex flex-col gap-2">
-                {release.regressions.map((r) => (
-                  <li key={r.model} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="truncate">{r.model}</span>
-                    <span className="shrink-0 tabular-nums text-red-500">
-                      {Math.round(r.prev_rate * 100)}→{Math.round(r.last_rate * 100)}%
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        ) : null}
-
+        {/* Liens rapides */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">{tq("rail.scoreTitle")}</CardTitle>
+            <CardTitle className="text-sm">{tq("rr.quick")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            {quick.map((q) => (
+              <button
+                key={q.label}
+                type="button"
+                onClick={() => onOpen(q.tab)}
+                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm transition-colors hover:bg-[var(--tessera-muted)]"
+              >
+                <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
+                <span className="truncate">{q.label}</span>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Activités récentes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{tq("rr.activity")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            <div className="flex items-end gap-2">
-              <span className={`text-4xl font-semibold tabular-nums ${highTone(scorePct)}`}>
-                {scorePct == null ? "—" : `${scorePct}%`}
-              </span>
-              <Badge tone={tone}>SLO</Badge>
-            </div>
-            <p className="text-xs text-[var(--muted-foreground)]">{tq("rail.scoreCaption")}</p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              {tq("rail.signals", { n: QUALITY_SIGNALS })}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("rail.topFailing")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {topFailing.length === 0 ? (
-              <p className="text-xs text-[var(--muted-foreground)]">{tq("rail.noFailing")}</p>
+            {activity.length === 0 ? (
+              <p className="text-xs text-[var(--muted-foreground)]">{tq("rr.noActivity")}</p>
             ) : (
-              <ul className="flex flex-col gap-2">
-                {topFailing.map((c) => (
-                  <li
-                    key={c.cluster_id}
-                    className="flex items-center justify-between gap-2 text-sm"
-                  >
-                    <span className="truncate">{c.dominant_category}</span>
-                    <Badge tone="neutral">{c.size}</Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("rail.sensitive")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col gap-3">
-              {sensitive.map((a) => (
-                <li key={a.label} className="flex flex-col gap-1">
-                  <span className="text-sm text-[var(--foreground)]">{a.label}</span>
-                  <span className="flex flex-wrap items-center gap-1.5 text-[0.7rem]">
-                    <Badge tone="neutral">
-                      {tq("rail.role")}: {a.role}
-                    </Badge>
-                    <Badge tone="warning">
-                      {tq("rail.safety")}: {a.safety}
-                    </Badge>
+              activity.slice(0, 4).map((a) => (
+                <div key={a.key} className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--tessera-green)]" />
+                  <span className="min-w-0 flex-1 truncate text-sm">{a.label}</span>
+                  <span className="shrink-0 font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                    {a.detail}
                   </span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex flex-col gap-2 py-4">
-            <Button onClick={onEvidence} className="w-full justify-center gap-2">
-              <FileDown className="h-4 w-4" />
-              {tq("cta.evidence")}
-            </Button>
-            <p className="text-xs text-[var(--muted-foreground)]">{tq("rail.evidenceCaption")}</p>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
     </aside>
+  );
+}
+
+/** Small "see all →" link used at the foot of a right-rail card. */
+function RailLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-1 inline-flex items-center gap-1 text-xs text-[var(--tessera-green)] hover:underline"
+    >
+      {children}
+      <ChevronRight className="h-3 w-3" />
+    </button>
   );
 }
 
@@ -1227,61 +1266,6 @@ function BackendCard({
         </CardContent>
       </Card>
     </a>
-  );
-}
-
-function SLOCard({ data, loading }: { data: SLOReport | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  const remaining = data ? Math.round(data.budget_remaining * 100) : 100;
-  const burnTone = !data || data.burn_rate <= 1 ? "success" : data.breaching ? "danger" : "warning";
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Flame className="h-4 w-4 text-blue-500" />
-          {t("slo.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("slo.empty")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">{t("slo.objective")}</span>
-                <span className="font-semibold tabular-nums">
-                  {Math.round(data.target * 100)}% ≥ {data.threshold.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">{t("slo.attained")}</span>
-                <span className={`font-semibold tabular-nums ${scoreTone(data.good_rate)}`}>
-                  {Math.round(data.good_rate * 100)}%
-                </span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">{t("slo.budget")}</span>
-                <Badge tone={remaining >= 50 ? "success" : remaining > 0 ? "warning" : "danger"}>
-                  {remaining}%
-                </Badge>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">{t("slo.burnRate")}</span>
-                <Badge tone={burnTone}>{data.burn_rate.toFixed(1)}×</Badge>
-              </div>
-              <Metric label={t("slo.fastBurn")} value={`${data.burn_rate_fast.toFixed(1)}×`} />
-              <Metric label={t("slo.bad")} value={`${data.n_bad}/${data.n}`} />
-            </div>
-            {data.breaching ? (
-              <p className="text-xs text-red-600 dark:text-red-400">{t("slo.breaching")}</p>
-            ) : null}
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }
 
@@ -1414,127 +1398,6 @@ function TailSamplingCard({
               value={`${Math.round(data.base_rate * 100)}%`}
             />
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function TrendCard({ data, loading }: { data: TrendReport | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  const directionTone =
-    data?.direction === "improving"
-      ? "success"
-      : data?.direction === "degrading"
-        ? "danger"
-        : "neutral";
-  // Sparkline scaling over the bucket means.
-  const means = data?.buckets.map((b) => b.mean) ?? [];
-  const lo = means.length > 0 ? Math.min(...means) : 0;
-  const hi = means.length > 0 ? Math.max(...means) : 1;
-  const span = hi - lo || 1;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <TrendingDown className="h-4 w-4 text-blue-500" />
-          {t("trend.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("trend.empty")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {t("trend.direction")}
-                </span>
-                <Badge tone={directionTone}>{t(`trend.${data.direction}`)}</Badge>
-              </div>
-              <Metric label={t("trend.slope")} value={data.slope.toFixed(4)} />
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">{t("trend.delta")}</span>
-                <span
-                  className={`font-semibold tabular-nums ${
-                    data.delta >= 0
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  {data.delta >= 0 ? "+" : ""}
-                  {data.delta.toFixed(2)}
-                </span>
-              </div>
-              <Metric
-                label={t("trend.halves")}
-                value={`${data.first_half_mean.toFixed(2)} → ${data.second_half_mean.toFixed(2)}`}
-              />
-              <Metric label={t("trend.points")} value={String(data.n)} />
-            </div>
-            {means.length > 1 ? (
-              <div className="flex h-10 items-end gap-1">
-                {data.buckets.map((b) => (
-                  <div
-                    key={b.index}
-                    className={`flex-1 rounded-t ${
-                      data.direction === "degrading" ? "bg-red-500/60" : "bg-blue-500/60"
-                    }`}
-                    style={{ height: `${10 + ((b.mean - lo) / span) * 90}%` }}
-                    title={`${b.mean.toFixed(2)} (n=${b.n})`}
-                  />
-                ))}
-              </div>
-            ) : null}
-            {data.degrading ? (
-              <p className="text-xs text-red-600 dark:text-red-400">{t("trend.degradingNote")}</p>
-            ) : null}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function RoadmapCard({ data, loading }: { data: RoadmapReport | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  const sevTone = (s: string) => (s === "high" ? "danger" : s === "medium" ? "warning" : "neutral");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <ListChecks className="h-4 w-4 text-blue-500" />
-          {t("roadmap.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n_items === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("roadmap.empty")}</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {data.items.map((item) => (
-              <li
-                key={item.signal}
-                className="flex flex-col gap-1 rounded-md border border-[var(--border)] p-3"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={sevTone(item.severity)}>
-                    {t(`roadmap.severity.${item.severity}`)}
-                  </Badge>
-                  <span className="font-medium">{item.theme}</span>
-                  <span className="text-xs text-[var(--muted-foreground)]">
-                    {item.evidence} {t("roadmap.evidence")}
-                  </span>
-                </div>
-                <p className="text-xs text-[var(--muted-foreground)]">{item.suggestion}</p>
-              </li>
-            ))}
-          </ul>
         )}
       </CardContent>
     </Card>
@@ -1697,69 +1560,6 @@ function MemoryInventoryCard({
   );
 }
 
-function JourneyCard({ data, loading }: { data: JourneyReport | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Footprints className="h-4 w-4 text-blue-500" />
-          {t("journey.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n_subjects === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("journey.empty")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <Metric label={t("journey.subjects")} value={String(data.n_subjects)} />
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {t("journey.returning")}
-                </span>
-                <Badge tone={data.n_returning > 0 ? "success" : "neutral"}>
-                  {data.n_returning}
-                </Badge>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                    <th className="py-2 pr-4 font-medium">{t("journey.subject")}</th>
-                    <th className="py-2 pr-4 font-medium">{t("journey.sessions")}</th>
-                    <th className="py-2 pr-4 font-medium">{t("journey.writes")}</th>
-                    <th className="py-2 pr-4 font-medium">{t("journey.reads")}</th>
-                    <th className="py-2 font-medium">{t("journey.span")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.subjects.slice(0, 8).map((j) => (
-                    <tr key={j.subject} className="border-b border-[var(--border)]/50">
-                      <td className="py-2 pr-4 font-mono text-xs">{j.subject}…</td>
-                      <td className="py-2 pr-4 tabular-nums">
-                        {j.returning ? <Badge tone="success">{j.n_sessions}</Badge> : j.n_sessions}
-                      </td>
-                      <td className="py-2 pr-4 tabular-nums">{j.n_writes}</td>
-                      <td className="py-2 pr-4 tabular-nums">{j.n_reads}</td>
-                      <td className="py-2 tabular-nums text-[var(--muted-foreground)]">
-                        {j.span_days.toFixed(1)} d
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 function SftDatasetCard({ data, loading }: { data: SFTDataset | undefined; loading: boolean }) {
   const t = useTranslations("observability");
   const langs = data ? Object.entries(data.by_language) : [];
@@ -1904,49 +1704,6 @@ function AIActCard({ data, loading }: { data: AIActReport | undefined; loading: 
               ))}
             </ul>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function PlaybooksCard({ data, loading }: { data: PlaybookReport | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  const sevTone = (s: string) =>
-    s === "critical" ? "danger" : s === "high" ? "warning" : "neutral";
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Siren className="h-4 w-4 text-blue-500" />
-          {t("playbooks.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.n_triggered === 0 ? (
-          <p className="text-sm text-emerald-600 dark:text-emerald-400">{t("playbooks.clear")}</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {data.playbooks.map((p) => (
-              <li
-                key={p.incident}
-                className="flex flex-col gap-1.5 rounded-md border border-[var(--border)] p-3"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={sevTone(p.severity)}>{t(`playbooks.severity.${p.severity}`)}</Badge>
-                  <span className="font-medium">{p.incident}</span>
-                  <span className="text-xs text-[var(--muted-foreground)]">{p.trigger}</span>
-                </div>
-                <ol className="ml-4 flex list-decimal flex-col gap-0.5 text-xs text-[var(--muted-foreground)]">
-                  {p.steps.map((s) => (
-                    <li key={s}>{s}</li>
-                  ))}
-                </ol>
-              </li>
-            ))}
-          </ul>
         )}
       </CardContent>
     </Card>
@@ -3171,60 +2928,6 @@ function RoutingCard({ data, loading }: { data: RoutingReport | undefined; loadi
               <Badge tone={cs === 0 ? "neutral" : "warning"}>{cs}%</Badge>
             </div>
             <Metric label={t("routing.turns")} value={String(data.n)} />
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function FunnelCard({ data, loading }: { data: FunnelReport | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Filter className="h-4 w-4 text-blue-500" />
-          {t("funnel.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading || !data ? (
-          <Skeleton className="h-12 w-full" />
-        ) : data.languages.length === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("funnel.empty")}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                  <th className="py-2 pr-4 font-medium">{t("funnel.language")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("funnel.turns")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("funnel.sessions")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("funnel.meanScore")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("funnel.singleTurn")}</th>
-                  <th className="py-2 font-medium">{t("funnel.lowScore")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.languages.map((l) => (
-                  <tr key={l.language} className="border-b border-[var(--border)]/50">
-                    <td className="py-2 pr-4 uppercase">{l.language}</td>
-                    <td className="py-2 pr-4 tabular-nums">{l.n_turns}</td>
-                    <td className="py-2 pr-4 tabular-nums">{l.n_sessions}</td>
-                    <td
-                      className={`py-2 pr-4 font-semibold tabular-nums ${scoreTone(l.mean_score)}`}
-                    >
-                      {l.mean_score.toFixed(2)}
-                    </td>
-                    <td className="py-2 pr-4 tabular-nums">
-                      {Math.round(l.single_turn_rate * 100)}%
-                    </td>
-                    <td className="py-2 tabular-nums">{Math.round(l.low_score_rate * 100)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
       </CardContent>

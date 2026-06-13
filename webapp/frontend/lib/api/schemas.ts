@@ -710,6 +710,37 @@ export const ScoreSeriesSchema = z.object({
 });
 export type ScoreSeries = z.infer<typeof ScoreSeriesSchema>;
 
+export const JudgeDriftSchema = z.object({
+  metric: z.string(),
+  judge_model: z.string().nullable(),
+  window_start: z.string(),
+  window_end: z.string(),
+  n: z.number().int(),
+  mean: z.number().nullable(),
+  divergence: z.number().nullable(),
+  delta: z.number().nullable(),
+  level: z.string(),
+  buckets: z.array(SeriesBucketSchema),
+  as_of: z.string().nullable().optional(),
+});
+export type JudgeDrift = z.infer<typeof JudgeDriftSchema>;
+
+export const JudgeAgreementSchema = z.object({
+  judge_model: z.string(),
+  agreement: z.number(),
+});
+export const JudgeConsensusSchema = z.object({
+  available: z.boolean(),
+  n_judges: z.number().int().optional(),
+  n_cases: z.number().int().optional(),
+  judge_models: z.array(z.string()).optional(),
+  consensus_rate: z.number().optional(),
+  mean_pairwise_agreement: z.number().optional(),
+  fleiss_kappa: z.number().optional(),
+  per_judge: z.array(JudgeAgreementSchema).optional(),
+});
+export type JudgeConsensus = z.infer<typeof JudgeConsensusSchema>;
+
 export const MetricPointSchema = z.object({
   x: z.number(),
   y: z.number(),

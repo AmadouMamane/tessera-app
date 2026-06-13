@@ -1,15 +1,32 @@
 "use client";
 
-import { LogIn, LogOut, ShieldCheck } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, UserCog } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Link, useRouter } from "@/i18n/navigation";
-import { cn } from "@/lib/cn";
+
+/** Two-letter avatar initials from a display name (e.g. "Amadou D." → "AD"). */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "··";
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
+  return (first + last).toUpperCase() || "··";
+}
 
 /**
- * Topbar auth affordance (ADR 0009): a sign-in link for visitors, or the
- * current role badge plus a sign-out button for operators.
+ * Topbar auth affordance (ADR 0009): a sign-in link for visitors, or a compact
+ * user menu (avatar + name + role + chevron). Account switch and sign-out live
+ * inside the dropdown — never as a bare button in the header.
  */
 export function AuthControl() {
   const { data: session, status } = useSession();
@@ -31,30 +48,47 @@ export function AuthControl() {
     );
   }
 
+  const name = session?.user?.name ?? "Amadou D.";
+  const roleLabel = t(`roles.${role}`);
+
   async function onSignOut() {
     await signOut({ redirect: false });
     router.refresh();
   }
 
   return (
-    <div className="flex items-center gap-1.5">
-      <span
-        className={cn(
-          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.65rem] font-medium",
-          "bg-gold-500/15 text-gold-700 ring-1 ring-gold-500/25 dark:text-gold-300",
-        )}
-      >
-        <ShieldCheck className="h-3 w-3" />
-        {t(`roles.${role}`)}
-      </span>
-      <button
-        type="button"
-        onClick={onSignOut}
-        className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)]"
-      >
-        <LogOut className="h-3.5 w-3.5" />
-        {t("signOut")}
-      </button>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] py-1 pl-1 pr-2 text-left transition-colors hover:bg-[var(--tessera-muted)]"
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-green-soft)] text-[0.7rem] font-semibold text-[var(--tessera-green)]">
+            {initials(name)}
+          </span>
+          <span className="hidden min-w-0 flex-col leading-tight sm:flex">
+            <span className="truncate text-xs font-medium text-[var(--tessera-text)]">{name}</span>
+            <span className="truncate text-[0.65rem] text-[var(--tessera-text-muted)]">
+              {roleLabel}
+            </span>
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[12rem]">
+        <DropdownMenuLabel>{t("signedInAs", { name })}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/login" className="flex items-center gap-2">
+            <UserCog className="h-4 w-4" />
+            {t("auditorMode")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void onSignOut()} className="flex items-center gap-2">
+          <LogOut className="h-4 w-4" />
+          {t("signOut")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

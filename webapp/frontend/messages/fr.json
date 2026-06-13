@@ -1065,7 +1065,7 @@
   },
   "quality": {
     "title": "Qualité IA",
-    "subtitle": "Tous les signaux d'observabilité de l'agent, regroupés par thème.",
+    "subtitle": "Évaluations, régressions, hallucinations, grounding et amélioration des réponses.",
     "sections": {
       "quality": "Fidélité & évaluation",
       "security": "Sécurité & garde",
@@ -1087,12 +1087,56 @@
     "cta": {
       "evidence": "Générer evidence pack qualité",
       "runEval": "Lancer évaluation",
-      "compareModels": "Comparer modèles"
+      "compareModels": "Comparer modèles",
+      "openDataset": "Ouvrir dataset"
+    },
+    "sec": {
+      "etat": "A. État actuel",
+      "diagnostic": "B. Diagnostic racine",
+      "predictive": "C. Signaux prédictifs",
+      "actions": "D. Actions recommandées"
+    },
+    "reco": {
+      "title": "Actions recommandées",
+      "curate": "Curer vers eval set",
+      "freeze": "Geler les releases",
+      "playbook": "Playbook hallucination",
+      "shadow": "Rejouer un shadow",
+      "ticket": "Créer ticket conformité",
+      "caption": "Actions sensibles en dual control (Admin + Operator)"
+    },
+    "rr": {
+      "problems": "Derniers problèmes",
+      "seeCases": "Voir tous les cas échoués",
+      "release": "Release actuelle",
+      "inProd": "En production",
+      "seeReleases": "Voir les releases",
+      "since": "déployée",
+      "quick": "Liens rapides",
+      "quickRun": "Run en cours",
+      "quickPolicies": "Policies & garde-fous",
+      "quickScheduled": "Runs programmés",
+      "quickCatalog": "Signal Catalog",
+      "seeLinks": "Voir tous les liens",
+      "activity": "Activités récentes",
+      "seeActivity": "Voir toutes les activités",
+      "noActivity": "Aucune activité récente",
+      "noProblems": "Aucun problème ouvert"
+    },
+    "statusbar": {
+      "realtime": "Données : temps réel",
+      "dataset": "Dataset actif",
+      "truthChain": "Chaîne de vérité",
+      "truthSource": "Source de vérité : YAML/Git",
+      "lastUpdate": "Dernière mise à jour",
+      "signals": "{n}/200 signaux qualité",
+      "systemOk": "Système OK"
     },
     "temporal": {
       "live": "Live",
       "replay": "Relire à T",
-      "window": "7 derniers jours"
+      "window": "7 derniers jours",
+      "liveData": "Données en temps réel"
     },
     "rail": {
       "scoreTitle": "Résumé du score",
@@ -1214,7 +1258,54 @@
       "noDisagreements": "Aucun désaccord juge ↔ humain.",
       "humanGood": "Humain : bon",
       "humanBad": "Humain : mauvais",
-      "cols": { "case": "Cas", "human": "Humain", "judge": "Juge", "score": "Score" }
+      "cols": { "case": "Cas", "human": "Humain", "judge": "Juge", "score": "Score" },
+      "kappaTitle": "Accord inter-juge",
+      "agreementGlobal": "Accord global",
+      "fp": "Faux positifs (Type I)",
+      "fn": "Faux négatifs (Type II)",
+      "verbosityBias": "Biais de verbosité",
+      "severityBias": "Biais de sévérité",
+      "samples": "Échantillons évalués",
+      "excellent": "Excellent",
+      "low": "Bas",
+      "moderate": "Modéré",
+      "strong": "Fort",
+      "confusion": "Matrice de confusion",
+      "refHuman": "Référence humaine",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "total": "Total",
+      "verbScatter": "Biais de verbosité (longueur ↔ score)",
+      "verbCorr": "Corrélation longueur ↔ score",
+      "lengthAxis": "Longueur de réponse",
+      "tooStrict": "Trop sévère",
+      "tooLenient": "Trop permissif",
+      "ambiguous": "Cas ambigus (haute divergence juge ↔ humains)",
+      "fiche": "Fiche juge",
+      "model": "Modèle",
+      "annotated": "Échantillons annotés",
+      "byHumans": "Par humains",
+      "matches": "Accords",
+      "actions": "Actions de calibration",
+      "recalibrate": "Recalibrer le juge",
+      "compare": "Comparer avec d'autres juges",
+      "viewAmbiguous": "Voir cas ambigus",
+      "rubrics": "Ajuster rubriques & seuils",
+      "report": "Générer rapport calibration",
+      "export": "Exporter données calibration",
+      "deltaCol": "Δ score",
+      "drift": "Drift du juge",
+      "consensus": "Consensus multi-juge",
+      "consensusJudges": "{n} juges",
+      "fleiss": "Fleiss κ",
+      "pairwise": "Accord pairwise",
+      "panel": "Panel de juges",
+      "driftStable": "Stable",
+      "driftLow": "Faible",
+      "driftModerate": "Modéré",
+      "driftHigh": "Élevé",
+      "driftCritical": "Critique",
+      "driftUnknown": "Indéterminé"
     },
     "runs": {
       "title": "Runs & datasets",
@@ -1257,7 +1348,7 @@
     "metrics": {
       "faithfulness": "Faithfulness",
       "grounding": "Grounding / ancrage",
-      "hallucination": "Fiabilité factuelle"
+      "hallucination": "Hallucinations critiques"
     },
     "release": {
       "title": "Release actuelle",

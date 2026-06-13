@@ -81,6 +81,10 @@ import {
   InversionReportSchema,
   type JourneyReport,
   JourneyReportSchema,
+  type JudgeConsensus,
+  JudgeConsensusSchema,
+  type JudgeDrift,
+  JudgeDriftSchema,
   type LocaleFormatSummary,
   LocaleFormatSummarySchema,
   type LocalizationReport,
@@ -448,6 +452,28 @@ export async function fetchScoreSeries(
     { signal },
     ScoreSeriesSchema,
   );
+}
+
+/** Judge score-drift over the window (Calibration juge tab, image 05). */
+export async function fetchJudgeDrift(
+  signal?: AbortSignal,
+  at?: string,
+  metric?: string,
+): Promise<JudgeDrift> {
+  const params = new URLSearchParams();
+  if (at) params.set("at", at);
+  if (metric) params.set("metric", metric);
+  const query = params.toString();
+  return request(
+    `/observability/judge-drift${query ? `?${query}` : ""}`,
+    { signal },
+    JudgeDriftSchema,
+  );
+}
+
+/** Multi-judge consensus over the gold set (Calibration juge tab, image 05). */
+export async function fetchJudgeConsensus(signal?: AbortSignal): Promise<JudgeConsensus> {
+  return request("/observability/judge-consensus", { signal }, JudgeConsensusSchema);
 }
 
 /** Eval run registry from the report archive (Runs & datasets tab, image 02). */

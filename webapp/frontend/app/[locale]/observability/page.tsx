@@ -18,7 +18,7 @@ export default async function ObservabilityPage({ params }: ObservabilityPagePro
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "quality" });
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="wide">
+    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
       <ObservabilityDashboard />
     </AppShell>
   );

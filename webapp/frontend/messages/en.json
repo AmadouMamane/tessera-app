@@ -1065,7 +1065,7 @@
   },
   "quality": {
     "title": "AI Quality",
-    "subtitle": "All the agent's observability signals, grouped by theme.",
+    "subtitle": "Evaluations, regressions, hallucinations, grounding and response improvement.",
     "sections": {
       "quality": "Faithfulness & evaluation",
       "security": "Security & guard",
@@ -1087,12 +1087,56 @@
     "cta": {
       "evidence": "Generate quality evidence pack",
       "runEval": "Run evaluation",
-      "compareModels": "Compare models"
+      "compareModels": "Compare models",
+      "openDataset": "Open dataset"
+    },
+    "sec": {
+      "etat": "A. Current state",
+      "diagnostic": "B. Root cause",
+      "predictive": "C. Predictive signals",
+      "actions": "D. Recommended actions"
+    },
+    "reco": {
+      "title": "Recommended actions",
+      "curate": "Curate to eval set",
+      "freeze": "Freeze releases",
+      "playbook": "Hallucination playbook",
+      "shadow": "Replay a shadow",
+      "ticket": "Open compliance ticket",
+      "caption": "Sensitive actions under dual control (Admin + Operator)"
+    },
+    "rr": {
+      "problems": "Latest problems",
+      "seeCases": "See all failed cases",
+      "release": "Current release",
+      "inProd": "In production",
+      "seeReleases": "See releases",
+      "since": "deployed",
+      "quick": "Quick links",
+      "quickRun": "Run in progress",
+      "quickPolicies": "Policies & guardrails",
+      "quickScheduled": "Scheduled runs",
+      "quickCatalog": "Signal Catalog",
+      "seeLinks": "See all links",
+      "activity": "Recent activity",
+      "seeActivity": "See all activity",
+      "noActivity": "No recent activity",
+      "noProblems": "No open problem"
+    },
+    "statusbar": {
+      "realtime": "Data: real-time",
+      "dataset": "Active dataset",
+      "truthChain": "Truth chain",
+      "truthSource": "Source of truth: YAML/Git",
+      "lastUpdate": "Last update",
+      "signals": "{n}/200 quality signals",
+      "systemOk": "System OK"
     },
     "temporal": {
       "live": "Live",
       "replay": "Replay at T",
-      "window": "Last 7 days"
+      "window": "Last 7 days",
+      "liveData": "Real-time data"
     },
     "rail": {
       "scoreTitle": "Score summary",
@@ -1214,7 +1258,54 @@
       "noDisagreements": "No judge ↔ human disagreement.",
       "humanGood": "Human: good",
       "humanBad": "Human: bad",
-      "cols": { "case": "Case", "human": "Human", "judge": "Judge", "score": "Score" }
+      "cols": { "case": "Case", "human": "Human", "judge": "Judge", "score": "Score" },
+      "kappaTitle": "Inter-judge agreement",
+      "agreementGlobal": "Overall agreement",
+      "fp": "False positives (Type I)",
+      "fn": "False negatives (Type II)",
+      "verbosityBias": "Verbosity bias",
+      "severityBias": "Severity bias",
+      "samples": "Evaluated samples",
+      "excellent": "Excellent",
+      "low": "Low",
+      "moderate": "Moderate",
+      "strong": "Strong",
+      "confusion": "Confusion matrix",
+      "refHuman": "Human reference",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "total": "Total",
+      "verbScatter": "Verbosity bias (length ↔ score)",
+      "verbCorr": "Length ↔ score correlation",
+      "lengthAxis": "Response length",
+      "tooStrict": "Too strict",
+      "tooLenient": "Too lenient",
+      "ambiguous": "Ambiguous cases (high judge ↔ human divergence)",
+      "fiche": "Judge profile",
+      "model": "Model",
+      "annotated": "Annotated samples",
+      "byHumans": "By humans",
+      "matches": "Matches",
+      "actions": "Calibration actions",
+      "recalibrate": "Recalibrate the judge",
+      "compare": "Compare with other judges",
+      "viewAmbiguous": "View ambiguous cases",
+      "rubrics": "Adjust rubrics & thresholds",
+      "report": "Generate calibration report",
+      "export": "Export calibration data",
+      "deltaCol": "Δ score",
+      "drift": "Judge drift",
+      "consensus": "Multi-judge consensus",
+      "consensusJudges": "{n} judges",
+      "fleiss": "Fleiss κ",
+      "pairwise": "Pairwise agreement",
+      "panel": "Judge panel",
+      "driftStable": "Stable",
+      "driftLow": "Low",
+      "driftModerate": "Moderate",
+      "driftHigh": "High",
+      "driftCritical": "Critical",
+      "driftUnknown": "Unknown"
     },
     "runs": {
       "title": "Runs & datasets",
@@ -1257,7 +1348,7 @@
     "metrics": {
       "faithfulness": "Faithfulness",
       "grounding": "Grounding",
-      "hallucination": "Factual reliability"
+      "hallucination": "Critical hallucinations"
     },
     "release": {
       "title": "Current release",
