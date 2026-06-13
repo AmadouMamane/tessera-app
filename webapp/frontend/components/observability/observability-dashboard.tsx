@@ -55,6 +55,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
 import {
@@ -113,6 +114,7 @@ import {
   fetchRoadmap,
   fetchRouting,
   fetchSLO,
+  fetchScoreSeries,
   fetchSessions,
   fetchSftDataset,
   fetchSiem,
@@ -242,6 +244,13 @@ export function ObservabilityDashboard() {
   const trend = useQuery({
     queryKey: ["trend", asOf],
     queryFn: ({ signal }) => fetchTrend(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
+  });
+
+  const scoreSeries = useQuery({
+    queryKey: ["score-series", asOf],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -655,6 +664,9 @@ export function ObservabilityDashboard() {
                 <JourneyCard data={journey.data} loading={journey.isLoading} />
                 <PlaybooksCard data={playbooks.data} loading={playbooks.isLoading} />
                 <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
+                <FullWidth>
+                  <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+                </FullWidth>
               </TabGrid>
             </>
           )}

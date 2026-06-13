@@ -1142,6 +1142,12 @@
         "reliability": "Zuverlässigkeit",
         "sessions": "Sessions"
       }
+    },
+    "charts": {
+      "evolution": "Entwicklung des Qualitätsscores (7 T)",
+      "noData": "Keine Daten im Zeitraum",
+      "mean": "Mittel",
+      "points": "{n} Punkte"
     }
   }
 }

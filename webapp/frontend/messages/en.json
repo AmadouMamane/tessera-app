@@ -1142,6 +1142,12 @@
         "reliability": "Reliability",
         "sessions": "Sessions"
       }
+    },
+    "charts": {
+      "evolution": "Quality score evolution (7d)",
+      "noData": "No data over the period",
+      "mean": "Mean",
+      "points": "{n} points"
     }
   }
 }

@@ -681,6 +681,24 @@ export const SLOReportSchema = z.object({
 });
 export type SLOReport = z.infer<typeof SLOReportSchema>;
 
+export const SeriesBucketSchema = z.object({
+  start: z.string(),
+  n: z.number().int(),
+  mean: z.number().nullable(),
+});
+
+export const ScoreSeriesSchema = z.object({
+  metric: z.string(),
+  window_start: z.string(),
+  window_end: z.string(),
+  n: z.number().int(),
+  mean: z.number().nullable(),
+  prev_mean: z.number().nullable(),
+  delta: z.number().nullable(),
+  buckets: z.array(SeriesBucketSchema),
+});
+export type ScoreSeries = z.infer<typeof ScoreSeriesSchema>;
+
 export const ShadowComparisonSchema = z.object({
   question: z.string(),
   language: z.string(),

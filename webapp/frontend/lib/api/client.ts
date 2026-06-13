@@ -125,6 +125,8 @@ import {
   SFTDatasetSchema,
   type SLOReport,
   SLOReportSchema,
+  type ScoreSeries,
+  ScoreSeriesSchema,
   type SessionReport,
   SessionReportSchema,
   type ShadowReport,
@@ -419,6 +421,11 @@ export async function fetchReproducibility(signal?: AbortSignal): Promise<ReproR
  */
 export async function fetchTrend(signal?: AbortSignal, at?: string): Promise<TrendReport> {
   return request(withAsOf("/observability/trend", at), { signal }, TrendReportSchema);
+}
+
+/** Calendar-time faithfulness series for the Vue d'ensemble evolution chart. */
+export async function fetchScoreSeries(signal?: AbortSignal, at?: string): Promise<ScoreSeries> {
+  return request(withAsOf("/observability/score-series", at), { signal }, ScoreSeriesSchema);
 }
 
 /** Measured instrumentation overhead vs the turn budget (cost of obs, #84). */
