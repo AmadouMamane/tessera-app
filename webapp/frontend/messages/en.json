@@ -1237,6 +1237,11 @@
         "economic": "Economic",
         "avoid": "Avoid"
       }
+    },
+    "metrics": {
+      "faithfulness": "Faithfulness",
+      "grounding": "Grounding",
+      "hallucination": "Factual reliability"
     }
   }
 }

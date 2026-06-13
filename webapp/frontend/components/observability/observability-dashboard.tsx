@@ -56,7 +56,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { ModelComparisonTable, RunsTable } from "@/components/observability/eval-runs";
-import { EvolutionChart } from "@/components/observability/evolution-chart";
+import { EvolutionChart, MetricKpi } from "@/components/observability/evolution-chart";
 import { FailedCasesTable, FailureDistribution } from "@/components/observability/failed-cases";
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
 import { ReplayPanel } from "@/components/observability/replay-panel";
@@ -256,8 +256,22 @@ export function ObservabilityDashboard() {
   });
 
   const scoreSeries = useQuery({
-    queryKey: ["score-series", asOf],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined),
+    queryKey: ["score-series", "faithfulness", asOf],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness"),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
+  });
+
+  const groundingSeries = useQuery({
+    queryKey: ["score-series", "grounding", asOf],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding"),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
+  });
+
+  const hallucinationSeries = useQuery({
+    queryKey: ["score-series", "hallucination", asOf],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "hallucination"),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -673,6 +687,23 @@ export function ObservabilityDashboard() {
                 judge={judgePct}
                 failed={failedCount}
               />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <MetricKpi
+                  label={tq("metrics.faithfulness")}
+                  series={scoreSeries.data}
+                  loading={scoreSeries.isLoading}
+                />
+                <MetricKpi
+                  label={tq("metrics.grounding")}
+                  series={groundingSeries.data}
+                  loading={groundingSeries.isLoading}
+                />
+                <MetricKpi
+                  label={tq("metrics.hallucination")}
+                  series={hallucinationSeries.data}
+                  loading={hallucinationSeries.isLoading}
+                />
+              </div>
               <TabGrid>
                 <QualityGauge summary={signalSummary} />
                 <SLOCard data={slo.data} loading={slo.isLoading} />

@@ -1237,6 +1237,11 @@
         "economic": "Sparsam",
         "avoid": "Vermeiden"
       }
+    },
+    "metrics": {
+      "faithfulness": "Treue",
+      "grounding": "Grounding",
+      "hallucination": "Faktentreue"
     }
   }
 }

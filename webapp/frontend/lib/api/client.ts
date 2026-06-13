@@ -429,9 +429,21 @@ export async function fetchTrend(signal?: AbortSignal, at?: string): Promise<Tre
   return request(withAsOf("/observability/trend", at), { signal }, TrendReportSchema);
 }
 
-/** Calendar-time faithfulness series for the Vue d'ensemble evolution chart. */
-export async function fetchScoreSeries(signal?: AbortSignal, at?: string): Promise<ScoreSeries> {
-  return request(withAsOf("/observability/score-series", at), { signal }, ScoreSeriesSchema);
+/** Calendar-time score series for one metric (Vue d'ensemble chart + metric KPIs). */
+export async function fetchScoreSeries(
+  signal?: AbortSignal,
+  at?: string,
+  metric?: string,
+): Promise<ScoreSeries> {
+  const params = new URLSearchParams();
+  if (at) params.set("at", at);
+  if (metric) params.set("metric", metric);
+  const query = params.toString();
+  return request(
+    `/observability/score-series${query ? `?${query}` : ""}`,
+    { signal },
+    ScoreSeriesSchema,
+  );
 }
 
 /** Eval run registry from the report archive (Runs & datasets tab, image 02). */

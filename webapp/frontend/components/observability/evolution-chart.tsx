@@ -10,6 +10,76 @@ import type { ScoreSeries } from "@/lib/api/schemas";
 const W = 100;
 const H = 38;
 
+/** A KPI tile for one metric: mean %, period delta (points), and a mini sparkline. */
+export function MetricKpi({
+  label,
+  series,
+  loading,
+}: {
+  label: string;
+  series: ScoreSeries | undefined;
+  loading: boolean;
+}) {
+  const buckets = series?.buckets ?? [];
+  const n = buckets.length;
+  const pts = buckets
+    .map((b, i) => ({ x: n > 1 ? (i / (n - 1)) * W : W / 2, y: b.mean, i }))
+    .filter((p): p is { x: number; y: number; i: number } => p.y != null)
+    .map((p) => ({ x: p.x, y: 14 - p.y * 14, i: p.i }));
+  const segments: string[] = [];
+  for (let k = 1; k < pts.length; k++) {
+    const a = pts[k - 1];
+    const b = pts[k];
+    if (a && b && b.i - a.i === 1) {
+      segments.push(`M ${a.x} ${a.y} L ${b.x} ${b.y}`);
+    }
+  }
+  const mean = series?.mean ?? null;
+  const delta = series?.delta ?? null;
+  return (
+    <Card className="p-3">
+      <div className="truncate text-xs text-[var(--muted-foreground)]">{label}</div>
+      <div className="mt-1 flex items-end justify-between gap-2">
+        <span className="text-2xl font-semibold tabular-nums">
+          {mean != null ? `${Math.round(mean * 100)}%` : "—"}
+        </span>
+        {delta != null ? (
+          <Badge tone={delta >= 0 ? "success" : "danger"} className="tabular-nums">
+            {delta >= 0 ? "+" : ""}
+            {Math.round(delta * 100)}
+          </Badge>
+        ) : null}
+      </div>
+      <div className="mt-1 h-6">
+        {loading && !series ? (
+          <Skeleton className="h-full w-full" />
+        ) : (
+          <svg
+            viewBox="0 0 100 14"
+            preserveAspectRatio="none"
+            className="h-full w-full"
+            aria-hidden="true"
+          >
+            {segments.map((d) => (
+              <path
+                key={d}
+                d={d}
+                fill="none"
+                stroke="#10b981"
+                strokeWidth={0.8}
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+            {pts.map((p) => (
+              <circle key={p.i} cx={p.x} cy={p.y} r={0.9} fill="#10b981" />
+            ))}
+          </svg>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 /** Real "score over the last N days" line chart (Vue d'ensemble, image 00). */
 export function EvolutionChart({
   series,
