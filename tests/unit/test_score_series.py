@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from tessera.observability.eval.series import compute_score_series
+from tessera.observability.eval.series import compute_metric_pairs, compute_score_series
 
 
 def _row(ts: datetime, score: float, metric: str = "faithfulness") -> dict[str, object]:
@@ -62,3 +62,34 @@ def test_malformed_rows_are_skipped() -> None:
     ]
     s = compute_score_series(rows, end=end, days=7, n_buckets=7)
     assert s.n == 0
+
+
+def _mrow(conv: str, metric: str, score: float, lang: str = "fr") -> dict[str, object]:
+    return {"conversation_id": conv, "metric": metric, "score": score, "language": lang}
+
+
+def test_metric_pairs_pairs_by_conversation() -> None:
+    rows = [
+        _mrow("c1", "faithfulness", 0.8),
+        _mrow("c1", "grounding", 0.6),
+        _mrow("c2", "faithfulness", 0.4),
+        _mrow("c2", "grounding", 0.2),
+        _mrow("c3", "faithfulness", 0.9),  # no grounding → skipped
+    ]
+    pairs = compute_metric_pairs(rows, x_metric="faithfulness", y_metric="grounding")
+    assert pairs.n == 2
+    coords = sorted((p.x, p.y) for p in pairs.points)
+    assert coords == [(0.4, 0.2), (0.8, 0.6)]
+    assert all(p.language == "fr" for p in pairs.points)
+
+
+def test_metric_pairs_averages_multi_turn_conversations() -> None:
+    rows = [
+        _mrow("c1", "faithfulness", 0.6),
+        _mrow("c1", "faithfulness", 0.8),
+        _mrow("c1", "grounding", 0.5),
+    ]
+    pairs = compute_metric_pairs(rows, x_metric="faithfulness", y_metric="grounding")
+    assert pairs.n == 1
+    assert pairs.points[0].x == 0.7  # mean of 0.6, 0.8
+    assert pairs.points[0].y == 0.5

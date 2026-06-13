@@ -12,7 +12,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-__all__ = ["ScoreSeries", "SeriesBucket", "compute_score_series"]
+__all__ = [
+    "MetricPairs",
+    "MetricPoint",
+    "ScoreSeries",
+    "SeriesBucket",
+    "compute_metric_pairs",
+    "compute_score_series",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,3 +126,76 @@ def compute_score_series(
         delta=delta,
         buckets=buckets,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class MetricPoint:
+    """One turn scored on both metrics (a point in the X-vs-Y scatter)."""
+
+    x: float
+    y: float
+    language: str
+
+
+@dataclass(frozen=True, slots=True)
+class MetricPairs:
+    """Per-turn pairs of two metrics, for a scatter (e.g. faithfulness vs grounding)."""
+
+    x_metric: str
+    y_metric: str
+    n: int
+    points: list[MetricPoint] = field(default_factory=list)
+
+
+def compute_metric_pairs(
+    rows: list[dict[str, object]],
+    *,
+    x_metric: str = "faithfulness",
+    y_metric: str = "grounding",
+) -> MetricPairs:
+    """Pair two metrics scored on the same turn, keyed by conversation.
+
+    The online evaluator emits all metrics for one turn under the same
+    ``conversation_id``; a point is produced only when a conversation has at least
+    one score for *both* metrics (its per-conversation means). Conversations with
+    only one of the two are skipped — no fabricated coordinate.
+
+    Args:
+        rows: Persisted score rows (any order) with ``metric``, ``score``,
+            ``conversation_id`` and ``language``.
+        x_metric: Metric mapped to the X axis.
+        y_metric: Metric mapped to the Y axis.
+
+    Returns:
+        A :class:`MetricPairs` with one point per paired conversation.
+    """
+    bucket: dict[str, dict[str, list[float]]] = {}
+    langs: dict[str, str] = {}
+    for row in rows:
+        metric = row.get("metric")
+        conv = row.get("conversation_id")
+        if not isinstance(conv, str) or metric not in (x_metric, y_metric):
+            continue
+        try:
+            score = float(row["score"])  # type: ignore[arg-type]
+        except (KeyError, TypeError, ValueError):
+            continue
+        bucket.setdefault(conv, {}).setdefault(str(metric), []).append(score)
+        lang = row.get("language")
+        if isinstance(lang, str):
+            langs[conv] = lang
+
+    points: list[MetricPoint] = []
+    for conv, metrics in bucket.items():
+        xs = metrics.get(x_metric)
+        ys = metrics.get(y_metric)
+        if not xs or not ys:
+            continue
+        points.append(
+            MetricPoint(
+                x=sum(xs) / len(xs),
+                y=sum(ys) / len(ys),
+                language=langs.get(conv, ""),
+            )
+        )
+    return MetricPairs(x_metric=x_metric, y_metric=y_metric, n=len(points), points=points)

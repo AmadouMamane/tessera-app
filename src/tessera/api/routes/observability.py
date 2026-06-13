@@ -412,6 +412,23 @@ async def observability_score_series(
     return {**asdict(series), "as_of": at}
 
 
+@router.get("/observability/metric-pairs")
+async def observability_metric_pairs(
+    x: str = "faithfulness",
+    y: str = "grounding",
+    at: str | None = None,
+) -> dict[str, object]:
+    """Per-turn pairs of two metrics for a scatter (e.g. faithfulness vs grounding).
+
+    Pairs are keyed by ``conversation_id`` — a turn that the online evaluator
+    scored on both metrics. Honours as-of-T via the durable score log.
+    """
+    from tessera.observability.eval.series import compute_metric_pairs
+
+    pairs = compute_metric_pairs(persisted_scores(at), x_metric=x, y_metric=y)
+    return {**asdict(pairs), "as_of": at}
+
+
 @router.get("/observability/obs-cost")
 async def observability_obs_cost() -> dict[str, object]:
     """Measured instrumentation overhead vs the turn budget (#84), cached."""
