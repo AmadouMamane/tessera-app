@@ -59,7 +59,14 @@ import { ModelComparisonTable, RunsTable } from "@/components/observability/eval
 import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedCasesTable, FailureDistribution } from "@/components/observability/failed-cases";
 import { JudgeCalibration } from "@/components/observability/judge-calibration";
-import { EtatActuel, OverviewKpis, TopProblems } from "@/components/observability/overview-exec";
+import {
+  CostQualityScatter,
+  EtatActuel,
+  OverviewKpis,
+  RootCauseDiagnostic,
+  RunsBars,
+  TopProblems,
+} from "@/components/observability/overview-exec";
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
 import {
@@ -190,7 +197,6 @@ import type {
   ToolValidity,
   ToxicityReport,
   TrendReport,
-  WhatChanged,
 } from "@/lib/api/schemas";
 
 // Locally-available Ollama models to shadow against (smallest first).
@@ -706,9 +712,12 @@ export function ObservabilityDashboard() {
                     limit={5}
                   />
                 </FullWidth>
+                <RootCauseDiagnostic
+                  whatChanged={whatChanged.data}
+                  regressions={releaseStatus.data?.regressions ?? []}
+                />
                 <SLOCard data={slo.data} loading={slo.isLoading} />
                 <TrendCard data={trend.data} loading={trend.isLoading} />
-                <WhatChangedCard data={whatChanged.data} loading={whatChanged.isLoading} />
                 <AnomalyCard data={anomalies.data} loading={anomalies.isLoading} />
                 <FailurePredictorCard
                   data={failurePredictor.data}
@@ -724,6 +733,11 @@ export function ObservabilityDashboard() {
                 <RoadmapCard data={roadmap.data} loading={roadmap.isLoading} />
                 <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
                 <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
+                <CostQualityScatter
+                  data={modelComparison.data}
+                  loading={modelComparison.isLoading}
+                />
+                <RunsBars registry={runs.data} loading={runs.isLoading} />
                 <FullWidth>
                   <ModelComparisonTable
                     data={modelComparison.data}
@@ -3337,70 +3351,6 @@ function AnomalyCard({ data, loading }: { data: AnomalyReport | undefined; loadi
                   </li>
                 ))}
               </ul>
-            ) : null}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function WhatChangedCard({ data, loading }: { data: WhatChanged | undefined; loading: boolean }) {
-  const t = useTranslations("observability");
-  const changes = data?.changes ?? [];
-  const delta = data?.score_delta ?? 0;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <GitFork className="h-4 w-4 text-blue-500" />
-          {t("whatChanged.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-12 w-full" />
-        ) : !data?.available ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{t("whatChanged.empty")}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-end gap-6 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {t("whatChanged.delta")}
-                </span>
-                <Badge tone={delta >= 0 ? "success" : "danger"}>
-                  {delta >= 0 ? "+" : ""}
-                  {delta.toFixed(2)}
-                </Badge>
-              </div>
-              {data.attributed ? (
-                <Badge tone="warning">{t("whatChanged.attributed")}</Badge>
-              ) : (
-                <Badge tone="neutral">
-                  {data.regressed ? t("whatChanged.unexplained") : t("whatChanged.stable")}
-                </Badge>
-              )}
-            </div>
-            {changes.length > 0 ? (
-              <ul className="flex flex-col gap-1 text-xs">
-                {changes.map((c) => (
-                  <li key={c.field} className="flex items-center gap-2">
-                    <span className="w-32 shrink-0 font-mono text-[var(--muted-foreground)]">
-                      {c.field}
-                    </span>
-                    <span className="font-mono">{c.before}</span>
-                    <span className="text-[var(--muted-foreground)]">→</span>
-                    <span className="font-mono text-amber-600 dark:text-amber-400">{c.after}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {(data.docs_added?.length ?? 0) + (data.docs_removed?.length ?? 0) > 0 ? (
-              <p className="text-xs text-[var(--muted-foreground)]">
-                {t("whatChanged.docs")}: +{data.docs_added?.length ?? 0} / −
-                {data.docs_removed?.length ?? 0}
-              </p>
             ) : null}
           </div>
         )}

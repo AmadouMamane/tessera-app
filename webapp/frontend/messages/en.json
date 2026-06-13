@@ -1147,7 +1147,19 @@
       "evolution": "Quality score evolution (7d)",
       "noData": "No data over the period",
       "mean": "Mean",
-      "points": "{n} points"
+      "points": "{n} points",
+      "diagnostic": "Root-cause diagnostic (probable)",
+      "noDiag": "No recent change detected.",
+      "whatChangedTitle": "What changed",
+      "causes": "Probable causes",
+      "impact": "Impact",
+      "change": "Change",
+      "corpusChanged": "RAG corpus changed",
+      "scoreRegressed": "Confirmed score regression",
+      "costQuality": "Eval cost vs Quality",
+      "costAxis": "Cost/run",
+      "qualityAxis": "Quality",
+      "runsBars": "Recent runs pass-rate"
     },
     "failed": {
       "title": "Failed cases",

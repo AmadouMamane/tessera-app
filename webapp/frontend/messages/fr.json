@@ -1147,7 +1147,19 @@
       "evolution": "Évolution du score qualité (7 j)",
       "noData": "Aucune donnée sur la période",
       "mean": "Moyenne",
-      "points": "{n} points"
+      "points": "{n} points",
+      "diagnostic": "Diagnostic racine (probable)",
+      "noDiag": "Aucun changement récent détecté.",
+      "whatChangedTitle": "Qu'est-ce qui a changé",
+      "causes": "Causes probables",
+      "impact": "Impact",
+      "change": "Changement",
+      "corpusChanged": "Corpus RAG modifié",
+      "scoreRegressed": "Régression de score confirmée",
+      "costQuality": "Coût évaluation vs Qualité",
+      "costAxis": "Coût/run",
+      "qualityAxis": "Qualité",
+      "runsBars": "Pass-rate des derniers runs"
     },
     "failed": {
       "title": "Cas échoués",

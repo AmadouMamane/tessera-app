@@ -1147,7 +1147,19 @@
       "evolution": "Entwicklung des Qualitätsscores (7 T)",
       "noData": "Keine Daten im Zeitraum",
       "mean": "Mittel",
-      "points": "{n} Punkte"
+      "points": "{n} Punkte",
+      "diagnostic": "Ursachen-Diagnose (wahrscheinlich)",
+      "noDiag": "Keine kürzliche Änderung erkannt.",
+      "whatChangedTitle": "Was sich geändert hat",
+      "causes": "Wahrscheinliche Ursachen",
+      "impact": "Auswirkung",
+      "change": "Änderung",
+      "corpusChanged": "RAG-Korpus geändert",
+      "scoreRegressed": "Bestätigte Score-Regression",
+      "costQuality": "Eval-Kosten vs Qualität",
+      "costAxis": "Kosten/Run",
+      "qualityAxis": "Qualität",
+      "runsBars": "Pass-Rate der letzten Runs"
     },
     "failed": {
       "title": "Fehlgeschlagene Fälle",

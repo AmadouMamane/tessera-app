@@ -6,7 +6,15 @@ import { MetricKpi } from "@/components/observability/evolution-chart";
 import type { SignalRow } from "@/components/observability/signals-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ReleaseStatus, ScoreSeries } from "@/lib/api/schemas";
+import { Skeleton } from "@/components/ui/skeleton";
+import type {
+  ModelComparison,
+  Regression,
+  ReleaseStatus,
+  RunRegistry,
+  ScoreSeries,
+  WhatChanged,
+} from "@/lib/api/schemas";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
@@ -209,6 +217,234 @@ export function TopProblems({ rows, limit = 6 }: { rows: SignalRow[]; limit?: nu
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+const VERDICT_COLOR: Record<string, string> = {
+  best: "#10b981",
+  balanced: "#3b82f6",
+  economic: "#10b981",
+  avoid: "#ef4444",
+};
+
+function rateColor(r: number): string {
+  return r >= 0.8 ? "#10b981" : r >= 0.5 ? "#f59e0b" : "#ef4444";
+}
+
+/** "Diagnostic racine (probable)" — what changed / probable causes / impact (image 00). */
+export function RootCauseDiagnostic({
+  whatChanged,
+  regressions,
+}: {
+  whatChanged: WhatChanged | undefined;
+  regressions: Regression[];
+}) {
+  const tq = useTranslations("quality");
+  const wc = whatChanged;
+  if (!wc?.available) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">{tq("charts.diagnostic")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
+            {tq("charts.noDiag")}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  const changes = wc.changes ?? [];
+  const docsAdded = wc.docs_added ?? [];
+  const docsRemoved = wc.docs_removed ?? [];
+  const delta = wc.score_delta ?? null;
+  const causes: string[] = [];
+  for (const c of changes) causes.push(`${tq("charts.change")} : ${c.field}`);
+  if (docsAdded.length || docsRemoved.length) {
+    causes.push(`${tq("charts.corpusChanged")} (+${docsAdded.length}/−${docsRemoved.length})`);
+  }
+  if (wc.regressed) causes.push(tq("charts.scoreRegressed"));
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{tq("charts.diagnostic")}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 text-sm">
+        <section>
+          <h4 className="mb-1 text-xs font-semibold text-[var(--muted-foreground)]">
+            {tq("charts.whatChangedTitle")}
+          </h4>
+          <ul className="flex flex-col gap-1">
+            {changes.map((c) => (
+              <li key={c.field} className="font-mono text-xs">
+                {c.field}: {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
+              </li>
+            ))}
+            {docsAdded.length ? (
+              <li className="text-xs text-emerald-500">+{docsAdded.length} docs</li>
+            ) : null}
+            {docsRemoved.length ? (
+              <li className="text-xs text-red-500">−{docsRemoved.length} docs</li>
+            ) : null}
+          </ul>
+        </section>
+        <section>
+          <h4 className="mb-1 text-xs font-semibold text-[var(--muted-foreground)]">
+            {tq("charts.causes")}
+          </h4>
+          <ul className="flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
+            {causes.map((c) => (
+              <li key={c}>• {c}</li>
+            ))}
+          </ul>
+        </section>
+        <section>
+          <h4 className="mb-1 text-xs font-semibold text-[var(--muted-foreground)]">
+            {tq("charts.impact")}
+          </h4>
+          <div className="flex flex-wrap items-center gap-2">
+            {delta != null ? (
+              <Badge tone={delta >= 0 ? "success" : "danger"} className="tabular-nums">
+                {delta >= 0 ? "+" : ""}
+                {Math.round(delta * 100)} pts
+              </Badge>
+            ) : null}
+            {regressions.map((r) => (
+              <span key={r.model} className="text-xs text-red-500">
+                {r.model} {Math.round(r.prev_rate * 100)}→{Math.round(r.last_rate * 100)}%
+              </span>
+            ))}
+          </div>
+        </section>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** "Coût évaluation vs Qualité" scatter from the model comparison (image 00). */
+export function CostQualityScatter({
+  data,
+  loading,
+}: {
+  data: ModelComparison | undefined;
+  loading: boolean;
+}) {
+  const tq = useTranslations("quality");
+  const models = data?.models ?? [];
+  const maxCost = Math.max(0.01, ...models.map((m) => m.est_cost_eur ?? 0));
+  const H = 56;
+  const top = 4;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{tq("charts.costQuality")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading && !data ? (
+          <Skeleton className="h-44 w-full" />
+        ) : (
+          <>
+            <div className="relative h-44 w-full">
+              <svg
+                viewBox={`0 0 100 ${H + top * 2}`}
+                preserveAspectRatio="none"
+                className="h-full w-full"
+                aria-hidden="true"
+              >
+                {[0, 0.5, 1].map((g) => (
+                  <line
+                    key={g}
+                    x1={0}
+                    x2={100}
+                    y1={top + (1 - g) * H}
+                    y2={top + (1 - g) * H}
+                    stroke="var(--tessera-border)"
+                    strokeWidth={0.3}
+                  />
+                ))}
+                {models.map((m) => (
+                  <circle
+                    key={m.model}
+                    cx={2 + ((m.est_cost_eur ?? 0) / maxCost) * 96}
+                    cy={top + (1 - m.pass_rate) * H}
+                    r={1.8}
+                    fill={VERDICT_COLOR[m.verdict] ?? "#64748b"}
+                  />
+                ))}
+              </svg>
+            </div>
+            <div className="mt-1 flex justify-between text-[0.65rem] text-[var(--muted-foreground)]">
+              <span>↑ {tq("charts.qualityAxis")}</span>
+              <span>{tq("charts.costAxis")} →</span>
+            </div>
+            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+              {models.map((m) => (
+                <li
+                  key={m.model}
+                  className="flex items-center gap-1 text-[var(--muted-foreground)]"
+                >
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: VERDICT_COLOR[m.verdict] ?? "#64748b" }}
+                  />
+                  {m.model}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Pass-rate of the most recent eval runs (real bars; the reference's per-release view). */
+export function RunsBars({
+  registry,
+  loading,
+}: {
+  registry: RunRegistry | undefined;
+  loading: boolean;
+}) {
+  const tq = useTranslations("quality");
+  const runs = [...(registry?.runs ?? [])].slice(0, 12).reverse();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{tq("charts.runsBars")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading && !registry ? (
+          <Skeleton className="h-40 w-full" />
+        ) : runs.length === 0 ? (
+          <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
+            {tq("runs.empty")}
+          </p>
+        ) : (
+          <div className="flex h-40 items-end gap-1">
+            {runs.map((r) => (
+              <div
+                key={r.run_id}
+                className="flex flex-1 flex-col items-center justify-end gap-1"
+                title={`${r.model} · ${Math.round(r.pass_rate * 100)}%`}
+              >
+                <span className="text-[0.55rem] tabular-nums text-[var(--muted-foreground)]">
+                  {Math.round(r.pass_rate * 100)}
+                </span>
+                <div
+                  className="w-full rounded-t"
+                  style={{
+                    height: `${Math.max(2, r.pass_rate * 100)}%`,
+                    background: rateColor(r.pass_rate),
+                  }}
+                />
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
