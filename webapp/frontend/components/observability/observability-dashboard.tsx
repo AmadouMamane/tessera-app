@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   Archive,
@@ -57,6 +57,11 @@ import { type ReactNode, useState } from "react";
 
 import { ReplayPanel } from "@/components/observability/replay-panel";
 import { SessionTheater } from "@/components/observability/session-theater";
+import {
+  TemporalRail,
+  useRailTimeline,
+  useTemporalState,
+} from "@/components/overview/temporal-rail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -197,17 +202,22 @@ export function ObservabilityDashboard() {
   const t = useTranslations("observability");
   const tq = useTranslations("quality");
   const [tab, setTab] = useState<TabKey>("overview");
+  const temporal = useTemporalState();
+  const { asOf, historyMode } = temporal;
+  const railTimeline = useRailTimeline();
 
   const scores = useQuery({
-    queryKey: ["eval-scores"],
-    queryFn: ({ signal }) => fetchEvalScores(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["eval-scores", asOf],
+    queryFn: ({ signal }) => fetchEvalScores(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : POLL_MS,
   });
 
   const slo = useQuery({
-    queryKey: ["slo"],
-    queryFn: ({ signal }) => fetchSLO(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["slo", asOf],
+    queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : POLL_MS,
   });
 
   const tailSampling = useQuery({
@@ -224,9 +234,10 @@ export function ObservabilityDashboard() {
   });
 
   const trend = useQuery({
-    queryKey: ["trend"],
-    queryFn: ({ signal }) => fetchTrend(signal),
-    refetchInterval: 15_000,
+    queryKey: ["trend", asOf],
+    queryFn: ({ signal }) => fetchTrend(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
   });
 
   const reproducibility = useQuery({
@@ -256,9 +267,10 @@ export function ObservabilityDashboard() {
   });
 
   const roadmap = useQuery({
-    queryKey: ["roadmap"],
-    queryFn: ({ signal }) => fetchRoadmap(signal),
-    refetchInterval: 20_000,
+    queryKey: ["roadmap", asOf],
+    queryFn: ({ signal }) => fetchRoadmap(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 20_000,
   });
 
   const memoryObs = useQuery({
@@ -287,9 +299,10 @@ export function ObservabilityDashboard() {
   });
 
   const toxicity = useQuery({
-    queryKey: ["toxicity"],
-    queryFn: ({ signal }) => fetchToxicity(signal),
-    refetchInterval: 15_000,
+    queryKey: ["toxicity", asOf],
+    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
   });
 
   const crossTenant = useQuery({
@@ -305,9 +318,10 @@ export function ObservabilityDashboard() {
   });
 
   const playbooks = useQuery({
-    queryKey: ["playbooks"],
-    queryFn: ({ signal }) => fetchPlaybooks(signal),
-    refetchInterval: 15_000,
+    queryKey: ["playbooks", asOf],
+    queryFn: ({ signal }) => fetchPlaybooks(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
   });
 
   const siem = useQuery({
@@ -323,9 +337,10 @@ export function ObservabilityDashboard() {
   });
 
   const aiAct = useQuery({
-    queryKey: ["ai-act"],
-    queryFn: ({ signal }) => fetchAIAct(signal),
-    refetchInterval: 30_000,
+    queryKey: ["ai-act", asOf],
+    queryFn: ({ signal }) => fetchAIAct(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 30_000,
   });
 
   const citationLinks = useQuery({
@@ -380,9 +395,10 @@ export function ObservabilityDashboard() {
   });
 
   const tools = useQuery({
-    queryKey: ["tool-validity"],
-    queryFn: ({ signal }) => fetchToolValidity(signal),
-    refetchInterval: 15_000,
+    queryKey: ["tool-validity", asOf],
+    queryFn: ({ signal }) => fetchToolValidity(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
   });
 
   const toolLoops = useQuery({
@@ -404,9 +420,10 @@ export function ObservabilityDashboard() {
   });
 
   const piiLeak = useQuery({
-    queryKey: ["pii-leak"],
-    queryFn: ({ signal }) => fetchPiiLeak(signal),
-    refetchInterval: 15_000,
+    queryKey: ["pii-leak", asOf],
+    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
   });
 
   const contradictions = useQuery({
@@ -416,15 +433,17 @@ export function ObservabilityDashboard() {
   });
 
   const whatChanged = useQuery({
-    queryKey: ["what-changed"],
-    queryFn: ({ signal }) => fetchWhatChanged(signal),
-    refetchInterval: 20_000,
+    queryKey: ["what-changed", asOf],
+    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 20_000,
   });
 
   const anomalies = useQuery({
-    queryKey: ["anomalies"],
-    queryFn: ({ signal }) => fetchAnomalies(signal),
-    refetchInterval: 20_000,
+    queryKey: ["anomalies", asOf],
+    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 20_000,
   });
 
   const refusal = useQuery({
@@ -446,9 +465,10 @@ export function ObservabilityDashboard() {
   });
 
   const conformance = useQuery({
-    queryKey: ["conformance"],
-    queryFn: ({ signal }) => fetchConformance(signal),
-    refetchInterval: 15_000,
+    queryKey: ["conformance", asOf],
+    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
   });
 
   const intent = useQuery({
@@ -458,9 +478,10 @@ export function ObservabilityDashboard() {
   });
 
   const cost = useQuery({
-    queryKey: ["cost"],
-    queryFn: ({ signal }) => fetchCost(signal),
-    refetchInterval: 15_000,
+    queryKey: ["cost", asOf],
+    queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
   });
 
   const contextOverflow = useQuery({
@@ -501,9 +522,10 @@ export function ObservabilityDashboard() {
   });
 
   const funnel = useQuery({
-    queryKey: ["funnel"],
-    queryFn: ({ signal }) => fetchFunnel(signal),
-    refetchInterval: 15_000,
+    queryKey: ["funnel", asOf],
+    queryFn: ({ signal }) => fetchFunnel(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 15_000,
   });
 
   // Newest first for display.
@@ -552,16 +574,27 @@ export function ObservabilityDashboard() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Sticky chrome: compact temporal bar + single evidence CTA + tabs. */}
-      <div className="sticky top-0 z-30 -mx-4 flex flex-col gap-3 bg-[var(--tessera-bg)] px-4 pb-3 pt-1 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+      {/* Sticky chrome: the shared temporal rail (Live/Replay) pins under the page
+          header; below it the tab bar + the single evidence-pack CTA. */}
+      <div className="sticky top-0 z-30 -mx-4 flex flex-col gap-3 bg-[var(--tessera-bg)] px-4 pb-3 pt-3 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+        <TemporalRail
+          mode={temporal.mode}
+          liveStatus={tq("rail.signals", { n: QUALITY_SIGNALS })}
+          timeline={railTimeline.data}
+          sloTarget={slo.data?.target}
+          selectedAt={temporal.selectedAt}
+          onSelectedAtChange={temporal.setSelectedAt}
+          periodKey={temporal.periodKey}
+          onPeriodChange={temporal.setPeriodKey}
+          onModeChange={temporal.changeMode}
+        />
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <TemporalBar />
+          <TabBar active={tab} onChange={setTab} />
           <Button onClick={downloadQualityEvidence} className="gap-2">
             <FileDown className="h-4 w-4" />
             {tq("cta.evidence")}
           </Button>
         </div>
-        <TabBar active={tab} onChange={setTab} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
@@ -761,31 +794,6 @@ export function ObservabilityDashboard() {
 
         <RightRail scorePct={sloPct} topFailing={topFailing} onEvidence={downloadQualityEvidence} />
       </div>
-    </div>
-  );
-}
-
-/** Compact live temporal bar (Replay rail expansion is Stage 5 — see memory). */
-function TemporalBar() {
-  const tq = useTranslations("quality");
-  return (
-    <div className="flex items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-1.5 text-sm">
-      <span className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-emerald-500" />
-        <span className="font-medium text-[var(--foreground)]">{tq("temporal.live")}</span>
-      </span>
-      <span className="text-[var(--muted-foreground)]">·</span>
-      <span className="text-[var(--muted-foreground)]">{tq("temporal.window")}</span>
-      <span className="text-[var(--muted-foreground)]">·</span>
-      <button
-        type="button"
-        disabled
-        title={tq("empty.noBackend")}
-        className="flex cursor-not-allowed items-center gap-1 text-[var(--muted-foreground)] opacity-70"
-      >
-        <Undo2 className="h-3.5 w-3.5" />
-        {tq("temporal.replay")}
-      </button>
     </div>
   );
 }
