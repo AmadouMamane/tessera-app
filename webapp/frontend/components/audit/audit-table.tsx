@@ -21,6 +21,7 @@ import {
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { DeltaBadge, MetricCard } from "@/components/cockpit/metric-card";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -464,6 +465,7 @@ function MetricGrid({
   formatter: Intl.NumberFormat;
 }) {
   const t = useTranslations("audit.metrics");
+  const td = useTranslations("audit.delta");
   const metrics = useMemo(
     () => new Map(overview?.metrics.map((metric) => [metric.key, metric])),
     [overview],
@@ -482,73 +484,44 @@ function MetricGrid({
       {cards.map((key) => {
         const metric = metrics.get(key);
         const chainOk = metric?.value === 1;
-        return (
-          <section
-            key={key}
-            className="h-[108px] overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
-          >
-            <p className="text-xs font-medium text-[var(--tessera-text-muted)]">
-              {t(`${key}.label`)}
-            </p>
-            {loading || !metric ? (
-              <div className="mt-1 flex h-8 items-baseline gap-2">
-                <Skeleton className="h-7 w-16" />
-                <Skeleton className="h-4 w-12" />
-              </div>
-            ) : (
-              <div className="mt-1 flex h-8 items-baseline gap-2">
-                <p className="text-[1.55rem] font-semibold leading-none text-white">
-                  {key === "chain_integrity"
-                    ? t(metric.value === 1 ? "conform" : "broken")
-                    : formatter.format(metric.value)}
-                </p>
-                <DeltaBadge metric={metric} />
-              </div>
-            )}
-            <div className="mt-1.5 h-7 border-t border-[var(--tessera-border)] pt-1.5">
-              {loading || !metric ? (
-                <Skeleton className="h-5 w-full" />
-              ) : key === "chain_integrity" ? (
-                <div className="flex items-center gap-2 text-xs text-[var(--tessera-text-muted)]">
-                  <span
-                    className={cn(
-                      "h-2 w-2 rounded-full",
-                      chainOk ? "bg-[var(--tessera-green)]" : "bg-red-400",
-                    )}
-                  />
-                  {t(chainOk ? "chainHint" : "chainBrokenHint")}
-                </div>
-              ) : (
-                <MetricSparkline
-                  className="h-5"
-                  values={series}
-                  tone={key === "guard_refusals" ? "danger" : "success"}
-                />
-              )}
+        const trend =
+          key === "chain_integrity" ? (
+            <div className="flex items-center gap-2 text-xs text-[var(--tessera-text-muted)]">
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  chainOk ? "bg-[var(--tessera-green)]" : "bg-red-400",
+                )}
+              />
+              {t(chainOk ? "chainHint" : "chainBrokenHint")}
             </div>
-          </section>
+          ) : (
+            <MetricSparkline
+              className="h-5"
+              values={series}
+              tone={key === "guard_refusals" ? "danger" : "success"}
+            />
+          );
+        return (
+          <MetricCard
+            key={key}
+            label={t(`${key}.label`)}
+            loading={loading || !metric}
+            value={
+              metric && key === "chain_integrity"
+                ? t(metric.value === 1 ? "conform" : "broken")
+                : metric
+                  ? formatter.format(metric.value)
+                  : ""
+            }
+            delta={
+              metric ? <DeltaBadge deltaPct={metric.delta_pct} noneLabel={td("none")} /> : undefined
+            }
+            trend={trend}
+          />
         );
       })}
     </div>
-  );
-}
-
-function DeltaBadge({ metric }: { metric: AuditMetric }) {
-  const t = useTranslations("audit.delta");
-  if (metric.delta_pct == null) {
-    return <span className="text-xs text-[var(--tessera-text-muted)]">{t("none")}</span>;
-  }
-  const positive = metric.delta_pct >= 0;
-  return (
-    <span
-      className={cn(
-        "text-xs font-medium",
-        positive ? "text-[var(--tessera-green)]" : "text-red-300",
-      )}
-    >
-      {positive ? "+" : ""}
-      {metric.delta_pct.toFixed(1)}%
-    </span>
   );
 }
 
