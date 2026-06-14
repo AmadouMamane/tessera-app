@@ -116,6 +116,7 @@ function Spark({ values }: { values: number[] }) {
 function Kpi({
   label,
   value,
+  unit,
   sub,
   tone,
   series,
@@ -124,6 +125,7 @@ function Kpi({
 }: {
   label: string;
   value: string;
+  unit?: string;
   sub?: string;
   tone?: string;
   series?: number[];
@@ -139,15 +141,16 @@ function Kpi({
       <div className="truncate text-xs text-[var(--muted-foreground)]">{label}</div>
       <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
         {value}
+        {unit ? (
+          <span className="text-base font-medium text-[var(--muted-foreground)]">{unit}</span>
+        ) : null}
       </div>
       {showDelta ? (
-        <div
-          className={`flex items-center gap-1 text-[0.65rem] tabular-nums ${deltaGood ? GOOD : BAD}`}
-        >
-          <span>{up ? "↗" : "↘"}</span>
-          <span>
-            {Math.abs((delta as number) * 100).toFixed(0)} {tc("kpi.ptsPrev")}
+        <div className="flex items-center gap-1 text-[0.65rem] tabular-nums">
+          <span className={`whitespace-nowrap ${deltaGood ? GOOD : BAD}`}>
+            {up ? "↗" : "↘"} {Math.abs((delta as number) * 100).toFixed(0)} {tc("kpi.pts")}
           </span>
+          <span className="truncate text-[var(--muted-foreground)]">{tc("kpi.vsPrev")}</span>
         </div>
       ) : sub ? (
         <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{sub}</div>
@@ -265,7 +268,8 @@ export function ComplianceDashboard() {
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
               <Kpi
                 label={tc("kpi.score")}
-                value={`${d.score ?? 0}/100`}
+                value={`${d.score ?? 0}`}
+                unit="/100"
                 sub={tc("kpi.scoreSub")}
                 tone={(d.score ?? 0) >= 80 ? GOOD : WARN}
                 series={trend}
@@ -274,14 +278,16 @@ export function ComplianceDashboard() {
               />
               <Kpi
                 label={tc("kpi.obligations")}
-                value={`${d.n_applied ?? 0}/${d.n_obligations ?? 0}`}
+                value={`${d.n_applied ?? 0}`}
+                unit={`/${d.n_obligations ?? 0}`}
                 sub={`${Math.round(((d.n_applied ?? 0) / (d.n_obligations || 1)) * 100)}%`}
                 tone={GOOD}
                 series={trend}
               />
               <Kpi
                 label={tc("kpi.conformant")}
-                value={`${d.n_conformant ?? 0}/${d.n_controls ?? 0}`}
+                value={`${d.n_conformant ?? 0}`}
+                unit={`/${d.n_controls ?? 0}`}
                 sub={`${Math.round(((d.n_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
                 tone={GOOD}
                 series={trend}

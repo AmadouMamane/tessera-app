@@ -2063,7 +2063,8 @@
       "residualSub": "Monitored",
       "deadlines": "Critical deadlines",
       "deadlinesSub": "To handle",
-      "ptsPrev": "pts vs prev. period"
+      "pts": "pts",
+      "vsPrev": "vs prev."
     },
     "panel": {
       "mapping": "Regulatory mapping",

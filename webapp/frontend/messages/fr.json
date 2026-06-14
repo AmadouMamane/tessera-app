@@ -2063,7 +2063,8 @@
       "residualSub": "Surveillés",
       "deadlines": "Échéances critiques",
       "deadlinesSub": "À traiter",
-      "ptsPrev": "pts vs période préc."
+      "pts": "pts",
+      "vsPrev": "vs préc."
     },
     "panel": {
       "mapping": "Cartographie réglementaire",
