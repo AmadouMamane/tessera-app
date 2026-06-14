@@ -77,6 +77,8 @@ import {
   HandoffReportSchema,
   type HealthResponse,
   HealthResponseSchema,
+  type ImprovementReport,
+  ImprovementReportSchema,
   type IntentReport,
   IntentReportSchema,
   type InventoryReport,
@@ -597,6 +599,11 @@ export async function fetchCompliance(signal?: AbortSignal): Promise<ComplianceR
 /** Operational reliability & cost posture derived from the real signals (#08). */
 export async function fetchReliability(signal?: AbortSignal): Promise<ReliabilityReport> {
   return request("/observability/reliability", { signal }, ReliabilityReportSchema);
+}
+
+/** Continuous-improvement posture mined from the telemetry roadmap (#09). */
+export async function fetchImprovement(signal?: AbortSignal): Promise<ImprovementReport> {
+  return request("/observability/improvement", { signal }, ImprovementReportSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

@@ -2171,5 +2171,75 @@
       "tight": "Serrée",
       "forecastCta": "Voir prévisions détaillées"
     }
+  },
+  "improvement": {
+    "title": "Amélioration",
+    "subtitle": "Priorisez, exécutez et mesurez les remédiations qualité de vos agents IA.",
+    "loading": "Chargement de la posture d'amélioration…",
+    "unavailable": "Posture d'amélioration indisponible.",
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "plan": "Plan d'action",
+      "curation": "Curation & eval set",
+      "experiments": "Expériences",
+      "release": "Release qualité"
+    },
+    "kpi": {
+      "gain": "Gain qualité potentiel",
+      "actions": "Actions recommandées",
+      "curate": "Cas à curer",
+      "frozen": "Releases gelées",
+      "shadow": "Candidats shadow / replay",
+      "coverage": "Couverture eval set",
+      "debt": "Dette corpus",
+      "roi": "ROI estimé"
+    },
+    "panel": {
+      "opportunities": "Opportunités prioritaires",
+      "causes": "Répartition des causes",
+      "coverage": "Couverture eval set",
+      "coverageSub": "des cas couverts",
+      "debt": "Dette corpus",
+      "curate": "Cas à curer"
+    },
+    "col": {
+      "action": "Action",
+      "cause": "Cause probable",
+      "gain": "Gain attendu",
+      "effort": "Effort",
+      "risk": "Risque",
+      "owner": "Owner",
+      "status": "Statut"
+    },
+    "level": {
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé"
+    },
+    "status": {
+      "to_start": "À démarrer",
+      "in_progress": "En cours",
+      "ready": "Prêt",
+      "to_approve": "À approuver",
+      "chain": "Chaîne d'audit intacte",
+      "truth": "Source de vérité : YAML · Git",
+      "improvement": "Amélioration continue"
+    },
+    "gate": {
+      "quality": "Qualité gate",
+      "coverage": "Couverture gate",
+      "corpus": "Corpus gate"
+    },
+    "rail": {
+      "candidate": "Candidate",
+      "topProblems": "Top problèmes adressables",
+      "sensitive": "Actions sensibles",
+      "freeze": "Geler la release",
+      "prompt": "Modifier le prompt système",
+      "corpus": "Reconstruire le corpus",
+      "current": "Release actuelle",
+      "inProd": "En production",
+      "planCta": "Préparer le plan d'action"
+    }
   }
 }

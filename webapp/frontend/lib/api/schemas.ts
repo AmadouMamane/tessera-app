@@ -330,6 +330,47 @@ export type ReliabilityCostRow = z.infer<typeof ReliabilityCostRowSchema>;
 export type ReliabilityServiceRow = z.infer<typeof ReliabilityServiceRowSchema>;
 export type ReliabilityIncident = z.infer<typeof ReliabilityIncidentSchema>;
 
+export const OpportunitySchema = z.object({
+  rank: z.number().int(),
+  action: z.string(),
+  cause: z.string(),
+  gain_pts: z.number(),
+  effort: z.string(),
+  risk: z.string(),
+  owner: z.string(),
+  role: z.string(),
+  status: z.string(),
+  evidence: z.number().int(),
+});
+export type Opportunity = z.infer<typeof OpportunitySchema>;
+
+export const ImprovementGateSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+  passed: z.boolean(),
+});
+export const ImprovementCandidateSchema = z.object({
+  version: z.string(),
+  label: z.string(),
+  gates: z.array(ImprovementGateSchema),
+});
+export const ImprovementReportSchema = z.object({
+  available: z.boolean(),
+  potential_gain_pts: z.number().optional(),
+  n_active_actions: z.number().int().optional(),
+  n_to_curate: z.number().int().optional(),
+  n_frozen_releases: z.number().int().optional(),
+  n_shadow_candidates: z.number().int().optional(),
+  eval_coverage: z.number().optional(),
+  corpus_debt_days: z.number().int().optional(),
+  roi_pct: z.number().optional(),
+  opportunities: z.array(OpportunitySchema).optional(),
+  causes: z.record(z.string(), z.number()).optional(),
+  candidate: ImprovementCandidateSchema.nullable().optional(),
+  current_version: z.string().optional(),
+});
+export type ImprovementReport = z.infer<typeof ImprovementReportSchema>;
+
 export const ComplianceControlSchema = z.object({
   id: z.string(),
   name: z.string(),

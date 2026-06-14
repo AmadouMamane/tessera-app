@@ -45,6 +45,7 @@ from tessera.observability import (
     guard_explain as guard_explain_mod,
     guard_retraction as guard_retraction_mod,
     handoffs as handoffs_mod,
+    improvement as improvement_mod,
     journey as journey_mod,
     language_routing as language_routing_mod,
     least_privilege as least_privilege_mod,
@@ -589,6 +590,21 @@ async def observability_compliance() -> dict[str, object]:
         return {"available": True, **asdict(compliance_mod.compute_compliance())}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.compliance: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/improvement")
+async def observability_improvement() -> dict[str, object]:
+    """Continuous-improvement posture mined from the telemetry roadmap (#09).
+
+    Turns the real roadmap backlog (low-faithfulness turns, unknown intents,
+    stale corpora) plus eval-set coverage and corpus freshness into prioritised
+    improvement opportunities. Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **asdict(improvement_mod.compute_improvement())}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
         return {"available": False}
 
 

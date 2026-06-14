@@ -2171,5 +2171,75 @@
       "tight": "Knapp",
       "forecastCta": "Detaillierte Prognose ansehen"
     }
+  },
+  "improvement": {
+    "title": "Verbesserung",
+    "subtitle": "Priorisieren, ausführen und messen Sie Qualitäts-Remediationen Ihrer KI-Agenten.",
+    "loading": "Verbesserungs-Haltung wird geladen…",
+    "unavailable": "Verbesserungs-Haltung nicht verfügbar.",
+    "tabs": {
+      "overview": "Übersicht",
+      "plan": "Aktionsplan",
+      "curation": "Kuration & Eval-Set",
+      "experiments": "Experimente",
+      "release": "Qualitäts-Release"
+    },
+    "kpi": {
+      "gain": "Potenzieller Qualitätsgewinn",
+      "actions": "Empfohlene Maßnahmen",
+      "curate": "Zu kuratierende Fälle",
+      "frozen": "Eingefrorene Releases",
+      "shadow": "Shadow-/Replay-Kandidaten",
+      "coverage": "Eval-Set-Abdeckung",
+      "debt": "Korpus-Schuld",
+      "roi": "Geschätzter ROI"
+    },
+    "panel": {
+      "opportunities": "Prioritäre Chancen",
+      "causes": "Ursachen-Verteilung",
+      "coverage": "Eval-Set-Abdeckung",
+      "coverageSub": "der abgedeckten Fälle",
+      "debt": "Korpus-Schuld",
+      "curate": "Zu kuratierende Fälle"
+    },
+    "col": {
+      "action": "Aktion",
+      "cause": "Wahrscheinliche Ursache",
+      "gain": "Erwarteter Gewinn",
+      "effort": "Aufwand",
+      "risk": "Risiko",
+      "owner": "Owner",
+      "status": "Status"
+    },
+    "level": {
+      "low": "Gering",
+      "medium": "Mittel",
+      "high": "Hoch"
+    },
+    "status": {
+      "to_start": "Zu starten",
+      "in_progress": "In Arbeit",
+      "ready": "Bereit",
+      "to_approve": "Zu genehmigen",
+      "chain": "Audit-Kette intakt",
+      "truth": "Quelle der Wahrheit: YAML · Git",
+      "improvement": "Kontinuierliche Verbesserung"
+    },
+    "gate": {
+      "quality": "Qualitäts-Gate",
+      "coverage": "Abdeckungs-Gate",
+      "corpus": "Korpus-Gate"
+    },
+    "rail": {
+      "candidate": "Candidate",
+      "topProblems": "Top adressierbare Probleme",
+      "sensitive": "Sensible Aktionen",
+      "freeze": "Release einfrieren",
+      "prompt": "System-Prompt bearbeiten",
+      "corpus": "Korpus neu aufbauen",
+      "current": "Aktuelles Release",
+      "inProd": "In Produktion",
+      "planCta": "Aktionsplan vorbereiten"
+    }
   }
 }

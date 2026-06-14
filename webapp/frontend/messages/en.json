@@ -2171,5 +2171,75 @@
       "tight": "Tight",
       "forecastCta": "See detailed forecast"
     }
+  },
+  "improvement": {
+    "title": "Improvement",
+    "subtitle": "Prioritise, run and measure quality remediations for your AI agents.",
+    "loading": "Loading improvement posture…",
+    "unavailable": "Improvement posture unavailable.",
+    "tabs": {
+      "overview": "Overview",
+      "plan": "Action plan",
+      "curation": "Curation & eval set",
+      "experiments": "Experiments",
+      "release": "Quality release"
+    },
+    "kpi": {
+      "gain": "Potential quality gain",
+      "actions": "Recommended actions",
+      "curate": "Cases to curate",
+      "frozen": "Frozen releases",
+      "shadow": "Shadow / replay candidates",
+      "coverage": "Eval-set coverage",
+      "debt": "Corpus debt",
+      "roi": "Estimated ROI"
+    },
+    "panel": {
+      "opportunities": "Priority opportunities",
+      "causes": "Root-cause breakdown",
+      "coverage": "Eval-set coverage",
+      "coverageSub": "of cases covered",
+      "debt": "Corpus debt",
+      "curate": "Cases to curate"
+    },
+    "col": {
+      "action": "Action",
+      "cause": "Probable cause",
+      "gain": "Expected gain",
+      "effort": "Effort",
+      "risk": "Risk",
+      "owner": "Owner",
+      "status": "Status"
+    },
+    "level": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "status": {
+      "to_start": "To start",
+      "in_progress": "In progress",
+      "ready": "Ready",
+      "to_approve": "To approve",
+      "chain": "Audit chain intact",
+      "truth": "Source of truth: YAML · Git",
+      "improvement": "Continuous improvement"
+    },
+    "gate": {
+      "quality": "Quality gate",
+      "coverage": "Coverage gate",
+      "corpus": "Corpus gate"
+    },
+    "rail": {
+      "candidate": "Candidate",
+      "topProblems": "Top addressable problems",
+      "sensitive": "Sensitive actions",
+      "freeze": "Freeze the release",
+      "prompt": "Edit the system prompt",
+      "corpus": "Rebuild the corpus",
+      "current": "Current release",
+      "inProd": "In production",
+      "planCta": "Prepare the action plan"
+    }
   }
 }

@@ -39,6 +39,7 @@ type RouteHref =
   | "/security"
   | "/compliance"
   | "/reliability"
+  | "/improvement"
   | "/health"
   | "/settings";
 
@@ -72,7 +73,7 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: "/security", icon: LockKeyhole, labelKey: "security", pulse: true },
       { href: "/compliance", icon: FileCheck2, labelKey: "compliance", pulse: true },
       { href: "/reliability", icon: Gauge, labelKey: "reliability", pulse: true },
-      { href: "/eval", icon: Sparkles, labelKey: "improvement" },
+      { href: "/improvement", icon: Sparkles, labelKey: "improvement" },
     ],
   },
   {
