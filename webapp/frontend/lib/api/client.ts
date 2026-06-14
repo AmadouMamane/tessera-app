@@ -137,6 +137,8 @@ import {
   ReliabilityReportSchema,
   type ReplayResult,
   ReplayResultSchema,
+  type ReplayShadowOverview,
+  ReplayShadowOverviewSchema,
   type ReplaysResponse,
   ReplaysResponseSchema,
   type ReproReport,
@@ -651,6 +653,12 @@ export async function fetchImprovement(signal?: AbortSignal): Promise<Improvemen
 
 export async function fetchIncidentsOverview(signal?: AbortSignal): Promise<IncidentsOverview> {
   return request("/observability/incidents", { signal }, IncidentsOverviewSchema);
+}
+
+export async function fetchReplayShadowOverview(
+  signal?: AbortSignal,
+): Promise<ReplayShadowOverview> {
+  return request("/observability/replay-shadow", { signal }, ReplayShadowOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

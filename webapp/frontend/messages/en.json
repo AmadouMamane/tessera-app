@@ -2595,5 +2595,150 @@
       "source": "Source of truth: {src}",
       "sync": "Last sync: {ago}"
     }
+  },
+  "replay": {
+    "title": "Replay & shadow",
+    "subtitle": "Replay sessions precisely, compare against baselines and observe shadow traffic.",
+    "tabs": {
+      "overview": "Overview",
+      "sessions": "Replayed sessions",
+      "shadow": "Shadow traffic",
+      "comparisons": "Comparisons",
+      "baselines": "Baselines",
+      "diffs": "Diffs",
+      "evals": "Replayed evals",
+      "exports": "Exports & proofs"
+    },
+    "delta": {
+      "vs7d": "vs D-7"
+    },
+    "zone": {
+      "actual": "A · Current state",
+      "diagnostic": "B · Deviation diagnosis",
+      "comparisons": "C · Deviations & comparisons",
+      "distribution": "D · Distribution & proofs"
+    },
+    "kpi": {
+      "sessions": "Replayed sessions",
+      "requests": "Replayed requests",
+      "tokens": "Replayed tokens",
+      "cost": "Replay cost",
+      "deviations": "Critical deviations vs baseline",
+      "evals": "Replayed evals",
+      "proofs": "Proofs generated",
+      "coverage": "Shadow coverage"
+    },
+    "panel": {
+      "traffic": "Replayable traffic per day",
+      "devByType": "Deviations vs baseline by type",
+      "severity": "Deviation severity",
+      "recentSessions": "Recent sessions",
+      "topDeviations": "Deviations — Top 10",
+      "comparisons": "Recent comparisons",
+      "regressions": "Top regressions vs baseline",
+      "byService": "Distribution by service",
+      "byModel": "Distribution by model",
+      "evalsByCat": "Replayed evals by category",
+      "proofsExports": "Proofs & exports"
+    },
+    "legend": {
+      "requests": "Requests",
+      "tokens": "Tokens (M)",
+      "critical": "critical deviations"
+    },
+    "col": {
+      "id": "Session ID",
+      "service": "Service",
+      "model": "Model",
+      "status": "Status",
+      "origin": "Origin date",
+      "type": "Type",
+      "baseline": "Baseline",
+      "severity": "Severity",
+      "delta": "Δ Score",
+      "comparison": "Comparison",
+      "sessions": "Sessions",
+      "deviations": "Deviations",
+      "trend": "Trend",
+      "critical": "Critical deviations"
+    },
+    "status": {
+      "rejouee": "Replayed",
+      "termine": "Completed",
+      "encours": "Running",
+      "error": "Error"
+    },
+    "severity": {
+      "critique": "Critical",
+      "eleve": "High",
+      "moyen": "Medium",
+      "faible": "Low"
+    },
+    "type": {
+      "instruction": "Instruction not followed",
+      "hallucination": "Hallucination",
+      "toxicity": "Toxicity",
+      "factual": "Factual quality",
+      "confidentiality": "Confidentiality",
+      "robustness": "Robustness",
+      "others": "Other"
+    },
+    "service": {
+      "chat_support": "Chat Support",
+      "fraud_risk": "Fraud Risk",
+      "code_copilot": "Code Copilot",
+      "data_analyst": "Data Analyst",
+      "agent_workflow": "Agent Workflow",
+      "others": "Other"
+    },
+    "model": {
+      "llama": "Llama 3.2 3B",
+      "gpt4o": "GPT-4o",
+      "mistral": "Mistral 8x7B",
+      "deepseek": "DeepSeek-V2",
+      "others": "Other"
+    },
+    "proofs": {
+      "generated": "Proofs generated",
+      "available": "Exports available",
+      "downloaded": "Exports downloaded",
+      "totalSize": "Total exported size",
+      "lastExport": "Last export"
+    },
+    "exportBtn": {
+      "results": "Export results",
+      "schedule": "Schedule a replay",
+      "log": "View replay log",
+      "all": "View exports & proofs"
+    },
+    "rail": {
+      "realtime": "Real-time data",
+      "compareBaseline": "Compare to a baseline",
+      "allServices": "All services",
+      "replayNow": "Replay now",
+      "shortcuts": "Time shortcuts",
+      "now": "Now (live)",
+      "custom": "Custom",
+      "activity": "Replay activity (live)",
+      "viewJournal": "View whole log"
+    },
+    "viewAll": {
+      "all": "View all",
+      "deviations": "View all deviations",
+      "regressions": "View all regressions",
+      "categories": "View all categories",
+      "services": "View all services",
+      "models": "View all models",
+      "comparisons": "View all comparisons"
+    },
+    "footer": {
+      "environment": "Environment: {env}",
+      "services": "Services: {n}",
+      "activeUsers": "Active users: {n}",
+      "confidence": "Confidence level: {level}",
+      "chain": "Audit chain intact",
+      "source": "Source of truth: {src}",
+      "soc": "SOC connected"
+    }
   }
 }

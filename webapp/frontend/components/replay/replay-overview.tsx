@@ -1,0 +1,772 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import {
+  Activity,
+  ChevronRight,
+  Database,
+  Download,
+  FileSearch,
+  GitCompare,
+  RefreshCcw,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
+
+import { MetricSparkline } from "@/components/overview/metric-sparkline";
+import {
+  TemporalRail,
+  useRailTimeline,
+  useTemporalState,
+} from "@/components/overview/temporal-rail";
+import { Button } from "@/components/ui/button";
+import { fetchReplayShadowOverview } from "@/lib/api/client";
+import type { ReplayShadowOverview } from "@/lib/api/schemas";
+import { cn } from "@/lib/cn";
+
+const SEV_TEXT: Record<string, string> = {
+  critique: "text-red-300",
+  eleve: "text-amber-300",
+  moyen: "text-yellow-300",
+  faible: "text-sky-300",
+};
+const STATUS_BADGE: Record<string, string> = {
+  rejouee: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  termine: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  encours: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  error: "border-red-500/30 bg-red-500/15 text-red-300",
+};
+
+const TABS = [
+  "overview",
+  "sessions",
+  "shadow",
+  "comparisons",
+  "baselines",
+  "diffs",
+  "evals",
+  "exports",
+] as const;
+
+type T = ReturnType<typeof useTranslations<"replay">>;
+type Data = ReplayShadowOverview;
+
+export function ReplayOverview() {
+  const t = useTranslations("replay");
+  const temporal = useTemporalState();
+  const railTimeline = useRailTimeline();
+  const { data } = useQuery({
+    queryKey: ["replay-shadow-overview"],
+    queryFn: ({ signal }) => fetchReplayShadowOverview(signal),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+
+  if (!data) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-[var(--tessera-text-muted)]">
+        …
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+      <CommandBar t={t} />
+      <TemporalRail
+        mode={temporal.mode}
+        liveStatus={t("rail.realtime")}
+        timeline={railTimeline.data}
+        selectedAt={temporal.selectedAt}
+        onSelectedAtChange={temporal.setSelectedAt}
+        periodKey={temporal.periodKey}
+        onPeriodChange={temporal.setPeriodKey}
+        onModeChange={temporal.changeMode}
+      />
+
+      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_312px]">
+        <div className="flex min-w-0 flex-col gap-3">
+          {/* A · État actuel */}
+          <Zone label={t("zone.actual")}>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+              {data.kpis.map((kpi) => (
+                <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vs7d")} />
+              ))}
+            </div>
+          </Zone>
+
+          {/* B · Diagnostic des écarts */}
+          <Zone label={t("zone.diagnostic")}>
+            <div className="grid gap-3 xl:grid-cols-12">
+              <TrafficChart t={t} data={data} className="xl:col-span-4" />
+              <Panel title={t("panel.devByType")} className="xl:col-span-2">
+                <Donut
+                  slices={data.deviation_by_type}
+                  total={data.deviation_total}
+                  caption={t("legend.critical")}
+                  labelOf={(k) => t(`type.${k}`)}
+                />
+              </Panel>
+              <Panel title={t("panel.severity")} className="xl:col-span-2">
+                <Donut
+                  slices={data.deviation_severity}
+                  total={data.deviation_total}
+                  caption={t("legend.critical")}
+                  labelOf={(k) => t(`severity.${k}`)}
+                />
+              </Panel>
+              <RecentSessions t={t} data={data} className="xl:col-span-4" />
+            </div>
+          </Zone>
+
+          {/* C · Écarts & comparaisons */}
+          <Zone label={t("zone.comparisons")}>
+            <div className="grid gap-3 xl:grid-cols-12">
+              <TopDeviations t={t} data={data} className="xl:col-span-6" />
+              <Comparisons t={t} data={data} className="xl:col-span-3" />
+              <Regressions t={t} data={data} className="xl:col-span-3" />
+            </div>
+          </Zone>
+
+          {/* D · Distribution & preuves */}
+          <Zone label={t("zone.distribution")}>
+            <div className="grid gap-3 xl:grid-cols-12">
+              <Panel title={t("panel.byService")} className="xl:col-span-3">
+                <Donut
+                  slices={data.by_service}
+                  total={data.requests_total}
+                  caption={t("kpi.requests").toLowerCase()}
+                  labelOf={(k) => t(`service.${k}`)}
+                  showCount
+                />
+              </Panel>
+              <Panel title={t("panel.byModel")} className="xl:col-span-3">
+                <Donut
+                  slices={data.by_model}
+                  total={data.requests_total}
+                  caption={t("kpi.requests").toLowerCase()}
+                  labelOf={(k) => t(`model.${k}`)}
+                  showCount
+                />
+              </Panel>
+              <EvalsByCategory t={t} data={data} className="xl:col-span-3" />
+              <ProofsExports t={t} data={data} className="xl:col-span-3" />
+            </div>
+          </Zone>
+        </div>
+
+        <ReplayRail t={t} data={data} />
+      </div>
+
+      <Footer t={t} data={data} />
+    </div>
+  );
+}
+
+// ── chrome ───────────────────────────────────────────────────────────────────
+
+function CommandBar({ t }: { t: T }) {
+  return (
+    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            className={cn(
+              "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
+              tab === "overview"
+                ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {t(`tabs.${tab}`)}
+          </button>
+        ))}
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-9 shrink-0 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
+      >
+        <GitCompare className="h-4 w-4" /> {t("rail.compareBaseline")}
+      </Button>
+    </section>
+  );
+}
+
+// ── zone B ───────────────────────────────────────────────────────────────────
+
+function TrafficChart({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const tr = data.replay_traffic;
+  const maxReq = Math.max(...tr.requests, 1);
+  const maxTok = Math.max(...tr.tokens, 1);
+  const W = 240;
+  const H = 86;
+  const n = tr.requests.length;
+  const bw = (W / n) * 0.5;
+  const line = tr.tokens
+    .map((v, i) => `${((i + 0.5) / n) * W},${H - (v / maxTok) * (H - 10)}`)
+    .join(" ");
+  return (
+    <Panel title={t("panel.traffic")} className={className}>
+      <div className="flex flex-col gap-1">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="h-[96px] w-full"
+          aria-hidden="true"
+        >
+          {tr.requests.map((v, i) => {
+            const h = (v / maxReq) * (H - 10);
+            return (
+              <rect
+                // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length daily series never reorders
+                key={i}
+                x={((i + 0.5) / n) * W - bw / 2}
+                y={H - h}
+                width={bw}
+                height={h}
+                rx="1"
+                fill="#2e72d2"
+                opacity="0.7"
+              />
+            );
+          })}
+          <polyline
+            points={line}
+            fill="none"
+            stroke="#34d399"
+            strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        <div className="flex justify-between text-[0.58rem] tabular-nums text-[var(--tessera-text-muted)]">
+          {tr.labels.map((l) => (
+            <span key={l}>{l}</span>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 text-[0.6rem] text-[var(--tessera-text-muted)]">
+          <Legend color="#2e72d2" label={t("legend.requests")} />
+          <Legend color="#34d399" label={t("legend.tokens")} />
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function RecentSessions({ t, data, className }: { t: T; data: Data; className?: string }) {
+  return (
+    <Panel
+      title={t("panel.recentSessions")}
+      className={className}
+      action={<ViewAll label={t("viewAll.all")} />}
+    >
+      <table className="w-full border-collapse text-left text-[0.7rem]">
+        <thead>
+          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="px-1.5 py-1 font-medium">{t("col.id")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("col.service")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("col.model")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("col.status")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("col.origin")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.recent_sessions.map((s) => (
+            <tr key={s.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
+              <td className="px-1.5 py-1 font-mono text-[#87bfff]">{s.id}</td>
+              <td className="px-1.5 py-1 text-[var(--tessera-text)]">{s.service}</td>
+              <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{s.model}</td>
+              <td className="px-1.5 py-1">
+                <StatusBadge status={s.status} t={t} />
+              </td>
+              <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text-muted)]">
+                {s.origin}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Panel>
+  );
+}
+
+// ── zone C ───────────────────────────────────────────────────────────────────
+
+function TopDeviations({ t, data, className }: { t: T; data: Data; className?: string }) {
+  return (
+    <Panel
+      title={t("panel.topDeviations")}
+      className={className}
+      action={<ViewAll label={t("viewAll.deviations")} />}
+    >
+      <table className="w-full border-collapse text-left text-[0.7rem]">
+        <thead>
+          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="px-1.5 py-1 font-medium">{t("col.id")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("col.service")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("col.type")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("col.baseline")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("col.severity")}</th>
+            <th className="px-1.5 py-1 text-right font-medium">{t("col.delta")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.top_deviations.map((d) => (
+            <tr
+              key={`${d.id}-${d.type}`}
+              className="border-b border-[var(--tessera-border)]/60 last:border-0"
+            >
+              <td className="px-1.5 py-1 font-mono text-[#87bfff]">{d.id}</td>
+              <td className="px-1.5 py-1 text-[var(--tessera-text)]">{d.service}</td>
+              <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">
+                {t(`type.${d.type}`)}
+              </td>
+              <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text-muted)]">
+                {d.baseline}
+              </td>
+              <td className={cn("px-1.5 py-1 font-medium", SEV_TEXT[d.severity])}>
+                {t(`severity.${d.severity}`)}
+              </td>
+              <td className="px-1.5 py-1 text-right font-mono tabular-nums text-red-300">
+                {d.delta}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Panel>
+  );
+}
+
+function Comparisons({ t, data, className }: { t: T; data: Data; className?: string }) {
+  return (
+    <Panel
+      title={t("panel.comparisons")}
+      className={className}
+      action={<ViewAll label={t("viewAll.comparisons")} />}
+    >
+      <table className="w-full border-collapse text-left text-[0.7rem]">
+        <thead>
+          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="px-1.5 py-1 font-medium">{t("col.comparison")}</th>
+            <th className="px-1.5 py-1 text-right font-medium">{t("col.sessions")}</th>
+            <th className="px-1.5 py-1 text-right font-medium">{t("col.deviations")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.recent_comparisons.map((c) => (
+            <tr key={c.label} className="border-b border-[var(--tessera-border)]/60 last:border-0">
+              <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text)]">
+                {c.label}
+              </td>
+              <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-text-muted)]">
+                {c.sessions}
+              </td>
+              <td className="px-1.5 py-1 text-right tabular-nums text-amber-300">{c.deviations}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Panel>
+  );
+}
+
+function Regressions({ t, data, className }: { t: T; data: Data; className?: string }) {
+  return (
+    <Panel
+      title={t("panel.regressions")}
+      className={className}
+      action={<ViewAll label={t("viewAll.regressions")} />}
+    >
+      <ul className="flex flex-col gap-1.5">
+        {data.top_regressions.map((r) => (
+          <li key={r.service} className="flex items-center gap-2 text-[0.7rem]">
+            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{r.service}</span>
+            <span className="font-mono tabular-nums text-red-300">{r.delta}</span>
+            <MetricSparkline className="h-4 w-12" values={r.spark} tone="danger" />
+            <span className="w-7 text-right tabular-nums text-[var(--tessera-text-muted)]">
+              {r.critical}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+// ── zone D ───────────────────────────────────────────────────────────────────
+
+function EvalsByCategory({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const max = Math.max(...data.evals_by_category.map((c) => c.pct), 1);
+  return (
+    <Panel
+      title={t("panel.evalsByCat")}
+      className={className}
+      action={<ViewAll label={t("viewAll.categories")} />}
+    >
+      <ul className="flex flex-col gap-2">
+        {data.evals_by_category.map((c) => (
+          <li key={c.key} className="flex items-center gap-2 text-[0.68rem]">
+            <span className="w-24 shrink-0 truncate text-[var(--tessera-text)]">
+              {t(`type.${c.key}`)}
+            </span>
+            <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${(c.pct / max) * 100}%`, background: c.color }}
+              />
+            </div>
+            <span className="w-12 shrink-0 text-right tabular-nums text-[var(--tessera-text-muted)]">
+              {c.count} · {c.pct}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+function ProofsExports({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const p = data.proofs_exports;
+  const rows: [string, string][] = [
+    [t("proofs.generated"), p.generated],
+    [t("proofs.available"), p.available],
+    [t("proofs.downloaded"), p.downloaded],
+    [t("proofs.totalSize"), p.total_size],
+    [t("proofs.lastExport"), p.last_export],
+  ];
+  return (
+    <Panel title={t("panel.proofsExports")} className={className}>
+      <div className="flex flex-col gap-1.5">
+        <dl className="flex flex-col gap-1 text-[0.7rem]">
+          {rows.map(([k, v]) => (
+            <div key={k} className="flex items-center justify-between gap-2">
+              <dt className="text-[var(--tessera-text-muted)]">{k}</dt>
+              <dd className="tabular-nums text-[var(--tessera-text)]">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-1 flex flex-col gap-1">
+          <RailButton icon={Download} label={t("exportBtn.results")} />
+          <RailButton icon={RefreshCcw} label={t("exportBtn.schedule")} />
+          <RailButton icon={FileSearch} label={t("exportBtn.log")} />
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+// ── right rail ───────────────────────────────────────────────────────────────
+
+function ReplayRail({ t, data }: { t: T; data: Data }) {
+  return (
+    <aside className="flex min-w-0 flex-col gap-3">
+      <Panel title={t("rail.compareBaseline")}>
+        <div className="flex flex-col gap-2">
+          <Select options={data.baselines.map((b) => b.label)} />
+          <Select options={[t("rail.allServices"), ...data.services]} />
+          <Button
+            size="sm"
+            className="h-9 w-full justify-center gap-2 border border-[#2e72d2] bg-[#1b4f8a] text-xs text-[#d8eaff] hover:bg-[#22609f]"
+          >
+            <RefreshCcw className="h-4 w-4" /> {t("rail.replayNow")}
+          </Button>
+        </div>
+      </Panel>
+
+      <Panel title={t("rail.shortcuts")}>
+        <div className="flex flex-wrap gap-1.5">
+          {[t("rail.now"), "24h", "7j", "30j", t("rail.custom")].map((s, i) => (
+            <button
+              key={s}
+              type="button"
+              className={cn(
+                "h-7 rounded-md border px-2.5 text-[0.66rem] font-medium transition-colors",
+                i === 2
+                  ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
+                  : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
+              )}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title={t("rail.activity")} action={<ViewAll label={t("rail.viewJournal")} />}>
+        <ul className="flex flex-col gap-1.5">
+          {data.activity_feed.map((a) => (
+            <li key={`${a.id}-${a.time}`} className="flex items-center gap-2 text-[0.7rem]">
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 shrink-0 rounded-full",
+                  a.status === "error"
+                    ? "bg-red-400"
+                    : a.status === "termine"
+                      ? "bg-emerald-400"
+                      : "bg-sky-400",
+                )}
+              />
+              <span className="font-mono text-[0.66rem] text-[#87bfff]">{a.id}</span>
+              <span className="ml-auto tabular-nums text-[var(--tessera-text-muted)]">
+                {a.time}
+              </span>
+              <StatusBadge status={a.status} t={t} />
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </aside>
+  );
+}
+
+// ── footer ───────────────────────────────────────────────────────────────────
+
+function Footer({ t, data }: { t: T; data: Data }) {
+  const f = data.footer;
+  return (
+    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+      <Chip
+        icon={Activity}
+        tone="text-[var(--tessera-green)]"
+        label={t("footer.environment", { env: f.environment })}
+      />
+      <Chip icon={GitCompare} label={t("footer.services", { n: f.services })} />
+      <Chip icon={Users} label={t("footer.activeUsers", { n: f.active_users })} />
+      <Chip
+        icon={ShieldCheck}
+        tone="text-[var(--tessera-green)]"
+        label={t("footer.confidence", { level: f.confidence })}
+      />
+      <Chip icon={ShieldCheck} tone="text-[var(--tessera-green)]" label={t("footer.chain")} />
+      <Chip icon={Database} label={t("footer.source", { src: f.source })} />
+      <Chip icon={ShieldCheck} tone="text-[var(--tessera-green)]" label={t("footer.soc")} />
+    </footer>
+  );
+}
+
+// ── atoms ────────────────────────────────────────────────────────────────────
+
+function Zone({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5">
+      <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+        {label}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function Panel({
+  title,
+  action,
+  children,
+  className,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
+        className,
+      )}
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="min-w-0 truncate text-[0.8rem] font-semibold text-[var(--tessera-text)]">
+          {title}
+        </h3>
+        {action}
+      </div>
+      <div className="min-h-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+function KpiTile({
+  kpi,
+  label,
+  vs,
+}: {
+  kpi: Data["kpis"][number];
+  label: string;
+  vs: string;
+}) {
+  const up = kpi.delta_label.trim().startsWith("+");
+  const good = up === kpi.good_is_up;
+  const magnitude = kpi.delta_label.replace(/^[+-]\s*/, "");
+  return (
+    <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+      <p className="truncate text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">{label}</p>
+      <div className="mt-1 flex items-center gap-2">
+        <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-white">
+          {kpi.value}
+        </span>
+        <MetricSparkline
+          className="h-6 min-w-0 flex-1"
+          values={kpi.series}
+          tone={kpi.good_is_up ? "success" : "danger"}
+        />
+      </div>
+      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
+        <span className={good ? "text-[var(--tessera-green)]" : "text-red-300"}>
+          {up ? "▲" : "▼"} {magnitude}
+        </span>
+        <span className="text-[var(--tessera-text-muted)]">{vs}</span>
+      </div>
+    </div>
+  );
+}
+
+function Donut({
+  slices,
+  total,
+  caption,
+  labelOf,
+  showCount,
+}: {
+  slices: Data["deviation_by_type"];
+  total: number | string;
+  caption: string;
+  labelOf: (key: string) => string;
+  showCount?: boolean;
+}) {
+  const sum = slices.reduce((s, x) => s + x.count, 0) || 1;
+  const R = 28;
+  const C = 2 * Math.PI * R;
+  let off = 0;
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative h-[88px] w-[88px] shrink-0">
+        <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90" aria-hidden="true">
+          <circle
+            cx="36"
+            cy="36"
+            r={R}
+            fill="none"
+            stroke="var(--tessera-border)"
+            strokeWidth="9"
+          />
+          {slices.map((s) => {
+            const frac = s.count / sum;
+            const seg = { dash: frac * C, gap: C - frac * C, o: -off * C };
+            off += frac;
+            return (
+              <circle
+                key={s.key}
+                cx="36"
+                cy="36"
+                r={R}
+                fill="none"
+                stroke={s.color}
+                strokeWidth="9"
+                strokeDasharray={`${seg.dash} ${seg.gap}`}
+                strokeDashoffset={seg.o}
+              />
+            );
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <span className="text-sm font-semibold tabular-nums text-white">{total}</span>
+          <span className="px-1 text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
+            {caption}
+          </span>
+        </div>
+      </div>
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.64rem]">
+        {slices.map((s) => (
+          <li key={s.key} className="flex items-center gap-1.5">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
+            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
+              {labelOf(s.key)}
+            </span>
+            <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
+              {showCount ? `${s.count.toLocaleString("fr-FR")} · ` : ""}
+              {s.pct}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function StatusBadge({ status, t }: { status: string; t: T }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.58rem] font-medium",
+        STATUS_BADGE[status],
+      )}
+    >
+      {t(`status.${status}`)}
+    </span>
+  );
+}
+
+function Select({ options }: { options: string[] }) {
+  return (
+    <div className="relative">
+      <select className="h-9 w-full cursor-pointer appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 pr-8 text-xs text-[var(--tessera-text)] outline-none">
+        {options.map((o) => (
+          <option key={o} className="bg-[var(--tessera-surface)]">
+            {o}
+          </option>
+        ))}
+      </select>
+      <ChevronRight className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-90 text-[var(--tessera-text-muted)]" />
+    </div>
+  );
+}
+
+function RailButton({ icon: Icon, label }: { icon: typeof Download; label: string }) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
+      <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{label}</span>
+    </button>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span className="h-1 w-3 rounded-full" style={{ background: color }} /> {label}
+    </span>
+  );
+}
+
+function ViewAll({ label }: { label: string }) {
+  return (
+    <button
+      type="button"
+      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
+    >
+      {label} <ChevronRight className="h-3 w-3" />
+    </button>
+  );
+}
+
+function Chip({
+  icon: Icon,
+  label,
+  tone,
+}: { icon: typeof Activity; label: string; tone?: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+      <Icon className={cn("h-3.5 w-3.5 shrink-0", tone)} />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}

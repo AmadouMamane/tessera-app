@@ -1939,3 +1939,95 @@ export const IncidentsOverviewSchema = z.object({
 });
 export type IncidentsOverview = z.infer<typeof IncidentsOverviewSchema>;
 export type PriorityIncident = z.infer<typeof PriorityIncidentSchema>;
+
+// ---------------------------------------------------------------------------
+// Replay & shadow (page #11)
+// ---------------------------------------------------------------------------
+
+const RsKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  delta_label: z.string(),
+  good_is_up: z.boolean(),
+  series: z.array(z.number()),
+});
+const RsSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+const RsSessionSchema = z.object({
+  id: z.string(),
+  service: z.string(),
+  model: z.string(),
+  status: z.enum(["rejouee", "termine", "encours", "error"]),
+  origin: z.string(),
+});
+const RsDeviationSchema = z.object({
+  id: z.string(),
+  service: z.string(),
+  type: z.string(),
+  baseline: z.string(),
+  severity: z.enum(["critique", "eleve", "moyen", "faible"]),
+  delta: z.string(),
+});
+const RsComparisonSchema = z.object({
+  label: z.string(),
+  baseline: z.string(),
+  sessions: z.string(),
+  deviations: z.number().int(),
+});
+const RsRegressionSchema = z.object({
+  service: z.string(),
+  delta: z.string(),
+  critical: z.number().int(),
+  spark: z.array(z.number()),
+});
+const RsActivitySchema = z.object({
+  id: z.string(),
+  time: z.string(),
+  status: z.enum(["rejouee", "termine", "encours", "error"]),
+});
+
+export const ReplayShadowOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  period_days: z.number().int(),
+  updated_at: z.string(),
+  kpis: z.array(RsKpiSchema),
+  replay_traffic: z.object({
+    labels: z.array(z.string()),
+    requests: z.array(z.number()),
+    tokens: z.array(z.number()),
+  }),
+  deviation_by_type: z.array(RsSliceSchema),
+  deviation_total: z.number().int(),
+  deviation_severity: z.array(RsSliceSchema),
+  recent_sessions: z.array(RsSessionSchema),
+  top_deviations: z.array(RsDeviationSchema),
+  recent_comparisons: z.array(RsComparisonSchema),
+  top_regressions: z.array(RsRegressionSchema),
+  by_service: z.array(RsSliceSchema),
+  by_model: z.array(RsSliceSchema),
+  requests_total: z.string(),
+  evals_by_category: z.array(RsSliceSchema),
+  proofs_exports: z.object({
+    generated: z.string(),
+    available: z.string(),
+    downloaded: z.string(),
+    total_size: z.string(),
+    last_export: z.string(),
+  }),
+  baselines: z.array(z.object({ value: z.string(), label: z.string() })),
+  services: z.array(z.string()),
+  activity_feed: z.array(RsActivitySchema),
+  footer: z.object({
+    environment: z.string(),
+    services: z.number().int(),
+    active_users: z.string(),
+    confidence: z.string(),
+    source: z.string(),
+  }),
+});
+export type ReplayShadowOverview = z.infer<typeof ReplayShadowOverviewSchema>;

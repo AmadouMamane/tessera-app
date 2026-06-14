@@ -62,6 +62,7 @@ from tessera.observability import (
     refusal as refusal_mod,
     reliability as reliability_mod,
     replay as replay_mod,
+    replay_shadow as replay_shadow_mod,
     reproducibility as reproducibility_mod,
     reranking_contribution as reranking_contribution_mod,
     retrieval_quality as retrieval_quality_mod,
@@ -621,6 +622,21 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/replay-shadow")
+async def observability_replay_shadow() -> dict[str, object]:
+    """Replay & shadow overview (page #11).
+
+    Composes the replay posture, traffic and deviation series, recent / top
+    sessions, baseline comparisons, per-service/model distributions, replayed
+    evals and the live activity feed. Degrades to ``available: false``.
+    """
+    try:
+        return {"available": True, **replay_shadow_mod.compute_replay_shadow_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.replay_shadow: failed: {exc}\n")
         return {"available": False}
 
 

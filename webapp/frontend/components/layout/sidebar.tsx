@@ -35,6 +35,7 @@ type RouteHref =
   | "/chat"
   | "/audit"
   | "/incidents"
+  | "/replay"
   | "/eval"
   | "/observability"
   | "/security"
@@ -81,7 +82,7 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     labelKey: "groups.act",
     items: [
       { href: "/incidents", icon: Wrench, labelKey: "incidents", badge: "11" },
-      { icon: PlayCircle, labelKey: "replay" },
+      { href: "/replay", icon: PlayCircle, labelKey: "replay" },
       { icon: DatabaseZap, labelKey: "curation" },
       { icon: GitBranch, labelKey: "release" },
       { icon: Workflow, labelKey: "automations" },

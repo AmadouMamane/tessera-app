@@ -2595,5 +2595,150 @@
       "source": "Source de vérité : {src}",
       "sync": "Dernière sync : {ago}"
     }
+  },
+  "replay": {
+    "title": "Replay & shadow",
+    "subtitle": "Rejouer précisément des sessions, comparer aux baselines et observer le trafic fantôme.",
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "sessions": "Sessions rejouées",
+      "shadow": "Shadow traffic",
+      "comparisons": "Comparaisons",
+      "baselines": "Baselines",
+      "diffs": "Diffs",
+      "evals": "Évaluations rejouées",
+      "exports": "Exports & preuves"
+    },
+    "delta": {
+      "vs7d": "vs J-7"
+    },
+    "zone": {
+      "actual": "A · État actuel",
+      "diagnostic": "B · Diagnostic des écarts",
+      "comparisons": "C · Écarts & comparaisons",
+      "distribution": "D · Distribution & preuves"
+    },
+    "kpi": {
+      "sessions": "Sessions rejouées",
+      "requests": "Requêtes rejouées",
+      "tokens": "Tokens rejoués",
+      "cost": "Coût de replay",
+      "deviations": "Écarts critiques vs baseline",
+      "evals": "Évaluations rejouées",
+      "proofs": "Preuves générées",
+      "coverage": "Shadow coverage"
+    },
+    "panel": {
+      "traffic": "Trafic rejouable par jour",
+      "devByType": "Écarts vs baseline par type",
+      "severity": "Sévérité des écarts",
+      "recentSessions": "Sessions récentes",
+      "topDeviations": "Écarts — Top 10",
+      "comparisons": "Comparaisons récentes",
+      "regressions": "Top régressions vs baseline",
+      "byService": "Répartition par service",
+      "byModel": "Répartition par modèle",
+      "evalsByCat": "Évaluations rejouées par catégorie",
+      "proofsExports": "Preuves & exports"
+    },
+    "legend": {
+      "requests": "Requêtes",
+      "tokens": "Tokens (M)",
+      "critical": "écarts critiques"
+    },
+    "col": {
+      "id": "Session ID",
+      "service": "Service",
+      "model": "Modèle",
+      "status": "Statut",
+      "origin": "Date d’origine",
+      "type": "Type",
+      "baseline": "Baseline",
+      "severity": "Sévérité",
+      "delta": "Δ Score",
+      "comparison": "Comparaison",
+      "sessions": "Sessions",
+      "deviations": "Écarts",
+      "trend": "Tendance",
+      "critical": "Écarts critiques"
+    },
+    "status": {
+      "rejouee": "Rejouée",
+      "termine": "Terminé",
+      "encours": "En cours",
+      "error": "Erreur"
+    },
+    "severity": {
+      "critique": "Critique",
+      "eleve": "Élevé",
+      "moyen": "Moyen",
+      "faible": "Faible"
+    },
+    "type": {
+      "instruction": "Instruction non suivie",
+      "hallucination": "Hallucination",
+      "toxicity": "Toxicité",
+      "factual": "Qualité factuelle",
+      "confidentiality": "Confidentialité",
+      "robustness": "Robustesse",
+      "others": "Autres"
+    },
+    "service": {
+      "chat_support": "Chat Support",
+      "fraud_risk": "Fraud Risk",
+      "code_copilot": "Code Copilot",
+      "data_analyst": "Data Analyst",
+      "agent_workflow": "Agent Workflow",
+      "others": "Autres"
+    },
+    "model": {
+      "llama": "Llama 3.2 3B",
+      "gpt4o": "GPT-4o",
+      "mistral": "Mistral 8x7B",
+      "deepseek": "DeepSeek-V2",
+      "others": "Autres"
+    },
+    "proofs": {
+      "generated": "Preuves générées",
+      "available": "Exports disponibles",
+      "downloaded": "Exports téléchargés",
+      "totalSize": "Taille totale exportée",
+      "lastExport": "Dernier export"
+    },
+    "exportBtn": {
+      "results": "Exporter les résultats",
+      "schedule": "Programmer un replay",
+      "log": "Voir le journal de replay",
+      "all": "Voir les exports & preuves"
+    },
+    "rail": {
+      "realtime": "Données en temps réel",
+      "compareBaseline": "Comparer à une baseline",
+      "allServices": "Tous les services",
+      "replayNow": "Relire maintenant",
+      "shortcuts": "Raccourcis temporels",
+      "now": "Maintenant (live)",
+      "custom": "Personnalisé",
+      "activity": "Activité de replay (live)",
+      "viewJournal": "Voir tout le journal"
+    },
+    "viewAll": {
+      "all": "Voir tout",
+      "deviations": "Voir tous les écarts",
+      "regressions": "Voir toutes les régressions",
+      "categories": "Voir toutes les catégories",
+      "services": "Voir tous les services",
+      "models": "Voir tous les modèles",
+      "comparisons": "Voir toutes les comparaisons"
+    },
+    "footer": {
+      "environment": "Environnement : {env}",
+      "services": "Services : {n}",
+      "activeUsers": "Utilisateurs actifs : {n}",
+      "confidence": "Niveau de confiance : {level}",
+      "chain": "Chaîne d’audit intacte",
+      "source": "Source de vérité : {src}",
+      "soc": "SOC connecté"
+    }
   }
 }
