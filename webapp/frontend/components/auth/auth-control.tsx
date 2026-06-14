@@ -34,7 +34,24 @@ export function AuthControl() {
   const router = useRouter();
   const role = session?.user?.role;
 
-  if (status === "loading") return null;
+  // Reserve the resolved control's footprint while the session loads, so it
+  // doesn't pop in and reflow the (flex-wrap) header row — which would make the
+  // header "dance" at narrower widths. Mirrors the authenticated button below.
+  if (status === "loading") {
+    return (
+      <div
+        aria-hidden
+        className="flex items-center gap-2 rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] py-1 pl-1 pr-2"
+      >
+        <span className="h-7 w-7 shrink-0 animate-pulse rounded-full bg-[var(--tessera-muted)]" />
+        <span className="hidden min-w-0 flex-col gap-1 sm:flex">
+          <span className="h-3 w-16 animate-pulse rounded bg-[var(--tessera-muted)]" />
+          <span className="h-2.5 w-10 animate-pulse rounded bg-[var(--tessera-muted)]" />
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+      </div>
+    );
+  }
 
   if (!role) {
     return (
