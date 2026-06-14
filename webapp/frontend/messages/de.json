@@ -3377,5 +3377,133 @@
       "total": "{n} Signale",
       "source": "Quelle der Wahrheit: {src}"
     }
+  },
+  "policies": {
+    "title": "Policies & Leitplanken",
+    "subtitle": "Policy-Governance, Runtime-Leitplanken, Freigabe-Workflow und Versionsverlauf.",
+    "actions": {
+      "createDraft": "Draft-Version erstellen",
+      "compareVersions": "Versionen vergleichen",
+      "diffYaml": "YAML-Diff",
+      "rollback": "Rollback",
+      "requestApproval": "Freigabe anfordern"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "activePolicies": "Aktive Policies",
+      "history": "Verlauf & Versionen",
+      "runtimeGuardrails": "Runtime-Leitplanken",
+      "impactSimulator": "Impact-Simulator",
+      "approvals": "Freigaben"
+    },
+    "version": {
+      "active": "Aktive Version",
+      "viewAtDate": "Policy zum Datum",
+      "compareTo": "Vergleichen mit",
+      "effectiveFrom": "Gültig ab",
+      "commit": "Commit",
+      "author": "Autor",
+      "approver": "Freigegeben von",
+      "scope": "Scope",
+      "compareLabel": "Vergleich {active} (aktiv) → {compare}"
+    },
+    "vStatus": {
+      "draft": "Draft",
+      "approved": "Freigegeben",
+      "active": "Aktiv",
+      "canary": "Canary",
+      "archived": "Archiviert"
+    },
+    "kpi": {
+      "active_policies": "Aktive Policies",
+      "blocking_guardrails": "Blockierende Leitplanken",
+      "violations_blocked": "Blockierte Verstöße 24h",
+      "false_positives": "Falsch-Positive 24h",
+      "pending_versions": "Versionen zur Freigabe",
+      "exceptions": "Ausnahmen"
+    },
+    "delta": {
+      "vsHier": "vs. gestern"
+    },
+    "zone": {
+      "activePolicies": "A · Kritische aktive Policies",
+      "history": "B · Verlauf & Versionen (letzte 5)",
+      "diff": "C · YAML-Diff / Änderungen",
+      "guardrails": "D · Runtime-Leitplanken (24h)",
+      "impact": "E · Impact-Simulator",
+      "detail": "Versionsdetail",
+      "sensitive": "Sensible Aktionen",
+      "links": "Schnelllinks"
+    },
+    "col": {
+      "id": "Policy-ID",
+      "name": "Name",
+      "type": "Typ",
+      "action": "Aktion",
+      "scope": "Scope",
+      "version": "Version",
+      "changedBy": "Zuletzt geändert von",
+      "approvedBy": "Freigegeben von",
+      "status": "Status"
+    },
+    "action": {
+      "deny": "deny",
+      "allow": "allow",
+      "warn": "warn"
+    },
+    "type": {
+      "pii": "PII",
+      "injection": "Prompt Injection",
+      "tool": "Tool",
+      "memory": "Memory",
+      "regulatory": "Regulatory"
+    },
+    "pStatus": {
+      "active": "Aktiv",
+      "draft": "Draft",
+      "archived": "Archiviert"
+    },
+    "hCol": {
+      "version": "Version",
+      "datetime": "Datum/Zeit",
+      "author": "Autor",
+      "approver": "Freigegeben von",
+      "status": "Status"
+    },
+    "gr": {
+      "deny_policies": "Deny Policies",
+      "pii_detection": "PII-Erkennung (Blocks)",
+      "attacks_blocked": "Blockierte Angriffe",
+      "tool_denials": "Tool Denials",
+      "pii_blocked": "PII geblockt",
+      "memory_approved": "Memory-Write freigegeben"
+    },
+    "impactCol": {
+      "metric": "Metrik",
+      "baseline": "Baseline",
+      "candidate": "Candidate",
+      "impact": "Impact"
+    },
+    "sensitive": {
+      "rollback": "Rollback auf {v}",
+      "force_activation": "Aktivierung {v} erzwingen",
+      "disable": "Policy deaktivieren",
+      "delete_draft": "Draft-Version löschen",
+      "reservedOps": "Nur für Ops Admin+"
+    },
+    "links": {
+      "audit_journal": "Audit-Protokoll öffnen",
+      "export_siem": "SIEM-Export anzeigen",
+      "evidence_pack": "Evidence-Pack erzeugen",
+      "release_control": "Release Control anzeigen"
+    },
+    "viewAll": {
+      "history": "Ganzen Verlauf anzeigen",
+      "policies": "Alle Policies anzeigen"
+    },
+    "footer": {
+      "source": "Quelle der Wahrheit: {src}",
+      "chain": "{txt}"
+    }
   }
 }

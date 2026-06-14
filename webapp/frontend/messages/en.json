@@ -3377,5 +3377,133 @@
       "total": "{n} signals",
       "source": "Source of truth: {src}"
     }
+  },
+  "policies": {
+    "title": "Policies & guardrails",
+    "subtitle": "Policy governance, runtime guardrails, approval workflow and version history.",
+    "actions": {
+      "createDraft": "Create draft version",
+      "compareVersions": "Compare versions",
+      "diffYaml": "Diff YAML",
+      "rollback": "Rollback",
+      "requestApproval": "Request approval"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activePolicies": "Active policies",
+      "history": "History & versions",
+      "runtimeGuardrails": "Runtime guardrails",
+      "impactSimulator": "Impact simulator",
+      "approvals": "Approvals"
+    },
+    "version": {
+      "active": "Active version",
+      "viewAtDate": "View policy at date",
+      "compareTo": "Compare to",
+      "effectiveFrom": "Effective from",
+      "commit": "Commit",
+      "author": "Author",
+      "approver": "Approved by",
+      "scope": "Scope",
+      "compareLabel": "Compare {active} (active) → {compare}"
+    },
+    "vStatus": {
+      "draft": "Draft",
+      "approved": "Approved",
+      "active": "Active",
+      "canary": "Canary",
+      "archived": "Archived"
+    },
+    "kpi": {
+      "active_policies": "Active policies",
+      "blocking_guardrails": "Blocking guardrails",
+      "violations_blocked": "Violations blocked 24h",
+      "false_positives": "False positives 24h",
+      "pending_versions": "Versions pending approval",
+      "exceptions": "Exceptions"
+    },
+    "delta": {
+      "vsHier": "vs yesterday"
+    },
+    "zone": {
+      "activePolicies": "A · Critical active policies",
+      "history": "B · History & versions (last 5)",
+      "diff": "C · YAML diff / changes",
+      "guardrails": "D · Runtime guardrails (24h)",
+      "impact": "E · Impact simulator",
+      "detail": "Version detail",
+      "sensitive": "Sensitive actions",
+      "links": "Quick links"
+    },
+    "col": {
+      "id": "Policy ID",
+      "name": "Name",
+      "type": "Type",
+      "action": "Action",
+      "scope": "Scope",
+      "version": "Version",
+      "changedBy": "Last changed by",
+      "approvedBy": "Approved by",
+      "status": "Status"
+    },
+    "action": {
+      "deny": "deny",
+      "allow": "allow",
+      "warn": "warn"
+    },
+    "type": {
+      "pii": "PII",
+      "injection": "Prompt Injection",
+      "tool": "Tool",
+      "memory": "Memory",
+      "regulatory": "Regulatory"
+    },
+    "pStatus": {
+      "active": "Active",
+      "draft": "Draft",
+      "archived": "Archived"
+    },
+    "hCol": {
+      "version": "Version",
+      "datetime": "Date/Time",
+      "author": "Author",
+      "approver": "Approved by",
+      "status": "Status"
+    },
+    "gr": {
+      "deny_policies": "Deny policies",
+      "pii_detection": "PII detection (blocks)",
+      "attacks_blocked": "Attacks blocked",
+      "tool_denials": "Tool denials",
+      "pii_blocked": "PII blocked",
+      "memory_approved": "Memory writes approved"
+    },
+    "impactCol": {
+      "metric": "Metric",
+      "baseline": "Baseline",
+      "candidate": "Candidate",
+      "impact": "Impact"
+    },
+    "sensitive": {
+      "rollback": "Rollback to {v}",
+      "force_activation": "Force activation {v}",
+      "disable": "Disable policy",
+      "delete_draft": "Delete draft version",
+      "reservedOps": "Reserved for Ops Admin+"
+    },
+    "links": {
+      "audit_journal": "Open audit log",
+      "export_siem": "View SIEM export",
+      "evidence_pack": "Generate evidence pack",
+      "release_control": "View release control"
+    },
+    "viewAll": {
+      "history": "View full history",
+      "policies": "View all policies"
+    },
+    "footer": {
+      "source": "Source of truth: {src}",
+      "chain": "{txt}"
+    }
   }
 }

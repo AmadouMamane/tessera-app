@@ -2387,3 +2387,78 @@ export const SignalCatalogueSchema = z.object({
   footer: z.object({ total: z.number().int(), source: z.string() }),
 });
 export type SignalCatalogue = z.infer<typeof SignalCatalogueSchema>;
+
+// ---------------------------------------------------------------------------
+// Policies & guardrails (page #16-policies)
+// ---------------------------------------------------------------------------
+
+const PolKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  delta_label: z.string(),
+  good_is_up: z.boolean(),
+  series: z.array(z.number()),
+});
+
+export const PoliciesOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  active_version: z.string(),
+  compare_to: z.string(),
+  version_timeline: z.array(
+    z.object({
+      version: z.string(),
+      status: z.enum(["draft", "approved", "active", "canary", "archived"]),
+      date: z.string(),
+    }),
+  ),
+  version_detail: z.object({
+    version: z.string(),
+    effective_from: z.string(),
+    commit: z.string(),
+    author: z.string(),
+    approver: z.string(),
+    scope: z.string(),
+  }),
+  kpis: z.array(PolKpiSchema),
+  active_policies: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.string(),
+      action: z.enum(["deny", "allow", "warn"]),
+      scope: z.string(),
+      version: z.string(),
+      changed_by: z.string(),
+      approved_by: z.string(),
+      status: z.enum(["active", "draft", "archived"]),
+    }),
+  ),
+  version_history: z.array(
+    z.object({
+      version: z.string(),
+      datetime: z.string(),
+      author: z.string(),
+      approver: z.string(),
+      status: z.enum(["draft", "approved", "active", "canary", "archived"]),
+    }),
+  ),
+  diff: z.object({
+    title: z.string(),
+    lines: z.array(z.object({ type: z.enum(["context", "added", "removed"]), text: z.string() })),
+  }),
+  guardrails: z.array(z.object({ key: z.string(), value: z.string(), pct: z.number() })),
+  impact: z.array(
+    z.object({
+      metric: z.string(),
+      baseline: z.string(),
+      candidate: z.string(),
+      delta: z.string(),
+      tone: z.enum(["ok", "warn", "bad", "neutral"]),
+    }),
+  ),
+  sensitive_actions: z.array(z.object({ key: z.string(), role: z.string() })),
+  quick_links: z.array(z.string()),
+  footer: z.object({ source: z.string(), chain: z.string() }),
+});
+export type PoliciesOverview = z.infer<typeof PoliciesOverviewSchema>;

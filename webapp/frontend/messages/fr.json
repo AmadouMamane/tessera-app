@@ -3377,5 +3377,133 @@
       "total": "{n} signaux",
       "source": "Source de vérité : {src}"
     }
+  },
+  "policies": {
+    "title": "Policies & garde-fous",
+    "subtitle": "Gouvernance des politiques, garde-fous runtime, workflow d’approbation et historique des versions.",
+    "actions": {
+      "createDraft": "Créer version draft",
+      "compareVersions": "Comparer versions",
+      "diffYaml": "Diff YAML",
+      "rollback": "Rollback",
+      "requestApproval": "Demander approbation"
+    },
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "activePolicies": "Politiques actives",
+      "history": "Historique & versions",
+      "runtimeGuardrails": "Garde-fous runtime",
+      "impactSimulator": "Simulateur d’impact",
+      "approvals": "Approbations"
+    },
+    "version": {
+      "active": "Version active",
+      "viewAtDate": "Voir politique à date",
+      "compareTo": "Comparer à",
+      "effectiveFrom": "Effective from",
+      "commit": "Commit",
+      "author": "Auteur",
+      "approver": "Approuvé par",
+      "scope": "Scope",
+      "compareLabel": "Comparer {active} (active) → {compare}"
+    },
+    "vStatus": {
+      "draft": "Draft",
+      "approved": "Approved",
+      "active": "Active",
+      "canary": "Canary",
+      "archived": "Archivé"
+    },
+    "kpi": {
+      "active_policies": "Politiques actives",
+      "blocking_guardrails": "Garde-fous bloquants",
+      "violations_blocked": "Violations bloquées 24h",
+      "false_positives": "Faux positifs 24h",
+      "pending_versions": "Versions en attente d’approbation",
+      "exceptions": "Exceptions"
+    },
+    "delta": {
+      "vsHier": "vs hier"
+    },
+    "zone": {
+      "activePolicies": "A · Politiques critiques actives",
+      "history": "B · Historique & versions (5 dernières)",
+      "diff": "C · Diff YAML / changements",
+      "guardrails": "D · Garde-fous runtime (24h)",
+      "impact": "E · Simulateur d’impact",
+      "detail": "Détail version",
+      "sensitive": "Actions sensibles",
+      "links": "Liens rapides"
+    },
+    "col": {
+      "id": "Policy ID",
+      "name": "Nom",
+      "type": "Type",
+      "action": "Action",
+      "scope": "Scope",
+      "version": "Version",
+      "changedBy": "Last changed by",
+      "approvedBy": "Approved by",
+      "status": "Statut"
+    },
+    "action": {
+      "deny": "deny",
+      "allow": "allow",
+      "warn": "warn"
+    },
+    "type": {
+      "pii": "PII",
+      "injection": "Prompt Injection",
+      "tool": "Tool",
+      "memory": "Memory",
+      "regulatory": "Regulatory"
+    },
+    "pStatus": {
+      "active": "Active",
+      "draft": "Draft",
+      "archived": "Archivé"
+    },
+    "hCol": {
+      "version": "Version",
+      "datetime": "Date/Heure",
+      "author": "Auteur",
+      "approver": "Approuvé par",
+      "status": "Statut"
+    },
+    "gr": {
+      "deny_policies": "Deny policies",
+      "pii_detection": "PII detection (blocages)",
+      "attacks_blocked": "Attaques bloquées",
+      "tool_denials": "Tool denials",
+      "pii_blocked": "PII bloqué",
+      "memory_approved": "Mémoire write approuvées"
+    },
+    "impactCol": {
+      "metric": "Métrique",
+      "baseline": "Baseline",
+      "candidate": "Candidate",
+      "impact": "Impact"
+    },
+    "sensitive": {
+      "rollback": "Rollback vers {v}",
+      "force_activation": "Forcer activation {v}",
+      "disable": "Désactiver politique",
+      "delete_draft": "Supprimer version draft",
+      "reservedOps": "Réservé aux Ops Admin+"
+    },
+    "links": {
+      "audit_journal": "Ouvrir journal d’audit",
+      "export_siem": "Voir export SIEM",
+      "evidence_pack": "Générer evidence pack",
+      "release_control": "Voir release control"
+    },
+    "viewAll": {
+      "history": "Voir tout l’historique",
+      "policies": "Voir toutes les politiques"
+    },
+    "footer": {
+      "source": "Source de vérité : {src}",
+      "chain": "{txt}"
+    }
   }
 }

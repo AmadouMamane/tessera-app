@@ -119,6 +119,8 @@ import {
   PIILeakSummarySchema,
   type PlaybookReport,
   PlaybookReportSchema,
+  type PoliciesOverview,
+  PoliciesOverviewSchema,
   type PredictorEvaluation,
   PredictorEvaluationSchema,
   type PrivilegeReport,
@@ -683,6 +685,10 @@ export async function fetchProofsOverview(signal?: AbortSignal): Promise<ProofsO
 
 export async function fetchSignalCatalogue(signal?: AbortSignal): Promise<SignalCatalogue> {
   return request("/observability/signal-catalogue", { signal }, SignalCatalogueSchema);
+}
+
+export async function fetchPoliciesOverview(signal?: AbortSignal): Promise<PoliciesOverview> {
+  return request("/observability/policies", { signal }, PoliciesOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

@@ -59,6 +59,7 @@ from tessera.observability import (
     obs_cost as obs_cost_mod,
     pii_leak as pii_leak_mod,
     playbooks as playbooks_mod,
+    policies as policies_mod,
     proofs as proofs_mod,
     provenance as provenance_mod,
     redteam as redteam_mod,
@@ -626,6 +627,21 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/policies")
+async def observability_policies() -> dict[str, object]:
+    """Policies & guardrails overview (page #16-policies).
+
+    Composes the version timeline, posture KPIs, critical active policies,
+    version history, YAML diff, runtime guardrails, impact simulator and
+    sensitive actions. Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **policies_mod.compute_policies_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.policies: failed: {exc}\n")
         return {"available": False}
 
 
