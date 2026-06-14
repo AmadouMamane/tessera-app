@@ -324,6 +324,10 @@ export const ReliabilityReportSchema = z.object({
   services: z.array(ReliabilityServiceRowSchema).optional(),
   providers: z.array(ReliabilityProviderRowSchema).optional(),
   incidents: z.array(ReliabilityIncidentSchema).optional(),
+  volume_series: z.array(z.number()).optional(),
+  volume_delta: z.number().nullable().optional(),
+  quality_series: z.array(z.number()).optional(),
+  quality_delta: z.number().nullable().optional(),
 });
 export type ReliabilityReport = z.infer<typeof ReliabilityReportSchema>;
 export type ReliabilityCostRow = z.infer<typeof ReliabilityCostRowSchema>;

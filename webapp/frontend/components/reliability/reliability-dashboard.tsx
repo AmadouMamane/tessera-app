@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   Boxes,
@@ -14,6 +14,11 @@ import {
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import {
+  TemporalRail,
+  useRailTimeline,
+  useTemporalState,
+} from "@/components/overview/temporal-rail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,13 +57,58 @@ const ms = (v: number | null) =>
   v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(2)}s` : `${Math.round(v)}ms`;
 const pct = (v: number | null | undefined, d = 1) => (v == null ? "—" : `${(v * 100).toFixed(d)}%`);
 
+function Sec({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      {children}
+    </h2>
+  );
+}
+
+/** A translucent banded section grouping one cockpit zone (A · B · C · …). */
+function Zone({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5">
+      <Sec>{label}</Sec>
+      <div className="mt-1.5">{children}</div>
+    </section>
+  );
+}
+
+/** Tiny sparkline over a real value series. */
+function Spark({ values }: { values: number[] }) {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const W = 100;
+  const H = 22;
+  const d = values
+    .map(
+      (v, i) =>
+        `${i === 0 ? "M" : "L"}${((i / (values.length - 1)) * W).toFixed(1)},${(
+          H - ((v - min) / span) * H
+        ).toFixed(1)}`,
+    )
+    .join(" ");
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="h-5 w-full"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path d={d} fill="none" stroke="#10b981" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function Panel({ title, children, note }: { title: string; children: ReactNode; note?: string }) {
   return (
-    <Card className="min-w-0">
+    <Card className="flex h-full min-w-0 flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="text-[0.78rem] font-medium">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1">
         {children}
         {note ? <p className="mt-1 text-[0.6rem] text-[var(--muted-foreground)]">{note}</p> : null}
       </CardContent>
@@ -72,7 +122,25 @@ function Kpi({
   value,
   sub,
   tone,
-}: { icon: LucideIcon; label: string; value: string; sub?: string; tone?: string }) {
+  series,
+  delta,
+  deltaUnit,
+  deltaUpIsGood,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: string;
+  series?: number[];
+  delta?: number | null;
+  deltaUnit?: "pts" | "%";
+  deltaUpIsGood?: boolean;
+}) {
+  const tr = useTranslations("reliability");
+  const showDelta = delta != null && Math.abs(delta) >= 0.005;
+  const up = (delta ?? 0) > 0;
+  const deltaGood = up === (deltaUpIsGood ?? true);
   return (
     <Card className="flex flex-col gap-0.5 p-3">
       <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
@@ -82,9 +150,18 @@ function Kpi({
       <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
         {value}
       </div>
-      {sub ? (
+      {showDelta ? (
+        <div className="flex items-center gap-1 text-[0.65rem] tabular-nums">
+          <span className={`whitespace-nowrap ${deltaGood ? GOOD : BAD}`}>
+            {up ? "↗" : "↘"} {Math.abs((delta as number) * 100).toFixed(0)}
+            {deltaUnit === "%" ? " %" : ` ${tr("kpi.pts")}`}
+          </span>
+          <span className="truncate text-[var(--muted-foreground)]">{tr("kpi.vsPrev")}</span>
+        </div>
+      ) : sub ? (
         <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{sub}</div>
       ) : null}
+      {series && series.length > 1 ? <Spark values={series} /> : null}
     </Card>
   );
 }
@@ -171,10 +248,14 @@ const POLL = 30_000;
 
 export function ReliabilityDashboard() {
   const tr = useTranslations("reliability");
+  const temporal = useTemporalState();
+  const { historyMode } = temporal;
+  const railTimeline = useRailTimeline();
   const q = useQuery({
     queryKey: ["reliability"],
     queryFn: ({ signal }) => fetchReliability(signal),
-    refetchInterval: POLL,
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : POLL,
   });
   const d = q.data;
 
@@ -209,160 +290,184 @@ export function ReliabilityDashboard() {
         ))}
       </nav>
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
-        <Kpi
-          icon={ShieldCheck}
-          label={tr("kpi.availability")}
-          value={pct(d.availability, 2)}
-          tone={(d.availability ?? 0) >= 0.99 ? GOOD : WARN}
-          sub={tr("kpi.sla")}
-        />
-        <Kpi
-          icon={Activity}
-          label={tr("kpi.errorRate")}
-          value={pct(d.error_rate, 2)}
-          tone={(d.error_rate ?? 0) < 0.01 ? GOOD : WARN}
-        />
-        <Kpi
-          icon={Timer}
-          label={tr("kpi.p50")}
-          value={ms(d.latency_p50_ms ?? null)}
-          tone={GOOD}
-          sub={tr("kpi.estimated")}
-        />
-        <Kpi
-          icon={Timer}
-          label={tr("kpi.p95")}
-          value={ms(d.latency_p95_ms ?? null)}
-          tone={WARN}
-          sub={tr("kpi.estimated")}
-        />
-        <Kpi
-          icon={Wrench}
-          label={tr("kpi.toolSuccess")}
-          value={pct(d.tool_success, 2)}
-          tone={(d.tool_success ?? 0) >= 0.95 ? GOOD : WARN}
-        />
-        <Kpi
-          icon={Coins}
-          label={tr("kpi.totalCost")}
-          value={eur(d.total_cost_eur ?? 0, 4)}
-          tone={GOOD}
-          sub={tr("kpi.window")}
-        />
-        <Kpi
-          icon={Coins}
-          label={tr("kpi.costPerReq")}
-          value={eur(d.cost_per_request_eur ?? 0, 6)}
-          tone={GOOD}
-        />
-        <Kpi
-          icon={Boxes}
-          label={tr("kpi.requests")}
-          value={`${(d.n_requests ?? 0).toLocaleString("fr-FR")}`}
-          sub={`${(d.total_tokens ?? 0).toLocaleString("fr-FR")} ${tr("kpi.tokens")}`}
-        />
-      </div>
+      {/* Shared temporal rail (Live / Replay as-of-T) */}
+      <TemporalRail
+        mode={temporal.mode}
+        liveStatus={tr("status.realtime")}
+        timeline={railTimeline.data}
+        selectedAt={temporal.selectedAt}
+        onSelectedAtChange={temporal.setSelectedAt}
+        periodKey={temporal.periodKey}
+        onPeriodChange={temporal.setPeriodKey}
+        onModeChange={temporal.changeMode}
+      />
 
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-2">
-          {/* Row 1 — errors donut · providers · budget */}
-          <div className="grid items-start gap-2 lg:grid-cols-3">
-            <Panel title={tr("panel.errors", { n: errSlices.reduce((s, x) => s + x.count, 0) })}>
-              {errSlices.length === 0 ? (
-                <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
-                  {tr("noErrors")}
-                </p>
-              ) : (
-                <Donut slices={errSlices} />
-              )}
-            </Panel>
-            <Panel title={tr("panel.providers")}>
-              <div className="flex flex-col gap-1.5">
-                {(d.providers ?? []).map((p) => (
-                  <Bar key={p.provider} label={p.provider} value={p.n_requests} max={maxProv} />
-                ))}
-              </div>
-            </Panel>
-            <Panel title={tr("panel.budget")} note={tr("panel.budgetNote")}>
-              <div className="flex items-end gap-2">
-                <span className="text-2xl font-semibold tabular-nums">
-                  {eur(d.budget_spent_eur ?? 0)}
-                </span>
-                <span className="pb-1 text-xs text-[var(--muted-foreground)]">
-                  / {eur(d.budget_monthly_eur ?? 0, 0)}
-                </span>
-              </div>
-              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--tessera-muted)]/50">
-                <div
-                  className="h-full rounded-full bg-[var(--tessera-green)]"
-                  style={{ width: `${Math.min(100, budgetUsed * 100)}%` }}
-                />
-              </div>
-              <div className="mt-1 flex justify-between text-[0.65rem] text-[var(--muted-foreground)]">
-                <span>{pct(budgetUsed)}</span>
-                <span>
-                  {tr("panel.projected")}: {eur(d.budget_projected_eur ?? 0)}
-                </span>
-              </div>
-            </Panel>
-          </div>
-
-          {/* Row 2 — cost by model */}
-          <Panel title={tr("panel.costByModel", { n: d.models?.length ?? 0 })}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[0.72rem]">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                    <th className="py-1 pr-2 font-medium">{tr("col.model")}</th>
-                    <th className="py-1 pr-2 font-medium">{tr("col.provider")}</th>
-                    <th className="py-1 pr-2 text-right font-medium">{tr("col.requests")}</th>
-                    <th className="py-1 pr-2 text-right font-medium">{tr("col.cost")}</th>
-                    <th className="py-1 pr-2 text-right font-medium">{tr("col.passRate")}</th>
-                    <th className="py-1 text-right font-medium">{tr("col.latency")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(d.models ?? []).map((m) => (
-                    <ModelRow key={m.model} m={m} />
-                  ))}
-                </tbody>
-              </table>
+          {/* A. Posture opérationnelle */}
+          <Zone label={tr("sec.actual")}>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
+              <Kpi
+                icon={ShieldCheck}
+                label={tr("kpi.availability")}
+                value={pct(d.availability, 2)}
+                tone={(d.availability ?? 0) >= 0.99 ? GOOD : WARN}
+                sub={tr("kpi.sla")}
+              />
+              <Kpi
+                icon={Activity}
+                label={tr("kpi.errorRate")}
+                value={pct(d.error_rate, 2)}
+                tone={(d.error_rate ?? 0) < 0.01 ? GOOD : WARN}
+              />
+              <Kpi
+                icon={Timer}
+                label={tr("kpi.p50")}
+                value={ms(d.latency_p50_ms ?? null)}
+                tone={GOOD}
+                sub={tr("kpi.estimated")}
+              />
+              <Kpi
+                icon={Timer}
+                label={tr("kpi.p95")}
+                value={ms(d.latency_p95_ms ?? null)}
+                tone={WARN}
+                sub={tr("kpi.estimated")}
+              />
+              <Kpi
+                icon={Wrench}
+                label={tr("kpi.toolSuccess")}
+                value={pct(d.tool_success, 2)}
+                tone={(d.tool_success ?? 0) >= 0.95 ? GOOD : WARN}
+              />
+              <Kpi
+                icon={Coins}
+                label={tr("kpi.totalCost")}
+                value={eur(d.total_cost_eur ?? 0, 4)}
+                tone={GOOD}
+                sub={tr("kpi.window")}
+              />
+              <Kpi
+                icon={Coins}
+                label={tr("kpi.costPerReq")}
+                value={eur(d.cost_per_request_eur ?? 0, 6)}
+                tone={GOOD}
+              />
+              <Kpi
+                icon={Boxes}
+                label={tr("kpi.requests")}
+                value={`${(d.n_requests ?? 0).toLocaleString("fr-FR")}`}
+                sub={`${(d.total_tokens ?? 0).toLocaleString("fr-FR")} ${tr("kpi.tokens")}`}
+                series={d.volume_series}
+                delta={d.volume_delta}
+                deltaUnit="%"
+                deltaUpIsGood
+              />
             </div>
-          </Panel>
+          </Zone>
 
-          {/* Row 3 — performance par service · incidents */}
-          <div className="grid items-start gap-2 lg:grid-cols-2">
-            <Panel title={tr("panel.services")}>
-              <table className="w-full text-[0.72rem]">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                    <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
-                    <th className="py-1 pr-2 text-right font-medium">{tr("col.success")}</th>
-                    <th className="py-1 pr-2 text-right font-medium">{tr("col.p50")}</th>
-                    <th className="py-1 text-right font-medium">{tr("col.requests")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(d.services ?? []).map((s) => (
-                    <ServiceRow key={s.name} s={s} />
-                  ))}
-                </tbody>
-              </table>
-            </Panel>
-            <Panel title={tr("panel.incidents", { n: d.incidents?.length ?? 0 })}>
-              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-                {(d.incidents ?? []).length === 0 ? (
-                  <li className="text-[var(--muted-foreground)]">{tr("noIncidents")}</li>
+          {/* B. Fiabilité & budget */}
+          <Zone label={tr("sec.reliability")}>
+            <div className="grid gap-2 lg:grid-cols-3">
+              <Panel title={tr("panel.errors", { n: errSlices.reduce((s, x) => s + x.count, 0) })}>
+                {errSlices.length === 0 ? (
+                  <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                    {tr("noErrors")}
+                  </p>
                 ) : (
-                  (d.incidents ?? []).map((inc, i) => (
-                    <IncidentRow key={`${inc.type}-${i}`} inc={inc} />
-                  ))
+                  <Donut slices={errSlices} />
                 )}
-              </ul>
+              </Panel>
+              <Panel title={tr("panel.providers")}>
+                <div className="flex flex-col gap-1.5">
+                  {(d.providers ?? []).map((p) => (
+                    <Bar key={p.provider} label={p.provider} value={p.n_requests} max={maxProv} />
+                  ))}
+                </div>
+              </Panel>
+              <Panel title={tr("panel.budget")} note={tr("panel.budgetNote")}>
+                <div className="flex items-end gap-2">
+                  <span className="text-2xl font-semibold tabular-nums">
+                    {eur(d.budget_spent_eur ?? 0)}
+                  </span>
+                  <span className="pb-1 text-xs text-[var(--muted-foreground)]">
+                    / {eur(d.budget_monthly_eur ?? 0, 0)}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--tessera-muted)]/50">
+                  <div
+                    className="h-full rounded-full bg-[var(--tessera-green)]"
+                    style={{ width: `${Math.min(100, budgetUsed * 100)}%` }}
+                  />
+                </div>
+                <div className="mt-1 flex justify-between text-[0.65rem] text-[var(--muted-foreground)]">
+                  <span>{pct(budgetUsed)}</span>
+                  <span>
+                    {tr("panel.projected")}: {eur(d.budget_projected_eur ?? 0)}
+                  </span>
+                </div>
+              </Panel>
+            </div>
+          </Zone>
+
+          {/* C. Coûts par modèle */}
+          <Zone label={tr("sec.cost")}>
+            <Panel title={tr("panel.costByModel", { n: d.models?.length ?? 0 })}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[0.72rem]">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                      <th className="py-1 pr-2 font-medium">{tr("col.model")}</th>
+                      <th className="py-1 pr-2 font-medium">{tr("col.provider")}</th>
+                      <th className="py-1 pr-2 text-right font-medium">{tr("col.requests")}</th>
+                      <th className="py-1 pr-2 text-right font-medium">{tr("col.cost")}</th>
+                      <th className="py-1 pr-2 text-right font-medium">{tr("col.passRate")}</th>
+                      <th className="py-1 text-right font-medium">{tr("col.latency")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(d.models ?? []).map((m) => (
+                      <ModelRow key={m.model} m={m} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Panel>
-          </div>
+          </Zone>
+
+          {/* D. Performance & incidents */}
+          <Zone label={tr("sec.performance")}>
+            <div className="grid gap-2 lg:grid-cols-2">
+              <Panel title={tr("panel.services")}>
+                <table className="w-full text-[0.72rem]">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                      <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
+                      <th className="py-1 pr-2 text-right font-medium">{tr("col.success")}</th>
+                      <th className="py-1 pr-2 text-right font-medium">{tr("col.p50")}</th>
+                      <th className="py-1 text-right font-medium">{tr("col.requests")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(d.services ?? []).map((s) => (
+                      <ServiceRow key={s.name} s={s} />
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
+              <Panel title={tr("panel.incidents", { n: d.incidents?.length ?? 0 })}>
+                <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                  {(d.incidents ?? []).length === 0 ? (
+                    <li className="text-[var(--muted-foreground)]">{tr("noIncidents")}</li>
+                  ) : (
+                    (d.incidents ?? []).map((inc, i) => (
+                      <IncidentRow key={`${inc.type}-${i}`} inc={inc} />
+                    ))
+                  )}
+                </ul>
+              </Panel>
+            </div>
+          </Zone>
         </div>
 
         <ReliabilityRail
@@ -372,6 +477,8 @@ export function ReliabilityDashboard() {
           requests={d.n_requests ?? 0}
           cacheOverhead={d.cache_overhead_pct ?? 0}
           withinBudget={d.within_budget ?? true}
+          qualitySeries={d.quality_series ?? []}
+          qualityDelta={d.quality_delta ?? null}
         />
       </div>
 
@@ -448,6 +555,8 @@ function ReliabilityRail({
   requests,
   cacheOverhead,
   withinBudget,
+  qualitySeries,
+  qualityDelta,
 }: {
   spent: number;
   monthly: number;
@@ -455,12 +564,47 @@ function ReliabilityRail({
   requests: number;
   cacheOverhead: number;
   withinBudget: boolean;
+  qualitySeries: number[];
+  qualityDelta: number | null;
 }) {
   const tr = useTranslations("reliability");
   const used = monthly ? spent / monthly : 0;
+  const qUp = (qualityDelta ?? 0) > 0;
+  const showQDelta = qualityDelta != null && Math.abs(qualityDelta) >= 0.005;
+  const quickActions: { key: string; icon: LucideIcon }[] = [
+    { key: "qaForecast", icon: CalendarClock },
+    { key: "qaOptimize", icon: Coins },
+    { key: "qaIncident", icon: Activity },
+    { key: "qaExport", icon: ShieldCheck },
+  ];
   return (
     <aside className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-col gap-2 xl:sticky xl:top-4">
+        {qualitySeries.length > 1 ? (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">{tr("rail.qualityTrend")}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-xl font-semibold tabular-nums">
+                  {Math.round((qualitySeries.at(-1) ?? 0) * 100)}%
+                </span>
+                {showQDelta ? (
+                  <span className={`text-[0.7rem] tabular-nums ${qUp ? GOOD : BAD}`}>
+                    {qUp ? "↗" : "↘"} {Math.abs((qualityDelta as number) * 100).toFixed(0)}{" "}
+                    {tr("kpi.pts")}
+                  </span>
+                ) : null}
+              </div>
+              <Spark values={qualitySeries} />
+              <p className="text-[0.6rem] text-[var(--muted-foreground)]">
+                {tr("rail.qualityTrendNote")}
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{tr("rail.requests")}</CardTitle>
@@ -497,6 +641,24 @@ function ReliabilityRail({
               label={tr("rail.budgetHeadroom")}
               value={withinBudget ? tr("rail.ok") : tr("rail.tight")}
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{tr("rail.quickActions")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-0.5">
+            {quickActions.map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
+              >
+                <a.icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{tr(`rail.${a.key}`)}</span>
+              </button>
+            ))}
           </CardContent>
         </Card>
 

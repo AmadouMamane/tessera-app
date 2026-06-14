@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 
 from tessera.observability import (
     cost_anomaly as cost_anomaly_mod,
@@ -30,7 +31,8 @@ from tessera.observability import (
     tool_validity as tool_validity_mod,
 )
 from tessera.observability.eval.runs import compare_models, load_runs
-from tessera.observability.eval.scores import recent_scores
+from tessera.observability.eval.scores import persisted_scores, recent_scores
+from tessera.observability.eval.series import compute_score_series
 
 __all__ = [
     "CostRow",
@@ -49,6 +51,16 @@ __all__ = [
 _THROUGHPUT_TOK_S = 240.0
 # Monthly cost budget (governance target, image 08).
 _MONTHLY_BUDGET_EUR = 25_000.0
+
+# Real trends for the KPI strip, read from the durable quality-score log over the
+# trailing window. Honest scope: only the score log carries real multi-day history
+# here (per-request latency/cost are estimated from the *current* token
+# distribution, so they get no fabricated back-history — see the module docstring).
+# We surface what is genuinely measured: scored-turn *volume* per bucket and the
+# composite answer-*quality* trend, each with a period-over-period delta.
+_TREND_METRICS: tuple[str, ...] = ("faithfulness", "grounding")
+_TREND_DAYS = 14
+_TREND_BUCKETS = 7
 
 _PROVIDERS: tuple[tuple[str, str], ...] = (
     ("llama", "Meta"),
@@ -141,10 +153,65 @@ class ReliabilityReport:
     services: list[ServiceRow] = field(default_factory=list)
     providers: list[ProviderRow] = field(default_factory=list)
     incidents: list[Incident] = field(default_factory=list)
+    # Real trends over the trailing window from the durable score log: scored-turn
+    # volume per bucket and the composite answer-quality trend, each with a
+    # period-over-period delta. Empty when the log has no usable history.
+    volume_series: list[int] = field(default_factory=list)
+    volume_delta: float | None = None
+    quality_series: list[float] = field(default_factory=list)
+    quality_delta: float | None = None
 
 
 def _latency_ms(tokens: float) -> float:
     return round((tokens / _THROUGHPUT_TOK_S) * 1000.0, 1)
+
+
+def _trends() -> tuple[list[int], float | None, list[float], float | None]:
+    """Real volume and quality trends from the durable quality-score log.
+
+    Buckets the durably-stored eval scores over the trailing window (honouring
+    as-of-T, ADR 0011): the per-bucket scored-turn count gives a genuine activity
+    sparkline + a current-vs-previous-window delta, and the composite metric mean
+    gives an answer-quality sparkline + delta. Grounded, not fabricated — an empty
+    or unreadable log yields empty series and ``None`` deltas.
+
+    Returns:
+        ``(volume_series, volume_delta, quality_series, quality_delta)`` — per-bucket
+        counts (0-filled), the volume change as a fraction of the previous window,
+        the non-empty composite quality means (0..1), and the composite quality
+        delta (0..1).
+    """
+    try:
+        rows = persisted_scores()
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.reliability: trends failed: {exc}\n")
+        return [], None, [], None
+    if not rows:
+        return [], None, [], None
+    end = datetime.now(UTC)
+    per_metric = [
+        compute_score_series(rows, metric=m, end=end, days=_TREND_DAYS, n_buckets=_TREND_BUCKETS)
+        for m in _TREND_METRICS
+    ]
+    base = per_metric[0]
+    volume_series = [b.n for b in base.buckets]
+    prev = compute_score_series(
+        rows,
+        metric=_TREND_METRICS[0],
+        end=end - timedelta(days=_TREND_DAYS),
+        days=_TREND_DAYS,
+        n_buckets=1,
+    )
+    volume_delta = (base.n - prev.n) / prev.n if prev.n else None
+
+    quality_series: list[float] = []
+    for i in range(_TREND_BUCKETS):
+        means = [m for m in (s.buckets[i].mean for s in per_metric) if m is not None]
+        if means:
+            quality_series.append(sum(means) / len(means))
+    deltas = [d for d in (s.delta for s in per_metric) if d is not None]
+    quality_delta = sum(deltas) / len(deltas) if deltas else None
+    return volume_series, volume_delta, quality_series, quality_delta
 
 
 def compute_reliability() -> ReliabilityReport:
@@ -254,6 +321,8 @@ def compute_reliability() -> ReliabilityReport:
     spent = total_cost_eur
     projected = round(spent * (30.0 / max(1, n_requests)) * n_requests, 2) if n_requests else spent
 
+    volume_series, volume_delta, quality_series, quality_delta = _trends()
+
     return ReliabilityReport(
         availability=availability,
         error_rate=error_rate,
@@ -274,6 +343,10 @@ def compute_reliability() -> ReliabilityReport:
         services=services,
         providers=providers,
         incidents=incidents,
+        volume_series=volume_series,
+        volume_delta=volume_delta,
+        quality_series=quality_series,
+        quality_delta=quality_delta,
     )
 
 

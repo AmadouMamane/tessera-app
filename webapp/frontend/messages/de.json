@@ -2159,7 +2159,9 @@
       "window": "im Fenster",
       "costPerReq": "Kosten / Anfrage",
       "requests": "Anfragen",
-      "tokens": "Tokens"
+      "tokens": "Tokens",
+      "pts": "Pkt.",
+      "vsPrev": "vs Vorper."
     },
     "panel": {
       "errors": "Fehlerverteilung ({n})",
@@ -2192,7 +2194,8 @@
     "status": {
       "chain": "Audit-Kette intakt",
       "truth": "Quelle der Wahrheit: YAML · Git",
-      "soc": "SOC verbunden"
+      "soc": "SOC verbunden",
+      "realtime": "Echtzeit"
     },
     "rail": {
       "requests": "Anfragen (Fenster)",
@@ -2208,7 +2211,20 @@
       "budgetHeadroom": "Budget-Spielraum",
       "ok": "OK",
       "tight": "Knapp",
-      "forecastCta": "Detaillierte Prognose ansehen"
+      "forecastCta": "Detaillierte Prognose ansehen",
+      "quickActions": "Schnellaktionen",
+      "qaForecast": "Budgetprognose",
+      "qaOptimize": "Kosten optimieren",
+      "qaIncident": "Vorfall öffnen",
+      "qaExport": "Bericht exportieren",
+      "qualityTrend": "Qualitätstrend (14T)",
+      "qualityTrendNote": "Mittlerer Qualitätsscore der bewerteten Antworten"
+    },
+    "sec": {
+      "actual": "A · Betriebslage",
+      "reliability": "B · Zuverlässigkeit & Budget",
+      "cost": "C · Kosten pro Modell",
+      "performance": "D · Leistung & Vorfälle"
     }
   },
   "improvement": {
