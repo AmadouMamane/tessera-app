@@ -214,6 +214,15 @@ class ReliabilityReport:
     daily: list[DayPoint] = field(default_factory=list)
     services_cost: list[ServiceCostRow] = field(default_factory=list)
     actions: list[ActionRow] = field(default_factory=list)
+    # Period-over-period deltas for the KPI tiles, vs the immediately preceding
+    # window. ``None`` when the previous period has no data to compare against
+    # (the tile then shows no badge — never a fabricated change). Rate deltas are
+    # raw differences (→ points); cost/latency deltas are relative (→ percent).
+    availability_delta: float | None = None
+    error_rate_delta: float | None = None
+    tool_success_delta: float | None = None
+    latency_p50_delta: float | None = None
+    cost_per_request_delta: float | None = None
 
 
 def _latency_ms(tokens: float) -> float:
@@ -402,6 +411,49 @@ def _trends(
     return volume_series, volume_delta, quality_series, quality_delta
 
 
+@dataclass(frozen=True, slots=True)
+class _Headline:
+    """Headline rate/latency/cost metrics over one window, for vs-previous deltas."""
+
+    availability: float | None
+    error_rate: float | None
+    tool_success: float | None
+    p50: float | None
+    cost_per_request: float | None
+
+
+def _headline(start: datetime, end: datetime) -> _Headline:
+    """Compute the KPI headline metrics over ``[start, end]`` (``None`` where no data)."""
+    tool = tool_validity_mod.compute_tool_validity(at=end.isoformat())
+    if tool.total > 0:
+        avail: float | None = (tool.allowed - tool.errored) / tool.total
+        tool_success: float | None = tool.validity_rate
+        error: float | None = 1.0 - avail  # type: ignore[operator]
+    else:
+        avail = tool_success = error = None
+    bundles = [b for b in replay_mod.persisted_bundles() if _in_window(b.captured_at, start, end)]
+    cpr: float | None = None
+    p50: float | None = None
+    if bundles:
+        cost = cost_anomaly_mod.analyze_costs(
+            [(b.question, f"{b.question}\n{b.context}\n{b.original_answer}") for b in bundles]
+        )
+        if cost.n_turns:
+            cpr = cost.estimated_cost_eur / cost.n_turns
+            p50 = _latency_ms(cost.mean_tokens)
+    return _Headline(avail, error, tool_success, p50, cpr)
+
+
+def _rel_delta(cur: float, prev: float | None) -> float | None:
+    """Relative change ``(cur-prev)/prev`` (percent), ``None`` when no baseline."""
+    return (cur - prev) / prev if prev else None
+
+
+def _abs_delta(cur: float, prev: float | None) -> float | None:
+    """Raw difference ``cur-prev`` (points), ``None`` when no baseline."""
+    return (cur - prev) if prev is not None else None
+
+
 def _incidents(
     cost: cost_anomaly_mod.CostReport, tool: tool_validity_mod.ToolValidityReport, day: str
 ) -> list[Incident]:
@@ -554,6 +606,9 @@ def compute_reliability(
     services_cost = _services_cost(funnel, cost_per_request=cost_per_request)
     actions = _actions(models, funnel, cost, tool)
 
+    # Period-over-period deltas vs the immediately preceding equal window.
+    prev = _headline(start - (end - start), start)
+
     return ReliabilityReport(
         availability=availability,
         error_rate=error_rate,
@@ -582,6 +637,11 @@ def compute_reliability(
         daily=daily,
         services_cost=services_cost,
         actions=actions,
+        availability_delta=_abs_delta(availability, prev.availability),
+        error_rate_delta=_abs_delta(error_rate, prev.error_rate),
+        tool_success_delta=_abs_delta(tool_success, prev.tool_success),
+        latency_p50_delta=_rel_delta(p50, prev.p50),
+        cost_per_request_delta=_rel_delta(cost_per_request, prev.cost_per_request),
     )
 
 

@@ -355,6 +355,11 @@ export const ReliabilityReportSchema = z.object({
   daily: z.array(ReliabilityDayPointSchema).optional(),
   services_cost: z.array(ReliabilityServiceCostRowSchema).optional(),
   actions: z.array(ReliabilityActionRowSchema).optional(),
+  availability_delta: z.number().nullable().optional(),
+  error_rate_delta: z.number().nullable().optional(),
+  tool_success_delta: z.number().nullable().optional(),
+  latency_p50_delta: z.number().nullable().optional(),
+  cost_per_request_delta: z.number().nullable().optional(),
 });
 export type ReliabilityReport = z.infer<typeof ReliabilityReportSchema>;
 export type ReliabilityDayPoint = z.infer<typeof ReliabilityDayPointSchema>;

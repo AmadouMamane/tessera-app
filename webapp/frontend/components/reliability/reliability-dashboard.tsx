@@ -85,8 +85,28 @@ function Spark({ values }: { values: number[] }) {
       preserveAspectRatio="none"
       aria-hidden="true"
     >
+      <line
+        x1="0"
+        y1={H - 0.5}
+        x2={W}
+        y2={H - 0.5}
+        stroke="var(--tessera-border)"
+        strokeWidth="1"
+      />
       <path d={d} fill="none" stroke="#10b981" strokeWidth="1.4" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+/** Placeholder keeping the horizontal axis on every card when a series is absent. */
+function SparkEmpty({ label }: { label: string }) {
+  return (
+    <div className="relative h-5 w-full">
+      <span className="absolute inset-x-0 bottom-0 h-px bg-[var(--tessera-border)]" />
+      <span className="absolute inset-0 flex items-center justify-center text-[0.55rem] text-[var(--muted-foreground)]">
+        {label}
+      </span>
+    </div>
   );
 }
 
@@ -149,7 +169,11 @@ function Kpi({
       ) : sub ? (
         <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{sub}</div>
       ) : null}
-      {series && series.length > 1 ? <Spark values={series} /> : null}
+      {series && series.length > 1 ? (
+        <Spark values={series} />
+      ) : (
+        <SparkEmpty label={tr("noData")} />
+      )}
     </Card>
   );
 }
@@ -375,6 +399,9 @@ export function ReliabilityDashboard() {
                 tone={(d.availability ?? 0) >= 0.99 ? GOOD : WARN}
                 sub={tr("kpi.sla")}
                 series={availLine}
+                delta={d.availability_delta}
+                deltaUnit="pts"
+                deltaUpIsGood
               />
               <Kpi
                 icon={Activity}
@@ -382,6 +409,9 @@ export function ReliabilityDashboard() {
                 value={pct(d.error_rate, 2)}
                 tone={(d.error_rate ?? 0) < 0.01 ? GOOD : WARN}
                 series={errLine}
+                delta={d.error_rate_delta}
+                deltaUnit="pts"
+                deltaUpIsGood={false}
               />
               <Kpi
                 icon={Timer}
@@ -389,6 +419,9 @@ export function ReliabilityDashboard() {
                 value={ms(d.latency_p50_ms ?? null)}
                 tone={GOOD}
                 sub={tr("kpi.estimated")}
+                delta={d.latency_p50_delta}
+                deltaUnit="%"
+                deltaUpIsGood={false}
               />
               <Kpi
                 icon={Timer}
@@ -402,6 +435,9 @@ export function ReliabilityDashboard() {
                 label={tr("kpi.toolSuccess")}
                 value={pct(d.tool_success, 2)}
                 tone={(d.tool_success ?? 0) >= 0.95 ? GOOD : WARN}
+                delta={d.tool_success_delta}
+                deltaUnit="pts"
+                deltaUpIsGood
               />
               <Kpi
                 icon={Coins}
@@ -419,6 +455,9 @@ export function ReliabilityDashboard() {
                 label={tr("kpi.costPerReq")}
                 value={eur(d.cost_per_request_eur ?? 0, 6)}
                 tone={GOOD}
+                delta={d.cost_per_request_delta}
+                deltaUnit="%"
+                deltaUpIsGood={false}
               />
               <Kpi
                 icon={Boxes}

@@ -2267,7 +2267,8 @@
       "d7": "7 jours",
       "d14": "14 jours",
       "d30": "30 jours"
-    }
+    },
+    "noData": "pas de données"
   },
   "improvement": {
     "title": "Amélioration",
