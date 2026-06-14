@@ -2246,6 +2246,13 @@
       "actual": "A · Posture réglementaire",
       "mapping": "B · Cartographie & obligations",
       "controls": "C · Contrôles & incidents"
+    },
+    "footer": {
+      "reference": "Référentiel : v2026.06",
+      "lastReview": "Dernière revue : il y a 2 h",
+      "validProofs": "Preuves valides : 1 105",
+      "source": "Source de vérité : YAML · Git",
+      "audit": "Audit intact"
     }
   },
   "reliability": {

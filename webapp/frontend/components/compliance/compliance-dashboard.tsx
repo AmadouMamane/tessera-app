@@ -12,8 +12,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
+import { ComplianceTabView } from "@/components/compliance/compliance-tab-view";
 import {
   TemporalRail,
   useRailTimeline,
@@ -50,6 +51,7 @@ const TABS = [
   "evidence",
   "registry",
 ] as const;
+type TabKey = (typeof TABS)[number];
 
 function Sec({ children }: { children: ReactNode }) {
   return (
@@ -205,6 +207,7 @@ const POLL = 30_000;
 
 export function ComplianceDashboard() {
   const tc = useTranslations("compliance");
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const temporal = useTemporalState();
   const { historyMode } = temporal;
   const railTimeline = useRailTimeline();
@@ -235,17 +238,19 @@ export function ComplianceDashboard() {
     <div className="flex flex-col gap-2">
       {/* tab bar */}
       <nav className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-[var(--tessera-border)]">
-        {TABS.map((t, i) => (
-          <span
+        {TABS.map((t) => (
+          <button
             key={t}
-            className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[0.8rem] ${
-              i === 0
+            type="button"
+            onClick={() => setActiveTab(t)}
+            className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[0.8rem] transition-colors ${
+              t === activeTab
                 ? "border-[var(--tessera-green)] font-medium text-[var(--tessera-text)]"
-                : "border-transparent text-[var(--muted-foreground)]"
+                : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--tessera-text)]"
             }`}
           >
             {tc(`tabs.${t}`)}
-          </span>
+          </button>
         ))}
       </nav>
 
@@ -261,214 +266,226 @@ export function ComplianceDashboard() {
         onModeChange={temporal.changeMode}
       />
 
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex min-w-0 flex-col gap-2">
-          {/* A. Posture réglementaire */}
-          <Zone label={tc("sec.actual")}>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
-              <Kpi
-                label={tc("kpi.score")}
-                value={`${d.score ?? 0}`}
-                unit="/100"
-                sub={tc("kpi.scoreSub")}
-                tone={(d.score ?? 0) >= 80 ? GOOD : WARN}
-                series={trend}
-                delta={d.score_delta}
-                deltaUpIsGood
-              />
-              <Kpi
-                label={tc("kpi.obligations")}
-                value={`${d.n_applied ?? 0}`}
-                unit={`/${d.n_obligations ?? 0}`}
-                sub={`${Math.round(((d.n_applied ?? 0) / (d.n_obligations || 1)) * 100)}%`}
-                tone={GOOD}
-                series={trend}
-              />
-              <Kpi
-                label={tc("kpi.conformant")}
-                value={`${d.n_conformant ?? 0}`}
-                unit={`/${d.n_controls ?? 0}`}
-                sub={`${Math.round(((d.n_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
-                tone={GOOD}
-                series={trend}
-              />
-              <Kpi
-                label={tc("kpi.partial")}
-                value={`${d.n_partial ?? 0}`}
-                sub={`${Math.round(((d.n_partial ?? 0) / (d.n_controls || 1)) * 100)}%`}
-                tone={WARN}
-              />
-              <Kpi
-                label={tc("kpi.nonConformant")}
-                value={`${d.n_non_conformant ?? 0}`}
-                sub={`${Math.round(((d.n_non_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
-                tone={(d.n_non_conformant ?? 0) > 0 ? BAD : GOOD}
-              />
-              <Kpi
-                label={tc("kpi.residual")}
-                value={`${d.n_residual_risk ?? 0}`}
-                sub={tc("kpi.residualSub")}
-                tone={WARN}
-              />
-              <Kpi
-                label={tc("kpi.deadlines")}
-                value={`${d.n_critical_deadlines ?? 0}`}
-                sub={tc("kpi.deadlinesSub")}
-                tone={(d.n_critical_deadlines ?? 0) > 0 ? BAD : GOOD}
-              />
-            </div>
-          </Zone>
-
-          {/* B. Cartographie · obligations · evidence */}
-          <Zone label={tc("sec.mapping")}>
-            <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)]">
-              <Panel title={tc("panel.mapping")}>
-                <table className="w-full text-[0.72rem]">
-                  <thead>
-                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                      <th className="py-1 pr-2 font-medium">{tc("col.framework")}</th>
-                      <th className="py-1 pr-2 font-medium">{tc("col.score")}</th>
-                      <th className="py-1 font-medium">{tc("col.breakdown")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(d.frameworks ?? []).map((f) => (
-                      <FrameworkRow key={f.code} f={f} />
-                    ))}
-                  </tbody>
-                </table>
-              </Panel>
-
-              <Panel title={tc("panel.obligations", { n: d.obligations?.length ?? 0 })}>
-                <table className="w-full text-[0.72rem]">
-                  <thead>
-                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                      <th className="py-1 pr-2 font-medium">{tc("col.obligation")}</th>
-                      <th className="py-1 pr-2 font-medium">{tc("col.status")}</th>
-                      <th className="py-1 pr-2 font-medium">{tc("col.due")}</th>
-                      <th className="py-1 font-medium">{tc("col.owner")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(d.obligations ?? []).slice(0, 6).map((o) => (
-                      <ObligationRow key={o.name} o={o} fwLabel={fwLabel} />
-                    ))}
-                  </tbody>
-                </table>
-              </Panel>
-
-              <Panel title={tc("panel.evidence")}>
-                <div className="flex items-center gap-3">
-                  <EvidenceDonut completeness={d.evidence_completeness ?? 0} />
-                  <ul className="flex flex-col gap-1 text-[0.7rem]">
-                    <EvRow
-                      color="#10b981"
-                      label={tc("evidence.valid")}
-                      value={d.evidence_valid ?? 0}
-                    />
-                    <EvRow
-                      color="#f59e0b"
-                      label={tc("evidence.missing")}
-                      value={d.evidence_missing ?? 0}
-                    />
-                    <EvRow
-                      color="#ef4444"
-                      label={tc("evidence.blocking")}
-                      value={d.evidence_blocking ?? 0}
-                    />
-                    <li className="pt-1 text-[var(--muted-foreground)]">
-                      {tc("evidence.total", { n: evTotal })}
-                    </li>
-                  </ul>
+      {activeTab !== "overview" && d.tabs?.[activeTab] ? (
+        <ComplianceTabView tab={d.tabs[activeTab]} />
+      ) : (
+        <>
+          <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="flex min-w-0 flex-col gap-2">
+              {/* A. Posture réglementaire */}
+              <Zone label={tc("sec.actual")}>
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
+                  <Kpi
+                    label={tc("kpi.score")}
+                    value={`${d.score ?? 0}`}
+                    unit="/100"
+                    sub={tc("kpi.scoreSub")}
+                    tone={(d.score ?? 0) >= 80 ? GOOD : WARN}
+                    series={trend}
+                    delta={d.score_delta}
+                    deltaUpIsGood
+                  />
+                  <Kpi
+                    label={tc("kpi.obligations")}
+                    value={`${d.n_applied ?? 0}`}
+                    unit={`/${d.n_obligations ?? 0}`}
+                    sub={`${Math.round(((d.n_applied ?? 0) / (d.n_obligations || 1)) * 100)}%`}
+                    tone={GOOD}
+                    series={trend}
+                  />
+                  <Kpi
+                    label={tc("kpi.conformant")}
+                    value={`${d.n_conformant ?? 0}`}
+                    unit={`/${d.n_controls ?? 0}`}
+                    sub={`${Math.round(((d.n_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
+                    tone={GOOD}
+                    series={trend}
+                  />
+                  <Kpi
+                    label={tc("kpi.partial")}
+                    value={`${d.n_partial ?? 0}`}
+                    sub={`${Math.round(((d.n_partial ?? 0) / (d.n_controls || 1)) * 100)}%`}
+                    tone={WARN}
+                  />
+                  <Kpi
+                    label={tc("kpi.nonConformant")}
+                    value={`${d.n_non_conformant ?? 0}`}
+                    sub={`${Math.round(((d.n_non_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
+                    tone={(d.n_non_conformant ?? 0) > 0 ? BAD : GOOD}
+                  />
+                  <Kpi
+                    label={tc("kpi.residual")}
+                    value={`${d.n_residual_risk ?? 0}`}
+                    sub={tc("kpi.residualSub")}
+                    tone={WARN}
+                  />
+                  <Kpi
+                    label={tc("kpi.deadlines")}
+                    value={`${d.n_critical_deadlines ?? 0}`}
+                    sub={tc("kpi.deadlinesSub")}
+                    tone={(d.n_critical_deadlines ?? 0) > 0 ? BAD : GOOD}
+                  />
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-2 h-7 w-full justify-center text-[0.7rem]"
-                >
-                  {tc("evidence.export")}
-                </Button>
-              </Panel>
-            </div>
-          </Zone>
+              </Zone>
 
-          {/* C. Contrôles · preuves manquantes · incidents */}
-          <Zone label={tc("sec.controls")}>
-            <div className="grid gap-2 lg:grid-cols-3">
-              <Panel title={tc("panel.controls", { n: d.controls?.length ?? 0 })}>
-                <ul className="flex flex-col gap-1 text-[0.72rem]">
-                  {(d.controls ?? []).slice(0, 6).map((c) => (
-                    <li key={c.id} className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate">{c.name}</span>
-                      <Badge tone={STATUS_BADGE[c.status] ?? "neutral"}>
-                        {tc(`status.${c.status}`)}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
+              {/* B. Cartographie · obligations · evidence */}
+              <Zone label={tc("sec.mapping")}>
+                <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)]">
+                  <Panel title={tc("panel.mapping")}>
+                    <table className="w-full text-[0.72rem]">
+                      <thead>
+                        <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                          <th className="py-1 pr-2 font-medium">{tc("col.framework")}</th>
+                          <th className="py-1 pr-2 font-medium">{tc("col.score")}</th>
+                          <th className="py-1 font-medium">{tc("col.breakdown")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(d.frameworks ?? []).map((f) => (
+                          <FrameworkRow key={f.code} f={f} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </Panel>
 
-              <Panel title={tc("panel.missing")}>
-                <ul className="flex flex-col gap-1 text-[0.72rem]">
-                  {(d.controls ?? [])
-                    .filter((c) => c.status !== "conformant")
-                    .slice(0, 7)
-                    .map((c) => (
-                      <li key={c.id} className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 flex-1 truncate font-mono text-[0.65rem]">
-                          {c.evidence_id}
-                        </span>
-                        <span className="shrink-0 text-[var(--muted-foreground)]">
-                          {fwLabel(c.framework)}
-                        </span>
-                      </li>
-                    ))}
-                </ul>
-              </Panel>
+                  <Panel title={tc("panel.obligations", { n: d.obligations?.length ?? 0 })}>
+                    <table className="w-full text-[0.72rem]">
+                      <thead>
+                        <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                          <th className="py-1 pr-2 font-medium">{tc("col.obligation")}</th>
+                          <th className="py-1 pr-2 font-medium">{tc("col.status")}</th>
+                          <th className="py-1 pr-2 font-medium">{tc("col.due")}</th>
+                          <th className="py-1 font-medium">{tc("col.owner")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(d.obligations ?? []).slice(0, 6).map((o) => (
+                          <ObligationRow key={o.name} o={o} fwLabel={fwLabel} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </Panel>
 
-              <Panel title={tc("panel.incidents")}>
-                <table className="w-full text-[0.7rem]">
-                  <thead>
-                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                      <th className="py-1 pr-2 font-medium">{tc("col.nc")}</th>
-                      <th className="py-1 pr-2 font-medium">{tc("col.severity")}</th>
-                      <th className="py-1 font-medium">{tc("col.status")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(d.non_conformities ?? []).slice(0, 6).map((nc) => (
-                      <tr key={nc.id} className="border-b border-[var(--border)]/50">
-                        <td className="py-1 pr-2 font-mono text-[var(--tessera-green)]">{nc.id}</td>
-                        <td className="py-1 pr-2">
-                          <Badge tone={SEV_BADGE[nc.severity] ?? "neutral"}>
-                            {tc(`sev.${nc.severity}`)}
+                  <Panel title={tc("panel.evidence")}>
+                    <div className="flex items-center gap-3">
+                      <EvidenceDonut completeness={d.evidence_completeness ?? 0} />
+                      <ul className="flex flex-col gap-1 text-[0.7rem]">
+                        <EvRow
+                          color="#10b981"
+                          label={tc("evidence.valid")}
+                          value={d.evidence_valid ?? 0}
+                        />
+                        <EvRow
+                          color="#f59e0b"
+                          label={tc("evidence.missing")}
+                          value={d.evidence_missing ?? 0}
+                        />
+                        <EvRow
+                          color="#ef4444"
+                          label={tc("evidence.blocking")}
+                          value={d.evidence_blocking ?? 0}
+                        />
+                        <li className="pt-1 text-[var(--muted-foreground)]">
+                          {tc("evidence.total", { n: evTotal })}
+                        </li>
+                      </ul>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 h-7 w-full justify-center text-[0.7rem]"
+                    >
+                      {tc("evidence.export")}
+                    </Button>
+                  </Panel>
+                </div>
+              </Zone>
+
+              {/* C. Contrôles · preuves manquantes · incidents */}
+              <Zone label={tc("sec.controls")}>
+                <div className="grid gap-2 lg:grid-cols-3">
+                  <Panel title={tc("panel.controls", { n: d.controls?.length ?? 0 })}>
+                    <ul className="flex flex-col gap-1 text-[0.72rem]">
+                      {(d.controls ?? []).slice(0, 6).map((c) => (
+                        <li key={c.id} className="flex items-center gap-2">
+                          <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                          <Badge tone={STATUS_BADGE[c.status] ?? "neutral"}>
+                            {tc(`status.${c.status}`)}
                           </Badge>
-                        </td>
-                        <td className="py-1 text-[var(--muted-foreground)]">
-                          {tc(`ncStatus.${nc.status}`)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Panel>
+                        </li>
+                      ))}
+                    </ul>
+                  </Panel>
+
+                  <Panel title={tc("panel.missing")}>
+                    <ul className="flex flex-col gap-1 text-[0.72rem]">
+                      {(d.controls ?? [])
+                        .filter((c) => c.status !== "conformant")
+                        .slice(0, 7)
+                        .map((c) => (
+                          <li key={c.id} className="flex items-center justify-between gap-2">
+                            <span className="min-w-0 flex-1 truncate font-mono text-[0.65rem]">
+                              {c.evidence_id}
+                            </span>
+                            <span className="shrink-0 text-[var(--muted-foreground)]">
+                              {fwLabel(c.framework)}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </Panel>
+
+                  <Panel title={tc("panel.incidents")}>
+                    <table className="w-full text-[0.7rem]">
+                      <thead>
+                        <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                          <th className="py-1 pr-2 font-medium">{tc("col.nc")}</th>
+                          <th className="py-1 pr-2 font-medium">{tc("col.severity")}</th>
+                          <th className="py-1 font-medium">{tc("col.status")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(d.non_conformities ?? []).slice(0, 6).map((nc) => (
+                          <tr key={nc.id} className="border-b border-[var(--border)]/50">
+                            <td className="py-1 pr-2 font-mono text-[var(--tessera-green)]">
+                              {nc.id}
+                            </td>
+                            <td className="py-1 pr-2">
+                              <Badge tone={SEV_BADGE[nc.severity] ?? "neutral"}>
+                                {tc(`sev.${nc.severity}`)}
+                              </Badge>
+                            </td>
+                            <td className="py-1 text-[var(--muted-foreground)]">
+                              {tc(`ncStatus.${nc.status}`)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </Panel>
+                </div>
+              </Zone>
             </div>
-          </Zone>
-        </div>
 
-        <ComplianceRail
-          obligations={d.obligations ?? []}
-          nc={d.non_conformities ?? []}
-          fwLabel={fwLabel}
-        />
-      </div>
+            <ComplianceRail
+              obligations={d.obligations ?? []}
+              nc={d.non_conformities ?? []}
+              fwLabel={fwLabel}
+            />
+          </div>
 
-      {/* footer */}
-      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
-        <Chip icon={ShieldCheck} label={tc("status.chain")} tone="text-[var(--tessera-green)]" />
-        <Chip icon={ScrollText} label={tc("status.truth")} />
-        <Chip icon={FileCheck2} label={tc("status.env")} />
-      </div>
+          {/* footer */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+            <Chip
+              icon={ShieldCheck}
+              label={tc("status.chain")}
+              tone="text-[var(--tessera-green)]"
+            />
+            <Chip icon={ScrollText} label={tc("status.truth")} />
+            <Chip icon={FileCheck2} label={tc("status.env")} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

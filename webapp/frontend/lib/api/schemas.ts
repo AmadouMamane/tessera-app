@@ -532,6 +532,88 @@ export const NonConformitySchema = z.object({
 });
 export type NonConformity = z.infer<typeof NonConformitySchema>;
 
+// --- Conformite command-bar tabs (generic catalogue shape) ---------------
+
+export const TabKpiSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  unit: z.string().nullable().optional(),
+  sub: z.string().nullable().optional(),
+  delta: z.string().nullable().optional(),
+  delta_good: z.boolean().nullable().optional(),
+  tone: z.string().nullable().optional(),
+});
+export type TabKpi = z.infer<typeof TabKpiSchema>;
+
+export const TabColumnSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  kind: z.string(),
+  align: z.string(),
+});
+export type TabColumn = z.infer<typeof TabColumnSchema>;
+
+export const TabRowSchema = z.object({
+  id: z.string(),
+  cells: z.record(z.string(), z.unknown()),
+});
+export type TabRow = z.infer<typeof TabRowSchema>;
+
+export const DetailFieldSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  tone: z.string().nullable().optional(),
+});
+
+export const DetailListSchema = z.object({
+  title: z.string(),
+  items: z.array(z.record(z.string(), z.unknown())),
+});
+
+export const TabDetailSchema = z.object({
+  eyebrow: z.string(),
+  title: z.string(),
+  status_label: z.string().nullable().optional(),
+  status_tone: z.string().nullable().optional(),
+  summary: z.string().nullable().optional(),
+  fields: z.array(DetailFieldSchema),
+  lists: z.array(DetailListSchema),
+  actions: z.array(z.string()),
+});
+export type TabDetail = z.infer<typeof TabDetailSchema>;
+
+export const SectionItemSchema = z.object({
+  label: z.string(),
+  sub: z.string().nullable().optional(),
+  value: z.string().nullable().optional(),
+  badge: z.string().nullable().optional(),
+  badge_tone: z.string().nullable().optional(),
+});
+export type SectionItem = z.infer<typeof SectionItemSchema>;
+
+export const TabSectionSchema = z.object({
+  title: z.string(),
+  kind: z.string(),
+  items: z.array(SectionItemSchema),
+  cta: z.string().nullable().optional(),
+  donut_value: z.number().nullable().optional(),
+  donut_label: z.string().nullable().optional(),
+  bars: z.array(z.record(z.string(), z.unknown())),
+  series: z.array(z.record(z.string(), z.unknown())),
+  actions: z.array(z.string()),
+});
+export type TabSection = z.infer<typeof TabSectionSchema>;
+
+export const ComplianceTabSchema = z.object({
+  table_title: z.string(),
+  kpis: z.array(TabKpiSchema),
+  columns: z.array(TabColumnSchema),
+  rows: z.array(TabRowSchema),
+  detail: TabDetailSchema.nullable().optional(),
+  sections: z.array(TabSectionSchema),
+});
+export type ComplianceTab = z.infer<typeof ComplianceTabSchema>;
+
 export const ComplianceReportSchema = z.object({
   available: z.boolean(),
   score: z.number().int().optional(),
@@ -553,6 +635,7 @@ export const ComplianceReportSchema = z.object({
   non_conformities: z.array(NonConformitySchema).optional(),
   score_series: z.array(z.number()).optional(),
   score_delta: z.number().nullable().optional(),
+  tabs: z.record(z.string(), ComplianceTabSchema).optional(),
 });
 export type ComplianceReport = z.infer<typeof ComplianceReportSchema>;
 

@@ -2246,6 +2246,13 @@
       "actual": "A · Regulatory posture",
       "mapping": "B · Mapping & obligations",
       "controls": "C · Controls & incidents"
+    },
+    "footer": {
+      "reference": "Baseline: v2026.06",
+      "lastReview": "Last review: 2 h ago",
+      "validProofs": "Valid evidence: 1,105",
+      "source": "Source of truth: YAML · Git",
+      "audit": "Audit intact"
     }
   },
   "reliability": {

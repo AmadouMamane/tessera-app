@@ -2246,6 +2246,13 @@
       "actual": "A · Regulatorische Lage",
       "mapping": "B · Mapping & Pflichten",
       "controls": "C · Kontrollen & Vorfälle"
+    },
+    "footer": {
+      "reference": "Referenz: v2026.06",
+      "lastReview": "Letzte Prüfung: vor 2 Std.",
+      "validProofs": "Gültige Nachweise: 1 105",
+      "source": "Quelle der Wahrheit: YAML · Git",
+      "audit": "Audit intakt"
     }
   },
   "reliability": {

@@ -32,6 +32,7 @@ from tessera.observability import (
     refusal as refusal_mod,
     replay as replay_mod,
 )
+from tessera.observability.compliance_tabs import ComplianceTab, build_tabs
 from tessera.observability.eval.scores import persisted_scores, recent_scores
 from tessera.observability.eval.series import compute_score_series
 
@@ -149,6 +150,10 @@ class ComplianceReport:
     # delta. Empty when the score log has no usable history.
     score_series: list[float] = field(default_factory=list)
     score_delta: float | None = None
+    # Per-tab governance catalogues (Cartographie, Obligations, Evaluations,
+    # Incidents, Purge & retention, Preuves, Registre): deterministic fixture data
+    # keyed by tab name, rendered by the command bar.
+    tabs: dict[str, ComplianceTab] = field(default_factory=dict)
 
 
 def _status(value: float) -> str:
@@ -399,4 +404,5 @@ def compute_compliance() -> ComplianceReport:
         non_conformities=non_conformities,
         score_series=score_series,
         score_delta=score_delta,
+        tabs=build_tabs(),
     )
