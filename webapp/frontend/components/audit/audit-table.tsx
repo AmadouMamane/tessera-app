@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Badge } from "@/components/ui/badge";
@@ -63,11 +63,24 @@ interface AuditWindow {
   until: string;
 }
 
-function makeWindow(preset: Period): AuditWindow {
-  const until = new Date();
+function makeWindow(preset: Period, anchor: Date = new Date()): AuditWindow {
+  const until = anchor;
   const hours = preset === "24h" ? 24 : preset === "7d" ? 24 * 7 : 24 * 30;
   const since = new Date(until.getTime() - hours * 60 * 60 * 1000);
   return { preset, since: since.toISOString(), until: until.toISOString() };
+}
+
+function endOfLocalDay(value: string): Date | null {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, 23, 59, 59, 999);
+}
+
+function dateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function AuditTable() {
@@ -131,6 +144,13 @@ export function AuditTable() {
     setWindow(makeWindow(period));
   }
 
+  function applyDate(value: string) {
+    const end = endOfLocalDay(value);
+    if (!end) return;
+    setCursor(0);
+    setWindow(makeWindow(window.preset, end));
+  }
+
   function resetPaging(update: () => void) {
     setCursor(0);
     update();
@@ -143,6 +163,7 @@ export function AuditTable() {
         overview={overview.data}
         loading={overview.isLoading}
         onPeriod={applyPeriod}
+        onDate={applyDate}
       />
 
       <MetricGrid
@@ -232,14 +253,18 @@ function PeriodRail({
   overview,
   loading,
   onPeriod,
+  onDate,
 }: {
   value: Period;
   overview: AuditOverview | undefined;
   loading: boolean;
   onPeriod: (period: Period) => void;
+  onDate: (value: string) => void;
 }) {
   const t = useTranslations("audit");
   const formatter = useFormatter();
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const inputValue = overview?.window_end ? dateInputValue(new Date(overview.window_end)) : "";
   return (
     <section className="flex min-h-[50px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-1.5">
       <span className="min-w-16 text-xs font-medium text-[var(--tessera-text-muted)]">
@@ -284,11 +309,25 @@ function PeriodRail({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => onPeriod(value)}
+        onClick={() => {
+          const input = dateInputRef.current;
+          if (!input) return;
+          if (typeof input.showPicker === "function") input.showPicker();
+          else input.click();
+        }}
         className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
       >
         {t("window.refresh")}
       </Button>
+      <input
+        ref={dateInputRef}
+        type="date"
+        value={inputValue}
+        aria-label={t("window.refresh")}
+        className="sr-only"
+        onInput={(event) => onDate(event.currentTarget.value)}
+        onChange={(event) => onDate(event.target.value)}
+      />
     </section>
   );
 }
