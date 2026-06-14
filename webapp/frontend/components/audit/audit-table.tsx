@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   ShieldOff,
+  X,
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
@@ -120,13 +121,8 @@ export function AuditTable() {
   const selectedKey = selected ? entryKey(selected) : null;
 
   useEffect(() => {
-    if (entries.length === 0) {
-      if (selected) setSelected(null);
-      return;
-    }
-    if (!selectedKey || !entries.some((entry) => entryKey(entry) === selectedKey)) {
-      const first = entries[0];
-      if (first) setSelected(first);
+    if (selected && !entries.some((entry) => entryKey(entry) === selectedKey)) {
+      setSelected(null);
     }
   }, [entries, selected, selectedKey]);
 
@@ -141,7 +137,7 @@ export function AuditTable() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden text-[var(--tessera-text)]">
+    <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden text-[var(--tessera-text)]">
       <PeriodRail
         value={window.preset}
         overview={overview.data}
@@ -155,8 +151,8 @@ export function AuditTable() {
         formatter={numberFormatter}
       />
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
           <FilterDeck
             overview={overview.data}
             query={query}
@@ -216,11 +212,17 @@ export function AuditTable() {
 
           <BottomPanels overview={overview.data} loading={overview.isLoading} />
         </div>
-
-        <AuditDetails entry={selected} overview={overview.data} />
       </div>
 
       <AuditFooter overview={overview.data} formatter={formatter} />
+
+      {selected ? (
+        <AuditDetailOverlay
+          entry={selected}
+          overview={overview.data}
+          onClose={() => setSelected(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -870,34 +872,68 @@ function ProofList({
   );
 }
 
+function AuditDetailOverlay({
+  entry,
+  overview,
+  onClose,
+}: {
+  entry: AuditEntry;
+  overview: AuditOverview | undefined;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="absolute inset-0 z-30 flex justify-end overflow-hidden rounded-lg bg-[#020817]/70 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <AuditDetails entry={entry} overview={overview} onClose={onClose} />
+    </div>
+  );
+}
+
 function AuditDetails({
   entry,
   overview,
+  onClose,
 }: {
-  entry: AuditEntry | null;
+  entry: AuditEntry;
   overview: AuditOverview | undefined;
+  onClose: () => void;
 }) {
   const t = useTranslations("audit");
+  const tCommon = useTranslations("common");
   const formatter = useFormatter();
-  if (!entry) {
-    return (
-      <aside className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
-        <EmptyState
-          icon={<ShieldCheck />}
-          title={t("detail.empty")}
-          description={t("description")}
-        />
-      </aside>
-    );
-  }
   const firstDecision = entry.decisions[0];
   const rationale = firstDecision?.rationale || entry.policy_rule || entry.error || "—";
   const eventJson = JSON.stringify(entry, null, 2);
   return (
-    <aside className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+    <dialog
+      open
+      aria-modal="true"
+      aria-label={t("detail.title")}
+      className="static m-0 flex h-full w-full max-w-[480px] flex-col overflow-hidden border-0 border-l border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0 text-[var(--tessera-text)] shadow-[-24px_0_60px_rgba(0,0,0,0.35)]"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
       <div className="z-10 flex shrink-0 items-center justify-between border-b border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-3">
         <h2 className="font-sans text-base font-semibold">{t("detail.title")}</h2>
-        <OutcomeBadge outcome={entry.outcome} />
+        <div className="flex items-center gap-2">
+          <OutcomeBadge outcome={entry.outcome} />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={tCommon("close")}
+            className="h-7 w-7 text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
         <DetailSection>
@@ -954,7 +990,7 @@ function AuditDetails({
         </DetailBlock>
       </div>
       <QuickActions entry={entry} eventJson={eventJson} />
-    </aside>
+    </dialog>
   );
 }
 
