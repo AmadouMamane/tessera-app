@@ -193,6 +193,8 @@ import {
   StegoReportSchema,
   type SycophancyReport,
   SycophancyReportSchema,
+  type SystemProfile,
+  SystemProfileSchema,
   type TailSamplingReport,
   TailSamplingReportSchema,
   type TimelineReport,
@@ -709,6 +711,10 @@ export async function fetchIntegrationsOverview(
   signal?: AbortSignal,
 ): Promise<IntegrationsOverview> {
   return request("/observability/integrations", { signal }, IntegrationsOverviewSchema);
+}
+
+export async function fetchSystemProfile(signal?: AbortSignal): Promise<SystemProfile> {
+  return request("/observability/system-profile", { signal }, SystemProfileSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

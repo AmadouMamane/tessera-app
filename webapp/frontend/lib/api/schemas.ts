@@ -2692,3 +2692,86 @@ export const IntegrationsOverviewSchema = z.object({
   footer: z.object({ total: z.number().int(), source: z.string() }),
 });
 export type IntegrationsOverview = z.infer<typeof IntegrationsOverviewSchema>;
+
+// ---------------------------------------------------------------------------
+// System profile (page #20)
+// ---------------------------------------------------------------------------
+
+const SpSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+
+export const SystemProfileSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  kpis: z.array(
+    z.object({
+      key: z.string(),
+      kind: z.enum(["status", "metric", "chart", "time"]),
+      value: z.string(),
+      sub: z.string(),
+      delta: z.string().optional(),
+      link: z.string().optional(),
+      extra: z.string().optional(),
+      series: z.array(z.number()),
+    }),
+  ),
+  architecture: z.object({
+    edition: z.string(),
+    version: z.string(),
+    deployment: z.string(),
+    region: z.string(),
+    cluster: z.string(),
+    deployed_at: z.string(),
+    uptime: z.string(),
+    next_maintenance: z.string(),
+  }),
+  topology: z.object({
+    tiers: z.array(z.object({ key: z.string(), label: z.string(), nodes: z.number().int() })),
+    planes: z.array(z.object({ key: z.string(), label: z.string(), nodes: z.number().int() })),
+    stores: z.array(z.object({ key: z.string(), label: z.string(), detail: z.string() })),
+  }),
+  resources: z.object({ total: z.string(), slices: z.array(SpSliceSchema) }),
+  os_info: z.object({
+    os: z.string(),
+    kernel: z.string(),
+    arch: z.string(),
+    virtualization: z.string(),
+    cpu: z.string(),
+    memory: z.string(),
+    system_time: z.string(),
+    timezone: z.string(),
+    fqdn: z.string(),
+    infra_id: z.string(),
+    support: z.string(),
+  }),
+  health_checks: z.array(z.object({ key: z.string(), status: z.enum(["ok", "warn", "bad"]) })),
+  resource_series: z.object({
+    labels: z.array(z.string()),
+    cpu: z.array(z.number()),
+    memory: z.array(z.number()),
+    disk: z.array(z.number()),
+    network: z.array(z.number()),
+  }),
+  services: z.array(
+    z.object({
+      name: z.string(),
+      status: z.enum(["ok", "warn", "bad"]),
+      version: z.string(),
+      instances: z.string(),
+    }),
+  ),
+  versions: z.array(z.object({ name: z.string(), version: z.string() })),
+  licenses: z.object({
+    edition: z.string(),
+    seats: z.string(),
+    expiry: z.string(),
+    quota_calls: z.string(),
+    quota_storage: z.string(),
+  }),
+  footer: z.object({ version: z.string(), source: z.string() }),
+});
+export type SystemProfile = z.infer<typeof SystemProfileSchema>;

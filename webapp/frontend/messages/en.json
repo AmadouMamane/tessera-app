@@ -3863,5 +3863,121 @@
       "total": "{n} integrations",
       "source": "Source of truth: {src}"
     }
+  },
+  "systemProfile": {
+    "title": "System profile",
+    "subtitle": "Complete technical view of the Tessera environment and its operational state.",
+    "actions": {
+      "export": "Export report",
+      "refresh": "Refresh"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "infrastructure": "Infrastructure",
+      "services": "Services & components",
+      "performance": "Performance",
+      "storage": "Storage",
+      "network": "Network",
+      "security": "Security",
+      "licenses": "Licenses & quotas",
+      "configs": "Configurations",
+      "logs": "System logs"
+    },
+    "kpi": {
+      "status": "Global status",
+      "availability": "Availability (30 days)",
+      "cpu": "System load",
+      "memory": "Memory used",
+      "storage": "Storage used",
+      "services": "Active services",
+      "nodes": "Active nodes",
+      "last_check": "Last check"
+    },
+    "zone": {
+      "architecture": "Architecture & deployment",
+      "topology": "Topology",
+      "resources": "Resource distribution",
+      "os": "Operating system",
+      "health": "Health checks",
+      "performance": "Performance (real-time)",
+      "services": "Services & components",
+      "versions": "Versions & dependencies",
+      "licenses": "Licenses & quotas"
+    },
+    "arch": {
+      "edition": "Edition",
+      "version": "Version",
+      "deployment": "Deployment mode",
+      "region": "Region",
+      "cluster": "Cluster",
+      "deployed": "Deployment date",
+      "uptime": "Uptime",
+      "nextMaintenance": "Next maintenance"
+    },
+    "topo": {
+      "tiers": "Ingress",
+      "planes": "Planes",
+      "stores": "Storage"
+    },
+    "res": {
+      "control": "Control Plane",
+      "data": "Data Plane",
+      "worker": "Worker",
+      "system": "System"
+    },
+    "os": {
+      "os": "Operating system",
+      "kernel": "Kernel",
+      "arch": "Architecture",
+      "virtualization": "Virtualization",
+      "cpu": "CPU",
+      "memory": "Total memory",
+      "systemTime": "System time",
+      "timezone": "Timezone",
+      "fqdn": "FQDN",
+      "infraId": "Install ID",
+      "support": "Support"
+    },
+    "health": {
+      "database": "Database",
+      "storage": "Storage",
+      "cache": "Cache",
+      "queue": "Queue",
+      "critical_services": "Critical services",
+      "api_gateway": "API Gateway",
+      "connectivity": "Connectivity",
+      "security": "Security",
+      "backups": "Backups",
+      "monitoring": "Monitoring",
+      "viewAll": "View all checks"
+    },
+    "perf": {
+      "cpu": "CPU",
+      "memory": "Memory",
+      "disk": "Disk I/O",
+      "network": "Network"
+    },
+    "svcCol": {
+      "name": "Service",
+      "status": "Status",
+      "version": "Version",
+      "instances": "Instances"
+    },
+    "status": {
+      "ok": "OK",
+      "warn": "Warning",
+      "bad": "Error"
+    },
+    "lic": {
+      "edition": "Edition",
+      "seats": "Seats",
+      "expiry": "Expiry",
+      "quotaCalls": "Calls quota",
+      "quotaStorage": "Storage quota"
+    },
+    "footer": {
+      "version": "{v}",
+      "source": "{src}"
+    }
   }
 }

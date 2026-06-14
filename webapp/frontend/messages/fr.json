@@ -3863,5 +3863,121 @@
       "total": "{n} intégrations",
       "source": "Source de vérité : {src}"
     }
+  },
+  "systemProfile": {
+    "title": "Profil système",
+    "subtitle": "Vue technique complète de l’environnement Tessera et de son état opérationnel.",
+    "actions": {
+      "export": "Exporter le rapport",
+      "refresh": "Actualiser"
+    },
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "infrastructure": "Infrastructure",
+      "services": "Services & composants",
+      "performance": "Performance",
+      "storage": "Stockage",
+      "network": "Réseau",
+      "security": "Sécurité",
+      "licenses": "Licences & quotas",
+      "configs": "Configurations",
+      "logs": "Journaux système"
+    },
+    "kpi": {
+      "status": "Statut global",
+      "availability": "Disponibilité (30 jours)",
+      "cpu": "Charge système",
+      "memory": "Mémoire utilisée",
+      "storage": "Stockage utilisé",
+      "services": "Services actifs",
+      "nodes": "Nœuds actifs",
+      "last_check": "Dernière vérification"
+    },
+    "zone": {
+      "architecture": "Architecture & déploiement",
+      "topology": "Topologie",
+      "resources": "Distribution des ressources",
+      "os": "Système d’exploitation",
+      "health": "Contrôles de santé",
+      "performance": "Performance (temps réel)",
+      "services": "Services & composants",
+      "versions": "Versions & dépendances",
+      "licenses": "Licences & quotas"
+    },
+    "arch": {
+      "edition": "Édition",
+      "version": "Version",
+      "deployment": "Mode de déploiement",
+      "region": "Région",
+      "cluster": "Cluster",
+      "deployed": "Date de déploiement",
+      "uptime": "Durée d’activité",
+      "nextMaintenance": "Prochaine maintenance"
+    },
+    "topo": {
+      "tiers": "Entrée",
+      "planes": "Plans",
+      "stores": "Stockage"
+    },
+    "res": {
+      "control": "Control Plane",
+      "data": "Data Plane",
+      "worker": "Worker",
+      "system": "Système"
+    },
+    "os": {
+      "os": "Système d’exploitation",
+      "kernel": "Kernel",
+      "arch": "Architecture",
+      "virtualization": "Virtualisation",
+      "cpu": "CPU",
+      "memory": "Mémoire totale",
+      "systemTime": "Heure système",
+      "timezone": "Fuseau",
+      "fqdn": "FQDN",
+      "infraId": "ID d’installation",
+      "support": "Support"
+    },
+    "health": {
+      "database": "Base de données",
+      "storage": "Stockage",
+      "cache": "Cache",
+      "queue": "File d’attente",
+      "critical_services": "Services critiques",
+      "api_gateway": "API Gateway",
+      "connectivity": "Connectivité",
+      "security": "Sécurité",
+      "backups": "Sauvegardes",
+      "monitoring": "Monitoring",
+      "viewAll": "Voir toutes les vérifications"
+    },
+    "perf": {
+      "cpu": "CPU",
+      "memory": "Mémoire",
+      "disk": "Disque I/O",
+      "network": "Réseau"
+    },
+    "svcCol": {
+      "name": "Service",
+      "status": "Statut",
+      "version": "Version",
+      "instances": "Instances"
+    },
+    "status": {
+      "ok": "OK",
+      "warn": "Avertissement",
+      "bad": "Erreur"
+    },
+    "lic": {
+      "edition": "Édition",
+      "seats": "Sièges",
+      "expiry": "Expiration",
+      "quotaCalls": "Quota d’appels",
+      "quotaStorage": "Quota stockage"
+    },
+    "footer": {
+      "version": "{v}",
+      "source": "{src}"
+    }
   }
 }

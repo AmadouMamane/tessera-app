@@ -1,0 +1,531 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import {
+  CheckCircle2,
+  ChevronRight,
+  Download,
+  RefreshCcw,
+  Server,
+  TriangleAlert,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
+
+import { MetricSparkline } from "@/components/overview/metric-sparkline";
+import { Button } from "@/components/ui/button";
+import { fetchSystemProfile } from "@/lib/api/client";
+import type { SystemProfile as SystemData } from "@/lib/api/schemas";
+import { cn } from "@/lib/cn";
+
+const TABS = [
+  "overview",
+  "infrastructure",
+  "services",
+  "performance",
+  "storage",
+  "network",
+  "security",
+  "licenses",
+  "configs",
+  "logs",
+] as const;
+
+type T = ReturnType<typeof useTranslations<"systemProfile">>;
+type Data = SystemData;
+
+export function SystemProfile() {
+  const t = useTranslations("systemProfile");
+  const { data } = useQuery({
+    queryKey: ["system-profile"],
+    queryFn: ({ signal }) => fetchSystemProfile(signal),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+
+  if (!data) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-[var(--tessera-text-muted)]">
+        …
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+      <CommandBar t={t} />
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+        {data.kpis.map((kpi) => (
+          <SystemKpi key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} />
+        ))}
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-12">
+        <Architecture t={t} data={data} className="xl:col-span-4" />
+        <Topology t={t} data={data} className="xl:col-span-5" />
+        <Resources t={t} data={data} className="xl:col-span-3" />
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-12">
+        <OsInfo t={t} data={data} className="xl:col-span-4" />
+        <Performance t={t} data={data} className="xl:col-span-4" />
+        <Health t={t} data={data} className="xl:col-span-4" />
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-12">
+        <Services t={t} data={data} className="xl:col-span-5" />
+        <Versions t={t} data={data} className="xl:col-span-3" />
+        <Licenses t={t} data={data} className="xl:col-span-4" />
+      </div>
+
+      <Footer t={t} data={data} />
+    </div>
+  );
+}
+
+// ── chrome ───────────────────────────────────────────────────────────────────
+
+function CommandBar({ t }: { t: T }) {
+  return (
+    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            className={cn(
+              "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
+              tab === "overview"
+                ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {t(`tabs.${tab}`)}
+          </button>
+        ))}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
+        >
+          <Download className="h-4 w-4" /> {t("actions.export")}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
+        >
+          <RefreshCcw className="h-4 w-4" /> {t("actions.refresh")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function SystemKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }) {
+  return (
+    <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+      <p className="truncate text-[0.66rem] font-medium text-[var(--tessera-text-muted)]">
+        {label}
+      </p>
+      {kpi.kind === "status" ? (
+        <div className="mt-1 flex items-center gap-1.5">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+          <span className="text-[0.95rem] font-semibold text-emerald-300">{kpi.value}</span>
+        </div>
+      ) : (
+        <div className="mt-1 flex items-center gap-2">
+          <span className="whitespace-nowrap text-[1.25rem] font-semibold leading-none text-white">
+            {kpi.value}
+          </span>
+          {kpi.delta ? (
+            <span className="text-[0.62rem] font-medium text-emerald-300">{kpi.delta}</span>
+          ) : null}
+        </div>
+      )}
+      <p className="mt-0.5 truncate text-[0.58rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
+      {kpi.kind === "chart" ? (
+        <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
+      ) : (
+        <div className="mt-auto">
+          {kpi.link ? (
+            <span className="text-[0.6rem] text-[#87bfff]">{kpi.link} →</span>
+          ) : kpi.extra ? (
+            <span className="text-[0.58rem] text-[var(--tessera-text-muted)]">{kpi.extra}</span>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── zones ────────────────────────────────────────────────────────────────────
+
+function Architecture({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const a = data.architecture;
+  const rows: [string, string][] = [
+    [t("arch.edition"), a.edition],
+    [t("arch.version"), a.version],
+    [t("arch.deployment"), a.deployment],
+    [t("arch.region"), a.region],
+    [t("arch.cluster"), a.cluster],
+    [t("arch.deployed"), a.deployed_at],
+    [t("arch.uptime"), a.uptime],
+    [t("arch.nextMaintenance"), a.next_maintenance],
+  ];
+  return (
+    <Panel title={t("zone.architecture")} className={className}>
+      <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+        {rows.map(([k, v]) => (
+          <KV key={k} label={k} value={v} />
+        ))}
+      </dl>
+    </Panel>
+  );
+}
+
+function Topology({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const tp = data.topology;
+  return (
+    <Panel title={t("zone.topology")} className={className}>
+      <div className="flex flex-col items-center gap-1.5">
+        <Row nodes={tp.tiers} />
+        <Connector />
+        <Row nodes={tp.planes} />
+        <Connector />
+        <div className="grid w-full grid-cols-3 gap-1.5">
+          {tp.stores.map((s) => (
+            <div
+              key={s.key}
+              className="flex flex-col items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-center"
+            >
+              <span className="text-[0.66rem] font-medium text-[var(--tessera-text)]">
+                {s.label}
+              </span>
+              <span className="text-[0.54rem] text-[var(--tessera-text-muted)]">{s.detail}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function Row({ nodes }: { nodes: { key: string; label: string; nodes: number }[] }) {
+  return (
+    <div
+      className="grid w-full gap-1.5"
+      style={{ gridTemplateColumns: `repeat(${nodes.length}, minmax(0, 1fr))` }}
+    >
+      {nodes.map((n) => (
+        <div
+          key={n.key}
+          className="flex items-center justify-center gap-1.5 rounded-md border border-[#2e72d2]/40 bg-[#0d3561]/40 px-2 py-1.5 text-center"
+        >
+          <span className="text-[0.68rem] font-medium text-[#d8eaff]">{n.label}</span>
+          <span className="rounded bg-[var(--tessera-bg)] px-1 text-[0.54rem] tabular-nums text-[var(--tessera-text-muted)]">
+            ×{n.nodes}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Connector() {
+  return <span className="h-2 w-px bg-[var(--tessera-border)]" />;
+}
+
+function Resources({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const r = data.resources;
+  const sum = r.slices.reduce((s, x) => s + x.count, 0) || 1;
+  const R = 28;
+  const C = 2 * Math.PI * R;
+  let off = 0;
+  return (
+    <Panel title={t("zone.resources")} className={className}>
+      <div className="flex items-center gap-3">
+        <div className="relative h-[92px] w-[92px] shrink-0">
+          <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90" aria-hidden="true">
+            <circle
+              cx="36"
+              cy="36"
+              r={R}
+              fill="none"
+              stroke="var(--tessera-border)"
+              strokeWidth="9"
+            />
+            {r.slices.map((s) => {
+              const frac = s.count / sum;
+              const seg = { dash: frac * C, gap: C - frac * C, o: -off * C };
+              off += frac;
+              return (
+                <circle
+                  key={s.key}
+                  cx="36"
+                  cy="36"
+                  r={R}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth="9"
+                  strokeDasharray={`${seg.dash} ${seg.gap}`}
+                  strokeDashoffset={seg.o}
+                />
+              );
+            })}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+            <span className="text-[0.62rem] uppercase text-[var(--tessera-text-muted)]">Total</span>
+            <span className="text-[0.78rem] font-semibold text-white">{r.total}</span>
+          </div>
+        </div>
+        <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.64rem]">
+          {r.slices.map((s) => (
+            <li key={s.key} className="flex items-center gap-1.5">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
+              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
+                {t(`res.${s.key}`)}
+              </span>
+              <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
+                {s.count} · {s.pct}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Panel>
+  );
+}
+
+function OsInfo({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const o = data.os_info;
+  const rows: [string, string][] = [
+    [t("os.os"), o.os],
+    [t("os.kernel"), o.kernel],
+    [t("os.arch"), o.arch],
+    [t("os.virtualization"), o.virtualization],
+    [t("os.cpu"), o.cpu],
+    [t("os.memory"), o.memory],
+    [t("os.systemTime"), o.system_time],
+    [t("os.timezone"), o.timezone],
+    [t("os.fqdn"), o.fqdn],
+    [t("os.infraId"), o.infra_id],
+    [t("os.support"), o.support],
+  ];
+  return (
+    <Panel title={t("zone.os")} className={className}>
+      <dl className="flex flex-col gap-1 text-[0.66rem]">
+        {rows.map(([k, v]) => (
+          <KV key={k} label={k} value={v} mono />
+        ))}
+      </dl>
+    </Panel>
+  );
+}
+
+function Performance({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const s = data.resource_series;
+  const charts = [
+    { key: "cpu", values: s.cpu, tone: "success" as const },
+    { key: "memory", values: s.memory, tone: "success" as const },
+    { key: "disk", values: s.disk, tone: "success" as const },
+    { key: "network", values: s.network, tone: "success" as const },
+  ];
+  return (
+    <Panel title={t("zone.performance")} className={className}>
+      <div className="grid grid-cols-2 gap-2">
+        {charts.map((c) => (
+          <div
+            key={c.key}
+            className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2"
+          >
+            <p className="text-[0.58rem] text-[var(--tessera-text-muted)]">{t(`perf.${c.key}`)}</p>
+            <MetricSparkline className="mt-1 h-7 w-full" values={c.values} tone={c.tone} />
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+function Health({ t, data, className }: { t: T; data: Data; className?: string }) {
+  return (
+    <Panel
+      title={t("zone.health")}
+      className={className}
+      action={<ViewAll label={t("health.viewAll")} />}
+    >
+      <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+        {data.health_checks.map((h) => (
+          <li
+            key={h.key}
+            className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.66rem]"
+          >
+            <span className="min-w-0 truncate text-[var(--tessera-text)]">
+              {t(`health.${h.key}`)}
+            </span>
+            {h.status === "ok" ? (
+              <span className="inline-flex items-center gap-1 text-emerald-300">
+                <CheckCircle2 className="h-3 w-3" /> {t("status.ok")}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-amber-300">
+                <TriangleAlert className="h-3 w-3" /> {t("status.warn")}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+function Services({ t, data, className }: { t: T; data: Data; className?: string }) {
+  return (
+    <Panel title={t("zone.services")} className={className}>
+      <table className="w-full border-collapse text-left text-[0.7rem]">
+        <thead>
+          <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="px-1.5 py-1 font-medium">{t("svcCol.name")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("svcCol.status")}</th>
+            <th className="px-1.5 py-1 font-medium">{t("svcCol.version")}</th>
+            <th className="px-1.5 py-1 text-right font-medium">{t("svcCol.instances")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.services.map((s) => (
+            <tr key={s.name} className="border-b border-[var(--tessera-border)]/60 last:border-0">
+              <td className="px-1.5 py-1 text-[var(--tessera-text)]">{s.name}</td>
+              <td className="px-1.5 py-1">
+                {s.status === "ok" ? (
+                  <span className="inline-flex items-center gap-1 text-emerald-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {t("status.ok")}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-amber-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> {t("status.warn")}
+                  </span>
+                )}
+              </td>
+              <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text-muted)]">
+                {s.version}
+              </td>
+              <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-text-muted)]">
+                {s.instances}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Panel>
+  );
+}
+
+function Versions({ t, data, className }: { t: T; data: Data; className?: string }) {
+  return (
+    <Panel title={t("zone.versions")} className={className}>
+      <dl className="flex flex-col gap-1.5 text-[0.68rem]">
+        {data.versions.map((v) => (
+          <div key={v.name} className="flex items-center justify-between gap-2">
+            <dt className="text-[var(--tessera-text)]">{v.name}</dt>
+            <dd className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+              {v.version}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </Panel>
+  );
+}
+
+function Licenses({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const l = data.licenses;
+  const rows: [string, string][] = [
+    [t("lic.edition"), l.edition],
+    [t("lic.seats"), l.seats],
+    [t("lic.expiry"), l.expiry],
+    [t("lic.quotaCalls"), l.quota_calls],
+    [t("lic.quotaStorage"), l.quota_storage],
+  ];
+  return (
+    <Panel title={t("zone.licenses")} className={className}>
+      <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+        {rows.map(([k, v]) => (
+          <KV key={k} label={k} value={v} />
+        ))}
+      </dl>
+    </Panel>
+  );
+}
+
+// ── atoms ────────────────────────────────────────────────────────────────────
+
+function Panel({
+  title,
+  action,
+  children,
+  className,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
+        className,
+      )}
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="min-w-0 truncate text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+          {title}
+        </h3>
+        {action}
+      </div>
+      <div className="min-h-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+function KV({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <dt className="shrink-0 text-[var(--tessera-text-muted)]">{label}</dt>
+      <dd
+        className={cn(
+          "min-w-0 truncate text-right text-[var(--tessera-text)]",
+          mono && "font-mono text-[0.62rem]",
+        )}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function ViewAll({ label }: { label: string }) {
+  return (
+    <button
+      type="button"
+      className="flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
+    >
+      {label} <ChevronRight className="h-3 w-3" />
+    </button>
+  );
+}
+
+function Footer({ t, data }: { t: T; data: Data }) {
+  return (
+    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+      <span className="flex items-center gap-1.5">
+        <Server className="h-3.5 w-3.5" /> {t("footer.version", { v: data.footer.version })}
+      </span>
+      <span>{t("footer.source", { src: data.footer.source })}</span>
+    </footer>
+  );
+}

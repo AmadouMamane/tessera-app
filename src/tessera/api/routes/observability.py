@@ -84,6 +84,7 @@ from tessera.observability import (
     sources as sources_mod,
     span_propagation as span_propagation_mod,
     steganography as steganography_mod,
+    system_profile as system_profile_mod,
     tail_sampling as tail_sampling_mod,
     tool_loops as tool_loops_mod,
     tool_validity as tool_validity_mod,
@@ -630,6 +631,21 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/system-profile")
+async def observability_system_profile() -> dict[str, object]:
+    """System profile overview (page #20).
+
+    Composes the operational posture, architecture, topology, resource
+    distribution, OS info, health checks, resource series and services table.
+    Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **system_profile_mod.compute_system_profile()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.system_profile: failed: {exc}\n")
         return {"available": False}
 
 
