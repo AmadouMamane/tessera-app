@@ -610,7 +610,7 @@ async def observability_improvement() -> dict[str, object]:
 
 @router.get("/observability/reliability")
 async def observability_reliability(
-    days: int = 30, anchor: str | None = None
+    days: int = 14, anchor: str | None = None
 ) -> dict[str, object]:
     """Operational reliability & cost posture from the real signals (#08).
 

@@ -319,7 +319,7 @@ const POLL = 30_000;
 
 export function ReliabilityDashboard() {
   const tr = useTranslations("reliability");
-  const [period, setPeriod] = useState<Period>({ days: 30, anchor: null });
+  const [period, setPeriod] = useState<Period>({ days: 14, anchor: null });
   const q = useQuery({
     queryKey: ["reliability", period.days, period.anchor],
     queryFn: ({ signal }) => fetchReliability(signal, period.days, period.anchor),

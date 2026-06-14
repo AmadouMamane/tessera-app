@@ -63,9 +63,11 @@ _MONTHLY_BUDGET_EUR = 25_000.0
 # composite answer-*quality* trend, each with a period-over-period delta.
 _TREND_METRICS: tuple[str, ...] = ("faithfulness", "grounding")
 _TREND_BUCKETS = 7
-# Default analysis window (days) when the period rail hasn't narrowed it. 30 days
-# matches the headline tiles ("Coût total (30j)", "Requêtes (30j)").
-_DEFAULT_DAYS = 30
+# Default analysis window (days) when the period rail hasn't narrowed it. 14 days
+# is the densest real window here (the durable score log spans ~28 days), so the
+# period-over-period deltas have a populated previous period to compare against;
+# 30 days stays selectable in the rail.
+_DEFAULT_DAYS = 14
 # A model whose eval pass-rate falls below this earns a "review quality" action.
 _LOW_PASS_RATE = 0.8
 
@@ -449,9 +451,11 @@ def compute_reliability(
     )
     tool = tool_validity_mod.compute_tool_validity(at=anchor_iso)
     obs = obs_cost_mod.measure_overhead()  # synthetic benchmark — no time axis to window
-    scores = [
-        s for s in persisted_scores(at=anchor_iso) if _in_window(s.get("scored_at"), start, end)
-    ]
+    # All scores up to T: the window aggregates (funnel) use the in-window slice,
+    # but the trend/daily helpers need the *previous* period too (for the
+    # period-over-period delta), so they re-window the broader set themselves.
+    scores_asof = persisted_scores(at=anchor_iso)
+    scores = [s for s in scores_asof if _in_window(s.get("scored_at"), start, end)]
     funnel_turns: list[tuple[str, str | None, float]] = []
     for s in scores:
         lang = s.get("language")
@@ -536,9 +540,11 @@ def compute_reliability(
     spent = total_cost_eur
     projected = round(spent * (30.0 / max(1, n_requests)) * n_requests, 2) if n_requests else spent
 
-    volume_series, volume_delta, quality_series, quality_delta = _trends(scores, end=end, days=days)
+    volume_series, volume_delta, quality_series, quality_delta = _trends(
+        scores_asof, end=end, days=days
+    )
     daily = _daily(
-        scores,
+        scores_asof,
         cost_per_request=cost_per_request,
         availability=availability,
         error_rate=error_rate,
