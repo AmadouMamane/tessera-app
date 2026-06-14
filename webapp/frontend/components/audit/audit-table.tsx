@@ -2,20 +2,28 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Cpu,
+  Copy,
+  Database,
+  Download,
+  ExternalLink,
+  FileJson,
+  Filter,
+  Hash,
+  KeyRound,
+  Search,
   ShieldAlert,
   ShieldCheck,
   ShieldOff,
-  X,
 } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
 
+import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,201 +42,1035 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchAudit, fetchAuditIntegrity } from "@/lib/api/client";
-import type { AuditEntry, AuditIntegrity, AuditOutcome } from "@/lib/api/schemas";
-import { findModel } from "@/lib/models";
+import { fetchAudit, fetchAuditOverview } from "@/lib/api/client";
+import type {
+  AuditEntry,
+  AuditEventType,
+  AuditMetric,
+  AuditOutcome,
+  AuditOverview,
+} from "@/lib/api/schemas";
+import { cn } from "@/lib/cn";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 9;
 const OUTCOMES: ReadonlyArray<AuditOutcome> = ["allowed", "denied", "error"];
+const EVENT_TYPES: ReadonlyArray<AuditEventType> = ["guard", "tool", "memory", "other"];
+const PERIODS = ["24h", "7d", "30d"] as const;
+
+type Period = (typeof PERIODS)[number];
+type SelectValueState = "all" | string;
+
+interface AuditWindow {
+  preset: Period;
+  since: string;
+  until: string;
+}
+
+function makeWindow(preset: Period): AuditWindow {
+  const until = new Date();
+  const hours = preset === "24h" ? 24 : preset === "7d" ? 24 * 7 : 24 * 30;
+  const since = new Date(until.getTime() - hours * 60 * 60 * 1000);
+  return { preset, since: since.toISOString(), until: until.toISOString() };
+}
 
 export function AuditTable() {
   const t = useTranslations("audit");
   const tCommon = useTranslations("common");
   const formatter = useFormatter();
+  const locale = useLocale();
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
   const [cursor, setCursor] = useState(0);
-  const [target, setTarget] = useState("");
+  const [window, setWindow] = useState<AuditWindow>(() => makeWindow("7d"));
+  const [query, setQuery] = useState("");
+  const [target, setTarget] = useState<SelectValueState>("all");
   const [outcome, setOutcome] = useState<AuditOutcome | "all">("all");
+  const [eventType, setEventType] = useState<AuditEventType | "all">("all");
+  const [policyRule, setPolicyRule] = useState<SelectValueState>("all");
   const [selected, setSelected] = useState<AuditEntry | null>(null);
 
-  const query = useQuery({
-    queryKey: ["audit", cursor, target, outcome],
+  const filters = useMemo(
+    () => ({
+      target: target === "all" ? undefined : target,
+      outcome: outcome === "all" ? undefined : outcome,
+      eventType: eventType === "all" ? undefined : eventType,
+      policyRule: policyRule === "all" ? undefined : policyRule,
+      query: query.trim() || undefined,
+      since: window.since,
+      until: window.until,
+    }),
+    [eventType, outcome, policyRule, query, target, window.since, window.until],
+  );
+
+  const overview = useQuery({
+    queryKey: ["audit-overview", filters],
+    queryFn: ({ signal }) => fetchAuditOverview({ ...filters, signal }),
+    refetchInterval: 30_000,
+  });
+
+  const page = useQuery({
+    queryKey: ["audit", cursor, filters],
     queryFn: ({ signal }) =>
       fetchAudit({
+        ...filters,
         cursor,
         limit: PAGE_SIZE,
-        target: target || undefined,
-        outcome: outcome === "all" ? undefined : outcome,
         signal,
       }),
     placeholderData: (prev) => prev,
   });
 
-  const entries = query.data?.entries ?? [];
+  const entries = page.data?.entries ?? [];
+  const selectedKey = selected ? entryKey(selected) : null;
 
-  const integrity = useQuery({
-    queryKey: ["audit-integrity"],
-    queryFn: ({ signal }) => fetchAuditIntegrity(signal),
-    refetchInterval: 30_000,
-  });
+  useEffect(() => {
+    if (entries.length === 0) {
+      if (selected) setSelected(null);
+      return;
+    }
+    if (!selectedKey || !entries.some((entry) => entryKey(entry) === selectedKey)) {
+      const first = entries[0];
+      if (first) setSelected(first);
+    }
+  }, [entries, selected, selectedKey]);
+
+  function applyPeriod(period: Period) {
+    setCursor(0);
+    setWindow(makeWindow(period));
+  }
+
+  function resetPaging(update: () => void) {
+    setCursor(0);
+    update();
+  }
 
   return (
-    <>
-      <div className="mb-3 flex items-center justify-end">
-        <IntegrityBadge data={integrity.data} />
-      </div>
-      <Card>
-        <CardContent className="p-0">
-          <Filters
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden text-[var(--tessera-text)]">
+      <PeriodRail
+        value={window.preset}
+        overview={overview.data}
+        loading={overview.isLoading}
+        onPeriod={applyPeriod}
+      />
+
+      <MetricGrid
+        overview={overview.data}
+        loading={overview.isLoading}
+        formatter={numberFormatter}
+      />
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+          <FilterDeck
+            overview={overview.data}
+            query={query}
             target={target}
             outcome={outcome}
-            onTargetChange={(value) => {
-              setCursor(0);
-              setTarget(value);
-            }}
-            onOutcomeChange={(value) => {
-              setCursor(0);
-              setOutcome(value);
-            }}
+            eventType={eventType}
+            policyRule={policyRule}
+            onQuery={(value) => resetPaging(() => setQuery(value))}
+            onTarget={(value) => resetPaging(() => setTarget(value))}
+            onOutcome={(value) => resetPaging(() => setOutcome(value))}
+            onEventType={(value) => resetPaging(() => setEventType(value))}
+            onPolicyRule={(value) => resetPaging(() => setPolicyRule(value))}
           />
 
-          {query.isPending ? (
-            <div className="space-y-2 p-6">
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="p-6">
-              <EmptyState
-                icon={<ShieldCheck />}
-                title={tCommon("empty")}
-                description={t("description")}
-              />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("columns.occurredAt")}</TableHead>
-                  <TableHead>{t("columns.target")}</TableHead>
-                  <TableHead>{t("columns.outcome")}</TableHead>
-                  <TableHead className="text-center">{t("columns.decisions")}</TableHead>
-                  <TableHead aria-label="actions" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {entries.map((entry, idx) => (
-                  <TableRow
-                    key={`${entry.occurred_at}-${idx}`}
-                    className="group cursor-pointer transition-colors hover:bg-[var(--muted)]/40 focus-visible:bg-[var(--muted)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
-                    // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a real <button>; role=button makes the whole row keyboard-activatable
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`${entry.target} — ${t(`outcomes.${entry.outcome}`)}`}
-                    onClick={() => setSelected(entry)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setSelected(entry);
-                      }
-                    }}
-                  >
-                    <TableCell className="font-mono text-xs">
-                      {formatter.dateTime(new Date(entry.occurred_at), {
-                        dateStyle: "short",
-                        timeStyle: "medium",
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">{entry.target}</span>
-                      {entry.model ? (
-                        <span className="mt-0.5 flex items-center gap-1 text-[10px] text-[var(--muted-foreground)]">
-                          <Cpu className="h-3 w-3 text-gold-500" />
-                          {findModel(entry.model).label}
-                        </span>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      <OutcomeBadge outcome={entry.outcome} />
-                    </TableCell>
-                    <TableCell className="text-center text-xs text-[var(--muted-foreground)]">
-                      {entry.decisions.length}
-                    </TableCell>
-                    <TableCell className="w-8 text-right">
-                      <ChevronRight className="ml-auto h-4 w-4 text-[var(--muted-foreground)] opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
-                    </TableCell>
-                  </TableRow>
+          <EventTypeTabs
+            overview={overview.data}
+            value={eventType}
+            onValue={(value) => resetPaging(() => setEventType(value))}
+          />
+
+          <section className="min-h-[260px] flex-1 overflow-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+            {page.isPending ? (
+              <div className="space-y-2 p-4">
+                {Array.from({ length: PAGE_SIZE }).map((_, index) => (
+                  <Skeleton
+                    // biome-ignore lint/suspicious/noArrayIndexKey: fixed loading placeholders never reorder
+                    key={index}
+                    className="h-9 w-full"
+                  />
                 ))}
-              </TableBody>
-            </Table>
-          )}
-
-          <Pagination
-            cursor={cursor}
-            pageSize={PAGE_SIZE}
-            hasMore={query.data?.has_more ?? false}
-            onPrevious={() => setCursor((c) => Math.max(0, c - PAGE_SIZE))}
-            onNext={() => setCursor((c) => c + PAGE_SIZE)}
-          />
-        </CardContent>
-        {selected ? (
-          <>
-            <div
-              aria-hidden
-              className="fixed inset-0 z-30 bg-[var(--background)]/60 backdrop-blur-sm animate-in fade-in-0 duration-200"
-              onClick={() => setSelected(null)}
+              </div>
+            ) : entries.length === 0 ? (
+              <div className="p-6">
+                <EmptyState
+                  icon={<ShieldCheck />}
+                  title={tCommon("empty")}
+                  description={t("description")}
+                />
+              </div>
+            ) : (
+              <AuditEventsTable
+                entries={entries}
+                selected={selected}
+                onSelect={setSelected}
+                formatter={formatter}
+              />
+            )}
+            <Pagination
+              cursor={cursor}
+              pageSize={PAGE_SIZE}
+              hasMore={page.data?.has_more ?? false}
+              total={overview.data?.total_events}
+              onPrevious={() => setCursor((value) => Math.max(0, value - PAGE_SIZE))}
+              onNext={() => setCursor((value) => value + PAGE_SIZE)}
             />
-            <DetailsDrawer entry={selected} onClose={() => setSelected(null)} />
-          </>
-        ) : null}
-      </Card>
-      {/* In-flow bottom spacer: a last-child margin is dropped from the scroll
-          container's scrollHeight and gets clipped, leaving the card flush
-          against the viewport edge; an in-flow box is counted instead. */}
-      <div aria-hidden className="h-10 shrink-0" />
-    </>
+          </section>
+
+          <BottomPanels overview={overview.data} loading={overview.isLoading} />
+        </div>
+
+        <AuditDetails entry={selected} overview={overview.data} />
+      </div>
+
+      <AuditFooter overview={overview.data} formatter={formatter} />
+    </div>
   );
 }
 
-function Filters({
+function PeriodRail({
+  value,
+  overview,
+  loading,
+  onPeriod,
+}: {
+  value: Period;
+  overview: AuditOverview | undefined;
+  loading: boolean;
+  onPeriod: (period: Period) => void;
+}) {
+  const t = useTranslations("audit");
+  const formatter = useFormatter();
+  return (
+    <section className="flex min-h-[50px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-1.5">
+      <span className="min-w-16 text-xs font-medium text-[var(--tessera-text-muted)]">
+        {t("window.label")}
+      </span>
+      <div className="flex min-h-8 items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)]">
+        <CalendarDays className="h-4 w-4 text-[var(--tessera-text-muted)]" />
+        {loading || !overview ? (
+          <Skeleton className="h-4 w-56" />
+        ) : (
+          <span>
+            {formatter.dateTime(new Date(overview.window_start), {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+            <span className="px-3 text-[var(--tessera-text-muted)]">→</span>
+            {formatter.dateTime(new Date(overview.window_end), {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        )}
+      </div>
+      <div className="flex rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-1">
+        {PERIODS.map((period) => (
+          <button
+            key={period}
+            type="button"
+            onClick={() => onPeriod(period)}
+            className={cn(
+              "h-7 rounded px-3 text-xs transition-colors",
+              value === period
+                ? "bg-[#123e6a] text-[#d8eaff] ring-1 ring-[#2e72d2]"
+                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {t(`window.${period}`)}
+          </button>
+        ))}
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onPeriod(value)}
+        className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
+      >
+        {t("window.refresh")}
+      </Button>
+    </section>
+  );
+}
+
+function MetricGrid({
+  overview,
+  loading,
+  formatter,
+}: {
+  overview: AuditOverview | undefined;
+  loading: boolean;
+  formatter: Intl.NumberFormat;
+}) {
+  const t = useTranslations("audit.metrics");
+  const metrics = useMemo(
+    () => new Map(overview?.metrics.map((metric) => [metric.key, metric])),
+    [overview],
+  );
+  const series = overview?.timeline.map((bucket) => bucket.total) ?? [];
+  const cards: AuditMetric["key"][] = [
+    "signed_events",
+    "sensitive_actions",
+    "guard_refusals",
+    "proof_events",
+    "chain_integrity",
+    "unique_actors",
+  ];
+  return (
+    <div className="grid shrink-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+      {cards.map((key) => {
+        const metric = metrics.get(key);
+        const chainOk = metric?.value === 1;
+        return (
+          <section
+            key={key}
+            className="min-h-[88px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+          >
+            <p className="text-xs font-medium text-[var(--tessera-text-muted)]">
+              {t(`${key}.label`)}
+            </p>
+            {loading || !metric ? (
+              <Skeleton className="mt-4 h-8 w-28" />
+            ) : (
+              <div className="mt-1.5 flex items-baseline gap-2">
+                <p className="text-[1.55rem] font-semibold leading-none text-white">
+                  {key === "chain_integrity"
+                    ? t(metric.value === 1 ? "conform" : "broken")
+                    : formatter.format(metric.value)}
+                </p>
+                <DeltaBadge metric={metric} />
+              </div>
+            )}
+            <div className="mt-2 border-t border-[var(--tessera-border)] pt-1.5">
+              {key === "chain_integrity" ? (
+                <div className="flex items-center gap-2 text-xs text-[var(--tessera-text-muted)]">
+                  <span
+                    className={cn(
+                      "h-2 w-2 rounded-full",
+                      chainOk ? "bg-[var(--tessera-green)]" : "bg-red-400",
+                    )}
+                  />
+                  {t(chainOk ? "chainHint" : "chainBrokenHint")}
+                </div>
+              ) : (
+                <MetricSparkline
+                  className="h-5"
+                  values={series}
+                  tone={key === "guard_refusals" ? "danger" : "success"}
+                />
+              )}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function DeltaBadge({ metric }: { metric: AuditMetric }) {
+  const t = useTranslations("audit.delta");
+  if (metric.delta_pct == null) {
+    return <span className="text-xs text-[var(--tessera-text-muted)]">{t("none")}</span>;
+  }
+  const positive = metric.delta_pct >= 0;
+  return (
+    <span
+      className={cn(
+        "text-xs font-medium",
+        positive ? "text-[var(--tessera-green)]" : "text-red-300",
+      )}
+    >
+      {positive ? "+" : ""}
+      {metric.delta_pct.toFixed(1)}%
+    </span>
+  );
+}
+
+function FilterDeck({
+  overview,
+  query,
   target,
   outcome,
-  onTargetChange,
-  onOutcomeChange,
+  eventType,
+  policyRule,
+  onQuery,
+  onTarget,
+  onOutcome,
+  onEventType,
+  onPolicyRule,
 }: {
-  target: string;
+  overview: AuditOverview | undefined;
+  query: string;
+  target: SelectValueState;
   outcome: AuditOutcome | "all";
-  onTargetChange: (value: string) => void;
-  onOutcomeChange: (value: AuditOutcome | "all") => void;
+  eventType: AuditEventType | "all";
+  policyRule: SelectValueState;
+  onQuery: (value: string) => void;
+  onTarget: (value: SelectValueState) => void;
+  onOutcome: (value: AuditOutcome | "all") => void;
+  onEventType: (value: AuditEventType | "all") => void;
+  onPolicyRule: (value: SelectValueState) => void;
 }) {
   const t = useTranslations("audit");
   const tCommon = useTranslations("common");
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] px-5 py-3">
-      <Input
-        type="search"
-        value={target}
-        onChange={(e) => onTargetChange(e.target.value)}
-        placeholder={t("filters.target")}
-        className="max-w-xs"
-        aria-label={t("filters.target")}
+    <section className="shrink-0 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1.5">
+      <div className="flex items-center gap-2 border-b border-[var(--tessera-border)] px-2 pb-1.5">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--tessera-text-muted)]" />
+          <Input
+            type="search"
+            value={query}
+            onChange={(event) => onQuery(event.target.value)}
+            placeholder={t("filters.search")}
+            aria-label={t("filters.search")}
+            className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-9 text-xs"
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-[var(--tessera-border)] bg-[var(--tessera-bg)]"
+        >
+          <Filter className="h-4 w-4" />
+          {t("filters.button")}
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 gap-2 px-2 pt-1.5 lg:grid-cols-4">
+        <Select
+          value={eventType}
+          onValueChange={(value) => onEventType(value as AuditEventType | "all")}
+        >
+          <SelectTrigger className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs">
+            <SelectValue placeholder={t("filters.eventType")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            {EVENT_TYPES.map((item) => (
+              <SelectItem key={item} value={item}>
+                {t(`eventTypes.${item}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={target} onValueChange={onTarget}>
+          <SelectTrigger className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs">
+            <SelectValue placeholder={t("filters.target")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            {(overview?.targets ?? []).map((item) => (
+              <SelectItem key={item.key} value={item.key}>
+                {item.key}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={outcome} onValueChange={(value) => onOutcome(value as AuditOutcome | "all")}>
+          <SelectTrigger className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs">
+            <SelectValue placeholder={t("filters.outcome")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            {OUTCOMES.map((item) => (
+              <SelectItem key={item} value={item}>
+                {t(`outcomes.${item}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={policyRule} onValueChange={onPolicyRule}>
+          <SelectTrigger className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs">
+            <SelectValue placeholder={t("filters.policyRule")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            {(overview?.policies ?? []).map((item) => (
+              <SelectItem key={item.key} value={item.key}>
+                {item.key}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </section>
+  );
+}
+
+function EventTypeTabs({
+  overview,
+  value,
+  onValue,
+}: {
+  overview: AuditOverview | undefined;
+  value: AuditEventType | "all";
+  onValue: (value: AuditEventType | "all") => void;
+}) {
+  const t = useTranslations("audit");
+  const countFor = (key: AuditEventType) =>
+    overview?.event_types.find((item) => item.key === key)?.count ?? 0;
+  return (
+    <div className="flex min-h-9 shrink-0 items-center gap-2 overflow-x-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-1">
+      <TabButton
+        active={value === "all"}
+        label={t("eventTypes.all")}
+        count={overview?.total_events ?? 0}
+        onClick={() => onValue("all")}
       />
-      <Select value={outcome} onValueChange={(v) => onOutcomeChange(v as AuditOutcome | "all")}>
-        <SelectTrigger className="w-40">
-          <SelectValue placeholder={t("filters.outcome")} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{tCommon("all")}</SelectItem>
-          {OUTCOMES.map((opt) => (
-            <SelectItem key={opt} value={opt}>
-              {t(`outcomes.${opt}`)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {EVENT_TYPES.map((item) => (
+        <TabButton
+          key={item}
+          active={value === item}
+          label={t(`eventTypes.${item}`)}
+          count={countFor(item)}
+          onClick={() => onValue(item)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  label,
+  count,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  count: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex h-7 shrink-0 items-center gap-2 rounded-md border px-3 text-xs transition-colors",
+        active
+          ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
+          : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
+      )}
+    >
+      <span>{label}</span>
+      <span className="font-mono text-[0.68rem] text-[var(--tessera-text-muted)]">{count}</span>
+    </button>
+  );
+}
+
+function AuditEventsTable({
+  entries,
+  selected,
+  onSelect,
+  formatter,
+}: {
+  entries: AuditEntry[];
+  selected: AuditEntry | null;
+  onSelect: (entry: AuditEntry) => void;
+  formatter: ReturnType<typeof useFormatter>;
+}) {
+  const t = useTranslations("audit");
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[132px]">{t("columns.occurredAt")}</TableHead>
+          <TableHead>{t("columns.type")}</TableHead>
+          <TableHead>{t("columns.object")}</TableHead>
+          <TableHead>{t("columns.actor")}</TableHead>
+          <TableHead>{t("columns.role")}</TableHead>
+          <TableHead>{t("columns.scope")}</TableHead>
+          <TableHead>{t("columns.outcome")}</TableHead>
+          <TableHead>{t("columns.proof")}</TableHead>
+          <TableHead>{t("columns.case")}</TableHead>
+          <TableHead className="text-center">{t("columns.decisions")}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {entries.map((entry) => {
+          const active = selected ? entryKey(selected) === entryKey(entry) : false;
+          return (
+            <TableRow
+              key={entryKey(entry)}
+              className={cn(
+                "group cursor-pointer text-xs transition-colors hover:bg-[#0b2b49]",
+                active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
+              )}
+              // biome-ignore lint/a11y/useSemanticElements: a data row opens the adjacent detail panel and remains keyboard reachable
+              role="button"
+              tabIndex={0}
+              aria-label={`${entry.target} ${entry.outcome}`}
+              onClick={() => onSelect(entry)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelect(entry);
+                }
+              }}
+            >
+              <TableCell className="font-mono text-[0.68rem] text-[var(--tessera-text-muted)]">
+                {formatter.dateTime(new Date(entry.occurred_at), {
+                  dateStyle: "short",
+                  timeStyle: "medium",
+                })}
+              </TableCell>
+              <TableCell>{t(`eventTypes.${entry.event_type}`)}</TableCell>
+              <TableCell className="max-w-[210px] truncate font-medium text-[var(--tessera-text)]">
+                {entry.object_label}
+              </TableCell>
+              <TableCell className="max-w-[160px] truncate">{entry.actor}</TableCell>
+              <TableCell>{t(`roles.${entry.actor_role}`)}</TableCell>
+              <TableCell className="max-w-[120px] truncate">{entry.scope}</TableCell>
+              <TableCell>
+                <OutcomeBadge outcome={entry.outcome} />
+              </TableCell>
+              <TableCell className="font-mono text-[0.68rem] text-[#87bfff]">
+                {entry.proof_ref ? (
+                  <span className="inline-flex items-center gap-1">
+                    {entry.proof_ref}
+                    <ExternalLink className="h-3 w-3" />
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </TableCell>
+              <TableCell className="max-w-[170px] truncate">{entry.policy_rule ?? "—"}</TableCell>
+              <TableCell className="text-center font-mono">{entry.decisions.length}</TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+}
+
+function Pagination({
+  cursor,
+  pageSize,
+  hasMore,
+  total,
+  onPrevious,
+  onNext,
+}: {
+  cursor: number;
+  pageSize: number;
+  hasMore: boolean;
+  total: number | undefined;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const t = useTranslations("common");
+  const start = total === 0 ? 0 : cursor + 1;
+  const end = Math.min(cursor + pageSize, total ?? cursor + pageSize);
+  return (
+    <div className="flex min-h-11 items-center justify-between border-t border-[var(--tessera-border)] px-4 py-2 text-xs text-[var(--tessera-text-muted)]">
+      <p>
+        {start}–{end}
+        {typeof total === "number" ? ` / ${total}` : null}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={onPrevious} disabled={cursor === 0}>
+          <ChevronLeft className="h-4 w-4" />
+          {t("previous")}
+        </Button>
+        <Button variant="outline" size="sm" onClick={onNext} disabled={!hasMore}>
+          {t("next")}
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function BottomPanels({
+  overview,
+  loading,
+}: {
+  overview: AuditOverview | undefined;
+  loading: boolean;
+}) {
+  const t = useTranslations("audit.panels");
+  return (
+    <div className="grid shrink-0 grid-cols-1 gap-3 lg:grid-cols-5">
+      <Panel title={t("timeline")}>
+        {loading || !overview ? (
+          <Skeleton className="h-28 w-full" />
+        ) : (
+          <TimelineChart overview={overview} />
+        )}
+      </Panel>
+      <Panel title={t("actors")}>
+        <CountList items={overview?.actors ?? []} loading={loading} />
+      </Panel>
+      <Panel title={t("policies")}>
+        <CountList items={overview?.policies ?? []} loading={loading} danger />
+      </Panel>
+      <Panel title={t("proofs")}>
+        <ProofList overview={overview} loading={loading} />
+      </Panel>
+      <Panel title={t("filters")}>
+        <CountList items={overview?.suggested_filters ?? []} loading={loading} />
+      </Panel>
+    </div>
+  );
+}
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="h-[142px] overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+      <h2 className="font-sans text-sm font-semibold text-[var(--tessera-text)]">{title}</h2>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function CountList({
+  items,
+  loading,
+  danger,
+}: {
+  items: { key: string; count: number }[];
+  loading: boolean;
+  danger?: boolean;
+}) {
+  if (loading) return <Skeleton className="h-24 w-full" />;
+  const max = Math.max(...items.map((item) => item.count), 1);
+  return (
+    <ol className="space-y-2">
+      {items.slice(0, 5).map((item, index) => (
+        <li
+          key={`${item.key}-${index}`}
+          className="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-xs"
+        >
+          <span className="font-mono text-[var(--tessera-text-muted)]">{index + 1}</span>
+          <div className="min-w-0">
+            <p className="truncate text-[var(--tessera-text)]">{item.key}</p>
+            <div className="mt-1 h-1.5 rounded-full bg-[var(--tessera-bg)]">
+              <div
+                className={cn("h-full rounded-full", danger ? "bg-red-400" : "bg-[#2e72d2]")}
+                style={{ width: `${(item.count / max) * 100}%` }}
+              />
+            </div>
+          </div>
+          <span className="font-mono text-[var(--tessera-text-muted)]">{item.count}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function TimelineChart({ overview }: { overview: AuditOverview }) {
+  const total = overview.timeline.map((bucket) => bucket.total);
+  const denied = overview.timeline.map((bucket) => bucket.denied);
+  return (
+    <div className="space-y-2">
+      <svg viewBox="0 0 220 72" className="h-[74px] w-full" aria-hidden="true">
+        <title>{overview.total_events}</title>
+        <line
+          x1="0"
+          x2="220"
+          y1="66"
+          y2="66"
+          stroke="currentColor"
+          className="text-[var(--tessera-border)]"
+        />
+        <polyline points={polyline(total, 220, 64)} fill="none" stroke="#2e72d2" strokeWidth="2" />
+        <polyline points={polyline(denied, 220, 64)} fill="none" stroke="#ff7a59" strokeWidth="2" />
+      </svg>
+      <div className="flex justify-between text-[0.65rem] text-[var(--tessera-text-muted)]">
+        {overview.timeline.map((bucket) => (
+          <span key={bucket.start}>{bucket.label}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProofList({
+  overview,
+  loading,
+}: {
+  overview: AuditOverview | undefined;
+  loading: boolean;
+}) {
+  const formatter = useFormatter();
+  if (loading) return <Skeleton className="h-24 w-full" />;
+  return (
+    <ul className="space-y-2">
+      {(overview?.recent_proofs ?? []).slice(0, 4).map((proof) => (
+        <li key={proof.hash} className="flex items-center gap-2 text-xs">
+          <FileJson className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+          <div className="min-w-0">
+            <p className="truncate font-mono text-[var(--tessera-text)]">
+              {proof.hash.slice(0, 14)}
+            </p>
+            <p className="truncate text-[0.68rem] text-[var(--tessera-text-muted)]">
+              {formatter.dateTime(new Date(proof.occurred_at), {
+                dateStyle: "short",
+                timeStyle: "short",
+              })}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function AuditDetails({
+  entry,
+  overview,
+}: {
+  entry: AuditEntry | null;
+  overview: AuditOverview | undefined;
+}) {
+  const t = useTranslations("audit");
+  const formatter = useFormatter();
+  if (!entry) {
+    return (
+      <aside className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
+        <EmptyState
+          icon={<ShieldCheck />}
+          title={t("detail.empty")}
+          description={t("description")}
+        />
+      </aside>
+    );
+  }
+  const firstDecision = entry.decisions[0];
+  const rationale = firstDecision?.rationale || entry.policy_rule || entry.error || "—";
+  return (
+    <aside className="min-h-0 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-3">
+        <h2 className="font-sans text-base font-semibold">{t("detail.title")}</h2>
+        <OutcomeBadge outcome={entry.outcome} />
+      </div>
+      <div className="space-y-5 p-4">
+        <DetailSection>
+          <DetailRow
+            label={t("detail.eventId")}
+            value={entry.proof_ref ?? entry.hash?.slice(0, 12) ?? "—"}
+            mono
+          />
+          <DetailRow
+            label={t("detail.timestamp")}
+            value={formatter.dateTime(new Date(entry.occurred_at), {
+              dateStyle: "medium",
+              timeStyle: "medium",
+            })}
+          />
+          <DetailRow
+            label={t("detail.actor")}
+            value={entry.actor}
+            badge={t(`roles.${entry.actor_role}`)}
+          />
+          <DetailRow label={t("detail.scope")} value={entry.scope} />
+          <DetailRow label={t("detail.action")} value={entry.target} />
+          <DetailRow label={t("detail.object")} value={entry.object_label} />
+          <DetailRow label={t("detail.policy")} value={rationale} />
+        </DetailSection>
+
+        <DetailBlock title={t("detail.proof")}>
+          <DetailRow label={t("detail.hash")} value={entry.hash ?? "—"} mono />
+          <DetailRow label={t("detail.prevHash")} value={entry.prev_hash ?? "—"} mono />
+          <DetailRow
+            label={t("detail.chain")}
+            value={overview?.chain_verified ? t("integrity.ok") : t("integrity.unknown")}
+          />
+        </DetailBlock>
+
+        <DetailBlock title={t("detail.causality")}>
+          <div className="grid grid-cols-4 gap-2">
+            {["request", "policy", "decision", "proof"].map((step, index) => (
+              <div
+                key={step}
+                className="text-center text-[0.65rem] text-[var(--tessera-text-muted)]"
+              >
+                <div className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full border border-[#1b805f] bg-[#05281f] text-[var(--tessera-green)]">
+                  {index + 1}
+                </div>
+                {t(`detail.steps.${step}`)}
+              </div>
+            ))}
+          </div>
+        </DetailBlock>
+
+        <DetailBlock title={t("payload")}>
+          <pre className="max-h-44 overflow-auto rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 font-mono text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]">
+            {JSON.stringify(entry.arguments, null, 2)}
+          </pre>
+        </DetailBlock>
+
+        <DetailBlock title={t("detail.links")}>
+          <DetailRow label={t("columns.type")} value={t(`eventTypes.${entry.event_type}`)} />
+          <DetailRow label={t("columns.case")} value={entry.policy_rule ?? "—"} />
+          <DetailRow label={t("detail.model")} value={entry.model ?? "—"} />
+        </DetailBlock>
+
+        <div className="grid grid-cols-2 gap-2">
+          <ActionButton
+            icon="copy"
+            label={t("actions.copyId")}
+            value={entry.proof_ref ?? entry.hash ?? ""}
+          />
+          <ActionButton
+            icon="download"
+            label={t("actions.openProof")}
+            value={JSON.stringify(entry, null, 2)}
+            downloadName="tessera-audit-event.json"
+          />
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function DetailSection({ children }: { children: React.ReactNode }) {
+  return <section className="space-y-2">{children}</section>;
+}
+
+function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border-t border-[var(--tessera-border)] pt-4">
+      <h3 className="font-sans text-sm font-semibold">{title}</h3>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  badge,
+  mono,
+}: {
+  label: string;
+  value: string;
+  badge?: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-[116px_minmax(0,1fr)] gap-3 text-xs">
+      <dt className="text-[var(--tessera-text-muted)]">{label}</dt>
+      <dd
+        className={cn(
+          "min-w-0 truncate text-[var(--tessera-text)]",
+          mono && "font-mono text-[0.68rem]",
+        )}
+      >
+        {value}
+        {badge ? (
+          <span className="ml-2 rounded bg-[var(--tessera-muted)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
+            {badge}
+          </span>
+        ) : null}
+      </dd>
+    </div>
+  );
+}
+
+function ActionButton({
+  icon,
+  label,
+  value,
+  downloadName,
+}: {
+  icon: "copy" | "download";
+  label: string;
+  value: string;
+  downloadName?: string;
+}) {
+  const Icon = icon === "copy" ? Copy : Download;
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs"
+      onClick={() => {
+        if (downloadName) {
+          const blob = new Blob([value], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = downloadName;
+          a.click();
+          URL.revokeObjectURL(url);
+          return;
+        }
+        void navigator.clipboard?.writeText(value);
+      }}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </Button>
+  );
+}
+
+function AuditFooter({
+  overview,
+  formatter,
+}: {
+  overview: AuditOverview | undefined;
+  formatter: ReturnType<typeof useFormatter>;
+}) {
+  const t = useTranslations("audit.footer");
+  return (
+    <footer className="grid min-h-[48px] shrink-0 grid-cols-1 gap-3 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)] md:grid-cols-5">
+      <FooterItem
+        icon={<ShieldCheck />}
+        label={t("integrity")}
+        value={overview?.chain_verified ? t("conform") : t("unknown")}
+      />
+      <FooterItem icon={<Database />} label={t("source")} value={t("ledger")} />
+      <FooterItem
+        icon={<FileJson />}
+        label={t("proofs")}
+        value={String(overview?.chain_length ?? "—")}
+      />
+      <FooterItem
+        icon={<Hash />}
+        label={t("lastCheck")}
+        value={
+          overview
+            ? formatter.dateTime(new Date(overview.generated_at), {
+                dateStyle: "short",
+                timeStyle: "medium",
+              })
+            : "—"
+        }
+      />
+      <FooterItem
+        icon={<KeyRound />}
+        label={t("clock")}
+        value={
+          overview
+            ? formatter.dateTime(new Date(overview.window_end), { timeStyle: "medium" })
+            : "—"
+        }
+      />
+    </footer>
+  );
+}
+
+function FooterItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[var(--tessera-green)] [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
+      <div className="min-w-0">
+        <p className="truncate font-medium text-[var(--tessera-text)]">{label}</p>
+        <p className="truncate">{value}</p>
+      </div>
     </div>
   );
 }
@@ -254,173 +1096,19 @@ function OutcomeBadge({ outcome }: { outcome: AuditOutcome }) {
   );
 }
 
-function Pagination({
-  cursor,
-  pageSize,
-  hasMore,
-  onPrevious,
-  onNext,
-}: {
-  cursor: number;
-  pageSize: number;
-  hasMore: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-}) {
-  const t = useTranslations("common");
-  return (
-    <div className="flex items-center justify-between border-t border-[var(--border)] px-5 py-3">
-      <p className="text-xs text-[var(--muted-foreground)]">
-        {cursor + 1} – {cursor + pageSize}
-      </p>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={onPrevious} disabled={cursor === 0}>
-          <ChevronLeft className="h-4 w-4" />
-          {t("previous")}
-        </Button>
-        <Button variant="outline" size="sm" onClick={onNext} disabled={!hasMore}>
-          {t("next")}
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
+function entryKey(entry: AuditEntry): string {
+  return `${entry.occurred_at}-${entry.target}-${entry.hash ?? entry.proof_ref ?? entry.object_label}`;
 }
 
-function DetailsDrawer({
-  entry,
-  onClose,
-}: {
-  entry: AuditEntry;
-  onClose: () => void;
-}) {
-  const t = useTranslations("common");
-  const tAudit = useTranslations("audit");
-  const formatter = useFormatter();
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  // Move focus into the drawer on open and close it on Escape — a drawer that
-  // can be opened by keyboard must also be dismissible and focusable by keyboard.
-  useEffect(() => {
-    closeRef.current?.focus();
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div
-      // biome-ignore lint/a11y/useSemanticElements: a custom slide-over panel uses role=dialog on a div by design
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${tAudit("title")} — ${entry.target}`}
-      className="animate-in slide-in-from-right-full fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-card-elevated)] duration-300"
-    >
-      {/* premium left accent hairline */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-px bg-gradient-to-b from-gold-500/50 via-gold-500/10 to-transparent" />
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-[var(--border)] bg-gradient-to-b from-[var(--muted)]/30 to-transparent px-5 py-3.5">
-        <div className="flex items-center gap-2">
-          <OutcomeBadge outcome={entry.outcome} />
-          <p className="font-serif text-sm font-semibold">{entry.target}</p>
-        </div>
-        <Button
-          ref={closeRef}
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          aria-label={t("close")}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {/* Meta row */}
-        <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
-          <span className="font-mono tabular-nums">
-            {formatter.dateTime(new Date(entry.occurred_at), {
-              dateStyle: "medium",
-              timeStyle: "medium",
-            })}
-          </span>
-        </div>
-
-        {/* Decisions */}
-        {entry.decisions.length > 0 && (
-          <section>
-            <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-              {tAudit("columns.decisions")}
-            </p>
-            <ul className="space-y-2">
-              {entry.decisions.map((d, i) => (
-                <li
-                  // biome-ignore lint/suspicious/noArrayIndexKey: guard decisions are render-once and never reorder
-                  key={i}
-                  className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 px-4 py-3 text-xs"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono font-medium text-[var(--foreground)]">
-                      {d.policy_rule}
-                    </span>
-                    <span
-                      className={
-                        d.decision === "allow"
-                          ? "font-medium text-green-700 dark:text-green-400"
-                          : d.decision === "deny"
-                            ? "font-medium text-red-700 dark:text-red-400"
-                            : "font-medium text-amber-700 dark:text-amber-400"
-                      }
-                    >
-                      {d.decision}
-                    </span>
-                  </div>
-                  {d.rationale && (
-                    <p className="mt-1 leading-relaxed text-[var(--muted-foreground)]">
-                      {d.rationale}
-                    </p>
-                  )}
-                  {d.redactions.length > 0 && (
-                    <p className="mt-1 text-[var(--muted-foreground)]/60">
-                      {tAudit("redacted")}: {d.redactions.join(", ")}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* Raw payload — collapsible */}
-        <section>
-          <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-            {tAudit("payload")}
-          </p>
-          <pre className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--muted)]/40 px-3 py-2.5 font-mono text-[0.72rem] leading-relaxed text-[var(--foreground)] dark:bg-navy-800/60">
-            {JSON.stringify(entry, null, 2)}
-          </pre>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-/** Tamper-evident hash-chain status of the audit log (ADR 0010, #3). */
-function IntegrityBadge({ data }: { data: AuditIntegrity | undefined }) {
-  const t = useTranslations("audit");
-  if (!data) return null;
-  return data.verified ? (
-    <Badge tone="success">
-      <ShieldCheck className="h-3.5 w-3.5" />
-      {t("integrity.verified", { n: data.length })}
-    </Badge>
-  ) : (
-    <Badge tone="danger">
-      <ShieldOff className="h-3.5 w-3.5" />
-      {t("integrity.broken", { at: data.broken_at ?? 0 })}
-    </Badge>
-  );
+function polyline(values: number[], width: number, height: number): string {
+  if (values.length === 0) return "";
+  const max = Math.max(...values, 1);
+  const last = Math.max(values.length - 1, 1);
+  return values
+    .map((value, index) => {
+      const x = (index / last) * width;
+      const y = height - (value / max) * (height - 8);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
 }

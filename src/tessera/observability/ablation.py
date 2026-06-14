@@ -13,7 +13,7 @@ This module re-runs a captured turn under two ablations and re-judges each:
 * **no-rerank** — present the same chunks in reversed order, so the best chunk is
   no longer first (the reranker's ordering benefit is removed).
 
-Each layer's *worth* is ``baseline − ablated_score``. Generation and judging
+Each layer's *worth* is ``baseline - ablated_score``. Generation and judging
 reuse the sovereign local backend and :class:`LLMJudge`, so the whole thing runs
 zero-egress.
 """

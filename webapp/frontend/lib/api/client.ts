@@ -18,9 +18,12 @@ import {
   AblationReportSchema,
   type AnomalyReport,
   AnomalyReportSchema,
+  type AuditEventType,
   type AuditIntegrity,
   AuditIntegritySchema,
   type AuditOutcome,
+  type AuditOverview,
+  AuditOverviewSchema,
   type AuditPage,
   AuditPageSchema,
   type BudgetSnapshot,
@@ -253,17 +256,44 @@ export interface FetchAuditOptions {
   limit?: number;
   target?: string;
   outcome?: AuditOutcome;
+  eventType?: AuditEventType;
+  policyRule?: string;
+  query?: string;
+  since?: string;
+  until?: string;
   signal?: AbortSignal;
+}
+
+function appendAuditParams(params: URLSearchParams, options: FetchAuditOptions): void {
+  if (options.target) params.set("target", options.target);
+  if (options.outcome) params.set("outcome", options.outcome);
+  if (options.eventType) params.set("event_type", options.eventType);
+  if (options.policyRule) params.set("policy_rule", options.policyRule);
+  if (options.query) params.set("q", options.query);
+  if (options.since) params.set("since", options.since);
+  if (options.until) params.set("until", options.until);
 }
 
 export async function fetchAudit(options: FetchAuditOptions = {}): Promise<AuditPage> {
   const params = new URLSearchParams();
   if (options.cursor != null) params.set("cursor", String(options.cursor));
   if (options.limit != null) params.set("limit", String(options.limit));
-  if (options.target) params.set("target", options.target);
-  if (options.outcome) params.set("outcome", options.outcome);
+  appendAuditParams(params, options);
   const query = params.toString();
   return request(`/audit${query ? `?${query}` : ""}`, { signal: options.signal }, AuditPageSchema);
+}
+
+export async function fetchAuditOverview(
+  options: Omit<FetchAuditOptions, "cursor" | "limit"> = {},
+): Promise<AuditOverview> {
+  const params = new URLSearchParams();
+  appendAuditParams(params, options);
+  const query = params.toString();
+  return request(
+    `/audit/overview${query ? `?${query}` : ""}`,
+    { signal: options.signal },
+    AuditOverviewSchema,
+  );
 }
 
 export async function fetchAuditIntegrity(signal?: AbortSignal): Promise<AuditIntegrity> {

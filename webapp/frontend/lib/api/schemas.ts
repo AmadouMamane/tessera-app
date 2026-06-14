@@ -59,6 +59,10 @@ export const ChatErrorEventSchema = z.object({
 
 export const AuditOutcomeSchema = z.enum(["allowed", "denied", "error"]);
 export type AuditOutcome = z.infer<typeof AuditOutcomeSchema>;
+export const AuditEventTypeSchema = z.enum(["guard", "tool", "memory", "other"]);
+export type AuditEventType = z.infer<typeof AuditEventTypeSchema>;
+export const AuditActorRoleSchema = z.enum(["human", "service", "system", "model"]);
+export type AuditActorRole = z.infer<typeof AuditActorRoleSchema>;
 
 export const AuditDecisionSchema = z.object({
   target: z.string(),
@@ -78,6 +82,17 @@ export const AuditEntrySchema = z.object({
   arguments: z.record(z.string(), z.unknown()).default({}),
   decisions: z.array(AuditDecisionSchema).default([]),
   error: z.string().nullable().default(null),
+  version: z.number().int().nullable().optional(),
+  data_residency: z.string().nullable().optional(),
+  prev_hash: z.string().nullable().optional(),
+  hash: z.string().nullable().optional(),
+  event_type: AuditEventTypeSchema.default("other"),
+  actor: z.string().default("audit-log"),
+  actor_role: AuditActorRoleSchema.default("system"),
+  scope: z.string().default("global"),
+  object_label: z.string().default("audit event"),
+  policy_rule: z.string().nullable().optional(),
+  proof_ref: z.string().nullable().optional(),
 });
 export type AuditEntry = z.infer<typeof AuditEntrySchema>;
 
@@ -94,6 +109,68 @@ export const AuditIntegritySchema = z.object({
   broken_at: z.number().int().nullable().default(null),
 });
 export type AuditIntegrity = z.infer<typeof AuditIntegritySchema>;
+
+export const AuditCountSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+});
+export type AuditCount = z.infer<typeof AuditCountSchema>;
+
+export const AuditMetricSchema = z.object({
+  key: z.enum([
+    "signed_events",
+    "sensitive_actions",
+    "guard_refusals",
+    "proof_events",
+    "chain_integrity",
+    "unique_actors",
+  ]),
+  value: z.number().int(),
+  previous_value: z.number().int(),
+  delta_pct: z.number().nullable().default(null),
+});
+export type AuditMetric = z.infer<typeof AuditMetricSchema>;
+
+export const AuditTimelineBucketSchema = z.object({
+  label: z.string(),
+  start: z.string(),
+  end: z.string(),
+  total: z.number().int(),
+  allowed: z.number().int(),
+  denied: z.number().int(),
+  error: z.number().int(),
+});
+export type AuditTimelineBucket = z.infer<typeof AuditTimelineBucketSchema>;
+
+export const AuditProofSchema = z.object({
+  occurred_at: z.string(),
+  target: z.string(),
+  outcome: AuditOutcomeSchema,
+  actor: z.string(),
+  hash: z.string(),
+  prev_hash: z.string().nullable().optional(),
+});
+export type AuditProof = z.infer<typeof AuditProofSchema>;
+
+export const AuditOverviewSchema = z.object({
+  generated_at: z.string(),
+  window_start: z.string(),
+  window_end: z.string(),
+  total_events: z.number().int(),
+  chain_verified: z.boolean(),
+  chain_length: z.number().int(),
+  chain_broken_at: z.number().int().nullable().default(null),
+  metrics: z.array(AuditMetricSchema),
+  timeline: z.array(AuditTimelineBucketSchema),
+  targets: z.array(AuditCountSchema),
+  outcomes: z.array(AuditCountSchema),
+  policies: z.array(AuditCountSchema),
+  actors: z.array(AuditCountSchema),
+  event_types: z.array(AuditCountSchema),
+  recent_proofs: z.array(AuditProofSchema),
+  suggested_filters: z.array(AuditCountSchema),
+});
+export type AuditOverview = z.infer<typeof AuditOverviewSchema>;
 
 // ---------------------------------------------------------------------------
 // Health + budget

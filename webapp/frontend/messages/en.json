@@ -299,13 +299,54 @@
   },
   "audit": {
     "title": "Audit trail",
-    "description": "Every tool call is recorded with its decision, target, and policy rationale.",
+    "description": "Every sensitive action is signed, traced, and verifiable end to end.",
     "payload": "Payload",
     "redacted": "Redacted",
+    "window": {
+      "label": "Period",
+      "24h": "24h",
+      "7d": "7 days",
+      "30d": "30 days",
+      "refresh": "Go to date"
+    },
+    "metrics": {
+      "signed_events": {
+        "label": "Signed events"
+      },
+      "sensitive_actions": {
+        "label": "Sensitive actions"
+      },
+      "guard_refusals": {
+        "label": "Guard refusals"
+      },
+      "proof_events": {
+        "label": "Verifiable proofs"
+      },
+      "chain_integrity": {
+        "label": "Chain integrity"
+      },
+      "unique_actors": {
+        "label": "Unique actors"
+      },
+      "conform": "Conform",
+      "broken": "Broken",
+      "chainHint": "No deviation",
+      "chainBrokenHint": "Deviation detected"
+    },
+    "delta": {
+      "none": "—"
+    },
     "columns": {
-      "occurredAt": "When",
+      "occurredAt": "Date / Time",
+      "type": "Type",
+      "object": "Object",
+      "actor": "Actor",
+      "role": "Role",
+      "scope": "Scope",
       "target": "Tool",
       "outcome": "Verdict",
+      "proof": "Proof",
+      "case": "Linked case",
       "decisions": "Decisions",
       "actions": ""
     },
@@ -315,12 +356,76 @@
       "error": "Error"
     },
     "filters": {
+      "search": "Search (actor, action, object, trace ID, rule…)",
+      "button": "Filters",
+      "eventType": "Event type",
       "target": "Tool",
-      "outcome": "Verdict"
+      "outcome": "Verdict",
+      "policyRule": "Rule"
+    },
+    "eventTypes": {
+      "all": "All",
+      "guard": "Decisions",
+      "tool": "Tools",
+      "memory": "Memory",
+      "other": "Other"
+    },
+    "roles": {
+      "human": "Human",
+      "service": "Service",
+      "system": "System",
+      "model": "Model"
     },
     "integrity": {
       "verified": "Audit chain verified · {n} entries",
-      "broken": "Audit chain BROKEN at #{at}"
+      "broken": "Audit chain BROKEN at #{at}",
+      "ok": "Chain verified",
+      "unknown": "Unknown state"
+    },
+    "panels": {
+      "timeline": "Chronology",
+      "actors": "Most active actors",
+      "policies": "Triggered rules",
+      "proofs": "Recent proofs",
+      "filters": "Frequent filters"
+    },
+    "detail": {
+      "title": "Event detail",
+      "empty": "No event selected",
+      "eventId": "Event ID",
+      "timestamp": "Timestamp",
+      "actor": "Actor",
+      "scope": "Scope",
+      "action": "Action",
+      "object": "Object",
+      "policy": "Justification",
+      "proof": "Proof & integrity",
+      "hash": "Hash",
+      "prevHash": "Previous hash",
+      "chain": "Chain",
+      "causality": "Causality chain",
+      "links": "Related links",
+      "model": "Model",
+      "steps": {
+        "request": "Request",
+        "policy": "Policy Engine",
+        "decision": "Decision",
+        "proof": "Proof"
+      }
+    },
+    "actions": {
+      "copyId": "Copy ID",
+      "openProof": "Open proof"
+    },
+    "footer": {
+      "integrity": "Audit integrity",
+      "conform": "Conform",
+      "unknown": "Unknown",
+      "source": "Source of truth",
+      "ledger": "Tessera Audit Ledger",
+      "proofs": "Proofs",
+      "lastCheck": "Last verification",
+      "clock": "System clock"
     }
   },
   "eval": {

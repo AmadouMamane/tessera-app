@@ -299,13 +299,54 @@
   },
   "audit": {
     "title": "Audit-Protokoll",
-    "description": "Jeder Werkzeugaufruf wird mit seiner Entscheidung, Quelle und der zugehörigen Richtlinie protokolliert.",
+    "description": "Jede sensible Aktion ist signiert, nachverfolgt und Ende-zu-Ende überprüfbar.",
     "payload": "Nutzdaten",
     "redacted": "Geschwärzt",
+    "window": {
+      "label": "Zeitraum",
+      "24h": "24h",
+      "7d": "7 Tage",
+      "30d": "30 Tage",
+      "refresh": "Zum Datum"
+    },
+    "metrics": {
+      "signed_events": {
+        "label": "Signierte Ereignisse"
+      },
+      "sensitive_actions": {
+        "label": "Sensible Aktionen"
+      },
+      "guard_refusals": {
+        "label": "Guard-Ablehnungen"
+      },
+      "proof_events": {
+        "label": "Prüfbare Nachweise"
+      },
+      "chain_integrity": {
+        "label": "Kettenintegrität"
+      },
+      "unique_actors": {
+        "label": "Eindeutige Akteure"
+      },
+      "conform": "Konform",
+      "broken": "Unterbrochen",
+      "chainHint": "Keine Abweichung",
+      "chainBrokenHint": "Abweichung erkannt"
+    },
+    "delta": {
+      "none": "—"
+    },
     "columns": {
-      "occurredAt": "Zeitpunkt",
+      "occurredAt": "Datum / Zeit",
+      "type": "Typ",
+      "object": "Objekt",
+      "actor": "Akteur",
+      "role": "Rolle",
+      "scope": "Scope",
       "target": "Werkzeug",
       "outcome": "Verdikt",
+      "proof": "Nachweis",
+      "case": "Verknüpfter Fall",
       "decisions": "Entscheidungen",
       "actions": ""
     },
@@ -315,12 +356,76 @@
       "error": "Fehler"
     },
     "filters": {
+      "search": "Suchen (Akteur, Aktion, Objekt, Trace-ID, Regel…)",
+      "button": "Filter",
+      "eventType": "Ereignistyp",
       "target": "Werkzeug",
-      "outcome": "Verdikt"
+      "outcome": "Verdikt",
+      "policyRule": "Regel"
+    },
+    "eventTypes": {
+      "all": "Alle",
+      "guard": "Entscheidungen",
+      "tool": "Werkzeuge",
+      "memory": "Speicher",
+      "other": "Andere"
+    },
+    "roles": {
+      "human": "Mensch",
+      "service": "Service",
+      "system": "System",
+      "model": "Modell"
     },
     "integrity": {
       "verified": "Audit-Kette verifiziert · {n} Einträge",
-      "broken": "Audit-Kette MANIPULIERT bei #{at}"
+      "broken": "Audit-Kette MANIPULIERT bei #{at}",
+      "ok": "Kette verifiziert",
+      "unknown": "Unbekannter Zustand"
+    },
+    "panels": {
+      "timeline": "Chronologie",
+      "actors": "Aktivste Akteure",
+      "policies": "Ausgelöste Regeln",
+      "proofs": "Aktuelle Nachweise",
+      "filters": "Häufige Filter"
+    },
+    "detail": {
+      "title": "Ereignisdetail",
+      "empty": "Kein Ereignis ausgewählt",
+      "eventId": "Event ID",
+      "timestamp": "Zeitstempel",
+      "actor": "Akteur",
+      "scope": "Scope",
+      "action": "Aktion",
+      "object": "Objekt",
+      "policy": "Begründung",
+      "proof": "Nachweis & Integrität",
+      "hash": "Hash",
+      "prevHash": "Vorheriger Hash",
+      "chain": "Kette",
+      "causality": "Kausalkette",
+      "links": "Verknüpfte Links",
+      "model": "Modell",
+      "steps": {
+        "request": "Anfrage",
+        "policy": "Policy Engine",
+        "decision": "Entscheidung",
+        "proof": "Nachweis"
+      }
+    },
+    "actions": {
+      "copyId": "ID kopieren",
+      "openProof": "Nachweis öffnen"
+    },
+    "footer": {
+      "integrity": "Audit-Integrität",
+      "conform": "Konform",
+      "unknown": "Unbekannt",
+      "source": "Quelle der Wahrheit",
+      "ledger": "Tessera Audit Ledger",
+      "proofs": "Nachweise",
+      "lastCheck": "Letzte Prüfung",
+      "clock": "Systemuhr"
     }
   },
   "eval": {

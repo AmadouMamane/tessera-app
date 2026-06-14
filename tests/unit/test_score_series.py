@@ -111,7 +111,12 @@ def test_judge_drift_unknown_with_too_few_buckets() -> None:
     from tessera.observability.eval.series import compute_judge_drift
 
     end = datetime(2026, 6, 12, 12, 0, tzinfo=UTC)
-    drift = compute_judge_drift([_jrow(end - timedelta(hours=1), 0.9)], end=end, days=7, n_buckets=7)
+    drift = compute_judge_drift(
+        [_jrow(end - timedelta(hours=1), 0.9)],
+        end=end,
+        days=7,
+        n_buckets=7,
+    )
     assert drift.level == "unknown"
     assert drift.divergence is None
     assert drift.delta is None

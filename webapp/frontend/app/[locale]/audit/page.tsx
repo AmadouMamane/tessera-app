@@ -25,7 +25,7 @@ export default async function AuditPage({ params }: AuditPageProps) {
   const role = await currentRole();
 
   return (
-    <AppShell title={t("title")} description={t("description")}>
+    <AppShell title={t("title")} description={t("description")} contentWidth="full">
       {isOperator(role) ? <AuditTable /> : <OperatorLocked locale={locale} />}
     </AppShell>
   );
