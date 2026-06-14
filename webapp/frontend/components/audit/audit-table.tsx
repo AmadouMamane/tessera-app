@@ -961,7 +961,12 @@ function TimelineChart({ overview }: { overview: AuditOverview }) {
   const ticks = timelineTicks(overview.timeline);
   return (
     <div className="flex h-full flex-col justify-end gap-1.5 pb-1">
-      <svg viewBox="0 0 220 64" className="h-[58px] w-full shrink-0" aria-hidden="true">
+      <svg
+        viewBox="0 0 220 64"
+        preserveAspectRatio="none"
+        className="h-[58px] w-full shrink-0"
+        aria-hidden="true"
+      >
         <title>{overview.total_events}</title>
         <line
           x1="0"
@@ -969,10 +974,23 @@ function TimelineChart({ overview }: { overview: AuditOverview }) {
           y1="58"
           y2="58"
           stroke="currentColor"
+          vectorEffect="non-scaling-stroke"
           className="text-[var(--tessera-border)]"
         />
-        <polyline points={polyline(total, 220, 56)} fill="none" stroke="#2e72d2" strokeWidth="2" />
-        <polyline points={polyline(denied, 220, 56)} fill="none" stroke="#ff7a59" strokeWidth="2" />
+        <polyline
+          points={polyline(total, 220, 56)}
+          fill="none"
+          stroke="#2e72d2"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+        />
+        <polyline
+          points={polyline(denied, 220, 56)}
+          fill="none"
+          stroke="#ff7a59"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+        />
       </svg>
       <div className="grid grid-cols-4 gap-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
         {ticks.map((bucket, index) => (
