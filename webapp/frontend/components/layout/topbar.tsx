@@ -209,16 +209,16 @@ export function Topbar({ title, description, contextItems = [], actions = [] }: 
   return (
     <header className="relative flex min-h-[5.5rem] items-center justify-between gap-4 border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-6 py-3">
       <div className="min-w-0">
-        <h1 className="font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
+        <h1 className="truncate font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 text-sm text-[var(--tessera-text-muted)]">{description}</p>
+          <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">{description}</p>
         ) : (
-          <p className="mt-1 text-sm text-[var(--tessera-text-muted)]">{t("tagline")}</p>
+          <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">{t("tagline")}</p>
         )}
       </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
         <StatusBadge />
         <ModelBadge />
         <HeaderIconButton icon={Search} label="Recherche" className="hidden lg:inline-flex" />
