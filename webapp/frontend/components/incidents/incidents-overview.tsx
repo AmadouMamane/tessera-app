@@ -21,6 +21,11 @@ import type { ReactNode } from "react";
 
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
+import {
+  TemporalRail,
+  useRailTimeline,
+  useTemporalState,
+} from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
 import { fetchIncidentsOverview } from "@/lib/api/client";
 import type { IncidentsOverview as IncidentsOverviewData } from "@/lib/api/schemas";
@@ -59,6 +64,8 @@ const TABS = [
 
 export function IncidentsOverview() {
   const t = useTranslations("incidents");
+  const temporal = useTemporalState();
+  const railTimeline = useRailTimeline();
   const { data } = useQuery({
     queryKey: ["incidents-overview"],
     queryFn: ({ signal }) => fetchIncidentsOverview(signal),
@@ -77,7 +84,16 @@ export function IncidentsOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} />
-      <LiveRail t={t} data={data} />
+      <TemporalRail
+        mode={temporal.mode}
+        liveStatus={t("rail.realtime")}
+        timeline={railTimeline.data}
+        selectedAt={temporal.selectedAt}
+        onSelectedAtChange={temporal.setSelectedAt}
+        periodKey={temporal.periodKey}
+        onPeriodChange={temporal.setPeriodKey}
+        onModeChange={temporal.changeMode}
+      />
 
       {/* A · État actuel */}
       <Zone label={t("zone.actual")}>
@@ -177,29 +193,6 @@ function CommandBar({ t }: { t: T }) {
         <IconBtn icon={Download} />
         <IconBtn icon={MoreVertical} />
       </div>
-    </section>
-  );
-}
-
-function LiveRail({ t, data }: { t: T; data: Data }) {
-  return (
-    <section className="flex min-h-[42px] shrink-0 flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-2 text-xs text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <span className="flex items-center gap-1.5 font-medium text-[var(--tessera-green)]">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--tessera-green)]" />{" "}
-        {t("rail.live")}
-      </span>
-      <Sep />
-      <span>{t("rail.realtime")}</span>
-      <Sep />
-      <span>{t("rail.period", { days: data.period_days })}</span>
-      <Sep />
-      <span>{t("rail.updated", { time: data.updated_at })}</span>
-      <button
-        type="button"
-        className="ml-auto flex h-7 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
-      >
-        <RefreshCcw className="h-3.5 w-3.5" /> {t("rail.replay")}
-      </button>
     </section>
   );
 }
@@ -868,10 +861,6 @@ function IconBtn({ icon: Icon }: { icon: typeof Download }) {
       <Icon className="h-4 w-4" />
     </button>
   );
-}
-
-function Sep() {
-  return <span className="text-[var(--tessera-border-strong)]">·</span>;
 }
 
 function Chip({
