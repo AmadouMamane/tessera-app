@@ -49,6 +49,7 @@ from tessera.observability import (
     guard_retraction as guard_retraction_mod,
     handoffs as handoffs_mod,
     improvement as improvement_mod,
+    inbox as inbox_mod,
     incidents as incidents_mod,
     integrations as integrations_mod,
     journey as journey_mod,
@@ -632,6 +633,20 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/inbox")
+async def observability_inbox() -> dict[str, object]:
+    """Inbox / À traiter overview (page #24).
+
+    Composes the queue posture, the task queue, the by-type distribution and the
+    SLA buckets. Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **inbox_mod.compute_inbox_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.inbox: failed: {exc}\n")
         return {"available": False}
 
 

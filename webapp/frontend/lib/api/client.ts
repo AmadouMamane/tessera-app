@@ -89,6 +89,8 @@ import {
   HealthResponseSchema,
   type ImprovementReport,
   ImprovementReportSchema,
+  type InboxOverview,
+  InboxOverviewSchema,
   type IncidentsOverview,
   IncidentsOverviewSchema,
   type IntegrationsOverview,
@@ -721,6 +723,10 @@ export async function fetchSystemProfile(signal?: AbortSignal): Promise<SystemPr
 
 export async function fetchParametersOverview(signal?: AbortSignal): Promise<ParametersOverview> {
   return request("/observability/parameters", { signal }, ParametersOverviewSchema);
+}
+
+export async function fetchInboxOverview(signal?: AbortSignal): Promise<InboxOverview> {
+  return request("/observability/inbox", { signal }, InboxOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

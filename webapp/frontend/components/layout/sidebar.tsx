@@ -34,6 +34,7 @@ import { cn } from "@/lib/cn";
 type RouteHref =
   | "/"
   | "/chat"
+  | "/inbox"
   | "/audit"
   | "/incidents"
   | "/replay"
@@ -75,7 +76,7 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     labelKey: "groups.product",
     items: [
       { href: "/chat", icon: Bot, labelKey: "assistant" },
-      { icon: ClipboardList, labelKey: "inbox", badge: "24", badgeTone: "danger" },
+      { href: "/inbox", icon: ClipboardList, labelKey: "inbox", badge: "24", badgeTone: "danger" },
     ],
   },
   {

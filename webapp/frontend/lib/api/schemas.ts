@@ -2828,3 +2828,45 @@ export const ParametersOverviewSchema = z.object({
   footer: z.object({ version: z.string(), source: z.string() }),
 });
 export type ParametersOverview = z.infer<typeof ParametersOverviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Inbox / À traiter (page #24)
+// ---------------------------------------------------------------------------
+
+const IbKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  delta_label: z.string(),
+  good_is_up: z.boolean(),
+  series: z.array(z.number()),
+});
+
+export const InboxOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  rail: z.object({ period: z.string(), sla: z.string(), updated: z.string(), compare: z.string() }),
+  kpis: z.array(IbKpiSchema),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      priority: z.enum(["urgent", "high", "medium", "low"]),
+      type: z.string(),
+      title: z.string(),
+      source: z.string(),
+      assignee: z.string(),
+      sla: z.string(),
+      sla_tone: z.enum(["crit", "warn", "ok"]),
+      due: z.string(),
+      status: z.enum(["todo", "in_progress", "waiting", "resolved"]),
+    }),
+  ),
+  total_items: z.number().int(),
+  by_type: z.array(
+    z.object({ key: z.string(), count: z.number().int(), pct: z.number(), color: z.string() }),
+  ),
+  by_type_total: z.number().int(),
+  sla_buckets: z.array(z.object({ key: z.string(), count: z.number().int(), color: z.string() })),
+  recent_activity: z.array(z.object({ time: z.string(), actor: z.string(), action: z.string() })),
+  footer: z.object({ total: z.number().int(), source: z.string() }),
+});
+export type InboxOverview = z.infer<typeof InboxOverviewSchema>;

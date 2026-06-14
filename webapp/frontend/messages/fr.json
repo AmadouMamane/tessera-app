@@ -4081,5 +4081,96 @@
       "version": "{v}",
       "source": "Source de vérité : {src}"
     }
+  },
+  "inbox": {
+    "title": "À traiter",
+    "subtitle": "Traitez les demandes, incidents et actions nécessitant votre attention.",
+    "rail": {
+      "live": "Live",
+      "queue": "File actuelle",
+      "realtime": "Données en temps réel",
+      "period": "Période",
+      "sla": "SLA",
+      "updated": "Dernière mise à jour",
+      "replay": "Relire file à T",
+      "compareTo": "Comparer à",
+      "bulk": "Actions groupées"
+    },
+    "kpi": {
+      "total": "À traiter (total)",
+      "urgent": "À traiter (urgents)",
+      "sla_2h": "SLA < 2h",
+      "overdue": "En retard (SLA dépassé)",
+      "assigned": "Assignés à moi",
+      "resolved": "Résolus aujourd’hui",
+      "avg_time": "Temps moyen",
+      "resolution_rate": "Taux de résolution"
+    },
+    "delta": {
+      "vsHier": "vs hier"
+    },
+    "filters": {
+      "search": "Rechercher dans la liste…",
+      "priority": "Priorité",
+      "type": "Type",
+      "status": "Statut",
+      "assignee": "Assigné à",
+      "active": "Filtres actifs",
+      "reset": "Réinitialiser"
+    },
+    "col": {
+      "priority": "Priorité",
+      "type": "Type",
+      "title": "Titre",
+      "source": "Source",
+      "assignee": "Assigné à",
+      "sla": "SLA",
+      "due": "Échéance",
+      "status": "Statut"
+    },
+    "priority": {
+      "urgent": "Urgent",
+      "high": "Élevée",
+      "medium": "Moyenne",
+      "low": "Faible"
+    },
+    "type": {
+      "conversation": "Conversations IA",
+      "incident": "Incidents",
+      "alert": "Alertes",
+      "approval": "Approbations",
+      "access": "Demandes d’accès",
+      "other": "Autres"
+    },
+    "status": {
+      "todo": "À faire",
+      "in_progress": "En cours",
+      "waiting": "En attente",
+      "resolved": "Résolu"
+    },
+    "zone": {
+      "byType": "Répartition par type",
+      "sla": "SLA & échéances",
+      "actions": "Actions rapides",
+      "activity": "Activité récente"
+    },
+    "sla": {
+      "overdue": "En retard",
+      "lt2h": "< 2h",
+      "h2_8": "2h – 8h",
+      "gt8h": "> 8h",
+      "viewDetail": "Voir le détail",
+      "viewSla": "Voir les SLA"
+    },
+    "actions": {
+      "take": "Prendre",
+      "resolve": "Résoudre",
+      "assign": "Assigner",
+      "escalate": "Escalader"
+    },
+    "footer": {
+      "total": "{n} éléments",
+      "source": "{src}"
+    }
   }
 }

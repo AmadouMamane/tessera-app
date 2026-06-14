@@ -4081,5 +4081,96 @@
       "version": "{v}",
       "source": "Quelle der Wahrheit: {src}"
     }
+  },
+  "inbox": {
+    "title": "Zu bearbeiten",
+    "subtitle": "Bearbeiten Sie Anfragen, Incidents und Aktionen, die Ihre Aufmerksamkeit erfordern.",
+    "rail": {
+      "live": "Live",
+      "queue": "Aktuelle Queue",
+      "realtime": "Echtzeitdaten",
+      "period": "Zeitraum",
+      "sla": "SLA",
+      "updated": "Letzte Aktualisierung",
+      "replay": "Queue bei T wiedergeben",
+      "compareTo": "Vergleichen mit",
+      "bulk": "Sammelaktionen"
+    },
+    "kpi": {
+      "total": "Zu bearbeiten (gesamt)",
+      "urgent": "Zu bearbeiten (dringend)",
+      "sla_2h": "SLA < 2h",
+      "overdue": "Überfällig (SLA)",
+      "assigned": "Mir zugewiesen",
+      "resolved": "Heute gelöst",
+      "avg_time": "Ø Zeit",
+      "resolution_rate": "Lösungsrate"
+    },
+    "delta": {
+      "vsHier": "vs. gestern"
+    },
+    "filters": {
+      "search": "In Liste suchen…",
+      "priority": "Priorität",
+      "type": "Typ",
+      "status": "Status",
+      "assignee": "Zugewiesen an",
+      "active": "Aktive Filter",
+      "reset": "Zurücksetzen"
+    },
+    "col": {
+      "priority": "Priorität",
+      "type": "Typ",
+      "title": "Titel",
+      "source": "Quelle",
+      "assignee": "Zugewiesen an",
+      "sla": "SLA",
+      "due": "Fällig",
+      "status": "Status"
+    },
+    "priority": {
+      "urgent": "Dringend",
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "type": {
+      "conversation": "KI-Konversationen",
+      "incident": "Incidents",
+      "alert": "Alarme",
+      "approval": "Freigaben",
+      "access": "Zugriffsanfragen",
+      "other": "Andere"
+    },
+    "status": {
+      "todo": "Offen",
+      "in_progress": "In Bearbeitung",
+      "waiting": "Wartend",
+      "resolved": "Gelöst"
+    },
+    "zone": {
+      "byType": "Verteilung nach Typ",
+      "sla": "SLA & Fristen",
+      "actions": "Schnellaktionen",
+      "activity": "Letzte Aktivität"
+    },
+    "sla": {
+      "overdue": "Überfällig",
+      "lt2h": "< 2h",
+      "h2_8": "2h – 8h",
+      "gt8h": "> 8h",
+      "viewDetail": "Details anzeigen",
+      "viewSla": "SLA anzeigen"
+    },
+    "actions": {
+      "take": "Übernehmen",
+      "resolve": "Lösen",
+      "assign": "Zuweisen",
+      "escalate": "Eskalieren"
+    },
+    "footer": {
+      "total": "{n} Elemente",
+      "source": "{src}"
+    }
   }
 }

@@ -4081,5 +4081,96 @@
       "version": "{v}",
       "source": "Source of truth: {src}"
     }
+  },
+  "inbox": {
+    "title": "To process",
+    "subtitle": "Handle the requests, incidents and actions that need your attention.",
+    "rail": {
+      "live": "Live",
+      "queue": "Current queue",
+      "realtime": "Real-time data",
+      "period": "Period",
+      "sla": "SLA",
+      "updated": "Last updated",
+      "replay": "Replay queue at T",
+      "compareTo": "Compare to",
+      "bulk": "Bulk actions"
+    },
+    "kpi": {
+      "total": "To process (total)",
+      "urgent": "To process (urgent)",
+      "sla_2h": "SLA < 2h",
+      "overdue": "Overdue (SLA breached)",
+      "assigned": "Assigned to me",
+      "resolved": "Resolved today",
+      "avg_time": "Average time",
+      "resolution_rate": "Resolution rate"
+    },
+    "delta": {
+      "vsHier": "vs yesterday"
+    },
+    "filters": {
+      "search": "Search the list…",
+      "priority": "Priority",
+      "type": "Type",
+      "status": "Status",
+      "assignee": "Assigned to",
+      "active": "Active filters",
+      "reset": "Reset"
+    },
+    "col": {
+      "priority": "Priority",
+      "type": "Type",
+      "title": "Title",
+      "source": "Source",
+      "assignee": "Assigned to",
+      "sla": "SLA",
+      "due": "Due",
+      "status": "Status"
+    },
+    "priority": {
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "type": {
+      "conversation": "AI conversations",
+      "incident": "Incidents",
+      "alert": "Alerts",
+      "approval": "Approvals",
+      "access": "Access requests",
+      "other": "Other"
+    },
+    "status": {
+      "todo": "To do",
+      "in_progress": "In progress",
+      "waiting": "Waiting",
+      "resolved": "Resolved"
+    },
+    "zone": {
+      "byType": "Distribution by type",
+      "sla": "SLA & deadlines",
+      "actions": "Quick actions",
+      "activity": "Recent activity"
+    },
+    "sla": {
+      "overdue": "Overdue",
+      "lt2h": "< 2h",
+      "h2_8": "2h – 8h",
+      "gt8h": "> 8h",
+      "viewDetail": "View detail",
+      "viewSla": "View SLAs"
+    },
+    "actions": {
+      "take": "Take",
+      "resolve": "Resolve",
+      "assign": "Assign",
+      "escalate": "Escalate"
+    },
+    "footer": {
+      "total": "{n} items",
+      "source": "{src}"
+    }
   }
 }
