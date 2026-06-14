@@ -307,7 +307,9 @@
       "24h": "24h",
       "7d": "7 jours",
       "30d": "30 jours",
-      "refresh": "Aller à une date"
+      "refresh": "Aller à une date",
+      "previousMonth": "Mois précédent",
+      "nextMonth": "Mois suivant"
     },
     "metrics": {
       "signed_events": {

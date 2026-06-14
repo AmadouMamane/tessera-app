@@ -83,6 +83,33 @@ function dateInputValue(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function startOfLocalMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addLocalMonths(date: Date, amount: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+}
+
+function calendarMonthDays(month: Date): Date[] {
+  const first = startOfLocalMonth(month);
+  const mondayOffset = (first.getDay() + 6) % 7;
+  const start = new Date(first);
+  start.setDate(first.getDate() - mondayOffset);
+  return Array.from(
+    { length: 42 },
+    (_, index) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + index),
+  );
+}
+
+function isSameLocalDate(left: Date, right: Date): boolean {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
 export function AuditTable() {
   const t = useTranslations("audit");
   const tCommon = useTranslations("common");
@@ -263,19 +290,83 @@ function PeriodRail({
 }) {
   const t = useTranslations("audit");
   const formatter = useFormatter();
-  const dateInputRef = useRef<HTMLInputElement>(null);
-  const inputValue = overview?.window_end ? dateInputValue(new Date(overview.window_end)) : "";
+  const locale = useLocale();
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const selectedDate = useMemo(
+    () => (overview?.window_end ? new Date(overview.window_end) : new Date()),
+    [overview?.window_end],
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfLocalMonth(selectedDate));
+  const monthDays = useMemo(() => calendarMonthDays(calendarMonth), [calendarMonth]);
+  const monthFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }),
+    [locale],
+  );
+  const dayFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { dateStyle: "full" }),
+    [locale],
+  );
+  const weekdayLabels = useMemo(() => {
+    const monday = new Date(2026, 5, 1);
+    const weekdayFormatter = new Intl.DateTimeFormat(locale, { weekday: "narrow" });
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(2026, 5, monday.getDate() + index);
+      return { key: dateInputValue(day), label: weekdayFormatter.format(day) };
+    });
+  }, [locale]);
+
+  useEffect(() => {
+    if (pickerOpen) setCalendarMonth(startOfLocalMonth(selectedDate));
+  }, [pickerOpen, selectedDate]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+
+    function closeOnOutsidePointer(event: MouseEvent) {
+      if (!pickerRef.current?.contains(event.target as Node)) setPickerOpen(false);
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setPickerOpen(false);
+    }
+
+    document.addEventListener("mousedown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [pickerOpen]);
+
   return (
-    <section className="flex min-h-[50px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-1.5">
+    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <span className="min-w-16 text-xs font-medium text-[var(--tessera-text-muted)]">
         {t("window.label")}
       </span>
-      <div className="flex min-h-8 items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)]">
-        <CalendarDays className="h-4 w-4 text-[var(--tessera-text-muted)]" />
+      <div className="flex h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+        {PERIODS.map((period) => (
+          <button
+            key={period}
+            type="button"
+            onClick={() => onPeriod(period)}
+            className={cn(
+              "h-7 rounded px-3 text-xs font-medium transition-colors",
+              value === period
+                ? "bg-[#123e6a] text-[#d8eaff] ring-1 ring-[#2e72d2]"
+                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {t(`window.${period}`)}
+          </button>
+        ))}
+      </div>
+      <div className="flex h-9 min-w-[320px] flex-1 items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+        <CalendarDays className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
         {loading || !overview ? (
           <Skeleton className="h-4 w-56" />
         ) : (
-          <span>
+          <span className="truncate">
             {formatter.dateTime(new Date(overview.window_start), {
               dateStyle: "medium",
               timeStyle: "short",
@@ -288,46 +379,75 @@ function PeriodRail({
           </span>
         )}
       </div>
-      <div className="flex rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-1">
-        {PERIODS.map((period) => (
-          <button
-            key={period}
-            type="button"
-            onClick={() => onPeriod(period)}
-            className={cn(
-              "h-7 rounded px-3 text-xs transition-colors",
-              value === period
-                ? "bg-[#123e6a] text-[#d8eaff] ring-1 ring-[#2e72d2]"
-                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
-            )}
-          >
-            {t(`window.${period}`)}
-          </button>
-        ))}
+      <div ref={pickerRef} className="relative">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-expanded={pickerOpen}
+          onClick={() => setPickerOpen((open) => !open)}
+          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 font-medium text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
+        >
+          <CalendarDays className="h-4 w-4" />
+          {t("window.refresh")}
+        </Button>
+        {pickerOpen ? (
+          <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[292px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[var(--tessera-text)] shadow-[0_20px_60px_rgba(0,0,0,0.38)]">
+            <div className="mb-3 flex items-center justify-between border-b border-[var(--tessera-border)] pb-2">
+              <button
+                type="button"
+                aria-label={t("window.previousMonth")}
+                onClick={() => setCalendarMonth((month) => addLocalMonths(month, -1))}
+                className="grid h-8 w-8 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <p className="text-sm font-semibold capitalize">
+                {monthFormatter.format(calendarMonth)}
+              </p>
+              <button
+                type="button"
+                aria-label={t("window.nextMonth")}
+                onClick={() => setCalendarMonth((month) => addLocalMonths(month, 1))}
+                className="grid h-8 w-8 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center text-[0.68rem] font-medium uppercase text-[var(--tessera-text-muted)]">
+              {weekdayLabels.map((day) => (
+                <span key={day.key}>{day.label}</span>
+              ))}
+            </div>
+            <div className="mt-2 grid grid-cols-7 gap-1">
+              {monthDays.map((day) => {
+                const inMonth = day.getMonth() === calendarMonth.getMonth();
+                const selected = isSameLocalDate(day, selectedDate);
+                return (
+                  <button
+                    key={dateInputValue(day)}
+                    type="button"
+                    aria-label={dayFormatter.format(day)}
+                    onClick={() => {
+                      onDate(dateInputValue(day));
+                      setPickerOpen(false);
+                    }}
+                    className={cn(
+                      "h-8 rounded-md text-xs font-medium transition-colors",
+                      selected
+                        ? "bg-[#123e6a] text-[#d8eaff] ring-1 ring-[#2e72d2]"
+                        : "text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]",
+                      !inMonth && "text-[var(--tessera-text-muted)] opacity-45",
+                    )}
+                  >
+                    {day.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          const input = dateInputRef.current;
-          if (!input) return;
-          if (typeof input.showPicker === "function") input.showPicker();
-          else input.click();
-        }}
-        className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
-      >
-        {t("window.refresh")}
-      </Button>
-      <input
-        ref={dateInputRef}
-        type="date"
-        value={inputValue}
-        aria-label={t("window.refresh")}
-        className="sr-only"
-        onInput={(event) => onDate(event.currentTarget.value)}
-        onChange={(event) => onDate(event.target.value)}
-      />
     </section>
   );
 }
