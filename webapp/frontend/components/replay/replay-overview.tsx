@@ -204,54 +204,81 @@ function CommandBar({ t }: { t: T }) {
 
 function TrafficChart({ t, data, className }: { t: T; data: Data; className?: string }) {
   const tr = data.replay_traffic;
-  const maxReq = Math.max(...tr.requests, 1);
-  const maxTok = Math.max(...tr.tokens, 1);
+  const niceMax = (v: number, step: number) => Math.max(step, Math.ceil(v / step) * step);
+  const reqMax = niceMax(Math.max(...tr.requests, 1), 20); // K
+  const tokMax = niceMax(Math.max(...tr.tokens, 1), 25); // M
+  const fracs = [1, 0.75, 0.5, 0.25, 0];
   const W = 240;
-  const H = 86;
+  const H = 112;
+  const top = 6;
   const n = tr.requests.length;
-  const bw = (W / n) * 0.5;
-  const line = tr.tokens
-    .map((v, i) => `${((i + 0.5) / n) * W},${H - (v / maxTok) * (H - 10)}`)
-    .join(" ");
+  const bw = (W / n) * 0.46;
+  const y = (v: number, max: number) => top + (1 - v / max) * (H - top);
+  const line = tr.tokens.map((v, i) => `${((i + 0.5) / n) * W},${y(v, tokMax)}`).join(" ");
   return (
     <Panel title={t("panel.traffic")} className={className}>
       <div className="flex flex-col gap-1">
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          className="h-[96px] w-full"
-          aria-hidden="true"
-        >
-          {tr.requests.map((v, i) => {
-            const h = (v / maxReq) * (H - 10);
-            return (
-              <rect
-                // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length daily series never reorders
-                key={i}
-                x={((i + 0.5) / n) * W - bw / 2}
-                y={H - h}
-                width={bw}
-                height={h}
-                rx="1"
-                fill="#2e72d2"
-                opacity="0.7"
+        <div className="flex gap-1">
+          <div className="flex w-7 flex-col justify-between py-[5px] text-right text-[0.5rem] tabular-nums text-[var(--tessera-text-muted)]">
+            {fracs.map((f) => (
+              <span key={f}>{Math.round(f * reqMax)}K</span>
+            ))}
+          </div>
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            className="h-[120px] min-w-0 flex-1"
+            aria-hidden="true"
+          >
+            {fracs.map((f) => (
+              <line
+                key={f}
+                x1="0"
+                x2={W}
+                y1={top + f * (H - top)}
+                y2={top + f * (H - top)}
+                stroke="var(--tessera-border)"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+                opacity="0.5"
               />
-            );
-          })}
-          <polyline
-            points={line}
-            fill="none"
-            stroke="#34d399"
-            strokeWidth="2"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-        <div className="flex justify-between text-[0.58rem] tabular-nums text-[var(--tessera-text-muted)]">
+            ))}
+            {tr.requests.map((v, i) => {
+              const yy = y(v, reqMax);
+              return (
+                <rect
+                  // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length daily series never reorders
+                  key={i}
+                  x={((i + 0.5) / n) * W - bw / 2}
+                  y={yy}
+                  width={bw}
+                  height={H - yy}
+                  rx="1.5"
+                  fill="#2e72d2"
+                  opacity="0.8"
+                />
+              );
+            })}
+            <polyline
+              points={line}
+              fill="none"
+              stroke="#34d399"
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+          <div className="flex w-7 flex-col justify-between py-[5px] text-left text-[0.5rem] tabular-nums text-[var(--tessera-text-muted)]">
+            {fracs.map((f) => (
+              <span key={f}>{Math.round(f * tokMax)}M</span>
+            ))}
+          </div>
+        </div>
+        <div className="flex justify-between pl-8 pr-8 text-[0.55rem] tabular-nums text-[var(--tessera-text-muted)]">
           {tr.labels.map((l) => (
             <span key={l}>{l}</span>
           ))}
         </div>
-        <div className="flex items-center gap-3 text-[0.6rem] text-[var(--tessera-text-muted)]">
+        <div className="flex items-center gap-3 pl-8 text-[0.6rem] text-[var(--tessera-text-muted)]">
           <Legend color="#2e72d2" label={t("legend.requests")} />
           <Legend color="#34d399" label={t("legend.tokens")} />
         </div>

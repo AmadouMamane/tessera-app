@@ -85,10 +85,11 @@ def compute_replay_shadow_overview() -> dict[str, object]:
         _kpi("coverage", "61%", "+4.2 pts", True, [54, 55, 57, 58, 59, 60, 61]),
     ]
 
+    # Daily replay volume: requests in thousands (K), tokens in millions (M).
     replay_traffic = {
         "labels": ["03/05", "05/05", "07/05", "09/05", "11/05"],
-        "requests": [22, 26, 24, 30, 31],
-        "tokens": [40, 50, 45, 60, 62],
+        "requests": [58, 64, 55, 72, 78],
+        "tokens": [62, 71, 60, 88, 95],
     }
 
     deviation_by_type = [
