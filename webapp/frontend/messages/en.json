@@ -2258,6 +2258,15 @@
       "projected": "End-of-month forecast",
       "within": "Within budget",
       "over": "Over budget"
+    },
+    "period": {
+      "title": "Analysis period",
+      "selected": "Selected window",
+      "from": "From",
+      "apply": "Open the rail",
+      "d7": "7 days",
+      "d14": "14 days",
+      "d30": "30 days"
     }
   },
   "improvement": {

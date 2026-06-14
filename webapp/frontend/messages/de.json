@@ -2258,6 +2258,15 @@
       "projected": "Prognose Monatsende",
       "within": "Im Budget",
       "over": "Überschreitung"
+    },
+    "period": {
+      "title": "Analysezeitraum",
+      "selected": "Gewähltes Fenster",
+      "from": "Von",
+      "apply": "Zeitleiste öffnen",
+      "d7": "7 Tage",
+      "d14": "14 Tage",
+      "d30": "30 Tage"
     }
   },
   "improvement": {

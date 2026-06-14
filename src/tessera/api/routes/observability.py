@@ -609,15 +609,20 @@ async def observability_improvement() -> dict[str, object]:
 
 
 @router.get("/observability/reliability")
-async def observability_reliability() -> dict[str, object]:
+async def observability_reliability(
+    days: int = 30, anchor: str | None = None
+) -> dict[str, object]:
     """Operational reliability & cost posture from the real signals (#08).
 
     Token cost, tool success, span overhead, per-language quality and per-model
     run stats are measured; latency is estimated from the token distribution at a
-    documented local throughput. Degrades to ``available: false`` on failure.
+    documented local throughput. The period rail narrows the window via ``days``
+    (length) and ``anchor`` (upper-bound day/instant). Degrades to
+    ``available: false`` on failure.
     """
     try:
-        return {"available": True, **asdict(reliability_mod.compute_reliability())}
+        report = reliability_mod.compute_reliability(days=days, anchor=anchor)
+        return {"available": True, "days": days, "anchor": anchor, **asdict(report)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.reliability: failed: {exc}\n")
         return {"available": False}

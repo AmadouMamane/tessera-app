@@ -34,13 +34,14 @@ def test_compute_reliability_is_internally_consistent() -> None:
     assert report.budget_monthly_eur > 0.0
 
 
-def test_trends_bucket_real_scores(monkeypatch) -> None:
+def test_trends_bucket_real_scores() -> None:
     from datetime import UTC, datetime, timedelta
 
     now = datetime.now(UTC)
+    days = 14
     # Higher quality + more volume in the current window than the previous one.
     rows: list[dict[str, object]] = []
-    for day in range(rel._TREND_DAYS):  # current window
+    for day in range(days):  # current window
         for _ in range(3):
             rows.append(
                 {
@@ -49,7 +50,7 @@ def test_trends_bucket_real_scores(monkeypatch) -> None:
                     "score": 0.9,
                 }
             )
-    for day in range(rel._TREND_DAYS, rel._TREND_DAYS * 2):  # previous window, sparser + lower
+    for day in range(days, days * 2):  # previous window, sparser + lower
         rows.append(
             {
                 "scored_at": (now - timedelta(days=day)).isoformat(),
@@ -57,17 +58,19 @@ def test_trends_bucket_real_scores(monkeypatch) -> None:
                 "score": 0.5,
             }
         )
-    monkeypatch.setattr(rel, "persisted_scores", lambda: rows)
-    volume_series, volume_delta, quality_series, quality_delta = rel._trends()
+    volume_series, volume_delta, quality_series, quality_delta = rel._trends(
+        rows, end=now, days=days
+    )
     assert len(volume_series) == rel._TREND_BUCKETS
     assert volume_delta is not None and volume_delta > 0  # current window busier
     assert all(0.0 <= v <= 1.0 for v in quality_series)
     assert quality_delta is not None and quality_delta > 0  # quality improved
 
 
-def test_trends_empty_log_yields_nothing(monkeypatch) -> None:
-    monkeypatch.setattr(rel, "persisted_scores", list)
-    assert rel._trends() == ([], None, [], None)
+def test_trends_empty_log_yields_nothing() -> None:
+    from datetime import UTC, datetime
+
+    assert rel._trends([], end=datetime.now(UTC), days=30) == ([], None, [], None)
 
 
 def test_services_cost_shares_sum_to_one() -> None:
@@ -89,8 +92,10 @@ def test_daily_holds_snapshot_availability(monkeypatch) -> None:
 
     now = datetime.now(UTC)
     rows = [{"scored_at": now.isoformat(), "metric": "faithfulness", "score": 0.2}]
-    daily = rel._daily(rows, cost_per_request=0.01, availability=0.997, error_rate=0.003)
-    assert len(daily) == rel._TREND_DAYS
+    daily = rel._daily(
+        rows, cost_per_request=0.01, availability=0.997, error_rate=0.003, end=now, days=30
+    )
+    assert len(daily) == 30
     # Availability is the headline rate held flat — never reinterpreted as quality.
     assert all(p.availability == 0.997 and p.error_rate == 0.003 for p in daily)
     assert any(p.volume > 0 for p in daily)  # the real turn was bucketed

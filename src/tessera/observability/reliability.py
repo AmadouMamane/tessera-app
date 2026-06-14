@@ -31,7 +31,7 @@ from tessera.observability import (
     tool_validity as tool_validity_mod,
 )
 from tessera.observability.eval.runs import compare_models, load_runs
-from tessera.observability.eval.scores import persisted_scores, recent_scores
+from tessera.observability.eval.scores import persisted_scores
 from tessera.observability.eval.series import compute_score_series
 
 __all__ = [
@@ -62,8 +62,10 @@ _MONTHLY_BUDGET_EUR = 25_000.0
 # We surface what is genuinely measured: scored-turn *volume* per bucket and the
 # composite answer-*quality* trend, each with a period-over-period delta.
 _TREND_METRICS: tuple[str, ...] = ("faithfulness", "grounding")
-_TREND_DAYS = 14
 _TREND_BUCKETS = 7
+# Default analysis window (days) when the period rail hasn't narrowed it. 30 days
+# matches the headline tiles ("Coût total (30j)", "Requêtes (30j)").
+_DEFAULT_DAYS = 30
 # A model whose eval pass-rate falls below this earns a "review quality" action.
 _LOW_PASS_RATE = 0.8
 
@@ -218,9 +220,27 @@ def _latency_ms(tokens: float) -> float:
 
 def _parse_ts(value: object) -> datetime | None:
     try:
-        return datetime.fromisoformat(str(value))
+        ts = datetime.fromisoformat(str(value))
     except (TypeError, ValueError):
         return None
+    return ts.replace(tzinfo=UTC) if ts.tzinfo is None else ts
+
+
+def _window_bounds(days: int, anchor: str | None) -> tuple[datetime, datetime]:
+    """Resolve the analysis window ``[start, end]`` from a length and an anchor.
+
+    ``anchor`` is the upper bound (instant T or a calendar day); ``None`` means now.
+    """
+    end = _parse_ts(anchor) if anchor else None
+    if end is None:
+        end = datetime.now(UTC)
+    return end - timedelta(days=max(1, days)), end
+
+
+def _in_window(ts: object, start: datetime, end: datetime) -> bool:
+    """True when a timestamp string falls inside the window (malformed → excluded)."""
+    t = _parse_ts(ts)
+    return t is not None and start <= t <= end
 
 
 def _daily(
@@ -229,8 +249,10 @@ def _daily(
     cost_per_request: float,
     availability: float,
     error_rate: float,
+    end: datetime,
+    days: int,
 ) -> list[DayPoint]:
-    """One :class:`DayPoint` per calendar day over the trailing window.
+    """One :class:`DayPoint` per calendar day over the window ending at ``end``.
 
     Volume, quality and the derived cost are *measured* per day from the durable
     score log. Availability and error rate are the **current** tool-validity rates
@@ -239,14 +261,13 @@ def _daily(
     the availability KPI), each day carries the present rate — flat, honest and
     consistent with the headline tile.
     """
-    now = datetime.now(UTC)
-    start = now - timedelta(days=_TREND_DAYS)
+    start = end - timedelta(days=days)
     by_day: dict[str, list[float]] = {}
     for r in rows:
         if r.get("metric") != _TREND_METRICS[0]:  # one row per turn
             continue
         ts = _parse_ts(r.get("scored_at"))
-        if ts is None or ts < start or ts > now:
+        if ts is None or ts < start or ts > end:
             continue
         try:
             score = float(r["score"])  # type: ignore[arg-type]
@@ -255,7 +276,7 @@ def _daily(
         by_day.setdefault(ts.date().isoformat(), []).append(score)
 
     out: list[DayPoint] = []
-    for i in range(_TREND_DAYS):
+    for i in range(days):
         day = (start + timedelta(days=i + 1)).date().isoformat()
         scores = by_day.get(day, [])
         vol = len(scores)
@@ -335,14 +356,16 @@ def _actions(
     ]
 
 
-def _trends() -> tuple[list[int], float | None, list[float], float | None]:
+def _trends(
+    rows: list[dict[str, object]], *, end: datetime, days: int
+) -> tuple[list[int], float | None, list[float], float | None]:
     """Real volume and quality trends from the durable quality-score log.
 
-    Buckets the durably-stored eval scores over the trailing window (honouring
-    as-of-T, ADR 0011): the per-bucket scored-turn count gives a genuine activity
-    sparkline + a current-vs-previous-window delta, and the composite metric mean
-    gives an answer-quality sparkline + delta. Grounded, not fabricated — an empty
-    or unreadable log yields empty series and ``None`` deltas.
+    Buckets the durably-stored eval scores over the window ending at ``end``
+    (honouring as-of-T, ADR 0011): the per-bucket scored-turn count gives a genuine
+    activity sparkline + a current-vs-previous-window delta, and the composite
+    metric mean gives an answer-quality sparkline + delta. Grounded, not fabricated
+    — an empty log yields empty series and ``None`` deltas.
 
     Returns:
         ``(volume_series, volume_delta, quality_series, quality_delta)`` — per-bucket
@@ -350,16 +373,10 @@ def _trends() -> tuple[list[int], float | None, list[float], float | None]:
         the non-empty composite quality means (0..1), and the composite quality
         delta (0..1).
     """
-    try:
-        rows = persisted_scores()
-    except Exception as exc:  # never break the dashboard
-        sys.stderr.write(f"tessera.observability.reliability: trends failed: {exc}\n")
-        return [], None, [], None
     if not rows:
         return [], None, [], None
-    end = datetime.now(UTC)
     per_metric = [
-        compute_score_series(rows, metric=m, end=end, days=_TREND_DAYS, n_buckets=_TREND_BUCKETS)
+        compute_score_series(rows, metric=m, end=end, days=days, n_buckets=_TREND_BUCKETS)
         for m in _TREND_METRICS
     ]
     base = per_metric[0]
@@ -367,8 +384,8 @@ def _trends() -> tuple[list[int], float | None, list[float], float | None]:
     prev = compute_score_series(
         rows,
         metric=_TREND_METRICS[0],
-        end=end - timedelta(days=_TREND_DAYS),
-        days=_TREND_DAYS,
+        end=end - timedelta(days=days),
+        days=days,
         n_buckets=1,
     )
     volume_delta = (base.n - prev.n) / prev.n if prev.n else None
@@ -383,15 +400,58 @@ def _trends() -> tuple[list[int], float | None, list[float], float | None]:
     return volume_series, volume_delta, quality_series, quality_delta
 
 
-def compute_reliability() -> ReliabilityReport:
-    """Assemble the reliability & cost posture from the real runtime signals."""
-    bundles = replay_mod.recent_bundles()
+def _incidents(
+    cost: cost_anomaly_mod.CostReport, tool: tool_validity_mod.ToolValidityReport, day: str
+) -> list[Incident]:
+    """Recent incidents from the real anomalies / tool errors in the window."""
+    incidents: list[Incident] = [
+        Incident(
+            label=a.question[:48],
+            type="token_spike",
+            severity="medium",
+            detail=f"{a.tokens} tokens",
+            date=day,
+            service="Coût",
+        )
+        for a in cost.anomalies[:4]
+    ]
+    if tool.errored > 0:
+        incidents.append(
+            Incident("Erreur d'appel outil", "tool_error", "high", f"{tool.errored}", day, "Outils")
+        )
+    if tool.denied > 0:
+        incidents.append(
+            Incident(
+                "Outil refusé par la garde", "tool_denied", "low", f"{tool.denied}", day, "Garde"
+            )
+        )
+    return incidents
+
+
+def compute_reliability(
+    *, days: int = _DEFAULT_DAYS, anchor: str | None = None
+) -> ReliabilityReport:
+    """Assemble the reliability & cost posture over the window ``[anchor-days, anchor]``.
+
+    The period rail narrows the window: ``days`` is its length and ``anchor`` its
+    upper bound (instant T or a calendar day, ``None`` = now). Every time-stamped
+    signal is filtered to that window — bundles (cost/latency), the durable score
+    log (volume/quality/daily/services) and the eval run archive (per-model cost) —
+    so the whole page recomputes for the chosen period. Only ``obs_cost`` stays
+    window-independent: it is a synthetic micro-benchmark of instrumentation
+    overhead with no time axis.
+    """
+    start, end = _window_bounds(days, anchor)
+    anchor_iso = end.isoformat()
+    bundles = [b for b in replay_mod.persisted_bundles() if _in_window(b.captured_at, start, end)]
     cost = cost_anomaly_mod.analyze_costs(
         [(b.question, f"{b.question}\n{b.context}\n{b.original_answer}") for b in bundles]
     )
-    tool = tool_validity_mod.compute_tool_validity()
-    obs = obs_cost_mod.measure_overhead()
-    scores = recent_scores()
+    tool = tool_validity_mod.compute_tool_validity(at=anchor_iso)
+    obs = obs_cost_mod.measure_overhead()  # synthetic benchmark — no time axis to window
+    scores = [
+        s for s in persisted_scores(at=anchor_iso) if _in_window(s.get("scored_at"), start, end)
+    ]
     funnel_turns: list[tuple[str, str | None, float]] = []
     for s in scores:
         lang = s.get("language")
@@ -429,10 +489,11 @@ def compute_reliability() -> ReliabilityReport:
     ]
     error_breakdown = [s for s in error_breakdown if s.count > 0]
 
-    # Per-model cost rows from the eval run archive.
+    # Per-model cost rows from the eval run archive, restricted to the window.
+    windowed_runs = [r for r in load_runs().runs if _in_window(r.run_at, start, end)]
     models: list[CostRow] = []
     provider_counts: dict[str, int] = {}
-    for stat in compare_models(load_runs().runs):
+    for stat in compare_models(windowed_runs):
         est_tokens = cost.mean_tokens * stat.total_cases
         cost_eur = (
             stat.est_cost_eur if stat.est_cost_eur is not None else est_tokens * cost_per_token
@@ -469,53 +530,20 @@ def compute_reliability() -> ReliabilityReport:
         for lang in funnel.languages
     ]
 
-    # Recent incidents from the real anomalies / tool errors.
-    today = datetime.now(UTC).date().isoformat()
-    incidents: list[Incident] = []
-    for a in cost.anomalies[:4]:
-        incidents.append(
-            Incident(
-                label=a.question[:48],
-                type="token_spike",
-                severity="medium",
-                detail=f"{a.tokens} tokens",
-                date=today,
-                service="Coût",
-            )
-        )
-    if tool.errored > 0:
-        incidents.append(
-            Incident(
-                label="Erreur d'appel outil",
-                type="tool_error",
-                severity="high",
-                detail=f"{tool.errored}",
-                date=today,
-                service="Outils",
-            )
-        )
-    if tool.denied > 0:
-        incidents.append(
-            Incident(
-                label="Outil refusé par la garde",
-                type="tool_denied",
-                severity="low",
-                detail=f"{tool.denied}",
-                date=today,
-                service="Garde",
-            )
-        )
+    incidents = _incidents(cost, tool, end.date().isoformat())
 
     # Budget projection: linear from spend so far over the window.
     spent = total_cost_eur
     projected = round(spent * (30.0 / max(1, n_requests)) * n_requests, 2) if n_requests else spent
 
-    volume_series, volume_delta, quality_series, quality_delta = _trends()
+    volume_series, volume_delta, quality_series, quality_delta = _trends(scores, end=end, days=days)
     daily = _daily(
         scores,
         cost_per_request=cost_per_request,
         availability=availability,
         error_rate=error_rate,
+        end=end,
+        days=days,
     )
     services_cost = _services_cost(funnel, cost_per_request=cost_per_request)
     actions = _actions(models, funnel, cost, tool)

@@ -2258,6 +2258,15 @@
       "projected": "Prévision fin de mois",
       "within": "Dans le budget",
       "over": "Dépassement"
+    },
+    "period": {
+      "title": "Période d'analyse",
+      "selected": "Fenêtre sélectionnée",
+      "from": "Du",
+      "apply": "Ouvrir la raille",
+      "d7": "7 jours",
+      "d14": "14 jours",
+      "d30": "30 jours"
     }
   },
   "improvement": {

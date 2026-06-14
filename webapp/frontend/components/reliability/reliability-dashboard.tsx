@@ -1,26 +1,12 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import {
-  Activity,
-  Boxes,
-  CalendarClock,
-  Coins,
-  type LucideIcon,
-  ShieldCheck,
-  Timer,
-  Wrench,
-} from "lucide-react";
+import { Activity, Boxes, Coins, type LucideIcon, ShieldCheck, Timer, Wrench } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
+import { type Period, PeriodRail } from "@/components/observability/period-rail";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchReliability } from "@/lib/api/client";
 import type {
@@ -332,14 +318,12 @@ const POLL = 30_000;
 
 export function ReliabilityDashboard() {
   const tr = useTranslations("reliability");
-  const temporal = useTemporalState();
-  const { historyMode } = temporal;
-  const railTimeline = useRailTimeline();
+  const [period, setPeriod] = useState<Period>({ days: 30, anchor: null });
   const q = useQuery({
-    queryKey: ["reliability"],
-    queryFn: ({ signal }) => fetchReliability(signal),
+    queryKey: ["reliability", period.days, period.anchor],
+    queryFn: ({ signal }) => fetchReliability(signal, period.days, period.anchor),
     placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : POLL,
+    refetchInterval: period.anchor ? false : POLL,
   });
   const d = q.data;
 
@@ -378,19 +362,7 @@ export function ReliabilityDashboard() {
         ))}
       </nav>
 
-      {/* Shared temporal rail (Live / Replay as-of-T) */}
-      <TemporalRail
-        mode={temporal.mode}
-        liveStatus={tr("status.realtime")}
-        timeline={railTimeline.data}
-        selectedAt={temporal.selectedAt}
-        onSelectedAtChange={temporal.setSelectedAt}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        onModeChange={temporal.changeMode}
-      />
-
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="flex min-w-0 flex-col gap-2">
           {/* A. Posture opérationnelle */}
           <Zone label={tr("sec.actual")}>
@@ -581,7 +553,7 @@ export function ReliabilityDashboard() {
 
           {/* D. Performance & budget */}
           <Zone label={tr("sec.performance")}>
-            <div className="grid gap-2 lg:grid-cols-3">
+            <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
               <Panel title={tr("panel.services")}>
                 <table className="w-full text-[0.72rem]">
                   <thead>
@@ -644,19 +616,51 @@ export function ReliabilityDashboard() {
                   </Badge>
                 </div>
               </Panel>
+              <Panel title={tr("rail.qualityTrend")} note={tr("rail.qualityTrendNote")}>
+                {(d.quality_series ?? []).length > 1 ? (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xl font-semibold tabular-nums">
+                        {Math.round(((d.quality_series ?? []).at(-1) ?? 0) * 100)}%
+                      </span>
+                      {d.quality_delta != null && Math.abs(d.quality_delta) >= 0.005 ? (
+                        <span
+                          className={`text-[0.7rem] tabular-nums ${d.quality_delta > 0 ? GOOD : BAD}`}
+                        >
+                          {d.quality_delta > 0 ? "↗" : "↘"}{" "}
+                          {Math.abs(d.quality_delta * 100).toFixed(0)} {tr("kpi.pts")}
+                        </span>
+                      ) : null}
+                    </div>
+                    <Spark values={d.quality_series ?? []} />
+                  </div>
+                ) : (
+                  <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>
+                )}
+              </Panel>
             </div>
           </Zone>
         </div>
 
-        <ReliabilityRail
-          spent={d.budget_spent_eur ?? 0}
-          monthly={d.budget_monthly_eur ?? 0}
-          projected={d.budget_projected_eur ?? 0}
-          requests={d.n_requests ?? 0}
-          cacheOverhead={d.cache_overhead_pct ?? 0}
-          withinBudget={d.within_budget ?? true}
-          qualitySeries={d.quality_series ?? []}
-          qualityDelta={d.quality_delta ?? null}
+        <PeriodRail
+          title={tr("period.title")}
+          items={(d.daily ?? [])
+            .filter((p) => p.date)
+            .map((p) => ({ stamp: p.date, label: fmtDate(p.date) }))
+            .reverse()}
+          presets={[
+            { value: 7, label: tr("period.d7") },
+            { value: 14, label: tr("period.d14") },
+            { value: 30, label: tr("period.d30") },
+          ]}
+          value={period}
+          onApply={setPeriod}
+          labels={{
+            selected: tr("period.selected"),
+            from: tr("period.from"),
+            apply: tr("period.apply"),
+            noData: tr("noIncidents"),
+          }}
         />
       </div>
 
@@ -751,131 +755,6 @@ function Chip({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; to
       <Icon className={`h-3.5 w-3.5 shrink-0 ${tone ?? ""}`} />
       <span className="truncate">{label}</span>
     </span>
-  );
-}
-
-function ReliabilityRail({
-  spent,
-  monthly,
-  projected,
-  requests,
-  cacheOverhead,
-  withinBudget,
-  qualitySeries,
-  qualityDelta,
-}: {
-  spent: number;
-  monthly: number;
-  projected: number;
-  requests: number;
-  cacheOverhead: number;
-  withinBudget: boolean;
-  qualitySeries: number[];
-  qualityDelta: number | null;
-}) {
-  const tr = useTranslations("reliability");
-  const used = monthly ? spent / monthly : 0;
-  const qUp = (qualityDelta ?? 0) > 0;
-  const showQDelta = qualityDelta != null && Math.abs(qualityDelta) >= 0.005;
-  const quickActions: { key: string; icon: LucideIcon }[] = [
-    { key: "qaForecast", icon: CalendarClock },
-    { key: "qaOptimize", icon: Coins },
-    { key: "qaIncident", icon: Activity },
-    { key: "qaExport", icon: ShieldCheck },
-  ];
-  return (
-    <aside className="flex min-w-0 flex-col gap-2">
-      <div className="flex flex-col gap-2 xl:sticky xl:top-4">
-        {qualitySeries.length > 1 ? (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">{tr("rail.qualityTrend")}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xl font-semibold tabular-nums">
-                  {Math.round((qualitySeries.at(-1) ?? 0) * 100)}%
-                </span>
-                {showQDelta ? (
-                  <span className={`text-[0.7rem] tabular-nums ${qUp ? GOOD : BAD}`}>
-                    {qUp ? "↗" : "↘"} {Math.abs((qualityDelta as number) * 100).toFixed(0)}{" "}
-                    {tr("kpi.pts")}
-                  </span>
-                ) : null}
-              </div>
-              <Spark values={qualitySeries} />
-              <p className="text-[0.6rem] text-[var(--muted-foreground)]">
-                {tr("rail.qualityTrendNote")}
-              </p>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{tr("rail.requests")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-end justify-between gap-2">
-            <span className="font-serif text-2xl font-semibold tabular-nums">
-              {requests.toLocaleString("fr-FR")}
-            </span>
-            <Badge tone="success">{tr("rail.live")}</Badge>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{tr("rail.forecast")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1 text-[0.72rem]">
-            <Row label={tr("rail.monthly")} value={eur(monthly, 0)} />
-            <Row label={tr("rail.spent")} value={`${eur(spent)} · ${Math.round(used * 100)}%`} />
-            <Row label={tr("rail.projected")} value={eur(projected)} />
-            <Badge tone={withinBudget ? "success" : "danger"}>
-              {withinBudget ? tr("rail.withinBudget") : tr("rail.overBudget")}
-            </Badge>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{tr("rail.cache")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1 text-[0.72rem]">
-            <Row label={tr("rail.overhead")} value={`${(cacheOverhead * 100).toFixed(3)}%`} />
-            <Row
-              label={tr("rail.budgetHeadroom")}
-              value={withinBudget ? tr("rail.ok") : tr("rail.tight")}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{tr("rail.quickActions")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-0.5">
-            {quickActions.map((a) => (
-              <button
-                key={a.key}
-                type="button"
-                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
-              >
-                <a.icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{tr(`rail.${a.key}`)}</span>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Button
-          size="sm"
-          className="h-8 w-full justify-center gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
-        >
-          <CalendarClock className="h-3.5 w-3.5" /> {tr("rail.forecastCta")}
-        </Button>
-      </div>
-    </aside>
   );
 }
 

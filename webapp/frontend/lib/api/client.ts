@@ -597,8 +597,14 @@ export async function fetchCompliance(signal?: AbortSignal): Promise<ComplianceR
 }
 
 /** Operational reliability & cost posture derived from the real signals (#08). */
-export async function fetchReliability(signal?: AbortSignal): Promise<ReliabilityReport> {
-  return request("/observability/reliability", { signal }, ReliabilityReportSchema);
+export async function fetchReliability(
+  signal?: AbortSignal,
+  days = 30,
+  anchor?: string | null,
+): Promise<ReliabilityReport> {
+  const qs = new URLSearchParams({ days: String(days) });
+  if (anchor) qs.set("anchor", anchor);
+  return request(`/observability/reliability?${qs}`, { signal }, ReliabilityReportSchema);
 }
 
 /** Continuous-improvement posture mined from the telemetry roadmap (#09). */
