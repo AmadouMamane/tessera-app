@@ -2228,3 +2228,99 @@ export const AutomationsOverviewSchema = z.object({
   footer: z.object({ source: z.string(), certified: z.string() }),
 });
 export type AutomationsOverview = z.infer<typeof AutomationsOverviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Proofs & exporter (page #15)
+// ---------------------------------------------------------------------------
+
+const PfKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  delta_label: z.string(),
+  good_is_up: z.boolean(),
+  series: z.array(z.number()),
+});
+const PfSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+
+export const ProofsOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  period_days: z.number().int(),
+  updated_at: z.string(),
+  kpis: z.array(PfKpiSchema),
+  alerts: z.array(z.object({ level: z.enum(["ok", "warn", "bad"]), label: z.string() })),
+  alert_count: z.number().int(),
+  pipeline: z.array(z.object({ key: z.string(), count: z.string(), status: z.string() })),
+  current_pack: z.object({
+    id: z.string(),
+    period: z.string(),
+    scope: z.string(),
+    hash: z.string(),
+    signer: z.string(),
+    contents: z.array(z.object({ key: z.string(), n: z.number().int() })),
+  }),
+  recent_packs: z.array(
+    z.object({
+      id: z.string(),
+      scope: z.string(),
+      artifacts: z.string(),
+      signature: z.string(),
+      destinations: z.string(),
+      by: z.string(),
+      time: z.string(),
+      status: z.enum(["signe", "exporte", "attente", "echec"]),
+    }),
+  ),
+  artifacts_distribution: z.array(PfSliceSchema),
+  artifacts_total: z.number().int(),
+  exporters: z.array(
+    z.object({
+      destination: z.string(),
+      format: z.string(),
+      status: z.enum(["ok", "degraded", "down"]),
+      last_push: z.string(),
+      queue: z.string(),
+      retention: z.string(),
+    }),
+  ),
+  crypto: z.object({
+    valid_signatures: z.string(),
+    algorithm: z.string(),
+    key_rotation: z.string(),
+    anomalies: z.number().int(),
+  }),
+  control_case_proofs: z.array(
+    z.object({
+      case_id: z.string(),
+      subject: z.string(),
+      linked: z.number().int(),
+      owner: z.string(),
+      status: z.enum(["ok", "pending"]),
+    }),
+  ),
+  retention: z.array(
+    z.object({
+      destination: z.string(),
+      proof_type: z.string(),
+      retention: z.string(),
+      obligation: z.string(),
+      coverage: z.number().int(),
+      expiry: z.string(),
+    }),
+  ),
+  export_journal: z.array(
+    z.object({ time: z.string(), label: z.string(), status: z.enum(["ok", "degraded", "down"]) }),
+  ),
+  queue: z.object({
+    pending_signature: z.number().int(),
+    pending_export: z.number().int(),
+    verifications: z.number().int(),
+  }),
+  footer: z.object({ chain: z.string(), source: z.string() }),
+});
+export type ProofsOverview = z.infer<typeof ProofsOverviewSchema>;

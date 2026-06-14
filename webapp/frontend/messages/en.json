@@ -3125,5 +3125,157 @@
       "source": "Source of truth: {src}",
       "certified": "{txt}"
     }
+  },
+  "proofs": {
+    "title": "Proofs & exporters",
+    "subtitle": "Assemble, sign, verify and export the AI proof artifacts.",
+    "tabs": {
+      "overview": "Overview",
+      "evidencePacks": "Evidence packs",
+      "exporters": "Exporters",
+      "chain": "Proof chain",
+      "destinations": "Destinations & retention"
+    },
+    "delta": {
+      "vs7d": "vs previous 7 days"
+    },
+    "rail": {
+      "realtime": "Real-time data"
+    },
+    "zone": {
+      "actual": "Current state",
+      "pipeline": "Proof pipeline",
+      "currentPack": "Current pack",
+      "recentPacks": "Recent evidence packs",
+      "distribution": "Artifact distribution",
+      "exporters": "Exporters & destinations",
+      "crypto": "Cryptographic verification",
+      "controlCases": "Control-case linked proofs",
+      "retention": "Retention & obligations",
+      "journal": "Export journal",
+      "queue": "Proofs to process",
+      "integrity": "Chain integrity",
+      "quickActions": "Quick actions",
+      "alerts": "Export alerts"
+    },
+    "kpi": {
+      "packs": "Packs generated",
+      "artifacts": "Signed artifacts",
+      "export_rate": "Export rate",
+      "exporters": "Active exporters",
+      "latency": "Avg latency",
+      "retention": "Retention coverage"
+    },
+    "pipeline": {
+      "collecte": "Collection",
+      "normalisation": "Normalization",
+      "signature": "Signature",
+      "pack": "Pack",
+      "export": "Export",
+      "chainOk": "Proof chain intact"
+    },
+    "pack": {
+      "contents": "Contents",
+      "download": "Download",
+      "verify": "Verify signature",
+      "hash": "Hash",
+      "signer": "Signer"
+    },
+    "content": {
+      "audit_logs": "audit logs",
+      "eval_cases": "eval cases",
+      "incidents": "incidents",
+      "release_manifests": "release manifests",
+      "policy_snapshots": "policy snapshots"
+    },
+    "packCol": {
+      "id": "Pack ID",
+      "scope": "Scope",
+      "artifacts": "Artifacts",
+      "signature": "Signature",
+      "destinations": "Destinations",
+      "by": "Created by",
+      "time": "Time",
+      "status": "Status"
+    },
+    "packStatus": {
+      "signe": "Signed",
+      "exporte": "Exported",
+      "attente": "Pending",
+      "echec": "Partial failure"
+    },
+    "art": {
+      "audit_logs": "Audit logs",
+      "eval_scores": "Eval scores",
+      "replays": "Replays",
+      "manifests": "Manifests",
+      "snapshots": "Snapshots",
+      "reports": "Reports"
+    },
+    "expCol": {
+      "destination": "Destination",
+      "format": "Format",
+      "status": "Status",
+      "lastPush": "Last push",
+      "queue": "Queue",
+      "retention": "Retention"
+    },
+    "expStatus": {
+      "ok": "OK",
+      "degraded": "Degraded",
+      "down": "Down"
+    },
+    "crypto": {
+      "validSignatures": "Valid signatures",
+      "algorithm": "Algorithm",
+      "keyRotation": "Key rotation",
+      "anomalies": "Anomalies"
+    },
+    "ccCol": {
+      "caseId": "Case ID",
+      "subject": "Subject",
+      "linked": "Linked proofs",
+      "owner": "Owner",
+      "status": "Status"
+    },
+    "ccStatus": {
+      "ok": "OK",
+      "pending": "Pending"
+    },
+    "retCol": {
+      "destination": "Destination",
+      "proofType": "Proof type",
+      "retention": "Retention",
+      "obligation": "Obligation",
+      "coverage": "Coverage",
+      "expiry": "Expiry"
+    },
+    "integrity": {
+      "intact": "Intact",
+      "noAnomaly": "No anomaly detected",
+      "lastCheck": "Last check"
+    },
+    "queue": {
+      "pendingSignature": "Awaiting signature",
+      "pendingExport": "Pending exports",
+      "verifications": "Verifications required",
+      "viewQueue": "View the queue"
+    },
+    "quick": {
+      "createPack": "Create evidence pack",
+      "exportSiem": "Export to SIEM",
+      "downloadManifest": "Download manifest",
+      "manageExporters": "Manage exporters"
+    },
+    "viewAll": {
+      "all": "View all",
+      "packs": "View all packs",
+      "exporters": "Manage exporters",
+      "alerts": "View all alerts ({n})"
+    },
+    "footer": {
+      "chain": "{txt}",
+      "source": "Source of truth: {src}"
+    }
   }
 }

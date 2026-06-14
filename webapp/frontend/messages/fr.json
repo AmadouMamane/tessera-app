@@ -3125,5 +3125,157 @@
       "source": "Source de vérité : {src}",
       "certified": "{txt}"
     }
+  },
+  "proofs": {
+    "title": "Preuves & exporteurs",
+    "subtitle": "Assembler, signer, vérifier et exporter les artefacts de preuve de l’IA.",
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "evidencePacks": "Evidence packs",
+      "exporters": "Exporteurs",
+      "chain": "Chaîne de preuve",
+      "destinations": "Destinations & rétention"
+    },
+    "delta": {
+      "vs7d": "vs 7 jours précédents"
+    },
+    "rail": {
+      "realtime": "Données en temps réel"
+    },
+    "zone": {
+      "actual": "État actuel",
+      "pipeline": "Pipeline de preuve",
+      "currentPack": "Pack courant",
+      "recentPacks": "Evidence packs récents",
+      "distribution": "Répartition des artefacts",
+      "exporters": "Exporteurs & destinations",
+      "crypto": "Vérification cryptographique",
+      "controlCases": "Preuves liées aux control cases",
+      "retention": "Rétention & obligations",
+      "journal": "Journal des exports",
+      "queue": "Preuves à traiter",
+      "integrity": "Intégrité de la chaîne",
+      "quickActions": "Actions rapides",
+      "alerts": "Alertes export"
+    },
+    "kpi": {
+      "packs": "Packs générés",
+      "artifacts": "Artefacts signés",
+      "export_rate": "Taux d’export",
+      "exporters": "Exporteurs actifs",
+      "latency": "Latence moy.",
+      "retention": "Couverture rétention"
+    },
+    "pipeline": {
+      "collecte": "Collecte",
+      "normalisation": "Normalisation",
+      "signature": "Signature",
+      "pack": "Pack",
+      "export": "Export",
+      "chainOk": "Chaîne de preuve intacte"
+    },
+    "pack": {
+      "contents": "Contenu",
+      "download": "Télécharger",
+      "verify": "Vérifier signature",
+      "hash": "Hash",
+      "signer": "Signataire"
+    },
+    "content": {
+      "audit_logs": "logs d’audit",
+      "eval_cases": "cas d’éval",
+      "incidents": "incidents",
+      "release_manifests": "manifests release",
+      "policy_snapshots": "snapshots de politiques"
+    },
+    "packCol": {
+      "id": "Pack ID",
+      "scope": "Scope",
+      "artifacts": "Artefacts",
+      "signature": "Signature",
+      "destinations": "Destinations",
+      "by": "Créé par",
+      "time": "Heure",
+      "status": "Statut"
+    },
+    "packStatus": {
+      "signe": "Signé",
+      "exporte": "Exporté",
+      "attente": "En attente",
+      "echec": "Échec partiel"
+    },
+    "art": {
+      "audit_logs": "Logs d’audit",
+      "eval_scores": "Scores d’éval",
+      "replays": "Replays",
+      "manifests": "Manifests",
+      "snapshots": "Snapshots",
+      "reports": "Rapports"
+    },
+    "expCol": {
+      "destination": "Destination",
+      "format": "Format",
+      "status": "Statut",
+      "lastPush": "Dernier push",
+      "queue": "File",
+      "retention": "Rétention"
+    },
+    "expStatus": {
+      "ok": "OK",
+      "degraded": "Dégradé",
+      "down": "HS"
+    },
+    "crypto": {
+      "validSignatures": "Signatures valides",
+      "algorithm": "Algorithme",
+      "keyRotation": "Rotation des clés",
+      "anomalies": "Anomalies"
+    },
+    "ccCol": {
+      "caseId": "Case ID",
+      "subject": "Sujet",
+      "linked": "Preuves liées",
+      "owner": "Owner",
+      "status": "Statut"
+    },
+    "ccStatus": {
+      "ok": "OK",
+      "pending": "En attente"
+    },
+    "retCol": {
+      "destination": "Destination",
+      "proofType": "Type de preuve",
+      "retention": "Rétention",
+      "obligation": "Obligation",
+      "coverage": "Couverture",
+      "expiry": "Expiration"
+    },
+    "integrity": {
+      "intact": "Intacte",
+      "noAnomaly": "Aucune anomalie détectée",
+      "lastCheck": "Dernier contrôle"
+    },
+    "queue": {
+      "pendingSignature": "En attente de signature",
+      "pendingExport": "Exports en attente",
+      "verifications": "Vérifications requises",
+      "viewQueue": "Voir la file d’attente"
+    },
+    "quick": {
+      "createPack": "Créer evidence pack",
+      "exportSiem": "Exporter vers SIEM",
+      "downloadManifest": "Télécharger manifest",
+      "manageExporters": "Gérer les exporteurs"
+    },
+    "viewAll": {
+      "all": "Voir tout",
+      "packs": "Voir tous les packs",
+      "exporters": "Gérer les exporteurs",
+      "alerts": "Voir toutes les alertes ({n})"
+    },
+    "footer": {
+      "chain": "{txt}",
+      "source": "Source de vérité : {src}"
+    }
   }
 }

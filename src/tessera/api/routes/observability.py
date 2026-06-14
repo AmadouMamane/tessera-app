@@ -59,6 +59,7 @@ from tessera.observability import (
     obs_cost as obs_cost_mod,
     pii_leak as pii_leak_mod,
     playbooks as playbooks_mod,
+    proofs as proofs_mod,
     provenance as provenance_mod,
     redteam as redteam_mod,
     refusal as refusal_mod,
@@ -624,6 +625,22 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/proofs")
+async def observability_proofs() -> dict[str, object]:
+    """Proofs & exporter overview (page #15).
+
+    Composes the proof posture, assembly pipeline, current evidence pack,
+    recent packs, artifact distribution, exporters & destinations, cryptographic
+    verification, control-case proofs, retention obligations and export journal.
+    Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **proofs_mod.compute_proofs_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.proofs: failed: {exc}\n")
         return {"available": False}
 
 

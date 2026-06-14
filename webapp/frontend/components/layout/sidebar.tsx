@@ -38,6 +38,7 @@ type RouteHref =
   | "/replay"
   | "/curation"
   | "/automations"
+  | "/proofs"
   | "/eval"
   | "/observability"
   | "/security"
@@ -94,7 +95,7 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     labelKey: "groups.prove",
     items: [
       { href: "/audit", icon: ScrollText, labelKey: "audit" },
-      { icon: Archive, labelKey: "proofExporters" },
+      { href: "/proofs", icon: Archive, labelKey: "proofExporters" },
       { icon: FileSearch, labelKey: "evidencePack" },
     ],
   },

@@ -123,6 +123,8 @@ import {
   PredictorEvaluationSchema,
   type PrivilegeReport,
   PrivilegeReportSchema,
+  type ProofsOverview,
+  ProofsOverviewSchema,
   type PropagationReport,
   PropagationReportSchema,
   type ProvenanceReport,
@@ -671,6 +673,10 @@ export async function fetchCurationOverview(signal?: AbortSignal): Promise<Curat
 
 export async function fetchAutomationsOverview(signal?: AbortSignal): Promise<AutomationsOverview> {
   return request("/observability/automations", { signal }, AutomationsOverviewSchema);
+}
+
+export async function fetchProofsOverview(signal?: AbortSignal): Promise<ProofsOverview> {
+  return request("/observability/proofs", { signal }, ProofsOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */
