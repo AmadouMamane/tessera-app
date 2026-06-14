@@ -33,6 +33,8 @@ import {
   CitationSummarySchema,
   type ClusterReport,
   ClusterReportSchema,
+  type ComplianceReport,
+  ComplianceReportSchema,
   type ConformanceReport,
   ConformanceReportSchema,
   type ConsistencyReport,
@@ -583,6 +585,11 @@ export async function fetchCalibration(signal?: AbortSignal): Promise<Calibratio
 /** Guard/firewall detection efficacy over injection vs benign inputs. */
 export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<FirewallEfficacy> {
   return request("/observability/firewall-efficacy", { signal }, FirewallEfficacySchema);
+}
+
+/** Regulatory compliance posture derived from the real runtime signals (#07). */
+export async function fetchCompliance(signal?: AbortSignal): Promise<ComplianceReport> {
+  return request("/observability/compliance", { signal }, ComplianceReportSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

@@ -2010,5 +2010,86 @@
       "exportSiem": "An SIEM exportieren",
       "anomalies": "{n} Session-Anomalien erkannt"
     }
+  },
+  "compliance": {
+    "title": "Compliance",
+    "subtitle": "Regulatorische Haltung aus realen Runtime-Signalen abgeleitet.",
+    "loading": "Compliance-Haltung wird geladen…",
+    "unavailable": "Compliance-Haltung nicht verfügbar.",
+    "tabs": {
+      "overview": "Übersicht",
+      "mapping": "Regulatorische Kartierung",
+      "obligations": "Pflichten & Kontrollen",
+      "evaluations": "Bewertungen",
+      "incidents": "Vorfälle & Ausnahmen",
+      "retention": "Löschung & Aufbewahrung",
+      "evidence": "Nachweise & Attestierungen",
+      "registry": "Verarbeitungsregister"
+    },
+    "kpi": {
+      "score": "Globaler Compliance-Score",
+      "scoreSub": "aus Runtime-Signalen abgeleitet",
+      "obligations": "Angewandte Pflichten",
+      "conformant": "Konforme Kontrollen",
+      "partial": "Teilweise konform",
+      "nonConformant": "Nichtkonformitäten",
+      "residual": "Restrisiken",
+      "residualSub": "Überwacht",
+      "deadlines": "Kritische Fristen",
+      "deadlinesSub": "Zu bearbeiten"
+    },
+    "panel": {
+      "mapping": "Regulatorische Kartierung",
+      "obligations": "Pflichten mit Risiko ({n})",
+      "evidence": "Compliance-Evidence-Pack",
+      "controls": "Kritische Kontrollen ({n})",
+      "missing": "Fehlende Nachweise",
+      "incidents": "Vorfälle & Ausnahmen"
+    },
+    "col": {
+      "framework": "Rahmen",
+      "score": "Score",
+      "breakdown": "Konf · Teil · Nicht",
+      "obligation": "Pflicht",
+      "status": "Status",
+      "due": "Frist",
+      "owner": "Verantwortlich",
+      "nc": "ID",
+      "severity": "Kritikalität"
+    },
+    "status": {
+      "conformant": "Konform",
+      "partial": "Teilweise",
+      "non_conformant": "Nicht konform",
+      "chain": "Audit-Kette intakt",
+      "truth": "Quelle der Wahrheit: YAML · Git",
+      "env": "Umgebung: Produktion"
+    },
+    "sev": {
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Gering"
+    },
+    "ncStatus": {
+      "open": "Offen",
+      "accepted": "Akzeptiert",
+      "resolved": "Behoben"
+    },
+    "evidence": {
+      "valid": "Gültige Nachweise",
+      "missing": "Fehlende Nachweise",
+      "blocking": "Blockierende Nachweise",
+      "total": "{n} Nachweise gesamt",
+      "export": "Exportbereit"
+    },
+    "rail": {
+      "lastEval": "Letzte Bewertung",
+      "live": "LIVE",
+      "deadlines": "Anstehende Fristen",
+      "criticalNc": "Kritische Nichtkonformitäten",
+      "noNc": "Keine kritische Nichtkonformität",
+      "actions": "Empfohlene Maßnahmen ({n})",
+      "evidenceCta": "Compliance-Evidence-Pack erzeugen"
+    }
   }
 }

@@ -2010,5 +2010,86 @@
       "exportSiem": "Exporter vers SIEM",
       "anomalies": "{n} anomalies de session détectées"
     }
+  },
+  "compliance": {
+    "title": "Conformité",
+    "subtitle": "Posture réglementaire dérivée des signaux runtime réels.",
+    "loading": "Chargement de la posture de conformité…",
+    "unavailable": "Posture de conformité indisponible.",
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "mapping": "Cartographie réglementaire",
+      "obligations": "Obligations & contrôles",
+      "evaluations": "Évaluations",
+      "incidents": "Incidents & exceptions",
+      "retention": "Purge & rétention",
+      "evidence": "Preuves & attestations",
+      "registry": "Registre des traitements"
+    },
+    "kpi": {
+      "score": "Score conformité global",
+      "scoreSub": "dérivé des signaux runtime",
+      "obligations": "Obligations appliquées",
+      "conformant": "Contrôles conformes",
+      "partial": "Partiellement conformes",
+      "nonConformant": "Non conformités",
+      "residual": "Risques résiduels",
+      "residualSub": "Surveillés",
+      "deadlines": "Échéances critiques",
+      "deadlinesSub": "À traiter"
+    },
+    "panel": {
+      "mapping": "Cartographie réglementaire",
+      "obligations": "Obligations à risque ({n})",
+      "evidence": "Evidence Pack conformité",
+      "controls": "Contrôles critiques ({n})",
+      "missing": "Preuves manquantes",
+      "incidents": "Incidents & exceptions"
+    },
+    "col": {
+      "framework": "Cadre",
+      "score": "Score",
+      "breakdown": "Conf · Part · Non",
+      "obligation": "Obligation",
+      "status": "Statut",
+      "due": "Échéance",
+      "owner": "Propriétaire",
+      "nc": "ID",
+      "severity": "Criticité"
+    },
+    "status": {
+      "conformant": "Conforme",
+      "partial": "Partiel",
+      "non_conformant": "Non conforme",
+      "chain": "Chaîne d'audit intacte",
+      "truth": "Source de vérité : YAML · Git",
+      "env": "Environnement : Production"
+    },
+    "sev": {
+      "high": "Élevé",
+      "medium": "Moyen",
+      "low": "Faible"
+    },
+    "ncStatus": {
+      "open": "Ouvert",
+      "accepted": "Accepté",
+      "resolved": "Résolu"
+    },
+    "evidence": {
+      "valid": "Preuves valides",
+      "missing": "Preuves manquantes",
+      "blocking": "Preuves bloquantes",
+      "total": "{n} preuves au total",
+      "export": "Prêt à exporter"
+    },
+    "rail": {
+      "lastEval": "Dernière évaluation",
+      "live": "LIVE",
+      "deadlines": "Échéances à venir",
+      "criticalNc": "Non conformités critiques",
+      "noNc": "Aucune non-conformité critique",
+      "actions": "Actions recommandées ({n})",
+      "evidenceCta": "Générer evidence pack conformité"
+    }
   }
 }

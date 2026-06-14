@@ -276,6 +276,71 @@ export const CalibrationSchema = z.object({
 });
 export type Calibration = z.infer<typeof CalibrationSchema>;
 
+export const ComplianceControlSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  framework: z.string(),
+  signal: z.string(),
+  status: z.string(),
+  value: z.number(),
+  risk: z.string(),
+  owner: z.string(),
+  evidence_id: z.string(),
+});
+export type ComplianceControl = z.infer<typeof ComplianceControlSchema>;
+
+export const ComplianceFrameworkSchema = z.object({
+  code: z.string(),
+  label: z.string(),
+  score: z.number(),
+  n_conformant: z.number().int(),
+  n_partial: z.number().int(),
+  n_non_conformant: z.number().int(),
+  n_na: z.number().int(),
+});
+export type ComplianceFramework = z.infer<typeof ComplianceFrameworkSchema>;
+
+export const ComplianceObligationSchema = z.object({
+  name: z.string(),
+  framework: z.string(),
+  article: z.string(),
+  status: z.string(),
+  due: z.string(),
+  owner: z.string(),
+});
+export type ComplianceObligation = z.infer<typeof ComplianceObligationSchema>;
+
+export const NonConformitySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  framework: z.string(),
+  severity: z.string(),
+  status: z.string(),
+});
+export type NonConformity = z.infer<typeof NonConformitySchema>;
+
+export const ComplianceReportSchema = z.object({
+  available: z.boolean(),
+  score: z.number().int().optional(),
+  n_obligations: z.number().int().optional(),
+  n_applied: z.number().int().optional(),
+  n_controls: z.number().int().optional(),
+  n_conformant: z.number().int().optional(),
+  n_partial: z.number().int().optional(),
+  n_non_conformant: z.number().int().optional(),
+  n_residual_risk: z.number().int().optional(),
+  n_critical_deadlines: z.number().int().optional(),
+  evidence_valid: z.number().int().optional(),
+  evidence_missing: z.number().int().optional(),
+  evidence_blocking: z.number().int().optional(),
+  evidence_completeness: z.number().optional(),
+  frameworks: z.array(ComplianceFrameworkSchema).optional(),
+  controls: z.array(ComplianceControlSchema).optional(),
+  obligations: z.array(ComplianceObligationSchema).optional(),
+  non_conformities: z.array(NonConformitySchema).optional(),
+});
+export type ComplianceReport = z.infer<typeof ComplianceReportSchema>;
+
 export const LineageSchema = z.object({
   model: z.string(),
   prompt_version: z.string(),

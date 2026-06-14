@@ -22,6 +22,7 @@ from tessera.observability import (
     anomalies as anomalies_mod,
     citation_resolver as citation_resolver_mod,
     citation_validity as citation_validity_mod,
+    compliance as compliance_mod,
     conformance as conformance_mod,
     consistency as consistency_mod,
     context_overflow as context_overflow_mod,
@@ -572,6 +573,22 @@ async def observability_calibration() -> dict[str, object]:
                 sys.stderr.write(f"tessera.observability.calibration: failed: {exc}\n")
                 return {"available": False}
     return _calibration_cache
+
+
+@router.get("/observability/compliance")
+async def observability_compliance() -> dict[str, object]:
+    """Regulatory compliance posture derived from the real runtime signals (#07).
+
+    Maps the live AI-Act, conformance, citation, disclosure, PII, refusal,
+    erasure and firewall signals onto per-framework controls (RGPD, EU AI Act,
+    DORA, ISO 27001, SOC 2, internal policies). Degrades to ``available: false``
+    if assembly fails so the dashboard never errors.
+    """
+    try:
+        return {"available": True, **asdict(compliance_mod.compute_compliance())}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.compliance: failed: {exc}\n")
+        return {"available": False}
 
 
 @router.get("/observability/judge-consensus")

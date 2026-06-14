@@ -2010,5 +2010,86 @@
       "exportSiem": "Export to SIEM",
       "anomalies": "{n} session anomalies detected"
     }
+  },
+  "compliance": {
+    "title": "Compliance",
+    "subtitle": "Regulatory posture derived from real runtime signals.",
+    "loading": "Loading compliance posture…",
+    "unavailable": "Compliance posture unavailable.",
+    "tabs": {
+      "overview": "Overview",
+      "mapping": "Regulatory mapping",
+      "obligations": "Obligations & controls",
+      "evaluations": "Evaluations",
+      "incidents": "Incidents & exceptions",
+      "retention": "Purge & retention",
+      "evidence": "Evidence & attestations",
+      "registry": "Processing register"
+    },
+    "kpi": {
+      "score": "Global compliance score",
+      "scoreSub": "derived from runtime signals",
+      "obligations": "Obligations applied",
+      "conformant": "Conformant controls",
+      "partial": "Partially conformant",
+      "nonConformant": "Non-conformities",
+      "residual": "Residual risks",
+      "residualSub": "Monitored",
+      "deadlines": "Critical deadlines",
+      "deadlinesSub": "To handle"
+    },
+    "panel": {
+      "mapping": "Regulatory mapping",
+      "obligations": "Obligations at risk ({n})",
+      "evidence": "Compliance evidence pack",
+      "controls": "Critical controls ({n})",
+      "missing": "Missing evidence",
+      "incidents": "Incidents & exceptions"
+    },
+    "col": {
+      "framework": "Framework",
+      "score": "Score",
+      "breakdown": "Conf · Part · Non",
+      "obligation": "Obligation",
+      "status": "Status",
+      "due": "Due",
+      "owner": "Owner",
+      "nc": "ID",
+      "severity": "Severity"
+    },
+    "status": {
+      "conformant": "Conformant",
+      "partial": "Partial",
+      "non_conformant": "Non-conformant",
+      "chain": "Audit chain intact",
+      "truth": "Source of truth: YAML · Git",
+      "env": "Environment: Production"
+    },
+    "sev": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "ncStatus": {
+      "open": "Open",
+      "accepted": "Accepted",
+      "resolved": "Resolved"
+    },
+    "evidence": {
+      "valid": "Valid evidence",
+      "missing": "Missing evidence",
+      "blocking": "Blocking evidence",
+      "total": "{n} evidence items total",
+      "export": "Ready to export"
+    },
+    "rail": {
+      "lastEval": "Last evaluation",
+      "live": "LIVE",
+      "deadlines": "Upcoming deadlines",
+      "criticalNc": "Critical non-conformities",
+      "noNc": "No critical non-conformity",
+      "actions": "Recommended actions ({n})",
+      "evidenceCta": "Generate compliance evidence pack"
+    }
   }
 }
