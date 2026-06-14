@@ -1,10 +1,24 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, FileCheck2, type LucideIcon, ScrollText, ShieldCheck } from "lucide-react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  BookText,
+  CalendarClock,
+  FileCheck2,
+  FileDown,
+  ListChecks,
+  type LucideIcon,
+  ScrollText,
+  ShieldCheck,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import {
+  TemporalRail,
+  useRailTimeline,
+  useTemporalState,
+} from "@/components/overview/temporal-rail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,18 +51,37 @@ const TABS = [
   "registry",
 ] as const;
 
+function Sec({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      {children}
+    </h2>
+  );
+}
+
+/** A translucent banded section grouping one cockpit zone (A · B · C · …). */
+function Zone({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5">
+      <Sec>{label}</Sec>
+      <div className="mt-1.5">{children}</div>
+    </section>
+  );
+}
+
 function Panel({
   title,
   action,
   children,
-}: { title: string; action?: ReactNode; children: ReactNode }) {
+  className,
+}: { title: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <Card className="min-w-0">
+    <Card className={`flex h-full min-w-0 flex-col ${className ?? ""}`}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
         <CardTitle className="text-[0.78rem] font-medium">{title}</CardTitle>
         {action}
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="flex-1">{children}</CardContent>
     </Card>
   );
 }
@@ -117,10 +150,14 @@ const POLL = 30_000;
 
 export function ComplianceDashboard() {
   const tc = useTranslations("compliance");
+  const temporal = useTemporalState();
+  const { historyMode } = temporal;
+  const railTimeline = useRailTimeline();
   const q = useQuery({
     queryKey: ["compliance"],
     queryFn: ({ signal }) => fetchCompliance(signal),
-    refetchInterval: POLL,
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : POLL,
   });
   const d = q.data;
 
@@ -155,185 +192,203 @@ export function ComplianceDashboard() {
         ))}
       </nav>
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
-        <Kpi
-          label={tc("kpi.score")}
-          value={`${d.score ?? 0}/100`}
-          sub={tc("kpi.scoreSub")}
-          tone={(d.score ?? 0) >= 80 ? GOOD : WARN}
-        />
-        <Kpi
-          label={tc("kpi.obligations")}
-          value={`${d.n_applied ?? 0}/${d.n_obligations ?? 0}`}
-          sub={`${Math.round(((d.n_applied ?? 0) / (d.n_obligations || 1)) * 100)}%`}
-          tone={GOOD}
-        />
-        <Kpi
-          label={tc("kpi.conformant")}
-          value={`${d.n_conformant ?? 0}/${d.n_controls ?? 0}`}
-          sub={`${Math.round(((d.n_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
-          tone={GOOD}
-        />
-        <Kpi
-          label={tc("kpi.partial")}
-          value={`${d.n_partial ?? 0}`}
-          sub={`${Math.round(((d.n_partial ?? 0) / (d.n_controls || 1)) * 100)}%`}
-          tone={WARN}
-        />
-        <Kpi
-          label={tc("kpi.nonConformant")}
-          value={`${d.n_non_conformant ?? 0}`}
-          sub={`${Math.round(((d.n_non_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
-          tone={(d.n_non_conformant ?? 0) > 0 ? BAD : GOOD}
-        />
-        <Kpi
-          label={tc("kpi.residual")}
-          value={`${d.n_residual_risk ?? 0}`}
-          sub={tc("kpi.residualSub")}
-          tone={WARN}
-        />
-        <Kpi
-          label={tc("kpi.deadlines")}
-          value={`${d.n_critical_deadlines ?? 0}`}
-          sub={tc("kpi.deadlinesSub")}
-          tone={(d.n_critical_deadlines ?? 0) > 0 ? BAD : GOOD}
-        />
-      </div>
+      {/* Shared temporal rail (Live / Replay as-of-T) */}
+      <TemporalRail
+        mode={temporal.mode}
+        liveStatus={tc("status.realtime")}
+        timeline={railTimeline.data}
+        selectedAt={temporal.selectedAt}
+        onSelectedAtChange={temporal.setSelectedAt}
+        periodKey={temporal.periodKey}
+        onPeriodChange={temporal.setPeriodKey}
+        onModeChange={temporal.changeMode}
+      />
 
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-2">
-          {/* Row 1 — cartographie · obligations · evidence */}
-          <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)]">
-            <Panel title={tc("panel.mapping")}>
-              <table className="w-full text-[0.72rem]">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                    <th className="py-1 pr-2 font-medium">{tc("col.framework")}</th>
-                    <th className="py-1 pr-2 font-medium">{tc("col.score")}</th>
-                    <th className="py-1 font-medium">{tc("col.breakdown")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(d.frameworks ?? []).map((f) => (
-                    <FrameworkRow key={f.code} f={f} />
-                  ))}
-                </tbody>
-              </table>
-            </Panel>
+          {/* A. Posture réglementaire */}
+          <Zone label={tc("sec.actual")}>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
+              <Kpi
+                label={tc("kpi.score")}
+                value={`${d.score ?? 0}/100`}
+                sub={tc("kpi.scoreSub")}
+                tone={(d.score ?? 0) >= 80 ? GOOD : WARN}
+              />
+              <Kpi
+                label={tc("kpi.obligations")}
+                value={`${d.n_applied ?? 0}/${d.n_obligations ?? 0}`}
+                sub={`${Math.round(((d.n_applied ?? 0) / (d.n_obligations || 1)) * 100)}%`}
+                tone={GOOD}
+              />
+              <Kpi
+                label={tc("kpi.conformant")}
+                value={`${d.n_conformant ?? 0}/${d.n_controls ?? 0}`}
+                sub={`${Math.round(((d.n_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
+                tone={GOOD}
+              />
+              <Kpi
+                label={tc("kpi.partial")}
+                value={`${d.n_partial ?? 0}`}
+                sub={`${Math.round(((d.n_partial ?? 0) / (d.n_controls || 1)) * 100)}%`}
+                tone={WARN}
+              />
+              <Kpi
+                label={tc("kpi.nonConformant")}
+                value={`${d.n_non_conformant ?? 0}`}
+                sub={`${Math.round(((d.n_non_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
+                tone={(d.n_non_conformant ?? 0) > 0 ? BAD : GOOD}
+              />
+              <Kpi
+                label={tc("kpi.residual")}
+                value={`${d.n_residual_risk ?? 0}`}
+                sub={tc("kpi.residualSub")}
+                tone={WARN}
+              />
+              <Kpi
+                label={tc("kpi.deadlines")}
+                value={`${d.n_critical_deadlines ?? 0}`}
+                sub={tc("kpi.deadlinesSub")}
+                tone={(d.n_critical_deadlines ?? 0) > 0 ? BAD : GOOD}
+              />
+            </div>
+          </Zone>
 
-            <Panel title={tc("panel.obligations", { n: d.obligations?.length ?? 0 })}>
-              <table className="w-full text-[0.72rem]">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                    <th className="py-1 pr-2 font-medium">{tc("col.obligation")}</th>
-                    <th className="py-1 pr-2 font-medium">{tc("col.status")}</th>
-                    <th className="py-1 pr-2 font-medium">{tc("col.due")}</th>
-                    <th className="py-1 font-medium">{tc("col.owner")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(d.obligations ?? []).slice(0, 6).map((o) => (
-                    <ObligationRow key={o.name} o={o} fwLabel={fwLabel} />
-                  ))}
-                </tbody>
-              </table>
-            </Panel>
+          {/* B. Cartographie · obligations · evidence */}
+          <Zone label={tc("sec.mapping")}>
+            <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)]">
+              <Panel title={tc("panel.mapping")}>
+                <table className="w-full text-[0.72rem]">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                      <th className="py-1 pr-2 font-medium">{tc("col.framework")}</th>
+                      <th className="py-1 pr-2 font-medium">{tc("col.score")}</th>
+                      <th className="py-1 font-medium">{tc("col.breakdown")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(d.frameworks ?? []).map((f) => (
+                      <FrameworkRow key={f.code} f={f} />
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
 
-            <Panel title={tc("panel.evidence")}>
-              <div className="flex items-center gap-3">
-                <EvidenceDonut completeness={d.evidence_completeness ?? 0} />
-                <ul className="flex flex-col gap-1 text-[0.7rem]">
-                  <EvRow
-                    color="#10b981"
-                    label={tc("evidence.valid")}
-                    value={d.evidence_valid ?? 0}
-                  />
-                  <EvRow
-                    color="#f59e0b"
-                    label={tc("evidence.missing")}
-                    value={d.evidence_missing ?? 0}
-                  />
-                  <EvRow
-                    color="#ef4444"
-                    label={tc("evidence.blocking")}
-                    value={d.evidence_blocking ?? 0}
-                  />
-                  <li className="pt-1 text-[var(--muted-foreground)]">
-                    {tc("evidence.total", { n: evTotal })}
-                  </li>
-                </ul>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2 h-7 w-full justify-center text-[0.7rem]"
-              >
-                {tc("evidence.export")}
-              </Button>
-            </Panel>
-          </div>
+              <Panel title={tc("panel.obligations", { n: d.obligations?.length ?? 0 })}>
+                <table className="w-full text-[0.72rem]">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                      <th className="py-1 pr-2 font-medium">{tc("col.obligation")}</th>
+                      <th className="py-1 pr-2 font-medium">{tc("col.status")}</th>
+                      <th className="py-1 pr-2 font-medium">{tc("col.due")}</th>
+                      <th className="py-1 font-medium">{tc("col.owner")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(d.obligations ?? []).slice(0, 6).map((o) => (
+                      <ObligationRow key={o.name} o={o} fwLabel={fwLabel} />
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
 
-          {/* Row 2 — contrôles critiques · preuves manquantes · incidents */}
-          <div className="grid items-start gap-2 lg:grid-cols-3">
-            <Panel title={tc("panel.controls", { n: d.controls?.length ?? 0 })}>
-              <ul className="flex flex-col gap-1 text-[0.72rem]">
-                {(d.controls ?? []).slice(0, 6).map((c) => (
-                  <li key={c.id} className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate">{c.name}</span>
-                    <Badge tone={STATUS_BADGE[c.status] ?? "neutral"}>
-                      {tc(`status.${c.status}`)}
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
+              <Panel title={tc("panel.evidence")}>
+                <div className="flex items-center gap-3">
+                  <EvidenceDonut completeness={d.evidence_completeness ?? 0} />
+                  <ul className="flex flex-col gap-1 text-[0.7rem]">
+                    <EvRow
+                      color="#10b981"
+                      label={tc("evidence.valid")}
+                      value={d.evidence_valid ?? 0}
+                    />
+                    <EvRow
+                      color="#f59e0b"
+                      label={tc("evidence.missing")}
+                      value={d.evidence_missing ?? 0}
+                    />
+                    <EvRow
+                      color="#ef4444"
+                      label={tc("evidence.blocking")}
+                      value={d.evidence_blocking ?? 0}
+                    />
+                    <li className="pt-1 text-[var(--muted-foreground)]">
+                      {tc("evidence.total", { n: evTotal })}
+                    </li>
+                  </ul>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 h-7 w-full justify-center text-[0.7rem]"
+                >
+                  {tc("evidence.export")}
+                </Button>
+              </Panel>
+            </div>
+          </Zone>
 
-            <Panel title={tc("panel.missing")}>
-              <ul className="flex flex-col gap-1 text-[0.72rem]">
-                {(d.controls ?? [])
-                  .filter((c) => c.status !== "conformant")
-                  .slice(0, 7)
-                  .map((c) => (
-                    <li key={c.id} className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 flex-1 truncate font-mono text-[0.65rem]">
-                        {c.evidence_id}
-                      </span>
-                      <span className="shrink-0 text-[var(--muted-foreground)]">
-                        {fwLabel(c.framework)}
-                      </span>
+          {/* C. Contrôles · preuves manquantes · incidents */}
+          <Zone label={tc("sec.controls")}>
+            <div className="grid gap-2 lg:grid-cols-3">
+              <Panel title={tc("panel.controls", { n: d.controls?.length ?? 0 })}>
+                <ul className="flex flex-col gap-1 text-[0.72rem]">
+                  {(d.controls ?? []).slice(0, 6).map((c) => (
+                    <li key={c.id} className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                      <Badge tone={STATUS_BADGE[c.status] ?? "neutral"}>
+                        {tc(`status.${c.status}`)}
+                      </Badge>
                     </li>
                   ))}
-              </ul>
-            </Panel>
+                </ul>
+              </Panel>
 
-            <Panel title={tc("panel.incidents")}>
-              <table className="w-full text-[0.7rem]">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                    <th className="py-1 pr-2 font-medium">{tc("col.nc")}</th>
-                    <th className="py-1 pr-2 font-medium">{tc("col.severity")}</th>
-                    <th className="py-1 font-medium">{tc("col.status")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(d.non_conformities ?? []).slice(0, 6).map((nc) => (
-                    <tr key={nc.id} className="border-b border-[var(--border)]/50">
-                      <td className="py-1 pr-2 font-mono text-[var(--tessera-green)]">{nc.id}</td>
-                      <td className="py-1 pr-2">
-                        <Badge tone={SEV_BADGE[nc.severity] ?? "neutral"}>
-                          {tc(`sev.${nc.severity}`)}
-                        </Badge>
-                      </td>
-                      <td className="py-1 text-[var(--muted-foreground)]">
-                        {tc(`ncStatus.${nc.status}`)}
-                      </td>
+              <Panel title={tc("panel.missing")}>
+                <ul className="flex flex-col gap-1 text-[0.72rem]">
+                  {(d.controls ?? [])
+                    .filter((c) => c.status !== "conformant")
+                    .slice(0, 7)
+                    .map((c) => (
+                      <li key={c.id} className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 flex-1 truncate font-mono text-[0.65rem]">
+                          {c.evidence_id}
+                        </span>
+                        <span className="shrink-0 text-[var(--muted-foreground)]">
+                          {fwLabel(c.framework)}
+                        </span>
+                      </li>
+                    ))}
+                </ul>
+              </Panel>
+
+              <Panel title={tc("panel.incidents")}>
+                <table className="w-full text-[0.7rem]">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                      <th className="py-1 pr-2 font-medium">{tc("col.nc")}</th>
+                      <th className="py-1 pr-2 font-medium">{tc("col.severity")}</th>
+                      <th className="py-1 font-medium">{tc("col.status")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Panel>
-          </div>
+                  </thead>
+                  <tbody>
+                    {(d.non_conformities ?? []).slice(0, 6).map((nc) => (
+                      <tr key={nc.id} className="border-b border-[var(--border)]/50">
+                        <td className="py-1 pr-2 font-mono text-[var(--tessera-green)]">{nc.id}</td>
+                        <td className="py-1 pr-2">
+                          <Badge tone={SEV_BADGE[nc.severity] ?? "neutral"}>
+                            {tc(`sev.${nc.severity}`)}
+                          </Badge>
+                        </td>
+                        <td className="py-1 text-[var(--muted-foreground)]">
+                          {tc(`ncStatus.${nc.status}`)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
+            </div>
+          </Zone>
         </div>
 
         <ComplianceRail
@@ -483,6 +538,29 @@ function ComplianceRail({
                   {fwLabel(o.framework)}
                 </Badge>
               </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{tc("rail.quickActions")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-0.5">
+            {[
+              { key: "qaEvidence", icon: FileCheck2 },
+              { key: "qaRemediation", icon: ListChecks },
+              { key: "qaReport", icon: FileDown },
+              { key: "qaRegistry", icon: BookText },
+            ].map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
+              >
+                <a.icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{tc(`rail.${a.key}`)}</span>
+              </button>
             ))}
           </CardContent>
         </Card>

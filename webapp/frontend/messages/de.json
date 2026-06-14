@@ -2089,7 +2089,8 @@
       "non_conformant": "Nicht konform",
       "chain": "Audit-Kette intakt",
       "truth": "Quelle der Wahrheit: YAML · Git",
-      "env": "Umgebung: Produktion"
+      "env": "Umgebung: Produktion",
+      "realtime": "Echtzeit"
     },
     "sev": {
       "high": "Hoch",
@@ -2115,7 +2116,17 @@
       "criticalNc": "Kritische Nichtkonformitäten",
       "noNc": "Keine kritische Nichtkonformität",
       "actions": "Empfohlene Maßnahmen ({n})",
-      "evidenceCta": "Compliance-Evidence-Pack erzeugen"
+      "evidenceCta": "Compliance-Evidence-Pack erzeugen",
+      "quickActions": "Schnellaktionen",
+      "qaEvidence": "Evidence-Pack erzeugen",
+      "qaRemediation": "Abhilfeplan",
+      "qaReport": "Compliance-Bericht exportieren",
+      "qaRegistry": "Verarbeitungsverzeichnis"
+    },
+    "sec": {
+      "actual": "A · Regulatorische Lage",
+      "mapping": "B · Mapping & Pflichten",
+      "controls": "C · Kontrollen & Vorfälle"
     }
   },
   "reliability": {
