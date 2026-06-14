@@ -83,6 +83,8 @@ import {
   HealthResponseSchema,
   type ImprovementReport,
   ImprovementReportSchema,
+  type IncidentsOverview,
+  IncidentsOverviewSchema,
   type IntentReport,
   IntentReportSchema,
   type InventoryReport,
@@ -645,6 +647,10 @@ export async function fetchReliability(
 /** Continuous-improvement posture mined from the telemetry roadmap (#09). */
 export async function fetchImprovement(signal?: AbortSignal): Promise<ImprovementReport> {
   return request("/observability/improvement", { signal }, ImprovementReportSchema);
+}
+
+export async function fetchIncidentsOverview(signal?: AbortSignal): Promise<IncidentsOverview> {
+  return request("/observability/incidents", { signal }, IncidentsOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

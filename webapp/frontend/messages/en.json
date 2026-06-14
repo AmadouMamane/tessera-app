@@ -2454,5 +2454,146 @@
       "inProd": "In production",
       "planCta": "Prepare the action plan"
     }
+  },
+  "incidents": {
+    "title": "Incidents & playbooks",
+    "subtitle": "Incident response, playbook orchestration and governed remediation.",
+    "tabs": {
+      "overview": "Overview",
+      "incidents": "Incidents",
+      "playbooks": "Playbooks",
+      "orchestration": "Orchestration",
+      "automations": "Automations",
+      "postmortems": "Post-mortems",
+      "journal": "Response log"
+    },
+    "rail": {
+      "live": "Live",
+      "realtime": "Real-time data",
+      "period": "Period: {days} days",
+      "updated": "Last updated: {time}",
+      "replay": "Replay at T"
+    },
+    "actions": {
+      "createTicket": "Create ticket",
+      "launchPlaybook": "Launch playbook",
+      "evidencePack": "Generate evidence pack"
+    },
+    "zone": {
+      "actual": "A · Current state",
+      "triage": "B · Diagnosis / triage",
+      "execution": "C · Execution & automation",
+      "impact": "D · Impact & performance"
+    },
+    "kpi": {
+      "open": "Open incidents",
+      "critical": "Critical",
+      "mtta": "MTTA (7d avg)",
+      "mttr": "MTTR (7d avg)",
+      "playbooks": "Active playbooks",
+      "autoresolve": "Auto-resolution",
+      "evidence": "Evidence packs generated",
+      "sla_risk": "Incidents with SLA at risk"
+    },
+    "delta": {
+      "vs7d": "vs D-7"
+    },
+    "triage": {
+      "queue": "Priority incident queue",
+      "catalog": "Recommended playbook catalogue",
+      "recent": "Recent incidents",
+      "sla": "SLA & escalations",
+      "distribution": "Incident distribution",
+      "controlCases": "Priority control cases",
+      "viewAll": "View all",
+      "viewCatalog": "View whole catalogue",
+      "viewCases": "View all cases",
+      "recentMore": "+{n} more incidents",
+      "runs": "{n} runs",
+      "assoc": "Linked to {n}",
+      "incidentsCount": "{n} incidents"
+    },
+    "col": {
+      "id": "Incident ID",
+      "severity": "Severity",
+      "trigger": "Trigger",
+      "domain": "Domain",
+      "status": "Status",
+      "owner": "Owner",
+      "sla": "SLA",
+      "playbook": "Recommended playbook",
+      "role": "Required role"
+    },
+    "severity": {
+      "critique": "Critical",
+      "eleve": "High",
+      "moyen": "Medium"
+    },
+    "status": {
+      "ouvert": "Open",
+      "encours": "In progress",
+      "resolu": "Resolved"
+    },
+    "domain": {
+      "privacy": "Privacy",
+      "qualite_rag": "Quality / RAG",
+      "securite": "Security",
+      "observabilite": "Observability",
+      "conformite": "Compliance"
+    },
+    "exec": {
+      "running": "Running playbook",
+      "journal": "Response log (excerpt)",
+      "automations": "Automations",
+      "quickActions": "Quick actions",
+      "owner": "Owner",
+      "role": "Required role",
+      "proofs": "Proofs generated",
+      "elapsed": "Elapsed",
+      "viewAll": "View whole log",
+      "viewAllAuto": "View all automations"
+    },
+    "journalCol": {
+      "time": "Time",
+      "incident": "Incident",
+      "action": "Action",
+      "actor": "Actor"
+    },
+    "autoCol": {
+      "rule": "Rule",
+      "status": "Status",
+      "last": "Last triggered",
+      "role": "Required role"
+    },
+    "autoStatus": {
+      "actif": "Active",
+      "dryrun": "Dry-run",
+      "inactif": "Inactive"
+    },
+    "quick": {
+      "assignOwner": "Assign owner",
+      "launchContainment": "Launch containment",
+      "freezeRelease": "Freeze release",
+      "createJira": "Create Jira ticket",
+      "evidencePack": "Generate evidence pack"
+    },
+    "impact": {
+      "mttr": "MTTA / MTTR over 7 days",
+      "resolution": "Resolution rate per playbook (7d)",
+      "byDomain": "Incidents per domain (7d)",
+      "postmortems": "Lessons learned — Recent post-mortems",
+      "viewFull": "View full analysis",
+      "viewAll": "View all post-mortems",
+      "mttaLine": "MTTA",
+      "mttrLine": "MTTR"
+    },
+    "footer": {
+      "critical": "{n} critical incidents",
+      "atRisk": "{n} incidents at risk",
+      "playbooks": "{n} active playbooks",
+      "proofs": "{n} proofs generated (7d)",
+      "source": "Source of truth: {src}",
+      "sync": "Last sync: {ago}"
+    }
   }
 }

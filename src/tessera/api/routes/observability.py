@@ -46,6 +46,7 @@ from tessera.observability import (
     guard_retraction as guard_retraction_mod,
     handoffs as handoffs_mod,
     improvement as improvement_mod,
+    incidents as incidents_mod,
     journey as journey_mod,
     language_routing as language_routing_mod,
     least_privilege as least_privilege_mod,
@@ -605,6 +606,21 @@ async def observability_improvement() -> dict[str, object]:
         return {"available": True, **asdict(improvement_mod.compute_improvement())}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/incidents")
+async def observability_incidents() -> dict[str, object]:
+    """Incidents & playbooks overview (page #10).
+
+    Composes the current incident posture, the triage queue with recommended
+    playbooks, the running playbook timeline, the automation rules and the
+    7-day impact charts into one payload. Degrades to ``available: false``.
+    """
+    try:
+        return {"available": True, **incidents_mod.compute_incidents_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
         return {"available": False}
 
 

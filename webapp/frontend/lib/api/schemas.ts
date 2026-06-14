@@ -1800,3 +1800,142 @@ export const FirewallEfficacySchema = z.object({
   f1: z.number(),
 });
 export type FirewallEfficacy = z.infer<typeof FirewallEfficacySchema>;
+
+// ---------------------------------------------------------------------------
+// Incidents & playbooks (page #10)
+// ---------------------------------------------------------------------------
+
+const IncidentKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  delta_label: z.string(),
+  good_is_up: z.boolean(),
+  series: z.array(z.number()),
+});
+
+const PriorityIncidentSchema = z.object({
+  id: z.string(),
+  severity: z.enum(["critique", "eleve", "moyen"]),
+  trigger: z.string(),
+  domain: z.string(),
+  status: z.enum(["ouvert", "encours", "resolu"]),
+  owner: z.string(),
+  sla: z.string(),
+  sla_tone: z.enum(["crit", "warn", "ok"]),
+  playbook: z.string(),
+  role: z.string(),
+});
+
+const PlaybookCatalogItemSchema = z.object({
+  name: z.string(),
+  desc: z.string(),
+  runs: z.number().int(),
+});
+
+const RecentIncidentSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  severity: z.enum(["critique", "eleve", "moyen"]),
+  time: z.string(),
+});
+
+const SlaEscalationSchema = z.object({
+  id: z.string(),
+  remaining: z.string(),
+  tone: z.enum(["crit", "warn", "ok"]),
+});
+
+const DomainSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+
+const ControlCaseSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  assoc: z.number().int(),
+});
+
+const PlaybookStepSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  time: z.string(),
+  state: z.enum(["done", "current", "todo"]),
+});
+
+const RunningPlaybookSchema = z.object({
+  name: z.string(),
+  incident: z.string(),
+  owner: z.string(),
+  role: z.string(),
+  proofs: z.number().int(),
+  elapsed: z.string(),
+  steps: z.array(PlaybookStepSchema),
+});
+
+const ResponseJournalRowSchema = z.object({
+  time: z.string(),
+  incident: z.string(),
+  action: z.string(),
+  actor: z.string(),
+});
+
+const AutomationRowSchema = z.object({
+  rule: z.string(),
+  status: z.enum(["actif", "dryrun", "inactif"]),
+  last: z.string(),
+  role: z.string(),
+});
+
+const ResolutionBarSchema = z.object({
+  name: z.string(),
+  pct: z.number(),
+  ratio: z.string(),
+  color: z.string(),
+});
+
+const PostmortemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  rca: z.string(),
+  resolved: z.string(),
+});
+
+export const IncidentsOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  period_days: z.number().int(),
+  updated_at: z.string(),
+  kpis: z.array(IncidentKpiSchema),
+  priority_incidents: z.array(PriorityIncidentSchema),
+  playbook_catalog: z.array(PlaybookCatalogItemSchema),
+  recent_incidents: z.array(RecentIncidentSchema),
+  recent_more: z.number().int(),
+  sla_escalations: z.array(SlaEscalationSchema),
+  domain_distribution: z.array(DomainSliceSchema),
+  donut_total: z.number().int(),
+  control_cases: z.array(ControlCaseSchema),
+  running_playbook: RunningPlaybookSchema,
+  response_journal: z.array(ResponseJournalRowSchema),
+  automations: z.array(AutomationRowSchema),
+  mttr_series: z.object({
+    labels: z.array(z.string()),
+    mtta: z.array(z.number()),
+    mttr: z.array(z.number()),
+  }),
+  resolution_by_playbook: z.array(ResolutionBarSchema),
+  incidents_by_domain: z.array(DomainSliceSchema),
+  postmortems: z.array(PostmortemSchema),
+  footer: z.object({
+    critical: z.number().int(),
+    at_risk: z.number().int(),
+    playbooks: z.number().int(),
+    proofs: z.number().int(),
+    source: z.string(),
+    sync: z.string(),
+  }),
+});
+export type IncidentsOverview = z.infer<typeof IncidentsOverviewSchema>;
+export type PriorityIncident = z.infer<typeof PriorityIncidentSchema>;

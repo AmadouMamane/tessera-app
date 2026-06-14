@@ -2454,5 +2454,146 @@
       "inProd": "En production",
       "planCta": "Préparer le plan d'action"
     }
+  },
+  "incidents": {
+    "title": "Incidents & playbooks",
+    "subtitle": "Réponse aux incidents, orchestration des playbooks et remédiation gouvernée.",
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "incidents": "Incidents",
+      "playbooks": "Playbooks",
+      "orchestration": "Orchestration",
+      "automations": "Automations",
+      "postmortems": "Post-mortems",
+      "journal": "Journal de réponse"
+    },
+    "rail": {
+      "live": "Live",
+      "realtime": "Données en temps réel",
+      "period": "Période : {days} jours",
+      "updated": "Dernière mise à jour : {time}",
+      "replay": "Relire à T"
+    },
+    "actions": {
+      "createTicket": "Créer ticket",
+      "launchPlaybook": "Lancer playbook",
+      "evidencePack": "Générer evidence pack"
+    },
+    "zone": {
+      "actual": "A · État actuel",
+      "triage": "B · Diagnostic / triage",
+      "execution": "C · Exécution & automation",
+      "impact": "D · Impact & performance"
+    },
+    "kpi": {
+      "open": "Incidents ouverts",
+      "critical": "Critiques",
+      "mtta": "MTTA (moy. 7j)",
+      "mttr": "MTTR (moy. 7j)",
+      "playbooks": "Playbooks actifs",
+      "autoresolve": "Auto-résolution",
+      "evidence": "Evidence packs générés",
+      "sla_risk": "Incidents avec SLA à risque"
+    },
+    "delta": {
+      "vs7d": "vs J-7"
+    },
+    "triage": {
+      "queue": "File prioritaire des incidents",
+      "catalog": "Catalogue des playbooks recommandés",
+      "recent": "Incidents récents",
+      "sla": "SLA & Escalades",
+      "distribution": "Répartition des incidents",
+      "controlCases": "Control cases prioritaires",
+      "viewAll": "Voir tout",
+      "viewCatalog": "Voir tout le catalogue",
+      "viewCases": "Voir tous les cas",
+      "recentMore": "+{n} autres incidents",
+      "runs": "{n} exéc.",
+      "assoc": "Assoc. à {n}",
+      "incidentsCount": "{n} incidents"
+    },
+    "col": {
+      "id": "ID incident",
+      "severity": "Sévérité",
+      "trigger": "Stade déclencheur",
+      "domain": "Domaine",
+      "status": "Statut",
+      "owner": "Owner",
+      "sla": "SLA",
+      "playbook": "Playbook recommandé",
+      "role": "Rôle requis"
+    },
+    "severity": {
+      "critique": "Critique",
+      "eleve": "Élevé",
+      "moyen": "Moyen"
+    },
+    "status": {
+      "ouvert": "Ouvert",
+      "encours": "En cours",
+      "resolu": "Résolu"
+    },
+    "domain": {
+      "privacy": "Privacy",
+      "qualite_rag": "Qualité / RAG",
+      "securite": "Sécurité",
+      "observabilite": "Observabilité",
+      "conformite": "Conformité"
+    },
+    "exec": {
+      "running": "Playbook en cours",
+      "journal": "Journal de réponse (extrait)",
+      "automations": "Automations",
+      "quickActions": "Actions rapides",
+      "owner": "Owner",
+      "role": "Rôle requis",
+      "proofs": "Preuves générées",
+      "elapsed": "Temps écoulé",
+      "viewAll": "Voir tout le journal",
+      "viewAllAuto": "Voir toutes les automations"
+    },
+    "journalCol": {
+      "time": "Heure",
+      "incident": "Incident",
+      "action": "Action",
+      "actor": "Acteur"
+    },
+    "autoCol": {
+      "rule": "Règle",
+      "status": "Statut",
+      "last": "Dernier déclenchement",
+      "role": "Rôle requis"
+    },
+    "autoStatus": {
+      "actif": "Actif",
+      "dryrun": "Dry-run",
+      "inactif": "Inactif"
+    },
+    "quick": {
+      "assignOwner": "Assigner owner",
+      "launchContainment": "Lancer containment",
+      "freezeRelease": "Geler release",
+      "createJira": "Créer ticket Jira",
+      "evidencePack": "Générer evidence pack"
+    },
+    "impact": {
+      "mttr": "MTTA / MTTR sur 7 jours",
+      "resolution": "Taux de résolution par playbook (7j)",
+      "byDomain": "Incidents par domaine (7j)",
+      "postmortems": "Leçons apprises — Post-mortems récents",
+      "viewFull": "Voir l’analyse complète",
+      "viewAll": "Voir tous les post-mortems",
+      "mttaLine": "MTTA",
+      "mttrLine": "MTTR"
+    },
+    "footer": {
+      "critical": "{n} incidents critiques",
+      "atRisk": "{n} incidents à risque",
+      "playbooks": "{n} playbooks actifs",
+      "proofs": "{n} preuves générées (7j)",
+      "source": "Source de vérité : {src}",
+      "sync": "Dernière sync : {ago}"
+    }
   }
 }
