@@ -2749,5 +2749,216 @@
       "scheduleReplay": "Schedule a replay",
       "viewLog": "View replay log"
     }
+  },
+  "curation": {
+    "title": "Eval-set curation",
+    "subtitle": "Select, enrich, promote and govern the turns that feed the evaluation sets.",
+    "tabs": {
+      "overview": "Overview",
+      "curate": "To curate",
+      "coverage": "Coverage & gaps",
+      "promotions": "Promotions",
+      "rejections": "Rejections",
+      "history": "History"
+    },
+    "delta": {
+      "vs7d": "vs D-7"
+    },
+    "actions": {
+      "launchScoring": "Launch scoring",
+      "createLot": "Create curation lot",
+      "evidencePack": "Generate evidence pack"
+    },
+    "rail": {
+      "realtime": "Real-time data"
+    },
+    "zone": {
+      "actual": "A · Current state",
+      "diagnostic": "B · Curation diagnosis",
+      "gaps": "C · Gaps & coverage",
+      "governance": "D · Actions & governance",
+      "trends": "E · Impact & trends"
+    },
+    "kpi": {
+      "candidates": "Candidate turns",
+      "promotable": "Promotable",
+      "manual_review": "To review manually",
+      "rejected": "Rejected",
+      "intent_coverage": "Intent coverage",
+      "lang_coverage": "Language coverage",
+      "duplicates": "Duplicates detected",
+      "failures": "Failures / PII blocked"
+    },
+    "panel": {
+      "priorityLots": "Priority candidate lots",
+      "whyTours": "Why these turns?",
+      "workflow": "Curation workflow",
+      "release": "Current release",
+      "linkedEvidence": "Linked sets / evidence",
+      "coverage": "Eval-set coverage",
+      "distribution": "Candidate distribution",
+      "qualitySignals": "Candidate quality signals",
+      "linkedDatasets": "Linked datasets",
+      "owners": "Owners & required roles",
+      "quickActions": "Quick actions",
+      "recentActivity": "Recent activity",
+      "backlogTrend": "Curation backlog trend (7d)",
+      "balance": "Promote / reject / review balance (7d)",
+      "impact": "Expected impact on pass-rate"
+    },
+    "col": {
+      "id": "Lot ID",
+      "source": "Source",
+      "category": "Category",
+      "score": "Value score",
+      "risk": "Risk",
+      "owner": "Owner"
+    },
+    "whyCol": {
+      "reason": "Main reason",
+      "value": "Expected value",
+      "cost": "Review cost"
+    },
+    "wfCol": {
+      "step": "Step",
+      "qty": "Qty",
+      "status": "Status"
+    },
+    "source": {
+      "live": "Live",
+      "replay": "Replay",
+      "shadow": "Shadow"
+    },
+    "risk": {
+      "eleve": "High",
+      "moyen": "Medium",
+      "bas": "Low"
+    },
+    "category": {
+      "hallucination": "Hallucination",
+      "pii": "PII",
+      "conformite": "Compliance",
+      "outils": "Tools",
+      "grounding": "Grounding"
+    },
+    "wfStatus": {
+      "termine": "Done",
+      "encours": "In progress",
+      "attente": "Pending"
+    },
+    "dist": {
+      "hallucination": "Hallucination",
+      "grounding": "Grounding",
+      "conformite": "Compliance",
+      "pii_securite": "PII / Security",
+      "multilingue": "Multilingual",
+      "autres": "Other"
+    },
+    "cov": {
+      "intent": "Intent",
+      "langue": "Language",
+      "canal": "Channel",
+      "politique": "Policy",
+      "type_echec": "Failure type",
+      "virements": "Transfers",
+      "carte": "Card",
+      "credit": "Credit",
+      "frais": "Fees",
+      "kyc": "KYC",
+      "securite": "Security",
+      "support": "General support"
+    },
+    "signal": {
+      "dedup": "Deduplication",
+      "anchoring": "Anchoring available",
+      "labels": "Sufficient labels",
+      "pii_sensitivity": "PII sensitivity",
+      "cross_tenant": "Cross-tenant leak",
+      "release_coverage": "Release coverage"
+    },
+    "level": {
+      "bon": "Good",
+      "moyen": "Fair",
+      "faible": "Weak"
+    },
+    "dsCol": {
+      "dataset": "Dataset",
+      "size": "Size",
+      "status": "Status",
+      "updated": "Last update"
+    },
+    "ownerCol": {
+      "role": "Role",
+      "required": "Required",
+      "assigned": "Assigned",
+      "status": "Status"
+    },
+    "ownerStatus": {
+      "ok": "OK",
+      "pending": "Pending"
+    },
+    "action": {
+      "promote": "Promote 11 turns",
+      "assign_review": "Assign compliance review",
+      "freeze": "Freeze sensitive lot",
+      "create_replay": "Create validation replay",
+      "export": "Export lot to signed dataset"
+    },
+    "actCtrl": {
+      "dualControl": "Dual-control required",
+      "signature": "Signature required"
+    },
+    "actCol": {
+      "time": "Time",
+      "action": "Action",
+      "actor": "Actor"
+    },
+    "quick": {
+      "filterSensitivity": "Filter by sensitivity",
+      "openCatalog": "Open signal catalogue",
+      "evidencePack": "Generate evidence pack"
+    },
+    "release": {
+      "ready": "Ready to publish",
+      "readiness": "Readiness score",
+      "viewDetail": "View release detail"
+    },
+    "evidence": {
+      "currentCohort": "Current cohort",
+      "openPack": "Open Evidence Pack"
+    },
+    "backlogLegend": {
+      "total": "Total",
+      "toCurate": "To curate",
+      "promotable": "Promotable",
+      "rejected": "Rejected"
+    },
+    "balanceLegend": {
+      "promote": "Promote",
+      "reject": "Reject",
+      "review": "Review"
+    },
+    "impact": {
+      "before": "Before (current)",
+      "after": "After (projected)",
+      "currentRate": "Current pass-rate",
+      "projectedRate": "Projected pass-rate",
+      "expectedDelta": "Δ expected",
+      "viewDetail": "View impact detail"
+    },
+    "viewAll": {
+      "lots": "View all candidates",
+      "reasons": "View all reasons",
+      "workflow": "View detailed workflow",
+      "signals": "View signal detail",
+      "datasets": "View all datasets",
+      "activities": "View all activity"
+    },
+    "footer": {
+      "release": "Linked release: {id}",
+      "chain": "Truth chain · OK",
+      "source": "Source of truth: {src}",
+      "sync": "Last update: {ago}"
+    }
   }
 }

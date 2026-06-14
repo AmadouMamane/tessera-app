@@ -2749,5 +2749,216 @@
       "scheduleReplay": "Replay planen",
       "viewLog": "Replay-Protokoll anzeigen"
     }
+  },
+  "curation": {
+    "title": "Eval-Set-Kuratierung",
+    "subtitle": "Turns auswählen, anreichern, befördern und governen, die die Evaluierungssätze speisen.",
+    "tabs": {
+      "overview": "Übersicht",
+      "curate": "Zu kuratieren",
+      "coverage": "Coverage & Gaps",
+      "promotions": "Beförderungen",
+      "rejections": "Ablehnungen",
+      "history": "Verlauf"
+    },
+    "delta": {
+      "vs7d": "vs. T-7"
+    },
+    "actions": {
+      "launchScoring": "Scoring starten",
+      "createLot": "Kuratierungs-Los erstellen",
+      "evidencePack": "Evidence-Pack erzeugen"
+    },
+    "rail": {
+      "realtime": "Echtzeitdaten"
+    },
+    "zone": {
+      "actual": "A · Aktueller Stand",
+      "diagnostic": "B · Kuratierungs-Diagnose",
+      "gaps": "C · Gaps & Coverage",
+      "governance": "D · Aktionen & Governance",
+      "trends": "E · Wirkung & Trends"
+    },
+    "kpi": {
+      "candidates": "Kandidaten-Turns",
+      "promotable": "Beförderbar",
+      "manual_review": "Manuell zu prüfen",
+      "rejected": "Abgelehnt",
+      "intent_coverage": "Intent-Coverage",
+      "lang_coverage": "Sprach-Coverage",
+      "duplicates": "Erkannte Duplikate",
+      "failures": "Failures / PII geblockt"
+    },
+    "panel": {
+      "priorityLots": "Priorisierte Kandidaten-Lose",
+      "whyTours": "Warum diese Turns?",
+      "workflow": "Kuratierungs-Workflow",
+      "release": "Aktuelles Release",
+      "linkedEvidence": "Verknüpfte Sets / Evidence",
+      "coverage": "Coverage des Eval-Sets",
+      "distribution": "Kandidaten-Verteilung",
+      "qualitySignals": "Qualitätssignale der Kandidaten",
+      "linkedDatasets": "Verknüpfte Datasets",
+      "owners": "Owner & erforderliche Rollen",
+      "quickActions": "Schnellaktionen",
+      "recentActivity": "Letzte Aktivitäten",
+      "backlogTrend": "Backlog-Entwicklung (7 T)",
+      "balance": "Balance Befördern / Ablehnen / Prüfen (7 T)",
+      "impact": "Erwartete Wirkung auf Pass-Rate"
+    },
+    "col": {
+      "id": "Los-ID",
+      "source": "Quelle",
+      "category": "Kategorie",
+      "score": "Wert-Score",
+      "risk": "Risiko",
+      "owner": "Owner"
+    },
+    "whyCol": {
+      "reason": "Hauptgrund",
+      "value": "Erwarteter Wert",
+      "cost": "Prüfaufwand"
+    },
+    "wfCol": {
+      "step": "Schritt",
+      "qty": "Anz.",
+      "status": "Status"
+    },
+    "source": {
+      "live": "Live",
+      "replay": "Replay",
+      "shadow": "Shadow"
+    },
+    "risk": {
+      "eleve": "Hoch",
+      "moyen": "Mittel",
+      "bas": "Niedrig"
+    },
+    "category": {
+      "hallucination": "Halluzination",
+      "pii": "PII",
+      "conformite": "Compliance",
+      "outils": "Tools",
+      "grounding": "Grounding"
+    },
+    "wfStatus": {
+      "termine": "Abgeschlossen",
+      "encours": "Läuft",
+      "attente": "Wartend"
+    },
+    "dist": {
+      "hallucination": "Halluzination",
+      "grounding": "Grounding",
+      "conformite": "Compliance",
+      "pii_securite": "PII / Sicherheit",
+      "multilingue": "Mehrsprachig",
+      "autres": "Andere"
+    },
+    "cov": {
+      "intent": "Intent",
+      "langue": "Sprache",
+      "canal": "Kanal",
+      "politique": "Policy",
+      "type_echec": "Fehlertyp",
+      "virements": "Überweisungen",
+      "carte": "Karte",
+      "credit": "Kredit",
+      "frais": "Gebühren",
+      "kyc": "KYC",
+      "securite": "Sicherheit",
+      "support": "Allg. Support"
+    },
+    "signal": {
+      "dedup": "Deduplizierung",
+      "anchoring": "Anchoring verfügbar",
+      "labels": "Ausreichend Labels",
+      "pii_sensitivity": "PII-Sensibilität",
+      "cross_tenant": "Cross-Tenant-Leck",
+      "release_coverage": "Release-Coverage"
+    },
+    "level": {
+      "bon": "Gut",
+      "moyen": "Mittel",
+      "faible": "Schwach"
+    },
+    "dsCol": {
+      "dataset": "Dataset",
+      "size": "Größe",
+      "status": "Status",
+      "updated": "Letzte Akt."
+    },
+    "ownerCol": {
+      "role": "Rolle",
+      "required": "Erforderlich",
+      "assigned": "Zugewiesen",
+      "status": "Status"
+    },
+    "ownerStatus": {
+      "ok": "OK",
+      "pending": "Ausstehend"
+    },
+    "action": {
+      "promote": "11 Turns befördern",
+      "assign_review": "Compliance-Prüfung zuweisen",
+      "freeze": "Sensibles Los einfrieren",
+      "create_replay": "Validierungs-Replay erstellen",
+      "export": "Los in signiertes Dataset exportieren"
+    },
+    "actCtrl": {
+      "dualControl": "Dual-Control erforderlich",
+      "signature": "Signatur erforderlich"
+    },
+    "actCol": {
+      "time": "Uhrzeit",
+      "action": "Aktion",
+      "actor": "Akteur"
+    },
+    "quick": {
+      "filterSensitivity": "Nach Sensibilität filtern",
+      "openCatalog": "Signal-Katalog öffnen",
+      "evidencePack": "Evidence-Pack erzeugen"
+    },
+    "release": {
+      "ready": "Bereit zur Veröffentlichung",
+      "readiness": "Readiness-Score",
+      "viewDetail": "Release-Details anzeigen"
+    },
+    "evidence": {
+      "currentCohort": "Aktuelle Kohorte",
+      "openPack": "Evidence-Pack öffnen"
+    },
+    "backlogLegend": {
+      "total": "Gesamt",
+      "toCurate": "Zu kuratieren",
+      "promotable": "Beförderbar",
+      "rejected": "Abgelehnt"
+    },
+    "balanceLegend": {
+      "promote": "Befördern",
+      "reject": "Ablehnen",
+      "review": "Prüfen"
+    },
+    "impact": {
+      "before": "Vorher (aktuell)",
+      "after": "Nachher (projiziert)",
+      "currentRate": "Pass-Rate aktuell",
+      "projectedRate": "Pass-Rate projiziert",
+      "expectedDelta": "Δ erwartet",
+      "viewDetail": "Wirkungsdetails anzeigen"
+    },
+    "viewAll": {
+      "lots": "Alle Kandidaten anzeigen",
+      "reasons": "Alle Gründe anzeigen",
+      "workflow": "Detaillierten Workflow anzeigen",
+      "signals": "Signal-Details anzeigen",
+      "datasets": "Alle Datasets anzeigen",
+      "activities": "Alle Aktivitäten anzeigen"
+    },
+    "footer": {
+      "release": "Verknüpftes Release: {id}",
+      "chain": "Wahrheitskette · OK",
+      "source": "Quelle der Wahrheit: {src}",
+      "sync": "Letzte Aktualisierung: {ago}"
+    }
   }
 }

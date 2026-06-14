@@ -33,6 +33,7 @@ from tessera.observability import (
     coverage as coverage_mod,
     cross_tenant as cross_tenant_mod,
     crosslingual as crosslingual_mod,
+    curation as curation_mod,
     disclosure as disclosure_mod,
     embedding_inversion as embedding_inversion_mod,
     embedding_skew as embedding_skew_mod,
@@ -622,6 +623,22 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/curation")
+async def observability_curation() -> dict[str, object]:
+    """Curation eval-set overview (page #12).
+
+    Composes the backlog posture, priority curation lots, workflow stages,
+    coverage heatmap, candidate distribution & quality signals, linked datasets,
+    governance actions and the backlog / balance / pass-rate trends. Degrades to
+    ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **curation_mod.compute_curation_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.curation: failed: {exc}\n")
         return {"available": False}
 
 

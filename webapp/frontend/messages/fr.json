@@ -2749,5 +2749,216 @@
       "scheduleReplay": "Programmer un replay",
       "viewLog": "Voir le journal de replay"
     }
+  },
+  "curation": {
+    "title": "Curation eval set",
+    "subtitle": "Sélectionner, enrichir, promouvoir et gouverner les tours qui alimentent les jeux d’évaluation.",
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "curate": "À curer",
+      "coverage": "Couverture & gaps",
+      "promotions": "Promotions",
+      "rejections": "Rejets",
+      "history": "Historique"
+    },
+    "delta": {
+      "vs7d": "vs J-7"
+    },
+    "actions": {
+      "launchScoring": "Lancer scoring",
+      "createLot": "Créer lot de curation",
+      "evidencePack": "Générer evidence pack"
+    },
+    "rail": {
+      "realtime": "Données en temps réel"
+    },
+    "zone": {
+      "actual": "A · État actuel",
+      "diagnostic": "B · Diagnostic de curation",
+      "gaps": "C · Gaps & couverture",
+      "governance": "D · Actions & gouvernance",
+      "trends": "E · Impact & tendances"
+    },
+    "kpi": {
+      "candidates": "Tours candidats",
+      "promotable": "Promouvables",
+      "manual_review": "À revoir manuellement",
+      "rejected": "Rejetés",
+      "intent_coverage": "Couverture intents",
+      "lang_coverage": "Couverture langues",
+      "duplicates": "Doublons détectés",
+      "failures": "Failures / PII bloquées"
+    },
+    "panel": {
+      "priorityLots": "Lots candidats prioritaires",
+      "whyTours": "Pourquoi ces tours ?",
+      "workflow": "Workflow de curation",
+      "release": "Release actuelle",
+      "linkedEvidence": "Jeux liés / évidence",
+      "coverage": "Couverture du set d’éval",
+      "distribution": "Répartition des candidats",
+      "qualitySignals": "Signaux de qualité des candidats",
+      "linkedDatasets": "Datasets liés",
+      "owners": "Owners & rôles requis",
+      "quickActions": "Actions rapides",
+      "recentActivity": "Activités récentes",
+      "backlogTrend": "Évolution du backlog de curation (7 j)",
+      "balance": "Balance promote / rejeter / revoir (7 j)",
+      "impact": "Impact attendu sur pass-rate"
+    },
+    "col": {
+      "id": "Lot ID",
+      "source": "Source",
+      "category": "Catégorie",
+      "score": "Score de valeur",
+      "risk": "Risque",
+      "owner": "Propriétaire"
+    },
+    "whyCol": {
+      "reason": "Raison principale",
+      "value": "Valeur attendue",
+      "cost": "Coût de revue"
+    },
+    "wfCol": {
+      "step": "Étape",
+      "qty": "Qté",
+      "status": "Statut"
+    },
+    "source": {
+      "live": "Live",
+      "replay": "Replay",
+      "shadow": "Shadow"
+    },
+    "risk": {
+      "eleve": "Élevé",
+      "moyen": "Moyen",
+      "bas": "Bas"
+    },
+    "category": {
+      "hallucination": "Hallucination",
+      "pii": "PII",
+      "conformite": "Conformité",
+      "outils": "Outils",
+      "grounding": "Grounding"
+    },
+    "wfStatus": {
+      "termine": "Terminé",
+      "encours": "En cours",
+      "attente": "En attente"
+    },
+    "dist": {
+      "hallucination": "Hallucination",
+      "grounding": "Grounding",
+      "conformite": "Conformité",
+      "pii_securite": "PII / Sécurité",
+      "multilingue": "Multilingue",
+      "autres": "Autres"
+    },
+    "cov": {
+      "intent": "Intent",
+      "langue": "Langue",
+      "canal": "Canal",
+      "politique": "Politique",
+      "type_echec": "Type d’échec",
+      "virements": "Virements",
+      "carte": "Carte",
+      "credit": "Crédit",
+      "frais": "Frais",
+      "kyc": "KYC",
+      "securite": "Sécurité",
+      "support": "Support général"
+    },
+    "signal": {
+      "dedup": "Déduplication",
+      "anchoring": "Ancrage disponible",
+      "labels": "Labels suffisants",
+      "pii_sensitivity": "Sensibilité PII",
+      "cross_tenant": "Fuite cross-tenant",
+      "release_coverage": "Couverture release"
+    },
+    "level": {
+      "bon": "Bon",
+      "moyen": "Moyen",
+      "faible": "Faible"
+    },
+    "dsCol": {
+      "dataset": "Dataset",
+      "size": "Taille",
+      "status": "Statut",
+      "updated": "Dernière MAJ"
+    },
+    "ownerCol": {
+      "role": "Rôle",
+      "required": "Requis",
+      "assigned": "Assigné",
+      "status": "Statut"
+    },
+    "ownerStatus": {
+      "ok": "OK",
+      "pending": "En attente"
+    },
+    "action": {
+      "promote": "Promouvoir 11 tours",
+      "assign_review": "Assigner revue conformité",
+      "freeze": "Geler lot sensible",
+      "create_replay": "Créer replay de validation",
+      "export": "Exporter lot vers dataset signé"
+    },
+    "actCtrl": {
+      "dualControl": "Dual-control requis",
+      "signature": "Signature requise"
+    },
+    "actCol": {
+      "time": "Heure",
+      "action": "Action",
+      "actor": "Acteur"
+    },
+    "quick": {
+      "filterSensitivity": "Filtrer par sensibilité",
+      "openCatalog": "Ouvrir catalogue de signaux",
+      "evidencePack": "Générer evidence pack"
+    },
+    "release": {
+      "ready": "Prêt à publier",
+      "readiness": "Readiness score",
+      "viewDetail": "Voir le détail release"
+    },
+    "evidence": {
+      "currentCohort": "Cohorte courante",
+      "openPack": "Ouvrir Evidence Pack"
+    },
+    "backlogLegend": {
+      "total": "Total",
+      "toCurate": "À curer",
+      "promotable": "Promouvables",
+      "rejected": "Rejetés"
+    },
+    "balanceLegend": {
+      "promote": "Promouvoir",
+      "reject": "Rejeter",
+      "review": "Revoir"
+    },
+    "impact": {
+      "before": "Avant (actuel)",
+      "after": "Après (projeté)",
+      "currentRate": "Pass-rate actuel",
+      "projectedRate": "Pass-rate projeté",
+      "expectedDelta": "Δ attendu",
+      "viewDetail": "Voir le détail de l’impact"
+    },
+    "viewAll": {
+      "lots": "Voir tous les candidats",
+      "reasons": "Voir toutes les raisons",
+      "workflow": "Voir le workflow détaillé",
+      "signals": "Voir le détail des signaux",
+      "datasets": "Voir tous les datasets",
+      "activities": "Voir toutes les activités"
+    },
+    "footer": {
+      "release": "Release liée : {id}",
+      "chain": "Chaîne de vérité · OK",
+      "source": "Source de vérité : {src}",
+      "sync": "Dernière mise à jour : {ago}"
+    }
   }
 }

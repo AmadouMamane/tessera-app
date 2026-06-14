@@ -2031,3 +2031,113 @@ export const ReplayShadowOverviewSchema = z.object({
   }),
 });
 export type ReplayShadowOverview = z.infer<typeof ReplayShadowOverviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Curation eval set (page #12)
+// ---------------------------------------------------------------------------
+
+const CurKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  delta_label: z.string(),
+  good_is_up: z.boolean(),
+  series: z.array(z.number()),
+});
+const CurLotSchema = z.object({
+  id: z.string(),
+  source: z.enum(["live", "replay", "shadow"]),
+  category: z.string(),
+  score: z.number().int(),
+  risk: z.enum(["eleve", "moyen", "bas"]),
+  owner: z.string(),
+});
+const CurWhySchema = z.object({
+  reason: z.string(),
+  value: z.number().int(),
+  cost: z.string(),
+});
+const CurWorkflowSchema = z.object({
+  step: z.string(),
+  qty: z.number().int(),
+  status: z.enum(["termine", "encours", "attente"]),
+});
+const CurSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+const CurSignalSchema = z.object({
+  key: z.string(),
+  pct: z.number(),
+  level: z.enum(["bon", "moyen", "faible"]),
+});
+const CurDatasetSchema = z.object({
+  name: z.string(),
+  size: z.string(),
+  status: z.string(),
+  updated: z.string(),
+});
+const CurOwnerSchema = z.object({
+  role: z.string(),
+  required: z.number().int(),
+  assigned: z.number().int(),
+  status: z.enum(["ok", "pending"]),
+});
+const CurActionSchema = z.object({
+  key: z.string(),
+  role: z.string(),
+  requirement: z.enum(["", "dual", "signature"]),
+});
+const CurActivitySchema = z.object({
+  time: z.string(),
+  action: z.string(),
+  actor: z.string(),
+});
+
+export const CurationOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  period_days: z.number().int(),
+  updated_at: z.string(),
+  kpis: z.array(CurKpiSchema),
+  priority_lots: z.array(CurLotSchema),
+  why_tours: z.array(CurWhySchema),
+  workflow: z.array(CurWorkflowSchema),
+  release: z.object({ id: z.string(), status: z.string(), readiness: z.number().int() }),
+  cohort: z.string(),
+  coverage: z.object({
+    rows: z.array(z.string()),
+    cols: z.array(z.string()),
+    cells: z.array(z.array(z.enum(["ok", "warn", "bad", "none"]))),
+  }),
+  candidates_distribution: z.array(CurSliceSchema),
+  distribution_total: z.number().int(),
+  quality_signals: z.array(CurSignalSchema),
+  linked_datasets: z.array(CurDatasetSchema),
+  owners: z.array(CurOwnerSchema),
+  actions: z.array(CurActionSchema),
+  recent_activity: z.array(CurActivitySchema),
+  backlog_trend: z.object({
+    labels: z.array(z.string()),
+    total: z.array(z.number()),
+    to_curate: z.array(z.number()),
+    promotable: z.array(z.number()),
+    rejected: z.array(z.number()),
+  }),
+  balance: z.object({
+    labels: z.array(z.string()),
+    promote: z.array(z.number()),
+    review: z.array(z.number()),
+    reject: z.array(z.number()),
+  }),
+  impact: z.object({
+    current: z.string(),
+    projected: z.string(),
+    delta: z.string(),
+    current_val: z.number(),
+    projected_val: z.number(),
+  }),
+  footer: z.object({ release: z.string(), source: z.string(), sync: z.string() }),
+});
+export type CurationOverview = z.infer<typeof CurationOverviewSchema>;

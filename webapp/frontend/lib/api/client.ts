@@ -55,6 +55,8 @@ import {
   CrossLingualReportSchema,
   type CrossTenantReport,
   CrossTenantReportSchema,
+  type CurationOverview,
+  CurationOverviewSchema,
   type DisclosureReport,
   DisclosureReportSchema,
   type EnsembleReport,
@@ -659,6 +661,10 @@ export async function fetchReplayShadowOverview(
   signal?: AbortSignal,
 ): Promise<ReplayShadowOverview> {
   return request("/observability/replay-shadow", { signal }, ReplayShadowOverviewSchema);
+}
+
+export async function fetchCurationOverview(signal?: AbortSignal): Promise<CurationOverview> {
+  return request("/observability/curation", { signal }, CurationOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */
