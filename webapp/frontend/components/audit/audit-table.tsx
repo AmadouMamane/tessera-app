@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -19,10 +18,12 @@ import {
   X,
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { DeltaBadge, MetricCard } from "@/components/cockpit/metric-card";
+import { StretchChart, sampleTicks } from "@/components/cockpit/stretch-chart";
 import { CountList, SummaryPanel } from "@/components/cockpit/summary-panel";
+import { WindowControl, endOfLocalDay } from "@/components/cockpit/window-control";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,46 +71,6 @@ function makeWindow(preset: Period, anchor: Date = new Date()): AuditWindow {
   const hours = preset === "24h" ? 24 : preset === "7d" ? 24 * 7 : 24 * 30;
   const since = new Date(until.getTime() - hours * 60 * 60 * 1000);
   return { preset, since: since.toISOString(), until: until.toISOString() };
-}
-
-function endOfLocalDay(value: string): Date | null {
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day, 23, 59, 59, 999);
-}
-
-function dateInputValue(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function startOfLocalMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function addLocalMonths(date: Date, amount: number): Date {
-  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
-}
-
-function calendarMonthDays(month: Date): Date[] {
-  const first = startOfLocalMonth(month);
-  const mondayOffset = (first.getDay() + 6) % 7;
-  const start = new Date(first);
-  start.setDate(first.getDate() - mondayOffset);
-  return Array.from(
-    { length: 42 },
-    (_, index) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + index),
-  );
-}
-
-function isSameLocalDate(left: Date, right: Date): boolean {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
 }
 
 export function AuditTable({ initialWindow }: { initialWindow?: AuditWindow }) {
@@ -163,6 +124,10 @@ export function AuditTable({ initialWindow }: { initialWindow?: AuditWindow }) {
 
   const entries = page.data?.entries ?? [];
   const selectedKey = selected ? entryKey(selected) : null;
+  const selectedDate = useMemo(
+    () => (overview.data?.window_end ? new Date(overview.data.window_end) : new Date()),
+    [overview.data?.window_end],
+  );
 
   useEffect(() => {
     if (selected && !entries.some((entry) => entryKey(entry) === selectedKey)) {
@@ -189,12 +154,21 @@ export function AuditTable({ initialWindow }: { initialWindow?: AuditWindow }) {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden text-[var(--tessera-text)]">
-      <PeriodRail
-        value={window.preset}
-        overview={overview.data}
-        loading={overview.isLoading}
-        onPeriod={applyPeriod}
+      <WindowControl
+        presets={PERIODS.map((period) => ({ value: period, label: t(`window.${period}`) }))}
+        period={window.preset}
+        onPeriod={(value) => applyPeriod(value as Period)}
+        windowStart={overview.data ? new Date(overview.data.window_start) : null}
+        windowEnd={overview.data ? new Date(overview.data.window_end) : null}
+        selectedDate={selectedDate}
         onDate={applyDate}
+        loading={overview.isLoading}
+        labels={{
+          window: t("window.label"),
+          refresh: t("window.refresh"),
+          prevMonth: t("window.previousMonth"),
+          nextMonth: t("window.nextMonth"),
+        }}
       />
 
       <MetricGrid
@@ -276,183 +250,6 @@ export function AuditTable({ initialWindow }: { initialWindow?: AuditWindow }) {
         />
       ) : null}
     </div>
-  );
-}
-
-function PeriodRail({
-  value,
-  overview,
-  loading,
-  onPeriod,
-  onDate,
-}: {
-  value: Period;
-  overview: AuditOverview | undefined;
-  loading: boolean;
-  onPeriod: (period: Period) => void;
-  onDate: (value: string) => void;
-}) {
-  const t = useTranslations("audit");
-  const formatter = useFormatter();
-  const locale = useLocale();
-  const pickerRef = useRef<HTMLDivElement>(null);
-  const selectedDate = useMemo(
-    () => (overview?.window_end ? new Date(overview.window_end) : new Date()),
-    [overview?.window_end],
-  );
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(() => startOfLocalMonth(selectedDate));
-  const monthDays = useMemo(() => calendarMonthDays(calendarMonth), [calendarMonth]);
-  const monthFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }),
-    [locale],
-  );
-  const dayFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { dateStyle: "full" }),
-    [locale],
-  );
-  const weekdayLabels = useMemo(() => {
-    const monday = new Date(2026, 5, 1);
-    const weekdayFormatter = new Intl.DateTimeFormat(locale, { weekday: "narrow" });
-    return Array.from({ length: 7 }, (_, index) => {
-      const day = new Date(2026, 5, monday.getDate() + index);
-      return { key: dateInputValue(day), label: weekdayFormatter.format(day) };
-    });
-  }, [locale]);
-
-  useEffect(() => {
-    if (pickerOpen) setCalendarMonth(startOfLocalMonth(selectedDate));
-  }, [pickerOpen, selectedDate]);
-
-  useEffect(() => {
-    if (!pickerOpen) return;
-
-    function closeOnOutsidePointer(event: MouseEvent) {
-      if (!pickerRef.current?.contains(event.target as Node)) setPickerOpen(false);
-    }
-
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setPickerOpen(false);
-    }
-
-    document.addEventListener("mousedown", closeOnOutsidePointer);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutsidePointer);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [pickerOpen]);
-
-  return (
-    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <span className="min-w-16 text-xs font-medium text-[var(--tessera-text-muted)]">
-        {t("window.label")}
-      </span>
-      <div className="flex h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-        {PERIODS.map((period) => (
-          <button
-            key={period}
-            type="button"
-            onClick={() => onPeriod(period)}
-            className={cn(
-              "h-7 rounded px-3 text-xs font-medium transition-colors",
-              value === period
-                ? "bg-[#123e6a] text-[#d8eaff] ring-1 ring-[#2e72d2]"
-                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
-            )}
-          >
-            {t(`window.${period}`)}
-          </button>
-        ))}
-      </div>
-      <div className="flex h-9 max-w-[520px] shrink-0 items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-        <CalendarDays className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
-        {loading || !overview ? (
-          <Skeleton className="h-4 w-64" />
-        ) : (
-          <span className="truncate whitespace-nowrap">
-            {formatter.dateTime(new Date(overview.window_start), {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-            <span className="px-3 text-[var(--tessera-text-muted)]">→</span>
-            {formatter.dateTime(new Date(overview.window_end), {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-          </span>
-        )}
-      </div>
-      <div ref={pickerRef} className="relative">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-expanded={pickerOpen}
-          onClick={() => setPickerOpen((open) => !open)}
-          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 font-medium text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <CalendarDays className="h-4 w-4" />
-          {t("window.refresh")}
-        </Button>
-        {pickerOpen ? (
-          <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[292px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[var(--tessera-text)] shadow-[0_20px_60px_rgba(0,0,0,0.38)]">
-            <div className="mb-3 flex items-center justify-between border-b border-[var(--tessera-border)] pb-2">
-              <button
-                type="button"
-                aria-label={t("window.previousMonth")}
-                onClick={() => setCalendarMonth((month) => addLocalMonths(month, -1))}
-                className="grid h-8 w-8 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <p className="text-sm font-semibold capitalize">
-                {monthFormatter.format(calendarMonth)}
-              </p>
-              <button
-                type="button"
-                aria-label={t("window.nextMonth")}
-                onClick={() => setCalendarMonth((month) => addLocalMonths(month, 1))}
-                className="grid h-8 w-8 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-[0.68rem] font-medium uppercase text-[var(--tessera-text-muted)]">
-              {weekdayLabels.map((day) => (
-                <span key={day.key}>{day.label}</span>
-              ))}
-            </div>
-            <div className="mt-2 grid grid-cols-7 gap-1">
-              {monthDays.map((day) => {
-                const inMonth = day.getMonth() === calendarMonth.getMonth();
-                const selected = isSameLocalDate(day, selectedDate);
-                return (
-                  <button
-                    key={dateInputValue(day)}
-                    type="button"
-                    aria-label={dayFormatter.format(day)}
-                    onClick={() => {
-                      onDate(dateInputValue(day));
-                      setPickerOpen(false);
-                    }}
-                    className={cn(
-                      "h-8 rounded-md text-xs font-medium transition-colors",
-                      selected
-                        ? "bg-[#123e6a] text-[#d8eaff] ring-1 ring-[#2e72d2]"
-                        : "text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]",
-                      !inMonth && "text-[var(--tessera-text-muted)] opacity-45",
-                    )}
-                  >
-                    {day.getDate()}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </section>
   );
 }
 
@@ -886,71 +683,16 @@ function BottomPanels({
 }
 
 function TimelineChart({ overview }: { overview: AuditOverview }) {
-  const total = overview.timeline.map((bucket) => bucket.total);
-  const denied = overview.timeline.map((bucket) => bucket.denied);
-  const ticks = timelineTicks(overview.timeline);
   return (
-    <div className="flex h-full flex-col justify-end gap-1.5 pb-1">
-      <svg
-        viewBox="0 0 220 64"
-        preserveAspectRatio="none"
-        className="h-[58px] w-full shrink-0"
-        aria-hidden="true"
-      >
-        <title>{overview.total_events}</title>
-        <line
-          x1="0"
-          x2="220"
-          y1="58"
-          y2="58"
-          stroke="currentColor"
-          vectorEffect="non-scaling-stroke"
-          className="text-[var(--tessera-border)]"
-        />
-        <polyline
-          points={polyline(total, 220, 56)}
-          fill="none"
-          stroke="#2e72d2"
-          strokeWidth="2"
-          vectorEffect="non-scaling-stroke"
-        />
-        <polyline
-          points={polyline(denied, 220, 56)}
-          fill="none"
-          stroke="#ff7a59"
-          strokeWidth="2"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      <div className="grid grid-cols-4 gap-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
-        {ticks.map((bucket, index) => (
-          <span
-            key={bucket.start}
-            className={cn(
-              "min-w-0 truncate",
-              index === 0 ? "text-left" : index === ticks.length - 1 ? "text-right" : "text-center",
-            )}
-          >
-            {bucket.label}
-          </span>
-        ))}
-      </div>
-    </div>
+    <StretchChart
+      title={String(overview.total_events)}
+      lines={[
+        { points: overview.timeline.map((bucket) => bucket.total), color: "#2e72d2" },
+        { points: overview.timeline.map((bucket) => bucket.denied), color: "#ff7a59" },
+      ]}
+      ticks={sampleTicks(overview.timeline).map((bucket) => bucket.label)}
+    />
   );
-}
-
-function timelineTicks(timeline: AuditOverview["timeline"]): AuditOverview["timeline"] {
-  if (timeline.length <= 4) return timeline;
-  const indexes = new Set([
-    0,
-    Math.floor((timeline.length - 1) / 3),
-    Math.floor(((timeline.length - 1) * 2) / 3),
-    timeline.length - 1,
-  ]);
-  return [...indexes]
-    .sort((a, b) => a - b)
-    .map((index) => timeline[index])
-    .filter((bucket): bucket is AuditOverview["timeline"][number] => Boolean(bucket));
 }
 
 function ProofList({
@@ -1379,17 +1121,4 @@ function OutcomeBadge({ outcome }: { outcome: AuditOutcome }) {
 
 function entryKey(entry: AuditEntry): string {
   return `${entry.occurred_at}-${entry.target}-${entry.hash ?? entry.proof_ref ?? entry.object_label}`;
-}
-
-function polyline(values: number[], width: number, height: number): string {
-  if (values.length === 0) return "";
-  const max = Math.max(...values, 1);
-  const last = Math.max(values.length - 1, 1);
-  return values
-    .map((value, index) => {
-      const x = (index / last) * width;
-      const y = height - (value / max) * (height - 8);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
 }
