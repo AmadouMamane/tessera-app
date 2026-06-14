@@ -359,6 +359,8 @@
       "search": "Suchen (Akteur, Aktion, Objekt, Trace-ID, Regel…)",
       "button": "Filter",
       "eventType": "Ereignistyp",
+      "role": "Rolle",
+      "scope": "Scope",
       "target": "Werkzeug",
       "outcome": "Verdikt",
       "policyRule": "Regel"
@@ -404,6 +406,9 @@
       "prevHash": "Vorheriger Hash",
       "chain": "Kette",
       "causality": "Kausalkette",
+      "diff": "Diff (vorher / nachher)",
+      "before": "Vorher",
+      "after": "Nachher",
       "links": "Verknüpfte Links",
       "model": "Modell",
       "steps": {
@@ -414,8 +419,11 @@
       }
     },
     "actions": {
+      "title": "Schnellaktionen",
       "copyId": "ID kopieren",
-      "openProof": "Nachweis öffnen"
+      "openProof": "Nachweis öffnen",
+      "viewPolicy": "Richtlinie anzeigen",
+      "openCase": "Fall öffnen"
     },
     "footer": {
       "integrity": "Audit-Integrität",

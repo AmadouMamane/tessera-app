@@ -18,6 +18,7 @@ import {
   AblationReportSchema,
   type AnomalyReport,
   AnomalyReportSchema,
+  type AuditActorRole,
   type AuditEventType,
   type AuditIntegrity,
   AuditIntegritySchema,
@@ -257,6 +258,8 @@ export interface FetchAuditOptions {
   target?: string;
   outcome?: AuditOutcome;
   eventType?: AuditEventType;
+  actorRole?: AuditActorRole;
+  scope?: string;
   policyRule?: string;
   query?: string;
   since?: string;
@@ -268,6 +271,8 @@ function appendAuditParams(params: URLSearchParams, options: FetchAuditOptions):
   if (options.target) params.set("target", options.target);
   if (options.outcome) params.set("outcome", options.outcome);
   if (options.eventType) params.set("event_type", options.eventType);
+  if (options.actorRole) params.set("actor_role", options.actorRole);
+  if (options.scope) params.set("scope", options.scope);
   if (options.policyRule) params.set("policy_rule", options.policyRule);
   if (options.query) params.set("q", options.query);
   if (options.since) params.set("since", options.since);

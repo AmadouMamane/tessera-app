@@ -359,6 +359,8 @@
       "search": "Search (actor, action, object, trace ID, rule…)",
       "button": "Filters",
       "eventType": "Event type",
+      "role": "Role",
+      "scope": "Scope",
       "target": "Tool",
       "outcome": "Verdict",
       "policyRule": "Rule"
@@ -404,6 +406,9 @@
       "prevHash": "Previous hash",
       "chain": "Chain",
       "causality": "Causality chain",
+      "diff": "Diff (before / after)",
+      "before": "Before",
+      "after": "After",
       "links": "Related links",
       "model": "Model",
       "steps": {
@@ -414,8 +419,11 @@
       }
     },
     "actions": {
+      "title": "Quick actions",
       "copyId": "Copy ID",
-      "openProof": "Open proof"
+      "openProof": "Open proof",
+      "viewPolicy": "View policy",
+      "openCase": "Open case"
     },
     "footer": {
       "integrity": "Audit integrity",

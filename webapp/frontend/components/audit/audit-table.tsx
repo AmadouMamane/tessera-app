@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Copy,
   Database,
-  Download,
   ExternalLink,
   FileJson,
   Filter,
@@ -26,13 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -44,6 +37,7 @@ import {
 } from "@/components/ui/table";
 import { fetchAudit, fetchAuditOverview } from "@/lib/api/client";
 import type {
+  AuditActorRole,
   AuditEntry,
   AuditEventType,
   AuditMetric,
@@ -55,6 +49,8 @@ import { cn } from "@/lib/cn";
 const PAGE_SIZE = 9;
 const OUTCOMES: ReadonlyArray<AuditOutcome> = ["allowed", "denied", "error"];
 const EVENT_TYPES: ReadonlyArray<AuditEventType> = ["guard", "tool", "memory", "other"];
+const ACTOR_ROLES: ReadonlyArray<AuditActorRole> = ["human", "service", "system", "model"];
+const ACTOR_ROLE_SET = new Set<string>(ACTOR_ROLES);
 const PERIODS = ["24h", "7d", "30d"] as const;
 
 type Period = (typeof PERIODS)[number];
@@ -83,23 +79,23 @@ export function AuditTable() {
   const [cursor, setCursor] = useState(0);
   const [window, setWindow] = useState<AuditWindow>(() => makeWindow("7d"));
   const [query, setQuery] = useState("");
-  const [target, setTarget] = useState<SelectValueState>("all");
   const [outcome, setOutcome] = useState<AuditOutcome | "all">("all");
   const [eventType, setEventType] = useState<AuditEventType | "all">("all");
-  const [policyRule, setPolicyRule] = useState<SelectValueState>("all");
+  const [actorRole, setActorRole] = useState<AuditActorRole | "all">("all");
+  const [scope, setScope] = useState<SelectValueState>("all");
   const [selected, setSelected] = useState<AuditEntry | null>(null);
 
   const filters = useMemo(
     () => ({
-      target: target === "all" ? undefined : target,
       outcome: outcome === "all" ? undefined : outcome,
       eventType: eventType === "all" ? undefined : eventType,
-      policyRule: policyRule === "all" ? undefined : policyRule,
+      actorRole: actorRole === "all" ? undefined : actorRole,
+      scope: scope === "all" ? undefined : scope,
       query: query.trim() || undefined,
       since: window.since,
       until: window.until,
     }),
-    [eventType, outcome, policyRule, query, target, window.since, window.until],
+    [actorRole, eventType, outcome, query, scope, window.since, window.until],
   );
 
   const overview = useQuery({
@@ -164,15 +160,15 @@ export function AuditTable() {
           <FilterDeck
             overview={overview.data}
             query={query}
-            target={target}
             outcome={outcome}
             eventType={eventType}
-            policyRule={policyRule}
+            actorRole={actorRole}
+            scope={scope}
             onQuery={(value) => resetPaging(() => setQuery(value))}
-            onTarget={(value) => resetPaging(() => setTarget(value))}
             onOutcome={(value) => resetPaging(() => setOutcome(value))}
             onEventType={(value) => resetPaging(() => setEventType(value))}
-            onPolicyRule={(value) => resetPaging(() => setPolicyRule(value))}
+            onActorRole={(value) => resetPaging(() => setActorRole(value))}
+            onScope={(value) => resetPaging(() => setScope(value))}
           />
 
           <EventTypeTabs
@@ -391,27 +387,27 @@ function DeltaBadge({ metric }: { metric: AuditMetric }) {
 function FilterDeck({
   overview,
   query,
-  target,
   outcome,
   eventType,
-  policyRule,
+  actorRole,
+  scope,
   onQuery,
-  onTarget,
   onOutcome,
   onEventType,
-  onPolicyRule,
+  onActorRole,
+  onScope,
 }: {
   overview: AuditOverview | undefined;
   query: string;
-  target: SelectValueState;
   outcome: AuditOutcome | "all";
   eventType: AuditEventType | "all";
-  policyRule: SelectValueState;
+  actorRole: AuditActorRole | "all";
+  scope: SelectValueState;
   onQuery: (value: string) => void;
-  onTarget: (value: SelectValueState) => void;
   onOutcome: (value: AuditOutcome | "all") => void;
   onEventType: (value: AuditEventType | "all") => void;
-  onPolicyRule: (value: SelectValueState) => void;
+  onActorRole: (value: AuditActorRole | "all") => void;
+  onScope: (value: SelectValueState) => void;
 }) {
   const t = useTranslations("audit");
   const tCommon = useTranslations("common");
@@ -440,11 +436,51 @@ function FilterDeck({
       </div>
       <div className="grid grid-cols-2 gap-2 px-2 pt-1.5 lg:grid-cols-4">
         <Select
+          value={actorRole}
+          onValueChange={(value) => onActorRole(value as AuditActorRole | "all")}
+        >
+          <SelectTrigger className="h-10 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs [&>span]:!flex [&>span]:!overflow-visible">
+            <FilterSelectValue
+              label={t("filters.role")}
+              value={actorRole === "all" ? tCommon("all") : t(`roles.${actorRole}`)}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            {(overview?.roles ?? [])
+              .filter((item) => isActorRole(item.key))
+              .map((item) => (
+                <SelectItem key={item.key} value={item.key}>
+                  {t(`roles.${item.key}`)}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+        <Select value={scope} onValueChange={onScope}>
+          <SelectTrigger className="h-10 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs [&>span]:!flex [&>span]:!overflow-visible">
+            <FilterSelectValue
+              label={t("filters.scope")}
+              value={scope === "all" ? tCommon("all") : scope}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            {(overview?.scopes ?? []).map((item) => (
+              <SelectItem key={item.key} value={item.key}>
+                {item.key}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
           value={eventType}
           onValueChange={(value) => onEventType(value as AuditEventType | "all")}
         >
-          <SelectTrigger className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs">
-            <SelectValue placeholder={t("filters.eventType")} />
+          <SelectTrigger className="h-10 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs [&>span]:!flex [&>span]:!overflow-visible">
+            <FilterSelectValue
+              label={t("filters.eventType")}
+              value={eventType === "all" ? tCommon("all") : t(`eventTypes.${eventType}`)}
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{tCommon("all")}</SelectItem>
@@ -455,22 +491,12 @@ function FilterDeck({
             ))}
           </SelectContent>
         </Select>
-        <Select value={target} onValueChange={onTarget}>
-          <SelectTrigger className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs">
-            <SelectValue placeholder={t("filters.target")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{tCommon("all")}</SelectItem>
-            {(overview?.targets ?? []).map((item) => (
-              <SelectItem key={item.key} value={item.key}>
-                {item.key}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <Select value={outcome} onValueChange={(value) => onOutcome(value as AuditOutcome | "all")}>
-          <SelectTrigger className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs">
-            <SelectValue placeholder={t("filters.outcome")} />
+          <SelectTrigger className="h-10 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs [&>span]:!flex [&>span]:!overflow-visible">
+            <FilterSelectValue
+              label={t("filters.outcome")}
+              value={outcome === "all" ? tCommon("all") : t(`outcomes.${outcome}`)}
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{tCommon("all")}</SelectItem>
@@ -481,21 +507,21 @@ function FilterDeck({
             ))}
           </SelectContent>
         </Select>
-        <Select value={policyRule} onValueChange={onPolicyRule}>
-          <SelectTrigger className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs">
-            <SelectValue placeholder={t("filters.policyRule")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{tCommon("all")}</SelectItem>
-            {(overview?.policies ?? []).map((item) => (
-              <SelectItem key={item.key} value={item.key}>
-                {item.key}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
     </section>
+  );
+}
+
+function isActorRole(value: string): value is AuditActorRole {
+  return ACTOR_ROLE_SET.has(value);
+}
+
+function FilterSelectValue({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="flex min-w-0 flex-col items-start leading-tight">
+      <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{label}</span>
+      <span className="max-w-full truncate text-[0.72rem] text-[var(--tessera-text)]">{value}</span>
+    </span>
   );
 }
 
@@ -841,13 +867,14 @@ function AuditDetails({
   }
   const firstDecision = entry.decisions[0];
   const rationale = firstDecision?.rationale || entry.policy_rule || entry.error || "—";
+  const eventJson = JSON.stringify(entry, null, 2);
   return (
-    <aside className="min-h-0 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-3">
+    <aside className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+      <div className="z-10 flex shrink-0 items-center justify-between border-b border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-3">
         <h2 className="font-sans text-base font-semibold">{t("detail.title")}</h2>
         <OutcomeBadge outcome={entry.outcome} />
       </div>
-      <div className="space-y-5 p-4">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
         <DetailSection>
           <DetailRow
             label={t("detail.eventId")}
@@ -872,6 +899,14 @@ function AuditDetails({
           <DetailRow label={t("detail.policy")} value={rationale} />
         </DetailSection>
 
+        <DetailBlock title={t("detail.causality")}>
+          <CausalityChain entry={entry} />
+        </DetailBlock>
+
+        <DetailBlock title={t("detail.diff")}>
+          <DiffPanel entry={entry} />
+        </DetailBlock>
+
         <DetailBlock title={t("detail.proof")}>
           <DetailRow label={t("detail.hash")} value={entry.hash ?? "—"} mono />
           <DetailRow label={t("detail.prevHash")} value={entry.prev_hash ?? "—"} mono />
@@ -879,22 +914,6 @@ function AuditDetails({
             label={t("detail.chain")}
             value={overview?.chain_verified ? t("integrity.ok") : t("integrity.unknown")}
           />
-        </DetailBlock>
-
-        <DetailBlock title={t("detail.causality")}>
-          <div className="grid grid-cols-4 gap-2">
-            {["request", "policy", "decision", "proof"].map((step, index) => (
-              <div
-                key={step}
-                className="text-center text-[0.65rem] text-[var(--tessera-text-muted)]"
-              >
-                <div className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full border border-[#1b805f] bg-[#05281f] text-[var(--tessera-green)]">
-                  {index + 1}
-                </div>
-                {t(`detail.steps.${step}`)}
-              </div>
-            ))}
-          </div>
         </DetailBlock>
 
         <DetailBlock title={t("payload")}>
@@ -908,22 +927,104 @@ function AuditDetails({
           <DetailRow label={t("columns.case")} value={entry.policy_rule ?? "—"} />
           <DetailRow label={t("detail.model")} value={entry.model ?? "—"} />
         </DetailBlock>
-
-        <div className="grid grid-cols-2 gap-2">
-          <ActionButton
-            icon="copy"
-            label={t("actions.copyId")}
-            value={entry.proof_ref ?? entry.hash ?? ""}
-          />
-          <ActionButton
-            icon="download"
-            label={t("actions.openProof")}
-            value={JSON.stringify(entry, null, 2)}
-            downloadName="tessera-audit-event.json"
-          />
-        </div>
       </div>
+      <QuickActions entry={entry} eventJson={eventJson} />
     </aside>
+  );
+}
+
+function QuickActions({ entry, eventJson }: { entry: AuditEntry; eventJson: string }) {
+  const t = useTranslations("audit");
+  return (
+    <div className="shrink-0 border-t border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+      <h3 className="font-sans text-sm font-semibold">{t("actions.title")}</h3>
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
+        <ActionButton
+          icon="copy"
+          label={t("actions.copyId")}
+          value={entry.proof_ref ?? entry.hash ?? ""}
+        />
+        <ActionButton
+          icon="proof"
+          label={t("actions.openProof")}
+          value={eventJson}
+          downloadName="tessera-audit-event.json"
+        />
+        <ActionButton
+          icon="policy"
+          label={t("actions.viewPolicy")}
+          value={entry.policy_rule ?? ""}
+        />
+        <ActionButton icon="case" label={t("actions.openCase")} value={entry.object_label} />
+      </div>
+    </div>
+  );
+}
+
+function CausalityChain({ entry }: { entry: AuditEntry }) {
+  const t = useTranslations("audit");
+  const steps = [
+    { key: "request", label: t("detail.steps.request"), sub: entry.actor },
+    { key: "policy", label: t("detail.steps.policy"), sub: entry.policy_rule ?? "—" },
+    { key: "decision", label: t("detail.steps.decision"), sub: t(`outcomes.${entry.outcome}`) },
+    { key: "proof", label: t("detail.steps.proof"), sub: entry.proof_ref ?? "—" },
+  ];
+  return (
+    <div className="relative px-2 pb-1 pt-2">
+      <div className="absolute left-[10%] right-[10%] top-[21px] h-px bg-[#1b805f]" />
+      <div className="relative grid grid-cols-4 gap-2">
+        {steps.map((step, index) => (
+          <div key={step.key} className="min-w-0 text-center">
+            <div className="mx-auto flex h-7 w-7 items-center justify-center rounded-full border border-[#1b805f] bg-[#05281f] text-[0.7rem] font-semibold text-[var(--tessera-green)] shadow-[0_0_0_4px_var(--tessera-surface)]">
+              {index + 1}
+            </div>
+            <p className="mt-1 truncate text-[0.65rem] text-[var(--tessera-text)]">{step.label}</p>
+            <p className="truncate text-[0.58rem] text-[var(--tessera-text-muted)]">{step.sub}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DiffPanel({ entry }: { entry: AuditEntry }) {
+  const t = useTranslations("audit.detail");
+  const firstDecision = entry.decisions[0];
+  const after = {
+    outcome: entry.outcome,
+    policy_rule: entry.policy_rule,
+    decision: firstDecision?.decision ?? null,
+    redactions: firstDecision?.redactions ?? [],
+  };
+  return (
+    <div className="grid grid-cols-2 overflow-hidden rounded-md border border-[var(--tessera-border)]">
+      <DiffColumn title={t("before")} payload={entry.arguments} />
+      <DiffColumn title={t("after")} payload={after} after />
+    </div>
+  );
+}
+
+function DiffColumn({
+  title,
+  payload,
+  after,
+}: {
+  title: string;
+  payload: unknown;
+  after?: boolean;
+}) {
+  return (
+    <div className={cn("min-w-0 p-3", after ? "border-l border-[var(--tessera-border)]" : "")}>
+      <p className="mb-2 text-[0.65rem] font-medium text-[var(--tessera-text-muted)]">{title}</p>
+      <pre
+        className={cn(
+          "max-h-28 overflow-auto whitespace-pre-wrap font-mono text-[0.62rem] leading-relaxed",
+          after ? "text-[var(--tessera-green)]" : "text-[var(--tessera-text-muted)]",
+        )}
+      >
+        {JSON.stringify(payload, null, 2)}
+      </pre>
+    </div>
   );
 }
 
@@ -977,18 +1078,25 @@ function ActionButton({
   value,
   downloadName,
 }: {
-  icon: "copy" | "download";
+  icon: "copy" | "proof" | "policy" | "case";
   label: string;
   value: string;
   downloadName?: string;
 }) {
-  const Icon = icon === "copy" ? Copy : Download;
+  const Icon =
+    icon === "copy"
+      ? Copy
+      : icon === "proof"
+        ? FileJson
+        : icon === "policy"
+          ? ShieldCheck
+          : ExternalLink;
   return (
     <Button
       type="button"
       variant="outline"
       size="sm"
-      className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs"
+      className="h-7 justify-start gap-1.5 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 text-[0.68rem]"
       onClick={() => {
         if (downloadName) {
           const blob = new Blob([value], { type: "application/json" });
@@ -1003,7 +1111,7 @@ function ActionButton({
         void navigator.clipboard?.writeText(value);
       }}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className="h-3.5 w-3.5" />
       {label}
     </Button>
   );

@@ -120,6 +120,8 @@ def test_filter_entries_applies_policy_search_and_time_window() -> None:
         target=None,
         outcome="allowed",
         event_type=None,
+        actor_role=None,
+        scope=None,
         policy_rule="memory.write.governance",
         q="SUB-1",
         since=datetime(2026, 6, 14, tzinfo=UTC),

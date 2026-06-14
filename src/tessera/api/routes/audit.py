@@ -145,6 +145,8 @@ class AuditOverview(BaseModel):
     outcomes: list[AuditCount]
     policies: list[AuditCount]
     actors: list[AuditCount]
+    roles: list[AuditCount]
+    scopes: list[AuditCount]
     event_types: list[AuditCount]
     recent_proofs: list[AuditProof]
     suggested_filters: list[AuditCount]
@@ -156,6 +158,14 @@ _DEFAULT_WINDOW = timedelta(days=7)
 _TIMELINE_BUCKETS = 8
 _DAY_LABEL_THRESHOLD_SECONDS = 172_800
 _RECENT_PROOF_LIMIT = 5
+_METRIC_KEYS: tuple[AuditMetricKey, ...] = (
+    "signed_events",
+    "sensitive_actions",
+    "guard_refusals",
+    "proof_events",
+    "chain_integrity",
+    "unique_actors",
+)
 
 
 def _resolve_audit_path() -> Path:
@@ -321,6 +331,8 @@ def _filter_entries(
     target: str | None,
     outcome: AuditOutcome | None,
     event_type: AuditEventType | None,
+    actor_role: AuditActorRole | None,
+    scope: str | None,
     policy_rule: str | None,
     q: str | None,
     since: datetime | None,
@@ -333,6 +345,10 @@ def _filter_entries(
         filtered = [entry for entry in filtered if entry.outcome == outcome]
     if event_type:
         filtered = [entry for entry in filtered if entry.event_type == event_type]
+    if actor_role:
+        filtered = [entry for entry in filtered if entry.actor_role == actor_role]
+    if scope:
+        filtered = [entry for entry in filtered if entry.scope == scope]
     if policy_rule:
         filtered = [entry for entry in filtered if entry.policy_rule == policy_rule]
     if q:
@@ -354,7 +370,7 @@ def _count(items: list[str], limit: int = 10) -> list[AuditCount]:
 
 def _delta_pct(current: int, previous: int) -> float | None:
     if previous == 0:
-        return None
+        return 100.0 if current > 0 else 0.0
     return round(((current - previous) / previous) * 100, 1)
 
 
@@ -365,6 +381,45 @@ def _metric(key: AuditMetricKey, current: int, previous: int) -> AuditMetric:
         previous_value=previous,
         delta_pct=_delta_pct(current, previous),
     )
+
+
+def _measure(entries: list[AuditEntry], integrity: AuditIntegrity) -> dict[AuditMetricKey, int]:
+    signed = sum(1 for entry in entries if entry.hash)
+    sensitive = sum(1 for entry in entries if entry.event_type in {"memory", "tool"})
+    refusals = sum(1 for entry in entries if entry.outcome == "denied")
+    actors = {entry.actor for entry in entries if entry.actor}
+    return {
+        "signed_events": len(entries),
+        "sensitive_actions": sensitive,
+        "guard_refusals": refusals,
+        "proof_events": signed,
+        "chain_integrity": int(integrity.verified),
+        "unique_actors": len(actors),
+    }
+
+
+def _comparison_counts(
+    current: list[AuditEntry],
+    previous: list[AuditEntry],
+    integrity: AuditIntegrity,
+    start: datetime,
+    end: datetime,
+) -> tuple[dict[AuditMetricKey, int], dict[AuditMetricKey, int]]:
+    if previous:
+        return _measure(current, integrity), _measure(previous, integrity)
+
+    midpoint = start + ((end - start) / 2)
+    early = [
+        entry
+        for entry in current
+        if (occurred := _entry_datetime(entry)) is not None and occurred < midpoint
+    ]
+    late = [
+        entry
+        for entry in current
+        if (occurred := _entry_datetime(entry)) is not None and occurred >= midpoint
+    ]
+    return _measure(late, integrity), _measure(early, integrity)
 
 
 def _window_bounds(
@@ -447,6 +502,8 @@ def _build_overview(
     target: str | None = None,
     outcome: AuditOutcome | None = None,
     event_type: AuditEventType | None = None,
+    actor_role: AuditActorRole | None = None,
+    scope: str | None = None,
     policy_rule: str | None = None,
     q: str | None = None,
 ) -> AuditOverview:
@@ -456,6 +513,8 @@ def _build_overview(
         target=target,
         outcome=outcome,
         event_type=event_type,
+        actor_role=actor_role,
+        scope=scope,
         policy_rule=policy_rule,
         q=q,
         since=start,
@@ -467,28 +526,31 @@ def _build_overview(
         target=target,
         outcome=outcome,
         event_type=event_type,
+        actor_role=actor_role,
+        scope=scope,
         policy_rule=policy_rule,
         q=q,
         since=start - duration,
         until=start,
     )
 
-    signed = sum(1 for entry in current if entry.hash)
-    previous_signed = sum(1 for entry in previous if entry.hash)
-    sensitive = sum(1 for entry in current if entry.event_type in {"memory", "tool"})
-    previous_sensitive = sum(1 for entry in previous if entry.event_type in {"memory", "tool"})
-    refusals = sum(1 for entry in current if entry.outcome == "denied")
-    previous_refusals = sum(1 for entry in previous if entry.outcome == "denied")
-    actors = {entry.actor for entry in current if entry.actor}
-    previous_actors = {entry.actor for entry in previous if entry.actor}
+    values = _measure(current, integrity)
+    comparison_current, comparison_previous = _comparison_counts(
+        current,
+        previous,
+        integrity,
+        start,
+        end,
+    )
 
     metrics = [
-        _metric("signed_events", len(current), len(previous)),
-        _metric("sensitive_actions", sensitive, previous_sensitive),
-        _metric("guard_refusals", refusals, previous_refusals),
-        _metric("proof_events", signed, previous_signed),
-        _metric("chain_integrity", int(integrity.verified), int(integrity.verified)),
-        _metric("unique_actors", len(actors), len(previous_actors)),
+        AuditMetric(
+            key=key,
+            value=values[key],
+            previous_value=comparison_previous[key],
+            delta_pct=_delta_pct(comparison_current[key], comparison_previous[key]),
+        )
+        for key in _METRIC_KEYS
     ]
 
     suggested = _count(
@@ -511,6 +573,8 @@ def _build_overview(
         outcomes=_count([entry.outcome for entry in current], limit=3),
         policies=_count([entry.policy_rule or "unknown" for entry in current]),
         actors=_count([entry.actor for entry in current]),
+        roles=_count([entry.actor_role for entry in current], limit=4),
+        scopes=_count([entry.scope for entry in current]),
         event_types=_count([entry.event_type for entry in current], limit=4),
         recent_proofs=_recent_proofs(current),
         suggested_filters=suggested,
@@ -524,6 +588,8 @@ async def audit_list(
     target: Annotated[str | None, Query()] = None,
     outcome: Annotated[AuditOutcome | None, Query()] = None,
     event_type: Annotated[AuditEventType | None, Query()] = None,
+    actor_role: Annotated[AuditActorRole | None, Query()] = None,
+    scope: Annotated[str | None, Query()] = None,
     policy_rule: Annotated[str | None, Query()] = None,
     q: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
     since: Annotated[str | None, Query()] = None,
@@ -536,6 +602,8 @@ async def audit_list(
         target=target,
         outcome=outcome,
         event_type=event_type,
+        actor_role=actor_role,
+        scope=scope,
         policy_rule=policy_rule,
         q=q,
         since=_parse_datetime(since),
@@ -555,6 +623,8 @@ async def audit_overview(
     target: Annotated[str | None, Query()] = None,
     outcome: Annotated[AuditOutcome | None, Query()] = None,
     event_type: Annotated[AuditEventType | None, Query()] = None,
+    actor_role: Annotated[AuditActorRole | None, Query()] = None,
+    scope: Annotated[str | None, Query()] = None,
     policy_rule: Annotated[str | None, Query()] = None,
     q: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
     since: Annotated[str | None, Query()] = None,
@@ -576,6 +646,8 @@ async def audit_overview(
         target=target,
         outcome=outcome,
         event_type=event_type,
+        actor_role=actor_role,
+        scope=scope,
         policy_rule=policy_rule,
         q=q,
     )

@@ -166,6 +166,8 @@ export const AuditOverviewSchema = z.object({
   outcomes: z.array(AuditCountSchema),
   policies: z.array(AuditCountSchema),
   actors: z.array(AuditCountSchema),
+  roles: z.array(AuditCountSchema),
+  scopes: z.array(AuditCountSchema),
   event_types: z.array(AuditCountSchema),
   recent_proofs: z.array(AuditProofSchema),
   suggested_filters: z.array(AuditCountSchema),

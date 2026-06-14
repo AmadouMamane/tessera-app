@@ -359,6 +359,8 @@
       "search": "Rechercher (acteur, action, objet, trace ID, règle…)",
       "button": "Filtres",
       "eventType": "Type d'événement",
+      "role": "Rôle",
+      "scope": "Scope",
       "target": "Outil",
       "outcome": "Verdict",
       "policyRule": "Règle"
@@ -404,6 +406,9 @@
       "prevHash": "Hash précédent",
       "chain": "Chaîne",
       "causality": "Chaîne de causalité",
+      "diff": "Diff (avant / après)",
+      "before": "Avant",
+      "after": "Après",
       "links": "Liens associés",
       "model": "Modèle",
       "steps": {
@@ -414,8 +419,11 @@
       }
     },
     "actions": {
-      "copyId": "Copier l'ID",
-      "openProof": "Ouvrir la preuve"
+      "title": "Actions rapides",
+      "copyId": "Copier ID",
+      "openProof": "Ouvrir preuve",
+      "viewPolicy": "Voir politique",
+      "openCase": "Ouvrir case"
     },
     "footer": {
       "integrity": "Intégrité d'audit",
