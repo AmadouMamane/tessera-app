@@ -361,12 +361,12 @@ function PeriodRail({
           </button>
         ))}
       </div>
-      <div className="flex h-9 min-w-[320px] flex-1 items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+      <div className="flex h-9 max-w-[520px] shrink-0 items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
         <CalendarDays className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
         {loading || !overview ? (
-          <Skeleton className="h-4 w-56" />
+          <Skeleton className="h-4 w-64" />
         ) : (
-          <span className="truncate">
+          <span className="truncate whitespace-nowrap">
             {formatter.dateTime(new Date(overview.window_start), {
               dateStyle: "medium",
               timeStyle: "short",
@@ -483,15 +483,18 @@ function MetricGrid({
         return (
           <section
             key={key}
-            className="min-h-[88px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+            className="h-[108px] overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
           >
             <p className="text-xs font-medium text-[var(--tessera-text-muted)]">
               {t(`${key}.label`)}
             </p>
             {loading || !metric ? (
-              <Skeleton className="mt-4 h-8 w-28" />
+              <div className="mt-1 flex h-8 items-baseline gap-2">
+                <Skeleton className="h-7 w-16" />
+                <Skeleton className="h-4 w-12" />
+              </div>
             ) : (
-              <div className="mt-1.5 flex items-baseline gap-2">
+              <div className="mt-1 flex h-8 items-baseline gap-2">
                 <p className="text-[1.55rem] font-semibold leading-none text-white">
                   {key === "chain_integrity"
                     ? t(metric.value === 1 ? "conform" : "broken")
@@ -500,8 +503,10 @@ function MetricGrid({
                 <DeltaBadge metric={metric} />
               </div>
             )}
-            <div className="mt-2 border-t border-[var(--tessera-border)] pt-1.5">
-              {key === "chain_integrity" ? (
+            <div className="mt-1.5 h-7 border-t border-[var(--tessera-border)] pt-1.5">
+              {loading || !metric ? (
+                <Skeleton className="h-5 w-full" />
+              ) : key === "chain_integrity" ? (
                 <div className="flex items-center gap-2 text-xs text-[var(--tessera-text-muted)]">
                   <span
                     className={cn(
