@@ -745,9 +745,11 @@ function BottomPanels({
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="h-[142px] overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <h2 className="font-sans text-sm font-semibold text-[var(--tessera-text)]">{title}</h2>
-      <div className="mt-3">{children}</div>
+    <section className="flex h-[142px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+      <h2 className="shrink-0 font-sans text-sm font-semibold text-[var(--tessera-text)]">
+        {title}
+      </h2>
+      <div className="mt-2 min-h-0 flex-1 overflow-hidden pb-1">{children}</div>
     </section>
   );
 }
@@ -764,16 +766,16 @@ function CountList({
   if (loading) return <Skeleton className="h-24 w-full" />;
   const max = Math.max(...items.map((item) => item.count), 1);
   return (
-    <ol className="space-y-2">
-      {items.slice(0, 5).map((item, index) => (
+    <ol className="space-y-1 pb-1">
+      {items.slice(0, 3).map((item, index) => (
         <li
           key={`${item.key}-${index}`}
-          className="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-xs"
+          className="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-[0.72rem] leading-tight"
         >
           <span className="font-mono text-[var(--tessera-text-muted)]">{index + 1}</span>
           <div className="min-w-0">
             <p className="truncate text-[var(--tessera-text)]">{item.key}</p>
-            <div className="mt-1 h-1.5 rounded-full bg-[var(--tessera-bg)]">
+            <div className="mt-0.5 h-1.5 rounded-full bg-[var(--tessera-bg)]">
               <div
                 className={cn("h-full rounded-full", danger ? "bg-red-400" : "bg-[#2e72d2]")}
                 style={{ width: `${(item.count / max) * 100}%` }}
@@ -790,28 +792,51 @@ function CountList({
 function TimelineChart({ overview }: { overview: AuditOverview }) {
   const total = overview.timeline.map((bucket) => bucket.total);
   const denied = overview.timeline.map((bucket) => bucket.denied);
+  const ticks = timelineTicks(overview.timeline);
   return (
-    <div className="space-y-2">
-      <svg viewBox="0 0 220 72" className="h-[74px] w-full" aria-hidden="true">
+    <div className="flex h-full flex-col justify-end gap-1.5 pb-1">
+      <svg viewBox="0 0 220 64" className="h-[58px] w-full shrink-0" aria-hidden="true">
         <title>{overview.total_events}</title>
         <line
           x1="0"
           x2="220"
-          y1="66"
-          y2="66"
+          y1="58"
+          y2="58"
           stroke="currentColor"
           className="text-[var(--tessera-border)]"
         />
-        <polyline points={polyline(total, 220, 64)} fill="none" stroke="#2e72d2" strokeWidth="2" />
-        <polyline points={polyline(denied, 220, 64)} fill="none" stroke="#ff7a59" strokeWidth="2" />
+        <polyline points={polyline(total, 220, 56)} fill="none" stroke="#2e72d2" strokeWidth="2" />
+        <polyline points={polyline(denied, 220, 56)} fill="none" stroke="#ff7a59" strokeWidth="2" />
       </svg>
-      <div className="flex justify-between text-[0.65rem] text-[var(--tessera-text-muted)]">
-        {overview.timeline.map((bucket) => (
-          <span key={bucket.start}>{bucket.label}</span>
+      <div className="grid grid-cols-4 gap-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
+        {ticks.map((bucket, index) => (
+          <span
+            key={bucket.start}
+            className={cn(
+              "min-w-0 truncate",
+              index === 0 ? "text-left" : index === ticks.length - 1 ? "text-right" : "text-center",
+            )}
+          >
+            {bucket.label}
+          </span>
         ))}
       </div>
     </div>
   );
+}
+
+function timelineTicks(timeline: AuditOverview["timeline"]): AuditOverview["timeline"] {
+  if (timeline.length <= 4) return timeline;
+  const indexes = new Set([
+    0,
+    Math.floor((timeline.length - 1) / 3),
+    Math.floor(((timeline.length - 1) * 2) / 3),
+    timeline.length - 1,
+  ]);
+  return [...indexes]
+    .sort((a, b) => a - b)
+    .map((index) => timeline[index])
+    .filter((bucket): bucket is AuditOverview["timeline"][number] => Boolean(bucket));
 }
 
 function ProofList({
@@ -824,15 +849,15 @@ function ProofList({
   const formatter = useFormatter();
   if (loading) return <Skeleton className="h-24 w-full" />;
   return (
-    <ul className="space-y-2">
-      {(overview?.recent_proofs ?? []).slice(0, 4).map((proof) => (
-        <li key={proof.hash} className="flex items-center gap-2 text-xs">
-          <FileJson className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+    <ul className="space-y-1 pb-1">
+      {(overview?.recent_proofs ?? []).slice(0, 3).map((proof) => (
+        <li key={proof.hash} className="flex items-start gap-1.5 text-[0.7rem] leading-tight">
+          <FileJson className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
           <div className="min-w-0">
             <p className="truncate font-mono text-[var(--tessera-text)]">
               {proof.hash.slice(0, 14)}
             </p>
-            <p className="truncate text-[0.68rem] text-[var(--tessera-text-muted)]">
+            <p className="truncate text-[0.58rem] leading-tight text-[var(--tessera-text-muted)]">
               {formatter.dateTime(new Date(proof.occurred_at), {
                 dateStyle: "short",
                 timeStyle: "short",
