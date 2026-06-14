@@ -1058,7 +1058,7 @@ function DiffPanel({ entry }: { entry: AuditEntry }) {
     redactions: firstDecision?.redactions ?? [],
   };
   return (
-    <div className="grid grid-cols-2 overflow-hidden rounded-md border border-[var(--tessera-border)]">
+    <div className="grid gap-2">
       <DiffColumn title={t("before")} payload={entry.arguments} />
       <DiffColumn title={t("after")} payload={after} after />
     </div>
@@ -1075,11 +1075,11 @@ function DiffColumn({
   after?: boolean;
 }) {
   return (
-    <div className={cn("min-w-0 p-3", after ? "border-l border-[var(--tessera-border)]" : "")}>
+    <div className="min-w-0 rounded-md border border-[var(--tessera-border)] p-3">
       <p className="mb-2 text-[0.65rem] font-medium text-[var(--tessera-text-muted)]">{title}</p>
       <pre
         className={cn(
-          "max-h-28 overflow-auto whitespace-pre-wrap font-mono text-[0.62rem] leading-relaxed",
+          "max-h-32 overflow-auto whitespace-pre rounded bg-[var(--tessera-bg)] p-2 font-mono text-[0.62rem] leading-relaxed",
           after ? "text-[var(--tessera-green)]" : "text-[var(--tessera-text-muted)]",
         )}
       >
