@@ -173,6 +173,8 @@ import {
   ShadowReportSchema,
   type SiemExport,
   SiemExportSchema,
+  type SignalCatalogue,
+  SignalCatalogueSchema,
   type SkewReport,
   SkewReportSchema,
   type SnapshotDiffReport,
@@ -677,6 +679,10 @@ export async function fetchAutomationsOverview(signal?: AbortSignal): Promise<Au
 
 export async function fetchProofsOverview(signal?: AbortSignal): Promise<ProofsOverview> {
   return request("/observability/proofs", { signal }, ProofsOverviewSchema);
+}
+
+export async function fetchSignalCatalogue(signal?: AbortSignal): Promise<SignalCatalogue> {
+  return request("/observability/signal-catalogue", { signal }, SignalCatalogueSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

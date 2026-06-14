@@ -3277,5 +3277,105 @@
       "chain": "{txt}",
       "source": "Source of truth: {src}"
     }
+  },
+  "signalCatalogue": {
+    "title": "Signal catalogue",
+    "subtitle": "Catalogue, govern and monitor every AI signal used across your systems.",
+    "actions": {
+      "importSignal": "Import a signal",
+      "exportCatalogue": "Export catalogue",
+      "createSignal": "Create a signal"
+    },
+    "filters": {
+      "search": "Search a signal…",
+      "status": "Status",
+      "severity": "Severity",
+      "category": "Category",
+      "source": "Source",
+      "owner": "Owner",
+      "environment": "Environment",
+      "button": "Filter",
+      "all": "All"
+    },
+    "kpi": {
+      "total": "Total signals",
+      "active": "Active",
+      "evaluation": "In evaluation",
+      "deprecated": "Deprecated",
+      "disabled": "Disabled",
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "col": {
+      "name": "Signal name",
+      "category": "Category",
+      "description": "Description",
+      "source": "Source",
+      "severity": "Severity",
+      "status": "Status",
+      "quality": "Quality (30d)",
+      "lastActivity": "Last activity",
+      "owner": "Owner",
+      "modified": "Modified"
+    },
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "status": {
+      "active": "Active",
+      "evaluation": "In evaluation",
+      "deprecated": "Deprecated",
+      "disabled": "Disabled"
+    },
+    "category": {
+      "qualite": "AI Quality",
+      "securite": "Security",
+      "conformite": "Compliance",
+      "observabilite": "Observability",
+      "cout": "Cost",
+      "memoire": "Memory"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "definition": "Definition",
+      "performance": "Performance",
+      "history": "History",
+      "dependencies": "Dependencies"
+    },
+    "detail": {
+      "moreDetails": "More details",
+      "source": "Source",
+      "type": "Type",
+      "unit": "Unit",
+      "direction": "Direction",
+      "frequency": "Compute frequency",
+      "environment": "Environment",
+      "tags": "Tags",
+      "created": "Created",
+      "modified": "Modified",
+      "severity": "Severity",
+      "thresholdCritical": "Critical threshold",
+      "thresholdAlert": "Alert threshold",
+      "model": "Evaluated model",
+      "lastActivity": "Last activity",
+      "quality": "Quality (d)",
+      "distribution": "Distribution (30 days)",
+      "trend": "Trend (30 days)",
+      "actions": "Quick actions",
+      "usage": "Usage",
+      "loggedBy": "Logged by {n}",
+      "monitors": "Monitors {n}",
+      "viewSignal": "View signal",
+      "viewEvals": "View linked evaluations"
+    },
+    "footer": {
+      "total": "{n} signals",
+      "source": "Source of truth: {src}"
+    }
   }
 }

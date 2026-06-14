@@ -3277,5 +3277,105 @@
       "chain": "{txt}",
       "source": "Source de vérité : {src}"
     }
+  },
+  "signalCatalogue": {
+    "title": "Signal catalogue",
+    "subtitle": "Cataloguez, gouvernez et surveillez tous les signaux IA utilisés dans vos systèmes.",
+    "actions": {
+      "importSignal": "Importer un signal",
+      "exportCatalogue": "Exporter le catalogue",
+      "createSignal": "Créer un signal"
+    },
+    "filters": {
+      "search": "Rechercher un signal…",
+      "status": "Statut",
+      "severity": "Sévérité",
+      "category": "Catégorie",
+      "source": "Source",
+      "owner": "Propriétaire",
+      "environment": "Environnement",
+      "button": "Filtrer",
+      "all": "Tous"
+    },
+    "kpi": {
+      "total": "Signaux totaux",
+      "active": "Actifs",
+      "evaluation": "En évaluation",
+      "deprecated": "Dépréciés",
+      "disabled": "Désactivés",
+      "critical": "Critical",
+      "high": "Élevé",
+      "medium": "Moyen",
+      "low": "Faible"
+    },
+    "col": {
+      "name": "Nom du signal",
+      "category": "Catégorie",
+      "description": "Description",
+      "source": "Source",
+      "severity": "Sévérité",
+      "status": "Statut",
+      "quality": "Qualité (30j)",
+      "lastActivity": "Dernière activité",
+      "owner": "Propriétaire",
+      "modified": "Modifié le"
+    },
+    "severity": {
+      "critical": "Critical",
+      "high": "Élevé",
+      "medium": "Moyen",
+      "low": "Faible"
+    },
+    "status": {
+      "active": "Actif",
+      "evaluation": "En évaluation",
+      "deprecated": "Déprécié",
+      "disabled": "Désactivé"
+    },
+    "category": {
+      "qualite": "Qualité IA",
+      "securite": "Sécurité",
+      "conformite": "Conformité",
+      "observabilite": "Observabilité",
+      "cout": "Coût",
+      "memoire": "Mémoire"
+    },
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "definition": "Définition",
+      "performance": "Performance",
+      "history": "Historique",
+      "dependencies": "Dépendances"
+    },
+    "detail": {
+      "moreDetails": "Plus de détails",
+      "source": "Source",
+      "type": "Type",
+      "unit": "Unité",
+      "direction": "Direction",
+      "frequency": "Fréquence calcul",
+      "environment": "Environnement",
+      "tags": "Tags",
+      "created": "Créé le",
+      "modified": "Modifié le",
+      "severity": "Sévérité",
+      "thresholdCritical": "Seuil critique",
+      "thresholdAlert": "Seuil alerte",
+      "model": "Modèle évalué",
+      "lastActivity": "Dernière activité",
+      "quality": "Qualité (J)",
+      "distribution": "Distribution (30 jours)",
+      "trend": "Tendance (30 jours)",
+      "actions": "Actions rapides",
+      "usage": "Utilisation",
+      "loggedBy": "Logué par {n}",
+      "monitors": "Surveille {n}",
+      "viewSignal": "Voir le signal",
+      "viewEvals": "Voir les évaluations liées"
+    },
+    "footer": {
+      "total": "{n} signaux",
+      "source": "Source de vérité : {src}"
+    }
   }
 }

@@ -76,6 +76,7 @@ from tessera.observability import (
     sft_export as sft_export_mod,
     shadow as shadow_mod,
     siem as siem_mod,
+    signal_catalogue as signal_catalogue_mod,
     slo as slo_mod,
     span_propagation as span_propagation_mod,
     steganography as steganography_mod,
@@ -625,6 +626,20 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/signal-catalogue")
+async def observability_signal_catalogue() -> dict[str, object]:
+    """Signal catalogue overview (page #16).
+
+    Composes the catalogue posture, the filterable signal table and the
+    selected-signal detail. Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **signal_catalogue_mod.compute_signal_catalogue()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.signal_catalogue: failed: {exc}\n")
         return {"available": False}
 
 

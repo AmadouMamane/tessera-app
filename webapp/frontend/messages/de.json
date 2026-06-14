@@ -3277,5 +3277,105 @@
       "chain": "{txt}",
       "source": "Quelle der Wahrheit: {src}"
     }
+  },
+  "signalCatalogue": {
+    "title": "Signal-Katalog",
+    "subtitle": "Katalogisieren, governen und überwachen Sie alle in Ihren Systemen genutzten KI-Signale.",
+    "actions": {
+      "importSignal": "Signal importieren",
+      "exportCatalogue": "Katalog exportieren",
+      "createSignal": "Signal erstellen"
+    },
+    "filters": {
+      "search": "Signal suchen…",
+      "status": "Status",
+      "severity": "Schweregrad",
+      "category": "Kategorie",
+      "source": "Quelle",
+      "owner": "Owner",
+      "environment": "Umgebung",
+      "button": "Filtern",
+      "all": "Alle"
+    },
+    "kpi": {
+      "total": "Signale gesamt",
+      "active": "Aktiv",
+      "evaluation": "In Bewertung",
+      "deprecated": "Veraltet",
+      "disabled": "Deaktiviert",
+      "critical": "Critical",
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "col": {
+      "name": "Signalname",
+      "category": "Kategorie",
+      "description": "Beschreibung",
+      "source": "Quelle",
+      "severity": "Schweregrad",
+      "status": "Status",
+      "quality": "Qualität (30T)",
+      "lastActivity": "Letzte Aktivität",
+      "owner": "Owner",
+      "modified": "Geändert am"
+    },
+    "severity": {
+      "critical": "Critical",
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "status": {
+      "active": "Aktiv",
+      "evaluation": "In Bewertung",
+      "deprecated": "Veraltet",
+      "disabled": "Deaktiviert"
+    },
+    "category": {
+      "qualite": "KI-Qualität",
+      "securite": "Sicherheit",
+      "conformite": "Compliance",
+      "observabilite": "Observability",
+      "cout": "Kosten",
+      "memoire": "Speicher"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "definition": "Definition",
+      "performance": "Performance",
+      "history": "Verlauf",
+      "dependencies": "Abhängigkeiten"
+    },
+    "detail": {
+      "moreDetails": "Mehr Details",
+      "source": "Quelle",
+      "type": "Typ",
+      "unit": "Einheit",
+      "direction": "Richtung",
+      "frequency": "Berechnungsfrequenz",
+      "environment": "Umgebung",
+      "tags": "Tags",
+      "created": "Erstellt am",
+      "modified": "Geändert am",
+      "severity": "Schweregrad",
+      "thresholdCritical": "Kritischer Schwellwert",
+      "thresholdAlert": "Alarm-Schwellwert",
+      "model": "Bewertetes Modell",
+      "lastActivity": "Letzte Aktivität",
+      "quality": "Qualität (T)",
+      "distribution": "Verteilung (30 Tage)",
+      "trend": "Trend (30 Tage)",
+      "actions": "Schnellaktionen",
+      "usage": "Nutzung",
+      "loggedBy": "Geloggt von {n}",
+      "monitors": "Überwacht {n}",
+      "viewSignal": "Signal anzeigen",
+      "viewEvals": "Verknüpfte Bewertungen anzeigen"
+    },
+    "footer": {
+      "total": "{n} Signale",
+      "source": "Quelle der Wahrheit: {src}"
+    }
   }
 }

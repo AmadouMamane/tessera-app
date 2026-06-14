@@ -2324,3 +2324,66 @@ export const ProofsOverviewSchema = z.object({
   footer: z.object({ chain: z.string(), source: z.string() }),
 });
 export type ProofsOverview = z.infer<typeof ProofsOverviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Signal catalogue (page #16)
+// ---------------------------------------------------------------------------
+
+const ScKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  sub: z.string(),
+  series: z.array(z.number()),
+});
+const ScSignalSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.string(),
+  description: z.string(),
+  source: z.string(),
+  severity: z.enum(["critical", "high", "medium", "low"]),
+  status: z.enum(["active", "evaluation", "deprecated", "disabled"]),
+  quality: z.number().int(),
+  last_activity: z.string(),
+  owner: z.string(),
+  modified: z.string(),
+});
+
+export const SignalCatalogueSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  total_signals: z.number().int(),
+  page_size: z.number().int(),
+  kpis: z.array(ScKpiSchema),
+  signals: z.array(ScSignalSchema),
+  selected: z.object({
+    id: z.string(),
+    name: z.string(),
+    category: z.string(),
+    status: z.enum(["active", "evaluation", "deprecated", "disabled"]),
+    description: z.string(),
+    source: z.string(),
+    type: z.string(),
+    unit: z.string(),
+    direction: z.string(),
+    frequency: z.string(),
+    environment: z.string(),
+    tags: z.array(z.string()),
+    created: z.string(),
+    modified: z.string(),
+    severity: z.enum(["critical", "high", "medium", "low"]),
+    threshold_critical: z.string(),
+    threshold_alert: z.string(),
+    model: z.string(),
+    last_activity: z.string(),
+    quality: z.number().int(),
+    distribution: z.array(
+      z.object({ label: z.string(), count: z.number().int(), color: z.string() }),
+    ),
+    trend: z.array(z.number()),
+    usage: z.object({ logged_by: z.string(), monitors: z.string() }),
+  }),
+  categories: z.array(z.string()),
+  footer: z.object({ total: z.number().int(), source: z.string() }),
+});
+export type SignalCatalogue = z.infer<typeof SignalCatalogueSchema>;
