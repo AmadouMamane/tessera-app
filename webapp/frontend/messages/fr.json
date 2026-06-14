@@ -2091,5 +2091,85 @@
       "actions": "Actions recommandées ({n})",
       "evidenceCta": "Générer evidence pack conformité"
     }
+  },
+  "reliability": {
+    "title": "Fiabilité & coût",
+    "subtitle": "Disponibilité, latence, erreurs et coût économique de l'agent.",
+    "loading": "Chargement de la posture fiabilité…",
+    "unavailable": "Posture fiabilité indisponible.",
+    "noErrors": "Aucune erreur sur la fenêtre",
+    "noIncidents": "Aucun incident récent",
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "reliability": "Fiabilité opérationnelle",
+      "cost": "Coûts & consommation",
+      "performance": "Performance",
+      "quotas": "Quotas & prompts",
+      "incidents": "Erreurs & incidents",
+      "capacity": "Capacité & quotas"
+    },
+    "kpi": {
+      "availability": "Disponibilité",
+      "sla": "succès opérationnel (outils)",
+      "errorRate": "Taux d'erreur global",
+      "p50": "Latence médiane (p50)",
+      "p95": "Latence p95",
+      "estimated": "estimée (tokens/débit)",
+      "toolSuccess": "Réussite outils",
+      "totalCost": "Coût total",
+      "window": "sur la fenêtre",
+      "costPerReq": "Coût / requête",
+      "requests": "Requêtes",
+      "tokens": "tokens"
+    },
+    "panel": {
+      "errors": "Répartition des erreurs ({n})",
+      "providers": "Requêtes par fournisseur",
+      "budget": "Budget & consommation",
+      "budgetNote": "budget mensuel cible (gouvernance)",
+      "projected": "Projeté",
+      "costByModel": "Coût par modèle ({n})",
+      "services": "Performance par service",
+      "incidents": "Incidents récents ({n})"
+    },
+    "col": {
+      "model": "Modèle",
+      "provider": "Fournisseur",
+      "requests": "Requêtes",
+      "cost": "Coût total",
+      "passRate": "Réussite",
+      "latency": "Latence",
+      "service": "Service",
+      "success": "Réussite",
+      "p50": "p50"
+    },
+    "err": {
+      "token_spike": "Pic de tokens",
+      "tool_denied": "Refus garde",
+      "tool_error": "Erreur outil",
+      "arg_failure": "Args invalides",
+      "low_quality": "Réponse faible"
+    },
+    "status": {
+      "chain": "Chaîne d'audit intacte",
+      "truth": "Source de vérité : YAML · Git",
+      "soc": "SOC connecté"
+    },
+    "rail": {
+      "requests": "Requêtes (fenêtre)",
+      "live": "LIVE",
+      "forecast": "Coût & prévisions",
+      "monthly": "Mensuel",
+      "spent": "Consommé",
+      "projected": "Fin de mois projeté",
+      "withinBudget": "Dans le budget",
+      "overBudget": "Dépassement",
+      "cache": "Surcharge & capacité",
+      "overhead": "Surcharge spans",
+      "budgetHeadroom": "Marge budget",
+      "ok": "OK",
+      "tight": "Serrée",
+      "forecastCta": "Voir prévisions détaillées"
+    }
   }
 }

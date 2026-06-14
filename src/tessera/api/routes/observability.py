@@ -58,6 +58,7 @@ from tessera.observability import (
     provenance as provenance_mod,
     redteam as redteam_mod,
     refusal as refusal_mod,
+    reliability as reliability_mod,
     replay as replay_mod,
     reproducibility as reproducibility_mod,
     reranking_contribution as reranking_contribution_mod,
@@ -588,6 +589,21 @@ async def observability_compliance() -> dict[str, object]:
         return {"available": True, **asdict(compliance_mod.compute_compliance())}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.compliance: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/reliability")
+async def observability_reliability() -> dict[str, object]:
+    """Operational reliability & cost posture from the real signals (#08).
+
+    Token cost, tool success, span overhead, per-language quality and per-model
+    run stats are measured; latency is estimated from the token distribution at a
+    documented local throughput. Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **asdict(reliability_mod.compute_reliability())}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.reliability: failed: {exc}\n")
         return {"available": False}
 
 

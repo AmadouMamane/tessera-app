@@ -2091,5 +2091,85 @@
       "actions": "Empfohlene Maßnahmen ({n})",
       "evidenceCta": "Compliance-Evidence-Pack erzeugen"
     }
+  },
+  "reliability": {
+    "title": "Zuverlässigkeit & Kosten",
+    "subtitle": "Verfügbarkeit, Latenz, Fehler und wirtschaftliche Kosten des Agenten.",
+    "loading": "Zuverlässigkeits-Haltung wird geladen…",
+    "unavailable": "Zuverlässigkeits-Haltung nicht verfügbar.",
+    "noErrors": "Keine Fehler im Fenster",
+    "noIncidents": "Keine aktuellen Vorfälle",
+    "tabs": {
+      "overview": "Übersicht",
+      "reliability": "Operative Zuverlässigkeit",
+      "cost": "Kosten & Verbrauch",
+      "performance": "Performance",
+      "quotas": "Quotas & Prompts",
+      "incidents": "Fehler & Vorfälle",
+      "capacity": "Kapazität & Quotas"
+    },
+    "kpi": {
+      "availability": "Verfügbarkeit",
+      "sla": "operativer Tool-Erfolg",
+      "errorRate": "Globale Fehlerrate",
+      "p50": "Median-Latenz (p50)",
+      "p95": "p95-Latenz",
+      "estimated": "geschätzt (Tokens/Rate)",
+      "toolSuccess": "Tool-Erfolg",
+      "totalCost": "Gesamtkosten",
+      "window": "im Fenster",
+      "costPerReq": "Kosten / Anfrage",
+      "requests": "Anfragen",
+      "tokens": "Tokens"
+    },
+    "panel": {
+      "errors": "Fehlerverteilung ({n})",
+      "providers": "Anfragen nach Anbieter",
+      "budget": "Budget & Verbrauch",
+      "budgetNote": "monatliches Zielbudget (Governance)",
+      "projected": "Projiziert",
+      "costByModel": "Kosten nach Modell ({n})",
+      "services": "Performance nach Service",
+      "incidents": "Aktuelle Vorfälle ({n})"
+    },
+    "col": {
+      "model": "Modell",
+      "provider": "Anbieter",
+      "requests": "Anfragen",
+      "cost": "Gesamtkosten",
+      "passRate": "Erfolg",
+      "latency": "Latenz",
+      "service": "Service",
+      "success": "Erfolg",
+      "p50": "p50"
+    },
+    "err": {
+      "token_spike": "Token-Spitze",
+      "tool_denied": "Guard-Ablehnung",
+      "tool_error": "Tool-Fehler",
+      "arg_failure": "Ungültige Args",
+      "low_quality": "Schwache Antwort"
+    },
+    "status": {
+      "chain": "Audit-Kette intakt",
+      "truth": "Quelle der Wahrheit: YAML · Git",
+      "soc": "SOC verbunden"
+    },
+    "rail": {
+      "requests": "Anfragen (Fenster)",
+      "live": "LIVE",
+      "forecast": "Kosten & Prognose",
+      "monthly": "Monatlich",
+      "spent": "Verbraucht",
+      "projected": "Monatsende projiziert",
+      "withinBudget": "Im Budget",
+      "overBudget": "Über Budget",
+      "cache": "Overhead & Kapazität",
+      "overhead": "Span-Overhead",
+      "budgetHeadroom": "Budget-Spielraum",
+      "ok": "OK",
+      "tight": "Knapp",
+      "forecastCta": "Detaillierte Prognose ansehen"
+    }
   }
 }

@@ -276,6 +276,60 @@ export const CalibrationSchema = z.object({
 });
 export type Calibration = z.infer<typeof CalibrationSchema>;
 
+export const ReliabilityErrorSliceSchema = z.object({ label: z.string(), count: z.number().int() });
+export const ReliabilityCostRowSchema = z.object({
+  model: z.string(),
+  provider: z.string(),
+  n_requests: z.number().int(),
+  cost_eur: z.number(),
+  cost_per_1k: z.number(),
+  pass_rate: z.number().nullable(),
+  latency_ms: z.number().nullable(),
+});
+export const ReliabilityServiceRowSchema = z.object({
+  name: z.string(),
+  success: z.number(),
+  latency_p50_ms: z.number(),
+  n_requests: z.number().int(),
+  mean_score: z.number(),
+});
+export const ReliabilityProviderRowSchema = z.object({
+  provider: z.string(),
+  n_requests: z.number().int(),
+});
+export const ReliabilityIncidentSchema = z.object({
+  label: z.string(),
+  type: z.string(),
+  severity: z.string(),
+  detail: z.string(),
+});
+export const ReliabilityReportSchema = z.object({
+  available: z.boolean(),
+  availability: z.number().optional(),
+  error_rate: z.number().optional(),
+  latency_p50_ms: z.number().optional(),
+  latency_p95_ms: z.number().optional(),
+  tool_success: z.number().optional(),
+  total_cost_eur: z.number().optional(),
+  cost_per_request_eur: z.number().optional(),
+  n_requests: z.number().int().optional(),
+  total_tokens: z.number().int().optional(),
+  cache_overhead_pct: z.number().optional(),
+  within_budget: z.boolean().optional(),
+  budget_monthly_eur: z.number().optional(),
+  budget_spent_eur: z.number().optional(),
+  budget_projected_eur: z.number().optional(),
+  error_breakdown: z.array(ReliabilityErrorSliceSchema).optional(),
+  models: z.array(ReliabilityCostRowSchema).optional(),
+  services: z.array(ReliabilityServiceRowSchema).optional(),
+  providers: z.array(ReliabilityProviderRowSchema).optional(),
+  incidents: z.array(ReliabilityIncidentSchema).optional(),
+});
+export type ReliabilityReport = z.infer<typeof ReliabilityReportSchema>;
+export type ReliabilityCostRow = z.infer<typeof ReliabilityCostRowSchema>;
+export type ReliabilityServiceRow = z.infer<typeof ReliabilityServiceRowSchema>;
+export type ReliabilityIncident = z.infer<typeof ReliabilityIncidentSchema>;
+
 export const ComplianceControlSchema = z.object({
   id: z.string(),
   name: z.string(),

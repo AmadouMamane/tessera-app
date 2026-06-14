@@ -2091,5 +2091,85 @@
       "actions": "Recommended actions ({n})",
       "evidenceCta": "Generate compliance evidence pack"
     }
+  },
+  "reliability": {
+    "title": "Reliability & cost",
+    "subtitle": "Availability, latency, errors and the agent's economic cost.",
+    "loading": "Loading reliability posture…",
+    "unavailable": "Reliability posture unavailable.",
+    "noErrors": "No errors over the window",
+    "noIncidents": "No recent incidents",
+    "tabs": {
+      "overview": "Overview",
+      "reliability": "Operational reliability",
+      "cost": "Cost & consumption",
+      "performance": "Performance",
+      "quotas": "Quotas & prompts",
+      "incidents": "Errors & incidents",
+      "capacity": "Capacity & quotas"
+    },
+    "kpi": {
+      "availability": "Availability",
+      "sla": "operational tool success",
+      "errorRate": "Global error rate",
+      "p50": "Median latency (p50)",
+      "p95": "p95 latency",
+      "estimated": "estimated (tokens/rate)",
+      "toolSuccess": "Tool success",
+      "totalCost": "Total cost",
+      "window": "over the window",
+      "costPerReq": "Cost / request",
+      "requests": "Requests",
+      "tokens": "tokens"
+    },
+    "panel": {
+      "errors": "Error breakdown ({n})",
+      "providers": "Requests by provider",
+      "budget": "Budget & consumption",
+      "budgetNote": "monthly target budget (governance)",
+      "projected": "Projected",
+      "costByModel": "Cost by model ({n})",
+      "services": "Performance by service",
+      "incidents": "Recent incidents ({n})"
+    },
+    "col": {
+      "model": "Model",
+      "provider": "Provider",
+      "requests": "Requests",
+      "cost": "Total cost",
+      "passRate": "Success",
+      "latency": "Latency",
+      "service": "Service",
+      "success": "Success",
+      "p50": "p50"
+    },
+    "err": {
+      "token_spike": "Token spike",
+      "tool_denied": "Guard denial",
+      "tool_error": "Tool error",
+      "arg_failure": "Invalid args",
+      "low_quality": "Low-quality reply"
+    },
+    "status": {
+      "chain": "Audit chain intact",
+      "truth": "Source of truth: YAML · Git",
+      "soc": "SOC connected"
+    },
+    "rail": {
+      "requests": "Requests (window)",
+      "live": "LIVE",
+      "forecast": "Cost & forecast",
+      "monthly": "Monthly",
+      "spent": "Spent",
+      "projected": "End-of-month projected",
+      "withinBudget": "Within budget",
+      "overBudget": "Over budget",
+      "cache": "Overhead & capacity",
+      "overhead": "Span overhead",
+      "budgetHeadroom": "Budget headroom",
+      "ok": "OK",
+      "tight": "Tight",
+      "forecastCta": "See detailed forecast"
+    }
   }
 }

@@ -125,6 +125,8 @@ import {
   RegressionRiskSchema,
   type ReleaseStatus,
   ReleaseStatusSchema,
+  type ReliabilityReport,
+  ReliabilityReportSchema,
   type ReplayResult,
   ReplayResultSchema,
   type ReplaysResponse,
@@ -590,6 +592,11 @@ export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<Firew
 /** Regulatory compliance posture derived from the real runtime signals (#07). */
 export async function fetchCompliance(signal?: AbortSignal): Promise<ComplianceReport> {
   return request("/observability/compliance", { signal }, ComplianceReportSchema);
+}
+
+/** Operational reliability & cost posture derived from the real signals (#08). */
+export async function fetchReliability(signal?: AbortSignal): Promise<ReliabilityReport> {
+  return request("/observability/reliability", { signal }, ReliabilityReportSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */
