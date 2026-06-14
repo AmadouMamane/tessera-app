@@ -2062,7 +2062,8 @@
       "residual": "Residual risks",
       "residualSub": "Monitored",
       "deadlines": "Critical deadlines",
-      "deadlinesSub": "To handle"
+      "deadlinesSub": "To handle",
+      "ptsPrev": "pts vs prev. period"
     },
     "panel": {
       "mapping": "Regulatory mapping",

@@ -86,21 +86,73 @@ function Panel({
   );
 }
 
+/** Tiny sparkline over a real value series. */
+function Spark({ values }: { values: number[] }) {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const W = 100;
+  const H = 22;
+  const d = values
+    .map(
+      (v, i) =>
+        `${i === 0 ? "M" : "L"}${((i / (values.length - 1)) * W).toFixed(1)},${(
+          H - ((v - min) / span) * H
+        ).toFixed(1)}`,
+    )
+    .join(" ");
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="h-5 w-full"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path d={d} fill="none" stroke="#10b981" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function Kpi({
   label,
   value,
   sub,
   tone,
-}: { label: string; value: string; sub?: string; tone?: string }) {
+  series,
+  delta,
+  deltaUpIsGood,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: string;
+  series?: number[];
+  delta?: number | null;
+  deltaUpIsGood?: boolean;
+}) {
+  const tc = useTranslations("compliance");
+  const showDelta = delta != null && Math.abs(delta) >= 0.005;
+  const up = (delta ?? 0) > 0;
+  const deltaGood = up === (deltaUpIsGood ?? true);
   return (
     <Card className="flex flex-col gap-0.5 p-3">
       <div className="truncate text-xs text-[var(--muted-foreground)]">{label}</div>
       <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
         {value}
       </div>
-      {sub ? (
+      {showDelta ? (
+        <div
+          className={`flex items-center gap-1 text-[0.65rem] tabular-nums ${deltaGood ? GOOD : BAD}`}
+        >
+          <span>{up ? "↗" : "↘"}</span>
+          <span>
+            {Math.abs((delta as number) * 100).toFixed(0)} {tc("kpi.ptsPrev")}
+          </span>
+        </div>
+      ) : sub ? (
         <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{sub}</div>
       ) : null}
+      {series && series.length > 1 ? <Spark values={series} /> : null}
     </Card>
   );
 }
@@ -173,6 +225,8 @@ export function ComplianceDashboard() {
 
   const fwLabel = (code: string) => d.frameworks?.find((f) => f.code === code)?.label ?? code;
   const evTotal = (d.evidence_valid ?? 0) + (d.evidence_missing ?? 0) + (d.evidence_blocking ?? 0);
+  // Real posture trend from the durable quality-score log (sparkline + delta).
+  const trend = d.score_series ?? [];
 
   return (
     <div className="flex flex-col gap-2">
@@ -214,18 +268,23 @@ export function ComplianceDashboard() {
                 value={`${d.score ?? 0}/100`}
                 sub={tc("kpi.scoreSub")}
                 tone={(d.score ?? 0) >= 80 ? GOOD : WARN}
+                series={trend}
+                delta={d.score_delta}
+                deltaUpIsGood
               />
               <Kpi
                 label={tc("kpi.obligations")}
                 value={`${d.n_applied ?? 0}/${d.n_obligations ?? 0}`}
                 sub={`${Math.round(((d.n_applied ?? 0) / (d.n_obligations || 1)) * 100)}%`}
                 tone={GOOD}
+                series={trend}
               />
               <Kpi
                 label={tc("kpi.conformant")}
                 value={`${d.n_conformant ?? 0}/${d.n_controls ?? 0}`}
                 sub={`${Math.round(((d.n_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
                 tone={GOOD}
+                series={trend}
               />
               <Kpi
                 label={tc("kpi.partial")}

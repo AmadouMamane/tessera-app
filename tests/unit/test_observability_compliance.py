@@ -71,3 +71,37 @@ def test_compute_compliance_all_conformant() -> None:
     assert report.score == 100
     assert report.evidence_completeness == 1.0
     assert report.obligations == []
+
+
+def test_posture_trend_buckets_real_scores(monkeypatch) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime.now(UTC)
+    # Lower scores in the previous window, higher in the current → positive delta.
+    rows: list[dict[str, object]] = []
+    for day in range(comp._TREND_DAYS):  # current window, high scores
+        rows.append(
+            {
+                "scored_at": (now - timedelta(days=day)).isoformat(),
+                "metric": "faithfulness",
+                "score": 0.9,
+            }
+        )
+    for day in range(comp._TREND_DAYS, comp._TREND_DAYS * 2):  # previous window, low
+        rows.append(
+            {
+                "scored_at": (now - timedelta(days=day)).isoformat(),
+                "metric": "faithfulness",
+                "score": 0.5,
+            }
+        )
+    monkeypatch.setattr(comp, "persisted_scores", lambda: rows)
+    series, delta = comp._posture_trend()
+    assert len(series) > 1  # a real multi-point sparkline
+    assert all(0.0 <= v <= 1.0 for v in series)
+    assert delta is not None and delta > 0  # current period improved on the previous
+
+
+def test_posture_trend_empty_log_yields_no_trend(monkeypatch) -> None:
+    monkeypatch.setattr(comp, "persisted_scores", list)
+    assert comp._posture_trend() == ([], None)

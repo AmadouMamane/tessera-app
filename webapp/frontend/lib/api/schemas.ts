@@ -433,6 +433,8 @@ export const ComplianceReportSchema = z.object({
   controls: z.array(ComplianceControlSchema).optional(),
   obligations: z.array(ComplianceObligationSchema).optional(),
   non_conformities: z.array(NonConformitySchema).optional(),
+  score_series: z.array(z.number()).optional(),
+  score_delta: z.number().nullable().optional(),
 });
 export type ComplianceReport = z.infer<typeof ComplianceReportSchema>;
 

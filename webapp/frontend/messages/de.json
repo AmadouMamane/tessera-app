@@ -2062,7 +2062,8 @@
       "residual": "Restrisiken",
       "residualSub": "Überwacht",
       "deadlines": "Kritische Fristen",
-      "deadlinesSub": "Zu bearbeiten"
+      "deadlinesSub": "Zu bearbeiten",
+      "ptsPrev": "Pkt. vs. Vorperiode"
     },
     "panel": {
       "mapping": "Regulatorische Kartierung",

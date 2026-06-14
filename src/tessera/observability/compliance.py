@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from tessera.observability import (
     ai_act as ai_act_mod,
@@ -31,7 +32,8 @@ from tessera.observability import (
     refusal as refusal_mod,
     replay as replay_mod,
 )
-from tessera.observability.eval.scores import recent_scores
+from tessera.observability.eval.scores import persisted_scores, recent_scores
+from tessera.observability.eval.series import compute_score_series
 
 __all__ = [
     "Control",
@@ -58,6 +60,16 @@ _NON_CONFORMANT = "non_conformant"
 
 _THRESHOLD_CONFORMANT = 0.9
 _THRESHOLD_PARTIAL = 0.7
+
+# Posture trend: the global compliance score rolls up live signals that share the
+# same quality substrate as the judged eval metrics, so bucketing the durable
+# score log over the trailing window gives the KPI strip an honest sparkline +
+# period-over-period delta — exactly as the security/overview cockpits do (ADR
+# 0011). No history is fabricated: empty buckets are dropped, an empty log yields
+# no trend at all.
+_TREND_METRICS: tuple[str, ...] = ("faithfulness", "grounding")
+_TREND_DAYS = 14
+_TREND_BUCKETS = 7
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +144,11 @@ class ComplianceReport:
     controls: list[Control] = field(default_factory=list)
     obligations: list[Obligation] = field(default_factory=list)
     non_conformities: list[NonConformity] = field(default_factory=list)
+    # Real posture trend over the trailing window (composite of the durable
+    # quality-score series): the KPI-strip sparkline and its period-over-period
+    # delta. Empty when the score log has no usable history.
+    score_series: list[float] = field(default_factory=list)
+    score_delta: float | None = None
 
 
 def _status(value: float) -> str:
@@ -235,9 +252,44 @@ _OBLIGATION_META: dict[str, tuple[str, str]] = {
 }
 
 
+def _posture_trend() -> tuple[list[float], float | None]:
+    """Real posture trend, proxied by the durable quality-score log.
+
+    Buckets the durably-stored eval scores over the trailing window and averages
+    the available metric series into one composite posture line, plus a
+    period-over-period delta. Grounded, not fabricated: an empty or unreadable log
+    yields ``([], None)`` and the strip simply shows no curve.
+
+    Returns:
+        A ``(series, delta)`` pair — the non-empty bucket means (0..1) and the
+        composite mean-minus-previous-window delta (0..1), or ``None``.
+    """
+    try:
+        rows = persisted_scores()
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.compliance: posture_trend failed: {exc}\n")
+        return [], None
+    if not rows:
+        return [], None
+    end = datetime.now(UTC)
+    per_metric = [
+        compute_score_series(rows, metric=m, end=end, days=_TREND_DAYS, n_buckets=_TREND_BUCKETS)
+        for m in _TREND_METRICS
+    ]
+    series: list[float] = []
+    for i in range(_TREND_BUCKETS):
+        means = [m for m in (s.buckets[i].mean for s in per_metric) if m is not None]
+        if means:
+            series.append(sum(means) / len(means))
+    deltas = [d for d in (s.delta for s in per_metric) if d is not None]
+    delta = sum(deltas) / len(deltas) if deltas else None
+    return series, delta
+
+
 def compute_compliance() -> ComplianceReport:
     """Assemble the compliance posture from the real runtime signals."""
     values = _signal_values()
+    score_series, score_delta = _posture_trend()
     controls: list[Control] = []
     for cid, name, fw, signal, owner, ev in _CATALOGUE:
         if signal not in values:
@@ -345,4 +397,6 @@ def compute_compliance() -> ComplianceReport:
         controls=controls,
         obligations=obligations,
         non_conformities=non_conformities,
+        score_series=score_series,
+        score_delta=score_delta,
     )
