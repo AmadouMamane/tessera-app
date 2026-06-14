@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchReliability } from "@/lib/api/client";
 import type {
+  ReliabilityActionRow,
   ReliabilityCostRow,
   ReliabilityIncident,
   ReliabilityServiceRow,
@@ -222,24 +223,107 @@ function Donut({ slices }: { slices: { label: string; count: number; color: stri
   );
 }
 
-function Bar({
-  label,
-  value,
-  max,
-  tone,
-}: { label: string; value: number; max: number; tone?: string }) {
+function LatStat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <div className="flex items-center gap-2 text-[0.72rem]">
-      <span className="w-20 shrink-0 truncate">{label}</span>
-      <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--tessera-muted)]/50">
-        <div
-          className="h-full rounded-sm"
-          style={{ width: `${(value / (max || 1)) * 100}%`, background: tone ?? "#60a5fa" }}
-        />
+    <div className="flex items-baseline justify-between gap-2">
+      <span className="text-[0.72rem] text-[var(--muted-foreground)]">{label}</span>
+      <span className={`text-lg font-semibold tabular-nums ${tone}`}>{value}</span>
+    </div>
+  );
+}
+
+/** Multi-line chart over a shared X (one point per day), with a small legend. */
+function MultiLine({
+  lines,
+  format,
+}: {
+  lines: { label: string; color: string; values: (number | null)[] }[];
+  format: (v: number) => string;
+}) {
+  const all = lines.flatMap((l) => l.values.filter((v): v is number => v != null));
+  if (all.length < 2)
+    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const span = max - min || 1;
+  const W = 240;
+  const H = 70;
+  const n = Math.max(...lines.map((l) => l.values.length));
+  const path = (vals: (number | null)[]) => {
+    const pts = vals
+      .map((v, i) =>
+        v == null
+          ? null
+          : `${((i / Math.max(1, n - 1)) * W).toFixed(1)},${(H - 4 - ((v - min) / span) * (H - 8)).toFixed(1)}`,
+      )
+      .filter((p): p is string => p != null);
+    return pts.length < 2 ? "" : `M${pts.join(" L")}`;
+  };
+  return (
+    <div className="flex flex-col gap-1">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="h-20 w-full"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        {lines.map((l) => (
+          <path
+            key={l.label}
+            d={path(l.values)}
+            fill="none"
+            stroke={l.color}
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        ))}
+      </svg>
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[0.6rem] text-[var(--muted-foreground)]">
+        {lines.map((l) => {
+          const last = [...l.values].reverse().find((v): v is number => v != null);
+          return (
+            <span key={l.label} className="flex items-center gap-1">
+              <span className="h-1 w-3 rounded-full" style={{ background: l.color }} />
+              {l.label}
+              {last != null ? (
+                <b className="font-semibold text-[var(--foreground)]">{format(last)}</b>
+              ) : null}
+            </span>
+          );
+        })}
       </div>
-      <span className="w-12 shrink-0 text-right tabular-nums text-[var(--muted-foreground)]">
-        {value}
-      </span>
+    </div>
+  );
+}
+
+/** Vertical bar chart, one bar per day. */
+function DayBars({
+  values,
+  color = "#34d399",
+  format,
+}: {
+  values: number[];
+  color?: string;
+  format: (v: number) => string;
+}) {
+  if (values.length === 0)
+    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
+  const max = Math.max(0.000001, ...values);
+  const total = values.reduce((s, v) => s + v, 0);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex h-20 items-end gap-0.5">
+        {values.map((v, i) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: daily bars are positional
+            key={i}
+            className="flex-1 rounded-t-sm"
+            style={{ height: `${Math.max(3, (v / max) * 100)}%`, background: color }}
+            title={format(v)}
+          />
+        ))}
+      </div>
+      <div className="text-[0.6rem] text-[var(--muted-foreground)]">{format(total)}</div>
     </div>
   );
 }
@@ -274,8 +358,12 @@ export function ReliabilityDashboard() {
     count: s.count,
     color: ERR_COLOR[s.label] ?? "#94a3b8",
   }));
-  const maxProv = Math.max(1, ...(d.providers ?? []).map((p) => p.n_requests));
   const budgetUsed = d.budget_monthly_eur ? (d.budget_spent_eur ?? 0) / d.budget_monthly_eur : 0;
+  const daily = d.daily ?? [];
+  const availLine = daily.map((p) => p.availability);
+  const errLine = daily.map((p) => p.error_rate);
+  const costDay = daily.map((p) => p.cost_eur);
+  const provTotal = (d.providers ?? []).reduce((s, p) => s + p.n_requests, 0) || 1;
 
   return (
     <div className="flex flex-col gap-2">
@@ -368,7 +456,16 @@ export function ReliabilityDashboard() {
 
           {/* B. Fiabilité & budget */}
           <Zone label={tr("sec.reliability")}>
-            <div className="grid gap-2 lg:grid-cols-3">
+            <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+              <Panel title={tr("panel.availErrors")} note={tr("panel.availNote")}>
+                <MultiLine
+                  lines={[
+                    { label: tr("leg.availability"), color: "#34d399", values: availLine },
+                    { label: tr("leg.error"), color: "#ef4444", values: errLine },
+                  ]}
+                  format={(v) => pct(v, 0)}
+                />
+              </Panel>
               <Panel title={tr("panel.errors", { n: errSlices.reduce((s, x) => s + x.count, 0) })}>
                 {errSlices.length === 0 ? (
                   <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
@@ -378,66 +475,113 @@ export function ReliabilityDashboard() {
                   <Donut slices={errSlices} />
                 )}
               </Panel>
-              <Panel title={tr("panel.providers")}>
-                <div className="flex flex-col gap-1.5">
-                  {(d.providers ?? []).map((p) => (
-                    <Bar key={p.provider} label={p.provider} value={p.n_requests} max={maxProv} />
-                  ))}
+              <Panel title={tr("panel.latency")} note={tr("panel.latencyNote")}>
+                <div className="flex flex-col gap-2">
+                  <LatStat label={tr("leg.p50")} value={ms(d.latency_p50_ms ?? null)} tone={GOOD} />
+                  <LatStat label={tr("leg.p95")} value={ms(d.latency_p95_ms ?? null)} tone={WARN} />
+                  <LatStat label={tr("leg.p99")} value={ms(d.latency_p99_ms ?? null)} tone={BAD} />
                 </div>
               </Panel>
-              <Panel title={tr("panel.budget")} note={tr("panel.budgetNote")}>
-                <div className="flex items-end gap-2">
-                  <span className="text-2xl font-semibold tabular-nums">
-                    {eur(d.budget_spent_eur ?? 0)}
-                  </span>
-                  <span className="pb-1 text-xs text-[var(--muted-foreground)]">
-                    / {eur(d.budget_monthly_eur ?? 0, 0)}
-                  </span>
-                </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--tessera-muted)]/50">
-                  <div
-                    className="h-full rounded-full bg-[var(--tessera-green)]"
-                    style={{ width: `${Math.min(100, budgetUsed * 100)}%` }}
-                  />
-                </div>
-                <div className="mt-1 flex justify-between text-[0.65rem] text-[var(--muted-foreground)]">
-                  <span>{pct(budgetUsed)}</span>
-                  <span>
-                    {tr("panel.projected")}: {eur(d.budget_projected_eur ?? 0)}
-                  </span>
-                </div>
+              <Panel title={tr("panel.costPerDay")}>
+                <DayBars values={costDay} format={(v) => eur(v, 4)} />
               </Panel>
             </div>
           </Zone>
 
-          {/* C. Coûts par modèle */}
+          {/* C. Coûts & services */}
           <Zone label={tr("sec.cost")}>
-            <Panel title={tr("panel.costByModel", { n: d.models?.length ?? 0 })}>
-              <div className="overflow-x-auto">
+            <div className="grid gap-2 lg:grid-cols-2">
+              <Panel title={tr("panel.costByModel", { n: d.models?.length ?? 0 })}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[0.72rem]">
+                    <thead>
+                      <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                        <th className="py-1 pr-2 font-medium">{tr("col.model")}</th>
+                        <th className="py-1 pr-2 font-medium">{tr("col.provider")}</th>
+                        <th className="py-1 pr-2 text-right font-medium">{tr("col.requests")}</th>
+                        <th className="py-1 pr-2 text-right font-medium">{tr("col.cost")}</th>
+                        <th className="py-1 pr-2 text-right font-medium">{tr("col.passRate")}</th>
+                        <th className="py-1 text-right font-medium">{tr("col.latency")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(d.models ?? []).map((m) => (
+                        <ModelRow key={m.model} m={m} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Panel>
+              <Panel title={tr("panel.topServices", { n: d.services_cost?.length ?? 0 })}>
                 <table className="w-full text-[0.72rem]">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                      <th className="py-1 pr-2 font-medium">{tr("col.model")}</th>
-                      <th className="py-1 pr-2 font-medium">{tr("col.provider")}</th>
+                      <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
                       <th className="py-1 pr-2 text-right font-medium">{tr("col.requests")}</th>
                       <th className="py-1 pr-2 text-right font-medium">{tr("col.cost")}</th>
-                      <th className="py-1 pr-2 text-right font-medium">{tr("col.passRate")}</th>
-                      <th className="py-1 text-right font-medium">{tr("col.latency")}</th>
+                      <th className="py-1 text-right font-medium">{tr("col.share")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(d.models ?? []).map((m) => (
-                      <ModelRow key={m.model} m={m} />
+                    {(d.services_cost ?? []).map((s) => (
+                      <tr key={s.name} className="border-b border-[var(--border)]/50">
+                        <td className="py-1 pr-2">{s.name}</td>
+                        <td className="py-1 pr-2 text-right tabular-nums">{s.n_requests}</td>
+                        <td className="py-1 pr-2 text-right tabular-nums">{eur(s.cost_eur, 4)}</td>
+                        <td className="py-1 text-right tabular-nums text-[var(--muted-foreground)]">
+                          {pct(s.share, 0)}
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </Panel>
+              </Panel>
+              <Panel title={tr("panel.incidents", { n: d.incidents?.length ?? 0 })}>
+                {(d.incidents ?? []).length === 0 ? (
+                  <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                    {tr("noIncidents")}
+                  </p>
+                ) : (
+                  <table className="w-full text-[0.7rem]">
+                    <thead>
+                      <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                        <th className="py-1 pr-2 font-medium">{tr("col.date")}</th>
+                        <th className="py-1 pr-2 font-medium">{tr("col.type")}</th>
+                        <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
+                        <th className="py-1 text-right font-medium">{tr("col.severity")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(d.incidents ?? []).map((inc, i) => (
+                        <IncidentRow key={`${inc.type}-${i}`} inc={inc} />
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </Panel>
+              <Panel title={tr("panel.actions", { n: d.actions?.length ?? 0 })}>
+                <table className="w-full text-[0.7rem]">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                      <th className="py-1 pr-2 font-medium">{tr("col.priority")}</th>
+                      <th className="py-1 pr-2 font-medium">{tr("col.action")}</th>
+                      <th className="py-1 pr-2 font-medium">{tr("col.impact")}</th>
+                      <th className="py-1 text-right font-medium">{tr("col.complexity")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(d.actions ?? []).map((a) => (
+                      <ActionRow key={a.priority} a={a} />
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
+            </div>
           </Zone>
 
-          {/* D. Performance & incidents */}
+          {/* D. Performance & budget */}
           <Zone label={tr("sec.performance")}>
-            <div className="grid gap-2 lg:grid-cols-2">
+            <div className="grid gap-2 lg:grid-cols-3">
               <Panel title={tr("panel.services")}>
                 <table className="w-full text-[0.72rem]">
                   <thead>
@@ -455,16 +599,50 @@ export function ReliabilityDashboard() {
                   </tbody>
                 </table>
               </Panel>
-              <Panel title={tr("panel.incidents", { n: d.incidents?.length ?? 0 })}>
-                <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-                  {(d.incidents ?? []).length === 0 ? (
-                    <li className="text-[var(--muted-foreground)]">{tr("noIncidents")}</li>
-                  ) : (
-                    (d.incidents ?? []).map((inc, i) => (
-                      <IncidentRow key={`${inc.type}-${i}`} inc={inc} />
-                    ))
-                  )}
-                </ul>
+              <Panel title={tr("panel.providerBreakdown", { n: (d.providers ?? []).length })}>
+                <div className="flex flex-col gap-1.5">
+                  {(d.providers ?? []).map((p) => (
+                    <div key={p.provider} className="flex items-center gap-2 text-[0.72rem]">
+                      <span className="w-20 shrink-0 truncate">{p.provider}</span>
+                      <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--tessera-muted)]/50">
+                        <div
+                          className="h-full rounded-sm bg-[#60a5fa]"
+                          style={{ width: `${(p.n_requests / provTotal) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-20 shrink-0 text-right tabular-nums text-[var(--muted-foreground)]">
+                        {Math.round((p.n_requests / provTotal) * 100)}% · {p.n_requests}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+              <Panel title={tr("panel.budgetForecast")}>
+                <div className="flex flex-col gap-1.5 text-[0.72rem]">
+                  <div className="mb-1 flex items-end gap-2">
+                    <span className="text-2xl font-semibold tabular-nums">
+                      {eur(d.budget_spent_eur ?? 0)}
+                    </span>
+                    <span className="pb-1 text-xs text-[var(--muted-foreground)]">
+                      / {eur(d.budget_monthly_eur ?? 0, 0)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--tessera-muted)]/50">
+                    <div
+                      className="h-full rounded-full bg-[var(--tessera-green)]"
+                      style={{ width: `${Math.min(100, budgetUsed * 100)}%` }}
+                    />
+                  </div>
+                  <Row label={tr("bf.monthly")} value={eur(d.budget_monthly_eur ?? 0, 0)} />
+                  <Row
+                    label={tr("bf.spent")}
+                    value={`${eur(d.budget_spent_eur ?? 0)} · ${pct(budgetUsed, 0)}`}
+                  />
+                  <Row label={tr("bf.projected")} value={eur(d.budget_projected_eur ?? 0)} />
+                  <Badge tone={d.within_budget ? "success" : "danger"}>
+                    {d.within_budget ? tr("bf.within") : tr("bf.over")}
+                  </Badge>
+                </div>
               </Panel>
             </div>
           </Zone>
@@ -527,15 +705,43 @@ function ServiceRow({ s }: { s: ReliabilityServiceRow }) {
   );
 }
 
+const SEV_BADGE: Record<string, "danger" | "warning" | "neutral"> = {
+  high: "danger",
+  medium: "warning",
+  low: "neutral",
+};
+const fmtDate = (iso: string) => {
+  const parts = iso.split("-");
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}` : iso;
+};
+
 function IncidentRow({ inc }: { inc: ReliabilityIncident }) {
+  const tr = useTranslations("reliability");
   return (
-    <li className="flex items-center gap-2">
-      <span
-        className={`h-1.5 w-1.5 shrink-0 rounded-full ${inc.severity === "high" ? "bg-red-500" : inc.severity === "medium" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
-      />
-      <span className="min-w-0 flex-1 truncate">{inc.label}</span>
-      <span className="shrink-0 text-[0.62rem] text-[var(--muted-foreground)]">{inc.detail}</span>
-    </li>
+    <tr className="border-b border-[var(--border)]/50">
+      <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
+        {inc.date ? fmtDate(inc.date) : "—"}
+      </td>
+      <td className="py-1 pr-2">
+        <span className="truncate">{tr(`err.${inc.type}`)}</span>
+      </td>
+      <td className="py-1 pr-2 text-[var(--muted-foreground)]">{inc.service || "—"}</td>
+      <td className="py-1 text-right">
+        <Badge tone={SEV_BADGE[inc.severity] ?? "neutral"}>{inc.detail}</Badge>
+      </td>
+    </tr>
+  );
+}
+
+function ActionRow({ a }: { a: ReliabilityActionRow }) {
+  const good = a.impact.startsWith("+");
+  return (
+    <tr className="border-b border-[var(--border)]/50">
+      <td className="py-1 pr-2 tabular-nums text-[var(--tessera-green)]">{a.priority}</td>
+      <td className="py-1 pr-2">{a.action}</td>
+      <td className={`py-1 pr-2 tabular-nums ${good ? GOOD : WARN}`}>{a.impact}</td>
+      <td className="py-1 text-right text-[var(--muted-foreground)]">{a.complexity}</td>
+    </tr>
   );
 }
 

@@ -2171,7 +2171,16 @@
       "projected": "Projiziert",
       "costByModel": "Kosten nach Modell ({n})",
       "services": "Performance nach Service",
-      "incidents": "Aktuelle Vorfälle ({n})"
+      "incidents": "Aktuelle Vorfälle ({n})",
+      "availErrors": "Verfügbarkeit & Fehler (14 T)",
+      "availNote": "Aktuelle Verfügbarkeit & Fehlerrate (keine Tagesaufschlüsselung)",
+      "latency": "Latenz (geschätzt)",
+      "latencyNote": "Geschätzt — Tokens / lokaler Durchsatz",
+      "costPerDay": "Kosten pro Tag (€)",
+      "topServices": "Top-Services nach Kosten ({n})",
+      "actions": "Empfohlene Maßnahmen ({n})",
+      "providerBreakdown": "Verteilung nach Anbieter ({n})",
+      "budgetForecast": "Budget & Prognose"
     },
     "col": {
       "model": "Modell",
@@ -2182,7 +2191,17 @@
       "latency": "Latenz",
       "service": "Service",
       "success": "Erfolg",
-      "p50": "p50"
+      "p50": "p50",
+      "avail": "Verfügbarkeit",
+      "errorRate": "Fehlerrate",
+      "share": "Anteil",
+      "date": "Datum",
+      "type": "Typ",
+      "severity": "Schweregrad",
+      "priority": "#",
+      "action": "Maßnahme",
+      "impact": "Geschätzter Effekt",
+      "complexity": "Komplexität"
     },
     "err": {
       "token_spike": "Token-Spitze",
@@ -2222,9 +2241,23 @@
     },
     "sec": {
       "actual": "A · Betriebslage",
-      "reliability": "B · Zuverlässigkeit & Budget",
-      "cost": "C · Kosten pro Modell",
-      "performance": "D · Leistung & Vorfälle"
+      "reliability": "B · Verfügbarkeit, Fehler & Kosten",
+      "cost": "C · Kosten & Services",
+      "performance": "D · Leistung & Budget"
+    },
+    "leg": {
+      "availability": "Verfügbarkeit",
+      "error": "Fehlerrate",
+      "p50": "p50",
+      "p95": "p95",
+      "p99": "p99"
+    },
+    "bf": {
+      "monthly": "Monatsbudget",
+      "spent": "Ausgegeben (Monat)",
+      "projected": "Prognose Monatsende",
+      "within": "Im Budget",
+      "over": "Überschreitung"
     }
   },
   "improvement": {

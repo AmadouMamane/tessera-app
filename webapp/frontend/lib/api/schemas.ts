@@ -302,6 +302,29 @@ export const ReliabilityIncidentSchema = z.object({
   type: z.string(),
   severity: z.string(),
   detail: z.string(),
+  date: z.string().optional(),
+  service: z.string().optional(),
+});
+export const ReliabilityDayPointSchema = z.object({
+  date: z.string(),
+  volume: z.number().int(),
+  quality: z.number().nullable(),
+  availability: z.number(),
+  error_rate: z.number(),
+  cost_eur: z.number(),
+});
+export const ReliabilityServiceCostRowSchema = z.object({
+  name: z.string(),
+  n_requests: z.number().int(),
+  cost_eur: z.number(),
+  cost_per_1k: z.number(),
+  share: z.number(),
+});
+export const ReliabilityActionRowSchema = z.object({
+  priority: z.number().int(),
+  action: z.string(),
+  impact: z.string(),
+  complexity: z.string(),
 });
 export const ReliabilityReportSchema = z.object({
   available: z.boolean(),
@@ -309,6 +332,7 @@ export const ReliabilityReportSchema = z.object({
   error_rate: z.number().optional(),
   latency_p50_ms: z.number().optional(),
   latency_p95_ms: z.number().optional(),
+  latency_p99_ms: z.number().optional(),
   tool_success: z.number().optional(),
   total_cost_eur: z.number().optional(),
   cost_per_request_eur: z.number().optional(),
@@ -328,8 +352,14 @@ export const ReliabilityReportSchema = z.object({
   volume_delta: z.number().nullable().optional(),
   quality_series: z.array(z.number()).optional(),
   quality_delta: z.number().nullable().optional(),
+  daily: z.array(ReliabilityDayPointSchema).optional(),
+  services_cost: z.array(ReliabilityServiceCostRowSchema).optional(),
+  actions: z.array(ReliabilityActionRowSchema).optional(),
 });
 export type ReliabilityReport = z.infer<typeof ReliabilityReportSchema>;
+export type ReliabilityDayPoint = z.infer<typeof ReliabilityDayPointSchema>;
+export type ReliabilityServiceCostRow = z.infer<typeof ReliabilityServiceCostRowSchema>;
+export type ReliabilityActionRow = z.infer<typeof ReliabilityActionRowSchema>;
 export type ReliabilityCostRow = z.infer<typeof ReliabilityCostRowSchema>;
 export type ReliabilityServiceRow = z.infer<typeof ReliabilityServiceRowSchema>;
 export type ReliabilityIncident = z.infer<typeof ReliabilityIncidentSchema>;

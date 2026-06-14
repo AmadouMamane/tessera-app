@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tessera.observability import reliability as rel
+from tessera.observability import funnel as funnel_mod, reliability as rel
 
 
 def test_provider_mapping() -> None:
@@ -68,3 +68,29 @@ def test_trends_bucket_real_scores(monkeypatch) -> None:
 def test_trends_empty_log_yields_nothing(monkeypatch) -> None:
     monkeypatch.setattr(rel, "persisted_scores", list)
     assert rel._trends() == ([], None, [], None)
+
+
+def test_services_cost_shares_sum_to_one() -> None:
+    funnel = funnel_mod.FunnelReport(
+        n_turns=180,
+        languages=[
+            funnel_mod.LanguageFunnel("fr", 70, 50, 0.8, 0.5, 0.1),
+            funnel_mod.LanguageFunnel("de", 60, 40, 0.7, 0.4, 0.2),
+            funnel_mod.LanguageFunnel("en", 50, 30, 0.9, 0.6, 0.05),
+        ],
+    )
+    rows = rel._services_cost(funnel, cost_per_request=0.001)
+    assert [r.name for r in rows] == ["FR", "DE", "EN"]  # sorted by cost desc
+    assert abs(sum(r.share for r in rows) - 1.0) < 1e-9
+
+
+def test_daily_holds_snapshot_availability(monkeypatch) -> None:
+    from datetime import UTC, datetime
+
+    now = datetime.now(UTC)
+    rows = [{"scored_at": now.isoformat(), "metric": "faithfulness", "score": 0.2}]
+    daily = rel._daily(rows, cost_per_request=0.01, availability=0.997, error_rate=0.003)
+    assert len(daily) == rel._TREND_DAYS
+    # Availability is the headline rate held flat — never reinterpreted as quality.
+    assert all(p.availability == 0.997 and p.error_rate == 0.003 for p in daily)
+    assert any(p.volume > 0 for p in daily)  # the real turn was bucketed

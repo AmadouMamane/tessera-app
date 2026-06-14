@@ -2171,7 +2171,16 @@
       "projected": "Projected",
       "costByModel": "Cost by model ({n})",
       "services": "Performance by service",
-      "incidents": "Recent incidents ({n})"
+      "incidents": "Recent incidents ({n})",
+      "availErrors": "Availability & errors (14d)",
+      "availNote": "Current availability & error rate (no per-day breakdown)",
+      "latency": "Latency (estimated)",
+      "latencyNote": "Estimated — tokens / local throughput",
+      "costPerDay": "Cost per day (€)",
+      "topServices": "Top services by cost ({n})",
+      "actions": "Recommended actions ({n})",
+      "providerBreakdown": "Breakdown by provider ({n})",
+      "budgetForecast": "Budget & forecast"
     },
     "col": {
       "model": "Model",
@@ -2182,7 +2191,17 @@
       "latency": "Latency",
       "service": "Service",
       "success": "Success",
-      "p50": "p50"
+      "p50": "p50",
+      "avail": "Availability",
+      "errorRate": "Error rate",
+      "share": "Share",
+      "date": "Date",
+      "type": "Type",
+      "severity": "Severity",
+      "priority": "#",
+      "action": "Action",
+      "impact": "Est. impact",
+      "complexity": "Complexity"
     },
     "err": {
       "token_spike": "Token spike",
@@ -2222,9 +2241,23 @@
     },
     "sec": {
       "actual": "A · Operational posture",
-      "reliability": "B · Reliability & budget",
-      "cost": "C · Cost per model",
-      "performance": "D · Performance & incidents"
+      "reliability": "B · Availability, errors & cost",
+      "cost": "C · Cost & services",
+      "performance": "D · Performance & budget"
+    },
+    "leg": {
+      "availability": "Availability",
+      "error": "Error rate",
+      "p50": "p50",
+      "p95": "p95",
+      "p99": "p99"
+    },
+    "bf": {
+      "monthly": "Monthly budget",
+      "spent": "Spent (this month)",
+      "projected": "End-of-month forecast",
+      "within": "Within budget",
+      "over": "Over budget"
     }
   },
   "improvement": {

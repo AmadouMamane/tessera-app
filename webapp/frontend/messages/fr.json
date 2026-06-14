@@ -2171,7 +2171,16 @@
       "projected": "Projeté",
       "costByModel": "Coût par modèle ({n})",
       "services": "Performance par service",
-      "incidents": "Incidents récents ({n})"
+      "incidents": "Incidents récents ({n})",
+      "availErrors": "Disponibilité & erreurs (14 j)",
+      "availNote": "Disponibilité & taux d'erreur courants (pas de ventilation par jour)",
+      "latency": "Latence (estimée)",
+      "latencyNote": "Estimée — tokens / débit local",
+      "costPerDay": "Coût par jour (€)",
+      "topServices": "Top services par coût ({n})",
+      "actions": "Actions recommandées ({n})",
+      "providerBreakdown": "Répartition par fournisseur ({n})",
+      "budgetForecast": "Budget & prévisions"
     },
     "col": {
       "model": "Modèle",
@@ -2182,7 +2191,17 @@
       "latency": "Latence",
       "service": "Service",
       "success": "Réussite",
-      "p50": "p50"
+      "p50": "p50",
+      "avail": "Disponibilité",
+      "errorRate": "Taux d'erreur",
+      "share": "Part",
+      "date": "Date",
+      "type": "Type",
+      "severity": "Sévérité",
+      "priority": "#",
+      "action": "Action",
+      "impact": "Impact estimé",
+      "complexity": "Complexité"
     },
     "err": {
       "token_spike": "Pic de tokens",
@@ -2222,9 +2241,23 @@
     },
     "sec": {
       "actual": "A · Posture opérationnelle",
-      "reliability": "B · Fiabilité & budget",
-      "cost": "C · Coûts par modèle",
-      "performance": "D · Performance & incidents"
+      "reliability": "B · Disponibilité, erreurs & coût",
+      "cost": "C · Coûts & services",
+      "performance": "D · Performance & budget"
+    },
+    "leg": {
+      "availability": "Disponibilité",
+      "error": "Taux d'erreur",
+      "p50": "p50",
+      "p95": "p95",
+      "p99": "p99"
+    },
+    "bf": {
+      "monthly": "Budget mensuel",
+      "spent": "Dépensé (ce mois)",
+      "projected": "Prévision fin de mois",
+      "within": "Dans le budget",
+      "over": "Dépassement"
     }
   },
   "improvement": {

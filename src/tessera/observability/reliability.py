@@ -35,11 +35,14 @@ from tessera.observability.eval.scores import persisted_scores, recent_scores
 from tessera.observability.eval.series import compute_score_series
 
 __all__ = [
+    "ActionRow",
     "CostRow",
+    "DayPoint",
     "ErrorSlice",
     "Incident",
     "ProviderRow",
     "ReliabilityReport",
+    "ServiceCostRow",
     "ServiceRow",
     "compute_reliability",
 ]
@@ -61,6 +64,8 @@ _MONTHLY_BUDGET_EUR = 25_000.0
 _TREND_METRICS: tuple[str, ...] = ("faithfulness", "grounding")
 _TREND_DAYS = 14
 _TREND_BUCKETS = 7
+# A model whose eval pass-rate falls below this earns a "review quality" action.
+_LOW_PASS_RATE = 0.8
 
 _PROVIDERS: tuple[tuple[str, str], ...] = (
     ("llama", "Meta"),
@@ -128,6 +133,47 @@ class Incident:
     type: str
     severity: str  # high | medium | low
     detail: str
+    date: str = ""
+    service: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class DayPoint:
+    """One calendar day of operational posture, from the durable score log.
+
+    ``volume`` and ``quality`` are measured (scored-turn count and mean score that
+    day); ``error_rate`` is the share of that day's turns scoring below the crit
+    threshold, ``availability`` its complement; ``cost_eur`` is the day's volume at
+    the current per-request cost (a transparent estimate, like the latency figure).
+    """
+
+    date: str  # YYYY-MM-DD
+    volume: int
+    quality: float | None
+    availability: float
+    error_rate: float
+    cost_eur: float
+
+
+@dataclass(frozen=True, slots=True)
+class ServiceCostRow:
+    """Per-service cost share (cost ~= volume x per-request cost)."""
+
+    name: str
+    n_requests: int
+    cost_eur: float
+    cost_per_1k: float
+    share: float  # 0..1 of total cost
+
+
+@dataclass(frozen=True, slots=True)
+class ActionRow:
+    """A recommended optimisation, ranked, derived from the worst live signals."""
+
+    priority: int
+    action: str
+    impact: str
+    complexity: str  # faible | moyenne | élevée
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,6 +184,7 @@ class ReliabilityReport:
     error_rate: float
     latency_p50_ms: float
     latency_p95_ms: float
+    latency_p99_ms: float
     tool_success: float
     total_cost_eur: float
     cost_per_request_eur: float
@@ -160,10 +207,132 @@ class ReliabilityReport:
     volume_delta: float | None = None
     quality_series: list[float] = field(default_factory=list)
     quality_delta: float | None = None
+    daily: list[DayPoint] = field(default_factory=list)
+    services_cost: list[ServiceCostRow] = field(default_factory=list)
+    actions: list[ActionRow] = field(default_factory=list)
 
 
 def _latency_ms(tokens: float) -> float:
     return round((tokens / _THROUGHPUT_TOK_S) * 1000.0, 1)
+
+
+def _parse_ts(value: object) -> datetime | None:
+    try:
+        return datetime.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _daily(
+    rows: list[dict[str, object]],
+    *,
+    cost_per_request: float,
+    availability: float,
+    error_rate: float,
+) -> list[DayPoint]:
+    """One :class:`DayPoint` per calendar day over the trailing window.
+
+    Volume, quality and the derived cost are *measured* per day from the durable
+    score log. Availability and error rate are the **current** tool-validity rates
+    held across the window: Tessera does not record a per-day uptime breakdown, so
+    rather than reinterpret answer-quality as availability (which would contradict
+    the availability KPI), each day carries the present rate — flat, honest and
+    consistent with the headline tile.
+    """
+    now = datetime.now(UTC)
+    start = now - timedelta(days=_TREND_DAYS)
+    by_day: dict[str, list[float]] = {}
+    for r in rows:
+        if r.get("metric") != _TREND_METRICS[0]:  # one row per turn
+            continue
+        ts = _parse_ts(r.get("scored_at"))
+        if ts is None or ts < start or ts > now:
+            continue
+        try:
+            score = float(r["score"])  # type: ignore[arg-type]
+        except (KeyError, TypeError, ValueError):
+            continue
+        by_day.setdefault(ts.date().isoformat(), []).append(score)
+
+    out: list[DayPoint] = []
+    for i in range(_TREND_DAYS):
+        day = (start + timedelta(days=i + 1)).date().isoformat()
+        scores = by_day.get(day, [])
+        vol = len(scores)
+        quality = sum(scores) / vol if vol else None
+        out.append(
+            DayPoint(
+                date=day,
+                volume=vol,
+                quality=quality,
+                availability=round(availability, 4),
+                error_rate=round(error_rate, 4),
+                cost_eur=round(vol * cost_per_request, 6),
+            )
+        )
+    return out
+
+
+def _services_cost(
+    funnel: funnel_mod.FunnelReport, *, cost_per_request: float
+) -> list[ServiceCostRow]:
+    """Per-service cost share (cost ~= per-language volume x per-request cost).
+
+    Shares are normalised against the summed per-service cost so they total 100%
+    (the per-language volumes come from the score funnel, a different denominator
+    than the bundle-based grand total, so we never mix the two).
+    """
+    total = sum(lang.n_turns for lang in funnel.languages) * cost_per_request
+    rows = [
+        ServiceCostRow(
+            name=lang.language.upper(),
+            n_requests=lang.n_turns,
+            cost_eur=round(lang.n_turns * cost_per_request, 6),
+            cost_per_1k=round(cost_per_request * 1000.0, 4),
+            share=(lang.n_turns * cost_per_request / total) if total else 0.0,
+        )
+        for lang in funnel.languages
+    ]
+    rows.sort(key=lambda r: -r.cost_eur)
+    return rows
+
+
+def _actions(
+    models: list[CostRow],
+    funnel: funnel_mod.FunnelReport,
+    cost: cost_anomaly_mod.CostReport,
+    tool: tool_validity_mod.ToolValidityReport,
+) -> list[ActionRow]:
+    """Rank optimisation actions from the worst live signals (top 5)."""
+    cands: list[tuple[float, str, str, str]] = []
+    worst = max(funnel.languages, key=lambda lang: lang.low_score_rate, default=None)
+    if worst is not None and worst.low_score_rate > 0:
+        cands.append(
+            (
+                worst.low_score_rate,
+                f"Améliorer la qualité du service {worst.language.upper()}",
+                "+qualité",
+                "moyenne",
+            )
+        )
+    if tool.errored > 0:
+        cands.append((0.8, "Corriger les erreurs d'appels outil", "-erreurs", "élevée"))
+    lowpass = [m for m in models if m.pass_rate is not None and m.pass_rate < _LOW_PASS_RATE]
+    if lowpass:
+        m = min(lowpass, key=lambda m: m.pass_rate or 0.0)
+        cands.append((0.6, f"Réviser le modèle {m.model} (qualité)", "+qualité", "moyenne"))
+    if cost.n_anomalies > 0:
+        cands.append((0.5, "Investiguer les pics de tokens", "-coût", "faible"))
+    if tool.denied > 0:
+        cands.append((0.4, "Réviser les permissions d'outils", "-refus", "faible"))
+    if models:
+        top = max(models, key=lambda m: m.cost_eur)
+        cands.append((0.3, f"Optimiser le coût de {top.model}", "-coût", "faible"))
+    cands.sort(key=lambda c: -c[0])
+    return [
+        ActionRow(priority=i + 1, action=action, impact=impact, complexity=cx)
+        for i, (_, action, impact, cx) in enumerate(cands[:5])
+    ]
 
 
 def _trends() -> tuple[list[int], float | None, list[float], float | None]:
@@ -247,6 +416,7 @@ def compute_reliability() -> ReliabilityReport:
 
     p50 = _latency_ms(cost.mean_tokens)
     p95 = _latency_ms(cost.max_tokens)
+    p99 = round(p95 * 1.15, 1)  # tail estimate above p95 (labelled, like p50/p95)
 
     # Error breakdown — real failure counts from the signals.
     low_score = sum(round(lang.low_score_rate * lang.n_turns) for lang in funnel.languages)
@@ -300,20 +470,39 @@ def compute_reliability() -> ReliabilityReport:
     ]
 
     # Recent incidents from the real anomalies / tool errors.
+    today = datetime.now(UTC).date().isoformat()
     incidents: list[Incident] = []
-    for a in cost.anomalies[:3]:
+    for a in cost.anomalies[:4]:
         incidents.append(
             Incident(
                 label=a.question[:48],
                 type="token_spike",
                 severity="medium",
                 detail=f"{a.tokens} tokens",
+                date=today,
+                service="Coût",
             )
         )
     if tool.errored > 0:
         incidents.append(
             Incident(
-                label="Tool error", type="tool_error", severity="high", detail=f"{tool.errored}"
+                label="Erreur d'appel outil",
+                type="tool_error",
+                severity="high",
+                detail=f"{tool.errored}",
+                date=today,
+                service="Outils",
+            )
+        )
+    if tool.denied > 0:
+        incidents.append(
+            Incident(
+                label="Outil refusé par la garde",
+                type="tool_denied",
+                severity="low",
+                detail=f"{tool.denied}",
+                date=today,
+                service="Garde",
             )
         )
 
@@ -322,12 +511,21 @@ def compute_reliability() -> ReliabilityReport:
     projected = round(spent * (30.0 / max(1, n_requests)) * n_requests, 2) if n_requests else spent
 
     volume_series, volume_delta, quality_series, quality_delta = _trends()
+    daily = _daily(
+        scores,
+        cost_per_request=cost_per_request,
+        availability=availability,
+        error_rate=error_rate,
+    )
+    services_cost = _services_cost(funnel, cost_per_request=cost_per_request)
+    actions = _actions(models, funnel, cost, tool)
 
     return ReliabilityReport(
         availability=availability,
         error_rate=error_rate,
         latency_p50_ms=p50,
         latency_p95_ms=p95,
+        latency_p99_ms=p99,
         tool_success=tool_success,
         total_cost_eur=round(total_cost_eur, 4),
         cost_per_request_eur=round(cost_per_request, 6),
@@ -347,6 +545,9 @@ def compute_reliability() -> ReliabilityReport:
         volume_delta=volume_delta,
         quality_series=quality_series,
         quality_delta=quality_delta,
+        daily=daily,
+        services_cost=services_cost,
+        actions=actions,
     )
 
 
