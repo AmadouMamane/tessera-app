@@ -14,6 +14,11 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import {
+  TemporalRail,
+  useRailTimeline,
+  useTemporalState,
+} from "@/components/overview/temporal-rail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -377,6 +382,9 @@ const POLL = 30_000;
 export function SecurityDashboard() {
   const ts = useTranslations("security");
   const locale = useLocale();
+  const temporal = useTemporalState();
+  const { asOf, historyMode } = temporal;
+  const railTimeline = useRailTimeline();
 
   const firewall = useQuery({
     queryKey: ["firewall-efficacy"],
@@ -384,9 +392,10 @@ export function SecurityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
   const pii = useQuery({
-    queryKey: ["pii-leak"],
-    queryFn: ({ signal }) => fetchPiiLeak(signal),
-    refetchInterval: POLL,
+    queryKey: ["pii-leak", asOf],
+    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : POLL,
   });
   const lp = useQuery({
     queryKey: ["least-privilege"],
@@ -399,9 +408,10 @@ export function SecurityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
   const toxicity = useQuery({
-    queryKey: ["toxicity"],
-    queryFn: ({ signal }) => fetchToxicity(signal),
-    refetchInterval: POLL,
+    queryKey: ["toxicity", asOf],
+    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : POLL,
   });
   const crossTenant = useQuery({
     queryKey: ["cross-tenant"],
@@ -424,40 +434,40 @@ export function SecurityDashboard() {
     refetchInterval: POLL,
   });
   const anomalies = useQuery({
-    queryKey: ["anomalies"],
-    queryFn: ({ signal }) => fetchAnomalies(signal),
+    queryKey: ["anomalies", asOf],
+    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined),
     placeholderData: keepPreviousData,
-    refetchInterval: POLL,
+    refetchInterval: historyMode ? false : POLL,
   });
   const conformance = useQuery({
-    queryKey: ["conformance"],
-    queryFn: ({ signal }) => fetchConformance(signal),
+    queryKey: ["conformance", asOf],
+    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined),
     placeholderData: keepPreviousData,
-    refetchInterval: POLL,
+    refetchInterval: historyMode ? false : POLL,
   });
   const regression = useQuery({
-    queryKey: ["regression-risk"],
-    queryFn: ({ signal }) => fetchRegressionRisk(signal),
+    queryKey: ["regression-risk", asOf],
+    queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined),
     placeholderData: keepPreviousData,
-    refetchInterval: POLL,
+    refetchInterval: historyMode ? false : POLL,
   });
   const faith = useQuery({
-    queryKey: ["score-series", "faithfulness"],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, undefined, "faithfulness"),
+    queryKey: ["score-series", "faithfulness", asOf],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness"),
     placeholderData: keepPreviousData,
-    refetchInterval: POLL,
+    refetchInterval: historyMode ? false : POLL,
   });
   const grounding = useQuery({
-    queryKey: ["score-series", "grounding"],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, undefined, "grounding"),
+    queryKey: ["score-series", "grounding", asOf],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding"),
     placeholderData: keepPreviousData,
-    refetchInterval: POLL,
+    refetchInterval: historyMode ? false : POLL,
   });
   const whatChanged = useQuery({
-    queryKey: ["what-changed"],
-    queryFn: ({ signal }) => fetchWhatChanged(signal),
+    queryKey: ["what-changed", asOf],
+    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined),
     placeholderData: keepPreviousData,
-    refetchInterval: POLL,
+    refetchInterval: historyMode ? false : POLL,
   });
   const failed = useQuery({
     queryKey: ["failed-cases", locale],
@@ -468,6 +478,7 @@ export function SecurityDashboard() {
   const fw = firewall.data;
   const attackRate = fw && fw.n_positive > 0 ? fw.false_negative / fw.n_positive : null;
   const blocked = fw ? `${fw.true_positive}/${fw.n_positive}` : "—";
+  const blockRate = fw && fw.n_positive > 0 ? fw.true_positive / fw.n_positive : null;
   const piiRate = pii.data?.leak_rate ?? null;
   const toxRate = toxicity.data?.toxicity_rate ?? null;
   const xtRate = crossTenant.data?.leak_rate ?? null;
@@ -604,97 +615,109 @@ export function SecurityDashboard() {
         </div>
       </div>
 
-      {/* A. État actuel */}
-      <Sec>{ts("sec.actual")}</Sec>
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-        <Kpi
-          icon={ShieldAlert}
-          label={ts("kpi.attackRate")}
-          value={pct(attackRate)}
-          tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
-          series={fwSpark}
-          delta={sparkDelta(attackSeries)}
-          deltaUpIsGood={false}
-        />
-        <Kpi
-          icon={ShieldCheck}
-          label={ts("kpi.blocked")}
-          value={blocked}
-          tone={GOOD}
-          series={fwSpark.map((v) => 1 - v)}
-          delta={sparkDelta(incidentSeries.map((v) => -v))}
-          deltaUpIsGood
-        />
-        <Kpi
-          icon={ShieldCheck}
-          label={ts("kpi.piiLeak")}
-          value={pct(piiRate)}
-          tone={piiRate ? BAD : GOOD}
-        />
-        <Kpi
-          icon={ShieldCheck}
-          label={ts("kpi.leastPriv")}
-          value={`${lp.data?.n_used ?? 0}/${lp.data?.n_granted ?? 0}`}
-          tone={MUTED}
-          hint={ts("kpi.leastPrivHint")}
-        />
-        <Kpi
-          icon={ShieldAlert}
-          label={ts("kpi.sensitiveMemory")}
-          value={`${inventory.data?.n_expiring_soon ?? 0}`}
-          tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
-          hint={ts("kpi.sensitiveMemoryHint")}
-        />
-        <Kpi
-          icon={ShieldCheck}
-          label={ts("kpi.guard")}
-          value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
-          tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
-          hint={`${ts("kpi.recall")} ${fw?.recall?.toFixed(2) ?? "—"}`}
-        />
-      </div>
-
-      {/* B. Contrôles critiques */}
-      <Sec>{ts("sec.controls")}</Sec>
-      <Card>
-        <CardContent className="overflow-x-auto p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                <th className="px-3 py-2 font-medium">{ts("col.signal")}</th>
-                <th className="px-3 py-2 font-medium">{ts("col.state")}</th>
-                <th className="px-3 py-2 font-medium">{ts("col.value")}</th>
-                <th className="px-3 py-2 font-medium">{ts("col.target")}</th>
-                <th className="px-3 py-2 font-medium">{ts("col.action")}</th>
-                <th className="px-3 py-2 font-medium">{ts("col.role")}</th>
-                <th className="px-3 py-2 font-medium">{ts("col.case")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {controls.map((c) => (
-                <tr key={c.key} className="border-b border-[var(--border)]/50">
-                  <td className="px-3 py-2 font-medium">{ts(`ctrl.${c.key}`)}</td>
-                  <td className="px-3 py-2">
-                    <Badge tone={TONE_BADGE[c.tone]}>{ts(`state.${c.tone}`)}</Badge>
-                  </td>
-                  <td className={`px-3 py-2 tabular-nums ${toneText(c.tone)}`}>{c.value}</td>
-                  <td className="px-3 py-2 tabular-nums text-[var(--muted-foreground)]">
-                    {c.target}
-                  </td>
-                  <td className="px-3 py-2 text-[var(--muted-foreground)]">{c.action}</td>
-                  <td className="px-3 py-2">{c.role}</td>
-                  <td className="px-3 py-2 font-mono text-[0.7rem] text-[var(--tessera-green)]">
-                    {c.case}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      {/* Shared temporal rail (Live / Replay as-of-T) */}
+      <TemporalRail
+        mode={temporal.mode}
+        liveStatus={ts("status.realtime")}
+        timeline={railTimeline.data}
+        selectedAt={temporal.selectedAt}
+        onSelectedAtChange={temporal.setSelectedAt}
+        periodKey={temporal.periodKey}
+        onPeriodChange={temporal.setPeriodKey}
+        onModeChange={temporal.changeMode}
+      />
 
       <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-2">
+          {/* A. État actuel */}
+          <Sec>{ts("sec.actual")}</Sec>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("kpi.attackRate")}
+              value={pct(attackRate)}
+              tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
+              series={fwSpark}
+              delta={sparkDelta(attackSeries)}
+              deltaUpIsGood={false}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.blocked")}
+              value={blocked}
+              tone={GOOD}
+              series={fwSpark.map((v) => 1 - v)}
+              delta={sparkDelta(incidentSeries.map((v) => -v))}
+              deltaUpIsGood
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.piiLeak")}
+              value={pct(piiRate)}
+              tone={piiRate ? BAD : GOOD}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.leastPriv")}
+              value={`${lp.data?.n_used ?? 0}/${lp.data?.n_granted ?? 0}`}
+              tone={MUTED}
+              hint={ts("kpi.leastPrivHint")}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("kpi.sensitiveMemory")}
+              value={`${inventory.data?.n_expiring_soon ?? 0}`}
+              tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
+              hint={ts("kpi.sensitiveMemoryHint")}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.guard")}
+              value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
+              tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
+              hint={`${ts("kpi.recall")} ${fw?.recall?.toFixed(2) ?? "—"}`}
+            />
+          </div>
+
+          {/* B. Contrôles critiques */}
+          <Sec>{ts("sec.controls")}</Sec>
+          <Card>
+            <CardContent className="overflow-x-auto p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                    <th className="px-3 py-2 font-medium">{ts("col.signal")}</th>
+                    <th className="px-3 py-2 font-medium">{ts("col.state")}</th>
+                    <th className="px-3 py-2 font-medium">{ts("col.value")}</th>
+                    <th className="px-3 py-2 font-medium">{ts("col.target")}</th>
+                    <th className="px-3 py-2 font-medium">{ts("col.action")}</th>
+                    <th className="px-3 py-2 font-medium">{ts("col.role")}</th>
+                    <th className="px-3 py-2 font-medium">{ts("col.case")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {controls.map((c) => (
+                    <tr key={c.key} className="border-b border-[var(--border)]/50">
+                      <td className="px-3 py-2 font-medium">{ts(`ctrl.${c.key}`)}</td>
+                      <td className="px-3 py-2">
+                        <Badge tone={TONE_BADGE[c.tone]}>{ts(`state.${c.tone}`)}</Badge>
+                      </td>
+                      <td className={`px-3 py-2 tabular-nums ${toneText(c.tone)}`}>{c.value}</td>
+                      <td className="px-3 py-2 tabular-nums text-[var(--muted-foreground)]">
+                        {c.target}
+                      </td>
+                      <td className="px-3 py-2 text-[var(--muted-foreground)]">{c.action}</td>
+                      <td className="px-3 py-2">{c.role}</td>
+                      <td className="px-3 py-2 font-mono text-[0.7rem] text-[var(--tessera-green)]">
+                        {c.case}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
           {/* C. Diagnostic racine */}
           <Sec>{ts("sec.diagnostic")}</Sec>
           <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-4">
@@ -811,24 +834,24 @@ export function SecurityDashboard() {
             </Panel>
           </div>
 
-          {/* E. Privacy / Memory */}
+          {/* E. Privacy / Mémoire / SOC */}
           <Sec>{ts("sec.privacy")}</Sec>
           <div className="grid items-start gap-2 lg:grid-cols-3">
-            <Panel title={ts("panel.erasure")}>
-              <div className="flex flex-col gap-1 text-[0.72rem]">
-                <KV
-                  label={ts("panel.conversations")}
-                  value={`${erasure.data?.n_conversations ?? 0}`}
-                />
-                <KV label={ts("panel.bundles")} value={`${erasure.data?.n_bundles ?? 0}`} />
-                <KV label={ts("panel.scores")} value={`${erasure.data?.n_scores ?? 0}`} />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-1 h-7 justify-center text-[0.7rem]"
-                >
-                  {ts("panel.purgeCta")}
-                </Button>
+            <Panel title={ts("panel.redteam")}>
+              <div className="flex flex-col gap-1.5 text-[0.72rem]">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-semibold tabular-nums">{blocked}</span>
+                  <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
+                  <span className="ml-auto font-semibold tabular-nums text-amber-500">
+                    {fw?.false_negative ?? 0} {ts("panel.bypasses")}
+                  </span>
+                </div>
+                <div className="flex h-2 w-full overflow-hidden rounded-full">
+                  <div style={{ flexBasis: `${(blockRate ?? 0) * 100}%`, background: "#10b981" }} />
+                  <div style={{ flexGrow: 1, background: "#f97316" }} />
+                </div>
+                <KV label={ts("panel.blockRate")} value={pct(blockRate)} tone={GOOD} />
+                <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
               </div>
             </Panel>
             <Panel title={ts("panel.erasureSurface")}>
@@ -838,13 +861,22 @@ export function SecurityDashboard() {
                   label={ts("panel.completeness")}
                   tone="#10b981"
                 />
-                <div className="flex flex-col gap-0.5 text-[0.7rem] text-[var(--muted-foreground)]">
-                  <span>{ts("panel.gdprArt17")}</span>
-                  <span className="tabular-nums">
-                    {erasure.data?.n_bundles ?? 0} / {erasure.data?.n_conversations ?? 0}
-                  </span>
+                <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
+                  <KV
+                    label={ts("panel.conversations")}
+                    value={`${erasure.data?.n_conversations ?? 0}`}
+                  />
+                  <KV label={ts("panel.bundles")} value={`${erasure.data?.n_bundles ?? 0}`} />
+                  <KV label={ts("panel.scores")} value={`${erasure.data?.n_scores ?? 0}`} />
                 </div>
               </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 h-7 w-full justify-center text-[0.7rem]"
+              >
+                {ts("panel.purgeCta")}
+              </Button>
             </Panel>
             <Panel title={ts("panel.inversion")}>
               {inversion.data?.available === false || inversion.isLoading ? (
@@ -1026,6 +1058,29 @@ function SecurityRail({
             >
               {ts("rail.evidenceCta")}
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{ts("rail.quickActions")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-0.5">
+            {[
+              { key: "qaRedteam", icon: Siren },
+              { key: "qaIncident", icon: AlertTriangle },
+              { key: "qaPurge", icon: Trash2 },
+              { key: "qaTicket", icon: ShieldCheck },
+            ].map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
+              >
+                <a.icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{ts(`rail.${a.key}`)}</span>
+              </button>
+            ))}
           </CardContent>
         </Card>
 

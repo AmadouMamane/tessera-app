@@ -1882,7 +1882,7 @@
       "controls": "B. Critical controls",
       "diagnostic": "C. Root-cause diagnostic",
       "predictive": "D. Predictive signals",
-      "privacy": "E. Privacy / Memory (7 days)",
+      "privacy": "E. Privacy / Memory / SOC",
       "actions": "F. Recommended actions"
     },
     "kpi": {
@@ -1977,7 +1977,12 @@
       "whatChanged": "What changed",
       "noChanges": "No recent change",
       "attackLine": "Attack rate",
-      "incidentLine": "Critical incidents"
+      "incidentLine": "Critical incidents",
+      "redteam": "Continuous red-team (7d)",
+      "blocked": "blocked",
+      "bypasses": "bypasses",
+      "blockRate": "Block rate",
+      "uniqueBypasses": "Unique bypasses"
     },
     "overProvisioned": "Over-privileged",
     "act": {
@@ -2016,7 +2021,12 @@
       "risk": "Risk",
       "siem": "SIEM / SOC (24h)",
       "exportSiem": "Export to SIEM",
-      "anomalies": "{n} session anomalies detected"
+      "anomalies": "{n} session anomalies detected",
+      "quickActions": "Quick actions",
+      "qaRedteam": "Run red-team",
+      "qaIncident": "Open incident",
+      "qaPurge": "Purge GDPR memory",
+      "qaTicket": "Create compliance ticket"
     },
     "fail": {
       "injection": "Prompt injection",
