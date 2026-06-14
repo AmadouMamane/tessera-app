@@ -21,6 +21,7 @@ from tessera.observability import (
     access as access_mod,
     ai_act as ai_act_mod,
     anomalies as anomalies_mod,
+    assistant as assistant_mod,
     automations as automations_mod,
     citation_resolver as citation_resolver_mod,
     citation_validity as citation_validity_mod,
@@ -580,9 +581,7 @@ async def observability_calibration() -> dict[str, object]:
                 sys.stderr.write(f"tessera.observability.calibration: cache read failed: {exc}\n")
         if _calibration_cache is None:
             try:
-                report = await calibrate(
-                    LLMJudge(model=_CALIBRATION_JUDGE_MODEL), load_gold_set()
-                )
+                report = await calibrate(LLMJudge(model=_CALIBRATION_JUDGE_MODEL), load_gold_set())
                 _calibration_cache = {"available": True, **asdict(report)}
             except Exception as exc:  # never break the dashboard on a judge/IO error
                 sys.stderr.write(f"tessera.observability.calibration: failed: {exc}\n")
@@ -633,6 +632,22 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/assistant")
+async def observability_assistant() -> dict[str, object]:
+    """Assistant overview (Chat and Console sub-tabs).
+
+    Composes the session header, the grounded conversation, the session context,
+    the cited sources, the tools called, the guardrails triggered, the response
+    quality scores, the execution trace, the follow-up suggestions and the
+    console rail KPIs into one payload. Degrades to ``available: false``.
+    """
+    try:
+        return {"available": True, **assistant_mod.compute_assistant_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.assistant: failed: {exc}\n")
         return {"available": False}
 
 
@@ -817,9 +832,7 @@ async def observability_replay_shadow() -> dict[str, object]:
 
 
 @router.get("/observability/reliability")
-async def observability_reliability(
-    days: int = 14, anchor: str | None = None
-) -> dict[str, object]:
+async def observability_reliability(days: int = 14, anchor: str | None = None) -> dict[str, object]:
     """Operational reliability & cost posture from the real signals (#08).
 
     Token cost, tool success, span overhead, per-language quality and per-model

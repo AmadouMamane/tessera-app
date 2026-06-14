@@ -16,6 +16,7 @@
       "configure": "Konfigurieren"
     },
     "assistant": "Assistent",
+    "agentUi": "Agent UI",
     "inbox": "Zu bearbeiten",
     "overview": "Übersicht",
     "quality": "KI-Qualität",
@@ -4172,5 +4173,109 @@
       "total": "{n} Elemente",
       "source": "{src}"
     }
+  },
+  "assistant": {
+    "title": "Assistent",
+    "subtitle": "Interagieren Sie mit dem Assistenten und prüfen Sie jede Antwort.",
+    "realtime": "Sitzungen in Echtzeit",
+    "tabs": {
+      "chat": "Chat",
+      "console": "Konsole"
+    },
+    "pill": {
+      "model": "Modell",
+      "sources": "Quellen",
+      "guardrails": "Schutzregeln",
+      "language": "Sprache",
+      "prompt": "Prompt",
+      "trace": "Trace",
+      "id": "ID"
+    },
+    "sessionActive": "Sitzung aktiv",
+    "replayAt": "Erneut ab T",
+    "period24h": "24 Std.",
+    "newSession": "Neue Sitzung",
+    "chat": {
+      "title": "Chat",
+      "subtitle": "Interagieren Sie mit dem Assistenten. Erhalten Sie verlässliche und nachvollziehbare Antworten."
+    },
+    "console": {
+      "title": "Konsole",
+      "subtitle": "Interagieren Sie mit dem Assistenten und beobachten Sie Traces, Quellen, Werkzeuge und Schutzregeln im Detail."
+    },
+    "you": "Sie",
+    "assistant": "Assistent",
+    "toolsLabel": "Werkzeuge",
+    "guardrailsLabel": "Schutzregeln",
+    "addToEval": "Zum Evaluationsset hinzufügen",
+    "createIncident": "Vorfall erstellen",
+    "exportResponse": "Antwort exportieren",
+    "replaySession": "Diese Sitzung wiederholen",
+    "compareVersion": "Mit aktueller Version vergleichen",
+    "exportSession": "Sitzung exportieren",
+    "closeSession": "Sitzung schließen",
+    "useful": "Hilfreich",
+    "notUseful": "Nicht hilfreich",
+    "composerPlaceholder": "Stellen Sie dem Assistenten Ihre Frage…",
+    "disclaimer": "Der Assistent kann Fehler machen. Prüfen Sie wichtige Informationen.",
+    "sessionActiveAt": "Sitzung aktiv um",
+    "live": "Live",
+    "contextValue": "Tessera-Plattform",
+    "rail": {
+      "sla": "SLA eingehalten",
+      "mttr": "MTTR",
+      "context": "Kontext",
+      "tab": {
+        "context": "Kontext",
+        "sources": "Quellen",
+        "tools": "Werkzeuge",
+        "guardrails": "Schutzregeln"
+      }
+    },
+    "sessionContext": "Sitzungskontext",
+    "ctx": {
+      "user": "Benutzer",
+      "environment": "Umgebung",
+      "objective": "Ziel",
+      "tags": "Tags"
+    },
+    "sourcesUsed": "Verwendete Quellen",
+    "quickActions": "Schnellaktionen",
+    "qa": {
+      "followUp": "Folgefrage stellen",
+      "summary": "Zusammenfassung anfordern",
+      "openConsole": "In der Konsole öffnen",
+      "createIncident": "Vorfall erstellen",
+      "addEval": "Zum Evaluationsset hinzufügen",
+      "exportSession": "Sitzung exportieren"
+    },
+    "feedbackTitle": "Ihr Feedback zu dieser Antwort",
+    "feedbackSubtitle": "Helfen Sie uns, die Antwortqualität zu verbessern.",
+    "fb": {
+      "veryUseful": "Sehr hilfreich",
+      "useful": "Hilfreich",
+      "neutral": "Neutral"
+    },
+    "reportProblem": "Problem melden",
+    "qualityTitle": "Qualität & Sicherheit der Antwort",
+    "quality": {
+      "pertinence": "Relevanz",
+      "exactitude": "Genauigkeit",
+      "completude": "Vollständigkeit"
+    },
+    "toolsCalled": "Aufgerufene Werkzeuge",
+    "guardrailsTriggered": "Ausgelöste Schutzregeln",
+    "guardWarn": "Warn.",
+    "traceTitle": "Trace in Echtzeit",
+    "trace": {
+      "reception": "Empfang der Anfrage",
+      "analyse": "Analyse & Klassifizierung",
+      "sources": "Quellensuche",
+      "outils": "Werkzeuge ausgeführt",
+      "gardefous": "Schutzregeln",
+      "generation": "Antworterzeugung"
+    },
+    "tenant": "Mandant",
+    "sessionShort": "Sitzung"
   }
 }

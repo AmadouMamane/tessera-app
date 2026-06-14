@@ -16,6 +16,7 @@
       "configure": "Configurer"
     },
     "assistant": "Assistant",
+    "agentUi": "Agent UI",
     "inbox": "À traiter",
     "overview": "Vue d’ensemble",
     "quality": "Qualité IA",
@@ -4172,5 +4173,109 @@
       "total": "{n} éléments",
       "source": "{src}"
     }
+  },
+  "assistant": {
+    "title": "Assistant",
+    "subtitle": "Interagissez avec l’assistant et auditez chaque réponse.",
+    "realtime": "Sessions en temps réel",
+    "tabs": {
+      "chat": "Chat",
+      "console": "Console"
+    },
+    "pill": {
+      "model": "Modèle",
+      "sources": "Sources",
+      "guardrails": "Garde-fous",
+      "language": "Langue",
+      "prompt": "Prompt",
+      "trace": "Trace",
+      "id": "ID"
+    },
+    "sessionActive": "Session active",
+    "replayAt": "Relire à T",
+    "period24h": "24h",
+    "newSession": "Nouvelle session",
+    "chat": {
+      "title": "Chat",
+      "subtitle": "Interagissez avec l’assistant. Obtenez des réponses fiables et traçables."
+    },
+    "console": {
+      "title": "Console",
+      "subtitle": "Interagissez avec l’assistant et observez en détail les traces, sources, outils et garde-fous."
+    },
+    "you": "Vous",
+    "assistant": "Assistant",
+    "toolsLabel": "Outils",
+    "guardrailsLabel": "Garde-fous",
+    "addToEval": "Ajouter au jeu d’évaluation",
+    "createIncident": "Créer un incident",
+    "exportResponse": "Exporter la réponse",
+    "replaySession": "Rejouer cette session",
+    "compareVersion": "Comparer à la version actuelle",
+    "exportSession": "Exporter la session",
+    "closeSession": "Clôturer la session",
+    "useful": "Utile",
+    "notUseful": "Pas utile",
+    "composerPlaceholder": "Posez votre question à l’assistant…",
+    "disclaimer": "L’assistant peut faire des erreurs. Vérifiez les informations importantes.",
+    "sessionActiveAt": "Session active à",
+    "live": "Live",
+    "contextValue": "Plateforme Tessera",
+    "rail": {
+      "sla": "SLA respecté",
+      "mttr": "MTTR",
+      "context": "Contexte",
+      "tab": {
+        "context": "Contexte",
+        "sources": "Sources",
+        "tools": "Outils",
+        "guardrails": "Garde-fous"
+      }
+    },
+    "sessionContext": "Contexte de la session",
+    "ctx": {
+      "user": "Utilisateur",
+      "environment": "Environnement",
+      "objective": "Objectif",
+      "tags": "Tags"
+    },
+    "sourcesUsed": "Sources utilisées",
+    "quickActions": "Actions rapides",
+    "qa": {
+      "followUp": "Poser une question de suivi",
+      "summary": "Demander un résumé",
+      "openConsole": "Ouvrir dans la console",
+      "createIncident": "Créer un incident",
+      "addEval": "Ajouter au jeu d’évaluation",
+      "exportSession": "Exporter la session"
+    },
+    "feedbackTitle": "Votre feedback sur cette réponse",
+    "feedbackSubtitle": "Aidez-nous à améliorer la qualité des réponses.",
+    "fb": {
+      "veryUseful": "Très utile",
+      "useful": "Utile",
+      "neutral": "Neutre"
+    },
+    "reportProblem": "Signaler un problème",
+    "qualityTitle": "Qualité & sécurité de la réponse",
+    "quality": {
+      "pertinence": "Pertinence",
+      "exactitude": "Exactitude",
+      "completude": "Complétude"
+    },
+    "toolsCalled": "Outils appelés",
+    "guardrailsTriggered": "Garde-fous déclenchés",
+    "guardWarn": "Avert.",
+    "traceTitle": "Trace en temps réel",
+    "trace": {
+      "reception": "Réception de la requête",
+      "analyse": "Analyse & classification",
+      "sources": "Recherche de sources",
+      "outils": "Outils exécutés",
+      "gardefous": "Garde-fous",
+      "generation": "Génération de la réponse"
+    },
+    "tenant": "Tenant",
+    "sessionShort": "session"
   }
 }

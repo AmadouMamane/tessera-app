@@ -2870,3 +2870,48 @@ export const InboxOverviewSchema = z.object({
   footer: z.object({ total: z.number().int(), source: z.string() }),
 });
 export type InboxOverview = z.infer<typeof InboxOverviewSchema>;
+
+const AsMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  time: z.string(),
+  text: z.string().optional(),
+  latency: z.string().optional(),
+  tokens: z.string().optional(),
+  intro: z.string().optional(),
+  points: z.array(z.object({ label: z.string(), body: z.string() })).optional(),
+  outro: z.string().optional(),
+});
+
+export const AssistantOverviewSchema = z.object({
+  available: z.boolean(),
+  session: z.object({
+    id: z.string(),
+    status: z.string(),
+    model: z.string(),
+    prompt_version: z.string(),
+    sources_snapshot: z.string(),
+    guardrails_version: z.string(),
+    language: z.string(),
+    trace: z.string(),
+    started_at: z.string(),
+    replay_at: z.string(),
+  }),
+  context: z.object({
+    user: z.string(),
+    environment: z.string(),
+    objective: z.string(),
+    tags: z.array(z.string()),
+  }),
+  messages: z.array(AsMessageSchema),
+  sources: z.array(z.object({ title: z.string() })),
+  tools: z.array(z.object({ name: z.string() })),
+  guardrails: z.array(
+    z.object({ name: z.string(), detail: z.string(), level: z.enum(["warn", "crit", "ok"]) }),
+  ),
+  quality: z.array(z.object({ key: z.string(), value: z.number() })),
+  trace: z.array(z.object({ key: z.string(), done: z.boolean() })),
+  suggestions: z.array(z.string()),
+  rail_kpis: z.array(z.object({ key: z.string(), value: z.string() })),
+  tenant: z.string(),
+});
+export type AssistantOverview = z.infer<typeof AssistantOverviewSchema>;

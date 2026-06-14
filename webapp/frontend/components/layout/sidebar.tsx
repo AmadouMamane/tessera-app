@@ -14,6 +14,7 @@ import {
   KeyRound,
   LockKeyhole,
   MemoryStick,
+  MessagesSquare,
   PlayCircle,
   ScrollText,
   Settings,
@@ -33,6 +34,7 @@ import { cn } from "@/lib/cn";
 
 type RouteHref =
   | "/"
+  | "/assistant"
   | "/chat"
   | "/inbox"
   | "/audit"
@@ -75,7 +77,8 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
   {
     labelKey: "groups.product",
     items: [
-      { href: "/chat", icon: Bot, labelKey: "assistant" },
+      { href: "/assistant", icon: Bot, labelKey: "assistant" },
+      { href: "/chat", icon: MessagesSquare, labelKey: "agentUi" },
       { href: "/inbox", icon: ClipboardList, labelKey: "inbox", badge: "24", badgeTone: "danger" },
     ],
   },

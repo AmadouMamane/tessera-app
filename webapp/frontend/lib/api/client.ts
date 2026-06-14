@@ -20,6 +20,8 @@ import {
   AccessOverviewSchema,
   type AnomalyReport,
   AnomalyReportSchema,
+  type AssistantOverview,
+  AssistantOverviewSchema,
   type AuditActorRole,
   type AuditEventType,
   type AuditIntegrity,
@@ -709,6 +711,10 @@ export async function fetchSourcesOverview(signal?: AbortSignal): Promise<Source
 
 export async function fetchAccessOverview(signal?: AbortSignal): Promise<AccessOverview> {
   return request("/observability/access", { signal }, AccessOverviewSchema);
+}
+
+export async function fetchAssistantOverview(signal?: AbortSignal): Promise<AssistantOverview> {
+  return request("/observability/assistant", { signal }, AssistantOverviewSchema);
 }
 
 export async function fetchIntegrationsOverview(

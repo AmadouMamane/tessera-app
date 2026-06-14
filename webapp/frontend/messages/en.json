@@ -16,6 +16,7 @@
       "configure": "Configure"
     },
     "assistant": "Assistant",
+    "agentUi": "Agent UI",
     "inbox": "To process",
     "overview": "Overview",
     "quality": "AI quality",
@@ -4172,5 +4173,109 @@
       "total": "{n} items",
       "source": "{src}"
     }
+  },
+  "assistant": {
+    "title": "Assistant",
+    "subtitle": "Interact with the assistant and audit every response.",
+    "realtime": "Sessions in real time",
+    "tabs": {
+      "chat": "Chat",
+      "console": "Console"
+    },
+    "pill": {
+      "model": "Model",
+      "sources": "Sources",
+      "guardrails": "Guardrails",
+      "language": "Language",
+      "prompt": "Prompt",
+      "trace": "Trace",
+      "id": "ID"
+    },
+    "sessionActive": "Session active",
+    "replayAt": "Replay at T",
+    "period24h": "24h",
+    "newSession": "New session",
+    "chat": {
+      "title": "Chat",
+      "subtitle": "Interact with the assistant. Get reliable, traceable answers."
+    },
+    "console": {
+      "title": "Console",
+      "subtitle": "Interact with the assistant and inspect traces, sources, tools and guardrails in detail."
+    },
+    "you": "You",
+    "assistant": "Assistant",
+    "toolsLabel": "Tools",
+    "guardrailsLabel": "Guardrails",
+    "addToEval": "Add to evaluation set",
+    "createIncident": "Create incident",
+    "exportResponse": "Export response",
+    "replaySession": "Replay this session",
+    "compareVersion": "Compare to current version",
+    "exportSession": "Export session",
+    "closeSession": "Close session",
+    "useful": "Useful",
+    "notUseful": "Not useful",
+    "composerPlaceholder": "Ask the assistant your question…",
+    "disclaimer": "The assistant can make mistakes. Verify important information.",
+    "sessionActiveAt": "Session active at",
+    "live": "Live",
+    "contextValue": "Tessera Platform",
+    "rail": {
+      "sla": "SLA met",
+      "mttr": "MTTR",
+      "context": "Context",
+      "tab": {
+        "context": "Context",
+        "sources": "Sources",
+        "tools": "Tools",
+        "guardrails": "Guardrails"
+      }
+    },
+    "sessionContext": "Session context",
+    "ctx": {
+      "user": "User",
+      "environment": "Environment",
+      "objective": "Objective",
+      "tags": "Tags"
+    },
+    "sourcesUsed": "Sources used",
+    "quickActions": "Quick actions",
+    "qa": {
+      "followUp": "Ask a follow-up question",
+      "summary": "Request a summary",
+      "openConsole": "Open in console",
+      "createIncident": "Create incident",
+      "addEval": "Add to evaluation set",
+      "exportSession": "Export session"
+    },
+    "feedbackTitle": "Your feedback on this response",
+    "feedbackSubtitle": "Help us improve the quality of responses.",
+    "fb": {
+      "veryUseful": "Very useful",
+      "useful": "Useful",
+      "neutral": "Neutral"
+    },
+    "reportProblem": "Report a problem",
+    "qualityTitle": "Response quality & safety",
+    "quality": {
+      "pertinence": "Relevance",
+      "exactitude": "Accuracy",
+      "completude": "Completeness"
+    },
+    "toolsCalled": "Tools called",
+    "guardrailsTriggered": "Guardrails triggered",
+    "guardWarn": "Warn.",
+    "traceTitle": "Trace in real time",
+    "trace": {
+      "reception": "Request received",
+      "analyse": "Analysis & classification",
+      "sources": "Source retrieval",
+      "outils": "Tools executed",
+      "gardefous": "Guardrails",
+      "generation": "Response generation"
+    },
+    "tenant": "Tenant",
+    "sessionShort": "session"
   }
 }
