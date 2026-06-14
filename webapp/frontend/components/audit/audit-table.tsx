@@ -22,6 +22,7 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DeltaBadge, MetricCard } from "@/components/cockpit/metric-card";
+import { CountList, SummaryPanel } from "@/components/cockpit/summary-panel";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -861,72 +862,26 @@ function BottomPanels({
   const t = useTranslations("audit.panels");
   return (
     <div className="grid shrink-0 grid-cols-1 gap-3 lg:grid-cols-5">
-      <Panel title={t("timeline")}>
+      <SummaryPanel title={t("timeline")}>
         {loading || !overview ? (
           <Skeleton className="h-28 w-full" />
         ) : (
           <TimelineChart overview={overview} />
         )}
-      </Panel>
-      <Panel title={t("actors")}>
+      </SummaryPanel>
+      <SummaryPanel title={t("actors")}>
         <CountList items={overview?.actors ?? []} loading={loading} />
-      </Panel>
-      <Panel title={t("policies")}>
+      </SummaryPanel>
+      <SummaryPanel title={t("policies")}>
         <CountList items={overview?.policies ?? []} loading={loading} danger />
-      </Panel>
-      <Panel title={t("proofs")}>
+      </SummaryPanel>
+      <SummaryPanel title={t("proofs")}>
         <ProofList overview={overview} loading={loading} />
-      </Panel>
-      <Panel title={t("filters")}>
+      </SummaryPanel>
+      <SummaryPanel title={t("filters")}>
         <CountList items={overview?.suggested_filters ?? []} loading={loading} />
-      </Panel>
+      </SummaryPanel>
     </div>
-  );
-}
-
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex h-[142px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <h2 className="shrink-0 font-sans text-sm font-semibold text-[var(--tessera-text)]">
-        {title}
-      </h2>
-      <div className="mt-2 min-h-0 flex-1 overflow-hidden pb-1">{children}</div>
-    </section>
-  );
-}
-
-function CountList({
-  items,
-  loading,
-  danger,
-}: {
-  items: { key: string; count: number }[];
-  loading: boolean;
-  danger?: boolean;
-}) {
-  if (loading) return <Skeleton className="h-24 w-full" />;
-  const max = Math.max(...items.map((item) => item.count), 1);
-  return (
-    <ol className="space-y-1 pb-1">
-      {items.slice(0, 3).map((item, index) => (
-        <li
-          key={`${item.key}-${index}`}
-          className="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-[0.72rem] leading-tight"
-        >
-          <span className="font-mono text-[var(--tessera-text-muted)]">{index + 1}</span>
-          <div className="min-w-0">
-            <p className="truncate text-[var(--tessera-text)]">{item.key}</p>
-            <div className="mt-0.5 h-1.5 rounded-full bg-[var(--tessera-bg)]">
-              <div
-                className={cn("h-full rounded-full", danger ? "bg-red-400" : "bg-[#2e72d2]")}
-                style={{ width: `${(item.count / max) * 100}%` }}
-              />
-            </div>
-          </div>
-          <span className="font-mono text-[var(--tessera-text-muted)]">{item.count}</span>
-        </li>
-      ))}
-    </ol>
   );
 }
 
