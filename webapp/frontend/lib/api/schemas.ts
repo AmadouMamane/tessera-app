@@ -2141,3 +2141,90 @@ export const CurationOverviewSchema = z.object({
   footer: z.object({ release: z.string(), source: z.string(), sync: z.string() }),
 });
 export type CurationOverview = z.infer<typeof CurationOverviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Automations (page #13)
+// ---------------------------------------------------------------------------
+
+const AuKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  delta_label: z.string(),
+  good_is_up: z.boolean(),
+  series: z.array(z.number()),
+});
+const AuCatalogueSchema = z.object({
+  name: z.string(),
+  trigger: z.string(),
+  action: z.string(),
+  scope: z.string(),
+  mode: z.enum(["auto", "approb"]),
+  last_run: z.string(),
+  success: z.string(),
+  role: z.string(),
+  status: z.enum(["active", "paused"]),
+});
+const AuIncidentSchema = z.object({
+  severity: z.enum(["critique", "eleve", "moyen", "faible"]),
+  id: z.string(),
+  label: z.string(),
+  time: z.string(),
+});
+const AuPipelineSchema = z.object({ key: z.string(), count: z.string(), pct: z.number() });
+const AuSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+const AuEnvSchema = z.object({ key: z.string(), count: z.number().int(), color: z.string() });
+const AuJournalSchema = z.object({
+  time: z.string(),
+  automation: z.string(),
+  trigger: z.string(),
+  actor: z.string(),
+  evidence: z.string(),
+  duration: z.string(),
+  result: z.enum(["success", "fail", "blocked", "approb"]),
+});
+const AuApprovalSchema = z.object({ name: z.string(), since: z.string(), role: z.string() });
+const AuGuardrailSchema = z.object({ key: z.string(), count: z.number().int(), pct: z.number() });
+const AuSavingSchema = z.object({ key: z.string(), value: z.string(), delta: z.string() });
+
+export const AutomationsOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  period_days: z.number().int(),
+  updated_at: z.string(),
+  kpis: z.array(AuKpiSchema),
+  catalogue: z.array(AuCatalogueSchema),
+  recent_incidents: z.array(AuIncidentSchema),
+  pipeline: z.array(AuPipelineSchema),
+  completion: z.string(),
+  by_type: z.array(AuSliceSchema),
+  by_type_total: z.number().int(),
+  by_env: z.array(AuEnvSchema),
+  journal: z.array(AuJournalSchema),
+  approvals: z.array(AuApprovalSchema),
+  guardrails: z.array(AuGuardrailSchema),
+  performance: z.object({
+    labels: z.array(z.string()),
+    success: z.array(z.number()),
+    average: z.array(z.number()),
+  }),
+  savings: z.array(AuSavingSchema),
+  context: z.object({
+    version: z.string(),
+    last_modified: z.string(),
+    author: z.string(),
+    branch: z.string(),
+    scope: z.string(),
+  }),
+  governance: z.object({
+    dual_control: z.boolean(),
+    roles: z.array(z.object({ mode: z.string(), scope: z.string() })),
+    default_scope: z.string(),
+  }),
+  footer: z.object({ source: z.string(), certified: z.string() }),
+});
+export type AutomationsOverview = z.infer<typeof AutomationsOverviewSchema>;

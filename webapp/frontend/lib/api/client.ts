@@ -27,6 +27,8 @@ import {
   AuditOverviewSchema,
   type AuditPage,
   AuditPageSchema,
+  type AutomationsOverview,
+  AutomationsOverviewSchema,
   type BudgetSnapshot,
   BudgetSnapshotSchema,
   type Calibration,
@@ -665,6 +667,10 @@ export async function fetchReplayShadowOverview(
 
 export async function fetchCurationOverview(signal?: AbortSignal): Promise<CurationOverview> {
   return request("/observability/curation", { signal }, CurationOverviewSchema);
+}
+
+export async function fetchAutomationsOverview(signal?: AbortSignal): Promise<AutomationsOverview> {
+  return request("/observability/automations", { signal }, AutomationsOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

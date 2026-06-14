@@ -2960,5 +2960,170 @@
       "source": "Source of truth: {src}",
       "sync": "Last update: {ago}"
     }
+  },
+  "automations": {
+    "title": "Automations",
+    "subtitle": "Orchestrate the rules, triggers and automatic actions of your AI system while keeping human control, traceability and guardrails.",
+    "tabs": {
+      "overview": "Overview",
+      "rules": "Rules",
+      "executions": "Executions",
+      "queue": "Queue",
+      "approvals": "Approvals",
+      "audit": "Audit & log"
+    },
+    "delta": {
+      "vsHier": "vs yesterday"
+    },
+    "actions": {
+      "createAutomation": "Create automation",
+      "simulateRule": "Simulate a rule",
+      "export": "Export",
+      "evidencePack": "Generate evidence pack"
+    },
+    "rail": {
+      "realtime": "Real-time data"
+    },
+    "zone": {
+      "actual": "Current state",
+      "catalogue": "A · Automation catalogue",
+      "pipeline": "B · Execution pipeline (24h)",
+      "distribution": "C · Distribution by type",
+      "env": "D · Executions by environment",
+      "journal": "E · Recent execution log",
+      "governance": "G · Governance & control",
+      "approvals": "H · Pending approvals",
+      "guardrails": "I · Most-used guardrails (7d)",
+      "performance": "J · Automation performance (30d)",
+      "savings": "K · Savings / impact (30d)",
+      "context": "L · Context & release"
+    },
+    "kpi": {
+      "active": "Active automations",
+      "executions": "Executions / 24h",
+      "success_rate": "Success rate",
+      "approvals": "With approval",
+      "blocked": "Blocked by guardrail",
+      "sensitive": "Sensitive actions",
+      "mttr": "Auto MTTR"
+    },
+    "panel": {
+      "recentIncidents": "Recent automated incidents",
+      "quickActions": "Quick actions"
+    },
+    "col": {
+      "name": "Name",
+      "trigger": "Trigger",
+      "action": "Action",
+      "scope": "Scope",
+      "mode": "Mode",
+      "lastRun": "Last run",
+      "success": "Success (7d)",
+      "role": "Required role",
+      "status": "Status"
+    },
+    "mode": {
+      "auto": "Auto",
+      "approb": "Approval"
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused"
+    },
+    "severity": {
+      "critique": "Critical",
+      "eleve": "High",
+      "moyen": "Medium",
+      "faible": "Low"
+    },
+    "pipeline": {
+      "trigger": "Trigger",
+      "evaluation": "Evaluation",
+      "guardrail": "Guardrail",
+      "approval": "Approval",
+      "execution": "Execution",
+      "proof": "Proof",
+      "completion": "Global completion rate"
+    },
+    "type": {
+      "qualite": "Quality",
+      "securite": "Security",
+      "conformite": "Compliance",
+      "memoire": "Memory",
+      "release": "Release",
+      "cout": "Cost"
+    },
+    "env": {
+      "prod": "Prod",
+      "preprod": "Preprod",
+      "staging": "Staging",
+      "dev": "Dev"
+    },
+    "jCol": {
+      "time": "Timestamp",
+      "automation": "Automation",
+      "trigger": "Trigger",
+      "actor": "Executed by",
+      "evidence": "Evidence ID",
+      "duration": "Duration",
+      "result": "Result"
+    },
+    "result": {
+      "success": "Success",
+      "fail": "Failure",
+      "blocked": "Blocked",
+      "approb": "Approval"
+    },
+    "approve": {
+      "cta": "Approve",
+      "since": "Since {t}"
+    },
+    "gr": {
+      "pii_guard": "PII guard",
+      "release_gate": "Release gate",
+      "policy_check": "Policy check",
+      "dual_control": "Dual control",
+      "budget_cap": "Budget cap"
+    },
+    "perf": {
+      "success": "Success rate",
+      "average": "Average"
+    },
+    "savings": {
+      "tickets": "Tickets avoided",
+      "minutes": "Minutes saved",
+      "executions": "Auto executions",
+      "evidences": "Evidences generated"
+    },
+    "ctx": {
+      "version": "Catalogue version",
+      "modified": "Last modified",
+      "author": "Author",
+      "branch": "Git branch",
+      "scope": "Default scope",
+      "history": "View version history"
+    },
+    "gov": {
+      "dualControl": "Dual control enabled",
+      "rolesByMode": "Required roles by mode",
+      "defaultScope": "Default scope",
+      "chain": "Audit chain intact"
+    },
+    "quick": {
+      "activate": "Activate a rule",
+      "suspend": "Suspend",
+      "openJournal": "Open log",
+      "viewApprovals": "View approvals"
+    },
+    "viewAll": {
+      "all": "View all",
+      "guardrails": "View guardrails",
+      "performance": "View full analysis",
+      "journal": "View log"
+    },
+    "footer": {
+      "source": "Source of truth: {src}",
+      "certified": "{txt}"
+    }
   }
 }

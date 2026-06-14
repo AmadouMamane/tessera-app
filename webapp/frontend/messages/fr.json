@@ -2960,5 +2960,170 @@
       "source": "Source de vérité : {src}",
       "sync": "Dernière mise à jour : {ago}"
     }
+  },
+  "automations": {
+    "title": "Automations",
+    "subtitle": "Orchestrez les règles, déclencheurs et actions automatiques de votre système IA en gardant le contrôle humain, la traçabilité et les garde-fous.",
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "rules": "Règles",
+      "executions": "Exécutions",
+      "queue": "File d’attente",
+      "approvals": "Approbations",
+      "audit": "Audit & journal"
+    },
+    "delta": {
+      "vsHier": "vs hier"
+    },
+    "actions": {
+      "createAutomation": "Créer une automation",
+      "simulateRule": "Simuler une règle",
+      "export": "Exporter",
+      "evidencePack": "Générer evidence pack"
+    },
+    "rail": {
+      "realtime": "Données en temps réel"
+    },
+    "zone": {
+      "actual": "État actuel",
+      "catalogue": "A · Catalogue d’automations",
+      "pipeline": "B · Pipeline d’exécution (24h)",
+      "distribution": "C · Répartition par type",
+      "env": "D · Exécutions par environnement",
+      "journal": "E · Journal d’exécution récent",
+      "governance": "G · Gouvernance & contrôle",
+      "approvals": "H · Approbations en attente",
+      "guardrails": "I · Garde-fous les plus sollicités (7j)",
+      "performance": "J · Performance des automations (30j)",
+      "savings": "K · Économies / impact (30j)",
+      "context": "L · Contexte & release"
+    },
+    "kpi": {
+      "active": "Automations actives",
+      "executions": "Exécutions / 24h",
+      "success_rate": "Taux de succès",
+      "approvals": "Avec approbation",
+      "blocked": "Bloquées par garde-fou",
+      "sensitive": "Actions sensibles",
+      "mttr": "MTTR auto"
+    },
+    "panel": {
+      "recentIncidents": "Incidents automatisés récents",
+      "quickActions": "Actions rapides"
+    },
+    "col": {
+      "name": "Nom",
+      "trigger": "Déclencheur",
+      "action": "Action",
+      "scope": "Portée",
+      "mode": "Mode",
+      "lastRun": "Dernière exécution",
+      "success": "Succès (7j)",
+      "role": "Rôle requis",
+      "status": "Statut"
+    },
+    "mode": {
+      "auto": "Auto",
+      "approb": "Approb."
+    },
+    "status": {
+      "active": "Active",
+      "paused": "En pause"
+    },
+    "severity": {
+      "critique": "Critique",
+      "eleve": "Élevé",
+      "moyen": "Moyen",
+      "faible": "Faible"
+    },
+    "pipeline": {
+      "trigger": "Déclencheur",
+      "evaluation": "Évaluation",
+      "guardrail": "Garde-fou",
+      "approval": "Approbation",
+      "execution": "Exécution",
+      "proof": "Preuve",
+      "completion": "Taux d’achèvement global"
+    },
+    "type": {
+      "qualite": "Qualité",
+      "securite": "Sécurité",
+      "conformite": "Conformité",
+      "memoire": "Mémoire",
+      "release": "Release",
+      "cout": "Coût"
+    },
+    "env": {
+      "prod": "Prod",
+      "preprod": "Preprod",
+      "staging": "Staging",
+      "dev": "Dev"
+    },
+    "jCol": {
+      "time": "Horodatage",
+      "automation": "Automation",
+      "trigger": "Déclencheur",
+      "actor": "Exécutée par",
+      "evidence": "Évidence ID",
+      "duration": "Durée",
+      "result": "Résultat"
+    },
+    "result": {
+      "success": "Succès",
+      "fail": "Échec",
+      "blocked": "Bloquée",
+      "approb": "Approbation"
+    },
+    "approve": {
+      "cta": "Approuver",
+      "since": "Depuis {t}"
+    },
+    "gr": {
+      "pii_guard": "PII guard",
+      "release_gate": "Release gate",
+      "policy_check": "Policy check",
+      "dual_control": "Dual control",
+      "budget_cap": "Budget cap"
+    },
+    "perf": {
+      "success": "Taux de succès",
+      "average": "Moyenne"
+    },
+    "savings": {
+      "tickets": "Tickets évités",
+      "minutes": "Minutes gagnées",
+      "executions": "Exécutions auto",
+      "evidences": "Évidences générées"
+    },
+    "ctx": {
+      "version": "Version du catalogue",
+      "modified": "Dernière modif",
+      "author": "Auteur",
+      "branch": "Branche Git",
+      "scope": "Scope par défaut",
+      "history": "Voir l’historique des versions"
+    },
+    "gov": {
+      "dualControl": "Dual contrôle activé",
+      "rolesByMode": "Rôles requis par mode",
+      "defaultScope": "Scope par défaut",
+      "chain": "Chaîne d’audit intacte"
+    },
+    "quick": {
+      "activate": "Activer une règle",
+      "suspend": "Suspendre",
+      "openJournal": "Ouvrir journal",
+      "viewApprovals": "Voir approbations"
+    },
+    "viewAll": {
+      "all": "Voir tout",
+      "guardrails": "Voir les garde-fous",
+      "performance": "Voir l’analyse complète",
+      "journal": "Voir le journal"
+    },
+    "footer": {
+      "source": "Source de vérité : {src}",
+      "certified": "{txt}"
+    }
   }
 }

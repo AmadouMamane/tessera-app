@@ -2960,5 +2960,170 @@
       "source": "Quelle der Wahrheit: {src}",
       "sync": "Letzte Aktualisierung: {ago}"
     }
+  },
+  "automations": {
+    "title": "Automatisierungen",
+    "subtitle": "Regeln, Trigger und automatische Aktionen Ihres KI-Systems orchestrieren — mit menschlicher Kontrolle, Nachvollziehbarkeit und Leitplanken.",
+    "tabs": {
+      "overview": "Übersicht",
+      "rules": "Regeln",
+      "executions": "Ausführungen",
+      "queue": "Warteschlange",
+      "approvals": "Freigaben",
+      "audit": "Audit & Protokoll"
+    },
+    "delta": {
+      "vsHier": "vs. gestern"
+    },
+    "actions": {
+      "createAutomation": "Automatisierung erstellen",
+      "simulateRule": "Regel simulieren",
+      "export": "Exportieren",
+      "evidencePack": "Evidence-Pack erzeugen"
+    },
+    "rail": {
+      "realtime": "Echtzeitdaten"
+    },
+    "zone": {
+      "actual": "Aktueller Stand",
+      "catalogue": "A · Automatisierungs-Katalog",
+      "pipeline": "B · Ausführungs-Pipeline (24h)",
+      "distribution": "C · Verteilung nach Typ",
+      "env": "D · Ausführungen pro Umgebung",
+      "journal": "E · Aktuelles Ausführungsprotokoll",
+      "governance": "G · Governance & Kontrolle",
+      "approvals": "H · Ausstehende Freigaben",
+      "guardrails": "I · Meistgenutzte Leitplanken (7T)",
+      "performance": "J · Automatisierungs-Performance (30T)",
+      "savings": "K · Einsparungen / Wirkung (30T)",
+      "context": "L · Kontext & Release"
+    },
+    "kpi": {
+      "active": "Aktive Automatisierungen",
+      "executions": "Ausführungen / 24h",
+      "success_rate": "Erfolgsrate",
+      "approvals": "Mit Freigabe",
+      "blocked": "Von Leitplanke geblockt",
+      "sensitive": "Sensible Aktionen",
+      "mttr": "Auto-MTTR"
+    },
+    "panel": {
+      "recentIncidents": "Letzte automatisierte Incidents",
+      "quickActions": "Schnellaktionen"
+    },
+    "col": {
+      "name": "Name",
+      "trigger": "Trigger",
+      "action": "Aktion",
+      "scope": "Geltungsbereich",
+      "mode": "Modus",
+      "lastRun": "Letzte Ausführung",
+      "success": "Erfolg (7T)",
+      "role": "Erforderliche Rolle",
+      "status": "Status"
+    },
+    "mode": {
+      "auto": "Auto",
+      "approb": "Freigabe"
+    },
+    "status": {
+      "active": "Aktiv",
+      "paused": "Pausiert"
+    },
+    "severity": {
+      "critique": "Kritisch",
+      "eleve": "Hoch",
+      "moyen": "Mittel",
+      "faible": "Niedrig"
+    },
+    "pipeline": {
+      "trigger": "Trigger",
+      "evaluation": "Bewertung",
+      "guardrail": "Leitplanke",
+      "approval": "Freigabe",
+      "execution": "Ausführung",
+      "proof": "Nachweis",
+      "completion": "Globale Abschlussrate"
+    },
+    "type": {
+      "qualite": "Qualität",
+      "securite": "Sicherheit",
+      "conformite": "Compliance",
+      "memoire": "Speicher",
+      "release": "Release",
+      "cout": "Kosten"
+    },
+    "env": {
+      "prod": "Prod",
+      "preprod": "Preprod",
+      "staging": "Staging",
+      "dev": "Dev"
+    },
+    "jCol": {
+      "time": "Zeitstempel",
+      "automation": "Automatisierung",
+      "trigger": "Trigger",
+      "actor": "Ausgeführt von",
+      "evidence": "Evidence-ID",
+      "duration": "Dauer",
+      "result": "Ergebnis"
+    },
+    "result": {
+      "success": "Erfolg",
+      "fail": "Fehler",
+      "blocked": "Geblockt",
+      "approb": "Freigabe"
+    },
+    "approve": {
+      "cta": "Freigeben",
+      "since": "Seit {t}"
+    },
+    "gr": {
+      "pii_guard": "PII Guard",
+      "release_gate": "Release Gate",
+      "policy_check": "Policy Check",
+      "dual_control": "Dual Control",
+      "budget_cap": "Budget Cap"
+    },
+    "perf": {
+      "success": "Erfolgsrate",
+      "average": "Durchschnitt"
+    },
+    "savings": {
+      "tickets": "Vermiedene Tickets",
+      "minutes": "Gesparte Minuten",
+      "executions": "Auto-Ausführungen",
+      "evidences": "Erzeugte Nachweise"
+    },
+    "ctx": {
+      "version": "Katalog-Version",
+      "modified": "Letzte Änderung",
+      "author": "Autor",
+      "branch": "Git-Branch",
+      "scope": "Standard-Scope",
+      "history": "Versionsverlauf anzeigen"
+    },
+    "gov": {
+      "dualControl": "Dual-Control aktiv",
+      "rolesByMode": "Rollen je Modus",
+      "defaultScope": "Standard-Scope",
+      "chain": "Audit-Kette intakt"
+    },
+    "quick": {
+      "activate": "Regel aktivieren",
+      "suspend": "Aussetzen",
+      "openJournal": "Protokoll öffnen",
+      "viewApprovals": "Freigaben anzeigen"
+    },
+    "viewAll": {
+      "all": "Alle anzeigen",
+      "guardrails": "Leitplanken anzeigen",
+      "performance": "Vollständige Analyse anzeigen",
+      "journal": "Protokoll anzeigen"
+    },
+    "footer": {
+      "source": "Quelle der Wahrheit: {src}",
+      "certified": "{txt}"
+    }
   }
 }

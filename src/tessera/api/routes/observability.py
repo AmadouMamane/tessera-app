@@ -20,6 +20,7 @@ from tessera.observability import (
     ablation as ablation_mod,
     ai_act as ai_act_mod,
     anomalies as anomalies_mod,
+    automations as automations_mod,
     citation_resolver as citation_resolver_mod,
     citation_validity as citation_validity_mod,
     compliance as compliance_mod,
@@ -623,6 +624,22 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/automations")
+async def observability_automations() -> dict[str, object]:
+    """Automations overview (page #13).
+
+    Composes the automation posture, rule catalogue, execution pipeline, type /
+    environment breakdowns, execution journal, pending approvals, most-used
+    guardrails, performance / savings trends and governance context. Degrades to
+    ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **automations_mod.compute_automations_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.automations: failed: {exc}\n")
         return {"available": False}
 
 
