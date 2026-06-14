@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.observability import (
     ablation as ablation_mod,
+    access as access_mod,
     ai_act as ai_act_mod,
     anomalies as anomalies_mod,
     automations as automations_mod,
@@ -628,6 +629,20 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/access")
+async def observability_access() -> dict[str, object]:
+    """Roles & access overview (page #18).
+
+    Composes the access posture, the role table, the selected-role detail and
+    the governance panels. Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **access_mod.compute_access_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.access: failed: {exc}\n")
         return {"available": False}
 
 

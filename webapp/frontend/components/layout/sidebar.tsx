@@ -42,6 +42,7 @@ type RouteHref =
   | "/signals"
   | "/policies"
   | "/sources"
+  | "/access"
   | "/eval"
   | "/observability"
   | "/security"
@@ -108,7 +109,7 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: "/signals", icon: Boxes, labelKey: "signalCatalog", badge: "200" },
       { href: "/policies", icon: ShieldCheck, labelKey: "policies" },
       { href: "/sources", icon: MemoryStick, labelKey: "sourcesMemory" },
-      { icon: KeyRound, labelKey: "rolesAccess" },
+      { href: "/access", icon: KeyRound, labelKey: "rolesAccess" },
       { icon: Settings, labelKey: "integrations" },
       { href: "/settings", icon: UserRound, labelKey: "systemProfile" },
     ],

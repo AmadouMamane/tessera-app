@@ -3632,5 +3632,123 @@
       "total": "{n} sources",
       "source": "Source of truth: {src}"
     }
+  },
+  "roles": {
+    "title": "Roles & access",
+    "subtitle": "Manage identities, roles, permissions and access across the whole platform.",
+    "actions": {
+      "export": "Export",
+      "import": "Import",
+      "create": "Create a role"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "roles": "Roles",
+      "users": "Users",
+      "groups": "Groups",
+      "permissions": "Permissions",
+      "byResource": "Access by resource",
+      "pending": "Pending requests",
+      "ownership": "Ownership",
+      "sessions": "Active sessions",
+      "history": "History & audits",
+      "sod": "SoD & risks"
+    },
+    "filters": {
+      "search": "Search a role, user, description…",
+      "type": "Type",
+      "status": "Status",
+      "environment": "Environment",
+      "showInactive": "show inactive",
+      "button": "Filters",
+      "all": "All"
+    },
+    "kpi": {
+      "users": "Users",
+      "roles": "Roles",
+      "groups": "Groups",
+      "active_access": "Active access (24h)",
+      "pending": "Pending requests",
+      "sod_violations": "SoD violations (active)",
+      "inactive": "Inactive accounts (>90d)"
+    },
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "description": "Description",
+      "users": "Users",
+      "groups": "Groups",
+      "permissions": "Permissions",
+      "scope": "Scope",
+      "environment": "Environment",
+      "modified": "Last modified",
+      "status": "Status"
+    },
+    "type": {
+      "systeme": "System",
+      "metier": "Business"
+    },
+    "status": {
+      "active": "Active",
+      "deprecated": "Deprecated",
+      "disabled": "Disabled"
+    },
+    "detailTabs": {
+      "overview": "Overview",
+      "permissions": "Permissions",
+      "users": "Users",
+      "groups": "Groups",
+      "history": "History"
+    },
+    "detail": {
+      "title": "Role details",
+      "edit": "Edit",
+      "members": "Users",
+      "viewAll": "View all",
+      "scope": "Scope",
+      "owner": "Owner",
+      "created": "Created",
+      "modified": "Modified",
+      "status": "Status",
+      "environment": "Environment",
+      "permDist": "Permission distribution",
+      "accessScope": "Access scope",
+      "viewDetail": "View detail"
+    },
+    "perm": {
+      "full": "Full",
+      "partial": "Partial",
+      "readonly": "Read only",
+      "none": "None"
+    },
+    "resource": {
+      "data": "Data",
+      "guardrails": "Risks & guardrails",
+      "compliance": "Compliance",
+      "audit": "Audit & proofs",
+      "system": "System"
+    },
+    "zone": {
+      "topRoles": "Top roles by access",
+      "byResource": "Access by resource",
+      "pending": "Pending requests",
+      "sod": "SoD violations",
+      "inactive": "Inactive accounts"
+    },
+    "risk": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "pendingCol": {
+      "user": "User",
+      "role": "Role",
+      "since": "Since",
+      "risk": "Risk"
+    },
+    "footer": {
+      "total": "{n} roles",
+      "source": "Source of truth: {src}"
+    }
   }
 }

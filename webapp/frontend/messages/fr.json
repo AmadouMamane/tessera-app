@@ -3632,5 +3632,123 @@
       "total": "{n} sources",
       "source": "Source de vérité : {src}"
     }
+  },
+  "roles": {
+    "title": "Rôles & accès",
+    "subtitle": "Gérez les identités, les rôles, les permissions et les accès à l’ensemble de la plateforme.",
+    "actions": {
+      "export": "Exporter",
+      "import": "Importer",
+      "create": "Créer un rôle"
+    },
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "roles": "Rôles",
+      "users": "Utilisateurs",
+      "groups": "Groupes",
+      "permissions": "Permissions",
+      "byResource": "Accès par ressource",
+      "pending": "Demandes en attente",
+      "ownership": "Propriété",
+      "sessions": "Sessions actives",
+      "history": "Historique & audits",
+      "sod": "SoD & risques"
+    },
+    "filters": {
+      "search": "Rechercher un rôle, utilisateur, description…",
+      "type": "Type",
+      "status": "Statut",
+      "environment": "Environnement",
+      "showInactive": "afficher inactifs",
+      "button": "Filtres",
+      "all": "Tous"
+    },
+    "kpi": {
+      "users": "Utilisateurs",
+      "roles": "Rôles",
+      "groups": "Groupes",
+      "active_access": "Accès actifs (24h)",
+      "pending": "Demandes en attente",
+      "sod_violations": "Violations SoD (actives)",
+      "inactive": "Comptes inactifs (>90j)"
+    },
+    "col": {
+      "name": "Nom",
+      "type": "Type",
+      "description": "Description",
+      "users": "Utilisateurs",
+      "groups": "Groupes",
+      "permissions": "Permissions",
+      "scope": "Portée",
+      "environment": "Environnement",
+      "modified": "Dernière modif.",
+      "status": "Statut"
+    },
+    "type": {
+      "systeme": "Système",
+      "metier": "Métier"
+    },
+    "status": {
+      "active": "Actif",
+      "deprecated": "Déprécié",
+      "disabled": "Désactivé"
+    },
+    "detailTabs": {
+      "overview": "Vue d’ensemble",
+      "permissions": "Permissions",
+      "users": "Utilisateurs",
+      "groups": "Groupes",
+      "history": "Historique"
+    },
+    "detail": {
+      "title": "Détails du rôle",
+      "edit": "Modifier",
+      "members": "Utilisateurs",
+      "viewAll": "Voir tout",
+      "scope": "Portée",
+      "owner": "Propriétaire",
+      "created": "Créé le",
+      "modified": "Modifié",
+      "status": "Statut",
+      "environment": "Environnement",
+      "permDist": "Répartition des permissions",
+      "accessScope": "Portée d’accès",
+      "viewDetail": "Voir le détail"
+    },
+    "perm": {
+      "full": "Complètes",
+      "partial": "Partielles",
+      "readonly": "Lecture seule",
+      "none": "Aucune"
+    },
+    "resource": {
+      "data": "Données",
+      "guardrails": "Risques & garde-fous",
+      "compliance": "Conformité",
+      "audit": "Audit & preuves",
+      "system": "Système"
+    },
+    "zone": {
+      "topRoles": "Principaux rôles par accès",
+      "byResource": "Accès par ressource",
+      "pending": "Demandes en attente",
+      "sod": "Violations SoD",
+      "inactive": "Comptes inactifs"
+    },
+    "risk": {
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé"
+    },
+    "pendingCol": {
+      "user": "Utilisateur",
+      "role": "Rôle",
+      "since": "Depuis",
+      "risk": "Risque"
+    },
+    "footer": {
+      "total": "{n} rôles",
+      "source": "Source de vérité : {src}"
+    }
   }
 }

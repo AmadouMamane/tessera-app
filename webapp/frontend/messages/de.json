@@ -3632,5 +3632,123 @@
       "total": "{n} Quellen",
       "source": "Quelle der Wahrheit: {src}"
     }
+  },
+  "roles": {
+    "title": "Rollen & Zugriff",
+    "subtitle": "Verwalten Sie Identitäten, Rollen, Berechtigungen und Zugriffe der gesamten Plattform.",
+    "actions": {
+      "export": "Exportieren",
+      "import": "Importieren",
+      "create": "Rolle erstellen"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "roles": "Rollen",
+      "users": "Benutzer",
+      "groups": "Gruppen",
+      "permissions": "Berechtigungen",
+      "byResource": "Zugriff nach Ressource",
+      "pending": "Offene Anfragen",
+      "ownership": "Eigentum",
+      "sessions": "Aktive Sessions",
+      "history": "Verlauf & Audits",
+      "sod": "SoD & Risiken"
+    },
+    "filters": {
+      "search": "Rolle, Benutzer, Beschreibung suchen…",
+      "type": "Typ",
+      "status": "Status",
+      "environment": "Umgebung",
+      "showInactive": "inaktive anzeigen",
+      "button": "Filter",
+      "all": "Alle"
+    },
+    "kpi": {
+      "users": "Benutzer",
+      "roles": "Rollen",
+      "groups": "Gruppen",
+      "active_access": "Aktive Zugriffe (24h)",
+      "pending": "Offene Anfragen",
+      "sod_violations": "SoD-Verstöße (aktiv)",
+      "inactive": "Inaktive Konten (>90T)"
+    },
+    "col": {
+      "name": "Name",
+      "type": "Typ",
+      "description": "Beschreibung",
+      "users": "Benutzer",
+      "groups": "Gruppen",
+      "permissions": "Berechtigungen",
+      "scope": "Geltungsbereich",
+      "environment": "Umgebung",
+      "modified": "Letzte Änderung",
+      "status": "Status"
+    },
+    "type": {
+      "systeme": "System",
+      "metier": "Fachlich"
+    },
+    "status": {
+      "active": "Aktiv",
+      "deprecated": "Veraltet",
+      "disabled": "Deaktiviert"
+    },
+    "detailTabs": {
+      "overview": "Übersicht",
+      "permissions": "Berechtigungen",
+      "users": "Benutzer",
+      "groups": "Gruppen",
+      "history": "Verlauf"
+    },
+    "detail": {
+      "title": "Rollendetails",
+      "edit": "Bearbeiten",
+      "members": "Benutzer",
+      "viewAll": "Alle anzeigen",
+      "scope": "Geltungsbereich",
+      "owner": "Owner",
+      "created": "Erstellt am",
+      "modified": "Geändert",
+      "status": "Status",
+      "environment": "Umgebung",
+      "permDist": "Berechtigungsverteilung",
+      "accessScope": "Zugriffsbereich",
+      "viewDetail": "Details anzeigen"
+    },
+    "perm": {
+      "full": "Vollständig",
+      "partial": "Teilweise",
+      "readonly": "Nur Lesen",
+      "none": "Keine"
+    },
+    "resource": {
+      "data": "Daten",
+      "guardrails": "Risiken & Leitplanken",
+      "compliance": "Compliance",
+      "audit": "Audit & Nachweise",
+      "system": "System"
+    },
+    "zone": {
+      "topRoles": "Top-Rollen nach Zugriff",
+      "byResource": "Zugriff nach Ressource",
+      "pending": "Offene Anfragen",
+      "sod": "SoD-Verstöße",
+      "inactive": "Inaktive Konten"
+    },
+    "risk": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch"
+    },
+    "pendingCol": {
+      "user": "Benutzer",
+      "role": "Rolle",
+      "since": "Seit",
+      "risk": "Risiko"
+    },
+    "footer": {
+      "total": "{n} Rollen",
+      "source": "Quelle der Wahrheit: {src}"
+    }
   }
 }

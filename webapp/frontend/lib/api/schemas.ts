@@ -2537,3 +2537,80 @@ export const SourcesOverviewSchema = z.object({
   footer: z.object({ total: z.number().int(), source: z.string() }),
 });
 export type SourcesOverview = z.infer<typeof SourcesOverviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Roles & access (page #18)
+// ---------------------------------------------------------------------------
+
+const RaKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  sub: z.string(),
+  series: z.array(z.number()),
+});
+const RaSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+
+export const AccessOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  total_roles: z.number().int(),
+  page_size: z.number().int(),
+  kpis: z.array(RaKpiSchema),
+  roles: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.enum(["systeme", "metier"]),
+      description: z.string(),
+      users: z.number().int(),
+      groups: z.number().int(),
+      permissions: z.number().int(),
+      scope: z.string(),
+      environment: z.string(),
+      modified: z.string(),
+      status: z.enum(["active", "deprecated", "disabled"]),
+    }),
+  ),
+  selected: z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.enum(["systeme", "metier"]),
+    scope: z.string(),
+    description: z.string(),
+    owner: z.string(),
+    created: z.string(),
+    modified: z.string(),
+    status: z.enum(["active", "deprecated", "disabled"]),
+    environment: z.string(),
+    members: z.array(z.object({ name: z.string(), team: z.string(), status: z.string() })),
+    permission_dist: z.array(RaSliceSchema),
+    access_scope: z.array(RaSliceSchema),
+  }),
+  top_roles: z.array(z.object({ name: z.string(), value: z.number(), label: z.string() })),
+  access_by_resource: z.array(RaSliceSchema),
+  pending_requests: z.array(
+    z.object({
+      user: z.string(),
+      role: z.string(),
+      since: z.string(),
+      risk: z.enum(["low", "medium", "high"]),
+    }),
+  ),
+  sod_violations: z.array(
+    z.object({
+      user: z.string(),
+      conflict: z.string(),
+      severity: z.enum(["high", "medium", "low"]),
+    }),
+  ),
+  inactive_accounts: z.array(
+    z.object({ user: z.string(), last_seen: z.string(), role: z.string() }),
+  ),
+  footer: z.object({ total: z.number().int(), source: z.string() }),
+});
+export type AccessOverview = z.infer<typeof AccessOverviewSchema>;

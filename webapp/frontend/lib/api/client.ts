@@ -16,6 +16,8 @@ import {
   AIActReportSchema,
   type AblationReport,
   AblationReportSchema,
+  type AccessOverview,
+  AccessOverviewSchema,
   type AnomalyReport,
   AnomalyReportSchema,
   type AuditActorRole,
@@ -695,6 +697,10 @@ export async function fetchPoliciesOverview(signal?: AbortSignal): Promise<Polic
 
 export async function fetchSourcesOverview(signal?: AbortSignal): Promise<SourcesOverview> {
   return request("/observability/sources", { signal }, SourcesOverviewSchema);
+}
+
+export async function fetchAccessOverview(signal?: AbortSignal): Promise<AccessOverview> {
+  return request("/observability/access", { signal }, AccessOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */
