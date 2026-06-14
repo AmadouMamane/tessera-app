@@ -2775,3 +2775,56 @@ export const SystemProfileSchema = z.object({
   footer: z.object({ version: z.string(), source: z.string() }),
 });
 export type SystemProfile = z.infer<typeof SystemProfileSchema>;
+
+// ---------------------------------------------------------------------------
+// Parameters / settings (page #21)
+// ---------------------------------------------------------------------------
+
+const PaKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  sub: z.string(),
+  series: z.array(z.number()),
+});
+
+export const ParametersOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  config_version: z.object({
+    version: z.string(),
+    env: z.string(),
+    status: z.string(),
+    active_since: z.string(),
+    modified_by: z.string(),
+    validation: z.string(),
+    next_review: z.string(),
+  }),
+  kpis: z.array(PaKpiSchema),
+  categories: z.array(z.object({ key: z.string(), desc: z.string() })),
+  recent_params: z.array(
+    z.object({
+      name: z.string(),
+      category: z.string(),
+      value: z.string(),
+      modified_by: z.string(),
+      date: z.string(),
+      status: z.enum(["active", "draft", "deprecated"]),
+    }),
+  ),
+  config_state: z.object({
+    total: z.number().int(),
+    slices: z.array(
+      z.object({ key: z.string(), count: z.number().int(), pct: z.number(), color: z.string() }),
+    ),
+  }),
+  compliance: z.array(z.object({ key: z.string(), status: z.enum(["ok", "warn", "bad"]) })),
+  usage_policies: z.array(z.object({ name: z.string(), value: z.string(), status: z.string() })),
+  backup: z.object({
+    last_backup: z.string(),
+    frequency: z.string(),
+    retention: z.string(),
+    size: z.string(),
+  }),
+  footer: z.object({ version: z.string(), source: z.string() }),
+});
+export type ParametersOverview = z.infer<typeof ParametersOverviewSchema>;

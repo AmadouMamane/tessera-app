@@ -48,7 +48,8 @@
     "eval": "Regression scorecard",
     "health": "Service health",
     "settings": "Settings",
-    "observability": "Observability"
+    "observability": "Observability",
+    "parameters": "Settings"
   },
   "common": {
     "language": "Language",
@@ -3978,6 +3979,107 @@
     "footer": {
       "version": "{v}",
       "source": "{src}"
+    }
+  },
+  "parameters": {
+    "title": "Settings",
+    "subtitle": "Configure the behaviour, policies and preferences of the Tessera platform.",
+    "actions": {
+      "export": "Export configuration",
+      "import": "Import configuration",
+      "save": "Save changes",
+      "viewAtDate": "View config at date",
+      "compareTo": "Compare to",
+      "history": "History & versions"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "general": "General",
+      "security": "Security & compliance",
+      "data": "Data & retention",
+      "models": "AI & models",
+      "access": "Access & authentication",
+      "notifications": "Notifications",
+      "integrations": "Integrations",
+      "audit": "Audit & logs",
+      "system": "System"
+    },
+    "version": {
+      "active": "Active configuration version",
+      "activeSince": "Active since",
+      "modifiedBy": "Modified by",
+      "status": "Status",
+      "nextReview": "Next review"
+    },
+    "kpi": {
+      "configured": "Configured parameters",
+      "policies": "Active policies",
+      "security_rules": "Security rules",
+      "integrations": "Connected integrations",
+      "models": "Available AI models",
+      "changes": "Changes (30 days)"
+    },
+    "quick": {
+      "title": "Quick configuration",
+      "customize": "Customize",
+      "configure": "Configure"
+    },
+    "cat": {
+      "security_policies": "Security policies",
+      "data_retention": "Data retention",
+      "models_ai": "Models & AI",
+      "authentication": "Authentication",
+      "notifications": "Notifications",
+      "integrations": "Integrations"
+    },
+    "recent": {
+      "title": "Recent parameters"
+    },
+    "col": {
+      "name": "Parameter",
+      "category": "Category",
+      "value": "Value",
+      "modifiedBy": "Modified by",
+      "date": "Date",
+      "status": "Status"
+    },
+    "paramStatus": {
+      "active": "Active",
+      "draft": "Draft",
+      "deprecated": "Deprecated"
+    },
+    "state": {
+      "title": "Configuration state",
+      "active": "Active",
+      "inactive": "Inactive",
+      "drafts": "Drafts",
+      "deprecated": "Deprecated",
+      "viewDetail": "View detail"
+    },
+    "compliance": {
+      "title": "Parameters compliance",
+      "conform": "Compliant",
+      "view": "View",
+      "viewAll": "View all controls",
+      "security_policies": "Security policies",
+      "data_retention": "Data retention",
+      "authentication": "Access & authentication",
+      "models_ai": "AI & models",
+      "audit": "Audit & traceability"
+    },
+    "usage": {
+      "title": "Usage policies"
+    },
+    "backup": {
+      "title": "Backup & restore",
+      "last": "Last backup",
+      "frequency": "Frequency",
+      "retention": "Retention",
+      "size": "Size"
+    },
+    "footer": {
+      "version": "{v}",
+      "source": "Source of truth: {src}"
     }
   }
 }

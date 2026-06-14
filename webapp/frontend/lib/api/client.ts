@@ -121,6 +121,8 @@ import {
   OverflowReportSchema,
   type PIILeakSummary,
   PIILeakSummarySchema,
+  type ParametersOverview,
+  ParametersOverviewSchema,
   type PlaybookReport,
   PlaybookReportSchema,
   type PoliciesOverview,
@@ -715,6 +717,10 @@ export async function fetchIntegrationsOverview(
 
 export async function fetchSystemProfile(signal?: AbortSignal): Promise<SystemProfile> {
   return request("/observability/system-profile", { signal }, SystemProfileSchema);
+}
+
+export async function fetchParametersOverview(signal?: AbortSignal): Promise<ParametersOverview> {
+  return request("/observability/parameters", { signal }, ParametersOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

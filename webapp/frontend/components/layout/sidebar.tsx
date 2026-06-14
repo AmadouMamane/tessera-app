@@ -19,6 +19,7 @@ import {
   Settings,
   ShieldCheck,
   ShieldHalf,
+  SlidersHorizontal,
   Sparkles,
   UserRound,
   Workflow,
@@ -45,6 +46,7 @@ type RouteHref =
   | "/access"
   | "/integrations"
   | "/system"
+  | "/parametres"
   | "/eval"
   | "/observability"
   | "/security"
@@ -113,6 +115,7 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: "/sources", icon: MemoryStick, labelKey: "sourcesMemory" },
       { href: "/access", icon: KeyRound, labelKey: "rolesAccess" },
       { href: "/integrations", icon: Settings, labelKey: "integrations" },
+      { href: "/parametres", icon: SlidersHorizontal, labelKey: "parameters" },
       { href: "/system", icon: UserRound, labelKey: "systemProfile" },
     ],
   },

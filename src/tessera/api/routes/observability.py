@@ -59,6 +59,7 @@ from tessera.observability import (
     memory_inventory as memory_inventory_mod,
     memory_obs as memory_obs_mod,
     obs_cost as obs_cost_mod,
+    parameters as parameters_mod,
     pii_leak as pii_leak_mod,
     playbooks as playbooks_mod,
     policies as policies_mod,
@@ -631,6 +632,21 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/parameters")
+async def observability_parameters() -> dict[str, object]:
+    """Settings / parameters overview (page #21).
+
+    Composes the active config version, posture KPIs, quick-config categories,
+    recent parameters, configuration-state distribution and compliance checks.
+    Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **parameters_mod.compute_parameters_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.parameters: failed: {exc}\n")
         return {"available": False}
 
 

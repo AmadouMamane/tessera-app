@@ -48,7 +48,8 @@
     "eval": "Regressionsscore",
     "health": "Servicestatus",
     "settings": "Einstellungen",
-    "observability": "Beobachtbarkeit"
+    "observability": "Beobachtbarkeit",
+    "parameters": "Einstellungen"
   },
   "common": {
     "language": "Sprache",
@@ -3978,6 +3979,107 @@
     "footer": {
       "version": "{v}",
       "source": "{src}"
+    }
+  },
+  "parameters": {
+    "title": "Einstellungen",
+    "subtitle": "Konfigurieren Sie Verhalten, Richtlinien und Präferenzen der Tessera-Plattform.",
+    "actions": {
+      "export": "Konfiguration exportieren",
+      "import": "Konfiguration importieren",
+      "save": "Änderungen speichern",
+      "viewAtDate": "Konfiguration zum Datum",
+      "compareTo": "Vergleichen mit",
+      "history": "Verlauf & Versionen"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "general": "Allgemein",
+      "security": "Sicherheit & Compliance",
+      "data": "Daten & Aufbewahrung",
+      "models": "KI & Modelle",
+      "access": "Zugriff & Authentifizierung",
+      "notifications": "Benachrichtigungen",
+      "integrations": "Integrationen",
+      "audit": "Audit & Logs",
+      "system": "System"
+    },
+    "version": {
+      "active": "Aktive Konfigurationsversion",
+      "activeSince": "Aktiv seit",
+      "modifiedBy": "Geändert von",
+      "status": "Status",
+      "nextReview": "Nächste Prüfung"
+    },
+    "kpi": {
+      "configured": "Konfigurierte Parameter",
+      "policies": "Aktive Richtlinien",
+      "security_rules": "Sicherheitsregeln",
+      "integrations": "Verbundene Integrationen",
+      "models": "Verfügbare KI-Modelle",
+      "changes": "Änderungen (30 Tage)"
+    },
+    "quick": {
+      "title": "Schnellkonfiguration",
+      "customize": "Anpassen",
+      "configure": "Konfigurieren"
+    },
+    "cat": {
+      "security_policies": "Sicherheitsrichtlinien",
+      "data_retention": "Datenaufbewahrung",
+      "models_ai": "Modelle & KI",
+      "authentication": "Authentifizierung",
+      "notifications": "Benachrichtigungen",
+      "integrations": "Integrationen"
+    },
+    "recent": {
+      "title": "Letzte Parameter"
+    },
+    "col": {
+      "name": "Parameter",
+      "category": "Kategorie",
+      "value": "Wert",
+      "modifiedBy": "Geändert von",
+      "date": "Datum",
+      "status": "Status"
+    },
+    "paramStatus": {
+      "active": "Aktiv",
+      "draft": "Entwurf",
+      "deprecated": "Veraltet"
+    },
+    "state": {
+      "title": "Konfigurationsstatus",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "drafts": "Entwürfe",
+      "deprecated": "Veraltet",
+      "viewDetail": "Details anzeigen"
+    },
+    "compliance": {
+      "title": "Parameter-Compliance",
+      "conform": "Konform",
+      "view": "Anzeigen",
+      "viewAll": "Alle Kontrollen anzeigen",
+      "security_policies": "Sicherheitsrichtlinien",
+      "data_retention": "Datenaufbewahrung",
+      "authentication": "Zugriff & Authentifizierung",
+      "models_ai": "KI & Modelle",
+      "audit": "Audit & Nachvollziehbarkeit"
+    },
+    "usage": {
+      "title": "Nutzungsrichtlinien"
+    },
+    "backup": {
+      "title": "Backup & Wiederherstellung",
+      "last": "Letztes Backup",
+      "frequency": "Frequenz",
+      "retention": "Aufbewahrung",
+      "size": "Größe"
+    },
+    "footer": {
+      "version": "{v}",
+      "source": "Quelle der Wahrheit: {src}"
     }
   }
 }
