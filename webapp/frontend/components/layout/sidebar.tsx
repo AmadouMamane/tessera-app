@@ -43,6 +43,7 @@ type RouteHref =
   | "/policies"
   | "/sources"
   | "/access"
+  | "/integrations"
   | "/eval"
   | "/observability"
   | "/security"
@@ -110,7 +111,7 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: "/policies", icon: ShieldCheck, labelKey: "policies" },
       { href: "/sources", icon: MemoryStick, labelKey: "sourcesMemory" },
       { href: "/access", icon: KeyRound, labelKey: "rolesAccess" },
-      { icon: Settings, labelKey: "integrations" },
+      { href: "/integrations", icon: Settings, labelKey: "integrations" },
       { href: "/settings", icon: UserRound, labelKey: "systemProfile" },
     ],
   },

@@ -2614,3 +2614,81 @@ export const AccessOverviewSchema = z.object({
   footer: z.object({ total: z.number().int(), source: z.string() }),
 });
 export type AccessOverview = z.infer<typeof AccessOverviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Integrations (page #19)
+// ---------------------------------------------------------------------------
+
+const IgKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  sub: z.string(),
+  series: z.array(z.number()),
+});
+const IgSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+const IgMetricSchema = z.object({ value: z.string(), delta: z.string() });
+
+export const IntegrationsOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string(),
+  total_integrations: z.number().int(),
+  page_size: z.number().int(),
+  kpis: z.array(IgKpiSchema),
+  integrations: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.string(),
+      status: z.enum(["active", "warning", "error", "disabled"]),
+      environment: z.string(),
+      owner: z.string(),
+      calls: z.string(),
+      success_rate: z.string(),
+      response_time: z.string(),
+      last_sync: z.string(),
+    }),
+  ),
+  selected: z.object({
+    id: z.string(),
+    name: z.string(),
+    status: z.enum(["active", "warning", "error", "disabled"]),
+    last_sync: z.string(),
+    response_time: z.string(),
+    success_rate: z.string(),
+    description: z.string(),
+    owner: z.string(),
+    environment: z.string(),
+    region: z.string(),
+    criticality: z.enum(["low", "medium", "high"]),
+    usage: z.object({ read: IgMetricSchema, write: IgMetricSchema, cost: IgMetricSchema }),
+    config: z.object({
+      url: z.string(),
+      version: z.string(),
+      auth: z.string(),
+      timeout: z.string(),
+      retry: z.string(),
+      rate_limit: z.string(),
+      pagination: z.string(),
+    }),
+    security: z.object({
+      method: z.string(),
+      client_id: z.string(),
+      cert: z.string(),
+      key_rotation: z.string(),
+      last_rotation: z.string(),
+    }),
+  }),
+  by_type: z.array(IgSliceSchema),
+  by_type_total: z.number().int(),
+  by_env: z.array(
+    z.object({ key: z.string(), value: z.string(), pct: z.number(), color: z.string() }),
+  ),
+  top_integrations: z.array(z.object({ name: z.string(), value: z.number(), label: z.string() })),
+  footer: z.object({ total: z.number().int(), source: z.string() }),
+});
+export type IntegrationsOverview = z.infer<typeof IntegrationsOverviewSchema>;

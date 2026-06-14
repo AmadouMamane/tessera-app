@@ -91,6 +91,8 @@ import {
   ImprovementReportSchema,
   type IncidentsOverview,
   IncidentsOverviewSchema,
+  type IntegrationsOverview,
+  IntegrationsOverviewSchema,
   type IntentReport,
   IntentReportSchema,
   type InventoryReport,
@@ -701,6 +703,12 @@ export async function fetchSourcesOverview(signal?: AbortSignal): Promise<Source
 
 export async function fetchAccessOverview(signal?: AbortSignal): Promise<AccessOverview> {
   return request("/observability/access", { signal }, AccessOverviewSchema);
+}
+
+export async function fetchIntegrationsOverview(
+  signal?: AbortSignal,
+): Promise<IntegrationsOverview> {
+  return request("/observability/integrations", { signal }, IntegrationsOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

@@ -3750,5 +3750,118 @@
       "total": "{n} Rollen",
       "source": "Quelle der Wahrheit: {src}"
     }
+  },
+  "integrations": {
+    "title": "Integrationen",
+    "subtitle": "Verbinden, konfigurieren und überwachen Sie die in Tessera integrierten externen Systeme und Dienste.",
+    "actions": {
+      "test": "Konnektivität testen",
+      "import": "Konfig. importieren",
+      "create": "Neue Integration"
+    },
+    "filters": {
+      "search": "Integration suchen…",
+      "status": "Status",
+      "type": "Typ",
+      "environment": "Umgebung",
+      "owner": "Owner",
+      "showDisabled": "deaktivierte anzeigen",
+      "button": "Filter",
+      "all": "Alle"
+    },
+    "kpi": {
+      "total": "Integrationen gesamt",
+      "active": "Aktiv",
+      "warnings": "Warnungen",
+      "errors": "Fehler",
+      "calls": "Aufrufe (24h)",
+      "success_rate": "Erfolgsrate (24h)",
+      "response_time": "Antwortzeit (p95)",
+      "cost": "Kosten (30 Tage)"
+    },
+    "col": {
+      "name": "Name",
+      "type": "Typ",
+      "status": "Status",
+      "environment": "Umgebung",
+      "owner": "Owner",
+      "calls": "Aufrufe (24h)",
+      "successRate": "Erfolgsrate",
+      "responseTime": "Antwortzeit",
+      "lastSync": "Letzte Sync."
+    },
+    "type": {
+      "database": "Datenbank",
+      "warehouse": "Data Warehouse",
+      "api": "API",
+      "saas": "SaaS",
+      "queue": "Message Queue",
+      "storage": "Speicher"
+    },
+    "status": {
+      "active": "Aktiv",
+      "warning": "Warnung",
+      "error": "Fehler",
+      "disabled": "Deaktiviert"
+    },
+    "criticality": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch"
+    },
+    "detailTabs": {
+      "config": "Konfigurieren",
+      "endpoints": "Endpoint & Keys",
+      "secrets": "Secrets & Auth",
+      "mappings": "Mappings",
+      "policies": "Policies",
+      "calls": "Ihre Aufrufe",
+      "history": "Verlauf"
+    },
+    "detail": {
+      "connectivity": "Status & Konnektivität",
+      "lastSync": "Letzte Sync.",
+      "responseTime": "Antwortzeit (24h)",
+      "successRate": "Erfolgsrate (24h)",
+      "general": "Allgemeine Infos",
+      "owner": "Owner",
+      "environment": "Umgebung",
+      "region": "Region",
+      "criticality": "Kritikalität",
+      "usage": "Nutzung (30 Tage)",
+      "read": "Gelesene Daten",
+      "write": "Geschriebene Daten",
+      "cost": "Kosten",
+      "viewDetail": "Details anzeigen",
+      "config": "Hauptkonfiguration",
+      "url": "URL",
+      "version": "Version",
+      "auth": "Authentifizierung",
+      "timeout": "Timeout",
+      "retry": "Retry",
+      "rateLimit": "Rate Limit",
+      "pagination": "Pagination",
+      "security": "Sicherheit & Authentifizierung",
+      "method": "Authentifizierungsmethode",
+      "clientId": "Client-ID",
+      "cert": "Zertifikat / Privater Schlüssel",
+      "keyRotation": "Schlüsselrotation",
+      "lastRotation": "Letzte Rotation"
+    },
+    "zone": {
+      "byType": "Verteilung nach Typ",
+      "byEnv": "Aufrufe pro Umgebung",
+      "top": "Top-Integrationen nach Aufrufen"
+    },
+    "env": {
+      "prod": "Prod",
+      "preprod": "Preprod",
+      "staging": "Staging",
+      "dev": "Dev"
+    },
+    "footer": {
+      "total": "{n} Integrationen",
+      "source": "Quelle der Wahrheit: {src}"
+    }
   }
 }

@@ -50,6 +50,7 @@ from tessera.observability import (
     handoffs as handoffs_mod,
     improvement as improvement_mod,
     incidents as incidents_mod,
+    integrations as integrations_mod,
     journey as journey_mod,
     language_routing as language_routing_mod,
     least_privilege as least_privilege_mod,
@@ -629,6 +630,21 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/integrations")
+async def observability_integrations() -> dict[str, object]:
+    """Integrations overview (page #19).
+
+    Composes the integration posture, the catalogue table, the
+    selected-integration detail and the distributions. Degrades to
+    ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **integrations_mod.compute_integrations_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.integrations: failed: {exc}\n")
         return {"available": False}
 
 
