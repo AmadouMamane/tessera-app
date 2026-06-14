@@ -62,10 +62,11 @@ function Zone({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Tiny sparkline over a real value series. */
+/** Tiny sparkline over a real value series. A flat series reads as a steady mid line. */
 function Spark({ values }: { values: number[] }) {
   const min = Math.min(...values);
   const max = Math.max(...values);
+  const flat = max - min === 0;
   const span = max - min || 1;
   const W = 100;
   const H = 22;
@@ -73,7 +74,7 @@ function Spark({ values }: { values: number[] }) {
     .map(
       (v, i) =>
         `${i === 0 ? "M" : "L"}${((i / (values.length - 1)) * W).toFixed(1)},${(
-          H - ((v - min) / span) * H
+          flat ? H / 2 : H - ((v - min) / span) * H
         ).toFixed(1)}`,
     )
     .join(" ");
@@ -373,12 +374,14 @@ export function ReliabilityDashboard() {
                 value={pct(d.availability, 2)}
                 tone={(d.availability ?? 0) >= 0.99 ? GOOD : WARN}
                 sub={tr("kpi.sla")}
+                series={availLine}
               />
               <Kpi
                 icon={Activity}
                 label={tr("kpi.errorRate")}
                 value={pct(d.error_rate, 2)}
                 tone={(d.error_rate ?? 0) < 0.01 ? GOOD : WARN}
+                series={errLine}
               />
               <Kpi
                 icon={Timer}
@@ -406,6 +409,10 @@ export function ReliabilityDashboard() {
                 value={eur(d.total_cost_eur ?? 0, 4)}
                 tone={GOOD}
                 sub={tr("kpi.window")}
+                series={costDay}
+                delta={d.volume_delta}
+                deltaUnit="%"
+                deltaUpIsGood={false}
               />
               <Kpi
                 icon={Coins}
