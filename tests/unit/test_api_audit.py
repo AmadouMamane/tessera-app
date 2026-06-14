@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from tessera.api.routes import audit
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_entry_normalisation_exposes_auditable_dashboard_fields() -> None:
@@ -129,3 +134,42 @@ def test_filter_entries_applies_policy_search_and_time_window() -> None:
     )
 
     assert filtered == [kept]
+
+
+def test_read_entries_cache_invalidates_when_audit_file_changes(tmp_path: Path) -> None:
+    path = tmp_path / "audit.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "occurred_at": "2026-06-14T10:00:00+00:00",
+                "target": "memory.read",
+                "outcome": "allowed",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    audit._ENTRIES_CACHE = None
+    first = audit._read_entries(path)
+    second = audit._read_entries(path)
+
+    assert first is second
+    assert [entry.target for entry in first] == ["memory.read"]
+
+    with path.open("a", encoding="utf-8") as fp:
+        fp.write(
+            json.dumps(
+                {
+                    "occurred_at": "2026-06-14T11:00:00+00:00",
+                    "target": "memory.write",
+                    "outcome": "allowed",
+                }
+            )
+            + "\n"
+        )
+
+    refreshed = audit._read_entries(path)
+
+    assert refreshed is not first
+    assert [entry.target for entry in refreshed] == ["memory.read", "memory.write"]

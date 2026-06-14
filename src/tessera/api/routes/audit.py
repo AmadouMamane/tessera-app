@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path  # noqa: TCH003  used at runtime in the file-backed reader
+from threading import RLock
 from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Query
@@ -168,10 +170,43 @@ _METRIC_KEYS: tuple[AuditMetricKey, ...] = (
 )
 
 
+@dataclass(frozen=True, slots=True)
+class _AuditFileState:
+    path: str
+    mtime_ns: int | None
+    size: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class _EntriesCache:
+    state: _AuditFileState
+    entries: list[AuditEntry]
+
+
+@dataclass(frozen=True, slots=True)
+class _IntegrityCache:
+    state: _AuditFileState
+    integrity: AuditIntegrity
+
+
+_ENTRIES_CACHE_LOCK = RLock()
+_INTEGRITY_CACHE_LOCK = RLock()
+_ENTRIES_CACHE: _EntriesCache | None = None
+_INTEGRITY_CACHE: _IntegrityCache | None = None
+
+
 def _resolve_audit_path() -> Path:
     from tessera.settings import get_settings
 
     return get_settings().guard.audit_file
+
+
+def _audit_file_state(path: Path) -> _AuditFileState:
+    try:
+        stat = path.stat()
+    except OSError:
+        return _AuditFileState(path=str(path), mtime_ns=None, size=None)
+    return _AuditFileState(path=str(path), mtime_ns=stat.st_mtime_ns, size=stat.st_size)
 
 
 def _first_text(value: object) -> str | None:
@@ -261,7 +296,7 @@ def _entry_from_payload(payload: dict[str, object]) -> AuditEntry:
     )
 
 
-def _read_entries(path: Path) -> list[AuditEntry]:
+def _read_entries_uncached(path: Path) -> list[AuditEntry]:
     if not path.exists():
         return []
     out: list[AuditEntry] = []
@@ -279,6 +314,35 @@ def _read_entries(path: Path) -> list[AuditEntry]:
             except (ValidationError, TypeError):
                 continue
     return out
+
+
+def _read_entries(path: Path) -> list[AuditEntry]:
+    global _ENTRIES_CACHE
+
+    state = _audit_file_state(path)
+    with _ENTRIES_CACHE_LOCK:
+        if _ENTRIES_CACHE is not None and _ENTRIES_CACHE.state == state:
+            return _ENTRIES_CACHE.entries
+        entries = _read_entries_uncached(path)
+        _ENTRIES_CACHE = _EntriesCache(state=state, entries=entries)
+        return entries
+
+
+def _audit_integrity(path: Path) -> AuditIntegrity:
+    global _INTEGRITY_CACHE
+
+    state = _audit_file_state(path)
+    with _INTEGRITY_CACHE_LOCK:
+        if _INTEGRITY_CACHE is not None and _INTEGRITY_CACHE.state == state:
+            return _INTEGRITY_CACHE.integrity
+        status = verify_audit_chain(path)
+        integrity = AuditIntegrity(
+            verified=status.verified,
+            length=status.length,
+            broken_at=status.broken_at,
+        )
+        _INTEGRITY_CACHE = _IntegrityCache(state=state, integrity=integrity)
+        return integrity
 
 
 def _parse_datetime(value: str | None) -> datetime | None:
@@ -446,17 +510,25 @@ def _timeline(
 ) -> list[AuditTimelineBucket]:
     span = max((end - start).total_seconds(), float(_TIMELINE_BUCKETS))
     bucket_seconds = span / _TIMELINE_BUCKETS
+    totals = [0] * _TIMELINE_BUCKETS
+    outcomes_by_bucket: list[Counter[AuditOutcome]] = [Counter() for _ in range(_TIMELINE_BUCKETS)]
+
+    for entry in entries:
+        occurred = _entry_datetime(entry)
+        if occurred is None or occurred < start or occurred >= end:
+            continue
+        index = min(
+            _TIMELINE_BUCKETS - 1,
+            int((occurred - start).total_seconds() / bucket_seconds),
+        )
+        totals[index] += 1
+        outcomes_by_bucket[index][entry.outcome] += 1
+
     buckets: list[AuditTimelineBucket] = []
     for index in range(_TIMELINE_BUCKETS):
         bucket_start = start + timedelta(seconds=bucket_seconds * index)
         bucket_end = start + timedelta(seconds=bucket_seconds * (index + 1))
-        members = [
-            entry
-            for entry in entries
-            if (occurred := _entry_datetime(entry)) is not None
-            and bucket_start <= occurred < bucket_end
-        ]
-        outcomes = Counter(entry.outcome for entry in members)
+        outcomes = outcomes_by_bucket[index]
         buckets.append(
             AuditTimelineBucket(
                 label=bucket_start.strftime(
@@ -464,7 +536,7 @@ def _timeline(
                 ),
                 start=bucket_start.isoformat(),
                 end=bucket_end.isoformat(),
-                total=len(members),
+                total=totals[index],
                 allowed=outcomes["allowed"],
                 denied=outcomes["denied"],
                 error=outcomes["error"],
@@ -632,12 +704,7 @@ async def audit_overview(
 ) -> AuditOverview:
     """Return aggregate audit cockpit data for the selected window."""
     path = _resolve_audit_path()
-    status = verify_audit_chain(path)
-    integrity = AuditIntegrity(
-        verified=status.verified,
-        length=status.length,
-        broken_at=status.broken_at,
-    )
+    integrity = _audit_integrity(path)
     return _build_overview(
         _read_entries(path),
         integrity,
@@ -656,7 +723,4 @@ async def audit_overview(
 @router.get("/audit/integrity", response_model=AuditIntegrity)
 async def audit_integrity() -> AuditIntegrity:
     """Verify the audit log's tamper-evident hash chain."""
-    status = verify_audit_chain(_resolve_audit_path())
-    return AuditIntegrity(
-        verified=status.verified, length=status.length, broken_at=status.broken_at
-    )
+    return _audit_integrity(_resolve_audit_path())

@@ -110,7 +110,7 @@ function isSameLocalDate(left: Date, right: Date): boolean {
   );
 }
 
-export function AuditTable() {
+export function AuditTable({ initialWindow }: { initialWindow?: AuditWindow }) {
   const t = useTranslations("audit");
   const tCommon = useTranslations("common");
   const formatter = useFormatter();
@@ -118,7 +118,7 @@ export function AuditTable() {
   const numberFormatter = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
   const [cursor, setCursor] = useState(0);
-  const [window, setWindow] = useState<AuditWindow>(() => makeWindow("7d"));
+  const [window, setWindow] = useState<AuditWindow>(() => initialWindow ?? makeWindow("7d"));
   const [query, setQuery] = useState("");
   const [outcome, setOutcome] = useState<AuditOutcome | "all">("all");
   const [eventType, setEventType] = useState<AuditEventType | "all">("all");
@@ -142,6 +142,7 @@ export function AuditTable() {
   const overview = useQuery({
     queryKey: ["audit-overview", filters],
     queryFn: ({ signal }) => fetchAuditOverview({ ...filters, signal }),
+    staleTime: 30_000,
     refetchInterval: 30_000,
   });
 
@@ -155,6 +156,7 @@ export function AuditTable() {
         signal,
       }),
     placeholderData: (prev) => prev,
+    staleTime: 30_000,
   });
 
   const entries = page.data?.entries ?? [];
