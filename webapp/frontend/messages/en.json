@@ -2639,7 +2639,8 @@
       "byService": "Distribution by service",
       "byModel": "Distribution by model",
       "evalsByCat": "Replayed evals by category",
-      "proofsExports": "Proofs & exports"
+      "proofsExports": "Proofs & exports",
+      "quickActions": "Quick actions"
     },
     "legend": {
       "requests": "Requests",
@@ -2739,6 +2740,14 @@
       "chain": "Audit chain intact",
       "source": "Source of truth: {src}",
       "soc": "SOC connected"
+    },
+    "quick": {
+      "replaySession": "Replay a session",
+      "compareBaseline": "Compare to a baseline",
+      "createBaseline": "Create a baseline",
+      "exportResults": "Export results",
+      "scheduleReplay": "Schedule a replay",
+      "viewLog": "View replay log"
     }
   }
 }

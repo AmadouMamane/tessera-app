@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ChevronRight,
+  Clock3,
   Database,
   Download,
   FileSearch,
   GitCompare,
+  Plus,
   RefreshCcw,
   ShieldCheck,
   Users,
@@ -151,8 +153,9 @@ export function ReplayOverview() {
                   showCount
                 />
               </Panel>
-              <EvalsByCategory t={t} data={data} className="xl:col-span-3" />
-              <ProofsExports t={t} data={data} className="xl:col-span-3" />
+              <EvalsByCategory t={t} data={data} className="xl:col-span-2" />
+              <ProofsExports t={t} data={data} className="xl:col-span-2" />
+              <QuickActions t={t} className="xl:col-span-2" />
             </div>
           </Zone>
         </div>
@@ -440,22 +443,41 @@ function ProofsExports({ t, data, className }: { t: T; data: Data; className?: s
     [t("proofs.lastExport"), p.last_export],
   ];
   return (
-    <Panel title={t("panel.proofsExports")} className={className}>
-      <div className="flex flex-col gap-1.5">
-        <dl className="flex flex-col gap-1 text-[0.7rem]">
-          {rows.map(([k, v]) => (
-            <div key={k} className="flex items-center justify-between gap-2">
-              <dt className="text-[var(--tessera-text-muted)]">{k}</dt>
-              <dd className="tabular-nums text-[var(--tessera-text)]">{v}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="mt-1 flex flex-col gap-1">
-          <RailButton icon={Download} label={t("exportBtn.results")} />
-          <RailButton icon={RefreshCcw} label={t("exportBtn.schedule")} />
-          <RailButton icon={FileSearch} label={t("exportBtn.log")} />
-        </div>
-      </div>
+    <Panel
+      title={t("panel.proofsExports")}
+      className={className}
+      action={<ViewAll label={t("exportBtn.all")} />}
+    >
+      <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+        {rows.map(([k, v]) => (
+          <div key={k} className="flex items-center justify-between gap-2">
+            <dt className="text-[var(--tessera-text-muted)]">{k}</dt>
+            <dd className="tabular-nums text-[var(--tessera-text)]">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </Panel>
+  );
+}
+
+function QuickActions({ t, className }: { t: T; className?: string }) {
+  const items = [
+    { key: "replaySession", icon: RefreshCcw },
+    { key: "compareBaseline", icon: GitCompare },
+    { key: "createBaseline", icon: Plus },
+    { key: "exportResults", icon: Download },
+    { key: "scheduleReplay", icon: Clock3 },
+    { key: "viewLog", icon: FileSearch },
+  ] as const;
+  return (
+    <Panel title={t("panel.quickActions")} className={className}>
+      <ul className="flex flex-col gap-1">
+        {items.map((it) => (
+          <li key={it.key}>
+            <RailButton icon={it.icon} label={t(`quick.${it.key}`)} />
+          </li>
+        ))}
+      </ul>
     </Panel>
   );
 }

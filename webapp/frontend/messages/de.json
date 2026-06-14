@@ -2639,7 +2639,8 @@
       "byService": "Verteilung nach Service",
       "byModel": "Verteilung nach Modell",
       "evalsByCat": "Wiedergegebene Bewertungen nach Kategorie",
-      "proofsExports": "Nachweise & Exporte"
+      "proofsExports": "Nachweise & Exporte",
+      "quickActions": "Schnellaktionen"
     },
     "legend": {
       "requests": "Anfragen",
@@ -2739,6 +2740,14 @@
       "chain": "Audit-Kette intakt",
       "source": "Quelle der Wahrheit: {src}",
       "soc": "SOC verbunden"
+    },
+    "quick": {
+      "replaySession": "Session wiedergeben",
+      "compareBaseline": "Mit Baseline vergleichen",
+      "createBaseline": "Baseline erstellen",
+      "exportResults": "Ergebnisse exportieren",
+      "scheduleReplay": "Replay planen",
+      "viewLog": "Replay-Protokoll anzeigen"
     }
   }
 }
