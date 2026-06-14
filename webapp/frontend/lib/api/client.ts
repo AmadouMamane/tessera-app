@@ -181,6 +181,8 @@ import {
   SkewReportSchema,
   type SnapshotDiffReport,
   SnapshotDiffReportSchema,
+  type SourcesOverview,
+  SourcesOverviewSchema,
   type StatusCountsTrend,
   StatusCountsTrendSchema,
   type StegoReport,
@@ -689,6 +691,10 @@ export async function fetchSignalCatalogue(signal?: AbortSignal): Promise<Signal
 
 export async function fetchPoliciesOverview(signal?: AbortSignal): Promise<PoliciesOverview> {
   return request("/observability/policies", { signal }, PoliciesOverviewSchema);
+}
+
+export async function fetchSourcesOverview(signal?: AbortSignal): Promise<SourcesOverview> {
+  return request("/observability/sources", { signal }, SourcesOverviewSchema);
 }
 
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */

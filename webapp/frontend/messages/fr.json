@@ -3505,5 +3505,132 @@
       "source": "Source de vérité : {src}",
       "chain": "{txt}"
     }
+  },
+  "sources": {
+    "title": "Sources & mémoire",
+    "subtitle": "Gérez les sources de données, la mémoire du système et leur cycle de vie.",
+    "actions": {
+      "importSource": "Importer une source",
+      "connectSource": "Connecter une source",
+      "createSource": "Créer une source"
+    },
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "sources": "Sources",
+      "memory": "Mémoire",
+      "indexation": "Indexation & embeddings",
+      "quality": "Qualité & fraîcheur",
+      "access": "Accès & permissions",
+      "retention": "Rétention & purge",
+      "lineage": "Lineage & dépendances",
+      "history": "Historique & snapshots"
+    },
+    "filters": {
+      "snapshot": "Snapshot actif",
+      "viewSnapshot": "Voir snapshot à date",
+      "comparePrev": "Comparer à snapshot précédent",
+      "status": "Statut",
+      "type": "Type",
+      "classification": "Classification",
+      "environment": "Environnement",
+      "owner": "Propriétaire",
+      "showDisabled": "afficher désactivées",
+      "button": "Filtres",
+      "all": "Tous"
+    },
+    "kpi": {
+      "total": "Sources totales",
+      "active": "Actives",
+      "synced": "Synchronisées (24h)",
+      "memory": "Mémoire totale",
+      "indexed": "Indexée",
+      "retention": "Rétention moyenne",
+      "quality": "Qualité moyenne",
+      "cost": "Coût (30 jours)"
+    },
+    "col": {
+      "name": "Nom de la source",
+      "type": "Type",
+      "classification": "Classification",
+      "environment": "Environnement",
+      "status": "Statut",
+      "dataTotal": "Données (total)",
+      "indexed": "Indexée",
+      "lastSync": "Dernière sync.",
+      "quality": "Qualité",
+      "freshness": "Fraîcheur",
+      "owner": "Propriétaire",
+      "cost": "Coût (30j)"
+    },
+    "type": {
+      "database": "Base de données",
+      "vector": "Vecteur",
+      "api": "API",
+      "files": "Fichiers",
+      "stream": "Stream",
+      "memory": "Mémoire"
+    },
+    "classification": {
+      "public": "Public",
+      "internal": "Interne",
+      "confidential": "Confidentiel"
+    },
+    "status": {
+      "active": "Active",
+      "deprecated": "Dépréciée",
+      "disabled": "Désactivée"
+    },
+    "detailTabs": {
+      "overview": "Vue d’ensemble",
+      "details": "Détails",
+      "schema": "Schéma & champs",
+      "access": "Accès",
+      "activity": "Activité",
+      "dependencies": "Dépendances",
+      "history": "Historique"
+    },
+    "detail": {
+      "usage": "Utilisation (30 jours)",
+      "connector": "Connecteur",
+      "environment": "Environnement",
+      "region": "Région",
+      "status": "Statut",
+      "classification": "Classification",
+      "owner": "Propriétaire",
+      "created": "Créée le",
+      "modified": "Dernière modif.",
+      "retention": "Rétention",
+      "source": "Source",
+      "tags": "Tags",
+      "documents": "Documents",
+      "queries": "Requêtes",
+      "cost": "Coût (30)",
+      "qualityTitle": "Qualité des données",
+      "scoreGlobal": "Score global",
+      "viewDetail": "Voir le détail",
+      "quickAccess": "Accès rapide",
+      "actions": "Actions"
+    },
+    "quality": {
+      "completeness": "Complétude",
+      "freshness": "Fraîcheur",
+      "accuracy": "Exactitude",
+      "consistency": "Cohérence"
+    },
+    "zone": {
+      "byType": "Répartition par type",
+      "byEnv": "Mémoire par environnement",
+      "costBySource": "Coût par source"
+    },
+    "env": {
+      "prod": "Prod",
+      "preprod": "Preprod",
+      "staging": "Staging",
+      "dev": "Dev"
+    },
+    "footer": {
+      "total": "{n} sources",
+      "source": "Source de vérité : {src}"
+    }
   }
 }

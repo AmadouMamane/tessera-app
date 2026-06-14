@@ -79,6 +79,7 @@ from tessera.observability import (
     siem as siem_mod,
     signal_catalogue as signal_catalogue_mod,
     slo as slo_mod,
+    sources as sources_mod,
     span_propagation as span_propagation_mod,
     steganography as steganography_mod,
     tail_sampling as tail_sampling_mod,
@@ -627,6 +628,21 @@ async def observability_incidents() -> dict[str, object]:
         return {"available": True, **incidents_mod.compute_incidents_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/sources")
+async def observability_sources() -> dict[str, object]:
+    """Sources & memory overview (page #17).
+
+    Composes the catalogue posture, the source table, the selected-source detail
+    and the type / environment / cost distributions. Degrades to
+    ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **sources_mod.compute_sources_overview()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.sources: failed: {exc}\n")
         return {"available": False}
 
 

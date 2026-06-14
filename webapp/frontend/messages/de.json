@@ -3505,5 +3505,132 @@
       "source": "Quelle der Wahrheit: {src}",
       "chain": "{txt}"
     }
+  },
+  "sources": {
+    "title": "Quellen & Speicher",
+    "subtitle": "Verwalten Sie Datenquellen, den Systemspeicher und ihren Lebenszyklus.",
+    "actions": {
+      "importSource": "Quelle importieren",
+      "connectSource": "Quelle verbinden",
+      "createSource": "Quelle erstellen"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "sources": "Quellen",
+      "memory": "Speicher",
+      "indexation": "Indexierung & Embeddings",
+      "quality": "Qualität & Frische",
+      "access": "Zugriff & Berechtigungen",
+      "retention": "Aufbewahrung & Löschung",
+      "lineage": "Lineage & Abhängigkeiten",
+      "history": "Verlauf & Snapshots"
+    },
+    "filters": {
+      "snapshot": "Aktiver Snapshot",
+      "viewSnapshot": "Snapshot zum Datum",
+      "comparePrev": "Mit vorherigem Snapshot vergleichen",
+      "status": "Status",
+      "type": "Typ",
+      "classification": "Klassifizierung",
+      "environment": "Umgebung",
+      "owner": "Owner",
+      "showDisabled": "deaktivierte anzeigen",
+      "button": "Filter",
+      "all": "Alle"
+    },
+    "kpi": {
+      "total": "Quellen gesamt",
+      "active": "Aktiv",
+      "synced": "Synchronisiert (24h)",
+      "memory": "Speicher gesamt",
+      "indexed": "Indexiert",
+      "retention": "Ø Aufbewahrung",
+      "quality": "Ø Qualität",
+      "cost": "Kosten (30 Tage)"
+    },
+    "col": {
+      "name": "Quellenname",
+      "type": "Typ",
+      "classification": "Klassifizierung",
+      "environment": "Umgebung",
+      "status": "Status",
+      "dataTotal": "Daten (gesamt)",
+      "indexed": "Indexiert",
+      "lastSync": "Letzte Sync.",
+      "quality": "Qualität",
+      "freshness": "Frische",
+      "owner": "Owner",
+      "cost": "Kosten (30T)"
+    },
+    "type": {
+      "database": "Datenbank",
+      "vector": "Vektor",
+      "api": "API",
+      "files": "Dateien",
+      "stream": "Stream",
+      "memory": "Speicher"
+    },
+    "classification": {
+      "public": "Öffentlich",
+      "internal": "Intern",
+      "confidential": "Vertraulich"
+    },
+    "status": {
+      "active": "Aktiv",
+      "deprecated": "Veraltet",
+      "disabled": "Deaktiviert"
+    },
+    "detailTabs": {
+      "overview": "Übersicht",
+      "details": "Details",
+      "schema": "Schema & Felder",
+      "access": "Zugriff",
+      "activity": "Aktivität",
+      "dependencies": "Abhängigkeiten",
+      "history": "Verlauf"
+    },
+    "detail": {
+      "usage": "Nutzung (30 Tage)",
+      "connector": "Connector",
+      "environment": "Umgebung",
+      "region": "Region",
+      "status": "Status",
+      "classification": "Klassifizierung",
+      "owner": "Owner",
+      "created": "Erstellt am",
+      "modified": "Letzte Änderung",
+      "retention": "Aufbewahrung",
+      "source": "Quelle",
+      "tags": "Tags",
+      "documents": "Dokumente",
+      "queries": "Anfragen",
+      "cost": "Kosten (30)",
+      "qualityTitle": "Datenqualität",
+      "scoreGlobal": "Gesamtscore",
+      "viewDetail": "Details anzeigen",
+      "quickAccess": "Schnellzugriff",
+      "actions": "Aktionen"
+    },
+    "quality": {
+      "completeness": "Vollständigkeit",
+      "freshness": "Frische",
+      "accuracy": "Genauigkeit",
+      "consistency": "Konsistenz"
+    },
+    "zone": {
+      "byType": "Verteilung nach Typ",
+      "byEnv": "Speicher pro Umgebung",
+      "costBySource": "Kosten pro Quelle"
+    },
+    "env": {
+      "prod": "Prod",
+      "preprod": "Preprod",
+      "staging": "Staging",
+      "dev": "Dev"
+    },
+    "footer": {
+      "total": "{n} Quellen",
+      "source": "Quelle der Wahrheit: {src}"
+    }
   }
 }
