@@ -1894,7 +1894,8 @@
       "sensitiveMemory": "Mémoire sensible",
       "sensitiveMemoryHint": "cas à risque",
       "guard": "Efficacité du guard",
-      "recall": "rappel"
+      "recall": "rappel",
+      "vs7d": "vs 7j"
     },
     "col": {
       "signal": "Signal",
@@ -1969,7 +1970,14 @@
       "computing": "Calcul en cours…",
       "recoverable": "Vecteurs récupérables",
       "recoveryRate": "Taux de récupération",
-      "threshold": "Seuil"
+      "threshold": "Seuil",
+      "failures": "Répartition des échecs",
+      "failuresUnit": "échecs",
+      "noFailures": "Aucun échec observé",
+      "whatChanged": "Ce qui a changé",
+      "noChanges": "Aucun changement récent",
+      "attackLine": "Taux d'attaque",
+      "incidentLine": "Incidents critiques"
     },
     "overProvisioned": "Sur-privilégié",
     "act": {
@@ -2009,6 +2017,14 @@
       "siem": "SIEM / SOC (24h)",
       "exportSiem": "Exporter vers SIEM",
       "anomalies": "{n} anomalies de session détectées"
+    },
+    "fail": {
+      "injection": "Injection de prompt",
+      "toolMisuse": "Usage outil abusif",
+      "inversion": "Inversion embedding",
+      "refusal": "Refus mal calibré",
+      "pii": "Fuite PII",
+      "toxicity": "Toxicité"
     }
   },
   "compliance": {

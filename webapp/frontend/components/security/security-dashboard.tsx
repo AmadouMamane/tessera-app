@@ -32,6 +32,7 @@ import {
   fetchRegressionRisk,
   fetchScoreSeries,
   fetchToxicity,
+  fetchWhatChanged,
 } from "@/lib/api/client";
 import type {
   AnomalyReport,
@@ -91,6 +92,8 @@ function Kpi({
   tone,
   hint,
   series,
+  delta,
+  deltaUpIsGood,
 }: {
   icon: LucideIcon;
   label: string;
@@ -98,7 +101,13 @@ function Kpi({
   tone?: string;
   hint?: string;
   series?: number[];
+  delta?: number | null;
+  deltaUpIsGood?: boolean;
 }) {
+  const ts = useTranslations("security");
+  const showDelta = delta != null && Math.abs(delta) >= 0.005;
+  const up = (delta ?? 0) > 0;
+  const deltaGood = up === (deltaUpIsGood ?? true);
   return (
     <Card className="flex flex-col gap-1 p-3">
       <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
@@ -108,6 +117,16 @@ function Kpi({
       <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
         {value}
       </div>
+      {showDelta ? (
+        <div
+          className={`flex items-center gap-1 text-[0.65rem] tabular-nums ${deltaGood ? GOOD : BAD}`}
+        >
+          <span>{up ? "↗" : "↘"}</span>
+          <span>
+            {Math.abs((delta as number) * 100).toFixed(1)} pts {ts("kpi.vs7d")}
+          </span>
+        </div>
+      ) : null}
       {series && series.length > 1 ? <Spark values={series} /> : null}
       {hint ? (
         <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{hint}</div>
@@ -195,6 +214,124 @@ function RiskBar({ label, value, sub }: { label: string; value: number; sub?: st
       <span className="w-12 shrink-0 text-right tabular-nums" style={{ color: tone }}>
         {sub ?? pct(value)}
       </span>
+    </div>
+  );
+}
+
+/** Donut of failure families (zone C "Répartition des échecs"). */
+function FailureDonut({
+  slices,
+  label,
+}: {
+  slices: { key: string; count: number; color: string }[];
+  label: string;
+}) {
+  const ts = useTranslations("security");
+  const total = slices.reduce((s, x) => s + x.count, 0) || 1;
+  const R = 28;
+  const C = 2 * Math.PI * R;
+  let off = 0;
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative h-[84px] w-[84px] shrink-0">
+        <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90" aria-hidden="true">
+          <circle
+            cx="36"
+            cy="36"
+            r={R}
+            fill="none"
+            stroke="var(--tessera-border)"
+            strokeWidth="9"
+          />
+          {slices.map((s) => {
+            const frac = s.count / total;
+            const seg = { dash: frac * C, gap: C - frac * C, o: -off * C };
+            off += frac;
+            return (
+              <circle
+                key={s.key}
+                cx="36"
+                cy="36"
+                r={R}
+                fill="none"
+                stroke={s.color}
+                strokeWidth="9"
+                strokeDasharray={`${seg.dash} ${seg.gap}`}
+                strokeDashoffset={seg.o}
+              />
+            );
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-base font-semibold tabular-nums">{total}</span>
+          <span className="text-[0.5rem] uppercase text-[var(--muted-foreground)]">{label}</span>
+        </div>
+      </div>
+      <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.7rem]">
+        {slices.map((s) => (
+          <li key={s.key} className="flex items-center gap-1.5">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
+            <span className="min-w-0 flex-1 truncate">{ts(`fail.${s.key}`)}</span>
+            <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">
+              {s.count} · {Math.round((s.count / total) * 100)}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Two-line trend chart over the score-series window (zone D). */
+function LineChart({
+  a,
+  b,
+  aLabel,
+  bLabel,
+}: {
+  a: number[];
+  b: number[];
+  aLabel: string;
+  bLabel: string;
+}) {
+  const all = [...a, ...b];
+  if (all.length < 2)
+    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
+  const max = Math.max(0.01, ...all);
+  const W = 220;
+  const H = 60;
+  const path = (s: number[]) =>
+    s.length < 2
+      ? ""
+      : s
+          .map(
+            (v, i) =>
+              `${i === 0 ? "M" : "L"}${((i / (s.length - 1)) * W).toFixed(1)},${(H - 4 - (v / max) * (H - 8)).toFixed(1)}`,
+          )
+          .join(" ");
+  return (
+    <div className="flex flex-col gap-1">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="h-16 w-full"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path d={path(a)} fill="none" stroke="#f97316" strokeWidth="1.6" strokeLinejoin="round" />
+        {b.length >= 2 ? (
+          <path d={path(b)} fill="none" stroke="#ef4444" strokeWidth="1.4" strokeLinejoin="round" />
+        ) : null}
+      </svg>
+      <div className="flex gap-3 text-[0.6rem] text-[var(--muted-foreground)]">
+        <span className="flex items-center gap-1">
+          <span className="h-1 w-3 rounded-full bg-[#f97316]" /> {aLabel}
+        </span>
+        {b.length >= 2 ? (
+          <span className="flex items-center gap-1">
+            <span className="h-1 w-3 rounded-full bg-[#ef4444]" /> {bLabel}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -304,9 +441,21 @@ export function SecurityDashboard() {
     placeholderData: keepPreviousData,
     refetchInterval: POLL,
   });
-  const trend = useQuery({
-    queryKey: ["score-series", "hallucination"],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, undefined, "hallucination"),
+  const faith = useQuery({
+    queryKey: ["score-series", "faithfulness"],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, undefined, "faithfulness"),
+    placeholderData: keepPreviousData,
+    refetchInterval: POLL,
+  });
+  const grounding = useQuery({
+    queryKey: ["score-series", "grounding"],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, undefined, "grounding"),
+    placeholderData: keepPreviousData,
+    refetchInterval: POLL,
+  });
+  const whatChanged = useQuery({
+    queryKey: ["what-changed"],
+    queryFn: ({ signal }) => fetchWhatChanged(signal),
     placeholderData: keepPreviousData,
     refetchInterval: POLL,
   });
@@ -326,8 +475,14 @@ export function SecurityDashboard() {
   const overProvRate =
     lp.data && lp.data.n_granted > 0 ? lp.data.n_over_provisioned / lp.data.n_granted : null;
 
-  const fwSpark =
-    trend.data?.buckets.filter((b) => b.mean != null).map((b) => 1 - (b.mean as number)) ?? [];
+  // Real 30-day risk trend from the durable score series (1 − metric mean).
+  const attackSeries =
+    faith.data?.buckets.filter((b) => b.mean != null).map((b) => 1 - (b.mean as number)) ?? [];
+  const incidentSeries =
+    grounding.data?.buckets.filter((b) => b.mean != null).map((b) => 1 - (b.mean as number)) ?? [];
+  const fwSpark = attackSeries;
+  const sparkDelta = (s: number[]): number | null =>
+    s.length >= 2 ? (s.at(-1) as number) - (s[0] as number) : null;
 
   // Zone B — critical controls, all real.
   type Control = {
@@ -407,6 +562,20 @@ export function SecurityDashboard() {
     { key: "compliance", value: 1 - (conformance.data?.conformance_rate ?? 1) },
   ].sort((a, b) => b.value - a.value);
 
+  // Répartition des échecs (zone C donut) — real failure observations per family.
+  const failureSlices = [
+    { key: "injection", count: fw?.false_negative ?? 0, color: "#f97316" },
+    { key: "toolMisuse", count: lp.data?.n_over_provisioned ?? 0, color: "#60a5fa" },
+    { key: "inversion", count: inversion.data?.n_recoverable ?? 0, color: "#a78bfa" },
+    {
+      key: "refusal",
+      count: (refusal.data?.legit_refused ?? 0) + (refusal.data?.forbidden_allowed ?? 0),
+      color: "#fbbf24",
+    },
+    { key: "pii", count: pii.data?.n_with_leak ?? 0, color: "#f472b6" },
+    { key: "toxicity", count: toxicity.data?.n_toxic ?? 0, color: "#34d399" },
+  ].filter((s) => s.count > 0);
+
   const erasureComplete =
     erasure.data && erasure.data.n_conversations > 0
       ? erasure.data.n_bundles / erasure.data.n_conversations
@@ -444,6 +613,8 @@ export function SecurityDashboard() {
           value={pct(attackRate)}
           tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
           series={fwSpark}
+          delta={sparkDelta(attackSeries)}
+          deltaUpIsGood={false}
         />
         <Kpi
           icon={ShieldCheck}
@@ -451,6 +622,8 @@ export function SecurityDashboard() {
           value={blocked}
           tone={GOOD}
           series={fwSpark.map((v) => 1 - v)}
+          delta={sparkDelta(incidentSeries.map((v) => -v))}
+          deltaUpIsGood
         />
         <Kpi
           icon={ShieldCheck}
@@ -525,19 +698,39 @@ export function SecurityDashboard() {
           {/* C. Diagnostic racine */}
           <Sec>{ts("sec.diagnostic")}</Sec>
           <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+            <Panel title={ts("panel.failures")}>
+              {failureSlices.length === 0 ? (
+                <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                  {ts("panel.noFailures")}
+                </p>
+              ) : (
+                <FailureDonut slices={failureSlices} label={ts("panel.failuresUnit")} />
+              )}
+            </Panel>
+            <Panel title={ts("panel.whatChanged")}>
+              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                {(whatChanged.data?.changes ?? []).length === 0 ? (
+                  <li className="text-[var(--muted-foreground)]">{ts("panel.noChanges")}</li>
+                ) : (
+                  (whatChanged.data?.changes ?? []).slice(0, 4).map((c) => (
+                    <li key={c.field} className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate">{c.field}</span>
+                      <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                        {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
+                      </span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </Panel>
             <Panel title={ts("panel.refusal")}>
-              <div className="flex items-center justify-around">
+              <div className="flex items-center gap-2">
                 <Gauge
                   value={refusal.data?.over_refusal_rate ?? 0}
                   label={ts("panel.overRefusal")}
                   tone="#f59e0b"
                 />
-                <div className="flex flex-col gap-1 text-[0.7rem]">
-                  <KV
-                    label={ts("panel.overRefusal")}
-                    value={pct(refusal.data?.over_refusal_rate)}
-                    tone={WARN}
-                  />
+                <div className="flex min-w-0 flex-col gap-1 text-[0.7rem]">
                   <KV
                     label={ts("panel.underRefusal")}
                     value={pct(refusal.data?.under_refusal_rate)}
@@ -545,6 +738,52 @@ export function SecurityDashboard() {
                   />
                   <KV label={ts("panel.legit")} value={`${refusal.data?.n_legit ?? 0}`} />
                   <KV label={ts("panel.forbidden")} value={`${refusal.data?.n_forbidden ?? 0}`} />
+                </div>
+              </div>
+            </Panel>
+            <Panel title={ts("panel.priorityCases")}>
+              <ul className="flex flex-col gap-1 text-[0.72rem]">
+                {(failed.data?.cases ?? []).slice(0, 4).map((c) => (
+                  <li key={c.case_id} className="flex items-center gap-1.5">
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                    <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                      {c.case_id}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          </div>
+
+          {/* D. Signaux prédictifs */}
+          <Sec>{ts("sec.predictive")}</Sec>
+          <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+            <Panel title={ts("panel.trend")}>
+              <LineChart
+                a={attackSeries}
+                b={incidentSeries}
+                aLabel={ts("panel.attackLine")}
+                bLabel={ts("panel.incidentLine")}
+              />
+            </Panel>
+            <Panel title={ts("panel.regression")}>
+              <div className="flex items-center gap-3">
+                <Gauge
+                  value={regression.data?.risk_score ?? 0}
+                  tone={(regression.data?.risk_score ?? 0) >= 0.5 ? "#ef4444" : "#f59e0b"}
+                />
+                <div className="flex flex-col gap-0.5 text-[0.7rem]">
+                  <span
+                    className={`text-base font-semibold ${(regression.data?.risk_score ?? 0) >= 0.5 ? BAD : WARN}`}
+                  >
+                    {ts(`level.${regression.data?.level ?? "low"}`)}
+                  </span>
+                  <span className="text-[var(--muted-foreground)]">
+                    {ts("panel.regression7d")}: {pct(regression.data?.probability_7d)}
+                  </span>
                 </div>
               </div>
             </Panel>
@@ -569,54 +808,6 @@ export function SecurityDashboard() {
                   );
                 })}
               </ul>
-            </Panel>
-            <Panel title={ts("panel.priorityCases")}>
-              <ul className="flex flex-col gap-1 text-[0.72rem]">
-                {(failed.data?.cases ?? []).slice(0, 4).map((c) => (
-                  <li key={c.case_id} className="flex items-center gap-1.5">
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{c.title}</span>
-                    <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
-                      {c.case_id}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          </div>
-
-          {/* D. Signaux prédictifs */}
-          <Sec>{ts("sec.predictive")}</Sec>
-          <div className="grid items-start gap-2 lg:grid-cols-2">
-            <Panel title={ts("panel.trend")}>
-              {fwSpark.length > 1 ? (
-                <Spark values={fwSpark} />
-              ) : (
-                <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>
-              )}
-              <p className="mt-1 text-[0.62rem] text-[var(--muted-foreground)]">
-                {ts("panel.trendNote")}
-              </p>
-            </Panel>
-            <Panel title={ts("panel.regression")}>
-              <div className="flex items-center gap-3">
-                <Gauge
-                  value={regression.data?.risk_score ?? 0}
-                  tone={(regression.data?.risk_score ?? 0) >= 0.5 ? "#ef4444" : "#f59e0b"}
-                />
-                <div className="flex flex-col gap-0.5 text-[0.7rem]">
-                  <span
-                    className={`text-base font-semibold ${(regression.data?.risk_score ?? 0) >= 0.5 ? BAD : WARN}`}
-                  >
-                    {ts(`level.${regression.data?.level ?? "low"}`)}
-                  </span>
-                  <span className="text-[var(--muted-foreground)]">
-                    {ts("panel.regression7d")}: {pct(regression.data?.probability_7d)}
-                  </span>
-                </div>
-              </div>
             </Panel>
           </div>
 
