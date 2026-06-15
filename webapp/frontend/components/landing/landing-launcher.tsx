@@ -36,14 +36,14 @@ interface SpaceItem {
 const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--bg-app": "#020817",
   "--bg-deep": "#030B18",
-  "--bg-radial": "rgba(20, 43, 77, 0.42)",
-  "--bg-panel": "#061426",
-  "--bg-panel-soft": "#0A1B2F",
-  "--panel": "rgba(6, 20, 38, 0.82)",
-  "--panel-soft": "rgba(10, 27, 47, 0.72)",
+  "--bg-radial": "rgba(20, 43, 77, 0.26)",
+  "--bg-panel": "rgba(6, 20, 38, 0.78)",
+  "--bg-panel-soft": "rgba(10, 27, 47, 0.66)",
+  "--panel": "rgba(6, 20, 38, 0.78)",
+  "--panel-soft": "rgba(10, 27, 47, 0.66)",
   "--border-subtle": "rgba(148, 163, 184, 0.14)",
-  "--border-gold": "rgba(214, 182, 106, 0.72)",
-  "--border-cyan": "rgba(45, 212, 191, 0.62)",
+  "--border-gold": "rgba(214, 182, 106, 0.55)",
+  "--border-cyan": "rgba(45, 212, 191, 0.48)",
   "--text-primary": "#F8FAFC",
   "--text-secondary": "#A6B3C8",
   "--champagne": "#D6B66A",
@@ -55,8 +55,8 @@ const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--success": "#22C55E",
   "--radius-lg": "24px",
   "--radius-md": "16px",
-  "--shadow-gold": "0 0 38px rgba(214, 182, 106, 0.16), inset 0 1px 0 rgba(255,255,255,0.05)",
-  "--shadow-cyan": "0 0 38px rgba(45, 212, 191, 0.14), inset 0 1px 0 rgba(255,255,255,0.05)",
+  "--shadow-gold": "0 0 18px rgba(214, 182, 106, 0.08), inset 0 1px 0 rgba(255,255,255,0.04)",
+  "--shadow-cyan": "0 0 18px rgba(45, 212, 191, 0.08), inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
 const CLIENT_ITEMS: SpaceItem[] = [
@@ -84,7 +84,6 @@ const ACCENT: Record<
     icon: string;
     soft: string;
     tone: string;
-    waveStroke: string;
   }
 > = {
   gold: {
@@ -92,8 +91,8 @@ const ACCENT: Record<
     button: "border-[var(--border-gold)] text-[var(--text-primary)]",
     buttonStyle: {
       background:
-        "linear-gradient(180deg, rgba(244,199,106,0.38), rgba(214,182,106,0.22) 42%, rgba(76,52,16,0.72))",
-      boxShadow: "0 0 28px rgba(214, 182, 106, 0.20), inset 0 1px 0 rgba(255,255,255,0.10)",
+        "linear-gradient(180deg, rgba(214,182,106,0.30), rgba(88,62,24,0.78) 58%, rgba(42,31,18,0.92))",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
     },
     cardStyle: {
       boxShadow: "var(--shadow-gold)",
@@ -101,15 +100,14 @@ const ACCENT: Record<
     icon: "text-[var(--gold-strong)]",
     soft: "text-[var(--gold)]",
     tone: "text-[var(--gold-strong)]",
-    waveStroke: "var(--gold)",
   },
   cyan: {
     border: "border-[var(--border-cyan)]",
     button: "border-[var(--border-cyan)] text-[var(--text-primary)]",
     buttonStyle: {
       background:
-        "linear-gradient(180deg, rgba(45,212,191,0.28), rgba(14,116,144,0.25) 44%, rgba(5,52,70,0.78))",
-      boxShadow: "0 0 28px rgba(45, 212, 191, 0.18), inset 0 1px 0 rgba(255,255,255,0.09)",
+        "linear-gradient(180deg, rgba(45,212,191,0.22), rgba(8,86,102,0.70) 55%, rgba(4,39,53,0.92))",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
     },
     cardStyle: {
       boxShadow: "var(--shadow-cyan)",
@@ -117,7 +115,6 @@ const ACCENT: Record<
     icon: "text-[var(--cyan)]",
     soft: "text-[var(--cyan-soft)]",
     tone: "text-[var(--cyan)]",
-    waveStroke: "var(--cyan)",
   },
 };
 
@@ -135,30 +132,20 @@ export function LandingLauncher() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 50% 18%, var(--bg-radial) 0%, rgba(20,43,77,0.18) 28%, transparent 55%), linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-app) 48%, #010511 100%)",
-          boxShadow: "inset 0 0 180px rgba(0,0,0,0.64)",
+            "radial-gradient(circle at 50% 18%, var(--bg-radial) 0%, rgba(20,43,77,0.10) 32%, transparent 58%), linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-app) 48%, #010511 100%)",
+          boxShadow: "inset 0 0 150px rgba(0,0,0,0.70)",
         }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[220px]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[150px] bg-cover bg-bottom bg-no-repeat"
         style={{
-          background:
-            "radial-gradient(ellipse at 50% 100%, rgba(45,212,191,0.10), transparent 68%)",
+          backgroundImage: "url('/brand/select-space-waves.svg')",
         }}
-      />
-      <WaveCorner
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[210px] w-full"
-        tone="gold"
-      />
-      <WaveCorner
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[210px] w-full"
-        flip
-        tone="cyan"
       />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header t={t} />
-        <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-[14px]">
+        <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-[30px]">
           <section className="text-center">
             <h1 className="font-sans text-[54px] font-bold leading-none tracking-[-0.02em] text-[var(--text-primary)] [text-shadow:0_2px_22px_rgba(248,250,252,0.12)]">
               {t("welcome")}
@@ -168,7 +155,7 @@ export function LandingLauncher() {
             </p>
           </section>
 
-          <section className="mt-[22px] grid w-full max-w-[1252px] grid-cols-1 gap-8 xl:grid-cols-[610px_610px]">
+          <section className="mt-[30px] grid w-full max-w-[1252px] grid-cols-1 gap-8 xl:grid-cols-[610px_610px]">
             <SpaceCard
               t={t}
               ns="client"
@@ -243,7 +230,7 @@ function SpaceToggle({ t }: { t: T }) {
     <nav className="absolute left-[48.35%] top-[31px] flex h-[52px] w-[456px] -translate-x-1/2 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_76%,transparent)] p-0 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--text-primary)_4%,transparent),0_0_32px_rgba(0,0,0,0.18)]">
       <Link
         href="/produit"
-        className="flex h-[50px] w-[218px] items-center justify-center gap-[13px] rounded-[15px] border border-[var(--border-gold)] bg-[linear-gradient(180deg,rgba(214,182,106,0.26),rgba(55,38,14,0.88))] text-[17px] font-semibold uppercase tracking-[0.01em] text-[var(--gold-strong)] shadow-[0_0_28px_rgba(214,182,106,0.20),inset_0_1px_0_rgba(255,255,255,0.08)]"
+        className="flex h-[50px] w-[218px] items-center justify-center gap-[13px] rounded-[15px] border border-[rgba(214,182,106,0.50)] bg-[linear-gradient(180deg,rgba(214,182,106,0.22),rgba(55,38,14,0.86))] text-[17px] font-semibold uppercase tracking-[0.01em] text-[var(--gold)] shadow-[0_0_14px_rgba(214,182,106,0.10),inset_0_1px_0_rgba(255,255,255,0.07)]"
       >
         <UserRound className="h-[22px] w-[22px] fill-[color-mix(in_srgb,var(--gold-strong)_70%,transparent)] stroke-[var(--gold-strong)] stroke-[2.1]" />
         {t("toggle.product")}
@@ -281,7 +268,7 @@ function SpaceCard({
   return (
     <section
       className={cn(
-        "relative h-[560px] overflow-hidden rounded-[var(--radius-lg)] border px-[34px] pb-[22px] pt-[26px] backdrop-blur-[2px]",
+        "relative h-[492px] overflow-hidden rounded-[var(--radius-lg)] border px-[34px] pb-[22px] pt-[24px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{
@@ -294,12 +281,12 @@ function SpaceCard({
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 74% 10%, rgba(248,250,252,0.045), transparent 31%), linear-gradient(180deg, rgba(255,255,255,0.018), transparent 36%)",
+            "radial-gradient(circle at 74% 10%, rgba(248,250,252,0.032), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.014), transparent 34%)",
         }}
       />
 
       <div className="relative">
-        <div className="relative min-h-[156px]">
+        <div className="relative min-h-[138px]">
           <div className="min-w-0 max-w-[365px]">
             <div className="flex items-center gap-[20px]">
               <HexBadge className={cn(a.icon, a.soft)}>{badgeIcon}</HexBadge>
@@ -316,7 +303,7 @@ function SpaceCard({
           </div>
           <div
             className={cn(
-              "absolute top-[6px] opacity-50",
+              "absolute top-[2px] scale-[0.86] opacity-[0.24]",
               ns === "client" ? "-right-[5px]" : "right-0",
             )}
           >
@@ -326,7 +313,7 @@ function SpaceCard({
 
         <div className="h-px w-full bg-[var(--border-subtle)]" />
 
-        <ul className="mt-[17px] flex flex-col gap-[10px]">
+        <ul className="mt-[14px] flex flex-col gap-[8px]">
           {items.map((item) => (
             <li key={item.key} className="grid grid-cols-[34px_1fr_18px] items-center">
               <span
@@ -335,10 +322,10 @@ function SpaceCard({
                 <item.icon className="h-[27px] w-[27px] stroke-[1.8]" />
               </span>
               <span className="min-w-0 pl-[19px]">
-                <span className="block text-[17px] font-semibold leading-[1.08] text-[var(--text-primary)]">
+                <span className="block text-[16px] font-semibold leading-[1.06] text-[var(--text-primary)]">
                   {t(`${ns}.items.${item.key}.title`)}
                 </span>
-                <span className="mt-[4px] block text-[15px] font-medium leading-[1.08] text-[var(--text-secondary)]">
+                <span className="mt-[3px] block text-[14px] font-medium leading-[1.06] text-[var(--text-secondary)]">
                   {t(`${ns}.items.${item.key}.desc`)}
                 </span>
               </span>
@@ -354,7 +341,7 @@ function SpaceCard({
       <Link
         href={href}
         className={cn(
-          "absolute bottom-[18px] left-[31px] right-[31px] flex h-[56px] items-center justify-center gap-[24px] rounded-[15px] border text-[20px] font-semibold leading-none tracking-[0]",
+          "absolute bottom-[18px] left-[31px] right-[31px] flex h-[56px] items-center justify-center gap-[24px] rounded-[14px] border text-[20px] font-semibold leading-none tracking-[0]",
           a.button,
         )}
         style={a.buttonStyle}
@@ -470,53 +457,6 @@ function EyeIcon({ className }: { className?: string }) {
         strokeLinejoin="round"
       />
       <circle cx="14" cy="14" r="3.4" fill="currentColor" />
-    </svg>
-  );
-}
-
-function WaveCorner({
-  className,
-  flip = false,
-  tone,
-}: {
-  className: string;
-  flip?: boolean;
-  tone: Accent;
-}) {
-  const lines = Array.from({ length: 72 }, (_, i) => i);
-  const stroke = ACCENT[tone].waveStroke;
-  const gradientId = `landing-wave-${tone}`;
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      viewBox="0 0 760 260"
-      fill="none"
-      preserveAspectRatio="none"
-      style={flip ? { transform: "scaleX(-1)" } : undefined}
-    >
-      <defs>
-        <linearGradient id={gradientId} x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor={stroke} stopOpacity="0.95" />
-          <stop offset="46%" stopColor={stroke} stopOpacity="0.42" />
-          <stop offset="78%" stopColor={stroke} stopOpacity="0.08" />
-          <stop offset="100%" stopColor={stroke} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {lines.map((i) => {
-        const y = 252 - i * 2.35;
-        const bend = i * 1.85;
-        const d = `M -12 ${y} C 170 ${226 - bend * 0.16} 218 ${176 - bend * 0.6} 362 ${204 - bend * 0.24} C 506 ${232 - bend * 0.18} 596 ${168 - bend * 0.32} 780 ${186 - bend * 0.48}`;
-        return (
-          <path
-            key={i}
-            d={d}
-            stroke={`url(#${gradientId})`}
-            strokeOpacity={Math.max(0.035, 0.22 - i * 0.0026)}
-            strokeWidth="0.68"
-          />
-        );
-      })}
     </svg>
   );
 }

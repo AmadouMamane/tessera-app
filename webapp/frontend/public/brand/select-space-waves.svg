@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1672 160" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="goldWave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#D6B66A" stop-opacity="0.15"/>
+      <stop offset="0.36" stop-color="#D6B66A" stop-opacity="0.07"/>
+      <stop offset="0.58" stop-color="#D6B66A" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="cyanWave" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#2DD4BF" stop-opacity="0.16"/>
+      <stop offset="0.38" stop-color="#2DD4BF" stop-opacity="0.07"/>
+      <stop offset="0.6" stop-color="#2DD4BF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round">
+    <path d="M-18 118C149 82 260 136 416 107C573 78 672 106 832 124C992 142 1092 94 1245 104C1408 114 1509 134 1690 96" stroke="url(#goldWave)" stroke-width="0.9"/>
+    <path d="M-18 126C150 90 263 144 420 115C576 86 675 114 836 132C996 150 1095 102 1248 112C1411 122 1512 142 1690 104" stroke="url(#goldWave)" stroke-width="0.75"/>
+    <path d="M-18 134C150 98 265 152 422 123C578 94 677 122 838 140C998 158 1097 110 1250 120C1413 130 1516 150 1690 112" stroke="url(#goldWave)" stroke-width="0.6"/>
+    <path d="M-18 124C149 88 261 142 417 113C574 84 673 112 833 130C993 148 1093 100 1246 110C1409 120 1511 140 1690 102" stroke="url(#cyanWave)" stroke-width="0.9"/>
+    <path d="M-18 132C149 96 263 150 419 121C576 92 675 120 835 138C995 156 1095 108 1248 118C1411 128 1515 148 1690 110" stroke="url(#cyanWave)" stroke-width="0.75"/>
+    <path d="M-18 140C149 104 265 158 421 129C578 100 677 128 837 146C997 164 1097 116 1250 126C1413 136 1518 156 1690 118" stroke="url(#cyanWave)" stroke-width="0.6"/>
+  </g>
+</svg>
