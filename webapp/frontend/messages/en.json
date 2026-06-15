@@ -4493,5 +4493,11 @@
     "subtitle": "Analyse conversation sessions, their quality and their compliance.",
     "loading": "Loading history…",
     "unavailable": "History unavailable."
+  },
+  "agentAFaire": {
+    "title": "To do",
+    "subtitle": "Your pending tasks, reviews and approvals.",
+    "loading": "Loading tasks…",
+    "unavailable": "Tasks unavailable."
   }
 }

@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tessera.observability import (
     ablation as ablation_mod,
     access as access_mod,
+    agent_a_faire as agent_a_faire_mod,
     agent_connaissances as agent_connaissances_mod,
     agent_console as agent_console_mod,
     agent_evaluations as agent_evaluations_mod,
@@ -685,6 +686,22 @@ async def observability_agent_garde_fous() -> dict[str, object]:
         return {"available": True, **agent_garde_fous_mod.compute_agent_garde_fous()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_garde_fous: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/agent-a-faire")
+async def observability_agent_a_faire() -> dict[str, object]:
+    """Agent "A faire" personal action queue (reference image 23).
+
+    Temporal rail + event timeline, KPI strip, saved-views filter rail, task
+    table and a right column (type donut, SLA buckets, quick actions, recent
+    activity, status footer). Deterministic fixture; degrades to
+    ``available: false``.
+    """
+    try:
+        return {"available": True, **agent_a_faire_mod.compute_agent_a_faire()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.agent_a_faire: failed: {exc}\n")
         return {"available": False}
 
 

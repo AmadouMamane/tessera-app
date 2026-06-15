@@ -3116,6 +3116,120 @@ export const AgentSyntheseSchema = z.object({
 });
 export type AgentSynthese = z.infer<typeof AgentSyntheseSchema>;
 
+export const AgentAFaireSchema = z.object({
+  available: z.boolean(),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  rail: z
+    .object({
+      live: z.string(),
+      segments: z.array(z.string()),
+      period: z.string(),
+      updated: z.string(),
+      now: z.string(),
+      scope: z.string(),
+      bulk: z.string(),
+    })
+    .optional(),
+  timeline: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      events: z.array(
+        z.object({ time: z.string(), label: z.string(), ref: z.string(), tone: z.string() }),
+      ),
+    })
+    .optional(),
+  kpis: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        value: z.string(),
+        delta: z.string(),
+        good: z.boolean(),
+        tone: z.string(),
+        series: z.array(z.number()),
+      }),
+    )
+    .optional(),
+  filters: z
+    .object({
+      title: z.string(),
+      search: z.string(),
+      selects: z.array(z.object({ label: z.string(), value: z.string() })),
+      more: z.string(),
+      views_title: z.string(),
+      views: z.array(z.string()),
+      views_cta: z.string(),
+    })
+    .optional(),
+  table: z
+    .object({
+      columns: z.array(z.string()),
+      count: z.string(),
+      tasks: z.array(
+        z.object({
+          priority: z.string(),
+          prio_tone: z.string(),
+          type: z.string(),
+          title: z.string(),
+          source: z.string(),
+          ref: z.string(),
+          assignee: z.string(),
+          sla: z.string(),
+          sla_tone: z.string(),
+          due: z.string(),
+          status: z.string(),
+          status_tone: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  donut: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      center: z.string(),
+      center_label: z.string(),
+      segments: z.array(
+        z.object({
+          label: z.string(),
+          count: z.number(),
+          share: z.string(),
+          color: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  sla: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      buckets: z.array(z.object({ label: z.string(), count: z.number(), color: z.string() })),
+    })
+    .optional(),
+  quick: z.object({ title: z.string(), items: z.array(z.string()) }).optional(),
+  activity: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      items: z.array(z.object({ actor: z.string(), action: z.string(), time: z.string() })),
+    })
+    .optional(),
+  status: z
+    .object({
+      title: z.string(),
+      label: z.string(),
+      value: z.string(),
+      primary: z.string(),
+      secondary: z.string(),
+    })
+    .optional(),
+  footer: z.object({ check: z.string(), status: z.string() }).optional(),
+});
+export type AgentAFaire = z.infer<typeof AgentAFaireSchema>;
+
 export const AgentConsoleSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),

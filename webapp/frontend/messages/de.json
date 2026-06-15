@@ -4493,5 +4493,11 @@
     "subtitle": "Analysieren Sie Konversationssitzungen, ihre Qualität und Konformität.",
     "loading": "Verlauf wird geladen…",
     "unavailable": "Verlauf nicht verfügbar."
+  },
+  "agentAFaire": {
+    "title": "Zu erledigen",
+    "subtitle": "Ihre offenen Aufgaben, Prüfungen und Freigaben.",
+    "loading": "Aufgaben werden geladen…",
+    "unavailable": "Aufgaben nicht verfügbar."
   }
 }
