@@ -1,8 +1,11 @@
 "use client";
 
 import {
+  Activity,
   Archive,
+  Bot,
   Boxes,
+  ChevronRight,
   ClipboardList,
   Cpu,
   DatabaseZap,
@@ -18,6 +21,7 @@ import {
   LockKeyhole,
   type LucideIcon,
   MemoryStick,
+  MessageSquare,
   PlayCircle,
   Plug,
   ScrollText,
@@ -33,12 +37,13 @@ import {
   Wrench,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
 type RouteHref =
-  // AGENT (flat)
+  | "/produit"
   | "/agent/synthese"
   | "/agent/configurations"
   | "/agent/connaissances"
@@ -49,7 +54,6 @@ type RouteHref =
   | "/agent/historique"
   | "/agent/a-traiter"
   | "/agent/a-faire"
-  // GOUVERNER
   | "/surveiller/vue-ensemble"
   | "/surveiller/qualite-ia"
   | "/surveiller/securite-privacy"
@@ -64,7 +68,6 @@ type RouteHref =
   | "/agir/automations"
   | "/prouver/audit-logs"
   | "/prouver/evidence-store"
-  // PLATEFORME
   | "/configurer/signal-catalog"
   | "/configurer/garde-fous"
   | "/configurer/modeles"
@@ -77,34 +80,38 @@ type RouteHref =
   | "/admin/roles-acces"
   | "/admin/profil-systeme";
 
-interface NavItem {
+interface Leaf {
   href: RouteHref;
   icon: LucideIcon;
   labelKey: string;
   badge?: string;
   badgeTone?: "default" | "danger" | "warning";
   pulse?: boolean;
-  /** Render a thin separator above this item (AGENT queue split). */
-  separatorBefore?: boolean;
 }
 
-interface NavGroup {
-  /** Group sub-label; omitted for the flat AGENT group. */
-  labelKey?: string;
-  items: NavItem[];
-}
-
-interface SuperGroup {
+interface Branch {
+  key: string;
+  icon: LucideIcon;
   labelKey: string;
-  groups: NavGroup[];
+  children: NavNode[];
 }
 
-const SUPER_GROUPS: ReadonlyArray<SuperGroup> = [
+type NavNode = Leaf | Branch;
+
+const isBranch = (n: NavNode): n is Branch => "children" in n;
+
+const TREE: ReadonlyArray<NavNode> = [
+  { href: "/produit", icon: MessageSquare, labelKey: "item.vueClient" },
   {
-    labelKey: "super.agent",
-    groups: [
+    key: "cockpit",
+    icon: LayoutDashboard,
+    labelKey: "super.cockpit",
+    children: [
       {
-        items: [
+        key: "agent",
+        icon: Bot,
+        labelKey: "super.agent",
+        children: [
           { href: "/agent/synthese", icon: LayoutDashboard, labelKey: "item.synthese" },
           {
             href: "/agent/configurations",
@@ -123,229 +130,325 @@ const SUPER_GROUPS: ReadonlyArray<SuperGroup> = [
             labelKey: "item.aTraiter",
             badge: "24",
             badgeTone: "danger",
-            separatorBefore: true,
           },
           { href: "/agent/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
         ],
       },
-    ],
-  },
-  {
-    labelKey: "super.gouverner",
-    groups: [
       {
-        labelKey: "group.surveiller",
-        items: [
-          { href: "/surveiller/vue-ensemble", icon: Home, labelKey: "item.vueEnsemble" },
+        key: "gouverner",
+        icon: ShieldHalf,
+        labelKey: "super.gouverner",
+        children: [
           {
-            href: "/surveiller/qualite-ia",
-            icon: ShieldHalf,
-            labelKey: "item.qualiteIa",
-            badge: "52",
+            key: "surveiller",
+            icon: Activity,
+            labelKey: "group.surveiller",
+            children: [
+              { href: "/surveiller/vue-ensemble", icon: Home, labelKey: "item.vueEnsemble" },
+              {
+                href: "/surveiller/qualite-ia",
+                icon: ShieldHalf,
+                labelKey: "item.qualiteIa",
+                badge: "52",
+              },
+              {
+                href: "/surveiller/securite-privacy",
+                icon: LockKeyhole,
+                labelKey: "item.securitePrivacy",
+                pulse: true,
+              },
+              {
+                href: "/surveiller/conformite",
+                icon: FileCheck2,
+                labelKey: "item.conformite",
+                pulse: true,
+              },
+              {
+                href: "/surveiller/fiabilite-cout",
+                icon: Gauge,
+                labelKey: "item.fiabiliteCout",
+                pulse: true,
+              },
+              { href: "/surveiller/observabilite", icon: Boxes, labelKey: "item.observabilite" },
+              { href: "/surveiller/amelioration", icon: Sparkles, labelKey: "item.amelioration" },
+            ],
           },
           {
-            href: "/surveiller/securite-privacy",
-            icon: LockKeyhole,
-            labelKey: "item.securitePrivacy",
-            pulse: true,
+            key: "agir",
+            icon: Workflow,
+            labelKey: "group.agir",
+            children: [
+              {
+                href: "/agir/incidents-playbooks",
+                icon: Wrench,
+                labelKey: "item.incidentsPlaybooks",
+                badge: "11",
+                badgeTone: "danger",
+              },
+              { href: "/agir/replay-shadow", icon: PlayCircle, labelKey: "item.replayShadow" },
+              {
+                href: "/agir/curation-eval-set",
+                icon: DatabaseZap,
+                labelKey: "item.curationEvalSet",
+                badge: "6",
+                badgeTone: "warning",
+              },
+              { href: "/agir/release-control", icon: GitBranch, labelKey: "item.releaseControl" },
+              { href: "/agir/automations", icon: Workflow, labelKey: "item.automations" },
+            ],
           },
           {
-            href: "/surveiller/conformite",
-            icon: FileCheck2,
-            labelKey: "item.conformite",
-            pulse: true,
+            key: "prouver",
+            icon: Archive,
+            labelKey: "group.prouver",
+            children: [
+              { href: "/prouver/audit-logs", icon: ScrollText, labelKey: "item.auditLogs" },
+              { href: "/prouver/evidence-store", icon: Archive, labelKey: "item.evidenceStore" },
+            ],
           },
-          {
-            href: "/surveiller/fiabilite-cout",
-            icon: Gauge,
-            labelKey: "item.fiabiliteCout",
-            pulse: true,
-          },
-          { href: "/surveiller/observabilite", icon: Boxes, labelKey: "item.observabilite" },
-          { href: "/surveiller/amelioration", icon: Sparkles, labelKey: "item.amelioration" },
         ],
       },
       {
-        labelKey: "group.agir",
-        items: [
+        key: "plateforme",
+        icon: Boxes,
+        labelKey: "super.plateforme",
+        children: [
           {
-            href: "/agir/incidents-playbooks",
-            icon: Wrench,
-            labelKey: "item.incidentsPlaybooks",
-            badge: "11",
-            badgeTone: "danger",
-          },
-          { href: "/agir/replay-shadow", icon: PlayCircle, labelKey: "item.replayShadow" },
-          {
-            href: "/agir/curation-eval-set",
-            icon: DatabaseZap,
-            labelKey: "item.curationEvalSet",
-            badge: "6",
-            badgeTone: "warning",
-          },
-          { href: "/agir/release-control", icon: GitBranch, labelKey: "item.releaseControl" },
-          { href: "/agir/automations", icon: Workflow, labelKey: "item.automations" },
-        ],
-      },
-      {
-        labelKey: "group.prouver",
-        items: [
-          { href: "/prouver/audit-logs", icon: ScrollText, labelKey: "item.auditLogs" },
-          { href: "/prouver/evidence-store", icon: Archive, labelKey: "item.evidenceStore" },
-        ],
-      },
-    ],
-  },
-  {
-    labelKey: "super.plateforme",
-    groups: [
-      {
-        labelKey: "group.configurer",
-        items: [
-          {
-            href: "/configurer/signal-catalog",
-            icon: Boxes,
-            labelKey: "item.signalCatalog",
-            badge: "200",
+            key: "configurer",
+            icon: SlidersHorizontal,
+            labelKey: "group.configurer",
+            children: [
+              {
+                href: "/configurer/signal-catalog",
+                icon: Boxes,
+                labelKey: "item.signalCatalog",
+                badge: "200",
+              },
+              {
+                href: "/configurer/garde-fous",
+                icon: ShieldCheck,
+                labelKey: "item.platformGuardrails",
+              },
+              { href: "/configurer/modeles", icon: Cpu, labelKey: "item.modeles" },
+              { href: "/configurer/connecteurs", icon: Plug, labelKey: "item.connecteurs" },
+              { href: "/configurer/politiques", icon: ShieldCheck, labelKey: "item.politiques" },
+              {
+                href: "/configurer/sources-memoire",
+                icon: MemoryStick,
+                labelKey: "item.sourcesMemoire",
+              },
+              {
+                href: "/configurer/parametres",
+                icon: SlidersHorizontal,
+                labelKey: "item.parametres",
+              },
+              { href: "/configurer/integrations", icon: Settings, labelKey: "item.integrations" },
+            ],
           },
           {
-            href: "/configurer/garde-fous",
-            icon: ShieldCheck,
-            labelKey: "item.platformGuardrails",
+            key: "admin",
+            icon: KeyRound,
+            labelKey: "group.admin",
+            children: [
+              { href: "/admin/utilisateurs", icon: Users, labelKey: "item.utilisateurs" },
+              { href: "/admin/roles-acces", icon: KeyRound, labelKey: "item.rolesAcces" },
+              { href: "/admin/profil-systeme", icon: UserRound, labelKey: "item.profilSysteme" },
+            ],
           },
-          { href: "/configurer/modeles", icon: Cpu, labelKey: "item.modeles" },
-          { href: "/configurer/connecteurs", icon: Plug, labelKey: "item.connecteurs" },
-          { href: "/configurer/politiques", icon: ShieldCheck, labelKey: "item.politiques" },
-          {
-            href: "/configurer/sources-memoire",
-            icon: MemoryStick,
-            labelKey: "item.sourcesMemoire",
-          },
-          { href: "/configurer/parametres", icon: SlidersHorizontal, labelKey: "item.parametres" },
-          { href: "/configurer/integrations", icon: Settings, labelKey: "item.integrations" },
-        ],
-      },
-      {
-        labelKey: "group.admin",
-        items: [
-          { href: "/admin/utilisateurs", icon: Users, labelKey: "item.utilisateurs" },
-          { href: "/admin/roles-acces", icon: KeyRound, labelKey: "item.rolesAcces" },
-          { href: "/admin/profil-systeme", icon: UserRound, labelKey: "item.profilSysteme" },
         ],
       },
     ],
   },
 ];
 
+/** Map each leaf href to the chain of branch keys leading to it. */
+const ANCESTORS: Record<string, string[]> = (() => {
+  const out: Record<string, string[]> = {};
+  const walk = (nodes: ReadonlyArray<NavNode>, trail: string[]) => {
+    for (const n of nodes) {
+      if (isBranch(n)) walk(n.children, [...trail, n.key]);
+      else out[n.href] = trail;
+    }
+  };
+  walk(TREE, []);
+  return out;
+})();
+
+function activeBranchKeys(pathname: string): string[] {
+  for (const [href, trail] of Object.entries(ANCESTORS)) {
+    if (pathname === href || pathname.startsWith(`${href}/`)) return trail;
+  }
+  return [];
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const t = useTranslations("nav");
 
+  // Everything is collapsed by default; only the branches on the active path are
+  // auto-expanded so the current page stays visible. The user expands the rest.
+  const activeTrail = useMemo(() => activeBranchKeys(pathname), [pathname]);
+  const [open, setOpen] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(activeTrail.map((k) => [k, true])),
+  );
+  useEffect(() => {
+    if (activeTrail.length === 0) return;
+    setOpen((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const k of activeTrail)
+        if (!next[k]) {
+          next[k] = true;
+          changed = true;
+        }
+      return changed ? next : prev;
+    });
+  }, [activeTrail]);
+
+  const toggle = (key: string) => setOpen((p) => ({ ...p, [key]: !p[key] }));
+
   return (
     <aside className="flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] md:w-[218px]">
       <BrandHeader />
-      <AppToggle />
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 md:px-3">
-        <div className="flex flex-col gap-4">
-          {SUPER_GROUPS.map((sg) => (
-            <section key={sg.labelKey}>
-              <p className="mb-1.5 hidden px-2 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-[var(--tessera-text)] md:block">
-                {t(sg.labelKey)}
-              </p>
-              <div className="flex flex-col gap-2.5">
-                {sg.groups.map((group, gi) => (
-                  <div key={group.labelKey ?? `flat-${gi}`}>
-                    {group.labelKey ? (
-                      <p className="mb-1 hidden px-2 text-[0.6rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)] md:block">
-                        {t(group.labelKey)}
-                      </p>
-                    ) : null}
-                    <ul className="flex flex-col gap-1 md:gap-0.5">
-                      {group.items.map((item) => (
-                        <li key={item.href}>
-                          {item.separatorBefore ? (
-                            <div className="my-1.5 mx-2 border-t border-[var(--tessera-border)]" />
-                          ) : null}
-                          <NavEntry
-                            item={item}
-                            active={isActive(pathname, item.href)}
-                            label={t(item.labelKey)}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </section>
+        <ul className="flex flex-col gap-0.5">
+          {TREE.map((node) => (
+            <NavTreeNode
+              key={isBranch(node) ? node.key : node.href}
+              node={node}
+              depth={0}
+              pathname={pathname}
+              open={open}
+              toggle={toggle}
+              t={t}
+            />
           ))}
-        </div>
+        </ul>
       </nav>
       <IdentityBlock />
     </aside>
   );
 }
 
-function AppToggle() {
-  const t = useTranslations("nav.toggle");
-  return (
-    <div className="hidden px-3 py-2 md:block">
-      <div className="flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-0.5">
-        <span className="flex-1 rounded bg-[var(--tessera-surface-elevated)] px-2 py-1 text-center text-[0.7rem] font-semibold text-white">
-          {t("cockpit")}
-        </span>
+type T = ReturnType<typeof useTranslations<"nav">>;
+
+function NavTreeNode({
+  node,
+  depth,
+  pathname,
+  open,
+  toggle,
+  t,
+}: {
+  node: NavNode;
+  depth: number;
+  pathname: string;
+  open: Record<string, boolean>;
+  toggle: (key: string) => void;
+  t: T;
+}) {
+  const pad = { paddingLeft: `${0.5 + depth * 0.75}rem` };
+
+  if (!isBranch(node)) {
+    const active = pathname === node.href || pathname.startsWith(`${node.href}/`);
+    return (
+      <li>
         <Link
-          href="/produit"
-          className="flex-1 rounded px-2 py-1 text-center text-[0.7rem] font-medium text-[var(--tessera-text-muted)] transition-colors hover:text-[var(--tessera-text)]"
+          href={node.href}
+          aria-current={active ? "page" : undefined}
+          style={pad}
+          className={cn(
+            "group flex min-h-9 items-center gap-2 rounded-md py-2 pr-2 text-sm font-medium transition-colors",
+            active
+              ? "border-l-2 border-[var(--tessera-green)] bg-[var(--tessera-surface-elevated)] text-white"
+              : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+          )}
         >
-          {t("produit")}
+          <node.icon
+            className={cn(
+              "h-4 w-4 shrink-0 transition-colors",
+              active
+                ? "text-[var(--tessera-green)]"
+                : "text-[var(--tessera-text-muted)] group-hover:text-[var(--tessera-text)]",
+            )}
+          />
+          <span className="hidden min-w-0 flex-1 truncate md:block">{t(node.labelKey)}</span>
+          {node.pulse ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> : null}
+          {node.badge ? <Badge tone={node.badgeTone} active={active} value={node.badge} /> : null}
         </Link>
-      </div>
-    </div>
+      </li>
+    );
+  }
+
+  const isOpen = open[node.key] ?? false;
+  const containsActive = activeBranchKeys(pathname).includes(node.key);
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => toggle(node.key)}
+        aria-expanded={isOpen}
+        style={pad}
+        className={cn(
+          "group flex min-h-9 w-full items-center gap-2 rounded-md py-2 pr-2 font-medium transition-colors",
+          depth === 0
+            ? "text-[0.7rem] uppercase tracking-[0.1em]"
+            : "text-[0.66rem] uppercase tracking-wide",
+          containsActive
+            ? "text-[var(--tessera-text)]"
+            : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+        )}
+      >
+        <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+        <span className="hidden min-w-0 flex-1 truncate text-left md:block">
+          {t(node.labelKey)}
+        </span>
+        <ChevronRight
+          className={cn(
+            "hidden h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] transition-transform md:block",
+            isOpen ? "rotate-90" : "",
+          )}
+        />
+      </button>
+      {isOpen ? (
+        <ul className="mt-0.5 flex flex-col gap-0.5">
+          {node.children.map((child) => (
+            <NavTreeNode
+              key={isBranch(child) ? child.key : child.href}
+              node={child}
+              depth={depth + 1}
+              pathname={pathname}
+              open={open}
+              toggle={toggle}
+              t={t}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
   );
 }
 
-function NavEntry({ item, active, label }: { item: NavItem; active: boolean; label: string }) {
-  const Icon = item.icon;
+function Badge({
+  tone,
+  active,
+  value,
+}: { tone?: "default" | "danger" | "warning"; active: boolean; value: string }) {
   return (
-    <Link
-      href={item.href}
-      aria-current={active ? "page" : undefined}
-      aria-label={label}
+    <span
       className={cn(
-        "group flex min-h-9 items-center justify-center gap-2 rounded-md px-2 py-2 text-sm font-medium transition-colors md:justify-start md:px-3",
-        active
-          ? "border-l-2 border-[var(--tessera-green)] bg-[var(--tessera-surface-elevated)] pl-[6px] text-white md:pl-[10px]"
-          : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+        "hidden rounded-full px-2 py-0.5 text-[0.65rem] font-semibold md:inline-flex",
+        tone === "danger"
+          ? "bg-red-500 text-white"
+          : tone === "warning"
+            ? "bg-amber-500 text-white"
+            : active
+              ? "bg-[var(--tessera-green-soft)] text-[#d6f0e3]"
+              : "bg-[var(--tessera-muted)] text-[var(--tessera-text-muted)]",
       )}
     >
-      <Icon
-        className={cn(
-          "h-4 w-4 shrink-0 transition-colors",
-          active
-            ? "text-[var(--tessera-green)]"
-            : "text-[var(--tessera-text-muted)] group-hover:text-[var(--tessera-text)]",
-        )}
-      />
-      <span className="hidden min-w-0 flex-1 truncate md:block">{label}</span>
-      {item.pulse ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> : null}
-      {item.badge ? (
-        <span
-          className={cn(
-            "hidden rounded-full px-2 py-0.5 text-[0.65rem] font-semibold md:inline-flex",
-            item.badgeTone === "danger"
-              ? "bg-red-500 text-white"
-              : item.badgeTone === "warning"
-                ? "bg-amber-500 text-white"
-                : active
-                  ? "bg-[var(--tessera-green-soft)] text-[#d6f0e3]"
-                  : "bg-[var(--tessera-muted)] text-[var(--tessera-text-muted)]",
-          )}
-        >
-          {item.badge}
-        </span>
-      ) : null}
-    </Link>
+      {value}
+    </span>
   );
 }
 
@@ -408,8 +511,4 @@ function IdentityBlock() {
       </div>
     </div>
   );
-}
-
-function isActive(pathname: string, href: RouteHref): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
 }

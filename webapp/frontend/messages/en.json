@@ -54,7 +54,8 @@
     "super": {
       "agent": "Agent",
       "gouverner": "Govern",
-      "plateforme": "Platform"
+      "plateforme": "Platform",
+      "cockpit": "Cockpit"
     },
     "group": {
       "surveiller": "Monitor",
@@ -102,7 +103,8 @@
       "integrations": "Integrations",
       "utilisateurs": "Users",
       "rolesAcces": "Roles & access",
-      "profilSysteme": "System profile"
+      "profilSysteme": "System profile",
+      "vueClient": "Customer view"
     }
   },
   "common": {
