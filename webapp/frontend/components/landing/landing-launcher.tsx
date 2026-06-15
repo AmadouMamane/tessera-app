@@ -31,6 +31,7 @@ type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
 interface SpaceItem {
   icon: React.ComponentType<{ className?: string }>;
   key: string;
+  href: string;
 }
 
 const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
@@ -60,18 +61,18 @@ const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
 };
 
 const CLIENT_ITEMS: SpaceItem[] = [
-  { icon: MessageSquare, key: "chat" },
-  { icon: ListChecks, key: "requests" },
-  { icon: FileText, key: "documents" },
-  { icon: BellRing, key: "alerts" },
-  { icon: Settings, key: "settings" },
+  { icon: MessageSquare, key: "chat", href: "/produit" },
+  { icon: ListChecks, key: "requests", href: "/produit/mes-demandes" },
+  { icon: FileText, key: "documents", href: "/produit/documents" },
+  { icon: BellRing, key: "alerts", href: "/produit/alertes" },
+  { icon: Settings, key: "settings", href: "/produit/parametres" },
 ];
 
 const OPERATOR_ITEMS: SpaceItem[] = [
-  { icon: EyeIcon, key: "supervision" },
-  { icon: ShieldCheck, key: "management" },
-  { icon: SlidersHorizontal, key: "configuration" },
-  { icon: UsersRound, key: "platform" },
+  { icon: EyeIcon, key: "supervision", href: "/surveiller/vue-ensemble" },
+  { icon: ShieldCheck, key: "management", href: "/agir/incidents-playbooks" },
+  { icon: SlidersHorizontal, key: "configuration", href: "/configurer/signal-catalog" },
+  { icon: UsersRound, key: "platform", href: "/admin/utilisateurs" },
 ];
 
 const ACCENT: Record<
@@ -313,22 +314,29 @@ function SpaceCard({
 
         <div className="h-px w-full bg-[var(--border-subtle)]" />
 
-        <ul className={cn("mt-[16px] flex flex-col", ns === "operator" ? "gap-[24px]" : "gap-[12px]")}>
+        <ul
+          className={cn("mt-[16px] flex flex-col", ns === "operator" ? "gap-[24px]" : "gap-[12px]")}
+        >
           {items.map((item) => (
-            <li key={item.key} className="grid grid-cols-[20px_1fr_14px] items-center">
-              <item.icon className={cn("h-[18px] w-[18px] stroke-[1.6]", a.icon)} />
-              <span className="min-w-0 pl-[14px]">
-                <span className="block text-[13px] font-semibold leading-[1.2] text-[var(--text-primary)]">
-                  {t(`${ns}.items.${item.key}.title`)}
+            <li key={item.key}>
+              <Link
+                href={item.href}
+                className="group/row -mx-[8px] grid grid-cols-[20px_1fr_14px] items-center rounded-[8px] px-[8px] py-[3px] transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]"
+              >
+                <item.icon className={cn("h-[18px] w-[18px] stroke-[1.6]", a.icon)} />
+                <span className="min-w-0 pl-[14px]">
+                  <span className="block text-[13px] font-semibold leading-[1.2] text-[var(--text-primary)]">
+                    {t(`${ns}.items.${item.key}.title`)}
+                  </span>
+                  <span className="mt-[4px] block text-[11.5px] font-normal leading-[1.25] text-[var(--text-secondary)]">
+                    {t(`${ns}.items.${item.key}.desc`)}
+                  </span>
                 </span>
-                <span className="mt-[4px] block text-[11.5px] font-normal leading-[1.25] text-[var(--text-secondary)]">
-                  {t(`${ns}.items.${item.key}.desc`)}
-                </span>
-              </span>
-              <ChevronRight
-                className="h-[15px] w-[15px] stroke-[1.6] text-[var(--text-secondary)]"
-                aria-hidden="true"
-              />
+                <ChevronRight
+                  className="h-[15px] w-[15px] stroke-[1.6] text-[var(--text-secondary)] transition-transform group-hover/row:translate-x-[2px] group-hover/row:text-[var(--text-primary)]"
+                  aria-hidden="true"
+                />
+              </Link>
             </li>
           ))}
         </ul>
