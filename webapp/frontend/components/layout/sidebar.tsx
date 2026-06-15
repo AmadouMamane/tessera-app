@@ -405,11 +405,8 @@ function NavTreeNode({
   return (
     <li>
       {pinned ? (
-        // Super-section label: a quiet separator, no icon, no toggle.
-        <div
-          style={pad}
-          className="mt-3 flex min-h-7 items-center py-1 pr-2 text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-[var(--tessera-text-muted)]/70"
-        >
+        <div style={pad} className={cn(headerClass, "hover:text-[var(--tessera-text-muted)]")}>
+          <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
           <span className="hidden min-w-0 flex-1 truncate text-left md:block">
             {t(node.labelKey)}
           </span>
@@ -435,7 +432,7 @@ function NavTreeNode({
         </button>
       )}
       {isOpen ? (
-        <ul className={cn("flex flex-col gap-0.5", !pinned && "mt-0.5")}>
+        <ul className="mt-0.5 flex flex-col gap-0.5">
           {node.children.map((child) => (
             <NavTreeNode
               key={isBranch(child) ? child.key : child.href}
