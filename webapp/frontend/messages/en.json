@@ -50,7 +50,60 @@
     "health": "Service health",
     "settings": "Settings",
     "observability": "Observability",
-    "parameters": "Settings"
+    "parameters": "Settings",
+    "super": {
+      "agent": "Agent",
+      "gouverner": "Govern",
+      "plateforme": "Platform"
+    },
+    "group": {
+      "surveiller": "Monitor",
+      "agir": "Act",
+      "prouver": "Prove",
+      "configurer": "Configure",
+      "admin": "Admin"
+    },
+    "toggle": {
+      "cockpit": "Cockpit",
+      "produit": "Customer view"
+    },
+    "item": {
+      "synthese": "Agent dashboard",
+      "configurations": "Configurations",
+      "connaissances": "Knowledge",
+      "agentGuardrails": "Guardrails",
+      "prompts": "Prompts",
+      "evaluations": "Evaluations",
+      "console": "Console",
+      "historique": "History",
+      "aTraiter": "To handle",
+      "aFaire": "Backlog",
+      "vueEnsemble": "Overview",
+      "qualiteIa": "AI quality",
+      "securitePrivacy": "Security & Privacy",
+      "conformite": "Compliance",
+      "fiabiliteCout": "Reliability & cost",
+      "observabilite": "Observability",
+      "amelioration": "Improvement",
+      "incidentsPlaybooks": "Incidents & playbooks",
+      "replayShadow": "Replay & shadow",
+      "curationEvalSet": "Eval set curation",
+      "releaseControl": "Release Control",
+      "automations": "Automations",
+      "auditLogs": "Audit log",
+      "evidenceStore": "Evidence store",
+      "signalCatalog": "Signal Catalog",
+      "platformGuardrails": "Guardrails",
+      "modeles": "Models",
+      "connecteurs": "Connectors",
+      "politiques": "Policies",
+      "sourcesMemoire": "Sources & memory",
+      "parametres": "Settings",
+      "integrations": "Integrations",
+      "utilisateurs": "Users",
+      "rolesAcces": "Roles & access",
+      "profilSysteme": "System profile"
+    }
   },
   "common": {
     "language": "Language",
@@ -4284,6 +4337,28 @@
       "generation": "Response generation"
     },
     "tenant": "Tenant",
-    "sessionShort": "session"
+    "sessionShort": "session",
+    "synthese": {
+      "title": "Agent dashboard",
+      "subtitle": "Conversational agent dashboard."
+    },
+    "debugBanner": "DEBUG · SANDBOX — env=debug conversations, excluded from production metrics and audit.",
+    "sessionDetail": {
+      "title": "Session",
+      "subtitle": "Session detail (read-only)."
+    }
+  },
+  "product": {
+    "nav": {
+      "brand": "Crédit Aurore",
+      "chat": "Assistant",
+      "requests": "My requests",
+      "documents": "Documents",
+      "alerts": "Alerts",
+      "settings": "Settings"
+    }
+  },
+  "scaffold": {
+    "body": "This page is under construction. Navigation, routing and states are in place; content will be wired up shortly."
   }
 }

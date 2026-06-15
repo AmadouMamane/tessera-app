@@ -50,7 +50,60 @@
     "health": "Servicestatus",
     "settings": "Einstellungen",
     "observability": "Beobachtbarkeit",
-    "parameters": "Einstellungen"
+    "parameters": "Einstellungen",
+    "super": {
+      "agent": "Agent",
+      "gouverner": "Steuern",
+      "plateforme": "Plattform"
+    },
+    "group": {
+      "surveiller": "Überwachen",
+      "agir": "Handeln",
+      "prouver": "Nachweisen",
+      "configurer": "Konfigurieren",
+      "admin": "Verwaltung"
+    },
+    "toggle": {
+      "cockpit": "Cockpit",
+      "produit": "Kundenansicht"
+    },
+    "item": {
+      "synthese": "Agent-Dashboard",
+      "configurations": "Konfigurationen",
+      "connaissances": "Wissen",
+      "agentGuardrails": "Leitplanken",
+      "prompts": "Prompts",
+      "evaluations": "Evaluierungen",
+      "console": "Konsole",
+      "historique": "Verlauf",
+      "aTraiter": "Zu bearbeiten",
+      "aFaire": "Backlog",
+      "vueEnsemble": "Übersicht",
+      "qualiteIa": "KI-Qualität",
+      "securitePrivacy": "Sicherheit & Datenschutz",
+      "conformite": "Compliance",
+      "fiabiliteCout": "Zuverlässigkeit & Kosten",
+      "observabilite": "Observability",
+      "amelioration": "Verbesserung",
+      "incidentsPlaybooks": "Incidents & Playbooks",
+      "replayShadow": "Replay & Shadow",
+      "curationEvalSet": "Eval-Set-Kuratierung",
+      "releaseControl": "Release-Kontrolle",
+      "automations": "Automatisierungen",
+      "auditLogs": "Audit-Protokoll",
+      "evidenceStore": "Evidence-Speicher",
+      "signalCatalog": "Signalkatalog",
+      "platformGuardrails": "Leitplanken",
+      "modeles": "Modelle",
+      "connecteurs": "Konnektoren",
+      "politiques": "Richtlinien",
+      "sourcesMemoire": "Quellen & Speicher",
+      "parametres": "Einstellungen",
+      "integrations": "Integrationen",
+      "utilisateurs": "Benutzer",
+      "rolesAcces": "Rollen & Zugriff",
+      "profilSysteme": "Systemprofil"
+    }
   },
   "common": {
     "language": "Sprache",
@@ -4284,6 +4337,28 @@
       "generation": "Antworterzeugung"
     },
     "tenant": "Mandant",
-    "sessionShort": "Sitzung"
+    "sessionShort": "Sitzung",
+    "synthese": {
+      "title": "Agent-Dashboard",
+      "subtitle": "Dashboard des Konversationsagenten."
+    },
+    "debugBanner": "DEBUG · SANDBOX — Konversationen env=debug, von Produktionsmetriken und Audit ausgeschlossen.",
+    "sessionDetail": {
+      "title": "Sitzung",
+      "subtitle": "Sitzungsdetail (schreibgeschützt)."
+    }
+  },
+  "product": {
+    "nav": {
+      "brand": "Crédit Aurore",
+      "chat": "Assistent",
+      "requests": "Meine Anfragen",
+      "documents": "Dokumente",
+      "alerts": "Benachrichtigungen",
+      "settings": "Einstellungen"
+    }
+  },
+  "scaffold": {
+    "body": "Diese Seite ist im Aufbau. Navigation, Routing und Zustände stehen; der Inhalt wird in Kürze angebunden."
   }
 }

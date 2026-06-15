@@ -33,7 +33,6 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 
 import {
@@ -46,6 +45,7 @@ import type { AssistantOverview as AssistantOverviewData } from "@/lib/api/schem
 import { cn } from "@/lib/cn";
 
 type Tab = "chat" | "console";
+export type AssistantView = "synthese" | "console";
 type T = ReturnType<typeof useTranslations<"assistant">>;
 type Data = AssistantOverviewData;
 type Icon = ComponentType<{ className?: string }>;
@@ -57,11 +57,11 @@ const GUARD_BADGE: Record<string, string> = {
   ok: "border-emerald-500/40 bg-emerald-500/15 text-emerald-300",
 };
 
-export function AssistantOverview() {
+export function AssistantOverview({ view }: { view: AssistantView }) {
   const t = useTranslations("assistant");
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
-  const [tab, setTab] = useState<Tab>("chat");
+  const tab: Tab = view === "console" ? "console" : "chat";
   const { data } = useQuery({
     queryKey: ["assistant-overview"],
     queryFn: ({ signal }) => fetchAssistantOverview(signal),
@@ -79,7 +79,13 @@ export function AssistantOverview() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} tab={tab} setTab={setTab} data={data} />
+      {tab === "console" ? (
+        <div className="flex shrink-0 items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[0.7rem] font-medium text-amber-200">
+          <Terminal className="h-3.5 w-3.5" />
+          {t("debugBanner")}
+        </div>
+      ) : null}
+      <CommandBar t={t} tab={tab} data={data} />
       {tab === "console" ? (
         <TemporalRail
           mode={temporal.mode}
@@ -107,12 +113,7 @@ export function AssistantOverview() {
 
 // ── command bar ───────────────────────────────────────────────────────────────
 
-function CommandBar({
-  t,
-  tab,
-  setTab,
-  data,
-}: { t: T; tab: Tab; setTab: (tab: Tab) => void; data: Data }) {
+function CommandBar({ t, tab, data }: { t: T; tab: Tab; data: Data }) {
   const s = data.session;
   const pills =
     tab === "chat"
@@ -132,24 +133,6 @@ function CommandBar({
 
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="flex h-9 shrink-0 items-center gap-0.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-0.5">
-        {(["chat", "console"] as const).map((tb) => (
-          <button
-            key={tb}
-            type="button"
-            onClick={() => setTab(tb)}
-            className={cn(
-              "h-8 rounded px-3 text-xs font-medium transition-colors",
-              tab === tb
-                ? "bg-[#6d4aed] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
-                : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
-            )}
-          >
-            {t(`tabs.${tb}`)}
-          </button>
-        ))}
-      </div>
-
       <SessionPill t={t} id={s.id} />
       {pills.map((p) => (
         <Pill key={p.label} icon={p.icon} label={p.label} value={p.value} />

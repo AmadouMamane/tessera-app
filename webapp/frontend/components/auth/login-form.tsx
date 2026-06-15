@@ -32,7 +32,7 @@ export function LoginForm() {
       setError(true);
       return;
     }
-    router.push("/audit");
+    router.push("/agent/synthese");
     router.refresh();
   }
 

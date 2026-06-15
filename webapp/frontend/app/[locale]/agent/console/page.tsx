@@ -6,17 +6,17 @@ import { AppShell } from "@/components/layout/app-shell";
 import { AssistantOverviewSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
-interface AssistantPageProps {
+interface PageProps {
   params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: AssistantPageProps) {
+export async function generateMetadata({ params }: PageProps) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "assistant" });
-  return { title: t("title") };
+  return { title: t("console.title") };
 }
 
-async function prefetchAssistant(queryClient: QueryClient) {
+async function prefetch(queryClient: QueryClient) {
   await queryClient.prefetchQuery({
     queryKey: ["assistant-overview"],
     queryFn: async () => {
@@ -30,21 +30,21 @@ async function prefetchAssistant(queryClient: QueryClient) {
   });
 }
 
-export default async function AssistantPage({ params }: AssistantPageProps) {
+export default async function AgentConsolePage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "assistant" });
   const queryClient = new QueryClient();
   try {
-    await prefetchAssistant(queryClient);
+    await prefetch(queryClient);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }
 
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+    <AppShell title={t("console.title")} description={t("console.subtitle")} contentWidth="full">
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <AssistantOverview />
+        <AssistantOverview view="console" />
       </HydrationBoundary>
     </AppShell>
   );

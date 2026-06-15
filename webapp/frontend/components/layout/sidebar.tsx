@@ -2,125 +2,237 @@
 
 import {
   Archive,
-  Bot,
   Boxes,
   ClipboardList,
+  Cpu,
   DatabaseZap,
   FileCheck2,
-  FileSearch,
+  FileText,
   Gauge,
   GitBranch,
   Home,
+  Inbox,
   KeyRound,
+  LayoutDashboard,
+  ListTodo,
   LockKeyhole,
+  type LucideIcon,
   MemoryStick,
-  MessagesSquare,
   PlayCircle,
+  Plug,
   ScrollText,
   Settings,
   ShieldCheck,
   ShieldHalf,
   SlidersHorizontal,
   Sparkles,
+  Terminal,
   UserRound,
+  Users,
   Workflow,
   Wrench,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
 type RouteHref =
-  | "/"
-  | "/assistant"
-  | "/chat"
-  | "/inbox"
-  | "/audit"
-  | "/incidents"
-  | "/replay"
-  | "/curation"
-  | "/automations"
-  | "/proofs"
-  | "/signals"
-  | "/policies"
-  | "/sources"
-  | "/access"
-  | "/integrations"
-  | "/system"
-  | "/parametres"
-  | "/eval"
-  | "/observability"
-  | "/security"
-  | "/compliance"
-  | "/reliability"
-  | "/improvement"
-  | "/health"
-  | "/settings";
+  // AGENT (flat)
+  | "/agent/synthese"
+  | "/agent/configurations"
+  | "/agent/connaissances"
+  | "/agent/garde-fous"
+  | "/agent/prompts"
+  | "/agent/evaluations"
+  | "/agent/console"
+  | "/agent/historique"
+  | "/agent/a-traiter"
+  | "/agent/a-faire"
+  // GOUVERNER
+  | "/surveiller/vue-ensemble"
+  | "/surveiller/qualite-ia"
+  | "/surveiller/securite-privacy"
+  | "/surveiller/conformite"
+  | "/surveiller/fiabilite-cout"
+  | "/surveiller/observabilite"
+  | "/surveiller/amelioration"
+  | "/agir/incidents-playbooks"
+  | "/agir/replay-shadow"
+  | "/agir/curation-eval-set"
+  | "/agir/release-control"
+  | "/agir/automations"
+  | "/prouver/audit-logs"
+  | "/prouver/evidence-store"
+  // PLATEFORME
+  | "/configurer/signal-catalog"
+  | "/configurer/garde-fous"
+  | "/configurer/modeles"
+  | "/configurer/connecteurs"
+  | "/configurer/politiques"
+  | "/configurer/sources-memoire"
+  | "/configurer/parametres"
+  | "/configurer/integrations"
+  | "/admin/utilisateurs"
+  | "/admin/roles-acces"
+  | "/admin/profil-systeme";
 
 interface NavItem {
-  href?: RouteHref;
+  href: RouteHref;
   icon: LucideIcon;
   labelKey: string;
   badge?: string;
-  badgeTone?: "default" | "danger";
+  badgeTone?: "default" | "danger" | "warning";
   pulse?: boolean;
+  /** Render a thin separator above this item (AGENT queue split). */
+  separatorBefore?: boolean;
 }
 
 interface NavGroup {
-  labelKey: string;
+  /** Group sub-label; omitted for the flat AGENT group. */
+  labelKey?: string;
   items: NavItem[];
 }
 
-const NAV_GROUPS: ReadonlyArray<NavGroup> = [
+interface SuperGroup {
+  labelKey: string;
+  groups: NavGroup[];
+}
+
+const SUPER_GROUPS: ReadonlyArray<SuperGroup> = [
   {
-    labelKey: "groups.product",
-    items: [
-      { href: "/assistant", icon: Bot, labelKey: "assistant" },
-      { href: "/chat", icon: MessagesSquare, labelKey: "agentUi" },
-      { href: "/inbox", icon: ClipboardList, labelKey: "inbox", badge: "24", badgeTone: "danger" },
+    labelKey: "super.agent",
+    groups: [
+      {
+        items: [
+          { href: "/agent/synthese", icon: LayoutDashboard, labelKey: "item.synthese" },
+          {
+            href: "/agent/configurations",
+            icon: SlidersHorizontal,
+            labelKey: "item.configurations",
+          },
+          { href: "/agent/connaissances", icon: MemoryStick, labelKey: "item.connaissances" },
+          { href: "/agent/garde-fous", icon: ShieldCheck, labelKey: "item.agentGuardrails" },
+          { href: "/agent/prompts", icon: FileText, labelKey: "item.prompts" },
+          { href: "/agent/evaluations", icon: ClipboardList, labelKey: "item.evaluations" },
+          { href: "/agent/console", icon: Terminal, labelKey: "item.console" },
+          { href: "/agent/historique", icon: ScrollText, labelKey: "item.historique" },
+          {
+            href: "/agent/a-traiter",
+            icon: Inbox,
+            labelKey: "item.aTraiter",
+            badge: "24",
+            badgeTone: "danger",
+            separatorBefore: true,
+          },
+          { href: "/agent/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
+        ],
+      },
     ],
   },
   {
-    labelKey: "groups.cockpit",
-    items: [
-      { href: "/", icon: Home, labelKey: "overview" },
-      { href: "/observability", icon: ShieldHalf, labelKey: "quality", badge: "52" },
-      { href: "/security", icon: LockKeyhole, labelKey: "security", pulse: true },
-      { href: "/compliance", icon: FileCheck2, labelKey: "compliance", pulse: true },
-      { href: "/reliability", icon: Gauge, labelKey: "reliability", pulse: true },
-      { href: "/improvement", icon: Sparkles, labelKey: "improvement" },
+    labelKey: "super.gouverner",
+    groups: [
+      {
+        labelKey: "group.surveiller",
+        items: [
+          { href: "/surveiller/vue-ensemble", icon: Home, labelKey: "item.vueEnsemble" },
+          {
+            href: "/surveiller/qualite-ia",
+            icon: ShieldHalf,
+            labelKey: "item.qualiteIa",
+            badge: "52",
+          },
+          {
+            href: "/surveiller/securite-privacy",
+            icon: LockKeyhole,
+            labelKey: "item.securitePrivacy",
+            pulse: true,
+          },
+          {
+            href: "/surveiller/conformite",
+            icon: FileCheck2,
+            labelKey: "item.conformite",
+            pulse: true,
+          },
+          {
+            href: "/surveiller/fiabilite-cout",
+            icon: Gauge,
+            labelKey: "item.fiabiliteCout",
+            pulse: true,
+          },
+          { href: "/surveiller/observabilite", icon: Boxes, labelKey: "item.observabilite" },
+          { href: "/surveiller/amelioration", icon: Sparkles, labelKey: "item.amelioration" },
+        ],
+      },
+      {
+        labelKey: "group.agir",
+        items: [
+          {
+            href: "/agir/incidents-playbooks",
+            icon: Wrench,
+            labelKey: "item.incidentsPlaybooks",
+            badge: "11",
+            badgeTone: "danger",
+          },
+          { href: "/agir/replay-shadow", icon: PlayCircle, labelKey: "item.replayShadow" },
+          {
+            href: "/agir/curation-eval-set",
+            icon: DatabaseZap,
+            labelKey: "item.curationEvalSet",
+            badge: "6",
+            badgeTone: "warning",
+          },
+          { href: "/agir/release-control", icon: GitBranch, labelKey: "item.releaseControl" },
+          { href: "/agir/automations", icon: Workflow, labelKey: "item.automations" },
+        ],
+      },
+      {
+        labelKey: "group.prouver",
+        items: [
+          { href: "/prouver/audit-logs", icon: ScrollText, labelKey: "item.auditLogs" },
+          { href: "/prouver/evidence-store", icon: Archive, labelKey: "item.evidenceStore" },
+        ],
+      },
     ],
   },
   {
-    labelKey: "groups.act",
-    items: [
-      { href: "/incidents", icon: Wrench, labelKey: "incidents", badge: "11" },
-      { href: "/replay", icon: PlayCircle, labelKey: "replay" },
-      { href: "/curation", icon: DatabaseZap, labelKey: "curation" },
-      { icon: GitBranch, labelKey: "release" },
-      { href: "/automations", icon: Workflow, labelKey: "automations" },
-    ],
-  },
-  {
-    labelKey: "groups.prove",
-    items: [
-      { href: "/audit", icon: ScrollText, labelKey: "audit" },
-      { href: "/proofs", icon: Archive, labelKey: "proofExporters" },
-      { icon: FileSearch, labelKey: "evidencePack" },
-    ],
-  },
-  {
-    labelKey: "groups.configure",
-    items: [
-      { href: "/signals", icon: Boxes, labelKey: "signalCatalog", badge: "200" },
-      { href: "/policies", icon: ShieldCheck, labelKey: "policies" },
-      { href: "/sources", icon: MemoryStick, labelKey: "sourcesMemory" },
-      { href: "/access", icon: KeyRound, labelKey: "rolesAccess" },
-      { href: "/integrations", icon: Settings, labelKey: "integrations" },
-      { href: "/parametres", icon: SlidersHorizontal, labelKey: "parameters" },
-      { href: "/system", icon: UserRound, labelKey: "systemProfile" },
+    labelKey: "super.plateforme",
+    groups: [
+      {
+        labelKey: "group.configurer",
+        items: [
+          {
+            href: "/configurer/signal-catalog",
+            icon: Boxes,
+            labelKey: "item.signalCatalog",
+            badge: "200",
+          },
+          {
+            href: "/configurer/garde-fous",
+            icon: ShieldCheck,
+            labelKey: "item.platformGuardrails",
+          },
+          { href: "/configurer/modeles", icon: Cpu, labelKey: "item.modeles" },
+          { href: "/configurer/connecteurs", icon: Plug, labelKey: "item.connecteurs" },
+          { href: "/configurer/politiques", icon: ShieldCheck, labelKey: "item.politiques" },
+          {
+            href: "/configurer/sources-memoire",
+            icon: MemoryStick,
+            labelKey: "item.sourcesMemoire",
+          },
+          { href: "/configurer/parametres", icon: SlidersHorizontal, labelKey: "item.parametres" },
+          { href: "/configurer/integrations", icon: Settings, labelKey: "item.integrations" },
+        ],
+      },
+      {
+        labelKey: "group.admin",
+        items: [
+          { href: "/admin/utilisateurs", icon: Users, labelKey: "item.utilisateurs" },
+          { href: "/admin/roles-acces", icon: KeyRound, labelKey: "item.rolesAcces" },
+          { href: "/admin/profil-systeme", icon: UserRound, labelKey: "item.profilSysteme" },
+        ],
+      },
     ],
   },
 ];
@@ -132,24 +244,39 @@ export function Sidebar() {
   return (
     <aside className="flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] md:w-[218px]">
       <BrandHeader />
-      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-4 md:px-3">
+      <AppToggle />
+      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 md:px-3">
         <div className="flex flex-col gap-4">
-          {NAV_GROUPS.map((group) => (
-            <section key={group.labelKey}>
-              <p className="mb-1.5 hidden px-2 text-[0.65rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)] md:block">
-                {t(group.labelKey)}
+          {SUPER_GROUPS.map((sg) => (
+            <section key={sg.labelKey}>
+              <p className="mb-1.5 hidden px-2 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-[var(--tessera-text)] md:block">
+                {t(sg.labelKey)}
               </p>
-              <ul className="flex flex-col gap-1 md:gap-0.5">
-                {group.items.map((item) => (
-                  <li key={item.labelKey}>
-                    <NavEntry
-                      item={item}
-                      active={isActive(pathname, item.href)}
-                      label={t(item.labelKey)}
-                    />
-                  </li>
+              <div className="flex flex-col gap-2.5">
+                {sg.groups.map((group, gi) => (
+                  <div key={group.labelKey ?? `flat-${gi}`}>
+                    {group.labelKey ? (
+                      <p className="mb-1 hidden px-2 text-[0.6rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)] md:block">
+                        {t(group.labelKey)}
+                      </p>
+                    ) : null}
+                    <ul className="flex flex-col gap-1 md:gap-0.5">
+                      {group.items.map((item) => (
+                        <li key={item.href}>
+                          {item.separatorBefore ? (
+                            <div className="my-1.5 mx-2 border-t border-[var(--tessera-border)]" />
+                          ) : null}
+                          <NavEntry
+                            item={item}
+                            active={isActive(pathname, item.href)}
+                            label={t(item.labelKey)}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </section>
           ))}
         </div>
@@ -159,10 +286,39 @@ export function Sidebar() {
   );
 }
 
+function AppToggle() {
+  const t = useTranslations("nav.toggle");
+  return (
+    <div className="hidden px-3 py-2 md:block">
+      <div className="flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-0.5">
+        <span className="flex-1 rounded bg-[var(--tessera-surface-elevated)] px-2 py-1 text-center text-[0.7rem] font-semibold text-white">
+          {t("cockpit")}
+        </span>
+        <Link
+          href="/produit"
+          className="flex-1 rounded px-2 py-1 text-center text-[0.7rem] font-medium text-[var(--tessera-text-muted)] transition-colors hover:text-[var(--tessera-text)]"
+        >
+          {t("produit")}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function NavEntry({ item, active, label }: { item: NavItem; active: boolean; label: string }) {
   const Icon = item.icon;
-  const content = (
-    <>
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      aria-label={label}
+      className={cn(
+        "group flex min-h-9 items-center justify-center gap-2 rounded-md px-2 py-2 text-sm font-medium transition-colors md:justify-start md:px-3",
+        active
+          ? "border-l-2 border-[var(--tessera-green)] bg-[var(--tessera-surface-elevated)] pl-[6px] text-white md:pl-[10px]"
+          : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+      )}
+    >
       <Icon
         className={cn(
           "h-4 w-4 shrink-0 transition-colors",
@@ -179,42 +335,16 @@ function NavEntry({ item, active, label }: { item: NavItem; active: boolean; lab
             "hidden rounded-full px-2 py-0.5 text-[0.65rem] font-semibold md:inline-flex",
             item.badgeTone === "danger"
               ? "bg-red-500 text-white"
-              : active
-                ? "bg-[var(--tessera-green-soft)] text-[#d6f0e3]"
-                : "bg-[var(--tessera-muted)] text-[var(--tessera-text-muted)]",
+              : item.badgeTone === "warning"
+                ? "bg-amber-500 text-white"
+                : active
+                  ? "bg-[var(--tessera-green-soft)] text-[#d6f0e3]"
+                  : "bg-[var(--tessera-muted)] text-[var(--tessera-text-muted)]",
           )}
         >
           {item.badge}
         </span>
       ) : null}
-    </>
-  );
-
-  const className = cn(
-    "group flex min-h-9 items-center justify-center gap-2 rounded-md px-2 py-2 text-sm font-medium transition-colors md:justify-start md:px-3",
-    active
-      ? "border-l-2 border-[var(--tessera-green)] bg-[var(--tessera-surface-elevated)] pl-[6px] text-white md:pl-[10px]"
-      : item.href
-        ? "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
-        : "cursor-not-allowed text-[var(--tessera-text-subtle)]",
-  );
-
-  if (!item.href) {
-    return (
-      <span className={className} aria-disabled="true" aria-label={label}>
-        {content}
-      </span>
-    );
-  }
-
-  return (
-    <Link
-      href={item.href}
-      className={className}
-      aria-current={active ? "page" : undefined}
-      aria-label={label}
-    >
-      {content}
     </Link>
   );
 }
@@ -280,8 +410,6 @@ function IdentityBlock() {
   );
 }
 
-function isActive(pathname: string, href?: RouteHref): boolean {
-  if (!href) return false;
-  if (href === "/") return pathname === "/";
+function isActive(pathname: string, href: RouteHref): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }

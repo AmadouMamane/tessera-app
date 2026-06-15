@@ -1080,7 +1080,7 @@ function QuickActionsCard({
         setStatus(frozen ? t("unfrozen") : t("frozen"));
         break;
       case "replay":
-        router.push("/observability");
+        router.push("/surveiller/qualite-ia");
         break;
       case "replayAt":
         onReplayAt();

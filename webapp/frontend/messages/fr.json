@@ -50,7 +50,60 @@
     "health": "État du service",
     "settings": "Paramètres",
     "observability": "Observabilité",
-    "parameters": "Paramètres"
+    "parameters": "Paramètres",
+    "super": {
+      "agent": "Agent",
+      "gouverner": "Gouverner",
+      "plateforme": "Plateforme"
+    },
+    "group": {
+      "surveiller": "Surveiller",
+      "agir": "Agir",
+      "prouver": "Prouver",
+      "configurer": "Configurer",
+      "admin": "Admin"
+    },
+    "toggle": {
+      "cockpit": "Cockpit",
+      "produit": "Vue client"
+    },
+    "item": {
+      "synthese": "Synthèse",
+      "configurations": "Configurations",
+      "connaissances": "Connaissances",
+      "agentGuardrails": "Garde-fous",
+      "prompts": "Prompts",
+      "evaluations": "Évaluations",
+      "console": "Console",
+      "historique": "Historique",
+      "aTraiter": "À traiter",
+      "aFaire": "À faire",
+      "vueEnsemble": "Vue d’ensemble",
+      "qualiteIa": "Qualité IA",
+      "securitePrivacy": "Sécurité & Privacy",
+      "conformite": "Conformité",
+      "fiabiliteCout": "Fiabilité & coût",
+      "observabilite": "Observabilité",
+      "amelioration": "Amélioration",
+      "incidentsPlaybooks": "Incidents & playbooks",
+      "replayShadow": "Replay & shadow",
+      "curationEvalSet": "Curation eval set",
+      "releaseControl": "Release Control",
+      "automations": "Automations",
+      "auditLogs": "Journal d’audit",
+      "evidenceStore": "Evidence store",
+      "signalCatalog": "Signal Catalog",
+      "platformGuardrails": "Garde-fous",
+      "modeles": "Modèles",
+      "connecteurs": "Connecteurs",
+      "politiques": "Politiques",
+      "sourcesMemoire": "Sources & mémoire",
+      "parametres": "Paramètres",
+      "integrations": "Intégrations",
+      "utilisateurs": "Utilisateurs",
+      "rolesAcces": "Rôles & accès",
+      "profilSysteme": "Profil système"
+    }
   },
   "common": {
     "language": "Langue",
@@ -4284,6 +4337,28 @@
       "generation": "Génération de la réponse"
     },
     "tenant": "Tenant",
-    "sessionShort": "session"
+    "sessionShort": "session",
+    "synthese": {
+      "title": "Synthèse de l’agent",
+      "subtitle": "Tableau de bord de l’agent conversationnel."
+    },
+    "debugBanner": "DEBUG · SANDBOX — conversations env=debug, exclues des métriques de production et de l’audit.",
+    "sessionDetail": {
+      "title": "Session",
+      "subtitle": "Détail de la session (lecture seule)."
+    }
+  },
+  "product": {
+    "nav": {
+      "brand": "Crédit Aurore",
+      "chat": "Assistant",
+      "requests": "Mes demandes",
+      "documents": "Documents",
+      "alerts": "Alertes",
+      "settings": "Paramètres"
+    }
+  },
+  "scaffold": {
+    "body": "Cette page est en cours de construction. La navigation, le routage et les états sont en place ; le contenu sera branché prochainement."
   }
 }

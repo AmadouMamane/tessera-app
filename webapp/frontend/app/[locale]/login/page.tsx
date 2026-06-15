@@ -42,7 +42,7 @@ export default async function LoginPage({ params }: LoginPageProps) {
 
         <div className="mt-5 flex items-center justify-between">
           <Link
-            href="/chat"
+            href="/produit"
             className="inline-flex items-center gap-1.5 text-sm text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
           >
             <ArrowLeft className="h-4 w-4" />
