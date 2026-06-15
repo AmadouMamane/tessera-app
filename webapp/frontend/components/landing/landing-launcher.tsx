@@ -315,7 +315,7 @@ function SpaceCard({
         <div className="h-px w-full bg-[var(--border-subtle)]" />
 
         <ul
-          className={cn("mt-[16px] flex flex-col", ns === "operator" ? "gap-[24px]" : "gap-[12px]")}
+          className={cn("mt-[16px] flex flex-col", ns === "operator" ? "gap-[18px]" : "gap-[8px]")}
         >
           {items.map((item) => (
             <li key={item.key}>
