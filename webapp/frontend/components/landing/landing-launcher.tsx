@@ -191,7 +191,7 @@ export function LandingLauncher() {
 
 function Header({ t }: { t: T }) {
   return (
-    <header className="relative flex h-[68px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-10">
+    <header className="relative flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-6">
       <TesseraLogo className="h-[48px]" />
 
       <SpaceToggle t={t} />
