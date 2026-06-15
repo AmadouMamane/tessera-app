@@ -51,41 +51,45 @@ const OPERATOR_ITEMS: SpaceItem[] = [
 export function LandingLauncher() {
   const t = useTranslations("landing");
   return (
-    <div className="bg-canvas-glow relative flex min-h-screen flex-col bg-[var(--tessera-bg)] text-[var(--tessera-text)]">
-      <Header t={t} />
-      <main className="flex flex-1 items-center justify-center px-4 py-8">
-        <div className="w-full max-w-5xl">
-          <div className="text-center">
-            <h1 className="font-serif text-3xl font-semibold text-white md:text-4xl">
-              {t("welcome")}
-            </h1>
-            <p className="mt-2 text-sm text-[var(--tessera-text-muted)] md:text-base">
-              {t("choose")}
-            </p>
-          </div>
+    <div className="bg-canvas-glow relative flex min-h-screen flex-col overflow-hidden bg-[var(--tessera-bg)] text-[var(--tessera-text)]">
+      <WaveCorner className="pointer-events-none absolute bottom-0 left-0 h-[70%] w-[50%]" flip />
+      <WaveCorner className="pointer-events-none absolute bottom-0 right-0 h-[75%] w-[55%]" />
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <Header t={t} />
+        <main className="flex flex-1 items-center justify-center px-4 py-8">
+          <div className="w-full max-w-5xl">
+            <div className="text-center">
+              <h1 className="font-serif text-3xl font-semibold text-white md:text-4xl">
+                {t("welcome")}
+              </h1>
+              <p className="mt-2 text-sm text-[var(--tessera-text-muted)] md:text-base">
+                {t("choose")}
+              </p>
+            </div>
 
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <SpaceCard
-              t={t}
-              ns="client"
-              accent="gold"
-              badgeIcon={UserRound}
-              href="/produit"
-              items={CLIENT_ITEMS}
-              mock={<ChatMock />}
-            />
-            <SpaceCard
-              t={t}
-              ns="operator"
-              accent="teal"
-              badgeIcon={ShieldCheck}
-              href="/agent/synthese"
-              items={OPERATOR_ITEMS}
-              mock={<DashboardMock />}
-            />
+            <div className="mt-8 grid gap-5 md:grid-cols-2">
+              <SpaceCard
+                t={t}
+                ns="client"
+                accent="gold"
+                badgeIcon={UserRound}
+                href="/produit"
+                items={CLIENT_ITEMS}
+                mock={<ChatMock />}
+              />
+              <SpaceCard
+                t={t}
+                ns="operator"
+                accent="teal"
+                badgeIcon={ShieldCheck}
+                href="/agent/synthese"
+                items={OPERATOR_ITEMS}
+                mock={<DashboardMock />}
+              />
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
@@ -139,7 +143,7 @@ function SpaceToggle({ t }: { t: T }) {
     <div className="flex items-center gap-1 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-1">
       <Link
         href="/produit"
-        className="flex items-center gap-2 rounded-md bg-gradient-to-r from-[#caa45a] to-[#b8893f] px-4 py-1.5 text-[0.78rem] font-semibold text-[#1a1406] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+        className="flex items-center gap-2 rounded-md bg-gradient-to-r from-[#d8b56a] to-[#b8893f] px-4 py-1.5 text-[0.78rem] font-semibold text-[#1a1406] shadow-[0_0_18px_rgba(202,164,90,0.35),inset_0_1px_0_rgba(255,255,255,0.25)] ring-1 ring-[#e6c889]/50"
       >
         <UserRound className="h-3.5 w-3.5" />
         {t("toggle.product")}
@@ -292,24 +296,74 @@ function DashboardMock() {
   );
 }
 
+// Faceted hexagonal gem: outer hexagon + inner hexagon "hole" split into 12
+// triangular facets shaded from a single cyan->blue gradient. Points are
+// pre-computed so the markup stays free of array-index access.
+const GEM_FACETS: { pts: string; o: number }[] = [
+  { pts: "18,3.5 30.56,10.75 22.76,15.25", o: 0.95 },
+  { pts: "18,3.5 22.76,15.25 18,12.5", o: 0.6 },
+  { pts: "30.56,10.75 30.56,25.25 22.76,20.75", o: 0.9 },
+  { pts: "30.56,10.75 22.76,20.75 22.76,15.25", o: 0.55 },
+  { pts: "30.56,25.25 18,32.5 18,23.5", o: 0.8 },
+  { pts: "30.56,25.25 18,23.5 22.76,20.75", o: 0.5 },
+  { pts: "18,32.5 5.44,25.25 13.24,20.75", o: 0.7 },
+  { pts: "18,32.5 13.24,20.75 18,23.5", o: 0.5 },
+  { pts: "5.44,25.25 5.44,10.75 13.24,15.25", o: 0.8 },
+  { pts: "5.44,25.25 13.24,15.25 13.24,20.75", o: 0.55 },
+  { pts: "5.44,10.75 18,3.5 18,12.5", o: 0.9 },
+  { pts: "5.44,10.75 18,12.5 13.24,15.25", o: 0.6 },
+];
+
 function TesseraMark() {
+  return (
+    <svg aria-hidden="true" className="h-9 w-9 shrink-0" viewBox="0 0 36 36" fill="none">
+      <defs>
+        <linearGradient id="tessera-gem" x1="0" y1="0" x2="0.4" y2="1">
+          <stop offset="0" stopColor="#74e8dc" />
+          <stop offset="0.5" stopColor="#2aa7d8" />
+          <stop offset="1" stopColor="#1f57b0" />
+        </linearGradient>
+      </defs>
+      {GEM_FACETS.map((f) => (
+        <polygon
+          key={f.pts}
+          points={f.pts}
+          fill="url(#tessera-gem)"
+          fillOpacity={f.o}
+          stroke="#9ff0e6"
+          strokeOpacity="0.35"
+          strokeWidth="0.4"
+        />
+      ))}
+    </svg>
+  );
+}
+
+/** Decorative flow-field wave lines anchored in a corner (sweeping ribbon). */
+function WaveCorner({ className, flip = false }: { className: string; flip?: boolean }) {
+  const lines = Array.from({ length: 48 }, (_, i) => i);
   return (
     <svg
       aria-hidden="true"
-      className="h-9 w-9 shrink-0 text-[var(--tessera-green)]"
-      viewBox="0 0 36 36"
+      className={className}
+      viewBox="0 0 360 280"
       fill="none"
+      preserveAspectRatio="xMaxYMax slice"
+      style={flip ? { transform: "scaleX(-1)" } : undefined}
     >
-      <path
-        d="M18 3.5 31 10.75v14.5L18 32.5 5 25.25v-14.5L18 3.5Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M18 3.5v14.7m0 14.3V18.2m0 0L5 10.75m13 7.45 13-7.45M5 25.25l13-7.05 13 7.05"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
+      {lines.map((i) => {
+        const o = i * 5;
+        const d = `M ${20 - o * 0.2} 290 C ${150 - o * 0.4} ${250 - o * 1.1} ${250 - o * 0.2} ${250 - o * 1.4} 380 ${90 - o * 1.05}`;
+        return (
+          <path
+            key={i}
+            d={d}
+            stroke="#3aa3c8"
+            strokeOpacity={Math.max(0.04, 0.3 - i * 0.005)}
+            strokeWidth="0.65"
+          />
+        );
+      })}
     </svg>
   );
 }
