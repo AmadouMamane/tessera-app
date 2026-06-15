@@ -133,14 +133,20 @@ export function LandingLauncher() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 50% 18%, var(--bg-radial) 0%, rgba(20,43,77,0.10) 32%, transparent 58%), linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-app) 48%, #010511 100%)",
-          boxShadow: "inset 0 0 150px rgba(0,0,0,0.70)",
+            "radial-gradient(circle at 50% 10%, rgba(20, 43, 77, 0.28), transparent 42%), linear-gradient(180deg, #020817 0%, #030B18 58%, #020817 100%)",
+          boxShadow: "inset 0 0 150px rgba(0,0,0,0.55)",
         }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[150px] bg-cover bg-bottom bg-no-repeat"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[230px]"
         style={{
-          backgroundImage: "url('/brand/select-space-waves.svg')",
+          backgroundImage: "url('/assets/tessera-waves-bottom.png')",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "bottom center",
+          backgroundSize: "100% auto",
+          opacity: 0.12,
+          maskImage: "linear-gradient(to top, #000 38%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to top, #000 38%, transparent 100%)",
         }}
       />
 
