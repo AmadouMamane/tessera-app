@@ -21,6 +21,7 @@ from tessera.observability import (
     access as access_mod,
     agent_connaissances as agent_connaissances_mod,
     agent_console as agent_console_mod,
+    agent_garde_fous as agent_garde_fous_mod,
     agent_synthese as agent_synthese_mod,
     ai_act as ai_act_mod,
     anomalies as anomalies_mod,
@@ -620,6 +621,21 @@ async def observability_improvement() -> dict[str, object]:
         return {"available": True, **asdict(improvement_mod.compute_improvement())}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/agent-garde-fous")
+async def observability_agent_garde_fous() -> dict[str, object]:
+    """Agent Guardrails ("Garde-fous") dashboard (reference image 27).
+
+    Active-snapshot bar, KPI strip, filterable rules table, watchlist, quick
+    actions, coverage-by-category and a per-rule detail panel. Deterministic
+    fixture; degrades to ``available: false``.
+    """
+    try:
+        return {"available": True, **agent_garde_fous_mod.compute_agent_garde_fous()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.agent_garde_fous: failed: {exc}\n")
         return {"available": False}
 
 

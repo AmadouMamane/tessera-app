@@ -4466,5 +4466,12 @@
     "subtitle": "Die Quellen, auf denen dieser Agent verankert ist.",
     "loading": "Wissen wird geladen…",
     "unavailable": "Wissen nicht verfügbar."
+  },
+  "agentGardeFous": {
+    "title": "Leitplanken",
+    "subtitle": "Verwalten Sie die Regeln, Filter und Schutzmaßnahmen für die Antworten des Assistenten.",
+    "loading": "Leitplanken werden geladen…",
+    "unavailable": "Leitplanken nicht verfügbar.",
+    "realtime": "Live"
   }
 }

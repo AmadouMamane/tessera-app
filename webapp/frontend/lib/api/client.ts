@@ -22,6 +22,8 @@ import {
   AgentConnaissancesSchema,
   type AgentConsole,
   AgentConsoleSchema,
+  type AgentGardeFous,
+  AgentGardeFousSchema,
   type AgentSynthese,
   AgentSyntheseSchema,
   type AnomalyReport,
@@ -1075,4 +1077,8 @@ export async function fetchAgentConsole(signal?: AbortSignal): Promise<AgentCons
 
 export async function fetchAgentConnaissances(signal?: AbortSignal): Promise<AgentConnaissances> {
   return request("/observability/agent-connaissances", { signal }, AgentConnaissancesSchema);
+}
+
+export async function fetchAgentGardeFous(signal?: AbortSignal): Promise<AgentGardeFous> {
+  return request("/observability/agent-garde-fous", { signal }, AgentGardeFousSchema);
 }

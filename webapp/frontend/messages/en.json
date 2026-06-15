@@ -4466,5 +4466,12 @@
     "subtitle": "The sources this agent is grounded on.",
     "loading": "Loading knowledge…",
     "unavailable": "Knowledge unavailable."
+  },
+  "agentGardeFous": {
+    "title": "Guardrails",
+    "subtitle": "Manage the rules, filters and protections applied to the assistant's answers.",
+    "loading": "Loading guardrails…",
+    "unavailable": "Guardrails unavailable.",
+    "realtime": "Live"
   }
 }

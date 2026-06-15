@@ -4466,5 +4466,12 @@
     "subtitle": "Les sources sur lesquelles cet agent est ancré.",
     "loading": "Chargement des connaissances…",
     "unavailable": "Connaissances indisponibles."
+  },
+  "agentGardeFous": {
+    "title": "Garde-fous",
+    "subtitle": "Gérez les règles, filtres et protections appliqués aux réponses de l'assistant.",
+    "loading": "Chargement des garde-fous…",
+    "unavailable": "Garde-fous indisponibles.",
+    "realtime": "Live"
   }
 }
