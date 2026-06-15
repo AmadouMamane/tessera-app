@@ -358,7 +358,7 @@ function NavTreeNode({
         {node.separatorBefore ? (
           <li
             aria-hidden
-            className="mx-3 -my-px h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
+            className="mx-3 -my-px h-px bg-gradient-to-r from-white/[0.06] via-white/15 to-white/[0.06]"
           />
         ) : null}
         <li>
@@ -403,7 +403,7 @@ function NavTreeNode({
       : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
   );
   return (
-    <li>
+    <li className={cn(depth === 0 && pinned ? "mt-4" : undefined)}>
       {pinned ? (
         <div style={pad} className={cn(headerClass, "hover:text-[var(--tessera-text-muted)]")}>
           <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
