@@ -4460,5 +4460,11 @@
     "unavailable": "Console indisponible.",
     "realtime": "Live",
     "idSession": "ID session"
+  },
+  "agentConnaissances": {
+    "title": "Connaissances",
+    "subtitle": "Les sources sur lesquelles cet agent est ancré.",
+    "loading": "Chargement des connaissances…",
+    "unavailable": "Connaissances indisponibles."
   }
 }

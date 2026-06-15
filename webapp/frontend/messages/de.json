@@ -4460,5 +4460,11 @@
     "unavailable": "Konsole nicht verfügbar.",
     "realtime": "Live",
     "idSession": "Sitzungs-ID"
+  },
+  "agentConnaissances": {
+    "title": "Wissen",
+    "subtitle": "Die Quellen, auf denen dieser Agent verankert ist.",
+    "loading": "Wissen wird geladen…",
+    "unavailable": "Wissen nicht verfügbar."
   }
 }

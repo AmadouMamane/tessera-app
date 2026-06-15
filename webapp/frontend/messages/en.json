@@ -4460,5 +4460,11 @@
     "unavailable": "Console unavailable.",
     "realtime": "Live",
     "idSession": "Session ID"
+  },
+  "agentConnaissances": {
+    "title": "Knowledge",
+    "subtitle": "The sources this agent is grounded on.",
+    "loading": "Loading knowledge…",
+    "unavailable": "Knowledge unavailable."
   }
 }

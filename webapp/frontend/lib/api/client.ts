@@ -18,6 +18,8 @@ import {
   AblationReportSchema,
   type AccessOverview,
   AccessOverviewSchema,
+  type AgentConnaissances,
+  AgentConnaissancesSchema,
   type AgentConsole,
   AgentConsoleSchema,
   type AgentSynthese,
@@ -1069,4 +1071,8 @@ export async function fetchAgentSynthese(signal?: AbortSignal): Promise<AgentSyn
 
 export async function fetchAgentConsole(signal?: AbortSignal): Promise<AgentConsole> {
   return request("/observability/agent-console", { signal }, AgentConsoleSchema);
+}
+
+export async function fetchAgentConnaissances(signal?: AbortSignal): Promise<AgentConnaissances> {
+  return request("/observability/agent-connaissances", { signal }, AgentConnaissancesSchema);
 }

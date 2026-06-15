@@ -3208,3 +3208,65 @@ export const AgentConsoleSchema = z.object({
     .optional(),
 });
 export type AgentConsole = z.infer<typeof AgentConsoleSchema>;
+
+export const AgentConnaissancesSchema = z.object({
+  available: z.boolean(),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  actions: z.object({ manage: z.string(), memory: z.string(), attach: z.string() }).optional(),
+  kpis: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        value: z.string(),
+        series: z.array(z.number()),
+      }),
+    )
+    .optional(),
+  filters: z
+    .object({
+      search: z.string(),
+      selects: z.array(z.object({ label: z.string(), value: z.string() })),
+      more: z.string(),
+    })
+    .optional(),
+  table: z
+    .object({
+      columns: z.array(z.string()),
+      count: z.string(),
+      rows: z.array(
+        z.object({
+          name: z.string(),
+          path: z.string(),
+          type: z.string(),
+          status: z.string(),
+          status_tone: z.string(),
+          coverage: z.number().nullable(),
+          freshness: z.string(),
+          citation: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  detail: z
+    .object({
+      name: z.string(),
+      status: z.string(),
+      status_tone: z.string(),
+      tabs: z.array(z.string()),
+      summary_title: z.string(),
+      summary: z.string(),
+      usage_title: z.string(),
+      usage: z.array(z.object({ label: z.string(), value: z.string() })),
+      answers_title: z.string(),
+      answers: z.array(z.object({ text: z.string(), time: z.string() })),
+      actions_title: z.string(),
+      toggle_label: z.string(),
+      toggle_on: z.boolean(),
+      detach: z.string(),
+      full_sheet: z.string(),
+    })
+    .optional(),
+});
+export type AgentConnaissances = z.infer<typeof AgentConnaissancesSchema>;
