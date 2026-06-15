@@ -145,7 +145,7 @@ export function LandingLauncher() {
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header t={t} />
-        <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+        <main className="flex flex-1 flex-col items-center justify-center px-6 pt-4 pb-28">
           <section className="text-center">
             <h1 className="font-sans text-[54px] font-bold leading-none tracking-[-0.02em] text-[var(--text-primary)] [text-shadow:0_2px_22px_rgba(248,250,252,0.12)]">
               {t("welcome")}
