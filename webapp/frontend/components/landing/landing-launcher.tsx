@@ -147,10 +147,10 @@ export function LandingLauncher() {
         <Header t={t} />
         <main className="flex flex-1 flex-col items-center justify-center px-6 pt-4 pb-28">
           <section className="text-center">
-            <h1 className="font-sans text-[54px] font-bold leading-none tracking-[-0.02em] text-[var(--text-primary)] [text-shadow:0_2px_22px_rgba(248,250,252,0.12)]">
+            <h1 className="font-sans text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-[var(--text-primary)]">
               {t("welcome")}
             </h1>
-            <p className="mt-[15px] text-[22px] font-medium leading-none tracking-[0] text-[var(--text-secondary)]">
+            <p className="mt-[10px] text-[15px] font-normal leading-[1.4] tracking-[0.01em] text-[var(--text-secondary)]">
               {t("choose")}
             </p>
           </section>
@@ -196,29 +196,29 @@ function Header({ t }: { t: T }) {
 
       <SpaceToggle t={t} />
 
-      <div className="flex items-center gap-[27px] pt-[4px] text-[var(--text-secondary)]">
-        <Search className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
+      <div className="flex items-center gap-[20px] pt-[6px] text-[var(--text-secondary)]">
+        <Search className="h-[18px] w-[18px] stroke-[1.7]" aria-hidden="true" />
         <span className="relative inline-flex">
-          <Bell className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
-          <span className="absolute -right-[2px] -top-[5px] grid h-[20px] min-w-[20px] place-items-center rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_52%,var(--bg-panel))] px-[3px] text-[8px] font-bold text-[var(--gold-strong)]">
+          <Bell className="h-[18px] w-[18px] stroke-[1.7]" aria-hidden="true" />
+          <span className="absolute -right-[3px] -top-[4px] grid h-[14px] min-w-[14px] place-items-center rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_52%,var(--bg-panel))] px-[2px] text-[7px] font-bold text-[var(--gold-strong)]">
             1
           </span>
         </span>
-        <CircleHelp className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
-        <Moon className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
-        <div className="ml-2 flex items-center gap-[12px]">
-          <span className="grid h-[47px] w-[47px] place-items-center rounded-full bg-[linear-gradient(135deg,var(--gold-strong),rgba(89,62,19,0.92))] text-[19px] font-semibold text-[var(--bg-app)] shadow-[0_0_26px_rgba(214,182,106,0.22)]">
+        <CircleHelp className="h-[18px] w-[18px] stroke-[1.7]" aria-hidden="true" />
+        <Moon className="h-[18px] w-[18px] stroke-[1.7]" aria-hidden="true" />
+        <div className="ml-1 flex items-center gap-[10px]">
+          <span className="grid h-[36px] w-[36px] place-items-center rounded-full bg-[linear-gradient(135deg,var(--gold-strong),rgba(89,62,19,0.92))] text-[14px] font-semibold text-[var(--bg-app)] shadow-[0_0_26px_rgba(214,182,106,0.22)]">
             {t("user.initials")}
           </span>
-          <span className="flex min-w-[120px] flex-col">
-            <span className="text-[16px] font-semibold leading-[1.15] text-[var(--text-primary)]">
+          <span className="flex min-w-[110px] flex-col">
+            <span className="text-[13px] font-semibold leading-[1.2] text-[var(--text-primary)]">
               {t("user.name")}
             </span>
-            <span className="mt-[4px] text-[13px] font-medium leading-none text-[var(--text-secondary)]">
+            <span className="mt-[2px] text-[11px] font-normal leading-none text-[var(--text-secondary)]">
               {t("user.role")}
             </span>
           </span>
-          <ChevronDown className="h-[21px] w-[21px] stroke-[1.8]" aria-hidden="true" />
+          <ChevronDown className="h-[16px] w-[16px] stroke-[1.7]" aria-hidden="true" />
         </div>
       </div>
     </header>
@@ -227,19 +227,19 @@ function Header({ t }: { t: T }) {
 
 function SpaceToggle({ t }: { t: T }) {
   return (
-    <nav className="absolute left-[48.35%] top-[31px] flex h-[52px] w-[456px] -translate-x-1/2 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_76%,transparent)] p-0 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--text-primary)_4%,transparent),0_0_32px_rgba(0,0,0,0.18)]">
+    <nav className="absolute left-[48.35%] top-[34px] flex h-[44px] w-[360px] -translate-x-1/2 items-center rounded-[12px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_76%,transparent)] p-0 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--text-primary)_4%,transparent),0_0_32px_rgba(0,0,0,0.18)]">
       <Link
         href="/produit"
-        className="flex h-[50px] w-[218px] items-center justify-center gap-[13px] rounded-[15px] border border-[rgba(214,182,106,0.50)] bg-[linear-gradient(180deg,rgba(214,182,106,0.22),rgba(55,38,14,0.86))] text-[17px] font-semibold uppercase tracking-[0.01em] text-[var(--gold)] shadow-[0_0_14px_rgba(214,182,106,0.10),inset_0_1px_0_rgba(255,255,255,0.07)]"
+        className="flex h-[42px] w-[176px] items-center justify-center gap-[9px] rounded-[11px] border border-[rgba(214,182,106,0.50)] bg-[linear-gradient(180deg,rgba(214,182,106,0.22),rgba(55,38,14,0.86))] text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--gold)] shadow-[0_0_14px_rgba(214,182,106,0.10),inset_0_1px_0_rgba(255,255,255,0.07)]"
       >
-        <UserRound className="h-[22px] w-[22px] fill-[color-mix(in_srgb,var(--gold-strong)_70%,transparent)] stroke-[var(--gold-strong)] stroke-[2.1]" />
+        <UserRound className="h-[16px] w-[16px] fill-[color-mix(in_srgb,var(--gold-strong)_70%,transparent)] stroke-[var(--gold-strong)] stroke-[2]" />
         {t("toggle.product")}
       </Link>
       <Link
         href="/agent/synthese"
-        className="flex h-[50px] flex-1 items-center justify-center gap-[13px] rounded-[15px] text-[17px] font-semibold uppercase tracking-[0.01em] text-[var(--text-secondary)]"
+        className="flex h-[42px] flex-1 items-center justify-center gap-[9px] rounded-[11px] text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]"
       >
-        <ShieldCheck className="h-[23px] w-[23px] stroke-[var(--cyan)] stroke-[2.1]" />
+        <ShieldCheck className="h-[16px] w-[16px] stroke-[var(--cyan)] stroke-[2]" />
         {t("toggle.cockpit")}
       </Link>
     </nav>
@@ -268,7 +268,7 @@ function SpaceCard({
   return (
     <section
       className={cn(
-        "relative h-[492px] overflow-hidden rounded-[var(--radius-lg)] border px-[34px] pb-[22px] pt-[24px] backdrop-blur-[2px]",
+        "relative h-[430px] overflow-hidden rounded-[var(--radius-lg)] border px-[30px] pb-[20px] pt-[22px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{
@@ -286,18 +286,18 @@ function SpaceCard({
       />
 
       <div className="relative">
-        <div className="relative min-h-[138px]">
+        <div className="relative min-h-[120px]">
           <div className="min-w-0 max-w-[365px]">
-            <div className="flex items-center gap-[20px]">
+            <div className="flex items-center gap-[14px]">
               <HexBadge className={cn(a.icon, a.soft)}>{badgeIcon}</HexBadge>
-              <span className={cn("text-[18px] font-semibold uppercase leading-none", a.tone)}>
+              <span className={cn("text-[12px] font-semibold uppercase tracking-[0.16em]", a.tone)}>
                 {t(`${ns}.badge`)}
               </span>
             </div>
-            <h2 className="mt-[16px] font-sans text-[31px] font-semibold leading-none tracking-[0] text-[var(--text-primary)]">
+            <h2 className="mt-[14px] font-sans text-[22px] font-semibold leading-[1.1] tracking-[-0.01em] text-[var(--text-primary)]">
               {t(`${ns}.title`)}
             </h2>
-            <p className="mt-[18px] max-w-[360px] text-[17px] font-medium leading-[1.5] tracking-[0] text-[var(--text-secondary)]">
+            <p className="mt-[10px] max-w-[330px] text-[13px] font-normal leading-[1.5] text-[var(--text-secondary)]">
               {t(`${ns}.desc`)}
             </p>
           </div>
@@ -313,24 +313,20 @@ function SpaceCard({
 
         <div className="h-px w-full bg-[var(--border-subtle)]" />
 
-        <ul className="mt-[14px] flex flex-col gap-[8px]">
+        <ul className="mt-[12px] flex flex-col gap-[6px]">
           {items.map((item) => (
-            <li key={item.key} className="grid grid-cols-[34px_1fr_18px] items-center">
-              <span
-                className={cn("grid h-[28px] w-[28px] place-items-center rounded-[5px]", a.icon)}
-              >
-                <item.icon className="h-[27px] w-[27px] stroke-[1.8]" />
-              </span>
-              <span className="min-w-0 pl-[19px]">
-                <span className="block text-[16px] font-semibold leading-[1.06] text-[var(--text-primary)]">
+            <li key={item.key} className="grid grid-cols-[20px_1fr_14px] items-center">
+              <item.icon className={cn("h-[18px] w-[18px] stroke-[1.6]", a.icon)} />
+              <span className="min-w-0 pl-[14px]">
+                <span className="block text-[13px] font-semibold leading-[1.2] text-[var(--text-primary)]">
                   {t(`${ns}.items.${item.key}.title`)}
                 </span>
-                <span className="mt-[3px] block text-[14px] font-medium leading-[1.06] text-[var(--text-secondary)]">
+                <span className="mt-[1px] block text-[11.5px] font-normal leading-[1.25] text-[var(--text-secondary)]">
                   {t(`${ns}.items.${item.key}.desc`)}
                 </span>
               </span>
               <ChevronRight
-                className="h-[24px] w-[24px] stroke-[1.5] text-[var(--text-secondary)]"
+                className="h-[15px] w-[15px] stroke-[1.6] text-[var(--text-secondary)]"
                 aria-hidden="true"
               />
             </li>
@@ -341,13 +337,13 @@ function SpaceCard({
       <Link
         href={href}
         className={cn(
-          "absolute bottom-[18px] left-[31px] right-[31px] flex h-[56px] items-center justify-center gap-[24px] rounded-[14px] border text-[20px] font-semibold leading-none tracking-[0]",
+          "absolute bottom-[18px] left-[31px] right-[31px] flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
           a.button,
         )}
         style={a.buttonStyle}
       >
         {t(`${ns}.cta`)}
-        <ArrowRight className="h-[27px] w-[27px] stroke-[1.6]" />
+        <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
       </Link>
     </section>
   );
