@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { ChatRoom } from "@/components/chat/chat-room";
-import { AppShell } from "@/components/layout/app-shell";
+import { ProductShell } from "@/components/layout/product-shell";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -16,10 +16,9 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function ProductChatPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "chat" });
   return (
-    <AppShell title={t("title")}>
+    <ProductShell>
       <ChatRoom />
-    </AppShell>
+    </ProductShell>
   );
 }
