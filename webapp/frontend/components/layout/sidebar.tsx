@@ -426,7 +426,7 @@ function NavTreeNode({
     <li>
       {pinned ? (
         <div style={pad} className={headerClass}>
-          <span className="hidden min-w-0 flex-1 truncate text-left md:block">
+          <span className="ml-1.5 hidden min-w-0 flex-1 truncate text-left md:block">
             {t(node.labelKey)}
           </span>
         </div>
@@ -441,7 +441,9 @@ function NavTreeNode({
           {isSuper ? null : (
             <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
           )}
-          <span className="hidden min-w-0 flex-1 truncate text-left md:block">
+          <span
+            className={cn("hidden min-w-0 flex-1 truncate text-left md:block", isSuper && "ml-1.5")}
+          >
             {t(node.labelKey)}
           </span>
           <ChevronRight
