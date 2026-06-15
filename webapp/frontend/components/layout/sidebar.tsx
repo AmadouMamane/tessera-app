@@ -94,13 +94,24 @@ interface Leaf {
   separatorBefore?: boolean;
 }
 
+/** Per-section accent colour for the super-section header bar. */
+type Accent = "green" | "amber" | "sky";
+
+const ACCENT: Record<Accent, string> = {
+  green: "border-[var(--tessera-green)]/70",
+  amber: "border-amber-400/70",
+  sky: "border-sky-400/70",
+};
+
 interface Branch {
   key: string;
   icon: LucideIcon;
   labelKey: string;
   children: NavNode[];
-  /** Pinned super-section: a pure label separator, no icon, no toggle. */
+  /** Always-expanded super-section header: no toggle, no chevron. */
   pinned?: boolean;
+  /** Super-section accent colour (depth-0 header bar). */
+  accent?: Accent;
 }
 
 type NavNode = Leaf | Branch;
@@ -112,6 +123,7 @@ const TREE: ReadonlyArray<NavNode> = [
     key: "agent",
     icon: Bot,
     labelKey: "super.agent",
+    accent: "green",
     children: [
       { href: "/agent/synthese", icon: LayoutDashboard, labelKey: "item.synthese" },
       {
@@ -141,6 +153,7 @@ const TREE: ReadonlyArray<NavNode> = [
     icon: ShieldHalf,
     labelKey: "super.gouverner",
     pinned: true,
+    accent: "amber",
     children: [
       {
         key: "surveiller",
@@ -216,6 +229,7 @@ const TREE: ReadonlyArray<NavNode> = [
     icon: Boxes,
     labelKey: "super.plateforme",
     pinned: true,
+    accent: "sky",
     children: [
       {
         key: "configurer",
@@ -393,20 +407,25 @@ function NavTreeNode({
   const pinned = node.pinned ?? false;
   const isOpen = pinned ? true : (open[node.key] ?? false);
   const containsActive = activeBranchKeys(pathname).includes(node.key);
+  const isSuper = depth === 0;
   const headerClass = cn(
     "group flex min-h-9 w-full items-center gap-2 rounded-md py-2 pr-2 font-medium transition-colors",
-    depth === 0
-      ? "border-l-2 border-[var(--tessera-green)]/55 text-[0.7rem] uppercase tracking-[0.1em]"
-      : "text-[0.66rem] uppercase tracking-wide",
-    containsActive
-      ? "text-[var(--tessera-text)]"
-      : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+    isSuper
+      ? cn(
+          "border-l-2 text-[0.7rem] uppercase tracking-[0.1em] text-white",
+          ACCENT[node.accent ?? "green"],
+        )
+      : cn(
+          "text-[0.66rem] uppercase tracking-wide",
+          containsActive
+            ? "text-[var(--tessera-text)]"
+            : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+        ),
   );
   return (
     <li>
       {pinned ? (
-        <div style={pad} className={cn(headerClass, "hover:text-[var(--tessera-text-muted)]")}>
-          <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+        <div style={pad} className={headerClass}>
           <span className="hidden min-w-0 flex-1 truncate text-left md:block">
             {t(node.labelKey)}
           </span>
@@ -419,7 +438,9 @@ function NavTreeNode({
           style={pad}
           className={headerClass}
         >
-          <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+          {isSuper ? null : (
+            <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+          )}
           <span className="hidden min-w-0 flex-1 truncate text-left md:block">
             {t(node.labelKey)}
           </span>
