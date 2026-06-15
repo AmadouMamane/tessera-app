@@ -34,23 +34,29 @@ interface SpaceItem {
 }
 
 const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
-  "--bg-app": "#030B18",
+  "--bg-app": "#020817",
+  "--bg-deep": "#030B18",
+  "--bg-radial": "rgba(20, 43, 77, 0.42)",
   "--bg-panel": "#061426",
   "--bg-panel-soft": "#0A1B2F",
+  "--panel": "rgba(6, 20, 38, 0.82)",
+  "--panel-soft": "rgba(10, 27, 47, 0.72)",
   "--border-subtle": "rgba(148, 163, 184, 0.14)",
   "--border-gold": "rgba(214, 182, 106, 0.72)",
   "--border-cyan": "rgba(45, 212, 191, 0.62)",
   "--text-primary": "#F8FAFC",
   "--text-secondary": "#A6B3C8",
-  "--gold": "#D6B66A",
-  "--gold-strong": "#F4C76A",
+  "--champagne": "#D6B66A",
+  "--champagne-strong": "#F4C76A",
+  "--gold": "var(--champagne)",
+  "--gold-strong": "var(--champagne-strong)",
   "--cyan": "#2DD4BF",
   "--cyan-soft": "#67E8F9",
   "--success": "#22C55E",
   "--radius-lg": "24px",
   "--radius-md": "16px",
-  "--shadow-gold": "0 0 32px rgba(214, 182, 106, 0.18)",
-  "--shadow-cyan": "0 0 32px rgba(45, 212, 191, 0.16)",
+  "--shadow-gold": "0 0 38px rgba(214, 182, 106, 0.16), inset 0 1px 0 rgba(255,255,255,0.05)",
+  "--shadow-cyan": "0 0 38px rgba(45, 212, 191, 0.14), inset 0 1px 0 rgba(255,255,255,0.05)",
 };
 
 const CLIENT_ITEMS: SpaceItem[] = [
@@ -74,8 +80,8 @@ const ACCENT: Record<
     border: string;
     button: string;
     buttonStyle: CSSProperties;
+    cardStyle: CSSProperties;
     icon: string;
-    shadow: string;
     soft: string;
     tone: string;
     waveStroke: string;
@@ -86,12 +92,13 @@ const ACCENT: Record<
     button: "border-[var(--border-gold)] text-[var(--text-primary)]",
     buttonStyle: {
       background:
-        "linear-gradient(180deg, color-mix(in srgb, var(--gold-strong) 36%, var(--bg-panel-soft)), color-mix(in srgb, var(--gold) 22%, var(--bg-panel)))",
-      boxShadow:
-        "inset 0 1px 0 color-mix(in srgb, var(--gold-strong) 36%, transparent), 0 14px 34px color-mix(in srgb, var(--gold) 18%, transparent)",
+        "linear-gradient(180deg, rgba(244,199,106,0.38), rgba(214,182,106,0.22) 42%, rgba(76,52,16,0.72))",
+      boxShadow: "0 0 28px rgba(214, 182, 106, 0.20), inset 0 1px 0 rgba(255,255,255,0.10)",
+    },
+    cardStyle: {
+      boxShadow: "var(--shadow-gold)",
     },
     icon: "text-[var(--gold-strong)]",
-    shadow: "shadow-[var(--shadow-gold)]",
     soft: "text-[var(--gold)]",
     tone: "text-[var(--gold-strong)]",
     waveStroke: "var(--gold)",
@@ -101,12 +108,13 @@ const ACCENT: Record<
     button: "border-[var(--border-cyan)] text-[var(--text-primary)]",
     buttonStyle: {
       background:
-        "linear-gradient(180deg, color-mix(in srgb, var(--cyan) 34%, var(--bg-panel-soft)), color-mix(in srgb, var(--cyan) 18%, var(--bg-panel)))",
-      boxShadow:
-        "inset 0 1px 0 color-mix(in srgb, var(--cyan-soft) 28%, transparent), 0 14px 34px color-mix(in srgb, var(--cyan) 16%, transparent)",
+        "linear-gradient(180deg, rgba(45,212,191,0.28), rgba(14,116,144,0.25) 44%, rgba(5,52,70,0.78))",
+      boxShadow: "0 0 28px rgba(45, 212, 191, 0.18), inset 0 1px 0 rgba(255,255,255,0.09)",
+    },
+    cardStyle: {
+      boxShadow: "var(--shadow-cyan)",
     },
     icon: "text-[var(--cyan)]",
-    shadow: "shadow-[var(--shadow-cyan)]",
     soft: "text-[var(--cyan-soft)]",
     tone: "text-[var(--cyan)]",
     waveStroke: "var(--cyan)",
@@ -127,39 +135,40 @@ export function LandingLauncher() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 50% 43%, color-mix(in srgb, var(--bg-panel-soft) 62%, transparent), transparent 46%), linear-gradient(180deg, var(--bg-app) 0%, var(--bg-panel) 54%, var(--bg-app) 100%)",
+            "radial-gradient(circle at 50% 18%, var(--bg-radial) 0%, rgba(20,43,77,0.18) 28%, transparent 55%), linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-app) 48%, #010511 100%)",
+          boxShadow: "inset 0 0 180px rgba(0,0,0,0.64)",
         }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[220px]"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--cyan) 14%, transparent), transparent 58%)",
+            "radial-gradient(ellipse at 50% 100%, rgba(45,212,191,0.10), transparent 68%)",
         }}
       />
       <WaveCorner
-        className="pointer-events-none absolute -bottom-8 left-0 h-[32%] w-[46%]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[210px] w-full"
         tone="gold"
       />
       <WaveCorner
-        className="pointer-events-none absolute -bottom-6 right-0 h-[34%] w-[48%]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[210px] w-full"
         flip
         tone="cyan"
       />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header t={t} />
-        <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-[22px]">
+        <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-[14px]">
           <section className="text-center">
-            <h1 className="font-sans text-[50px] font-semibold leading-none tracking-[0] text-[var(--text-primary)] [text-shadow:0_2px_18px_color-mix(in_srgb,var(--text-primary)_12%,transparent)]">
+            <h1 className="font-sans text-[54px] font-bold leading-none tracking-[-0.02em] text-[var(--text-primary)] [text-shadow:0_2px_22px_rgba(248,250,252,0.12)]">
               {t("welcome")}
             </h1>
-            <p className="mt-4 text-[23px] font-medium leading-none tracking-[0] text-[var(--text-secondary)]">
+            <p className="mt-[15px] text-[22px] font-medium leading-none tracking-[0] text-[var(--text-secondary)]">
               {t("choose")}
             </p>
           </section>
 
-          <section className="mt-[29px] grid w-full max-w-[1298px] grid-cols-1 gap-6 xl:grid-cols-[623px_648px]">
+          <section className="mt-[22px] grid w-full max-w-[1252px] grid-cols-1 gap-8 xl:grid-cols-[610px_610px]">
             <SpaceCard
               t={t}
               ns="client"
@@ -211,7 +220,7 @@ function Header({ t }: { t: T }) {
         <CircleHelp className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
         <Moon className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
         <div className="ml-2 flex items-center gap-[12px]">
-          <span className="grid h-[47px] w-[47px] place-items-center rounded-full bg-[linear-gradient(135deg,var(--gold-strong),color-mix(in_srgb,var(--gold)_30%,var(--bg-panel)))] text-[19px] font-semibold text-[var(--bg-app)] shadow-[0_0_26px_color-mix(in_srgb,var(--gold)_22%,transparent)]">
+          <span className="grid h-[47px] w-[47px] place-items-center rounded-full bg-[linear-gradient(135deg,var(--gold-strong),rgba(89,62,19,0.92))] text-[19px] font-semibold text-[var(--bg-app)] shadow-[0_0_26px_rgba(214,182,106,0.22)]">
             {t("user.initials")}
           </span>
           <span className="flex min-w-[120px] flex-col">
@@ -234,7 +243,7 @@ function SpaceToggle({ t }: { t: T }) {
     <nav className="absolute left-[48.35%] top-[31px] flex h-[52px] w-[456px] -translate-x-1/2 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_76%,transparent)] p-0 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--text-primary)_4%,transparent),0_0_32px_rgba(0,0,0,0.18)]">
       <Link
         href="/produit"
-        className="flex h-[50px] w-[218px] items-center justify-center gap-[13px] rounded-[15px] border border-[var(--border-gold)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gold)_36%,var(--bg-panel)),color-mix(in_srgb,var(--gold)_16%,var(--bg-app)))] text-[17px] font-semibold uppercase tracking-[0.01em] text-[var(--gold-strong)] shadow-[var(--shadow-gold)]"
+        className="flex h-[50px] w-[218px] items-center justify-center gap-[13px] rounded-[15px] border border-[var(--border-gold)] bg-[linear-gradient(180deg,rgba(214,182,106,0.26),rgba(55,38,14,0.88))] text-[17px] font-semibold uppercase tracking-[0.01em] text-[var(--gold-strong)] shadow-[0_0_28px_rgba(214,182,106,0.20),inset_0_1px_0_rgba(255,255,255,0.08)]"
       >
         <UserRound className="h-[22px] w-[22px] fill-[color-mix(in_srgb,var(--gold-strong)_70%,transparent)] stroke-[var(--gold-strong)] stroke-[2.1]" />
         {t("toggle.product")}
@@ -272,25 +281,25 @@ function SpaceCard({
   return (
     <section
       className={cn(
-        "relative h-[618px] overflow-hidden rounded-[var(--radius-lg)] border px-[34px] pb-[26px] pt-[26px] backdrop-blur-[2px]",
+        "relative h-[560px] overflow-hidden rounded-[var(--radius-lg)] border px-[34px] pb-[22px] pt-[26px] backdrop-blur-[2px]",
         a.border,
-        a.shadow,
       )}
       style={{
+        ...a.cardStyle,
         background:
-          "linear-gradient(145deg, color-mix(in srgb, var(--bg-panel-soft) 72%, transparent), color-mix(in srgb, var(--bg-panel) 78%, transparent) 54%, color-mix(in srgb, var(--bg-app) 88%, transparent))",
+          "linear-gradient(145deg, var(--panel) 0%, var(--panel-soft) 56%, rgba(2,8,23,0.94) 100%)",
       }}
     >
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 72% 8%, color-mix(in srgb, var(--text-primary) 5%, transparent), transparent 30%)",
+            "radial-gradient(circle at 74% 10%, rgba(248,250,252,0.045), transparent 31%), linear-gradient(180deg, rgba(255,255,255,0.018), transparent 36%)",
         }}
       />
 
       <div className="relative">
-        <div className="relative min-h-[185px]">
+        <div className="relative min-h-[156px]">
           <div className="min-w-0 max-w-[365px]">
             <div className="flex items-center gap-[20px]">
               <HexBadge className={cn(a.icon, a.soft)}>{badgeIcon}</HexBadge>
@@ -305,14 +314,19 @@ function SpaceCard({
               {t(`${ns}.desc`)}
             </p>
           </div>
-          <div className={cn("absolute top-[16px]", ns === "client" ? "-right-[5px]" : "right-0")}>
+          <div
+            className={cn(
+              "absolute top-[6px] opacity-50",
+              ns === "client" ? "-right-[5px]" : "right-0",
+            )}
+          >
             {visual}
           </div>
         </div>
 
         <div className="h-px w-full bg-[var(--border-subtle)]" />
 
-        <ul className="mt-[22px] flex flex-col gap-[17px]">
+        <ul className="mt-[17px] flex flex-col gap-[10px]">
           {items.map((item) => (
             <li key={item.key} className="grid grid-cols-[34px_1fr_18px] items-center">
               <span
@@ -321,10 +335,10 @@ function SpaceCard({
                 <item.icon className="h-[27px] w-[27px] stroke-[1.8]" />
               </span>
               <span className="min-w-0 pl-[19px]">
-                <span className="block text-[18px] font-semibold leading-[1.1] text-[var(--text-primary)]">
+                <span className="block text-[17px] font-semibold leading-[1.08] text-[var(--text-primary)]">
                   {t(`${ns}.items.${item.key}.title`)}
                 </span>
-                <span className="mt-[6px] block text-[16px] font-medium leading-[1.1] text-[var(--text-secondary)]">
+                <span className="mt-[4px] block text-[15px] font-medium leading-[1.08] text-[var(--text-secondary)]">
                   {t(`${ns}.items.${item.key}.desc`)}
                 </span>
               </span>
@@ -340,7 +354,7 @@ function SpaceCard({
       <Link
         href={href}
         className={cn(
-          "absolute bottom-[26px] left-[31px] right-[31px] flex h-[59px] items-center justify-center gap-[24px] rounded-[12px] border text-[20px] font-semibold leading-none tracking-[0]",
+          "absolute bottom-[18px] left-[31px] right-[31px] flex h-[56px] items-center justify-center gap-[24px] rounded-[15px] border text-[20px] font-semibold leading-none tracking-[0]",
           a.button,
         )}
         style={a.buttonStyle}
@@ -471,6 +485,7 @@ function WaveCorner({
 }) {
   const lines = Array.from({ length: 72 }, (_, i) => i);
   const stroke = ACCENT[tone].waveStroke;
+  const gradientId = `landing-wave-${tone}`;
   return (
     <svg
       aria-hidden="true"
@@ -480,17 +495,25 @@ function WaveCorner({
       preserveAspectRatio="none"
       style={flip ? { transform: "scaleX(-1)" } : undefined}
     >
+      <defs>
+        <linearGradient id={gradientId} x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%" stopColor={stroke} stopOpacity="0.95" />
+          <stop offset="46%" stopColor={stroke} stopOpacity="0.42" />
+          <stop offset="78%" stopColor={stroke} stopOpacity="0.08" />
+          <stop offset="100%" stopColor={stroke} stopOpacity="0" />
+        </linearGradient>
+      </defs>
       {lines.map((i) => {
-        const y = 244 - i * 3.2;
-        const bend = i * 2.4;
-        const d = `M -12 ${y} C 170 ${218 - bend * 0.18} 212 ${162 - bend * 0.78} 356 ${198 - bend * 0.28} C 505 ${236 - bend * 0.2} 590 ${154 - bend * 0.35} 780 ${178 - bend * 0.58}`;
+        const y = 252 - i * 2.35;
+        const bend = i * 1.85;
+        const d = `M -12 ${y} C 170 ${226 - bend * 0.16} 218 ${176 - bend * 0.6} 362 ${204 - bend * 0.24} C 506 ${232 - bend * 0.18} 596 ${168 - bend * 0.32} 780 ${186 - bend * 0.48}`;
         return (
           <path
             key={i}
             d={d}
-            stroke={stroke}
-            strokeOpacity={Math.max(0.055, 0.34 - i * 0.0038)}
-            strokeWidth="0.72"
+            stroke={`url(#${gradientId})`}
+            strokeOpacity={Math.max(0.035, 0.22 - i * 0.0026)}
+            strokeWidth="0.68"
           />
         );
       })}
