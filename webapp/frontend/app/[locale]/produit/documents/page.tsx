@@ -19,7 +19,7 @@ export default async function ProductScaffoldPage({ params }: PageProps) {
   const t = await getTranslations({ locale, namespace: "product.nav" });
   const title = t("documents");
   return (
-    <ProductShell>
+    <ProductShell title={title}>
       <ScaffoldView title={title} />
     </ProductShell>
   );

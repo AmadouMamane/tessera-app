@@ -10,6 +10,8 @@ interface AppShellProps {
   contentWidth?: "default" | "wide" | "full";
   topbarContext?: TopbarContextItem[];
   topbarActions?: TopbarAction[];
+  /** Override the left rail (defaults to the cockpit sidebar). */
+  sidebar?: ReactNode;
 }
 
 export function AppShell({
@@ -19,6 +21,7 @@ export function AppShell({
   contentWidth = "default",
   topbarContext,
   topbarActions,
+  sidebar,
 }: AppShellProps) {
   // "full" — edge-to-edge desktop dashboard (no centred cap), tight padding.
   const maxWidth =
@@ -32,7 +35,7 @@ export function AppShell({
 
   return (
     <div className="bg-canvas-glow relative flex h-full overflow-hidden bg-[var(--tessera-bg)] text-[var(--tessera-text)]">
-      <Sidebar />
+      {sidebar ?? <Sidebar />}
       <div className="flex h-full min-w-0 flex-1 flex-col">
         <Topbar
           title={title}
