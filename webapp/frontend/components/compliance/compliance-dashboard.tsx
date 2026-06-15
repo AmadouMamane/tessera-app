@@ -14,7 +14,7 @@ import {
 import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
-import { ComplianceTabView } from "@/components/compliance/compliance-tab-view";
+import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import {
   TemporalRail,
   useRailTimeline,
@@ -267,7 +267,7 @@ export function ComplianceDashboard() {
       />
 
       {activeTab !== "overview" && d.tabs?.[activeTab] ? (
-        <ComplianceTabView tab={d.tabs[activeTab]} />
+        <CatalogTabView tab={d.tabs[activeTab]} footer={<TabFooter tc={tc} />} />
       ) : (
         <>
           <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -530,6 +530,19 @@ function EvRow({ color, label, value }: { color: string; label: string; value: n
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{value}</span>
     </li>
+  );
+}
+
+/** Shared footer for the catalogue tabs (référentiel · revue · preuves · source). */
+function TabFooter({ tc }: { tc: ReturnType<typeof useTranslations<"compliance">> }) {
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+      <Chip icon={ScrollText} label={tc("footer.reference")} />
+      <Chip icon={CalendarClock} label={tc("footer.lastReview")} />
+      <Chip icon={FileCheck2} label={tc("footer.validProofs")} />
+      <Chip icon={BookText} label={tc("footer.source")} />
+      <Chip icon={ShieldCheck} label={tc("footer.audit")} tone="text-[var(--tessera-green)]" />
+    </div>
   );
 }
 

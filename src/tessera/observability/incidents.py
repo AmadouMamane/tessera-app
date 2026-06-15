@@ -14,7 +14,10 @@ values are stable across calls so the page never "dances" on refetch.
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import UTC, datetime
+
+from tessera.observability.incidents_tabs import build_tabs
 
 __all__ = ["compute_incidents_overview"]
 
@@ -323,4 +326,7 @@ def compute_incidents_overview() -> dict[str, object]:
             "source": "YAML · Git",
             "sync": "il y a 2 min",
         },
+        # Per-tab operational catalogues (Incidents, Playbooks, Orchestration,
+        # Actions, Post-mortems, Problemes connus, Rapports), rendered generically.
+        "tabs": {key: asdict(tab) for key, tab in build_tabs().items()},
     }

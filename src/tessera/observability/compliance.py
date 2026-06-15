@@ -20,6 +20,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from tessera.observability import (
     ai_act as ai_act_mod,
@@ -32,9 +33,12 @@ from tessera.observability import (
     refusal as refusal_mod,
     replay as replay_mod,
 )
-from tessera.observability.compliance_tabs import ComplianceTab, build_tabs
+from tessera.observability.compliance_tabs import build_tabs
 from tessera.observability.eval.scores import persisted_scores, recent_scores
 from tessera.observability.eval.series import compute_score_series
+
+if TYPE_CHECKING:
+    from tessera.observability.catalog_tabs import CatalogTab
 
 __all__ = [
     "Control",
@@ -153,7 +157,7 @@ class ComplianceReport:
     # Per-tab governance catalogues (Cartographie, Obligations, Evaluations,
     # Incidents, Purge & retention, Preuves, Registre): deterministic fixture data
     # keyed by tab name, rendered by the command bar.
-    tabs: dict[str, ComplianceTab] = field(default_factory=dict)
+    tabs: dict[str, CatalogTab] = field(default_factory=dict)
 
 
 def _status(value: float) -> str:

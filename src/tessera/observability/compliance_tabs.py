@@ -8,10 +8,10 @@ mappings, treatment registers, retention rules, evidence inventories. Exactly li
 the security case identifiers, this metadata is fixed, deterministic fixture data
 so the page is stable on every refetch.
 
-The payload uses one generic, render-friendly shape (``ComplianceTab``) shared by
-every tab: a KPI strip, a main table with a sticky detail panel, and a band of
-bottom sections. The frontend renders each tab from this shape, so adding or
-tuning a tab is a pure-data change here.
+The payload uses the shared, render-friendly ``CatalogTab`` shape (see
+``catalog_tabs``): a KPI strip, a main table with a sticky detail panel, and a
+band of bottom sections. The frontend renders each tab from this shape, so adding
+or tuning a tab is a pure-data change here.
 
 Display labels are kept in French inside the data (owners, framework names, column
 headers and section titles are all part of the regulatory content), matching how
@@ -20,139 +20,23 @@ every other catalogue page in Tessera carries its domain text.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from tessera.observability.catalog_tabs import (
+    CatalogTab,
+    DetailField,
+    DetailList,
+    SectionItem,
+    TabColumn,
+    TabDetail,
+    TabKpi,
+    TabRow,
+    TabSection,
+    badge as _badge,
+    bar as _bar,
+    delta as _delta,
+    owner as _owner,
+)
 
-__all__ = [
-    "ComplianceTab",
-    "DetailField",
-    "DetailList",
-    "TabColumn",
-    "TabDetail",
-    "TabKpi",
-    "TabRow",
-    "TabSection",
-    "SectionItem",
-    "build_tabs",
-]
-
-
-@dataclass(frozen=True, slots=True)
-class TabKpi:
-    """One KPI tile in a tab strip."""
-
-    label: str
-    value: str
-    unit: str | None = None
-    sub: str | None = None
-    delta: str | None = None  # pre-formatted, ASCII signs, e.g. "+8.2%"
-    delta_good: bool | None = None  # True -> green, False -> red
-    tone: str | None = None  # good | warn | bad | neutral
-
-
-@dataclass(frozen=True, slots=True)
-class TabColumn:
-    """A column descriptor for the main table."""
-
-    key: str
-    label: str
-    kind: str = "text"  # text | num | delta | badge | owner | mono | bar | pct
-    align: str = "left"
-
-
-@dataclass(frozen=True, slots=True)
-class TabRow:
-    """One table row. ``cells`` maps column key -> render value."""
-
-    id: str
-    cells: dict[str, object]
-
-
-@dataclass(frozen=True, slots=True)
-class DetailField:
-    """A label/value pair in the detail panel."""
-
-    label: str
-    value: str
-    tone: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class DetailList:
-    """A small titled list inside the detail panel."""
-
-    title: str
-    items: list[dict[str, object]] = field(default_factory=list)
-
-
-@dataclass(frozen=True, slots=True)
-class TabDetail:
-    """The sticky right-hand detail panel for the selected row."""
-
-    eyebrow: str
-    title: str
-    status_label: str | None
-    status_tone: str | None
-    summary: str | None
-    fields: list[DetailField] = field(default_factory=list)
-    lists: list[DetailList] = field(default_factory=list)
-    actions: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True, slots=True)
-class SectionItem:
-    """One row inside a bottom section."""
-
-    label: str
-    sub: str | None = None
-    value: str | None = None
-    badge: str | None = None
-    badge_tone: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class TabSection:
-    """A bottom-band panel: list / activity / donut / bars / chart / actions."""
-
-    title: str
-    kind: str  # list | activity | donut | bars | chart | actions
-    items: list[SectionItem] = field(default_factory=list)
-    cta: str | None = None
-    donut_value: float | None = None  # 0..1
-    donut_label: str | None = None
-    bars: list[dict[str, object]] = field(default_factory=list)  # {label,value,tone?}
-    series: list[dict[str, object]] = field(default_factory=list)  # {label,color,points}
-    actions: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True, slots=True)
-class ComplianceTab:
-    """The full payload for one command-bar tab."""
-
-    table_title: str
-    kpis: list[TabKpi] = field(default_factory=list)
-    columns: list[TabColumn] = field(default_factory=list)
-    rows: list[TabRow] = field(default_factory=list)
-    detail: TabDetail | None = None
-    sections: list[TabSection] = field(default_factory=list)
-
-
-# --- small builders -------------------------------------------------------
-
-
-def _owner(name: str, role: str) -> dict[str, object]:
-    return {"name": name, "role": role}
-
-
-def _badge(label: str, tone: str) -> dict[str, object]:
-    return {"label": label, "tone": tone}
-
-
-def _delta(value: str, delta: str, good: bool) -> dict[str, object]:
-    return {"value": value, "delta": delta, "good": good}
-
-
-def _bar(have: int, total: int) -> dict[str, object]:
-    return {"have": have, "total": total, "pct": round(have / total * 100) if total else 0}
+__all__ = ["build_tabs"]
 
 
 # Recurring owners across the regulatory catalogue.
@@ -171,7 +55,7 @@ def _generer() -> list[str]:
 # --- Cartographie reglementaire ------------------------------------------
 
 
-def _tab_mapping() -> ComplianceTab:
+def _tab_mapping() -> CatalogTab:
     kpis = [
         TabKpi("Cadres actifs", "7", tone="good"),
         TabKpi("Obligations mappees", "512", delta="+8.2%", delta_good=True, tone="good"),
@@ -391,7 +275,7 @@ def _tab_mapping() -> ComplianceTab:
             ],
         ),
     ]
-    return ComplianceTab(
+    return CatalogTab(
         "Cartographie reglementaire",
         kpis=kpis,
         columns=columns,
@@ -404,7 +288,7 @@ def _tab_mapping() -> ComplianceTab:
 # --- Obligations & controles ---------------------------------------------
 
 
-def _tab_obligations() -> ComplianceTab:
+def _tab_obligations() -> CatalogTab:
     kpis = [
         TabKpi("Obligations actives", "18", tone="good"),
         TabKpi("Controles lies", "284", delta="+6.0%", delta_good=True),
@@ -611,7 +495,7 @@ def _tab_obligations() -> ComplianceTab:
             cta="Voir toutes les echeances",
         ),
     ]
-    return ComplianceTab(
+    return CatalogTab(
         "Obligations & controles",
         kpis=kpis,
         columns=columns,
@@ -624,7 +508,7 @@ def _tab_obligations() -> ComplianceTab:
 # --- Evaluations ----------------------------------------------------------
 
 
-def _tab_evaluations() -> ComplianceTab:
+def _tab_evaluations() -> CatalogTab:
     kpis = [
         TabKpi("Campagnes d'evaluation", "7", tone="good"),
         TabKpi(
@@ -830,7 +714,7 @@ def _tab_evaluations() -> ComplianceTab:
             cta="Voir tous les cadres",
         ),
     ]
-    return ComplianceTab(
+    return CatalogTab(
         "Evaluations",
         kpis=kpis,
         columns=columns,
@@ -843,7 +727,7 @@ def _tab_evaluations() -> ComplianceTab:
 # --- Incidents & exceptions ----------------------------------------------
 
 
-def _tab_incidents() -> ComplianceTab:
+def _tab_incidents() -> CatalogTab:
     kpis = [
         TabKpi("Incidents ouverts", "42", delta="-5.0%", delta_good=True, tone="warn"),
         TabKpi("Controles degrades", "27", delta="-3.0%", delta_good=True, tone="warn"),
@@ -1026,7 +910,7 @@ def _tab_incidents() -> ComplianceTab:
             ],
         ),
     ]
-    return ComplianceTab(
+    return CatalogTab(
         "Incidents & exceptions",
         kpis=kpis,
         columns=columns,
@@ -1039,7 +923,7 @@ def _tab_incidents() -> ComplianceTab:
 # --- Purge & retention ----------------------------------------------------
 
 
-def _tab_retention() -> ComplianceTab:
+def _tab_retention() -> CatalogTab:
     kpis = [
         TabKpi("Ressources sous retention", "38", tone="good"),
         TabKpi("Delais de purge respectes", "112", delta="+2.0%", delta_good=True),
@@ -1211,7 +1095,7 @@ def _tab_retention() -> ComplianceTab:
             ],
         ),
     ]
-    return ComplianceTab(
+    return CatalogTab(
         "Purge & retention",
         kpis=kpis,
         columns=columns,
@@ -1224,7 +1108,7 @@ def _tab_retention() -> ComplianceTab:
 # --- Preuves & attestations ----------------------------------------------
 
 
-def _tab_evidence() -> ComplianceTab:
+def _tab_evidence() -> CatalogTab:
     kpis = [
         TabKpi("Preuves disponibles", "8 246", delta="+2.0%", delta_good=True, tone="good"),
         TabKpi("Attestations valides", "7 112", delta="+1.0%", delta_good=True),
@@ -1408,7 +1292,7 @@ def _tab_evidence() -> ComplianceTab:
             cta="Voir toutes les activites",
         ),
     ]
-    return ComplianceTab(
+    return CatalogTab(
         "Inventaire des preuves & attestations",
         kpis=kpis,
         columns=columns,
@@ -1421,7 +1305,7 @@ def _tab_evidence() -> ComplianceTab:
 # --- Registre des traitements --------------------------------------------
 
 
-def _tab_registry() -> ComplianceTab:
+def _tab_registry() -> CatalogTab:
     kpis = [
         TabKpi("Traitements enregistres", "36", tone="good"),
         TabKpi("Finalites documentees", "36", delta="+5.0%", delta_good=True),
@@ -1610,7 +1494,7 @@ def _tab_registry() -> ComplianceTab:
             cta="Voir toutes les exceptions",
         ),
     ]
-    return ComplianceTab(
+    return CatalogTab(
         "Registre des traitements",
         kpis=kpis,
         columns=columns,
@@ -1620,7 +1504,7 @@ def _tab_registry() -> ComplianceTab:
     )
 
 
-def build_tabs() -> dict[str, ComplianceTab]:
+def build_tabs() -> dict[str, CatalogTab]:
     """Return the deterministic per-tab payloads for the Conformite command bar."""
     return {
         "mapping": _tab_mapping(),

@@ -2469,12 +2469,13 @@
     "subtitle": "Incident-Reaktion, Playbook-Orchestrierung und gouvernierte Remediation.",
     "tabs": {
       "overview": "Übersicht",
-      "incidents": "Incidents",
+      "incidents": "Vorfälle",
       "playbooks": "Playbooks",
       "orchestration": "Orchestrierung",
-      "automations": "Automatisierungen",
-      "postmortems": "Post-mortems",
-      "journal": "Reaktionsprotokoll"
+      "actions": "Aktionen",
+      "postmortems": "Post-Mortems",
+      "problemes": "Bekannte Probleme",
+      "rapports": "Berichte"
     },
     "rail": {
       "live": "Live",

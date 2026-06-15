@@ -17,8 +17,9 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
+import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
@@ -57,13 +58,16 @@ const TABS = [
   "incidents",
   "playbooks",
   "orchestration",
-  "automations",
+  "actions",
   "postmortems",
-  "journal",
+  "problemes",
+  "rapports",
 ] as const;
+type TabKey = (typeof TABS)[number];
 
 export function IncidentsOverview() {
   const t = useTranslations("incidents");
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const { data } = useQuery({
@@ -83,7 +87,7 @@ export function IncidentsOverview() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
+      <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} />
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}
@@ -95,52 +99,58 @@ export function IncidentsOverview() {
         onModeChange={temporal.changeMode}
       />
 
-      {/* A · État actuel */}
-      <Zone label={t("zone.actual")}>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
-          {data.kpis.map((kpi) => (
-            <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vs7d")} />
-          ))}
-        </div>
-      </Zone>
+      {activeTab !== "overview" && data.tabs?.[activeTab] ? (
+        <CatalogTabView tab={data.tabs[activeTab]} footer={<Footer t={t} data={data} />} />
+      ) : (
+        <>
+          {/* A · État actuel */}
+          <Zone label={t("zone.actual")}>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+              {data.kpis.map((kpi) => (
+                <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vs7d")} />
+              ))}
+            </div>
+          </Zone>
 
-      {/* B · Diagnostic / triage */}
-      <Zone label={t("zone.triage")}>
-        <div className="grid gap-3 xl:grid-cols-12">
-          <div className="flex min-w-0 flex-col gap-3 xl:col-span-7">
-            <PriorityQueue t={t} data={data} />
-            <Catalog t={t} data={data} />
-          </div>
-          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:col-span-5">
-            <RecentIncidents t={t} data={data} />
-            <SlaEscalations t={t} data={data} />
-            <Distribution t={t} data={data} />
-            <ControlCases t={t} data={data} />
-          </div>
-        </div>
-      </Zone>
+          {/* B · Diagnostic / triage */}
+          <Zone label={t("zone.triage")}>
+            <div className="grid gap-3 xl:grid-cols-12">
+              <div className="flex min-w-0 flex-col gap-3 xl:col-span-7">
+                <PriorityQueue t={t} data={data} />
+                <Catalog t={t} data={data} />
+              </div>
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:col-span-5">
+                <RecentIncidents t={t} data={data} />
+                <SlaEscalations t={t} data={data} />
+                <Distribution t={t} data={data} />
+                <ControlCases t={t} data={data} />
+              </div>
+            </div>
+          </Zone>
 
-      {/* C · Exécution & automation */}
-      <Zone label={t("zone.execution")}>
-        <div className="grid gap-3 xl:grid-cols-12">
-          <RunningPlaybook t={t} data={data} className="xl:col-span-4" />
-          <ResponseJournal t={t} data={data} className="xl:col-span-4" />
-          <Automations t={t} data={data} className="xl:col-span-2" />
-          <QuickActions t={t} className="xl:col-span-2" />
-        </div>
-      </Zone>
+          {/* C · Exécution & automation */}
+          <Zone label={t("zone.execution")}>
+            <div className="grid gap-3 xl:grid-cols-12">
+              <RunningPlaybook t={t} data={data} className="xl:col-span-4" />
+              <ResponseJournal t={t} data={data} className="xl:col-span-4" />
+              <Automations t={t} data={data} className="xl:col-span-2" />
+              <QuickActions t={t} className="xl:col-span-2" />
+            </div>
+          </Zone>
 
-      {/* D · Impact & performance */}
-      <Zone label={t("zone.impact")}>
-        <div className="grid gap-3 xl:grid-cols-12">
-          <MttrChart t={t} data={data} className="xl:col-span-3" />
-          <ResolutionBars t={t} data={data} className="xl:col-span-3" />
-          <DomainBars t={t} data={data} className="xl:col-span-3" />
-          <Postmortems t={t} data={data} className="xl:col-span-3" />
-        </div>
-      </Zone>
+          {/* D · Impact & performance */}
+          <Zone label={t("zone.impact")}>
+            <div className="grid gap-3 xl:grid-cols-12">
+              <MttrChart t={t} data={data} className="xl:col-span-3" />
+              <ResolutionBars t={t} data={data} className="xl:col-span-3" />
+              <DomainBars t={t} data={data} className="xl:col-span-3" />
+              <Postmortems t={t} data={data} className="xl:col-span-3" />
+            </div>
+          </Zone>
 
-      <Footer t={t} data={data} />
+          <Footer t={t} data={data} />
+        </>
+      )}
     </div>
   );
 }
@@ -150,7 +160,11 @@ type Data = IncidentsOverviewData;
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({
+  t,
+  activeTab,
+  onSelect,
+}: { t: T; activeTab: TabKey; onSelect: (tab: TabKey) => void }) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
@@ -158,9 +172,10 @@ function CommandBar({ t }: { t: T }) {
           <button
             key={tab}
             type="button"
+            onClick={() => onSelect(tab)}
             className={cn(
               "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
-              tab === "overview"
+              tab === activeTab
                 ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
             )}

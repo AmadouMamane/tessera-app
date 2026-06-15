@@ -2472,9 +2472,10 @@
       "incidents": "Incidents",
       "playbooks": "Playbooks",
       "orchestration": "Orchestration",
-      "automations": "Automations",
+      "actions": "Actions",
       "postmortems": "Post-mortems",
-      "journal": "Journal de réponse"
+      "problemes": "Problèmes connus",
+      "rapports": "Rapports"
     },
     "rail": {
       "live": "Live",

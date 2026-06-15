@@ -604,7 +604,7 @@ export const TabSectionSchema = z.object({
 });
 export type TabSection = z.infer<typeof TabSectionSchema>;
 
-export const ComplianceTabSchema = z.object({
+export const CatalogTabSchema = z.object({
   table_title: z.string(),
   kpis: z.array(TabKpiSchema),
   columns: z.array(TabColumnSchema),
@@ -612,7 +612,7 @@ export const ComplianceTabSchema = z.object({
   detail: TabDetailSchema.nullable().optional(),
   sections: z.array(TabSectionSchema),
 });
-export type ComplianceTab = z.infer<typeof ComplianceTabSchema>;
+export type CatalogTab = z.infer<typeof CatalogTabSchema>;
 
 export const ComplianceReportSchema = z.object({
   available: z.boolean(),
@@ -635,7 +635,7 @@ export const ComplianceReportSchema = z.object({
   non_conformities: z.array(NonConformitySchema).optional(),
   score_series: z.array(z.number()).optional(),
   score_delta: z.number().nullable().optional(),
-  tabs: z.record(z.string(), ComplianceTabSchema).optional(),
+  tabs: z.record(z.string(), CatalogTabSchema).optional(),
 });
 export type ComplianceReport = z.infer<typeof ComplianceReportSchema>;
 
@@ -2019,6 +2019,7 @@ export const IncidentsOverviewSchema = z.object({
     source: z.string(),
     sync: z.string(),
   }),
+  tabs: z.record(z.string(), CatalogTabSchema).optional(),
 });
 export type IncidentsOverview = z.infer<typeof IncidentsOverviewSchema>;
 export type PriorityIncident = z.infer<typeof PriorityIncidentSchema>;

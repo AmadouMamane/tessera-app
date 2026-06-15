@@ -1,14 +1,12 @@
 "use client";
 
-import { FileCheck2, ScrollText, ShieldCheck } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
-  ComplianceTab,
+  CatalogTab,
   SectionItem,
   TabColumn,
   TabDetail,
@@ -530,35 +528,13 @@ function Section({ s }: { s: TabSection }) {
   );
 }
 
-/* ----------------------------------------------------------------- footer */
-
-function TabFooter() {
-  const tc = useTranslations("compliance.footer");
-  const items: [typeof ShieldCheck, string][] = [
-    [ScrollText, tc("reference")],
-    [ShieldCheck, tc("lastReview")],
-    [FileCheck2, tc("validProofs")],
-    [ScrollText, tc("source")],
-  ];
-  return (
-    <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
-      {items.map(([Icon, label]) => (
-        <span key={label} className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
-          <Icon className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{label}</span>
-        </span>
-      ))}
-      <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[var(--tessera-green)]">
-        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">{tc("audit")}</span>
-      </span>
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------------- view */
 
-export function ComplianceTabView({ tab }: { tab: ComplianceTab }) {
+/**
+ * Renders any command-bar catalogue tab (KPI strip + main table with a sticky
+ * detail panel + bottom sections). Pages pass a page-specific `footer`.
+ */
+export function CatalogTabView({ tab, footer }: { tab: CatalogTab; footer?: ReactNode }) {
   const [selected, setSelected] = useState(tab.rows[0]?.id ?? "");
 
   return (
@@ -589,7 +565,7 @@ export function ComplianceTabView({ tab }: { tab: ComplianceTab }) {
         {tab.detail ? <DetailPanel detail={tab.detail} cta="" /> : null}
       </div>
 
-      <TabFooter />
+      {footer}
     </div>
   );
 }
