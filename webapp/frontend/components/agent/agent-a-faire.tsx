@@ -79,16 +79,20 @@ export function AgentAFaire() {
         ))}
       </div>
 
-      <div className="grid min-w-0 gap-2.5 xl:grid-cols-[200px_minmax(0,1fr)_minmax(0,440px)]">
+      <div className="grid min-w-0 gap-2.5 xl:grid-cols-[200px_minmax(0,1fr)]">
         <Filters data={data} />
-        <TaskTable data={data} />
-        <aside className="flex min-w-0 flex-col gap-2.5">
-          <Donut data={data} />
-          <Sla data={data} />
-          <Quick data={data} />
-          <Activity data={data} />
-          <StatusPanel data={data} />
-        </aside>
+        <div className="flex min-w-0 flex-col gap-2.5">
+          <div className="grid min-w-0 gap-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
+            <TaskTable data={data} />
+            <aside className="flex min-w-0 flex-col gap-2.5">
+              <Donut data={data} />
+              <Sla data={data} />
+              <Quick data={data} />
+              <Activity data={data} />
+            </aside>
+          </div>
+          <DetailBand data={data} />
+        </div>
       </div>
 
       <Footer data={data} />
@@ -338,6 +342,180 @@ function TaskTable({ data }: { data: Data }) {
           </tbody>
         </table>
       </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
+        <span>{tbl.showing}</span>
+        <span className="flex items-center gap-1">
+          <ChevronRight className="h-3.5 w-3.5 rotate-180" />
+          {tbl.pages.map((n, i) => (
+            <span
+              key={n}
+              className={cn(
+                "flex h-6 min-w-6 items-center justify-center rounded border px-1.5",
+                i === 0
+                  ? "border-[#6d4aed] bg-[#6d4aed]/15 text-[var(--tessera-text)]"
+                  : "border-[var(--tessera-border)]",
+              )}
+            >
+              {n}
+            </span>
+          ))}
+          <ChevronRight className="h-3.5 w-3.5" />
+        </span>
+        <span className="flex items-center gap-1.5">
+          {tbl.per_page_label}
+          <span className="inline-flex items-center gap-1 rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5">
+            {tbl.per_page} <ChevronDown className="h-3 w-3" />
+          </span>
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function DetailBand({ data }: { data: Data }) {
+  const d = data.detail;
+  const s = data.status;
+  if (!d) return null;
+  return (
+    <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+      <div className="border-b border-[var(--tessera-border)] px-3.5 py-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+        {d.title}
+      </div>
+      <div className="grid gap-px bg-[var(--tessera-border)] lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)]">
+        {/* selected summary */}
+        <div className="flex flex-col gap-2 bg-[var(--tessera-surface)] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <Badge className={PRIO_TONE[d.selected.prio_tone] ?? PRIO_TONE.crit}>
+              {d.selected.priority}
+            </Badge>
+            <span className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
+              {d.selected.id}
+            </span>
+          </div>
+          <div>
+            <p className="text-[0.76rem] font-medium text-[var(--tessera-text)]">
+              {d.selected.title}
+            </p>
+            <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{d.selected.subtitle}</p>
+          </div>
+          <button
+            type="button"
+            className="mt-auto flex w-fit items-center gap-1 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 px-2.5 py-1.5 text-[0.66rem] text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
+          >
+            {d.selected.cta} <ArrowUpRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* contexte tabs + fields */}
+        <div className="flex flex-col gap-2 bg-[var(--tessera-surface)] p-3">
+          <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)]">
+            {d.tabs.map((tb, i) => (
+              <span
+                key={tb}
+                className={cn(
+                  "-mb-px border-b-2 py-1.5 text-[0.66rem]",
+                  i === 0
+                    ? "border-emerald-400 font-medium text-[var(--tessera-text)]"
+                    : "border-transparent text-[var(--tessera-text-muted)]",
+                )}
+              >
+                {tb}
+              </span>
+            ))}
+          </nav>
+          <ul className="flex flex-col gap-1 text-[0.66rem]">
+            {d.context.map((c) => (
+              <li key={c.label} className="flex items-center justify-between gap-2">
+                <span className="text-[var(--tessera-text-muted)]">{c.label}</span>
+                <span className="min-w-0 truncate text-[var(--tessera-text)]">{c.value}</span>
+              </li>
+            ))}
+          </ul>
+          <div>
+            <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{d.summary_label}</p>
+            <p className="text-[0.66rem] leading-snug text-[var(--tessera-text)]">{d.summary}</p>
+          </div>
+        </div>
+
+        {/* echeance & sla */}
+        <div className="flex flex-col gap-2 bg-[var(--tessera-surface)] p-3">
+          <h4 className="text-[0.7rem] font-semibold text-[var(--tessera-text)]">{d.sla_title}</h4>
+          <div>
+            <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">SLA</p>
+            <p className="text-[0.9rem] font-semibold tabular-nums text-red-300">{d.sla_value}</p>
+            <p className="text-[0.58rem] text-red-300">{d.sla_note}</p>
+          </div>
+          <ul className="flex flex-col gap-1 text-[0.66rem]">
+            {d.sla_rows.map((r) => (
+              <li key={r.label} className="flex items-center justify-between gap-2">
+                <span className="text-[var(--tessera-text-muted)]">{r.label}</span>
+                <span className="tabular-nums text-[var(--tessera-text)]">{r.value}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* assignation */}
+        <div className="flex flex-col gap-2 bg-[var(--tessera-surface)] p-3">
+          <h4 className="text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+            {d.assign_title}
+          </h4>
+          <div>
+            <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{d.assign_label}</p>
+            <span className="mt-0.5 inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--tessera-text)]">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#6d4aed]/20 text-[0.5rem] font-medium text-[#b9a6ff]">
+                {d.assignee
+                  .split(" ")
+                  .map((p) => p[0] ?? "")
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </span>
+              {d.assignee}
+            </span>
+          </div>
+          <div>
+            <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{d.team_label}</p>
+            <p className="text-[0.7rem] text-[var(--tessera-text)]">{d.team}</p>
+          </div>
+          <button
+            type="button"
+            className="mt-auto flex items-center justify-center gap-1 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 px-2.5 py-1.5 text-[0.66rem] text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
+          >
+            {d.reassign}
+          </button>
+        </div>
+
+        {/* statut & actions */}
+        <div className="flex flex-col gap-2 bg-[var(--tessera-surface)] p-3">
+          {s ? (
+            <>
+              <h4 className="text-[0.7rem] font-semibold text-[var(--tessera-text)]">{s.title}</h4>
+              <div>
+                <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.label}</p>
+                <button
+                  type="button"
+                  className="mt-0.5 flex h-8 w-full items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.68rem] text-[var(--tessera-text)]"
+                >
+                  {s.value} <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+                </button>
+              </div>
+              <button
+                type="button"
+                className="mt-auto flex h-9 items-center justify-center rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-[0.7rem] font-medium text-white hover:bg-[#7c5cf5]"
+              >
+                {s.primary}
+              </button>
+              <button
+                type="button"
+                className="flex h-8 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+              >
+                {s.secondary}
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
     </section>
   );
 }
@@ -493,38 +671,6 @@ function Activity({ data }: { data: Data }) {
           </li>
         ))}
       </ul>
-    </Panel>
-  );
-}
-
-function StatusPanel({ data }: { data: Data }) {
-  const s = data.status;
-  if (!s) return null;
-  return (
-    <Panel title={s.title}>
-      <div className="flex flex-col gap-2">
-        <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.label}</span>
-        <button
-          type="button"
-          className="flex h-8 items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.68rem] text-[var(--tessera-text)]"
-        >
-          {s.value} <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        </button>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-[0.7rem] font-medium text-white hover:bg-[#7c5cf5]"
-          >
-            {s.primary}
-          </button>
-          <button
-            type="button"
-            className="flex h-9 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.7rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-          >
-            {s.secondary}
-          </button>
-        </div>
-      </div>
     </Panel>
   );
 }

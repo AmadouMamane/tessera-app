@@ -3168,6 +3168,10 @@ export const AgentAFaireSchema = z.object({
     .object({
       columns: z.array(z.string()),
       count: z.string(),
+      showing: z.string(),
+      pages: z.array(z.number()),
+      per_page_label: z.string(),
+      per_page: z.string(),
       tasks: z.array(
         z.object({
           priority: z.string(),
@@ -3184,6 +3188,33 @@ export const AgentAFaireSchema = z.object({
           status_tone: z.string(),
         }),
       ),
+    })
+    .optional(),
+  detail: z
+    .object({
+      title: z.string(),
+      selected: z.object({
+        id: z.string(),
+        priority: z.string(),
+        prio_tone: z.string(),
+        title: z.string(),
+        subtitle: z.string(),
+        cta: z.string(),
+      }),
+      tabs: z.array(z.string()),
+      context: z.array(z.object({ label: z.string(), value: z.string() })),
+      summary_label: z.string(),
+      summary: z.string(),
+      sla_title: z.string(),
+      sla_value: z.string(),
+      sla_note: z.string(),
+      sla_rows: z.array(z.object({ label: z.string(), value: z.string() })),
+      assign_title: z.string(),
+      assign_label: z.string(),
+      assignee: z.string(),
+      team_label: z.string(),
+      team: z.string(),
+      reassign: z.string(),
     })
     .optional(),
   donut: z

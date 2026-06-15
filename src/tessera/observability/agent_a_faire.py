@@ -330,6 +330,42 @@ def compute_agent_a_faire() -> dict[str, object]:
         "secondary": "Escalader",
     }
 
+    detail: dict[str, object] = {
+        "title": "Detail selectionne",
+        "selected": {
+            "id": "#C-8921",
+            "priority": "Critique",
+            "prio_tone": "crit",
+            "title": "Reponse inappropriee detectee",
+            "subtitle": "Securite - Assistant",
+            "cta": "Ouvrir dans le contexte",
+        },
+        "tabs": ["Contexte", "Historique", "Preuves", "Relations (3)"],
+        "context": [
+            {"label": "Utilisateur", "value": "Sophie L."},
+            {"label": "E-mail", "value": "john.smith@acme.com"},
+            {"label": "Modele & runtime", "value": "Llama 3.2 70B"},
+            {"label": "Conversation", "value": "CONV-7745"},
+            {"label": "Date", "value": "11/06/2026 09:05"},
+        ],
+        "summary_label": "Resume",
+        "summary": "Le modele a genere une reponse contenant des instructions inappropriees.",
+        "sla_title": "Echeance & SLA",
+        "sla_value": "-1h 15m",
+        "sla_note": "Depasse depuis 09:27",
+        "sla_rows": [
+            {"label": "Echeance", "value": "11/06/2026 09:15"},
+            {"label": "Cree le", "value": "11/06/2026 09:05"},
+            {"label": "Age", "value": "1h 37m"},
+        ],
+        "assign_title": "Assignation",
+        "assign_label": "Assigne a",
+        "assignee": "Alice Martin",
+        "team_label": "Equipe",
+        "team": "AI Safety",
+        "reassign": "Reassigner",
+    }
+
     footer: dict[str, object] = {
         "check": "Derniere verification d'integrite : 11/06/2026 10:42:15",
         "status": "OK",
@@ -342,7 +378,16 @@ def compute_agent_a_faire() -> dict[str, object]:
         "timeline": timeline,
         "kpis": kpis,
         "filters": filters,
-        "table": {"columns": columns, "tasks": tasks, "count": "23 elements"},
+        "table": {
+            "columns": columns,
+            "tasks": tasks,
+            "count": "23 elements",
+            "showing": "Afficher 1 - 8 sur 23",
+            "pages": [1, 2, 3],
+            "per_page_label": "Lignes par page",
+            "per_page": "20",
+        },
+        "detail": detail,
         "donut": donut,
         "sla": sla,
         "quick": quick,
