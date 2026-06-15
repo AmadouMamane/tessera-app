@@ -358,7 +358,7 @@ function NavTreeNode({
         {node.separatorBefore ? (
           <li
             aria-hidden
-            className="mx-3 my-px h-px bg-gradient-to-r from-transparent via-[var(--tessera-border)] to-transparent"
+            className="mx-3 -my-px h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
           />
         ) : null}
         <li>
