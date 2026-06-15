@@ -3,6 +3,7 @@
 import {
   Activity,
   Archive,
+  Bell,
   Bot,
   Boxes,
   ChevronRight,
@@ -17,6 +18,7 @@ import {
   Inbox,
   KeyRound,
   LayoutDashboard,
+  ListChecks,
   ListTodo,
   LockKeyhole,
   type LucideIcon,
@@ -44,6 +46,10 @@ import { cn } from "@/lib/cn";
 
 type RouteHref =
   | "/produit"
+  | "/produit/mes-demandes"
+  | "/produit/documents"
+  | "/produit/alertes"
+  | "/produit/parametres"
   | "/agent/synthese"
   | "/agent/configurations"
   | "/agent/connaissances"
@@ -101,160 +107,164 @@ type NavNode = Leaf | Branch;
 const isBranch = (n: NavNode): n is Branch => "children" in n;
 
 const TREE: ReadonlyArray<NavNode> = [
-  { href: "/produit", icon: MessageSquare, labelKey: "item.vueClient" },
   {
-    key: "cockpit",
-    icon: LayoutDashboard,
-    labelKey: "super.cockpit",
+    key: "produit",
+    icon: UserRound,
+    labelKey: "super.produit",
+    children: [
+      { href: "/produit", icon: MessageSquare, labelKey: "item.assistant" },
+      { href: "/produit/mes-demandes", icon: ListChecks, labelKey: "item.mesDemandes" },
+      { href: "/produit/documents", icon: FileText, labelKey: "item.documents" },
+      { href: "/produit/alertes", icon: Bell, labelKey: "item.alertes" },
+      { href: "/produit/parametres", icon: Settings, labelKey: "item.parametres" },
+    ],
+  },
+  {
+    key: "agent",
+    icon: Bot,
+    labelKey: "super.agent",
+    children: [
+      { href: "/agent/synthese", icon: LayoutDashboard, labelKey: "item.synthese" },
+      {
+        href: "/agent/configurations",
+        icon: SlidersHorizontal,
+        labelKey: "item.configurations",
+      },
+      { href: "/agent/connaissances", icon: MemoryStick, labelKey: "item.connaissances" },
+      { href: "/agent/garde-fous", icon: ShieldCheck, labelKey: "item.agentGuardrails" },
+      { href: "/agent/prompts", icon: FileText, labelKey: "item.prompts" },
+      { href: "/agent/evaluations", icon: ClipboardList, labelKey: "item.evaluations" },
+      { href: "/agent/console", icon: Terminal, labelKey: "item.console" },
+      { href: "/agent/historique", icon: ScrollText, labelKey: "item.historique" },
+      {
+        href: "/agent/a-traiter",
+        icon: Inbox,
+        labelKey: "item.aTraiter",
+        badge: "24",
+        badgeTone: "danger",
+      },
+      { href: "/agent/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
+    ],
+  },
+  {
+    key: "gouverner",
+    icon: ShieldHalf,
+    labelKey: "super.gouverner",
     children: [
       {
-        key: "agent",
-        icon: Bot,
-        labelKey: "super.agent",
+        key: "surveiller",
+        icon: Activity,
+        labelKey: "group.surveiller",
         children: [
-          { href: "/agent/synthese", icon: LayoutDashboard, labelKey: "item.synthese" },
+          { href: "/surveiller/vue-ensemble", icon: Home, labelKey: "item.vueEnsemble" },
           {
-            href: "/agent/configurations",
-            icon: SlidersHorizontal,
-            labelKey: "item.configurations",
+            href: "/surveiller/qualite-ia",
+            icon: ShieldHalf,
+            labelKey: "item.qualiteIa",
+            badge: "52",
           },
-          { href: "/agent/connaissances", icon: MemoryStick, labelKey: "item.connaissances" },
-          { href: "/agent/garde-fous", icon: ShieldCheck, labelKey: "item.agentGuardrails" },
-          { href: "/agent/prompts", icon: FileText, labelKey: "item.prompts" },
-          { href: "/agent/evaluations", icon: ClipboardList, labelKey: "item.evaluations" },
-          { href: "/agent/console", icon: Terminal, labelKey: "item.console" },
-          { href: "/agent/historique", icon: ScrollText, labelKey: "item.historique" },
           {
-            href: "/agent/a-traiter",
-            icon: Inbox,
-            labelKey: "item.aTraiter",
-            badge: "24",
+            href: "/surveiller/securite-privacy",
+            icon: LockKeyhole,
+            labelKey: "item.securitePrivacy",
+            pulse: true,
+          },
+          {
+            href: "/surveiller/conformite",
+            icon: FileCheck2,
+            labelKey: "item.conformite",
+            pulse: true,
+          },
+          {
+            href: "/surveiller/fiabilite-cout",
+            icon: Gauge,
+            labelKey: "item.fiabiliteCout",
+            pulse: true,
+          },
+          { href: "/surveiller/observabilite", icon: Boxes, labelKey: "item.observabilite" },
+          { href: "/surveiller/amelioration", icon: Sparkles, labelKey: "item.amelioration" },
+        ],
+      },
+      {
+        key: "agir",
+        icon: Workflow,
+        labelKey: "group.agir",
+        children: [
+          {
+            href: "/agir/incidents-playbooks",
+            icon: Wrench,
+            labelKey: "item.incidentsPlaybooks",
+            badge: "11",
             badgeTone: "danger",
           },
-          { href: "/agent/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
+          { href: "/agir/replay-shadow", icon: PlayCircle, labelKey: "item.replayShadow" },
+          {
+            href: "/agir/curation-eval-set",
+            icon: DatabaseZap,
+            labelKey: "item.curationEvalSet",
+            badge: "6",
+            badgeTone: "warning",
+          },
+          { href: "/agir/release-control", icon: GitBranch, labelKey: "item.releaseControl" },
+          { href: "/agir/automations", icon: Workflow, labelKey: "item.automations" },
         ],
       },
       {
-        key: "gouverner",
-        icon: ShieldHalf,
-        labelKey: "super.gouverner",
+        key: "prouver",
+        icon: Archive,
+        labelKey: "group.prouver",
         children: [
-          {
-            key: "surveiller",
-            icon: Activity,
-            labelKey: "group.surveiller",
-            children: [
-              { href: "/surveiller/vue-ensemble", icon: Home, labelKey: "item.vueEnsemble" },
-              {
-                href: "/surveiller/qualite-ia",
-                icon: ShieldHalf,
-                labelKey: "item.qualiteIa",
-                badge: "52",
-              },
-              {
-                href: "/surveiller/securite-privacy",
-                icon: LockKeyhole,
-                labelKey: "item.securitePrivacy",
-                pulse: true,
-              },
-              {
-                href: "/surveiller/conformite",
-                icon: FileCheck2,
-                labelKey: "item.conformite",
-                pulse: true,
-              },
-              {
-                href: "/surveiller/fiabilite-cout",
-                icon: Gauge,
-                labelKey: "item.fiabiliteCout",
-                pulse: true,
-              },
-              { href: "/surveiller/observabilite", icon: Boxes, labelKey: "item.observabilite" },
-              { href: "/surveiller/amelioration", icon: Sparkles, labelKey: "item.amelioration" },
-            ],
-          },
-          {
-            key: "agir",
-            icon: Workflow,
-            labelKey: "group.agir",
-            children: [
-              {
-                href: "/agir/incidents-playbooks",
-                icon: Wrench,
-                labelKey: "item.incidentsPlaybooks",
-                badge: "11",
-                badgeTone: "danger",
-              },
-              { href: "/agir/replay-shadow", icon: PlayCircle, labelKey: "item.replayShadow" },
-              {
-                href: "/agir/curation-eval-set",
-                icon: DatabaseZap,
-                labelKey: "item.curationEvalSet",
-                badge: "6",
-                badgeTone: "warning",
-              },
-              { href: "/agir/release-control", icon: GitBranch, labelKey: "item.releaseControl" },
-              { href: "/agir/automations", icon: Workflow, labelKey: "item.automations" },
-            ],
-          },
-          {
-            key: "prouver",
-            icon: Archive,
-            labelKey: "group.prouver",
-            children: [
-              { href: "/prouver/audit-logs", icon: ScrollText, labelKey: "item.auditLogs" },
-              { href: "/prouver/evidence-store", icon: Archive, labelKey: "item.evidenceStore" },
-            ],
-          },
+          { href: "/prouver/audit-logs", icon: ScrollText, labelKey: "item.auditLogs" },
+          { href: "/prouver/evidence-store", icon: Archive, labelKey: "item.evidenceStore" },
         ],
       },
+    ],
+  },
+  {
+    key: "plateforme",
+    icon: Boxes,
+    labelKey: "super.plateforme",
+    children: [
       {
-        key: "plateforme",
-        icon: Boxes,
-        labelKey: "super.plateforme",
+        key: "configurer",
+        icon: SlidersHorizontal,
+        labelKey: "group.configurer",
         children: [
           {
-            key: "configurer",
+            href: "/configurer/signal-catalog",
+            icon: Boxes,
+            labelKey: "item.signalCatalog",
+            badge: "200",
+          },
+          {
+            href: "/configurer/garde-fous",
+            icon: ShieldCheck,
+            labelKey: "item.platformGuardrails",
+          },
+          { href: "/configurer/modeles", icon: Cpu, labelKey: "item.modeles" },
+          { href: "/configurer/connecteurs", icon: Plug, labelKey: "item.connecteurs" },
+          { href: "/configurer/politiques", icon: ShieldCheck, labelKey: "item.politiques" },
+          {
+            href: "/configurer/sources-memoire",
+            icon: MemoryStick,
+            labelKey: "item.sourcesMemoire",
+          },
+          {
+            href: "/configurer/parametres",
             icon: SlidersHorizontal,
-            labelKey: "group.configurer",
-            children: [
-              {
-                href: "/configurer/signal-catalog",
-                icon: Boxes,
-                labelKey: "item.signalCatalog",
-                badge: "200",
-              },
-              {
-                href: "/configurer/garde-fous",
-                icon: ShieldCheck,
-                labelKey: "item.platformGuardrails",
-              },
-              { href: "/configurer/modeles", icon: Cpu, labelKey: "item.modeles" },
-              { href: "/configurer/connecteurs", icon: Plug, labelKey: "item.connecteurs" },
-              { href: "/configurer/politiques", icon: ShieldCheck, labelKey: "item.politiques" },
-              {
-                href: "/configurer/sources-memoire",
-                icon: MemoryStick,
-                labelKey: "item.sourcesMemoire",
-              },
-              {
-                href: "/configurer/parametres",
-                icon: SlidersHorizontal,
-                labelKey: "item.parametres",
-              },
-              { href: "/configurer/integrations", icon: Settings, labelKey: "item.integrations" },
-            ],
+            labelKey: "item.parametres",
           },
-          {
-            key: "admin",
-            icon: KeyRound,
-            labelKey: "group.admin",
-            children: [
-              { href: "/admin/utilisateurs", icon: Users, labelKey: "item.utilisateurs" },
-              { href: "/admin/roles-acces", icon: KeyRound, labelKey: "item.rolesAcces" },
-              { href: "/admin/profil-systeme", icon: UserRound, labelKey: "item.profilSysteme" },
-            ],
-          },
+          { href: "/configurer/integrations", icon: Settings, labelKey: "item.integrations" },
+        ],
+      },
+      {
+        key: "admin",
+        icon: KeyRound,
+        labelKey: "group.admin",
+        children: [
+          { href: "/admin/utilisateurs", icon: Users, labelKey: "item.utilisateurs" },
+          { href: "/admin/roles-acces", icon: KeyRound, labelKey: "item.rolesAcces" },
+          { href: "/admin/profil-systeme", icon: UserRound, labelKey: "item.profilSysteme" },
         ],
       },
     ],

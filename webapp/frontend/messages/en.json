@@ -55,7 +55,8 @@
       "agent": "Agent",
       "gouverner": "Govern",
       "plateforme": "Platform",
-      "cockpit": "Cockpit"
+      "cockpit": "Cockpit",
+      "produit": "Product"
     },
     "group": {
       "surveiller": "Monitor",
@@ -104,7 +105,11 @@
       "utilisateurs": "Users",
       "rolesAcces": "Roles & access",
       "profilSysteme": "System profile",
-      "vueClient": "Customer view"
+      "vueClient": "Customer view",
+      "assistant": "Assistant",
+      "mesDemandes": "My requests",
+      "documents": "Documents",
+      "alertes": "Alerts"
     }
   },
   "common": {
