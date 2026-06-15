@@ -3,7 +3,6 @@
 import {
   Activity,
   Archive,
-  Bell,
   Bot,
   Boxes,
   ChevronRight,
@@ -18,12 +17,10 @@ import {
   Inbox,
   KeyRound,
   LayoutDashboard,
-  ListChecks,
   ListTodo,
   LockKeyhole,
   type LucideIcon,
   MemoryStick,
-  MessageSquare,
   PlayCircle,
   Plug,
   ScrollText,
@@ -100,6 +97,8 @@ interface Branch {
   icon: LucideIcon;
   labelKey: string;
   children: NavNode[];
+  /** Always-expanded section header: no toggle, no chevron. */
+  pinned?: boolean;
 }
 
 type NavNode = Leaf | Branch;
@@ -107,18 +106,6 @@ type NavNode = Leaf | Branch;
 const isBranch = (n: NavNode): n is Branch => "children" in n;
 
 const TREE: ReadonlyArray<NavNode> = [
-  {
-    key: "produit",
-    icon: UserRound,
-    labelKey: "super.produit",
-    children: [
-      { href: "/produit", icon: MessageSquare, labelKey: "item.assistant" },
-      { href: "/produit/mes-demandes", icon: ListChecks, labelKey: "item.mesDemandes" },
-      { href: "/produit/documents", icon: FileText, labelKey: "item.documents" },
-      { href: "/produit/alertes", icon: Bell, labelKey: "item.alertes" },
-      { href: "/produit/parametres", icon: Settings, labelKey: "item.parametres" },
-    ],
-  },
   {
     key: "agent",
     icon: Bot,
@@ -150,6 +137,7 @@ const TREE: ReadonlyArray<NavNode> = [
     key: "gouverner",
     icon: ShieldHalf,
     labelKey: "super.gouverner",
+    pinned: true,
     children: [
       {
         key: "surveiller",
@@ -224,6 +212,7 @@ const TREE: ReadonlyArray<NavNode> = [
     key: "plateforme",
     icon: Boxes,
     labelKey: "super.plateforme",
+    pinned: true,
     children: [
       {
         key: "configurer",
@@ -390,36 +379,47 @@ function NavTreeNode({
     );
   }
 
-  const isOpen = open[node.key] ?? false;
+  const pinned = node.pinned ?? false;
+  const isOpen = pinned ? true : (open[node.key] ?? false);
   const containsActive = activeBranchKeys(pathname).includes(node.key);
+  const headerClass = cn(
+    "group flex min-h-9 w-full items-center gap-2 rounded-md py-2 pr-2 font-medium transition-colors",
+    depth === 0
+      ? "text-[0.7rem] uppercase tracking-[0.1em]"
+      : "text-[0.66rem] uppercase tracking-wide",
+    containsActive
+      ? "text-[var(--tessera-text)]"
+      : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+  );
   return (
     <li>
-      <button
-        type="button"
-        onClick={() => toggle(node.key)}
-        aria-expanded={isOpen}
-        style={pad}
-        className={cn(
-          "group flex min-h-9 w-full items-center gap-2 rounded-md py-2 pr-2 font-medium transition-colors",
-          depth === 0
-            ? "text-[0.7rem] uppercase tracking-[0.1em]"
-            : "text-[0.66rem] uppercase tracking-wide",
-          containsActive
-            ? "text-[var(--tessera-text)]"
-            : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
-        )}
-      >
-        <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
-        <span className="hidden min-w-0 flex-1 truncate text-left md:block">
-          {t(node.labelKey)}
-        </span>
-        <ChevronRight
-          className={cn(
-            "hidden h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] transition-transform md:block",
-            isOpen ? "rotate-90" : "",
-          )}
-        />
-      </button>
+      {pinned ? (
+        <div style={pad} className={cn(headerClass, "hover:text-[var(--tessera-text-muted)]")}>
+          <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+          <span className="hidden min-w-0 flex-1 truncate text-left md:block">
+            {t(node.labelKey)}
+          </span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => toggle(node.key)}
+          aria-expanded={isOpen}
+          style={pad}
+          className={headerClass}
+        >
+          <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+          <span className="hidden min-w-0 flex-1 truncate text-left md:block">
+            {t(node.labelKey)}
+          </span>
+          <ChevronRight
+            className={cn(
+              "hidden h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] transition-transform md:block",
+              isOpen ? "rotate-90" : "",
+            )}
+          />
+        </button>
+      )}
       {isOpen ? (
         <ul className="mt-0.5 flex flex-col gap-0.5">
           {node.children.map((child) => (
