@@ -268,7 +268,7 @@ function SpaceCard({
   return (
     <section
       className={cn(
-        "relative h-[486px] overflow-hidden rounded-[var(--radius-lg)] border px-[30px] pb-[20px] pt-[24px] backdrop-blur-[2px]",
+        "relative h-[540px] overflow-hidden rounded-[var(--radius-lg)] border px-[30px] pb-[20px] pt-[26px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{
@@ -286,7 +286,7 @@ function SpaceCard({
       />
 
       <div className="relative">
-        <div className="relative min-h-[146px]">
+        <div className="relative min-h-[178px]">
           <div className="min-w-0 max-w-[365px]">
             <div className="flex items-center gap-[14px]">
               <HexBadge className={cn(a.icon, a.soft)}>{badgeIcon}</HexBadge>
