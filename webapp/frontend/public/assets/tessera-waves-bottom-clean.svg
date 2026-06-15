@@ -1,0 +1,37 @@
+<svg width="1920" height="320" viewBox="0 0 1920 320" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="waveStroke" x1="0" y1="0" x2="1920" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D6B66A" stop-opacity="0.44"/>
+      <stop offset="38%" stop-color="#D6B66A" stop-opacity="0.22"/>
+      <stop offset="52%" stop-color="#2DD4BF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#2DD4BF" stop-opacity="0.44"/>
+    </linearGradient>
+    <linearGradient id="waveGlow" x1="0" y1="0" x2="1920" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F4C76A" stop-opacity="0.13"/>
+      <stop offset="50%" stop-color="#2DD4BF" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#67E8F9" stop-opacity="0.13"/>
+    </linearGradient>
+    <filter id="softGlow" x="-10%" y="-40%" width="120%" height="200%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="2.4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Transparent SVG. No background, no texture, no raster grain. -->
+  <g opacity="0.95" filter="url(#softGlow)">
+    <path d="M-80 260 C180 165 330 300 565 220 C780 147 940 230 1150 194 C1350 160 1518 253 1740 170 C1870 122 1970 146 2040 108" stroke="url(#waveGlow)" stroke-width="1.2"/>
+    <path d="M-80 274 C170 188 340 312 585 238 C790 176 948 246 1160 215 C1367 184 1508 270 1748 197 C1877 158 1988 170 2040 140" stroke="url(#waveStroke)" stroke-width="1.1"/>
+    <path d="M-80 287 C170 214 360 321 600 258 C820 200 965 266 1178 236 C1382 207 1516 292 1760 222 C1888 185 1995 199 2040 170" stroke="url(#waveStroke)" stroke-width="0.85" opacity="0.76"/>
+    <path d="M-80 302 C200 235 385 337 626 278 C850 224 994 286 1208 258 C1418 231 1545 312 1778 250 C1903 218 2005 230 2040 207" stroke="url(#waveStroke)" stroke-width="0.65" opacity="0.56"/>
+  </g>
+
+  <g opacity="0.28">
+    <path d="M-80 252 C160 180 350 252 575 220 C780 190 900 245 1110 228 C1340 210 1490 250 1740 176 C1865 140 1975 150 2040 126" stroke="url(#waveStroke)" stroke-width="0.4"/>
+    <path d="M-80 268 C160 196 350 268 575 236 C780 206 900 261 1110 244 C1340 226 1490 266 1740 192 C1865 156 1975 166 2040 142" stroke="url(#waveStroke)" stroke-width="0.4"/>
+    <path d="M-80 284 C160 212 350 284 575 252 C780 222 900 277 1110 260 C1340 242 1490 282 1740 208 C1865 172 1975 182 2040 158" stroke="url(#waveStroke)" stroke-width="0.4"/>
+    <path d="M-80 300 C160 228 350 300 575 268 C780 238 900 293 1110 276 C1340 258 1490 298 1740 224 C1865 188 1975 198 2040 174" stroke="url(#waveStroke)" stroke-width="0.4"/>
+  </g>
+</svg>

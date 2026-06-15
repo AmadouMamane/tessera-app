@@ -138,15 +138,15 @@ export function LandingLauncher() {
         }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[230px]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[210px]"
         style={{
-          backgroundImage: "url('/assets/tessera-waves-bottom.png')",
+          backgroundImage: "url('/assets/tessera-waves-bottom-clean.svg')",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "bottom center",
-          backgroundSize: "100% auto",
-          opacity: 0.12,
-          maskImage: "linear-gradient(to top, #000 38%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to top, #000 38%, transparent 100%)",
+          backgroundSize: "100% 100%",
+          opacity: 0.7,
+          maskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
         }}
       />
 
