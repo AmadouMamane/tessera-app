@@ -4444,7 +4444,8 @@
       "period": "Period",
       "updated": "Last updated",
       "replay": "Replay at T",
-      "comparison": "Quick comparison"
+      "comparison": "Quick comparison",
+      "realtime": "Real-time data"
     },
     "actions": {
       "export": "Export report",

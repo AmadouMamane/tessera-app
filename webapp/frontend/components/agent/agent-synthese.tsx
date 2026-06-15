@@ -6,16 +6,20 @@ import {
   CalendarClock,
   CheckCircle2,
   ChevronRight,
-  Clock3,
   Download,
   FlaskConical,
-  RotateCcw,
   Settings2,
   Sparkles,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import type { ReactNode } from "react";
 
+import {
+  TemporalRail,
+  useRailTimeline,
+  useTemporalState,
+} from "@/components/overview/temporal-rail";
 import { Link, usePathname } from "@/i18n/navigation";
 import { fetchAgentSynthese } from "@/lib/api/client";
 import type { AgentSynthese as Data } from "@/lib/api/schemas";
@@ -61,6 +65,8 @@ export function AgentSynthese() {
   const t = useTranslations("agentSynthese");
   const tn = useTranslations("nav");
   const pathname = usePathname();
+  const temporal = useTemporalState();
+  const railTimeline = useRailTimeline();
   const { data } = useQuery({
     queryKey: ["agent-synthese"],
     queryFn: ({ signal }) => fetchAgentSynthese(signal),
@@ -78,7 +84,18 @@ export function AgentSynthese() {
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <CommandBar t={t} tn={tn} pathname={pathname} meta={data.meta} />
+      <CommandBar t={t} tn={tn} pathname={pathname} />
+
+      <TemporalRail
+        mode={temporal.mode}
+        liveStatus={t("cmd.realtime")}
+        timeline={railTimeline.data}
+        selectedAt={temporal.selectedAt}
+        onSelectedAtChange={temporal.setSelectedAt}
+        periodKey={temporal.periodKey}
+        onPeriodChange={temporal.setPeriodKey}
+        onModeChange={temporal.changeMode}
+      />
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-7">
@@ -120,71 +137,38 @@ function CommandBar({
   t,
   tn,
   pathname,
-  meta,
-}: { t: T; tn: ReturnType<typeof useTranslations<"nav">>; pathname: string; meta: Data["meta"] }) {
+}: { t: T; tn: ReturnType<typeof useTranslations<"nav">>; pathname: string }) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
-        <nav className="flex min-w-0 flex-wrap items-center gap-1">
-          {TABS.map((tab) => {
-            const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={cn(
-                  "-mb-px shrink-0 border-b-2 px-3 py-2 text-[0.8rem] transition-colors",
-                  active
-                    ? "border-[#6d4aed] font-medium text-[var(--tessera-text)]"
-                    : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
-                )}
-              >
-                {tn(tab.labelKey)}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="flex shrink-0 items-center gap-2">
-          <GhostBtn icon={Download} label={t("actions.export")} />
-          <GhostBtn icon={FlaskConical} label={t("actions.test")} />
-          <button
-            type="button"
-            className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
-          >
-            <Settings2 className="h-4 w-4" /> {t("actions.configure")}
-          </button>
-        </div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
+      <nav className="flex min-w-0 flex-wrap items-center gap-1">
+        {TABS.map((tab) => {
+          const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={cn(
+                "-mb-px shrink-0 border-b-2 px-3 py-2 text-[0.8rem] transition-colors",
+                active
+                  ? "border-[#6d4aed] font-medium text-[var(--tessera-text)]"
+                  : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+              )}
+            >
+              {tn(tab.labelKey)}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="flex shrink-0 items-center gap-2">
+        <GhostBtn icon={Download} label={t("actions.export")} />
+        <GhostBtn icon={FlaskConical} label={t("actions.test")} />
+        <button
+          type="button"
+          className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
+        >
+          <Settings2 className="h-4 w-4" /> {t("actions.configure")}
+        </button>
       </div>
-
-      {meta ? (
-        <section className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-          <Meta label={t("cmd.mode")} value={meta.mode} icon={Clock3} dot />
-          <Meta label={t("cmd.period")} value={meta.period} />
-          <Meta label={t("cmd.updated")} value={meta.updated} />
-          <Meta label={t("cmd.replay")} value={meta.replayAt} icon={RotateCcw} />
-          <Meta label={t("cmd.comparison")} value={meta.comparison} />
-        </section>
-      ) : null}
-    </div>
-  );
-}
-
-function Meta({
-  label,
-  value,
-  icon: Icon,
-  dot,
-}: { label: string; value: string; icon?: typeof Clock3; dot?: boolean }) {
-  return (
-    <div className="flex min-w-0 flex-col">
-      <span className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-        {label}
-      </span>
-      <span className="flex items-center gap-1.5 text-[0.78rem] font-medium text-[var(--tessera-text)]">
-        {dot ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> : null}
-        {Icon ? <Icon className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" /> : null}
-        <span className="truncate">{value}</span>
-      </span>
     </div>
   );
 }
@@ -300,9 +284,14 @@ function Profile({ data, className }: { data: Data; className?: string }) {
   return (
     <Card cta={p.cta} className={className}>
       <div className="flex items-center gap-3">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-[#7c5cf5]/40 bg-[#6d4aed]/15 text-[#b9a6ff]">
-          <Bot className="h-6 w-6" />
-        </span>
+        <Image
+          src="/brand/agent-robot.png"
+          alt={p.name}
+          width={90}
+          height={90}
+          unoptimized
+          className="h-14 w-14 shrink-0 rounded-xl object-cover"
+        />
         <div className="min-w-0">
           <p className="truncate text-[0.92rem] font-semibold text-[var(--tessera-text)]">
             {p.name}

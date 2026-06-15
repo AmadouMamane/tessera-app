@@ -4444,7 +4444,8 @@
       "period": "Zeitraum",
       "updated": "Letzte Aktualisierung",
       "replay": "Stand zu T",
-      "comparison": "Schnellvergleich"
+      "comparison": "Schnellvergleich",
+      "realtime": "Echtzeitdaten"
     },
     "actions": {
       "export": "Bericht exportieren",

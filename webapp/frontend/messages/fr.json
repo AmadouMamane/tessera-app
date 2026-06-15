@@ -4444,7 +4444,8 @@
       "period": "Période",
       "updated": "Dernière mise à jour",
       "replay": "Relire à T",
-      "comparison": "Comparaison rapide"
+      "comparison": "Comparaison rapide",
+      "realtime": "Données en temps réel"
     },
     "actions": {
       "export": "Exporter le rapport",
