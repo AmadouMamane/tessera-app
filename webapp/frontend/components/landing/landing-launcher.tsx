@@ -155,7 +155,7 @@ export function LandingLauncher() {
             </p>
           </section>
 
-          <section className="mt-16 grid w-full max-w-[1252px] grid-cols-1 gap-8 xl:grid-cols-[610px_610px]">
+          <section className="mt-16 grid w-full max-w-[1112px] grid-cols-1 gap-8 xl:grid-cols-[540px_540px]">
             <SpaceCard
               t={t}
               ns="client"
@@ -268,7 +268,7 @@ function SpaceCard({
   return (
     <section
       className={cn(
-        "relative h-[430px] overflow-hidden rounded-[var(--radius-lg)] border px-[30px] pb-[20px] pt-[22px] backdrop-blur-[2px]",
+        "relative h-[486px] overflow-hidden rounded-[var(--radius-lg)] border px-[30px] pb-[20px] pt-[24px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{
@@ -313,7 +313,7 @@ function SpaceCard({
 
         <div className="h-px w-full bg-[var(--border-subtle)]" />
 
-        <ul className="mt-[12px] flex flex-col gap-[6px]">
+        <ul className="mt-[16px] flex flex-col gap-[15px]">
           {items.map((item) => (
             <li key={item.key} className="grid grid-cols-[20px_1fr_14px] items-center">
               <item.icon className={cn("h-[18px] w-[18px] stroke-[1.6]", a.icon)} />
