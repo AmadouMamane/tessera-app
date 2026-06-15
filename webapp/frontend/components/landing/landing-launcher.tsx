@@ -286,7 +286,7 @@ function SpaceCard({
       />
 
       <div className="relative">
-        <div className="relative min-h-[120px]">
+        <div className="relative min-h-[146px]">
           <div className="min-w-0 max-w-[365px]">
             <div className="flex items-center gap-[14px]">
               <HexBadge className={cn(a.icon, a.soft)}>{badgeIcon}</HexBadge>
