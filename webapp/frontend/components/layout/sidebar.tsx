@@ -97,14 +97,10 @@ interface Leaf {
 /** Per-section accent colour, carried by the header bar and active items inside it. */
 type Accent = "green" | "amber" | "sky";
 
-const ACCENT: Record<Accent, { bar: string; border: string; icon: string }> = {
-  green: {
-    bar: "bg-[var(--tessera-green)]",
-    border: "border-[var(--tessera-green)]",
-    icon: "text-[var(--tessera-green)]",
-  },
-  amber: { bar: "bg-amber-400", border: "border-amber-400", icon: "text-amber-400" },
-  sky: { bar: "bg-sky-400", border: "border-sky-400", icon: "text-sky-400" },
+const ACCENT: Record<Accent, string> = {
+  green: "border-[var(--tessera-green)]/55",
+  amber: "border-amber-400/55",
+  sky: "border-sky-400/55",
 };
 
 /** Active-item selector: a fixed colour, independent of the section accent. */
@@ -421,7 +417,7 @@ function NavTreeNode({
   const headerClass = cn(
     "group flex min-h-9 w-full items-center gap-2 rounded-md py-2 pr-2 font-medium transition-colors",
     depth === 0
-      ? cn("border-l-2 text-[0.7rem] uppercase tracking-[0.1em]", ACCENT[sectionAccent].border)
+      ? cn("border-l-2 text-[0.7rem] uppercase tracking-[0.1em]", ACCENT[sectionAccent])
       : "text-[0.66rem] uppercase tracking-wide",
     containsActive
       ? "text-[var(--tessera-text)]"
