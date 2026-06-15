@@ -103,9 +103,6 @@ const ACCENT: Record<Accent, string> = {
   sky: "border-sky-400/55",
 };
 
-/** Active-item selector: a fixed colour, independent of the section accent. */
-const SELECTED = { border: "border-white/80", icon: "text-white" };
-
 interface Branch {
   key: string;
   icon: LucideIcon;
@@ -389,7 +386,7 @@ function NavTreeNode({
             className={cn(
               "group flex min-h-9 items-center gap-2 rounded-md py-2 pr-2 text-sm font-medium transition-colors",
               active
-                ? cn(SELECTED.border, "border-l-2 bg-[var(--tessera-surface-elevated)] text-white")
+                ? "bg-[var(--tessera-surface-elevated)] text-white"
                 : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -397,7 +394,7 @@ function NavTreeNode({
               className={cn(
                 "h-4 w-4 shrink-0 transition-colors",
                 active
-                  ? SELECTED.icon
+                  ? "text-white"
                   : "text-[var(--tessera-text-muted)] group-hover:text-[var(--tessera-text)]",
               )}
             />
