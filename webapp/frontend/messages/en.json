@@ -4466,7 +4466,11 @@
     "loading": "Loading console…",
     "unavailable": "Console unavailable.",
     "realtime": "Live",
-    "idSession": "Session ID"
+    "idSession": "Session ID",
+    "send": "Send",
+    "stop": "Stop",
+    "newSession": "New session",
+    "generating": "Generating…"
   },
   "agentConnaissances": {
     "title": "Knowledge",

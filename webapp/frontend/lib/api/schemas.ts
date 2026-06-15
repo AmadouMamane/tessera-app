@@ -27,6 +27,51 @@ export const ChatCitationSchema = z.object({
 });
 export type ChatCitation = z.infer<typeof ChatCitationSchema>;
 
+export const ChatDebugSchema = z.object({
+  quality: z
+    .object({
+      title: z.string(),
+      badge: z.string(),
+      badge_tone: z.string(),
+      rows: z.array(
+        z.object({ label: z.string(), value: z.string(), scale: z.string(), tone: z.string() }),
+      ),
+    })
+    .optional(),
+  sources: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      rows: z.array(z.object({ label: z.string(), scope: z.string() })),
+    })
+    .optional(),
+  tools: z
+    .object({
+      title: z.string(),
+      rows: z.array(
+        z.object({ name: z.string(), status: z.string(), tone: z.string(), latency: z.string() }),
+      ),
+    })
+    .optional(),
+  guardrails: z
+    .object({
+      title: z.string(),
+      rows: z.array(
+        z.object({ name: z.string(), status: z.string(), tone: z.string(), detail: z.string() }),
+      ),
+    })
+    .optional(),
+  trace: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      rows: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+  tokens: z.number().int().nonnegative().optional(),
+});
+export type ChatDebug = z.infer<typeof ChatDebugSchema>;
+
 export const ChatStartEventSchema = z.object({
   conversation_id: z.string().uuid(),
   turn_id: z.string().uuid(),
@@ -41,6 +86,7 @@ export const ChatEndEventSchema = z.object({
   confidence: z.number().min(0).max(1).nullable(),
   citations: z.array(ChatCitationSchema),
   finish_reason: z.enum(["complete", "escalated", "error"]),
+  debug: ChatDebugSchema.optional(),
 });
 export type ChatEndEvent = z.infer<typeof ChatEndEventSchema>;
 

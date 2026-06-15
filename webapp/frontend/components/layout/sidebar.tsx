@@ -313,7 +313,7 @@ export function Sidebar() {
     <aside className="flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] md:w-[218px]">
       <BrandHeader />
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 md:px-3">
-        <ul className="flex flex-col gap-0.5">
+        <ul className="flex flex-col gap-2">
           {TREE.map((node) => (
             <NavTreeNode
               key={isBranch(node) ? node.key : node.href}
@@ -403,7 +403,12 @@ function NavTreeNode({
       : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
   );
   return (
-    <li className={cn(depth === 0 && pinned ? "mt-3" : undefined)}>
+    <li
+      className={cn(
+        depth === 0 &&
+          "rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1.5",
+      )}
+    >
       {pinned ? (
         <div style={pad} className={cn(headerClass, "hover:text-[var(--tessera-text-muted)]")}>
           <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />

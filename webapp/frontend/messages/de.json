@@ -4466,7 +4466,11 @@
     "loading": "Konsole wird geladen…",
     "unavailable": "Konsole nicht verfügbar.",
     "realtime": "Live",
-    "idSession": "Sitzungs-ID"
+    "idSession": "Sitzungs-ID",
+    "send": "Senden",
+    "stop": "Stopp",
+    "newSession": "Neue Sitzung",
+    "generating": "Generierung läuft…"
   },
   "agentConnaissances": {
     "title": "Wissen",

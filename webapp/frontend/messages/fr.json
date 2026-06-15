@@ -4466,7 +4466,11 @@
     "loading": "Chargement de la console…",
     "unavailable": "Console indisponible.",
     "realtime": "Live",
-    "idSession": "ID session"
+    "idSession": "ID session",
+    "send": "Envoyer",
+    "stop": "Stop",
+    "newSession": "Nouvelle session",
+    "generating": "Génération en cours…"
   },
   "agentConnaissances": {
     "title": "Connaissances",

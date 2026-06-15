@@ -42,7 +42,12 @@ export default async function AgentConsolePage({ params }: PageProps) {
   }
 
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+    <AppShell
+      title={t("title")}
+      description={t("subtitle")}
+      contentWidth="full"
+      breadcrumb={{ section: "PRODUIT > Chat", label: t("title") }}
+    >
       <HydrationBoundary state={dehydrate(queryClient)}>
         <AgentConsole />
       </HydrationBoundary>
