@@ -4,13 +4,11 @@ import {
   ArrowRight,
   Bell,
   BellRing,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   FileText,
   ListChecks,
   MessageSquare,
-  Moon,
   Search,
   Settings,
   ShieldCheck,
@@ -19,9 +17,11 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 
+import { AuthControl } from "@/components/auth/auth-control";
+import { TesseraLogo } from "@/components/brand/tessera-logo";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
@@ -191,43 +191,20 @@ export function LandingLauncher() {
 
 function Header({ t }: { t: T }) {
   return (
-    <header className="relative flex h-[112px] shrink-0 items-start justify-between pl-[30px] pr-[48px] pt-[28px]">
-      <Image
-        src="/brand/tessera-interface-lockup.png"
-        alt="Tessera AI Control Plane"
-        width={280}
-        height={72}
-        priority
-        unoptimized
-        className="h-[72px] w-[280px] object-contain"
-      />
+    <header className="relative flex h-[60px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-6">
+      <TesseraLogo className="h-[34px]" />
 
       <SpaceToggle t={t} />
 
-      <div className="flex items-center gap-[20px] pt-[6px] text-[var(--text-secondary)]">
-        <Search className="h-[18px] w-[18px] stroke-[1.7]" aria-hidden="true" />
-        <span className="relative inline-flex">
-          <Bell className="h-[18px] w-[18px] stroke-[1.7]" aria-hidden="true" />
-          <span className="absolute -right-[3px] -top-[4px] grid h-[14px] min-w-[14px] place-items-center rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_52%,var(--bg-panel))] px-[2px] text-[7px] font-bold text-[var(--gold-strong)]">
-            1
-          </span>
+      <div className="flex items-center gap-3 text-[var(--text-secondary)]">
+        <Search className="hidden h-[17px] w-[17px] stroke-[1.7] sm:block" aria-hidden="true" />
+        <span className="relative hidden sm:inline-flex">
+          <Bell className="h-[17px] w-[17px] stroke-[1.7]" aria-hidden="true" />
+          <span className="absolute -right-[3px] -top-[4px] h-[7px] w-[7px] rounded-full bg-[var(--gold-strong)]" />
         </span>
-        <CircleHelp className="h-[18px] w-[18px] stroke-[1.7]" aria-hidden="true" />
-        <Moon className="h-[18px] w-[18px] stroke-[1.7]" aria-hidden="true" />
-        <div className="ml-1 flex items-center gap-[10px]">
-          <span className="grid h-[36px] w-[36px] place-items-center rounded-full bg-[linear-gradient(135deg,var(--gold-strong),rgba(89,62,19,0.92))] text-[14px] font-semibold text-[var(--bg-app)] shadow-[0_0_26px_rgba(214,182,106,0.22)]">
-            {t("user.initials")}
-          </span>
-          <span className="flex min-w-[110px] flex-col">
-            <span className="text-[13px] font-semibold leading-[1.2] text-[var(--text-primary)]">
-              {t("user.name")}
-            </span>
-            <span className="mt-[2px] text-[11px] font-normal leading-none text-[var(--text-secondary)]">
-              {t("user.role")}
-            </span>
-          </span>
-          <ChevronDown className="h-[16px] w-[16px] stroke-[1.7]" aria-hidden="true" />
-        </div>
+        <CircleHelp className="hidden h-[17px] w-[17px] stroke-[1.7] sm:block" aria-hidden="true" />
+        <LanguageSwitcher />
+        <AuthControl />
       </div>
     </header>
   );
@@ -235,19 +212,19 @@ function Header({ t }: { t: T }) {
 
 function SpaceToggle({ t }: { t: T }) {
   return (
-    <nav className="absolute left-[48.35%] top-[34px] flex h-[44px] w-[360px] -translate-x-1/2 items-center rounded-[12px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_76%,transparent)] p-0 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--text-primary)_4%,transparent),0_0_32px_rgba(0,0,0,0.18)]">
+    <nav className="absolute left-1/2 top-1/2 flex h-[38px] w-[332px] -translate-x-1/2 -translate-y-1/2 items-center rounded-[11px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_76%,transparent)] p-0 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--text-primary)_4%,transparent),0_0_32px_rgba(0,0,0,0.18)]">
       <Link
         href="/produit"
-        className="flex h-[42px] w-[176px] items-center justify-center gap-[9px] rounded-[11px] border border-[rgba(214,182,106,0.50)] bg-[linear-gradient(180deg,rgba(214,182,106,0.22),rgba(55,38,14,0.86))] text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--gold)] shadow-[0_0_14px_rgba(214,182,106,0.10),inset_0_1px_0_rgba(255,255,255,0.07)]"
+        className="flex h-[36px] w-[164px] items-center justify-center gap-[8px] rounded-[10px] border border-[rgba(214,182,106,0.50)] bg-[linear-gradient(180deg,rgba(214,182,106,0.22),rgba(55,38,14,0.86))] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--gold)] shadow-[0_0_14px_rgba(214,182,106,0.10),inset_0_1px_0_rgba(255,255,255,0.07)]"
       >
-        <UserRound className="h-[16px] w-[16px] fill-[color-mix(in_srgb,var(--gold-strong)_70%,transparent)] stroke-[var(--gold-strong)] stroke-[2]" />
+        <UserRound className="h-[15px] w-[15px] fill-[color-mix(in_srgb,var(--gold-strong)_70%,transparent)] stroke-[var(--gold-strong)] stroke-[2]" />
         {t("toggle.product")}
       </Link>
       <Link
         href="/agent/synthese"
-        className="flex h-[42px] flex-1 items-center justify-center gap-[9px] rounded-[11px] text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]"
+        className="flex h-[36px] flex-1 items-center justify-center gap-[8px] rounded-[10px] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]"
       >
-        <ShieldCheck className="h-[16px] w-[16px] stroke-[var(--cyan)] stroke-[2]" />
+        <ShieldCheck className="h-[15px] w-[15px] stroke-[var(--cyan)] stroke-[2]" />
         {t("toggle.cockpit")}
       </Link>
     </nav>
