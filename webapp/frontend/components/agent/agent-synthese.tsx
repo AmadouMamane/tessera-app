@@ -77,7 +77,7 @@ export function AgentSynthese() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-1 pb-2 text-[var(--tessera-text)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-1 pb-2 text-[var(--tessera-text)] [scrollbar-gutter:stable_both-edges]">
       <CommandBar t={t} tn={tn} pathname={pathname} meta={data.meta} />
 
       {/* KPI strip */}
