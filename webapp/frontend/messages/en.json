@@ -4368,7 +4368,7 @@
     "choose": "Choose your space to continue",
     "brandTagline": "AI Control Plane",
     "user": {
-      "name": "Tessera Ops",
+      "name": "Camille D.",
       "role": "Platform"
     },
     "client": {
@@ -4422,6 +4422,10 @@
           "desc": "Administer users and integrations"
         }
       }
+    },
+    "toggle": {
+      "product": "Product",
+      "cockpit": "Cockpit"
     }
   }
 }
