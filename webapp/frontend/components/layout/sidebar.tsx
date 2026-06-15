@@ -403,12 +403,7 @@ function NavTreeNode({
       : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
   );
   return (
-    <li
-      className={cn(
-        depth === 0 &&
-          "rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1.5",
-      )}
-    >
+    <li className={cn(depth === 0 && "rounded-lg bg-[var(--tessera-surface)] p-1.5")}>
       {pinned ? (
         <div style={pad} className={cn(headerClass, "hover:text-[var(--tessera-text-muted)]")}>
           <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
@@ -518,22 +513,21 @@ function TesseraMark() {
 function IdentityBlock() {
   const t = useTranslations("nav.identity");
   return (
-    <div className="border-t border-[var(--tessera-border)] p-2 md:p-3">
-      <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2 md:p-3">
-        <div className="flex items-center justify-center gap-3 md:justify-start">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tessera-green-muted)] text-sm font-semibold text-[#d6f0e3]">
-            AD
-          </div>
-          <div className="hidden min-w-0 md:block">
-            <p className="truncate text-sm font-semibold text-white">{t("person")}</p>
-            <p className="truncate text-xs text-[var(--tessera-text-muted)]">{t("persona")}</p>
-          </div>
+    <div className="border-t border-[var(--tessera-border)] px-2 py-3 md:px-3">
+      <div className="flex items-center justify-center gap-3 md:justify-start">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-green-muted)] text-sm font-semibold text-[#d6f0e3]">
+          AD
         </div>
-        <div className="mt-3 hidden gap-1 text-xs text-[var(--tessera-text-muted)] md:grid">
-          <p>{t("role")}</p>
-          <p>{t("scope")}</p>
-          <p>{t("localeRuntime")}</p>
+        <div className="hidden min-w-0 md:block">
+          <p className="truncate text-sm font-semibold text-white">{t("person")}</p>
+          <p className="truncate text-xs text-[var(--tessera-text-muted)]">
+            {t("persona")} · {t("role")}
+          </p>
         </div>
+      </div>
+      <div className="mt-2 hidden gap-0.5 text-xs text-[var(--tessera-text-muted)] md:grid">
+        <p className="truncate">{t("scope")}</p>
+        <p className="truncate">{t("localeRuntime")}</p>
       </div>
     </div>
   );
