@@ -145,7 +145,7 @@ export function LandingLauncher() {
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header t={t} />
-        <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-[30px]">
+        <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
           <section className="text-center">
             <h1 className="font-sans text-[54px] font-bold leading-none tracking-[-0.02em] text-[var(--text-primary)] [text-shadow:0_2px_22px_rgba(248,250,252,0.12)]">
               {t("welcome")}
@@ -155,7 +155,7 @@ export function LandingLauncher() {
             </p>
           </section>
 
-          <section className="mt-[140px] grid w-full max-w-[1252px] grid-cols-1 gap-8 xl:grid-cols-[610px_610px]">
+          <section className="mt-16 grid w-full max-w-[1252px] grid-cols-1 gap-8 xl:grid-cols-[610px_610px]">
             <SpaceCard
               t={t}
               ns="client"
