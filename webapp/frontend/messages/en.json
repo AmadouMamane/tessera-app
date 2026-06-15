@@ -4487,5 +4487,11 @@
     "loading": "Loading evaluations…",
     "unavailable": "Evaluations unavailable.",
     "realtime": "Live"
+  },
+  "agentHistorique": {
+    "title": "Session history",
+    "subtitle": "Analyse conversation sessions, their quality and their compliance.",
+    "loading": "Loading history…",
+    "unavailable": "History unavailable."
   }
 }

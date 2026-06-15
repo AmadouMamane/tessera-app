@@ -4487,5 +4487,11 @@
     "loading": "Chargement des évaluations…",
     "unavailable": "Évaluations indisponibles.",
     "realtime": "Live"
+  },
+  "agentHistorique": {
+    "title": "Historique des sessions",
+    "subtitle": "Analysez les sessions de conversation, leur qualité et leur conformité.",
+    "loading": "Chargement de l'historique…",
+    "unavailable": "Historique indisponible."
   }
 }

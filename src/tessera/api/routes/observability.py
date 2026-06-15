@@ -23,6 +23,7 @@ from tessera.observability import (
     agent_console as agent_console_mod,
     agent_evaluations as agent_evaluations_mod,
     agent_garde_fous as agent_garde_fous_mod,
+    agent_historique as agent_historique_mod,
     agent_prompts as agent_prompts_mod,
     agent_synthese as agent_synthese_mod,
     ai_act as ai_act_mod,
@@ -623,6 +624,22 @@ async def observability_improvement() -> dict[str, object]:
         return {"available": True, **asdict(improvement_mod.compute_improvement())}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/agent-historique")
+async def observability_agent_historique() -> dict[str, object]:
+    """Agent Session History dashboard (reference image 30).
+
+    Inner tab strip, KPI strip, filterable sessions table, chart row (trend,
+    sessions by agent, score distribution, success gauge), watchlist, quick
+    actions and a per-session detail panel. Deterministic fixture; degrades to
+    ``available: false``.
+    """
+    try:
+        return {"available": True, **agent_historique_mod.compute_agent_historique()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.agent_historique: failed: {exc}\n")
         return {"available": False}
 
 

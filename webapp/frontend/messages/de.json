@@ -4487,5 +4487,11 @@
     "loading": "Evaluierungen werden geladen…",
     "unavailable": "Evaluierungen nicht verfügbar.",
     "realtime": "Live"
+  },
+  "agentHistorique": {
+    "title": "Sitzungsverlauf",
+    "subtitle": "Analysieren Sie Konversationssitzungen, ihre Qualität und Konformität.",
+    "loading": "Verlauf wird geladen…",
+    "unavailable": "Verlauf nicht verfügbar."
   }
 }

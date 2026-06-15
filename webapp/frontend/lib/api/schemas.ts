@@ -3591,3 +3591,131 @@ export const AgentEvaluationsSchema = z.object({
     .optional(),
 });
 export type AgentEvaluations = z.infer<typeof AgentEvaluationsSchema>;
+
+export const AgentHistoriqueSchema = z.object({
+  available: z.boolean(),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  actions: z.object({ export: z.string(), compare: z.string(), create: z.string() }).optional(),
+  subtabs: z.array(z.string()).optional(),
+  kpis: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        value: z.string(),
+        delta: z.string(),
+        delta_tone: z.string(),
+        tone: z.string(),
+        series: z.array(z.number()),
+      }),
+    )
+    .optional(),
+  filters: z
+    .object({
+      search: z.string(),
+      selects: z.array(z.object({ label: z.string(), value: z.string() })),
+      more: z.string(),
+    })
+    .optional(),
+  table: z
+    .object({
+      columns: z.array(z.string()),
+      count: z.string(),
+      pages: z.number(),
+      rows: z.array(
+        z.object({
+          sid: z.string(),
+          user: z.string(),
+          agent: z.string(),
+          start: z.string(),
+          messages: z.string(),
+          score: z.string(),
+          score_tone: z.string(),
+          status: z.string(),
+          status_tone: z.string(),
+          latency: z.string(),
+          tokens: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  trend: z
+    .object({
+      title: z.string(),
+      control: z.string(),
+      series: z.array(z.number()),
+      prev: z.array(z.number()),
+      legend: z.string(),
+      legend_prev: z.string(),
+    })
+    .optional(),
+  by_agent: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      items: z.array(
+        z.object({ label: z.string(), value: z.string(), pct: z.number(), share: z.string() }),
+      ),
+    })
+    .optional(),
+  scores: z
+    .object({
+      title: z.string(),
+      center: z.string(),
+      center_label: z.string(),
+      segments: z.array(
+        z.object({
+          label: z.string(),
+          value: z.string(),
+          share: z.string(),
+          pct: z.number(),
+          tone: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  success: z
+    .object({
+      title: z.string(),
+      gauge: z.number(),
+      value: z.string(),
+      note: z.string(),
+      cta: z.string(),
+    })
+    .optional(),
+  watch: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      items: z.array(z.object({ title: z.string(), detail: z.string(), tone: z.string() })),
+    })
+    .optional(),
+  quick: z.object({ title: z.string(), items: z.array(z.string()) }).optional(),
+  detail: z
+    .object({
+      sid: z.string(),
+      id: z.string(),
+      tabs: z.array(z.string()),
+      fields: z.array(
+        z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
+      ),
+      config_title: z.string(),
+      config_value: z.string(),
+      config_version: z.string(),
+      eval_title: z.string(),
+      eval_cta: z.string(),
+      eval: z.array(
+        z.object({
+          label: z.string(),
+          value: z.string(),
+          scale: z.string(),
+          lead: z.boolean(),
+        }),
+      ),
+      info_title: z.string(),
+      info: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+});
+export type AgentHistorique = z.infer<typeof AgentHistoriqueSchema>;
