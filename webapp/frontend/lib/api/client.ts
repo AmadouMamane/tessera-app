@@ -18,6 +18,8 @@ import {
   AblationReportSchema,
   type AccessOverview,
   AccessOverviewSchema,
+  type AgentConsole,
+  AgentConsoleSchema,
   type AgentSynthese,
   AgentSyntheseSchema,
   type AnomalyReport,
@@ -1063,4 +1065,8 @@ export async function fetchBudget(signal?: AbortSignal): Promise<BudgetSnapshot>
 /** Agent overview ("Synthese de l'agent") dashboard (reference image 22). */
 export async function fetchAgentSynthese(signal?: AbortSignal): Promise<AgentSynthese> {
   return request("/observability/agent-synthese", { signal }, AgentSyntheseSchema);
+}
+
+export async function fetchAgentConsole(signal?: AbortSignal): Promise<AgentConsole> {
+  return request("/observability/agent-console", { signal }, AgentConsoleSchema);
 }

@@ -3115,3 +3115,96 @@ export const AgentSyntheseSchema = z.object({
     .optional(),
 });
 export type AgentSynthese = z.infer<typeof AgentSyntheseSchema>;
+
+export const AgentConsoleSchema = z.object({
+  available: z.boolean(),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  status: z
+    .object({
+      session_id: z.string(),
+      live: z.boolean(),
+      fields: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+  transcript: z
+    .array(
+      z.object({
+        role: z.string(),
+        time: z.string(),
+        text: z.string().optional(),
+        latency: z.string().optional(),
+        intro: z.string().optional(),
+        points: z
+          .array(z.object({ ref: z.string(), title: z.string(), body: z.string() }))
+          .optional(),
+        closing: z.string().optional(),
+        chips: z.array(z.object({ label: z.string(), kind: z.string() })).optional(),
+      }),
+    )
+    .optional(),
+  kpis: z
+    .array(z.object({ key: z.string(), label: z.string(), value: z.string(), good: z.boolean() }))
+    .optional(),
+  tabs: z.array(z.string()).optional(),
+  quality: z
+    .object({
+      title: z.string(),
+      badge: z.string(),
+      badge_tone: z.string(),
+      rows: z.array(
+        z.object({ label: z.string(), value: z.string(), scale: z.string(), tone: z.string() }),
+      ),
+    })
+    .optional(),
+  sources: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      rows: z.array(z.object({ label: z.string(), scope: z.string() })),
+    })
+    .optional(),
+  tools: z
+    .object({
+      title: z.string(),
+      rows: z.array(
+        z.object({ name: z.string(), status: z.string(), tone: z.string(), latency: z.string() }),
+      ),
+    })
+    .optional(),
+  guardrails: z
+    .object({
+      title: z.string(),
+      rows: z.array(
+        z.object({ name: z.string(), status: z.string(), tone: z.string(), detail: z.string() }),
+      ),
+    })
+    .optional(),
+  trace: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      rows: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+  footer: z
+    .object({
+      started: z.string(),
+      live: z.boolean(),
+      context: z.string(),
+      language: z.string(),
+      session_id: z.string(),
+    })
+    .optional(),
+  actions: z
+    .object({
+      input_placeholder: z.string(),
+      feedback: z.array(z.string()),
+      footer_actions: z.array(z.string()),
+      timeline_incidents: z.string(),
+      new_session: z.string(),
+      replay: z.string(),
+    })
+    .optional(),
+});
+export type AgentConsole = z.infer<typeof AgentConsoleSchema>;

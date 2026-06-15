@@ -4452,5 +4452,13 @@
       "test": "Assistent testen",
       "configure": "Assistent konfigurieren"
     }
+  },
+  "agentConsole": {
+    "title": "Konsole (Debug)",
+    "subtitle": "Interagieren Sie mit dem Assistenten und beobachten Sie Traces, Quellen, Tools und Leitplanken im Detail.",
+    "loading": "Konsole wird geladen…",
+    "unavailable": "Konsole nicht verfügbar.",
+    "realtime": "Live",
+    "idSession": "Sitzungs-ID"
   }
 }

@@ -4452,5 +4452,13 @@
       "test": "Tester l'assistant",
       "configure": "Configurer l'assistant"
     }
+  },
+  "agentConsole": {
+    "title": "Console (Debug)",
+    "subtitle": "Interagissez avec l'assistant et observez en détail les traces, sources, outils et garde-fous.",
+    "loading": "Chargement de la console…",
+    "unavailable": "Console indisponible.",
+    "realtime": "Live",
+    "idSession": "ID session"
   }
 }

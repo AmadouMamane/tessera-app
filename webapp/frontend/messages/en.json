@@ -4452,5 +4452,13 @@
       "test": "Test assistant",
       "configure": "Configure assistant"
     }
+  },
+  "agentConsole": {
+    "title": "Console (Debug)",
+    "subtitle": "Interact with the assistant and inspect traces, sources, tools and guardrails in detail.",
+    "loading": "Loading console…",
+    "unavailable": "Console unavailable.",
+    "realtime": "Live",
+    "idSession": "Session ID"
   }
 }

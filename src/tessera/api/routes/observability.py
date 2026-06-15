@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tessera.observability import (
     ablation as ablation_mod,
     access as access_mod,
+    agent_console as agent_console_mod,
     agent_synthese as agent_synthese_mod,
     ai_act as ai_act_mod,
     anomalies as anomalies_mod,
@@ -618,6 +619,22 @@ async def observability_improvement() -> dict[str, object]:
         return {"available": True, **asdict(improvement_mod.compute_improvement())}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/agent-console")
+async def observability_agent_console() -> dict[str, object]:
+    """Agent Console (Debug) surface (reference image agent-console-normative).
+
+    Status sub-bar, live transcript, service-level KPIs and a tabbed inspector
+    (Contexte / Sources / Outils / Garde-fous / Trace) with the quality
+    scorecard, sources used, tools called, triggered guardrails and real-time
+    trace. Deterministic fixture; degrades to ``available: false``.
+    """
+    try:
+        return {"available": True, **agent_console_mod.compute_agent_console()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.agent_console: failed: {exc}\n")
         return {"available": False}
 
 
