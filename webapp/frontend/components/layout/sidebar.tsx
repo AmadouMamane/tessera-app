@@ -90,6 +90,8 @@ interface Leaf {
   badge?: string;
   badgeTone?: "default" | "danger" | "warning";
   pulse?: boolean;
+  /** Render a thin divider above this leaf (purely visual grouping). */
+  separatorBefore?: boolean;
 }
 
 interface Branch {
@@ -129,6 +131,7 @@ const TREE: ReadonlyArray<NavNode> = [
         labelKey: "item.aTraiter",
         badge: "24",
         badgeTone: "danger",
+        separatorBefore: true,
       },
       { href: "/agent/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
     ],
@@ -351,31 +354,36 @@ function NavTreeNode({
   if (!isBranch(node)) {
     const active = pathname === node.href || pathname.startsWith(`${node.href}/`);
     return (
-      <li>
-        <Link
-          href={node.href}
-          aria-current={active ? "page" : undefined}
-          style={pad}
-          className={cn(
-            "group flex min-h-9 items-center gap-2 rounded-md py-2 pr-2 text-sm font-medium transition-colors",
-            active
-              ? "border-l-2 border-[var(--tessera-green)] bg-[var(--tessera-surface-elevated)] text-white"
-              : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
-          )}
-        >
-          <node.icon
+      <>
+        {node.separatorBefore ? (
+          <li aria-hidden className="mx-2 my-1.5 border-t border-[var(--tessera-border)]" />
+        ) : null}
+        <li>
+          <Link
+            href={node.href}
+            aria-current={active ? "page" : undefined}
+            style={pad}
             className={cn(
-              "h-4 w-4 shrink-0 transition-colors",
+              "group flex min-h-9 items-center gap-2 rounded-md py-2 pr-2 text-sm font-medium transition-colors",
               active
-                ? "text-[var(--tessera-green)]"
-                : "text-[var(--tessera-text-muted)] group-hover:text-[var(--tessera-text)]",
+                ? "border-l-2 border-[var(--tessera-green)] bg-[var(--tessera-surface-elevated)] text-white"
+                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
             )}
-          />
-          <span className="hidden min-w-0 flex-1 truncate md:block">{t(node.labelKey)}</span>
-          {node.pulse ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> : null}
-          {node.badge ? <Badge tone={node.badgeTone} active={active} value={node.badge} /> : null}
-        </Link>
-      </li>
+          >
+            <node.icon
+              className={cn(
+                "h-4 w-4 shrink-0 transition-colors",
+                active
+                  ? "text-[var(--tessera-green)]"
+                  : "text-[var(--tessera-text-muted)] group-hover:text-[var(--tessera-text)]",
+              )}
+            />
+            <span className="hidden min-w-0 flex-1 truncate md:block">{t(node.labelKey)}</span>
+            {node.pulse ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> : null}
+            {node.badge ? <Badge tone={node.badgeTone} active={active} value={node.badge} /> : null}
+          </Link>
+        </li>
+      </>
     );
   }
 
