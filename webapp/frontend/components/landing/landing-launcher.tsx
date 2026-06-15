@@ -321,7 +321,7 @@ function SpaceCard({
                 <span className="block text-[13px] font-semibold leading-[1.2] text-[var(--text-primary)]">
                   {t(`${ns}.items.${item.key}.title`)}
                 </span>
-                <span className="mt-[1px] block text-[11.5px] font-normal leading-[1.25] text-[var(--text-secondary)]">
+                <span className="mt-[4px] block text-[11.5px] font-normal leading-[1.25] text-[var(--text-secondary)]">
                   {t(`${ns}.items.${item.key}.desc`)}
                 </span>
               </span>
