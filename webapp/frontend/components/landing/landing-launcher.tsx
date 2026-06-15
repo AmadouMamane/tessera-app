@@ -130,23 +130,13 @@ export function LandingLauncher() {
       style={SPACE_SELECTOR_TOKENS}
     >
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 z-0"
         style={{
-          background:
-            "radial-gradient(circle at 50% 10%, rgba(20, 43, 77, 0.28), transparent 42%), linear-gradient(180deg, #020817 0%, #030B18 58%, #020817 100%)",
-          boxShadow: "inset 0 0 150px rgba(0,0,0,0.55)",
-        }}
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[210px]"
-        style={{
-          backgroundImage: "url('/assets/tessera-waves-bottom-clean.svg')",
+          backgroundColor: "#020817",
+          backgroundImage: "url('/assets/tessera-select-space-bg.png')",
           backgroundRepeat: "no-repeat",
-          backgroundPosition: "bottom center",
-          backgroundSize: "100% 100%",
-          opacity: 0.7,
-          maskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
+          backgroundPosition: "center bottom",
+          backgroundSize: "cover",
         }}
       />
 
