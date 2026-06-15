@@ -136,7 +136,7 @@ export function LandingLauncher() {
           backgroundImage: "url('/assets/tessera-select-space-bg.png')",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center bottom",
-          backgroundSize: "cover",
+          backgroundSize: "1672px auto",
         }}
       />
 
