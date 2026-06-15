@@ -155,7 +155,7 @@ export function LandingLauncher() {
             </p>
           </section>
 
-          <section className="mt-[52px] grid w-full max-w-[1252px] grid-cols-1 gap-8 xl:grid-cols-[610px_610px]">
+          <section className="mt-[140px] grid w-full max-w-[1252px] grid-cols-1 gap-8 xl:grid-cols-[610px_610px]">
             <SpaceCard
               t={t}
               ns="client"
