@@ -94,24 +94,13 @@ interface Leaf {
   separatorBefore?: boolean;
 }
 
-/** Per-section accent colour, carried by the header bar and active items inside it. */
-type Accent = "green" | "amber" | "sky";
-
-const ACCENT: Record<Accent, string> = {
-  green: "border-[var(--tessera-green)]/55",
-  amber: "border-amber-400/55",
-  sky: "border-sky-400/55",
-};
-
 interface Branch {
   key: string;
   icon: LucideIcon;
   labelKey: string;
   children: NavNode[];
-  /** Always-expanded section header: no toggle, no chevron. */
+  /** Pinned super-section: a pure label separator, no icon, no toggle. */
   pinned?: boolean;
-  /** Top-level section accent; inherited by descendants. */
-  accent?: Accent;
 }
 
 type NavNode = Leaf | Branch;
@@ -123,7 +112,6 @@ const TREE: ReadonlyArray<NavNode> = [
     key: "agent",
     icon: Bot,
     labelKey: "super.agent",
-    accent: "green",
     children: [
       { href: "/agent/synthese", icon: LayoutDashboard, labelKey: "item.synthese" },
       {
@@ -153,7 +141,6 @@ const TREE: ReadonlyArray<NavNode> = [
     icon: ShieldHalf,
     labelKey: "super.gouverner",
     pinned: true,
-    accent: "amber",
     children: [
       {
         key: "surveiller",
@@ -229,7 +216,6 @@ const TREE: ReadonlyArray<NavNode> = [
     icon: Boxes,
     labelKey: "super.plateforme",
     pinned: true,
-    accent: "sky",
     children: [
       {
         key: "configurer",
@@ -355,7 +341,6 @@ function NavTreeNode({
   open,
   toggle,
   t,
-  accent = "green",
 }: {
   node: NavNode;
   depth: number;
@@ -363,8 +348,6 @@ function NavTreeNode({
   open: Record<string, boolean>;
   toggle: (key: string) => void;
   t: T;
-  /** Section accent inherited from the enclosing depth-0 branch. */
-  accent?: Accent;
 }) {
   const pad = { paddingLeft: `${0.5 + depth * 0.75}rem` };
 
@@ -410,11 +393,10 @@ function NavTreeNode({
   const pinned = node.pinned ?? false;
   const isOpen = pinned ? true : (open[node.key] ?? false);
   const containsActive = activeBranchKeys(pathname).includes(node.key);
-  const sectionAccent = node.accent ?? accent;
   const headerClass = cn(
     "group flex min-h-9 w-full items-center gap-2 rounded-md py-2 pr-2 font-medium transition-colors",
     depth === 0
-      ? cn("border-l-2 text-[0.7rem] uppercase tracking-[0.1em]", ACCENT[sectionAccent])
+      ? "border-l-2 border-[var(--tessera-green)]/55 text-[0.7rem] uppercase tracking-[0.1em]"
       : "text-[0.66rem] uppercase tracking-wide",
     containsActive
       ? "text-[var(--tessera-text)]"
@@ -423,8 +405,11 @@ function NavTreeNode({
   return (
     <li>
       {pinned ? (
-        <div style={pad} className={cn(headerClass, "hover:text-[var(--tessera-text-muted)]")}>
-          <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+        // Super-section label: a quiet separator, no icon, no toggle.
+        <div
+          style={pad}
+          className="mt-3 flex min-h-7 items-center py-1 pr-2 text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-[var(--tessera-text-muted)]/70"
+        >
           <span className="hidden min-w-0 flex-1 truncate text-left md:block">
             {t(node.labelKey)}
           </span>
@@ -450,7 +435,7 @@ function NavTreeNode({
         </button>
       )}
       {isOpen ? (
-        <ul className="mt-0.5 flex flex-col gap-0.5">
+        <ul className={cn("flex flex-col gap-0.5", !pinned && "mt-0.5")}>
           {node.children.map((child) => (
             <NavTreeNode
               key={isBranch(child) ? child.key : child.href}
@@ -460,7 +445,6 @@ function NavTreeNode({
               open={open}
               toggle={toggle}
               t={t}
-              accent={sectionAccent}
             />
           ))}
         </ul>
