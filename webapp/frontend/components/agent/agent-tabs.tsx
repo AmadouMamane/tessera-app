@@ -18,6 +18,7 @@ const TABS = [
   { href: "/agent/garde-fous", labelKey: "item.agentGuardrails" },
   { href: "/agent/prompts", labelKey: "item.prompts" },
   { href: "/agent/evaluations", labelKey: "item.evaluations" },
+  { href: "/agent/console", labelKey: "item.console" },
   { href: "/agent/historique", labelKey: "item.historique" },
 ] as const;
 
