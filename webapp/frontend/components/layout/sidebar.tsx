@@ -440,7 +440,7 @@ function NavTreeNode({
         <ul
           className={cn(
             "mt-0.5 flex flex-col gap-0.5",
-            depth === 0 && "ml-3 border-l border-[var(--tessera-green)]/30 pl-2",
+            depth === 0 && "ml-[1.1rem] border-l border-[var(--tessera-green)]/30 pl-1",
           )}
         >
           {node.children.map((child) => (
