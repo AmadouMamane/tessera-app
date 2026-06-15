@@ -313,7 +313,7 @@ function SpaceCard({
 
         <div className="h-px w-full bg-[var(--border-subtle)]" />
 
-        <ul className={cn("mt-[16px] flex flex-col", ns === "operator" ? "gap-[28px]" : "gap-[15px]")}>
+        <ul className={cn("mt-[16px] flex flex-col", ns === "operator" ? "gap-[24px]" : "gap-[12px]")}>
           {items.map((item) => (
             <li key={item.key} className="grid grid-cols-[20px_1fr_14px] items-center">
               <item.icon className={cn("h-[18px] w-[18px] stroke-[1.6]", a.icon)} />
