@@ -27,3 +27,23 @@ export function isAdmin(role: Role | null): boolean {
 export function isSuperadmin(role: Role | null): boolean {
   return role === "superadmin";
 }
+
+export function hasProductAccess(role: Role | null): boolean {
+  return role === null || role === "admin" || role === "superadmin";
+}
+
+export function hasCockpitAccess(role: Role | null): boolean {
+  return isOperator(role);
+}
+
+export function hasDualSpaceAccess(role: Role | null): boolean {
+  return hasProductAccess(role) && hasCockpitAccess(role);
+}
+
+export function spaceRedirectForRole(
+  role: Role | null,
+): "/select-space" | "/produit" | "/agent/synthese" {
+  if (hasDualSpaceAccess(role)) return "/select-space";
+  if (hasCockpitAccess(role)) return "/agent/synthese";
+  return "/produit";
+}

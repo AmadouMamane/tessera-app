@@ -11,8 +11,8 @@ import { useRouter } from "@/i18n/navigation";
 
 /**
  * Credentials sign-in form (ADR 0009). Calls Auth.js with redirect:false so we
- * can show an inline error, then navigates to the audit surface on success and
- * refreshes so the server components re-render with the new session.
+ * can show an inline error, then navigates to the selector on success. The
+ * server route redirects single-space users to their only allowed shell.
  */
 export function LoginForm() {
   const t = useTranslations("auth.login");
@@ -32,7 +32,7 @@ export function LoginForm() {
       setError(true);
       return;
     }
-    router.push("/agent/synthese");
+    router.push("/select-space");
     router.refresh();
   }
 

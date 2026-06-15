@@ -1,10 +1,13 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { LandingLauncher } from "@/components/landing/landing-launcher";
+import { redirect } from "@/i18n/navigation";
+import { currentRole, spaceRedirectForRole } from "@/lib/auth/session";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
 }
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps) {
   const { locale } = await params;
@@ -15,5 +18,6 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function HomePage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  return <LandingLauncher />;
+  const role = await currentRole();
+  redirect({ href: spaceRedirectForRole(role), locale });
 }

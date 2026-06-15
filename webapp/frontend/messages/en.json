@@ -4368,13 +4368,14 @@
     "choose": "Choose your space to continue",
     "brandTagline": "AI Control Plane",
     "user": {
-      "name": "Camille D.",
-      "role": "Platform"
+      "initials": "TO",
+      "name": "Tessera Ops",
+      "role": "Platform admin"
     },
     "client": {
       "badge": "Product",
       "title": "Client space",
-      "desc": "A simple interface to chat with your assistant and track your requests.",
+      "desc": "A simple interface to chat with your AI assistant and track your requests.",
       "cta": "Enter the client space",
       "items": {
         "chat": {

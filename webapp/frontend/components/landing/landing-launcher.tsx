@@ -1,16 +1,14 @@
 "use client";
 
 import {
-  Activity,
   ArrowRight,
   Bell,
-  Boxes,
+  BellRing,
   ChevronDown,
   ChevronRight,
   CircleHelp,
   FileText,
   ListChecks,
-  type LucideIcon,
   MessageSquare,
   Moon,
   Search,
@@ -18,120 +16,213 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   UserRound,
-  Workflow,
+  UsersRound,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
+import type { CSSProperties, ReactNode } from "react";
 
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
-type Accent = "gold" | "teal";
+type Accent = "gold" | "cyan";
+type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
 
 interface SpaceItem {
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   key: string;
-  href: string;
 }
 
+const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
+  "--bg-app": "#030B18",
+  "--bg-panel": "#061426",
+  "--bg-panel-soft": "#0A1B2F",
+  "--border-subtle": "rgba(148, 163, 184, 0.14)",
+  "--border-gold": "rgba(214, 182, 106, 0.72)",
+  "--border-cyan": "rgba(45, 212, 191, 0.62)",
+  "--text-primary": "#F8FAFC",
+  "--text-secondary": "#A6B3C8",
+  "--gold": "#D6B66A",
+  "--gold-strong": "#F4C76A",
+  "--cyan": "#2DD4BF",
+  "--cyan-soft": "#67E8F9",
+  "--success": "#22C55E",
+  "--radius-lg": "24px",
+  "--radius-md": "16px",
+  "--shadow-gold": "0 0 32px rgba(214, 182, 106, 0.18)",
+  "--shadow-cyan": "0 0 32px rgba(45, 212, 191, 0.16)",
+};
+
 const CLIENT_ITEMS: SpaceItem[] = [
-  { icon: MessageSquare, key: "chat", href: "/produit" },
-  { icon: ListChecks, key: "requests", href: "/produit/mes-demandes" },
-  { icon: FileText, key: "documents", href: "/produit/documents" },
-  { icon: Bell, key: "alerts", href: "/produit/alertes" },
-  { icon: Settings, key: "settings", href: "/produit/parametres" },
+  { icon: MessageSquare, key: "chat" },
+  { icon: ListChecks, key: "requests" },
+  { icon: FileText, key: "documents" },
+  { icon: BellRing, key: "alerts" },
+  { icon: Settings, key: "settings" },
 ];
 
 const OPERATOR_ITEMS: SpaceItem[] = [
-  { icon: Activity, key: "supervision", href: "/surveiller/vue-ensemble" },
-  { icon: Workflow, key: "management", href: "/agir/incidents-playbooks" },
-  { icon: SlidersHorizontal, key: "configuration", href: "/configurer/signal-catalog" },
-  { icon: Boxes, key: "platform", href: "/admin/utilisateurs" },
+  { icon: EyeIcon, key: "supervision" },
+  { icon: ShieldCheck, key: "management" },
+  { icon: SlidersHorizontal, key: "configuration" },
+  { icon: UsersRound, key: "platform" },
 ];
+
+const ACCENT: Record<
+  Accent,
+  {
+    border: string;
+    button: string;
+    buttonStyle: CSSProperties;
+    icon: string;
+    shadow: string;
+    soft: string;
+    tone: string;
+    waveStroke: string;
+  }
+> = {
+  gold: {
+    border: "border-[var(--border-gold)]",
+    button: "border-[var(--border-gold)] text-[var(--text-primary)]",
+    buttonStyle: {
+      background:
+        "linear-gradient(180deg, color-mix(in srgb, var(--gold-strong) 36%, var(--bg-panel-soft)), color-mix(in srgb, var(--gold) 22%, var(--bg-panel)))",
+      boxShadow:
+        "inset 0 1px 0 color-mix(in srgb, var(--gold-strong) 36%, transparent), 0 14px 34px color-mix(in srgb, var(--gold) 18%, transparent)",
+    },
+    icon: "text-[var(--gold-strong)]",
+    shadow: "shadow-[var(--shadow-gold)]",
+    soft: "text-[var(--gold)]",
+    tone: "text-[var(--gold-strong)]",
+    waveStroke: "var(--gold)",
+  },
+  cyan: {
+    border: "border-[var(--border-cyan)]",
+    button: "border-[var(--border-cyan)] text-[var(--text-primary)]",
+    buttonStyle: {
+      background:
+        "linear-gradient(180deg, color-mix(in srgb, var(--cyan) 34%, var(--bg-panel-soft)), color-mix(in srgb, var(--cyan) 18%, var(--bg-panel)))",
+      boxShadow:
+        "inset 0 1px 0 color-mix(in srgb, var(--cyan-soft) 28%, transparent), 0 14px 34px color-mix(in srgb, var(--cyan) 16%, transparent)",
+    },
+    icon: "text-[var(--cyan)]",
+    shadow: "shadow-[var(--shadow-cyan)]",
+    soft: "text-[var(--cyan-soft)]",
+    tone: "text-[var(--cyan)]",
+    waveStroke: "var(--cyan)",
+  },
+};
+
+type T = ReturnType<typeof useTranslations<"landing">>;
 
 export function LandingLauncher() {
   const t = useTranslations("landing");
+
   return (
-    <div className="bg-canvas-glow relative flex min-h-screen flex-col overflow-hidden bg-[var(--tessera-bg)] text-[var(--tessera-text)]">
-      <WaveCorner className="pointer-events-none absolute bottom-0 left-0 h-[70%] w-[50%]" flip />
-      <WaveCorner className="pointer-events-none absolute bottom-0 right-0 h-[75%] w-[55%]" />
+    <div
+      className="relative min-h-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)]"
+      style={SPACE_SELECTOR_TOKENS}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 43%, color-mix(in srgb, var(--bg-panel-soft) 62%, transparent), transparent 46%), linear-gradient(180deg, var(--bg-app) 0%, var(--bg-panel) 54%, var(--bg-app) 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%]"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--cyan) 14%, transparent), transparent 58%)",
+        }}
+      />
+      <WaveCorner
+        className="pointer-events-none absolute -bottom-8 left-0 h-[32%] w-[46%]"
+        tone="gold"
+      />
+      <WaveCorner
+        className="pointer-events-none absolute -bottom-6 right-0 h-[34%] w-[48%]"
+        flip
+        tone="cyan"
+      />
+
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header t={t} />
-        <main className="flex flex-1 items-center justify-center px-4 py-8">
-          <div className="w-full max-w-5xl">
-            <div className="text-center">
-              <h1 className="font-serif text-3xl font-semibold text-white md:text-4xl">
-                {t("welcome")}
-              </h1>
-              <p className="mt-2 text-sm text-[var(--tessera-text-muted)] md:text-base">
-                {t("choose")}
-              </p>
-            </div>
+        <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-[22px]">
+          <section className="text-center">
+            <h1 className="font-sans text-[50px] font-semibold leading-none tracking-[0] text-[var(--text-primary)] [text-shadow:0_2px_18px_color-mix(in_srgb,var(--text-primary)_12%,transparent)]">
+              {t("welcome")}
+            </h1>
+            <p className="mt-4 text-[23px] font-medium leading-none tracking-[0] text-[var(--text-secondary)]">
+              {t("choose")}
+            </p>
+          </section>
 
-            <div className="mt-8 grid gap-5 md:grid-cols-2">
-              <SpaceCard
-                t={t}
-                ns="client"
-                accent="gold"
-                badgeIcon={UserRound}
-                href="/produit"
-                items={CLIENT_ITEMS}
-                mock={<ChatMock />}
-              />
-              <SpaceCard
-                t={t}
-                ns="operator"
-                accent="teal"
-                badgeIcon={ShieldCheck}
-                href="/agent/synthese"
-                items={OPERATOR_ITEMS}
-                mock={<DashboardMock />}
-              />
-            </div>
-          </div>
+          <section className="mt-[29px] grid w-full max-w-[1298px] grid-cols-1 gap-6 xl:grid-cols-[623px_648px]">
+            <SpaceCard
+              t={t}
+              ns="client"
+              accent="gold"
+              badgeIcon={<UserRound className="h-[24px] w-[24px]" />}
+              href="/produit"
+              items={CLIENT_ITEMS}
+              visual={<ChatVisual />}
+            />
+            <SpaceCard
+              t={t}
+              ns="operator"
+              accent="cyan"
+              badgeIcon={<ShieldCheck className="h-[23px] w-[23px]" />}
+              href="/agent/synthese"
+              items={OPERATOR_ITEMS}
+              visual={<CockpitVisual />}
+            />
+          </section>
         </main>
       </div>
     </div>
   );
 }
 
-type T = ReturnType<typeof useTranslations<"landing">>;
-
 function Header({ t }: { t: T }) {
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-[var(--tessera-border)] px-4 md:px-6">
-      <div className="flex shrink-0 items-center gap-3">
-        <TesseraMark />
-        <div className="hidden flex-col leading-tight sm:flex">
-          <span className="font-sans text-base font-semibold tracking-[0.18em] text-white">
-            TESSERA
-          </span>
-          <span className="text-[0.55rem] uppercase tracking-[0.22em] text-[var(--tessera-text-muted)]">
-            {t("brandTagline")}
-          </span>
-        </div>
-      </div>
+    <header className="relative flex h-[112px] shrink-0 items-start justify-between pl-[30px] pr-[48px] pt-[28px]">
+      <Image
+        src="/brand/tessera-interface-lockup.png"
+        alt="Tessera AI Control Plane"
+        width={280}
+        height={72}
+        priority
+        unoptimized
+        className="h-[72px] w-[280px] object-contain"
+      />
 
       <SpaceToggle t={t} />
 
-      <div className="flex shrink-0 items-center gap-3">
-        <Search className="hidden h-4 w-4 text-[var(--tessera-text-muted)] sm:block" />
-        <span className="relative hidden sm:block">
-          <Bell className="h-4 w-4 text-[var(--tessera-text-muted)]" />
-          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500" />
-        </span>
-        <CircleHelp className="hidden h-4 w-4 text-[var(--tessera-text-muted)] sm:block" />
-        <Moon className="hidden h-4 w-4 text-[var(--tessera-text-muted)] sm:block" />
-        <div className="flex items-center gap-2 border-l border-[var(--tessera-border)] pl-3">
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-[#caa45a] to-[#b8893f] text-xs font-semibold text-[#1a1406]">
-            CD
+      <div className="flex items-center gap-[27px] pt-[4px] text-[var(--text-secondary)]">
+        <Search className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
+        <span className="relative inline-flex">
+          <Bell className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
+          <span className="absolute -right-[2px] -top-[5px] grid h-[20px] min-w-[20px] place-items-center rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_52%,var(--bg-panel))] px-[3px] text-[8px] font-bold text-[var(--gold-strong)]">
+            1
           </span>
-          <div className="hidden flex-col leading-tight md:flex">
-            <span className="text-[0.8rem] font-semibold text-white">{t("user.name")}</span>
-            <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+        </span>
+        <CircleHelp className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
+        <Moon className="h-[25px] w-[25px] stroke-[1.8]" aria-hidden="true" />
+        <div className="ml-2 flex items-center gap-[12px]">
+          <span className="grid h-[47px] w-[47px] place-items-center rounded-full bg-[linear-gradient(135deg,var(--gold-strong),color-mix(in_srgb,var(--gold)_30%,var(--bg-panel)))] text-[19px] font-semibold text-[var(--bg-app)] shadow-[0_0_26px_color-mix(in_srgb,var(--gold)_22%,transparent)]">
+            {t("user.initials")}
+          </span>
+          <span className="flex min-w-[120px] flex-col">
+            <span className="text-[16px] font-semibold leading-[1.15] text-[var(--text-primary)]">
+              {t("user.name")}
+            </span>
+            <span className="mt-[4px] text-[13px] font-medium leading-none text-[var(--text-secondary)]">
               {t("user.role")}
             </span>
-          </div>
-          <ChevronDown className="hidden h-4 w-4 text-[var(--tessera-text-muted)] md:block" />
+          </span>
+          <ChevronDown className="h-[21px] w-[21px] stroke-[1.8]" aria-hidden="true" />
         </div>
       </div>
     </header>
@@ -140,227 +231,266 @@ function Header({ t }: { t: T }) {
 
 function SpaceToggle({ t }: { t: T }) {
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-1">
+    <nav className="absolute left-[48.35%] top-[31px] flex h-[52px] w-[456px] -translate-x-1/2 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_76%,transparent)] p-0 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--text-primary)_4%,transparent),0_0_32px_rgba(0,0,0,0.18)]">
       <Link
         href="/produit"
-        className="flex items-center gap-2 rounded-md bg-gradient-to-r from-[#d8b56a] to-[#b8893f] px-4 py-1.5 text-[0.78rem] font-semibold text-[#1a1406] shadow-[0_0_18px_rgba(202,164,90,0.35),inset_0_1px_0_rgba(255,255,255,0.25)] ring-1 ring-[#e6c889]/50"
+        className="flex h-[50px] w-[218px] items-center justify-center gap-[13px] rounded-[15px] border border-[var(--border-gold)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gold)_36%,var(--bg-panel)),color-mix(in_srgb,var(--gold)_16%,var(--bg-app)))] text-[17px] font-semibold uppercase tracking-[0.01em] text-[var(--gold-strong)] shadow-[var(--shadow-gold)]"
       >
-        <UserRound className="h-3.5 w-3.5" />
+        <UserRound className="h-[22px] w-[22px] fill-[color-mix(in_srgb,var(--gold-strong)_70%,transparent)] stroke-[var(--gold-strong)] stroke-[2.1]" />
         {t("toggle.product")}
       </Link>
       <Link
         href="/agent/synthese"
-        className="flex items-center gap-2 rounded-md px-4 py-1.5 text-[0.78rem] font-medium text-[var(--tessera-text-muted)] transition-colors hover:text-[var(--tessera-text)]"
+        className="flex h-[50px] flex-1 items-center justify-center gap-[13px] rounded-[15px] text-[17px] font-semibold uppercase tracking-[0.01em] text-[var(--text-secondary)]"
       >
-        <ShieldCheck className="h-3.5 w-3.5" />
+        <ShieldCheck className="h-[23px] w-[23px] stroke-[var(--cyan)] stroke-[2.1]" />
         {t("toggle.cockpit")}
       </Link>
-    </div>
+    </nav>
   );
 }
-
-const ACCENT: Record<
-  Accent,
-  { badge: string; badgeIcon: string; row: string; chevron: string; cta: string; glow: string }
-> = {
-  gold: {
-    badge: "text-gold-300",
-    badgeIcon: "border-gold-700/40 bg-gold-900/30 text-gold-200",
-    row: "text-gold-300",
-    chevron: "group-hover/row:text-gold-300",
-    cta: "bg-gradient-to-r from-[#caa45a] to-[#b8893f] text-[#1a1406] hover:brightness-110",
-    glow: "before:bg-[radial-gradient(120%_55%_at_50%_0%,rgba(202,164,90,0.10),transparent)]",
-  },
-  teal: {
-    badge: "text-emerald-300",
-    badgeIcon: "border-emerald-700/40 bg-emerald-900/30 text-emerald-200",
-    row: "text-emerald-300",
-    chevron: "group-hover/row:text-emerald-300",
-    cta: "bg-gradient-to-r from-[#3ec99a] to-[#2bb6c4] text-[#04201a] hover:brightness-110",
-    glow: "before:bg-[radial-gradient(120%_55%_at_50%_0%,rgba(62,201,154,0.10),transparent)]",
-  },
-};
 
 function SpaceCard({
   t,
   ns,
   accent,
-  badgeIcon: BadgeIcon,
+  badgeIcon,
   href,
   items,
-  mock,
+  visual,
 }: {
   t: T;
   ns: "client" | "operator";
   accent: Accent;
-  badgeIcon: LucideIcon;
+  badgeIcon: ReactNode;
   href: "/produit" | "/agent/synthese";
   items: SpaceItem[];
-  mock: React.ReactNode;
+  visual: ReactNode;
 }) {
   const a = ACCENT[accent];
+
   return (
     <section
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-2xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-6",
-        "before:pointer-events-none before:absolute before:inset-0 before:content-['']",
-        a.glow,
+        "relative h-[618px] overflow-hidden rounded-[var(--radius-lg)] border px-[34px] pb-[26px] pt-[26px] backdrop-blur-[2px]",
+        a.border,
+        a.shadow,
       )}
+      style={{
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--bg-panel-soft) 72%, transparent), color-mix(in srgb, var(--bg-panel) 78%, transparent) 54%, color-mix(in srgb, var(--bg-app) 88%, transparent))",
+      }}
     >
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <span className="inline-flex items-center gap-2">
-            <span className={cn("grid h-7 w-7 place-items-center rounded-lg border", a.badgeIcon)}>
-              <BadgeIcon className="h-4 w-4" />
-            </span>
-            <span
-              className={cn("text-[0.62rem] font-semibold uppercase tracking-[0.18em]", a.badge)}
-            >
-              {t(`${ns}.badge`)}
-            </span>
-          </span>
-          <h2 className="mt-3 text-2xl font-semibold text-white">{t(`${ns}.title`)}</h2>
-          <p className="mt-1.5 max-w-xs text-[0.82rem] leading-relaxed text-[var(--tessera-text-muted)]">
-            {t(`${ns}.desc`)}
-          </p>
-        </div>
-        <div className="hidden shrink-0 sm:block">{mock}</div>
-      </div>
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 72% 8%, color-mix(in srgb, var(--text-primary) 5%, transparent), transparent 30%)",
+        }}
+      />
 
-      <ul className="relative mt-5 flex flex-col">
-        {items.map((item) => (
-          <li key={item.key}>
-            <Link
-              href={item.href}
-              className="group/row flex items-center gap-3 border-t border-[var(--tessera-border)]/60 py-2.5 transition-colors first:border-t-0 hover:bg-[var(--tessera-muted)]/30"
-            >
-              <item.icon className={cn("h-4 w-4 shrink-0", a.row)} />
-              <div className="min-w-0 flex-1">
-                <p className="text-[0.84rem] font-medium text-[var(--tessera-text)]">
+      <div className="relative">
+        <div className="relative min-h-[185px]">
+          <div className="min-w-0 max-w-[365px]">
+            <div className="flex items-center gap-[20px]">
+              <HexBadge className={cn(a.icon, a.soft)}>{badgeIcon}</HexBadge>
+              <span className={cn("text-[18px] font-semibold uppercase leading-none", a.tone)}>
+                {t(`${ns}.badge`)}
+              </span>
+            </div>
+            <h2 className="mt-[16px] font-sans text-[31px] font-semibold leading-none tracking-[0] text-[var(--text-primary)]">
+              {t(`${ns}.title`)}
+            </h2>
+            <p className="mt-[18px] max-w-[360px] text-[17px] font-medium leading-[1.5] tracking-[0] text-[var(--text-secondary)]">
+              {t(`${ns}.desc`)}
+            </p>
+          </div>
+          <div className={cn("absolute top-[16px]", ns === "client" ? "-right-[5px]" : "right-0")}>
+            {visual}
+          </div>
+        </div>
+
+        <div className="h-px w-full bg-[var(--border-subtle)]" />
+
+        <ul className="mt-[22px] flex flex-col gap-[17px]">
+          {items.map((item) => (
+            <li key={item.key} className="grid grid-cols-[34px_1fr_18px] items-center">
+              <span
+                className={cn("grid h-[28px] w-[28px] place-items-center rounded-[5px]", a.icon)}
+              >
+                <item.icon className="h-[27px] w-[27px] stroke-[1.8]" />
+              </span>
+              <span className="min-w-0 pl-[19px]">
+                <span className="block text-[18px] font-semibold leading-[1.1] text-[var(--text-primary)]">
                   {t(`${ns}.items.${item.key}.title`)}
-                </p>
-                <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+                </span>
+                <span className="mt-[6px] block text-[16px] font-medium leading-[1.1] text-[var(--text-secondary)]">
                   {t(`${ns}.items.${item.key}.desc`)}
-                </p>
-              </div>
+                </span>
+              </span>
               <ChevronRight
-                className={cn(
-                  "h-4 w-4 shrink-0 text-[var(--tessera-text-muted)] transition-colors",
-                  a.chevron,
-                )}
+                className="h-[24px] w-[24px] stroke-[1.5] text-[var(--text-secondary)]"
+                aria-hidden="true"
               />
-            </Link>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <Link
         href={href}
         className={cn(
-          "relative mt-6 flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition-all",
-          a.cta,
+          "absolute bottom-[26px] left-[31px] right-[31px] flex h-[59px] items-center justify-center gap-[24px] rounded-[12px] border text-[20px] font-semibold leading-none tracking-[0]",
+          a.button,
         )}
+        style={a.buttonStyle}
       >
         {t(`${ns}.cta`)}
-        <ArrowRight className="h-4 w-4" />
+        <ArrowRight className="h-[27px] w-[27px] stroke-[1.6]" />
       </Link>
     </section>
   );
 }
 
-function ChatMock() {
+function ChatVisual() {
   return (
-    <div className="flex w-28 flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2">
-      <div className="h-1.5 w-3/4 self-end rounded-full bg-gold-700/50" />
-      <div className="h-1.5 w-full rounded-full bg-[var(--tessera-muted)]" />
-      <div className="h-1.5 w-5/6 rounded-full bg-[var(--tessera-muted)]" />
-      <div className="mt-1 h-4 w-12 rounded-md bg-gold-800/40" />
-    </div>
-  );
-}
-
-function DashboardMock() {
-  return (
-    <div className="flex w-28 gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2">
-      <div className="flex flex-1 flex-col justify-end gap-1">
-        <div className="flex items-end gap-1">
-          <div className="h-5 w-2 rounded-sm bg-emerald-700/50" />
-          <div className="h-7 w-2 rounded-sm bg-emerald-600/60" />
-          <div className="h-4 w-2 rounded-sm bg-emerald-700/40" />
-          <div className="h-8 w-2 rounded-sm bg-emerald-500/60" />
-        </div>
-        <div className="h-1.5 w-full rounded-full bg-[var(--tessera-muted)]" />
+    <div className="relative h-[136px] w-[238px]">
+      <div className="absolute right-0 top-0 h-[55px] w-[148px] rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] shadow-[0_10px_28px_rgba(0,0,0,0.22)]">
+        <div className="ml-[17px] mt-[18px] h-[6px] w-[86px] rounded-full bg-[var(--text-secondary)] opacity-55" />
+        <div className="ml-[17px] mt-[14px] h-[6px] w-[112px] rounded-full bg-[var(--border-subtle)]" />
       </div>
-      <div className="h-10 w-10 shrink-0 rounded-full border-[3px] border-emerald-600/50 border-r-emerald-400/80" />
+      <div className="absolute right-0 top-[40px] h-[55px] w-[128px] rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel)]">
+        <div className="ml-[18px] mt-[15px] h-[6px] w-[58px] rounded-full bg-[var(--border-subtle)]" />
+        <div className="ml-[18px] mt-[14px] h-[6px] w-[88px] rounded-full bg-[var(--border-subtle)]" />
+        <div className="absolute -bottom-[11px] right-[24px] h-0 w-0 border-l-[15px] border-r-0 border-t-[12px] border-l-transparent border-t-[var(--bg-panel)]" />
+      </div>
+      <div className="absolute left-0 top-[27px] h-[59px] w-[74px] rounded-[10px] border border-[var(--border-gold)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gold)_54%,var(--bg-panel-soft)),color-mix(in_srgb,var(--gold)_22%,var(--bg-panel)))] shadow-[var(--shadow-gold)]">
+        <div className="ml-[17px] mt-[17px] h-[5px] w-[23px] rounded-full bg-[var(--gold-strong)]" />
+        <div className="ml-[49px] mt-[-5px] h-[5px] w-[17px] rounded-full bg-[var(--gold-strong)]" />
+        <div className="ml-[17px] mt-[12px] h-[5px] w-[39px] rounded-full bg-[var(--gold-strong)]" />
+        <div className="absolute -bottom-[13px] left-[17px] h-0 w-0 border-l-[16px] border-r-0 border-t-[14px] border-l-transparent border-t-[var(--bg-panel)]" />
+      </div>
+      <div className="absolute bottom-[2px] left-[62px] h-[47px] w-[73px] rounded-[9px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)]">
+        <div className="flex h-full items-center justify-center gap-[9px]">
+          <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold)]" />
+          <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold)]" />
+          <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold)]" />
+        </div>
+        <div className="absolute -bottom-[11px] right-[14px] h-0 w-0 border-l-[13px] border-r-0 border-t-[11px] border-l-transparent border-t-[var(--bg-panel-soft)]" />
+      </div>
     </div>
   );
 }
 
-// Faceted hexagonal gem: outer hexagon + inner hexagon "hole" split into 12
-// triangular facets shaded from a single cyan->blue gradient. Points are
-// pre-computed so the markup stays free of array-index access.
-const GEM_FACETS: { pts: string; o: number }[] = [
-  { pts: "18,3.5 30.56,10.75 22.76,15.25", o: 0.95 },
-  { pts: "18,3.5 22.76,15.25 18,12.5", o: 0.6 },
-  { pts: "30.56,10.75 30.56,25.25 22.76,20.75", o: 0.9 },
-  { pts: "30.56,10.75 22.76,20.75 22.76,15.25", o: 0.55 },
-  { pts: "30.56,25.25 18,32.5 18,23.5", o: 0.8 },
-  { pts: "30.56,25.25 18,23.5 22.76,20.75", o: 0.5 },
-  { pts: "18,32.5 5.44,25.25 13.24,20.75", o: 0.7 },
-  { pts: "18,32.5 13.24,20.75 18,23.5", o: 0.5 },
-  { pts: "5.44,25.25 5.44,10.75 13.24,15.25", o: 0.8 },
-  { pts: "5.44,25.25 13.24,15.25 13.24,20.75", o: 0.55 },
-  { pts: "5.44,10.75 18,3.5 18,12.5", o: 0.9 },
-  { pts: "5.44,10.75 18,12.5 13.24,15.25", o: 0.6 },
-];
-
-function TesseraMark() {
+function CockpitVisual() {
   return (
-    <svg aria-hidden="true" className="h-9 w-9 shrink-0" viewBox="0 0 36 36" fill="none">
-      <defs>
-        <linearGradient id="tessera-gem" x1="0" y1="0" x2="0.4" y2="1">
-          <stop offset="0" stopColor="#74e8dc" />
-          <stop offset="0.5" stopColor="#2aa7d8" />
-          <stop offset="1" stopColor="#1f57b0" />
-        </linearGradient>
-      </defs>
-      {GEM_FACETS.map((f) => (
+    <div className="grid h-[144px] w-[272px] grid-cols-[140px_124px] gap-[10px]">
+      <div className="row-span-2 rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-[14px]">
+        <svg aria-hidden="true" viewBox="0 0 112 76" className="h-[76px] w-[112px]">
+          <path
+            d="M0 62H112M0 43H112M0 24H112M13 0V76M34 0V76M55 0V76M76 0V76M97 0V76"
+            stroke="var(--border-subtle)"
+            strokeWidth="1"
+          />
+          <path
+            d="M3 58C18 49 22 31 35 33C48 35 51 50 64 41C74 34 77 18 88 20C98 22 100 37 111 29"
+            fill="none"
+            stroke="var(--cyan)"
+            strokeWidth="2"
+          />
+        </svg>
+        <div className="mt-[8px] h-[5px] w-[60px] rounded-full bg-[var(--border-subtle)]" />
+        <div className="mt-[10px] h-[5px] w-[95px] rounded-full bg-[var(--border-subtle)]" />
+        <div className="mt-[9px] h-[5px] w-[75px] rounded-full bg-[var(--border-subtle)]" />
+      </div>
+      <div className="rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-[12px]">
+        <div className="flex items-center gap-[13px]">
+          <div className="h-[49px] w-[49px] rounded-full border-[10px] border-[var(--border-subtle)] border-l-[var(--cyan)] border-t-[var(--cyan-soft)]" />
+          <div className="flex flex-col gap-[9px]">
+            <span className="h-[5px] w-[43px] rounded-full bg-[var(--border-subtle)]" />
+            <span className="h-[5px] w-[32px] rounded-full bg-[var(--border-subtle)]" />
+            <span className="h-[5px] w-[47px] rounded-full bg-[var(--border-subtle)]" />
+          </div>
+        </div>
+      </div>
+      <div className="rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-[12px]">
+        <div className="grid grid-cols-3 gap-x-[12px] gap-y-[8px]">
+          {Array.from({ length: 9 }, (_, index) => (
+            <span
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed decorative bars
+              key={index}
+              className="h-[5px] rounded-full bg-[var(--border-subtle)]"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HexBadge({ children, className }: { children: ReactNode; className: string }) {
+  return (
+    <span className={cn("relative grid h-[48px] w-[48px] place-items-center", className)}>
+      <svg aria-hidden="true" className="absolute inset-0 h-full w-full" viewBox="0 0 48 48">
         <polygon
-          key={f.pts}
-          points={f.pts}
-          fill="url(#tessera-gem)"
-          fillOpacity={f.o}
-          stroke="#9ff0e6"
-          strokeOpacity="0.35"
-          strokeWidth="0.4"
+          points="24 2.5 42.6 13.2 42.6 34.8 24 45.5 5.4 34.8 5.4 13.2"
+          fill="var(--bg-app)"
+          fillOpacity="0.42"
+          stroke="currentColor"
+          strokeWidth="2"
         />
-      ))}
+      </svg>
+      <span className="relative">{children}</span>
+    </span>
+  );
+}
+
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} viewBox="0 0 28 28" fill="none">
+      <path
+        d="M2.5 14s4.2-6.5 11.5-6.5S25.5 14 25.5 14 21.3 20.5 14 20.5 2.5 14 2.5 14Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="14" cy="14" r="3.4" fill="currentColor" />
     </svg>
   );
 }
 
-/** Decorative flow-field wave lines anchored in a corner (sweeping ribbon). */
-function WaveCorner({ className, flip = false }: { className: string; flip?: boolean }) {
-  const lines = Array.from({ length: 48 }, (_, i) => i);
+function WaveCorner({
+  className,
+  flip = false,
+  tone,
+}: {
+  className: string;
+  flip?: boolean;
+  tone: Accent;
+}) {
+  const lines = Array.from({ length: 72 }, (_, i) => i);
+  const stroke = ACCENT[tone].waveStroke;
   return (
     <svg
       aria-hidden="true"
       className={className}
-      viewBox="0 0 360 280"
+      viewBox="0 0 760 260"
       fill="none"
-      preserveAspectRatio="xMaxYMax slice"
+      preserveAspectRatio="none"
       style={flip ? { transform: "scaleX(-1)" } : undefined}
     >
       {lines.map((i) => {
-        const o = i * 5;
-        const d = `M ${20 - o * 0.2} 290 C ${150 - o * 0.4} ${250 - o * 1.1} ${250 - o * 0.2} ${250 - o * 1.4} 380 ${90 - o * 1.05}`;
+        const y = 244 - i * 3.2;
+        const bend = i * 2.4;
+        const d = `M -12 ${y} C 170 ${218 - bend * 0.18} 212 ${162 - bend * 0.78} 356 ${198 - bend * 0.28} C 505 ${236 - bend * 0.2} 590 ${154 - bend * 0.35} 780 ${178 - bend * 0.58}`;
         return (
           <path
             key={i}
             d={d}
-            stroke="#3aa3c8"
-            strokeOpacity={Math.max(0.04, 0.3 - i * 0.005)}
-            strokeWidth="0.65"
+            stroke={stroke}
+            strokeOpacity={Math.max(0.055, 0.34 - i * 0.0038)}
+            strokeWidth="0.72"
           />
         );
       })}
