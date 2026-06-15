@@ -137,27 +137,17 @@ export function LandingLauncher() {
             "radial-gradient(circle at 50% 12%, rgba(13, 38, 71, 0.55), transparent 46%), linear-gradient(180deg, #001025 0%, #00101f 60%, #000b18 100%)",
         }}
       />
-      {/* Corner waves, pinned at fixed size so they never grow with width. */}
+      {/* One continuous full-width wave band, stretched horizontally but at a
+          fixed height so it never grows taller as the window widens. */}
       <div
-        className="pointer-events-none absolute bottom-0 left-0 z-0 h-[421px] w-[760px] max-w-[55vw]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[300px]"
         style={{
-          backgroundImage: "url('/assets/tessera-waves-left.png')",
+          backgroundImage: "url('/assets/tessera-waves-band.png')",
           backgroundRepeat: "no-repeat",
-          backgroundPosition: "left bottom",
-          backgroundSize: "auto 100%",
-          maskImage: "radial-gradient(135% 135% at 0% 100%, #000 46%, transparent 82%)",
-          WebkitMaskImage: "radial-gradient(135% 135% at 0% 100%, #000 46%, transparent 82%)",
-        }}
-      />
-      <div
-        className="pointer-events-none absolute bottom-0 right-0 z-0 h-[421px] w-[760px] max-w-[55vw]"
-        style={{
-          backgroundImage: "url('/assets/tessera-waves-right.png')",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "right bottom",
-          backgroundSize: "auto 100%",
-          maskImage: "radial-gradient(135% 135% at 100% 100%, #000 46%, transparent 82%)",
-          WebkitMaskImage: "radial-gradient(135% 135% at 100% 100%, #000 46%, transparent 82%)",
+          backgroundPosition: "center bottom",
+          backgroundSize: "100% 100%",
+          maskImage: "linear-gradient(to top, #000 60%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to top, #000 60%, transparent 100%)",
         }}
       />
 
