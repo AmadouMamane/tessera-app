@@ -1,7 +1,10 @@
+import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { ScaffoldView } from "@/components/common/scaffold-view";
+import { AgentConfigurations } from "@/components/agent/agent-configurations";
 import { AppShell } from "@/components/layout/app-shell";
+import { AgentConfigurationsSchema } from "@/lib/api/schemas";
+import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -9,18 +12,44 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "nav" });
-  return { title: t("item.configurations") };
+  const t = await getTranslations({ locale, namespace: "agentConfigurations" });
+  return { title: t("title") };
 }
 
-export default async function ScaffoldPage({ params }: PageProps) {
+async function prefetch(queryClient: QueryClient) {
+  await queryClient.prefetchQuery({
+    queryKey: ["agent-configurations"],
+    queryFn: async () => {
+      const response = await fetch(`${backendUrl()}/observability/agent-configurations`, {
+        cache: "no-store",
+        headers: backendHeaders({ Accept: "application/json" }),
+      });
+      if (!response.ok) throw new Error(`Backend agent-configurations returned ${response.status}`);
+      return AgentConfigurationsSchema.parse(await response.json());
+    },
+  });
+}
+
+export default async function AgentConfigurationsPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "nav" });
-  const title = t("item.configurations");
+  const t = await getTranslations({ locale, namespace: "agentConfigurations" });
+  const queryClient = new QueryClient();
+  try {
+    await prefetch(queryClient);
+  } catch {
+    // Keep the page resilient: the client query will surface backend failures.
+  }
+
   return (
-    <AppShell title={title} contentWidth="full">
-      <ScaffoldView title={title} />
+    <AppShell
+      title={t("title")}
+      contentWidth="full"
+      breadcrumb={{ section: t("topbarTitle"), label: t("title") }}
+    >
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <AgentConfigurations />
+      </HydrationBoundary>
     </AppShell>
   );
 }

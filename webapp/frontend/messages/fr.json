@@ -4453,6 +4453,13 @@
       "configure": "Configurer l'assistant"
     }
   },
+  "agentConfigurations": {
+    "topbarTitle": "AGENT",
+    "title": "Configurations",
+    "subtitle": "Réglages de cet agent : identité, modèle, comportement et statut.",
+    "loading": "Chargement des configurations…",
+    "unavailable": "Configurations indisponibles."
+  },
   "agentConsole": {
     "title": "Console (Debug)",
     "subtitle": "Interagissez avec l'assistant et observez en détail les traces, sources, outils et garde-fous.",

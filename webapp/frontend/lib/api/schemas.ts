@@ -3261,6 +3261,106 @@ export const AgentAFaireSchema = z.object({
 });
 export type AgentAFaire = z.infer<typeof AgentAFaireSchema>;
 
+const AgentConfigFieldSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  kind: z.string(),
+  badge: z.string().nullable(),
+});
+
+export const AgentConfigurationsSchema = z.object({
+  available: z.boolean(),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  actions: z.object({ save: z.string(), more: z.string() }).optional(),
+  identity: z
+    .object({
+      title: z.string(),
+      left: z.array(AgentConfigFieldSchema),
+      right: z.array(AgentConfigFieldSchema),
+    })
+    .optional(),
+  model: z
+    .object({
+      title: z.string(),
+      left: z.array(AgentConfigFieldSchema),
+      right: z.array(AgentConfigFieldSchema),
+    })
+    .optional(),
+  behavior: z
+    .object({
+      title: z.string(),
+      selects: z.array(z.object({ label: z.string(), value: z.string() })),
+      sliders: z.array(z.object({ label: z.string(), value: z.string(), pct: z.number() })),
+      tools: z.object({ label: z.string(), value: z.string() }),
+      note: z.string(),
+    })
+    .optional(),
+  routing: z
+    .object({
+      title: z.string(),
+      left: z.array(AgentConfigFieldSchema),
+      right: z.array(AgentConfigFieldSchema),
+    })
+    .optional(),
+  tags: z
+    .object({
+      title: z.string(),
+      tags: z.array(z.string()),
+      add_tag: z.string(),
+      metadata_label: z.string(),
+      metadata: z.string(),
+      add_metadata: z.string(),
+      created: z.string(),
+      modified: z.string(),
+      archive: z.string(),
+    })
+    .optional(),
+  status: z
+    .object({
+      title: z.string(),
+      badge: z.string(),
+      rows: z.array(
+        z.object({
+          label: z.string(),
+          value: z.string(),
+          badge: z.boolean().optional(),
+          online: z.boolean().optional(),
+          info: z.boolean().optional(),
+        }),
+      ),
+    })
+    .optional(),
+  active_model: z
+    .object({
+      title: z.string(),
+      name: z.string(),
+      provider: z.string(),
+      rows: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+  summary: z
+    .object({
+      title: z.string(),
+      rows: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+  history: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      items: z.array(z.object({ time: z.string(), actor: z.string(), label: z.string() })),
+    })
+    .optional(),
+  links: z
+    .object({
+      title: z.string(),
+      items: z.array(z.object({ title: z.string(), desc: z.string(), href: z.string() })),
+    })
+    .optional(),
+});
+export type AgentConfigurations = z.infer<typeof AgentConfigurationsSchema>;
+
 export const AgentConsoleSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),

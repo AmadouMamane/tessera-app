@@ -75,6 +75,7 @@ interface TopbarProps {
   description?: string;
   contextItems?: TopbarContextItem[];
   actions?: TopbarAction[];
+  breadcrumb?: { section: string; label: string };
 }
 
 function downloadJson(name: string, obj: unknown) {
@@ -132,10 +133,41 @@ async function runAction(kind: "export" | "evidence") {
   });
 }
 
-export function Topbar({ title, description, contextItems = [], actions = [] }: TopbarProps) {
+export function Topbar({
+  title,
+  description,
+  contextItems = [],
+  actions = [],
+  breadcrumb,
+}: TopbarProps) {
   const t = useTranslations("app");
   const [pending, setPending] = useState<string | null>(null);
   const hasOverviewHeader = contextItems.length > 0 || actions.length > 0;
+
+  if (breadcrumb) {
+    return (
+      <header className="relative flex min-h-12 items-center justify-between gap-4 border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-6 py-2">
+        <div className="flex min-w-0 items-center gap-2 text-[0.72rem] font-medium">
+          <span className="uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {breadcrumb.section}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 -rotate-90 text-[var(--tessera-text-muted)]" />
+          <span className="truncate text-[var(--tessera-text)]">{breadcrumb.label}</span>
+        </div>
+        <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
+          <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
+          <HeaderIconButton
+            icon={Bell}
+            label="Notifications"
+            badge="7"
+            className="hidden lg:inline-flex"
+          />
+          <div className="mx-2 h-6 w-px bg-[var(--tessera-border)]" />
+          <AuthControl />
+        </div>
+      </header>
+    );
+  }
 
   async function onAction(action: TopbarAction) {
     if (!action.action) return;

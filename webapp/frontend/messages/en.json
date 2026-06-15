@@ -4453,6 +4453,13 @@
       "configure": "Configure assistant"
     }
   },
+  "agentConfigurations": {
+    "topbarTitle": "AGENT",
+    "title": "Configurations",
+    "subtitle": "Settings for this agent: identity, model, behaviour and status.",
+    "loading": "Loading configurations…",
+    "unavailable": "Configurations unavailable."
+  },
   "agentConsole": {
     "title": "Console (Debug)",
     "subtitle": "Interact with the assistant and inspect traces, sources, tools and guardrails in detail.",

@@ -10,6 +10,7 @@ interface AppShellProps {
   contentWidth?: "default" | "wide" | "full";
   topbarContext?: TopbarContextItem[];
   topbarActions?: TopbarAction[];
+  breadcrumb?: { section: string; label: string };
   /** Override the left rail (defaults to the cockpit sidebar). */
   sidebar?: ReactNode;
 }
@@ -21,6 +22,7 @@ export function AppShell({
   contentWidth = "default",
   topbarContext,
   topbarActions,
+  breadcrumb,
   sidebar,
 }: AppShellProps) {
   // "full" — edge-to-edge desktop dashboard (no centred cap), tight padding.
@@ -42,6 +44,7 @@ export function AppShell({
           description={description}
           contextItems={topbarContext}
           actions={topbarActions}
+          breadcrumb={breadcrumb}
         />
         <main className={`min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto ${mainPadding}`}>
           <div className={`mx-auto flex h-full w-full ${maxWidth} flex-col`}>{children}</div>

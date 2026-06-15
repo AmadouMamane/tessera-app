@@ -20,6 +20,7 @@ from tessera.observability import (
     ablation as ablation_mod,
     access as access_mod,
     agent_a_faire as agent_a_faire_mod,
+    agent_configurations as agent_configurations_mod,
     agent_connaissances as agent_connaissances_mod,
     agent_console as agent_console_mod,
     agent_evaluations as agent_evaluations_mod,
@@ -717,6 +718,22 @@ async def observability_agent_connaissances() -> dict[str, object]:
         return {"available": True, **agent_connaissances_mod.compute_agent_connaissances()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_connaissances: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/agent-configurations")
+async def observability_agent_configurations() -> dict[str, object]:
+    """Agent Configurations dashboard (reference image 26).
+
+    Composes the active settings, guard policy, prompt bundles, tools and
+    corpus-backed sources into the operator configuration form. Degrades to
+    ``available: false`` so the dashboard keeps rendering if a local source is
+    temporarily unreadable.
+    """
+    try:
+        return {"available": True, **agent_configurations_mod.compute_agent_configurations()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.agent_configurations: failed: {exc}\n")
         return {"available": False}
 
 
