@@ -10,15 +10,66 @@ panels (watchlist, quick actions, global-score trend) and a per-evaluation
 detail panel with a Summary / Configuration / Results / Activity tab set,
 period results and RBAC access.
 
-This build ships without a live evaluation store, so the payload is a
-deterministic reference fixture: values are stable across calls so the page
-never "dances" on refetch. Colours/statuses are emitted as keys. Free-text data
-is verbatim French with ASCII-only punctuation.
+The numbers are NOT a fixture: they are aggregated from a real run of the
+smallest local model (``llama3.2:3b``) over the failure catalogue, read from
+``eval/reports/`` by :mod:`tessera.observability.eval_data`. Each failure
+category becomes an evaluation "set" whose score is its real pass rate, so the
+page tells the project's honest story (the small model fails a lot). Free-text
+data is verbatim French with ASCII-only punctuation.
 """
 
 from __future__ import annotations
 
+from datetime import date
+
+from tessera.observability.eval_data import EvalSnapshot, load_eval_snapshot
+
 __all__ = ["compute_agent_evaluations"]
+
+# Map each failure-catalogue category to a display "type" + tone key used by the
+# evaluations table. Tone keys (sys/tpl/agt) are the ones the frontend styles.
+_GROUP: dict[str, tuple[str, str]] = {
+    "prompt_injection": ("Securite", "sys"),
+    "pii_leak": ("Confidentialite", "sys"),
+    "policy_violation": ("Politiques", "sys"),
+    "regulatory_misstatement": ("Conformite", "sys"),
+    "hallucination": ("Factualite", "tpl"),
+    "citation_fabrication": ("Factualite", "tpl"),
+    "language_mixing": ("Multilingue", "tpl"),
+    "overconfidence": ("Agent", "agt"),
+    "tool_misuse": ("Agent", "agt"),
+    "escalation_failure": ("Agent", "agt"),
+}
+
+_FACTUAL = {"hallucination", "citation_fabrication"}
+
+# Quality thresholds (on a 0-10 score) and rate thresholds (0-1).
+_GOOD_SCORE = 7.0
+_OK_SCORE = 5.0
+_HIGH_HALLUC = 0.3
+_ALERT_PASS_RATE = 0.7
+
+
+def _comma(value: float) -> str:
+    """French decimal: 4.2 -> '4,2'."""
+    return f"{value:.1f}".replace(".", ",")
+
+
+def _dot(value: float) -> str:
+    """Dot decimal for the table score column: 7.9 -> '7.9'."""
+    return f"{value:.1f}"
+
+
+def _pct(value: float) -> str:
+    return f"{round(value * 100)}%"
+
+
+def _quality_note(score10: float) -> tuple[str, str]:
+    if score10 >= _GOOD_SCORE:
+        return "Bon", "good"
+    if score10 >= _OK_SCORE:
+        return "Moyen", "warn"
+    return "Faible", "bad"
 
 
 def _kpi(
@@ -75,86 +126,121 @@ def _row(
     }
 
 
+def _run_labels(snap: EvalSnapshot) -> tuple[str, str]:
+    """Return (formatted timestamp, relative age) for the run."""
+    moment = snap.run_datetime()
+    if moment is None:
+        return snap.run_at, ""
+    stamp = moment.strftime("%d/%m/%Y %H:%M")
+    days = (date.today() - moment.date()).days
+    if days <= 0:
+        rel = "aujourd'hui"
+    elif days == 1:
+        rel = "hier"
+    else:
+        rel = f"il y a {days} j"
+    return stamp, rel
+
+
 def compute_agent_evaluations() -> dict[str, object]:
-    """Return the full Evaluations dashboard payload (deterministic fixture)."""
+    """Return the Evaluations dashboard payload from a real llama3.2:3b run."""
+    snap = load_eval_snapshot()
+    stamp, rel = _run_labels(snap)
+    n_lang = len(snap.languages)
+    lang_str = ", ".join(code for code, _ in snap.languages)
+    score10 = snap.pass_rate * 10
+
+    factual = [c for c in snap.categories if c.category in _FACTUAL]
+    fact_total = sum(c.total for c in factual)
+    fact_failed = sum(c.failed for c in factual)
+    halluc_rate = fact_failed / fact_total if fact_total else 0.0
+    cite = snap.category("citation_fabrication")
+    cite_rate = cite.pass_rate if cite else 0.0
+    cite_passed = cite.passed if cite else 0
+    cite_total = cite.total if cite else 0
+
+    behaviour = [c for c in snap.categories if _GROUP.get(c.category, ("", ""))[1] == "agt"]
+    beh_total = sum(c.total for c in behaviour)
+    beh_pass = sum(c.passed for c in behaviour)
+    beh_rate = beh_pass / beh_total if beh_total else 0.0
+
     snapshot: dict[str, object] = {
         "tag": "SNAPSHOT ACTIF",
-        "label": "Prod Quality Set v2.0",
-        "updated_label": "Derniere mise a jour",
-        "updated": "12/06/2026 07:42",
-        "updated_rel": "il y a 40 min",
-        "version_label": "Version active",
-        "version": "v2.0",
-        "version_status": "Actif",
+        "label": f"Catalogue d'echecs - {snap.model}",
+        "updated_label": "Derniere execution",
+        "updated": stamp,
+        "updated_rel": rel,
+        "version_label": "Modele evalue",
+        "version": snap.model,
+        "version_status": "On-prem",
         "evalset_label": "Jeu d'evaluations",
-        "evalset": "1 248 cas",
-        "coverage_label": "Couverture set",
-        "coverage": 98,
-        "coverage_tone": "Bonne",
+        "evalset": f"{snap.total} cas",
+        "coverage_label": "Couverture",
+        "coverage": 100,
+        "coverage_tone": "Complete",
         "asof": "Voir a date",
         "compare": "Comparer au snapshot precedent",
     }
 
+    score_note, score_tone = _quality_note(score10)
     kpis: list[dict[str, object]] = [
         _kpi(
             "score",
             "Score global",
-            "8,7",
+            _comma(score10),
             "/10",
-            "Bonne",
-            "good",
-            "+0,4 vs periode precedente",
-            "good",
+            score_note,
+            score_tone,
+            f"{snap.passed}/{snap.total} cas reussis",
+            "muted",
         ),
         _kpi(
             "success",
             "Taux de reussite",
             "",
             "",
-            "Bon",
-            "good",
-            "+3% vs periode precedente",
-            "good",
-            gauge=89,
+            score_note,
+            score_tone,
+            f"{snap.passed}/{snap.total} cas",
+            "muted",
+            gauge=round(snap.pass_rate * 100),
         ),
         _kpi(
             "halluc",
             "Hallucinations",
-            "1,6%",
+            _pct(halluc_rate),
             "",
-            "Bon",
-            "good",
-            "-0,6 pt vs periode precedente",
-            "good",
+            "Eleve" if halluc_rate >= _HIGH_HALLUC else "Maitrise",
+            "bad" if halluc_rate >= _HIGH_HALLUC else "good",
+            f"{fact_failed}/{fact_total} sondes factualite",
+            "muted",
         ),
         _kpi(
             "relevance",
             "Pertinence",
-            "9,1",
+            _comma(beh_rate * 10),
             "/10",
-            "Bonne",
-            "good",
-            "+0,3 vs periode precedente",
-            "good",
+            *_quality_note(beh_rate * 10),
+            f"{beh_pass}/{beh_total} cas agent",
+            "muted",
         ),
         _kpi(
             "fidelity",
             "Fidelite (sources)",
-            "92%",
+            _pct(cite_rate),
             "",
-            "Bonne",
-            "good",
-            "+4% vs periode precedente",
-            "good",
+            *_quality_note(cite_rate * 10),
+            f"{cite_passed}/{cite_total} cas citation",
+            "muted",
         ),
         _kpi(
             "coverage",
             "Couverture du set",
-            "12 540",
+            str(snap.total),
             "",
             "tests executes",
             "muted",
-            "98% du set total",
+            f"{len(snap.categories)} categories - {n_lang} langues",
             "muted",
         ),
     ]
@@ -182,141 +268,43 @@ def compute_agent_evaluations() -> dict[str, object]:
         "Proprietaire",
         "Tests",
     ]
-    rows: list[dict[str, object]] = [
-        _row(
-            "Prod Quality Set v2.0",
-            "Systeme",
-            "sys",
-            "Actif",
-            "good",
-            "v2.0",
-            "8.7",
-            "89%",
-            "1.6%",
-            "12/06/2026 07:42",
-            "Amadou D.",
-            "1 248",
-        ),
-        _row(
-            "Safety & Compliance Set v1.3",
-            "Systeme",
-            "sys",
-            "Actif",
-            "good",
-            "v1.3",
-            "9.2",
-            "94%",
-            "0.4%",
-            "11/06/2026 18:20",
-            "Sophie L.",
-            "980",
-        ),
-        _row(
-            "RAG Quality Set v2.1",
-            "Template",
-            "tpl",
-            "Actif",
-            "good",
-            "v2.1",
-            "9.1",
-            "92%",
-            "0.8%",
-            "10/06/2026 14:05",
-            "Nadia S.",
-            "864",
-        ),
-        _row(
-            "Agent Performance Set v1.4",
-            "Agent",
-            "agt",
-            "Actif",
-            "good",
-            "v1.4",
-            "8.4",
-            "86%",
-            "2.1%",
-            "09/06/2026 11:32",
-            "Claude B.",
-            "642",
-        ),
-        _row(
-            "Tonalite & Style Set v1.2",
-            "Agent",
-            "agt",
-            "Actif",
-            "good",
-            "v1.2",
-            "8.6",
-            "88%",
-            "1.2%",
-            "08/06/2026 16:48",
-            "Sophie L.",
-            "521",
-        ),
-        _row(
-            "Regression Set v3.0",
-            "Systeme",
-            "sys",
-            "Planifie",
-            "info",
-            "v3.0",
-            "-",
-            "-",
-            "-",
-            "Planifie demain",
-            "Amadou D.",
-            "0",
-        ),
-        _row(
-            "Legacy Quality Set v1.0",
-            "Systeme",
-            "sys",
-            "Inactif",
-            "off",
-            "v1.0",
-            "7.8",
-            "74%",
-            "5.2%",
-            "02/06/2026 09:10",
-            "Nadia M.",
-            "410",
-        ),
-        _row(
-            "Customer Support Set v3.0",
-            "Template",
-            "tpl",
-            "Actif",
-            "good",
-            "v3.0",
-            "8.9",
-            "90%",
-            "1.0%",
-            "07/06/2026 13:27",
-            "Claude B.",
-            "688",
-        ),
-    ]
+    version_label = snap.catalogue_version[:9] or "v1"
+    rows: list[dict[str, object]] = []
+    for stat in sorted(snap.categories, key=lambda c: (-c.pass_rate, -c.total)):
+        type_label, type_tone = _GROUP.get(stat.category, ("Autre", "sys"))
+        is_fact = stat.category in _FACTUAL
+        rows.append(
+            _row(
+                stat.label,
+                type_label,
+                type_tone,
+                "Actif",
+                "good",
+                version_label,
+                _dot(stat.pass_rate * 10),
+                _pct(stat.pass_rate),
+                _pct(stat.failed / stat.total) if is_fact and stat.total else "-",
+                stamp,
+                "Tessera Eval",
+                str(stat.total),
+            )
+        )
 
+    worst = snap.categories_by_pass_rate()
+    watch_tones = ["crit", "crit", "warn"]
+    watch_items: list[dict[str, object]] = [
+        {
+            "title": f"{stat.label} - {_pct(stat.pass_rate)} de reussite",
+            "detail": f"{stat.passed}/{stat.total} cas - {n_lang} langues",
+            "tone": tone,
+        }
+        for stat, tone in zip(worst[:3], watch_tones, strict=False)
+    ]
+    n_alert = sum(1 for c in snap.categories if c.pass_rate < _ALERT_PASS_RATE)
     watch: dict[str, object] = {
         "title": "A surveiller",
-        "cta": "Voir toutes les alertes (3)",
-        "items": [
-            {
-                "title": "Hallucinations en legere hausse",
-                "detail": "+0,3 pt sur 7j - Prod Quality",
-                "tone": "crit",
-            },
-            {
-                "title": "RAG Quality Set - score en baisse",
-                "detail": "-0,2 pt sur 7j",
-                "tone": "warn",
-            },
-            {
-                "title": "Echec d'execution - Customer Support",
-                "detail": "1 run interrompu hier",
-                "tone": "info",
-            },
-        ],
+        "cta": f"Voir toutes les alertes ({n_alert})",
+        "items": watch_items,
     }
 
     quick: dict[str, object] = {
@@ -330,43 +318,46 @@ def compute_agent_evaluations() -> dict[str, object]:
     }
 
     trend: dict[str, object] = {
-        "title": "Tendance du score global",
-        "value": "8,7",
+        "title": "Reussite par categorie",
+        "value": _comma(score10),
         "scale": "/10",
-        "legend": "Score global",
-        "series": [82, 83, 83, 84, 85, 85, 86, 86, 87, 87],
+        "legend": "Taux de reussite (%) par categorie",
+        "series": [round(c.pass_rate * 100) for c in worst],
     }
 
+    worst0 = worst[0]
+    worst0_type, _ = _GROUP.get(worst0.category, ("Conformite", "sys"))
     detail: dict[str, object] = {
-        "name": "Prod Quality Set v2.0",
-        "id": "@_eval_prod_001",
+        "name": worst0.label,
+        "id": f"@_eval_{worst0.category}",
         "status": "Actif",
         "tabs": ["Resume", "Configuration", "Resultats", "Activite"],
         "description": (
-            "Evaluation principale utilisee en production pour mesurer la "
-            "qualite globale des reponses de l'assistant."
+            f"Sondes de la categorie '{worst0.label}' du catalogue d'echecs, "
+            f"executees sur le plus petit modele ({snap.model}). Sur ce run, "
+            f"{worst0.passed} cas sur {worst0.total} passent."
         ),
         "fields": [
-            {"label": "Type", "value": "Systeme"},
-            {"label": "Version active", "value": "v2.0"},
+            {"label": "Type", "value": worst0_type},
+            {"label": "Categorie", "value": worst0.category},
+            {"label": "Version catalogue", "value": snap.catalogue_version},
             {"label": "Statut", "value": "Actif", "tone": "good"},
-            {"label": "Derniere execution", "value": "12/06/2026 07:42"},
-            {"label": "Prochaine execution", "value": "13/06/2026 07:00"},
-            {"label": "Modele evalue", "value": "gpt-4o-mini"},
-            {"label": "Temperature", "value": "0,2"},
-            {"label": "Top p", "value": "0,9"},
-            {"label": "Proprietaire", "value": "Amadou D."},
+            {"label": "Derniere execution", "value": stamp},
+            {"label": "Modele evalue", "value": snap.model},
+            {"label": "Cas", "value": str(worst0.total)},
+            {"label": "Langues", "value": lang_str},
+            {"label": "Proprietaire", "value": "Tessera Eval"},
         ],
         "results_title": "Resultats (periode)",
         "results_cta": "Modifier la periode",
         "results": [
-            {"label": "Score global", "value": "8,7 / 10"},
-            {"label": "Taux de reussite", "value": "89%"},
-            {"label": "Hallucinations", "value": "1,6%"},
-            {"label": "Pertinence", "value": "9,1 / 10"},
-            {"label": "Fidelite (sources)", "value": "92%"},
-            {"label": "Securite", "value": "9,4 / 10"},
-            {"label": "Completude", "value": "8,8 / 10"},
+            {"label": "Score", "value": f"{_comma(worst0.pass_rate * 10)} / 10"},
+            {"label": "Taux de reussite", "value": _pct(worst0.pass_rate)},
+            {"label": "Cas reussis", "value": f"{worst0.passed} / {worst0.total}"},
+            {"label": "Cas echoues", "value": f"{worst0.failed} / {worst0.total}"},
+            {"label": "Score global du run", "value": f"{_comma(score10)} / 10"},
+            {"label": "Escalades requises", "value": str(snap.escalations)},
+            {"label": "Invocations d'outils", "value": str(snap.tool_invocations)},
         ],
         "results_more": "Voir tous les resultats",
         "rbac_title": "Acces RBAC",
@@ -399,7 +390,12 @@ def compute_agent_evaluations() -> dict[str, object]:
         "snapshot": snapshot,
         "kpis": kpis,
         "filters": filters,
-        "table": {"columns": columns, "rows": rows, "count": "1-8 sur 24 evaluations", "pages": 3},
+        "table": {
+            "columns": columns,
+            "rows": rows,
+            "count": f"1-{len(rows)} sur {len(rows)} jeux",
+            "pages": 1,
+        },
         "watch": watch,
         "quick": quick,
         "trend": trend,
