@@ -1,10 +1,19 @@
-import { redirect } from "@/i18n/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+
+import { LandingLauncher } from "@/components/landing/landing-launcher";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
 }
 
-export default async function RedirectPage({ params }: PageProps) {
+export async function generateMetadata({ params }: PageProps) {
   const { locale } = await params;
-  redirect({ href: "/agent/synthese", locale });
+  const t = await getTranslations({ locale, namespace: "landing" });
+  return { title: t("welcome") };
+}
+
+export default async function HomePage({ params }: PageProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  return <LandingLauncher />;
 }

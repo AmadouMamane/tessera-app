@@ -4362,5 +4362,66 @@
   },
   "scaffold": {
     "body": "This page is under construction. Navigation, routing and states are in place; content will be wired up shortly."
+  },
+  "landing": {
+    "welcome": "Welcome to Tessera",
+    "choose": "Choose your space to continue",
+    "brandTagline": "AI Control Plane",
+    "user": {
+      "name": "Tessera Ops",
+      "role": "Platform"
+    },
+    "client": {
+      "badge": "Product",
+      "title": "Client space",
+      "desc": "A simple interface to chat with your assistant and track your requests.",
+      "cta": "Enter the client space",
+      "items": {
+        "chat": {
+          "title": "Chat",
+          "desc": "Chat with your AI assistant"
+        },
+        "requests": {
+          "title": "My requests",
+          "desc": "Track your requests and their status"
+        },
+        "documents": {
+          "title": "Documents",
+          "desc": "View your statements and contracts"
+        },
+        "alerts": {
+          "title": "Alerts",
+          "desc": "Keep an eye on your notifications"
+        },
+        "settings": {
+          "title": "Settings",
+          "desc": "Manage your profile and preferences"
+        }
+      }
+    },
+    "operator": {
+      "badge": "Cockpit",
+      "title": "Operator space",
+      "desc": "A complete cockpit to supervise, configure and operate the AI platform.",
+      "cta": "Enter the cockpit",
+      "items": {
+        "supervision": {
+          "title": "Supervision",
+          "desc": "Monitor quality, security and performance"
+        },
+        "management": {
+          "title": "Operations",
+          "desc": "Act on incidents and operations"
+        },
+        "configuration": {
+          "title": "Configuration",
+          "desc": "Configure agents, models and rules"
+        },
+        "platform": {
+          "title": "Platform",
+          "desc": "Administer users and integrations"
+        }
+      }
+    }
   }
 }

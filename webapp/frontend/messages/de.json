@@ -4362,5 +4362,66 @@
   },
   "scaffold": {
     "body": "Diese Seite ist im Aufbau. Navigation, Routing und Zustände stehen; der Inhalt wird in Kürze angebunden."
+  },
+  "landing": {
+    "welcome": "Willkommen bei Tessera",
+    "choose": "Wählen Sie Ihren Bereich, um fortzufahren",
+    "brandTagline": "AI Control Plane",
+    "user": {
+      "name": "Tessera Ops",
+      "role": "Plattform"
+    },
+    "client": {
+      "badge": "Produkt",
+      "title": "Kundenbereich",
+      "desc": "Eine einfache Oberfläche, um mit Ihrem Assistenten zu kommunizieren und Ihre Anfragen zu verfolgen.",
+      "cta": "Zum Kundenbereich",
+      "items": {
+        "chat": {
+          "title": "Chat",
+          "desc": "Kommunizieren Sie mit Ihrem KI-Assistenten"
+        },
+        "requests": {
+          "title": "Meine Anfragen",
+          "desc": "Verfolgen Sie Ihre Anfragen und deren Status"
+        },
+        "documents": {
+          "title": "Dokumente",
+          "desc": "Sehen Sie Auszüge und Verträge ein"
+        },
+        "alerts": {
+          "title": "Benachrichtigungen",
+          "desc": "Behalten Sie Ihre Benachrichtigungen im Blick"
+        },
+        "settings": {
+          "title": "Einstellungen",
+          "desc": "Verwalten Sie Profil und Präferenzen"
+        }
+      }
+    },
+    "operator": {
+      "badge": "Cockpit",
+      "title": "Betreiberbereich",
+      "desc": "Ein vollständiges Cockpit zum Überwachen, Konfigurieren und Steuern der KI-Plattform.",
+      "cta": "Zum Cockpit",
+      "items": {
+        "supervision": {
+          "title": "Überwachung",
+          "desc": "Überwachen Sie Qualität, Sicherheit und Leistung"
+        },
+        "management": {
+          "title": "Steuerung",
+          "desc": "Handeln Sie bei Vorfällen und im Betrieb"
+        },
+        "configuration": {
+          "title": "Konfiguration",
+          "desc": "Konfigurieren Sie Agenten, Modelle und Regeln"
+        },
+        "platform": {
+          "title": "Plattform",
+          "desc": "Verwalten Sie Benutzer und Integrationen"
+        }
+      }
+    }
   }
 }

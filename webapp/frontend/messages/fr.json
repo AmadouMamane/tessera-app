@@ -4362,5 +4362,66 @@
   },
   "scaffold": {
     "body": "Cette page est en cours de construction. La navigation, le routage et les états sont en place ; le contenu sera branché prochainement."
+  },
+  "landing": {
+    "welcome": "Bienvenue sur Tessera",
+    "choose": "Choisissez votre espace pour continuer",
+    "brandTagline": "AI Control Plane",
+    "user": {
+      "name": "Tessera Ops",
+      "role": "Plateforme"
+    },
+    "client": {
+      "badge": "Produit",
+      "title": "Espace client",
+      "desc": "Une interface simple pour échanger avec votre assistant et suivre vos demandes.",
+      "cta": "Accéder à l’espace client",
+      "items": {
+        "chat": {
+          "title": "Chat",
+          "desc": "Échangez avec votre assistant IA"
+        },
+        "requests": {
+          "title": "Mes demandes",
+          "desc": "Suivez vos requêtes et leur statut"
+        },
+        "documents": {
+          "title": "Documents",
+          "desc": "Consultez vos relevés et contrats"
+        },
+        "alerts": {
+          "title": "Alertes",
+          "desc": "Gardez un œil sur vos notifications"
+        },
+        "settings": {
+          "title": "Paramètres",
+          "desc": "Gérez votre profil et vos préférences"
+        }
+      }
+    },
+    "operator": {
+      "badge": "Cockpit",
+      "title": "Espace opérateur",
+      "desc": "Un cockpit complet pour superviser, configurer et piloter la plateforme IA.",
+      "cta": "Accéder au cockpit",
+      "items": {
+        "supervision": {
+          "title": "Supervision",
+          "desc": "Surveillez la qualité, la sécurité et la performance"
+        },
+        "management": {
+          "title": "Gestion",
+          "desc": "Agissez sur les incidents et les opérations"
+        },
+        "configuration": {
+          "title": "Configuration",
+          "desc": "Configurez agents, modèles et règles"
+        },
+        "platform": {
+          "title": "Plateforme",
+          "desc": "Administrez les utilisateurs et les intégrations"
+        }
+      }
+    }
   }
 }
