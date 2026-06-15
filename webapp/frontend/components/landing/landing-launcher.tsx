@@ -276,7 +276,7 @@ function SpaceCard({
   return (
     <section
       className={cn(
-        "relative h-[540px] overflow-hidden rounded-[var(--radius-lg)] border-[0.5px] px-[30px] pb-[20px] pt-[26px] backdrop-blur-[2px]",
+        "relative h-[540px] overflow-hidden rounded-[var(--radius-lg)] border px-[30px] pb-[20px] pt-[26px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{
