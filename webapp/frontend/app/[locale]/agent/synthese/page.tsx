@@ -1,7 +1,10 @@
+import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { ScaffoldView } from "@/components/common/scaffold-view";
+import { AgentSynthese } from "@/components/agent/agent-synthese";
 import { AppShell } from "@/components/layout/app-shell";
+import { AgentSyntheseSchema } from "@/lib/api/schemas";
+import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -9,17 +12,40 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "assistant" });
-  return { title: t("synthese.title") };
+  const t = await getTranslations({ locale, namespace: "agentSynthese" });
+  return { title: t("title") };
+}
+
+async function prefetch(queryClient: QueryClient) {
+  await queryClient.prefetchQuery({
+    queryKey: ["agent-synthese"],
+    queryFn: async () => {
+      const response = await fetch(`${backendUrl()}/observability/agent-synthese`, {
+        cache: "no-store",
+        headers: backendHeaders({ Accept: "application/json" }),
+      });
+      if (!response.ok) throw new Error(`Backend agent-synthese returned ${response.status}`);
+      return AgentSyntheseSchema.parse(await response.json());
+    },
+  });
 }
 
 export default async function AgentSynthesePage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "assistant" });
+  const t = await getTranslations({ locale, namespace: "agentSynthese" });
+  const queryClient = new QueryClient();
+  try {
+    await prefetch(queryClient);
+  } catch {
+    // Keep the page resilient: the client query will surface backend failures.
+  }
+
   return (
-    <AppShell title={t("synthese.title")} description={t("synthese.subtitle")} contentWidth="full">
-      <ScaffoldView title={t("synthese.title")} />
+    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <AgentSynthese />
+      </HydrationBoundary>
     </AppShell>
   );
 }

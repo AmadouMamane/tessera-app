@@ -2999,3 +2999,119 @@ export const AssistantOverviewSchema = z.object({
   tenant: z.string(),
 });
 export type AssistantOverview = z.infer<typeof AssistantOverviewSchema>;
+
+// --- Agent overview ("Synthese de l'agent") dashboard (reference image 22) ---
+
+const SynKpiSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  value: z.string(),
+  delta: z.string(),
+  good: z.boolean(),
+  series: z.array(z.number()),
+});
+const SynLabelValueSchema = z.object({ label: z.string(), value: z.string() });
+const SynBarSchema = z.object({ label: z.string(), pct: z.number(), tone: z.string() });
+
+export const AgentSyntheseSchema = z.object({
+  available: z.boolean(),
+  meta: z
+    .object({
+      mode: z.string(),
+      period: z.string(),
+      updated: z.string(),
+      replayAt: z.string(),
+      comparison: z.string(),
+    })
+    .optional(),
+  kpis: z.array(SynKpiSchema).optional(),
+  profile: z
+    .object({
+      name: z.string(),
+      status: z.string(),
+      fields: z.array(SynLabelValueSchema),
+      cta: z.string(),
+    })
+    .optional(),
+  capabilities: z
+    .object({ title: z.string(), items: z.array(z.string()), cta: z.string() })
+    .optional(),
+  topics: z.object({ title: z.string(), items: z.array(SynBarSchema), cta: z.string() }).optional(),
+  performance: z
+    .object({
+      title: z.string(),
+      rows: z.array(
+        z.object({
+          label: z.string(),
+          value: z.string(),
+          delta: z.string(),
+          good: z.boolean(),
+        }),
+      ),
+      cta: z.string(),
+    })
+    .optional(),
+  config: z
+    .object({ title: z.string(), rows: z.array(SynLabelValueSchema), cta: z.string() })
+    .optional(),
+  conversations: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      rows: z.array(
+        z.object({
+          title: z.string(),
+          user: z.string(),
+          time: z.string(),
+          status: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  activity: z
+    .object({
+      title: z.string(),
+      rows: z.array(z.object({ time: z.string(), label: z.string(), kind: z.string() })),
+    })
+    .optional(),
+  prompts: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      rows: z.array(
+        z.object({
+          name: z.string(),
+          version: z.string(),
+          status: z.string(),
+          updated: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  channels: z.object({ title: z.string(), items: z.array(SynBarSchema) }).optional(),
+  timeline: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      rows: z.array(
+        z.object({
+          time: z.string(),
+          label: z.string(),
+          detail: z.string(),
+          kind: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  alerts: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      items: z.array(z.object({ label: z.string(), value: z.string(), tone: z.string() })),
+    })
+    .optional(),
+  quick_config: z
+    .object({ title: z.string(), cta: z.string(), items: z.array(z.string()) })
+    .optional(),
+});
+export type AgentSynthese = z.infer<typeof AgentSyntheseSchema>;

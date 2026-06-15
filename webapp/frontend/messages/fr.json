@@ -4433,5 +4433,23 @@
       "product": "Produit",
       "cockpit": "Cockpit"
     }
+  },
+  "agentSynthese": {
+    "title": "Synthèse de l'agent",
+    "subtitle": "Surveillez et configurez l'assistant IA Tessera.",
+    "loading": "Chargement de la synthèse…",
+    "unavailable": "Synthèse indisponible.",
+    "cmd": {
+      "mode": "Mode",
+      "period": "Période",
+      "updated": "Dernière mise à jour",
+      "replay": "Relire à T",
+      "comparison": "Comparaison rapide"
+    },
+    "actions": {
+      "export": "Exporter le rapport",
+      "test": "Tester l'assistant",
+      "configure": "Configurer l'assistant"
+    }
   }
 }

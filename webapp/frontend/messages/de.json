@@ -4433,5 +4433,23 @@
       "product": "Produkt",
       "cockpit": "Cockpit"
     }
+  },
+  "agentSynthese": {
+    "title": "Agent-Übersicht",
+    "subtitle": "Überwachen und konfigurieren Sie den Tessera-KI-Assistenten.",
+    "loading": "Übersicht wird geladen…",
+    "unavailable": "Übersicht nicht verfügbar.",
+    "cmd": {
+      "mode": "Modus",
+      "period": "Zeitraum",
+      "updated": "Letzte Aktualisierung",
+      "replay": "Stand zu T",
+      "comparison": "Schnellvergleich"
+    },
+    "actions": {
+      "export": "Bericht exportieren",
+      "test": "Assistent testen",
+      "configure": "Assistent konfigurieren"
+    }
   }
 }

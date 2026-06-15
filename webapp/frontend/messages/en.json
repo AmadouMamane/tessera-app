@@ -4433,5 +4433,23 @@
       "product": "Product",
       "cockpit": "Cockpit"
     }
+  },
+  "agentSynthese": {
+    "title": "Agent overview",
+    "subtitle": "Monitor and configure the Tessera AI assistant.",
+    "loading": "Loading overview…",
+    "unavailable": "Overview unavailable.",
+    "cmd": {
+      "mode": "Mode",
+      "period": "Period",
+      "updated": "Last updated",
+      "replay": "Replay at T",
+      "comparison": "Quick comparison"
+    },
+    "actions": {
+      "export": "Export report",
+      "test": "Test assistant",
+      "configure": "Configure assistant"
+    }
   }
 }

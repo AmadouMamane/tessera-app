@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tessera.observability import (
     ablation as ablation_mod,
     access as access_mod,
+    agent_synthese as agent_synthese_mod,
     ai_act as ai_act_mod,
     anomalies as anomalies_mod,
     assistant as assistant_mod,
@@ -617,6 +618,22 @@ async def observability_improvement() -> dict[str, object]:
         return {"available": True, **asdict(improvement_mod.compute_improvement())}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/agent-synthese")
+async def observability_agent_synthese() -> dict[str, object]:
+    """Agent overview ("Synthese de l'agent") dashboard (reference image 22).
+
+    KPI strip, agent profile and capabilities, top topics, detailed performance,
+    current configuration, recent conversations, live activity, active prompts,
+    channel usage, change timeline, alerts and quick config. Deterministic
+    fixture; degrades to ``available: false``.
+    """
+    try:
+        return {"available": True, **agent_synthese_mod.compute_agent_synthese()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.agent_synthese: failed: {exc}\n")
         return {"available": False}
 
 
