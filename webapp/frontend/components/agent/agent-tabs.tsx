@@ -12,7 +12,7 @@ import { cn } from "@/lib/cn";
  * right via the `actions` slot.
  */
 const TABS = [
-  { href: "/agent/synthese", labelKey: "item.vueEnsemble" },
+  { href: "/agent/synthese", labelKey: "item.synthese" },
   { href: "/agent/configurations", labelKey: "item.configurations" },
   { href: "/agent/connaissances", labelKey: "item.connaissances" },
   { href: "/agent/garde-fous", labelKey: "item.agentGuardrails" },

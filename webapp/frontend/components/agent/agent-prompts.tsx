@@ -26,6 +26,7 @@ import {
 import { fetchAgentPrompts } from "@/lib/api/client";
 import type { AgentPrompts as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { AgentSubtabs } from "./agent-subtabs";
 import { AgentTabs } from "./agent-tabs";
 
 const KPI_ICONS: LucideIcon[] = [
@@ -106,26 +107,7 @@ export function AgentPrompts() {
         }
       />
 
-      <nav className="flex flex-wrap items-center gap-1 border-b border-[var(--tessera-border)] pb-1.5">
-        {subtabs.map((tb) => {
-          const on = tb === active;
-          return (
-            <button
-              key={tb}
-              type="button"
-              onClick={() => setSubtab(tb)}
-              className={cn(
-                "-mb-px shrink-0 border-b-2 px-3 py-1.5 text-[0.74rem] transition-colors",
-                on
-                  ? "border-[#6d4aed] font-medium text-[var(--tessera-text)]"
-                  : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
-              )}
-            >
-              {tb}
-            </button>
-          );
-        })}
-      </nav>
+      <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
 
       <TemporalRail
         mode={temporal.mode}
