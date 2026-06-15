@@ -56,8 +56,8 @@ const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--success": "#22C55E",
   "--radius-lg": "24px",
   "--radius-md": "16px",
-  "--shadow-gold": "0 0 18px rgba(214, 182, 106, 0.08), inset 0 1px 0 rgba(255,255,255,0.04)",
-  "--shadow-cyan": "0 0 18px rgba(45, 212, 191, 0.08), inset 0 1px 0 rgba(255,255,255,0.04)",
+  "--shadow-gold": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
+  "--shadow-cyan": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
 const CLIENT_ITEMS: SpaceItem[] = [
