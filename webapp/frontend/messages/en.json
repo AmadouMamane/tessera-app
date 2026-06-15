@@ -4473,5 +4473,12 @@
     "loading": "Loading guardrails…",
     "unavailable": "Guardrails unavailable.",
     "realtime": "Live"
+  },
+  "agentPrompts": {
+    "title": "Prompts",
+    "subtitle": "Manage the system prompts, templates and instructions used by the assistant and its agents.",
+    "loading": "Loading prompts…",
+    "unavailable": "Prompts unavailable.",
+    "realtime": "Live"
   }
 }

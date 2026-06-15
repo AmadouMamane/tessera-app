@@ -22,6 +22,7 @@ from tessera.observability import (
     agent_connaissances as agent_connaissances_mod,
     agent_console as agent_console_mod,
     agent_garde_fous as agent_garde_fous_mod,
+    agent_prompts as agent_prompts_mod,
     agent_synthese as agent_synthese_mod,
     ai_act as ai_act_mod,
     anomalies as anomalies_mod,
@@ -621,6 +622,21 @@ async def observability_improvement() -> dict[str, object]:
         return {"available": True, **asdict(improvement_mod.compute_improvement())}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/agent-prompts")
+async def observability_agent_prompts() -> dict[str, object]:
+    """Agent Prompts ("Prompts") dashboard (reference image 28).
+
+    Inner tab strip, active-snapshot bar, KPI strip, filterable prompts table,
+    watchlist, quick actions, quality-by-type and a per-prompt detail panel.
+    Deterministic fixture; degrades to ``available: false``.
+    """
+    try:
+        return {"available": True, **agent_prompts_mod.compute_agent_prompts()}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.agent_prompts: failed: {exc}\n")
         return {"available": False}
 
 

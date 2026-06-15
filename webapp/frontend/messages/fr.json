@@ -4473,5 +4473,12 @@
     "loading": "Chargement des garde-fous…",
     "unavailable": "Garde-fous indisponibles.",
     "realtime": "Live"
+  },
+  "agentPrompts": {
+    "title": "Prompts",
+    "subtitle": "Gérez les prompts systèmes, templates et instructions utilisés par l'assistant et les agents.",
+    "loading": "Chargement des prompts…",
+    "unavailable": "Prompts indisponibles.",
+    "realtime": "Live"
   }
 }

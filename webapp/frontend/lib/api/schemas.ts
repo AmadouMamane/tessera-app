@@ -3371,3 +3371,113 @@ export const AgentGardeFousSchema = z.object({
     .optional(),
 });
 export type AgentGardeFous = z.infer<typeof AgentGardeFousSchema>;
+
+export const AgentPromptsSchema = z.object({
+  available: z.boolean(),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  actions: z.object({ asof: z.string(), create: z.string() }).optional(),
+  subtabs: z.array(z.string()).optional(),
+  snapshot: z
+    .object({
+      tag: z.string(),
+      label: z.string(),
+      updated_label: z.string(),
+      updated: z.string(),
+      updated_rel: z.string(),
+      version_label: z.string(),
+      version: z.string(),
+      version_status: z.string(),
+      evalset_label: z.string(),
+      evalset: z.string(),
+      coverage_label: z.string(),
+      coverage: z.number(),
+      coverage_tone: z.string(),
+      asof: z.string(),
+      compare: z.string(),
+    })
+    .optional(),
+  kpis: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        value: z.string(),
+        delta: z.string(),
+        good: z.boolean(),
+        gauge: z.number().nullable(),
+      }),
+    )
+    .optional(),
+  filters: z
+    .object({
+      search: z.string(),
+      selects: z.array(z.object({ label: z.string(), value: z.string() })),
+      more: z.string(),
+    })
+    .optional(),
+  table: z
+    .object({
+      columns: z.array(z.string()),
+      count: z.string(),
+      pages: z.number(),
+      rows: z.array(
+        z.object({
+          name: z.string(),
+          type: z.string(),
+          type_tone: z.string(),
+          status: z.string(),
+          status_tone: z.string(),
+          version: z.string(),
+          quality: z.string(),
+          quality_tone: z.string(),
+          updated: z.string(),
+          owner: z.string(),
+          tests: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  watch: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      items: z.array(z.object({ title: z.string(), detail: z.string(), tone: z.string() })),
+    })
+    .optional(),
+  quick: z.object({ title: z.string(), items: z.array(z.string()) }).optional(),
+  by_type: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      items: z.array(
+        z.object({ label: z.string(), value: z.string(), pct: z.number(), tone: z.string() }),
+      ),
+    })
+    .optional(),
+  detail: z
+    .object({
+      name: z.string(),
+      id: z.string(),
+      status: z.string(),
+      tabs: z.array(z.string()),
+      description: z.string(),
+      fields: z.array(
+        z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
+      ),
+      tags_label: z.string(),
+      tags: z.array(z.string()),
+      config_title: z.string(),
+      config_cta: z.string(),
+      config: z.array(z.object({ label: z.string(), value: z.string() })),
+      rbac_title: z.string(),
+      rbac_cta: z.string(),
+      rbac: z.array(z.object({ role: z.string(), access: z.string() })),
+      rbac_more: z.string(),
+      info_title: z.string(),
+      info: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+  footer: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+});
+export type AgentPrompts = z.infer<typeof AgentPromptsSchema>;

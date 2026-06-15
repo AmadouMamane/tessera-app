@@ -4473,5 +4473,12 @@
     "loading": "Leitplanken werden geladen…",
     "unavailable": "Leitplanken nicht verfügbar.",
     "realtime": "Live"
+  },
+  "agentPrompts": {
+    "title": "Prompts",
+    "subtitle": "Verwalten Sie die System-Prompts, Vorlagen und Anweisungen des Assistenten und der Agenten.",
+    "loading": "Prompts werden geladen…",
+    "unavailable": "Prompts nicht verfügbar.",
+    "realtime": "Live"
   }
 }
