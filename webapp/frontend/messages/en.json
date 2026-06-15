@@ -4480,5 +4480,12 @@
     "loading": "Loading prompts…",
     "unavailable": "Prompts unavailable.",
     "realtime": "Live"
+  },
+  "agentEvaluations": {
+    "title": "Evaluations",
+    "subtitle": "Measure, analyse and improve the answer quality of the assistant and its agents.",
+    "loading": "Loading evaluations…",
+    "unavailable": "Evaluations unavailable.",
+    "realtime": "Live"
   }
 }

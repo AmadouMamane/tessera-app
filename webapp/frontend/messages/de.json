@@ -4480,5 +4480,12 @@
     "loading": "Prompts werden geladen…",
     "unavailable": "Prompts nicht verfügbar.",
     "realtime": "Live"
+  },
+  "agentEvaluations": {
+    "title": "Evaluierungen",
+    "subtitle": "Messen, analysieren und verbessern Sie die Antwortqualität des Assistenten und der Agenten.",
+    "loading": "Evaluierungen werden geladen…",
+    "unavailable": "Evaluierungen nicht verfügbar.",
+    "realtime": "Live"
   }
 }

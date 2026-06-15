@@ -3481,3 +3481,113 @@ export const AgentPromptsSchema = z.object({
   footer: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
 });
 export type AgentPrompts = z.infer<typeof AgentPromptsSchema>;
+
+export const AgentEvaluationsSchema = z.object({
+  available: z.boolean(),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  actions: z.object({ asof: z.string(), create: z.string() }).optional(),
+  subtabs: z.array(z.string()).optional(),
+  snapshot: z
+    .object({
+      tag: z.string(),
+      label: z.string(),
+      updated_label: z.string(),
+      updated: z.string(),
+      updated_rel: z.string(),
+      version_label: z.string(),
+      version: z.string(),
+      version_status: z.string(),
+      evalset_label: z.string(),
+      evalset: z.string(),
+      coverage_label: z.string(),
+      coverage: z.number(),
+      coverage_tone: z.string(),
+      asof: z.string(),
+      compare: z.string(),
+    })
+    .optional(),
+  kpis: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        value: z.string(),
+        scale: z.string(),
+        note: z.string(),
+        note_tone: z.string(),
+        delta: z.string(),
+        delta_tone: z.string(),
+        gauge: z.number().nullable(),
+      }),
+    )
+    .optional(),
+  filters: z
+    .object({
+      search: z.string(),
+      selects: z.array(z.object({ label: z.string(), value: z.string() })),
+      more: z.string(),
+    })
+    .optional(),
+  table: z
+    .object({
+      columns: z.array(z.string()),
+      count: z.string(),
+      pages: z.number(),
+      rows: z.array(
+        z.object({
+          name: z.string(),
+          type: z.string(),
+          type_tone: z.string(),
+          status: z.string(),
+          status_tone: z.string(),
+          version: z.string(),
+          score: z.string(),
+          success: z.string(),
+          halluc: z.string(),
+          last_run: z.string(),
+          owner: z.string(),
+          tests: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  watch: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      items: z.array(z.object({ title: z.string(), detail: z.string(), tone: z.string() })),
+    })
+    .optional(),
+  quick: z.object({ title: z.string(), items: z.array(z.string()) }).optional(),
+  trend: z
+    .object({
+      title: z.string(),
+      value: z.string(),
+      scale: z.string(),
+      legend: z.string(),
+      series: z.array(z.number()),
+    })
+    .optional(),
+  detail: z
+    .object({
+      name: z.string(),
+      id: z.string(),
+      status: z.string(),
+      tabs: z.array(z.string()),
+      description: z.string(),
+      fields: z.array(
+        z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
+      ),
+      results_title: z.string(),
+      results_cta: z.string(),
+      results: z.array(z.object({ label: z.string(), value: z.string() })),
+      results_more: z.string(),
+      rbac_title: z.string(),
+      rbac_cta: z.string(),
+      rbac: z.array(z.object({ role: z.string(), access: z.string() })),
+      rbac_more: z.string(),
+    })
+    .optional(),
+});
+export type AgentEvaluations = z.infer<typeof AgentEvaluationsSchema>;

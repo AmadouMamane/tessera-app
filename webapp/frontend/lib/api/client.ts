@@ -22,6 +22,8 @@ import {
   AgentConnaissancesSchema,
   type AgentConsole,
   AgentConsoleSchema,
+  type AgentEvaluations,
+  AgentEvaluationsSchema,
   type AgentGardeFous,
   AgentGardeFousSchema,
   type AgentPrompts,
@@ -1087,4 +1089,8 @@ export async function fetchAgentGardeFous(signal?: AbortSignal): Promise<AgentGa
 
 export async function fetchAgentPrompts(signal?: AbortSignal): Promise<AgentPrompts> {
   return request("/observability/agent-prompts", { signal }, AgentPromptsSchema);
+}
+
+export async function fetchAgentEvaluations(signal?: AbortSignal): Promise<AgentEvaluations> {
+  return request("/observability/agent-evaluations", { signal }, AgentEvaluationsSchema);
 }

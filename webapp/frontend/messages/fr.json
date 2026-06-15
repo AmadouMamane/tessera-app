@@ -4480,5 +4480,12 @@
     "loading": "Chargement des prompts…",
     "unavailable": "Prompts indisponibles.",
     "realtime": "Live"
+  },
+  "agentEvaluations": {
+    "title": "Évaluations",
+    "subtitle": "Mesurez, analysez et améliorez la qualité des réponses de l'assistant et des agents.",
+    "loading": "Chargement des évaluations…",
+    "unavailable": "Évaluations indisponibles.",
+    "realtime": "Live"
   }
 }
