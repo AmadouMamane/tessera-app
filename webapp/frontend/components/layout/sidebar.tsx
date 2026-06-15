@@ -403,7 +403,7 @@ function NavTreeNode({
       : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
   );
   return (
-    <li className={cn(depth === 0 && pinned ? "mt-4" : undefined)}>
+    <li className={cn(depth === 0 && pinned ? "mt-3" : undefined)}>
       {pinned ? (
         <div style={pad} className={cn(headerClass, "hover:text-[var(--tessera-text-muted)]")}>
           <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
