@@ -53,13 +53,22 @@ test("clicking a table row opens the detail drawer", async ({ page }) => {
 });
 
 test("Reconstituer at an early T re-queries the audit-derived diff", async ({ page }) => {
-  await page.locator('input[type="datetime-local"]').fill("2026-06-01T00:00");
+  // Reconstruct at an instant before the audit log starts (via a reference code):
+  // 0 decisions are logged by T, so the guardrails diff reports them all "apres T".
+  await page.getByPlaceholder(/ID de réponse/).fill("RES-2026-06-01-0000");
   await page.getByRole("button", { name: "Reconstituer" }).click();
-  // Before the audit log starts, 0 decisions are logged by T -> the guardrails
-  // diff reports every decision as logged "apres T".
   await expect(page.getByText(/décisions du guard journalisées après T/i).first()).toBeVisible({
     timeout: 15_000,
   });
+});
+
+test("the premium calendar opens and selects a day", async ({ page }) => {
+  await page.getByRole("button", { name: /^Maintenant/ }).first().click();
+  // The homemade popover (month grid + time input) is shown.
+  await expect(page.locator('input[type="time"]')).toBeVisible();
+  await page.getByRole("button", { name: "20", exact: true }).click();
+  // The trigger now reads the selected date instead of "Maintenant".
+  await expect(page.getByRole("button", { name: /20.*2026/ }).first()).toBeVisible();
 });
 
 test("the Reference field reconstructs at the encoded instant", async ({ page }) => {

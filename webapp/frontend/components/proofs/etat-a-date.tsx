@@ -21,7 +21,7 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -293,6 +293,179 @@ function Banner({ text, className }: { text: string; className?: string }) {
 }
 
 const CONTEXT_SOURCES = ["Réponse", "Session", "Trace", "Incident"];
+const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+/** Date -> "YYYY-MM-DDTHH:MM" (local), the datetime-local contract. */
+function fmtLocal(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+/** 42 day-cells (6 weeks) for a Monday-first month grid. */
+function monthGrid(month: Date): Date[] {
+  const first = startOfMonth(month);
+  const mondayOffset = (first.getDay() + 6) % 7;
+  const start = new Date(first.getFullYear(), first.getMonth(), first.getDate() - mondayOffset);
+  return Array.from(
+    { length: 42 },
+    (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i),
+  );
+}
+const sameDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+/** Premium date+time picker: a homemade calendar popover (no native picker). */
+function DateTimePicker({
+  t,
+  value,
+  onChange,
+  onLive,
+  isLive,
+}: {
+  t: T;
+  value: string;
+  onChange: (v: string) => void;
+  onLive: () => void;
+  isLive: boolean;
+}) {
+  const locale = useLocale();
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(open, () => setOpen(false));
+  const selected = value ? new Date(value) : null;
+  const [month, setMonth] = useState(() => startOfMonth(selected ?? new Date()));
+  useEffect(() => {
+    if (open) setMonth(startOfMonth(selected ?? new Date()));
+    // biome-ignore lint/correctness/useExhaustiveDependencies: only re-center when opening
+  }, [open]);
+
+  const days = useMemo(() => monthGrid(month), [month]);
+  const monthLabel = useMemo(
+    () => new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(month),
+    [locale, month],
+  );
+  const time = value ? value.slice(11, 16) : "12:00";
+  const today = new Date();
+
+  function pickDay(d: Date) {
+    const [hh = "12", mm = "00"] = time.split(":");
+    onChange(fmtLocal(new Date(d.getFullYear(), d.getMonth(), d.getDate(), +hh, +mm)));
+  }
+  function pickTime(value_: string) {
+    const base = selected ?? new Date();
+    const [hh = "12", mm = "00"] = value_.split(":");
+    onChange(fmtLocal(new Date(base.getFullYear(), base.getMonth(), base.getDate(), +hh, +mm)));
+  }
+
+  const live = isLive && !selected;
+  const trigger =
+    selected != null
+      ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(selected)
+      : t("now");
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex h-9 w-[15rem] items-center gap-2 rounded-md border bg-[var(--tessera-bg)] px-2.5 text-left text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-[#7c5cf5]/60",
+          selected ? "border-[#7c5cf5]/60" : "border-[var(--tessera-border)]",
+        )}
+      >
+        <CalendarDays className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+        <span className="truncate text-[var(--tessera-text)]">{trigger}</span>
+        {live ? (
+          <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+        ) : (
+          <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+        )}
+      </button>
+      {open ? (
+        <div className="absolute left-0 z-50 mt-1 w-[19rem] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.42)]">
+          <div className="mb-2 flex items-center justify-between">
+            <button
+              type="button"
+              aria-label={t("prevMonth")}
+              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+              className="grid h-7 w-7 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-[0.8rem] font-semibold capitalize text-[var(--tessera-text)]">
+              {monthLabel}
+            </span>
+            <button
+              type="button"
+              aria-label={t("nextMonth")}
+              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+              className="grid h-7 w-7 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-[0.6rem] font-medium uppercase text-[var(--tessera-text-muted)]">
+            {WEEKDAYS.map((d, i) => (
+              <span key={`${d}-${i}`}>{d}</span>
+            ))}
+          </div>
+          <div className="mt-1 grid grid-cols-7 gap-1">
+            {days.map((d) => {
+              const inMonth = d.getMonth() === month.getMonth();
+              const isSel = selected ? sameDay(d, selected) : false;
+              const isToday = sameDay(d, today);
+              return (
+                <button
+                  key={fmtLocal(d)}
+                  type="button"
+                  onClick={() => pickDay(d)}
+                  className={cn(
+                    "h-7 rounded-md text-[0.72rem] tabular-nums transition-colors",
+                    isSel
+                      ? "bg-[#6d4aed] font-semibold text-white"
+                      : "hover:bg-[var(--tessera-surface)]",
+                    !isSel && inMonth ? "text-[var(--tessera-text)]" : "",
+                    !isSel && !inMonth ? "text-[var(--tessera-text-muted)]/50" : "",
+                    !isSel && isToday ? "ring-1 ring-inset ring-[#7c5cf5]/60" : "",
+                  )}
+                >
+                  {d.getDate()}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] pt-3">
+            <label className="flex items-center gap-2 text-[0.72rem] text-[var(--tessera-text-muted)]">
+              <Clock className="h-3.5 w-3.5" />
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => pickTime(e.target.value)}
+                aria-label={t("dateTime")}
+                className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-1 text-[var(--tessera-text)] outline-none [color-scheme:dark]"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                onLive();
+                setOpen(false);
+              }}
+              className="flex items-center gap-1 rounded-md border border-[var(--tessera-border)] px-2.5 py-1 text-[0.7rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            >
+              <Clock className="h-3 w-3" /> {t("now")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function ControlBar({
   t,
@@ -334,57 +507,7 @@ function ControlBar({
         onChange={() => undefined}
       />
       <Field label={t("dateTime")}>
-        {/* Premium date+time field: a styled shell + dark-scheme native picker. */}
-        <div
-          className={cn(
-            "flex h-9 items-center gap-2 rounded-md border bg-[var(--tessera-bg)] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors focus-within:border-[#7c5cf5]",
-            isLive ? "border-[var(--tessera-border)]" : "border-[#7c5cf5]/60",
-          )}
-        >
-          <button
-            type="button"
-            aria-hidden
-            tabIndex={-1}
-            onClick={(e) => {
-              const input = e.currentTarget.parentElement?.querySelector(
-                'input[type="datetime-local"]',
-              ) as (HTMLInputElement & { showPicker?: () => void }) | null;
-              input?.showPicker?.();
-            }}
-            className="shrink-0 text-[#b9a6ff]"
-          >
-            <CalendarDays className="h-4 w-4" />
-          </button>
-          <input
-            type="datetime-local"
-            value={draft}
-            onChange={(e) => onDraft(e.target.value)}
-            onClick={(e) => {
-              const el = e.currentTarget as HTMLInputElement & { showPicker?: () => void };
-              try {
-                el.showPicker?.();
-              } catch {
-                /* showPicker can throw if not allowed; the native indicator still works */
-              }
-            }}
-            aria-label={t("dateTime")}
-            className="w-[12.5rem] cursor-pointer bg-transparent text-sm text-[var(--tessera-text)] outline-none [color-scheme:dark]"
-          />
-          {isLive ? (
-            <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[0.58rem] font-medium text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> live
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={onLive}
-              title={t("now")}
-              className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.58rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <Clock className="h-3 w-3" /> {t("now")}
-            </button>
-          )}
-        </div>
+        <DateTimePicker t={t} value={draft} onChange={onDraft} onLive={onLive} isLive={isLive} />
       </Field>
       <Field label={t("reference")}>
         <input
