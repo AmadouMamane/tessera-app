@@ -140,6 +140,29 @@ it dirty.
   object → `details` array, or add `fresh_days`/`attachable`), update the schema
   or the data is silently stripped after parse.
 
+## Round-3 skills (real usage data + tabs)
+
+- **Detail tabs must drive content.** A tab strip whose `tab` state doesn't gate
+  the rendered sections is a fake — clicking "Reponses ancrees"/"Parametres"
+  showed nothing. Gate each section with `tab === d.tabs[i]`; keep always-on
+  actions (detach/toggle) outside the gate so they stay reachable.
+- **Generate real traffic to fill usage data.** "Reponses ancrees" / "Derniere
+  utilisation" have no source until the agent is exercised. `scripts/
+  generate_traffic.py` runs realistic EU-banking questions through the live
+  retrieval store (`embed` + `knn_search`, cosine >= 0.55) and records, per
+  source, the grounded questions + timestamp to `knowledge_traffic.json`; the
+  backend reads it. For true response logging, the durable transcript
+  (`memory/transcript.py`) and the OTel/Phoenix/Langfuse instrumentation
+  (`observability/instrument.py`, `traces.py`) are the richer sources — wire
+  those when you need full request/response traces, not just retrieval hits.
+- **Parametres from real config, no run needed.** Fill a "settings" tab from the
+  actual config (embedding model `bge-m3`, dim 1024, cosine, top-k, corpus,
+  languages) — cheap and fully real.
+- **TODO / next on Connaissances:** turn the fixed right panel into a
+  click-to-open **drawer** like `/prouver/audit-logs` (`components/audit/
+  audit-table.tsx` uses an `absolute inset-0 z-30 flex justify-end` overlay) so
+  the detail slides over on row-click instead of occupying a fixed column.
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** Connaissances (pgvector inventory, durable
