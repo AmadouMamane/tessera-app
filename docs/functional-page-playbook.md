@@ -177,6 +177,41 @@ it dirty.
   mutation route returns the localized payload). `page.tsx` prefetch must use the
   same `["key", locale]` queryKey and `?lang=` or hydration won't match.
 
+## Round-7 skills (metric honesty, mutation errors, drawer anchoring, accents)
+
+- **A label must compute what it says.** The "Couverture" column actually
+  computed `chunks/max_chunks` (volume share vs the biggest source), not query
+  coverage. Renamed to "Volume" + recomputed as the real corpus share
+  (`chunks/total`). Same for the KPI "Couverture des requetes" -> "Couverture des
+  sources" (it measures the share of sources cited >=1x, not a per-query figure).
+  If a value can't be sourced for the label, change the label, don't fake the value.
+- **Don't duplicate a metric under a new name.** Per-source "query coverage" IS
+  the existing citation rate (same probe number) - adding a second column would be
+  a misleading twin. Surface the genuinely-distinct **absolute hit count** in the
+  detail (Usage), not as a redundant table column. The three retrieval metrics are
+  distinct: per-source **citation** (% queries hitting this source), global
+  **source coverage** (% sources ever hit), global **hit-rate** (% queries that hit
+  anything).
+- **Mutations need an `onError`.** Attach/detach/toggle that only had `onSuccess`
+  failed silently; add an `onError` -> inline alert banner (i18n key).
+- **Full-height overlay drawer anchored to the content area.** The right pattern,
+  distilled from several wrong turns: keep the page root **content-sized** (so no
+  empty gap under a short table), and position the drawer overlay `fixed` with a
+  runtime-measured rect of `<main>` (`getBoundingClientRect` on open + resize) -
+  `top` = the agent **tab strip** bottom (`[data-agent-tabs]`), `left/width/bottom`
+  = `<main>`. Result: full content-area height regardless of row count, **below the
+  header AND the page tab strip** (both are persistent nav chrome, like the audit
+  page), not over the sidebar. Wrong turns to avoid: `absolute inset-0` on a
+  content-sized root (drawer too short when few rows); `fixed inset-0` (covers the
+  header/nav). Float it: overlay `p-2.5` + panel `rounded-lg border` + soft shadow
+  for a small inset gap rather than edge-to-edge. Non-modal `<dialog open>` needs a
+  manual Escape handler AND a Tab focus-trap (query focusables, cycle first/last).
+- **French needs accents; ruff is fine with them.** Backend French was emitted
+  accent-free; add proper accents (Resilience -> Résilience, Desactivee ->
+  Désactivée, Credit -> Crédit) and German umlauts. `RUF001/2/3` only flag
+  *confusable* characters (fancy quotes, en-dash, Cyrillic look-alikes), NOT
+  accented Latin or umlauts - keep apostrophes ASCII (`'`) and you pass.
+
 ## Round-5 skills (robustness, a11y, sort, chips)
 
 - **One `useDismiss(open, onClose)` hook for every popover.** Custom dropdowns
