@@ -229,9 +229,19 @@ export function EtatADate() {
               <Original data={data} className="md:col-span-2" />
             </div>
             <div className="grid gap-2.5 md:grid-cols-3">
-              <GovCardView t={t} card={data.guardrails} icon={ShieldCheck} />
-              <GovCardView t={t} card={data.prompt_model} icon={Terminal} />
-              <GovCardView t={t} card={data.release} icon={Package} />
+              <GovCardView
+                t={t}
+                card={data.guardrails}
+                icon={ShieldCheck}
+                iconClass="text-emerald-400"
+              />
+              <GovCardView
+                t={t}
+                card={data.prompt_model}
+                icon={Terminal}
+                iconClass="text-amber-400"
+              />
+              <GovCardView t={t} card={data.release} icon={Package} iconClass="text-cyan-400" />
             </div>
             <SourcesTable
               t={t}
@@ -448,12 +458,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Panel({
   title,
   icon: Icon,
+  iconClass = "text-[#b9a6ff]",
   right,
   children,
   className,
 }: {
   title: string;
   icon?: typeof ShieldCheck;
+  iconClass?: string;
   right?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
@@ -467,7 +479,7 @@ function Panel({
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-[0.78rem] font-semibold text-[var(--tessera-text)]">
-          {Icon ? <Icon className="h-4 w-4 text-[#b9a6ff]" /> : null}
+          {Icon ? <Icon className={cn("h-4 w-4", iconClass)} /> : null}
           {title}
         </h2>
         {right}
@@ -500,6 +512,7 @@ function Reconstructed({ data, className }: { data: Data; className?: string }) 
     <Panel
       title={r.title}
       icon={FileText}
+      iconClass="text-violet-300"
       right={<VerifiedBadge ok={r.verified} label={r.verified_label} />}
       className={className}
     >
@@ -516,7 +529,7 @@ function Original({ data, className }: { data: Data; className?: string }) {
   const o = data.original;
   if (!o) return null;
   return (
-    <Panel title={o.title} icon={MessageSquare} className={className}>
+    <Panel title={o.title} icon={MessageSquare} iconClass="text-sky-400" className={className}>
       <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
         Référence · <span className="font-mono">{o.ref_code}</span>
       </p>
@@ -557,11 +570,18 @@ function GovCardView({
   t,
   card,
   icon,
+  iconClass,
   className,
-}: { t: T; card?: GovCard; icon: typeof ShieldCheck; className?: string }) {
+}: {
+  t: T;
+  card?: GovCard;
+  icon: typeof ShieldCheck;
+  iconClass?: string;
+  className?: string;
+}) {
   if (!card) return null;
   return (
-    <Panel title={card.title} icon={icon} className={className}>
+    <Panel title={card.title} icon={icon} iconClass={iconClass} className={className}>
       <dl className="flex flex-col gap-1.5 text-[0.72rem]">
         {card.rows.map((r) => (
           <div key={r.label} className="flex h-[1.15rem] items-center justify-between gap-2">
@@ -612,7 +632,7 @@ function Chronology({ data, className }: { data: Data; className?: string }) {
   const tl = data.timeline;
   if (!tl) return null;
   return (
-    <Panel title={tl.title} icon={History} className={className}>
+    <Panel title={tl.title} icon={History} iconClass="text-fuchsia-400" className={className}>
       {tl.rows.length === 0 ? (
         <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">Aucun événement à T.</p>
       ) : (
@@ -671,7 +691,7 @@ function Integrity({ data }: { data: Data }) {
     ["Journalisation", it.chain_label],
   ];
   return (
-    <Panel title={it.title} icon={ShieldCheck}>
+    <Panel title={it.title} icon={ShieldCheck} iconClass="text-emerald-400">
       <dl className="flex flex-col gap-1.5 text-[0.72rem]">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-center justify-between gap-2">
@@ -693,7 +713,7 @@ function AuditPieces({ data, className }: { data: Data; className?: string }) {
   const a = data.audit_pieces;
   if (!a) return null;
   return (
-    <Panel title={a.title} icon={FileText} className={className}>
+    <Panel title={a.title} icon={FileText} iconClass="text-blue-400" className={className}>
       <ul className="flex flex-col gap-2">
         {a.rows.map((r) => (
           <li key={r.href}>
@@ -1200,7 +1220,7 @@ function Snapshots({ data, onReload }: { data: Data; onReload: (asOf: string | n
   const s = data.snapshots;
   if (!s) return null;
   return (
-    <Panel title={s.title} icon={Bookmark}>
+    <Panel title={s.title} icon={Bookmark} iconClass="text-rose-400">
       {s.rows.length === 0 ? (
         <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">{t("noSnapshots")}</p>
       ) : (
