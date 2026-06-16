@@ -1134,8 +1134,8 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
         <>
           <p
             className={cn(
-              "mt-1.5 border-l-2 border-[var(--tessera-border)] pl-2.5 text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]",
-              clampable && !open && "line-clamp-3",
+              "mt-1 text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]",
+              clampable && !open && "line-clamp-2",
             )}
           >
             {answer}
@@ -1144,7 +1144,7 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
             <button
               type="button"
               onClick={() => setOpen((o) => !o)}
-              className="mt-1 pl-2.5 text-[0.64rem] font-medium text-[#5fd0c6] hover:text-[#8fe3db]"
+              className="mt-1 text-[0.64rem] font-medium text-[#5fd0c6] hover:text-[#8fe3db]"
             >
               {open ? t("showLess") : t("showMore")}
             </button>
