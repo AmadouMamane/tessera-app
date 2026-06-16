@@ -451,10 +451,17 @@ function Chronology({ data, className }: { data: Data; className?: string }) {
       ) : (
         <ul className="flex flex-col gap-2.5">
           {tl.rows.map((r, i) => (
-            <li key={`${r.time}-${i}`} className="flex gap-2.5 text-[0.72rem]">
+            <li key={`${r.time}-${i}`} className="relative flex gap-2.5 text-[0.72rem]">
+              {/* connecting thread between the dots (skip after the last) */}
+              {i < tl.rows.length - 1 ? (
+                <span
+                  aria-hidden
+                  className="absolute top-[7px] left-[2.5px] h-[calc(100%+0.625rem)] w-px bg-[var(--tessera-border)]"
+                />
+              ) : null}
               <span
                 className={cn(
-                  "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
+                  "z-10 mt-1 h-1.5 w-1.5 shrink-0 rounded-full ring-2 ring-[var(--tessera-surface)]",
                   KIND_DOT[r.kind] ?? "bg-slate-400",
                 )}
               />
