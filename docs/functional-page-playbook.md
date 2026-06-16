@@ -61,12 +61,16 @@ These are mandatory and override the normative screenshots:
     range readout + the "Aller a une date" calendar popover. This is the shared
     premium calendar; do not re-implement a month grid.
   - *Instant (date + time)* (Etat a date, where T carries an hour like 16:20): a
-    day-only window picker is the WRONG type. Keep a `datetime-local` input but
-    make it **premium by appearance**: wrap it in a styled shell (`h-9` border +
-    inset shadow + a `CalendarDays` icon), force the native picker dark with
-    `className="[color-scheme:dark]"`, and add a live/now affordance. Do NOT
-    force `WindowControl` onto an instant — it has no time and its range readout
-    is meaningless for a single T.
+    day-only window picker is the WRONG type, and the **native `datetime-local`
+    looks cheap even when shelled/`[color-scheme:dark]`** — so build a small
+    **homemade date+time popover**: a styled trigger (CalendarDays icon +
+    Intl-formatted value or "Maintenant" with a live dot), a Monday-first month
+    grid (`monthGrid` of 42 cells, prev/next nav, today ring, selected = violet,
+    out-of-month dimmed — same look as `window-control`), a `type="time"` input,
+    and a "Maintenant" reset. Feed the same `draft` "YYYY-MM-DDTHH:MM" so the
+    commit path (Reconstituer / reference code) is unchanged. Close on
+    outside-click via the shared `useDismiss`. Do NOT force `WindowControl` onto
+    an instant — it has no time and its range readout is meaningless for one T.
 - **FRENCH MUST CARRY ITS ACCENTS — backend strings AND hardcoded frontend
   strings.** "Réglementation", "État reconstruit à T", "Réponse d'origine",
   "Intégrité vérifiée", "Règles déclenchées", "décisions journalisées", "Requête
@@ -643,6 +647,46 @@ it dirty.
   empty states (`rows.length === 0 -> <EmptyRow/>`) on the transcript-fed cards
   so a narrow period window degrades gracefully (new i18n key `empty` x3 locales).
 
+## Round-15 skills (Etat a date: as-of reconstruction + premium polish)
+
+- **As-of-T from the streams that actually have history.** The corpus is one
+  ingest batch (no real version history), so reconstruct point-in-time state from
+  the streams that DO carry time: the guard **audit log** (`occurred_at`, real
+  multi-day stream) and the **transcript** (the anchored "original response" =
+  the real Q->A at/<= T). Knowledge accessibility flips at the single ingest
+  boundary; say so, don't fabricate per-source versions.
+- **"Diff vs current" must be a real two-point computation, never invented
+  version numbers.** Compare T against now from real signals: decisions logged
+  after T (`audit_total - decisions_at_T`), file mtime vs T (prompt/policy
+  changed after T?), eval `run_at` vs T. Emit each line **typed** `{kind, text}`
+  with kind in `added|removed|changed|unchanged`, and render a colour-coded glyph
+  (`+` emerald / `-` red / `~` amber / `=` muted) — the normative diff has a
+  colour code, not plain bullets.
+- **Homogenise a row of cards so separators line up.** Equal-height cards (grid
+  `items-stretch`) is not enough — give each card the **same number of rows** and
+  make every row a single fixed-height line (`dt` whitespace-nowrap + `dd`
+  truncate) so the mid-card separator ("Diff vs etat actuel") sits at the same y
+  across all cards; bottom-align the CTAs with `mt-auto`. Drop/relabel rows to
+  reach a common count (e.g. add a real "Statut vs actuel" to fill a 5th row)
+  rather than leaving ragged cards.
+- **Match the normative's icons, and give each card icon its own colour.** Read
+  the normative glyphs (FileText / MessageSquare / ShieldCheck / Terminal /
+  Package / History / Bookmark) instead of one generic icon, and pass a per-card
+  `iconClass` (violet / sky / emerald / amber / cyan / fuchsia / rose...) so the
+  header logos are visually distinct, not a uniform violet.
+- **Place page-level actions without wasting a row.** The shared `Topbar`
+  `actions` only do predefined behaviours (no client handlers), and a dedicated
+  buttons row wastes vertical space. Put "save / export" type actions on the
+  **right of an existing row** (e.g. the honesty banner row, `flex` with the
+  banner `flex-1`); keep the primary action (Reconstituer) inline at the end of
+  the field row so it stays on the same line as Tenant/Agent.
+- **The Topbar description is single-line (`truncate`).** Page subtitles must be
+  short or they get cut ("... une heure do"). Keep the one-liner terse; let a
+  banner carry the long explanation.
+- **Section-header right slot.** A `Panel` that needs a status chip on the title
+  line (e.g. "Integrite verifiee" next to "Etat reconstitue a T") takes a `right`
+  prop rendered in the header flex row — don't drop the badge below the content.
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** A faire + A traiter (shared `operator_items` backlog =
@@ -677,4 +721,9 @@ it dirty.
   timeline from file mtimes/ingest/eval; CTAs + quick-config are real `Link`s;
   `tests/unit/test_agent_synthese.py` + `e2e/synthese.spec.ts`).
 - **Real data (read-only):** Evaluations, Historique (eval run).
+- **Real + functional (prouver):** Etat a date (`/prouver/etat-a-date`) -
+  point-in-time reconstruction: original Q->A from the transcript at T, guard /
+  prompt&model / release cards with real two-point diffs, sources-at-T table
+  (Connaissances treatment + drawer), durable snapshots, premium homemade
+  calendar; `tests/unit/test_etat_a_date.py` + `e2e/etat-a-date.spec.ts`.
 - **Still fixture / blocked:** Other pages' filters/exports/RBAC are static.
