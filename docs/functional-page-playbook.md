@@ -105,6 +105,35 @@ it dirty.
   statements (PLR0915); move runtime-unused typing imports under
   `TYPE_CHECKING` (TCH003).
 - `pyvector`/`eval/` are not in the strict mypy gate; `src/tessera/**` is.
+- The Next dev server (3390) can be killed by the parallel process - if Playwright
+  hits `ERR_CONNECTION_REFUSED`, relaunch it (see above) before debugging.
+- Playwright on these pages: (1) a label rendered uppercase via CSS `uppercase`
+  keeps its **lowercase DOM text** - match `getByRole({name:"de"})`, not `"DE"`,
+  and `exact:true` is case-sensitive; (2) `getByRole(name)` is a **case-insensitive
+  substring** match - searching "Filtres" also matches "Reinitialiser les filtres"
+  (strict-mode violation) - use `.first()` or the exact name; (3) the **first
+  compile of a Next dev route is slow** - the first `click()` can time out, so warm
+  the route (longer `waitForTimeout`) before asserting.
+
+## Round-4 skills (drawer, real traces, filters, table widths)
+
+- **Detail panel -> drawer.** See the DONE notes under Round-3 (root `relative
+  overflow-hidden`, full-width table, `absolute inset-0 z-30` backdrop + `<dialog>`,
+  no `?? details[0]` fallback so nothing opens until a row click).
+- **Expandable long text.** Don't lengthen a truncation (still cut off) or always
+  show everything (kills density). Store the full text in the payload, render with
+  `line-clamp-3` + a "Voir plus / Voir moins" toggle gated on `text.length > N`.
+- **Dead button -> advanced-filters popover.** A button with no `onClick` is a
+  failure. Wire it to real extra axes absent from the inline dropdowns (langue,
+  couverture minimale, "avec echanges ancres") with a live count badge.
+- **A reset labelled "all" must reset all.** "Reinitialiser les filtres" first
+  cleared only the popover filters - inconsistent with the inline dropdowns. Make
+  it global (search + inline + advanced) and show it whenever ANY filter is active.
+- **Uniform column widths = `table-fixed` + per-`<th>` `style={{width}}`.** A
+  `w-full` auto-layout table sizes columns to content and looks arbitrary. Apply
+  `table-fixed` and explicit widths summing to 100% (Connaissances: Source 32 /
+  Type 18 / Statut 12 / Couverture 14 / Fraicheur 12 / Taux 12). Tailwind
+  `w-[X%]` classes are unreliable here; inline `style` on `<th>` works.
 
 ## Round-2 skills (premium polish, learned on Connaissances)
 

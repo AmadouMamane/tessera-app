@@ -553,6 +553,9 @@ function AdvancedFilters({
   );
 }
 
+// Fixed column widths (Source, Type, Statut, Couverture, Fraicheur, Taux de citation).
+const COL_WIDTHS = ["32%", "18%", "12%", "14%", "12%", "12%"] as const;
+
 function SourcesTable({
   data,
   rows,
@@ -571,12 +574,13 @@ function SourcesTable({
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] border-collapse text-left">
+        <table className="w-full min-w-[640px] table-fixed border-collapse text-left">
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.64rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => (
                 <th
                   key={c}
+                  style={{ width: COL_WIDTHS[i] }}
                   className={cn("px-3 py-2 font-medium", i === 0 ? "" : "whitespace-nowrap")}
                 >
                   {c}
