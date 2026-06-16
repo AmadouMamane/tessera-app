@@ -191,7 +191,7 @@ export function AgentConnaissances() {
   if (minCov > 0)
     chips.push({
       key: "cov",
-      label: `${t("coverageMin")}: ${t("coverageGte", { n: minCov })}`,
+      label: `${t("volumeMin")}: ${t("coverageGte", { n: minCov })}`,
       onRemove: () => setMinCov(0),
     });
   if (groundedOnly)
@@ -688,7 +688,7 @@ function AdvancedFilters({
 
           <div className="mb-3">
             <p className="mb-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {t("coverageMin")}
+              {t("volumeMin")}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {COVERAGE_STEPS.map((c) => {

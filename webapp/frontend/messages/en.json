@@ -4489,7 +4489,6 @@
     "filterStatut": "Status",
     "filterType": "Type",
     "filterPeriode": "Period",
-    "coverageMin": "Minimum coverage",
     "coverageAll": "All",
     "coverageGte": "≥ {n}%",
     "langLabel": "Language",
@@ -4507,7 +4506,8 @@
     "rowsPerPage": "Rows per page",
     "prevPage": "Previous page",
     "nextPage": "Next page",
-    "paramsFallback": "Parameters"
+    "paramsFallback": "Parameters",
+    "volumeMin": "Minimum volume"
   },
   "agentGardeFous": {
     "title": "Guardrails",

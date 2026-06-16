@@ -4489,7 +4489,6 @@
     "filterStatut": "Statut",
     "filterType": "Type",
     "filterPeriode": "Période",
-    "coverageMin": "Couverture minimale",
     "coverageAll": "Toutes",
     "coverageGte": "≥ {n}%",
     "langLabel": "Langue",
@@ -4507,7 +4506,8 @@
     "rowsPerPage": "Lignes par page",
     "prevPage": "Page précédente",
     "nextPage": "Page suivante",
-    "paramsFallback": "Paramètres"
+    "paramsFallback": "Paramètres",
+    "volumeMin": "Volume minimal"
   },
   "agentGardeFous": {
     "title": "Garde-fous",

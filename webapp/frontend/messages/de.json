@@ -4489,7 +4489,6 @@
     "filterStatut": "Status",
     "filterType": "Typ",
     "filterPeriode": "Zeitraum",
-    "coverageMin": "Mindestabdeckung",
     "coverageAll": "Alle",
     "coverageGte": "≥ {n}%",
     "langLabel": "Sprache",
@@ -4507,7 +4506,8 @@
     "rowsPerPage": "Zeilen pro Seite",
     "prevPage": "Vorherige Seite",
     "nextPage": "Nächste Seite",
-    "paramsFallback": "Parameter"
+    "paramsFallback": "Parameter",
+    "volumeMin": "Mindestvolumen"
   },
   "agentGardeFous": {
     "title": "Leitplanken",
