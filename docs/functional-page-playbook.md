@@ -106,6 +106,40 @@ it dirty.
   `TYPE_CHECKING` (TCH003).
 - `pyvector`/`eval/` are not in the strict mypy gate; `src/tessera/**` is.
 
+## Round-2 skills (premium polish, learned on Connaissances)
+
+- **Premium KPI tile.** Don't cram the sparkline to the right of the value.
+  Reuse `components/overview/metric-sparkline.tsx` (`MetricSparkline`,
+  full-width, `tone` from `@/lib/overview`) and lay the tile out as: icon+label
+  row, big value, then the **full-width** sparkline pinned to the bottom
+  (`mt-auto`). `components/cockpit/metric-card.tsx` is the canonical version.
+- **Row-click → detail selection.** Backend returns a `details` list (one entry
+  per row, each with a `key`). Frontend holds a `selected` key; compute
+  `detail = details.find(d => d.key === selected) ?? details[0]`; row
+  `onClick={() => onSelect(r.key)}` + highlight the selected row; put
+  `key={detail?.key}` on the detail `<section>` so its internal tab state resets
+  when you switch source.
+- **Dropdown filters, not cycle buttons.** When the user expects a list, build a
+  reusable `FilterDropdown({label,value,options,onSelect})` (open state +
+  absolute menu). Cycle-on-click is a stopgap.
+- **Functional time filter without a time axis.** Add a numeric `fresh_days`
+  per row; filter `fresh_days <= selectedDays`; show an honest empty state when
+  nothing is fresh enough (don't fake rows).
+- **Distribution-as-curve.** No time series (single ingest batch) → plot a real
+  per-entity distribution (per-source chunks / citation / hits). Never
+  `[value]*7`.
+- **Match the normative labels with real values.** Keep the normative field
+  labels ("Taux de citation", "Couverture des requêtes", "Dernière …") and fill
+  them from the real source; substitute an unsourced field with the closest real
+  fact (e.g. "Réponses ancrées" → real document locators, "Dernière utilisation"
+  → real `inserted_at` date) rather than dropping or faking it.
+- **Map each action label to its real route.** "Gérer le catalogue" →
+  `/configurer/signal-catalog`, "Sources & mémoire" / "Voir la fiche complète" →
+  `/configurer/sources-memoire`. Dead buttons are a failure.
+- **zod is non-strict** — when you change a payload field shape (e.g. `detail`
+  object → `details` array, or add `fresh_days`/`attachable`), update the schema
+  or the data is silently stripped after parse.
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** Connaissances (pgvector inventory, durable

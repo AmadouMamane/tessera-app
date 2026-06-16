@@ -314,11 +314,15 @@ def _build_detail(
         ),
         "usage_title": "Utilisation par cet agent",
         "usage": [
+            {"label": "Taux de citation", "value": str(row["citation"])},
+            {"label": "Couverture des requetes", "value": f"{row['coverage']}%"},
             {"label": "Chunks indexes", "value": str(agg.chunks[cat])},
             {"label": "Documents", "value": str(len(agg.docs[cat]))},
             {"label": "Langues", "value": ", ".join(sorted(agg.langs[cat]))},
-            {"label": "Couverture du corpus", "value": f"{row['coverage']}%"},
-            {"label": "Taux de citation", "value": str(row["citation"])},
+            {
+                "label": "Derniere indexation",
+                "value": agg.freshest[cat].strftime("%d/%m/%Y") if cat in agg.freshest else "-",
+            },
         ],
         "answers_title": "Documents ancres (locators reels)",
         "answers": [{"text": loc, "time": ""} for loc in locs[:4]],
