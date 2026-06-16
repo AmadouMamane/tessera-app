@@ -202,7 +202,7 @@ async def build_connaissances() -> dict[str, object]:
     agg = _aggregate(await _fetch_rows())
     chunks, freshest, docs = agg.chunks, agg.freshest, agg.docs
 
-    max_chunks = max(chunks.values(), default=1)
+    total_chunks = sum(chunks.values()) or 1
     cats_probe = probe.get("categories")
     cats_probe = cats_probe if isinstance(cats_probe, dict) else {}
     overall = probe.get("_overall")
@@ -242,7 +242,8 @@ async def build_connaissances() -> dict[str, object]:
                 "type_tone": type_tone,
                 "status": "Active" if active else "Desactivee",
                 "status_tone": "good" if active else "off",
-                "coverage": round(100 * chunks[cat] / max_chunks),
+                # Real share of the indexed corpus by chunk volume (sums to ~100%).
+                "coverage": round(100 * chunks[cat] / total_chunks),
                 "freshness": _freshness(now, freshest[cat]) if cat in freshest else "-",
                 "fresh_days": (now - freshest[cat]).days if cat in freshest else 9999,
                 "citation": f"{round(cite_pct)}%" if cite_pct is not None else "-",
@@ -315,7 +316,7 @@ async def build_connaissances() -> dict[str, object]:
             "more": "Filtres",
         },
         "table": {
-            "columns": ["Source", "Type", "Statut", "Couverture", "Fraicheur", "Taux de citation"],
+            "columns": ["Source", "Type", "Statut", "Volume", "Fraicheur", "Taux de citation"],
             "rows": rows_out,
             "count": f"1-{len(rows_out)} sur {len(rows_out)} sources",
         },
@@ -379,7 +380,7 @@ def _build_detail(
         "usage_title": "Utilisation par cet agent",
         "usage": [
             {"label": "Taux de citation", "value": str(row["citation"])},
-            {"label": "Couverture des requetes", "value": f"{row['coverage']}%"},
+            {"label": "Part du corpus", "value": f"{row['coverage']}%"},
             {"label": "Reponses ancrees", "value": str(grounded)},
             {"label": "Derniere utilisation", "value": last_used},
             {"label": "Chunks indexes", "value": str(agg.chunks[cat])},

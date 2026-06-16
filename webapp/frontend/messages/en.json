@@ -4476,7 +4476,8 @@
     "title": "Knowledge",
     "subtitle": "The sources this agent is grounded on.",
     "loading": "Loading knowledge…",
-    "unavailable": "Knowledge unavailable."
+    "unavailable": "Knowledge unavailable.",
+    "mutationError": "Action failed: the source could not be updated. Please try again."
   },
   "agentGardeFous": {
     "title": "Guardrails",

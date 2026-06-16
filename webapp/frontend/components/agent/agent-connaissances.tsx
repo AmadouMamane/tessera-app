@@ -93,6 +93,7 @@ const PERIOD_OPTS = [
 
 export function AgentConnaissances() {
   const t = useTranslations("agentConnaissances");
+  const tCommon = useTranslations("common");
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["agent-connaissances"],
@@ -108,9 +109,14 @@ export function AgentConnaissances() {
   const [minCov, setMinCov] = useState(0);
   const [groundedOnly, setGroundedOnly] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const [mutError, setMutError] = useState<string | null>(null);
   const mut = useMutation({
     mutationFn: mutateConnaissancesSource,
-    onSuccess: (fresh) => qc.setQueryData(["agent-connaissances"], fresh),
+    onSuccess: (fresh) => {
+      setMutError(null);
+      qc.setQueryData(["agent-connaissances"], fresh);
+    },
+    onError: () => setMutError(t("mutationError")),
   });
 
   if (!data) return <ConnaissancesSkeleton />;
@@ -200,6 +206,23 @@ export function AgentConnaissances() {
           </>
         }
       />
+
+      {mutError ? (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-[0.74rem] text-red-200"
+        >
+          <span>{mutError}</span>
+          <button
+            type="button"
+            aria-label={tCommon("close")}
+            onClick={() => setMutError(null)}
+            className="flex h-5 w-5 items-center justify-center rounded text-red-200/80 hover:text-white"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-5">
         {(data.kpis ?? []).map((k, i) => (
@@ -696,7 +719,7 @@ type SortDir = "asc" | "desc";
 // Sort value per column label; null always sorts last regardless of direction.
 function sortValue(column: string, r: RowT): number | string | null {
   switch (column) {
-    case "Couverture":
+    case "Volume":
       return r.coverage;
     case "Fraicheur":
       return r.fresh_days ?? null;
@@ -936,7 +959,7 @@ function Pagination({
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
-      <span className="tabular-nums">
+      <span className="tabular-nums" aria-live="polite">
         Afficher {start} - {end} sur {total}
       </span>
       <div className="flex items-center gap-1">
@@ -1123,14 +1146,35 @@ function DetailPanel({
   const tCommon = useTranslations("common");
   const [tab, setTab] = useState(detail.tabs[0] ?? "Usage");
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => closeRef.current?.focus(), []);
+  // Keep Tab focus inside the drawer (the native <dialog open> is not modal).
+  const onTrapKey = (event: React.KeyboardEvent<HTMLDialogElement>) => {
+    if (event.key !== "Tab" || !dialogRef.current) return;
+    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      'button, a[href], select, input, [tabindex]:not([tabindex="-1"])',
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
   const d = detail;
   const key = d.key;
   return (
     <dialog
       open
+      ref={dialogRef}
       aria-modal="true"
       aria-label={d.name}
+      onKeyDown={onTrapKey}
       className="static m-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden border-0 border-l border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0 text-[var(--tessera-text)] shadow-[-24px_0_60px_rgba(0,0,0,0.35)]"
       onCancel={(event) => {
         event.preventDefault();

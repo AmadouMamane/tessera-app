@@ -4476,7 +4476,8 @@
     "title": "Wissen",
     "subtitle": "Die Quellen, auf denen dieser Agent verankert ist.",
     "loading": "Wissen wird geladen…",
-    "unavailable": "Wissen nicht verfügbar."
+    "unavailable": "Wissen nicht verfügbar.",
+    "mutationError": "Aktion fehlgeschlagen: Die Quelle konnte nicht aktualisiert werden. Bitte erneut versuchen."
   },
   "agentGardeFous": {
     "title": "Leitplanken",

@@ -4476,7 +4476,8 @@
     "title": "Connaissances",
     "subtitle": "Les sources sur lesquelles cet agent est ancré.",
     "loading": "Chargement des connaissances…",
-    "unavailable": "Connaissances indisponibles."
+    "unavailable": "Connaissances indisponibles.",
+    "mutationError": "Action impossible : la mise a jour de la source a echoue. Reessayez."
   },
   "agentGardeFous": {
     "title": "Garde-fous",
