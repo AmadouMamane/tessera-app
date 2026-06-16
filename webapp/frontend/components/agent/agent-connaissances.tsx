@@ -2,9 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   Clock,
   Link2,
   type LucideIcon,
@@ -16,15 +19,37 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import { fetchAgentConnaissances, mutateConnaissancesSource } from "@/lib/api/client";
 import type { AgentConnaissances as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import type { OverviewTone } from "@/lib/overview";
 import { AgentTabs } from "./agent-tabs";
+
+/** Close a popover on outside-click and Escape; attach the returned ref to its root. */
+function useDismiss(open: boolean, onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+  return ref;
+}
 
 type DetailT = NonNullable<Data["details"]>[number];
 type RowT = NonNullable<Data["table"]>["rows"][number];
@@ -88,10 +113,11 @@ export function AgentConnaissances() {
     onSuccess: (fresh) => qc.setQueryData(["agent-connaissances"], fresh),
   });
 
-  if (!data?.available) {
+  if (!data) return <ConnaissancesSkeleton />;
+  if (!data.available) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-sm text-[var(--tessera-text-muted)]">
-        {data ? t("unavailable") : t("loading")}
+        {t("unavailable")}
       </div>
     );
   }
@@ -124,8 +150,39 @@ export function AgentConnaissances() {
       (langSel.length === 0 || (r.langs ?? []).some((l) => langSel.includes(l))) &&
       (r.coverage ?? 0) >= minCov &&
       (!groundedOnly || (r.grounded ?? 0) > 0) &&
-      (q === "" || r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q)),
+      (q === "" ||
+        r.name.toLowerCase().includes(q) ||
+        r.type.toLowerCase().includes(q) ||
+        r.path.toLowerCase().includes(q)),
   );
+
+  const chips: { key: string; label: string; onRemove: () => void }[] = [];
+  if (search.trim())
+    chips.push({ key: "q", label: `Recherche: "${search.trim()}"`, onRemove: () => setSearch("") });
+  if (status !== "Tous")
+    chips.push({ key: "st", label: `Statut: ${status}`, onRemove: () => setStatus("Tous") });
+  if (typeF !== "Tous")
+    chips.push({ key: "ty", label: `Type: ${typeF}`, onRemove: () => setTypeF("Tous") });
+  if (period !== "30")
+    chips.push({
+      key: "pe",
+      label: `Periode: ${PERIOD_OPTS.find((o) => o.value === period)?.label ?? period}`,
+      onRemove: () => setPeriod("30"),
+    });
+  for (const l of langSel)
+    chips.push({
+      key: `lang-${l}`,
+      label: `Langue: ${l.toUpperCase()}`,
+      onRemove: () => setLangSel(langSel.filter((x) => x !== l)),
+    });
+  if (minCov > 0)
+    chips.push({ key: "cov", label: `Couverture >= ${minCov}%`, onRemove: () => setMinCov(0) });
+  if (groundedOnly)
+    chips.push({
+      key: "gr",
+      label: "Avec echanges ancres",
+      onRemove: () => setGroundedOnly(false),
+    });
 
   return (
     <div className="relative flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
@@ -172,6 +229,7 @@ export function AgentConnaissances() {
           canReset={canReset}
           onReset={resetAll}
         />
+        {chips.length > 0 ? <ActiveFilterChips chips={chips} onClear={resetAll} /> : null}
         <SourcesTable data={data} rows={rows} selected={selected} onSelect={setSelected} />
       </div>
 
@@ -212,18 +270,27 @@ function AttachMenu({
   onAttach: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const ref = useDismiss(
+    open,
+    useCallback(() => setOpen(false), []),
+  );
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         type="button"
         disabled={pending}
+        aria-haspopup="menu"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className="flex h-9 items-center gap-2 rounded-md border border-[#d98b1f] bg-[#e0a23a] px-3 text-xs font-medium text-[#1b1402] hover:bg-[#eab44e] disabled:opacity-60"
       >
         <Plus className="h-4 w-4" /> {label}
       </button>
       {open ? (
-        <div className="absolute right-0 z-20 mt-1 w-72 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1 shadow-lg">
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 w-72 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1 shadow-lg"
+        >
           {items.length === 0 ? (
             <p className="px-2 py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">
               Toutes les sources du catalogue sont rattachees.
@@ -233,6 +300,7 @@ function AttachMenu({
               <button
                 key={it.key}
                 type="button"
+                role="menuitem"
                 disabled={pending}
                 onClick={() => {
                   onAttach(it.key);
@@ -249,6 +317,63 @@ function AttachMenu({
           )}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function ActiveFilterChips({
+  chips,
+  onClear,
+}: {
+  chips: { key: string; label: string; onRemove: () => void }[];
+  onClear: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {chips.map((c) => (
+        <span
+          key={c.key}
+          className="flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)] py-1 pl-2.5 pr-1 text-[0.66rem] text-[var(--tessera-text)]"
+        >
+          {c.label}
+          <button
+            type="button"
+            aria-label={`Retirer le filtre ${c.label}`}
+            onClick={c.onRemove}
+            className="flex h-4 w-4 items-center justify-center rounded-full text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-bg)] hover:text-[var(--tessera-text)]"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+      <button
+        type="button"
+        onClick={onClear}
+        className="ml-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
+      >
+        Tout effacer
+      </button>
+    </div>
+  );
+}
+
+const KPI_SK = ["a", "b", "c", "d", "e"];
+const ROW_SK = ["r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8"];
+
+function ConnaissancesSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 pb-2">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-5">
+        {KPI_SK.map((id) => (
+          <Skeleton key={id} className="h-[112px] w-full rounded-lg" />
+        ))}
+      </div>
+      <Skeleton className="h-14 w-full rounded-lg" />
+      <div className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+        {ROW_SK.map((id) => (
+          <Skeleton key={id} className="h-10 w-full" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -286,11 +411,17 @@ function FilterDropdown({
   onSelect: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const ref = useDismiss(
+    open,
+    useCallback(() => setOpen(false), []),
+  );
   const current = options.find((o) => o.value === value)?.label ?? value;
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] hover:border-[var(--tessera-text-muted)]"
       >
@@ -299,11 +430,15 @@ function FilterDropdown({
         <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
       </button>
       {open ? (
-        <div className="absolute right-0 z-20 mt-1 w-48 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1 shadow-lg">
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 w-48 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1 shadow-lg"
+        >
           {options.map((o) => (
             <button
               key={o.value}
               type="button"
+              role="menuitem"
               onClick={() => {
                 onSelect(o.value);
                 setOpen(false);
@@ -437,12 +572,18 @@ function AdvancedFilters({
   onReset: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const ref = useDismiss(
+    open,
+    useCallback(() => setOpen(false), []),
+  );
   const toggleLang = (l: string) =>
     setLangSel(langSel.includes(l) ? langSel.filter((x) => x !== l) : [...langSel, l]);
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-[0.74rem]",
@@ -550,6 +691,40 @@ function AdvancedFilters({
 
 // Fixed column widths (Source, Type, Statut, Couverture, Fraicheur, Taux de citation).
 const COL_WIDTHS = ["32%", "18%", "12%", "14%", "12%", "12%"] as const;
+type SortDir = "asc" | "desc";
+
+// Sort value per column label; null always sorts last regardless of direction.
+function sortValue(column: string, r: RowT): number | string | null {
+  switch (column) {
+    case "Couverture":
+      return r.coverage;
+    case "Fraicheur":
+      return r.fresh_days ?? null;
+    case "Taux de citation": {
+      const n = Number.parseFloat(r.citation);
+      return Number.isNaN(n) ? null : n;
+    }
+    case "Type":
+      return r.type.toLowerCase();
+    case "Statut":
+      return r.status.toLowerCase();
+    default:
+      return r.name.toLowerCase();
+  }
+}
+
+function compareRows(a: RowT, b: RowT, column: string, dir: SortDir): number {
+  const av = sortValue(column, a);
+  const bv = sortValue(column, b);
+  if (av === null && bv === null) return 0;
+  if (av === null) return 1; // nulls last
+  if (bv === null) return -1;
+  const base =
+    typeof av === "number" && typeof bv === "number"
+      ? av - bv
+      : String(av).localeCompare(String(bv));
+  return dir === "asc" ? base : -base;
+}
 
 function SourcesTable({
   data,
@@ -565,14 +740,28 @@ function SourcesTable({
   const tbl = data.table;
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const totalRows = rows.length;
+  const [sortCol, setSortCol] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const sortedRows = useMemo(() => {
+    if (!sortCol) return rows;
+    return [...rows].sort((a, b) => compareRows(a, b, sortCol, sortDir));
+  }, [rows, sortCol, sortDir]);
+  const totalRows = sortedRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
-  // Reset to the first page when the filtered set or page size changes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on filtered-count change, not row identity
-  useEffect(() => setPage(1), [totalRows, perPage]);
+  // Reset to the first page when the filtered set, page size, or sort changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on filter/sort change, not row identity
+  useEffect(() => setPage(1), [totalRows, perPage, sortCol, sortDir]);
   const safePage = Math.min(page, totalPages);
   const startIdx = (safePage - 1) * perPage;
-  const pageRows = rows.slice(startIdx, startIdx + perPage);
+  const pageRows = sortedRows.slice(startIdx, startIdx + perPage);
+  const onSort = (column: string) => {
+    if (column === sortCol) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(column);
+      setSortDir("asc");
+    }
+  };
   if (!tbl) return null;
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
@@ -584,9 +773,31 @@ function SourcesTable({
                 <th
                   key={c}
                   style={{ width: COL_WIDTHS[i] }}
-                  className={cn("px-3 py-2 font-medium", i === 0 ? "" : "whitespace-nowrap")}
+                  aria-sort={
+                    sortCol === c ? (sortDir === "asc" ? "ascending" : "descending") : "none"
+                  }
+                  className="px-3 py-2 font-medium"
                 >
-                  {c}
+                  <button
+                    type="button"
+                    onClick={() => onSort(c)}
+                    className={cn(
+                      "-mx-1 flex items-center gap-1 rounded px-1 py-0.5 uppercase hover:text-[var(--tessera-text)]",
+                      i === 0 ? "" : "whitespace-nowrap",
+                      sortCol === c ? "text-[var(--tessera-text)]" : "",
+                    )}
+                  >
+                    {c}
+                    {sortCol === c ? (
+                      sortDir === "asc" ? (
+                        <ArrowUp className="h-3 w-3" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" />
+                      )
+                    ) : (
+                      <ChevronsUpDown className="h-3 w-3 opacity-40" />
+                    )}
+                  </button>
                 </th>
               ))}
             </tr>
@@ -595,9 +806,19 @@ function SourcesTable({
             {pageRows.map((r) => (
               <tr
                 key={r.name}
+                // biome-ignore lint/a11y/useSemanticElements: a data row opens the detail drawer and stays keyboard reachable
+                role="button"
+                tabIndex={0}
+                aria-label={r.name}
                 onClick={() => r.key && onSelect(r.key)}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && r.key) {
+                    e.preventDefault();
+                    onSelect(r.key);
+                  }
+                }}
                 className={cn(
-                  "cursor-pointer border-b border-[var(--tessera-border)]/60 last:border-0",
+                  "cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none last:border-0 focus-visible:bg-[var(--tessera-bg)]/60 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#5fd0c6]",
                   r.key && r.key === selected
                     ? "bg-[var(--tessera-bg)]/70"
                     : "hover:bg-[var(--tessera-bg)]/40",
@@ -861,6 +1082,13 @@ function DetailDrawer({
   onDetach: (key: string) => void;
   onToggle: (key: string, active: boolean) => void;
 }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
   return (
     <div
       className="absolute inset-0 z-30 flex justify-end overflow-hidden rounded-lg bg-[#020817]/70 backdrop-blur-[2px]"
@@ -894,6 +1122,8 @@ function DetailPanel({
 }) {
   const tCommon = useTranslations("common");
   const [tab, setTab] = useState(detail.tabs[0] ?? "Usage");
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => closeRef.current?.focus(), []);
   const d = detail;
   const key = d.key;
   return (
@@ -927,9 +1157,10 @@ function DetailPanel({
           </span>
           <button
             type="button"
+            ref={closeRef}
             aria-label={tCommon("close")}
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-bg)] hover:text-[var(--tessera-text)]"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--tessera-text-muted)] outline-none hover:bg-[var(--tessera-bg)] hover:text-[var(--tessera-text)] focus-visible:ring-1 focus-visible:ring-[#5fd0c6]"
           >
             <X className="h-4 w-4" />
           </button>

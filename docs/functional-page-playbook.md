@@ -157,6 +157,34 @@ it dirty.
   Type 18 / Statut 12 / Couverture 14 / Fraicheur 12 / Taux 12). Tailwind
   `w-[X%]` classes are unreliable here; inline `style` on `<th>` works.
 
+## Round-5 skills (robustness, a11y, sort, chips)
+
+- **One `useDismiss(open, onClose)` hook for every popover.** Custom dropdowns
+  built from `useState(open)` don't close on outside-click or Escape, and opening
+  one leaves the others open. A shared hook (ref + `document` `mousedown`/`keydown`
+  listeners while open, returning the ref for the root `<div>`) fixes all three at
+  once - and the outside-mousedown naturally closes a sibling when you open the
+  next. Add `aria-haspopup`/`aria-expanded` to the trigger.
+- **biome a11y: prefer `menu`/`menuitem` over `listbox`/`option`.** `role="listbox"`
+  trips `useFocusableInteractive` (needs focus) + `useSemanticElements` (wants
+  `<select>`); `role="menu"` on a div + `role="menuitem"` on buttons passes.
+- **Keyboard-reachable table rows.** A clickable `<tr onClick>` is mouse-only. Add
+  `role="button"` (with a `biome-ignore lint/a11y/useSemanticElements`), `tabIndex
+  ={0}`, `aria-label`, an `onKeyDown` for Enter/Space, and a `focus-visible:ring`.
+- **Column sort on a fixed-layout table.** Header `<th>` gets `aria-sort`
+  (ascending/descending/none) and wraps its label in a `<button>` that toggles
+  `sortCol`/`sortDir`; a `useMemo` sorts a COPY of the filtered rows before
+  pagination (nulls always last; numeric vs `localeCompare`); reset page to 1 on
+  sort change. Show an up/down arrow on the active column, a dim `ChevronsUpDown`
+  on the rest.
+- **Removable active-filter chips.** Build a `{key,label,onRemove}[]` from the
+  active filter state, render chips with an X each plus a "Tout effacer" that calls
+  the global reset - a visible, one-click-removable summary above the table.
+- **Loading skeleton that mirrors the layout.** Distinguish loading
+  (`data === undefined` -> `<Skeleton>` grid matching KPIs + rows) from unavailable
+  (`data && !data.available` -> message), instead of one bare centered string.
+  Use stable string keys for the skeleton arrays (biome `noArrayIndexKey`).
+
 ## Round-2 skills (premium polish, learned on Connaissances)
 
 - **Premium KPI tile.** Don't cram the sparkline to the right of the value.
