@@ -1144,6 +1144,25 @@ function DetailDrawer({
   onDetach: (key: string) => void;
   onToggle: (key: string, active: boolean) => void;
 }) {
+  // Anchor the overlay to the <main> content area so it spans its full height
+  // (below the header, right of the sidebar) regardless of how tall the page is.
+  const [rect, setRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const m = document.querySelector("main");
+      if (!m) return;
+      const r = m.getBoundingClientRect();
+      setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -1153,7 +1172,8 @@ function DetailDrawer({
   }, [onClose]);
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-[#020817]/70 backdrop-blur-[2px]"
+      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 backdrop-blur-[2px]"
+      style={rect ?? { inset: 0 }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
