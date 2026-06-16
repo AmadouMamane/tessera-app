@@ -14,8 +14,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { Download } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Link } from "@/i18n/navigation";
 import { fetchAgentConfigurations, saveAgentConfigurations } from "@/lib/api/client";
@@ -55,6 +56,11 @@ export function AgentConfigurations() {
     },
     onError: () => setError(true),
   });
+  // Archive is a standalone durable toggle (it must not clobber pending edits).
+  const archiveMut = useMutation({
+    mutationFn: saveAgentConfigurations,
+    onSuccess: (fresh) => qc.setQueryData(["agent-configurations"], fresh),
+  });
 
   const setField = (key: string, serverValue: Override, value: Override) => {
     setDraft((prev) => {
@@ -92,7 +98,12 @@ export function AgentConfigurations() {
           <FieldSection block={data.model} ctx={ctx} />
           <Behavior data={data} ctx={ctx} />
           <FieldSection block={data.routing} ctx={ctx} compact />
-          <Tags data={data} ctx={ctx} />
+          <Tags
+            data={data}
+            ctx={ctx}
+            onArchive={() => archiveMut.mutate({ archived: !(data.tags?.archived ?? false) })}
+            archiving={archiveMut.isPending}
+          />
         </section>
         <aside className="flex min-w-0 flex-col gap-2.5">
           <Status data={data} />
@@ -102,6 +113,73 @@ export function AgentConfigurations() {
           <LinksPanel data={data} />
         </aside>
       </div>
+    </div>
+  );
+}
+
+function useDismiss(open: boolean, onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+  return ref;
+}
+
+function MoreMenu({ data, label }: { data: Data; label: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(
+    open,
+    useCallback(() => setOpen(false), []),
+  );
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "tessera-agent-configuration.json";
+    link.click();
+    URL.revokeObjectURL(url);
+    setOpen(false);
+  };
+  const itemCls =
+    "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[0.74rem] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-bg)] hover:text-[var(--tessera-text)]";
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((o) => !o)}
+        className="grid h-9 w-10 place-items-center rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg)] text-[var(--tessera-text)]"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-30 mt-1 w-56 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1 shadow-lg"
+        >
+          <button type="button" role="menuitem" onClick={exportJson} className={itemCls}>
+            <Download className="h-3.5 w-3.5" /> Exporter la configuration (JSON)
+          </button>
+          <Link href="/configurer/parametres" role="menuitem" className={itemCls}>
+            <ExternalLink className="h-3.5 w-3.5" /> Paramètres avancés
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -162,13 +240,7 @@ function Header({
           <Save className="h-3.5 w-3.5" />
           {actions?.save}
         </button>
-        <button
-          type="button"
-          aria-label={actions?.more}
-          className="grid h-9 w-10 place-items-center rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg)] text-[var(--tessera-text)]"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
+        <MoreMenu data={data} label={actions?.more ?? "Plus d'options"} />
       </div>
     </div>
   );
@@ -256,13 +328,13 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
       </span>
     );
   } else if (editable && field.kind === "toggle") {
-    const on = (ctx.draft[field.key as string] ?? field.value === "Active") === true;
+    const on = (ctx.draft[field.key as string] ?? field.value === "Activé") === true;
     control = (
       <span className={cn(FIELD_BOX, "h-7 justify-between")}>
-        <span className="text-[var(--tessera-text-muted)]">{on ? "Active" : "Desactivee"}</span>
+        <span className="text-[var(--tessera-text-muted)]">{on ? "Activé" : "Désactivée"}</span>
         <Toggle
           on={on}
-          onToggle={() => ctx.setField(field.key as string, field.value === "Active", !on)}
+          onToggle={() => ctx.setField(field.key as string, field.value === "Activé", !on)}
           label={field.label}
         />
       </span>
@@ -412,7 +484,12 @@ function SliderRow({ item, ctx }: { item: Slider; ctx: Ctx }) {
   );
 }
 
-function Tags({ data, ctx }: { data: Data; ctx: Ctx }) {
+function Tags({
+  data,
+  ctx,
+  onArchive,
+  archiving,
+}: { data: Data; ctx: Ctx; onArchive: () => void; archiving: boolean }) {
   const tags = data.tags;
   const [adding, setAdding] = useState("");
   const serverTags = useMemo(() => tags?.tags ?? [], [tags]);
@@ -486,7 +563,15 @@ function Tags({ data, ctx }: { data: Data; ctx: Ctx }) {
         </p>
         <button
           type="button"
-          className="inline-flex h-8 items-center gap-2 rounded-md border border-red-500/45 bg-red-500/10 px-3 text-[0.68rem] font-medium text-red-300"
+          onClick={onArchive}
+          disabled={archiving}
+          aria-pressed={tags.archived ?? false}
+          className={cn(
+            "inline-flex h-8 items-center gap-2 rounded-md border px-3 text-[0.68rem] font-medium disabled:opacity-50",
+            tags.archived
+              ? "border-emerald-500/45 bg-emerald-500/10 text-emerald-300"
+              : "border-red-500/45 bg-red-500/10 text-red-300",
+          )}
         >
           <Trash2 className="h-3.5 w-3.5" /> {tags.archive}
         </button>
@@ -504,7 +589,14 @@ function Status({ data }: { data: Data }) {
         <h2 className="font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
           {s.title}
         </h2>
-        <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[0.65rem] font-semibold text-emerald-300">
+        <span
+          className={cn(
+            "rounded-full px-2.5 py-1 text-[0.65rem] font-semibold",
+            s.badge_tone === "crit"
+              ? "bg-red-500/15 text-red-300"
+              : "bg-emerald-500/15 text-emerald-300",
+          )}
+        >
           {s.badge}
         </span>
       </div>
@@ -579,9 +671,12 @@ function History({ data }: { data: Data }) {
         <h2 className="font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
           {h.title}
         </h2>
-        <button type="button" className="text-[0.76rem] font-medium text-cyan-300">
+        <Link
+          href="/prouver/audit-logs"
+          className="text-[0.76rem] font-medium text-cyan-300 hover:text-cyan-200"
+        >
           {h.cta}
-        </button>
+        </Link>
       </div>
       <div className="grid gap-2.5">
         {h.items.map((item, index) => (

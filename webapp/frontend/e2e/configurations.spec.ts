@@ -49,8 +49,28 @@ test("a behaviour edit persists across a reload, then restores", async ({ page }
   await expect(page.getByLabel("Ton")).toHaveValue("Professionnel");
 });
 
+test("the archive button toggles the durable status badge", async ({ page }) => {
+  const status = page.locator("section", { hasText: "Statut de l'agent" });
+  await expect(status.getByText("Actif", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Archiver cet agent" }).click();
+  await expect(status.getByText("Archivé", { exact: true }).first()).toBeVisible();
+  // Persisted: reload still shows archived, then restore so the profile is clean.
+  await page.reload();
+  await expect(status.getByText("Archivé", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Désarchiver cet agent" }).click();
+  await expect(status.getByText("Actif", { exact: true }).first()).toBeVisible();
+});
+
+test("the overflow menu offers a real config export", async ({ page }) => {
+  await page.getByRole("button", { name: "..." }).click();
+  await expect(
+    page.getByRole("menuitem", { name: "Exporter la configuration (JSON)" }),
+  ).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Paramètres avancés" })).toBeVisible();
+});
+
 test("the parallel-tools toggle flips and enables save", async ({ page }) => {
-  const toggle = page.getByRole("switch", { name: "Execution parallele d'outils" });
+  const toggle = page.getByRole("switch", { name: "Exécution parallèle d'outils" });
   await expect(toggle).toHaveAttribute("aria-checked", "true");
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-checked", "false");

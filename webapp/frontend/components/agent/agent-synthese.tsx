@@ -57,6 +57,10 @@ const STATUS_BADGE: Record<string, string> = {
   resolu: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
   escalade: "border-amber-500/30 bg-amber-500/15 text-amber-300",
 };
+const STATUS_LABEL: Record<string, string> = {
+  resolu: "Résolu",
+  escalade: "Escalade",
+};
 const ALERT_TONE: Record<string, string> = {
   good: "text-emerald-300",
   warn: "text-amber-300",
@@ -450,7 +454,7 @@ function Conversations({ data, className }: { data: Data; className?: string }) 
                 STATUS_BADGE[r.status] ?? "",
               )}
             >
-              {r.status}
+              {STATUS_LABEL[r.status] ?? r.status}
             </span>
           </li>
         ))}

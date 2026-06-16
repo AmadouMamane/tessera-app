@@ -36,6 +36,7 @@ from tessera.observability import (
     compliance as compliance_mod,
     conformance as conformance_mod,
     consistency as consistency_mod,
+    console_feedback as console_feedback_mod,
     context_overflow as context_overflow_mod,
     contradiction as contradiction_mod,
     corpus_freshness as corpus_freshness_mod,
@@ -811,6 +812,33 @@ async def observability_agent_console() -> dict[str, object]:
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_console: failed: {exc}\n")
         return {"available": False}
+
+
+@router.get("/observability/agent-console/feedback")
+async def observability_agent_console_feedback(conversation_id: str) -> dict[str, object]:
+    """Return the persisted ``{turn: rating}`` operator feedback for a conversation."""
+    return {"ratings": console_feedback_mod.console_feedback(conversation_id)}
+
+
+class _ConsoleFeedbackBody(BaseModel):
+    """A single thumbs up/down on a console chat turn, persisted durably."""
+
+    conversation_id: str
+    turn: int = Field(ge=0)
+    rating: str | None = None
+
+
+@router.post("/observability/agent-console/feedback")
+async def observability_agent_console_feedback_save(
+    body: _ConsoleFeedbackBody,
+) -> dict[str, object]:
+    """Persist (or toggle off) one turn's rating and return the fresh map."""
+    if body.rating is not None and body.rating not in console_feedback_mod.available_ratings:
+        raise HTTPException(status_code=422, detail="rating must be 'up', 'down' or null")
+    ratings = console_feedback_mod.record_console_feedback(
+        body.conversation_id, body.turn, body.rating
+    )
+    return {"ratings": ratings}
 
 
 _SYNTHESE_PERIODS: dict[str, int | None] = {"h24": 1, "d7": 7, "d30": 30}

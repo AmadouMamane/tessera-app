@@ -107,7 +107,7 @@ def _kpis() -> list[dict[str, object]]:
     return [
         {
             "key": "sla",
-            "label": "SLA respecte",
+            "label": "SLA respecté",
             "value": _fmt_percent(slo.good_rate) if faithfulness else "n/a",
             "good": not slo.breaching,
         },
@@ -156,9 +156,9 @@ def _transcript() -> list[dict[str, object]]:
     points: list[dict[str, object]] = []
     selectors = [
         ("Conservation excessive", "conservation"),
-        ("Base legale insuffisante", "Article 6"),
+        ("Base légale insuffisante", "Article 6"),
         ("Droits des personnes", "Article 17"),
-        ("Securite et confidentialite", "Article 32"),
+        ("Sécurité et confidentialité", "Article 32"),
         ("Documentation probatoire", "document"),
     ]
     for index, (title, needle) in enumerate(selectors):
@@ -178,8 +178,8 @@ def _transcript() -> list[dict[str, object]]:
             "role": "user",
             "time": _fmt_time(now.replace(microsecond=0)),
             "text": (
-                "Quels sont les risques de non-conformite au RGPD lies a la "
-                "retention des conversations utilisateur dans notre assistant ?"
+                "Quels sont les risques de non-conformité au RGPD liés à la "
+                "rétention des conversations utilisateur dans notre assistant ?"
             ),
         },
         {
@@ -187,13 +187,13 @@ def _transcript() -> list[dict[str, object]]:
             "time": _fmt_time(now.replace(microsecond=0)),
             "latency": "source corpus",
             "intro": (
-                "Les principaux risques de non-conformite au RGPD lies a la "
-                "retention des conversations utilisateur sont :"
+                "Les principaux risques de non-conformité au RGPD liés à la "
+                "rétention des conversations utilisateur sont :"
             ),
             "points": points,
             "closing": (
-                "La console peut rejouer cette question en direct : la reponse "
-                "streamera alors via le meme modele que la console Produit."
+                "La console peut rejouer cette question en direct : la réponse "
+                "streamera alors via le même modèle que la console Produit."
             ),
             "chips": [
                 {"label": f"Sources ({len(sources[:_VISIBLE_SOURCE_LIMIT])})", "kind": "info"},
@@ -210,22 +210,22 @@ def _quality() -> dict[str, object]:
     h = _latest_score("hallucination") or f
     completeness = mean([f, g]) if f or g else 0.0
     minimum = min(value for value in (f, g, h, completeness) if value >= 0.0)
-    badge = "Bon" if minimum >= _QUALITY_GOOD_THRESHOLD else "A surveiller"
+    badge = "Bon" if minimum >= _QUALITY_GOOD_THRESHOLD else "À surveiller"
     tone = "good" if minimum >= _QUALITY_GOOD_THRESHOLD else "warn"
     return {
-        "title": "Qualite & securite de la reponse",
+        "title": "Qualité & sécurité de la réponse",
         "badge": badge,
         "badge_tone": tone,
         "rows": [
             {"label": "Pertinence", "value": f"{f * 10:.1f}", "scale": "/10", "tone": tone},
             {"label": "Exactitude", "value": f"{g * 10:.1f}", "scale": "/10", "tone": tone},
             {
-                "label": "Completude",
+                "label": "Complétude",
                 "value": f"{completeness * 10:.1f}",
                 "scale": "/10",
                 "tone": tone,
             },
-            {"label": "Securite", "value": f"{h * 10:.1f}", "scale": "/10", "tone": tone},
+            {"label": "Sécurité", "value": f"{h * 10:.1f}", "scale": "/10", "tone": tone},
         ],
     }
 
@@ -236,13 +236,13 @@ def _sources_panel() -> dict[str, object]:
         {"label": f"{source['source']} - {source['locator']}", "scope": "Externe"}
         for source in sources
     ]
-    return {"title": f"Sources utilisees ({len(rows)})", "cta": "Voir toutes", "rows": rows}
+    return {"title": f"Sources utilisées ({len(rows)})", "cta": "Voir toutes", "rows": rows}
 
 
 def _tools_panel() -> dict[str, object]:
     policy = load_policy(get_settings().guard.policy_path)
     rows = [
-        {"name": name, "status": "Autorise", "tone": "good", "latency": "policy"}
+        {"name": name, "status": "Autorisé", "tone": "good", "latency": "policy"}
         for name, rule in policy.tools.items()
         if rule.allow
     ][:3]
@@ -256,29 +256,29 @@ def _guardrails_panel() -> dict[str, object]:
             "name": "Prompt Injection Deny",
             "status": str(len(policy.prompt_injection_deny)),
             "tone": "warn",
-            "detail": "Patterns deny charges depuis la policy runtime.",
+            "detail": "Patterns deny chargés depuis la policy runtime.",
         },
         {
             "name": "PII Output Guard",
             "status": str(len(policy.pii_patterns)),
             "tone": "warn",
-            "detail": "Patterns PII charges depuis la policy runtime.",
+            "detail": "Patterns PII chargés depuis la policy runtime.",
         },
     ]
-    return {"title": f"Garde-fous charges ({len(rows)})", "rows": rows}
+    return {"title": f"Garde-fous chargés ({len(rows)})", "rows": rows}
 
 
 def _trace_panel() -> dict[str, object]:
     return {
-        "title": "Trace en temps reel",
-        "cta": "Voir la trace complete",
+        "title": "Trace en temps réel",
+        "cta": "Voir la trace complète",
         "rows": [
-            {"label": "Reception de la requete", "value": "live"},
+            {"label": "Réception de la requête", "value": "live"},
             {"label": "Analyse & classification", "value": "turn.end"},
             {"label": "Recherche de sources", "value": "turn.end"},
-            {"label": "Outils executes", "value": "turn.end"},
+            {"label": "Outils exécutés", "value": "turn.end"},
             {"label": "Garde-fous", "value": "turn.end"},
-            {"label": "Generation de la reponse", "value": "stream"},
+            {"label": "Génération de la réponse", "value": "stream"},
         ],
     }
 
@@ -305,7 +305,7 @@ def compute_agent_console() -> dict[str, object]:
             "session_id": session_id,
             "live": True,
             "fields": [
-                {"label": "Modele", "value": model},
+                {"label": "Modèle", "value": model},
                 {"label": "Prompt", "value": prompt_version},
                 {"label": "Sources", "value": sources_version},
                 {"label": "Garde-fous", "value": guard_version},
@@ -321,28 +321,28 @@ def compute_agent_console() -> dict[str, object]:
         "guardrails": _guardrails_panel(),
         "trace": _trace_panel(),
         "footer": {
-            "started": f"Session ouverte a {_fmt_time(now)}",
+            "started": f"Session ouverte à {_fmt_time(now)}",
             "live": True,
             "context": "Plateforme Tessera",
-            "language": "Francais",
+            "language": "Français",
             "session_id": session_id,
         },
         "actions": {
-            "input_placeholder": "Posez votre question a l'assistant...",
+            "input_placeholder": "Posez votre question à l'assistant...",
             "feedback": ["Utile", "Pas utile"],
             "footer_actions": [
-                "Rejouer cette session",
-                "Comparer a la version actuelle",
-                "Exporter la session",
-                "Cloturer la session",
+                {"key": "replay", "label": "Rejouer cette session"},
+                {"key": "compare", "label": "Comparer à la version actuelle"},
+                {"key": "export", "label": "Exporter la session"},
+                {"key": "close", "label": "Clôturer la session"},
             ],
             "timeline_incidents": "Timeline incidents",
             "new_session": "Nouvelle session",
-            "replay": "Relire a T",
+            "replay": "Relire à T",
         },
         "title": "Console",
         "subtitle": (
-            "Interagissez avec l'assistant et observez en detail les traces, "
+            "Interagissez avec l'assistant et observez en détail les traces, "
             "sources, outils et garde-fous."
         ),
         "provider": provider,

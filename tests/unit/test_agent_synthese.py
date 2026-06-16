@@ -102,13 +102,13 @@ def test_assemble_is_real_and_well_formed() -> None:
     # transcript sparkline is the real daily series
     assert kpis["conversations"]["series"] == [4, 5]
     # last-vs-previous bucket delta: (5-4)/4 = +25%
-    assert kpis["conversations"]["delta"] == "+25% vs jour precedent"
+    assert kpis["conversations"]["delta"] == "+25% vs jour précédent"
 
 
 def test_profile_and_language_mix_are_sourced() -> None:
     payload = syn._assemble(_snap(), _tx(), chain_ok=True, now=NOW)
     fields = {f["label"]: f["value"] for f in payload["profile"]["fields"]}  # type: ignore[union-attr]
-    assert fields["Modele principal"] == "llama3.2:3b"
+    assert fields["Modèle principal"] == "llama3.2:3b"
     assert fields["Connaissances"] == "15 sources / 238 fragments"
     assert fields["Conversations"] == "1 008"
     assert payload["profile"]["ctaHref"] == "/agent/configurations"  # type: ignore[index]
@@ -117,7 +117,7 @@ def test_profile_and_language_mix_are_sourced() -> None:
     chan = payload["channels"]
     assert "langue" in chan["title"].lower()  # type: ignore[index]
     labels = [i["label"] for i in chan["items"]]  # type: ignore[index]
-    assert "Francais" in labels and "Allemand" in labels
+    assert "Français" in labels and "Allemand" in labels
 
 
 def test_conversations_timeline_alerts_and_ctas() -> None:
@@ -125,18 +125,18 @@ def test_conversations_timeline_alerts_and_ctas() -> None:
 
     rows = payload["conversations"]["rows"]  # type: ignore[index]
     assert rows[0]["status"] == "escalade"  # escalated heuristic
-    assert rows[0]["user"] == "3 echanges"
-    assert rows[1]["user"] == "1 echange"  # singular
+    assert rows[0]["user"] == "3 échanges"
+    assert rows[1]["user"] == "1 échange"  # singular
 
     # Timeline events are sorted newest-first: the latest transcript activity
     # (15/06) leads, ahead of the older repo file mtimes.
     labels = [r["label"] for r in payload["timeline"]["rows"]]  # type: ignore[index]
-    assert labels[0] == "Derniere conversation"
-    assert "Prompts mis a jour" in labels
+    assert labels[0] == "Dernière conversation"
+    assert "Prompts mis à jour" in labels
 
     # Audit-chain alert reflects the broken chain.
     chain_alert = next(
-        i for i in payload["alerts"]["items"] if i["label"] == "Chaine d'audit"  # type: ignore[index]
+        i for i in payload["alerts"]["items"] if i["label"] == "Chaîne d'audit"  # type: ignore[index]
     )
     assert chain_alert["value"] == "Rompue" and chain_alert["tone"] == "crit"
 
@@ -151,7 +151,7 @@ def test_period_label_reflects_the_window() -> None:
     ] == "7 derniers jours"  # type: ignore[index]
     assert syn._assemble(_snap(), _tx(), chain_ok=True, period_days=1, now=NOW)["meta"][
         "period"
-    ] == "24 dernieres heures"  # type: ignore[index]
+    ] == "24 dernières heures"  # type: ignore[index]
     assert syn._assemble(_snap(), _tx(), chain_ok=True, period_days=None, now=NOW)["meta"][
         "period"
     ] == "Tout l'historique"  # type: ignore[index]
@@ -160,6 +160,6 @@ def test_period_label_reflects_the_window() -> None:
 def test_chain_ok_alert_is_good() -> None:
     payload = syn._assemble(_snap(), _tx(), chain_ok=True, now=NOW)
     chain_alert = next(
-        i for i in payload["alerts"]["items"] if i["label"] == "Chaine d'audit"  # type: ignore[index]
+        i for i in payload["alerts"]["items"] if i["label"] == "Chaîne d'audit"  # type: ignore[index]
     )
     assert chain_alert["value"] == "Intacte" and chain_alert["tone"] == "good"

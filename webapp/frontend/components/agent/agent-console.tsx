@@ -1,12 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   ChevronDown,
   ChevronRight,
   Cpu,
   Database,
+  Download,
   History,
   MessageSquare,
   Paperclip,
@@ -22,14 +23,15 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useLocale } from "next-intl";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   TemporalRail,
   useRailTimeline,
   useTemporalState,
 } from "@/components/overview/temporal-rail";
-import { fetchAgentConsole } from "@/lib/api/client";
+import { Link } from "@/i18n/navigation";
+import { fetchAgentConsole, fetchConsoleFeedback, saveConsoleFeedback } from "@/lib/api/client";
 import type {
   ChatCitation,
   ChatDebug,
@@ -38,6 +40,8 @@ import type {
 } from "@/lib/api/schemas";
 import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
+
+type Rating = "up" | "down";
 
 type T = ReturnType<typeof useTranslations<"agentConsole">>;
 
@@ -106,12 +110,26 @@ export function AgentConsole() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [liveDebug, setLiveDebug] = useState<ChatDebug | null>(null);
+  const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["agent-console"],
     queryFn: ({ signal }) => fetchAgentConsole(signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+
+  // Durable operator feedback (thumbs up/down) for the live conversation turns.
+  const { data: feedback } = useQuery({
+    queryKey: ["agent-console-feedback", conversationId],
+    queryFn: ({ signal }) => fetchConsoleFeedback(conversationId ?? "", signal),
+    enabled: Boolean(conversationId),
+  });
+  const rate = useMutation({
+    mutationFn: ({ turn, rating }: { turn: number; rating: Rating }) =>
+      saveConsoleFeedback(conversationId ?? "", turn, rating),
+    onSuccess: (fresh) => qc.setQueryData(["agent-console-feedback", conversationId], fresh),
+  });
+  const ratings = feedback?.ratings ?? {};
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -227,6 +245,45 @@ export function AgentConsole() {
     setIsStreaming(false);
   }, []);
 
+  const lastUserText = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i]?.role === "user") return messages[i]?.content ?? "";
+    }
+    return "";
+  }, [messages]);
+
+  const replayLastTurn = useCallback(() => {
+    if (lastUserText) void sendMessage(lastUserText);
+  }, [lastUserText, sendMessage]);
+
+  const exportSession = useCallback(() => {
+    const blob = new Blob([JSON.stringify({ conversationId, messages }, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tessera-console-${conversationId ?? "session"}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [conversationId, messages]);
+
+  const onFooterAction = useCallback(
+    (key: string) => {
+      if (key === "replay") replayLastTurn();
+      else if (key === "export") exportSession();
+      else if (key === "close") resetSession();
+    },
+    [replayLastTurn, exportSession, resetSession],
+  );
+
+  const onRate = useCallback(
+    (turn: number, rating: Rating) => {
+      if (conversationId) rate.mutate({ turn, rating });
+    },
+    [conversationId, rate],
+  );
+
   if (!data?.available) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-sm text-[var(--tessera-text-muted)]">
@@ -237,7 +294,14 @@ export function AgentConsole() {
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <StatusBar data={data} sessionId={conversationId} />
+      <StatusBar
+        data={data}
+        sessionId={conversationId}
+        periodKey={temporal.periodKey}
+        onPeriodChange={temporal.setPeriodKey}
+        onReplay={() => temporal.changeMode("replay")}
+        onNewSession={resetSession}
+      />
 
       <div className="grid gap-3 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-3 xl:col-span-8">
@@ -256,8 +320,11 @@ export function AgentConsole() {
             input={input}
             isStreaming={isStreaming}
             messages={messages}
+            ratings={ratings}
             onAbort={() => abortRef.current?.abort()}
+            onFooterAction={onFooterAction}
             onInputChange={setInput}
+            onRate={onRate}
             onReset={resetSession}
             onSubmit={sendMessage}
           />
@@ -274,7 +341,23 @@ export function AgentConsole() {
 
 // ── status sub-bar ───────────────────────────────────────────────────────────
 
-function StatusBar({ data, sessionId }: { data: Data; sessionId: string | null }) {
+const PERIOD_LABEL: Record<string, string> = { h24: "24h", d7: "7j", d30: "30j" };
+
+function StatusBar({
+  data,
+  sessionId,
+  periodKey,
+  onPeriodChange,
+  onReplay,
+  onNewSession,
+}: {
+  data: Data;
+  sessionId: string | null;
+  periodKey: string;
+  onPeriodChange: (key: string) => void;
+  onReplay: () => void;
+  onNewSession: () => void;
+}) {
   const s = data.status;
   const a = data.actions;
   if (!s || !a) return null;
@@ -302,18 +385,29 @@ function StatusBar({ data, sessionId }: { data: Data; sessionId: string | null }
       <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
+          onClick={onReplay}
           className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.72rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
         >
           <History className="h-3.5 w-3.5" /> {a.replay}
         </button>
+        <div className="relative flex h-8 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[0.72rem] text-[var(--tessera-text-muted)]">
+          <select
+            aria-label="Fenetre temporelle"
+            value={periodKey}
+            onChange={(event) => onPeriodChange(event.target.value)}
+            className="h-full cursor-pointer appearance-none bg-transparent pr-7 pl-2.5 text-[var(--tessera-text)] outline-none"
+          >
+            {Object.entries(PERIOD_LABEL).map(([key, label]) => (
+              <option key={key} value={key} className="bg-[var(--tessera-surface)]">
+                {label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 h-3.5 w-3.5" />
+        </div>
         <button
           type="button"
-          className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.72rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          24h <ChevronDown className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
+          onClick={onNewSession}
           className="flex h-8 items-center gap-1.5 rounded-md border border-[#d98b1f]/55 bg-[linear-gradient(180deg,#3a2a14,#21180d)] px-3 text-[0.72rem] font-medium text-[#f4c76a] hover:border-[#f4c76a]/65"
         >
           <Plus className="h-3.5 w-3.5" /> {a.new_session}
@@ -330,8 +424,11 @@ function ChatCard({
   input,
   isStreaming,
   messages,
+  ratings,
   onAbort,
+  onFooterAction,
   onInputChange,
+  onRate,
   onReset,
   onSubmit,
 }: {
@@ -339,8 +436,11 @@ function ChatCard({
   input: string;
   isStreaming: boolean;
   messages: LiveMessage[];
+  ratings: Record<string, string>;
   onAbort: () => void;
+  onFooterAction: (key: string) => void;
   onInputChange: (value: string) => void;
+  onRate: (turn: number, rating: Rating) => void;
   onReset: () => void;
   onSubmit: (value: string) => void;
 }) {
@@ -348,6 +448,7 @@ function ChatCard({
   const a = data.actions;
   const f = data.footer;
   const hasLiveMessages = messages.length > 0;
+  let assistantTurn = -1;
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <div className="flex items-start gap-3 border-b border-[var(--tessera-border)] p-3.5">
@@ -362,17 +463,27 @@ function ChatCard({
 
       <div className="flex min-h-[430px] flex-col gap-4 p-3.5">
         {hasLiveMessages
-          ? messages.map((message) =>
-              message.role === "user" ? (
-                <UserMsg
+          ? messages.map((message) => {
+              if (message.role === "user") {
+                return (
+                  <UserMsg
+                    key={message.id}
+                    time={formatTime(message.createdAt)}
+                    text={message.content}
+                  />
+                );
+              }
+              assistantTurn += 1;
+              const turn = assistantTurn;
+              return (
+                <LiveAssistantMsg
                   key={message.id}
-                  time={formatTime(message.createdAt)}
-                  text={message.content}
+                  message={message}
+                  rating={ratings[String(turn)] as Rating | undefined}
+                  onRate={(rating) => onRate(turn, rating)}
                 />
-              ) : (
-                <LiveAssistantMsg key={message.id} message={message} />
-              ),
-            )
+              );
+            })
           : (data.transcript ?? []).map((m) =>
               m.role === "user" ? (
                 <UserMsg key={`u-${m.time}`} time={m.time} text={m.text ?? ""} />
@@ -425,15 +536,28 @@ function ChatCard({
             <RotateCcw className="mr-1 inline h-3.5 w-3.5" />
             {t("newSession")}
           </button>
-          {(a?.footer_actions ?? []).map((label) => (
-            <button
-              key={label}
-              type="button"
-              className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              {label}
-            </button>
-          ))}
+          {(a?.footer_actions ?? []).map((action) => {
+            const cls =
+              "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]";
+            if (action.key === "compare") {
+              return (
+                <Link key={action.key} href="/prouver/etat-a-date" className={cls}>
+                  {action.label}
+                </Link>
+              );
+            }
+            return (
+              <button
+                key={action.key}
+                type="button"
+                onClick={() => onFooterAction(action.key)}
+                className={cls}
+              >
+                {action.key === "export" ? <Download className="h-3.5 w-3.5" /> : null}
+                {action.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -509,19 +633,54 @@ function AssistantMsg({ m }: { m: NonNullable<Data["transcript"]>[number] }) {
           </div>
         ) : null}
       </div>
-      <div className="flex items-center gap-3 text-[0.66rem] text-[var(--tessera-text-muted)]">
-        <button type="button" className="inline-flex items-center gap-1 hover:text-emerald-300">
-          <ThumbsUp className="h-3.5 w-3.5" /> Utile
-        </button>
-        <button type="button" className="inline-flex items-center gap-1 hover:text-red-300">
-          <ThumbsDown className="h-3.5 w-3.5" /> Pas utile
-        </button>
-      </div>
     </div>
   );
 }
 
-function LiveAssistantMsg({ message }: { message: LiveMessage }) {
+function FeedbackButtons({
+  rating,
+  onRate,
+}: {
+  rating?: Rating;
+  onRate: (rating: Rating) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <button
+        type="button"
+        aria-pressed={rating === "up"}
+        onClick={() => onRate("up")}
+        className={cn(
+          "inline-flex items-center gap-1 hover:text-emerald-300",
+          rating === "up" && "font-medium text-emerald-300",
+        )}
+      >
+        <ThumbsUp className="h-3.5 w-3.5" /> Utile
+      </button>
+      <button
+        type="button"
+        aria-pressed={rating === "down"}
+        onClick={() => onRate("down")}
+        className={cn(
+          "inline-flex items-center gap-1 hover:text-red-300",
+          rating === "down" && "font-medium text-red-300",
+        )}
+      >
+        <ThumbsDown className="h-3.5 w-3.5" /> Pas utile
+      </button>
+    </div>
+  );
+}
+
+function LiveAssistantMsg({
+  message,
+  rating,
+  onRate,
+}: {
+  message: LiveMessage;
+  rating?: Rating;
+  onRate: (rating: Rating) => void;
+}) {
   const t = useTranslations("agentConsole");
   const sources = message.debug?.sources?.rows.length ?? message.citations?.length ?? 0;
   const tools = message.debug?.tools?.rows.length ?? 0;
@@ -569,14 +728,9 @@ function LiveAssistantMsg({ message }: { message: LiveMessage }) {
           </div>
         ) : null}
       </div>
-      <div className="flex items-center gap-3 text-[0.66rem] text-[var(--tessera-text-muted)]">
-        <button type="button" className="inline-flex items-center gap-1 hover:text-emerald-300">
-          <ThumbsUp className="h-3.5 w-3.5" /> Utile
-        </button>
-        <button type="button" className="inline-flex items-center gap-1 hover:text-red-300">
-          <ThumbsDown className="h-3.5 w-3.5" /> Pas utile
-        </button>
-      </div>
+      {!message.error && message.content ? (
+        <FeedbackButtons rating={rating} onRate={onRate} />
+      ) : null}
     </div>
   );
 }
@@ -598,12 +752,12 @@ function KpiRow({ data }: { data: Data }) {
           </p>
         </div>
       ))}
-      <button
-        type="button"
+      <Link
+        href="/prouver/audit-logs"
         className="flex shrink-0 items-center rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
       >
         {a?.timeline_incidents}
-      </button>
+      </Link>
     </div>
   );
 }
@@ -670,17 +824,23 @@ function Inspector({
   );
 }
 
-function PanelHead({ title, cta }: { title: string; cta?: string }) {
+function PanelHead({
+  title,
+  cta,
+  href,
+}: {
+  title: string;
+  cta?: string;
+  href?: "/agent/connaissances" | "/prouver/audit-logs";
+}) {
+  const cls = "inline-flex items-center gap-0.5 text-[0.64rem] text-[#f4c76a] hover:text-white";
   return (
     <div className="mb-2 flex items-center justify-between gap-2">
       <h3 className="text-[0.74rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
-      {cta ? (
-        <button
-          type="button"
-          className="inline-flex items-center gap-0.5 text-[0.64rem] text-[#f4c76a] hover:text-white"
-        >
+      {cta && href ? (
+        <Link href={href} className={cls}>
           {cta} <ChevronRight className="h-3 w-3" />
-        </button>
+        </Link>
       ) : null}
     </div>
   );
@@ -723,7 +883,7 @@ function Quality({ q }: { q: NonNullable<Data["quality"]> }) {
 function SourcesPanel({ s }: { s: NonNullable<Data["sources"]> }) {
   return (
     <div className="p-3.5">
-      <PanelHead title={s.title} cta={s.cta} />
+      <PanelHead title={s.title} cta={s.cta} href="/agent/connaissances" />
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
         {s.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">
@@ -790,7 +950,7 @@ function GuardrailsPanel({ g }: { g: NonNullable<Data["guardrails"]> }) {
 function TracePanel({ tr }: { tr: NonNullable<Data["trace"]> }) {
   return (
     <div className="p-3.5">
-      <PanelHead title={tr.title} cta={tr.cta} />
+      <PanelHead title={tr.title} cta={tr.cta} href="/prouver/audit-logs" />
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
         {tr.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">

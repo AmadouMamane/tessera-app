@@ -687,6 +687,104 @@ it dirty.
   line (e.g. "Integrite verifiee" next to "Etat reconstitue a T") takes a `right`
   prop rendered in the header flex row — don't drop the badge below the content.
 
+## Round-16 skills (Console: wiring a live-chat debug surface end to end)
+
+- **A "real data" page can still be riddled with dead buttons.** Console already
+  streamed the live agent (real SSE turns, real debug panels) but its chrome was
+  inert: StatusBar `Relire a T` / `24h` / `Nouvelle session`, the KPI rail's
+  `Timeline incidents`, four footer actions, the panel `Voir toutes` ctas, and
+  the thumbs feedback all had no `onClick`. "Real data" and "real interactions"
+  are independent axes (Step 0) - audit EVERY button, not just the metrics.
+- **Wire by stable key, dispatch in the parent.** Restructured the backend
+  `footer_actions` from `["label", ...]` to `[{key, label}]` (keys
+  replay/compare/export/close) so the frontend dispatches real behaviour by key,
+  not by index or display string (which break under i18n). `compare` renders as
+  a locale-aware `<Link>` to `/prouver/etat-a-date`; the rest are buttons calling
+  a parent `onFooterAction(key)`.
+- **Each action maps to a genuinely real effect.** replay -> re-send the last
+  user turn through the live agent; export -> a client-side JSON `Blob` download
+  of the current transcript; close/new-session -> `resetSession`; the StatusBar
+  `Relire a T` -> `temporal.changeMode("replay")`; the `24h` button -> a real
+  `<select>` bound to `temporal.periodKey` (h24/d7/d30); KPI `Timeline incidents`
+  + panel ctas -> `<Link>`s to `/prouver/audit-logs` / `/agent/connaissances`. No
+  control left that doesn't do what it says.
+- **Durable feedback needs a real key; the live envelope provides one.** Thumbs
+  up/down persist to `console_feedback.json` (next to the audit log) keyed by the
+  real `conversation_id` from the SSE end-envelope + the assistant turn index;
+  `record_console_feedback(conv, turn, rating)` toggles off when the same rating
+  is re-clicked, and the GET seeds the query so a reload shows the saved rating.
+  The seed-transcript example (a canned illustrative turn, NOT a logged
+  conversation) has NO rateable identity, so its thumbs row was removed rather
+  than left dead - don't fake feedback on a non-real turn.
+- **Accent the emitted French even on a "debug" surface.** The console module
+  shipped accent-free ("Qualite & securite", "Sources utilisees", "Trace en
+  temps reel", "Genere", "Autorise", "Francais", "non-conformite") - same
+  non-negotiable as every other page; fix the module strings (ASCII apostrophes
+  keep RUF001 happy). `tests/unit/test_console_feedback.py` + `e2e/console.spec.ts`
+  cover the store and the non-LLM controls (the chat stream needs Ollama).
+
+## Round-17 skills (Historique: a real-data table that was inert)
+
+- **"Real data, read-only" is not an excuse for a dead table.** Historique
+  already showed real eval-run numbers but every control was cosmetic: the search
+  was a `<span>`, the four filter "selects" were dead buttons, the headers did not
+  sort, pagination was a static `[1,2,3...]`, and the detail was frozen on one
+  session (longest-latency `focus`), ignoring row clicks. Same bar as every other
+  table - the Connaissances treatment (controlled search input, key-based
+  `FilterDropdown`s, sortable headers with `aria-sort`, client pagination footer,
+  row-click selection) is mandatory even when the data is immutable.
+- **Send ALL rows + raw keys so the client owns filter/sort/pagination.** The
+  backend stopped pre-slicing to 12 rows; it now emits every session (174) with
+  display cells AND raw fields (`category_key`/`lang`/`status_tone`/`score_num`/
+  `latency_ms`/`tokens_num`) so filtering/sorting key off stable values, not i18n
+  strings. Sort accessors are keyed by **column index** (a `rowSortKey` switch),
+  numeric columns in a `Set`, `localeCompare(..., "fr")` for the rest.
+- **Build the whole detail from the selected row - no second round-trip.** Each
+  row also carries everything the detail needs (`case_id`, `escalation`,
+  `tools_count`, `input/output_tokens`, the real `question` + `response`), plus a
+  shared `meta` (model, catalogue) and static `detail_labels`. Row click sets the
+  selected sid; the right-column detail (the normative shows a persistent panel,
+  like Garde-fous Round-10 - so a panel, not a drawer) rebuilds from that row,
+  with **tab-gated** content. The Messages tab shows the real Q->A (the model's
+  actual answer) - the highest-signal real feature, free from the row payload.
+- **Wire the chrome to real effects or real routes.** Export -> a client-side CSV
+  `Blob` of the (filtered, sorted) rows; the action bar `Comparer`/`Creer un
+  rapport` -> `<Link>`s to `/prouver/etat-a-date` / `/prouver/evidence-store`; the
+  quick actions dispatch by key (failed -> set the status filter to `bad`, scores
+  -> `/agent/evaluations`, export -> CSV, evaluate -> `/agent/console`); the
+  panel ctas carry a `cta_href`. No dead buttons left.
+- **Same accent + test discipline.** Accent every emitted + hardcoded FR string
+  ("Reussie"->"Réussie", "Messages echanges"->"Messages échangés", "Duree
+  totale"->"Durée totale", "Reinitialiser"->"Réinitialiser"); split a pure
+  `_assemble(snap)` for `tests/unit/test_agent_historique.py`; cover
+  filter/sort/row-detail/pagination in `e2e/historique.spec.ts`. E2e gotcha: the
+  filter trigger's accessible name is "Statut Tous" (label+value) and collides
+  with the "Statut" sort header - target the full name.
+
+## Round-18 skills (Configurations: the last three dead buttons + an accent trap)
+
+- **A "done" page can still hide dead buttons - re-scan with grep.** Configurations
+  was Round-12 "real + functional" yet `grep 'type="button"'` surfaced three with
+  no handler: the header kebab (`...`), the Tags "Archiver cet agent", and the
+  history "Voir tout". Wired all three: the kebab -> a `useDismiss` menu with a
+  real JSON export (`Blob` download of the payload) + a `<Link>` to advanced
+  settings; the history cta -> `<Link>` to `/prouver/audit-logs`; archive -> a
+  **durable** toggle (new `archived` key in the config store) on its own mutation
+  (so it never clobbers pending field edits), flipping the status badge
+  Actif/Archivé + the button label, persisted across reload.
+- **Accenting a localized enum value silently breaks any string-equality logic.**
+  The toggle inferred its boolean from `field.value === "Active"`; accenting the
+  backend value to "Activé" turned every toggle permanently off (the compare
+  failed). When you accent an option/enum string that doubles as a comparison
+  key, grep every `=== "OldValue"` and the e2e `getByRole("switch",{name})` /
+  `selectOption` that names it, and fix them in lockstep. Better still, drive
+  booleans from a real boolean, not a display string - but at minimum keep the FE
+  compare and the BE value spelled identically.
+- **e2e: archived shows in two places.** Once archived, both the status badge and
+  the status-row value read "Archivé" -> `getByText(...).first()` to avoid a
+  strict-mode violation; restore the flag at the end so the durable profile stays
+  clean.
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** A faire + A traiter (shared `operator_items` backlog =

@@ -69,7 +69,7 @@ def test_compute_merges_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     assert temp["num"] == 1.0  # clamped
     assert temp["pct"] == 100
     parallel = next(f for f in payload["routing"]["right"] if f.get("key") == "parallel_tools")
-    assert parallel["value"] == "Desactivee"
+    assert parallel["value"] == "Désactivée"
     assert payload["tags"]["tags"] == ["x", "y"]
     lang = next(f for f in payload["identity"]["right"] if f.get("key") == "default_language")
     assert lang["value"] == "Anglais"

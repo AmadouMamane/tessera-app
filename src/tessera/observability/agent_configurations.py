@@ -53,36 +53,37 @@ _PARIS = ZoneInfo("Europe/Paris")
 
 _DEFAULTS: dict[str, Any] = {
     "name": "Tessera Assistant",
-    "description": "Assistant IA pour les clients Tessera. Reponses sourcees et conformes.",
-    "owner": "Equipe Support",
+    "description": "Assistant IA pour les clients Tessera. Réponses sourcées et conformes.",
+    "owner": "Équipe Support",
     "timezone": "Europe/Paris",
     "fallback_strategy": "Automatique",
     "tone": "Professionnel",
-    "detail": "Equilibre",
+    "detail": "Équilibré",
     "max_length": "Moyenne",
     "temperature": 0.3,
     "top_p": 0.7,
     "frequency_penalty": 0.2,
     "presence_penalty": 0.1,
-    "routing_strategy": "Par defaut (Recommande)",
+    "routing_strategy": "Par défaut (Recommandé)",
     "parallel_tools": True,
     "tags": ["support", "client"],
+    "archived": False,
 }
 
 _OPTIONS: dict[str, list[str]] = {
-    "owner": ["Equipe Support", "Equipe Produit", "Equipe Conformite", "Equipe ML"],
+    "owner": ["Équipe Support", "Équipe Produit", "Équipe Conformité", "Équipe ML"],
     "timezone": ["Europe/Paris", "Europe/Berlin", "Europe/London", "UTC"],
-    "fallback_strategy": ["Automatique", "Manuelle", "Desactivee"],
-    "tone": ["Professionnel", "Amical", "Direct", "Pedagogique"],
-    "detail": ["Concis", "Equilibre", "Detaille"],
+    "fallback_strategy": ["Automatique", "Manuelle", "Désactivée"],
+    "tone": ["Professionnel", "Amical", "Direct", "Pédagogique"],
+    "detail": ["Concis", "Équilibré", "Détaillé"],
     "max_length": ["Courte", "Moyenne", "Longue"],
     "routing_strategy": [
-        "Par defaut (Recommande)",
-        "Priorite latence",
-        "Priorite qualite",
-        "Cout minimal",
+        "Par défaut (Recommandé)",
+        "Priorité latence",
+        "Priorité qualité",
+        "Coût minimal",
     ],
-    "default_language": ["Francais", "Allemand", "Anglais"],
+    "default_language": ["Français", "Allemand", "Anglais"],
 }
 
 _SLIDERS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
@@ -166,7 +167,7 @@ def _effective() -> dict[str, Any]:
 
 
 def _lang_label(code: str) -> str:
-    return {"fr": "Francais", "de": "Allemand", "en": "Anglais"}.get(code, code)
+    return {"fr": "Français", "de": "Allemand", "en": "Anglais"}.get(code, code)
 
 
 def _fmt_mtime(path: Path) -> str:
@@ -285,34 +286,35 @@ def compute_agent_configurations() -> dict[str, object]:
     agent_id = f"tessera-assistant-{settings.environment.value}"
     default_lang_label = _lang_label(settings.default_language.value)
     lang_value = str(_load_overrides().get(_LANG_KEY) or default_lang_label)
+    archived = bool(cfg["archived"])
 
     return {
         "title": "Configurations",
-        "subtitle": "Reglages de cet agent : identite, modele, comportement et statut.",
+        "subtitle": "Réglages de cet agent : identité, modèle, comportement et statut.",
         "actions": {
             "save": "Enregistrer les modifications",
-            "saved": "Modifications enregistrees",
+            "saved": "Modifications enregistrées",
             "reset": "Annuler",
             "more": "...",
         },
         "identity": {
-            "title": "Identite",
+            "title": "Identité",
             "left": [
                 _edit("name", "Nom de l'agent", str(cfg["name"]), "text"),
                 _ro("Identifiant", agent_id, "copy"),
                 _edit("description", "Description", str(cfg["description"]), "textarea"),
             ],
             "right": [
-                _edit("default_language", "Langue par defaut", str(lang_value), "select"),
+                _edit("default_language", "Langue par défaut", str(lang_value), "select"),
                 _edit("timezone", "Fuseau horaire", str(cfg["timezone"]), "select"),
-                _edit("owner", "Proprietaire", str(cfg["owner"]), "select"),
+                _edit("owner", "Propriétaire", str(cfg["owner"]), "select"),
             ],
         },
         "model": {
-            "title": "Modele",
+            "title": "Modèle",
             "left": [
                 _ro(
-                    "Modele principal",
+                    "Modèle principal",
                     active_model,
                     "model",
                     _model_provider(active_model, profile),
@@ -321,14 +323,14 @@ def compute_agent_configurations() -> dict[str, object]:
             ],
             "right": [
                 _ro(
-                    "Modele de secours (fallback)",
+                    "Modèle de secours (fallback)",
                     fallback_model,
                     "model",
                     _model_provider(fallback_model, profile),
                 ),
                 _edit(
                     "fallback_strategy",
-                    "Strategie de bascule",
+                    "Stratégie de bascule",
                     str(cfg["fallback_strategy"]),
                     "select",
                 ),
@@ -338,20 +340,20 @@ def compute_agent_configurations() -> dict[str, object]:
             "title": "Comportement",
             "selects": [
                 _edit("tone", "Ton", str(cfg["tone"]), "select"),
-                _edit("detail", "Detail des reponses", str(cfg["detail"]), "select"),
-                _edit("max_length", "Longueur max des reponses", str(cfg["max_length"]), "select"),
+                _edit("detail", "Détail des réponses", str(cfg["detail"]), "select"),
+                _edit("max_length", "Longueur max des réponses", str(cfg["max_length"]), "select"),
             ],
             "sliders": [
-                _slider("temperature", "Temperature", float(cfg["temperature"])),
+                _slider("temperature", "Température", float(cfg["temperature"])),
                 _slider("top_p", "Top P", float(cfg["top_p"])),
                 _slider(
-                    "frequency_penalty", "Penalite de frequence", float(cfg["frequency_penalty"])
+                    "frequency_penalty", "Pénalité de fréquence", float(cfg["frequency_penalty"])
                 ),
-                _slider("presence_penalty", "Penalite de presence", float(cfg["presence_penalty"])),
+                _slider("presence_penalty", "Pénalité de présence", float(cfg["presence_penalty"])),
             ],
-            "tools": {"label": "Outils autorises", "value": f"{allowed_tools} selectionnes"},
+            "tools": {"label": "Outils autorisés", "value": f"{allowed_tools} sélectionnés"},
             "note": (
-                "Les parametres du modele et du comportement s'appliquent a "
+                "Les paramètres du modèle et du comportement s'appliquent à "
                 "l'environnement de production."
             ),
         },
@@ -360,53 +362,59 @@ def compute_agent_configurations() -> dict[str, object]:
             "left": [
                 _edit(
                     "routing_strategy",
-                    "Strategie de routage",
+                    "Stratégie de routage",
                     str(cfg["routing_strategy"]),
                     "select",
                 ),
                 _ro(
-                    "Timeout reponse (s)",
+                    "Timeout réponse (s)",
                     str(int(settings.api.request_timeout_seconds / 2)),
                     "info",
                 ),
             ],
             "right": [
-                _ro("Nombre max d'iterations", str(settings.memory.history_window + 2), "info"),
+                _ro("Nombre max d'itérations", str(settings.memory.history_window + 2), "info"),
                 _edit(
                     "parallel_tools",
-                    "Execution parallele d'outils",
-                    "Active" if cfg["parallel_tools"] else "Desactivee",
+                    "Exécution parallèle d'outils",
+                    "Activé" if cfg["parallel_tools"] else "Désactivée",
                     "toggle",
                 ),
             ],
         },
         "tags": {
-            "title": "Tags & Metadonnees",
+            "title": "Tags & Métadonnées",
             "tags": list(cfg["tags"]),
             "add_tag": "Ajouter un tag",
-            "metadata_label": "Metadonnees",
-            "metadata": "Aucune metadonnee",
+            "metadata_label": "Métadonnées",
+            "metadata": "Aucune métadonnée",
             "add_metadata": "Ajouter",
-            "created": f"Cree le {prompts_updated} par Julie Delacroix",
-            "modified": f"Derniere modification le {settings_updated} par Tessera Ops",
-            "archive": "Archiver cet agent",
+            "created": f"Créé le {prompts_updated} par Julie Delacroix",
+            "modified": f"Dernière modification le {settings_updated} par Tessera Ops",
+            "archive": "Désarchiver cet agent" if archived else "Archiver cet agent",
+            "archived": archived,
         },
         "status": {
             "title": "Statut de l'agent",
-            "badge": "Actif",
+            "badge": "Archivé" if archived else "Actif",
+            "badge_tone": "crit" if archived else "good",
             "rows": [
                 {
                     "label": "Environnement",
                     "value": settings.environment.value.title(),
                     "badge": True,
                 },
-                {"label": "Statut", "value": "En ligne", "online": True},
+                {
+                    "label": "Statut",
+                    "value": "Archivé" if archived else "En ligne",
+                    "online": not archived,
+                },
                 {"label": "Depuis", "value": settings_updated},
                 {"label": "Dernier redemarrage", "value": settings_updated, "info": True},
             ],
         },
         "active_model": {
-            "title": "Modele actif",
+            "title": "Modèle actif",
             "name": active_model,
             "provider": _model_provider(active_model, profile),
             "rows": [
@@ -415,15 +423,15 @@ def compute_agent_configurations() -> dict[str, object]:
             ],
         },
         "summary": {
-            "title": "Resume",
+            "title": "Résumé",
             "rows": [
                 {"label": "Langue", "value": str(lang_value)},
                 {"label": "Ton", "value": str(cfg["tone"])},
                 {"label": "Detail", "value": str(cfg["detail"])},
-                {"label": "Outils autorises", "value": str(tool_count)},
+                {"label": "Outils autorisés", "value": str(tool_count)},
                 {"label": "Garde-fous actifs", "value": str(guard_count)},
                 {"label": "Prompts actifs", "value": str(prompt_count)},
-                {"label": "Connaissances rattachees", "value": f"{knowledge_count} sources"},
+                {"label": "Connaissances rattachées", "value": f"{knowledge_count} sources"},
             ],
         },
         "history": {
@@ -433,12 +441,12 @@ def compute_agent_configurations() -> dict[str, object]:
                 {
                     "time": settings_updated,
                     "actor": "Tessera Ops",
-                    "label": f"Mise a jour du modele principal ({active_model})",
+                    "label": f"Mise à jour du modèle principal ({active_model})",
                 },
                 {
                     "time": prompts_updated,
                     "actor": "Tessera Ops",
-                    "label": "Modification des parametres de comportement",
+                    "label": "Modification des paramètres de comportement",
                 },
                 {
                     "time": policy_updated,
@@ -451,18 +459,18 @@ def compute_agent_configurations() -> dict[str, object]:
             "title": "Liens utiles",
             "items": [
                 {
-                    "title": "Sources & memoire",
-                    "desc": "Gerer le catalogue des sources et la memoire partagee",
+                    "title": "Sources & mémoire",
+                    "desc": "Gérer le catalogue des sources et la mémoire partagée",
                     "href": "/configurer/sources-memoire",
                 },
                 {
                     "title": "Garde-fous",
-                    "desc": "Voir les politiques de garde-fou appliquees a cet agent",
+                    "desc": "Voir les politiques de garde-fou appliquées à cet agent",
                     "href": "/agent/garde-fous",
                 },
                 {
                     "title": "Prompts",
-                    "desc": "Gerer les prompts de cet agent",
+                    "desc": "Gérer les prompts de cet agent",
                     "href": "/agent/prompts",
                 },
             ],

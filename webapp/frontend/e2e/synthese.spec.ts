@@ -25,19 +25,19 @@ test.beforeEach(async ({ page }) => {
 
 test("renders the real KPI strip from the live sources", async ({ page }) => {
   // Resolution KPI is computed from the eval run (a percentage with a comma).
-  await expect(page.getByText("Taux de resolution").first()).toBeVisible();
-  await expect(page.getByText(/cas reussis/).first()).toBeVisible();
+  await expect(page.getByText("Taux de résolution").first()).toBeVisible();
+  await expect(page.getByText(/cas réussis/).first()).toBeVisible();
   // Knowledge sources KPI mentions the real indexed-fragment count.
-  await expect(page.getByText(/fragments indexes/).first()).toBeVisible();
+  await expect(page.getByText(/fragments indexés/).first()).toBeVisible();
   // Language mix panel replaces the old fabricated "channels".
-  await expect(page.getByText(/Repartition par langue/).first()).toBeVisible();
+  await expect(page.getByText(/Répartition par langue/).first()).toBeVisible();
 });
 
 test("recent conversations come from the transcript", async ({ page }) => {
   const card = page.locator("section", { hasText: "Conversations recentes" });
   await expect(card).toBeVisible();
   // Each row shows a real turn-count label ("N echange(s)").
-  await expect(card.getByText(/\d+ echange/).first()).toBeVisible();
+  await expect(card.getByText(/\d+ échange/).first()).toBeVisible();
 });
 
 test("quick-config links navigate to the real agent pages", async ({ page }) => {

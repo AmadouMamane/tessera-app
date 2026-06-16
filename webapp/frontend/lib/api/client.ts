@@ -67,6 +67,8 @@ import {
   ConformanceReportSchema,
   type ConsistencyReport,
   ConsistencyReportSchema,
+  type ConsoleFeedback,
+  ConsoleFeedbackSchema,
   type ContradictionReport,
   ContradictionReportSchema,
   type CorpusScanReport,
@@ -1130,6 +1132,36 @@ export async function fetchAgentSynthese(
 
 export async function fetchAgentConsole(signal?: AbortSignal): Promise<AgentConsole> {
   return request("/observability/agent-console", { signal }, AgentConsoleSchema);
+}
+
+/** Read the persisted operator feedback (turn -> rating) for a conversation. */
+export async function fetchConsoleFeedback(
+  conversationId: string,
+  signal?: AbortSignal,
+): Promise<ConsoleFeedback> {
+  const query = new URLSearchParams({ conversation_id: conversationId }).toString();
+  return request(
+    `/observability/agent-console/feedback?${query}`,
+    { signal },
+    ConsoleFeedbackSchema,
+  );
+}
+
+/** Persist (or toggle off) one chat turn's rating; returns the fresh map. */
+export async function saveConsoleFeedback(
+  conversationId: string,
+  turn: number,
+  rating: "up" | "down" | null,
+): Promise<ConsoleFeedback> {
+  return request(
+    "/observability/agent-console/feedback",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ conversation_id: conversationId, turn, rating }),
+    },
+    ConsoleFeedbackSchema,
+  );
 }
 
 export async function fetchAgentConfigurations(signal?: AbortSignal): Promise<AgentConfigurations> {

@@ -3531,12 +3531,14 @@ export const AgentConfigurationsSchema = z.object({
       created: z.string(),
       modified: z.string(),
       archive: z.string(),
+      archived: z.boolean().optional(),
     })
     .optional(),
   status: z
     .object({
       title: z.string(),
       badge: z.string(),
+      badge_tone: z.string().optional(),
       rows: z.array(
         z.object({
           label: z.string(),
@@ -3662,7 +3664,7 @@ export const AgentConsoleSchema = z.object({
     .object({
       input_placeholder: z.string(),
       feedback: z.array(z.string()),
-      footer_actions: z.array(z.string()),
+      footer_actions: z.array(z.object({ key: z.string(), label: z.string() })),
       timeline_incidents: z.string(),
       new_session: z.string(),
       replay: z.string(),
@@ -3670,6 +3672,11 @@ export const AgentConsoleSchema = z.object({
     .optional(),
 });
 export type AgentConsole = z.infer<typeof AgentConsoleSchema>;
+
+export const ConsoleFeedbackSchema = z.object({
+  ratings: z.record(z.string(), z.string()),
+});
+export type ConsoleFeedback = z.infer<typeof ConsoleFeedbackSchema>;
 
 export const AgentConnaissancesSchema = z.object({
   available: z.boolean(),
@@ -4121,31 +4128,64 @@ export const AgentHistoriqueSchema = z.object({
       }),
     )
     .optional(),
+  meta: z.object({ model: z.string(), catalogue_version: z.string() }).optional(),
+  detail_labels: z
+    .object({
+      eyebrow: z.string(),
+      tabs: z.array(z.string()),
+      config_title: z.string(),
+      eval_title: z.string(),
+      eval_cta: z.string(),
+      info_title: z.string(),
+      messages_title: z.string(),
+      question_label: z.string(),
+      response_label: z.string(),
+      activity_title: z.string(),
+    })
+    .optional(),
   filters: z
     .object({
       search: z.string(),
-      selects: z.array(z.object({ label: z.string(), value: z.string() })),
-      more: z.string(),
+      options: z.object({
+        category: z.array(z.object({ key: z.string(), label: z.string() })),
+        lang: z.array(z.object({ key: z.string(), label: z.string() })),
+        status: z.array(z.object({ key: z.string(), label: z.string() })),
+        score: z.array(z.object({ key: z.string(), label: z.string() })),
+      }),
     })
     .optional(),
   table: z
     .object({
       columns: z.array(z.string()),
-      count: z.string(),
-      pages: z.number(),
+      total: z.number(),
       rows: z.array(
         z.object({
           sid: z.string(),
           user: z.string(),
           agent: z.string(),
           start: z.string(),
+          start_ts: z.string(),
           messages: z.string(),
           score: z.string(),
+          score_num: z.number(),
           score_tone: z.string(),
           status: z.string(),
           status_tone: z.string(),
           latency: z.string(),
+          latency_ms: z.number(),
           tokens: z.string(),
+          tokens_num: z.number(),
+          case_id: z.string(),
+          category_key: z.string(),
+          category_label: z.string(),
+          lang: z.string(),
+          passed: z.boolean(),
+          escalation: z.boolean(),
+          tools_count: z.number(),
+          input_tokens: z.number(),
+          output_tokens: z.number(),
+          question: z.string(),
+          response: z.string(),
         }),
       ),
     })
@@ -4164,6 +4204,7 @@ export const AgentHistoriqueSchema = z.object({
     .object({
       title: z.string(),
       cta: z.string(),
+      cta_href: z.string().optional(),
       items: z.array(
         z.object({ label: z.string(), value: z.string(), pct: z.number(), share: z.string() }),
       ),
@@ -4192,39 +4233,21 @@ export const AgentHistoriqueSchema = z.object({
       value: z.string(),
       note: z.string(),
       cta: z.string(),
+      cta_href: z.string().optional(),
     })
     .optional(),
   watch: z
     .object({
       title: z.string(),
       cta: z.string(),
+      cta_href: z.string().optional(),
       items: z.array(z.object({ title: z.string(), detail: z.string(), tone: z.string() })),
     })
     .optional(),
-  quick: z.object({ title: z.string(), items: z.array(z.string()) }).optional(),
-  detail: z
+  quick: z
     .object({
-      sid: z.string(),
-      id: z.string(),
-      tabs: z.array(z.string()),
-      fields: z.array(
-        z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
-      ),
-      config_title: z.string(),
-      config_value: z.string(),
-      config_version: z.string(),
-      eval_title: z.string(),
-      eval_cta: z.string(),
-      eval: z.array(
-        z.object({
-          label: z.string(),
-          value: z.string(),
-          scale: z.string(),
-          lead: z.boolean(),
-        }),
-      ),
-      info_title: z.string(),
-      info: z.array(z.object({ label: z.string(), value: z.string() })),
+      title: z.string(),
+      items: z.array(z.object({ key: z.string(), label: z.string() })),
     })
     .optional(),
 });

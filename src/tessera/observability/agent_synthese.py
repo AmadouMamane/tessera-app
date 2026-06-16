@@ -71,11 +71,11 @@ _TOOL_LABELS: dict[str, str] = {
     "account_balance": "Consultation de solde",
     "card_block": "Blocage de carte",
     "transaction_search": "Recherche de transactions",
-    "loan_simulate": "Simulation de credit",
+    "loan_simulate": "Simulation de crédit",
     "ticket_escalate": "Escalade vers un conseiller",
 }
 
-_LANG_LABELS: dict[str, str] = {"fr": "Francais", "de": "Allemand", "en": "Anglais"}
+_LANG_LABELS: dict[str, str] = {"fr": "Français", "de": "Allemand", "en": "Anglais"}
 
 
 def _secs(ms: float) -> str:
@@ -115,7 +115,7 @@ def _fmt_int(n: int) -> str:
 
 
 def _turns_label(n: int) -> str:
-    return f"{n} echange" if n <= 1 else f"{n} echanges"
+    return f"{n} échange" if n <= 1 else f"{n} échanges"
 
 
 def _truncate(text: str, limit: int = 64) -> str:
@@ -255,7 +255,7 @@ def _delta_vs_prev(series: Sequence[int]) -> str:
     if len(series) < _MIN_SERIES or series[-2] == 0:
         return "-"
     pct = round(100 * (series[-1] - series[-2]) / series[-2])
-    return f"{pct:+d}% vs jour precedent"
+    return f"{pct:+d}% vs jour précédent"
 
 
 def _period_label(period_days: int | None) -> str:
@@ -263,7 +263,7 @@ def _period_label(period_days: int | None) -> str:
     if period_days is None:
         return "Tout l'historique"
     if period_days <= 1:
-        return "24 dernieres heures"
+        return "24 dernières heures"
     return f"{period_days} derniers jours"
 
 
@@ -321,15 +321,15 @@ def _assemble(
              True, conv_series),
         _kpi("turns", "Tours utilisateur", _fmt_int(n_turns), _delta_vs_prev(turn_series),
              True, turn_series),
-        _kpi("resolution", "Taux de resolution", f"{pass_pct:.1f}%".replace(".", ","),
-             f"{passed}/{total} cas reussis", pass_pct >= _GOOD_PCT, res_series),
-        _kpi("latency", "Temps de reponse moyen", _secs(mean_ms),
+        _kpi("resolution", "Taux de résolution", f"{pass_pct:.1f}%".replace(".", ","),
+             f"{passed}/{total} cas réussis", pass_pct >= _GOOD_PCT, res_series),
+        _kpi("latency", "Temps de réponse moyen", _secs(mean_ms),
              f"p50 {_secs(p50)} - p95 {_secs(p95)}", mean_ms <= _GOOD_MEAN_MS, lat_series),
-        _kpi("errors", "Cas en echec", str(failed), f"sur {total} cas du catalogue",
+        _kpi("errors", "Cas en échec", str(failed), f"sur {total} cas du catalogue",
              False, err_series),
         _kpi("sources", "Sources de connaissances", str(cat_count),
-             f"{doc_count} fragments indexes", True, cat_series),
-        _kpi("messages", "Messages echanges", _fmt_int(n_msgs), _delta_vs_prev(msg_series),
+             f"{doc_count} fragments indexés", True, cat_series),
+        _kpi("messages", "Messages échangés", _fmt_int(n_msgs), _delta_vs_prev(msg_series),
              True, msg_series),
     ]
 
@@ -338,27 +338,27 @@ def _assemble(
         "name": str(cfg.get("name", "Tessera Assistant")),
         "status": "actif",
         "fields": [
-            {"label": "Modele principal", "value": snap.model},
-            {"label": "Proprietaire", "value": str(cfg.get("owner", "-"))},
+            {"label": "Modèle principal", "value": snap.model},
+            {"label": "Propriétaire", "value": str(cfg.get("owner", "-"))},
             {"label": "Langues", "value": f"{len(snap.languages)} (fr/de/en)"},
             {"label": "Connaissances", "value": f"{cat_count} sources / {doc_count} fragments"},
             {"label": "Conversations", "value": _fmt_int(n_convs)},
-            {"label": "Derniere activite", "value": _fmt_dt(last_at)},
+            {"label": "Dernière activité", "value": _fmt_dt(last_at)},
         ],
         "cta": "Voir la configuration active",
         "ctaHref": "/agent/configurations",
     }
 
     capabilities: dict[str, object] = {
-        "title": "Capacites principales",
+        "title": "Capacités principales",
         "items": _tool_capabilities(),
-        "cta": "Gerer les capacites",
+        "cta": "Gérer les capacités",
         "ctaHref": "/agent/configurations",
     }
 
     top_cats = sorted(snap.categories, key=lambda c: -c.total)[:_TOP_TOPICS]
     topics: dict[str, object] = {
-        "title": "Top categories evaluees",
+        "title": "Top catégories évaluées",
         "items": [
             {
                 "label": cat.label,
@@ -367,38 +367,38 @@ def _assemble(
             }
             for cat, tone in zip(top_cats, _TONES, strict=False)
         ],
-        "cta": "Voir toutes les categories",
+        "cta": "Voir toutes les catégories",
         "ctaHref": "/agent/evaluations",
     }
 
     performance: dict[str, object] = {
-        "title": "Performance detaillee",
+        "title": "Performance détaillée",
         "rows": [
-            {"label": "Taux de resolution", "value": f"{pass_pct:.1f}%".replace(".", ","),
+            {"label": "Taux de résolution", "value": f"{pass_pct:.1f}%".replace(".", ","),
              "delta": f"{passed}/{total}", "good": pass_pct >= _GOOD_PCT},
-            {"label": "Cas en echec", "value": f"{escal_pct:.1f}%".replace(".", ","),
+            {"label": "Cas en échec", "value": f"{escal_pct:.1f}%".replace(".", ","),
              "delta": f"{failed}/{total}", "good": False},
             {"label": "Escalades", "value": str(snap.escalations), "delta": "cas", "good": True},
             {"label": "Invocations d'outils", "value": str(snap.tool_invocations),
              "delta": "cas", "good": True},
             {"label": "Langues couvertes", "value": str(len(snap.languages)),
              "delta": "fr/de/en", "good": True},
-            {"label": "Temps de reponse P50", "value": _secs(p50), "delta": "median", "good": True},
-            {"label": "Temps de reponse P95", "value": _secs(p95), "delta": "queue",
+            {"label": "Temps de réponse P50", "value": _secs(p50), "delta": "median", "good": True},
+            {"label": "Temps de réponse P95", "value": _secs(p95), "delta": "queue",
              "good": p95 <= _GOOD_P95_MS},
         ],
-        "cta": "Voir le detail",
+        "cta": "Voir le détail",
         "ctaHref": "/agent/evaluations",
     }
 
     config: dict[str, object] = {
         "title": "Configuration courante",
         "rows": [
-            {"label": "Modele", "value": snap.model},
-            {"label": "Jeu d'evaluation", "value": snap.catalogue_version},
-            {"label": "Cas evalues", "value": str(total)},
-            {"label": "Categories", "value": str(len(snap.categories))},
-            {"label": "Langue par defaut", "value": str(cfg.get("default_language", "Francais"))},
+            {"label": "Modèle", "value": snap.model},
+            {"label": "Jeu d'évaluation", "value": snap.catalogue_version},
+            {"label": "Cas évalués", "value": str(total)},
+            {"label": "Catégories", "value": str(len(snap.categories))},
+            {"label": "Langue par défaut", "value": str(cfg.get("default_language", "Francais"))},
         ],
         "cta": "Modifier la configuration",
         "ctaHref": "/agent/configurations",
@@ -420,13 +420,13 @@ def _assemble(
     }
 
     activity: dict[str, object] = {
-        "title": "Activite recente",
+        "title": "Activité récente",
         "rows": [
             {
                 "time": (m["created_at"].astimezone(_PARIS).strftime("%H:%M")
                          if m.get("created_at") else "-"),
                 "label": ("Question utilisateur" if m.get("role") == "user"
-                          else "Reponse generee"),
+                          else "Réponse générée"),
                 "kind": "info" if m.get("role") == "user" else "ok",
             }
             for m in tx["recent_msgs"]
@@ -435,7 +435,7 @@ def _assemble(
 
     prompt_rows, prompts_mtime = _prompt_inventory()
     prompts: dict[str, object] = {
-        "title": "Prompts systeme actifs",
+        "title": "Prompts système actifs",
         "cta": "Voir tous les prompts",
         "ctaHref": "/agent/prompts",
         "rows": [
@@ -443,14 +443,14 @@ def _assemble(
                 "name": r["key"].replace("_", " ").capitalize(),
                 "version": f"{len(r['langs'])} langues",
                 "status": "actif",
-                "updated": f"Mis a jour le {_fmt_dt(prompts_mtime)}",
+                "updated": f"Mis à jour le {_fmt_dt(prompts_mtime)}",
             }
             for r in prompt_rows[:3]
         ],
     }
 
     languages: dict[str, object] = {
-        "title": "Repartition par langue (evaluation)",
+        "title": "Répartition par langue (évaluation)",
         "items": [
             {"label": _LANG_LABELS.get(code, code), "pct": round(100 * cnt / total) if total else 0,
              "tone": tone}
@@ -472,11 +472,11 @@ def _assemble(
         "items": [
             {"label": "Taux d'escalade (eval)", "value": f"{escal_pct:.1f} %".replace(".", ","),
              "tone": "warn" if escal_pct >= _ESCAL_WARN_PCT else "good"},
-            {"label": "Temps de reponse P95", "value": _secs(p95),
+            {"label": "Temps de réponse P95", "value": _secs(p95),
              "tone": "warn" if p95 > _GOOD_P95_MS else "good"},
-            {"label": "Cas en echec", "value": f"{failed}/{total}",
+            {"label": "Cas en échec", "value": f"{failed}/{total}",
              "tone": "crit" if failed > total / 2 else "warn"},
-            {"label": "Chaine d'audit", "value": "Intacte" if chain_ok else "Rompue",
+            {"label": "Chaîne d'audit", "value": "Intacte" if chain_ok else "Rompue",
              "tone": "good" if chain_ok else "crit"},
         ],
     }
@@ -488,17 +488,17 @@ def _assemble(
         "items": [
             {"label": "Sources de connaissances", "href": "/agent/connaissances"},
             {"label": "Garde-fous", "href": "/agent/garde-fous"},
-            {"label": "Prompts systeme", "href": "/agent/prompts"},
+            {"label": "Prompts système", "href": "/agent/prompts"},
             {"label": "Configuration de l'agent", "href": "/agent/configurations"},
         ],
     }
 
     return {
         "meta": {
-            "mode": "Donnees reelles",
+            "mode": "Données réelles",
             "period": _period_label(period_days),
             "updated": _fmt_dt(last_at),
-            "replayAt": "Relire a T",
+            "replayAt": "Relire à T",
             "comparison": "Aucune comparaison",
         },
         "kpis": kpis,
@@ -528,17 +528,17 @@ def _timeline_rows(
         if aware is not None:
             events.append((aware, label, detail, kind))
 
-    _add(prompts_mtime, "Prompts mis a jour", f"{_PROMPTS_DIR.name}/*.yaml", "info")
+    _add(prompts_mtime, "Prompts mis à jour", f"{_PROMPTS_DIR.name}/*.yaml", "info")
     _add(_mtime(_POLICY_FILE), "Politique garde-fous", "policy.yaml", "ok")
     newest_doc = tx["newest_doc"]
     _add(
         newest_doc.get("inserted_at"),
-        "Source de connaissances ajoutee",
+        "Source de connaissances ajoutée",
         str(newest_doc.get("locator") or "source"),
         "ok",
     )
-    _add(snap.run_datetime(), "Evaluation executee", snap.model, "info")
-    _add(tx["totals"].get("last_at"), "Derniere conversation", "transcript", "info")
+    _add(snap.run_datetime(), "Évaluation exécutée", snap.model, "info")
+    _add(tx["totals"].get("last_at"), "Dernière conversation", "transcript", "info")
 
     events.sort(key=lambda e: e[0], reverse=True)
     return [
