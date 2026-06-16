@@ -4575,7 +4575,7 @@
   },
   "etatADate": {
     "title": "State as of date",
-    "subtitle": "Reconstruct precisely the knowledge accessible to an agent at a given date and time.",
+    "subtitle": "Reconstruct an agent's state at a given date.",
     "agent": "Agent",
     "dateTime": "Date and time (Europe/Paris)",
     "reference": "Reference (optional)",

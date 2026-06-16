@@ -4575,7 +4575,7 @@
   },
   "etatADate": {
     "title": "État à date",
-    "subtitle": "Reconstruisez précisément les connaissances accessibles par un agent à une date et une heure données.",
+    "subtitle": "Reconstituez l'état d'un agent à une date donnée.",
     "agent": "Agent",
     "dateTime": "Date et heure (Europe/Paris)",
     "reference": "Référence (optionnelle)",

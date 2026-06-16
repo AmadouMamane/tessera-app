@@ -4575,7 +4575,7 @@
   },
   "etatADate": {
     "title": "Stand zum Datum",
-    "subtitle": "Rekonstruieren Sie genau, welches Wissen einem Agenten zu einem bestimmten Datum und einer bestimmten Uhrzeit zugänglich war.",
+    "subtitle": "Rekonstruieren Sie den Zustand eines Agenten zu einem Datum.",
     "agent": "Agent",
     "dateTime": "Datum und Uhrzeit (Europe/Paris)",
     "reference": "Referenz (optional)",
