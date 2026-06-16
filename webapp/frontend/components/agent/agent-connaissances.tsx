@@ -12,6 +12,7 @@ import {
   Search,
   SlidersHorizontal,
   Target,
+  X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -93,7 +94,7 @@ export function AgentConnaissances() {
 
   const a = data.actions;
   const details = data.details ?? [];
-  const detail = details.find((d) => d.key === selected) ?? details[0];
+  const detail = details.find((d) => d.key === selected);
   const periodDays = Number(period);
   const q = search.trim().toLowerCase();
   const allRows = data.table?.rows ?? [];
@@ -106,7 +107,7 @@ export function AgentConnaissances() {
   );
 
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="relative flex flex-col gap-3 overflow-hidden pb-2 text-[var(--tessera-text)]">
       <AgentTabs
         actions={
           <>
@@ -128,36 +129,37 @@ export function AgentConnaissances() {
         ))}
       </div>
 
-      <div className="grid gap-2.5 xl:grid-cols-12">
-        <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
-          <Filters
-            data={data}
-            search={search}
-            setSearch={setSearch}
-            status={status}
-            setStatus={setStatus}
-            typeF={typeF}
-            setTypeF={setTypeF}
-            period={period}
-            setPeriod={setPeriod}
-          />
-          <SourcesTable
-            data={data}
-            rows={rows}
-            total={allRows.length}
-            selected={detail?.key ?? null}
-            onSelect={setSelected}
-          />
-        </div>
-        <Detail
-          key={detail?.key}
+      <div className="flex min-w-0 flex-col gap-2.5">
+        <Filters
+          data={data}
+          search={search}
+          setSearch={setSearch}
+          status={status}
+          setStatus={setStatus}
+          typeF={typeF}
+          setTypeF={setTypeF}
+          period={period}
+          setPeriod={setPeriod}
+        />
+        <SourcesTable
+          data={data}
+          rows={rows}
+          total={allRows.length}
+          selected={selected}
+          onSelect={setSelected}
+        />
+      </div>
+
+      {detail ? (
+        <DetailDrawer
+          key={detail.key}
           detail={detail}
-          className="xl:col-span-4"
           pending={mut.isPending}
+          onClose={() => setSelected(null)}
           onDetach={(key) => mut.mutate({ key, attached: false })}
           onToggle={(key, active) => mut.mutate({ key, active })}
         />
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -490,42 +492,66 @@ function FileGlyph() {
   );
 }
 
-function Detail({
+function DetailDrawer({
   detail,
-  className,
   pending,
+  onClose,
   onDetach,
   onToggle,
 }: {
-  detail: DetailT | undefined;
-  className?: string;
+  detail: DetailT;
   pending: boolean;
+  onClose: () => void;
   onDetach: (key: string) => void;
   onToggle: (key: string, active: boolean) => void;
 }) {
-  const [tab, setTab] = useState(detail?.tabs[0] ?? "Usage");
-  if (!detail) {
-    return (
-      <section
-        className={cn(
-          "flex min-h-[200px] min-w-0 items-center justify-center rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[0.74rem] text-[var(--tessera-text-muted)]",
-          className,
-        )}
-      >
-        Selectionnez une source pour voir le detail.
-      </section>
-    );
-  }
+  return (
+    <div
+      className="absolute inset-0 z-30 flex justify-end overflow-hidden rounded-lg bg-[#020817]/70 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <DetailPanel
+        detail={detail}
+        pending={pending}
+        onClose={onClose}
+        onDetach={onDetach}
+        onToggle={onToggle}
+      />
+    </div>
+  );
+}
+
+function DetailPanel({
+  detail,
+  pending,
+  onClose,
+  onDetach,
+  onToggle,
+}: {
+  detail: DetailT;
+  pending: boolean;
+  onClose: () => void;
+  onDetach: (key: string) => void;
+  onToggle: (key: string, active: boolean) => void;
+}) {
+  const tCommon = useTranslations("common");
+  const [tab, setTab] = useState(detail.tabs[0] ?? "Usage");
   const d = detail;
   const key = d.key;
   return (
-    <section
-      className={cn(
-        "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]",
-        className,
-      )}
+    <dialog
+      open
+      aria-modal="true"
+      aria-label={d.name}
+      className="static m-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden border-0 border-l border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0 text-[var(--tessera-text)] shadow-[-24px_0_60px_rgba(0,0,0,0.35)]"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-3">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
             <FileGlyph />
@@ -534,17 +560,27 @@ function Detail({
             {d.name}
           </span>
         </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
-            STATUS_TONE[d.status_tone] ?? STATUS_TONE.good,
-          )}
-        >
-          {d.status}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span
+            className={cn(
+              "rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+              STATUS_TONE[d.status_tone] ?? STATUS_TONE.good,
+            )}
+          >
+            {d.status}
+          </span>
+          <button
+            type="button"
+            aria-label={tCommon("close")}
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-bg)] hover:text-[var(--tessera-text)]"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
+      <nav className="flex shrink-0 items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
         {d.tabs.map((tb) => {
           const on = tb === tab;
           return (
@@ -565,7 +601,7 @@ function Detail({
         })}
       </nav>
 
-      <div className="flex flex-col gap-4 p-3.5">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3.5">
         {tab === d.tabs[0] ? (
           <>
             <div>
@@ -675,6 +711,6 @@ function Detail({
           </Link>
         </div>
       </div>
-    </section>
+    </dialog>
   );
 }

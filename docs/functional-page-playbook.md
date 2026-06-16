@@ -158,10 +158,17 @@ it dirty.
 - **Parametres from real config, no run needed.** Fill a "settings" tab from the
   actual config (embedding model `bge-m3`, dim 1024, cosine, top-k, corpus,
   languages) — cheap and fully real.
-- **TODO / next on Connaissances:** turn the fixed right panel into a
-  click-to-open **drawer** like `/prouver/audit-logs` (`components/audit/
-  audit-table.tsx` uses an `absolute inset-0 z-30 flex justify-end` overlay) so
-  the detail slides over on row-click instead of occupying a fixed column.
+- **DONE - detail is now a drawer.** The fixed right column became a
+  click-to-open **drawer** like `/prouver/audit-logs`: the root is `relative ...
+  overflow-hidden`, the table spans full width, and `{detail ? <DetailDrawer
+  .../> : null}` renders an `absolute inset-0 z-30 flex justify-end` backdrop
+  (close on backdrop `onMouseDown` when `target === currentTarget`) holding a
+  `<dialog open aria-modal>` panel (`max-w-[460px]`, `border-l`, slide shadow,
+  `onCancel` -> close, X button labelled `common.close`). Key the drawer with
+  `key={detail.key}` so the internal tab state resets per source. The selection
+  is now `find(d => d.key === selected)` with **no `?? details[0]` fallback** so
+  nothing opens until a row is clicked. Verified e2e: 0 dialogs -> row-click
+  opens 1 (correct title, 3 tabs) -> X closes back to 0.
 
 ## Status of the agent pages (update as you go)
 
