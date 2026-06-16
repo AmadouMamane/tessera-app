@@ -67,6 +67,34 @@ class CategoryStat:
 
 
 @dataclass(frozen=True, slots=True)
+class SessionRow:
+    """One catalogue case run, presented as an agent "session"."""
+
+    case_id: str
+    language: str
+    category: str
+    title: str
+    passed: bool
+    needs_escalation: bool
+    tools: tuple[str, ...]
+    duration_ms: float
+    input_tokens: int
+    output_tokens: int
+    response: str
+    started_at: str
+
+    @property
+    def label(self) -> str:
+        """Human-facing French label for the case category."""
+        return CATEGORY_LABELS.get(self.category, self.category)
+
+    @property
+    def total_tokens(self) -> int:
+        """Combined input + output tokens for the turn."""
+        return self.input_tokens + self.output_tokens
+
+
+@dataclass(frozen=True, slots=True)
 class EvalSnapshot:
     """Aggregates from a single comprehensive failure-catalogue run."""
 
@@ -79,6 +107,26 @@ class EvalSnapshot:
     categories: tuple[CategoryStat, ...]
     escalations: int
     tool_invocations: int
+    sessions: tuple[SessionRow, ...]
+
+    def latencies_ms(self) -> list[float]:
+        """Sorted positive per-session durations (empty if untimed)."""
+        return sorted(s.duration_ms for s in self.sessions if s.duration_ms > 0)
+
+    def latency_percentile(self, pct: float) -> float:
+        """Nearest-rank percentile of session latency in ms (0.0 if untimed)."""
+        values = self.latencies_ms()
+        if not values:
+            return 0.0
+        rank = max(0, min(len(values) - 1, round(pct / 100 * (len(values) - 1))))
+        return values[rank]
+
+    def token_totals(self) -> tuple[int, int]:
+        """(total input tokens, total output tokens) across sessions."""
+        return (
+            sum(s.input_tokens for s in self.sessions),
+            sum(s.output_tokens for s in self.sessions),
+        )
 
     @property
     def failed(self) -> int:
@@ -161,6 +209,25 @@ def load_eval_snapshot() -> EvalSnapshot:
     tool_invocations = sum(
         len(r["invoked_tools"]) for r in results if isinstance(r.get("invoked_tools"), list)
     )
+    sessions = tuple(
+        SessionRow(
+            case_id=str(r.get("case_id", "")),
+            language=str(r.get("language", "")),
+            category=str(r.get("category", "")),
+            title=str(r.get("title", "")),
+            passed=bool(r.get("passed")),
+            needs_escalation=bool(r.get("needs_escalation")),
+            tools=tuple(str(t) for t in r["invoked_tools"])
+            if isinstance(r.get("invoked_tools"), list)
+            else (),
+            duration_ms=float(r.get("duration_ms", 0) or 0),
+            input_tokens=int(r.get("input_tokens", 0) or 0),
+            output_tokens=int(r.get("output_tokens", 0) or 0),
+            response=str(r.get("final_response", "")),
+            started_at=str(r.get("started_at", "")),
+        )
+        for r in results
+    )
     summary = best.get("summary")
     if isinstance(summary, dict) and isinstance(summary.get("passed"), int):
         passed = int(summary["passed"])
@@ -176,4 +243,5 @@ def load_eval_snapshot() -> EvalSnapshot:
         categories=categories,
         escalations=escalations,
         tool_invocations=tool_invocations,
+        sessions=sessions,
     )
