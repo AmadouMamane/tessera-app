@@ -6,7 +6,6 @@ import {
   CalendarClock,
   CheckCircle2,
   ChevronRight,
-  Download,
   FlaskConical,
   Settings2,
   Sparkles,
@@ -160,27 +159,30 @@ function CommandBar({
         })}
       </nav>
       <div className="flex shrink-0 items-center gap-2">
-        <GhostBtn icon={Download} label={t("actions.export")} />
-        <GhostBtn icon={FlaskConical} label={t("actions.test")} />
-        <button
-          type="button"
+        <GhostLink icon={FlaskConical} label={t("actions.test")} href="/agent/evaluations" />
+        <Link
+          href="/agent/configurations"
           className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
         >
           <Settings2 className="h-4 w-4" /> {t("actions.configure")}
-        </button>
+        </Link>
       </div>
     </div>
   );
 }
 
-function GhostBtn({ icon: Icon, label }: { icon: typeof Download; label: string }) {
+function GhostLink({
+  icon: Icon,
+  label,
+  href,
+}: { icon: typeof FlaskConical; label: string; href: string }) {
   return (
-    <button
-      type="button"
+    <Link
+      href={href as never}
       className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
     >
       <Icon className="h-4 w-4" /> {label}
-    </button>
+    </Link>
   );
 }
 
@@ -246,9 +248,16 @@ function Spark({ values, good }: { values: number[]; good: boolean }) {
 function Card({
   title,
   cta,
+  ctaHref,
   children,
   className,
-}: { title?: string; cta?: string; children: ReactNode; className?: string }) {
+}: {
+  title?: string;
+  cta?: string;
+  ctaHref?: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <section
       className={cn(
@@ -262,17 +271,23 @@ function Card({
         </div>
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-      {cta ? <CtaLink label={cta} /> : null}
+      {cta ? <CtaLink label={cta} href={ctaHref} /> : null}
     </section>
   );
 }
 
-function CtaLink({ label }: { label: string }) {
+function CtaLink({ label, href }: { label: string; href?: string }) {
+  const classes =
+    "mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-white";
+  if (href) {
+    return (
+      <Link href={href as never} className={classes}>
+        {label} <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+    );
+  }
   return (
-    <button
-      type="button"
-      className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-white"
-    >
+    <button type="button" className={classes}>
       {label} <ChevronRight className="h-3.5 w-3.5" />
     </button>
   );
@@ -282,7 +297,7 @@ function Profile({ data, className }: { data: Data; className?: string }) {
   const p = data.profile;
   if (!p) return null;
   return (
-    <Card cta={p.cta} className={className}>
+    <Card cta={p.cta} ctaHref={p.ctaHref} className={className}>
       <div className="flex items-center gap-3">
         <Image
           src="/brand/agent-robot.png"
@@ -317,7 +332,7 @@ function Capabilities({ data, className }: { data: Data; className?: string }) {
   const c = data.capabilities;
   if (!c) return null;
   return (
-    <Card title={c.title} cta={c.cta} className={className}>
+    <Card title={c.title} cta={c.cta} ctaHref={c.ctaHref} className={className}>
       <ul className="flex flex-col gap-2">
         {c.items.map((it) => (
           <li
@@ -337,7 +352,7 @@ function Topics({ data, className }: { data: Data; className?: string }) {
   const tp = data.topics;
   if (!tp) return null;
   return (
-    <Card title={tp.title} cta={tp.cta} className={className}>
+    <Card title={tp.title} cta={tp.cta} ctaHref={tp.ctaHref} className={className}>
       <ul className="flex flex-col gap-2.5">
         {tp.items.map((it) => (
           <li key={it.label} className="flex flex-col gap-1">
@@ -362,7 +377,7 @@ function Performance({ data, className }: { data: Data; className?: string }) {
   const pf = data.performance;
   if (!pf) return null;
   return (
-    <Card title={pf.title} cta={pf.cta} className={className}>
+    <Card title={pf.title} cta={pf.cta} ctaHref={pf.ctaHref} className={className}>
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
         {pf.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">
@@ -389,7 +404,7 @@ function ConfigNow({ data, className }: { data: Data; className?: string }) {
   const c = data.config;
   if (!c) return null;
   return (
-    <Card title={c.title} cta={c.cta} className={className}>
+    <Card title={c.title} cta={c.cta} ctaHref={c.ctaHref} className={className}>
       <ul className="flex flex-col gap-2 text-[0.72rem]">
         {c.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">
@@ -408,7 +423,7 @@ function Conversations({ data, className }: { data: Data; className?: string }) 
   const c = data.conversations;
   if (!c) return null;
   return (
-    <Card title={c.title} cta={c.cta} className={className}>
+    <Card title={c.title} cta={c.cta} ctaHref={c.ctaHref} className={className}>
       <ul className="flex flex-col gap-2">
         {c.rows.map((r) => (
           <li
@@ -467,7 +482,7 @@ function Prompts({ data, className }: { data: Data; className?: string }) {
   const p = data.prompts;
   if (!p) return null;
   return (
-    <Card title={p.title} cta={p.cta} className={className}>
+    <Card title={p.title} cta={p.cta} ctaHref={p.ctaHref} className={className}>
       <ul className="flex flex-col gap-2">
         {p.rows.map((r) => (
           <li
@@ -524,7 +539,7 @@ function Alerts({ data, className }: { data: Data; className?: string }) {
   const a = data.alerts;
   if (!a) return null;
   return (
-    <Card title={a.title} cta={a.cta} className={className}>
+    <Card title={a.title} cta={a.cta} ctaHref={a.ctaHref} className={className}>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {a.items.map((it) => (
           <div
@@ -554,19 +569,19 @@ function QuickConfig({ data, className }: { data: Data; className?: string }) {
   if (!q) return null;
   const icons = [Sparkles, Settings2, CalendarClock, Bot];
   return (
-    <Card title={q.title} cta={q.cta} className={className}>
+    <Card title={q.title} cta={q.cta} ctaHref={q.ctaHref} className={className}>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {q.items.map((it, i) => {
           const Icon = icons[i % icons.length] ?? Sparkles;
           return (
-            <button
-              key={it}
-              type="button"
+            <Link
+              key={it.label}
+              href={it.href as never}
               className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.72rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
             >
               <Icon className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
-              <span className="min-w-0 truncate">{it}</span>
-            </button>
+              <span className="min-w-0 truncate">{it.label}</span>
+            </Link>
           );
         })}
       </div>
@@ -578,7 +593,7 @@ function Timeline({ data, className }: { data: Data; className?: string }) {
   const tl = data.timeline;
   if (!tl) return null;
   return (
-    <Card title={tl.title} cta={tl.cta} className={className}>
+    <Card title={tl.title} cta={tl.cta} ctaHref={tl.ctaHref} className={className}>
       <ul className="flex flex-col gap-2.5">
         {tl.rows.map((r, i) => (
           <li key={`${r.time}-${i}`} className="flex gap-2.5 text-[0.72rem]">

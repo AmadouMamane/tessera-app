@@ -499,6 +499,59 @@ it dirty.
   to the inbox route; the a-faire mutation must be declared **after** it (FastAPI
   resolves the annotation at decoration time), or place the model earlier.
 
+## Round-14 skills (Synthese: a dashboard sourced end to end, no fixture)
+
+- **A multi-panel dashboard is "real" panel-by-panel, with one shared rule:
+  every value traces to an artifact or renders an honest relabel.** Synthese had
+  ~13 panels, mostly invented literals (Conversations "1 842", Satisfaction
+  "4,6 / 5", prompt versions "v3.2", channel %s, a fake timeline). The fix wires
+  each panel to a real source: transcript (`conversation_messages`) for
+  conversations / turns / messages / activity feed / recent conversations;
+  `eval_data` for resolution / latency / failures / escalations / topics /
+  performance / model; pgvector `documents` for knowledge sources; the prompts
+  YAML for active prompts; the `agent/tools/` files for capabilities; the
+  persisted agent config for the profile; `verify_audit_chain` for an alert.
+- **Relabel the unsourceable slots to a real distribution; never keep the fake.**
+  No per-channel or satisfaction store exists, so "Utilisation par canal" became
+  "Repartition par langue (evaluation)" (real eval language mix) and the
+  Satisfaction/Active-users/Sessions KPIs were replaced by real ones
+  (Conversations, Tours utilisateur, Messages, Sources de connaissances). The
+  fabricated change "Timeline" became "Derniers changements" built from real
+  file mtimes (prompts, policy.yaml) + ingest `inserted_at` + eval `run_at` +
+  the last transcript activity, sorted newest-first.
+- **The dashboard's functional axis is navigation, not mutation.** Like Prompts
+  (read-only), there is no durable mutation here -- the interactions are the CTAs
+  and quick-config shortcuts, which must be **real `Link`s** to the sibling agent
+  pages (a dead button is a failure). Added an optional `ctaHref` to each panel
+  and a `{label, href}[]` quick-config; the command-bar "Exporter" button (no
+  real export target) was removed rather than left dead.
+- **psycopg parses `%` in the SQL string itself.** An `ILIKE '%escalad%'` literal
+  raises `only '%s','%b','%t' are allowed as placeholders, got '%e'` even when
+  the query has unrelated `%s` params. Double every literal percent (`'%%...%%'`)
+  or pass the pattern as a parameter.
+- **Normalize every datetime to tz-aware before sorting/comparing.** The timeline
+  mixed DB `created_at`/`inserted_at` (tz-aware) with `Path.stat().st_mtime` (UTC
+  aware) and `snap.run_datetime()` (could be naive) -> "can't compare
+  offset-naive and offset-aware". A tiny `_aware(dt)` that attaches UTC to naive
+  values, applied in the formatter and the timeline builder, fixes it.
+- **Sparkline honesty on a gappy time axis.** The transcript spans ~16 days with
+  empty days, so the KPI series uses the last 7 **day-buckets that had activity**
+  (`GROUP BY date_trunc('day', ...)`), and the delta is "vs jour precedent"
+  (previous bucket), NOT "vs veille" -- buckets skip empty calendar days, so
+  "yesterday" would be a lie. eval-derived KPIs (resolution/latency/errors) keep
+  their chronological 7-bucket series; the sources KPI uses the real per-category
+  chunk distribution (no time axis).
+- **Test the pure assembler; abstract the DB behind the fetch.** `_assemble(snap,
+  tx, chain_ok, now)` is I/O-free (the transcript dict `tx` is the only DB-shaped
+  input), so `tests/unit/test_agent_synthese.py` feeds a synthetic snapshot +
+  transcript and asserts the 7 KPIs, profile, language mix, escalation heuristic,
+  singular/plural "echange(s)", timeline ordering, alert tone and the wired
+  hrefs -- with zero Postgres. (The FS reads -- tools/prompts/policy -- are
+  deterministic repo files, so they stay un-mocked.)
+- **e2e: a label can collide with a nav tab.** "Garde-fous" is both a quick-config
+  link and a top nav tab -> scope the click to the panel (`page.locator("section",
+  { hasText: "Configuration rapide" })`) before `getByRole("link", {name})`.
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** A faire + A traiter (shared `operator_items` backlog =
@@ -525,5 +578,12 @@ it dirty.
   Filtres popover** wiring the formerly-dead "Filtres" button to real extra axes
   -- langue (FR/DE/EN from `agg.langs`), couverture minimale, "avec echanges
   ancres" (real transcript traffic count) -- with a live count badge + reset).
-- **Real data (read-only):** Evaluations, Historique, Synthese (eval run).
+- **Real + functional (dashboard, nav-wired):** Synthese (every panel sourced
+  end to end -- transcript conversations/turns/messages/activity/recent convs,
+  eval resolution/latency/failures/topics/performance/model, pgvector sources,
+  prompts YAML, real tool capabilities, agent-config profile, audit-chain alert;
+  unsourceable slots relabelled to real distributions -- language mix, change
+  timeline from file mtimes/ingest/eval; CTAs + quick-config are real `Link`s;
+  `tests/unit/test_agent_synthese.py` + `e2e/synthese.spec.ts`).
+- **Real data (read-only):** Evaluations, Historique (eval run).
 - **Still fixture / blocked:** Other pages' filters/exports/RBAC are static.

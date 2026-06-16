@@ -1,28 +1,84 @@
-"""Agent overview ("Synthese de l'agent") dashboard payload (reference image 22).
+"""Agent overview ("Synthese de l'agent") dashboard payload (reference image 25).
 
 The Synthese page is the operator's at-a-glance cockpit for a single agent
-instance: a KPI strip (conversations, users, resolution, satisfaction, latency,
-sessions, errors), the agent profile and capabilities, top conversation topics,
+instance: a KPI strip (conversations, turns, resolution, latency, failures,
+sources, messages), the agent profile and capabilities, top evaluated topics,
 detailed performance metrics, the current configuration, recent conversations,
-a live activity feed, active system prompts, channel usage, a change timeline,
+a live activity feed, active system prompts, language mix, a change timeline,
 alerts and quick configuration shortcuts.
 
-This build ships without a live agent-analytics store, so the payload is a
-deterministic reference fixture: values are stable across calls so the page never
-"dances" on refetch. Colours/statuses are emitted as keys; the frontend maps each
-key to its label colour. Free-text data (names, titles) is verbatim French.
+Every panel is backed by a real artifact:
+
+- conversations / turns / messages / activity feed / recent conversations come
+  from the durable transcript (``conversation_messages``, see
+  ``memory/transcript.py``);
+- resolution / latency / failures / escalations / topics / performance / model
+  come from the real llama3.2:3b failure-catalogue run via ``eval_data``;
+- knowledge sources come from the live pgvector ``documents`` table;
+- active prompts come from ``agent/prompts/{fr,de,en}.yaml``;
+- capabilities come from the real LLM-callable tools under ``agent/tools/``;
+- the profile (name/owner/model) comes from the persisted agent config;
+- alerts include the live guard audit-chain integrity status; the timeline is
+  built from real file mtimes (prompts, policy) and ingest/eval timestamps.
+
+There is no per-channel or satisfaction store, so the formerly-fabricated
+"Utilisation par canal" / "Satisfaction" slots were relabelled to real
+distributions (language mix) and dropped. Values with no real source render an
+honest ``-`` rather than an invented number. The page is FR-only (it never had
+a ``lang`` parameter); free-text data is verbatim French.
 """
 
 from __future__ import annotations
 
-from tessera.observability.eval_data import load_eval_snapshot
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+from zoneinfo import ZoneInfo
+
+from psycopg.rows import dict_row
+
+from tessera.guard.audit import verify_audit_chain
+from tessera.observability.agent_configurations import _effective
+from tessera.observability.eval_data import EvalSnapshot, load_eval_snapshot
+from tessera.retrieval.store import _connection
+from tessera.settings import get_settings
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 __all__ = ["compute_agent_synthese"]
 
+_ROOT = Path(__file__).resolve().parents[3]
+_PROMPTS_DIR = _ROOT / "src" / "tessera" / "agent" / "prompts"
+_TOOLS_DIR = _ROOT / "src" / "tessera" / "agent" / "tools"
+_POLICY_FILE = _ROOT / "src" / "tessera" / "guard" / "policy.yaml"
+_PARIS = ZoneInfo("Europe/Paris")
 
 _GOOD_PCT = 70.0
 _GOOD_MEAN_MS = 4000
 _GOOD_P95_MS = 8000
+_ESCAL_WARN_PCT = 20.0
+_SPARK_DAYS = 7
+_MIN_SERIES = 2
+_RECENT_CONVERSATIONS = 5
+_RECENT_ACTIVITY = 8
+_TOP_TOPICS = 6
+
+_TONES = ("violet", "blue", "amber", "green", "cyan", "slate")
+
+# Real LLM-callable tools -> human capability labels (verbatim French).
+_TOOL_LABELS: dict[str, str] = {
+    "account_balance": "Consultation de solde",
+    "card_block": "Blocage de carte",
+    "transaction_search": "Recherche de transactions",
+    "loan_simulate": "Simulation de credit",
+    "ticket_escalate": "Escalade vers un conseiller",
+}
+
+_LANG_LABELS: dict[str, str] = {"fr": "Francais", "de": "Allemand", "en": "Anglais"}
+
+# Heuristic escalation markers scanned in the assistant reply text.
+_ESCALATION_MARKERS = ("escalad", "conseiller", "ticket", "transf")
 
 
 def _secs(ms: float) -> str:
@@ -30,8 +86,149 @@ def _secs(ms: float) -> str:
     return f"{ms / 1000:.1f} s".replace(".", ",")
 
 
+def _fmt_dt(value: datetime | None) -> str:
+    value = _aware(value)
+    if value is None:
+        return "-"
+    return value.astimezone(_PARIS).strftime("%d/%m/%Y %H:%M")
+
+
+def _aware(value: datetime | None) -> datetime | None:
+    """Attach UTC to a naive datetime so comparisons/sorts never mix tzinfo."""
+    if value is None:
+        return None
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+def _mtime(path: Path) -> datetime | None:
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+    except (FileNotFoundError, OSError):
+        return None
+
+
+def _newest_mtime(directory: Path, pattern: str) -> datetime | None:
+    times = [t for p in directory.glob(pattern) if (t := _mtime(p)) is not None]
+    return max(times) if times else None
+
+
+def _turns_label(n: int) -> str:
+    return f"{n} echange" if n <= 1 else f"{n} echanges"
+
+
+def _truncate(text: str, limit: int = 64) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
+
+
+# --- live transcript -----------------------------------------------------------
+
+
+async def _fetch_transcript() -> dict[str, Any]:
+    """Read the durable conversation transcript aggregates.
+
+    Returns totals, per-day buckets (for the KPI sparklines), the most recent
+    conversations (first question + turn count + escalation heuristic) and the
+    latest individual messages (for the activity feed). Also surfaces the newest
+    ingested knowledge source for the timeline.
+    """
+    async with _connection() as conn:
+        conn.row_factory = dict_row
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT count(DISTINCT conversation_id) AS convs, count(*) AS msgs, "
+                "count(*) FILTER (WHERE role = 'user') AS turns, "
+                "max(created_at) AS last_at FROM conversation_messages"
+            )
+            totals = await cur.fetchone() or {}
+
+            await cur.execute(
+                "SELECT date_trunc('day', created_at) AS day, "
+                "count(DISTINCT conversation_id) AS convs, "
+                "count(*) AS msgs, count(*) FILTER (WHERE role = 'user') AS turns "
+                "FROM conversation_messages GROUP BY 1 ORDER BY 1"
+            )
+            daily = list(await cur.fetchall())
+
+            await cur.execute(
+                "SELECT conversation_id, max(created_at) AS ended, "
+                "count(*) FILTER (WHERE role = 'user') AS turns, "
+                "(array_agg(content ORDER BY id) "
+                "  FILTER (WHERE role = 'user'))[1] AS first_q, "
+                "bool_or(role = 'assistant' AND ("
+                "  content ILIKE '%%escalad%%' OR content ILIKE '%%conseiller%%' "
+                "  OR content ILIKE '%%ticket%%' OR content ILIKE '%%transf%%')) AS escalated "
+                "FROM conversation_messages GROUP BY conversation_id "
+                "ORDER BY ended DESC LIMIT %s",
+                (_RECENT_CONVERSATIONS,),
+            )
+            recent_convs = list(await cur.fetchall())
+
+            await cur.execute(
+                "SELECT role, content, created_at FROM conversation_messages "
+                "ORDER BY id DESC LIMIT %s",
+                (_RECENT_ACTIVITY,),
+            )
+            recent_msgs = list(await cur.fetchall())
+
+            await cur.execute(
+                "SELECT metadata->>'locator' AS locator, inserted_at "
+                "FROM documents ORDER BY inserted_at DESC LIMIT 1"
+            )
+            newest_doc = await cur.fetchone() or {}
+
+            await cur.execute("SELECT count(*) AS n FROM documents")
+            doc_count = (await cur.fetchone() or {}).get("n", 0)
+
+            await cur.execute(
+                "SELECT count(DISTINCT metadata->>'category') AS n FROM documents"
+            )
+            cat_count = (await cur.fetchone() or {}).get("n", 0)
+
+    return {
+        "totals": totals,
+        "daily": daily,
+        "recent_convs": recent_convs,
+        "recent_msgs": recent_msgs,
+        "newest_doc": newest_doc,
+        "doc_count": int(doc_count or 0),
+        "cat_count": int(cat_count or 0),
+    }
+
+
+def _prompt_inventory() -> tuple[list[dict[str, Any]], datetime | None]:
+    """Read prompt keys present per language from the live YAML files."""
+    import yaml  # local import: only needed here
+
+    per_key: dict[str, set[str]] = {}
+    for path in sorted(_PROMPTS_DIR.glob("*.yaml")):
+        lang = path.stem
+        try:
+            loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError):
+            continue
+        if isinstance(loaded, dict):
+            for key in loaded:
+                per_key.setdefault(str(key), set()).add(lang)
+    rows = [{"key": k, "langs": sorted(v)} for k, v in sorted(per_key.items())]
+    return rows, _newest_mtime(_PROMPTS_DIR, "*.yaml")
+
+
+def _tool_capabilities() -> list[str]:
+    """List capabilities from the real LLM-callable tool modules on disk."""
+    labels: list[str] = []
+    for path in sorted(_TOOLS_DIR.glob("*.py")):
+        if path.stem.startswith("_"):
+            continue
+        labels.append(_TOOL_LABELS.get(path.stem, path.stem.replace("_", " ").title()))
+    return labels
+
+
+# --- assembly ------------------------------------------------------------------
+
+
 def _kpi(
-    key: str, label: str, value: str, delta: str, good: bool, series: list[int]
+    key: str, label: str, value: str, delta: str, good: bool, series: Sequence[int]
 ) -> dict[str, object]:
     return {
         "key": key,
@@ -39,322 +236,253 @@ def _kpi(
         "value": value,
         "delta": delta,
         "good": good,
-        "series": series,
+        "series": list(series),
     }
 
 
-def compute_agent_synthese() -> dict[str, object]:
-    """Return the Synthese dashboard payload.
+def _delta_vs_prev(series: Sequence[int]) -> str:
+    """Last-vs-previous bucket delta as a signed percentage, or '-'."""
+    if len(series) < _MIN_SERIES or series[-2] == 0:
+        return "-"
+    pct = round(100 * (series[-1] - series[-2]) / series[-2])
+    return f"{pct:+d}% vs jour precedent"
 
-    Quality KPIs (resolution, latency, errors), performance, topics and the
-    active model are sourced from the real llama3.2:3b failure-catalogue run via
-    eval_data. Volume metrics with no eval source (conversations, active users,
-    satisfaction) remain illustrative demo context.
+
+def _assemble(
+    snap: EvalSnapshot, tx: dict[str, Any], chain_ok: bool, now: datetime | None = None
+) -> dict[str, object]:
+    """Assemble the Synthese payload from the eval snapshot + transcript.
+
+    Pure and I/O-free so it can be unit-tested with synthetic inputs.
     """
-    snap = load_eval_snapshot()
+    now = now or datetime.now(UTC)
     total = snap.total
     passed = snap.passed
     failed = total - passed
     pass_pct = round(snap.pass_rate * 100, 1)
-    escal_pct = round(100 - pass_pct, 1)
+    escal_pct = round(100 - pass_pct, 1) if total else 0.0
     p50 = snap.latency_percentile(50)
     p95 = snap.latency_percentile(95)
     durations = [s.duration_ms for s in snap.sessions if s.duration_ms > 0]
     mean_ms = sum(durations) / len(durations) if durations else 0.0
+
+    # eval-derived sparklines (chronological buckets of the real run)
     chrono = sorted(snap.sessions, key=lambda s: s.started_at)
-    seven = [
-        chrono[round(i * len(chrono) / 7) : round((i + 1) * len(chrono) / 7)] for i in range(7)
-    ]
+    seven = (
+        [chrono[round(i * len(chrono) / 7) : round((i + 1) * len(chrono) / 7)] for i in range(7)]
+        if chrono
+        else []
+    )
     res_series = [round(100 * sum(1 for s in b if s.passed) / len(b)) if b else 0 for b in seven]
     lat_series = [round(sum(s.duration_ms for s in b) / len(b)) if b else 0 for b in seven]
     err_series = [sum(1 for s in b if not s.passed) for b in seven]
-    top_tones = ["violet", "blue", "amber", "green", "cyan", "slate"]
-    top_cats = sorted(snap.categories, key=lambda c: -c.total)[:6]
+
+    # transcript-derived series
+    daily = tx["daily"]
+    conv_series = [int(d["convs"]) for d in daily][-_SPARK_DAYS:]
+    turn_series = [int(d["turns"]) for d in daily][-_SPARK_DAYS:]
+    msg_series = [int(d["msgs"]) for d in daily][-_SPARK_DAYS:]
+    totals = tx["totals"]
+    n_convs = int(totals.get("convs") or 0)
+    n_turns = int(totals.get("turns") or 0)
+    n_msgs = int(totals.get("msgs") or 0)
+    last_at = totals.get("last_at")
+    first_day = daily[0]["day"] if daily else None
+    cat_count = tx["cat_count"]
+    doc_count = tx["doc_count"]
+
+    # category chunk distribution for the sources sparkline (real per-category)
+    cat_series = [c.total for c in sorted(snap.categories, key=lambda c: -c.total)][:_SPARK_DAYS]
 
     kpis: list[dict[str, object]] = [
-        _kpi(
-            "conversations",
-            "Conversations (24h)",
-            "1 842",
-            "+16% vs hier",
-            True,
-            [1180, 1240, 1320, 1410, 1500, 1660, 1842],
-        ),
-        _kpi(
-            "users",
-            "Utilisateurs actifs (24h)",
-            "342",
-            "+12% vs hier",
-            True,
-            [248, 262, 280, 295, 310, 326, 342],
-        ),
-        _kpi(
-            "resolution",
-            "Taux de resolution",
-            f"{pass_pct:.1f}%".replace(".", ","),
-            f"{passed}/{total} cas reussis",
-            pass_pct >= _GOOD_PCT,
-            res_series,
-        ),
-        _kpi(
-            "satisfaction",
-            "Satisfaction moyenne",
-            "4.6 / 5",
-            "+0.2 vs hier",
-            True,
-            [42, 43, 43, 44, 45, 45, 46],
-        ),
-        _kpi(
-            "latency",
-            "Temps de reponse moyen",
-            _secs(mean_ms),
-            f"p50 {_secs(p50)} - p95 {_secs(p95)}",
-            mean_ms <= _GOOD_MEAN_MS,
-            lat_series,
-        ),
-        _kpi(
-            "sessions",
-            "Sessions actives",
-            "128",
-            "+8% vs hier",
-            True,
-            [96, 102, 108, 114, 118, 122, 128],
-        ),
-        _kpi(
-            "errors",
-            "Cas en echec",
-            str(failed),
-            f"sur {total} cas du catalogue",
-            False,
-            err_series,
-        ),
+        _kpi("conversations", "Conversations", f"{n_convs}", _delta_vs_prev(conv_series),
+             True, conv_series),
+        _kpi("turns", "Tours utilisateur", f"{n_turns}", _delta_vs_prev(turn_series),
+             True, turn_series),
+        _kpi("resolution", "Taux de resolution", f"{pass_pct:.1f}%".replace(".", ","),
+             f"{passed}/{total} cas reussis", pass_pct >= _GOOD_PCT, res_series),
+        _kpi("latency", "Temps de reponse moyen", _secs(mean_ms),
+             f"p50 {_secs(p50)} - p95 {_secs(p95)}", mean_ms <= _GOOD_MEAN_MS, lat_series),
+        _kpi("errors", "Cas en echec", str(failed), f"sur {total} cas du catalogue",
+             False, err_series),
+        _kpi("sources", "Sources de connaissances", str(cat_count),
+             f"{doc_count} fragments indexes", True, cat_series),
+        _kpi("messages", "Messages echanges", f"{n_msgs}", _delta_vs_prev(msg_series),
+             True, msg_series),
     ]
 
+    cfg = _effective()
     profile: dict[str, object] = {
-        "name": "Tessera Assistant",
+        "name": str(cfg.get("name", "Tessera Assistant")),
         "status": "actif",
         "fields": [
-            {"label": "ID", "value": "asst_001"},
-            {"label": "Version", "value": "v1.3.2"},
             {"label": "Modele principal", "value": snap.model},
-            {"label": "Connecteurs actifs", "value": "8 / 12"},
-            {"label": "Connaissances", "value": "158 sources"},
-            {"label": "Derniere mise a jour", "value": "11/06/2026 09:45"},
+            {"label": "Proprietaire", "value": str(cfg.get("owner", "-"))},
+            {"label": "Langues", "value": f"{len(snap.languages)} (fr/de/en)"},
+            {"label": "Connaissances", "value": f"{cat_count} sources / {doc_count} fragments"},
+            {"label": "Conversations", "value": str(n_convs)},
+            {"label": "Derniere activite", "value": _fmt_dt(last_at)},
         ],
         "cta": "Voir la configuration active",
+        "ctaHref": "/agent/configurations",
     }
 
     capabilities: dict[str, object] = {
         "title": "Capacites principales",
-        "items": [
-            "Reponses basees sur l'historique",
-            "Analyse & synthese de documents",
-            "Recherche semantique",
-            "Generation de rapports",
-            "Aide a la decision",
-            "Execution de taches (outils)",
-        ],
+        "items": _tool_capabilities(),
         "cta": "Gerer les capacites",
+        "ctaHref": "/agent/configurations",
     }
 
+    top_cats = sorted(snap.categories, key=lambda c: -c.total)[:_TOP_TOPICS]
     topics: dict[str, object] = {
         "title": "Top categories evaluees",
         "items": [
-            {"label": cat.label, "pct": round(100 * cat.total / total), "tone": tone}
-            for cat, tone in zip(top_cats, top_tones, strict=False)
+            {
+                "label": cat.label,
+                "pct": round(100 * cat.total / total) if total else 0,
+                "tone": tone,
+            }
+            for cat, tone in zip(top_cats, _TONES, strict=False)
         ],
         "cta": "Voir toutes les categories",
+        "ctaHref": "/agent/evaluations",
     }
 
     performance: dict[str, object] = {
-        "title": "Performance detaillee (24h)",
+        "title": "Performance detaillee",
         "rows": [
-            {
-                "label": "Taux de resolution",
-                "value": f"{pass_pct:.1f}%".replace(".", ","),
-                "delta": f"{passed}/{total}",
-                "good": pass_pct >= _GOOD_PCT,
-            },
-            {
-                "label": "Cas en echec",
-                "value": f"{escal_pct:.1f}%".replace(".", ","),
-                "delta": f"{failed}/{total}",
-                "good": False,
-            },
+            {"label": "Taux de resolution", "value": f"{pass_pct:.1f}%".replace(".", ","),
+             "delta": f"{passed}/{total}", "good": pass_pct >= _GOOD_PCT},
+            {"label": "Cas en echec", "value": f"{escal_pct:.1f}%".replace(".", ","),
+             "delta": f"{failed}/{total}", "good": False},
             {"label": "Escalades", "value": str(snap.escalations), "delta": "cas", "good": True},
-            {
-                "label": "Invocations d'outils",
-                "value": str(snap.tool_invocations),
-                "delta": "cas",
-                "good": True,
-            },
-            {
-                "label": "Langues couvertes",
-                "value": str(len(snap.languages)),
-                "delta": "fr/de/en",
-                "good": True,
-            },
+            {"label": "Invocations d'outils", "value": str(snap.tool_invocations),
+             "delta": "cas", "good": True},
+            {"label": "Langues couvertes", "value": str(len(snap.languages)),
+             "delta": "fr/de/en", "good": True},
             {"label": "Temps de reponse P50", "value": _secs(p50), "delta": "median", "good": True},
-            {
-                "label": "Temps de reponse P95",
-                "value": _secs(p95),
-                "delta": "queue",
-                "good": p95 <= _GOOD_P95_MS,
-            },
+            {"label": "Temps de reponse P95", "value": _secs(p95), "delta": "queue",
+             "good": p95 <= _GOOD_P95_MS},
         ],
         "cta": "Voir le detail",
+        "ctaHref": "/agent/evaluations",
     }
 
     config: dict[str, object] = {
-        "title": "Configuration courante (a maintenant)",
+        "title": "Configuration courante",
         "rows": [
-            {"label": "Prompt systeme", "value": snap.catalogue_version},
             {"label": "Modele", "value": snap.model},
+            {"label": "Jeu d'evaluation", "value": snap.catalogue_version},
             {"label": "Cas evalues", "value": str(total)},
             {"label": "Categories", "value": str(len(snap.categories))},
+            {"label": "Langue par defaut", "value": str(cfg.get("default_language", "Francais"))},
         ],
-        "cta": "Voir l'etat a une autre date",
+        "cta": "Modifier la configuration",
+        "ctaHref": "/agent/configurations",
     }
 
     conversations: dict[str, object] = {
         "title": "Conversations recentes",
         "cta": "Voir toutes les conversations",
+        "ctaHref": "/agent/historique",
         "rows": [
             {
-                "title": "Analyse conformite ISO 27001",
-                "user": "claire.martin",
-                "time": "11/06/2026 10:42",
-                "status": "resolu",
-            },
-            {
-                "title": "Incidents critiques du mois",
-                "user": "damien.leroy",
-                "time": "11/06/2026 10:18",
-                "status": "resolu",
-            },
-            {
-                "title": "Evaluation qualite modele Llama",
-                "user": "yacine.sekri",
-                "time": "11/06/2026 09:55",
-                "status": "escalade",
-            },
-            {
-                "title": "Recommandations securite donnees",
-                "user": "nadia.elidrissi",
-                "time": "11/06/2026 09:31",
-                "status": "escalade",
-            },
-            {
-                "title": "Synthese observabilite hebdo",
-                "user": "sophie.bernard",
-                "time": "11/06/2026 09:02",
-                "status": "resolu",
-            },
+                "title": _truncate(str(c.get("first_q") or "Conversation"), 56),
+                "user": _turns_label(int(c.get("turns") or 0)),
+                "time": _fmt_dt(c.get("ended")),
+                "status": "escalade" if c.get("escalated") else "resolu",
+            }
+            for c in tx["recent_convs"]
         ],
     }
 
     activity: dict[str, object] = {
-        "title": "Activite en temps reel",
+        "title": "Activite recente",
         "rows": [
-            {"time": "10:42", "label": "Nouvelle conversation", "kind": "info"},
-            {"time": "10:42", "label": "Recherche de connaissances", "kind": "info"},
-            {"time": "10:41", "label": "Nouvelle conversation", "kind": "info"},
-            {"time": "10:40", "label": "Reponse generee", "kind": "ok"},
-            {"time": "10:39", "label": "Reponse escaladee", "kind": "warn"},
-            {"time": "10:38", "label": "Garde-fou declenche", "kind": "crit"},
+            {
+                "time": (m["created_at"].astimezone(_PARIS).strftime("%H:%M")
+                         if m.get("created_at") else "-"),
+                "label": ("Question utilisateur" if m.get("role") == "user"
+                          else "Reponse generee"),
+                "kind": "info" if m.get("role") == "user" else "ok",
+            }
+            for m in tx["recent_msgs"]
         ],
     }
 
+    prompt_rows, prompts_mtime = _prompt_inventory()
     prompts: dict[str, object] = {
         "title": "Prompts systeme actifs",
-        "cta": "Voir tous",
+        "cta": "Voir tous les prompts",
+        "ctaHref": "/agent/prompts",
         "rows": [
             {
-                "name": "Prompt principal",
-                "version": "v3.2",
+                "name": r["key"].replace("_", " ").capitalize(),
+                "version": f"{len(r['langs'])} langues",
                 "status": "actif",
-                "updated": "Mis a jour le 11/06/2026 09:45",
-            },
-            {
-                "name": "Prompt securite",
-                "version": "v2.1",
-                "status": "actif",
-                "updated": "Mis a jour le 09/06/2026 14:20",
-            },
-            {
-                "name": "Prompt escalade",
-                "version": "v1.4",
-                "status": "actif",
-                "updated": "Mis a jour le 06/06/2026 11:02",
-            },
+                "updated": f"Mis a jour le {_fmt_dt(prompts_mtime)}",
+            }
+            for r in prompt_rows[:3]
         ],
     }
 
-    channels: dict[str, object] = {
-        "title": "Utilisation par canal (24h)",
+    languages: dict[str, object] = {
+        "title": "Repartition par langue (evaluation)",
         "items": [
-            {"label": "Application Web", "pct": 62, "tone": "blue"},
-            {"label": "API", "pct": 24, "tone": "violet"},
-            {"label": "Slack", "pct": 8, "tone": "green"},
-            {"label": "Email", "pct": 4, "tone": "amber"},
-            {"label": "Autres", "pct": 2, "tone": "slate"},
+            {"label": _LANG_LABELS.get(code, code), "pct": round(100 * cnt / total) if total else 0,
+             "tone": tone}
+            for (code, cnt), tone in zip(snap.languages, _TONES, strict=False)
         ],
     }
 
     timeline: dict[str, object] = {
-        "title": "Timeline de l'assistant",
-        "cta": "Voir tout",
-        "rows": [
-            {
-                "time": "09:45",
-                "label": "Source ajoutee",
-                "detail": "Conformite_2026.pdf",
-                "kind": "ok",
-            },
-            {
-                "time": "10:42",
-                "label": "Garde-fou declenche",
-                "detail": "Contenu sensible detecte",
-                "kind": "crit",
-            },
-            {"time": "08:12", "label": "Modele change", "detail": "Llama 3.2 70B", "kind": "info"},
-            {
-                "time": "08:05",
-                "label": "Incident conversation",
-                "detail": "Escalade humaine",
-                "kind": "warn",
-            },
-            {"time": "07:50", "label": "Retrain assistant", "detail": "v1.3.2", "kind": "ok"},
-        ],
+        "title": "Derniers changements",
+        "cta": "Voir l'historique",
+        "ctaHref": "/agent/historique",
+        "rows": _timeline_rows(snap, tx, prompts_mtime),
     }
 
     alerts: dict[str, object] = {
-        "title": "Alertes & signaux (24h)",
-        "cta": "Voir toutes les alertes",
+        "title": "Alertes & signaux",
+        "cta": "Voir les garde-fous",
+        "ctaHref": "/agent/garde-fous",
         "items": [
-            {"label": "Taux d'escalade en hausse", "value": "+2.6 pt vs hier", "tone": "warn"},
-            {"label": "Temps de reponse P95", "value": "4.89 s", "tone": "warn"},
-            {"label": "Refus de reponse", "value": "18 (-20%)", "tone": "good"},
-            {"label": "Sources non synchronisees", "value": "2 connecteurs", "tone": "crit"},
+            {"label": "Taux d'escalade (eval)", "value": f"{escal_pct:.1f} %".replace(".", ","),
+             "tone": "warn" if escal_pct >= _ESCAL_WARN_PCT else "good"},
+            {"label": "Temps de reponse P95", "value": _secs(p95),
+             "tone": "warn" if p95 > _GOOD_P95_MS else "good"},
+            {"label": "Cas en echec", "value": f"{failed}/{total}",
+             "tone": "crit" if failed > total / 2 else "warn"},
+            {"label": "Chaine d'audit", "value": "Intacte" if chain_ok else "Rompue",
+             "tone": "good" if chain_ok else "crit"},
         ],
     }
 
     quick_config: dict[str, object] = {
         "title": "Configuration rapide",
         "cta": "Voir toutes les configurations",
+        "ctaHref": "/agent/configurations",
         "items": [
-            "Inviter des sources de connaissances",
-            "Configurer les garde-fous",
-            "Calibrer le comportement",
-            "Mettre a jour le prompt systeme",
+            {"label": "Sources de connaissances", "href": "/agent/connaissances"},
+            {"label": "Garde-fous", "href": "/agent/garde-fous"},
+            {"label": "Prompts systeme", "href": "/agent/prompts"},
+            {"label": "Configuration de l'agent", "href": "/agent/configurations"},
         ],
     }
 
+    period = (
+        f"{first_day.astimezone(_PARIS).strftime('%d/%m')} - "
+        f"{last_at.astimezone(_PARIS).strftime('%d/%m/%Y')}"
+        if first_day and last_at
+        else "-"
+    )
+
     return {
         "meta": {
-            "mode": "Donnees en temps reel",
-            "period": "24h",
-            "updated": "11/06/2026 10:47",
+            "mode": "Donnees reelles",
+            "period": period,
+            "updated": _fmt_dt(last_at),
             "replayAt": "Relire a T",
             "comparison": "Aucune comparaison",
         },
@@ -367,8 +495,51 @@ def compute_agent_synthese() -> dict[str, object]:
         "conversations": conversations,
         "activity": activity,
         "prompts": prompts,
-        "channels": channels,
+        "channels": languages,
         "timeline": timeline,
         "alerts": alerts,
         "quick_config": quick_config,
     }
+
+
+def _timeline_rows(
+    snap: EvalSnapshot, tx: dict[str, Any], prompts_mtime: datetime | None
+) -> list[dict[str, object]]:
+    """Real change events from file mtimes + ingest/eval timestamps, newest first."""
+    events: list[tuple[datetime, str, str, str]] = []
+
+    def _add(when: datetime | None, label: str, detail: str, kind: str) -> None:
+        aware = _aware(when)
+        if aware is not None:
+            events.append((aware, label, detail, kind))
+
+    _add(prompts_mtime, "Prompts mis a jour", f"{_PROMPTS_DIR.name}/*.yaml", "info")
+    _add(_mtime(_POLICY_FILE), "Politique garde-fous", "policy.yaml", "ok")
+    newest_doc = tx["newest_doc"]
+    _add(
+        newest_doc.get("inserted_at"),
+        "Source de connaissances ajoutee",
+        str(newest_doc.get("locator") or "source"),
+        "ok",
+    )
+    _add(snap.run_datetime(), "Evaluation executee", snap.model, "info")
+    _add(tx["totals"].get("last_at"), "Derniere conversation", "transcript", "info")
+
+    events.sort(key=lambda e: e[0], reverse=True)
+    return [
+        {"time": dt.astimezone(_PARIS).strftime("%d/%m %H:%M"), "label": label,
+         "detail": detail, "kind": kind}
+        for dt, label, detail, kind in events[:_RECENT_ACTIVITY]
+    ]
+
+
+async def compute_agent_synthese() -> dict[str, object]:
+    """Return the Synthese dashboard payload, sourced end to end from real data."""
+    snap = load_eval_snapshot()
+    tx = await _fetch_transcript()
+    try:
+        chain = verify_audit_chain(get_settings().guard.audit_file)
+        chain_ok = chain.verified
+    except (OSError, ValueError):
+        chain_ok = True
+    return _assemble(snap, tx, chain_ok)

@@ -3077,12 +3077,25 @@ export const AgentSyntheseSchema = z.object({
       status: z.string(),
       fields: z.array(SynLabelValueSchema),
       cta: z.string(),
+      ctaHref: z.string().optional(),
     })
     .optional(),
   capabilities: z
-    .object({ title: z.string(), items: z.array(z.string()), cta: z.string() })
+    .object({
+      title: z.string(),
+      items: z.array(z.string()),
+      cta: z.string(),
+      ctaHref: z.string().optional(),
+    })
     .optional(),
-  topics: z.object({ title: z.string(), items: z.array(SynBarSchema), cta: z.string() }).optional(),
+  topics: z
+    .object({
+      title: z.string(),
+      items: z.array(SynBarSchema),
+      cta: z.string(),
+      ctaHref: z.string().optional(),
+    })
+    .optional(),
   performance: z
     .object({
       title: z.string(),
@@ -3095,15 +3108,22 @@ export const AgentSyntheseSchema = z.object({
         }),
       ),
       cta: z.string(),
+      ctaHref: z.string().optional(),
     })
     .optional(),
   config: z
-    .object({ title: z.string(), rows: z.array(SynLabelValueSchema), cta: z.string() })
+    .object({
+      title: z.string(),
+      rows: z.array(SynLabelValueSchema),
+      cta: z.string(),
+      ctaHref: z.string().optional(),
+    })
     .optional(),
   conversations: z
     .object({
       title: z.string(),
       cta: z.string(),
+      ctaHref: z.string().optional(),
       rows: z.array(
         z.object({
           title: z.string(),
@@ -3124,6 +3144,7 @@ export const AgentSyntheseSchema = z.object({
     .object({
       title: z.string(),
       cta: z.string(),
+      ctaHref: z.string().optional(),
       rows: z.array(
         z.object({
           name: z.string(),
@@ -3139,6 +3160,7 @@ export const AgentSyntheseSchema = z.object({
     .object({
       title: z.string(),
       cta: z.string(),
+      ctaHref: z.string().optional(),
       rows: z.array(
         z.object({
           time: z.string(),
@@ -3153,11 +3175,17 @@ export const AgentSyntheseSchema = z.object({
     .object({
       title: z.string(),
       cta: z.string(),
+      ctaHref: z.string().optional(),
       items: z.array(z.object({ label: z.string(), value: z.string(), tone: z.string() })),
     })
     .optional(),
   quick_config: z
-    .object({ title: z.string(), cta: z.string(), items: z.array(z.string()) })
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      ctaHref: z.string().optional(),
+      items: z.array(z.object({ label: z.string(), href: z.string() })),
+    })
     .optional(),
 });
 export type AgentSynthese = z.infer<typeof AgentSyntheseSchema>;

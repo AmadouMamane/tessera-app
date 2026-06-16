@@ -822,7 +822,7 @@ async def observability_agent_synthese() -> dict[str, object]:
     fixture; degrades to ``available: false``.
     """
     try:
-        return {"available": True, **agent_synthese_mod.compute_agent_synthese()}
+        return {"available": True, **await agent_synthese_mod.compute_agent_synthese()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_synthese: failed: {exc}\n")
         return {"available": False}
