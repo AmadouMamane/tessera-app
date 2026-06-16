@@ -526,7 +526,7 @@ function Original({ data, className }: { data: Data; className?: string }) {
             <p className="mb-0.5 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
               {t("question")}
             </p>
-            <p className="text-[var(--tessera-text)]">{o.question}</p>
+            <p className="text-[var(--tessera-text-muted)]">{o.question}</p>
           </div>
           <div>
             <p className="mb-0.5 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
