@@ -149,24 +149,18 @@ export function EtatADate() {
           {t("unavailable")}
         </div>
       ) : (
-        <>
-          <div className="grid gap-2.5 xl:grid-cols-12">
-            <Reconstructed data={data} className="xl:col-span-3" />
-            <Original data={data} className="xl:col-span-5" />
-            <Chronology data={data} className="xl:col-span-4 xl:row-span-2" />
-            <GovCardView
-              t={t}
-              card={data.guardrails}
-              icon={ShieldCheck}
-              className="xl:col-span-4"
-            />
-            <GovCardView t={t} card={data.prompt_model} icon={FileText} className="xl:col-span-4" />
-            <GovCardView t={t} card={data.release} icon={Boxes} className="xl:col-span-4" />
-          </div>
-
-          <Integrity data={data} />
-
-          <div className="grid gap-2.5 xl:grid-cols-12">
+        <div className="grid gap-2.5 xl:grid-cols-12">
+          {/* Left content column: reconstruction + governance cards + sources */}
+          <div className="flex flex-col gap-2.5 xl:col-span-8">
+            <div className="grid gap-2.5 md:grid-cols-3">
+              <Reconstructed data={data} className="md:col-span-1" />
+              <Original data={data} className="md:col-span-2" />
+            </div>
+            <div className="grid gap-2.5 md:grid-cols-3">
+              <GovCardView t={t} card={data.guardrails} icon={ShieldCheck} />
+              <GovCardView t={t} card={data.prompt_model} icon={FileText} />
+              <GovCardView t={t} card={data.release} icon={Boxes} />
+            </div>
             <SourcesTable
               t={t}
               title={data.table?.title ?? ""}
@@ -180,13 +174,17 @@ export function EtatADate() {
               onStatusF={setStatusF}
               selected={selected}
               onSelect={setSelected}
-              className="xl:col-span-8"
             />
-            <AuditPieces data={data} className="xl:col-span-4" />
           </div>
 
-          <Snapshots data={data} onReload={reloadAt} />
-        </>
+          {/* Right rail: chronology, integrity, audit pieces, snapshots */}
+          <div className="flex flex-col gap-2.5 xl:col-span-4">
+            <Chronology data={data} />
+            <Integrity data={data} />
+            <AuditPieces data={data} />
+            <Snapshots data={data} onReload={reloadAt} />
+          </div>
+        </div>
       )}
 
       {detail ? <SourceDrawer t={t} row={detail} onClose={() => setSelected(null)} /> : null}
@@ -389,6 +387,7 @@ function Original({ data, className }: { data: Data; className?: string }) {
               <span className="font-mono text-[var(--tessera-text)]">{o.session}</span>
             </span>
           </div>
+          <CtaLink label={o.cta} href={o.cta_href} />
         </div>
       ) : (
         <p className="mt-2 text-[0.74rem] text-[var(--tessera-text-muted)]">{t("noOriginal")}</p>
@@ -469,7 +468,19 @@ function Chronology({ data, className }: { data: Data; className?: string }) {
           ))}
         </ul>
       )}
+      {tl.cta && tl.cta_href ? <CtaLink label={tl.cta} href={tl.cta_href} /> : null}
     </Panel>
+  );
+}
+
+function CtaLink({ label, href }: { label: string; href: string }) {
+  return (
+    <Link
+      href={href as never}
+      className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-white"
+    >
+      {label} <ChevronRight className="h-3.5 w-3.5" />
+    </Link>
   );
 }
 
@@ -485,15 +496,17 @@ function Integrity({ data }: { data: Data }) {
   ];
   return (
     <Panel title={it.title} icon={ShieldCheck}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <dl className="grid flex-1 grid-cols-2 gap-x-6 gap-y-1.5 text-[0.72rem] md:grid-cols-3">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex flex-col">
-              <dt className="text-[var(--tessera-text-muted)]">{label}</dt>
-              <dd className="font-medium tabular-nums text-[var(--tessera-text)]">{value}</dd>
-            </div>
-          ))}
-        </dl>
+      <dl className="flex flex-col gap-1.5 text-[0.72rem]">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex items-center justify-between gap-2">
+            <dt className="text-[var(--tessera-text-muted)]">{label}</dt>
+            <dd className="truncate text-right font-medium tabular-nums text-[var(--tessera-text)]">
+              {value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-2.5">
         <VerifiedBadge ok={it.verified} label={it.verified_label} />
       </div>
     </Panel>

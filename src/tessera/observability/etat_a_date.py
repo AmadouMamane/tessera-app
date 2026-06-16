@@ -492,7 +492,12 @@ def _assemble(
             "verified_label": "Integrite verifiee",
             "built_label": f"Reconstitue le {_fmt(now)} par Tessera Ops",
         },
-        "original": {"title": "Reponse d'origine", **_original_card(original, at)},
+        "original": {
+            "title": "Reponse d'origine",
+            "cta": "Ouvrir la trace",
+            "cta_href": "/prouver/audit-logs",
+            **_original_card(original, at),
+        },
         "guardrails": {
             "title": "Garde-fous actifs a T",
             **_guardrails_card(policy, audit, ctx, at),
@@ -502,6 +507,8 @@ def _assemble(
         "timeline": {
             "title": f"Chronologie a l'instant T ({_fmt(at) if at else 'live'})",
             "rows": _timeline(states, audit, at),
+            "cta": "Voir la chronologie complete",
+            "cta_href": "/prouver/audit-logs",
         },
         "integrity": {
             "title": "Integrite de la reconstruction",

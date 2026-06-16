@@ -3224,6 +3224,8 @@ export const EtatADateSchema = z.object({
   original: z
     .object({
       title: z.string(),
+      cta: z.string(),
+      cta_href: z.string(),
       available: z.boolean(),
       ref_code: z.string(),
       question: z.string().optional(),
@@ -3274,6 +3276,8 @@ export const EtatADateSchema = z.object({
     .object({
       title: z.string(),
       rows: z.array(z.object({ time: z.string(), label: z.string(), kind: z.string() })),
+      cta: z.string().optional(),
+      cta_href: z.string().optional(),
     })
     .optional(),
   audit_pieces: z
