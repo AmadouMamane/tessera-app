@@ -3505,6 +3505,7 @@ export const AgentConnaissancesSchema = z.object({
   title: z.string().optional(),
   subtitle: z.string().optional(),
   actions: z.object({ manage: z.string(), memory: z.string(), attach: z.string() }).optional(),
+  attachable: z.array(z.object({ key: z.string(), name: z.string(), type: z.string() })).optional(),
   kpis: z
     .array(
       z.object({

@@ -16,6 +16,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { Link } from "@/i18n/navigation";
 import { fetchAgentConnaissances, mutateConnaissancesSource } from "@/lib/api/client";
 import type { AgentConnaissances as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -28,6 +29,8 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 type Status = "Tous" | "Active" | "Desactivee";
+type TypeF = "Tous" | "Reglementation" | "Corpus produit";
+const CATALOG_HREF = "/configurer/sources-memoire" as const;
 
 export function AgentConnaissances() {
   const t = useTranslations("agentConnaissances");
@@ -40,6 +43,7 @@ export function AgentConnaissances() {
   });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<Status>("Tous");
+  const [typeF, setTypeF] = useState<TypeF>("Tous");
   const mut = useMutation({
     mutationFn: mutateConnaissancesSource,
     onSuccess: (fresh) => qc.setQueryData(["agent-connaissances"], fresh),
@@ -59,14 +63,14 @@ export function AgentConnaissances() {
       <AgentTabs
         actions={
           <>
-            <GhostBtn label={a?.manage ?? ""} />
-            <GhostBtn label={a?.memory ?? ""} />
-            <button
-              type="button"
-              className="flex h-9 items-center gap-2 rounded-md border border-[#d98b1f] bg-[#e0a23a] px-3 text-xs font-medium text-[#1b1402] hover:bg-[#eab44e]"
-            >
-              <Plus className="h-4 w-4" /> {a?.attach}
-            </button>
+            <GhostLink href={CATALOG_HREF} label={a?.manage ?? ""} />
+            <GhostLink href={CATALOG_HREF} label={a?.memory ?? ""} />
+            <AttachMenu
+              label={a?.attach ?? ""}
+              items={data.attachable ?? []}
+              pending={mut.isPending}
+              onAttach={(key) => mut.mutate({ key, attached: true })}
+            />
           </>
         }
       />
@@ -85,8 +89,10 @@ export function AgentConnaissances() {
             setSearch={setSearch}
             status={status}
             setStatus={setStatus}
+            typeF={typeF}
+            setTypeF={setTypeF}
           />
-          <SourcesTable data={data} search={search} status={status} />
+          <SourcesTable data={data} search={search} status={status} typeF={typeF} />
         </div>
         <Detail
           data={data}
@@ -100,14 +106,67 @@ export function AgentConnaissances() {
   );
 }
 
-function GhostBtn({ label }: { label: string }) {
+function GhostLink({ href, label }: { href: typeof CATALOG_HREF; label: string }) {
   return (
-    <button
-      type="button"
+    <Link
+      href={href}
       className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
     >
       {label}
-    </button>
+    </Link>
+  );
+}
+
+function AttachMenu({
+  label,
+  items,
+  pending,
+  onAttach,
+}: {
+  label: string;
+  items: { key: string; name: string; type: string }[];
+  pending: boolean;
+  onAttach: (key: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 items-center gap-2 rounded-md border border-[#d98b1f] bg-[#e0a23a] px-3 text-xs font-medium text-[#1b1402] hover:bg-[#eab44e] disabled:opacity-60"
+      >
+        <Plus className="h-4 w-4" /> {label}
+      </button>
+      {open ? (
+        <div className="absolute right-0 z-20 mt-1 w-72 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1 shadow-lg">
+          {items.length === 0 ? (
+            <p className="px-2 py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">
+              Toutes les sources du catalogue sont rattachees.
+            </p>
+          ) : (
+            items.map((it) => (
+              <button
+                key={it.key}
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  onAttach(it.key);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[0.72rem] text-[var(--tessera-text)] hover:bg-[var(--tessera-bg)] disabled:opacity-60"
+              >
+                <span className="truncate">{it.name}</span>
+                <span className="shrink-0 text-[0.62rem] text-[var(--tessera-text-muted)]">
+                  {it.type}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -175,6 +234,11 @@ const STATUS_LABEL: Record<Status, string> = {
   Active: "Active",
   Desactivee: "Desactivee",
 };
+const TYPE_CYCLE: Record<TypeF, TypeF> = {
+  Tous: "Reglementation",
+  Reglementation: "Corpus produit",
+  "Corpus produit": "Tous",
+};
 
 function Filters({
   data,
@@ -182,12 +246,16 @@ function Filters({
   setSearch,
   status,
   setStatus,
+  typeF,
+  setTypeF,
 }: {
   data: Data;
   search: string;
   setSearch: (v: string) => void;
   status: Status;
   setStatus: (v: Status) => void;
+  typeF: TypeF;
+  setTypeF: (v: TypeF) => void;
 }) {
   const f = data.filters;
   if (!f) return null;
@@ -211,7 +279,16 @@ function Filters({
         <span className="font-medium text-[var(--tessera-text)]">{STATUS_LABEL[status]}</span>
         <ChevronDown className="h-3.5 w-3.5" />
       </button>
-      {f.selects.slice(1).map((s) => (
+      <button
+        type="button"
+        onClick={() => setTypeF(TYPE_CYCLE[typeF])}
+        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+      >
+        <span className="text-[var(--tessera-text-muted)]">Type</span>
+        <span className="font-medium text-[var(--tessera-text)]">{typeF}</span>
+        <ChevronDown className="h-3.5 w-3.5" />
+      </button>
+      {f.selects.slice(2).map((s) => (
         <button
           key={s.label}
           type="button"
@@ -236,10 +313,12 @@ function SourcesTable({
   data,
   search,
   status,
+  typeF,
 }: {
   data: Data;
   search: string;
   status: Status;
+  typeF: TypeF;
 }) {
   const tbl = data.table;
   if (!tbl) return null;
@@ -247,6 +326,7 @@ function SourcesTable({
   const rows = tbl.rows.filter(
     (r) =>
       (status === "Tous" || r.status === status) &&
+      (typeF === "Tous" || r.type === typeF) &&
       (q === "" || r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q)),
   );
   return (
