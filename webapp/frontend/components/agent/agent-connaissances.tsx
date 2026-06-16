@@ -18,7 +18,7 @@ import {
   Target,
   X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -67,43 +67,28 @@ const STATUS_TONE: Record<string, string> = {
   off: "border-red-500/30 bg-red-500/15 text-red-300",
 };
 
-type Status = "Tous" | "Active" | "Desactivee";
-type TypeF = "Tous" | "Reglementation" | "Corpus produit";
+// Tone keys are locale-stable; display labels come from i18n / the backend.
+type Status = "all" | "good" | "off";
+type TypeF = "all" | "reg" | "prod";
 // "Gerer le catalogue" -> the signal catalogue; "Sources & memoire" -> the memory page.
 const CATALOG_HREF = "/configurer/signal-catalog" as const;
 const MEMORY_HREF = "/configurer/sources-memoire" as const;
 type NavHref = typeof CATALOG_HREF | typeof MEMORY_HREF;
 
-const STATUS_OPTS: { value: Status; label: string }[] = [
-  { value: "Tous", label: "Tous" },
-  { value: "Active", label: "Active" },
-  { value: "Desactivee", label: "Desactivee" },
-];
-const TYPE_OPTS: { value: TypeF; label: string }[] = [
-  { value: "Tous", label: "Tous" },
-  { value: "Reglementation", label: "Reglementation" },
-  { value: "Corpus produit", label: "Corpus produit" },
-];
-const PERIOD_OPTS = [
-  { value: "30", label: "30 derniers jours" },
-  { value: "7", label: "7 derniers jours" },
-  { value: "0", label: "Aujourd'hui" },
-  { value: "99999", label: "Tout" },
-];
-
 export function AgentConnaissances() {
   const t = useTranslations("agentConnaissances");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const qc = useQueryClient();
   const { data } = useQuery({
-    queryKey: ["agent-connaissances"],
-    queryFn: ({ signal }) => fetchAgentConnaissances(signal),
+    queryKey: ["agent-connaissances", locale],
+    queryFn: ({ signal }) => fetchAgentConnaissances(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<Status>("Tous");
-  const [typeF, setTypeF] = useState<TypeF>("Tous");
+  const [status, setStatus] = useState<Status>("all");
+  const [typeF, setTypeF] = useState<TypeF>("all");
   const [period, setPeriod] = useState("30");
   const [langSel, setLangSel] = useState<string[]>([]);
   const [minCov, setMinCov] = useState(0);
@@ -111,10 +96,11 @@ export function AgentConnaissances() {
   const [selected, setSelected] = useState<string | null>(null);
   const [mutError, setMutError] = useState<string | null>(null);
   const mut = useMutation({
-    mutationFn: mutateConnaissancesSource,
+    mutationFn: (body: { key: string; attached?: boolean; active?: boolean }) =>
+      mutateConnaissancesSource({ ...body, lang: locale }),
     onSuccess: (fresh) => {
       setMutError(null);
-      qc.setQueryData(["agent-connaissances"], fresh);
+      qc.setQueryData(["agent-connaissances", locale], fresh);
     },
     onError: () => setMutError(t("mutationError")),
   });
@@ -137,12 +123,12 @@ export function AgentConnaissances() {
   const allLangs = [...new Set(allRows.flatMap((r) => r.langs ?? []))].sort();
   const advCount = langSel.length + (minCov > 0 ? 1 : 0) + (groundedOnly ? 1 : 0);
   const inlineActive =
-    status !== "Tous" || typeF !== "Tous" || period !== "30" || search.trim() !== "";
+    status !== "all" || typeF !== "all" || period !== "30" || search.trim() !== "";
   const canReset = advCount > 0 || inlineActive;
   const resetAll = () => {
     setSearch("");
-    setStatus("Tous");
-    setTypeF("Tous");
+    setStatus("all");
+    setTypeF("all");
     setPeriod("30");
     setLangSel([]);
     setMinCov(0);
@@ -150,8 +136,8 @@ export function AgentConnaissances() {
   };
   const rows = allRows.filter(
     (r) =>
-      (status === "Tous" || r.status === status) &&
-      (typeF === "Tous" || r.type === typeF) &&
+      (status === "all" || r.status_tone === status) &&
+      (typeF === "all" || r.type_tone === typeF) &&
       (r.fresh_days ?? 0) <= periodDays &&
       (langSel.length === 0 || (r.langs ?? []).some((l) => langSel.includes(l))) &&
       (r.coverage ?? 0) >= minCov &&
@@ -162,33 +148,54 @@ export function AgentConnaissances() {
         r.path.toLowerCase().includes(q)),
   );
 
+  const periodLabels: Record<string, string> = {
+    "30": t("period30"),
+    "7": t("period7"),
+    "0": t("periodToday"),
+    "99999": t("periodAll"),
+  };
+  const statusLabel =
+    status === "good" ? t("statusActive") : status === "off" ? t("statusOff") : "";
+  const typeLabel = typeF === "reg" ? t("typeReg") : typeF === "prod" ? t("typeProd") : "";
   const chips: { key: string; label: string; onRemove: () => void }[] = [];
   if (search.trim())
-    chips.push({ key: "q", label: `Recherche: "${search.trim()}"`, onRemove: () => setSearch("") });
-  if (status !== "Tous")
-    chips.push({ key: "st", label: `Statut: ${status}`, onRemove: () => setStatus("Tous") });
-  if (typeF !== "Tous")
-    chips.push({ key: "ty", label: `Type: ${typeF}`, onRemove: () => setTypeF("Tous") });
+    chips.push({
+      key: "q",
+      label: `${t("searchPrefix")}: "${search.trim()}"`,
+      onRemove: () => setSearch(""),
+    });
+  if (status !== "all")
+    chips.push({
+      key: "st",
+      label: `${t("filterStatut")}: ${statusLabel}`,
+      onRemove: () => setStatus("all"),
+    });
+  if (typeF !== "all")
+    chips.push({
+      key: "ty",
+      label: `${t("filterType")}: ${typeLabel}`,
+      onRemove: () => setTypeF("all"),
+    });
   if (period !== "30")
     chips.push({
       key: "pe",
-      label: `Periode: ${PERIOD_OPTS.find((o) => o.value === period)?.label ?? period}`,
+      label: `${t("filterPeriode")}: ${periodLabels[period] ?? period}`,
       onRemove: () => setPeriod("30"),
     });
   for (const l of langSel)
     chips.push({
       key: `lang-${l}`,
-      label: `Langue: ${l.toUpperCase()}`,
+      label: `${t("langLabel")}: ${l.toUpperCase()}`,
       onRemove: () => setLangSel(langSel.filter((x) => x !== l)),
     });
   if (minCov > 0)
-    chips.push({ key: "cov", label: `Couverture >= ${minCov}%`, onRemove: () => setMinCov(0) });
-  if (groundedOnly)
     chips.push({
-      key: "gr",
-      label: "Avec echanges ancres",
-      onRemove: () => setGroundedOnly(false),
+      key: "cov",
+      label: `${t("coverageMin")}: ${t("coverageGte", { n: minCov })}`,
+      onRemove: () => setMinCov(0),
     });
+  if (groundedOnly)
+    chips.push({ key: "gr", label: t("grounded"), onRemove: () => setGroundedOnly(false) });
 
   return (
     <div className="relative flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
@@ -292,6 +299,7 @@ function AttachMenu({
   pending: boolean;
   onAttach: (key: string) => void;
 }) {
+  const t = useTranslations("agentConnaissances");
   const [open, setOpen] = useState(false);
   const ref = useDismiss(
     open,
@@ -316,7 +324,7 @@ function AttachMenu({
         >
           {items.length === 0 ? (
             <p className="px-2 py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">
-              Toutes les sources du catalogue sont rattachees.
+              {t("allAttached")}
             </p>
           ) : (
             items.map((it) => (
@@ -351,6 +359,7 @@ function ActiveFilterChips({
   chips: { key: string; label: string; onRemove: () => void }[];
   onClear: () => void;
 }) {
+  const t = useTranslations("agentConnaissances");
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {chips.map((c) => (
@@ -361,7 +370,7 @@ function ActiveFilterChips({
           {c.label}
           <button
             type="button"
-            aria-label={`Retirer le filtre ${c.label}`}
+            aria-label={t("removeFilter", { label: c.label })}
             onClick={c.onRemove}
             className="flex h-4 w-4 items-center justify-center rounded-full text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-bg)] hover:text-[var(--tessera-text)]"
           >
@@ -374,7 +383,7 @@ function ActiveFilterChips({
         onClick={onClear}
         className="ml-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
       >
-        Tout effacer
+        {t("clearAll")}
       </button>
     </div>
   );
@@ -524,8 +533,26 @@ function Filters({
   canReset: boolean;
   onReset: () => void;
 }) {
+  const t = useTranslations("agentConnaissances");
+  const tCommon = useTranslations("common");
   const f = data.filters;
   if (!f) return null;
+  const statusOpts = [
+    { value: "all", label: tCommon("all") },
+    { value: "good", label: t("statusActive") },
+    { value: "off", label: t("statusOff") },
+  ];
+  const typeOpts = [
+    { value: "all", label: tCommon("all") },
+    { value: "reg", label: t("typeReg") },
+    { value: "prod", label: t("typeProd") },
+  ];
+  const periodOpts = [
+    { value: "30", label: t("period30") },
+    { value: "7", label: t("period7") },
+    { value: "0", label: t("periodToday") },
+    { value: "99999", label: t("periodAll") },
+  ];
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
       <div className="flex h-9 min-w-[220px] flex-1 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5">
@@ -538,18 +565,23 @@ function Filters({
         />
       </div>
       <FilterDropdown
-        label="Statut"
+        label={t("filterStatut")}
         value={status}
-        options={STATUS_OPTS}
+        options={statusOpts}
         onSelect={(v) => setStatus(v as Status)}
       />
       <FilterDropdown
-        label="Type"
+        label={t("filterType")}
         value={typeF}
-        options={TYPE_OPTS}
+        options={typeOpts}
         onSelect={(v) => setTypeF(v as TypeF)}
       />
-      <FilterDropdown label="Periode" value={period} options={PERIOD_OPTS} onSelect={setPeriod} />
+      <FilterDropdown
+        label={t("filterPeriode")}
+        value={period}
+        options={periodOpts}
+        onSelect={setPeriod}
+      />
       <AdvancedFilters
         label={f.more}
         allLangs={allLangs}
@@ -594,6 +626,7 @@ function AdvancedFilters({
   canReset: boolean;
   onReset: () => void;
 }) {
+  const t = useTranslations("agentConnaissances");
   const [open, setOpen] = useState(false);
   const ref = useDismiss(
     open,
@@ -627,7 +660,7 @@ function AdvancedFilters({
           {allLangs.length > 0 ? (
             <div className="mb-3">
               <p className="mb-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
-                Langue
+                {t("langLabel")}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {allLangs.map((l) => {
@@ -655,7 +688,7 @@ function AdvancedFilters({
 
           <div className="mb-3">
             <p className="mb-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              Couverture minimale
+              {t("coverageMin")}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {COVERAGE_STEPS.map((c) => {
@@ -673,7 +706,7 @@ function AdvancedFilters({
                         : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
                     )}
                   >
-                    {c === 0 ? "Toutes" : `>= ${c}%`}
+                    {c === 0 ? t("coverageAll") : t("coverageGte", { n: c })}
                   </button>
                 );
               })}
@@ -686,7 +719,7 @@ function AdvancedFilters({
             onClick={() => setGroundedOnly(!groundedOnly)}
             className="flex w-full items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.7rem] text-[var(--tessera-text)]"
           >
-            <span>Avec echanges ancres</span>
+            <span>{t("grounded")}</span>
             <span
               className={cn(
                 "flex h-4 w-8 items-center rounded-full px-0.5 transition-colors",
@@ -703,7 +736,7 @@ function AdvancedFilters({
               onClick={onReset}
               className="mt-3 w-full text-center text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
             >
-              Reinitialiser les filtres
+              {t("reset")}
             </button>
           ) : null}
         </div>
@@ -716,29 +749,31 @@ function AdvancedFilters({
 const COL_WIDTHS = ["32%", "18%", "12%", "14%", "12%", "12%"] as const;
 type SortDir = "asc" | "desc";
 
-// Sort value per column label; null always sorts last regardless of direction.
-function sortValue(column: string, r: RowT): number | string | null {
-  switch (column) {
-    case "Volume":
+// Sort value per column INDEX (locale-proof; labels are localized). Columns:
+// 0 Source, 1 Type, 2 Statut, 3 Volume, 4 Fraicheur, 5 Taux de citation.
+// null always sorts last regardless of direction.
+function sortValue(col: number, r: RowT): number | string | null {
+  switch (col) {
+    case 3:
       return r.coverage;
-    case "Fraicheur":
+    case 4:
       return r.fresh_days ?? null;
-    case "Taux de citation": {
+    case 5: {
       const n = Number.parseFloat(r.citation);
       return Number.isNaN(n) ? null : n;
     }
-    case "Type":
-      return r.type.toLowerCase();
-    case "Statut":
-      return r.status.toLowerCase();
+    case 1:
+      return (r.type_tone ?? r.type).toLowerCase();
+    case 2:
+      return r.status_tone.toLowerCase();
     default:
       return r.name.toLowerCase();
   }
 }
 
-function compareRows(a: RowT, b: RowT, column: string, dir: SortDir): number {
-  const av = sortValue(column, a);
-  const bv = sortValue(column, b);
+function compareRows(a: RowT, b: RowT, col: number, dir: SortDir): number {
+  const av = sortValue(col, a);
+  const bv = sortValue(col, b);
   if (av === null && bv === null) return 0;
   if (av === null) return 1; // nulls last
   if (bv === null) return -1;
@@ -760,13 +795,14 @@ function SourcesTable({
   selected: string | null;
   onSelect: (key: string) => void;
 }) {
+  const t = useTranslations("agentConnaissances");
   const tbl = data.table;
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const [sortCol, setSortCol] = useState<string | null>(null);
+  const [sortCol, setSortCol] = useState<number | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const sortedRows = useMemo(() => {
-    if (!sortCol) return rows;
+    if (sortCol === null) return rows;
     return [...rows].sort((a, b) => compareRows(a, b, sortCol, sortDir));
   }, [rows, sortCol, sortDir]);
   const totalRows = sortedRows.length;
@@ -777,11 +813,11 @@ function SourcesTable({
   const safePage = Math.min(page, totalPages);
   const startIdx = (safePage - 1) * perPage;
   const pageRows = sortedRows.slice(startIdx, startIdx + perPage);
-  const onSort = (column: string) => {
-    if (column === sortCol) {
+  const onSort = (col: number) => {
+    if (col === sortCol) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
-      setSortCol(column);
+      setSortCol(col);
       setSortDir("asc");
     }
   };
@@ -797,21 +833,21 @@ function SourcesTable({
                   key={c}
                   style={{ width: COL_WIDTHS[i] }}
                   aria-sort={
-                    sortCol === c ? (sortDir === "asc" ? "ascending" : "descending") : "none"
+                    sortCol === i ? (sortDir === "asc" ? "ascending" : "descending") : "none"
                   }
                   className="px-3 py-2 font-medium"
                 >
                   <button
                     type="button"
-                    onClick={() => onSort(c)}
+                    onClick={() => onSort(i)}
                     className={cn(
                       "-mx-1 flex items-center gap-1 rounded px-1 py-0.5 uppercase hover:text-[var(--tessera-text)]",
                       i === 0 ? "" : "whitespace-nowrap",
-                      sortCol === c ? "text-[var(--tessera-text)]" : "",
+                      sortCol === i ? "text-[var(--tessera-text)]" : "",
                     )}
                   >
                     {c}
-                    {sortCol === c ? (
+                    {sortCol === i ? (
                       sortDir === "asc" ? (
                         <ArrowUp className="h-3 w-3" />
                       ) : (
@@ -906,7 +942,7 @@ function SourcesTable({
                   colSpan={tbl.columns.length}
                   className="px-3 py-6 text-center text-[0.72rem] text-[var(--tessera-text-muted)]"
                 >
-                  Aucune source ne correspond aux filtres.
+                  {t("noResults")}
                 </td>
               </tr>
             ) : null}
@@ -957,10 +993,11 @@ function Pagination({
   onPage: (p: number) => void;
   onPerPage: (n: number) => void;
 }) {
+  const t = useTranslations("agentConnaissances");
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
       <span className="tabular-nums" aria-live="polite">
-        Afficher {start} - {end} sur {total}
+        {t("paginationSummary", { start, end, total })}
       </span>
       <div className="flex items-center gap-1">
         <PageArrow dir="prev" disabled={page <= 1} onClick={() => onPage(Math.max(1, page - 1))} />
@@ -987,7 +1024,7 @@ function Pagination({
         />
       </div>
       <label className="flex items-center gap-2">
-        <span>Lignes par page</span>
+        <span>{t("rowsPerPage")}</span>
         <select
           value={perPage}
           onChange={(e) => onPerPage(Number(e.target.value))}
@@ -1013,12 +1050,13 @@ function PageArrow({
   disabled: boolean;
   onClick: () => void;
 }) {
+  const t = useTranslations("agentConnaissances");
   const Icon = dir === "prev" ? ChevronLeft : ChevronRight;
   return (
     <button
       type="button"
       disabled={disabled}
-      aria-label={dir === "prev" ? "Page precedente" : "Page suivante"}
+      aria-label={dir === "prev" ? t("prevPage") : t("nextPage")}
       onClick={onClick}
       className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
     >
@@ -1051,6 +1089,7 @@ type AnswerT = DetailT["answers"][number];
 const ANSWER_CLAMP_CHARS = 180;
 
 function AnswerItem({ ans }: { ans: AnswerT }) {
+  const t = useTranslations("agentConnaissances");
   const [open, setOpen] = useState(false);
   const answer = ans.answer ?? "";
   const clampable = answer.length > ANSWER_CLAMP_CHARS;
@@ -1083,7 +1122,7 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
               onClick={() => setOpen((o) => !o)}
               className="mt-1 pl-2.5 text-[0.64rem] font-medium text-[#5fd0c6] hover:text-[#8fe3db]"
             >
-              {open ? "Voir moins" : "Voir plus"}
+              {open ? t("showLess") : t("showMore")}
             </button>
           ) : null}
         </>
@@ -1144,6 +1183,7 @@ function DetailPanel({
   onToggle: (key: string, active: boolean) => void;
 }) {
   const tCommon = useTranslations("common");
+  const t = useTranslations("agentConnaissances");
   const [tab, setTab] = useState(detail.tabs[0] ?? "Usage");
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -1268,7 +1308,7 @@ function DetailPanel({
             </h3>
             {d.answers.length === 0 ? (
               <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
-                Aucune reponse ancree pour le moment.
+                {t("noGroundedAnswers")}
               </p>
             ) : (
               <ul className="flex flex-col gap-2.5">
@@ -1283,7 +1323,7 @@ function DetailPanel({
         {tab === d.tabs[2] ? (
           <div>
             <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
-              {d.params_title ?? "Parametres"}
+              {d.params_title ?? t("paramsFallback")}
             </h3>
             <ul className="flex flex-col gap-1.5 text-[0.72rem]">
               {(d.params ?? []).map((p) => (

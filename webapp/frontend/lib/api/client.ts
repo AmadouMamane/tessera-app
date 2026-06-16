@@ -1089,8 +1089,12 @@ export async function fetchAgentConfigurations(signal?: AbortSignal): Promise<Ag
   return request("/observability/agent-configurations", { signal }, AgentConfigurationsSchema);
 }
 
-export async function fetchAgentConnaissances(signal?: AbortSignal): Promise<AgentConnaissances> {
-  return request("/observability/agent-connaissances", { signal }, AgentConnaissancesSchema);
+export async function fetchAgentConnaissances(
+  lang?: string,
+  signal?: AbortSignal,
+): Promise<AgentConnaissances> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/agent-connaissances${q}`, { signal }, AgentConnaissancesSchema);
 }
 
 /** Attach/detach/activate a knowledge source; returns the refreshed payload. */
@@ -1098,13 +1102,16 @@ export async function mutateConnaissancesSource(body: {
   key: string;
   attached?: boolean;
   active?: boolean;
+  lang?: string;
 }): Promise<AgentConnaissances> {
+  const { lang, ...payload } = body;
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
   return request(
-    "/observability/agent-connaissances/source-state",
+    `/observability/agent-connaissances/source-state${q}`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     },
     AgentConnaissancesSchema,
   );

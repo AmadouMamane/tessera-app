@@ -50,6 +50,94 @@ _SOURCE_META: dict[str, tuple[str, str, str]] = {
     "fidelite": ("Credit Aurore - Fidelite", "Corpus produit", "prod"),
 }
 
+# --- Localization (fr/de/en). Logic keys (tones, fresh_days, coverage) stay
+# stable; only display labels are translated here. ASCII-only per file convention.
+_LANG_IDX: dict[str, int] = {"fr": 0, "de": 1, "en": 2}
+_TR: dict[str, tuple[str, str, str]] = {
+    "subtitle": (
+        "Les sources sur lesquelles cet agent est ancre (live pgvector).",
+        "Die Quellen, auf denen dieser Agent verankert ist (live pgvector).",
+        "The sources this agent is grounded on (live pgvector).",
+    ),
+    "act_manage": ("Gerer le catalogue", "Katalog verwalten", "Manage catalogue"),
+    "act_memory": ("Sources & memoire", "Quellen & Speicher", "Sources & memory"),
+    "act_attach": ("Rattacher une source", "Quelle hinzufuegen", "Attach a source"),
+    "kpi_sources": ("Sources rattachees", "Verknuepfte Quellen", "Attached sources"),
+    "kpi_coverage": ("Couverture des requetes", "Abdeckung der Anfragen", "Query coverage"),
+    "kpi_freshness": ("Fraicheur", "Aktualitaet", "Freshness"),
+    "kpi_citation": ("Taux de citation", "Zitationsrate", "Citation rate"),
+    "kpi_hitrate": ("Hit-rate retrieval", "Retrieval-Trefferquote", "Retrieval hit-rate"),
+    "f_search": (
+        "Rechercher une source rattachee...",
+        "Verknuepfte Quelle suchen...",
+        "Search an attached source...",
+    ),
+    "f_more": ("Filtres", "Filter", "Filters"),
+    "col_source": ("Source", "Quelle", "Source"),
+    "col_type": ("Type", "Typ", "Type"),
+    "col_status": ("Statut", "Status", "Status"),
+    "col_volume": ("Volume", "Volumen", "Volume"),
+    "col_freshness": ("Fraicheur", "Aktualitaet", "Freshness"),
+    "col_citation": ("Taux de citation", "Zitationsrate", "Citation rate"),
+    "type_reg": ("Reglementation", "Regulierung", "Regulation"),
+    "type_prod": ("Corpus produit", "Produktkorpus", "Product corpus"),
+    "st_active": ("Active", "Aktiv", "Active"),
+    "st_off": ("Desactivee", "Deaktiviert", "Disabled"),
+    "tab_usage": ("Usage", "Nutzung", "Usage"),
+    "tab_answers": ("Reponses ancrees", "Verankerte Antworten", "Grounded answers"),
+    "tab_params": ("Parametres", "Parameter", "Parameters"),
+    "summary_title": ("Resume", "Zusammenfassung", "Summary"),
+    "usage_title": (
+        "Utilisation par cet agent",
+        "Nutzung durch diesen Agenten",
+        "Usage by this agent",
+    ),
+    "u_citation": ("Taux de citation", "Zitationsrate", "Citation rate"),
+    "u_share": ("Part du corpus", "Korpusanteil", "Corpus share"),
+    "u_grounded": ("Reponses ancrees", "Verankerte Antworten", "Grounded answers"),
+    "u_lastused": ("Derniere utilisation", "Letzte Nutzung", "Last used"),
+    "u_chunks": ("Chunks indexes", "Indexierte Chunks", "Indexed chunks"),
+    "u_lastindex": ("Derniere indexation", "Letzte Indexierung", "Last indexed"),
+    "ans_real": (
+        "Echanges reels ancres sur cette source",
+        "Reale verankerte Dialoge zu dieser Quelle",
+        "Real grounded exchanges on this source",
+    ),
+    "ans_docs": (
+        "Documents ancres (locators reels)",
+        "Verankerte Dokumente (reale Locators)",
+        "Grounded documents (real locators)",
+    ),
+    "params_title": ("Parametres d'ancrage", "Verankerungsparameter", "Grounding parameters"),
+    "p_embed": ("Modele d'embedding", "Embedding-Modell", "Embedding model"),
+    "p_dim": ("Dimension", "Dimension", "Dimension"),
+    "p_corpus": ("Corpus", "Korpus", "Corpus"),
+    "p_docs": ("Documents", "Dokumente", "Documents"),
+    "p_langs": ("Langues", "Sprachen", "Languages"),
+    "p_topk": ("Top-k retrieval", "Top-k Retrieval", "Top-k retrieval"),
+    "p_distance": ("Distance", "Distanz", "Distance"),
+    "p_status": ("Statut d'ancrage", "Verankerungsstatus", "Grounding status"),
+    "actions_title": ("Actions", "Aktionen", "Actions"),
+    "toggle_label": ("Active pour cet agent", "Fuer diesen Agenten aktiv", "Active for this agent"),
+    "detach": ("Detacher de l'agent", "Vom Agenten loesen", "Detach from agent"),
+    "full_sheet": (
+        "Voir la fiche complete dans Sources & memoire",
+        "Vollstaendige Karte in Quellen & Speicher ansehen",
+        "View full sheet in Sources & memory",
+    ),
+    "today": ("Aujourd'hui", "Heute", "Today"),
+    "day_unit": ("j", "T", "d"),
+}
+
+
+def _norm_lang(lang: str) -> str:
+    return lang if lang in _LANG_IDX else "fr"
+
+
+def _t(key: str, lang: str) -> str:
+    """Localized label for ``key`` (falls back to French)."""
+    return _TR[key][_LANG_IDX.get(lang, 0)]
+
 
 def _state_path() -> Path:
     return get_settings().guard.audit_file.parent / "knowledge_state.json"
@@ -101,22 +189,26 @@ def _load_traffic() -> dict[str, object]:
     return cats if isinstance(cats, dict) else {}
 
 
-def _ago(iso: str) -> str:
-    """Relative French age from an ISO timestamp ('' on parse failure)."""
+def _rel_days(n: int, lang: str) -> str:
+    return {"fr": f"il y a {n} j", "de": f"vor {n} T", "en": f"{n}d ago"}[_norm_lang(lang)]
+
+
+def _ago(iso: str, lang: str) -> str:
+    """Relative localized age from an ISO timestamp ('' on parse failure)."""
     try:
         moment = datetime.fromisoformat(iso)
     except (ValueError, TypeError):
         return ""
     delta = datetime.now(UTC) - moment
     hour_s = 3600
-    if delta.days >= 2:  # noqa: PLR2004
-        return f"il y a {delta.days} j"
-    if delta.days == 1:
-        return "hier"
+    if delta.days >= 1:
+        return _rel_days(delta.days, lang)
     secs = delta.total_seconds()
     if secs < hour_s:
-        return f"il y a {max(1, int(secs // 60))} min"
-    return f"il y a {int(secs // hour_s)} h"
+        n = max(1, int(secs // 60))
+        return {"fr": f"il y a {n} min", "de": f"vor {n} Min", "en": f"{n}m ago"}[_norm_lang(lang)]
+    n = int(secs // hour_s)
+    return {"fr": f"il y a {n} h", "de": f"vor {n} Std", "en": f"{n}h ago"}[_norm_lang(lang)]
 
 
 async def _fetch_rows() -> list[dict[str, object]]:
@@ -150,13 +242,11 @@ def available_sources() -> set[str]:
     return set(_SOURCE_META)
 
 
-def _freshness(now: datetime, when: datetime) -> str:
+def _freshness(now: datetime, when: datetime, lang: str) -> str:
     days = (now - when).days
     if days <= 0:
-        return "Aujourd'hui"
-    if days == 1:
-        return "Hier"
-    return f"il y a {days} j"
+        return _t("today", lang)
+    return _rel_days(days, lang)
 
 
 class _Aggregate:
@@ -193,8 +283,13 @@ def _aggregate(rows: list[dict[str, object]]) -> _Aggregate:
     return agg
 
 
-async def build_connaissances() -> dict[str, object]:
-    """Assemble the Connaissances payload from the live retrieval store."""
+async def build_connaissances(lang: str = "fr") -> dict[str, object]:
+    """Assemble the Connaissances payload from the live retrieval store.
+
+    Display labels are localized via ``lang`` (fr/de/en); logic keys
+    (``status_tone``, ``type_tone``, ``fresh_days``, ``coverage``) stay stable.
+    """
+    lang = _norm_lang(lang)
     now = datetime.now(UTC)
     state = _load_state()
     probe = _load_probe()
@@ -222,7 +317,8 @@ async def build_connaissances() -> dict[str, object]:
     rows_out: list[dict[str, object]] = []
     attachable: list[dict[str, object]] = []
     for cat in ordered:
-        meta_name, type_label, type_tone = _SOURCE_META[cat]
+        meta_name, _type_fr, type_tone = _SOURCE_META[cat]
+        type_label = _t("type_reg" if type_tone == "reg" else "type_prod", lang)
         st = state.get(cat, {"attached": True, "active": True})
         if not st.get("attached", True):
             attachable.append({"key": cat, "name": meta_name, "type": type_label})
@@ -237,14 +333,14 @@ async def build_connaissances() -> dict[str, object]:
             {
                 "key": cat,
                 "name": meta_name,
-                "path": rows_chunks_label(chunks[cat], len(docs[cat])),
+                "path": rows_chunks_label(chunks[cat], len(docs[cat]), lang),
                 "type": type_label,
                 "type_tone": type_tone,
-                "status": "Active" if active else "Desactivee",
+                "status": _t("st_active" if active else "st_off", lang),
                 "status_tone": "good" if active else "off",
                 # Real share of the indexed corpus by chunk volume (sums to ~100%).
                 "coverage": round(100 * chunks[cat] / total_chunks),
-                "freshness": _freshness(now, freshest[cat]) if cat in freshest else "-",
+                "freshness": _freshness(now, freshest[cat], lang) if cat in freshest else "-",
                 "fresh_days": (now - freshest[cat]).days if cat in freshest else 9999,
                 "citation": f"{round(cite_pct)}%" if cite_pct is not None else "-",
                 "langs": sorted(agg.langs.get(cat, set())),
@@ -261,71 +357,77 @@ async def build_connaissances() -> dict[str, object]:
     hit_series = [_hits_of(c) for c in ordered]
     fresh_days = min(((now - w).days for w in freshest.values()), default=0)
 
+    fresh_value = _t("today", lang) if fresh_days <= 0 else f"{fresh_days} {_t('day_unit', lang)}"
     kpis = [
         {
             "key": "sources",
-            "label": "Sources rattachees",
+            "label": _t("kpi_sources", lang),
             "value": str(attached_count),
             "series": doc_series,
         },
         {
             "key": "coverage",
-            "label": "Couverture des requetes",
+            "label": _t("kpi_coverage", lang),
             "value": _pct_or_dash(overall.get("coverage")),
             "series": chunk_series,
         },
         {
             "key": "freshness",
-            "label": "Fraicheur",
-            "value": "Aujourd'hui" if fresh_days <= 0 else f"{fresh_days} j",
+            "label": _t("kpi_freshness", lang),
+            "value": fresh_value,
             "series": fresh_series,
         },
         {
             "key": "citation",
-            "label": "Taux de citation",
+            "label": _t("kpi_citation", lang),
             "value": _pct_or_dash(overall.get("citation")),
             "series": cite_series,
         },
         {
             "key": "hitrate",
-            "label": "Hit-rate retrieval",
+            "label": _t("kpi_hitrate", lang),
             "value": _pct_or_dash(overall.get("hitrate")),
             "series": hit_series,
         },
     ]
 
-    details = [_build_detail(r, agg, state, traffic) for r in rows_out]
+    details = [_build_detail(r, agg, state, traffic, lang) for r in rows_out]
 
     return {
         "title": "Connaissances",
-        "subtitle": "Les sources sur lesquelles cet agent est ancre (live pgvector).",
+        "subtitle": _t("subtitle", lang),
         "actions": {
-            "manage": "Gerer le catalogue",
-            "memory": "Sources & memoire",
-            "attach": "Rattacher une source",
+            "manage": _t("act_manage", lang),
+            "memory": _t("act_memory", lang),
+            "attach": _t("act_attach", lang),
         },
         "kpis": kpis,
         "attachable": attachable,
         "filters": {
-            "search": "Rechercher une source rattachee...",
-            "selects": [
-                {"label": "Statut", "value": "Tous"},
-                {"label": "Type", "value": "Tous"},
-                {"label": "Periode", "value": "30 derniers jours"},
-            ],
-            "more": "Filtres",
+            "search": _t("f_search", lang),
+            "selects": [],
+            "more": _t("f_more", lang),
         },
         "table": {
-            "columns": ["Source", "Type", "Statut", "Volume", "Fraicheur", "Taux de citation"],
+            "columns": [
+                _t("col_source", lang),
+                _t("col_type", lang),
+                _t("col_status", lang),
+                _t("col_volume", lang),
+                _t("col_freshness", lang),
+                _t("col_citation", lang),
+            ],
             "rows": rows_out,
-            "count": f"1-{len(rows_out)} sur {len(rows_out)} sources",
+            "count": f"{len(rows_out)}",
         },
         "details": details,
     }
 
 
-def rows_chunks_label(chunks: int, docs: int) -> str:
+def rows_chunks_label(chunks: int, docs: int, lang: str = "fr") -> str:
     """Subtitle under a source name: real chunk and document counts."""
+    if _norm_lang(lang) == "de":
+        return f"{chunks} Chunks / {docs} Dokumente"
     return f"{chunks} chunks / {docs} documents"
 
 
@@ -333,11 +435,20 @@ def _pct_or_dash(value: object) -> str:
     return f"{round(value)}%" if isinstance(value, int | float) else "-"
 
 
+def _summary(chunks: int, docs: int, langs: str, lang: str) -> str:
+    if lang == "de":
+        return f"In pgvector verankerte Quelle: {chunks} Chunks aus {docs} Dokumenten, in {langs}."
+    if lang == "en":
+        return f"Source grounded in pgvector: {chunks} chunks from {docs} documents, in {langs}."
+    return f"Source ancree dans pgvector : {chunks} chunks issus de {docs} documents, en {langs}."
+
+
 def _build_detail(
     row: dict[str, object],
     agg: _Aggregate,
     state: dict[str, dict[str, bool]],
     traffic: dict[str, object],
+    lang: str,
 ) -> dict[str, object]:
     cat = str(row["key"])
     st = state.get(cat, {"attached": True, "active": True})
@@ -350,62 +461,59 @@ def _build_detail(
     raw_answers = tr.get("answers")
     raw_answers = raw_answers if isinstance(raw_answers, list) else []
     grounded = int(tr.get("count", 0)) if isinstance(tr.get("count"), int) else 0
-    last_used = _ago(str(tr.get("last_used", ""))) or "-"
+    last_used = _ago(str(tr.get("last_used", "")), lang) or "-"
 
     if raw_answers:
-        answers_title = "Echanges reels ancres sur cette source"
+        answers_title = _t("ans_real", lang)
         answers = [
             {
                 "text": str(a.get("text", "")),
                 "answer": str(a.get("answer", "")),
-                "time": _ago(str(a.get("time", ""))),
+                "time": _ago(str(a.get("time", "")), lang),
             }
             for a in raw_answers[:5]
             if isinstance(a, dict)
         ]
     else:
-        answers_title = "Documents ancres (locators reels)"
+        answers_title = _t("ans_docs", lang)
         answers = [{"text": loc, "answer": "", "time": ""} for loc in locs[:5]]
 
     return {
         "name": str(row["name"]),
         "status": str(row["status"]),
         "status_tone": str(row["status_tone"]),
-        "tabs": ["Usage", "Reponses ancrees", "Parametres"],
-        "summary_title": "Resume",
-        "summary": (
-            f"Source ancree dans pgvector : {agg.chunks[cat]} chunks issus de "
-            f"{len(agg.docs[cat])} documents, en {langs}."
-        ),
-        "usage_title": "Utilisation par cet agent",
+        "tabs": [_t("tab_usage", lang), _t("tab_answers", lang), _t("tab_params", lang)],
+        "summary_title": _t("summary_title", lang),
+        "summary": _summary(agg.chunks[cat], len(agg.docs[cat]), langs, lang),
+        "usage_title": _t("usage_title", lang),
         "usage": [
-            {"label": "Taux de citation", "value": str(row["citation"])},
-            {"label": "Part du corpus", "value": f"{row['coverage']}%"},
-            {"label": "Reponses ancrees", "value": str(grounded)},
-            {"label": "Derniere utilisation", "value": last_used},
-            {"label": "Chunks indexes", "value": str(agg.chunks[cat])},
+            {"label": _t("u_citation", lang), "value": str(row["citation"])},
+            {"label": _t("u_share", lang), "value": f"{row['coverage']}%"},
+            {"label": _t("u_grounded", lang), "value": str(grounded)},
+            {"label": _t("u_lastused", lang), "value": last_used},
+            {"label": _t("u_chunks", lang), "value": str(agg.chunks[cat])},
             {
-                "label": "Derniere indexation",
+                "label": _t("u_lastindex", lang),
                 "value": agg.freshest[cat].strftime("%d/%m/%Y") if cat in agg.freshest else "-",
             },
         ],
         "answers_title": answers_title,
         "answers": answers,
-        "params_title": "Parametres d'ancrage",
+        "params_title": _t("params_title", lang),
         "params": [
-            {"label": "Modele d'embedding", "value": "bge-m3"},
-            {"label": "Dimension", "value": "1024"},
-            {"label": "Corpus", "value": corpus},
-            {"label": "Documents", "value": str(len(agg.docs[cat]))},
-            {"label": "Langues", "value": langs},
-            {"label": "Top-k retrieval", "value": "5"},
-            {"label": "Distance", "value": "cosine"},
-            {"label": "Statut d'ancrage", "value": str(row["status"])},
+            {"label": _t("p_embed", lang), "value": "bge-m3"},
+            {"label": _t("p_dim", lang), "value": "1024"},
+            {"label": _t("p_corpus", lang), "value": corpus},
+            {"label": _t("p_docs", lang), "value": str(len(agg.docs[cat]))},
+            {"label": _t("p_langs", lang), "value": langs},
+            {"label": _t("p_topk", lang), "value": "5"},
+            {"label": _t("p_distance", lang), "value": "cosine"},
+            {"label": _t("p_status", lang), "value": str(row["status"])},
         ],
-        "actions_title": "Actions",
-        "toggle_label": "Active pour cet agent",
+        "actions_title": _t("actions_title", lang),
+        "toggle_label": _t("toggle_label", lang),
         "toggle_on": bool(st.get("active", True)),
-        "detach": "Detacher de l'agent",
-        "full_sheet": "Voir la fiche complete dans Sources & memoire",
+        "detach": _t("detach", lang),
+        "full_sheet": _t("full_sheet", lang),
         "key": cat,
     }
