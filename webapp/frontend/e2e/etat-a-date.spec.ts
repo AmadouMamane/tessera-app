@@ -88,3 +88,15 @@ test("saving a snapshot persists it durably", async ({ page }) => {
   await expect(page.getByText("Snapshots enregistrés")).toBeVisible();
   await expect(page.getByText(/^RES-/).first()).toBeVisible();
 });
+
+test("the sealed (opposable) badge marks the verified reconstruction", async ({ page }) => {
+  await expect(page.getByText("Scellé", { exact: true })).toBeVisible();
+});
+
+test("downloading the report opens a printable opposable evidence document", async ({ page }) => {
+  const popupPromise = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "Télécharger le rapport" }).click();
+  const popup = await popupPromise;
+  await expect(popup.getByRole("heading", { name: /Rapport d'etat opposable/ })).toBeVisible();
+  await popup.close();
+});

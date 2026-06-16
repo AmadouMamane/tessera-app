@@ -13,6 +13,7 @@ import {
   FileText,
   History,
   Info,
+  Lock,
   MessageSquare,
   Package,
   RotateCcw,
@@ -102,6 +103,83 @@ function refToIso(ref: string): string | null {
   return Number.isNaN(local.getTime()) ? null : local.toISOString();
 }
 
+function esc(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** Build a clean, printable opposable-evidence report (browser "Save as PDF"). */
+function buildReportHtml(data: Data): string {
+  const m = data.meta;
+  const integ = data.integrity;
+  const orig = data.original;
+  const recon = data.reconstructed;
+  const rows = data.table?.rows ?? [];
+  const metaRows = [
+    ["Reference", m?.ref_code],
+    ["Etat a la date", m?.as_of_label],
+    ["Tenant", m?.tenant],
+    ["Agent", m?.agent],
+    ["Source du contexte", m?.context_source],
+    ["Fuseau horaire", m?.timezone],
+  ]
+    .filter(([, v]) => v)
+    .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`)
+    .join("");
+  const integRows = integ
+    ? [
+        [integ.verified_label, integ.verified ? "OUI" : "NON"],
+        ["Chaine d'audit", integ.chain_label],
+        ["Couverture de l'index", integ.coverage],
+        ["Sondage de test", integ.test_query],
+        ["Dernier sync", integ.last_sync],
+      ]
+        .filter(([, v]) => v)
+        .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`)
+        .join("")
+    : "";
+  const sourceRows = rows
+    .map(
+      (r) =>
+        `<tr><td>${esc(r.source)}</td><td>${esc(r.type)}</td><td>${esc(r.version)}</td>` +
+        `<td>${esc(r.accessible_until)}</td><td>${esc(r.status_label)}</td></tr>`,
+    )
+    .join("");
+  const sealed = recon?.verified ? '<span class="seal">SCELLE - Etat opposable</span>' : "";
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<title>Rapport d'etat opposable - ${esc(m?.ref_code ?? "")}</title>
+<style>
+  body{font:13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#111;margin:32px;}
+  h1{font-size:20px;margin:0 0 2px;} h2{font-size:14px;margin:24px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px;}
+  .sub{color:#555;margin:0 0 12px;}
+  .seal{display:inline-block;margin-left:10px;padding:2px 8px;border:1px solid #1a7f4b;color:#1a7f4b;border-radius:999px;font-size:11px;font-weight:600;vertical-align:middle;}
+  table{border-collapse:collapse;width:100%;margin:6px 0;} th,td{border:1px solid #e2e2e2;padding:6px 8px;text-align:left;vertical-align:top;}
+  th{background:#f6f6f6;white-space:nowrap;width:200px;} .src th{width:auto;}
+  .qa{border:1px solid #e2e2e2;border-radius:6px;padding:10px;background:#fafafa;}
+  .qa .q{font-weight:600;} .qa .a{margin-top:6px;white-space:pre-wrap;}
+  footer{margin-top:28px;color:#888;font-size:11px;}
+</style></head><body>
+<h1>Rapport d'etat opposable ${sealed}</h1>
+<p class="sub">Reconstitution de l'etat accessible et applicable par l'agent a la date et heure donnees.</p>
+<h2>Contexte de la reconstitution</h2>
+<table>${metaRows}</table>
+${integRows ? `<h2>Integrite & preuve</h2><table>${integRows}</table>` : ""}
+${
+  orig?.available
+    ? `<h2>${esc(orig.title)} (${esc(orig.ref_code ?? "")})</h2><div class="qa"><div class="q">Q : ${esc(orig.question)}</div><div class="a">R : ${esc(orig.answer)}</div></div>`
+    : ""
+}
+${
+  sourceRows
+    ? `<h2>${esc(data.table?.title ?? "Sources accessibles a T")}</h2><table class="src"><tr><th>Source</th><th>Type</th><th>Version</th><th>Accessible jusqu'a</th><th>Statut</th></tr>${sourceRows}</table>`
+    : ""
+}
+<footer>Genere le ${esc(new Date().toLocaleString("fr-FR"))} - Tessera - document probatoire reproductible (meme T => meme etat).</footer>
+</body></html>`;
+}
+
 export function EtatADate() {
   const t = useTranslations("etatADate");
   const qc = useQueryClient();
@@ -144,13 +222,14 @@ export function EtatADate() {
 
   function downloadReport() {
     if (!data) return;
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${data.meta?.ref_code ?? "etat-a-date"}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const html = buildReportHtml(data);
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    // Let the new document lay out before invoking the print -> "Save as PDF" dialog.
+    win.addEventListener("load", () => win.print());
   }
 
   const allRows = data?.table?.rows ?? [];
@@ -176,6 +255,11 @@ export function EtatADate() {
           <div className="flex-1" />
         )}
         <div className="flex shrink-0 items-center gap-2">
+          {data?.reconstructed?.verified ? (
+            <span className="flex h-9 items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 text-[0.72rem] font-medium text-emerald-300">
+              <Lock className="h-3.5 w-3.5" /> {t("sealed")}
+            </span>
+          ) : null}
           <button
             type="button"
             onClick={() => saveSnapshot.mutate()}
@@ -363,7 +447,9 @@ function DateTimePicker({
   const live = isLive && !selected;
   const trigger =
     selected != null
-      ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(selected)
+      ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
+          selected,
+        )
       : t("now");
 
   return (
@@ -411,6 +497,7 @@ function DateTimePicker({
           </div>
           <div className="grid grid-cols-7 gap-1 text-center text-[0.6rem] font-medium uppercase text-[var(--tessera-text-muted)]">
             {WEEKDAYS.map((d, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed weekday header with a duplicate "M"
               <span key={`${d}-${i}`}>{d}</span>
             ))}
           </div>

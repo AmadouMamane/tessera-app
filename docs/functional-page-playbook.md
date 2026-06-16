@@ -814,6 +814,27 @@ it dirty.
   asserts the keyed rows/options/accents; `e2e/evaluations.spec.ts` covers
   filter/sort/row-detail/quick-link.
 
+## Round-20 skills (Etat a date: the opposable/sealed framing + a real "PDF")
+
+- **Match the second normative by adding the opposable framing, not a new page.**
+  The `-opposable-final` normative is the same reconstruction re-titled "Etat
+  opposable - Scelle". Added a green **Scelle** lock badge in the existing actions
+  row, gated on `data.reconstructed.verified` (the reconstruction is always
+  integrity-checked), plus an `etatADate.sealed` i18n key (fr/de/en). No second
+  route - one page, one opposable identity.
+- **A "Telecharger le rapport (PDF)" must produce a real document, not a JSON
+  relabelled.** Replaced the JSON `Blob` download with a printable HTML evidence
+  report (`buildReportHtml` -> `window.open` + `print()` = the browser's "Save as
+  PDF"). The report is the opposable artifact: context (ref/T/tenant/agent),
+  integrity & proof (chain, coverage), the real original Q->A, and the
+  sources-accessible-at-T table - all HTML-escaped, with a "reproducible (same T
+  => same state)" footer. e2e asserts the popup opens with the report heading.
+- **A "done" file can carry pre-existing biome errors.** `biome check` inside the
+  project flagged a `noArrayIndexKey` on the fixed weekday header (`["L","M","M",
+  ...]` has a duplicate, so the index IS needed) - present on HEAD too. Left the
+  file better than found: a one-line `biome-ignore` clears it (exit 0). When
+  touching a legacy file, run `biome check` on it and clear what you can.
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** A faire + A traiter (shared `operator_items` backlog =

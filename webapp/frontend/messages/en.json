@@ -4625,6 +4625,7 @@
     "now": "Now",
     "goToDate": "Go to a date",
     "prevMonth": "Previous month",
-    "nextMonth": "Next month"
+    "nextMonth": "Next month",
+    "sealed": "Sealed"
   }
 }
