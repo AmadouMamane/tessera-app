@@ -3528,9 +3528,11 @@ export const AgentConnaissancesSchema = z.object({
       count: z.string(),
       rows: z.array(
         z.object({
+          key: z.string().optional(),
           name: z.string(),
           path: z.string(),
           type: z.string(),
+          type_tone: z.string().optional(),
           status: z.string(),
           status_tone: z.string(),
           coverage: z.number().nullable(),
@@ -3557,6 +3559,7 @@ export const AgentConnaissancesSchema = z.object({
       toggle_on: z.boolean(),
       detach: z.string(),
       full_sheet: z.string(),
+      key: z.string().optional(),
     })
     .optional(),
 });

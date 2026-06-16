@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronRight,
@@ -16,7 +16,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { fetchAgentConnaissances } from "@/lib/api/client";
+import { fetchAgentConnaissances, mutateConnaissancesSource } from "@/lib/api/client";
 import type { AgentConnaissances as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { AgentTabs } from "./agent-tabs";
@@ -27,13 +27,22 @@ const STATUS_TONE: Record<string, string> = {
   off: "border-red-500/30 bg-red-500/15 text-red-300",
 };
 
+type Status = "Tous" | "Active" | "Desactivee";
+
 export function AgentConnaissances() {
   const t = useTranslations("agentConnaissances");
+  const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["agent-connaissances"],
     queryFn: ({ signal }) => fetchAgentConnaissances(signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
+  });
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<Status>("Tous");
+  const mut = useMutation({
+    mutationFn: mutateConnaissancesSource,
+    onSuccess: (fresh) => qc.setQueryData(["agent-connaissances"], fresh),
   });
 
   if (!data?.available) {
@@ -70,10 +79,22 @@ export function AgentConnaissances() {
 
       <div className="grid gap-2.5 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
-          <Filters data={data} />
-          <SourcesTable data={data} />
+          <Filters
+            data={data}
+            search={search}
+            setSearch={setSearch}
+            status={status}
+            setStatus={setStatus}
+          />
+          <SourcesTable data={data} search={search} status={status} />
         </div>
-        <Detail data={data} className="xl:col-span-4" />
+        <Detail
+          data={data}
+          className="xl:col-span-4"
+          pending={mut.isPending}
+          onDetach={(key) => mut.mutate({ key, attached: false })}
+          onToggle={(key, active) => mut.mutate({ key, active })}
+        />
       </div>
     </div>
   );
@@ -144,16 +165,53 @@ function Spark({ values }: { values: number[] }) {
   );
 }
 
-function Filters({ data }: { data: Data }) {
+const STATUS_CYCLE: Record<Status, Status> = {
+  Tous: "Active",
+  Active: "Desactivee",
+  Desactivee: "Tous",
+};
+const STATUS_LABEL: Record<Status, string> = {
+  Tous: "Tous",
+  Active: "Active",
+  Desactivee: "Desactivee",
+};
+
+function Filters({
+  data,
+  search,
+  setSearch,
+  status,
+  setStatus,
+}: {
+  data: Data;
+  search: string;
+  setSearch: (v: string) => void;
+  status: Status;
+  setStatus: (v: Status) => void;
+}) {
   const f = data.filters;
   if (!f) return null;
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
       <div className="flex h-9 min-w-[220px] flex-1 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5">
         <Search className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        <span className="truncate text-[0.74rem] text-[var(--tessera-text-muted)]">{f.search}</span>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={f.search}
+          className="min-w-0 flex-1 bg-transparent text-[0.74rem] text-[var(--tessera-text)] placeholder:text-[var(--tessera-text-muted)] focus:outline-none"
+        />
       </div>
-      {f.selects.map((s) => (
+      <button
+        type="button"
+        onClick={() => setStatus(STATUS_CYCLE[status])}
+        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+      >
+        <span className="text-[var(--tessera-text-muted)]">Statut</span>
+        <span className="font-medium text-[var(--tessera-text)]">{STATUS_LABEL[status]}</span>
+        <ChevronDown className="h-3.5 w-3.5" />
+      </button>
+      {f.selects.slice(1).map((s) => (
         <button
           key={s.label}
           type="button"
@@ -174,9 +232,23 @@ function Filters({ data }: { data: Data }) {
   );
 }
 
-function SourcesTable({ data }: { data: Data }) {
+function SourcesTable({
+  data,
+  search,
+  status,
+}: {
+  data: Data;
+  search: string;
+  status: Status;
+}) {
   const tbl = data.table;
   if (!tbl) return null;
+  const q = search.trim().toLowerCase();
+  const rows = tbl.rows.filter(
+    (r) =>
+      (status === "Tous" || r.status === status) &&
+      (q === "" || r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q)),
+  );
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <div className="overflow-x-auto">
@@ -194,7 +266,7 @@ function SourcesTable({ data }: { data: Data }) {
             </tr>
           </thead>
           <tbody>
-            {tbl.rows.map((r) => (
+            {rows.map((r) => (
               <tr
                 key={r.name}
                 className="border-b border-[var(--tessera-border)]/60 last:border-0 hover:bg-[var(--tessera-bg)]/40"
@@ -256,7 +328,9 @@ function SourcesTable({ data }: { data: Data }) {
         </table>
       </div>
       <div className="border-t border-[var(--tessera-border)] px-3 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
-        {tbl.count}
+        {rows.length === tbl.rows.length
+          ? tbl.count
+          : `${rows.length} sur ${tbl.rows.length} sources`}
       </div>
     </section>
   );
@@ -281,10 +355,23 @@ function FileGlyph() {
   );
 }
 
-function Detail({ data, className }: { data: Data; className?: string }) {
+function Detail({
+  data,
+  className,
+  pending,
+  onDetach,
+  onToggle,
+}: {
+  data: Data;
+  className?: string;
+  pending: boolean;
+  onDetach: (key: string) => void;
+  onToggle: (key: string, active: boolean) => void;
+}) {
   const d = data.detail;
   const [tab, setTab] = useState(d?.tabs[0] ?? "Usage");
   if (!d) return null;
+  const key = d.key;
   return (
     <section
       className={cn(
@@ -385,18 +472,24 @@ function Detail({ data, className }: { data: Data; className?: string }) {
           </h3>
           <div className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2">
             <span className="text-[0.72rem] text-[var(--tessera-text)]">{d.toggle_label}</span>
-            <span
+            <button
+              type="button"
+              disabled={pending || !key}
+              aria-pressed={d.toggle_on}
+              onClick={() => key && onToggle(key, !d.toggle_on)}
               className={cn(
-                "flex h-4 w-8 items-center rounded-full px-0.5 transition-colors",
+                "flex h-4 w-8 items-center rounded-full px-0.5 transition-colors disabled:opacity-60",
                 d.toggle_on ? "justify-end bg-emerald-500" : "justify-start bg-slate-600",
               )}
             >
               <span className="h-3 w-3 rounded-full bg-white" />
-            </span>
+            </button>
           </div>
           <button
             type="button"
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/5 px-3 py-2 text-[0.72rem] font-medium text-red-300 hover:bg-red-500/10"
+            disabled={pending || !key}
+            onClick={() => key && onDetach(key)}
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/5 px-3 py-2 text-[0.72rem] font-medium text-red-300 hover:bg-red-500/10 disabled:opacity-60"
           >
             {d.detach}
           </button>

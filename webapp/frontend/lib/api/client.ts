@@ -1093,6 +1093,23 @@ export async function fetchAgentConnaissances(signal?: AbortSignal): Promise<Age
   return request("/observability/agent-connaissances", { signal }, AgentConnaissancesSchema);
 }
 
+/** Attach/detach/activate a knowledge source; returns the refreshed payload. */
+export async function mutateConnaissancesSource(body: {
+  key: string;
+  attached?: boolean;
+  active?: boolean;
+}): Promise<AgentConnaissances> {
+  return request(
+    "/observability/agent-connaissances/source-state",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    AgentConnaissancesSchema,
+  );
+}
+
 export async function fetchAgentAFaire(signal?: AbortSignal): Promise<AgentAFaire> {
   return request("/observability/agent-a-faire", { signal }, AgentAFaireSchema);
 }
