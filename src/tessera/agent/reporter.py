@@ -194,8 +194,8 @@ def _strip_reasoning(text: str) -> str:
     return cleaned.strip()
 
 
-async def _synthesise(state: AgentState) -> str:
-    """Call the LLM to produce a grounded answer from all available sources."""
+async def _synthesise(state: AgentState) -> tuple[str, int, int]:
+    """Call the LLM for a grounded answer; return (text, input_tokens, output_tokens)."""
     language = state["language"]
     prompts = load_prompts(language)
     system_prompt, current_user_content = _build_synthesis_input(state, prompts)
@@ -205,7 +205,7 @@ async def _synthesise(state: AgentState) -> str:
         temperature=0.2,
         model=state.get("model"),
     )
-    return _strip_reasoning(response.content)
+    return _strip_reasoning(response.content), response.input_tokens, response.output_tokens
 
 
 async def astream_synthesise(state: AgentState) -> AsyncIterator[str]:
@@ -268,10 +268,12 @@ async def run(state: AgentState) -> dict[str, object]:
     draft = state.get("draft_response")
     docs = state.get("retrieved_documents", [])
 
+    input_tokens = 0
+    output_tokens = 0
     if docs:
         # Retrieved documents are present — always synthesise via LLM so
         # every aspect of the question (tool result + regulation) is addressed.
-        final = await _synthesise(state)
+        final, input_tokens, output_tokens = await _synthesise(state)
         citations_footer = format_citations(state.get("citations", []), language)
         if citations_footer:
             final = final + citations_footer
@@ -284,4 +286,6 @@ async def run(state: AgentState) -> dict[str, object]:
     return {
         "final_response": final,
         "messages": [ConversationMessage(role="assistant", content=final)],
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
     }

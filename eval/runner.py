@@ -46,6 +46,11 @@ class CaseResult:
     category: str = ""
     title: str = ""
     expected_behavior: str = ""
+    started_at: str = ""
+    ended_at: str = ""
+    duration_ms: float = 0.0
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 def _load_schema() -> dict[str, object]:
@@ -175,9 +180,11 @@ async def _run_case(case: dict[str, object], language: str, model: str | None = 
         model=model,
     )
     graph = compile_graph()
+    started = datetime.now(UTC)
     try:
         final_state = await graph.ainvoke(initial)
     except Exception as exc:  # one case must never crash the whole language run
+        ended = datetime.now(UTC)
         return CaseResult(
             case_id=str(case["id"]),
             language=language,
@@ -189,7 +196,11 @@ async def _run_case(case: dict[str, object], language: str, model: str | None = 
             category=str(case.get("category", "")),
             title=str(case.get("title", "")),
             expected_behavior=str(case.get("expected_behavior", "")),
+            started_at=started.isoformat(),
+            ended_at=ended.isoformat(),
+            duration_ms=(ended - started).total_seconds() * 1000.0,
         )
+    ended = datetime.now(UTC)
     passed, reasons = _evaluate(case, language, final_state)
     return CaseResult(
         case_id=str(case["id"]),
@@ -202,6 +213,11 @@ async def _run_case(case: dict[str, object], language: str, model: str | None = 
         category=str(case.get("category", "")),
         title=str(case.get("title", "")),
         expected_behavior=str(case.get("expected_behavior", "")),
+        started_at=started.isoformat(),
+        ended_at=ended.isoformat(),
+        duration_ms=(ended - started).total_seconds() * 1000.0,
+        input_tokens=int(final_state.get("input_tokens", 0) or 0),
+        output_tokens=int(final_state.get("output_tokens", 0) or 0),
     )
 
 

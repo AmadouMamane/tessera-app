@@ -207,6 +207,11 @@ class AgentState(TypedDict):
     needs_escalation: bool
     escalation_reason: NotRequired[str]
 
+    # --- Usage ------------------------------------------------------------
+    # Token accounting for the synthesis LLM call (0 when no LLM was invoked).
+    input_tokens: NotRequired[int]
+    output_tokens: NotRequired[int]
+
     # --- Error reporting --------------------------------------------------
     # Annotated so concurrent workers can each append without conflict.
     errors: Annotated[list[str], operator.add]
