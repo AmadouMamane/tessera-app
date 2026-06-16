@@ -88,6 +88,37 @@ def _load_probe() -> dict[str, object]:
     return data if isinstance(data, dict) else {}
 
 
+def _load_traffic() -> dict[str, object]:
+    """Return per-category grounded-question traffic (from generate_traffic)."""
+    path = _state_path().parent / "knowledge_traffic.json"
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    cats = data.get("categories") if isinstance(data, dict) else None
+    return cats if isinstance(cats, dict) else {}
+
+
+def _ago(iso: str) -> str:
+    """Relative French age from an ISO timestamp ('' on parse failure)."""
+    try:
+        moment = datetime.fromisoformat(iso)
+    except (ValueError, TypeError):
+        return ""
+    delta = datetime.now(UTC) - moment
+    hour_s = 3600
+    if delta.days >= 2:  # noqa: PLR2004
+        return f"il y a {delta.days} j"
+    if delta.days == 1:
+        return "hier"
+    secs = delta.total_seconds()
+    if secs < hour_s:
+        return f"il y a {max(1, int(secs // 60))} min"
+    return f"il y a {int(secs // hour_s)} h"
+
+
 async def _fetch_rows() -> list[dict[str, object]]:
     """Return every chunk's (corpus, source, language, category, locator, inserted_at)."""
     table = get_settings().postgres.vector_table
@@ -167,6 +198,7 @@ async def build_connaissances() -> dict[str, object]:
     now = datetime.now(UTC)
     state = _load_state()
     probe = _load_probe()
+    traffic = _load_traffic()
     agg = _aggregate(await _fetch_rows())
     chunks, freshest, docs = agg.chunks, agg.freshest, agg.docs
 
@@ -255,7 +287,7 @@ async def build_connaissances() -> dict[str, object]:
         },
     ]
 
-    details = [_build_detail(r, agg, state) for r in rows_out]
+    details = [_build_detail(r, agg, state, traffic) for r in rows_out]
 
     return {
         "title": "Connaissances",
@@ -298,10 +330,32 @@ def _build_detail(
     row: dict[str, object],
     agg: _Aggregate,
     state: dict[str, dict[str, bool]],
+    traffic: dict[str, object],
 ) -> dict[str, object]:
     cat = str(row["key"])
     st = state.get(cat, {"attached": True, "active": True})
     locs = agg.locators.get(cat, [])
+    langs = ", ".join(sorted(agg.langs[cat]))
+    corpus = "regulations" if row["type_tone"] == "reg" else "credit_aurore"
+
+    tr = traffic.get(cat)
+    tr = tr if isinstance(tr, dict) else {}
+    raw_answers = tr.get("answers")
+    raw_answers = raw_answers if isinstance(raw_answers, list) else []
+    grounded = int(tr.get("count", 0)) if isinstance(tr.get("count"), int) else 0
+    last_used = _ago(str(tr.get("last_used", ""))) or "-"
+
+    if raw_answers:
+        answers_title = "Questions ancrees sur cette source"
+        answers = [
+            {"text": str(a.get("text", "")), "time": _ago(str(a.get("time", "")))}
+            for a in raw_answers[:5]
+            if isinstance(a, dict)
+        ]
+    else:
+        answers_title = "Documents ancres (locators reels)"
+        answers = [{"text": loc, "time": ""} for loc in locs[:5]]
+
     return {
         "name": str(row["name"]),
         "status": str(row["status"]),
@@ -310,22 +364,33 @@ def _build_detail(
         "summary_title": "Resume",
         "summary": (
             f"Source ancree dans pgvector : {agg.chunks[cat]} chunks issus de "
-            f"{len(agg.docs[cat])} documents, en {', '.join(sorted(agg.langs[cat]))}."
+            f"{len(agg.docs[cat])} documents, en {langs}."
         ),
         "usage_title": "Utilisation par cet agent",
         "usage": [
             {"label": "Taux de citation", "value": str(row["citation"])},
             {"label": "Couverture des requetes", "value": f"{row['coverage']}%"},
+            {"label": "Reponses ancrees", "value": str(grounded)},
+            {"label": "Derniere utilisation", "value": last_used},
             {"label": "Chunks indexes", "value": str(agg.chunks[cat])},
-            {"label": "Documents", "value": str(len(agg.docs[cat]))},
-            {"label": "Langues", "value": ", ".join(sorted(agg.langs[cat]))},
             {
                 "label": "Derniere indexation",
                 "value": agg.freshest[cat].strftime("%d/%m/%Y") if cat in agg.freshest else "-",
             },
         ],
-        "answers_title": "Documents ancres (locators reels)",
-        "answers": [{"text": loc, "time": ""} for loc in locs[:4]],
+        "answers_title": answers_title,
+        "answers": answers,
+        "params_title": "Parametres d'ancrage",
+        "params": [
+            {"label": "Modele d'embedding", "value": "bge-m3"},
+            {"label": "Dimension", "value": "1024"},
+            {"label": "Corpus", "value": corpus},
+            {"label": "Documents", "value": str(len(agg.docs[cat]))},
+            {"label": "Langues", "value": langs},
+            {"label": "Top-k retrieval", "value": "5"},
+            {"label": "Distance", "value": "cosine"},
+            {"label": "Statut d'ancrage", "value": str(row["status"])},
+        ],
         "actions_title": "Actions",
         "toggle_label": "Active pour cet agent",
         "toggle_on": bool(st.get("active", True)),

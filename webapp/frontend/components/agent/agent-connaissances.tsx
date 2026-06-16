@@ -566,51 +566,78 @@ function Detail({
       </nav>
 
       <div className="flex flex-col gap-4 p-3.5">
-        <div>
-          <h3 className="mb-1 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
-            {d.summary_title}
-          </h3>
-          <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
-            {d.summary}
-          </p>
-        </div>
+        {tab === d.tabs[0] ? (
+          <>
+            <div>
+              <h3 className="mb-1 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+                {d.summary_title}
+              </h3>
+              <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+                {d.summary}
+              </p>
+            </div>
+            <div>
+              <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+                {d.usage_title}
+              </h3>
+              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                {d.usage.map((u) => (
+                  <li key={u.label} className="flex items-center justify-between gap-2">
+                    <span className="text-[var(--tessera-text-muted)]">{u.label}</span>
+                    <span className="font-medium tabular-nums text-[var(--tessera-text)]">
+                      {u.value}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        ) : null}
 
-        <div>
-          <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
-            {d.usage_title}
-          </h3>
-          <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-            {d.usage.map((u) => (
-              <li key={u.label} className="flex items-center justify-between gap-2">
-                <span className="text-[var(--tessera-text-muted)]">{u.label}</span>
-                <span className="font-medium tabular-nums text-[var(--tessera-text)]">
-                  {u.value}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {tab === d.tabs[1] ? (
+          <div>
+            <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+              {d.answers_title}
+            </h3>
+            {d.answers.length === 0 ? (
+              <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+                Aucune reponse ancree pour le moment.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {d.answers.map((ans) => (
+                  <li key={ans.text} className="flex items-start gap-2">
+                    <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[0.72rem] text-[var(--tessera-text)]">
+                        {ans.text}
+                      </span>
+                      <span className="block text-[0.62rem] text-[var(--tessera-text-muted)]">
+                        {ans.time}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
 
-        <div>
-          <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
-            {d.answers_title}
-          </h3>
-          <ul className="flex flex-col gap-2">
-            {d.answers.map((ans) => (
-              <li key={ans.text} className="flex items-start gap-2">
-                <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[0.72rem] text-[var(--tessera-text)]">
-                    {ans.text}
-                  </span>
-                  <span className="block text-[0.62rem] text-[var(--tessera-text-muted)]">
-                    {ans.time}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {tab === d.tabs[2] ? (
+          <div>
+            <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+              {d.params_title ?? "Parametres"}
+            </h3>
+            <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+              {(d.params ?? []).map((p) => (
+                <li key={p.label} className="flex items-center justify-between gap-2">
+                  <span className="text-[var(--tessera-text-muted)]">{p.label}</span>
+                  <span className="font-medium text-[var(--tessera-text)]">{p.value}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div>
           <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
