@@ -39,7 +39,6 @@ _CORPORA = ("regulations", "credit_aurore")
 _TOP_K = 5
 _THRESHOLD = 0.55
 _QUESTION_MAX = 140
-_ANSWER_MAX = 220
 _EXAMPLES_PER_SOURCE = 5
 _WS = re.compile(r"\s+")
 
@@ -48,9 +47,14 @@ def _traffic_path() -> object:
     return _state_path().parent / "knowledge_traffic.json"
 
 
+def _flatten(text: str) -> str:
+    """Collapse whitespace in verbatim transcript text (no truncation)."""
+    return _WS.sub(" ", text).strip()
+
+
 def _clean(text: str, limit: int) -> str:
     """Collapse whitespace and truncate verbatim transcript text for display."""
-    flat = _WS.sub(" ", text).strip()
+    flat = _flatten(text)
     return flat if len(flat) <= limit else flat[: limit - 1].rstrip() + "…"
 
 
@@ -93,7 +97,7 @@ async def _load_exchanges() -> list[_Exchange]:
         question = str(prev["content"]).strip()
         if not question:
             continue
-        answer = _clean(str(cur_row["content"]), _ANSWER_MAX)
+        answer = _flatten(str(cur_row["content"]))
         when = cur_row["created_at"]
         key = _WS.sub(" ", question).strip().lower()
         existing = by_question.get(key)

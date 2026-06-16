@@ -492,6 +492,52 @@ function FileGlyph() {
   );
 }
 
+type AnswerT = DetailT["answers"][number];
+// Longer grounded answers collapse to a few lines with a Voir plus toggle.
+const ANSWER_CLAMP_CHARS = 180;
+
+function AnswerItem({ ans }: { ans: AnswerT }) {
+  const [open, setOpen] = useState(false);
+  const answer = ans.answer ?? "";
+  const clampable = answer.length > ANSWER_CLAMP_CHARS;
+  return (
+    <li className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-2.5">
+      <div className="flex items-start gap-2">
+        <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5fd0c6]" />
+        <span className="min-w-0 flex-1 text-[0.72rem] font-medium text-[var(--tessera-text)]">
+          {ans.text}
+        </span>
+        {ans.time ? (
+          <span className="shrink-0 text-[0.6rem] text-[var(--tessera-text-muted)]">
+            {ans.time}
+          </span>
+        ) : null}
+      </div>
+      {answer ? (
+        <>
+          <p
+            className={cn(
+              "mt-1.5 border-l-2 border-[var(--tessera-border)] pl-2.5 text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]",
+              clampable && !open && "line-clamp-3",
+            )}
+          >
+            {answer}
+          </p>
+          {clampable ? (
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              className="mt-1 pl-2.5 text-[0.64rem] font-medium text-[#5fd0c6] hover:text-[#8fe3db]"
+            >
+              {open ? "Voir moins" : "Voir plus"}
+            </button>
+          ) : null}
+        </>
+      ) : null}
+    </li>
+  );
+}
+
 function DetailDrawer({
   detail,
   pending,
@@ -642,27 +688,7 @@ function DetailPanel({
             ) : (
               <ul className="flex flex-col gap-2.5">
                 {d.answers.map((ans) => (
-                  <li
-                    key={ans.text}
-                    className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-2.5"
-                  >
-                    <div className="flex items-start gap-2">
-                      <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5fd0c6]" />
-                      <span className="min-w-0 flex-1 text-[0.72rem] font-medium text-[var(--tessera-text)]">
-                        {ans.text}
-                      </span>
-                      {ans.time ? (
-                        <span className="shrink-0 text-[0.6rem] text-[var(--tessera-text-muted)]">
-                          {ans.time}
-                        </span>
-                      ) : null}
-                    </div>
-                    {ans.answer ? (
-                      <p className="mt-1.5 border-l-2 border-[var(--tessera-border)] pl-2.5 text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]">
-                        {ans.answer}
-                      </p>
-                    ) : null}
-                  </li>
+                  <AnswerItem key={ans.text} ans={ans} />
                 ))}
               </ul>
             )}
