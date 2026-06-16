@@ -199,20 +199,22 @@ export function AgentConnaissances() {
 
   return (
     <div className="relative flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <AgentTabs
-        actions={
-          <>
-            <GhostLink href={CATALOG_HREF} label={a?.manage ?? ""} />
-            <GhostLink href={MEMORY_HREF} label={a?.memory ?? ""} />
-            <AttachMenu
-              label={a?.attach ?? ""}
-              items={data.attachable ?? []}
-              pending={mut.isPending}
-              onAttach={(key) => mut.mutate({ key, attached: true })}
-            />
-          </>
-        }
-      />
+      <div data-agent-tabs>
+        <AgentTabs
+          actions={
+            <>
+              <GhostLink href={CATALOG_HREF} label={a?.manage ?? ""} />
+              <GhostLink href={MEMORY_HREF} label={a?.memory ?? ""} />
+              <AttachMenu
+                label={a?.attach ?? ""}
+                items={data.attachable ?? []}
+                pending={mut.isPending}
+                onAttach={(key) => mut.mutate({ key, attached: true })}
+              />
+            </>
+          }
+        />
+      </div>
 
       {mutError ? (
         <div
@@ -1157,7 +1159,10 @@ function DetailDrawer({
       const m = document.querySelector("main");
       if (!m) return;
       const r = m.getBoundingClientRect();
-      setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+      // Start below the agent tab strip so page-level navigation stays usable.
+      const tabs = document.querySelector("[data-agent-tabs]");
+      const top = tabs ? tabs.getBoundingClientRect().bottom : r.top;
+      setRect({ top, left: r.left, width: r.width, height: r.bottom - top });
     };
     measure();
     window.addEventListener("resize", measure);
