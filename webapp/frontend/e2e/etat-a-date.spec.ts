@@ -62,6 +62,15 @@ test("Reconstituer at an early T re-queries the audit-derived diff", async ({ pa
   });
 });
 
+test("the Reference field reconstructs at the encoded instant", async ({ page }) => {
+  // Live by default -> the snapshot id is SNAP-LIVE.
+  await expect(page.getByText("SNAP-LIVE").first()).toBeVisible();
+  await page.getByPlaceholder(/ID de réponse/).fill("RES-2026-06-10-1620");
+  await page.getByRole("button", { name: "Reconstituer" }).click();
+  // The reference resolves to 10 June 2026 -> the reconstruction is dated then.
+  await expect(page.getByText(/SNAP-2026-06-10/).first()).toBeVisible({ timeout: 15_000 });
+});
+
 test("saving a snapshot persists it durably", async ({ page }) => {
   await page.getByRole("button", { name: "Enregistrer ce snapshot" }).click();
   await expect(page.getByText("Snapshots enregistres")).toBeVisible({ timeout: 15_000 });

@@ -75,10 +75,20 @@ function toLocalInput(iso: string): string {
   return new Date(d.getTime() - off).toISOString().slice(0, 16);
 }
 
+/** A reference code "RES-2026-06-10-1620" -> the ISO instant it encodes. */
+function refToIso(ref: string): string | null {
+  const m = ref.trim().match(/RES-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})/i);
+  if (!m) return null;
+  const [, y, mo, d, h, mi] = m;
+  const local = new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi));
+  return Number.isNaN(local.getTime()) ? null : local.toISOString();
+}
+
 export function EtatADate() {
   const t = useTranslations("etatADate");
   const qc = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [refInput, setRefInput] = useState("");
   const [asOf, setAsOf] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState("all");
@@ -133,7 +143,9 @@ export function EtatADate() {
         t={t}
         draft={draft}
         onDraft={setDraft}
-        onReconstruct={() => setAsOf(toIso(draft))}
+        refInput={refInput}
+        onRefInput={setRefInput}
+        onReconstruct={() => setAsOf(refToIso(refInput) ?? toIso(draft))}
         meta={data?.meta}
         onDownload={downloadReport}
         canDownload={Boolean(data?.available)}
@@ -209,6 +221,8 @@ function ControlBar({
   t,
   draft,
   onDraft,
+  refInput,
+  onRefInput,
   onReconstruct,
   meta,
   onDownload,
@@ -220,6 +234,8 @@ function ControlBar({
   t: T;
   draft: string;
   onDraft: (v: string) => void;
+  refInput: string;
+  onRefInput: (v: string) => void;
   onReconstruct: () => void;
   meta: Data["meta"];
   onDownload: () => void;
@@ -263,6 +279,15 @@ function ControlBar({
             onChange={(e) => onDraft(e.target.value)}
             aria-label={t("dateTime")}
             className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
+          />
+        </Field>
+        <Field label={t("reference")}>
+          <input
+            value={refInput}
+            onChange={(e) => onRefInput(e.target.value)}
+            placeholder={t("refPlaceholder")}
+            aria-label={t("reference")}
+            className="h-9 w-56 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
           />
         </Field>
         <Field label={t("contextSource")}>
