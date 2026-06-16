@@ -4453,7 +4453,8 @@
       "export": "Bericht exportieren",
       "test": "Assistent testen",
       "configure": "Assistent konfigurieren"
-    }
+    },
+    "empty": "Keine Daten verfügbar."
   },
   "agentConfigurations": {
     "topbarTitle": "AGENT",

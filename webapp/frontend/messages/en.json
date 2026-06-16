@@ -4453,7 +4453,8 @@
       "export": "Export report",
       "test": "Test assistant",
       "configure": "Configure assistant"
-    }
+    },
+    "empty": "No data available."
   },
   "agentConfigurations": {
     "topbarTitle": "AGENT",

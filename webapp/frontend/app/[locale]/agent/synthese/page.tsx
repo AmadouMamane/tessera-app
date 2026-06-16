@@ -18,9 +18,9 @@ export async function generateMetadata({ params }: PageProps) {
 
 async function prefetch(queryClient: QueryClient) {
   await queryClient.prefetchQuery({
-    queryKey: ["agent-synthese"],
+    queryKey: ["agent-synthese", "d7"],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/agent-synthese`, {
+      const response = await fetch(`${backendUrl()}/observability/agent-synthese?period=d7`, {
         cache: "no-store",
         headers: backendHeaders({ Accept: "application/json" }),
       });

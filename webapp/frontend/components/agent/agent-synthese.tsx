@@ -14,15 +14,18 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import type { ReactNode } from "react";
 
+import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
   TemporalRail,
   useRailTimeline,
   useTemporalState,
 } from "@/components/overview/temporal-rail";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link, usePathname } from "@/i18n/navigation";
 import { fetchAgentSynthese } from "@/lib/api/client";
 import type { AgentSynthese as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import type { OverviewTone } from "@/lib/overview";
 
 type T = ReturnType<typeof useTranslations<"agentSynthese">>;
 
@@ -67,16 +70,19 @@ export function AgentSynthese() {
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const { data } = useQuery({
-    queryKey: ["agent-synthese"],
-    queryFn: ({ signal }) => fetchAgentSynthese(signal),
+    queryKey: ["agent-synthese", temporal.periodKey],
+    queryFn: ({ signal }) => fetchAgentSynthese(temporal.periodKey, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
 
-  if (!data?.available) {
+  if (data === undefined) {
+    return <SyntheseSkeleton />;
+  }
+  if (!data.available) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-sm text-[var(--tessera-text-muted)]">
-        {data ? t("unavailable") : t("loading")}
+        {t("unavailable")}
       </div>
     );
   }
@@ -125,6 +131,32 @@ export function AgentSynthese() {
         <Alerts data={data} className="xl:col-span-5" />
         <QuickConfig data={data} className="xl:col-span-4" />
         <Timeline data={data} className="xl:col-span-3" />
+      </div>
+    </div>
+  );
+}
+
+// ── loading skeleton ─────────────────────────────────────────────────────────
+
+const SKELETON_KPIS = ["a", "b", "c", "d", "e", "f", "g"];
+const SKELETON_CARDS = ["a", "b", "c", "d"];
+
+function SyntheseSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 pb-2">
+      <Skeleton className="h-9 w-full" />
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-7">
+        {SKELETON_KPIS.map((k) => (
+          <Skeleton key={k} className="h-[112px] w-full rounded-lg" />
+        ))}
+      </div>
+      <div className="grid gap-2.5 xl:grid-cols-12">
+        {SKELETON_CARDS.map((k, i) => (
+          <Skeleton
+            key={k}
+            className={cn("h-44 rounded-lg", i === 0 ? "xl:col-span-4" : "xl:col-span-3")}
+          />
+        ))}
       </div>
     </div>
   );
@@ -189,57 +221,25 @@ function GhostLink({
 // ── KPI ────────────────────────────────────────────────────────────────────
 
 function KpiTile({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
+  const tone: OverviewTone = kpi.good ? "success" : "danger";
   return (
-    <div className="flex h-[104px] flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+    <div className="flex h-[112px] flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <p className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">{kpi.label}</p>
-      <p className="mt-0.5 text-[1.35rem] font-semibold tabular-nums text-[var(--tessera-text)]">
+      <p className="mt-0.5 text-[1.35rem] font-semibold leading-none tabular-nums text-[var(--tessera-text)]">
         {kpi.value}
       </p>
-      <div className="mt-auto flex items-end justify-between gap-2">
-        <span
-          className={cn(
-            "text-[0.62rem] tabular-nums",
-            kpi.good ? "text-emerald-400" : "text-red-400",
-          )}
-        >
-          {kpi.delta}
-        </span>
-        <Spark values={kpi.series} good={kpi.good} />
+      <span
+        className={cn(
+          "mt-1 line-clamp-1 text-[0.6rem] tabular-nums",
+          kpi.good ? "text-emerald-400" : "text-red-400",
+        )}
+      >
+        {kpi.delta}
+      </span>
+      <div className="mt-auto pt-1">
+        <MetricSparkline values={kpi.series} tone={tone} height={26} />
       </div>
     </div>
-  );
-}
-
-function Spark({ values, good }: { values: number[]; good: boolean }) {
-  if (values.length < 2) return null;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const W = 64;
-  const H = 22;
-  const d = values
-    .map((v, i) => {
-      const x = (i / (values.length - 1)) * W;
-      const y = H - ((v - min) / span) * H;
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-  return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="h-6 w-16"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <path
-        d={d}
-        fill="none"
-        stroke={good ? "#34d399" : "#f87171"}
-        strokeWidth="1.4"
-        vectorEffect="non-scaling-stroke"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 
@@ -274,6 +274,11 @@ function Card({
       {cta ? <CtaLink label={cta} href={ctaHref} /> : null}
     </section>
   );
+}
+
+function EmptyRow() {
+  const t = useTranslations("agentSynthese");
+  return <p className="py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">{t("empty")}</p>;
 }
 
 function CtaLink({ label, href }: { label: string; href?: string }) {
@@ -424,6 +429,7 @@ function Conversations({ data, className }: { data: Data; className?: string }) 
   if (!c) return null;
   return (
     <Card title={c.title} cta={c.cta} ctaHref={c.ctaHref} className={className}>
+      {c.rows.length === 0 ? <EmptyRow /> : null}
       <ul className="flex flex-col gap-2">
         {c.rows.map((r) => (
           <li
@@ -458,6 +464,7 @@ function Activity({ data, className }: { data: Data; className?: string }) {
   if (!a) return null;
   return (
     <Card title={a.title} className={className}>
+      {a.rows.length === 0 ? <EmptyRow /> : null}
       <ul className="flex flex-col gap-2.5">
         {a.rows.map((r, i) => (
           <li key={`${r.time}-${i}`} className="flex items-center gap-2 text-[0.72rem]">
@@ -483,6 +490,7 @@ function Prompts({ data, className }: { data: Data; className?: string }) {
   if (!p) return null;
   return (
     <Card title={p.title} cta={p.cta} ctaHref={p.ctaHref} className={className}>
+      {p.rows.length === 0 ? <EmptyRow /> : null}
       <ul className="flex flex-col gap-2">
         {p.rows.map((r) => (
           <li
@@ -594,6 +602,7 @@ function Timeline({ data, className }: { data: Data; className?: string }) {
   if (!tl) return null;
   return (
     <Card title={tl.title} cta={tl.cta} ctaHref={tl.ctaHref} className={className}>
+      {tl.rows.length === 0 ? <EmptyRow /> : null}
       <ul className="flex flex-col gap-2.5">
         {tl.rows.map((r, i) => (
           <li key={`${r.time}-${i}`} className="flex gap-2.5 text-[0.72rem]">

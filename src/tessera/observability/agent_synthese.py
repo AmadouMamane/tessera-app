@@ -77,9 +77,6 @@ _TOOL_LABELS: dict[str, str] = {
 
 _LANG_LABELS: dict[str, str] = {"fr": "Francais", "de": "Allemand", "en": "Anglais"}
 
-# Heuristic escalation markers scanned in the assistant reply text.
-_ESCALATION_MARKERS = ("escalad", "conseiller", "ticket", "transf")
-
 
 def _secs(ms: float) -> str:
     """Milliseconds -> French seconds: 3243 -> '3,2 s'."""
@@ -112,6 +109,11 @@ def _newest_mtime(directory: Path, pattern: str) -> datetime | None:
     return max(times) if times else None
 
 
+def _fmt_int(n: int) -> str:
+    """Group thousands with a space, French style: 1008 -> '1 008'."""
+    return f"{n:,}".replace(",", " ")
+
+
 def _turns_label(n: int) -> str:
     return f"{n} echange" if n <= 1 else f"{n} echanges"
 
@@ -124,48 +126,56 @@ def _truncate(text: str, limit: int = 64) -> str:
 # --- live transcript -----------------------------------------------------------
 
 
-async def _fetch_transcript() -> dict[str, Any]:
+async def _fetch_transcript(period_days: int | None) -> dict[str, Any]:
     """Read the durable conversation transcript aggregates.
 
     Returns totals, per-day buckets (for the KPI sparklines), the most recent
     conversations (first question + turn count + escalation heuristic) and the
     latest individual messages (for the activity feed). Also surfaces the newest
     ingested knowledge source for the timeline.
+
+    When ``period_days`` is set, every transcript-derived figure is restricted to
+    that trailing window (relative to ``now()``), so the dashboard period control
+    genuinely changes the numbers. The knowledge-base counts are period-agnostic.
     """
+    # An interval literal cannot be a placeholder; period_days is a validated int.
+    window = (
+        f"created_at >= now() - interval '{int(period_days)} days'" if period_days else "TRUE"
+    )
     async with _connection() as conn:
         conn.row_factory = dict_row
         async with conn.cursor() as cur:
             await cur.execute(
-                "SELECT count(DISTINCT conversation_id) AS convs, count(*) AS msgs, "
+                "SELECT count(DISTINCT conversation_id) AS convs, count(*) AS msgs, "  # noqa: S608
                 "count(*) FILTER (WHERE role = 'user') AS turns, "
-                "max(created_at) AS last_at FROM conversation_messages"
+                f"max(created_at) AS last_at FROM conversation_messages WHERE {window}"
             )
             totals = await cur.fetchone() or {}
 
             await cur.execute(
-                "SELECT date_trunc('day', created_at) AS day, "
+                "SELECT date_trunc('day', created_at) AS day, "  # noqa: S608
                 "count(DISTINCT conversation_id) AS convs, "
                 "count(*) AS msgs, count(*) FILTER (WHERE role = 'user') AS turns "
-                "FROM conversation_messages GROUP BY 1 ORDER BY 1"
+                f"FROM conversation_messages WHERE {window} GROUP BY 1 ORDER BY 1"
             )
             daily = list(await cur.fetchall())
 
             await cur.execute(
-                "SELECT conversation_id, max(created_at) AS ended, "
+                "SELECT conversation_id, max(created_at) AS ended, "  # noqa: S608
                 "count(*) FILTER (WHERE role = 'user') AS turns, "
                 "(array_agg(content ORDER BY id) "
                 "  FILTER (WHERE role = 'user'))[1] AS first_q, "
                 "bool_or(role = 'assistant' AND ("
                 "  content ILIKE '%%escalad%%' OR content ILIKE '%%conseiller%%' "
                 "  OR content ILIKE '%%ticket%%' OR content ILIKE '%%transf%%')) AS escalated "
-                "FROM conversation_messages GROUP BY conversation_id "
+                f"FROM conversation_messages WHERE {window} GROUP BY conversation_id "
                 "ORDER BY ended DESC LIMIT %s",
                 (_RECENT_CONVERSATIONS,),
             )
             recent_convs = list(await cur.fetchall())
 
             await cur.execute(
-                "SELECT role, content, created_at FROM conversation_messages "
+                f"SELECT role, content, created_at FROM conversation_messages WHERE {window} "  # noqa: S608
                 "ORDER BY id DESC LIMIT %s",
                 (_RECENT_ACTIVITY,),
             )
@@ -248,8 +258,21 @@ def _delta_vs_prev(series: Sequence[int]) -> str:
     return f"{pct:+d}% vs jour precedent"
 
 
+def _period_label(period_days: int | None) -> str:
+    """Human window label for the meta strip."""
+    if period_days is None:
+        return "Tout l'historique"
+    if period_days <= 1:
+        return "24 dernieres heures"
+    return f"{period_days} derniers jours"
+
+
 def _assemble(
-    snap: EvalSnapshot, tx: dict[str, Any], chain_ok: bool, now: datetime | None = None
+    snap: EvalSnapshot,
+    tx: dict[str, Any],
+    chain_ok: bool,
+    period_days: int | None = None,
+    now: datetime | None = None,
 ) -> dict[str, object]:
     """Assemble the Synthese payload from the eval snapshot + transcript.
 
@@ -287,7 +310,6 @@ def _assemble(
     n_turns = int(totals.get("turns") or 0)
     n_msgs = int(totals.get("msgs") or 0)
     last_at = totals.get("last_at")
-    first_day = daily[0]["day"] if daily else None
     cat_count = tx["cat_count"]
     doc_count = tx["doc_count"]
 
@@ -295,9 +317,9 @@ def _assemble(
     cat_series = [c.total for c in sorted(snap.categories, key=lambda c: -c.total)][:_SPARK_DAYS]
 
     kpis: list[dict[str, object]] = [
-        _kpi("conversations", "Conversations", f"{n_convs}", _delta_vs_prev(conv_series),
+        _kpi("conversations", "Conversations", _fmt_int(n_convs), _delta_vs_prev(conv_series),
              True, conv_series),
-        _kpi("turns", "Tours utilisateur", f"{n_turns}", _delta_vs_prev(turn_series),
+        _kpi("turns", "Tours utilisateur", _fmt_int(n_turns), _delta_vs_prev(turn_series),
              True, turn_series),
         _kpi("resolution", "Taux de resolution", f"{pass_pct:.1f}%".replace(".", ","),
              f"{passed}/{total} cas reussis", pass_pct >= _GOOD_PCT, res_series),
@@ -307,7 +329,7 @@ def _assemble(
              False, err_series),
         _kpi("sources", "Sources de connaissances", str(cat_count),
              f"{doc_count} fragments indexes", True, cat_series),
-        _kpi("messages", "Messages echanges", f"{n_msgs}", _delta_vs_prev(msg_series),
+        _kpi("messages", "Messages echanges", _fmt_int(n_msgs), _delta_vs_prev(msg_series),
              True, msg_series),
     ]
 
@@ -320,7 +342,7 @@ def _assemble(
             {"label": "Proprietaire", "value": str(cfg.get("owner", "-"))},
             {"label": "Langues", "value": f"{len(snap.languages)} (fr/de/en)"},
             {"label": "Connaissances", "value": f"{cat_count} sources / {doc_count} fragments"},
-            {"label": "Conversations", "value": str(n_convs)},
+            {"label": "Conversations", "value": _fmt_int(n_convs)},
             {"label": "Derniere activite", "value": _fmt_dt(last_at)},
         ],
         "cta": "Voir la configuration active",
@@ -471,17 +493,10 @@ def _assemble(
         ],
     }
 
-    period = (
-        f"{first_day.astimezone(_PARIS).strftime('%d/%m')} - "
-        f"{last_at.astimezone(_PARIS).strftime('%d/%m/%Y')}"
-        if first_day and last_at
-        else "-"
-    )
-
     return {
         "meta": {
             "mode": "Donnees reelles",
-            "period": period,
+            "period": _period_label(period_days),
             "updated": _fmt_dt(last_at),
             "replayAt": "Relire a T",
             "comparison": "Aucune comparaison",
@@ -533,13 +548,18 @@ def _timeline_rows(
     ]
 
 
-async def compute_agent_synthese() -> dict[str, object]:
-    """Return the Synthese dashboard payload, sourced end to end from real data."""
+async def compute_agent_synthese(period_days: int | None = None) -> dict[str, object]:
+    """Return the Synthese dashboard payload, sourced end to end from real data.
+
+    Args:
+        period_days: Trailing window (in days) the transcript-derived figures are
+            restricted to. ``None`` means the whole history.
+    """
     snap = load_eval_snapshot()
-    tx = await _fetch_transcript()
+    tx = await _fetch_transcript(period_days)
     try:
         chain = verify_audit_chain(get_settings().guard.audit_file)
         chain_ok = chain.verified
     except (OSError, ValueError):
         chain_ok = True
-    return _assemble(snap, tx, chain_ok)
+    return _assemble(snap, tx, chain_ok, period_days=period_days)

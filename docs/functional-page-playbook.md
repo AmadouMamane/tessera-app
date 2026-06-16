@@ -552,6 +552,36 @@ it dirty.
   link and a top nav tab -> scope the click to the panel (`page.locator("section",
   { hasText: "Configuration rapide" })`) before `getByRole("link", {name})`.
 
+### Round-14 quality pass (sparkline reuse, period wiring, skeleton)
+
+- **KPI tiles must use the canonical full-width sparkline.** The first build
+  crammed a 64px `<svg>` into the tile's bottom-right; the normative (and the
+  Round-2 skill) want the **full-width `MetricSparkline`** pinned to the bottom
+  (`mt-auto`), tone from `kpi.good`. Reusing `components/overview/metric-sparkline.tsx`
+  instead of a bespoke `<path>` matched the normative immediately. Group integer
+  KPIs French-style (`1008 -> "1 008"`, `f"{n:,}".replace(",", " ")`).
+- **A period selector that changes nothing is a dead control -- and a lie.** The
+  shared `TemporalRail` shows "Periode : 7 jours" but the synthese `useQuery`
+  keyed on `["agent-synthese"]` ignored it, so the page showed all 16 days of
+  transcript under a "7 jours" label. Fix: thread `temporal.periodKey` into the
+  queryKey + `fetch(?period=)`, map `h24/d7/d30 -> 1/7/30` days in the route, and
+  filter every transcript figure to `created_at >= now() - interval 'N days'`
+  (the eval run is a fixed snapshot; knowledge counts are period-agnostic). Now
+  h24/d7/d30 genuinely return 3 / 99 / 1008 conversations. NOTE the rail's period
+  `<select>` only renders in **replay** mode (live mode shows the period as text);
+  the e2e must click "Relire a T" first, then `selectOption`. The as-of-T
+  scrubber stays inert here (ADR 0011 Phase 2, deferred) -- wiring the period
+  window is the bounded, honest win.
+- **An interval literal cannot be a psycopg placeholder.** `interval '%s days'`
+  fails; interpolate a **validated int** (`int(period_days)`) and silence the
+  resulting `S608` with `# noqa: S608` on the flagged string line (the diagnostic
+  points at the SQL string start, not the `cur.execute(` line).
+- **Distinguish loading from unavailable.** `data === undefined` -> a
+  `SyntheseSkeleton` mirroring the KPI grid + card row (stable string keys, not
+  array indices); `data && !available` -> the unavailable message. Per-panel
+  empty states (`rows.length === 0 -> <EmptyRow/>`) on the transcript-fed cards
+  so a narrow period window degrades gracefully (new i18n key `empty` x3 locales).
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** A faire + A traiter (shared `operator_items` backlog =

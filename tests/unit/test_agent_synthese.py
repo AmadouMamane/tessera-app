@@ -91,9 +91,10 @@ def test_assemble_is_real_and_well_formed() -> None:
     assert set(kpis) == {
         "conversations", "turns", "resolution", "latency", "errors", "sources", "messages",
     }
-    assert kpis["conversations"]["value"] == "1008"
-    assert kpis["turns"]["value"] == "1054"
-    assert kpis["messages"]["value"] == "2108"
+    # integer counts are grouped French-style with a space separator
+    assert kpis["conversations"]["value"] == "1 008"
+    assert kpis["turns"]["value"] == "1 054"
+    assert kpis["messages"]["value"] == "2 108"
     assert kpis["sources"]["value"] == "15"
     assert "238 fragments" in kpis["sources"]["delta"]
     # resolution = 2/4 = 50,0%
@@ -109,7 +110,7 @@ def test_profile_and_language_mix_are_sourced() -> None:
     fields = {f["label"]: f["value"] for f in payload["profile"]["fields"]}  # type: ignore[union-attr]
     assert fields["Modele principal"] == "llama3.2:3b"
     assert fields["Connaissances"] == "15 sources / 238 fragments"
-    assert fields["Conversations"] == "1008"
+    assert fields["Conversations"] == "1 008"
     assert payload["profile"]["ctaHref"] == "/agent/configurations"  # type: ignore[index]
 
     # Channels relabelled to the real eval language mix.
@@ -142,6 +143,18 @@ def test_conversations_timeline_alerts_and_ctas() -> None:
     # Quick-config items are real navigable links.
     hrefs = {i["href"] for i in payload["quick_config"]["items"]}  # type: ignore[index]
     assert "/agent/connaissances" in hrefs and "/agent/garde-fous" in hrefs
+
+
+def test_period_label_reflects_the_window() -> None:
+    assert syn._assemble(_snap(), _tx(), chain_ok=True, period_days=7, now=NOW)["meta"][
+        "period"
+    ] == "7 derniers jours"  # type: ignore[index]
+    assert syn._assemble(_snap(), _tx(), chain_ok=True, period_days=1, now=NOW)["meta"][
+        "period"
+    ] == "24 dernieres heures"  # type: ignore[index]
+    assert syn._assemble(_snap(), _tx(), chain_ok=True, period_days=None, now=NOW)["meta"][
+        "period"
+    ] == "Tout l'historique"  # type: ignore[index]
 
 
 def test_chain_ok_alert_is_good() -> None:

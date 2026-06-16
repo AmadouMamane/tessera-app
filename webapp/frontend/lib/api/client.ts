@@ -1093,9 +1093,13 @@ export async function fetchBudget(signal?: AbortSignal): Promise<BudgetSnapshot>
   });
 }
 
-/** Agent overview ("Synthese de l'agent") dashboard (reference image 22). */
-export async function fetchAgentSynthese(signal?: AbortSignal): Promise<AgentSynthese> {
-  return request("/observability/agent-synthese", { signal }, AgentSyntheseSchema);
+/** Agent overview ("Synthese de l'agent") dashboard (reference image 25). */
+export async function fetchAgentSynthese(
+  period: string,
+  signal?: AbortSignal,
+): Promise<AgentSynthese> {
+  const query = new URLSearchParams({ period }).toString();
+  return request(`/observability/agent-synthese?${query}`, { signal }, AgentSyntheseSchema);
 }
 
 export async function fetchAgentConsole(signal?: AbortSignal): Promise<AgentConsole> {

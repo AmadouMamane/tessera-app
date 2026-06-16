@@ -47,6 +47,18 @@ test("quick-config links navigate to the real agent pages", async ({ page }) => 
   expect(page.url()).toContain("/agent/garde-fous");
 });
 
+test("the period control re-queries the transcript window", async ({ page }) => {
+  // Default window is 7 days, so the all-time message total is not shown yet.
+  await expect(page.getByText("2 108")).toHaveCount(0);
+  // The period <select> lives in the rail's replay mode; open it, then widen to
+  // 30 days -> the dashboard refetches and the larger transcript totals appear.
+  await page.getByRole("button", { name: "Relire à T" }).click();
+  const periodSelect = page.locator('select:has(option[value="d30"])');
+  await expect(periodSelect).toBeVisible({ timeout: 15_000 });
+  await periodSelect.selectOption("d30");
+  await expect(page.getByText("2 108").first()).toBeVisible({ timeout: 15_000 });
+});
+
 test("the Configurer CTA navigates to the configuration page", async ({ page }) => {
   await page.getByRole("link", { name: /Configurer l'assistant/ }).click();
   await page.waitForURL(/\/agent\/configurations/, { timeout: 15_000 });

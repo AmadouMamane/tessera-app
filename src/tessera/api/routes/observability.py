@@ -812,17 +812,26 @@ async def observability_agent_console() -> dict[str, object]:
         return {"available": False}
 
 
+_SYNTHESE_PERIODS: dict[str, int | None] = {"h24": 1, "d7": 7, "d30": 30}
+
+
 @router.get("/observability/agent-synthese")
-async def observability_agent_synthese() -> dict[str, object]:
-    """Agent overview ("Synthese de l'agent") dashboard (reference image 22).
+async def observability_agent_synthese(period: str = "d7") -> dict[str, object]:
+    """Agent overview ("Synthese de l'agent") dashboard (reference image 25).
 
     KPI strip, agent profile and capabilities, top topics, detailed performance,
     current configuration, recent conversations, live activity, active prompts,
-    channel usage, change timeline, alerts and quick config. Deterministic
-    fixture; degrades to ``available: false``.
+    language mix, change timeline, alerts and quick config. Sourced end to end
+    from the transcript + eval run + pgvector; degrades to ``available: false``.
+
+    The ``period`` query param (``h24``/``d7``/``d30``) restricts the
+    transcript-derived figures to that trailing window; unknown values mean the
+    whole history.
     """
+    period_days = _SYNTHESE_PERIODS.get(period)
     try:
-        return {"available": True, **await agent_synthese_mod.compute_agent_synthese()}
+        payload = await agent_synthese_mod.compute_agent_synthese(period_days)
+        return {"available": True, **payload}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_synthese: failed: {exc}\n")
         return {"available": False}
