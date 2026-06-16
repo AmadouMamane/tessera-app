@@ -20,7 +20,7 @@ async function login(page: Page) {
 test.beforeEach(async ({ page }) => {
   await login(page);
   await page.goto(PAGE);
-  await expect(page.getByText("État reconstruit à T").first()).toBeVisible();
+  await expect(page.getByText("État reconstitué à T").first()).toBeVisible();
   await expect(page.locator("table tbody tr").first()).toBeVisible();
 });
 

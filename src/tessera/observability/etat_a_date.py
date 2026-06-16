@@ -322,7 +322,6 @@ def _guardrails_card(
             ("Règles actives", str(rules_active)),
             ("Motifs d'injection", str(len(policy.prompt_injection_deny))),
             ("Motifs PII surveillés", str(len(policy.pii_patterns))),
-            ("Règles déclenchées jusqu'à T", str(len(audit.rules))),
             ("Dernier changement avant T", _fmt(ctx.policy_mtime)),
         ],
         diff,
@@ -358,12 +357,16 @@ def _release_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
             ctx.run_dt, at, "Nouvelle évaluation exécutée après T", "Aucune évaluation après T"
         ),
     ]
+    run_dt = _aware(ctx.run_dt)
+    at_dt = _aware(at)
+    up_to_date = run_dt is not None and (at_dt is None or run_dt > at_dt)
     return _card(
         [
             ("Jeu d'évaluation", ctx.catalogue),
             ("Date d'exécution", _fmt(ctx.run_dt)),
             ("Environnement", "Local / on-prem"),
             ("Modèle évalué", ctx.model),
+            ("Statut vs actuel", "À jour" if up_to_date else "Historique"),
         ],
         diff,
         "Voir le détail de la release",
@@ -486,7 +489,7 @@ def _assemble(
             ),
         },
         "reconstructed": {
-            "title": "État reconstruit à T",
+            "title": "État reconstitué à T",
             "snapshot_id": _snapshot_id(at),
             "verified": True,
             "verified_label": "Intégrité vérifiée",
@@ -530,7 +533,7 @@ def _assemble(
             ],
         },
         "summary": {
-            "title": "Synthèse de l'état reconstruit",
+            "title": "Synthèse de l'état reconstitué",
             "cards": [
                 {"label": "Sources accessibles", "value": f"{active} / {len(states)}"},
                 {"label": "Fragments accessibles", "value": _fmt_int(chunks_at_t)},

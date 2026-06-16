@@ -3,7 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bookmark,
-  Boxes,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
@@ -14,10 +13,12 @@ import {
   FileText,
   History,
   Info,
+  MessageSquare,
+  Package,
   RotateCcw,
   Search,
   ShieldCheck,
-  Sparkles,
+  Terminal,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -191,8 +192,8 @@ export function EtatADate() {
             </div>
             <div className="grid gap-2.5 md:grid-cols-3">
               <GovCardView t={t} card={data.guardrails} icon={ShieldCheck} />
-              <GovCardView t={t} card={data.prompt_model} icon={FileText} />
-              <GovCardView t={t} card={data.release} icon={Boxes} />
+              <GovCardView t={t} card={data.prompt_model} icon={Terminal} />
+              <GovCardView t={t} card={data.release} icon={Package} />
             </div>
             <SourcesTable
               t={t}
@@ -276,94 +277,96 @@ function ControlBar({
   saved: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <div className="flex items-center justify-end gap-2">
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+      <SelectField
+        label={t("tenant")}
+        value={meta?.tenant ?? ""}
+        options={[meta?.tenant ?? "-"]}
+        onChange={() => undefined}
+      />
+      <SelectField
+        label={t("agent")}
+        value={meta?.agent ?? ""}
+        options={[meta?.agent ?? "-"]}
+        onChange={() => undefined}
+      />
+      <Field label={t("dateTime")}>
+        {/* Premium date+time field: a styled shell + dark-scheme native picker. */}
+        <div
+          className={cn(
+            "flex h-9 items-center gap-2 rounded-md border bg-[var(--tessera-bg)] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors focus-within:border-[#7c5cf5]",
+            isLive ? "border-[var(--tessera-border)]" : "border-[#7c5cf5]/60",
+          )}
+        >
+          <CalendarDays className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+          <input
+            type="datetime-local"
+            value={draft}
+            onChange={(e) => onDraft(e.target.value)}
+            aria-label={t("dateTime")}
+            className="w-[11.5rem] bg-transparent text-sm text-[var(--tessera-text)] outline-none [color-scheme:dark]"
+          />
+          {isLive ? (
+            <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[0.58rem] font-medium text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> live
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={onLive}
+              title={t("now")}
+              className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.58rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            >
+              <Clock className="h-3 w-3" /> {t("now")}
+            </button>
+          )}
+        </div>
+      </Field>
+      <Field label={t("reference")}>
+        <input
+          value={refInput}
+          onChange={(e) => onRefInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onReconstruct();
+          }}
+          placeholder={t("refPlaceholder")}
+          aria-label={t("reference")}
+          className="h-9 w-56 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
+        />
+      </Field>
+      <SelectField
+        label={t("contextSource")}
+        value={ctxSource}
+        options={CONTEXT_SOURCES}
+        onChange={onCtxSource}
+      />
+      <div className="ml-auto flex items-end gap-2">
         <button
           type="button"
           onClick={onSave}
           disabled={!canDownload || saving}
+          title={t("saveSnapshot")}
           className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-50"
         >
           <Bookmark className="h-4 w-4" />
-          {saving ? t("saving") : saved ? t("saved") : t("saveSnapshot")}
+          <span className="hidden lg:inline">
+            {saving ? t("saving") : saved ? t("saved") : t("saveSnapshot")}
+          </span>
         </button>
         <button
           type="button"
           onClick={onDownload}
           disabled={!canDownload}
+          title={t("downloadReport")}
           className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-50"
         >
-          <Download className="h-4 w-4" /> {t("downloadReport")}
+          <Download className="h-4 w-4" />
+          <span className="hidden lg:inline">{t("downloadReport")}</span>
         </button>
-      </div>
-
-      <div className="flex flex-wrap items-end gap-3">
-        <SelectField
-          label={t("tenant")}
-          value={meta?.tenant ?? ""}
-          options={[meta?.tenant ?? "-"]}
-          onChange={() => undefined}
-        />
-        <SelectField
-          label={t("agent")}
-          value={meta?.agent ?? ""}
-          options={[meta?.agent ?? "-"]}
-          onChange={() => undefined}
-        />
-        <Field label={t("dateTime")}>
-          {/* Premium date+time field: a styled shell + dark-scheme native picker. */}
-          <div
-            className={cn(
-              "flex h-9 items-center gap-2 rounded-md border bg-[var(--tessera-bg)] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors focus-within:border-[#7c5cf5]",
-              isLive ? "border-[var(--tessera-border)]" : "border-[#7c5cf5]/60",
-            )}
-          >
-            <CalendarDays className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
-            <input
-              type="datetime-local"
-              value={draft}
-              onChange={(e) => onDraft(e.target.value)}
-              aria-label={t("dateTime")}
-              className="w-[11.5rem] bg-transparent text-sm text-[var(--tessera-text)] outline-none [color-scheme:dark]"
-            />
-            {isLive ? (
-              <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[0.58rem] font-medium text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> live
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={onLive}
-                title={t("now")}
-                className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.58rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-              >
-                <Clock className="h-3 w-3" /> {t("now")}
-              </button>
-            )}
-          </div>
-        </Field>
-        <Field label={t("reference")}>
-          <input
-            value={refInput}
-            onChange={(e) => onRefInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onReconstruct();
-            }}
-            placeholder={t("refPlaceholder")}
-            aria-label={t("reference")}
-            className="h-9 w-56 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
-          />
-        </Field>
-        <SelectField
-          label={t("contextSource")}
-          value={ctxSource}
-          options={CONTEXT_SOURCES}
-          onChange={onCtxSource}
-        />
         <button
           type="button"
           onClick={onReconstruct}
-          className="ml-auto flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-4 text-xs font-medium text-white hover:bg-[#7c5cf5]"
+          className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-4 text-xs font-medium text-white hover:bg-[#7c5cf5]"
         >
           <History className="h-4 w-4" /> {t("reconstruct")}
         </button>
@@ -415,9 +418,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Panel({
   title,
   icon: Icon,
+  right,
   children,
   className,
-}: { title: string; icon?: typeof ShieldCheck; children: React.ReactNode; className?: string }) {
+}: {
+  title: string;
+  icon?: typeof ShieldCheck;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <section
       className={cn(
@@ -425,10 +435,13 @@ function Panel({
         className,
       )}
     >
-      <h2 className="mb-2 flex items-center gap-1.5 text-[0.78rem] font-semibold text-[var(--tessera-text)]">
-        {Icon ? <Icon className="h-4 w-4 text-[#b9a6ff]" /> : null}
-        {title}
-      </h2>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-1.5 text-[0.78rem] font-semibold text-[var(--tessera-text)]">
+          {Icon ? <Icon className="h-4 w-4 text-[#b9a6ff]" /> : null}
+          {title}
+        </h2>
+        {right}
+      </div>
       {children}
     </section>
   );
@@ -454,9 +467,13 @@ function Reconstructed({ data, className }: { data: Data; className?: string }) 
   const r = data.reconstructed;
   if (!r) return null;
   return (
-    <Panel title={r.title} icon={Sparkles} className={className}>
+    <Panel
+      title={r.title}
+      icon={FileText}
+      right={<VerifiedBadge ok={r.verified} label={r.verified_label} />}
+      className={className}
+    >
       <p className="font-mono text-[0.72rem] text-[var(--tessera-text)]">{r.snapshot_id}</p>
-      <VerifiedBadge ok={r.verified} label={r.verified_label} />
       <p className="mt-3 text-[0.68rem] text-[var(--tessera-text-muted)]">{r.built_label}</p>
     </Panel>
   );
@@ -467,7 +484,7 @@ function Original({ data, className }: { data: Data; className?: string }) {
   const o = data.original;
   if (!o) return null;
   return (
-    <Panel title={o.title} icon={FileText} className={className}>
+    <Panel title={o.title} icon={MessageSquare} className={className}>
       <p className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">{o.ref_code}</p>
       {o.available ? (
         <div className="mt-2 flex flex-col gap-2 text-[0.74rem]">
@@ -539,7 +556,7 @@ function GovCardView({
       </div>
       <Link
         href={card.cta_href as never}
-        className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-white"
+        className="mt-auto flex items-center gap-1 self-start pt-2.5 text-[0.68rem] text-[#b9a6ff] hover:text-white"
       >
         {card.cta} <ChevronRight className="h-3.5 w-3.5" />
       </Link>
