@@ -129,6 +129,17 @@ it dirty.
 - **A reset labelled "all" must reset all.** "Reinitialiser les filtres" first
   cleared only the popover filters - inconsistent with the inline dropdowns. Make
   it global (search + inline + advanced) and show it whenever ANY filter is active.
+- **`overflow-hidden` on a flex item clips instead of scrolls.** Adding
+  `overflow-hidden` to the page root (needed so the `absolute inset-0` drawer
+  clips to the rounded card) turned the root into a flex item that flexbox shrank
+  to the container height, clipping the bottom rows with no scroll (visible when
+  "Lignes par page" = 50). Fix: viewport-constrain the page like
+  `/prouver/audit-logs` - thread `min-h-0 flex-1` from the root through the
+  filters/table wrapper down to the table `<section>`, give the table-wrapper
+  `<div>` `min-h-0 flex-1 overflow-auto` so rows scroll INSIDE the card, and pin
+  the pagination footer below it. Make the `<thead><tr>` `sticky top-0 z-10
+  bg-[var(--tessera-surface)]` so headers stay during the internal scroll. KPIs
+  and filters then stay fixed; only the rows scroll.
 - **Client-side pagination footer.** Below a filtered table: "Afficher {start} -
   {end} sur {total}" + centered page buttons (prev/next chevrons, a centered
   window of numbers, active = violet `#b9a6ff`) + "Lignes par page" `<select>`
