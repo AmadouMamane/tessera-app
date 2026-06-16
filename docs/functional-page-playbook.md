@@ -184,7 +184,11 @@ it dirty.
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** Connaissances (pgvector inventory, durable
-  attach/active, search/type/status filters, Rattacher, real probe sparklines).
+  attach/active, search/type/status filters, Rattacher, real probe sparklines,
+  click-to-open detail drawer, transcript-grounded answers, and an **advanced
+  Filtres popover** wiring the formerly-dead "Filtres" button to real extra axes
+  -- langue (FR/DE/EN from `agg.langs`), couverture minimale, "avec echanges
+  ancres" (real transcript traffic count) -- with a live count badge + reset).
 - **Real data (read-only):** Evaluations, Historique, Synthese (eval run);
   Configurations (repo introspection — form not yet persisted).
 - **Still fixture / blocked:** Garde-fous (needs guard-decision logs), Prompts

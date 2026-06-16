@@ -78,6 +78,9 @@ export function AgentConnaissances() {
   const [status, setStatus] = useState<Status>("Tous");
   const [typeF, setTypeF] = useState<TypeF>("Tous");
   const [period, setPeriod] = useState("30");
+  const [langSel, setLangSel] = useState<string[]>([]);
+  const [minCov, setMinCov] = useState(0);
+  const [groundedOnly, setGroundedOnly] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const mut = useMutation({
     mutationFn: mutateConnaissancesSource,
@@ -98,11 +101,16 @@ export function AgentConnaissances() {
   const periodDays = Number(period);
   const q = search.trim().toLowerCase();
   const allRows = data.table?.rows ?? [];
+  const allLangs = [...new Set(allRows.flatMap((r) => r.langs ?? []))].sort();
+  const advCount = langSel.length + (minCov > 0 ? 1 : 0) + (groundedOnly ? 1 : 0);
   const rows = allRows.filter(
     (r) =>
       (status === "Tous" || r.status === status) &&
       (typeF === "Tous" || r.type === typeF) &&
       (r.fresh_days ?? 0) <= periodDays &&
+      (langSel.length === 0 || (r.langs ?? []).some((l) => langSel.includes(l))) &&
+      (r.coverage ?? 0) >= minCov &&
+      (!groundedOnly || (r.grounded ?? 0) > 0) &&
       (q === "" || r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q)),
   );
 
@@ -140,6 +148,14 @@ export function AgentConnaissances() {
           setTypeF={setTypeF}
           period={period}
           setPeriod={setPeriod}
+          allLangs={allLangs}
+          langSel={langSel}
+          setLangSel={setLangSel}
+          minCov={minCov}
+          setMinCov={setMinCov}
+          groundedOnly={groundedOnly}
+          setGroundedOnly={setGroundedOnly}
+          advCount={advCount}
         />
         <SourcesTable
           data={data}
@@ -310,6 +326,14 @@ function Filters({
   setTypeF,
   period,
   setPeriod,
+  allLangs,
+  langSel,
+  setLangSel,
+  minCov,
+  setMinCov,
+  groundedOnly,
+  setGroundedOnly,
+  advCount,
 }: {
   data: Data;
   search: string;
@@ -320,6 +344,14 @@ function Filters({
   setTypeF: (v: TypeF) => void;
   period: string;
   setPeriod: (v: string) => void;
+  allLangs: string[];
+  langSel: string[];
+  setLangSel: (v: string[]) => void;
+  minCov: number;
+  setMinCov: (v: number) => void;
+  groundedOnly: boolean;
+  setGroundedOnly: (v: boolean) => void;
+  advCount: number;
 }) {
   const f = data.filters;
   if (!f) return null;
@@ -347,12 +379,157 @@ function Filters({
         onSelect={(v) => setTypeF(v as TypeF)}
       />
       <FilterDropdown label="Periode" value={period} options={PERIOD_OPTS} onSelect={setPeriod} />
+      <AdvancedFilters
+        label={f.more}
+        allLangs={allLangs}
+        langSel={langSel}
+        setLangSel={setLangSel}
+        minCov={minCov}
+        setMinCov={setMinCov}
+        groundedOnly={groundedOnly}
+        setGroundedOnly={setGroundedOnly}
+        activeCount={advCount}
+      />
+    </div>
+  );
+}
+
+const COVERAGE_STEPS = [0, 25, 50, 75] as const;
+
+function AdvancedFilters({
+  label,
+  allLangs,
+  langSel,
+  setLangSel,
+  minCov,
+  setMinCov,
+  groundedOnly,
+  setGroundedOnly,
+  activeCount,
+}: {
+  label: string;
+  allLangs: string[];
+  langSel: string[];
+  setLangSel: (v: string[]) => void;
+  minCov: number;
+  setMinCov: (v: number) => void;
+  groundedOnly: boolean;
+  setGroundedOnly: (v: boolean) => void;
+  activeCount: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const toggleLang = (l: string) =>
+    setLangSel(langSel.includes(l) ? langSel.filter((x) => x !== l) : [...langSel, l]);
+  const reset = () => {
+    setLangSel([]);
+    setMinCov(0);
+    setGroundedOnly(false);
+  };
+  return (
+    <div className="relative">
       <button
         type="button"
-        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-[0.74rem]",
+          activeCount > 0
+            ? "border-[#5fd0c6]/50 bg-[#5fd0c6]/10 text-[var(--tessera-text)]"
+            : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+        )}
       >
-        <SlidersHorizontal className="h-3.5 w-3.5" /> {f.more}
+        <SlidersHorizontal className="h-3.5 w-3.5" /> {label}
+        {activeCount > 0 ? (
+          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5fd0c6] px-1 text-[0.6rem] font-semibold text-[#04201d]">
+            {activeCount}
+          </span>
+        ) : null}
       </button>
+      {open ? (
+        <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 shadow-lg">
+          {allLangs.length > 0 ? (
+            <div className="mb-3">
+              <p className="mb-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                Langue
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {allLangs.map((l) => {
+                  const on = langSel.includes(l);
+                  return (
+                    <button
+                      key={l}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleLang(l)}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-[0.66rem] font-medium uppercase",
+                        on
+                          ? "border-[#5fd0c6]/50 bg-[#5fd0c6]/15 text-[var(--tessera-text)]"
+                          : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+                      )}
+                    >
+                      {l}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mb-3">
+            <p className="mb-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              Couverture minimale
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {COVERAGE_STEPS.map((c) => {
+                const on = minCov === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setMinCov(c)}
+                    className={cn(
+                      "rounded-md border px-2 py-1 text-[0.66rem] font-medium tabular-nums",
+                      on
+                        ? "border-[#5fd0c6]/50 bg-[#5fd0c6]/15 text-[var(--tessera-text)]"
+                        : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+                    )}
+                  >
+                    {c === 0 ? "Toutes" : `>= ${c}%`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            aria-pressed={groundedOnly}
+            onClick={() => setGroundedOnly(!groundedOnly)}
+            className="flex w-full items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.7rem] text-[var(--tessera-text)]"
+          >
+            <span>Avec echanges ancres</span>
+            <span
+              className={cn(
+                "flex h-4 w-8 items-center rounded-full px-0.5 transition-colors",
+                groundedOnly ? "justify-end bg-emerald-500" : "justify-start bg-slate-600",
+              )}
+            >
+              <span className="h-3 w-3 rounded-full bg-white" />
+            </span>
+          </button>
+
+          {activeCount > 0 ? (
+            <button
+              type="button"
+              onClick={reset}
+              className="mt-3 w-full text-center text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
+            >
+              Reinitialiser les filtres
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

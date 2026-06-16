@@ -229,6 +229,10 @@ async def build_connaissances() -> dict[str, object]:
             continue
         active = st.get("active", True)
         cite_pct = _cite_of(cat)
+        tr = traffic.get(cat)
+        grounded = (
+            int(tr["count"]) if isinstance(tr, dict) and isinstance(tr.get("count"), int) else 0
+        )
         rows_out.append(
             {
                 "key": cat,
@@ -242,6 +246,8 @@ async def build_connaissances() -> dict[str, object]:
                 "freshness": _freshness(now, freshest[cat]) if cat in freshest else "-",
                 "fresh_days": (now - freshest[cat]).days if cat in freshest else 9999,
                 "citation": f"{round(cite_pct)}%" if cite_pct is not None else "-",
+                "langs": sorted(agg.langs.get(cat, set())),
+                "grounded": grounded,
             }
         )
     attached_count = len(rows_out)

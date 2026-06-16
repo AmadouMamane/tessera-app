@@ -3540,6 +3540,8 @@ export const AgentConnaissancesSchema = z.object({
           freshness: z.string(),
           fresh_days: z.number().optional(),
           citation: z.string(),
+          langs: z.array(z.string()).optional(),
+          grounded: z.number().optional(),
         }),
       ),
     })
