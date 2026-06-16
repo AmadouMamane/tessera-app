@@ -63,7 +63,7 @@ _TR: dict[str, tuple[str, str, str]] = {
     "act_memory": ("Sources & memoire", "Quellen & Speicher", "Sources & memory"),
     "act_attach": ("Rattacher une source", "Quelle hinzufuegen", "Attach a source"),
     "kpi_sources": ("Sources rattachees", "Verknuepfte Quellen", "Attached sources"),
-    "kpi_coverage": ("Couverture des requetes", "Abdeckung der Anfragen", "Query coverage"),
+    "kpi_coverage": ("Couverture des sources", "Quellenabdeckung", "Source coverage"),
     "kpi_freshness": ("Fraicheur", "Aktualitaet", "Freshness"),
     "kpi_citation": ("Taux de citation", "Zitationsrate", "Citation rate"),
     "kpi_hitrate": ("Hit-rate retrieval", "Retrieval-Trefferquote", "Retrieval hit-rate"),
