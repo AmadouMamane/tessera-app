@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Clock,
   Link2,
@@ -15,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Link } from "@/i18n/navigation";
@@ -171,13 +172,7 @@ export function AgentConnaissances() {
           canReset={canReset}
           onReset={resetAll}
         />
-        <SourcesTable
-          data={data}
-          rows={rows}
-          total={allRows.length}
-          selected={selected}
-          onSelect={setSelected}
-        />
+        <SourcesTable data={data} rows={rows} selected={selected} onSelect={setSelected} />
       </div>
 
       {detail ? (
@@ -559,17 +554,25 @@ const COL_WIDTHS = ["32%", "18%", "12%", "14%", "12%", "12%"] as const;
 function SourcesTable({
   data,
   rows,
-  total,
   selected,
   onSelect,
 }: {
   data: Data;
   rows: RowT[];
-  total: number;
   selected: string | null;
   onSelect: (key: string) => void;
 }) {
   const tbl = data.table;
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const totalRows = rows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+  // Reset to the first page when the filtered set or page size changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on filtered-count change, not row identity
+  useEffect(() => setPage(1), [totalRows, perPage]);
+  const safePage = Math.min(page, totalPages);
+  const startIdx = (safePage - 1) * perPage;
+  const pageRows = rows.slice(startIdx, startIdx + perPage);
   if (!tbl) return null;
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
@@ -589,7 +592,7 @@ function SourcesTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {pageRows.map((r) => (
               <tr
                 key={r.name}
                 onClick={() => r.key && onSelect(r.key)}
@@ -653,7 +656,7 @@ function SourcesTable({
                 </td>
               </tr>
             ))}
-            {rows.length === 0 ? (
+            {totalRows === 0 ? (
               <tr>
                 <td
                   colSpan={tbl.columns.length}
@@ -666,10 +669,117 @@ function SourcesTable({
           </tbody>
         </table>
       </div>
-      <div className="border-t border-[var(--tessera-border)] px-3 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
-        {rows.length === total ? tbl.count : `${rows.length} sur ${total} sources`}
-      </div>
+      <Pagination
+        page={safePage}
+        totalPages={totalPages}
+        start={totalRows === 0 ? 0 : startIdx + 1}
+        end={Math.min(startIdx + perPage, totalRows)}
+        total={totalRows}
+        perPage={perPage}
+        onPage={setPage}
+        onPerPage={setPerPage}
+      />
     </section>
+  );
+}
+
+const ROWS_PER_PAGE_OPTS = [10, 20, 50] as const;
+const MAX_PAGE_BUTTONS = 5;
+
+function pageWindow(page: number, totalPages: number): number[] {
+  // A compact, centered window of page numbers (no ellipsis logic needed at this scale).
+  const span = Math.min(MAX_PAGE_BUTTONS, totalPages);
+  let first = Math.max(1, page - Math.floor(span / 2));
+  first = Math.min(first, totalPages - span + 1);
+  return Array.from({ length: span }, (_, i) => first + i);
+}
+
+function Pagination({
+  page,
+  totalPages,
+  start,
+  end,
+  total,
+  perPage,
+  onPage,
+  onPerPage,
+}: {
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  total: number;
+  perPage: number;
+  onPage: (p: number) => void;
+  onPerPage: (n: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <span className="tabular-nums">
+        Afficher {start} - {end} sur {total}
+      </span>
+      <div className="flex items-center gap-1">
+        <PageArrow dir="prev" disabled={page <= 1} onClick={() => onPage(Math.max(1, page - 1))} />
+        {pageWindow(page, totalPages).map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-current={n === page ? "page" : undefined}
+            onClick={() => onPage(n)}
+            className={cn(
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              n === page
+                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-white"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {n}
+          </button>
+        ))}
+        <PageArrow
+          dir="next"
+          disabled={page >= totalPages}
+          onClick={() => onPage(Math.min(totalPages, page + 1))}
+        />
+      </div>
+      <label className="flex items-center gap-2">
+        <span>Lignes par page</span>
+        <select
+          value={perPage}
+          onChange={(e) => onPerPage(Number(e.target.value))}
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+        >
+          {ROWS_PER_PAGE_OPTS.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+function PageArrow({
+  dir,
+  disabled,
+  onClick,
+}: {
+  dir: "prev" | "next";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const Icon = dir === "prev" ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={dir === "prev" ? "Page precedente" : "Page suivante"}
+      onClick={onClick}
+      className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
   );
 }
 

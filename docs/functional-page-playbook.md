@@ -129,6 +129,12 @@ it dirty.
 - **A reset labelled "all" must reset all.** "Reinitialiser les filtres" first
   cleared only the popover filters - inconsistent with the inline dropdowns. Make
   it global (search + inline + advanced) and show it whenever ANY filter is active.
+- **Client-side pagination footer.** Below a filtered table: "Afficher {start} -
+  {end} sur {total}" + centered page buttons (prev/next chevrons, a centered
+  window of numbers, active = violet `#b9a6ff`) + "Lignes par page" `<select>`
+  (default 10). Hold `page`/`perPage` in the table; `useEffect(() => setPage(1),
+  [totalRows, perPage])` resets to page 1 when the filtered count or page size
+  changes; slice `rows.slice((page-1)*perPage, ...)`. Clamp `safePage` on render.
 - **Uniform column widths = `table-fixed` + per-`<th>` `style={{width}}`.** A
   `w-full` auto-layout table sizes columns to content and looks arbitrary. Apply
   `table-fixed` and explicit widths summing to 100% (Connaissances: Source 32 /
