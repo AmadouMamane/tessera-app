@@ -503,7 +503,9 @@ function Reconstructed({ data, className }: { data: Data; className?: string }) 
       right={<VerifiedBadge ok={r.verified} label={r.verified_label} />}
       className={className}
     >
-      <p className="font-mono text-[0.72rem] text-[var(--tessera-text)]">{r.snapshot_id}</p>
+      <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+        Snapshot · <span className="font-mono text-[var(--tessera-text)]">{r.snapshot_id}</span>
+      </p>
       <p className="mt-3 text-[0.68rem] text-[var(--tessera-text-muted)]">{r.built_label}</p>
     </Panel>
   );
