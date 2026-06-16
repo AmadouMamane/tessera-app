@@ -3,27 +3,32 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bookmark,
-  CheckCircle2,
+  Boxes,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   Download,
+  FileText,
   History,
+  Info,
   RotateCcw,
   Search,
   ShieldCheck,
+  Sparkles,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "@/i18n/navigation";
 import { fetchEtatADate, saveEtatSnapshot } from "@/lib/api/client";
 import type { EtatADate as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 type Row = NonNullable<Data["table"]>["rows"][number];
+type GovCard = NonNullable<Data["guardrails"]>;
 type SortDir = "asc" | "desc";
 
 const TYPE_TONE: Record<string, string> = {
@@ -37,7 +42,6 @@ const KIND_DOT: Record<string, string> = {
 };
 const ROWS_PER_PAGE_OPTS = [10, 25, 50];
 
-/** Close a popover on outside-click / Escape; returns the ref for its root. */
 function useDismiss(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -58,14 +62,12 @@ function useDismiss(open: boolean, onClose: () => void) {
   return ref;
 }
 
-/** datetime-local value (browser-local) -> ISO instant, or null when empty. */
 function toIso(value: string): string | null {
   if (!value) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-/** ISO instant -> datetime-local value in browser-local time (for the input). */
 function toLocalInput(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -76,10 +78,8 @@ function toLocalInput(iso: string): string {
 export function EtatADate() {
   const t = useTranslations("etatADate");
   const qc = useQueryClient();
-  // null = live; a committed ISO instant once the operator reconstructs at T.
   const [draft, setDraft] = useState("");
   const [asOf, setAsOf] = useState<string | null>(null);
-  // Table controls (filters live in the parent; sort/page live in the table).
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState("all");
   const [statusF, setStatusF] = useState("all");
@@ -127,14 +127,14 @@ export function EtatADate() {
 
   return (
     <div className="relative flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      {data?.meta?.banner ? <Banner text={data.meta.banner} /> : null}
+
       <ControlBar
         t={t}
         draft={draft}
         onDraft={setDraft}
         onReconstruct={() => setAsOf(toIso(draft))}
-        refCode={data?.meta?.ref_code ?? "-"}
-        agent={data?.meta?.agent ?? "-"}
-        contextSource={data?.meta?.context_source ?? "-"}
+        meta={data?.meta}
         onDownload={downloadReport}
         canDownload={Boolean(data?.available)}
         onSave={() => saveSnapshot.mutate()}
@@ -150,11 +150,21 @@ export function EtatADate() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-5">
-            {(data.kpis ?? []).map((k) => (
-              <KpiTile key={k.key} kpi={k} />
-            ))}
+          <div className="grid gap-2.5 xl:grid-cols-12">
+            <Reconstructed data={data} className="xl:col-span-3" />
+            <Original data={data} className="xl:col-span-5" />
+            <Chronology data={data} className="xl:col-span-4 xl:row-span-2" />
+            <GovCardView
+              t={t}
+              card={data.guardrails}
+              icon={ShieldCheck}
+              className="xl:col-span-4"
+            />
+            <GovCardView t={t} card={data.prompt_model} icon={FileText} className="xl:col-span-4" />
+            <GovCardView t={t} card={data.release} icon={Boxes} className="xl:col-span-4" />
           </div>
+
+          <Integrity data={data} />
 
           <div className="grid gap-2.5 xl:grid-cols-12">
             <SourcesTable
@@ -172,14 +182,9 @@ export function EtatADate() {
               onSelect={setSelected}
               className="xl:col-span-8"
             />
-            <div className="flex flex-col gap-2.5 xl:col-span-4">
-              <Integrity data={data} />
-              <Timeline data={data} />
-              <Policies data={data} />
-            </div>
+            <AuditPieces data={data} className="xl:col-span-4" />
           </div>
 
-          <SummaryCards data={data} />
           <Snapshots data={data} onReload={reloadAt} />
         </>
       )}
@@ -189,18 +194,25 @@ export function EtatADate() {
   );
 }
 
-// ── control bar ──────────────────────────────────────────────────────────────
-
 type T = ReturnType<typeof useTranslations<"etatADate">>;
+
+// ── banner + control bar ──────────────────────────────────────────────────────
+
+function Banner({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-[#9a5f18]/50 bg-[#3e260c]/30 p-2.5 text-[0.72rem] text-[#f0c89a]">
+      <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#f0a23a]" />
+      <span>{text}</span>
+    </div>
+  );
+}
 
 function ControlBar({
   t,
   draft,
   onDraft,
   onReconstruct,
-  refCode,
-  agent,
-  contextSource,
+  meta,
   onDownload,
   canDownload,
   onSave,
@@ -211,9 +223,7 @@ function ControlBar({
   draft: string;
   onDraft: (v: string) => void;
   onReconstruct: () => void;
-  refCode: string;
-  agent: string;
-  contextSource: string;
+  meta: Data["meta"];
   onDownload: () => void;
   canDownload: boolean;
   onSave: () => void;
@@ -242,10 +252,11 @@ function ControlBar({
         </button>
       </div>
       <div className="flex flex-wrap items-end gap-3">
+        <Field label={t("tenant")}>
+          <Static>{meta?.tenant ?? "-"}</Static>
+        </Field>
         <Field label={t("agent")}>
-          <span className="flex h-9 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm">
-            {agent}
-          </span>
+          <Static>{meta?.agent ?? "-"}</Static>
         </Field>
         <Field label={t("dateTime")}>
           <input
@@ -258,9 +269,9 @@ function ControlBar({
         </Field>
         <Field label={t("contextSource")}>
           <span className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm">
-            {contextSource}
+            {meta?.context_source ?? "-"}
             <span className="rounded bg-[var(--tessera-surface)] px-1.5 py-0.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-              {refCode}
+              {meta?.ref_code ?? "-"}
             </span>
           </span>
         </Field>
@@ -287,17 +298,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-// ── KPI ────────────────────────────────────────────────────────────────────
-
-function KpiTile({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
+function Static({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">{kpi.label}</p>
-      <p className="text-[1.4rem] font-semibold tabular-nums text-[var(--tessera-text)]">
-        {kpi.value}
-      </p>
-      <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{kpi.hint}</p>
-    </div>
+    <span className="flex h-9 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm">
+      {children}
+    </span>
   );
 }
 
@@ -305,9 +310,10 @@ function KpiTile({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
 
 function Panel({
   title,
+  icon: Icon,
   children,
   className,
-}: { title: string; children: React.ReactNode; className?: string }) {
+}: { title: string; icon?: typeof ShieldCheck; children: React.ReactNode; className?: string }) {
   return (
     <section
       className={cn(
@@ -315,25 +321,220 @@ function Panel({
         className,
       )}
     >
-      <h2 className="mb-2 text-[0.78rem] font-semibold text-[var(--tessera-text)]">{title}</h2>
+      <h2 className="mb-2 flex items-center gap-1.5 text-[0.78rem] font-semibold text-[var(--tessera-text)]">
+        {Icon ? <Icon className="h-4 w-4 text-[#b9a6ff]" /> : null}
+        {title}
+      </h2>
       {children}
     </section>
   );
 }
 
+function VerifiedBadge({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+        ok
+          ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+          : "border-red-500/30 bg-red-500/15 text-red-300",
+      )}
+    >
+      {ok ? <ShieldCheck className="h-3.5 w-3.5" /> : null}
+      {label}
+    </span>
+  );
+}
+
+function Reconstructed({ data, className }: { data: Data; className?: string }) {
+  const r = data.reconstructed;
+  if (!r) return null;
+  return (
+    <Panel title={r.title} icon={Sparkles} className={className}>
+      <p className="font-mono text-[0.72rem] text-[var(--tessera-text)]">{r.snapshot_id}</p>
+      <VerifiedBadge ok={r.verified} label={r.verified_label} />
+      <p className="mt-3 text-[0.68rem] text-[var(--tessera-text-muted)]">{r.built_label}</p>
+    </Panel>
+  );
+}
+
+function Original({ data, className }: { data: Data; className?: string }) {
+  const t = useTranslations("etatADate");
+  const o = data.original;
+  if (!o) return null;
+  return (
+    <Panel title={o.title} icon={FileText} className={className}>
+      <p className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">{o.ref_code}</p>
+      {o.available ? (
+        <div className="mt-2 flex flex-col gap-2 text-[0.74rem]">
+          <div>
+            <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {t("question")}
+            </p>
+            <p className="text-[var(--tessera-text)]">{o.question}</p>
+          </div>
+          <div>
+            <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {t("answer")}
+            </p>
+            <p className="text-[var(--tessera-text-muted)]">{o.answer}</p>
+          </div>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--tessera-border)]/50 pt-2 text-[0.62rem] text-[var(--tessera-text-muted)]">
+            <span>
+              {t("timestampLabel")}{" "}
+              <span className="text-[var(--tessera-text)]">{o.timestamp}</span>
+            </span>
+            <span>
+              {t("sessionLabel")}{" "}
+              <span className="font-mono text-[var(--tessera-text)]">{o.session}</span>
+            </span>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-2 text-[0.74rem] text-[var(--tessera-text-muted)]">{t("noOriginal")}</p>
+      )}
+    </Panel>
+  );
+}
+
+function GovCardView({
+  t,
+  card,
+  icon,
+  className,
+}: { t: T; card?: GovCard; icon: typeof ShieldCheck; className?: string }) {
+  if (!card) return null;
+  return (
+    <Panel title={card.title} icon={icon} className={className}>
+      <dl className="flex flex-col gap-1.5 text-[0.72rem]">
+        {card.rows.map((r) => (
+          <div key={r.label} className="flex items-center justify-between gap-2">
+            <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
+            <dd className="truncate text-right font-medium text-[var(--tessera-text)]">
+              {r.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-2.5 border-t border-[var(--tessera-border)]/60 pt-2">
+        <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          {t("diffVsNow")}
+        </p>
+        <ul className="mt-1 flex flex-col gap-1">
+          {card.diff.map((d) => (
+            <li
+              key={d}
+              className="flex items-start gap-1.5 text-[0.68rem] text-[var(--tessera-text)]"
+            >
+              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#b9a6ff]" />
+              {d}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <Link
+        href={card.cta_href as never}
+        className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-white"
+      >
+        {card.cta} <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+    </Panel>
+  );
+}
+
+function Chronology({ data, className }: { data: Data; className?: string }) {
+  const tl = data.timeline;
+  if (!tl) return null;
+  return (
+    <Panel title={tl.title} icon={History} className={className}>
+      {tl.rows.length === 0 ? (
+        <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">Aucun evenement a T.</p>
+      ) : (
+        <ul className="flex flex-col gap-2.5">
+          {tl.rows.map((r, i) => (
+            <li key={`${r.time}-${i}`} className="flex gap-2.5 text-[0.72rem]">
+              <span
+                className={cn(
+                  "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
+                  KIND_DOT[r.kind] ?? "bg-slate-400",
+                )}
+              />
+              <span className="min-w-0">
+                <span className="block tabular-nums text-[var(--tessera-text-muted)]">
+                  {r.time}
+                </span>
+                <span className="text-[var(--tessera-text)]">{r.label}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
+function Integrity({ data }: { data: Data }) {
+  const it = data.integrity;
+  if (!it) return null;
+  const rows: [string, string][] = [
+    ["Indice snapshot", it.snapshot_id],
+    ["Couverture des sources", it.coverage],
+    ["Requete de test", it.test_query],
+    ["Derniere synchro avant T", it.last_sync],
+    ["Journalisation", it.chain_label],
+  ];
+  return (
+    <Panel title={it.title} icon={ShieldCheck}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <dl className="grid flex-1 grid-cols-2 gap-x-6 gap-y-1.5 text-[0.72rem] md:grid-cols-3">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex flex-col">
+              <dt className="text-[var(--tessera-text-muted)]">{label}</dt>
+              <dd className="font-medium tabular-nums text-[var(--tessera-text)]">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <VerifiedBadge ok={it.verified} label={it.verified_label} />
+      </div>
+    </Panel>
+  );
+}
+
+function AuditPieces({ data, className }: { data: Data; className?: string }) {
+  const a = data.audit_pieces;
+  if (!a) return null;
+  return (
+    <Panel title={a.title} icon={FileText} className={className}>
+      <ul className="flex flex-col gap-2">
+        {a.rows.map((r) => (
+          <li key={r.href}>
+            <Link
+              href={r.href as never}
+              className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.72rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
+            >
+              {r.label}
+              <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
 // ── sources table (filters + sort + pagination + row-click drawer) ────────────
 
-const COLS: { key: keyof Row | "source"; labelKey: string; width: string; align?: "right" }[] = [
-  { key: "source", labelKey: "source", width: "34%" },
+const COLS: { key: keyof Row; labelKey: string; width: string; align?: "right" }[] = [
+  { key: "source", labelKey: "source", width: "30%" },
   { key: "type", labelKey: "type", width: "16%" },
-  { key: "langs", labelKey: "langs", width: "12%" },
-  { key: "chunks", labelKey: "fragments", width: "14%", align: "right" },
-  { key: "updated", labelKey: "updated", width: "12%" },
+  { key: "version", labelKey: "colVersion", width: "18%" },
+  { key: "chunks", labelKey: "colDocuments", width: "12%", align: "right" },
+  { key: "accessible_until", labelKey: "colAccessibleUntil", width: "12%" },
   { key: "status", labelKey: "status", width: "12%" },
 ];
 
-function sortValue(row: Row, key: keyof Row | "source"): string | number {
-  const v = row[key as keyof Row];
+function sortValue(row: Row, key: keyof Row): string | number {
+  const v = row[key];
   return typeof v === "number" ? v : String(v ?? "").toLowerCase();
 }
 
@@ -393,7 +594,6 @@ function SourcesTable({
   const start = (safePage - 1) * perPage;
   const pageRows = sorted.slice(start, start + perPage);
 
-  // Unique filter options derived from the data (stable keys, localized labels).
   const typeOpts = useMemo(() => {
     const m = new Map<string, string>();
     for (const r of allRows) m.set(r.type_key, r.type);
@@ -429,7 +629,7 @@ function SourcesTable({
             onChange={(e) => onSearch(e.target.value)}
             placeholder={t("searchPlaceholder")}
             aria-label={t("searchPlaceholder")}
-            className="h-8 w-52 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-8 pr-2 text-[0.72rem] text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
+            className="h-8 w-52 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pr-2 pl-8 text-[0.72rem] text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
           />
         </div>
         <FilterDropdown
@@ -449,7 +649,7 @@ function SourcesTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] table-fixed border-collapse text-left">
+        <table className="w-full min-w-[680px] table-fixed border-collapse text-left">
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, i) => (
@@ -513,8 +713,8 @@ function SourcesTable({
                 >
                   <td className="truncate px-3 py-2 font-medium text-[var(--tessera-text)]">
                     {r.source}
-                    <span className="block text-[0.58rem] font-normal text-[var(--tessera-text-muted)]">
-                      {r.updated}
+                    <span className="block text-[0.58rem] font-normal uppercase text-[var(--tessera-text-muted)]">
+                      {r.langs}
                     </span>
                   </td>
                   <td className="px-3 py-2">
@@ -528,14 +728,14 @@ function SourcesTable({
                       {r.type}
                     </span>
                   </td>
-                  <td className="px-3 py-2 uppercase tabular-nums text-[var(--tessera-text-muted)]">
-                    {r.langs}
+                  <td className="px-3 py-2 tabular-nums text-[var(--tessera-text-muted)]">
+                    {r.version}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--tessera-text)]">
                     {r.chunks}
                   </td>
                   <td className="px-3 py-2 tabular-nums text-[var(--tessera-text-muted)]">
-                    {r.first_seen}
+                    {r.accessible_until}
                   </td>
                   <td className="px-3 py-2">
                     <span
@@ -621,7 +821,7 @@ function FilterDropdown({
               )}
             >
               {lbl}
-              {value === k ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : null}
+              {value === k ? <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> : null}
             </button>
           ))}
         </div>
@@ -806,122 +1006,12 @@ function SourceDrawer({ t, row, onClose }: { t: T; row: Row; onClose: () => void
   );
 }
 
-function Integrity({ data }: { data: Data }) {
-  const it = data.integrity;
-  if (!it) return null;
-  return (
-    <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex flex-col">
-          <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
-            Couverture de l'index
-          </span>
-          <span className="text-[1.3rem] font-semibold tabular-nums">{it.coverage}</span>
-        </span>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
-            it.verified
-              ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-              : "border-red-500/30 bg-red-500/15 text-red-300",
-          )}
-        >
-          {it.verified ? <ShieldCheck className="h-3.5 w-3.5" /> : null}
-          {it.verified_label}
-        </span>
-      </div>
-      <dl className="mt-2 flex flex-col gap-1.5 text-[0.72rem]">
-        <div className="flex items-center justify-between gap-2">
-          <dt className="text-[var(--tessera-text-muted)]">Derniere synchro avant T</dt>
-          <dd className="font-medium">{it.last_sync}</dd>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <dt className="text-[var(--tessera-text-muted)]">Journalisation</dt>
-          <dd className="font-medium">{it.chain_label}</dd>
-        </div>
-      </dl>
-    </section>
-  );
-}
-
-function Timeline({ data }: { data: Data }) {
-  const tl = data.timeline;
-  if (!tl) return null;
-  return (
-    <Panel title={tl.title}>
-      {tl.rows.length === 0 ? (
-        <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">Aucun evenement a T.</p>
-      ) : (
-        <ul className="flex flex-col gap-2.5">
-          {tl.rows.map((r, i) => (
-            <li key={`${r.time}-${i}`} className="flex gap-2.5 text-[0.72rem]">
-              <span
-                className={cn(
-                  "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
-                  KIND_DOT[r.kind] ?? "bg-slate-400",
-                )}
-              />
-              <span className="min-w-0">
-                <span className="block tabular-nums text-[var(--tessera-text-muted)]">
-                  {r.time}
-                </span>
-                <span className="text-[var(--tessera-text)]">{r.label}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Panel>
-  );
-}
-
-function Policies({ data }: { data: Data }) {
-  const p = data.policies;
-  if (!p) return null;
-  return (
-    <Panel title={p.title}>
-      <dl className="flex flex-col gap-1.5 text-[0.72rem]">
-        {p.rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-2">
-            <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
-            <dd className="font-medium tabular-nums text-[var(--tessera-text)]">{r.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </Panel>
-  );
-}
-
-function SummaryCards({ data }: { data: Data }) {
-  const s = data.summary;
-  if (!s) return null;
-  return (
-    <Panel title={s.title}>
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-        {s.cards.map((c) => (
-          <div
-            key={c.label}
-            className="flex flex-col gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5"
-          >
-            <span className="flex items-center gap-1.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> {c.label}
-            </span>
-            <span className="text-[1.1rem] font-semibold tabular-nums text-[var(--tessera-text)]">
-              {c.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    </Panel>
-  );
-}
-
 function Snapshots({ data, onReload }: { data: Data; onReload: (asOf: string | null) => void }) {
   const t = useTranslations("etatADate");
   const s = data.snapshots;
   if (!s) return null;
   return (
-    <Panel title={s.title}>
+    <Panel title={s.title} icon={Bookmark}>
       {s.rows.length === 0 ? (
         <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">{t("noSnapshots")}</p>
       ) : (
@@ -959,20 +1049,22 @@ function Snapshots({ data, onReload }: { data: Data; onReload: (asOf: string | n
 
 // ── skeleton ───────────────────────────────────────────────────────────────
 
-const SKELETON_KPIS = ["a", "b", "c", "d", "e"];
+const SKELETON_CARDS = ["a", "b", "c"];
 
 function EtatSkeleton() {
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-5">
-        {SKELETON_KPIS.map((k) => (
-          <Skeleton key={k} className="h-[88px] w-full rounded-lg" />
-        ))}
+      <div className="grid gap-2.5 xl:grid-cols-12">
+        <Skeleton className="h-40 rounded-lg xl:col-span-3" />
+        <Skeleton className="h-40 rounded-lg xl:col-span-5" />
+        <Skeleton className="h-40 rounded-lg xl:col-span-4" />
       </div>
       <div className="grid gap-2.5 xl:grid-cols-12">
-        <Skeleton className="h-80 rounded-lg xl:col-span-8" />
-        <Skeleton className="h-80 rounded-lg xl:col-span-4" />
+        {SKELETON_CARDS.map((k) => (
+          <Skeleton key={k} className="h-44 rounded-lg xl:col-span-4" />
+        ))}
       </div>
+      <Skeleton className="h-80 rounded-lg" />
     </div>
   );
 }

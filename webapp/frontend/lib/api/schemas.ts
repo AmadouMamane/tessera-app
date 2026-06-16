@@ -3190,6 +3190,14 @@ export const AgentSyntheseSchema = z.object({
 });
 export type AgentSynthese = z.infer<typeof AgentSyntheseSchema>;
 
+const EtatGovCardSchema = z.object({
+  title: z.string(),
+  rows: z.array(z.object({ label: z.string(), value: z.string() })),
+  diff: z.array(z.string()),
+  cta: z.string(),
+  cta_href: z.string(),
+});
+
 export const EtatADateSchema = z.object({
   available: z.boolean(),
   meta: z
@@ -3197,14 +3205,36 @@ export const EtatADateSchema = z.object({
       as_of: z.string().nullable(),
       as_of_label: z.string(),
       ref_code: z.string(),
+      tenant: z.string(),
       agent: z.string(),
       context_source: z.string(),
       timezone: z.string(),
+      banner: z.string(),
     })
     .optional(),
-  kpis: z
-    .array(z.object({ key: z.string(), label: z.string(), value: z.string(), hint: z.string() }))
+  reconstructed: z
+    .object({
+      title: z.string(),
+      snapshot_id: z.string(),
+      verified: z.boolean(),
+      verified_label: z.string(),
+      built_label: z.string(),
+    })
     .optional(),
+  original: z
+    .object({
+      title: z.string(),
+      available: z.boolean(),
+      ref_code: z.string(),
+      question: z.string().optional(),
+      answer: z.string().optional(),
+      timestamp: z.string().optional(),
+      session: z.string().optional(),
+    })
+    .optional(),
+  guardrails: EtatGovCardSchema.optional(),
+  prompt_model: EtatGovCardSchema.optional(),
+  release: EtatGovCardSchema.optional(),
   table: z
     .object({
       title: z.string(),
@@ -3218,6 +3248,8 @@ export const EtatADateSchema = z.object({
           langs: z.string(),
           chunks: z.number(),
           total_chunks: z.number(),
+          version: z.string(),
+          accessible_until: z.string(),
           updated: z.string(),
           first_seen: z.string(),
           status: z.string(),
@@ -3228,11 +3260,13 @@ export const EtatADateSchema = z.object({
     .optional(),
   integrity: z
     .object({
+      title: z.string(),
+      snapshot_id: z.string(),
       coverage: z.string(),
+      test_query: z.string(),
       last_sync: z.string(),
       verified: z.boolean(),
       verified_label: z.string(),
-      decisions: z.string(),
       chain_label: z.string(),
     })
     .optional(),
@@ -3242,16 +3276,10 @@ export const EtatADateSchema = z.object({
       rows: z.array(z.object({ time: z.string(), label: z.string(), kind: z.string() })),
     })
     .optional(),
-  policies: z
+  audit_pieces: z
     .object({
       title: z.string(),
-      rows: z.array(z.object({ label: z.string(), value: z.string() })),
-    })
-    .optional(),
-  summary: z
-    .object({
-      title: z.string(),
-      cards: z.array(z.object({ label: z.string(), value: z.string() })),
+      rows: z.array(z.object({ label: z.string(), href: z.string() })),
     })
     .optional(),
   snapshots: z

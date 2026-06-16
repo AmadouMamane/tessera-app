@@ -1,12 +1,13 @@
 import { type Page, expect, test } from "@playwright/test";
 
-// Covers "Etat a date": the live reconstruction from pgvector + the audit log,
-// the real Reconstituer windowing, and the mandatory main-table treatment -
-// working Type filter, row-click drawer, and a durable saved snapshot.
+// Covers "Etat a date": the response-centric reconstruction (original Q&A from
+// the transcript, governance cards with real diffs), the real Reconstituer
+// windowing, and the mandatory main-table treatment - working Type filter,
+// row-click drawer, and a durable saved snapshot.
 
 const PAGE = "/fr/prouver/etat-a-date";
 
-test.use({ viewport: { width: 1672, height: 1000 } });
+test.use({ viewport: { width: 1672, height: 1100 } });
 
 async function login(page: Page) {
   await page.goto("/fr/login");
@@ -19,20 +20,21 @@ async function login(page: Page) {
 test.beforeEach(async ({ page }) => {
   await login(page);
   await page.goto(PAGE);
-  await expect(page.getByText("Sources actives").first()).toBeVisible();
+  await expect(page.getByText("Etat reconstruit a T").first()).toBeVisible();
   await expect(page.locator("table tbody tr").first()).toBeVisible();
 });
 
-test("renders the live reconstruction from pgvector + the audit log", async ({ page }) => {
-  await expect(page.getByText("Documents accessibles").first()).toBeVisible();
+test("reconstructs a real original response + governance cards", async ({ page }) => {
+  await expect(page.getByText("Reponse d'origine").first()).toBeVisible();
+  await expect(page.getByText("Garde-fous actifs a T").first()).toBeVisible();
+  await expect(page.getByText("Prompt & modele a T").first()).toBeVisible();
+  // Each governance card shows a real "Diff vs etat actuel" section.
+  await expect(page.getByText("Diff vs état actuel").first()).toBeVisible();
   await expect(page.getByText("Sources accessibles a l'instant T").first()).toBeVisible();
-  await expect(page.getByText("Garde-fous").first()).toBeVisible();
 });
 
 test("the Type filter actually narrows the table", async ({ page }) => {
   const before = await page.locator("table tbody tr").count();
-  // The filter trigger's accessible name is "Type Tous" (label + current value);
-  // the sortable header button is just "Type" - target the trigger.
   await page.getByRole("button", { name: "Type Tous" }).click();
   await page.getByRole("menuitem", { name: "Reglementation" }).click();
   const after = await page.locator("table tbody tr").count();
@@ -50,21 +52,20 @@ test("clicking a table row opens the detail drawer", async ({ page }) => {
   await expect(page.locator("dialog")).toHaveCount(0);
 });
 
-test("Reconstituer at an early T re-queries the audit window", async ({ page }) => {
+test("Reconstituer at an early T re-queries the audit-derived diff", async ({ page }) => {
   await page.locator('input[type="datetime-local"]').fill("2026-06-01T00:00");
   await page.getByRole("button", { name: "Reconstituer" }).click();
-  const decisionsTile = page
-    .locator("div")
-    .filter({ has: page.getByText("Decisions du guard", { exact: true }) })
-    .last();
-  await expect(decisionsTile.getByText("0", { exact: true })).toBeVisible({ timeout: 15_000 });
+  // Before the audit log starts, 0 decisions are logged by T -> the guardrails
+  // diff reports every decision as logged "apres T".
+  await expect(page.getByText(/decisions du guard journalisees apres T/i).first()).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test("saving a snapshot persists it durably", async ({ page }) => {
   await page.getByRole("button", { name: "Enregistrer ce snapshot" }).click();
-  // The snapshot appears in the durable list with its reference code.
-  await expect(page.getByText(/^RES-/).first()).toBeVisible({ timeout: 15_000 });
-  // It survives a reload (durable store, not in-memory).
+  await expect(page.getByText("Snapshots enregistres")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/^RES-/).first()).toBeVisible();
   await page.reload();
   await expect(page.getByText("Snapshots enregistres")).toBeVisible();
   await expect(page.getByText(/^RES-/).first()).toBeVisible();

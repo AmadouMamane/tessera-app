@@ -4611,6 +4611,16 @@
     "accessibleChunks": "Accessible fragments",
     "firstSeen": "First indexed",
     "lastSeen": "Last indexed at T",
-    "close": "Close"
+    "close": "Close",
+    "tenant": "Tenant",
+    "question": "Question",
+    "answer": "Answer",
+    "timestampLabel": "Timestamp",
+    "sessionLabel": "Session / trace",
+    "noOriginal": "No answer found at this date.",
+    "diffVsNow": "Diff vs current state",
+    "colVersion": "Version at T",
+    "colDocuments": "Accessible documents",
+    "colAccessibleUntil": "Accessible until T"
   }
 }

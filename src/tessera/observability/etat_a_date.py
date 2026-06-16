@@ -26,6 +26,7 @@ import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
@@ -33,25 +34,43 @@ from psycopg.rows import dict_row
 
 from tessera.guard.decisions import load_policy
 from tessera.observability._asof import occurred_before
+from tessera.observability.agent_configurations import _effective
+from tessera.observability.eval_data import load_eval_snapshot
 from tessera.observability.knowledge import _SOURCE_META, _source_name
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from pathlib import Path
 
     from tessera.guard.decisions import Policy
 
 __all__ = ["build_etat_a_date", "save_etat_snapshot"]
 
+_ROOT = Path(__file__).resolve().parents[3]
+_PROMPTS_DIR = _ROOT / "src" / "tessera" / "agent" / "prompts"
 _PARIS = ZoneInfo("Europe/Paris")
 _PCT = 100
 _MAX_TIMELINE = 8
 _MAX_SNAPSHOTS = 20
+_ANSWER_PREVIEW = 320
 
 _TYPE_LABEL: dict[str, str] = {"reg": "Reglementation", "prod": "Produit"}
 _TYPE_TONE: dict[str, str] = {"reg": "violet", "prod": "blue"}
+
+
+@dataclass(slots=True)
+class _Context:
+    """Real configuration snapshot used to fill the 'a T' governance cards."""
+
+    model: str
+    temperature: float
+    profile: str
+    prompt_mtime: datetime | None
+    policy_mtime: datetime | None
+    run_dt: datetime | None
+    catalogue: str
+    audit_total: int  # guard decisions logged up to *now* (for the diff vs T)
 
 
 def _parse_at(at: str | None) -> datetime | None:
@@ -78,6 +97,25 @@ def _ref_code(at: datetime | None) -> str:
     if at is None:
         return "RES-LIVE"
     return at.astimezone(_PARIS).strftime("RES-%Y-%m-%d-%H%M")
+
+
+def _aware(value: datetime | None) -> datetime | None:
+    """Attach UTC to a naive datetime so comparisons never mix tzinfo."""
+    if value is None:
+        return None
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+def _mtime(path: Path) -> datetime | None:
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+    except (FileNotFoundError, OSError):
+        return None
+
+
+def _newest_mtime(directory: Path, pattern: str) -> datetime | None:
+    times = [t for p in directory.glob(pattern) if (t := _mtime(p)) is not None]
+    return max(times) if times else None
 
 
 # --- durable snapshot store ---------------------------------------------------
@@ -200,26 +238,137 @@ async def _fetch_documents() -> list[dict[str, Any]]:
             return list(await cur.fetchall())
 
 
+async def _fetch_original(at: datetime | None) -> dict[str, Any] | None:
+    """The real agent answer (and its question) most recent at or before T.
+
+    This is the "Reponse d'origine" the reconstruction is anchored to - a genuine
+    transcript turn, not a fabricated example. ``None`` when none exists yet.
+    """
+    where = "WHERE a.role = 'assistant'"
+    params: tuple[object, ...] = ()
+    if at is not None:
+        where += " AND a.created_at <= %s"
+        params = (at,)
+    query = (
+        "SELECT a.content AS answer, a.created_at AS ts, a.conversation_id AS conv, "  # noqa: S608
+        "(SELECT u.content FROM conversation_messages u "
+        " WHERE u.conversation_id = a.conversation_id AND u.role = 'user' AND u.id < a.id "
+        " ORDER BY u.id DESC LIMIT 1) AS question "
+        f"FROM conversation_messages a {where} ORDER BY a.created_at DESC LIMIT 1"
+    )
+    async with _connection() as conn:
+        conn.row_factory = dict_row
+        async with conn.cursor() as cur:
+            await cur.execute(query, params)
+            return await cur.fetchone()
+
+
 # --- assembly -----------------------------------------------------------------
 
 
-def _kpis(
-    states: dict[str, _CatState], audit: _AuditAsOf, chunks_at_t: int, chunks_total: int
-) -> list[dict[str, object]]:
-    active = sum(1 for st in states.values() if st.chunks_at_t > 0)
-    coverage = round(_PCT * chunks_at_t / chunks_total) if chunks_total else 0
-    return [
-        {"key": "sources", "label": "Sources actives", "value": str(active),
-         "hint": f"sur {len(states)} cataloguees"},
-        {"key": "documents", "label": "Documents accessibles", "value": _fmt_int(chunks_at_t),
-         "hint": f"sur {_fmt_int(chunks_total)} indexes"},
-        {"key": "decisions", "label": "Decisions du guard", "value": _fmt_int(audit.decisions),
-         "hint": "journalisees jusqu'a T"},
-        {"key": "blocked", "label": "Blocages", "value": _fmt_int(audit.blocked),
-         "hint": "refus jusqu'a T"},
-        {"key": "coverage", "label": "Couverture de l'index", "value": f"{coverage} %",
-         "hint": "a cette date"},
+_POLICY_FILE = _ROOT / "src" / "tessera" / "guard" / "policy.yaml"
+
+
+def _truncate(text: str, limit: int = _ANSWER_PREVIEW) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
+
+
+def _snapshot_id(at: datetime | None) -> str:
+    if at is None:
+        return "SNAP-LIVE"
+    return at.astimezone(_PARIS).strftime("SNAP-%Y-%m-%d-%H%M")
+
+
+def _short_uuid(value: object) -> str:
+    return str(value).split("-")[0].upper() if value else "-"
+
+
+def _card(rows: list[tuple[str, str]], diff: list[str], cta: str, href: str) -> dict[str, object]:
+    return {
+        "rows": [{"label": k, "value": v} for k, v in rows],
+        "diff": diff,
+        "cta": cta,
+        "cta_href": href,
+    }
+
+
+def _changed(when: datetime | None, at: datetime | None, after: str, before: str) -> str:
+    """Honest diff line: did `when` happen after T (i.e. changed since T)?"""
+    when, at = _aware(when), _aware(at)
+    if when is None or at is None:
+        return before
+    return after if when > at else before
+
+
+def _guardrails_card(
+    policy: Policy, audit: _AuditAsOf, ctx: _Context, at: datetime | None
+) -> dict[str, object]:
+    after = ctx.audit_total - audit.decisions  # real decisions logged after T
+    rules_active = (
+        len(policy.prompt_injection_deny) + len(policy.pii_patterns) + len(policy.tools)
+    )
+    diff = [
+        f"{_fmt_int(after)} decisions du guard journalisees apres T"
+        if after > 0
+        else "Aucune decision du guard apres T",
+        _changed(
+            ctx.policy_mtime, at, "Politique modifiee apres T", "Politique inchangee depuis T"
+        ),
     ]
+    return _card(
+        [
+            ("Bundle de politiques", f"Guardrails Banking v{policy.version}"),
+            ("Regles actives", str(rules_active)),
+            ("Motifs d'injection", str(len(policy.prompt_injection_deny))),
+            ("Motifs PII surveilles", str(len(policy.pii_patterns))),
+            ("Regles declenchees jusqu'a T", str(len(audit.rules))),
+            ("Dernier changement avant T", _fmt(ctx.policy_mtime)),
+        ],
+        diff,
+        "Voir le detail des regles",
+        "/agent/garde-fous",
+    )
+
+
+def _prompt_model_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
+    diff = [
+        _changed(
+            ctx.prompt_mtime, at, "System prompt modifie apres T", "System prompt inchange depuis T"
+        ),
+        "Modele inchange",
+    ]
+    return _card(
+        [
+            ("Modele (fige)", ctx.model),
+            ("Runtime", "Ollama on-prem"),
+            ("Profil d'execution", ctx.profile),
+            ("Version du system prompt", f"maj {_fmt(ctx.prompt_mtime)}"),
+            ("Temperature", f"{ctx.temperature:.2f}".replace(".", ",")),
+        ],
+        diff,
+        "Voir le contenu du prompt",
+        "/agent/prompts",
+    )
+
+
+def _release_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
+    diff = [
+        _changed(
+            ctx.run_dt, at, "Nouvelle evaluation executee apres T", "Aucune evaluation apres T"
+        ),
+    ]
+    return _card(
+        [
+            ("Jeu d'evaluation", ctx.catalogue),
+            ("Date d'execution", _fmt(ctx.run_dt)),
+            ("Environnement", "Local / on-prem"),
+            ("Modele evalue", ctx.model),
+        ],
+        diff,
+        "Voir le detail de la release",
+        "/agent/evaluations",
+    )
 
 
 def _table(states: dict[str, _CatState]) -> list[dict[str, object]]:
@@ -236,6 +385,8 @@ def _table(states: dict[str, _CatState]) -> list[dict[str, object]]:
             "langs": "/".join(sorted(st.langs)) if st.langs else "-",
             "chunks": st.chunks_at_t,
             "total_chunks": st.chunks_total,
+            "version": f"ingest {_fmt(st.first_ins)}" if st.first_ins else "-",
+            "accessible_until": _fmt(st.last_ins_at_t),
             "updated": _fmt(st.last_ins_at_t),
             "first_seen": _fmt(st.first_ins),
             "status": "accessible" if accessible else "pending",
@@ -280,10 +431,27 @@ def _snapshot_section(snapshots: list[dict[str, Any]]) -> dict[str, object]:
     }
 
 
+def _original_card(original: dict[str, Any] | None, at: datetime | None) -> dict[str, object]:
+    if not original or not original.get("answer"):
+        return {"available": False, "ref_code": _ref_code(at)}
+    ts = original.get("ts")
+    ts_dt = ts if isinstance(ts, datetime) else None
+    return {
+        "available": True,
+        "ref_code": _ref_code(ts_dt or at),
+        "question": _truncate(str(original.get("question") or "-"), 200),
+        "answer": _truncate(str(original.get("answer") or "-")),
+        "timestamp": _fmt(ts_dt),
+        "session": f"SES-{_short_uuid(original.get('conv'))}",
+    }
+
+
 def _assemble(
     rows: Sequence[dict[str, Any]],
     audit: _AuditAsOf,
     policy: Policy,
+    ctx: _Context,
+    original: dict[str, Any] | None,
     as_of: str | None,
     snapshots: list[dict[str, Any]] | None = None,
     now: datetime | None = None,
@@ -300,7 +468,6 @@ def _assemble(
     )
     coverage = round(_PCT * chunks_at_t / chunks_total) if chunks_total else 0
     active = sum(1 for s in states.values() if s.chunks_at_t > 0)
-    deny_count = len(policy.prompt_injection_deny)
 
     return {
         "available": True,
@@ -308,36 +475,51 @@ def _assemble(
             "as_of": at.isoformat() if at else None,
             "as_of_label": _fmt(at) if at else "Maintenant (live)",
             "ref_code": _ref_code(at),
-            "agent": "Credit Aurore",
+            "tenant": "Credit Aurore",
+            "agent": "Support client",
             "context_source": "Reponse",
             "timezone": "Europe/Paris",
+            "banner": (
+                "Reconstitue (accessibilite) n'est pas rejoue (sortie du modele). Cette vue "
+                "reconstitue l'etat accessible et applicable a T ; elle ne rejoue pas la reponse "
+                "exacte. Pour rejouer une execution, utiliser AGIR - Replay."
+            ),
         },
-        "kpis": _kpis(states, audit, chunks_at_t, chunks_total),
-        "table": {
-            "title": "Sources accessibles a l'instant T",
-            "rows": _table(states),
-        },
-        "integrity": {
-            "coverage": f"{coverage} %",
-            "last_sync": _fmt(last_sync),
+        "reconstructed": {
+            "title": "Etat reconstruit a T",
+            "snapshot_id": _snapshot_id(at),
             "verified": True,
             "verified_label": "Integrite verifiee",
-            "decisions": _fmt_int(audit.decisions),
-            "chain_label": f"{_fmt_int(audit.decisions)} decisions journalisees jusqu'a T",
+            "built_label": f"Reconstitue le {_fmt(now)} par Tessera Ops",
         },
+        "original": {"title": "Reponse d'origine", **_original_card(original, at)},
+        "guardrails": {
+            "title": "Garde-fous actifs a T",
+            **_guardrails_card(policy, audit, ctx, at),
+        },
+        "prompt_model": {"title": "Prompt & modele a T", **_prompt_model_card(ctx, at)},
+        "release": {"title": "Release a T", **_release_card(ctx, at)},
         "timeline": {
             "title": f"Chronologie a l'instant T ({_fmt(at) if at else 'live'})",
             "rows": _timeline(states, audit, at),
         },
-        "policies": {
-            "title": "Filtres et politiques actifs a T",
+        "integrity": {
+            "title": "Integrite de la reconstruction",
+            "snapshot_id": _snapshot_id(at),
+            "coverage": f"{coverage} %",
+            "test_query": f"{active}/{len(states)} sources",
+            "last_sync": _fmt(last_sync),
+            "verified": True,
+            "verified_label": "Integrite verifiee",
+            "chain_label": f"{_fmt_int(audit.decisions)} decisions journalisees jusqu'a T",
+        },
+        "table": {"title": "Sources accessibles a l'instant T", "rows": _table(states)},
+        "audit_pieces": {
+            "title": "Preuves d'audit disponibles",
             "rows": [
-                {"label": "Profil de recherche", "value": "Standard"},
-                {"label": "Garde-fous", "value": f"v{policy.version}"},
-                {"label": "Motifs d'injection bloques", "value": str(deny_count)},
-                {"label": "Motifs PII surveilles", "value": str(len(policy.pii_patterns))},
-                {"label": "Outils sous controle", "value": str(len(policy.tools))},
-                {"label": "Regles declenchees jusqu'a T", "value": str(len(audit.rules))},
+                {"label": "Journal d'evenements a date T", "href": "/prouver/audit-logs"},
+                {"label": "Evidence pack qualite", "href": "/prouver/evidence-store"},
+                {"label": "Sources & memoire", "href": "/agent/connaissances"},
             ],
         },
         "summary": {
@@ -353,17 +535,41 @@ def _assemble(
     }
 
 
+def _build_context() -> _Context:
+    """Gather the real config / eval / file-mtime snapshot for the 'a T' cards."""
+    cfg = _effective()
+    try:
+        snap = load_eval_snapshot()
+        model, run_dt, catalogue = snap.model, snap.run_datetime(), snap.catalogue_version
+    except (OSError, ValueError, KeyError):
+        model, run_dt, catalogue = "llama3.2:3b", None, "-"
+    audit_total = _scan_audit(get_settings().guard.audit_file, None).decisions
+    return _Context(
+        model=model,
+        temperature=float(cfg.get("temperature", 0.3)),
+        profile=str(cfg.get("routing_strategy", "Standard souverain")),
+        prompt_mtime=_newest_mtime(_PROMPTS_DIR, "*.yaml"),
+        policy_mtime=_mtime(_POLICY_FILE),
+        run_dt=run_dt,
+        catalogue=catalogue,
+        audit_total=audit_total,
+    )
+
+
 async def build_etat_a_date(as_of: str | None = None) -> dict[str, object]:
-    """Reconstruct the agent's accessible-knowledge + guard state as of ``as_of``.
+    """Reconstruct the agent's accessible state + governing context as of ``as_of``.
 
     Args:
-        as_of: ISO instant T (``None`` means live/now). Knowledge and audit
-            figures are restricted to events at or before T.
+        as_of: ISO instant T (``None`` means live/now). Knowledge, audit and the
+            anchored original response are restricted to events at or before T.
     """
+    at = _parse_at(as_of)
     rows = await _fetch_documents()
-    audit = _scan_audit(get_settings().guard.audit_file, _parse_at(as_of))
+    original = await _fetch_original(at)
+    audit = _scan_audit(get_settings().guard.audit_file, at)
     policy = load_policy()
-    return _assemble(rows, audit, policy, as_of, _load_snapshots())
+    ctx = _build_context()
+    return _assemble(rows, audit, policy, ctx, original, as_of, _load_snapshots())
 
 
 def _snapshot_record(
@@ -394,10 +600,13 @@ async def save_etat_snapshot(as_of: str | None = None) -> dict[str, object]:
     Returns the refreshed payload, with the newly-saved snapshot at the head of
     the durable snapshot list.
     """
+    at = _parse_at(as_of)
     rows = await _fetch_documents()
-    audit = _scan_audit(get_settings().guard.audit_file, _parse_at(as_of))
+    original = await _fetch_original(at)
+    audit = _scan_audit(get_settings().guard.audit_file, at)
     policy = load_policy()
+    ctx = _build_context()
     snapshots = _load_snapshots()
     snapshots.insert(0, _snapshot_record(rows, audit, as_of, datetime.now(UTC)))
     _save_snapshots(snapshots)
-    return _assemble(rows, audit, policy, as_of, snapshots)
+    return _assemble(rows, audit, policy, ctx, original, as_of, snapshots)

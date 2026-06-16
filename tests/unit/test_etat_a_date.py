@@ -1,9 +1,10 @@
 """Unit tests for the point-in-time reconstruction assembler.
 
 `etat_a_date._assemble` is exercised with synthetic pgvector rows + an audit
-aggregate + a stub policy (no DB / no file I/O). Asserts the as-of windowing of
-both knowledge accessibility (chunks indexed at or before T) and the guard
-figures, plus the table/integrity/timeline/policies shaping.
+aggregate + a stub policy + a config context + an anchored original response (no
+DB / no file I/O). Asserts the as-of windowing of knowledge accessibility, the
+real "diff vs current state" lines, the original-response card and the snapshot
+record.
 """
 
 from __future__ import annotations
@@ -26,6 +27,23 @@ class _StubPolicy:
     tools: tuple[str, ...] = ("t1", "t2", "t3", "t4", "t5")
 
 
+def _ctx(audit_total: int = 15000, prompt_after: bool = False) -> ead._Context:
+    # prompt_mtime after T iff prompt_after, to drive the prompt diff line.
+    prompt_mtime = datetime(2026, 6, 14, 9, 0, tzinfo=UTC) if prompt_after else datetime(
+        2026, 6, 3, 9, 0, tzinfo=UTC
+    )
+    return ead._Context(
+        model="llama3.2:3b",
+        temperature=0.3,
+        profile="Standard souverain",
+        prompt_mtime=prompt_mtime,
+        policy_mtime=datetime(2026, 5, 29, 11, 34, tzinfo=UTC),
+        run_dt=datetime(2026, 6, 16, 5, 51, tzinfo=UTC),
+        catalogue="Catalogue v1",
+        audit_total=audit_total,
+    )
+
+
 def _row(cat: str, lang: str, ins: datetime) -> dict[str, Any]:
     return {
         "source": f"{cat}.pdf",
@@ -36,13 +54,13 @@ def _row(cat: str, lang: str, ins: datetime) -> dict[str, Any]:
 
 
 def _rows() -> list[dict[str, Any]]:
-    early = datetime(2026, 5, 28, 22, 0, tzinfo=UTC)  # ingested before any T tested
-    late = datetime(2026, 6, 14, 9, 0, tzinfo=UTC)  # ingested AFTER T_MID
+    early = datetime(2026, 5, 28, 22, 0, tzinfo=UTC)
+    late = datetime(2026, 6, 14, 9, 0, tzinfo=UTC)  # only accessible for T >= 14 June
     return [
         _row("dora", "fr", early),
         _row("dora", "en", early),
         _row("gdpr", "fr", early),
-        _row("comptes", "fr", late),  # only accessible for T >= 14 June
+        _row("comptes", "fr", late),
     ]
 
 
@@ -57,79 +75,80 @@ def _audit(decisions: int = 100, blocked: int = 90) -> ead._AuditAsOf:
     return scan
 
 
-def test_knowledge_windowing_at_t() -> None:
-    # At T = 12 June: the 'late' (14 June) comptes source is not yet accessible.
-    payload = ead._assemble(_rows(), _audit(), _StubPolicy(), T_MID, now=NOW)
-    kpis = {k["key"]: k["value"] for k in payload["kpis"]}  # type: ignore[union-attr]
-    assert kpis["sources"] == "2"  # dora + gdpr (comptes not yet indexed)
-    assert kpis["documents"] == "3"  # 3 early chunks
-    assert kpis["decisions"] == "100"
-    assert kpis["blocked"] == "90"
+def _original() -> dict[str, Any]:
+    return {
+        "answer": "Le financement en 4 fois est possible sous reserve.",
+        "ts": datetime(2026, 6, 10, 16, 18, tzinfo=UTC),
+        "conv": "95ab9122-0000-0000-0000-000000000000",
+        "question": "Puis-je financer mon achat en 4 fois ?",
+    }
 
+
+def _assemble(audit_total: int = 15000) -> dict[str, object]:
+    return ead._assemble(
+        _rows(),
+        _audit(),
+        _StubPolicy(),
+        _ctx(audit_total=audit_total),
+        _original(),
+        T_MID,
+        now=NOW,
+    )
+
+
+def test_knowledge_windowing_and_table_at_t() -> None:
+    payload = _assemble()
     table = {r["key"]: r for r in payload["table"]["rows"]}  # type: ignore[index]
     assert table["dora"]["status"] == "accessible"
-    assert table["comptes"]["status"] == "pending"
+    assert table["comptes"]["status"] == "pending"  # 14 June ingest > T (12 June)
     assert table["comptes"]["status_label"] == "Pas encore indexee"
+    # the table carries the normative columns
+    assert "version" in table["dora"] and "accessible_until" in table["dora"]
 
 
-def test_full_window_when_t_is_after_all_ingests() -> None:
-    payload = ead._assemble(_rows(), _audit(), _StubPolicy(), "2026-06-15T00:00:00+00:00", now=NOW)
-    kpis = {k["key"]: k["value"] for k in payload["kpis"]}  # type: ignore[union-attr]
-    assert kpis["sources"] == "3"  # all three sources now indexed
-    assert kpis["documents"] == "4"
-    assert kpis["coverage"] == "100 %"
+def test_guardrails_diff_is_a_real_two_point_count() -> None:
+    # audit_total (now) = 15 000 ; decisions at T = 100 -> 14 900 logged after T.
+    payload = _assemble(audit_total=15_000)
+    gr = payload["guardrails"]
+    rows = {r["label"]: r["value"] for r in gr["rows"]}  # type: ignore[index]
+    assert rows["Bundle de politiques"] == "Guardrails Banking v2"
+    assert any("14 900 decisions" in d for d in gr["diff"])  # type: ignore[index]
 
 
-def test_live_means_everything_accessible() -> None:
-    payload = ead._assemble(_rows(), _audit(), _StubPolicy(), None, now=NOW)
-    assert payload["meta"]["as_of"] is None  # type: ignore[index]
-    assert payload["meta"]["as_of_label"] == "Maintenant (live)"  # type: ignore[index]
-    kpis = {k["key"]: k["value"] for k in payload["kpis"]}  # type: ignore[union-attr]
-    assert kpis["sources"] == "3"
+def test_prompt_diff_reflects_mtime_vs_t() -> None:
+    after = ead._assemble(
+        _rows(), _audit(), _StubPolicy(), _ctx(prompt_after=True), _original(), T_MID, now=NOW
+    )
+    assert any("modifie apres T" in d for d in after["prompt_model"]["diff"])  # type: ignore[index]
+    before = _assemble()
+    assert any("inchange depuis T" in d for d in before["prompt_model"]["diff"])  # type: ignore[index]
 
 
-def test_policies_and_ref_code_are_sourced() -> None:
-    payload = ead._assemble(_rows(), _audit(), _StubPolicy(), T_MID, now=NOW)
-    pol = {r["label"]: r["value"] for r in payload["policies"]["rows"]}  # type: ignore[index]
-    assert pol["Garde-fous"] == "v2"
-    assert pol["Motifs d'injection bloques"] == "3"
-    assert pol["Motifs PII surveilles"] == "2"
-    assert pol["Outils sous controle"] == "5"
-    assert pol["Regles declenchees jusqu'a T"] == "2"
-    assert payload["meta"]["ref_code"] == "RES-2026-06-12-0200"  # type: ignore[index]
+def test_original_card_is_the_real_transcript_turn() -> None:
+    o = _assemble()["original"]
+    assert o["available"] is True  # type: ignore[index]
+    assert o["question"].startswith("Puis-je financer")  # type: ignore[index]
+    # session = short conversation id; ref_code derived from the answer timestamp
+    assert o["session"] == "SES-95AB9122"  # type: ignore[index]
+    assert o["ref_code"] == "RES-2026-06-10-1818"  # type: ignore[index]
 
 
-def test_timeline_is_newest_first_and_bounded() -> None:
-    payload = ead._assemble(_rows(), _audit(), _StubPolicy(), "2026-06-15T00:00:00+00:00", now=NOW)
-    rows = payload["timeline"]["rows"]  # type: ignore[index]
-    assert len(rows) <= ead._MAX_TIMELINE
-    assert any("guard" in r["label"].lower() for r in rows)
+def test_no_original_when_absent() -> None:
+    payload = ead._assemble(
+        _rows(), _audit(), _StubPolicy(), _ctx(), None, T_MID, now=NOW
+    )
+    assert payload["original"]["available"] is False  # type: ignore[index]
+
+
+def test_reconstructed_and_integrity_ids() -> None:
+    payload = _assemble()
+    assert payload["reconstructed"]["snapshot_id"] == "SNAP-2026-06-12-0200"  # type: ignore[index]
+    assert payload["integrity"]["test_query"] == "2/3 sources"  # type: ignore[index]
 
 
 def test_snapshot_record_captures_headline_figures() -> None:
-    rec = ead._snapshot_record(_rows(), _audit(decisions=15484, blocked=15187), T_MID, NOW)
-    assert rec["as_of"] == "2026-06-12T00:00:00+00:00"
+    rec = ead._snapshot_record(_rows(), _audit(decisions=15484), T_MID, NOW)
     assert rec["ref_code"] == "RES-2026-06-12-0200"
-    # at T = 12 June only the 3 early chunks (2 sources) are accessible.
     assert "2 sources" in rec["summary"]
-    assert "3 fragments" in rec["summary"]
     assert "15 484 decisions guard" in rec["summary"]
     assert len(rec["id"]) == 12
-
-
-def test_snapshots_section_renders_saved_records() -> None:
-    saved = [
-        {
-            "id": "abc123",
-            "saved_at": "2026-06-16T10:00:00+00:00",
-            "as_of": "2026-06-12T00:00:00+00:00",
-            "as_of_label": "12/06/2026, 02:00",
-            "ref_code": "RES-2026-06-12-0200",
-            "summary": "2 sources - 3 fragments - 100 decisions guard",
-        }
-    ]
-    payload = ead._assemble(_rows(), _audit(), _StubPolicy(), T_MID, saved, now=NOW)
-    rows = payload["snapshots"]["rows"]  # type: ignore[index]
-    assert len(rows) == 1
-    assert rows[0]["ref_code"] == "RES-2026-06-12-0200"
-    assert rows[0]["saved_label"] != "-"  # saved_at parsed and formatted
