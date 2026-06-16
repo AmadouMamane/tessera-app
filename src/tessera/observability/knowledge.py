@@ -168,16 +168,9 @@ async def build_connaissances() -> dict[str, object]:
     state = _load_state()
     probe = _load_probe()
     agg = _aggregate(await _fetch_rows())
-    chunks, langs, freshest, docs, locators = (
-        agg.chunks,
-        agg.langs,
-        agg.freshest,
-        agg.docs,
-        agg.locators,
-    )
+    chunks, freshest, docs = agg.chunks, agg.freshest, agg.docs
 
     max_chunks = max(chunks.values(), default=1)
-    total_chunks = sum(chunks.values())
     cats_probe = probe.get("categories")
     cats_probe = cats_probe if isinstance(cats_probe, dict) else {}
     overall = probe.get("_overall")
@@ -215,6 +208,7 @@ async def build_connaissances() -> dict[str, object]:
                 "status_tone": "good" if active else "off",
                 "coverage": round(100 * chunks[cat] / max_chunks),
                 "freshness": _freshness(now, freshest[cat]) if cat in freshest else "-",
+                "fresh_days": (now - freshest[cat]).days if cat in freshest else 9999,
                 "citation": f"{round(cite_pct)}%" if cite_pct is not None else "-",
             }
         )
@@ -236,9 +230,9 @@ async def build_connaissances() -> dict[str, object]:
             "series": doc_series,
         },
         {
-            "key": "chunks",
-            "label": "Chunks indexes",
-            "value": str(total_chunks),
+            "key": "coverage",
+            "label": "Couverture des requetes",
+            "value": _pct_or_dash(overall.get("coverage")),
             "series": chunk_series,
         },
         {
@@ -261,7 +255,7 @@ async def build_connaissances() -> dict[str, object]:
         },
     ]
 
-    detail = _build_detail(rows_out, chunks, docs, langs, locators, state)
+    details = [_build_detail(r, agg, state) for r in rows_out]
 
     return {
         "title": "Connaissances",
@@ -287,7 +281,7 @@ async def build_connaissances() -> dict[str, object]:
             "rows": rows_out,
             "count": f"1-{len(rows_out)} sur {len(rows_out)} sources",
         },
-        "detail": detail,
+        "details": details,
     }
 
 
@@ -301,35 +295,30 @@ def _pct_or_dash(value: object) -> str:
 
 
 def _build_detail(
-    rows_out: list[dict[str, object]],
-    chunks: dict[str, int],
-    docs: dict[str, set[str]],
-    langs: dict[str, set[str]],
-    locators: dict[str, list[str]],
+    row: dict[str, object],
+    agg: _Aggregate,
     state: dict[str, dict[str, bool]],
 ) -> dict[str, object]:
-    if not rows_out:
-        return {"name": "Aucune source", "status": "Desactivee", "status_tone": "off", "tabs": []}
-    top = rows_out[0]
-    cat = str(top["key"])
+    cat = str(row["key"])
     st = state.get(cat, {"attached": True, "active": True})
-    locs = locators.get(cat, [])
+    locs = agg.locators.get(cat, [])
     return {
-        "name": str(top["name"]),
-        "status": str(top["status"]),
-        "status_tone": str(top["status_tone"]),
+        "name": str(row["name"]),
+        "status": str(row["status"]),
+        "status_tone": str(row["status_tone"]),
         "tabs": ["Usage", "Reponses ancrees", "Parametres"],
         "summary_title": "Resume",
         "summary": (
-            f"Source ancree dans pgvector : {chunks[cat]} chunks issus de "
-            f"{len(docs[cat])} documents, en {', '.join(sorted(langs[cat]))}."
+            f"Source ancree dans pgvector : {agg.chunks[cat]} chunks issus de "
+            f"{len(agg.docs[cat])} documents, en {', '.join(sorted(agg.langs[cat]))}."
         ),
         "usage_title": "Utilisation par cet agent",
         "usage": [
-            {"label": "Chunks indexes", "value": str(chunks[cat])},
-            {"label": "Documents", "value": str(len(docs[cat]))},
-            {"label": "Langues", "value": ", ".join(sorted(langs[cat]))},
-            {"label": "Couverture du corpus", "value": f"{top['coverage']}%"},
+            {"label": "Chunks indexes", "value": str(agg.chunks[cat])},
+            {"label": "Documents", "value": str(len(agg.docs[cat]))},
+            {"label": "Langues", "value": ", ".join(sorted(agg.langs[cat]))},
+            {"label": "Couverture du corpus", "value": f"{row['coverage']}%"},
+            {"label": "Taux de citation", "value": str(row["citation"])},
         ],
         "answers_title": "Documents ancres (locators reels)",
         "answers": [{"text": loc, "time": ""} for loc in locs[:4]],

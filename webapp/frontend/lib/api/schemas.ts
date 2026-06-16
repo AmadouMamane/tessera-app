@@ -3538,30 +3538,33 @@ export const AgentConnaissancesSchema = z.object({
           status_tone: z.string(),
           coverage: z.number().nullable(),
           freshness: z.string(),
+          fresh_days: z.number().optional(),
           citation: z.string(),
         }),
       ),
     })
     .optional(),
-  detail: z
-    .object({
-      name: z.string(),
-      status: z.string(),
-      status_tone: z.string(),
-      tabs: z.array(z.string()),
-      summary_title: z.string(),
-      summary: z.string(),
-      usage_title: z.string(),
-      usage: z.array(z.object({ label: z.string(), value: z.string() })),
-      answers_title: z.string(),
-      answers: z.array(z.object({ text: z.string(), time: z.string() })),
-      actions_title: z.string(),
-      toggle_label: z.string(),
-      toggle_on: z.boolean(),
-      detach: z.string(),
-      full_sheet: z.string(),
-      key: z.string().optional(),
-    })
+  details: z
+    .array(
+      z.object({
+        name: z.string(),
+        status: z.string(),
+        status_tone: z.string(),
+        tabs: z.array(z.string()),
+        summary_title: z.string(),
+        summary: z.string(),
+        usage_title: z.string(),
+        usage: z.array(z.object({ label: z.string(), value: z.string() })),
+        answers_title: z.string(),
+        answers: z.array(z.object({ text: z.string(), time: z.string() })),
+        actions_title: z.string(),
+        toggle_label: z.string(),
+        toggle_on: z.boolean(),
+        detach: z.string(),
+        full_sheet: z.string(),
+        key: z.string().optional(),
+      }),
+    )
     .optional(),
 });
 export type AgentConnaissances = z.infer<typeof AgentConnaissancesSchema>;
