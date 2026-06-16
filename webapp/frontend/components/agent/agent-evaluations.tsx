@@ -5,7 +5,9 @@ import {
   BarChart3,
   CalendarClock,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   GitCompare,
   Layers,
   type LucideIcon,
@@ -13,23 +15,27 @@ import {
   Plus,
   Search,
   ShieldCheck,
-  SlidersHorizontal,
   Sparkles,
   Target,
+  X,
 } from "lucide-react";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   TemporalRail,
   useRailTimeline,
   useTemporalState,
 } from "@/components/overview/temporal-rail";
+import { Link } from "@/i18n/navigation";
 import { fetchAgentEvaluations } from "@/lib/api/client";
 import type { AgentEvaluations as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { AgentSubtabs } from "./agent-subtabs";
 import { AgentTabs } from "./agent-tabs";
+
+type RowT = NonNullable<Data["table"]>["rows"][number];
 
 const KPI_ICONS: LucideIcon[] = [Sparkles, Target, ShieldCheck, BarChart3, Layers, Target];
 const TYPE_TONE: Record<string, string> = {
@@ -57,6 +63,71 @@ const WATCH_DOT: Record<string, string> = {
   info: "bg-sky-400",
   crit: "bg-red-400",
 };
+const PER_PAGE_OPTS = [10, 25, 50];
+const MAX_PAGE_BUTTONS = 5;
+const NUMERIC_COLS = new Set([4, 5, 6, 9]);
+const QUICK_HREF: Record<string, Route> = {
+  run: "/agir/curation-eval-set" as Route,
+  compare: "/prouver/etat-a-date" as Route,
+  results: "/agent/historique" as Route,
+  sets: "/agir/curation-eval-set" as Route,
+};
+
+function useDismiss(open: boolean, onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+  return ref;
+}
+
+function rowSortKey(r: RowT, col: number): string | number {
+  switch (col) {
+    case 0:
+      return r.name;
+    case 1:
+      return r.type;
+    case 2:
+      return r.status;
+    case 3:
+      return r.version;
+    case 4:
+      return r.score_num;
+    case 5:
+      return r.pass_rate;
+    case 6:
+      return r.is_fact && r.total ? r.failed / r.total : -1;
+    case 7:
+      return r.last_run;
+    case 8:
+      return r.owner;
+    case 9:
+      return r.total;
+    default:
+      return r.name;
+  }
+}
+
+function compareRows(a: RowT, b: RowT, col: number, dir: "asc" | "desc"): number {
+  const av = rowSortKey(a, col);
+  const bv = rowSortKey(b, col);
+  const cmp = NUMERIC_COLS.has(col)
+    ? Number(av) - Number(bv)
+    : String(av).localeCompare(String(bv), "fr");
+  return dir === "asc" ? cmp : -cmp;
+}
 
 export function AgentEvaluations() {
   const t = useTranslations("agentEvaluations");
@@ -69,6 +140,50 @@ export function AgentEvaluations() {
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+
+  const [search, setSearch] = useState("");
+  const [typeKey, setTypeKey] = useState("all");
+  const [qualityKey, setQualityKey] = useState("all");
+  const [hallucKey, setHallucKey] = useState("all");
+  const [sortCol, setSortCol] = useState<number | null>(4);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const allRows = data?.table?.rows ?? [];
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allRows.filter((r) => {
+      if (typeKey !== "all" && r.type !== typeKey) return false;
+      if (qualityKey !== "all" && r.quality_key !== qualityKey) return false;
+      if (hallucKey === "with" && !r.is_fact) return false;
+      if (hallucKey === "without" && r.is_fact) return false;
+      if (q && !`${r.name} ${r.type} ${r.category_key}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [allRows, search, typeKey, qualityKey, hallucKey]);
+
+  const sorted = useMemo(() => {
+    if (sortCol === null) return filtered;
+    return [...filtered].sort((a, b) => compareRows(a, b, sortCol, sortDir));
+  }, [filtered, sortCol, sortDir]);
+
+  const total = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset to page 1 on any filter/sort change
+  useEffect(() => setPage(1), [search, typeKey, qualityKey, hallucKey, sortCol, sortDir, perPage]);
+  const safePage = Math.min(page, totalPages);
+  const startIdx = (safePage - 1) * perPage;
+  const pageRows = sorted.slice(startIdx, startIdx + perPage);
+  const selectedRow = sorted.find((r) => r.name === selected) ?? pageRows[0] ?? allRows[0] ?? null;
+
+  const resetFilters = useCallback(() => {
+    setSearch("");
+    setTypeKey("all");
+    setQualityKey("all");
+    setHallucKey("all");
+  }, []);
 
   if (!data?.available) {
     return (
@@ -88,16 +203,17 @@ export function AgentEvaluations() {
           <>
             <button
               type="button"
+              onClick={() => temporal.changeMode("replay")}
               className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
             >
               <CalendarClock className="h-4 w-4" /> {a?.asof}
             </button>
-            <button
-              type="button"
+            <Link
+              href={"/agir/curation-eval-set" as Route}
               className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
             >
               <Plus className="h-4 w-4" /> {a?.create}
-            </button>
+            </Link>
           </>
         }
       />
@@ -115,7 +231,7 @@ export function AgentEvaluations() {
         onModeChange={temporal.changeMode}
       />
 
-      <Snapshot data={data} />
+      <Snapshot data={data} onAsof={() => temporal.changeMode("replay")} />
 
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
         {(data.kpis ?? []).map((k, i) => (
@@ -125,21 +241,54 @@ export function AgentEvaluations() {
 
       <div className="grid gap-2.5 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
-          <Filters data={data} />
-          <RunsTable data={data} />
+          <Filters
+            data={data}
+            search={search}
+            setSearch={setSearch}
+            typeKey={typeKey}
+            setTypeKey={setTypeKey}
+            qualityKey={qualityKey}
+            setQualityKey={setQualityKey}
+            hallucKey={hallucKey}
+            setHallucKey={setHallucKey}
+            onReset={resetFilters}
+          />
+          <RunsTable
+            data={data}
+            rows={pageRows}
+            total={total}
+            selected={selectedRow?.name ?? null}
+            onSelect={setSelected}
+            sortCol={sortCol}
+            sortDir={sortDir}
+            onSort={(col) => {
+              if (col === sortCol) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+              else {
+                setSortCol(col);
+                setSortDir("asc");
+              }
+            }}
+            page={safePage}
+            totalPages={totalPages}
+            start={total === 0 ? 0 : startIdx + 1}
+            end={Math.min(startIdx + perPage, total)}
+            perPage={perPage}
+            onPage={setPage}
+            onPerPage={setPerPage}
+          />
           <div className="grid gap-2.5 md:grid-cols-3">
             <Watch data={data} />
             <Quick data={data} />
             <Trend data={data} />
           </div>
         </div>
-        <Detail data={data} className="xl:col-span-4" />
+        <Detail data={data} row={selectedRow} className="xl:col-span-4" />
       </div>
     </div>
   );
 }
 
-function Snapshot({ data }: { data: Data }) {
+function Snapshot({ data, onAsof }: { data: Data; onAsof: () => void }) {
   const s = data.snapshot;
   if (!s) return null;
   return (
@@ -178,16 +327,17 @@ function Snapshot({ data }: { data: Data }) {
       <div className="flex flex-col items-start gap-1 text-[0.68rem]">
         <button
           type="button"
+          onClick={onAsof}
           className="inline-flex items-center gap-1 text-[#b9a6ff] hover:text-white"
         >
           <CalendarClock className="h-3.5 w-3.5" /> {s.asof}
         </button>
-        <button
-          type="button"
+        <Link
+          href={"/prouver/etat-a-date" as Route}
           className="inline-flex items-center gap-1 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
         >
           <ChevronRight className="h-3.5 w-3.5" /> {s.compare}
-        </button>
+        </Link>
       </div>
     </div>
   );
@@ -274,38 +424,155 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
   );
 }
 
-function Filters({ data }: { data: Data }) {
-  const f = data.filters;
-  if (!f) return null;
+function FilterDropdown({
+  label,
+  value,
+  options,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onSelect: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(
+    open,
+    useCallback(() => setOpen(false), []),
+  );
+  const current = options.find((o) => o.value === value)?.label ?? value;
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
-      <div className="flex h-9 min-w-[200px] flex-1 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5">
-        <Search className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        <span className="truncate text-[0.74rem] text-[var(--tessera-text-muted)]">{f.search}</span>
-      </div>
-      {f.selects.map((s) => (
-        <button
-          key={s.label}
-          type="button"
-          className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <span>{s.label}</span>
-          <span className="font-medium text-[var(--tessera-text)]">{s.value}</span>
-          <ChevronDown className="h-3.5 w-3.5" />
-        </button>
-      ))}
+    <div className="relative" ref={ref}>
       <button
         type="button"
-        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] hover:border-[var(--tessera-text-muted)]"
       >
-        <SlidersHorizontal className="h-3.5 w-3.5" /> {f.more}
+        <span className="text-[var(--tessera-text-muted)]">{label}</span>
+        <span className="font-medium text-[var(--tessera-text)]">{current}</span>
+        <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
       </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 max-h-72 w-52 overflow-y-auto rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1 shadow-lg"
+        >
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onSelect(o.value);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[0.72rem] hover:bg-[var(--tessera-bg)]",
+                o.value === value
+                  ? "text-[var(--tessera-text)]"
+                  : "text-[var(--tessera-text-muted)]",
+              )}
+            >
+              {o.label}
+              {o.value === value ? <span className="text-[#b9a6ff]">&bull;</span> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function RunsTable({ data }: { data: Data }) {
-  const tbl = data.table;
+type FiltersProps = {
+  data: Data;
+  search: string;
+  setSearch: (v: string) => void;
+  typeKey: string;
+  setTypeKey: (v: string) => void;
+  qualityKey: string;
+  setQualityKey: (v: string) => void;
+  hallucKey: string;
+  setHallucKey: (v: string) => void;
+  onReset: () => void;
+};
+
+function Filters(p: FiltersProps) {
+  const f = p.data.filters;
+  if (!f) return null;
+  const opt = (
+    items: { key: string; label: string }[],
+    allLabel: string,
+  ): { value: string; label: string }[] => [
+    { value: "all", label: allLabel },
+    ...items.map((i) => ({ value: i.key, label: i.label })),
+  ];
+  const anyActive =
+    p.search !== "" || p.typeKey !== "all" || p.qualityKey !== "all" || p.hallucKey !== "all";
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
+      <div className="flex h-9 min-w-[200px] flex-1 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5">
+        <Search className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+        <input
+          value={p.search}
+          onChange={(e) => p.setSearch(e.target.value)}
+          placeholder={f.search}
+          aria-label={f.search}
+          className="h-full min-w-0 flex-1 bg-transparent text-[0.74rem] text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
+        />
+      </div>
+      <FilterDropdown
+        label="Type"
+        value={p.typeKey}
+        options={opt(f.options.type, "Tous")}
+        onSelect={p.setTypeKey}
+      />
+      <FilterDropdown
+        label="Qualité"
+        value={p.qualityKey}
+        options={opt(f.options.quality, "Toutes")}
+        onSelect={p.setQualityKey}
+      />
+      <FilterDropdown
+        label="Hallucinations"
+        value={p.hallucKey}
+        options={opt(f.options.halluc, "Toutes")}
+        onSelect={p.setHallucKey}
+      />
+      {anyActive ? (
+        <button
+          type="button"
+          onClick={p.onReset}
+          className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        >
+          <X className="h-3.5 w-3.5" /> Réinitialiser
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+type TableProps = {
+  data: Data;
+  rows: RowT[];
+  total: number;
+  selected: string | null;
+  onSelect: (name: string) => void;
+  sortCol: number | null;
+  sortDir: "asc" | "desc";
+  onSort: (col: number) => void;
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  perPage: number;
+  onPage: (p: number) => void;
+  onPerPage: (n: number) => void;
+};
+
+function RunsTable(p: TableProps) {
+  const tbl = p.data.table;
   if (!tbl) return null;
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
@@ -316,117 +583,250 @@ function RunsTable({ data }: { data: Data }) {
               {tbl.columns.map((c, i) => (
                 <th
                   key={c}
+                  aria-sort={
+                    p.sortCol === i ? (p.sortDir === "asc" ? "ascending" : "descending") : "none"
+                  }
                   className={cn("px-3 py-2 font-medium", i === 0 ? "" : "whitespace-nowrap")}
                 >
-                  {c}
+                  <button
+                    type="button"
+                    onClick={() => p.onSort(i)}
+                    className={cn(
+                      "inline-flex items-center gap-1 hover:text-[var(--tessera-text)]",
+                      p.sortCol === i ? "text-[var(--tessera-text)]" : "",
+                    )}
+                  >
+                    {c}
+                    {p.sortCol === i ? (
+                      <ChevronDown className={cn("h-3 w-3", p.sortDir === "asc" && "rotate-180")} />
+                    ) : (
+                      <ChevronsUpDown className="h-3 w-3 opacity-40" />
+                    )}
+                  </button>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {tbl.rows.map((r) => (
-              <tr
-                key={r.name}
-                className="border-b border-[var(--tessera-border)]/60 last:border-0 hover:bg-[var(--tessera-bg)]/40"
-              >
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-                    <span className="truncate text-[0.72rem] font-medium text-[var(--tessera-text)]">
-                      {r.name}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-3 py-2.5">
-                  <span
-                    className={cn(
-                      "rounded-full border px-2 py-0.5 text-[0.56rem] font-medium",
-                      TYPE_TONE[r.type_tone] ?? TYPE_TONE.tpl,
-                    )}
-                  >
-                    {r.type}
-                  </span>
-                </td>
-                <td className="px-3 py-2.5">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 text-[0.66rem]",
-                      STATUS_TONE[r.status_tone] ?? STATUS_TONE.good,
-                    )}
-                  >
+            {p.rows.map((r) => {
+              const on = r.name === p.selected;
+              return (
+                <tr
+                  key={r.name}
+                  // biome-ignore lint/a11y/useSemanticElements: a table row is the click target here
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Evaluation ${r.name}`}
+                  onClick={() => p.onSelect(r.name)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      p.onSelect(r.name);
+                    }
+                  }}
+                  className={cn(
+                    "cursor-pointer border-b border-[var(--tessera-border)]/60 last:border-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#8b7cf0]",
+                    on ? "bg-[#6d4aed]/10" : "hover:bg-[var(--tessera-bg)]/40",
+                  )}
+                >
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+                      <span className="truncate text-[0.72rem] font-medium text-[var(--tessera-text)]">
+                        {r.name}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5">
                     <span
                       className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        STATUS_DOT[r.status_tone] ?? STATUS_DOT.good,
+                        "rounded-full border px-2 py-0.5 text-[0.56rem] font-medium",
+                        TYPE_TONE[r.type_tone] ?? TYPE_TONE.tpl,
                       )}
-                    />
-                    {r.status}
-                  </span>
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text)]">
-                  {r.version}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text)]">
-                  {r.score === "-" ? "-" : `${r.score} / 10`}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-emerald-300">
-                  {r.success}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
-                  {r.halluc}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
-                  {r.last_run}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] text-[var(--tessera-text)]">
-                  {r.owner}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
-                  {r.tests}
+                    >
+                      {r.type}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 text-[0.66rem]",
+                        STATUS_TONE[r.status_tone] ?? STATUS_TONE.good,
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          STATUS_DOT[r.status_tone] ?? STATUS_DOT.good,
+                        )}
+                      />
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text)]">
+                    {r.version}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text)]">
+                    {r.score === "-" ? "-" : `${r.score} / 10`}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-emerald-300">
+                    {r.success}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
+                    {r.halluc}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
+                    {r.last_run}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] text-[var(--tessera-text)]">
+                    {r.owner}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
+                    {r.tests}
+                  </td>
+                </tr>
+              );
+            })}
+            {p.rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={tbl.columns.length}
+                  className="px-3 py-8 text-center text-[0.72rem] text-[var(--tessera-text-muted)]"
+                >
+                  Aucune évaluation ne correspond aux filtres.
                 </td>
               </tr>
-            ))}
+            ) : null}
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between border-t border-[var(--tessera-border)] px-3 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
-        <span>{tbl.count}</span>
-        <span className="flex items-center gap-1">
-          {[1, 2, 3].map((n) => (
-            <span
-              key={n}
-              className={cn(
-                "flex h-6 min-w-6 items-center justify-center rounded border px-1.5",
-                n === 1
-                  ? "border-[#6d4aed] bg-[#6d4aed]/15 text-[var(--tessera-text)]"
-                  : "border-[var(--tessera-border)]",
-              )}
-            >
-              {n}
-            </span>
-          ))}
-        </span>
-      </div>
+      <Pagination
+        page={p.page}
+        totalPages={p.totalPages}
+        start={p.start}
+        end={p.end}
+        total={p.total}
+        perPage={p.perPage}
+        onPage={p.onPage}
+        onPerPage={p.onPerPage}
+      />
     </section>
+  );
+}
+
+function pageWindow(page: number, totalPages: number): number[] {
+  const span = Math.min(MAX_PAGE_BUTTONS, totalPages);
+  let first = Math.max(1, page - Math.floor(span / 2));
+  first = Math.min(first, totalPages - span + 1);
+  return Array.from({ length: span }, (_, i) => first + i);
+}
+
+function Pagination({
+  page,
+  totalPages,
+  start,
+  end,
+  total,
+  perPage,
+  onPage,
+  onPerPage,
+}: {
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  total: number;
+  perPage: number;
+  onPage: (p: number) => void;
+  onPerPage: (n: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <span className="tabular-nums" aria-live="polite">
+        {start}-{end} sur {total} jeux
+      </span>
+      <div className="flex items-center gap-1">
+        <PageArrow dir="prev" disabled={page <= 1} onClick={() => onPage(Math.max(1, page - 1))} />
+        {pageWindow(page, totalPages).map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-current={n === page ? "page" : undefined}
+            onClick={() => onPage(n)}
+            className={cn(
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              n === page
+                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-white"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {n}
+          </button>
+        ))}
+        <PageArrow
+          dir="next"
+          disabled={page >= totalPages}
+          onClick={() => onPage(Math.min(totalPages, page + 1))}
+        />
+      </div>
+      <label className="flex items-center gap-2">
+        <span>Lignes par page</span>
+        <select
+          value={perPage}
+          onChange={(e) => onPerPage(Number(e.target.value))}
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+        >
+          {PER_PAGE_OPTS.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+function PageArrow({
+  dir,
+  disabled,
+  onClick,
+}: {
+  dir: "prev" | "next";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const Icon = dir === "prev" ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={dir === "prev" ? "Page précédente" : "Page suivante"}
+      onClick={onClick}
+      className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] enabled:hover:text-[var(--tessera-text)] disabled:opacity-40"
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
   );
 }
 
 function PanelCard({
   title,
   cta,
+  ctaHref,
   children,
-}: { title: string; cta?: string; children: React.ReactNode }) {
+}: { title: string; cta?: string; ctaHref?: string; children: React.ReactNode }) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <h3 className="mb-2 text-[0.74rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-      {cta ? (
-        <button
-          type="button"
+      {cta && ctaHref ? (
+        <Link
+          href={ctaHref as Route}
           className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
         >
           {cta} <ChevronRight className="h-3.5 w-3.5" />
-        </button>
+        </Link>
       ) : null}
     </section>
   );
@@ -436,7 +836,7 @@ function Watch({ data }: { data: Data }) {
   const w = data.watch;
   if (!w) return null;
   return (
-    <PanelCard title={w.title} cta={w.cta}>
+    <PanelCard title={w.title} cta={w.cta} ctaHref={w.cta_href}>
       <ul className="flex flex-col gap-2.5">
         {w.items.map((it) => (
           <li key={it.title} className="flex items-start gap-2">
@@ -471,14 +871,14 @@ function Quick({ data }: { data: Data }) {
         {q.items.map((it, i) => {
           const Icon = icons[i % icons.length] ?? Play;
           return (
-            <button
-              key={it}
-              type="button"
+            <Link
+              key={it.key}
+              href={QUICK_HREF[it.key] ?? ("/agent/evaluations" as Route)}
               className="flex flex-col items-start gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.68rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
             >
               <Icon className="h-4 w-4 text-[#b9a6ff]" />
-              <span className="min-w-0 truncate">{it}</span>
-            </button>
+              <span className="min-w-0 truncate">{it.label}</span>
+            </Link>
           );
         })}
       </div>
@@ -541,10 +941,57 @@ function AreaChart({ values }: { values: number[] }) {
   );
 }
 
-function Detail({ data, className }: { data: Data; className?: string }) {
-  const d = data.detail;
-  const [tab, setTab] = useState(d?.tabs[0] ?? "Resume");
-  if (!d) return null;
+function Detail({
+  data,
+  row,
+  className,
+}: {
+  data: Data;
+  row: RowT | null;
+  className?: string;
+}) {
+  const labels = data.detail_labels;
+  const meta = data.meta;
+  const tabs = labels?.tabs ?? ["Résumé", "Configuration", "Résultats", "Activité"];
+  const [tab, setTab] = useState(tabs[0] ?? "Résumé");
+  if (!labels || !meta || !row) return null;
+
+  const description = `Sondes de la catégorie '${row.name}' du catalogue d'échecs, exécutées sur le plus petit modèle (${meta.model}). Sur ce run, ${row.passed} cas sur ${row.total} passent.`;
+  const fields: { label: string; value: string; tone?: string }[] = [
+    { label: "Type", value: row.type },
+    { label: "Catégorie", value: row.category_key },
+    { label: "Version catalogue", value: meta.catalogue_version },
+    { label: "Statut", value: row.status, tone: row.status_tone },
+    { label: "Dernière exécution", value: row.last_run },
+    { label: "Modèle évalué", value: meta.model },
+    { label: "Cas", value: String(row.total) },
+    { label: "Langues", value: meta.languages },
+    { label: "Propriétaire", value: row.owner },
+  ];
+  const results: { label: string; value: string }[] = [
+    { label: "Score", value: `${row.score} / 10` },
+    { label: "Taux de réussite", value: row.success },
+    { label: "Cas réussis", value: `${row.passed} / ${row.total}` },
+    { label: "Cas échoués", value: `${row.failed} / ${row.total}` },
+    { label: "Score global du run", value: `${meta.score10} / 10` },
+    { label: "Escalades requises", value: String(meta.escalations) },
+    { label: "Invocations d'outils", value: String(meta.tool_invocations) },
+  ];
+  const config: { label: string; value: string }[] = [
+    { label: "Modèle", value: meta.model },
+    { label: "Version catalogue", value: meta.catalogue_version },
+    { label: "Type", value: row.type },
+    { label: "Qualité", value: row.quality_label },
+    { label: "Langues", value: meta.languages },
+  ];
+  const activity: { label: string; time: string }[] = [
+    { label: "Jeu exécuté", time: row.last_run },
+    {
+      label: row.pass_rate >= 0.7 ? "Évaluation réussie" : "Évaluation sous le seuil",
+      time: row.last_run,
+    },
+  ];
+
   return (
     <section
       className={cn(
@@ -554,28 +1001,23 @@ function Detail({ data, className }: { data: Data; className?: string }) {
     >
       <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
         <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          Details de l'evaluation
+          {labels.eyebrow}
         </p>
         <div className="mt-1 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <Sparkles className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-            <span className="min-w-0">
-              <span className="block truncate text-[0.85rem] font-semibold text-[var(--tessera-text)]">
-                {d.name}
-              </span>
-              <span className="block truncate font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
-                {d.id}
-              </span>
+            <span className="min-w-0 truncate text-[0.85rem] font-semibold text-[var(--tessera-text)]">
+              {row.name}
             </span>
           </div>
           <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-emerald-300">
-            {d.status}
+            {row.status}
           </span>
         </div>
       </div>
 
       <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
-        {d.tabs.map((tb) => {
+        {tabs.map((tb) => {
           const on = tb === tab;
           return (
             <button
@@ -596,84 +1038,107 @@ function Detail({ data, className }: { data: Data; className?: string }) {
       </nav>
 
       <div className="flex flex-col gap-4 p-3.5">
-        <div>
-          <h3 className="mb-1 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
-            Description
-          </h3>
-          <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
-            {d.description}
-          </p>
-        </div>
+        {tab === tabs[0] ? (
+          <>
+            <div>
+              <h3 className="mb-1 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+                Description
+              </h3>
+              <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+                {description}
+              </p>
+            </div>
+            <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+              {fields.map((f) => (
+                <li key={f.label} className="flex items-center justify-between gap-2">
+                  <span className="text-[var(--tessera-text-muted)]">{f.label}</span>
+                  <span
+                    className={cn(
+                      "font-medium",
+                      f.tone === "good" ? "text-emerald-300" : "text-[var(--tessera-text)]",
+                    )}
+                  >
+                    {f.value}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
 
-        <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-          {d.fields.map((f) => (
-            <li key={f.label} className="flex items-center justify-between gap-2">
-              <span className="text-[var(--tessera-text-muted)]">{f.label}</span>
-              <span
-                className={cn(
-                  "font-medium",
-                  f.tone === "good" ? "text-emerald-300" : "text-[var(--tessera-text)]",
-                )}
-              >
-                {f.value}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {tab === tabs[1] ? (
+          <>
+            <DetailBlock title={labels.config_title}>
+              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                {config.map((c) => (
+                  <li key={c.label} className="flex items-center justify-between gap-2">
+                    <span className="text-[var(--tessera-text-muted)]">{c.label}</span>
+                    <span className="font-medium text-[var(--tessera-text)]">{c.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </DetailBlock>
+            <DetailBlock title={labels.rbac_title}>
+              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                {meta.rbac.map((r) => (
+                  <li key={r.role} className="flex items-center justify-between gap-2">
+                    <span className="text-[var(--tessera-text-muted)]">{r.role}</span>
+                    <span className="font-medium text-[var(--tessera-text)]">{r.access}</span>
+                  </li>
+                ))}
+              </ul>
+            </DetailBlock>
+          </>
+        ) : null}
 
-        <DetailBlock title={d.results_title} cta={d.results_cta}>
-          <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-            {d.results.map((r) => (
-              <li key={r.label} className="flex items-center justify-between gap-2">
-                <span className="text-[var(--tessera-text-muted)]">{r.label}</span>
-                <span className="font-medium tabular-nums text-[var(--tessera-text)]">
-                  {r.value}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            className="mt-2 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
-          >
-            {d.results_more} <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </DetailBlock>
+        {tab === tabs[2] ? (
+          <DetailBlock title={labels.results_title}>
+            <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+              {results.map((r) => (
+                <li key={r.label} className="flex items-center justify-between gap-2">
+                  <span className="text-[var(--tessera-text-muted)]">{r.label}</span>
+                  <span className="font-medium tabular-nums text-[var(--tessera-text)]">
+                    {r.value}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Link
+              href={"/agent/historique" as Route}
+              className="mt-2 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
+            >
+              {labels.results_cta} <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </DetailBlock>
+        ) : null}
 
-        <DetailBlock title={d.rbac_title} cta={d.rbac_cta}>
-          <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-            {d.rbac.map((r) => (
-              <li key={r.role} className="flex items-center justify-between gap-2">
-                <span className="text-[var(--tessera-text-muted)]">{r.role}</span>
-                <span className="font-medium text-[var(--tessera-text)]">{r.access}</span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            className="mt-2 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
-          >
-            {d.rbac_more} <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </DetailBlock>
+        {tab === tabs[3] ? (
+          <div>
+            <h3 className="mb-2 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+              {labels.activity_title}
+            </h3>
+            <ul className="flex flex-col gap-2 text-[0.72rem]">
+              {activity.map((it) => (
+                <li key={it.label} className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                  <span className="text-[var(--tessera-text)]">{it.label}</span>
+                  <span className="ml-auto shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
+                    {it.time}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
-function DetailBlock({
-  title,
-  cta,
-  children,
-}: { title: string; cta: string; children: React.ReactNode }) {
+function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-[0.7rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
-        <button type="button" className="text-[0.64rem] text-[#b9a6ff] hover:text-white">
-          {cta}
-        </button>
-      </div>
+      <h3 className="mb-2 text-[0.7rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
       {children}
     </div>
   );

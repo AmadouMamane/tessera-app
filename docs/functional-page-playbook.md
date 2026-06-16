@@ -785,6 +785,35 @@ it dirty.
   strict-mode violation; restore the flag at the end so the durable profile stays
   clean.
 
+## Round-19 skills (Evaluations: the Historique twin, same rebuild)
+
+- **Same inert-table pattern, same fix.** Evaluations was the structural twin of
+  Historique (real eval-run numbers, dead search `<span>` + dead filter buttons +
+  static pagination + frozen `data.detail`). Applied the identical treatment:
+  emit every category row with stable keys (`category_key`/`quality_key`/`is_fact`
+  /`score_num`/`pass_rate`/`passed`/`total`/`failed`), a shared `meta` (model,
+  catalogue, languages, run score, escalations, tool calls, RBAC) and static
+  `detail_labels`; the frontend owns search/filters/sort/pagination and rebuilds
+  the tab-gated detail from the selected row.
+- **Pick filters that bite (again).** Every row's Statut is "Actif" and owner is
+  "Tessera Eval", so the normative's Statut/Proprietaire filters would never
+  change the count. Replaced them with Type (real catalogue categories), Quality
+  band (Bon/Moyen/Faible from the score) and Hallucinations (with/without =
+  `is_fact`) - all partitioning. Search + the three dropdowns + sortable headers
+  + pagination, verified e2e.
+- **Wire the snapshot/quick/cta chrome.** The snapshot bar's `Voir a date` ->
+  rail replay; `Comparer` -> `<Link>` to `/prouver/etat-a-date`; quick actions
+  dispatch by key to real routes (`/agir/curation-eval-set`,
+  `/prouver/etat-a-date`, `/agent/historique`); the watch cta carries a
+  `cta_href`; the top `Creer une evaluation` -> the eval-set curation page. No
+  dead button remains.
+- **Accent the whole localized-but-French module.** Sécurité/Confidentialité/
+  Conformité/Factualité types, "Derniere execution"->"Dernière exécution",
+  "Modele evalue"->"Modèle évalué", "Eleve"/"Maitrise"->"Élevé"/"Maîtrisé",
+  "Fidelite"->"Fidélité", "Complete"->"Complète". `tests/unit/test_agent_evaluations.py`
+  asserts the keyed rows/options/accents; `e2e/evaluations.spec.ts` covers
+  filter/sort/row-detail/quick-link.
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** A faire + A traiter (shared `operator_items` backlog =

@@ -1,40 +1,46 @@
-"""Agent Evaluations ("Evaluations") dashboard payload (reference image 29).
+"""Agent Evaluations ("Évaluations") dashboard payload (reference image 29).
 
 The Evaluations page measures, analyses and improves the quality of the
-assistant's answers: an inner tab strip (overview, eval sets, results,
-dimensions, comparisons, errors, versions, exports), an active-snapshot bar
-(as-of-T), a KPI strip (global score, success rate, hallucinations, relevance,
-source fidelity, set coverage), a filterable evaluations table (type, status,
-version, score, success, hallucinations, last run, owner), three secondary
-panels (watchlist, quick actions, global-score trend) and a per-evaluation
-detail panel with a Summary / Configuration / Results / Activity tab set,
-period results and RBAC access.
+assistant's answers: an inner tab strip, an active-snapshot bar (as-of-T), a KPI
+strip (global score, success rate, hallucinations, relevance, source fidelity,
+set coverage), a filterable + sortable + paginated evaluations table (one row
+per failure-catalogue category), three secondary panels (watchlist, quick
+actions, per-category success trend) and a per-row detail panel (Summary /
+Configuration / Results / Activity) driven by the selected evaluation set.
 
 The numbers are NOT a fixture: they are aggregated from a real run of the
 smallest local model (``llama3.2:3b``) over the failure catalogue, read from
 ``eval/reports/`` by :mod:`tessera.observability.eval_data`. Each failure
 category becomes an evaluation "set" whose score is its real pass rate, so the
-page tells the project's honest story (the small model fails a lot). Free-text
-data is verbatim French with ASCII-only punctuation.
+page tells the project's honest story (the small model fails a lot).
+
+The page is read-only on the eval run (an immutable artifact): the functional
+axis is the wired filters / sort / pagination / row-selection and the real
+cross-page navigation, verified end to end. Free-text data is verbatim French
+(accented).
 """
 
 from __future__ import annotations
 
 from datetime import date
+from typing import TYPE_CHECKING
 
-from tessera.observability.eval_data import EvalSnapshot, load_eval_snapshot
+from tessera.observability.eval_data import load_eval_snapshot
+
+if TYPE_CHECKING:
+    from tessera.observability.eval_data import CategoryStat, EvalSnapshot
 
 __all__ = ["compute_agent_evaluations"]
 
 # Map each failure-catalogue category to a display "type" + tone key used by the
 # evaluations table. Tone keys (sys/tpl/agt) are the ones the frontend styles.
 _GROUP: dict[str, tuple[str, str]] = {
-    "prompt_injection": ("Securite", "sys"),
-    "pii_leak": ("Confidentialite", "sys"),
+    "prompt_injection": ("Sécurité", "sys"),
+    "pii_leak": ("Confidentialité", "sys"),
     "policy_violation": ("Politiques", "sys"),
-    "regulatory_misstatement": ("Conformite", "sys"),
-    "hallucination": ("Factualite", "tpl"),
-    "citation_fabrication": ("Factualite", "tpl"),
+    "regulatory_misstatement": ("Conformité", "sys"),
+    "hallucination": ("Factualité", "tpl"),
+    "citation_fabrication": ("Factualité", "tpl"),
     "language_mixing": ("Multilingue", "tpl"),
     "overconfidence": ("Agent", "agt"),
     "tool_misuse": ("Agent", "agt"),
@@ -96,33 +102,34 @@ def _kpi(
     }
 
 
-def _row(
-    name: str,
-    type_: str,
-    type_tone: str,
-    status: str,
-    status_tone: str,
-    version: str,
-    score: str,
-    success: str,
-    halluc: str,
-    last_run: str,
-    owner: str,
-    tests: str,
-) -> dict[str, object]:
+def _row(stat: CategoryStat, version_label: str, stamp: str) -> dict[str, object]:
+    """A self-describing evaluation-set row (display cells + raw keys for the detail)."""
+    type_label, type_tone = _GROUP.get(stat.category, ("Autre", "sys"))
+    is_fact = stat.category in _FACTUAL
+    quality, quality_tone = _quality_note(stat.pass_rate * 10)
     return {
-        "name": name,
-        "type": type_,
+        "name": stat.label,
+        "type": type_label,
         "type_tone": type_tone,
-        "status": status,
-        "status_tone": status_tone,
-        "version": version,
-        "score": score,
-        "success": success,
-        "halluc": halluc,
-        "last_run": last_run,
-        "owner": owner,
-        "tests": tests,
+        "status": "Actif",
+        "status_tone": "good",
+        "version": version_label,
+        "score": _dot(stat.pass_rate * 10),
+        "score_num": round(stat.pass_rate * 10, 1),
+        "success": _pct(stat.pass_rate),
+        "halluc": _pct(stat.failed / stat.total) if is_fact and stat.total else "-",
+        "last_run": stamp,
+        "owner": "Tessera Eval",
+        "tests": str(stat.total),
+        # raw fields for filtering + the detail panel
+        "category_key": stat.category,
+        "quality_key": quality_tone,
+        "quality_label": quality,
+        "is_fact": is_fact,
+        "passed": stat.passed,
+        "total": stat.total,
+        "failed": stat.failed,
+        "pass_rate": round(stat.pass_rate, 4),
     }
 
 
@@ -166,238 +173,145 @@ def compute_agent_evaluations() -> dict[str, object]:
 
     snapshot: dict[str, object] = {
         "tag": "SNAPSHOT ACTIF",
-        "label": f"Catalogue d'echecs - {snap.model}",
-        "updated_label": "Derniere execution",
+        "label": f"Catalogue d'échecs - {snap.model}",
+        "updated_label": "Dernière exécution",
         "updated": stamp,
         "updated_rel": rel,
-        "version_label": "Modele evalue",
+        "version_label": "Modèle évalué",
         "version": snap.model,
         "version_status": "On-prem",
-        "evalset_label": "Jeu d'evaluations",
+        "evalset_label": "Jeu d'évaluations",
         "evalset": f"{snap.total} cas",
         "coverage_label": "Couverture",
         "coverage": 100,
-        "coverage_tone": "Complete",
-        "asof": "Voir a date",
-        "compare": "Comparer au snapshot precedent",
+        "coverage_tone": "Complète",
+        "asof": "Voir à date",
+        "compare": "Comparer au snapshot précédent",
     }
 
     score_note, score_tone = _quality_note(score10)
     kpis: list[dict[str, object]] = [
-        _kpi(
-            "score",
-            "Score global",
-            _comma(score10),
-            "/10",
-            score_note,
-            score_tone,
-            f"{snap.passed}/{snap.total} cas reussis",
-            "muted",
-        ),
-        _kpi(
-            "success",
-            "Taux de reussite",
-            "",
-            "",
-            score_note,
-            score_tone,
-            f"{snap.passed}/{snap.total} cas",
-            "muted",
-            gauge=round(snap.pass_rate * 100),
-        ),
-        _kpi(
-            "halluc",
-            "Hallucinations",
-            _pct(halluc_rate),
-            "",
-            "Eleve" if halluc_rate >= _HIGH_HALLUC else "Maitrise",
-            "bad" if halluc_rate >= _HIGH_HALLUC else "good",
-            f"{fact_failed}/{fact_total} sondes factualite",
-            "muted",
-        ),
-        _kpi(
-            "relevance",
-            "Pertinence",
-            _comma(beh_rate * 10),
-            "/10",
-            *_quality_note(beh_rate * 10),
-            f"{beh_pass}/{beh_total} cas agent",
-            "muted",
-        ),
-        _kpi(
-            "fidelity",
-            "Fidelite (sources)",
-            _pct(cite_rate),
-            "",
-            *_quality_note(cite_rate * 10),
-            f"{cite_passed}/{cite_total} cas citation",
-            "muted",
-        ),
-        _kpi(
-            "coverage",
-            "Couverture du set",
-            str(snap.total),
-            "",
-            "tests executes",
-            "muted",
-            f"{len(snap.categories)} categories - {n_lang} langues",
-            "muted",
-        ),
+        _kpi("score", "Score global", _comma(score10), "/10", score_note, score_tone,
+             f"{snap.passed}/{snap.total} cas réussis", "muted"),
+        _kpi("success", "Taux de réussite", "", "", score_note, score_tone,
+             f"{snap.passed}/{snap.total} cas", "muted", gauge=round(snap.pass_rate * 100)),
+        _kpi("halluc", "Hallucinations", _pct(halluc_rate), "",
+             "Élevé" if halluc_rate >= _HIGH_HALLUC else "Maîtrisé",
+             "bad" if halluc_rate >= _HIGH_HALLUC else "good",
+             f"{fact_failed}/{fact_total} sondes factualité", "muted"),
+        _kpi("relevance", "Pertinence", _comma(beh_rate * 10), "/10", *_quality_note(beh_rate * 10),
+             f"{beh_pass}/{beh_total} cas agent", "muted"),
+        _kpi("fidelity", "Fidélité (sources)", _pct(cite_rate), "", *_quality_note(cite_rate * 10),
+             f"{cite_passed}/{cite_total} cas citation", "muted"),
+        _kpi("coverage", "Couverture du set", str(snap.total), "", "tests exécutés", "muted",
+             f"{len(snap.categories)} catégories - {n_lang} langues", "muted"),
     ]
 
+    # Filter options that genuinely partition the rows (type / quality band /
+    # hallucinations), keyed on stable values - the normative's uniform
+    # Statut/Proprietaire would never change the row count, so they are dropped.
+    seen_types: dict[str, str] = {}
+    for stat in snap.categories:
+        label, _tone = _GROUP.get(stat.category, ("Autre", "sys"))
+        seen_types.setdefault(label, label)
     filters: dict[str, object] = {
-        "search": "Rechercher une evaluation...",
-        "selects": [
-            {"label": "Type", "value": "Tous"},
-            {"label": "Statut", "value": "Tous"},
-            {"label": "Proprietaire", "value": "Tous"},
-            {"label": "Etiquette", "value": "Toutes"},
-        ],
-        "more": "Filtres",
+        "search": "Rechercher une évaluation...",
+        "options": {
+            "type": [{"key": lbl, "label": lbl} for lbl in sorted(seen_types)],
+            "quality": [
+                {"key": "good", "label": "Bon"},
+                {"key": "warn", "label": "Moyen"},
+                {"key": "bad", "label": "Faible"},
+            ],
+            "halluc": [
+                {"key": "with", "label": "Avec hallucinations"},
+                {"key": "without", "label": "Sans"},
+            ],
+        },
     }
 
     columns = [
-        "Nom de l'evaluation",
-        "Type",
-        "Statut",
-        "Version",
-        "Score global",
-        "Taux reussite",
-        "Hallucinations",
-        "Derniere execution",
-        "Proprietaire",
-        "Tests",
+        "Nom de l'évaluation", "Type", "Statut", "Version", "Score global",
+        "Taux réussite", "Hallucinations", "Dernière exécution", "Propriétaire", "Tests",
     ]
     version_label = snap.catalogue_version[:9] or "v1"
-    rows: list[dict[str, object]] = []
-    for stat in sorted(snap.categories, key=lambda c: (-c.pass_rate, -c.total)):
-        type_label, type_tone = _GROUP.get(stat.category, ("Autre", "sys"))
-        is_fact = stat.category in _FACTUAL
-        rows.append(
-            _row(
-                stat.label,
-                type_label,
-                type_tone,
-                "Actif",
-                "good",
-                version_label,
-                _dot(stat.pass_rate * 10),
-                _pct(stat.pass_rate),
-                _pct(stat.failed / stat.total) if is_fact and stat.total else "-",
-                stamp,
-                "Tessera Eval",
-                str(stat.total),
-            )
-        )
+    rows = [
+        _row(stat, version_label, stamp)
+        for stat in sorted(snap.categories, key=lambda c: (-c.pass_rate, -c.total))
+    ]
 
     worst = snap.categories_by_pass_rate()
     watch_tones = ["crit", "crit", "warn"]
-    watch_items: list[dict[str, object]] = [
-        {
-            "title": f"{stat.label} - {_pct(stat.pass_rate)} de reussite",
-            "detail": f"{stat.passed}/{stat.total} cas - {n_lang} langues",
-            "tone": tone,
-        }
+    watch_items = [
+        {"title": f"{stat.label} - {_pct(stat.pass_rate)} de réussite",
+         "detail": f"{stat.passed}/{stat.total} cas - {n_lang} langues", "tone": tone}
         for stat, tone in zip(worst[:3], watch_tones, strict=False)
     ]
     n_alert = sum(1 for c in snap.categories if c.pass_rate < _ALERT_PASS_RATE)
     watch: dict[str, object] = {
-        "title": "A surveiller",
+        "title": "À surveiller",
         "cta": f"Voir toutes les alertes ({n_alert})",
+        "cta_href": "/agent/a-traiter",
         "items": watch_items,
     }
 
     quick: dict[str, object] = {
         "title": "Actions rapides",
         "items": [
-            "Lancer une evaluation",
-            "Comparer versions",
-            "Voir les resultats",
-            "Gerer les jeux",
+            {"key": "run", "label": "Lancer une évaluation"},
+            {"key": "compare", "label": "Comparer versions"},
+            {"key": "results", "label": "Voir les résultats"},
+            {"key": "sets", "label": "Gérer les jeux"},
         ],
     }
 
     trend: dict[str, object] = {
-        "title": "Reussite par categorie",
+        "title": "Réussite par catégorie",
         "value": _comma(score10),
         "scale": "/10",
-        "legend": "Taux de reussite (%) par categorie",
+        "legend": "Taux de réussite (%) par catégorie",
         "series": [round(c.pass_rate * 100) for c in worst],
     }
 
-    worst0 = worst[0]
-    worst0_type, _ = _GROUP.get(worst0.category, ("Conformite", "sys"))
-    detail: dict[str, object] = {
-        "name": worst0.label,
-        "id": f"@_eval_{worst0.category}",
-        "status": "Actif",
-        "tabs": ["Resume", "Configuration", "Resultats", "Activite"],
-        "description": (
-            f"Sondes de la categorie '{worst0.label}' du catalogue d'echecs, "
-            f"executees sur le plus petit modele ({snap.model}). Sur ce run, "
-            f"{worst0.passed} cas sur {worst0.total} passent."
-        ),
-        "fields": [
-            {"label": "Type", "value": worst0_type},
-            {"label": "Categorie", "value": worst0.category},
-            {"label": "Version catalogue", "value": snap.catalogue_version},
-            {"label": "Statut", "value": "Actif", "tone": "good"},
-            {"label": "Derniere execution", "value": stamp},
-            {"label": "Modele evalue", "value": snap.model},
-            {"label": "Cas", "value": str(worst0.total)},
-            {"label": "Langues", "value": lang_str},
-            {"label": "Proprietaire", "value": "Tessera Eval"},
-        ],
-        "results_title": "Resultats (periode)",
-        "results_cta": "Modifier la periode",
-        "results": [
-            {"label": "Score", "value": f"{_comma(worst0.pass_rate * 10)} / 10"},
-            {"label": "Taux de reussite", "value": _pct(worst0.pass_rate)},
-            {"label": "Cas reussis", "value": f"{worst0.passed} / {worst0.total}"},
-            {"label": "Cas echoues", "value": f"{worst0.failed} / {worst0.total}"},
-            {"label": "Score global du run", "value": f"{_comma(score10)} / 10"},
-            {"label": "Escalades requises", "value": str(snap.escalations)},
-            {"label": "Invocations d'outils", "value": str(snap.tool_invocations)},
-        ],
-        "results_more": "Voir tous les resultats",
-        "rbac_title": "Acces RBAC",
-        "rbac_cta": "Modifier",
-        "rbac": [
-            {"role": "ML Engineer", "access": "Lecture"},
-            {"role": "Compliance Officer", "access": "Lecture / Ecriture"},
-            {"role": "Admin", "access": "Lecture / Ecriture"},
-        ],
-        "rbac_more": "Voir toutes les permissions (5)",
-    }
-
     return {
-        "title": "Evaluations",
+        "title": "Évaluations",
         "subtitle": (
-            "Mesurez, analysez et ameliorez la qualite des reponses de "
+            "Mesurez, analysez et améliorez la qualité des réponses de "
             "l'assistant et des agents."
         ),
-        "actions": {"asof": "Voir a date (as-of)", "create": "Creer une evaluation"},
+        "actions": {"asof": "Voir à date (as-of)", "create": "Créer une évaluation"},
         "subtabs": [
-            "Vue d'ensemble",
-            "Jeux d'evaluations",
-            "Resultats",
-            "Dimensions",
-            "Comparaisons",
-            "Erreurs",
-            "Versions & historique",
-            "Exports",
+            "Vue d'ensemble", "Jeux d'évaluations", "Résultats", "Dimensions",
+            "Comparaisons", "Erreurs", "Versions & historique", "Exports",
         ],
+        "meta": {
+            "model": snap.model,
+            "catalogue_version": snap.catalogue_version,
+            "languages": lang_str,
+            "score10": _comma(score10),
+            "escalations": snap.escalations,
+            "tool_invocations": snap.tool_invocations,
+            "rbac": [
+                {"role": "ML Engineer", "access": "Lecture"},
+                {"role": "Compliance Officer", "access": "Lecture / Écriture"},
+                {"role": "Admin", "access": "Lecture / Écriture"},
+            ],
+        },
+        "detail_labels": {
+            "eyebrow": "Détails de l'évaluation",
+            "tabs": ["Résumé", "Configuration", "Résultats", "Activité"],
+            "results_title": "Résultats (run)",
+            "results_cta": "Voir tous les résultats",
+            "rbac_title": "Accès RBAC",
+            "config_title": "Configuration du jeu",
+            "info_title": "Informations techniques",
+            "activity_title": "Journal d'activité",
+        },
         "snapshot": snapshot,
         "kpis": kpis,
         "filters": filters,
-        "table": {
-            "columns": columns,
-            "rows": rows,
-            "count": f"1-{len(rows)} sur {len(rows)} jeux",
-            "pages": 1,
-        },
+        "table": {"columns": columns, "rows": rows, "total": len(rows)},
         "watch": watch,
         "quick": quick,
         "trend": trend,
-        "detail": detail,
     }

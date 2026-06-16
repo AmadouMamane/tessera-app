@@ -4039,18 +4039,43 @@ export const AgentEvaluationsSchema = z.object({
       }),
     )
     .optional(),
+  meta: z
+    .object({
+      model: z.string(),
+      catalogue_version: z.string(),
+      languages: z.string(),
+      score10: z.string(),
+      escalations: z.number(),
+      tool_invocations: z.number(),
+      rbac: z.array(z.object({ role: z.string(), access: z.string() })),
+    })
+    .optional(),
+  detail_labels: z
+    .object({
+      eyebrow: z.string(),
+      tabs: z.array(z.string()),
+      results_title: z.string(),
+      results_cta: z.string(),
+      rbac_title: z.string(),
+      config_title: z.string(),
+      info_title: z.string(),
+      activity_title: z.string(),
+    })
+    .optional(),
   filters: z
     .object({
       search: z.string(),
-      selects: z.array(z.object({ label: z.string(), value: z.string() })),
-      more: z.string(),
+      options: z.object({
+        type: z.array(z.object({ key: z.string(), label: z.string() })),
+        quality: z.array(z.object({ key: z.string(), label: z.string() })),
+        halluc: z.array(z.object({ key: z.string(), label: z.string() })),
+      }),
     })
     .optional(),
   table: z
     .object({
       columns: z.array(z.string()),
-      count: z.string(),
-      pages: z.number(),
+      total: z.number(),
       rows: z.array(
         z.object({
           name: z.string(),
@@ -4060,11 +4085,20 @@ export const AgentEvaluationsSchema = z.object({
           status_tone: z.string(),
           version: z.string(),
           score: z.string(),
+          score_num: z.number(),
           success: z.string(),
           halluc: z.string(),
           last_run: z.string(),
           owner: z.string(),
           tests: z.string(),
+          category_key: z.string(),
+          quality_key: z.string(),
+          quality_label: z.string(),
+          is_fact: z.boolean(),
+          passed: z.number(),
+          total: z.number(),
+          failed: z.number(),
+          pass_rate: z.number(),
         }),
       ),
     })
@@ -4073,10 +4107,16 @@ export const AgentEvaluationsSchema = z.object({
     .object({
       title: z.string(),
       cta: z.string(),
+      cta_href: z.string().optional(),
       items: z.array(z.object({ title: z.string(), detail: z.string(), tone: z.string() })),
     })
     .optional(),
-  quick: z.object({ title: z.string(), items: z.array(z.string()) }).optional(),
+  quick: z
+    .object({
+      title: z.string(),
+      items: z.array(z.object({ key: z.string(), label: z.string() })),
+    })
+    .optional(),
   trend: z
     .object({
       title: z.string(),
@@ -4084,26 +4124,6 @@ export const AgentEvaluationsSchema = z.object({
       scale: z.string(),
       legend: z.string(),
       series: z.array(z.number()),
-    })
-    .optional(),
-  detail: z
-    .object({
-      name: z.string(),
-      id: z.string(),
-      status: z.string(),
-      tabs: z.array(z.string()),
-      description: z.string(),
-      fields: z.array(
-        z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
-      ),
-      results_title: z.string(),
-      results_cta: z.string(),
-      results: z.array(z.object({ label: z.string(), value: z.string() })),
-      results_more: z.string(),
-      rbac_title: z.string(),
-      rbac_cta: z.string(),
-      rbac: z.array(z.object({ role: z.string(), access: z.string() })),
-      rbac_more: z.string(),
     })
     .optional(),
 });
