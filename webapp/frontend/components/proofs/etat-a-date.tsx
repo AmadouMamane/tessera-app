@@ -155,7 +155,37 @@ export function EtatADate() {
 
   return (
     <div className="relative flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      {data?.meta?.banner ? <Banner text={data.meta.banner} /> : null}
+      {/* Banner + page actions share one row (no wasted line). */}
+      <div className="flex flex-wrap items-stretch gap-3">
+        {data?.meta?.banner ? (
+          <Banner text={data.meta.banner} className="min-w-0 flex-1" />
+        ) : (
+          <div className="flex-1" />
+        )}
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => saveSnapshot.mutate()}
+            disabled={!data?.available || saveSnapshot.isPending}
+            className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-50"
+          >
+            <Bookmark className="h-4 w-4" />
+            {saveSnapshot.isPending
+              ? t("saving")
+              : saveSnapshot.isSuccess
+                ? t("saved")
+                : t("saveSnapshot")}
+          </button>
+          <button
+            type="button"
+            onClick={downloadReport}
+            disabled={!data?.available}
+            className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" /> {t("downloadReport")}
+          </button>
+        </div>
+      </div>
 
       <ControlBar
         t={t}
@@ -169,11 +199,6 @@ export function EtatADate() {
         onCtxSource={setCtxSource}
         onReconstruct={reconstruct}
         meta={data?.meta}
-        onDownload={downloadReport}
-        canDownload={Boolean(data?.available)}
-        onSave={() => saveSnapshot.mutate()}
-        saving={saveSnapshot.isPending}
-        saved={saveSnapshot.isSuccess}
       />
 
       {data === undefined ? (
@@ -230,9 +255,14 @@ type T = ReturnType<typeof useTranslations<"etatADate">>;
 
 // ── banner + control bar ──────────────────────────────────────────────────────
 
-function Banner({ text }: { text: string }) {
+function Banner({ text, className }: { text: string; className?: string }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-[#9a5f18]/50 bg-[#3e260c]/30 p-2.5 text-[0.72rem] text-[#f0c89a]">
+    <div
+      className={cn(
+        "flex items-start gap-2 rounded-lg border border-[#9a5f18]/50 bg-[#3e260c]/30 p-2.5 text-[0.72rem] text-[#f0c89a]",
+        className,
+      )}
+    >
       <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#f0a23a]" />
       <span>{text}</span>
     </div>
@@ -253,11 +283,6 @@ function ControlBar({
   onCtxSource,
   onReconstruct,
   meta,
-  onDownload,
-  canDownload,
-  onSave,
-  saving,
-  saved,
 }: {
   t: T;
   draft: string;
@@ -270,11 +295,6 @@ function ControlBar({
   onCtxSource: (v: string) => void;
   onReconstruct: () => void;
   meta: Data["meta"];
-  onDownload: () => void;
-  canDownload: boolean;
-  onSave: () => void;
-  saving: boolean;
-  saved: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
@@ -298,13 +318,34 @@ function ControlBar({
             isLive ? "border-[var(--tessera-border)]" : "border-[#7c5cf5]/60",
           )}
         >
-          <CalendarDays className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            onClick={(e) => {
+              const input = e.currentTarget.parentElement?.querySelector(
+                'input[type="datetime-local"]',
+              ) as (HTMLInputElement & { showPicker?: () => void }) | null;
+              input?.showPicker?.();
+            }}
+            className="shrink-0 text-[#b9a6ff]"
+          >
+            <CalendarDays className="h-4 w-4" />
+          </button>
           <input
             type="datetime-local"
             value={draft}
             onChange={(e) => onDraft(e.target.value)}
+            onClick={(e) => {
+              const el = e.currentTarget as HTMLInputElement & { showPicker?: () => void };
+              try {
+                el.showPicker?.();
+              } catch {
+                /* showPicker can throw if not allowed; the native indicator still works */
+              }
+            }}
             aria-label={t("dateTime")}
-            className="w-[11.5rem] bg-transparent text-sm text-[var(--tessera-text)] outline-none [color-scheme:dark]"
+            className="w-[12.5rem] cursor-pointer bg-transparent text-sm text-[var(--tessera-text)] outline-none [color-scheme:dark]"
           />
           {isLive ? (
             <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[0.58rem] font-medium text-emerald-300">
@@ -340,37 +381,13 @@ function ControlBar({
         options={CONTEXT_SOURCES}
         onChange={onCtxSource}
       />
-      <div className="ml-auto flex items-end gap-2">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={!canDownload || saving}
-          title={t("saveSnapshot")}
-          className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-50"
-        >
-          <Bookmark className="h-4 w-4" />
-          <span className="hidden lg:inline">
-            {saving ? t("saving") : saved ? t("saved") : t("saveSnapshot")}
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={onDownload}
-          disabled={!canDownload}
-          title={t("downloadReport")}
-          className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-50"
-        >
-          <Download className="h-4 w-4" />
-          <span className="hidden lg:inline">{t("downloadReport")}</span>
-        </button>
-        <button
-          type="button"
-          onClick={onReconstruct}
-          className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-4 text-xs font-medium text-white hover:bg-[#7c5cf5]"
-        >
-          <History className="h-4 w-4" /> {t("reconstruct")}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onReconstruct}
+        className="ml-auto flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-4 text-xs font-medium text-white hover:bg-[#7c5cf5]"
+      >
+        <History className="h-4 w-4" /> {t("reconstruct")}
+      </button>
     </div>
   );
 }
@@ -530,8 +547,10 @@ function GovCardView({
     <Panel title={card.title} icon={icon} className={className}>
       <dl className="flex flex-col gap-1.5 text-[0.72rem]">
         {card.rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-2">
-            <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
+          <div key={r.label} className="flex h-[1.15rem] items-center justify-between gap-2">
+            <dt className="shrink-0 whitespace-nowrap text-[var(--tessera-text-muted)]">
+              {r.label}
+            </dt>
             <dd className="truncate text-right font-medium text-[var(--tessera-text)]">
               {r.value}
             </dd>
