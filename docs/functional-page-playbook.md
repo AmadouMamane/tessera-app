@@ -157,6 +157,26 @@ it dirty.
   Type 18 / Statut 12 / Couverture 14 / Fraicheur 12 / Taux 12). Tailwind
   `w-[X%]` classes are unreliable here; inline `style` on `<th>` works.
 
+## Round-6 skills (full FR/DE/EN localization)
+
+- **Backend builder takes `lang`.** `build_connaissances(lang)` localizes every
+  display label via a small `_TR: {key: (fr, de, en)}` table + `_t(key, lang)`;
+  templated text (summary, freshness, relative time, chunk label) gets per-locale
+  helpers. The GET route and the mutation route both accept a `lang` query param.
+  ASCII-only in Python source per file convention (German uses ae/oe/ue/ss).
+- **Filter/sort on STABLE KEYS, never display strings.** Once labels are
+  localized, comparing `r.status === "Active"` or keying a sort `switch` on the
+  column label "Couverture" breaks in DE/EN. Filter on `status_tone`/`type_tone`
+  (and period days, lang codes), and sort by **column index**, not label.
+- **Frontend chrome via next-intl.** Backend owns data labels; the frontend owns
+  its own widget chrome (filters, chips, pagination, advanced popover, voir plus,
+  empty/loading/error states) under the page's i18n namespace. Status/Type filter
+  *option labels* come from i18n too (`tCommon("all")` + per-tone keys).
+- **Locale plumbing.** `useLocale()` -> pass to `fetch(?lang=)` and into the
+  react-query `queryKey` (so switching locale refetches) and to mutations (the
+  mutation route returns the localized payload). `page.tsx` prefetch must use the
+  same `["key", locale]` queryKey and `?lang=` or hydration won't match.
+
 ## Round-5 skills (robustness, a11y, sort, chips)
 
 - **One `useDismiss(open, onClose)` hook for every popover.** Custom dropdowns
