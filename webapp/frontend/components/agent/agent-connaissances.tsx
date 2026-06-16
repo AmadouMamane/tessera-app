@@ -128,7 +128,7 @@ export function AgentConnaissances() {
   );
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-2 text-[var(--tessera-text)]">
+    <div className="relative flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <AgentTabs
         actions={
           <>
@@ -150,7 +150,7 @@ export function AgentConnaissances() {
         ))}
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5">
+      <div className="flex min-w-0 flex-col gap-2.5">
         <Filters
           data={data}
           search={search}
@@ -575,11 +575,11 @@ function SourcesTable({
   const pageRows = rows.slice(startIdx, startIdx + perPage);
   if (!tbl) return null;
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
-      <div className="min-h-0 flex-1 overflow-auto">
+    <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+      <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] table-fixed border-collapse text-left">
           <thead>
-            <tr className="sticky top-0 z-10 border-b border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[0.64rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-[0.64rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => (
                 <th
                   key={c}

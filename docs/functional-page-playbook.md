@@ -129,17 +129,22 @@ it dirty.
 - **A reset labelled "all" must reset all.** "Reinitialiser les filtres" first
   cleared only the popover filters - inconsistent with the inline dropdowns. Make
   it global (search + inline + advanced) and show it whenever ANY filter is active.
-- **`overflow-hidden` on a flex item clips instead of scrolls.** Adding
-  `overflow-hidden` to the page root (needed so the `absolute inset-0` drawer
-  clips to the rounded card) turned the root into a flex item that flexbox shrank
-  to the container height, clipping the bottom rows with no scroll (visible when
-  "Lignes par page" = 50). Fix: viewport-constrain the page like
-  `/prouver/audit-logs` - thread `min-h-0 flex-1` from the root through the
-  filters/table wrapper down to the table `<section>`, give the table-wrapper
-  `<div>` `min-h-0 flex-1 overflow-auto` so rows scroll INSIDE the card, and pin
-  the pagination footer below it. Make the `<thead><tr>` `sticky top-0 z-10
-  bg-[var(--tessera-surface)]` so headers stay during the internal scroll. KPIs
-  and filters then stay fixed; only the rows scroll.
+- **`overflow-hidden` on a flex item clips instead of scrolls.** The page root
+  carried `overflow-hidden` (added so the `absolute inset-0` drawer would clip
+  cleanly). As a flex child of the AppShell `h-full` column, `overflow-hidden`
+  set its automatic `min-height` to 0, so flexbox shrank it to the container
+  height and clipped the bottom rows with no scroll once "Lignes par page" was
+  high. Two ways out, and the choice matters:
+  - *Viewport-constrain* (`min-h-0 flex-1` chain + `overflow-auto` table area +
+    `sticky` header) keeps KPIs/filters fixed and scrolls rows in-card - but the
+    table then fills the viewport and leaves a big empty gap below the last row
+    when few rows are shown.
+  - *Content-size (chosen here)*: just **drop `overflow-hidden`** from the root
+    (keep `relative` for the drawer). The root then sizes to its content
+    (default `min-height:auto` blocks the shrink), so the card hugs the rows
+    (no gap at 10/page) and the AppShell `<main>` (`overflow-y-auto`) scrolls the
+    whole page at 50/page. The `absolute inset-0` drawer still works; the backdrop
+    has its own `overflow-hidden rounded-lg`, so the root does not need it.
 - **Client-side pagination footer.** Below a filtered table: "Afficher {start} -
   {end} sur {total}" + centered page buttons (prev/next chevrons, a centered
   window of numbers, active = violet `#b9a6ff`) + "Lignes par page" `<select>`
