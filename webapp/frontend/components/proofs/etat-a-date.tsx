@@ -4,10 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bookmark,
   Boxes,
+  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
+  Clock,
   Download,
   FileText,
   History,
@@ -62,12 +64,14 @@ function useDismiss(open: boolean, onClose: () => void) {
   return ref;
 }
 
+/** datetime-local value (browser-local) -> ISO instant, or null when empty. */
 function toIso(value: string): string | null {
   if (!value) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+/** ISO instant -> datetime-local value in browser-local time (for the input). */
 function toLocalInput(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -87,8 +91,10 @@ function refToIso(ref: string): string | null {
 export function EtatADate() {
   const t = useTranslations("etatADate");
   const qc = useQueryClient();
+  // Draft instant (date + time) from the premium picker; empty = none picked.
   const [draft, setDraft] = useState("");
   const [refInput, setRefInput] = useState("");
+  const [ctxSource, setCtxSource] = useState("Réponse");
   const [asOf, setAsOf] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState("all");
@@ -106,9 +112,20 @@ export function EtatADate() {
     onSuccess: (fresh) => qc.setQueryData(["etat-a-date", asOf], fresh),
   });
 
+  function reconstruct() {
+    setAsOf(refToIso(refInput) ?? toIso(draft));
+  }
+
+  function goLive() {
+    setDraft("");
+    setRefInput("");
+    setAsOf(null);
+  }
+
   function reloadAt(snapAsOf: string | null) {
     setAsOf(snapAsOf);
     setDraft(snapAsOf ? toLocalInput(snapAsOf) : "");
+    setRefInput("");
   }
 
   function downloadReport() {
@@ -143,9 +160,13 @@ export function EtatADate() {
         t={t}
         draft={draft}
         onDraft={setDraft}
+        onLive={goLive}
+        isLive={asOf === null}
         refInput={refInput}
         onRefInput={setRefInput}
-        onReconstruct={() => setAsOf(refToIso(refInput) ?? toIso(draft))}
+        ctxSource={ctxSource}
+        onCtxSource={setCtxSource}
+        onReconstruct={reconstruct}
         meta={data?.meta}
         onDownload={downloadReport}
         canDownload={Boolean(data?.available)}
@@ -217,12 +238,18 @@ function Banner({ text }: { text: string }) {
   );
 }
 
+const CONTEXT_SOURCES = ["Réponse", "Session", "Trace", "Incident"];
+
 function ControlBar({
   t,
   draft,
   onDraft,
+  onLive,
+  isLive,
   refInput,
   onRefInput,
+  ctxSource,
+  onCtxSource,
   onReconstruct,
   meta,
   onDownload,
@@ -234,8 +261,12 @@ function ControlBar({
   t: T;
   draft: string;
   onDraft: (v: string) => void;
+  onLive: () => void;
+  isLive: boolean;
   refInput: string;
   onRefInput: (v: string) => void;
+  ctxSource: string;
+  onCtxSource: (v: string) => void;
   onReconstruct: () => void;
   meta: Data["meta"];
   onDownload: () => void;
@@ -265,48 +296,106 @@ function ControlBar({
           <Download className="h-4 w-4" /> {t("downloadReport")}
         </button>
       </div>
+
       <div className="flex flex-wrap items-end gap-3">
-        <Field label={t("tenant")}>
-          <Static>{meta?.tenant ?? "-"}</Static>
-        </Field>
-        <Field label={t("agent")}>
-          <Static>{meta?.agent ?? "-"}</Static>
-        </Field>
+        <SelectField
+          label={t("tenant")}
+          value={meta?.tenant ?? ""}
+          options={[meta?.tenant ?? "-"]}
+          onChange={() => undefined}
+        />
+        <SelectField
+          label={t("agent")}
+          value={meta?.agent ?? ""}
+          options={[meta?.agent ?? "-"]}
+          onChange={() => undefined}
+        />
         <Field label={t("dateTime")}>
-          <input
-            type="datetime-local"
-            value={draft}
-            onChange={(e) => onDraft(e.target.value)}
-            aria-label={t("dateTime")}
-            className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
-          />
+          {/* Premium date+time field: a styled shell + dark-scheme native picker. */}
+          <div
+            className={cn(
+              "flex h-9 items-center gap-2 rounded-md border bg-[var(--tessera-bg)] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors focus-within:border-[#7c5cf5]",
+              isLive ? "border-[var(--tessera-border)]" : "border-[#7c5cf5]/60",
+            )}
+          >
+            <CalendarDays className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+            <input
+              type="datetime-local"
+              value={draft}
+              onChange={(e) => onDraft(e.target.value)}
+              aria-label={t("dateTime")}
+              className="w-[11.5rem] bg-transparent text-sm text-[var(--tessera-text)] outline-none [color-scheme:dark]"
+            />
+            {isLive ? (
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[0.58rem] font-medium text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> live
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={onLive}
+                title={t("now")}
+                className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.58rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+              >
+                <Clock className="h-3 w-3" /> {t("now")}
+              </button>
+            )}
+          </div>
         </Field>
         <Field label={t("reference")}>
           <input
             value={refInput}
             onChange={(e) => onRefInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onReconstruct();
+            }}
             placeholder={t("refPlaceholder")}
             aria-label={t("reference")}
             className="h-9 w-56 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
           />
         </Field>
-        <Field label={t("contextSource")}>
-          <span className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm">
-            {meta?.context_source ?? "-"}
-            <span className="rounded bg-[var(--tessera-surface)] px-1.5 py-0.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-              {meta?.ref_code ?? "-"}
-            </span>
-          </span>
-        </Field>
+        <SelectField
+          label={t("contextSource")}
+          value={ctxSource}
+          options={CONTEXT_SOURCES}
+          onChange={onCtxSource}
+        />
         <button
           type="button"
           onClick={onReconstruct}
-          className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-4 text-xs font-medium text-white hover:bg-[#7c5cf5]"
+          className="ml-auto flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-4 text-xs font-medium text-white hover:bg-[#7c5cf5]"
         >
           <History className="h-4 w-4" /> {t("reconstruct")}
         </button>
       </div>
     </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+  return (
+    <Field label={label}>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label={label}
+          className="h-9 w-44 appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pr-8 pl-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
+        >
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-2.5 h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+      </div>
+    </Field>
   );
 }
 
@@ -318,14 +407,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       </span>
       {children}
     </div>
-  );
-}
-
-function Static({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="flex h-9 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm">
-      {children}
-    </span>
   );
 }
 
@@ -472,7 +553,7 @@ function Chronology({ data, className }: { data: Data; className?: string }) {
   return (
     <Panel title={tl.title} icon={History} className={className}>
       {tl.rows.length === 0 ? (
-        <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">Aucun evenement a T.</p>
+        <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">Aucun événement à T.</p>
       ) : (
         <ul className="flex flex-col gap-2.5">
           {tl.rows.map((r, i) => (
@@ -522,8 +603,8 @@ function Integrity({ data }: { data: Data }) {
   const rows: [string, string][] = [
     ["Indice snapshot", it.snapshot_id],
     ["Couverture des sources", it.coverage],
-    ["Requete de test", it.test_query],
-    ["Derniere synchro avant T", it.last_sync],
+    ["Requête de test", it.test_query],
+    ["Dernière synchro avant T", it.last_sync],
     ["Journalisation", it.chain_label],
   ];
   return (

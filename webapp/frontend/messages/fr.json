@@ -4621,6 +4621,10 @@
     "diffVsNow": "Diff vs état actuel",
     "colVersion": "Version incluse à T",
     "colDocuments": "Documents accessibles",
-    "colAccessibleUntil": "Accessible jusqu'à T"
+    "colAccessibleUntil": "Accessible jusqu'à T",
+    "now": "Maintenant",
+    "goToDate": "Aller à une date",
+    "prevMonth": "Mois précédent",
+    "nextMonth": "Mois suivant"
   }
 }

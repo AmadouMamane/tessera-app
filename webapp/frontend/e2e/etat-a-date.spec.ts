@@ -20,23 +20,23 @@ async function login(page: Page) {
 test.beforeEach(async ({ page }) => {
   await login(page);
   await page.goto(PAGE);
-  await expect(page.getByText("Etat reconstruit a T").first()).toBeVisible();
+  await expect(page.getByText("État reconstruit à T").first()).toBeVisible();
   await expect(page.locator("table tbody tr").first()).toBeVisible();
 });
 
 test("reconstructs a real original response + governance cards", async ({ page }) => {
-  await expect(page.getByText("Reponse d'origine").first()).toBeVisible();
-  await expect(page.getByText("Garde-fous actifs a T").first()).toBeVisible();
-  await expect(page.getByText("Prompt & modele a T").first()).toBeVisible();
+  await expect(page.getByText("Réponse d'origine").first()).toBeVisible();
+  await expect(page.getByText("Garde-fous actifs à T").first()).toBeVisible();
+  await expect(page.getByText("Prompt & modèle à T").first()).toBeVisible();
   // Each governance card shows a real "Diff vs etat actuel" section.
   await expect(page.getByText("Diff vs état actuel").first()).toBeVisible();
-  await expect(page.getByText("Sources accessibles a l'instant T").first()).toBeVisible();
+  await expect(page.getByText("Sources accessibles à l'instant T").first()).toBeVisible();
 });
 
 test("the Type filter actually narrows the table", async ({ page }) => {
   const before = await page.locator("table tbody tr").count();
   await page.getByRole("button", { name: "Type Tous" }).click();
-  await page.getByRole("menuitem", { name: "Reglementation" }).click();
+  await page.getByRole("menuitem", { name: "Réglementation" }).click();
   const after = await page.locator("table tbody tr").count();
   expect(after).toBeLessThan(before);
   expect(after).toBeGreaterThan(0);
@@ -57,7 +57,7 @@ test("Reconstituer at an early T re-queries the audit-derived diff", async ({ pa
   await page.getByRole("button", { name: "Reconstituer" }).click();
   // Before the audit log starts, 0 decisions are logged by T -> the guardrails
   // diff reports every decision as logged "apres T".
-  await expect(page.getByText(/decisions du guard journalisees apres T/i).first()).toBeVisible({
+  await expect(page.getByText(/décisions du guard journalisées après T/i).first()).toBeVisible({
     timeout: 15_000,
   });
 });
@@ -73,9 +73,9 @@ test("the Reference field reconstructs at the encoded instant", async ({ page })
 
 test("saving a snapshot persists it durably", async ({ page }) => {
   await page.getByRole("button", { name: "Enregistrer ce snapshot" }).click();
-  await expect(page.getByText("Snapshots enregistres")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Snapshots enregistrés")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/^RES-/).first()).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Snapshots enregistres")).toBeVisible();
+  await expect(page.getByText("Snapshots enregistrés")).toBeVisible();
   await expect(page.getByText(/^RES-/).first()).toBeVisible();
 });

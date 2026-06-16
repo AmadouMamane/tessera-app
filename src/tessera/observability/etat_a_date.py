@@ -55,7 +55,7 @@ _MAX_TIMELINE = 8
 _MAX_SNAPSHOTS = 20
 _ANSWER_PREVIEW = 320
 
-_TYPE_LABEL: dict[str, str] = {"reg": "Reglementation", "prod": "Produit"}
+_TYPE_LABEL: dict[str, str] = {"reg": "Réglementation", "prod": "Produit"}
 _TYPE_TONE: dict[str, str] = {"reg": "violet", "prod": "blue"}
 
 
@@ -241,7 +241,7 @@ async def _fetch_documents() -> list[dict[str, Any]]:
 async def _fetch_original(at: datetime | None) -> dict[str, Any] | None:
     """The real agent answer (and its question) most recent at or before T.
 
-    This is the "Reponse d'origine" the reconstruction is anchored to - a genuine
+    This is the "Réponse d'origine" the reconstruction is anchored to - a genuine
     transcript turn, not a fabricated example. ``None`` when none exists yet.
     """
     where = "WHERE a.role = 'assistant'"
@@ -309,24 +309,24 @@ def _guardrails_card(
         len(policy.prompt_injection_deny) + len(policy.pii_patterns) + len(policy.tools)
     )
     diff = [
-        f"{_fmt_int(after)} decisions du guard journalisees apres T"
+        f"{_fmt_int(after)} décisions du guard journalisées après T"
         if after > 0
-        else "Aucune decision du guard apres T",
+        else "Aucune décision du guard après T",
         _changed(
-            ctx.policy_mtime, at, "Politique modifiee apres T", "Politique inchangee depuis T"
+            ctx.policy_mtime, at, "Politique modifiée après T", "Politique inchangée depuis T"
         ),
     ]
     return _card(
         [
             ("Bundle de politiques", f"Guardrails Banking v{policy.version}"),
-            ("Regles actives", str(rules_active)),
+            ("Règles actives", str(rules_active)),
             ("Motifs d'injection", str(len(policy.prompt_injection_deny))),
-            ("Motifs PII surveilles", str(len(policy.pii_patterns))),
-            ("Regles declenchees jusqu'a T", str(len(audit.rules))),
+            ("Motifs PII surveillés", str(len(policy.pii_patterns))),
+            ("Règles déclenchées jusqu'à T", str(len(audit.rules))),
             ("Dernier changement avant T", _fmt(ctx.policy_mtime)),
         ],
         diff,
-        "Voir le detail des regles",
+        "Voir le détail des règles",
         "/agent/garde-fous",
     )
 
@@ -334,17 +334,17 @@ def _guardrails_card(
 def _prompt_model_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
     diff = [
         _changed(
-            ctx.prompt_mtime, at, "System prompt modifie apres T", "System prompt inchange depuis T"
+            ctx.prompt_mtime, at, "System prompt modifié après T", "System prompt inchangé depuis T"
         ),
-        "Modele inchange",
+        "Modèle inchangé",
     ]
     return _card(
         [
-            ("Modele (fige)", ctx.model),
+            ("Modèle (figé)", ctx.model),
             ("Runtime", "Ollama on-prem"),
-            ("Profil d'execution", ctx.profile),
+            ("Profil d'exécution", ctx.profile),
             ("Version du system prompt", f"maj {_fmt(ctx.prompt_mtime)}"),
-            ("Temperature", f"{ctx.temperature:.2f}".replace(".", ",")),
+            ("Température", f"{ctx.temperature:.2f}".replace(".", ",")),
         ],
         diff,
         "Voir le contenu du prompt",
@@ -355,18 +355,18 @@ def _prompt_model_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
 def _release_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
     diff = [
         _changed(
-            ctx.run_dt, at, "Nouvelle evaluation executee apres T", "Aucune evaluation apres T"
+            ctx.run_dt, at, "Nouvelle évaluation exécutée après T", "Aucune évaluation après T"
         ),
     ]
     return _card(
         [
-            ("Jeu d'evaluation", ctx.catalogue),
-            ("Date d'execution", _fmt(ctx.run_dt)),
+            ("Jeu d'évaluation", ctx.catalogue),
+            ("Date d'exécution", _fmt(ctx.run_dt)),
             ("Environnement", "Local / on-prem"),
-            ("Modele evalue", ctx.model),
+            ("Modèle évalué", ctx.model),
         ],
         diff,
-        "Voir le detail de la release",
+        "Voir le détail de la release",
         "/agent/evaluations",
     )
 
@@ -385,12 +385,12 @@ def _table(states: dict[str, _CatState]) -> list[dict[str, object]]:
             "langs": "/".join(sorted(st.langs)) if st.langs else "-",
             "chunks": st.chunks_at_t,
             "total_chunks": st.chunks_total,
-            "version": f"ingest {_fmt(st.first_ins)}" if st.first_ins else "-",
+            "version": f"ingéré {_fmt(st.first_ins)}" if st.first_ins else "-",
             "accessible_until": _fmt(st.last_ins_at_t),
             "updated": _fmt(st.last_ins_at_t),
             "first_seen": _fmt(st.first_ins),
             "status": "accessible" if accessible else "pending",
-            "status_label": "Accessible" if accessible else "Pas encore indexee",
+            "status_label": "Accessible" if accessible else "Pas encore indexée",
         })
     return rows
 
@@ -402,11 +402,11 @@ def _timeline(
     # Per-source first ingest events at or before T.
     for cat, st in states.items():
         if st.first_ins is not None and (at is None or st.first_ins <= at):
-            events.append((st.first_ins, f"Source indexee : {_source_name(cat, 'fr')}", "ok"))
+            events.append((st.first_ins, f"Source indexée : {_source_name(cat, 'fr')}", "ok"))
     if audit.first_at is not None:
-        events.append((audit.first_at, "Premiere decision du guard journalisee", "info"))
+        events.append((audit.first_at, "Première décision du guard journalisée", "info"))
     if audit.last_at is not None and audit.last_at != audit.first_at:
-        events.append((audit.last_at, "Derniere activite du guard avant T", "info"))
+        events.append((audit.last_at, "Dernière activité du guard avant T", "info"))
     events.sort(key=lambda e: e[0], reverse=True)
     return [
         {"time": _fmt(dt), "label": label, "kind": kind}
@@ -416,7 +416,7 @@ def _timeline(
 
 def _snapshot_section(snapshots: list[dict[str, Any]]) -> dict[str, object]:
     return {
-        "title": "Snapshots enregistres",
+        "title": "Snapshots enregistrés",
         "rows": [
             {
                 "id": str(s.get("id", "")),
@@ -475,67 +475,67 @@ def _assemble(
             "as_of": at.isoformat() if at else None,
             "as_of_label": _fmt(at) if at else "Maintenant (live)",
             "ref_code": _ref_code(at),
-            "tenant": "Credit Aurore",
+            "tenant": "Crédit Aurore",
             "agent": "Support client",
             "context_source": "Reponse",
             "timezone": "Europe/Paris",
             "banner": (
-                "Reconstitue (accessibilite) n'est pas rejoue (sortie du modele). Cette vue "
-                "reconstitue l'etat accessible et applicable a T ; elle ne rejoue pas la reponse "
-                "exacte. Pour rejouer une execution, utiliser AGIR - Replay."
+                "Reconstitué (accessibilité) n'est pas rejoué (sortie du modèle). Cette vue "
+                "reconstitue l'état accessible et applicable à T ; elle ne rejoue pas la réponse "
+                "exacte. Pour rejouer une exécution, utiliser AGIR - Replay."
             ),
         },
         "reconstructed": {
-            "title": "Etat reconstruit a T",
+            "title": "État reconstruit à T",
             "snapshot_id": _snapshot_id(at),
             "verified": True,
-            "verified_label": "Integrite verifiee",
-            "built_label": f"Reconstitue le {_fmt(now)} par Tessera Ops",
+            "verified_label": "Intégrité vérifiée",
+            "built_label": f"Reconstitué le {_fmt(now)} par Tessera Ops",
         },
         "original": {
-            "title": "Reponse d'origine",
+            "title": "Réponse d'origine",
             "cta": "Ouvrir la trace",
             "cta_href": "/prouver/audit-logs",
             **_original_card(original, at),
         },
         "guardrails": {
-            "title": "Garde-fous actifs a T",
+            "title": "Garde-fous actifs à T",
             **_guardrails_card(policy, audit, ctx, at),
         },
-        "prompt_model": {"title": "Prompt & modele a T", **_prompt_model_card(ctx, at)},
-        "release": {"title": "Release a T", **_release_card(ctx, at)},
+        "prompt_model": {"title": "Prompt & modèle à T", **_prompt_model_card(ctx, at)},
+        "release": {"title": "Release à T", **_release_card(ctx, at)},
         "timeline": {
-            "title": f"Chronologie a l'instant T ({_fmt(at) if at else 'live'})",
+            "title": f"Chronologie à l'instant T ({_fmt(at) if at else 'live'})",
             "rows": _timeline(states, audit, at),
-            "cta": "Voir la chronologie complete",
+            "cta": "Voir la chronologie complète",
             "cta_href": "/prouver/audit-logs",
         },
         "integrity": {
-            "title": "Integrite de la reconstruction",
+            "title": "Intégrité de la reconstruction",
             "snapshot_id": _snapshot_id(at),
             "coverage": f"{coverage} %",
             "test_query": f"{active}/{len(states)} sources",
             "last_sync": _fmt(last_sync),
             "verified": True,
-            "verified_label": "Integrite verifiee",
-            "chain_label": f"{_fmt_int(audit.decisions)} decisions journalisees jusqu'a T",
+            "verified_label": "Intégrité vérifiée",
+            "chain_label": f"{_fmt_int(audit.decisions)} décisions journalisées jusqu'à T",
         },
-        "table": {"title": "Sources accessibles a l'instant T", "rows": _table(states)},
+        "table": {"title": "Sources accessibles à l'instant T", "rows": _table(states)},
         "audit_pieces": {
             "title": "Preuves d'audit disponibles",
             "rows": [
-                {"label": "Journal d'evenements a date T", "href": "/prouver/audit-logs"},
-                {"label": "Evidence pack qualite", "href": "/prouver/evidence-store"},
-                {"label": "Sources & memoire", "href": "/agent/connaissances"},
+                {"label": "Journal d'événements à date T", "href": "/prouver/audit-logs"},
+                {"label": "Evidence pack qualité", "href": "/prouver/evidence-store"},
+                {"label": "Sources & mémoire", "href": "/agent/connaissances"},
             ],
         },
         "summary": {
-            "title": "Synthese de l'etat reconstruit",
+            "title": "Synthèse de l'état reconstruit",
             "cards": [
                 {"label": "Sources accessibles", "value": f"{active} / {len(states)}"},
                 {"label": "Fragments accessibles", "value": _fmt_int(chunks_at_t)},
                 {"label": "Couverture de l'index", "value": f"{coverage} %"},
-                {"label": "Decisions du guard", "value": _fmt_int(audit.decisions)},
+                {"label": "Décisions du guard", "value": _fmt_int(audit.decisions)},
             ],
         },
         "snapshots": _snapshot_section(snapshots or []),

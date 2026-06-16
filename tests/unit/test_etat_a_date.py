@@ -101,7 +101,7 @@ def test_knowledge_windowing_and_table_at_t() -> None:
     table = {r["key"]: r for r in payload["table"]["rows"]}  # type: ignore[index]
     assert table["dora"]["status"] == "accessible"
     assert table["comptes"]["status"] == "pending"  # 14 June ingest > T (12 June)
-    assert table["comptes"]["status_label"] == "Pas encore indexee"
+    assert table["comptes"]["status_label"] == "Pas encore indexée"
     # the table carries the normative columns
     assert "version" in table["dora"] and "accessible_until" in table["dora"]
 
@@ -112,16 +112,16 @@ def test_guardrails_diff_is_a_real_two_point_count() -> None:
     gr = payload["guardrails"]
     rows = {r["label"]: r["value"] for r in gr["rows"]}  # type: ignore[index]
     assert rows["Bundle de politiques"] == "Guardrails Banking v2"
-    assert any("14 900 decisions" in d for d in gr["diff"])  # type: ignore[index]
+    assert any("14 900 décisions" in d for d in gr["diff"])  # type: ignore[index]
 
 
 def test_prompt_diff_reflects_mtime_vs_t() -> None:
     after = ead._assemble(
         _rows(), _audit(), _StubPolicy(), _ctx(prompt_after=True), _original(), T_MID, now=NOW
     )
-    assert any("modifie apres T" in d for d in after["prompt_model"]["diff"])  # type: ignore[index]
+    assert any("modifié après T" in d for d in after["prompt_model"]["diff"])  # type: ignore[index]
     before = _assemble()
-    assert any("inchange depuis T" in d for d in before["prompt_model"]["diff"])  # type: ignore[index]
+    assert any("inchangé depuis T" in d for d in before["prompt_model"]["diff"])  # type: ignore[index]
 
 
 def test_original_card_is_the_real_transcript_turn() -> None:

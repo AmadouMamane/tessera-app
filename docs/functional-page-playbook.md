@@ -48,6 +48,35 @@ These are mandatory and override the normative screenshots:
   probe) and wire it. Omitting is only OK when the control would be meaningless
   (e.g. editing a Git-managed file from the UI), never merely because the
   persistence isn't built yet.
+- **EVERY control in a control bar must be a real, working input — never a static
+  `<span>` dressed as a field.** Tenant / Agent / "Source du contexte" etc. are
+  native `<select>`s (styled `appearance-none` + an overlaid `ChevronDown`), the
+  reference is a real `<input>` (commits on Enter), the primary button actually
+  mutates state. A field that only displays a value is a failure even if it looks
+  right.
+- **CALENDARS — two premium types, pick by what you select, never ship the raw
+  control:**
+  - *Day / window* (Journal d'audit, Synthese period): reuse the canonical
+    `components/cockpit/window-control.tsx` (`WindowControl`) — segmented presets +
+    range readout + the "Aller a une date" calendar popover. This is the shared
+    premium calendar; do not re-implement a month grid.
+  - *Instant (date + time)* (Etat a date, where T carries an hour like 16:20): a
+    day-only window picker is the WRONG type. Keep a `datetime-local` input but
+    make it **premium by appearance**: wrap it in a styled shell (`h-9` border +
+    inset shadow + a `CalendarDays` icon), force the native picker dark with
+    `className="[color-scheme:dark]"`, and add a live/now affordance. Do NOT
+    force `WindowControl` onto an instant — it has no time and its range readout
+    is meaningless for a single T.
+- **FRENCH MUST CARRY ITS ACCENTS — backend strings AND hardcoded frontend
+  strings.** "Réglementation", "État reconstruit à T", "Réponse d'origine",
+  "Intégrité vérifiée", "Règles déclenchées", "décisions journalisées", "Requête
+  de test", "Pas encore indexée"… `ruff` is fine with accented Latin (RUF001 only
+  flags confusable glyphs — keep apostrophes ASCII `'`). Accent the module's
+  emitted strings, the relabels, AND any French literal hardcoded in the `.tsx`.
+  Gotcha: adding accents **breaks every e2e/`getByText` selector** that used the
+  accent-free spelling — `getByText`/`getByRole({name})` are accent-sensitive, so
+  update the specs in lockstep ("Etat reconstruit a T" -> "État reconstruit à T",
+  menuitem "Reglementation" -> "Réglementation", etc.).
 
 ## Step 1 — find the real source (don't assume there isn't one)
 
