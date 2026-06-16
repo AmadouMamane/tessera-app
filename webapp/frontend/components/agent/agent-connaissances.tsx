@@ -1240,7 +1240,7 @@ function DetailPanel({
       aria-modal="true"
       aria-label={d.name}
       onKeyDown={onTrapKey}
-      className="static m-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0 text-[var(--tessera-text)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
+      className="static m-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0 text-[var(--tessera-text)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
       onCancel={(event) => {
         event.preventDefault();
         onClose();
