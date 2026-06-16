@@ -27,10 +27,10 @@ def test_evaluations_payload_is_consistent_with_the_run() -> None:
     snap = load_eval_snapshot()
     payload = compute_agent_evaluations()
 
-    # One eval-set row per scored category; the count string agrees.
+    # One eval-set row per scored category; the total agrees.
     rows = payload["table"]["rows"]  # type: ignore[index]
     assert len(rows) == len(snap.categories)
-    assert payload["table"]["count"] == f"1-{len(rows)} sur {len(rows)} jeux"  # type: ignore[index]
+    assert payload["table"]["total"] == len(rows)  # type: ignore[index]
 
     # The success gauge equals the real overall pass rate.
     success = next(k for k in payload["kpis"] if k["key"] == "success")  # type: ignore[index]

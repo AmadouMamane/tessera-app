@@ -627,6 +627,10 @@ export function useRailTimeline() {
     queryKey: ["rail-timeline"],
     queryFn: ({ signal }) => fetchTimeline(signal),
     placeholderData: keepPreviousData,
-    refetchInterval: 15_000,
+    // The timeline is an append-only history that barely moves; keep it fresh
+    // across navigation between the temporal pages instead of refetching on every
+    // mount, and slow the background poll right down.
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 }
