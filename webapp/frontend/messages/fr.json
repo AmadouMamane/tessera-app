@@ -4154,6 +4154,8 @@
   "inbox": {
     "title": "À traiter",
     "subtitle": "Traitez les demandes, incidents et actions nécessitant votre attention.",
+    "cycleStatus": "Changer le statut",
+    "noResults": "Aucun élément ne correspond aux filtres.",
     "rail": {
       "live": "Live",
       "queue": "File actuelle",

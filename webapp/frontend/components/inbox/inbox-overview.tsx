@@ -1,15 +1,28 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, ChevronRight, Layers, RefreshCcw, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
-import { fetchInboxOverview } from "@/lib/api/client";
+import { fetchInboxOverview, mutateInboxItem } from "@/lib/api/client";
 import type { InboxOverview as InboxData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+
+const ALL = "all";
+// Status badge click cycles through the lifecycle; map UI -> backend keys.
+const NEXT_STATUS: Record<string, string> = {
+  todo: "in_progress",
+  in_progress: "resolved",
+  resolved: "todo",
+};
+const STATUS_TO_BACKEND: Record<string, string> = {
+  todo: "todo",
+  in_progress: "progress",
+  resolved: "done",
+};
 
 const PRIORITY: Record<string, string> = {
   urgent: "border-red-500/30 bg-red-500/15 text-red-300",
@@ -34,12 +47,34 @@ type Data = InboxData;
 
 export function InboxOverview() {
   const t = useTranslations("inbox");
+  const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["inbox-overview"],
     queryFn: ({ signal }) => fetchInboxOverview(signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+
+  const [search, setSearch] = useState("");
+  const [fPriority, setFPriority] = useState(ALL);
+  const [fStatus, setFStatus] = useState(ALL);
+  const [fType, setFType] = useState(ALL);
+  const mutate = useMutation({
+    mutationFn: mutateInboxItem,
+    onSuccess: (fresh) => qc.setQueryData(["inbox-overview"], fresh),
+  });
+
+  const items = data?.items ?? [];
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return items.filter(
+      (it) =>
+        (q === "" || it.title.toLowerCase().includes(q) || it.id.toLowerCase().includes(q)) &&
+        (fPriority === ALL || it.priority === fPriority) &&
+        (fStatus === ALL || it.status === fStatus) &&
+        (fType === ALL || it.type === fType),
+    );
+  }, [items, search, fPriority, fStatus, fType]);
 
   if (!data) {
     return (
@@ -48,6 +83,9 @@ export function InboxOverview() {
       </div>
     );
   }
+
+  const cycle = (id: string, status: string) =>
+    mutate.mutate({ item_id: id, status: STATUS_TO_BACKEND[NEXT_STATUS[status] ?? "todo"] });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
@@ -60,7 +98,21 @@ export function InboxOverview() {
       </div>
 
       <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <TaskTable t={t} data={data} />
+        <TaskTable
+          t={t}
+          data={data}
+          rows={filtered}
+          search={search}
+          setSearch={setSearch}
+          fPriority={fPriority}
+          setFPriority={setFPriority}
+          fStatus={fStatus}
+          setFStatus={setFStatus}
+          fType={fType}
+          setFType={setFType}
+          onCycle={cycle}
+          busy={mutate.isPending}
+        />
         <aside className="flex min-w-0 flex-col gap-3">
           <ByType t={t} data={data} />
           <Sla t={t} data={data} />
@@ -143,8 +195,70 @@ function CompactKpi({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: stri
 
 // ── table ────────────────────────────────────────────────────────────────────
 
-function TaskTable({ t, data }: { t: T; data: Data }) {
+interface TableProps {
+  t: T;
+  data: Data;
+  rows: Data["items"];
+  search: string;
+  setSearch: (v: string) => void;
+  fPriority: string;
+  setFPriority: (v: string) => void;
+  fStatus: string;
+  setFStatus: (v: string) => void;
+  fType: string;
+  setFType: (v: string) => void;
+  onCycle: (id: string, status: string) => void;
+  busy: boolean;
+}
+
+function FilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <span className="relative flex h-9 shrink-0 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-3 pr-7 text-xs text-[var(--tessera-text-muted)]">
+      <select
+        aria-label={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="appearance-none bg-transparent pr-1 text-[var(--tessera-text)] outline-none"
+      >
+        <option value={ALL} className="bg-[#0a1f33]">
+          {label}
+        </option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value} className="bg-[#0a1f33]">
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <ChevronRight className="pointer-events-none absolute right-2 h-3.5 w-3.5 rotate-90" />
+    </span>
+  );
+}
+
+function TaskTable(props: TableProps) {
+  const { t, data, rows, search, setSearch, onCycle, busy } = props;
   const cols = ["priority", "type", "title", "source", "assignee", "sla", "due", "status"] as const;
+  const priorityOpts = ["urgent", "high", "medium", "low"].map((v) => ({
+    value: v,
+    label: t(`priority.${v}`),
+  }));
+  const statusOpts = ["todo", "in_progress", "resolved"].map((v) => ({
+    value: v,
+    label: t(`status.${v}`),
+  }));
+  const typeOpts = [...new Set(data.items.map((i) => i.type))].map((v) => ({
+    value: v,
+    label: t(`type.${v}`),
+  }));
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <section className="flex min-h-[48px] shrink-0 flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
@@ -152,18 +266,31 @@ function TaskTable({ t, data }: { t: T; data: Data }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--tessera-text-muted)]" />
           <input
             type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder={t("filters.search")}
+            aria-label={t("filters.search")}
             className="h-9 w-full rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-9 pr-3 text-xs text-[var(--tessera-text)] outline-none"
           />
         </div>
-        {(["priority", "type", "status", "assignee"] as const).map((f) => (
-          <div
-            key={f}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)]"
-          >
-            {t(`filters.${f}`)} <ChevronRight className="h-3.5 w-3.5 rotate-90" />
-          </div>
-        ))}
+        <FilterSelect
+          label={t("filters.priority")}
+          value={props.fPriority}
+          options={priorityOpts}
+          onChange={props.setFPriority}
+        />
+        <FilterSelect
+          label={t("filters.type")}
+          value={props.fType}
+          options={typeOpts}
+          onChange={props.setFType}
+        />
+        <FilterSelect
+          label={t("filters.status")}
+          value={props.fStatus}
+          options={statusOpts}
+          onChange={props.setFStatus}
+        />
       </section>
 
       <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
@@ -179,47 +306,72 @@ function TaskTable({ t, data }: { t: T; data: Data }) {
               </tr>
             </thead>
             <tbody>
-              {data.items.map((it) => (
-                <tr
-                  key={it.id}
-                  className="cursor-pointer border-b border-[var(--tessera-border)]/60 transition-colors last:border-0 hover:bg-[#0b2b49]"
-                >
-                  <td className="px-2 py-1.5">
-                    <Badge className={PRIORITY[it.priority]}>{t(`priority.${it.priority}`)}</Badge>
-                  </td>
-                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    {t(`type.${it.type}`)}
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <span className="text-[var(--tessera-text)]">{it.title}</span>
-                    <span className="ml-1.5 font-mono text-[0.56rem] text-[var(--tessera-text-muted)]">
-                      {it.id}
-                    </span>
-                  </td>
-                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{it.source}</td>
-                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{it.assignee}</td>
+              {rows.length === 0 ? (
+                <tr>
                   <td
-                    className={cn(
-                      "whitespace-nowrap px-2 py-1.5 font-medium tabular-nums",
-                      SLA_TONE[it.sla_tone],
-                    )}
+                    colSpan={cols.length}
+                    className="px-2 py-8 text-center text-[var(--tessera-text-muted)]"
                   >
-                    {it.sla}
-                  </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                    {it.due}
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <Badge className={STATUS[it.status]}>{t(`status.${it.status}`)}</Badge>
+                    {t("noResults")}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                rows.map((it) => (
+                  <tr
+                    key={it.id}
+                    className="border-b border-[var(--tessera-border)]/60 transition-colors last:border-0 hover:bg-[#0b2b49]"
+                  >
+                    <td className="px-2 py-1.5">
+                      <Badge className={PRIORITY[it.priority]}>
+                        {t(`priority.${it.priority}`)}
+                      </Badge>
+                    </td>
+                    <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                      {t(`type.${it.type}`)}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <span className="text-[var(--tessera-text)]">{it.title}</span>
+                      <span className="ml-1.5 font-mono text-[0.56rem] text-[var(--tessera-text-muted)]">
+                        {it.id}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{it.source}</td>
+                    <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{it.assignee}</td>
+                    <td
+                      className={cn(
+                        "whitespace-nowrap px-2 py-1.5 font-medium tabular-nums",
+                        SLA_TONE[it.sla_tone],
+                      )}
+                    >
+                      {it.sla}
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                      {it.due}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onCycle(it.id, it.status)}
+                        title={t("cycleStatus")}
+                        className="disabled:opacity-50"
+                      >
+                        <Badge
+                          className={cn(STATUS[it.status], "cursor-pointer hover:brightness-125")}
+                        >
+                          {t(`status.${it.status}`)}
+                        </Badge>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
         <div className="flex items-center justify-between border-t border-[var(--tessera-border)] px-3 py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
           <span>
-            1–{data.items.length} / {data.total_items}
+            {rows.length} / {data.total_items}
           </span>
         </div>
       </div>

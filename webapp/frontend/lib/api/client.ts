@@ -753,6 +753,23 @@ export async function fetchInboxOverview(signal?: AbortSignal): Promise<InboxOve
   return request("/observability/inbox", { signal }, InboxOverviewSchema);
 }
 
+/** Persist a status/assignee change for one queue item; returns the fresh payload. */
+export async function mutateInboxItem(body: {
+  item_id: string;
+  status?: string;
+  assignee?: string;
+}): Promise<InboxOverview> {
+  return request(
+    "/observability/inbox/item-state",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    InboxOverviewSchema,
+  );
+}
+
 /** Schema/format conformance of tool-call arguments from the audit trail (#47), live or as of T. */
 export async function fetchConformance(
   signal?: AbortSignal,

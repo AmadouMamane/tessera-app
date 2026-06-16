@@ -1,16 +1,22 @@
-"""Inbox / "À traiter" cockpit overview (page #24).
+"""Inbox / "A traiter" cockpit overview (page #24).
 
-Composes the "À traiter" overview: the queue posture (items to process, urgent,
-SLA-at-risk, overdue, assigned-to-me, resolved-today, average handling time,
-resolution rate), the task queue, the by-type distribution and the SLA buckets.
-
-The dataset is a deterministic reference fixture; values are stable across calls
-so the page never "dances".
+Composes the "A traiter" overview from the real operator backlog
+(:mod:`tessera.observability.operator_items` - failed evaluation cases with a
+durable per-item status/assignee): the queue posture KPIs (open, urgent,
+SLA-at-risk, overdue, assigned-to-me, resolved, resolution rate), the task
+queue, the by-type distribution, the SLA buckets and the recent activity. Status
+is mutated by the item-state endpoint, so the page is functional, not a fixture.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+from tessera.observability.operator_items import load_items
+
+if TYPE_CHECKING:
+    from tessera.observability.operator_items import OperatorItem
 
 __all__ = ["compute_inbox_overview"]
 
@@ -22,6 +28,41 @@ _TYPE_COLOR = {
     "access": "#34d399",
     "other": "#64748b",
 }
+
+# category -> the inbox "type" bucket (keeps the existing i18n labels/colours).
+_TYPE_BUCKET: dict[str, str] = {
+    "prompt_injection": "incident",
+    "policy_violation": "incident",
+    "regulatory_misstatement": "incident",
+    "pii_leak": "alert",
+    "tool_misuse": "alert",
+    "hallucination": "conversation",
+    "citation_fabrication": "conversation",
+    "language_mixing": "conversation",
+    "escalation_failure": "approval",
+    "overconfidence": "other",
+}
+
+_PRIORITY_KEY = {"crit": "urgent", "high": "high", "mod": "medium", "low": "low"}
+_STATUS_KEY = {"todo": "todo", "progress": "in_progress", "done": "resolved"}
+
+_HOUR = 3600
+_WARN = 2 * _HOUR
+
+
+def _fmt_remaining(item: OperatorItem, now: datetime) -> str:
+    if item.status == "done":
+        return "-"
+    remaining = item.remaining_seconds(now)
+    if remaining < 0:
+        return "En retard"
+    hours = int(remaining // _HOUR)
+    minutes = int((remaining % _HOUR) // 60)
+    return f"{hours}h {minutes:02d}m" if hours else f"{minutes} min"
+
+
+def _fmt_due(item: OperatorItem) -> str:
+    return item.due_at().strftime("%d/%m %H:%M")
 
 
 def _kpi(
@@ -37,188 +78,122 @@ def _kpi(
 
 
 def compute_inbox_overview() -> dict[str, object]:
-    """Return the full Inbox / À traiter overview payload.
-
-    Returns:
-        A JSON-serialisable mapping with the queue posture KPIs, the task queue,
-        the by-type distribution, the SLA buckets and the recent activity.
-    """
+    """Return the full Inbox / A traiter overview payload from real items."""
     now = datetime.now(UTC)
+    items = load_items()
+    open_items = [i for i in items if i.status != "done"]
+    done_items = [i for i in items if i.status == "done"]
 
-    rail = {
-        "period": "24h",
-        "sla": "Temps réel",
-        "updated": "11/06/2026 10:42:15",
-        "compare": "Ce matin (08:00)",
-    }
+    urgent = sum(1 for i in open_items if i.priority == "crit")
+    sla_2h = sum(1 for i in open_items if 0 <= i.remaining_seconds(now) < _WARN)
+    overdue = sum(1 for i in open_items if i.remaining_seconds(now) < 0)
+    assigned = sum(1 for i in open_items if i.assignee == "Moi")
+    total = len(open_items)
+    resolved = len(done_items)
+    resolution_rate = round(100 * resolved / len(items)) if items else 0
+
+    # Real distribution series (per-bucket counts) - not a fabricated time-series.
+    bucket_counts: dict[str, int] = {}
+    for i in open_items:
+        bucket = _TYPE_BUCKET.get(i.category, "other")
+        bucket_counts[bucket] = bucket_counts.get(bucket, 0) + 1
+    series = [bucket_counts.get(k, 0) for k in _TYPE_COLOR]
 
     kpis = [
-        _kpi("total", "23", "+18%", False, [16, 18, 19, 20, 21, 22, 23]),
-        _kpi("urgent", "6", "+33%", False, [3, 4, 4, 5, 5, 6, 6]),
-        _kpi("sla_2h", "4", "+100%", False, [1, 2, 2, 3, 3, 4, 4]),
-        _kpi("overdue", "3", "+50%", False, [1, 1, 2, 2, 2, 3, 3]),
-        _kpi("assigned", "9", "+11%", True, [7, 8, 8, 8, 9, 9, 9]),
-        _kpi("resolved", "18", "+22%", True, [12, 13, 14, 15, 16, 17, 18]),
-        _kpi("avg_time", "1h 42m", "+12%", False, [88, 92, 96, 98, 100, 102, 102]),
-        _kpi("resolution_rate", "92%", "+3 pts", True, [86, 87, 88, 89, 90, 91, 92]),
+        _kpi("total", str(total), "-", False, series),
+        _kpi("urgent", str(urgent), "-", False, series),
+        _kpi("sla_2h", str(sla_2h), "-", False, series),
+        _kpi("overdue", str(overdue), "-", False, series),
+        _kpi("assigned", str(assigned), "-", True, series),
+        _kpi("resolved", str(resolved), "-", True, series),
+        _kpi("avg_time", "-", "-", False, series),
+        _kpi("resolution_rate", f"{resolution_rate}%", "-", True, series),
     ]
 
-    items = [
+    rail = {
+        "period": "Run d'evaluation",
+        "sla": "Temps reel",
+        "updated": now.strftime("%d/%m/%Y %H:%M:%S"),
+        "compare": "Cas en echec",
+    }
+
+    payload_items = [
         {
-            "id": "TSK-1042",
-            "priority": "urgent",
-            "type": "incident",
-            "title": "Régression qualité détectée en production",
-            "source": "Auto-page",
-            "assignee": "M. Engineer",
-            "sla": "18 min",
-            "sla_tone": "crit",
-            "due": "11/06 11:00",
-            "status": "todo",
-        },
-        {
-            "id": "TSK-1041",
-            "priority": "urgent",
-            "type": "alert",
-            "title": "Fuite PII potentielle — mémoire",
-            "source": "Guard",
-            "assignee": "A. Privacy",
-            "sla": "24 min",
-            "sla_tone": "crit",
-            "due": "11/06 11:06",
-            "status": "todo",
-        },
-        {
-            "id": "TSK-1039",
-            "priority": "high",
-            "type": "approval",
-            "title": "Approbation purge mémoire RGPD",
-            "source": "Workflow",
-            "assignee": "Moi",
-            "sla": "1 h 05",
-            "sla_tone": "warn",
-            "due": "11/06 11:47",
-            "status": "in_progress",
-        },
-        {
-            "id": "TSK-1037",
-            "priority": "high",
-            "type": "conversation",
-            "title": "Escalade conversation client — litige",
-            "source": "Assistant",
-            "assignee": "DevRel",
-            "sla": "1 h 40",
-            "sla_tone": "warn",
-            "due": "11/06 12:22",
-            "status": "todo",
-        },
-        {
-            "id": "TSK-1035",
-            "priority": "medium",
-            "type": "access",
-            "title": "Demande d'accès — rôle Compliance",
-            "source": "IAM",
-            "assignee": "Moi",
-            "sla": "3 h 10",
-            "sla_tone": "ok",
-            "due": "11/06 13:52",
-            "status": "waiting",
-        },
-        {
-            "id": "TSK-1033",
-            "priority": "medium",
-            "type": "conversation",
-            "title": "Réponse langue dégradée à vérifier",
-            "source": "Eval",
-            "assignee": "S. SysAdmin",
-            "sla": "4 h 20",
-            "sla_tone": "ok",
-            "due": "11/06 15:02",
-            "status": "todo",
-        },
-        {
-            "id": "TSK-1031",
-            "priority": "low",
-            "type": "incident",
-            "title": "Conformité Art. 50 — divulgation manquante",
-            "source": "Compliance",
-            "assignee": "A. Compliance",
-            "sla": "1 j",
-            "sla_tone": "ok",
-            "due": "12/06 10:00",
-            "status": "in_progress",
-        },
-        {
-            "id": "TSK-1028",
-            "priority": "medium",
-            "type": "approval",
-            "title": "Validation lot de curation CUR-042",
-            "source": "Curation",
-            "assignee": "Moi",
-            "sla": "6 h",
-            "sla_tone": "ok",
-            "due": "11/06 16:42",
-            "status": "todo",
-        },
-        {
-            "id": "TSK-1024",
-            "priority": "low",
-            "type": "other",
-            "title": "Revue trimestrielle des accès",
-            "source": "IAM",
-            "assignee": "—",
-            "sla": "2 j",
-            "sla_tone": "ok",
-            "due": "13/06 10:00",
-            "status": "waiting",
-        },
-        {
-            "id": "TSK-1019",
-            "priority": "high",
-            "type": "alert",
-            "title": "Budget coût hebdo dépassé",
-            "source": "FinOps",
-            "assignee": "dave",
-            "sla": "2 h 30",
-            "sla_tone": "warn",
-            "due": "11/06 13:12",
-            "status": "todo",
-        },
+            "id": i.item_id,
+            "priority": _PRIORITY_KEY.get(i.priority, "medium"),
+            "type": _TYPE_BUCKET.get(i.category, "other"),
+            "title": i.title,
+            "source": i.source,
+            "assignee": i.assignee or "—",
+            "sla": _fmt_remaining(i, now),
+            "sla_tone": i.sla_tone(now),
+            "due": _fmt_due(i),
+            "status": _STATUS_KEY.get(i.status, "todo"),
+        }
+        for i in items
     ]
 
+    by_type_total = len(items) or 1
+    type_counts: dict[str, int] = {}
+    for i in items:
+        bucket = _TYPE_BUCKET.get(i.category, "other")
+        type_counts[bucket] = type_counts.get(bucket, 0) + 1
     by_type = [
-        {"key": "conversation", "count": 9, "pct": 39, "color": _TYPE_COLOR["conversation"]},
-        {"key": "incident", "count": 6, "pct": 26, "color": _TYPE_COLOR["incident"]},
-        {"key": "alert", "count": 4, "pct": 17, "color": _TYPE_COLOR["alert"]},
-        {"key": "approval", "count": 2, "pct": 9, "color": _TYPE_COLOR["approval"]},
-        {"key": "access", "count": 1, "pct": 4, "color": _TYPE_COLOR["access"]},
-        {"key": "other", "count": 1, "pct": 4, "color": _TYPE_COLOR["other"]},
+        {
+            "key": key,
+            "count": type_counts.get(key, 0),
+            "pct": round(100 * type_counts.get(key, 0) / by_type_total),
+            "color": color,
+        }
+        for key, color in _TYPE_COLOR.items()
+        if type_counts.get(key, 0) > 0
     ]
 
-    sla_buckets = [
-        {"key": "overdue", "count": 3, "color": "#f87171"},
-        {"key": "lt2h", "count": 4, "color": "#fbbf24"},
-        {"key": "h2_8", "count": 7, "color": "#fbbf24"},
-        {"key": "gt8h", "count": 9, "color": "#34d399"},
-    ]
-
-    recent_activity = [
-        {"time": "10:41", "actor": "M. Engineer", "action": "a résolu TSK-1040"},
-        {"time": "10:38", "actor": "A. Privacy", "action": "a pris TSK-1041"},
-        {"time": "10:32", "actor": "Moi", "action": "a approuvé TSK-1036"},
-        {"time": "10:21", "actor": "Auto-escalade", "action": "a escaladé TSK-1042"},
-        {"time": "10:05", "actor": "DevRel", "action": "a commenté TSK-1037"},
-    ]
+    sla_buckets = _sla_buckets(open_items, now)
+    recent_activity = _recent_activity(items)
 
     return {
         "generated_at": now.isoformat(),
         "rail": rail,
         "kpis": kpis,
-        "items": items,
-        "total_items": 23,
+        "items": payload_items,
+        "total_items": len(items),
         "by_type": by_type,
-        "by_type_total": 23,
+        "by_type_total": len(items),
         "sla_buckets": sla_buckets,
         "recent_activity": recent_activity,
-        "footer": {"total": 23, "source": "File d'attente · temps réel"},
+        "footer": {"total": len(items), "source": "Cas d'evaluation en echec - run reel"},
     }
+
+
+def _sla_buckets(open_items: list[OperatorItem], now: datetime) -> list[dict[str, object]]:
+    counts = {"overdue": 0, "lt2h": 0, "h2_8": 0, "gt8h": 0}
+    for i in open_items:
+        remaining = i.remaining_seconds(now)
+        if remaining < 0:
+            counts["overdue"] += 1
+        elif remaining < _WARN:
+            counts["lt2h"] += 1
+        elif remaining < 8 * _HOUR:
+            counts["h2_8"] += 1
+        else:
+            counts["gt8h"] += 1
+    colors = {"overdue": "#f87171", "lt2h": "#fbbf24", "h2_8": "#fbbf24", "gt8h": "#34d399"}
+    return [{"key": k, "count": counts[k], "color": colors[k]} for k in counts]
+
+
+def _recent_activity(items: list[OperatorItem]) -> list[dict[str, object]]:
+    recent = sorted(items, key=lambda i: i.created_at, reverse=True)[:5]
+    out: list[dict[str, object]] = []
+    for i in recent:
+        verb = {"todo": "a signale", "progress": "traite", "done": "a resolu"}.get(
+            i.status, "a signale"
+        )
+        out.append(
+            {
+                "time": i.created_at.strftime("%H:%M"),
+                "actor": i.source,
+                "action": f"{verb} {i.case_id}",
+            }
+        )
+    return out

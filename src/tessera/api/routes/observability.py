@@ -873,6 +873,25 @@ async def observability_inbox() -> dict[str, object]:
         return {"available": False}
 
 
+class _ItemStateBody(BaseModel):
+    """Status/assignee mutation for one operator-queue item."""
+
+    item_id: str
+    status: str | None = None
+    assignee: str | None = None
+
+
+@router.post("/observability/inbox/item-state")
+async def observability_inbox_mutate(body: _ItemStateBody) -> dict[str, object]:
+    """Persist a status/assignee change for one queue item; return fresh payload."""
+    from tessera.observability import operator_items as operator_items_mod
+
+    if body.item_id not in operator_items_mod.available_item_ids():
+        raise HTTPException(status_code=404, detail="unknown item")
+    operator_items_mod.set_item_state(body.item_id, status=body.status, assignee=body.assignee)
+    return {"available": True, **inbox_mod.compute_inbox_overview()}
+
+
 @router.get("/observability/parameters")
 async def observability_parameters() -> dict[str, object]:
     """Settings / parameters overview (page #21).

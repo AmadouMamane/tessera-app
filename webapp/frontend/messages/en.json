@@ -4154,6 +4154,8 @@
   "inbox": {
     "title": "To process",
     "subtitle": "Handle the requests, incidents and actions that need your attention.",
+    "cycleStatus": "Change status",
+    "noResults": "No item matches the filters.",
     "rail": {
       "live": "Live",
       "queue": "Current queue",

@@ -4154,6 +4154,8 @@
   "inbox": {
     "title": "Zu bearbeiten",
     "subtitle": "Bearbeiten Sie Anfragen, Incidents und Aktionen, die Ihre Aufmerksamkeit erfordern.",
+    "cycleStatus": "Status ändern",
+    "noResults": "Kein Element entspricht den Filtern.",
     "rail": {
       "live": "Live",
       "queue": "Aktuelle Queue",
