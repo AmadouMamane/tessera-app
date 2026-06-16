@@ -4592,6 +4592,25 @@
     "langs": "Sprachen",
     "fragments": "Fragmente",
     "updated": "Aktualisiert",
-    "status": "Status"
+    "status": "Status",
+    "saving": "Wird gespeichert…",
+    "saved": "Snapshot gespeichert",
+    "noSnapshots": "Keine Snapshots gespeichert.",
+    "savedAt": "gespeichert am",
+    "reload": "Neu laden",
+    "searchPlaceholder": "Quelle suchen...",
+    "all": "Alle",
+    "filterType": "Typ",
+    "filterStatus": "Status",
+    "tableEmpty": "Keine Quelle.",
+    "paginationSummary": "{start}-{end} von {total}",
+    "rowsPerPage": "Zeilen pro Seite",
+    "prevPage": "Vorherige Seite",
+    "nextPage": "Nächste Seite",
+    "detailEyebrow": "Quellendetail",
+    "accessibleChunks": "Zugängliche Fragmente",
+    "firstSeen": "Erste Indexierung",
+    "lastSeen": "Letzte Indexierung zu T",
+    "close": "Schließen"
   }
 }

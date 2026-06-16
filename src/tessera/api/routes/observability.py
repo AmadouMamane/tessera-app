@@ -855,6 +855,23 @@ async def observability_etat_a_date(as_of: str | None = None) -> dict[str, objec
         return {"available": False}
 
 
+class _EtatSnapshotBody(BaseModel):
+    """Body for saving an Etat-a-date reconstruction snapshot."""
+
+    model_config = ConfigDict(extra="forbid")
+    as_of: str | None = None
+
+
+@router.post("/observability/etat-a-date/snapshot")
+async def observability_etat_a_date_snapshot(body: _EtatSnapshotBody) -> dict[str, object]:
+    """Persist a snapshot of the reconstruction at ``body.as_of``.
+
+    Saves to the durable snapshot store and returns the refreshed payload with
+    the new snapshot at the head of the list.
+    """
+    return await etat_a_date_mod.save_etat_snapshot(body.as_of)
+
+
 @router.get("/observability/incidents")
 async def observability_incidents() -> dict[str, object]:
     """Incidents & playbooks overview (page #10).

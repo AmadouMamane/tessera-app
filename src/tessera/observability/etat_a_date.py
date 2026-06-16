@@ -23,6 +23,7 @@ The page is FR-only (it has no ``lang`` parameter); free-text is verbatim French
 from __future__ import annotations
 
 import json
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -42,11 +43,12 @@ if TYPE_CHECKING:
 
     from tessera.guard.decisions import Policy
 
-__all__ = ["build_etat_a_date"]
+__all__ = ["build_etat_a_date", "save_etat_snapshot"]
 
 _PARIS = ZoneInfo("Europe/Paris")
 _PCT = 100
 _MAX_TIMELINE = 8
+_MAX_SNAPSHOTS = 20
 
 _TYPE_LABEL: dict[str, str] = {"reg": "Reglementation", "prod": "Produit"}
 _TYPE_TONE: dict[str, str] = {"reg": "violet", "prod": "blue"}
@@ -76,6 +78,35 @@ def _ref_code(at: datetime | None) -> str:
     if at is None:
         return "RES-LIVE"
     return at.astimezone(_PARIS).strftime("RES-%Y-%m-%d-%H%M")
+
+
+# --- durable snapshot store ---------------------------------------------------
+# Saved reconstructions persist to a JSON next to the guard audit log (dev:
+# /tmp/tessera/, outside the repo) so "Enregistrer ce snapshot" is a real,
+# durable action that survives a restart - not a decorative button.
+
+
+def _snapshots_path() -> Path:
+    return get_settings().guard.audit_file.parent / "etat_a_date_snapshots.json"
+
+
+def _load_snapshots() -> list[dict[str, Any]]:
+    path = _snapshots_path()
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    return data if isinstance(data, list) else []
+
+
+def _save_snapshots(snapshots: list[dict[str, Any]]) -> None:
+    path = _snapshots_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(snapshots[:_MAX_SNAPSHOTS], indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
 
 # --- live fetch ---------------------------------------------------------------
@@ -195,14 +226,18 @@ def _table(states: dict[str, _CatState]) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for cat, st in sorted(states.items(), key=lambda kv: -kv[1].chunks_at_t):
         accessible = st.chunks_at_t > 0
+        tone_key = _SOURCE_META[cat]
         rows.append({
             "key": cat,
             "source": _source_name(cat, "fr"),
-            "type": _TYPE_LABEL[_SOURCE_META[cat]],
-            "type_tone": _TYPE_TONE[_SOURCE_META[cat]],
+            "type": _TYPE_LABEL[tone_key],
+            "type_key": tone_key,
+            "type_tone": _TYPE_TONE[tone_key],
             "langs": "/".join(sorted(st.langs)) if st.langs else "-",
             "chunks": st.chunks_at_t,
+            "total_chunks": st.chunks_total,
             "updated": _fmt(st.last_ins_at_t),
+            "first_seen": _fmt(st.first_ins),
             "status": "accessible" if accessible else "pending",
             "status_label": "Accessible" if accessible else "Pas encore indexee",
         })
@@ -228,11 +263,29 @@ def _timeline(
     ]
 
 
+def _snapshot_section(snapshots: list[dict[str, Any]]) -> dict[str, object]:
+    return {
+        "title": "Snapshots enregistres",
+        "rows": [
+            {
+                "id": str(s.get("id", "")),
+                "as_of": s.get("as_of"),
+                "as_of_label": str(s.get("as_of_label", "-")),
+                "ref_code": str(s.get("ref_code", "-")),
+                "saved_label": _fmt(_parse_at(s.get("saved_at"))),
+                "summary": str(s.get("summary", "")),
+            }
+            for s in snapshots
+        ],
+    }
+
+
 def _assemble(
     rows: Sequence[dict[str, Any]],
     audit: _AuditAsOf,
     policy: Policy,
     as_of: str | None,
+    snapshots: list[dict[str, Any]] | None = None,
     now: datetime | None = None,
 ) -> dict[str, object]:
     """Assemble the reconstruction payload. Pure and I/O-free for unit testing."""
@@ -296,6 +349,7 @@ def _assemble(
                 {"label": "Decisions du guard", "value": _fmt_int(audit.decisions)},
             ],
         },
+        "snapshots": _snapshot_section(snapshots or []),
     }
 
 
@@ -309,4 +363,41 @@ async def build_etat_a_date(as_of: str | None = None) -> dict[str, object]:
     rows = await _fetch_documents()
     audit = _scan_audit(get_settings().guard.audit_file, _parse_at(as_of))
     policy = load_policy()
-    return _assemble(rows, audit, policy, as_of)
+    return _assemble(rows, audit, policy, as_of, _load_snapshots())
+
+
+def _snapshot_record(
+    rows: Sequence[dict[str, Any]], audit: _AuditAsOf, as_of: str | None, now: datetime
+) -> dict[str, Any]:
+    """Compact, durable record of a reconstruction (the headline figures at T)."""
+    at = _parse_at(as_of)
+    states = _scan_documents(rows, at)
+    active = sum(1 for st in states.values() if st.chunks_at_t > 0)
+    chunks_at_t = sum(st.chunks_at_t for st in states.values())
+    summary = (
+        f"{active} sources - {_fmt_int(chunks_at_t)} fragments - "
+        f"{_fmt_int(audit.decisions)} decisions guard"
+    )
+    return {
+        "id": uuid.uuid4().hex[:12],
+        "saved_at": now.isoformat(),
+        "as_of": at.isoformat() if at else None,
+        "as_of_label": _fmt(at) if at else "Maintenant (live)",
+        "ref_code": _ref_code(at),
+        "summary": summary,
+    }
+
+
+async def save_etat_snapshot(as_of: str | None = None) -> dict[str, object]:
+    """Persist a snapshot of the reconstruction at ``as_of``.
+
+    Returns the refreshed payload, with the newly-saved snapshot at the head of
+    the durable snapshot list.
+    """
+    rows = await _fetch_documents()
+    audit = _scan_audit(get_settings().guard.audit_file, _parse_at(as_of))
+    policy = load_policy()
+    snapshots = _load_snapshots()
+    snapshots.insert(0, _snapshot_record(rows, audit, as_of, datetime.now(UTC)))
+    _save_snapshots(snapshots)
+    return _assemble(rows, audit, policy, as_of, snapshots)

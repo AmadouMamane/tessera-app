@@ -4592,6 +4592,25 @@
     "langs": "Langues",
     "fragments": "Fragments",
     "updated": "Dernière maj",
-    "status": "Statut"
+    "status": "Statut",
+    "saving": "Enregistrement…",
+    "saved": "Snapshot enregistré",
+    "noSnapshots": "Aucun snapshot enregistré.",
+    "savedAt": "enregistré le",
+    "reload": "Recharger",
+    "searchPlaceholder": "Rechercher une source...",
+    "all": "Tous",
+    "filterType": "Type",
+    "filterStatus": "Statut",
+    "tableEmpty": "Aucune source.",
+    "paginationSummary": "{start}-{end} sur {total}",
+    "rowsPerPage": "Lignes par page",
+    "prevPage": "Page précédente",
+    "nextPage": "Page suivante",
+    "detailEyebrow": "Détail de la source",
+    "accessibleChunks": "Fragments accessibles",
+    "firstSeen": "Première indexation",
+    "lastSeen": "Dernière indexation à T",
+    "close": "Fermer"
   }
 }

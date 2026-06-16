@@ -104,3 +104,32 @@ def test_timeline_is_newest_first_and_bounded() -> None:
     rows = payload["timeline"]["rows"]  # type: ignore[index]
     assert len(rows) <= ead._MAX_TIMELINE
     assert any("guard" in r["label"].lower() for r in rows)
+
+
+def test_snapshot_record_captures_headline_figures() -> None:
+    rec = ead._snapshot_record(_rows(), _audit(decisions=15484, blocked=15187), T_MID, NOW)
+    assert rec["as_of"] == "2026-06-12T00:00:00+00:00"
+    assert rec["ref_code"] == "RES-2026-06-12-0200"
+    # at T = 12 June only the 3 early chunks (2 sources) are accessible.
+    assert "2 sources" in rec["summary"]
+    assert "3 fragments" in rec["summary"]
+    assert "15 484 decisions guard" in rec["summary"]
+    assert len(rec["id"]) == 12
+
+
+def test_snapshots_section_renders_saved_records() -> None:
+    saved = [
+        {
+            "id": "abc123",
+            "saved_at": "2026-06-16T10:00:00+00:00",
+            "as_of": "2026-06-12T00:00:00+00:00",
+            "as_of_label": "12/06/2026, 02:00",
+            "ref_code": "RES-2026-06-12-0200",
+            "summary": "2 sources - 3 fragments - 100 decisions guard",
+        }
+    ]
+    payload = ead._assemble(_rows(), _audit(), _StubPolicy(), T_MID, saved, now=NOW)
+    rows = payload["snapshots"]["rows"]  # type: ignore[index]
+    assert len(rows) == 1
+    assert rows[0]["ref_code"] == "RES-2026-06-12-0200"
+    assert rows[0]["saved_label"] != "-"  # saved_at parsed and formatted

@@ -1,8 +1,8 @@
 import { type Page, expect, test } from "@playwright/test";
 
-// Covers the "Etat a date" point-in-time reconstruction: the live state, the
-// sources-accessible table from pgvector, and the real Reconstituer interaction
-// that re-queries the guard audit log at an earlier instant T (fewer decisions).
+// Covers "Etat a date": the live reconstruction from pgvector + the audit log,
+// the real Reconstituer windowing, and the mandatory main-table treatment -
+// working Type filter, row-click drawer, and a durable saved snapshot.
 
 const PAGE = "/fr/prouver/etat-a-date";
 
@@ -20,27 +20,52 @@ test.beforeEach(async ({ page }) => {
   await login(page);
   await page.goto(PAGE);
   await expect(page.getByText("Sources actives").first()).toBeVisible();
+  await expect(page.locator("table tbody tr").first()).toBeVisible();
 });
 
 test("renders the live reconstruction from pgvector + the audit log", async ({ page }) => {
-  // Knowledge sources accessible now (single ingest -> all 15) and the table.
   await expect(page.getByText("Documents accessibles").first()).toBeVisible();
   await expect(page.getByText("Sources accessibles a l'instant T").first()).toBeVisible();
-  await expect(page.getByText("Accessible").first()).toBeVisible();
-  // Policies in force are sourced from the guard policy.
   await expect(page.getByText("Garde-fous").first()).toBeVisible();
 });
 
+test("the Type filter actually narrows the table", async ({ page }) => {
+  const before = await page.locator("table tbody tr").count();
+  // The filter trigger's accessible name is "Type Tous" (label + current value);
+  // the sortable header button is just "Type" - target the trigger.
+  await page.getByRole("button", { name: "Type Tous" }).click();
+  await page.getByRole("menuitem", { name: "Reglementation" }).click();
+  const after = await page.locator("table tbody tr").count();
+  expect(after).toBeLessThan(before);
+  expect(after).toBeGreaterThan(0);
+});
+
+test("clicking a table row opens the detail drawer", async ({ page }) => {
+  await expect(page.locator("dialog")).toHaveCount(0);
+  await page.locator("table tbody tr").first().click();
+  const drawer = page.locator("dialog");
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText("Détail de la source")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("dialog")).toHaveCount(0);
+});
+
 test("Reconstituer at an early T re-queries the audit window", async ({ page }) => {
-  // The audit log starts ~10 June 15:46 UTC; reconstructing before that must
-  // show zero guard decisions (the knowledge sources stay accessible).
   await page.locator('input[type="datetime-local"]').fill("2026-06-01T00:00");
   await page.getByRole("button", { name: "Reconstituer" }).click();
-
-  // "Decisions du guard" tile -> 0 at this early instant.
   const decisionsTile = page
     .locator("div")
     .filter({ has: page.getByText("Decisions du guard", { exact: true }) })
     .last();
   await expect(decisionsTile.getByText("0", { exact: true })).toBeVisible({ timeout: 15_000 });
+});
+
+test("saving a snapshot persists it durably", async ({ page }) => {
+  await page.getByRole("button", { name: "Enregistrer ce snapshot" }).click();
+  // The snapshot appears in the durable list with its reference code.
+  await expect(page.getByText(/^RES-/).first()).toBeVisible({ timeout: 15_000 });
+  // It survives a reload (durable store, not in-memory).
+  await page.reload();
+  await expect(page.getByText("Snapshots enregistres")).toBeVisible();
+  await expect(page.getByText(/^RES-/).first()).toBeVisible();
 });

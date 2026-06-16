@@ -3213,10 +3213,13 @@ export const EtatADateSchema = z.object({
           key: z.string(),
           source: z.string(),
           type: z.string(),
+          type_key: z.string(),
           type_tone: z.string(),
           langs: z.string(),
           chunks: z.number(),
+          total_chunks: z.number(),
           updated: z.string(),
+          first_seen: z.string(),
           status: z.string(),
           status_label: z.string(),
         }),
@@ -3249,6 +3252,21 @@ export const EtatADateSchema = z.object({
     .object({
       title: z.string(),
       cards: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+  snapshots: z
+    .object({
+      title: z.string(),
+      rows: z.array(
+        z.object({
+          id: z.string(),
+          as_of: z.string().nullable(),
+          as_of_label: z.string(),
+          ref_code: z.string(),
+          saved_label: z.string(),
+          summary: z.string(),
+        }),
+      ),
     })
     .optional(),
 });

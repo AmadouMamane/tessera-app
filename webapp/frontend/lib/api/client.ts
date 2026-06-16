@@ -1106,6 +1106,19 @@ export async function fetchEtatADate(
   return request(path, { signal }, EtatADateSchema);
 }
 
+/** Persist a reconstruction snapshot at T; returns the refreshed payload. */
+export async function saveEtatSnapshot(asOf: string | null): Promise<EtatADate> {
+  return request(
+    "/observability/etat-a-date/snapshot",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ as_of: asOf }),
+    },
+    EtatADateSchema,
+  );
+}
+
 /** Agent overview ("Synthese de l'agent") dashboard (reference image 25). */
 export async function fetchAgentSynthese(
   period: string,

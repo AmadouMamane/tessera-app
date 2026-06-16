@@ -17,6 +17,38 @@ fixture that visually matches the normative is NOT "real".
 2. **Real interactions** — search / filter / add / detach / toggle / nav
    actually mutate the live store or navigate, verified end-to-end.
 
+## NON-NEGOTIABLE UI RULES (read before touching any cockpit table)
+
+These are mandatory and override the normative screenshots:
+
+- **EVERY main-table row click MUST open a detail drawer.** This is the *single
+  allowed deviation from the normative images* — even if a normative shows an
+  inline detail panel (or no detail at all), the row click opens a right-anchored
+  **drawer**. Reuse the Connaissances pattern exactly (`agent-connaissances.tsx`):
+  overlay `fixed z-50 flex justify-end`, a runtime-measured rect of `<main>`
+  (`getBoundingClientRect` on open + resize, top below the tab strip when present),
+  a `<dialog open aria-modal>` panel (`max-w-[440px]`, `border-l`, shadow), close
+  on backdrop `onMouseDown` (target === currentTarget), Escape handler, and a
+  focus-return on close. No `?? rows[0]` fallback — nothing opens until a click.
+- **EVERY main table MUST have the full Connaissances treatment, identical look:**
+  a filter bar above (controlled search `<input>` + `FilterDropdown`s keyed on
+  **stable keys**, not display strings), **sortable** column headers
+  (`aria-sort`, click toggles col/dir, arrow on the active col, dim
+  `ChevronsUpDown` on the rest), and a **client-side pagination footer identical
+  to Connaissances** ("{start}-{end} sur {total}" + centered page window +
+  prev/next chevrons + "Lignes par page" select, default 10, `useEffect` resets
+  to page 1 on filter/sort/size change). `table-fixed` + explicit `<th>` widths.
+- **EVERY filter / sort / search / dropdown / button MUST actually work,
+  verified e2e** (the row count or order changes, the drawer opens, the state
+  mutates). A control that renders but does nothing is a FAILURE — this is the
+  same bar as "dead button = failure", applied to filters and sorts too.
+- **Never omit a control for lack of a backing store — build the store.** If a
+  normative shows "save snapshot" / "export" / any action and no persistence
+  exists, create the durable store (a JSON next to the audit log, a table, a
+  probe) and wire it. Omitting is only OK when the control would be meaningless
+  (e.g. editing a Git-managed file from the UI), never merely because the
+  persistence isn't built yet.
+
 ## Step 1 — find the real source (don't assume there isn't one)
 
 Check what's actually populated before declaring something a fixture:
