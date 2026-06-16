@@ -103,6 +103,18 @@ export function AgentConnaissances() {
   const allRows = data.table?.rows ?? [];
   const allLangs = [...new Set(allRows.flatMap((r) => r.langs ?? []))].sort();
   const advCount = langSel.length + (minCov > 0 ? 1 : 0) + (groundedOnly ? 1 : 0);
+  const inlineActive =
+    status !== "Tous" || typeF !== "Tous" || period !== "30" || search.trim() !== "";
+  const canReset = advCount > 0 || inlineActive;
+  const resetAll = () => {
+    setSearch("");
+    setStatus("Tous");
+    setTypeF("Tous");
+    setPeriod("30");
+    setLangSel([]);
+    setMinCov(0);
+    setGroundedOnly(false);
+  };
   const rows = allRows.filter(
     (r) =>
       (status === "Tous" || r.status === status) &&
@@ -156,6 +168,8 @@ export function AgentConnaissances() {
           groundedOnly={groundedOnly}
           setGroundedOnly={setGroundedOnly}
           advCount={advCount}
+          canReset={canReset}
+          onReset={resetAll}
         />
         <SourcesTable
           data={data}
@@ -334,6 +348,8 @@ function Filters({
   groundedOnly,
   setGroundedOnly,
   advCount,
+  canReset,
+  onReset,
 }: {
   data: Data;
   search: string;
@@ -352,6 +368,8 @@ function Filters({
   groundedOnly: boolean;
   setGroundedOnly: (v: boolean) => void;
   advCount: number;
+  canReset: boolean;
+  onReset: () => void;
 }) {
   const f = data.filters;
   if (!f) return null;
@@ -389,6 +407,8 @@ function Filters({
         groundedOnly={groundedOnly}
         setGroundedOnly={setGroundedOnly}
         activeCount={advCount}
+        canReset={canReset}
+        onReset={onReset}
       />
     </div>
   );
@@ -406,6 +426,8 @@ function AdvancedFilters({
   groundedOnly,
   setGroundedOnly,
   activeCount,
+  canReset,
+  onReset,
 }: {
   label: string;
   allLangs: string[];
@@ -416,15 +438,12 @@ function AdvancedFilters({
   groundedOnly: boolean;
   setGroundedOnly: (v: boolean) => void;
   activeCount: number;
+  canReset: boolean;
+  onReset: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const toggleLang = (l: string) =>
     setLangSel(langSel.includes(l) ? langSel.filter((x) => x !== l) : [...langSel, l]);
-  const reset = () => {
-    setLangSel([]);
-    setMinCov(0);
-    setGroundedOnly(false);
-  };
   return (
     <div className="relative">
       <button
@@ -519,10 +538,10 @@ function AdvancedFilters({
             </span>
           </button>
 
-          {activeCount > 0 ? (
+          {canReset ? (
             <button
               type="button"
-              onClick={reset}
+              onClick={onReset}
               className="mt-3 w-full text-center text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
             >
               Reinitialiser les filtres
