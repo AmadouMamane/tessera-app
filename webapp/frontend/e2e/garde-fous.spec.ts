@@ -40,7 +40,7 @@ test("search filters the rules client-side", async ({ page }) => {
 
 test("filters by category via the stable tone key", async ({ page }) => {
   const before = await page.locator("table tbody tr").count();
-  await page.getByRole("button", { name: "Categorie Toutes" }).click();
+  await page.getByRole("button", { name: "Catégorie Toutes" }).click();
   await page.getByRole("menuitem", { name: "Outils" }).click();
   const after = await page.locator("table tbody tr").count();
   expect(after).toBeLessThan(before);
@@ -79,8 +79,14 @@ test("the enable/disable toggle flips state and reverts", async ({ page }) => {
 });
 
 test("closes a filter dropdown on outside click", async ({ page }) => {
-  await page.getByRole("button", { name: "Categorie Toutes" }).click();
+  await page.getByRole("button", { name: "Catégorie Toutes" }).click();
   await expect(page.getByRole("menu")).toBeVisible();
   await page.getByPlaceholder(/Rechercher une r/).click();
   await expect(page.getByRole("menu")).toHaveCount(0);
+});
+
+test("the 'create guardrail' action links to the policy config page", async ({ page }) => {
+  await page.getByRole("link", { name: "Créer un garde-fou" }).click();
+  await page.waitForURL(/\/configurer\/garde-fous/, { timeout: 15_000 });
+  expect(page.url()).toContain("/configurer/garde-fous");
 });

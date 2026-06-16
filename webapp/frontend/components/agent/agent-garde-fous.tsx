@@ -169,16 +169,17 @@ export function AgentGardeFous() {
           <>
             <button
               type="button"
+              onClick={() => temporal.changeMode("replay")}
               className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
             >
               <CalendarClock className="h-4 w-4" /> {a?.asof}
             </button>
-            <button
-              type="button"
+            <Link
+              href={"/configurer/garde-fous" as Route}
               className="flex h-9 items-center gap-2 rounded-md border border-[#d98b1f] bg-[#e0a23a] px-3 text-xs font-medium text-[#1b1402] hover:bg-[#eab44e]"
             >
               <Plus className="h-4 w-4" /> {a?.create}
-            </button>
+            </Link>
           </>
         }
       />

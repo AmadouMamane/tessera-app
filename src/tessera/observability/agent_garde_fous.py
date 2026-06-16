@@ -106,8 +106,8 @@ _RULES: tuple[_RuleDef, ...] = (
         severity="crit",
         mode="block",
         description=(
-            "Detecte les tentatives de detournement d'instructions (jailbreak, "
-            "usurpation de role, injection via balises ou encodage) et refuse le "
+            "Détecte les tentatives de détournement d'instructions (jailbreak, "
+            "usurpation de rôle, injection via balises ou encodage) et refuse le "
             "tour avant que le LLM ne voie le contenu hostile.",
             "Erkennt Versuche, Anweisungen zu unterlaufen (Jailbreak, "
             "Rollenuebernahme, Injektion ueber Tags oder Kodierung) und lehnt "
@@ -128,9 +128,9 @@ _RULES: tuple[_RuleDef, ...] = (
         severity="crit",
         mode="limit",
         description=(
-            "Masque les donnees personnelles (email, IBAN, numero de carte, "
-            "telephones FR/DE) dans les entrees et sorties d'outils ainsi que "
-            "dans les arguments renvoyes au LLM.",
+            "Masque les données personnelles (email, IBAN, numéro de carte, "
+            "téléphones FR/DE) dans les entrées et sorties d'outils ainsi que "
+            "dans les arguments renvoyés au LLM.",
             "Maskiert personenbezogene Daten (E-Mail, IBAN, Kartennummer, "
             "Telefon FR/DE) in Werkzeug-Ein- und -Ausgaben sowie in den an das "
             "LLM zurueckgegebenen Argumenten.",
@@ -152,7 +152,7 @@ _RULES: tuple[_RuleDef, ...] = (
         description=(
             "Action sensible : le blocage d'une carte exige une confirmation "
             "explicite de l'utilisateur et valide le motif et les quatre "
-            "derniers chiffres avant execution.",
+            "derniers chiffres avant exécution.",
             "Sensible Aktion: das Sperren einer Karte erfordert eine "
             "ausdrueckliche Bestaetigung und prueft Grund und letzte vier "
             "Ziffern vor der Ausfuehrung.",
@@ -172,8 +172,8 @@ _RULES: tuple[_RuleDef, ...] = (
         severity="mod",
         mode="allow",
         description=(
-            "Autorise la lecture du solde apres validation de l'identifiant "
-            "client, masque dans le journal d'audit.",
+            "Autorise la lecture du solde après validation de l'identifiant "
+            "client, masqué dans le journal d'audit.",
             "Erlaubt das Lesen des Kontostands nach Pruefung der Kundennummer, "
             "im Audit-Protokoll maskiert.",
             "Allows reading the balance after validating the customer id, "
@@ -202,7 +202,7 @@ _RULES: tuple[_RuleDef, ...] = (
     _RuleDef(
         key="tool.loan_simulate.allow",
         name=(
-            "Outil - Simulation de pret",
+            "Outil - Simulation de prêt",
             "Werkzeug - Kreditsimulation",
             "Tool - Loan simulation",
         ),
@@ -210,8 +210,8 @@ _RULES: tuple[_RuleDef, ...] = (
         severity="low",
         mode="allow",
         description=(
-            "Autorise les simulations de pret en rejetant les montants aberrants "
-            "(plafond 10 M EUR) et les durees hors de l'intervalle 1-30 ans.",
+            "Autorise les simulations de prêt en rejetant les montants aberrants "
+            "(plafond 10 M EUR) et les durées hors de l'intervalle 1-30 ans.",
             "Erlaubt Kreditsimulationen und weist abwegige Betraege (Limit "
             "10 Mio. EUR) und Laufzeiten ausserhalb von 1-30 Jahren ab.",
             "Allows loan simulations while rejecting aberrant amounts (10M EUR "
@@ -248,7 +248,7 @@ _RULES: tuple[_RuleDef, ...] = (
         severity="high",
         mode="limit",
         description=(
-            "Filtre les ecritures memoire : depistage PII, consentement et TTL "
+            "Filtre les écritures mémoire : dépistage PII, consentement et TTL "
             "avant toute persistance d'un fait cross-session.",
             "Filtert Speicher-Schreibvorgaenge: PII-Screening, Einwilligung und "
             "TTL vor jeder sitzungsuebergreifenden Persistenz.",
@@ -267,8 +267,8 @@ _RULES: tuple[_RuleDef, ...] = (
         severity="mod",
         mode="limit",
         description=(
-            "Filtre les lectures memoire : depistage PII et controle d'acces par "
-            "sujet avant de restituer un souvenir a l'agent.",
+            "Filtre les lectures mémoire : dépistage PII et contrôle d'accès par "
+            "sujet avant de restituer un souvenir à l'agent.",
             "Filtert Speicher-Lesevorgaenge: PII-Screening und subjektbezogene "
             "Zugriffskontrolle, bevor eine Erinnerung an den Agenten geht.",
             "Filters memory reads: PII screening and per-subject access control "
@@ -456,17 +456,17 @@ _CFG: dict[str, tuple[str, str, str]] = {
     ),
     "pii_screen": ("Depistage PII", "PII-Screening", "PII screening"),
     "consent": ("Consentement", "Einwilligung", "Consent"),
-    "residency": ("Residence des donnees", "Datenresidenz", "Data residency"),
+    "residency": ("Résidence des données", "Datenresidenz", "Data residency"),
 }
 
 _YES = ("Oui", "Ja", "Yes")
 _NO = ("Non", "Nein", "No")
-_ENABLED = ("Activee", "Aktiviert", "Enabled")
+_ENABLED = ("Activée", "Aktiviert", "Enabled")
 _REQUIRED = ("Requise", "Erforderlich", "Required")
 _REFUSE_TURN = ("Refus du tour", "Zug ablehnen", "Refuse the turn")
 _MASK = ("Masquage", "Maskierung", "Masking")
 _IO_SCOPE = (
-    "Entrees et sorties d'outils",
+    "Entrées et sorties d'outils",
     "Werkzeug-Ein- und -Ausgaben",
     "Tool inputs and outputs",
 )
@@ -524,88 +524,88 @@ def _config_rows(rule: _RuleDef, policy: Policy, lang: str) -> list[dict[str, st
 _STR: dict[str, tuple[str, str, str]] = {
     "title": ("Garde-fous", "Schutzregeln", "Guardrails"),
     "subtitle": (
-        "Regles et protections appliquees aux reponses de l'assistant (live policy + audit).",
+        "Règles et protections appliquées aux réponses de l'assistant (live policy + audit).",
         "Regeln und Schutzmassnahmen fuer die Antworten des Assistenten (live Policy + Audit).",
         "Rules and protections applied to the assistant's answers (live policy + audit).",
     ),
-    "act_asof": ("Voir a date (as-of)", "Stand anzeigen (as-of)", "View as-of"),
-    "act_create": ("Creer un garde-fou", "Schutzregel erstellen", "Create a guardrail"),
+    "act_asof": ("Voir à date (as-of)", "Stand anzeigen (as-of)", "View as-of"),
+    "act_create": ("Créer un garde-fou", "Schutzregel erstellen", "Create a guardrail"),
     "snap_tag": ("SNAPSHOT ACTIF", "AKTIVER SNAPSHOT", "ACTIVE SNAPSHOT"),
-    "snap_label": ("Garde-fous a date", "Schutzregeln (Stand)", "Guardrails as-of"),
-    "snap_updated": ("Derniere mise a jour", "Letzte Aktualisierung", "Last updated"),
+    "snap_label": ("Garde-fous à date", "Schutzregeln (Stand)", "Guardrails as-of"),
+    "snap_updated": ("Dernière mise à jour", "Letzte Aktualisierung", "Last updated"),
     "snap_version": ("Version de la politique", "Policy-Version", "Policy version"),
     "snap_decisions": (
-        "Decisions journalisees",
+        "Décisions journalisées",
         "Protokollierte Entscheidungen",
         "Logged decisions",
     ),
-    "snap_coverage": ("Regles actives", "Aktive Regeln", "Active rules"),
-    "snap_asof": ("Voir a date", "Stand anzeigen", "View as-of"),
+    "snap_coverage": ("Règles actives", "Aktive Regeln", "Active rules"),
+    "snap_asof": ("Voir à date", "Stand anzeigen", "View as-of"),
     "snap_compare": (
-        "Comparer au snapshot precedent",
+        "Comparer au snapshot précédent",
         "Mit vorherigem Snapshot vergleichen",
         "Compare to previous snapshot",
     ),
-    "kpi_rules": ("Regles actives", "Aktive Regeln", "Active rules"),
-    "kpi_categories": ("Categories couvertes", "Abgedeckte Kategorien", "Covered categories"),
+    "kpi_rules": ("Règles actives", "Aktive Regeln", "Active rules"),
+    "kpi_categories": ("Catégories couvertes", "Abgedeckte Kategorien", "Covered categories"),
     "kpi_block": ("Taux de blocage", "Blockierrate", "Block rate"),
-    "kpi_incidents": ("Incidents bloques", "Blockierte Vorfaelle", "Blocked incidents"),
+    "kpi_incidents": ("Incidents bloqués", "Blockierte Vorfaelle", "Blocked incidents"),
     "kpi_falsepos": ("Taux de faux positifs", "Falsch-Positiv-Rate", "False-positive rate"),
     "kpi_decisions": (
-        "Decisions journalisees",
+        "Décisions journalisées",
         "Protokollierte Entscheidungen",
         "Logged decisions",
     ),
     "f_search": ("Rechercher une regle...", "Regel suchen...", "Search a rule..."),
-    "f_category": ("Categorie", "Kategorie", "Category"),
+    "f_category": ("Catégorie", "Kategorie", "Category"),
     "f_status": ("Statut", "Status", "Status"),
-    "f_severity": ("Severite", "Schweregrad", "Severity"),
+    "f_severity": ("Sévérité", "Schweregrad", "Severity"),
     "f_all_f": ("Toutes", "Alle", "All"),
     "f_all_m": ("Tous", "Alle", "All"),
     "f_more": ("Filtres", "Filter", "Filters"),
     "col_name": ("Nom de la regle", "Regelname", "Rule name"),
-    "col_category": ("Categorie", "Kategorie", "Category"),
-    "col_severity": ("Severite", "Schweregrad", "Severity"),
+    "col_category": ("Catégorie", "Kategorie", "Category"),
+    "col_severity": ("Sévérité", "Schweregrad", "Severity"),
     "col_status": ("Statut", "Status", "Status"),
     "col_mode": ("Mode", "Modus", "Mode"),
     "col_activity": ("Part d'activite", "Aktivitaetsanteil", "Activity share"),
     "col_updated": ("Source", "Quelle", "Source"),
-    "col_lastfired": ("Dernier declenchement", "Letzte Ausloesung", "Last fired"),
+    "col_lastfired": ("Dernier déclenchement", "Letzte Ausloesung", "Last fired"),
     "st_active": ("Active", "Aktiv", "Active"),
-    "st_off": ("Desactivee", "Deaktiviert", "Disabled"),
+    "st_off": ("Désactivée", "Deaktiviert", "Disabled"),
     "src_policy": ("policy.yaml", "policy.yaml", "policy.yaml"),
-    "src_governance": ("gouvernance memoire", "Speicher-Governance", "memory governance"),
-    "never": ("Jamais declenchee", "Nie ausgeloest", "Never fired"),
-    "watch_title": ("A surveiller", "Zu beobachten", "Watchlist"),
+    "src_governance": ("gouvernance mémoire", "Speicher-Governance", "memory governance"),
+    "never": ("Jamais déclenchée", "Nie ausgeloest", "Never fired"),
+    "watch_title": ("À surveiller", "Zu beobachten", "Watchlist"),
     "watch_cta": ("Voir le journal d'audit", "Audit-Protokoll ansehen", "View the audit log"),
     "quick_title": ("Actions rapides", "Schnellaktionen", "Quick actions"),
     "q_policy": ("Modifier la politique", "Policy bearbeiten", "Edit the policy"),
     "q_audit": ("Voir le journal d'audit", "Audit-Protokoll ansehen", "View the audit log"),
     "q_policies": ("Politiques de conformite", "Compliance-Richtlinien", "Compliance policies"),
     "q_catalog": ("Catalogue de signaux", "Signalkatalog", "Signal catalogue"),
-    "cov_title": ("Couverture par categorie", "Abdeckung nach Kategorie", "Coverage by category"),
-    "detail_eyebrow": ("Details du garde-fou", "Details der Schutzregel", "Guardrail details"),
-    "tab_summary": ("Resume", "Zusammenfassung", "Summary"),
+    "cov_title": ("Couverture par catégorie", "Abdeckung nach Kategorie", "Coverage by category"),
+    "detail_eyebrow": ("Détails du garde-fou", "Details der Schutzregel", "Guardrail details"),
+    "tab_summary": ("Résumé", "Zusammenfassung", "Summary"),
     "tab_config": ("Configuration", "Konfiguration", "Configuration"),
     "tab_tests": ("Journalisation", "Protokollierung", "Logging"),
-    "fld_category": ("Categorie", "Kategorie", "Category"),
-    "fld_severity": ("Severite", "Schweregrad", "Severity"),
+    "fld_category": ("Catégorie", "Kategorie", "Category"),
+    "fld_severity": ("Sévérité", "Schweregrad", "Severity"),
     "fld_mode": ("Mode", "Modus", "Mode"),
     "fld_decisions": (
-        "Decisions journalisees",
+        "Décisions journalisées",
         "Protokollierte Entscheidungen",
         "Logged decisions",
     ),
     "fld_blocks": ("Blocages", "Blockierungen", "Blocks"),
     "fld_blockrate": ("Taux de blocage", "Blockierrate", "Block rate"),
     "fld_activity": ("Part d'activite", "Aktivitaetsanteil", "Activity share"),
-    "fld_lastfired": ("Dernier declenchement", "Letzte Ausloesung", "Last fired"),
+    "fld_lastfired": ("Dernier déclenchement", "Letzte Ausloesung", "Last fired"),
     "cfg_title": ("Configuration technique", "Technische Konfiguration", "Technical configuration"),
     "cfg_cta": ("Voir policy.yaml", "policy.yaml ansehen", "View policy.yaml"),
-    "log_title": ("Journalisation & integrite", "Protokoll & Integritaet", "Logging & integrity"),
+    "log_title": ("Journalisation & intégrité", "Protokoll & Integritaet", "Logging & integrity"),
     "log_cta": ("Ouvrir le journal", "Protokoll oeffnen", "Open the log"),
-    "log_chain": ("Chaine d'audit", "Audit-Kette", "Audit chain"),
-    "log_entries": ("Entrees verifiees", "Verifizierte Eintraege", "Verified entries"),
+    "log_chain": ("Chaîne d'audit", "Audit-Kette", "Audit chain"),
+    "log_entries": ("Entrées vérifiées", "Verifizierte Eintraege", "Verified entries"),
     "log_verified": ("Verifiee", "Verifiziert", "Verified"),
     "log_broken": ("Rompue", "Gebrochen", "Broken"),
     "toggle_label": ("Active dans la politique", "In der Policy aktiv", "Active in the policy"),
@@ -617,22 +617,22 @@ _STR: dict[str, tuple[str, str, str]] = {
 
 # Watch-item templates (filled with real numbers in _assemble).
 _W_CAMPAIGN: dict[str, str] = {
-    "fr": "Campagne d'evaluation : {n} tours d'injection bloques",
+    "fr": "Campagne d'évaluation : {n} tours d'injection bloqués",
     "de": "Evaluierungskampagne: {n} Injektions-Zuege blockiert",
     "en": "Evaluation campaign: {n} injection turns blocked",
 }
 _W_TOPRULE: dict[str, str] = {
-    "fr": "{name} : {n} declenchements sur 24h",
+    "fr": "{name} : {n} déclenchements sur 24h",
     "de": "{name}: {n} Ausloesungen in 24h",
     "en": "{name}: {n} firings in 24h",
 }
 _W_CHAIN_OK: dict[str, str] = {
-    "fr": "Chaine d'audit verifiee - {n} entrees intactes",
+    "fr": "Chaîne d'audit vérifiée - {n} entrées intactes",
     "de": "Audit-Kette verifiziert - {n} Eintraege intakt",
     "en": "Audit chain verified - {n} entries intact",
 }
 _W_CHAIN_KO: dict[str, str] = {
-    "fr": "Chaine d'audit rompue a l'entree {n}",
+    "fr": "Chaîne d'audit rompue à l'entrée {n}",
     "de": "Audit-Kette bei Eintrag {n} gebrochen",
     "en": "Audit chain broken at entry {n}",
 }

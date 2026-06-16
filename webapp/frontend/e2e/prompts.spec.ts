@@ -25,7 +25,7 @@ test.beforeEach(async ({ page }) => {
 
 test("lists the prompts from the live YAML", async ({ page }) => {
   expect(await page.locator("table tbody tr").count()).toBeGreaterThan(0);
-  await expect(page.getByText("Assistant - Systeme").first()).toBeVisible();
+  await expect(page.getByText("Assistant - Système").first()).toBeVisible();
 });
 
 test("search filters the prompts client-side", async ({ page }) => {
@@ -48,8 +48,8 @@ test("the Variables filter narrows to prompts with variables", async ({ page }) 
 
 test("row click drives the detail and the Content tab shows real text", async ({ page }) => {
   const detail = page.locator("section", { hasText: "Détails du prompt" });
-  await page.getByRole("button", { name: "Assistant - Systeme" }).click();
-  await expect(detail.getByText("Assistant - Systeme")).toBeVisible();
+  await page.getByRole("button", { name: "Assistant - Système" }).click();
+  await expect(detail.getByText("Assistant - Système")).toBeVisible();
   await detail.getByRole("button", { name: "Contenu" }).click();
   // The actual system prompt text is rendered in a <pre> block.
   await expect(detail.locator("pre").first()).toBeVisible();
@@ -57,7 +57,7 @@ test("row click drives the detail and the Content tab shows real text", async ({
 });
 
 test("closes a filter dropdown on outside click", async ({ page }) => {
-  await page.getByRole("button", { name: "Categorie Toutes" }).click();
+  await page.getByRole("button", { name: "Catégorie Toutes" }).click();
   await expect(page.getByRole("menu")).toBeVisible();
   await page.getByPlaceholder(/Rechercher un prompt/).click();
   await expect(page.getByRole("menu")).toHaveCount(0);

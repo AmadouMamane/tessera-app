@@ -141,6 +141,7 @@ export function AgentPrompts() {
           <>
             <button
               type="button"
+              onClick={() => temporal.changeMode("replay")}
               className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
             >
               <CalendarClock className="h-4 w-4" /> {a?.asof}
