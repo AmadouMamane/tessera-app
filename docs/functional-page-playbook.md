@@ -177,6 +177,30 @@ it dirty.
   mutation route returns the localized payload). `page.tsx` prefetch must use the
   same `["key", locale]` queryKey and `?lang=` or hydration won't match.
 
+## Round-8 skills (testability, source-name i18n, URL state)
+
+- **Extract a pure assembler so the payload is unit-testable.** `build_<area>`
+  did DB fetch + assembly together (untestable without Postgres). Split it: the
+  async fn just fetches (`raw_rows`, state, probe, traffic) and delegates to a
+  pure `_assemble(raw_rows, state, probe, traffic, lang, now=None) -> payload`.
+  Unit tests then feed synthetic pgvector rows and assert the whole payload
+  (localized columns/KPIs, Volume share summing to 100, `status_tone`/`type_tone`
+  /`hits`, detached -> `attachable`) with zero I/O. See `tests/unit/test_knowledge.py`.
+- **Localize data labels too, keeping logic keys.** Source display names move to
+  `_SOURCE_NAME: {cat: (fr, de, en)}` (regulation acronyms RGPD/DSGVO/GDPR + the
+  brand suffixes translate; the brand stays). `_SOURCE_META` collapses to a
+  `cat -> tone` map - safe because the corpus scripts only iterate its keys.
+- **Sync filter/selection state to the URL.** Initialize each filter `useState`
+  from `useSearchParams().get(...)` and write them back in one effect via the
+  locale-aware `router.replace({ pathname, query }, { scroll: false })` (drop
+  defaults from the query). Persisting the open row (`sel`) reopens the drawer on
+  reload - a shareable, bookmarkable view. With `typedRoutes`, pass `Link`/router
+  hrefs as `{ pathname, query }` objects, not template strings.
+- **Cheap a11y wins.** `aria-label` on a placeholder-only search input;
+  `aria-live="polite"` on the active-filter chips region (it stays mounted while
+  >=1 chip, so add/remove is announced); deep-link cross-page actions with the
+  entity key (`?source=<key>`) instead of a bare route.
+
 ## Round-7 skills (metric honesty, mutation errors, drawer anchoring, accents)
 
 - **A label must compute what it says.** The "Couverture" column actually
