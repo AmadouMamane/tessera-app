@@ -517,17 +517,19 @@ function Original({ data, className }: { data: Data; className?: string }) {
   if (!o) return null;
   return (
     <Panel title={o.title} icon={MessageSquare} className={className}>
-      <p className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">{o.ref_code}</p>
+      <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
+        Référence · <span className="font-mono">{o.ref_code}</span>
+      </p>
       {o.available ? (
         <div className="mt-2 flex flex-col gap-2 text-[0.74rem]">
           <div>
-            <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <p className="mb-0.5 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
               {t("question")}
             </p>
             <p className="text-[var(--tessera-text)]">{o.question}</p>
           </div>
           <div>
-            <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <p className="mb-0.5 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
               {t("answer")}
             </p>
             <p className="text-[var(--tessera-text-muted)]">{o.answer}</p>
