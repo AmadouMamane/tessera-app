@@ -19,11 +19,12 @@ import {
   X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { fetchAgentConnaissances, mutateConnaissancesSource } from "@/lib/api/client";
 import type { AgentConnaissances as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -79,6 +80,9 @@ export function AgentConnaissances() {
   const t = useTranslations("agentConnaissances");
   const tCommon = useTranslations("common");
   const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
+  const sp = useSearchParams();
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["agent-connaissances", locale],
@@ -86,14 +90,17 @@ export function AgentConnaissances() {
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<Status>("all");
-  const [typeF, setTypeF] = useState<TypeF>("all");
-  const [period, setPeriod] = useState("30");
-  const [langSel, setLangSel] = useState<string[]>([]);
-  const [minCov, setMinCov] = useState(0);
-  const [groundedOnly, setGroundedOnly] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  // Filters + open source are restored from / synced to the URL (shareable view).
+  const [search, setSearch] = useState(() => sp.get("q") ?? "");
+  const [status, setStatus] = useState<Status>(() => (sp.get("status") as Status) ?? "all");
+  const [typeF, setTypeF] = useState<TypeF>(() => (sp.get("type") as TypeF) ?? "all");
+  const [period, setPeriod] = useState(() => sp.get("period") ?? "30");
+  const [langSel, setLangSel] = useState<string[]>(
+    () => sp.get("l")?.split(",").filter(Boolean) ?? [],
+  );
+  const [minCov, setMinCov] = useState(() => Number(sp.get("cov")) || 0);
+  const [groundedOnly, setGroundedOnly] = useState(() => sp.get("grounded") === "1");
+  const [selected, setSelected] = useState<string | null>(() => sp.get("sel"));
   const [mutError, setMutError] = useState<string | null>(null);
   const mut = useMutation({
     mutationFn: (body: { key: string; attached?: boolean; active?: boolean }) =>
@@ -104,6 +111,20 @@ export function AgentConnaissances() {
     },
     onError: () => setMutError(t("mutationError")),
   });
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: router/pathname are stable
+  useEffect(() => {
+    const query: Record<string, string> = {};
+    if (search.trim()) query.q = search.trim();
+    if (status !== "all") query.status = status;
+    if (typeF !== "all") query.type = typeF;
+    if (period !== "30") query.period = period;
+    if (langSel.length) query.l = langSel.join(",");
+    if (minCov) query.cov = String(minCov);
+    if (groundedOnly) query.grounded = "1";
+    if (selected) query.sel = selected;
+    router.replace({ pathname, query }, { scroll: false });
+  }, [search, status, typeF, period, langSel, minCov, groundedOnly, selected]);
 
   if (!data) return <ConnaissancesSkeleton />;
   if (!data.available) {
@@ -363,7 +384,7 @@ function ActiveFilterChips({
 }) {
   const t = useTranslations("agentConnaissances");
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5" aria-live="polite">
       {chips.map((c) => (
         <span
           key={c.key}
@@ -563,6 +584,7 @@ function Filters({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={f.search}
+          aria-label={f.search}
           className="min-w-0 flex-1 bg-transparent text-[0.74rem] text-[var(--tessera-text)] placeholder:text-[var(--tessera-text-muted)] focus:outline-none"
         />
       </div>
@@ -1389,7 +1411,7 @@ function DetailPanel({
             {d.detach}
           </button>
           <Link
-            href={MEMORY_HREF}
+            href={{ pathname: MEMORY_HREF, query: { source: d.key } }}
             className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-white"
           >
             {d.full_sheet}
