@@ -87,6 +87,8 @@ import {
   EnsembleReportSchema,
   type ErasureCoverage,
   ErasureCoverageSchema,
+  type EtatADate,
+  EtatADateSchema,
   type EvalScoresResponse,
   EvalScoresResponseSchema,
   type FailedCasesReport,
@@ -1091,6 +1093,17 @@ export async function fetchBudget(signal?: AbortSignal): Promise<BudgetSnapshot>
     output_tokens: Number(parsed.output_tokens ?? 0),
     estimated_cost_eur: Number(parsed.estimated_cost_eur ?? 0),
   });
+}
+
+/** Point-in-time reconstruction ("Etat a date", prouver/etat-a-date). */
+export async function fetchEtatADate(
+  asOf: string | null,
+  signal?: AbortSignal,
+): Promise<EtatADate> {
+  const path = asOf
+    ? `/observability/etat-a-date?as_of=${encodeURIComponent(asOf)}`
+    : "/observability/etat-a-date";
+  return request(path, { signal }, EtatADateSchema);
 }
 
 /** Agent overview ("Synthese de l'agent") dashboard (reference image 25). */

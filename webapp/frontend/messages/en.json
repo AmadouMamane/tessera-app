@@ -109,7 +109,8 @@
       "assistant": "Assistant",
       "mesDemandes": "My requests",
       "documents": "Documents",
-      "alertes": "Alerts"
+      "alertes": "Alerts",
+      "etatADate": "State as of date"
     }
   },
   "common": {
@@ -4571,5 +4572,26 @@
     "subtitle": "Your pending tasks, reviews and approvals.",
     "loading": "Loading tasks…",
     "unavailable": "Tasks unavailable."
+  },
+  "etatADate": {
+    "title": "State as of date",
+    "subtitle": "Reconstruct precisely the knowledge accessible to an agent at a given date and time.",
+    "agent": "Agent",
+    "dateTime": "Date and time (Europe/Paris)",
+    "reference": "Reference (optional)",
+    "refPlaceholder": "Response, session, trace or incident ID...",
+    "contextSource": "Context source",
+    "reconstruct": "Reconstruct",
+    "saveSnapshot": "Save this snapshot",
+    "downloadReport": "Download report",
+    "loading": "Reconstructing…",
+    "unavailable": "Reconstruction unavailable.",
+    "live": "Now (live)",
+    "source": "Source",
+    "type": "Type",
+    "langs": "Languages",
+    "fragments": "Fragments",
+    "updated": "Updated",
+    "status": "Status"
   }
 }

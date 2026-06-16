@@ -3190,6 +3190,70 @@ export const AgentSyntheseSchema = z.object({
 });
 export type AgentSynthese = z.infer<typeof AgentSyntheseSchema>;
 
+export const EtatADateSchema = z.object({
+  available: z.boolean(),
+  meta: z
+    .object({
+      as_of: z.string().nullable(),
+      as_of_label: z.string(),
+      ref_code: z.string(),
+      agent: z.string(),
+      context_source: z.string(),
+      timezone: z.string(),
+    })
+    .optional(),
+  kpis: z
+    .array(z.object({ key: z.string(), label: z.string(), value: z.string(), hint: z.string() }))
+    .optional(),
+  table: z
+    .object({
+      title: z.string(),
+      rows: z.array(
+        z.object({
+          key: z.string(),
+          source: z.string(),
+          type: z.string(),
+          type_tone: z.string(),
+          langs: z.string(),
+          chunks: z.number(),
+          updated: z.string(),
+          status: z.string(),
+          status_label: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  integrity: z
+    .object({
+      coverage: z.string(),
+      last_sync: z.string(),
+      verified: z.boolean(),
+      verified_label: z.string(),
+      decisions: z.string(),
+      chain_label: z.string(),
+    })
+    .optional(),
+  timeline: z
+    .object({
+      title: z.string(),
+      rows: z.array(z.object({ time: z.string(), label: z.string(), kind: z.string() })),
+    })
+    .optional(),
+  policies: z
+    .object({
+      title: z.string(),
+      rows: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+  summary: z
+    .object({
+      title: z.string(),
+      cards: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
+});
+export type EtatADate = z.infer<typeof EtatADateSchema>;
+
 const AgentAFaireDetailSchema = z.object({
   key: z.string().optional(),
   title: z.string().optional(),

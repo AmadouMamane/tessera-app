@@ -109,7 +109,8 @@
       "assistant": "Assistent",
       "mesDemandes": "Meine Anfragen",
       "documents": "Dokumente",
-      "alertes": "Benachrichtigungen"
+      "alertes": "Benachrichtigungen",
+      "etatADate": "Stand zum Datum"
     }
   },
   "common": {
@@ -4571,5 +4572,26 @@
     "subtitle": "Ihre offenen Aufgaben, Prüfungen und Freigaben.",
     "loading": "Aufgaben werden geladen…",
     "unavailable": "Aufgaben nicht verfügbar."
+  },
+  "etatADate": {
+    "title": "Stand zum Datum",
+    "subtitle": "Rekonstruieren Sie genau, welches Wissen einem Agenten zu einem bestimmten Datum und einer bestimmten Uhrzeit zugänglich war.",
+    "agent": "Agent",
+    "dateTime": "Datum und Uhrzeit (Europe/Paris)",
+    "reference": "Referenz (optional)",
+    "refPlaceholder": "Antwort-, Sitzungs-, Trace- oder Vorfall-ID...",
+    "contextSource": "Kontextquelle",
+    "reconstruct": "Rekonstruieren",
+    "saveSnapshot": "Snapshot speichern",
+    "downloadReport": "Bericht herunterladen",
+    "loading": "Rekonstruktion läuft…",
+    "unavailable": "Rekonstruktion nicht verfügbar.",
+    "live": "Jetzt (live)",
+    "source": "Quelle",
+    "type": "Typ",
+    "langs": "Sprachen",
+    "fragments": "Fragmente",
+    "updated": "Aktualisiert",
+    "status": "Status"
   }
 }

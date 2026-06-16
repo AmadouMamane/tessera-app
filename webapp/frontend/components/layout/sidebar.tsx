@@ -5,6 +5,7 @@ import {
   Archive,
   Bot,
   Boxes,
+  CalendarClock,
   ChevronRight,
   Cpu,
   DatabaseZap,
@@ -68,6 +69,7 @@ type RouteHref =
   | "/agir/automations"
   | "/prouver/audit-logs"
   | "/prouver/evidence-store"
+  | "/prouver/etat-a-date"
   | "/configurer/signal-catalog"
   | "/configurer/garde-fous"
   | "/configurer/modeles"
@@ -206,6 +208,7 @@ const TREE: ReadonlyArray<NavNode> = [
         children: [
           { href: "/prouver/audit-logs", icon: ScrollText, labelKey: "item.auditLogs" },
           { href: "/prouver/evidence-store", icon: Archive, labelKey: "item.evidenceStore" },
+          { href: "/prouver/etat-a-date", icon: CalendarClock, labelKey: "item.etatADate" },
         ],
       },
     ],

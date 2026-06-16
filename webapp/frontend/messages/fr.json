@@ -109,7 +109,8 @@
       "assistant": "Assistant",
       "mesDemandes": "Mes demandes",
       "documents": "Documents",
-      "alertes": "Alertes"
+      "alertes": "Alertes",
+      "etatADate": "État à date"
     }
   },
   "common": {
@@ -4571,5 +4572,26 @@
     "subtitle": "Vos tâches, revues et validations en attente de traitement.",
     "loading": "Chargement des tâches…",
     "unavailable": "Tâches indisponibles."
+  },
+  "etatADate": {
+    "title": "État à date",
+    "subtitle": "Reconstruisez précisément les connaissances accessibles par un agent à une date et une heure données.",
+    "agent": "Agent",
+    "dateTime": "Date et heure (Europe/Paris)",
+    "reference": "Référence (optionnelle)",
+    "refPlaceholder": "ID de réponse, session, trace, incident...",
+    "contextSource": "Source du contexte",
+    "reconstruct": "Reconstituer",
+    "saveSnapshot": "Enregistrer ce snapshot",
+    "downloadReport": "Télécharger le rapport",
+    "loading": "Reconstruction en cours…",
+    "unavailable": "Reconstruction indisponible.",
+    "live": "Maintenant (live)",
+    "source": "Source",
+    "type": "Type",
+    "langs": "Langues",
+    "fragments": "Fragments",
+    "updated": "Dernière maj",
+    "status": "Statut"
   }
 }

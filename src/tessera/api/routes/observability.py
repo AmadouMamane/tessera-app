@@ -49,6 +49,7 @@ from tessera.observability import (
     embedding_inversion as embedding_inversion_mod,
     embedding_skew as embedding_skew_mod,
     erasure as erasure_mod,
+    etat_a_date as etat_a_date_mod,
     failure_clustering as failure_clustering_mod,
     failure_predictor as failure_predictor_mod,
     firewall_efficacy as firewall_mod,
@@ -834,6 +835,23 @@ async def observability_agent_synthese(period: str = "d7") -> dict[str, object]:
         return {"available": True, **payload}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_synthese: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/etat-a-date")
+async def observability_etat_a_date(as_of: str | None = None) -> dict[str, object]:
+    """Point-in-time reconstruction ("Etat a date", prouver/etat-a-date).
+
+    Reconstructs, as of instant ``as_of`` (ISO; absent means live), the knowledge
+    sources accessible to the agent, the guard decisions/blocks logged by then,
+    the rules that had fired, and the policies in force. Sourced from pgvector
+    ``documents`` + the guard audit log + the guard policy; degrades to
+    ``available: false``.
+    """
+    try:
+        return await etat_a_date_mod.build_etat_a_date(as_of)
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.etat_a_date: failed: {exc}\n")
         return {"available": False}
 
 
