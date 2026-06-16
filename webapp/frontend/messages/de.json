@@ -4514,7 +4514,20 @@
     "subtitle": "Verwalten Sie die Regeln, Filter und Schutzmaßnahmen für die Antworten des Assistenten.",
     "loading": "Leitplanken werden geladen…",
     "unavailable": "Leitplanken nicht verfügbar.",
-    "realtime": "Live"
+    "realtime": "Live",
+    "mutationError": "Aktion fehlgeschlagen: Die Regel konnte nicht aktualisiert werden. Erneut versuchen.",
+    "searchPrefix": "Suche",
+    "clearAll": "Alle löschen",
+    "filterCategory": "Kategorie",
+    "filterStatus": "Status",
+    "filterSeverity": "Schweregrad",
+    "filterMode": "Modus",
+    "reset": "Filter zurücksetzen",
+    "noResults": "Keine Regel entspricht den Filtern.",
+    "ruleCount": "{shown} von {total} Regeln",
+    "detailEyebrow": "Details der Schutzregel",
+    "descriptionLabel": "Beschreibung",
+    "policyUpdated": "policy.yaml — zuletzt aktualisiert {date}"
   },
   "agentPrompts": {
     "title": "Prompts",

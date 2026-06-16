@@ -1121,8 +1121,31 @@ export async function fetchAgentAFaire(signal?: AbortSignal): Promise<AgentAFair
   return request("/observability/agent-a-faire", { signal }, AgentAFaireSchema);
 }
 
-export async function fetchAgentGardeFous(signal?: AbortSignal): Promise<AgentGardeFous> {
-  return request("/observability/agent-garde-fous", { signal }, AgentGardeFousSchema);
+export async function fetchAgentGardeFous(
+  lang?: string,
+  signal?: AbortSignal,
+): Promise<AgentGardeFous> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/agent-garde-fous${q}`, { signal }, AgentGardeFousSchema);
+}
+
+/** Enable/disable a guard rule; returns the refreshed payload. */
+export async function mutateGardeFousRule(body: {
+  key: string;
+  enabled: boolean;
+  lang?: string;
+}): Promise<AgentGardeFous> {
+  const { lang, ...payload } = body;
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(
+    `/observability/agent-garde-fous/rule-state${q}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    AgentGardeFousSchema,
+  );
 }
 
 export async function fetchAgentPrompts(signal?: AbortSignal): Promise<AgentPrompts> {

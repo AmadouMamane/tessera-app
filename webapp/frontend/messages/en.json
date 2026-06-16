@@ -4514,7 +4514,20 @@
     "subtitle": "Manage the rules, filters and protections applied to the assistant's answers.",
     "loading": "Loading guardrails…",
     "unavailable": "Guardrails unavailable.",
-    "realtime": "Live"
+    "realtime": "Live",
+    "mutationError": "Action failed: the rule could not be updated. Try again.",
+    "searchPrefix": "Search",
+    "clearAll": "Clear all",
+    "filterCategory": "Category",
+    "filterStatus": "Status",
+    "filterSeverity": "Severity",
+    "filterMode": "Mode",
+    "reset": "Reset filters",
+    "noResults": "No rule matches the filters.",
+    "ruleCount": "{shown} of {total} rules",
+    "detailEyebrow": "Guardrail details",
+    "descriptionLabel": "Description",
+    "policyUpdated": "policy.yaml — last updated {date}"
   },
   "agentPrompts": {
     "title": "Prompts",

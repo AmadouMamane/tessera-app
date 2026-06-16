@@ -4514,7 +4514,20 @@
     "subtitle": "Gérez les règles, filtres et protections appliqués aux réponses de l'assistant.",
     "loading": "Chargement des garde-fous…",
     "unavailable": "Garde-fous indisponibles.",
-    "realtime": "Live"
+    "realtime": "Live",
+    "mutationError": "Action impossible : la mise à jour de la règle a échoué. Réessayez.",
+    "searchPrefix": "Recherche",
+    "clearAll": "Tout effacer",
+    "filterCategory": "Catégorie",
+    "filterStatus": "Statut",
+    "filterSeverity": "Sévérité",
+    "filterMode": "Mode",
+    "reset": "Réinitialiser les filtres",
+    "noResults": "Aucune règle ne correspond aux filtres.",
+    "ruleCount": "{shown} sur {total} règles",
+    "detailEyebrow": "Détails du garde-fou",
+    "descriptionLabel": "Description",
+    "policyUpdated": "policy.yaml — dernière mise à jour {date}"
   },
   "agentPrompts": {
     "title": "Prompts",

@@ -676,18 +676,38 @@ async def observability_agent_prompts() -> dict[str, object]:
 
 
 @router.get("/observability/agent-garde-fous")
-async def observability_agent_garde_fous() -> dict[str, object]:
+async def observability_agent_garde_fous(lang: str = "fr") -> dict[str, object]:
     """Agent Guardrails ("Garde-fous") dashboard (reference image 27).
 
-    Active-snapshot bar, KPI strip, filterable rules table, watchlist, quick
-    actions, coverage-by-category and a per-rule detail panel. Deterministic
-    fixture; degrades to ``available: false``.
+    Backed by the live guard layer: rules are derived from ``policy.yaml`` and
+    the firing stats (decisions, blocks, last fired, 24h deltas) plus audit-chain
+    integrity are read from the tamper-evident audit log. Per-rule enable/disable
+    state is durable. Display labels are localized via ``lang`` (fr/de/en).
+    Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **agent_garde_fous_mod.compute_agent_garde_fous()}
+        return {"available": True, **(await agent_garde_fous_mod.build_agent_garde_fous(lang))}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_garde_fous: failed: {exc}\n")
         return {"available": False}
+
+
+class _RuleStateBody(BaseModel):
+    """Enable/disable mutation for one guard rule."""
+
+    key: str
+    enabled: bool
+
+
+@router.post("/observability/agent-garde-fous/rule-state")
+async def observability_agent_garde_fous_mutate(
+    body: _RuleStateBody, lang: str = "fr"
+) -> dict[str, object]:
+    """Persist an enable/disable change and return the fresh payload."""
+    if body.key not in agent_garde_fous_mod.available_rules():
+        raise HTTPException(status_code=404, detail="unknown rule")
+    agent_garde_fous_mod.set_rule_state(body.key, enabled=body.enabled)
+    return {"available": True, **(await agent_garde_fous_mod.build_agent_garde_fous(lang))}
 
 
 @router.get("/observability/agent-a-faire")

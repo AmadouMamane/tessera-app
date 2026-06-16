@@ -3624,14 +3624,18 @@ export const AgentGardeFousSchema = z.object({
       pages: z.number(),
       rows: z.array(
         z.object({
+          key: z.string(),
           name: z.string(),
           category: z.string(),
+          category_key: z.string(),
           severity: z.string(),
           sev_tone: z.string(),
           status: z.string(),
+          status_tone: z.string(),
           mode: z.string(),
           mode_tone: z.string(),
           coverage: z.number(),
+          decisions: z.number(),
           updated: z.string(),
           author: z.string(),
           test_status: z.string(),
@@ -3647,31 +3651,47 @@ export const AgentGardeFousSchema = z.object({
       items: z.array(z.object({ title: z.string(), detail: z.string(), tone: z.string() })),
     })
     .optional(),
-  quick: z.object({ title: z.string(), items: z.array(z.string()) }).optional(),
+  quick: z
+    .object({
+      title: z.string(),
+      items: z.array(z.object({ label: z.string(), href: z.string() })),
+    })
+    .optional(),
   coverage: z
     .object({
       title: z.string(),
       items: z.array(z.object({ label: z.string(), pct: z.number(), tone: z.string() })),
     })
     .optional(),
-  detail: z
-    .object({
-      name: z.string(),
-      id: z.string(),
-      status: z.string(),
-      tabs: z.array(z.string()),
-      description: z.string(),
-      fields: z.array(
-        z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
-      ),
-      config_title: z.string(),
-      config_cta: z.string(),
-      config: z.array(z.object({ label: z.string(), value: z.string() })),
-      rbac_title: z.string(),
-      rbac_cta: z.string(),
-      rbac: z.array(z.object({ role: z.string(), access: z.string() })),
-      rbac_more: z.string(),
-    })
+  details: z
+    .array(
+      z.object({
+        key: z.string(),
+        name: z.string(),
+        id: z.string(),
+        status: z.string(),
+        status_tone: z.string(),
+        enabled: z.boolean(),
+        tabs: z.array(z.string()),
+        description: z.string(),
+        fields: z.array(
+          z.object({
+            label: z.string(),
+            value: z.string(),
+            tone: z.string().nullable().optional(),
+          }),
+        ),
+        config_title: z.string(),
+        config_cta: z.string(),
+        config: z.array(z.object({ label: z.string(), value: z.string() })),
+        rbac_title: z.string(),
+        rbac_cta: z.string(),
+        rbac: z.array(z.object({ role: z.string(), access: z.string() })),
+        rbac_more: z.string(),
+        toggle_label: z.string(),
+        policy_updated: z.string(),
+      }),
+    )
     .optional(),
 });
 export type AgentGardeFous = z.infer<typeof AgentGardeFousSchema>;

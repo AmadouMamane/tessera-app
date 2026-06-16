@@ -364,9 +364,55 @@ it dirty.
   nothing opens until a row is clicked. Verified e2e: 0 dialogs -> row-click
   opens 1 (correct title, 3 tabs) -> X closes back to 0.
 
+## Round-10 skills (Garde-fous: policy.yaml + the live audit log)
+
+- **Two real sources, one page.** The rules come from the compiled guard policy
+  (`tessera.guard.decisions.load_policy()` over `policy.yaml`: deny-pattern count,
+  pii-pattern count, per-tool `allow`/`requires_confirmation`/`max_calls`/arg
+  counts) and the firing stats come from the JSON-Lines audit log
+  (`GuardSettings.audit_file`). Key each rule off the **`policy_rule` id the guard
+  actually emits** (`prompt_injection.deny_patterns`, `tool.<name>.allow`,
+  `memory.{read,write}.governance`) so a single scan attributes decisions/blocks/
+  last-fired correctly. The audit log is huge (15k lines) but a one-pass scan is
+  fine; reuse the reader shape from `guard_explain.py`.
+- **Audit-chain integrity is a free, on-theme real signal.** `verify_audit_chain`
+  returns `(verified, length, broken_at)`. Surface it in the watch list and the
+  detail's logging block. Ours is genuinely **broken** (multiple restart writers
+  resumed the in-proc chain) -> show it honestly; `length` is *entries-until-break*,
+  so label that field "Entrees verifiees", NOT total decisions (15 484 vs 400).
+- **Relabel slots you can't source instead of faking them.** The normative
+  snapshot had "Jeu d'evaluations: Prod Safety Set v2.1" and "Version v3.7.2" with
+  no backing store. Repurposed to real facts in the same slots: policy version
+  (`v{policy.version}`), `policy.yaml` mtime, total logged decisions, active-rule
+  coverage. The "Dernier test" column became "Dernier declenchement" (real
+  last-fired); the detail's "Tests"/"Acces RBAC" tabs became "Journalisation"
+  (real decision counts + chain status) because there is no test-run or RBAC store.
+- **Activity share, not invented coverage.** The per-rule "Couverture" % had no
+  meaning; recomputed as the real **share of logged decisions** (`rule.decisions /
+  total`). It is dominated (~98%) by a redteam injection campaign -- that is the
+  true picture, so keep it and explain it in the watch list ("Campagne
+  d'evaluation : N tours d'injection bloques").
+- **Right-column detail (not a drawer) when the normative shows one.** Garde-fous
+  27 shows a persistent detail column, so selection drives an inline
+  `xl:col-span-4` panel (default `details[0]`), tabs gate content
+  (Resume/Configuration/Journalisation), and the enable/disable **toggle**
+  (`role="switch"`, `aria-checked`) calls the durable `rule-state` mutation.
+  Mirror the rest from Connaissances: `useDismiss` popovers, stable-key filtering
+  (`category_key`/`status_tone`/`sev_tone`/`mode_tone`), an advanced "Filtres"
+  popover wiring the formerly-dead button to the Mode axis, removable chips, pure
+  `_assemble` for unit tests, committed e2e.
+- **E2e viewport gotcha.** The Playwright project spreads `devices["Desktop
+  Chrome"]` (1280x720), which **overrides** the config's `use.viewport`. At 1280
+  the filter bar wraps and a `right-0` popover can land over the sidebar -> add
+  `test.use({ viewport: { width: 1672, height: 1000 } })` at the top of the spec.
+
 ## Status of the agent pages (update as you go)
 
-- **Real + functional:** Connaissances (pgvector inventory, durable
+- **Real + functional:** Garde-fous (policy.yaml rules + live audit-log firing
+  stats + chain integrity, durable enable/disable toggle, search + category/
+  status/severity dropdowns + advanced Mode popover + removable chips, row-click
+  detail with tab-gated content, FR/DE/EN, `tests/unit/test_garde_fous.py` +
+  `e2e/garde-fous.spec.ts`). Connaissances (pgvector inventory, durable
   attach/active, search/type/status filters, Rattacher, real probe sparklines,
   click-to-open detail drawer, transcript-grounded answers, and an **advanced
   Filtres popover** wiring the formerly-dead "Filtres" button to real extra axes
@@ -374,6 +420,5 @@ it dirty.
   ancres" (real transcript traffic count) -- with a live count badge + reset).
 - **Real data (read-only):** Evaluations, Historique, Synthese (eval run);
   Configurations (repo introspection — form not yet persisted).
-- **Still fixture / blocked:** Garde-fous (needs guard-decision logs), Prompts
-  (real source = prompt YAML; per-prompt scores unsourced). Other pages'
-  filters/exports/RBAC are static.
+- **Still fixture / blocked:** Prompts (real source = prompt YAML; per-prompt
+  scores unsourced). Other pages' filters/exports/RBAC are static.
