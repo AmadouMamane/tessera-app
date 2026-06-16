@@ -151,10 +151,21 @@ it dirty.
   generate_traffic.py` runs realistic EU-banking questions through the live
   retrieval store (`embed` + `knn_search`, cosine >= 0.55) and records, per
   source, the grounded questions + timestamp to `knowledge_traffic.json`; the
-  backend reads it. For true response logging, the durable transcript
-  (`memory/transcript.py`) and the OTel/Phoenix/Langfuse instrumentation
-  (`observability/instrument.py`, `traces.py`) are the richer sources — wire
-  those when you need full request/response traces, not just retrieval hits.
+  backend reads it.
+- **DONE - real request/response traces from the transcript.** The richer source
+  is now wired: `scripts/ingest_transcript_traffic.py` reads the durable
+  conversation transcript (`conversation_messages`, `memory/transcript.py`),
+  pairs each real user question with the assistant answer that followed it
+  (`itertools.pairwise` over rows ordered by `(conversation_id, id)`, deduped by
+  question), embeds the question and `knn_search`-attributes it to the source it
+  actually retrieves (cosine >= 0.55), and writes the SAME `knowledge_traffic.json`
+  but with each entry carrying `{text (question), answer (assistant snippet),
+  time}`. The "Reponses ancrees" tab now renders real Q->A pairs. OTel/Phoenix/
+  Langfuse spans (`observability/traces.py`) export to Cloud Trace / an OTLP
+  collector / console - they are NOT a local queryable store, so the transcript
+  table (not the spans) is the right dev source for request/response history.
+  Re-run: `PYTHONPATH=.:src .venv/bin/python -m scripts.ingest_transcript_traffic`
+  (supersedes the synthetic `generate_traffic` when a transcript exists).
 - **Parametres from real config, no run needed.** Fill a "settings" tab from the
   actual config (embedding model `bge-m3`, dim 1024, cosine, top-k, corpus,
   languages) — cheap and fully real.

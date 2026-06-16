@@ -3556,7 +3556,9 @@ export const AgentConnaissancesSchema = z.object({
         usage_title: z.string(),
         usage: z.array(z.object({ label: z.string(), value: z.string() })),
         answers_title: z.string(),
-        answers: z.array(z.object({ text: z.string(), time: z.string() })),
+        answers: z.array(
+          z.object({ text: z.string(), answer: z.string().optional(), time: z.string() }),
+        ),
         params_title: z.string().optional(),
         params: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
         actions_title: z.string(),

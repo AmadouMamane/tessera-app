@@ -346,15 +346,19 @@ def _build_detail(
     last_used = _ago(str(tr.get("last_used", ""))) or "-"
 
     if raw_answers:
-        answers_title = "Questions ancrees sur cette source"
+        answers_title = "Echanges reels ancres sur cette source"
         answers = [
-            {"text": str(a.get("text", "")), "time": _ago(str(a.get("time", "")))}
+            {
+                "text": str(a.get("text", "")),
+                "answer": str(a.get("answer", "")),
+                "time": _ago(str(a.get("time", ""))),
+            }
             for a in raw_answers[:5]
             if isinstance(a, dict)
         ]
     else:
         answers_title = "Documents ancres (locators reels)"
-        answers = [{"text": loc, "time": ""} for loc in locs[:5]]
+        answers = [{"text": loc, "answer": "", "time": ""} for loc in locs[:5]]
 
     return {
         "name": str(row["name"]),
