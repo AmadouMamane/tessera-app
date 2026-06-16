@@ -185,6 +185,12 @@ it dirty.
   (`chunks/total`). Same for the KPI "Couverture des requetes" -> "Couverture des
   sources" (it measures the share of sources cited >=1x, not a per-query figure).
   If a value can't be sourced for the label, change the label, don't fake the value.
+- **Renaming a metric means auditing every surface that names it.** After
+  "Couverture" -> "Volume", the advanced filter was still "Couverture minimale"
+  (filtering the renamed field) and the KPI still said "des requetes". When you
+  rename a field's meaning, grep every place it surfaces - column header, inline
+  filter label, chip label, detail usage row, KPI - and the sort accessor that
+  keys off it; fix them together or you ship a half-renamed, contradictory UI.
 - **Don't duplicate a metric under a new name.** Per-source "query coverage" IS
   the existing citation rate (same probe number) - adding a second column would be
   a misleading twin. Surface the genuinely-distinct **absolute hit count** in the
