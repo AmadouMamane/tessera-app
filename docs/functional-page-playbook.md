@@ -1,0 +1,117 @@
+# Making a cockpit page 100% functional (real data + real interactions)
+
+This is the transferable recipe distilled from turning **Connaissances**
+(`/agent/connaissances`) from a deterministic fixture into a page backed by the
+live system. Point any future "make page X real/functional" task at this file —
+it tells you exactly what to do.
+
+## The one mental model: two independent axes
+
+A page is only "done" when **both** axes hold. State explicitly which holds; a
+fixture that visually matches the normative is NOT "real".
+
+1. **Real data** — every displayed value traces to a real artifact (pgvector,
+   eval reports, corpus files, prompt YAML, guard policy/audit log), not an
+   invented literal. If a metric has no real source, render `-`, never a fake
+   number.
+2. **Real interactions** — search / filter / add / detach / toggle / nav
+   actually mutate the live store or navigate, verified end-to-end.
+
+## Step 1 — find the real source (don't assume there isn't one)
+
+Check what's actually populated before declaring something a fixture:
+
+- pgvector: `SELECT count(*), <group cols> FROM documents` (238 chunks, 15
+  categories, real `inserted_at`, `metadata.{category,locator,language}`).
+- eval runs: `eval/reports/*.json` via `observability/eval_data.py`
+  (`load_eval_snapshot()` — pass rates, sessions w/ latency+tokens).
+- corpus on disk: `src/tessera/corpus/data/*.json`.
+- prompts: `src/tessera/agent/prompts/{fr,de,en}.yaml`.
+- guard: `src/tessera/guard/policy.yaml` + the audit log.
+
+If the data needs generating, **run the smallest model only** (`llama3.2:3b`,
+`bge-m3` for embeddings) and cache the result to JSON — never fabricate.
+
+## Step 2 — backend: build from the live source
+
+- Add `observability/<area>.py` with an async `build_<area>()` that reads the
+  live source and assembles the payload. Keep the **same payload shape** as the
+  existing fixture so the frontend/zod are untouched where possible.
+- Emit colours/statuses as keys; free-text **ASCII-only** (RUF001: no `·`, `€`,
+  `’`, `−` — use `-`, `/`, `EUR`; accents é/è are fine).
+- For metrics with no source, return `-` (see `_pct_or_dash`).
+- Rewire the GET route to `await build_<area>()`; keep the `try/except ->
+  {available: false}` guard.
+
+## Step 3 — durable mutation state + endpoint
+
+- Persist per-entity state to a JSON next to the guard audit log:
+  `get_settings().guard.audit_file.parent / "<area>_state.json"` (dev:
+  `/tmp/tessera/`, outside the repo, so it is never committed).
+- Expose `set_<area>_state(key, **changes)` (load → merge → save) and an
+  `available_<keys>()` set for validation.
+- Add `POST /observability/<area>/<thing>-state` taking a Pydantic body, 404 on
+  unknown key, and **return the refreshed payload** so the client can replace
+  its cache in one round-trip.
+
+## Step 4 — frontend: wire every control
+
+- `useMutation({ mutationFn, onSuccess: (fresh) => qc.setQueryData([key], fresh) })`.
+- Search → a controlled `<input>` filtering rows client-side (not a `<span>`).
+- Filters → cycle buttons (`Tous → A → B → Tous`) filtering rows by field.
+- Add/attach → a dropdown fed by an `attachable` list in the payload (entities
+  not currently attached), each item calling the mutation with `attached:true`.
+- Detach/toggle → buttons calling the mutation; `disabled` while pending.
+- Cross-app nav (e.g. "Gérer le catalogue") → `Link` to the real route
+  (`/configurer/sources-memoire`), not a dead button.
+- **zod is non-strict** (it strips unknown keys): add any field the component
+  needs (e.g. `key`) to the schema or it vanishes after parse.
+
+## Step 5 — real sparklines / curves
+
+- If the data has a real time axis, bucket it chronologically.
+- If it is a single snapshot (e.g. `inserted_at` spans 60s — one ingest batch),
+  **do not fake a time-series**. Plot a real **distribution** instead
+  (per-source chunk counts, per-source citation, per-category pass rate). Never
+  flat-fill `[value]*7`.
+- Visual reference: the curves in `/prouver/audit-logs`.
+
+## Step 6 — derived metrics need a probe, not a guess
+
+Retrieval citation / hit-rate have no stored source, so measure them:
+`scripts/probe_retrieval.py` embeds the real catalogue queries, runs
+`knn_search` over each corpus, counts hits above a similarity threshold
+(`>= 0.55`), and caches per-source + overall numbers to
+`<audit_dir>/knowledge_citations.json`. The backend reads the cache; absent →
+`-`. Re-run: `PYTHONPATH=.:src .venv/bin/python -m scripts.probe_retrieval`.
+
+## Step 7 — verify the interaction, not just the render
+
+Playwright, logged in as `admin / tessera-admin`, asserting **state changed**:
+detach → the row disappears and the count drops; toggle → `aria-pressed`
+flips; filter → row count changes. Then **reset the durable state**
+(`rm /tmp/tessera/<area>_state.json` or re-attach via curl) so you don't leave
+it dirty.
+
+## Gotchas that cost time
+
+- Restart the backend after backend edits (module import / any in-proc cache):
+  `for pid in $(lsof -ti tcp:8290); do kill -9 $pid; done` then relaunch with
+  `PYTHONPATH=$PWD/src TESSERA_API__PORT=8290 ...`.
+- Next dev must point at the right backend: launch with
+  `TESSERA_BACKEND_URL=http://localhost:8290` or it falls back to the stale
+  `:8099` and you debug a ghost.
+- ruff: name magic numbers (PLR2004); extract helpers if a function exceeds 50
+  statements (PLR0915); move runtime-unused typing imports under
+  `TYPE_CHECKING` (TCH003).
+- `pyvector`/`eval/` are not in the strict mypy gate; `src/tessera/**` is.
+
+## Status of the agent pages (update as you go)
+
+- **Real + functional:** Connaissances (pgvector inventory, durable
+  attach/active, search/type/status filters, Rattacher, real probe sparklines).
+- **Real data (read-only):** Evaluations, Historique, Synthese (eval run);
+  Configurations (repo introspection — form not yet persisted).
+- **Still fixture / blocked:** Garde-fous (needs guard-decision logs), Prompts
+  (real source = prompt YAML; per-prompt scores unsourced). Other pages'
+  filters/exports/RBAC are static.
