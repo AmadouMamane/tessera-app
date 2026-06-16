@@ -93,6 +93,7 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Usage by this agent",
     ),
     "u_citation": ("Taux de citation", "Zitationsrate", "Citation rate"),
+    "u_hits": ("Requetes ayant cite", "Anfragen mit Treffer", "Queries that cited"),
     "u_share": ("Part du corpus", "Korpusanteil", "Corpus share"),
     "u_grounded": ("Reponses ancrees", "Verankerte Antworten", "Grounded answers"),
     "u_lastused": ("Derniere utilisation", "Letzte Nutzung", "Last used"),
@@ -343,6 +344,7 @@ async def build_connaissances(lang: str = "fr") -> dict[str, object]:
                 "freshness": _freshness(now, freshest[cat], lang) if cat in freshest else "-",
                 "fresh_days": (now - freshest[cat]).days if cat in freshest else 9999,
                 "citation": f"{round(cite_pct)}%" if cite_pct is not None else "-",
+                "hits": _hits_of(cat),
                 "langs": sorted(agg.langs.get(cat, set())),
                 "grounded": grounded,
             }
@@ -488,6 +490,7 @@ def _build_detail(
         "usage_title": _t("usage_title", lang),
         "usage": [
             {"label": _t("u_citation", lang), "value": str(row["citation"])},
+            {"label": _t("u_hits", lang), "value": str(row.get("hits", 0))},
             {"label": _t("u_share", lang), "value": f"{row['coverage']}%"},
             {"label": _t("u_grounded", lang), "value": str(grounded)},
             {"label": _t("u_lastused", lang), "value": last_used},
