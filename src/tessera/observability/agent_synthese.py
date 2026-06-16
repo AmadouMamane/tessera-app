@@ -15,7 +15,19 @@ key to its label colour. Free-text data (names, titles) is verbatim French.
 
 from __future__ import annotations
 
+from tessera.observability.eval_data import load_eval_snapshot
+
 __all__ = ["compute_agent_synthese"]
+
+
+_GOOD_PCT = 70.0
+_GOOD_MEAN_MS = 4000
+_GOOD_P95_MS = 8000
+
+
+def _secs(ms: float) -> str:
+    """Milliseconds -> French seconds: 3243 -> '3,2 s'."""
+    return f"{ms / 1000:.1f} s".replace(".", ",")
 
 
 def _kpi(
@@ -32,7 +44,33 @@ def _kpi(
 
 
 def compute_agent_synthese() -> dict[str, object]:
-    """Return the full Synthese dashboard payload (deterministic fixture)."""
+    """Return the Synthese dashboard payload.
+
+    Quality KPIs (resolution, latency, errors), performance, topics and the
+    active model are sourced from the real llama3.2:3b failure-catalogue run via
+    eval_data. Volume metrics with no eval source (conversations, active users,
+    satisfaction) remain illustrative demo context.
+    """
+    snap = load_eval_snapshot()
+    total = snap.total
+    passed = snap.passed
+    failed = total - passed
+    pass_pct = round(snap.pass_rate * 100, 1)
+    escal_pct = round(100 - pass_pct, 1)
+    p50 = snap.latency_percentile(50)
+    p95 = snap.latency_percentile(95)
+    durations = [s.duration_ms for s in snap.sessions if s.duration_ms > 0]
+    mean_ms = sum(durations) / len(durations) if durations else 0.0
+    chrono = sorted(snap.sessions, key=lambda s: s.started_at)
+    seven = [
+        chrono[round(i * len(chrono) / 7) : round((i + 1) * len(chrono) / 7)] for i in range(7)
+    ]
+    res_series = [round(100 * sum(1 for s in b if s.passed) / len(b)) if b else 0 for b in seven]
+    lat_series = [round(sum(s.duration_ms for s in b) / len(b)) if b else 0 for b in seven]
+    err_series = [sum(1 for s in b if not s.passed) for b in seven]
+    top_tones = ["violet", "blue", "amber", "green", "cyan", "slate"]
+    top_cats = sorted(snap.categories, key=lambda c: -c.total)[:6]
+
     kpis: list[dict[str, object]] = [
         _kpi(
             "conversations",
@@ -53,10 +91,10 @@ def compute_agent_synthese() -> dict[str, object]:
         _kpi(
             "resolution",
             "Taux de resolution",
-            "86.7%",
-            "+2.8 pt vs hier",
-            True,
-            [80, 81, 82, 83, 84, 85, 87],
+            f"{pass_pct:.1f}%".replace(".", ","),
+            f"{passed}/{total} cas reussis",
+            pass_pct >= _GOOD_PCT,
+            res_series,
         ),
         _kpi(
             "satisfaction",
@@ -69,10 +107,10 @@ def compute_agent_synthese() -> dict[str, object]:
         _kpi(
             "latency",
             "Temps de reponse moyen",
-            "2.34 s",
-            "+0.12 s vs hier",
-            False,
-            [200, 205, 210, 218, 222, 230, 234],
+            _secs(mean_ms),
+            f"p50 {_secs(p50)} - p95 {_secs(p95)}",
+            mean_ms <= _GOOD_MEAN_MS,
+            lat_series,
         ),
         _kpi(
             "sessions",
@@ -84,11 +122,11 @@ def compute_agent_synthese() -> dict[str, object]:
         ),
         _kpi(
             "errors",
-            "Erreurs / refus (24h)",
-            "23",
-            "+5% vs hier",
+            "Cas en echec",
+            str(failed),
+            f"sur {total} cas du catalogue",
             False,
-            [16, 17, 19, 18, 20, 22, 23],
+            err_series,
         ),
     ]
 
@@ -98,7 +136,7 @@ def compute_agent_synthese() -> dict[str, object]:
         "fields": [
             {"label": "ID", "value": "asst_001"},
             {"label": "Version", "value": "v1.3.2"},
-            {"label": "Modele principal", "value": "Llama 3.2 70B"},
+            {"label": "Modele principal", "value": snap.model},
             {"label": "Connecteurs actifs", "value": "8 / 12"},
             {"label": "Connaissances", "value": "158 sources"},
             {"label": "Derniere mise a jour", "value": "11/06/2026 09:45"},
@@ -120,28 +158,49 @@ def compute_agent_synthese() -> dict[str, object]:
     }
 
     topics: dict[str, object] = {
-        "title": "Top sujets (24h)",
+        "title": "Top categories evaluees",
         "items": [
-            {"label": "Conformite", "pct": 28, "tone": "violet"},
-            {"label": "Qualite IA", "pct": 22, "tone": "blue"},
-            {"label": "Incidents", "pct": 16, "tone": "amber"},
-            {"label": "Securite", "pct": 12, "tone": "green"},
-            {"label": "Observabilite", "pct": 9, "tone": "cyan"},
-            {"label": "Autres", "pct": 13, "tone": "slate"},
+            {"label": cat.label, "pct": round(100 * cat.total / total), "tone": tone}
+            for cat, tone in zip(top_cats, top_tones, strict=False)
         ],
-        "cta": "Voir tous les sujets",
+        "cta": "Voir toutes les categories",
     }
 
     performance: dict[str, object] = {
         "title": "Performance detaillee (24h)",
         "rows": [
-            {"label": "Taux de resolution", "value": "86.7%", "delta": "+2.6 pt", "good": True},
-            {"label": "Taux d'escalade", "value": "13.3%", "delta": "-2.6 pt", "good": True},
-            {"label": "Satisfaction", "value": "4.6 / 5", "delta": "+0.1", "good": True},
-            {"label": "Reponses utiles", "value": "1 588", "delta": "+4%", "good": True},
-            {"label": "Precision citations", "value": "94.2%", "delta": "+1.1 pt", "good": True},
-            {"label": "Temps de reponse P50", "value": "1.71 s", "delta": "-0.05 s", "good": True},
-            {"label": "Temps de reponse P95", "value": "4.89 s", "delta": "+0.20 s", "good": False},
+            {
+                "label": "Taux de resolution",
+                "value": f"{pass_pct:.1f}%".replace(".", ","),
+                "delta": f"{passed}/{total}",
+                "good": pass_pct >= _GOOD_PCT,
+            },
+            {
+                "label": "Cas en echec",
+                "value": f"{escal_pct:.1f}%".replace(".", ","),
+                "delta": f"{failed}/{total}",
+                "good": False,
+            },
+            {"label": "Escalades", "value": str(snap.escalations), "delta": "cas", "good": True},
+            {
+                "label": "Invocations d'outils",
+                "value": str(snap.tool_invocations),
+                "delta": "cas",
+                "good": True,
+            },
+            {
+                "label": "Langues couvertes",
+                "value": str(len(snap.languages)),
+                "delta": "fr/de/en",
+                "good": True,
+            },
+            {"label": "Temps de reponse P50", "value": _secs(p50), "delta": "median", "good": True},
+            {
+                "label": "Temps de reponse P95",
+                "value": _secs(p95),
+                "delta": "queue",
+                "good": p95 <= _GOOD_P95_MS,
+            },
         ],
         "cta": "Voir le detail",
     }
@@ -149,10 +208,10 @@ def compute_agent_synthese() -> dict[str, object]:
     config: dict[str, object] = {
         "title": "Configuration courante (a maintenant)",
         "rows": [
-            {"label": "Prompt systeme", "value": "v3.2"},
-            {"label": "Modele", "value": "Llama 3.2 70B"},
-            {"label": "Sources connectees", "value": "158"},
-            {"label": "Garde-fous actifs", "value": "7"},
+            {"label": "Prompt systeme", "value": snap.catalogue_version},
+            {"label": "Modele", "value": snap.model},
+            {"label": "Cas evalues", "value": str(total)},
+            {"label": "Categories", "value": str(len(snap.categories))},
         ],
         "cta": "Voir l'etat a une autre date",
     }
