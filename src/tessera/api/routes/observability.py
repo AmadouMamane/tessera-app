@@ -21,7 +21,6 @@ from tessera.observability import (
     access as access_mod,
     agent_a_faire as agent_a_faire_mod,
     agent_configurations as agent_configurations_mod,
-    agent_connaissances as agent_connaissances_mod,
     agent_console as agent_console_mod,
     agent_evaluations as agent_evaluations_mod,
     agent_garde_fous as agent_garde_fous_mod,
@@ -63,6 +62,7 @@ from tessera.observability import (
     incidents as incidents_mod,
     integrations as integrations_mod,
     journey as journey_mod,
+    knowledge as knowledge_mod,
     language_routing as language_routing_mod,
     least_privilege as least_privilege_mod,
     locale_format as locale_format_mod,
@@ -710,15 +710,32 @@ async def observability_agent_a_faire() -> dict[str, object]:
 async def observability_agent_connaissances() -> dict[str, object]:
     """Agent Knowledge ("Connaissances") dashboard (reference image 01).
 
-    KPI strip, filterable sources table and a per-source detail panel (usage,
-    grounded answers, actions). Deterministic fixture; degrades to
-    ``available: false``.
+    Backed by the live pgvector ``documents`` table: the source inventory,
+    chunk counts, languages and freshness are real. Per-agent attach/active
+    state is durable. Degrades to ``available: false`` if the store is down.
     """
     try:
-        return {"available": True, **agent_connaissances_mod.compute_agent_connaissances()}
+        return {"available": True, **(await knowledge_mod.build_connaissances())}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_connaissances: failed: {exc}\n")
         return {"available": False}
+
+
+class _SourceStateBody(BaseModel):
+    """Attach/detach/activate mutation for one knowledge source."""
+
+    key: str
+    attached: bool | None = None
+    active: bool | None = None
+
+
+@router.post("/observability/agent-connaissances/source-state")
+async def observability_agent_connaissances_mutate(body: _SourceStateBody) -> dict[str, object]:
+    """Persist an attach/detach/activate change and return the fresh payload."""
+    if body.key not in knowledge_mod.available_sources():
+        raise HTTPException(status_code=404, detail="unknown source")
+    knowledge_mod.set_source_state(body.key, attached=body.attached, active=body.active)
+    return {"available": True, **(await knowledge_mod.build_connaissances())}
 
 
 @router.get("/observability/agent-configurations")
