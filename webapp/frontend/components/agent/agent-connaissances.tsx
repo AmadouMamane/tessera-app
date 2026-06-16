@@ -1177,7 +1177,7 @@ function DetailDrawer({
   }, [onClose]);
   return (
     <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 backdrop-blur-[2px]"
+      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 p-2.5 backdrop-blur-[2px]"
       style={rect ?? { inset: 0 }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -1240,7 +1240,7 @@ function DetailPanel({
       aria-modal="true"
       aria-label={d.name}
       onKeyDown={onTrapKey}
-      className="static m-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden border-0 border-l border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0 text-[var(--tessera-text)] shadow-[-24px_0_60px_rgba(0,0,0,0.35)]"
+      className="static m-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0 text-[var(--tessera-text)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
       onCancel={(event) => {
         event.preventDefault();
         onClose();
