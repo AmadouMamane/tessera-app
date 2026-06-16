@@ -780,6 +780,22 @@ async def observability_agent_configurations() -> dict[str, object]:
         return {"available": False}
 
 
+class _AgentConfigBody(BaseModel):
+    """A set of agent-profile overrides to persist (only known keys are kept)."""
+
+    changes: dict[str, object]
+
+
+@router.post("/observability/agent-configurations/config")
+async def observability_agent_configurations_save(body: _AgentConfigBody) -> dict[str, object]:
+    """Persist editable agent-profile overrides and return the fresh payload."""
+    unknown = set(body.changes) - agent_configurations_mod.available_config_keys()
+    if unknown:
+        raise HTTPException(status_code=422, detail=f"unknown keys: {sorted(unknown)}")
+    agent_configurations_mod.set_agent_config(body.changes)
+    return {"available": True, **agent_configurations_mod.compute_agent_configurations()}
+
+
 @router.get("/observability/agent-console")
 async def observability_agent_console() -> dict[str, object]:
     """Agent Console (Debug) surface (reference image agent-console-normative).

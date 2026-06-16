@@ -4458,7 +4458,8 @@
     "title": "Configurations",
     "subtitle": "Réglages de cet agent : identité, modèle, comportement et statut.",
     "loading": "Chargement des configurations…",
-    "unavailable": "Configurations indisponibles."
+    "unavailable": "Configurations indisponibles.",
+    "saveError": "Échec de l'enregistrement. Réessayez."
   },
   "agentConsole": {
     "title": "Console (Debug)",

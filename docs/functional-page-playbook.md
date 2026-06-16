@@ -435,9 +435,48 @@ it dirty.
   the FR detail eyebrow is "Détails du prompt", so a selector written
   "Details du prompt" silently never matches. Copy the accented string verbatim.
 
+## Round-12 skills (Configurations: an editable, persisted settings form)
+
+- **Make the form actually save.** The page already showed real settings
+  (model/profile/counts/mtimes) but every control was static and "Enregistrer"
+  was dead. Added a durable agent-profile override store
+  (`agent_config.json` next to the audit log) with `_DEFAULTS` + `_OPTIONS`, a
+  `set_agent_config(changes)` (coerce + merge + save) and `_effective()`
+  (defaults <- overrides). `compute` merges overrides over the real defaults, so
+  the save round-trips. A `POST .../agent-configurations/config` body
+  `{changes:{...}}` validates keys (422 on unknown) and returns the fresh payload.
+- **Tag every field as editable or read-only - never fake a control.** Each field
+  carries `editable` + a stable `key`; the frontend renders a real control only
+  when `editable` (text/textarea/`<select>`/range slider/`role=switch`
+  toggle/tag chips), and read-only facts (active model, identifiant, counts)
+  stay plain text (the identifiant gets a real clipboard-copy button, not a
+  decorative icon). A `<select appearance-none>` + overlaid chevron keeps the
+  normative look while being a native, accessible control.
+- **Draft-diff state, not a cloned form.** Hold only the pending edits
+  (`draft: Record<key, value>`); effective value = `draft[key] ?? serverValue`;
+  delete a key from the draft when it returns to the server value so `dirty`
+  (and the Save/Annuler buttons) is accurate. On save success clear the draft and
+  `setQueryData` the fresh payload; the header shows "Modifications
+  enregistrees" when clean, an inline error on failure. Coerce + clamp on the
+  backend (`temperature` to [0,1]) so a bad client value can never persist.
+- **Slider truth.** The range `value`/`pct` must read from the draft number when
+  present (not the server `num`), or the thumb won't move as you drag. Recompute
+  `pct` from the live number for the fill gradient.
+- **A field whose default is settings-derived can't live in a static dict.**
+  `default_language` is persisted but its base is `settings.default_language`, so
+  it is kept out of `_DEFAULTS` (special-cased in `available_config_keys`,
+  `_coerce`, and read straight from the overrides in `compute`).
+- **Configurations stays FR-only** (it never had a `lang` param); don't localize
+  it just for parity - match the page's existing contract.
+
 ## Status of the agent pages (update as you go)
 
-- **Real + functional:** Prompts (live `prompts/{fr,de,en}.yaml` inventory:
+- **Real + functional:** Configurations (real settings/repo introspection +
+  editable agent-profile overrides persisted via `agent_config.json` and the
+  `config` endpoint: name/description/language/owner/behaviour selects +
+  sampling sliders/routing/parallel-tools toggle/tags, dirty-gated Save+Annuler;
+  `tests/unit/test_configurations.py` + `e2e/configurations.spec.ts`). Prompts
+  (live `prompts/{fr,de,en}.yaml` inventory:
   categories, languages, template variables, lengths + the real prompt text per
   language in the detail Content tab; search + category/variables filters +
   removable chips; FR/DE/EN; read-only by design - no UI mutation;
@@ -452,6 +491,5 @@ it dirty.
   Filtres popover** wiring the formerly-dead "Filtres" button to real extra axes
   -- langue (FR/DE/EN from `agg.langs`), couverture minimale, "avec echanges
   ancres" (real transcript traffic count) -- with a live count badge + reset).
-- **Real data (read-only):** Evaluations, Historique, Synthese (eval run);
-  Configurations (repo introspection — form not yet persisted).
+- **Real data (read-only):** Evaluations, Historique, Synthese (eval run).
 - **Still fixture / blocked:** Other pages' filters/exports/RBAC are static.

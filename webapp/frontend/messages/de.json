@@ -4458,7 +4458,8 @@
     "title": "Konfigurationen",
     "subtitle": "Einstellungen für diesen Agenten: Identität, Modell, Verhalten und Status.",
     "loading": "Konfigurationen werden geladen…",
-    "unavailable": "Konfigurationen nicht verfügbar."
+    "unavailable": "Konfigurationen nicht verfügbar.",
+    "saveError": "Speichern fehlgeschlagen. Erneut versuchen."
   },
   "agentConsole": {
     "title": "Konsole (Debug)",

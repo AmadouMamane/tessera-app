@@ -3308,17 +3308,39 @@ export const AgentAFaireSchema = z.object({
 export type AgentAFaire = z.infer<typeof AgentAFaireSchema>;
 
 const AgentConfigFieldSchema = z.object({
+  key: z.string().optional(),
   label: z.string(),
   value: z.string(),
   kind: z.string(),
   badge: z.string().nullable(),
+  editable: z.boolean().optional(),
+  options: z.array(z.string()).optional(),
+});
+
+const AgentConfigSliderSchema = z.object({
+  key: z.string().optional(),
+  label: z.string(),
+  value: z.string(),
+  pct: z.number(),
+  num: z.number().optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  step: z.number().optional(),
+  editable: z.boolean().optional(),
 });
 
 export const AgentConfigurationsSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),
   subtitle: z.string().optional(),
-  actions: z.object({ save: z.string(), more: z.string() }).optional(),
+  actions: z
+    .object({
+      save: z.string(),
+      saved: z.string().optional(),
+      reset: z.string().optional(),
+      more: z.string(),
+    })
+    .optional(),
   identity: z
     .object({
       title: z.string(),
@@ -3336,8 +3358,8 @@ export const AgentConfigurationsSchema = z.object({
   behavior: z
     .object({
       title: z.string(),
-      selects: z.array(z.object({ label: z.string(), value: z.string() })),
-      sliders: z.array(z.object({ label: z.string(), value: z.string(), pct: z.number() })),
+      selects: z.array(AgentConfigFieldSchema),
+      sliders: z.array(AgentConfigSliderSchema),
       tools: z.object({ label: z.string(), value: z.string() }),
       note: z.string(),
     })

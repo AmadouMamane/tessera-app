@@ -2,21 +2,43 @@
 
 The Configurations page exposes the active agent identity, model routing,
 behaviour knobs, orchestration settings, tags, current status, and related
-management links. Values are derived from the live Tessera settings and
-repository-backed configuration sources (guard policy, prompt bundles, tools,
-and corpus files) so the frontend never fabricates configuration data.
+management links.
+
+Two kinds of value live here:
+
+* **Read-only facts** derived from the live Tessera settings and the
+  repository-backed configuration sources (active model, profile, languages,
+  guard/prompt/tool/corpus counts, file mtimes). The frontend never fabricates
+  these.
+* **Editable agent-profile overrides** (name, description, default language,
+  owner, behaviour tone/verbosity/length, sampling sliders, routing strategy,
+  parallel-tool execution, tags). These are persisted to a durable JSON next to
+  the guard audit log and merged over the defaults, so the "Enregistrer les
+  modifications" button actually changes state. Each editable field carries a
+  stable ``key`` so the frontend can bind a control and POST a diff.
+
+Free-text is verbatim French with ASCII-only punctuation.
 """
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
 from tessera.guard.decisions import load_policy
 from tessera.settings import LLMProfile, get_settings
 
-__all__ = ["compute_agent_configurations"]
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+__all__ = [
+    "available_config_keys",
+    "compute_agent_configurations",
+    "set_agent_config",
+]
 
 
 _ROOT = Path(__file__).resolve().parents[3]
@@ -25,15 +47,122 @@ _TOOLS_DIR = _ROOT / "src" / "tessera" / "agent" / "tools"
 _CORPUS_DIR = _ROOT / "src" / "tessera" / "corpus" / "data"
 _PARIS = ZoneInfo("Europe/Paris")
 
+# --- Editable defaults + option lists (the persisted agent profile) -----------
+# Defaults are the values the agent profile starts from; overrides in the durable
+# store win. Keys here are the contract with the frontend and the save endpoint.
 
-def _field(
-    label: str, value: str, kind: str = "text", badge: str | None = None
-) -> dict[str, object]:
-    return {"label": label, "value": value, "kind": kind, "badge": badge}
+_DEFAULTS: dict[str, Any] = {
+    "name": "Tessera Assistant",
+    "description": "Assistant IA pour les clients Tessera. Reponses sourcees et conformes.",
+    "owner": "Equipe Support",
+    "timezone": "Europe/Paris",
+    "fallback_strategy": "Automatique",
+    "tone": "Professionnel",
+    "detail": "Equilibre",
+    "max_length": "Moyenne",
+    "temperature": 0.3,
+    "top_p": 0.7,
+    "frequency_penalty": 0.2,
+    "presence_penalty": 0.1,
+    "routing_strategy": "Par defaut (Recommande)",
+    "parallel_tools": True,
+    "tags": ["support", "client"],
+}
+
+_OPTIONS: dict[str, list[str]] = {
+    "owner": ["Equipe Support", "Equipe Produit", "Equipe Conformite", "Equipe ML"],
+    "timezone": ["Europe/Paris", "Europe/Berlin", "Europe/London", "UTC"],
+    "fallback_strategy": ["Automatique", "Manuelle", "Desactivee"],
+    "tone": ["Professionnel", "Amical", "Direct", "Pedagogique"],
+    "detail": ["Concis", "Equilibre", "Detaille"],
+    "max_length": ["Courte", "Moyenne", "Longue"],
+    "routing_strategy": [
+        "Par defaut (Recommande)",
+        "Priorite latence",
+        "Priorite qualite",
+        "Cout minimal",
+    ],
+    "default_language": ["Francais", "Allemand", "Anglais"],
+}
+
+_SLIDERS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
+_SLIDER_MAX: dict[str, float] = {
+    "temperature": 1.0,
+    "top_p": 1.0,
+    "frequency_penalty": 2.0,
+    "presence_penalty": 2.0,
+}
 
 
-def _summary(label: str, value: str) -> dict[str, object]:
-    return {"label": label, "value": value}
+def _state_path() -> Path:
+    return get_settings().guard.audit_file.parent / "agent_config.json"
+
+
+def _load_overrides() -> dict[str, Any]:
+    path = _state_path()
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _save_overrides(state: dict[str, Any]) -> None:
+    path = _state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+# Persisted alongside _DEFAULTS but its base value comes from live settings.
+_LANG_KEY = "default_language"
+
+
+def available_config_keys() -> set[str]:
+    """The set of persistable config keys (for endpoint validation)."""
+    return set(_DEFAULTS) | {_LANG_KEY}
+
+
+def _coerce(key: str, value: Any) -> Any:
+    """Coerce an incoming value to the type of its default."""
+    if key == _LANG_KEY:
+        return str(value)
+    default = _DEFAULTS[key]
+    if isinstance(default, bool):
+        return bool(value)
+    if isinstance(default, float):
+        try:
+            return max(0.0, min(_SLIDER_MAX.get(key, 1.0), float(value)))
+        except (TypeError, ValueError):
+            return default
+    if isinstance(default, list):
+        return [str(v) for v in value] if isinstance(value, list) else default
+    return str(value)
+
+
+def set_agent_config(changes: Mapping[str, Any]) -> None:
+    """Persist a set of agent-profile overrides (unknown keys are ignored)."""
+    state = _load_overrides()
+    allowed = available_config_keys()
+    for key, value in changes.items():
+        if key in allowed:
+            state[key] = _coerce(key, value)
+    _save_overrides(state)
+
+
+def _effective() -> dict[str, Any]:
+    """Defaults merged with the durable overrides."""
+    merged = dict(_DEFAULTS)
+    for key, value in _load_overrides().items():
+        if key in merged:
+            merged[key] = _coerce(key, value)
+    return merged
+
+
+# --- Read-only repository introspection ---------------------------------------
 
 
 def _lang_label(code: str) -> str:
@@ -89,9 +218,54 @@ def _context_window(model: str) -> str:
     return "128k tokens"
 
 
+# --- Field builders -----------------------------------------------------------
+
+
+def _ro(label: str, value: str, kind: str = "text", badge: str | None = None) -> dict[str, object]:
+    """A read-only field (no key)."""
+    return {"label": label, "value": value, "kind": kind, "badge": badge, "editable": False}
+
+
+def _edit(
+    key: str,
+    label: str,
+    value: str,
+    kind: str,
+    *,
+    options: list[str] | None = None,
+    badge: str | None = None,
+) -> dict[str, object]:
+    """An editable field bound to a persisted key."""
+    return {
+        "key": key,
+        "label": label,
+        "value": value,
+        "kind": kind,
+        "badge": badge,
+        "editable": True,
+        "options": options or _OPTIONS.get(key, []),
+    }
+
+
+def _slider(key: str, label: str, value: float) -> dict[str, object]:
+    max_v = _SLIDER_MAX[key]
+    return {
+        "key": key,
+        "label": label,
+        "value": f"{value:.1f}".replace(".", ","),
+        "num": value,
+        "min": 0.0,
+        "max": max_v,
+        "step": 0.05,
+        "pct": round(100 * value / max_v),
+        "editable": True,
+    }
+
+
 def compute_agent_configurations() -> dict[str, object]:
-    """Return the active agent configuration payload."""
+    """Return the active agent configuration payload (real + editable overrides)."""
     settings = get_settings()
+    cfg = _effective()
     profile = settings.resolved_llm_profile()
     active_model = (
         settings.ollama.chat_model if profile is LLMProfile.ON_PREM else settings.vertex.chat_model
@@ -109,61 +283,71 @@ def compute_agent_configurations() -> dict[str, object]:
     policy_updated = _fmt_mtime(settings.guard.policy_path)
     prompts_updated = _fmt_mtime(_PROMPTS_DIR / "fr.yaml")
     agent_id = f"tessera-assistant-{settings.environment.value}"
+    default_lang_label = _lang_label(settings.default_language.value)
+    lang_value = str(_load_overrides().get(_LANG_KEY) or default_lang_label)
 
     return {
         "title": "Configurations",
         "subtitle": "Reglages de cet agent : identite, modele, comportement et statut.",
-        "actions": {"save": "Enregistrer les modifications", "more": "..."},
+        "actions": {
+            "save": "Enregistrer les modifications",
+            "saved": "Modifications enregistrees",
+            "reset": "Annuler",
+            "more": "...",
+        },
         "identity": {
             "title": "Identite",
             "left": [
-                _field("Nom de l'agent", "Tessera Assistant"),
-                _field("Identifiant", agent_id, "copy"),
-                _field(
-                    "Description",
-                    "Assistant IA pour les clients Tessera. Reponses sourcees et conformes.",
-                    "textarea",
-                ),
+                _edit("name", "Nom de l'agent", str(cfg["name"]), "text"),
+                _ro("Identifiant", agent_id, "copy"),
+                _edit("description", "Description", str(cfg["description"]), "textarea"),
             ],
             "right": [
-                _field("Langue par defaut", _lang_label(settings.default_language.value), "select"),
-                _field("Fuseau horaire", str(_PARIS), "select"),
-                _field("Proprietaire", "Equipe Support", "select"),
+                _edit("default_language", "Langue par defaut", str(lang_value), "select"),
+                _edit("timezone", "Fuseau horaire", str(cfg["timezone"]), "select"),
+                _edit("owner", "Proprietaire", str(cfg["owner"]), "select"),
             ],
         },
         "model": {
             "title": "Modele",
             "left": [
-                _field(
+                _ro(
                     "Modele principal",
                     active_model,
                     "model",
                     _model_provider(active_model, profile),
                 ),
-                _field("Version / Snapshot", _model_snapshot(active_model), "info"),
+                _ro("Version / Snapshot", _model_snapshot(active_model), "info"),
             ],
             "right": [
-                _field(
+                _ro(
                     "Modele de secours (fallback)",
                     fallback_model,
                     "model",
                     _model_provider(fallback_model, profile),
                 ),
-                _field("Strategie de bascule", "Automatique", "select"),
+                _edit(
+                    "fallback_strategy",
+                    "Strategie de bascule",
+                    str(cfg["fallback_strategy"]),
+                    "select",
+                ),
             ],
         },
         "behavior": {
             "title": "Comportement",
             "selects": [
-                {"label": "Ton", "value": "Professionnel"},
-                {"label": "Detail des reponses", "value": "Equilibre"},
-                {"label": "Longueur max des reponses", "value": "Moyenne"},
+                _edit("tone", "Ton", str(cfg["tone"]), "select"),
+                _edit("detail", "Detail des reponses", str(cfg["detail"]), "select"),
+                _edit("max_length", "Longueur max des reponses", str(cfg["max_length"]), "select"),
             ],
             "sliders": [
-                {"label": "Temperature", "value": "0,3", "pct": 30},
-                {"label": "Top P", "value": "0,7", "pct": 70},
-                {"label": "Penalite de frequence", "value": "0,2", "pct": 45},
-                {"label": "Penalite de presence", "value": "0,1", "pct": 30},
+                _slider("temperature", "Temperature", float(cfg["temperature"])),
+                _slider("top_p", "Top P", float(cfg["top_p"])),
+                _slider(
+                    "frequency_penalty", "Penalite de frequence", float(cfg["frequency_penalty"])
+                ),
+                _slider("presence_penalty", "Penalite de presence", float(cfg["presence_penalty"])),
             ],
             "tools": {"label": "Outils autorises", "value": f"{allowed_tools} selectionnes"},
             "note": (
@@ -174,21 +358,31 @@ def compute_agent_configurations() -> dict[str, object]:
         "routing": {
             "title": "Routage & Orchestration",
             "left": [
-                _field("Strategie de routage", "Par defaut (Recommande)", "select"),
-                _field(
+                _edit(
+                    "routing_strategy",
+                    "Strategie de routage",
+                    str(cfg["routing_strategy"]),
+                    "select",
+                ),
+                _ro(
                     "Timeout reponse (s)",
                     str(int(settings.api.request_timeout_seconds / 2)),
                     "info",
                 ),
             ],
             "right": [
-                _field("Nombre max d'iterations", str(settings.memory.history_window + 2), "info"),
-                _field("Execution parallele d'outils", "Active", "toggle"),
+                _ro("Nombre max d'iterations", str(settings.memory.history_window + 2), "info"),
+                _edit(
+                    "parallel_tools",
+                    "Execution parallele d'outils",
+                    "Active" if cfg["parallel_tools"] else "Desactivee",
+                    "toggle",
+                ),
             ],
         },
         "tags": {
             "title": "Tags & Metadonnees",
-            "tags": ["support", "client", settings.environment.value],
+            "tags": list(cfg["tags"]),
             "add_tag": "Ajouter un tag",
             "metadata_label": "Metadonnees",
             "metadata": "Aucune metadonnee",
@@ -223,13 +417,13 @@ def compute_agent_configurations() -> dict[str, object]:
         "summary": {
             "title": "Resume",
             "rows": [
-                _summary("Langue", _lang_label(settings.default_language.value)),
-                _summary("Ton", "Professionnel"),
-                _summary("Detail", "Equilibre"),
-                _summary("Outils autorises", str(tool_count)),
-                _summary("Garde-fous actifs", str(guard_count)),
-                _summary("Prompts actifs", str(prompt_count)),
-                _summary("Connaissances rattachees", f"{knowledge_count} sources"),
+                {"label": "Langue", "value": str(lang_value)},
+                {"label": "Ton", "value": str(cfg["tone"])},
+                {"label": "Detail", "value": str(cfg["detail"])},
+                {"label": "Outils autorises", "value": str(tool_count)},
+                {"label": "Garde-fous actifs", "value": str(guard_count)},
+                {"label": "Prompts actifs", "value": str(prompt_count)},
+                {"label": "Connaissances rattachees", "value": f"{knowledge_count} sources"},
             ],
         },
         "history": {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronRight,
@@ -9,27 +9,64 @@ import {
   Info,
   MoreHorizontal,
   Plus,
+  RotateCcw,
   Save,
   Trash2,
+  X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { Link } from "@/i18n/navigation";
-import { fetchAgentConfigurations } from "@/lib/api/client";
+import { fetchAgentConfigurations, saveAgentConfigurations } from "@/lib/api/client";
 import type { AgentConfigurations as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 type Field = NonNullable<Data["identity"]>["left"][number];
+type Slider = NonNullable<Data["behavior"]>["sliders"][number];
+type Override = string | number | boolean | string[];
+
+/** Pending edits keyed by field key; effective value = override ?? server value. */
+type Draft = Record<string, Override>;
+
+interface Ctx {
+  draft: Draft;
+  setField: (key: string, serverValue: Override, value: Override) => void;
+}
 
 export function AgentConfigurations() {
   const t = useTranslations("agentConfigurations");
+  const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["agent-configurations"],
     queryFn: ({ signal }) => fetchAgentConfigurations(signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+
+  const [draft, setDraft] = useState<Draft>({});
+  const [error, setError] = useState(false);
+  const save = useMutation({
+    mutationFn: saveAgentConfigurations,
+    onSuccess: (fresh) => {
+      setError(false);
+      setDraft({});
+      qc.setQueryData(["agent-configurations"], fresh);
+    },
+    onError: () => setError(true),
+  });
+
+  const setField = (key: string, serverValue: Override, value: Override) => {
+    setDraft((prev) => {
+      const next = { ...prev };
+      if (eq(value, serverValue)) delete next[key];
+      else next[key] = value;
+      return next;
+    });
+  };
+
+  const dirty = Object.keys(draft).length > 0;
+  const ctx: Ctx = { draft, setField };
 
   if (!data?.available) {
     return (
@@ -41,14 +78,21 @@ export function AgentConfigurations() {
 
   return (
     <div className="flex min-h-0 flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <Header data={data} />
+      <Header
+        data={data}
+        dirty={dirty}
+        saving={save.isPending}
+        error={error}
+        onSave={() => save.mutate(draft)}
+        onReset={() => setDraft({})}
+      />
       <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className="min-w-0 overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[linear-gradient(180deg,rgba(8,28,48,0.94),rgba(5,20,35,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-          <FieldSection block={data.identity} />
-          <FieldSection block={data.model} />
-          <Behavior data={data} />
-          <FieldSection block={data.routing} compact />
-          <Tags data={data} />
+          <FieldSection block={data.identity} ctx={ctx} />
+          <FieldSection block={data.model} ctx={ctx} />
+          <Behavior data={data} ctx={ctx} />
+          <FieldSection block={data.routing} ctx={ctx} compact />
+          <Tags data={data} ctx={ctx} />
         </section>
         <aside className="flex min-w-0 flex-col gap-2.5">
           <Status data={data} />
@@ -62,7 +106,28 @@ export function AgentConfigurations() {
   );
 }
 
-function Header({ data }: { data: Data }) {
+function eq(a: Override, b: Override): boolean {
+  if (Array.isArray(a) && Array.isArray(b))
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  return a === b;
+}
+
+function Header({
+  data,
+  dirty,
+  saving,
+  error,
+  onSave,
+  onReset,
+}: {
+  data: Data;
+  dirty: boolean;
+  saving: boolean;
+  error: boolean;
+  onSave: () => void;
+  onReset: () => void;
+}) {
+  const t = useTranslations("agentConfigurations");
   const actions = data.actions;
   return (
     <div className="flex min-h-[46px] flex-wrap items-start justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
@@ -73,9 +138,26 @@ function Header({ data }: { data: Data }) {
         <p className="mt-0.5 text-[0.82rem] text-[var(--tessera-text-muted)]">{data.subtitle}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {error ? (
+          <span className="text-[0.72rem] text-red-300">{t("saveError")}</span>
+        ) : !dirty ? (
+          <span className="text-[0.72rem] text-emerald-300">{actions?.saved}</span>
+        ) : null}
+        {dirty ? (
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={saving}
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg)] px-3 text-xs font-medium text-[var(--tessera-text)] disabled:opacity-50"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> {actions?.reset}
+          </button>
+        ) : null}
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-cyan-400/45 bg-[linear-gradient(180deg,#58d6df,#2597a6)] px-4 text-xs font-semibold text-[#04131b] shadow-[0_8px_20px_rgba(37,151,166,0.18)]"
+          onClick={onSave}
+          disabled={!dirty || saving}
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-cyan-400/45 bg-[linear-gradient(180deg,#58d6df,#2597a6)] px-4 text-xs font-semibold text-[#04131b] shadow-[0_8px_20px_rgba(37,151,166,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Save className="h-3.5 w-3.5" />
           {actions?.save}
@@ -94,9 +176,11 @@ function Header({ data }: { data: Data }) {
 
 function FieldSection({
   block,
+  ctx,
   compact = false,
 }: {
   block?: { title: string; left: Field[]; right: Field[] };
+  ctx: Ctx;
   compact?: boolean;
 }) {
   if (!block) return null;
@@ -106,60 +190,136 @@ function FieldSection({
         {block.title}
       </h2>
       <div className="grid gap-x-12 gap-y-2 lg:grid-cols-2">
-        <FieldColumn fields={block.left} compact={compact} />
-        <FieldColumn fields={block.right} compact={compact} />
+        <FieldColumn fields={block.left} ctx={ctx} compact={compact} />
+        <FieldColumn fields={block.right} ctx={ctx} compact={compact} />
       </div>
     </div>
   );
 }
 
-function FieldColumn({ fields, compact }: { fields: Field[]; compact?: boolean }) {
+function FieldColumn({
+  fields,
+  ctx,
+  compact,
+}: {
+  fields: Field[];
+  ctx: Ctx;
+  compact?: boolean;
+}) {
   return (
     <div className={cn("flex flex-col", compact ? "gap-1" : "gap-1.5")}>
       {fields.map((field) => (
-        <LabeledControl key={`${field.label}-${field.value}`} field={field} />
+        <LabeledControl
+          key={field.key ?? `${field.label}-${field.value}`}
+          field={field}
+          ctx={ctx}
+        />
       ))}
     </div>
   );
 }
 
-function LabeledControl({ field }: { field: Field }) {
-  const isTextarea = field.kind === "textarea";
-  return (
-    <div className="grid gap-1">
-      <span className="text-[0.68rem] font-medium text-[var(--tessera-text-muted)]">
-        {field.label}
+const FIELD_BOX =
+  "relative flex items-center rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-3 text-[0.78rem] text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]";
+
+function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
+  const editable = field.editable && field.key;
+  const current = editable ? String(ctx.draft[field.key as string] ?? field.value) : field.value;
+
+  let control: ReactNode;
+  if (editable && field.kind === "textarea") {
+    control = (
+      <textarea
+        value={current}
+        aria-label={field.label}
+        onChange={(e) => ctx.setField(field.key as string, field.value, e.target.value)}
+        className={cn(FIELD_BOX, "min-h-[44px] resize-none py-1.5 leading-snug")}
+        rows={2}
+      />
+    );
+  } else if (editable && field.kind === "select") {
+    control = (
+      <span className={cn(FIELD_BOX, "h-7 pr-2")}>
+        <select
+          value={current}
+          aria-label={field.label}
+          onChange={(e) => ctx.setField(field.key as string, field.value, e.target.value)}
+          className="w-full appearance-none bg-transparent text-[0.78rem] text-[var(--tessera-text)] outline-none"
+        >
+          {(field.options ?? [current]).map((o) => (
+            <option key={o} value={o} className="bg-[#0a1f33] text-[var(--tessera-text)]">
+              {o}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none ml-auto h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
       </span>
+    );
+  } else if (editable && field.kind === "toggle") {
+    const on = (ctx.draft[field.key as string] ?? field.value === "Active") === true;
+    control = (
+      <span className={cn(FIELD_BOX, "h-7 justify-between")}>
+        <span className="text-[var(--tessera-text-muted)]">{on ? "Active" : "Desactivee"}</span>
+        <Toggle
+          on={on}
+          onToggle={() => ctx.setField(field.key as string, field.value === "Active", !on)}
+          label={field.label}
+        />
+      </span>
+    );
+  } else if (editable) {
+    control = (
+      <input
+        value={current}
+        aria-label={field.label}
+        onChange={(e) => ctx.setField(field.key as string, field.value, e.target.value)}
+        className={cn(FIELD_BOX, "h-7")}
+      />
+    );
+  } else {
+    control = (
       <span
         className={cn(
-          "relative flex items-center rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-3 text-[0.78rem] text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]",
-          isTextarea ? "min-h-[38px] items-start py-1.5 leading-snug" : "h-7",
+          FIELD_BOX,
+          field.kind === "textarea" ? "min-h-[38px] items-start py-1.5 leading-snug" : "h-7",
         )}
       >
-        <span className={cn("min-w-0 truncate", isTextarea && "whitespace-normal")}>
-          {field.value}
+        <span className={cn("min-w-0 truncate", field.kind === "textarea" && "whitespace-normal")}>
+          {current}
         </span>
         {field.badge ? (
           <span className="ml-auto shrink-0 rounded-full bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.62rem] font-semibold text-[var(--tessera-text)]">
             {field.badge}
           </span>
         ) : null}
-        {field.kind === "select" ? (
-          <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
-        ) : null}
         {field.kind === "copy" ? (
-          <Copy className="ml-auto h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+          <button
+            type="button"
+            aria-label="Copier"
+            onClick={() => navigator.clipboard?.writeText(current)}
+            className="ml-auto shrink-0 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </button>
         ) : null}
         {field.kind === "info" ? (
           <Info className="ml-auto h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
         ) : null}
-        {field.kind === "toggle" ? <Toggle /> : null}
       </span>
+    );
+  }
+
+  return (
+    <div className="grid gap-1">
+      <span className="text-[0.68rem] font-medium text-[var(--tessera-text-muted)]">
+        {field.label}
+      </span>
+      {control}
     </div>
   );
 }
 
-function Behavior({ data }: { data: Data }) {
+function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
   const b = data.behavior;
   if (!b) return null;
   return (
@@ -170,21 +330,15 @@ function Behavior({ data }: { data: Data }) {
       <div className="grid gap-x-12 gap-y-2 lg:grid-cols-2">
         <div className="grid gap-2">
           {b.selects.map((item) => (
-            <div key={item.label} className="grid grid-cols-[140px_1fr] items-center gap-3">
-              <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{item.label}</span>
-              <span className="flex h-7 items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-3 text-[0.76rem] text-[var(--tessera-text)]">
-                {item.value}
-                <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-              </span>
-            </div>
+            <SelectRow key={item.key ?? item.label} field={item} ctx={ctx} />
           ))}
           {b.sliders.slice(0, 1).map((item) => (
-            <SliderRow key={item.label} item={item} />
+            <SliderRow key={item.key ?? item.label} item={item} ctx={ctx} />
           ))}
         </div>
         <div className="grid gap-2">
           {b.sliders.slice(1).map((item) => (
-            <SliderRow key={item.label} item={item} />
+            <SliderRow key={item.key ?? item.label} item={item} ctx={ctx} />
           ))}
           <div className="grid grid-cols-[170px_1fr] items-center gap-3">
             <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{b.tools.label}</span>
@@ -203,32 +357,73 @@ function Behavior({ data }: { data: Data }) {
   );
 }
 
-function SliderRow({
-  item,
-}: {
-  item: NonNullable<Data["behavior"]>["sliders"][number];
-}) {
+function SelectRow({ field, ctx }: { field: Field; ctx: Ctx }) {
+  const current = field.key ? String(ctx.draft[field.key] ?? field.value) : field.value;
   return (
-    <div className="grid grid-cols-[170px_44px_1fr] items-center gap-3">
-      <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{item.label}</span>
-      <span className="text-[0.76rem] tabular-nums text-[var(--tessera-text)]">{item.value}</span>
-      <span className="relative h-1.5 rounded-full bg-[var(--tessera-border)]">
-        <span
-          className="absolute inset-y-0 left-0 rounded-full bg-cyan-300"
-          style={{ width: `${item.pct}%` }}
-        />
-        <span
-          className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.35)]"
-          style={{ left: `calc(${item.pct}% - 6px)` }}
-        />
+    <div className="grid grid-cols-[140px_1fr] items-center gap-3">
+      <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{field.label}</span>
+      <span className="relative flex h-7 items-center rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-3 text-[0.76rem] text-[var(--tessera-text)]">
+        <select
+          value={current}
+          aria-label={field.label}
+          onChange={(e) => field.key && ctx.setField(field.key, field.value, e.target.value)}
+          className="w-full appearance-none bg-transparent outline-none"
+        >
+          {(field.options ?? [current]).map((o) => (
+            <option key={o} value={o} className="bg-[#0a1f33] text-[var(--tessera-text)]">
+              {o}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
       </span>
     </div>
   );
 }
 
-function Tags({ data }: { data: Data }) {
+function SliderRow({ item, ctx }: { item: Slider; ctx: Ctx }) {
+  const num =
+    item.key && typeof ctx.draft[item.key] === "number"
+      ? (ctx.draft[item.key] as number)
+      : (item.num ?? 0);
+  const max = item.max ?? 1;
+  const display = num.toFixed(1).replace(".", ",");
+  const pct = Math.round((100 * num) / max);
+  return (
+    <div className="grid grid-cols-[170px_44px_1fr] items-center gap-3">
+      <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{item.label}</span>
+      <span className="text-[0.76rem] tabular-nums text-[var(--tessera-text)]">{display}</span>
+      <input
+        type="range"
+        min={item.min ?? 0}
+        max={max}
+        step={item.step ?? 0.05}
+        value={num}
+        aria-label={item.label}
+        onChange={(e) =>
+          item.key && ctx.setField(item.key, item.num ?? 0, Number.parseFloat(e.target.value))
+        }
+        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--tessera-border)] accent-cyan-300 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-cyan-300"
+        style={{
+          background: `linear-gradient(90deg, #67e8f9 ${pct}%, var(--tessera-border) ${pct}%)`,
+        }}
+      />
+    </div>
+  );
+}
+
+function Tags({ data, ctx }: { data: Data; ctx: Ctx }) {
   const tags = data.tags;
+  const [adding, setAdding] = useState("");
+  const serverTags = useMemo(() => tags?.tags ?? [], [tags]);
   if (!tags) return null;
+  const current = (ctx.draft.tags as string[] | undefined) ?? serverTags;
+  const commit = (next: string[]) => ctx.setField("tags", serverTags, next);
+  const add = () => {
+    const v = adding.trim();
+    if (v && !current.includes(v)) commit([...current, v]);
+    setAdding("");
+  };
   return (
     <div className="px-5 py-2.5">
       <h2 className="mb-1.5 font-sans text-[0.92rem] font-semibold text-[var(--tessera-text)]">
@@ -237,19 +432,36 @@ function Tags({ data }: { data: Data }) {
       <div className="grid gap-x-12 gap-y-2 lg:grid-cols-2">
         <div>
           <p className="mb-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">Tags</p>
-          <div className="flex h-8 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-2">
-            {tags.tags.map((tag) => (
+          <div className="flex min-h-[34px] flex-wrap items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-2 py-1">
+            {current.map((tag) => (
               <span
                 key={tag}
                 className="inline-flex h-6 items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 text-[0.7rem] text-[var(--tessera-text)]"
               >
                 {tag}
-                <span className="text-[var(--tessera-text-muted)]">x</span>
+                <button
+                  type="button"
+                  aria-label={`Retirer ${tag}`}
+                  onClick={() => commit(current.filter((x) => x !== tag))}
+                  className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+                >
+                  <X className="h-3 w-3" />
+                </button>
               </span>
             ))}
-            <span className="ml-2 inline-flex items-center gap-1 text-[0.68rem] text-[var(--tessera-text-muted)]">
-              <Plus className="h-3.5 w-3.5" /> {tags.add_tag}
-            </span>
+            <input
+              value={adding}
+              onChange={(e) => setAdding(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  add();
+                }
+              }}
+              placeholder={tags.add_tag}
+              aria-label={tags.add_tag}
+              className="h-6 min-w-[110px] flex-1 bg-transparent text-[0.7rem] text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
+            />
           </div>
         </div>
         <div>
@@ -260,6 +472,7 @@ function Tags({ data }: { data: Data }) {
             <span className="text-[0.76rem] text-[var(--tessera-text-muted)]">{tags.metadata}</span>
             <button
               type="button"
+              onClick={add}
               className="inline-flex h-8 items-center gap-2 rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg)] px-4 text-xs font-medium text-[var(--tessera-text)]"
             >
               <Plus className="h-3.5 w-3.5" /> {tags.add_metadata}
@@ -447,10 +660,25 @@ function Badge({ children }: { children: ReactNode }) {
   );
 }
 
-function Toggle() {
+function Toggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
   return (
-    <span className="ml-auto inline-flex h-4 w-8 items-center rounded-full bg-cyan-400/35 p-0.5">
-      <span className="ml-auto h-3 w-3 rounded-full bg-cyan-300" />
-    </span>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={onToggle}
+      className={cn(
+        "ml-auto inline-flex h-4 w-8 items-center rounded-full p-0.5 transition-colors",
+        on ? "bg-cyan-400/60" : "bg-[var(--tessera-border)]",
+      )}
+    >
+      <span
+        className={cn(
+          "h-3 w-3 rounded-full bg-white transition-transform",
+          on ? "translate-x-4" : "translate-x-0",
+        )}
+      />
+    </button>
   );
 }

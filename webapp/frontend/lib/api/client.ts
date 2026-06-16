@@ -1089,6 +1089,21 @@ export async function fetchAgentConfigurations(signal?: AbortSignal): Promise<Ag
   return request("/observability/agent-configurations", { signal }, AgentConfigurationsSchema);
 }
 
+/** Persist editable agent-profile overrides; returns the refreshed payload. */
+export async function saveAgentConfigurations(
+  changes: Record<string, unknown>,
+): Promise<AgentConfigurations> {
+  return request(
+    "/observability/agent-configurations/config",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ changes }),
+    },
+    AgentConfigurationsSchema,
+  );
+}
+
 export async function fetchAgentConnaissances(
   lang?: string,
   signal?: AbortSignal,

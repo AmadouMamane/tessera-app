@@ -1,0 +1,61 @@
+import { type Page, expect, test } from "@playwright/test";
+
+// Covers the editable agent-profile form: the Save button is gated on a dirty
+// edit, a changed select persists across a reload (durable override store), and
+// the test restores the default so it leaves the profile clean.
+
+const PAGE = "/fr/agent/configurations";
+
+test.use({ viewport: { width: 1672, height: 1000 } });
+
+async function login(page: Page) {
+  await page.goto("/fr/login");
+  await page.fill("#login-username", "admin");
+  await page.fill("#login-password", "tessera-admin");
+  await page.click("button[type=submit]");
+  await page.waitForURL((url) => !url.pathname.endsWith("/login"), { timeout: 15_000 });
+}
+
+const save = (page: Page) =>
+  page.getByRole("button", { name: "Enregistrer les modifications" });
+
+test.beforeEach(async ({ page }) => {
+  await login(page);
+  await page.goto(PAGE);
+  await expect(page.getByLabel("Ton")).toBeVisible();
+});
+
+test("save is disabled until an edit makes the form dirty", async ({ page }) => {
+  await expect(save(page)).toBeDisabled();
+  await page.getByLabel("Ton").selectOption("Amical");
+  await expect(save(page)).toBeEnabled();
+});
+
+test("a behaviour edit persists across a reload, then restores", async ({ page }) => {
+  // Change the tone and persist it.
+  await page.getByLabel("Ton").selectOption("Amical");
+  await save(page).click();
+  await expect(save(page)).toBeDisabled(); // back to clean after success
+
+  // Reload: the durable override is reflected by the backend.
+  await page.reload();
+  await expect(page.getByLabel("Ton")).toHaveValue("Amical");
+
+  // Restore the default so the test leaves the profile clean.
+  await page.getByLabel("Ton").selectOption("Professionnel");
+  await save(page).click();
+  await expect(save(page)).toBeDisabled();
+  await page.reload();
+  await expect(page.getByLabel("Ton")).toHaveValue("Professionnel");
+});
+
+test("the parallel-tools toggle flips and enables save", async ({ page }) => {
+  const toggle = page.getByRole("switch", { name: "Execution parallele d'outils" });
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
+  await expect(save(page)).toBeEnabled();
+  // Cancel the pending edit (no persistence) to leave the profile clean.
+  await page.getByRole("button", { name: "Annuler" }).click();
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+});
