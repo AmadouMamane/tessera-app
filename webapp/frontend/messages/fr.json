@@ -4534,7 +4534,20 @@
     "subtitle": "Gérez les prompts systèmes, templates et instructions utilisés par l'assistant et les agents.",
     "loading": "Chargement des prompts…",
     "unavailable": "Prompts indisponibles.",
-    "realtime": "Live"
+    "realtime": "Live",
+    "searchPrefix": "Recherche",
+    "clearAll": "Tout effacer",
+    "filterCategory": "Catégorie",
+    "filterVariables": "Variables",
+    "withVariables": "Avec variables",
+    "withoutVariables": "Sans variables",
+    "reset": "Réinitialiser",
+    "noResults": "Aucun prompt ne correspond aux filtres.",
+    "promptCount": "{shown} sur {total} prompts",
+    "detailEyebrow": "Détails du prompt",
+    "descriptionLabel": "Description",
+    "copy": "Copier",
+    "copied": "Copié"
   },
   "agentEvaluations": {
     "title": "Évaluations",

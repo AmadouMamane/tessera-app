@@ -4534,7 +4534,20 @@
     "subtitle": "Manage the system prompts, templates and instructions used by the assistant and its agents.",
     "loading": "Loading prompts…",
     "unavailable": "Prompts unavailable.",
-    "realtime": "Live"
+    "realtime": "Live",
+    "searchPrefix": "Search",
+    "clearAll": "Clear all",
+    "filterCategory": "Category",
+    "filterVariables": "Variables",
+    "withVariables": "With variables",
+    "withoutVariables": "Without variables",
+    "reset": "Reset",
+    "noResults": "No prompt matches the filters.",
+    "promptCount": "{shown} of {total} prompts",
+    "detailEyebrow": "Prompt details",
+    "descriptionLabel": "Description",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "agentEvaluations": {
     "title": "Evaluations",

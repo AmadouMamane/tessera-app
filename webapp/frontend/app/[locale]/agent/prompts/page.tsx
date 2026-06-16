@@ -16,14 +16,17 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: t("title") };
 }
 
-async function prefetch(queryClient: QueryClient) {
+async function prefetch(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["agent-prompts"],
+    queryKey: ["agent-prompts", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/agent-prompts`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/agent-prompts?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend agent-prompts returned ${response.status}`);
       return AgentPromptsSchema.parse(await response.json());
     },
@@ -36,7 +39,7 @@ export default async function AgentPromptsPage({ params }: PageProps) {
   const t = await getTranslations({ locale, namespace: "agentPrompts" });
   const queryClient = new QueryClient();
   try {
-    await prefetch(queryClient);
+    await prefetch(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

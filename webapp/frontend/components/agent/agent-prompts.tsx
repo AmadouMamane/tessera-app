@@ -4,48 +4,47 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Boxes,
   CalendarClock,
+  Check,
   ChevronDown,
   ChevronRight,
   Code2,
   Copy,
   FileCode2,
   FlaskConical,
+  Hash,
+  Languages,
   type LucideIcon,
   Plus,
+  Ruler,
   Search,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useState } from "react";
+import type { Route } from "next";
+import { useLocale, useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   TemporalRail,
   useRailTimeline,
   useTemporalState,
 } from "@/components/overview/temporal-rail";
+import { Link } from "@/i18n/navigation";
 import { fetchAgentPrompts } from "@/lib/api/client";
 import type { AgentPrompts as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { AgentSubtabs } from "./agent-subtabs";
 import { AgentTabs } from "./agent-tabs";
 
-const KPI_ICONS: LucideIcon[] = [
-  FileCode2,
-  Boxes,
-  FlaskConical,
-  FlaskConical,
-  FlaskConical,
-  FlaskConical,
-];
+type RowT = NonNullable<Data["table"]>["rows"][number];
+type DetailT = NonNullable<Data["details"]>[number];
+
+const KPI_ICONS: LucideIcon[] = [FileCode2, Boxes, Languages, Hash, Ruler, Languages];
 const TYPE_TONE: Record<string, string> = {
-  sys: "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  tpl: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  agt: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  fct: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-};
-const STATUS_TONE: Record<string, string> = {
-  good: "text-emerald-300",
-  off: "text-[var(--tessera-text-muted)]",
+  orch: "border-violet-500/30 bg-violet-500/15 text-violet-300",
+  syn: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  rep: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  mem: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
 };
 const QUALITY_DOT: Record<string, string> = {
   good: "bg-emerald-400",
@@ -63,17 +62,60 @@ const COV_BAR: Record<string, string> = {
   red: "bg-red-500",
 };
 
+const ALL = "all" as const;
+
+/** Close a popover on outside-click and Escape; attach the returned ref to its root. */
+function useDismiss(open: boolean, onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+  return ref;
+}
+
 export function AgentPrompts() {
   const t = useTranslations("agentPrompts");
+  const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const [subtab, setSubtab] = useState("");
   const { data } = useQuery({
-    queryKey: ["agent-prompts"],
-    queryFn: ({ signal }) => fetchAgentPrompts(signal),
+    queryKey: ["agent-prompts", locale],
+    queryFn: ({ signal }) => fetchAgentPrompts(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+
+  const [search, setSearch] = useState("");
+  const [cat, setCat] = useState<string>(ALL);
+  const [vars, setVars] = useState<string>(ALL);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const rows = data?.table?.rows ?? [];
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter(
+      (r) =>
+        (q === "" || r.name.toLowerCase().includes(q) || r.key.toLowerCase().includes(q)) &&
+        (cat === ALL || r.type_tone === cat) &&
+        (vars === ALL || (vars === "with" ? r.vars_count > 0 : r.vars_count === 0)),
+    );
+  }, [rows, search, cat, vars]);
+
+  const details = data?.details ?? [];
+  const detail = details.find((d) => d.key === selected) ?? details[0] ?? null;
 
   if (!data?.available) {
     return (
@@ -86,6 +128,12 @@ export function AgentPrompts() {
   const a = data.actions;
   const subtabs = data.subtabs ?? [];
   const active = subtab || subtabs[0] || "";
+  const anyFilter = search !== "" || cat !== ALL || vars !== ALL;
+  const resetAll = () => {
+    setSearch("");
+    setCat(ALL);
+    setVars(ALL);
+  };
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <AgentTabs
@@ -97,12 +145,12 @@ export function AgentPrompts() {
             >
               <CalendarClock className="h-4 w-4" /> {a?.asof}
             </button>
-            <button
-              type="button"
+            <Link
+              href={"/assistant" as Route}
               className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
             >
               <Plus className="h-4 w-4" /> {a?.create}
-            </button>
+            </Link>
           </>
         }
       />
@@ -130,19 +178,83 @@ export function AgentPrompts() {
 
       <div className="grid gap-2.5 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
-          <Filters data={data} />
-          <PromptsTable data={data} />
+          <Filters
+            data={data}
+            search={search}
+            setSearch={setSearch}
+            cat={cat}
+            setCat={setCat}
+            vars={vars}
+            setVars={setVars}
+            rows={rows}
+            anyFilter={anyFilter}
+            onReset={resetAll}
+          />
+          {anyFilter ? (
+            <div className="flex flex-wrap items-center gap-1.5" aria-live="polite">
+              {search !== "" ? (
+                <Chip label={`${t("searchPrefix")}: ${search}`} onRemove={() => setSearch("")} />
+              ) : null}
+              {cat !== ALL ? (
+                <Chip
+                  label={labelFor(rows, "type_tone", "type", cat)}
+                  onRemove={() => setCat(ALL)}
+                />
+              ) : null}
+              {vars !== ALL ? (
+                <Chip
+                  label={vars === "with" ? t("withVariables") : t("withoutVariables")}
+                  onRemove={() => setVars(ALL)}
+                />
+              ) : null}
+              <button
+                type="button"
+                onClick={resetAll}
+                className="text-[0.66rem] text-[#b9a6ff] hover:text-white"
+              >
+                {t("clearAll")}
+              </button>
+            </div>
+          ) : null}
+          <PromptsTable
+            data={data}
+            rows={filtered}
+            total={rows.length}
+            selected={detail?.key ?? null}
+            onSelect={setSelected}
+          />
           <div className="grid gap-2.5 md:grid-cols-3">
             <Watch data={data} />
             <Quick data={data} />
             <ByType data={data} />
           </div>
         </div>
-        <Detail data={data} className="xl:col-span-4" />
+        <Detail detail={detail} className="xl:col-span-4" />
       </div>
 
       <Footer data={data} />
     </div>
+  );
+}
+
+function labelFor(
+  rows: RowT[],
+  keyField: keyof RowT,
+  labelField: keyof RowT,
+  value: string,
+): string {
+  const hit = rows.find((r) => String(r[keyField]) === value);
+  return hit ? String(hit[labelField]) : value;
+}
+
+function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-0.5 text-[0.64rem] text-[var(--tessera-text)]">
+      <span className="max-w-[220px] truncate">{label}</span>
+      <button type="button" onClick={onRemove} aria-label={`Remove ${label}`}>
+        <X className="h-3 w-3 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]" />
+      </button>
+    </span>
   );
 }
 
@@ -167,7 +279,9 @@ function Snapshot({ data }: { data: Data }) {
         </Field>
         <Field>
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.version_label}</span>
-          <span className="text-[0.82rem] font-medium text-[var(--tessera-text)]">{s.version}</span>
+          <span className="font-mono text-[0.8rem] font-medium text-[var(--tessera-text)]">
+            {s.version}
+          </span>
           <span className="text-[0.58rem] text-emerald-300">{s.version_status}</span>
         </Field>
         <Field>
@@ -183,18 +297,9 @@ function Snapshot({ data }: { data: Data }) {
         </Field>
       </div>
       <div className="flex flex-col items-start gap-1 text-[0.68rem]">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 text-[#b9a6ff] hover:text-white"
-        >
-          <ChevronRight className="h-3.5 w-3.5" /> {s.compare}
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
+        <span className="inline-flex items-center gap-1 text-[var(--tessera-text-muted)]">
           <CalendarClock className="h-3.5 w-3.5" /> {s.asof}
-        </button>
+        </span>
       </div>
     </div>
   );
@@ -266,37 +371,153 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
   );
 }
 
-function Filters({ data }: { data: Data }) {
-  const f = data.filters;
-  if (!f) return null;
+function FilterDropdown({
+  label,
+  value,
+  options,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onSelect: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(
+    open,
+    useCallback(() => setOpen(false), []),
+  );
+  const current = options.find((o) => o.value === value)?.label ?? value;
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
-      <div className="flex h-9 min-w-[200px] flex-1 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5">
-        <Search className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        <span className="truncate text-[0.74rem] text-[var(--tessera-text-muted)]">{f.search}</span>
-      </div>
-      {f.selects.map((s) => (
-        <button
-          key={s.label}
-          type="button"
-          className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <span>{s.label}</span>
-          <span className="font-medium text-[var(--tessera-text)]">{s.value}</span>
-          <ChevronDown className="h-3.5 w-3.5" />
-        </button>
-      ))}
+    <div className="relative" ref={ref}>
       <button
         type="button"
-        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] hover:border-[var(--tessera-text-muted)]"
       >
-        <SlidersHorizontal className="h-3.5 w-3.5" /> {f.more}
+        <span className="text-[var(--tessera-text-muted)]">{label}</span>
+        <span className="font-medium text-[var(--tessera-text)]">{current}</span>
+        <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
       </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute left-0 z-20 mt-1 w-52 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1 shadow-lg"
+        >
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onSelect(o.value);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[0.72rem] hover:bg-[var(--tessera-bg)]",
+                o.value === value
+                  ? "text-[var(--tessera-text)]"
+                  : "text-[var(--tessera-text-muted)]",
+              )}
+            >
+              {o.label}
+              {o.value === value ? <span className="text-[#5fd0c6]">&bull;</span> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function PromptsTable({ data }: { data: Data }) {
+function Filters({
+  data,
+  search,
+  setSearch,
+  cat,
+  setCat,
+  vars,
+  setVars,
+  rows,
+  anyFilter,
+  onReset,
+}: {
+  data: Data;
+  search: string;
+  setSearch: (v: string) => void;
+  cat: string;
+  setCat: (v: string) => void;
+  vars: string;
+  setVars: (v: string) => void;
+  rows: RowT[];
+  anyFilter: boolean;
+  onReset: () => void;
+}) {
+  const t = useTranslations("agentPrompts");
+  const f = data.filters;
+  if (!f) return null;
+  const allF = f.selects[0]?.value ?? "Toutes";
+  const catOptions = [{ value: ALL, label: allF }, ...dedupe(rows, "type_tone", "type")];
+  const varOptions = f.var_options ?? [{ value: ALL, label: allF }];
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
+      <div className="flex h-9 min-w-[200px] flex-1 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5">
+        <Search className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={f.search}
+          aria-label={f.search}
+          className="w-full bg-transparent text-[0.74rem] text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
+        />
+      </div>
+      <FilterDropdown
+        label={f.selects[0]?.label ?? t("filterCategory")}
+        value={cat}
+        options={catOptions}
+        onSelect={setCat}
+      />
+      <FilterDropdown
+        label={f.selects[1]?.label ?? t("filterVariables")}
+        value={vars}
+        options={varOptions}
+        onSelect={setVars}
+      />
+      {anyFilter ? (
+        <button
+          type="button"
+          onClick={onReset}
+          className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" /> {t("reset")}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function dedupe(rows: RowT[], keyField: keyof RowT, labelField: keyof RowT) {
+  const seen = new Map<string, string>();
+  for (const r of rows) seen.set(String(r[keyField]), String(r[labelField]));
+  return [...seen.entries()].map(([value, label]) => ({ value, label }));
+}
+
+function PromptsTable({
+  data,
+  rows,
+  total,
+  selected,
+  onSelect,
+}: {
+  data: Data;
+  rows: RowT[];
+  total: number;
+  selected: string | null;
+  onSelect: (key: string) => void;
+}) {
+  const t = useTranslations("agentPrompts");
   const tbl = data.table;
   if (!tbl) return null;
   return (
@@ -316,94 +537,94 @@ function PromptsTable({ data }: { data: Data }) {
             </tr>
           </thead>
           <tbody>
-            {tbl.rows.map((r) => (
-              <tr
-                key={r.name}
-                className="border-b border-[var(--tessera-border)]/60 last:border-0 hover:bg-[var(--tessera-bg)]/40"
-              >
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <FileCode2 className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-                    <span className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]">
-                      {r.name}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-3 py-2.5">
-                  <span
-                    className={cn(
-                      "rounded-full border px-2 py-0.5 text-[0.58rem] font-medium",
-                      TYPE_TONE[r.type_tone] ?? TYPE_TONE.tpl,
-                    )}
-                  >
-                    {r.type}
-                  </span>
-                </td>
-                <td className="px-3 py-2.5">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 text-[0.68rem]",
-                      STATUS_TONE[r.status_tone] ?? STATUS_TONE.good,
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        r.status_tone === "good" ? "bg-emerald-400" : "bg-slate-500",
-                      )}
-                    />
-                    {r.status}
-                  </span>
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.7rem] tabular-nums text-[var(--tessera-text)]">
-                  {r.version}
-                </td>
-                <td className="px-3 py-2.5">
-                  <span className="inline-flex items-center gap-1.5 text-[0.7rem] tabular-nums text-[var(--tessera-text)]">
-                    <span
-                      className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        QUALITY_DOT[r.quality_tone] ?? "bg-slate-400",
-                      )}
-                    />
-                    {r.quality === "-" ? "-" : `${r.quality} / 10`}
-                  </span>
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)]">
-                  {r.updated}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.7rem] text-[var(--tessera-text)]">
-                  {r.owner}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)]">
-                  {r.tests}
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={tbl.columns.length}
+                  className="px-3 py-10 text-center text-[0.74rem] text-[var(--tessera-text-muted)]"
+                >
+                  {t("noResults")}
                 </td>
               </tr>
-            ))}
+            ) : (
+              rows.map((r) => {
+                const on = r.key === selected;
+                return (
+                  <tr
+                    key={r.key}
+                    // biome-ignore lint/a11y/useSemanticElements: a data row selects the prompt and stays keyboard reachable
+                    role="button"
+                    tabIndex={0}
+                    aria-label={r.name}
+                    aria-pressed={on}
+                    onClick={() => onSelect(r.key)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelect(r.key);
+                      }
+                    }}
+                    className={cn(
+                      "cursor-pointer border-b border-[var(--tessera-border)]/60 last:border-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#7c5cf5]",
+                      on ? "bg-[#6d4aed]/10" : "hover:bg-[var(--tessera-bg)]/40",
+                    )}
+                  >
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <FileCode2 className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+                        <span className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]">
+                          {r.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span
+                        className={cn(
+                          "rounded-full border px-2 py-0.5 text-[0.58rem] font-medium",
+                          TYPE_TONE[r.type_tone] ?? TYPE_TONE.rep,
+                        )}
+                      >
+                        {r.type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="inline-flex items-center gap-1.5 text-[0.68rem] text-emerald-300">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 font-mono text-[0.66rem] text-[var(--tessera-text)]">
+                      {r.version}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="inline-flex items-center gap-1.5 text-[0.7rem] tabular-nums text-[var(--tessera-text)]">
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            QUALITY_DOT[r.quality_tone] ?? "bg-slate-400",
+                          )}
+                        />
+                        {r.quality}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)]">
+                      {r.updated}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 font-mono text-[0.64rem] text-[var(--tessera-text-muted)]">
+                      {r.owner}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)]">
+                      {r.tests}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
       <div className="flex items-center justify-between border-t border-[var(--tessera-border)] px-3 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
-        <span>{tbl.count}</span>
-        <span className="flex items-center gap-1">
-          {[1, 2, 3].map((n) => (
-            <span
-              key={n}
-              className={cn(
-                "flex h-6 min-w-6 items-center justify-center rounded border px-1.5",
-                n === 1
-                  ? "border-[#6d4aed] bg-[#6d4aed]/15 text-[var(--tessera-text)]"
-                  : "border-[var(--tessera-border)]",
-              )}
-            >
-              {n}
-            </span>
-          ))}
-          <span className="px-1">...</span>
-          <span className="flex h-6 min-w-6 items-center justify-center rounded border border-[var(--tessera-border)] px-1.5">
-            {tbl.pages}
-          </span>
-        </span>
+        <span>{t("promptCount", { shown: rows.length, total })}</span>
       </div>
     </section>
   );
@@ -412,19 +633,25 @@ function PromptsTable({ data }: { data: Data }) {
 function PanelCard({
   title,
   cta,
+  href,
   children,
-}: { title: string; cta?: string; children: React.ReactNode }) {
+}: {
+  title: string;
+  cta?: string;
+  href?: Route;
+  children: React.ReactNode;
+}) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <h3 className="mb-2 text-[0.74rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-      {cta ? (
-        <button
-          type="button"
+      {cta && href ? (
+        <Link
+          href={href}
           className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
         >
           {cta} <ChevronRight className="h-3.5 w-3.5" />
-        </button>
+        </Link>
       ) : null}
     </section>
   );
@@ -434,7 +661,7 @@ function Watch({ data }: { data: Data }) {
   const w = data.watch;
   if (!w) return null;
   return (
-    <PanelCard title={w.title} cta={w.cta}>
+    <PanelCard title={w.title} cta={w.cta} href={"/agent/evaluations" as Route}>
       <ul className="flex flex-col gap-2.5">
         {w.items.map((it) => (
           <li key={it.title} className="flex items-start gap-2">
@@ -445,11 +672,8 @@ function Watch({ data }: { data: Data }) {
               )}
             />
             <span className="min-w-0">
-              <span className="block truncate text-[0.72rem] text-[var(--tessera-text)]">
+              <span className="block text-[0.72rem] leading-snug text-[var(--tessera-text)]">
                 {it.title}
-              </span>
-              <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
-                {it.detail}
               </span>
             </span>
           </li>
@@ -462,21 +686,21 @@ function Watch({ data }: { data: Data }) {
 function Quick({ data }: { data: Data }) {
   const q = data.quick;
   if (!q) return null;
-  const icons = [FlaskConical, Copy, Plus, Code2];
+  const icons = [Code2, FlaskConical, CalendarClock, Boxes];
   return (
     <PanelCard title={q.title}>
       <div className="grid grid-cols-2 gap-2">
         {q.items.map((it, i) => {
           const Icon = icons[i % icons.length] ?? FlaskConical;
           return (
-            <button
-              key={it}
-              type="button"
+            <Link
+              key={it.href}
+              href={it.href as Route}
               className="flex flex-col items-start gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.68rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
             >
               <Icon className="h-4 w-4 text-[#b9a6ff]" />
-              <span className="min-w-0 truncate">{it}</span>
-            </button>
+              <span className="min-w-0 truncate">{it.label}</span>
+            </Link>
           );
         })}
       </div>
@@ -488,13 +712,13 @@ function ByType({ data }: { data: Data }) {
   const b = data.by_type;
   if (!b) return null;
   return (
-    <PanelCard title={b.title} cta={b.cta}>
+    <PanelCard title={b.title}>
       <ul className="flex flex-col gap-2.5">
         {b.items.map((it) => (
           <li key={it.label} className="flex flex-col gap-1">
             <div className="flex items-center justify-between text-[0.7rem]">
               <span className="text-[var(--tessera-text)]">{it.label}</span>
-              <span className="tabular-nums text-[var(--tessera-text-muted)]">{it.value} / 10</span>
+              <span className="tabular-nums text-[var(--tessera-text-muted)]">{it.value}</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
               <div
@@ -509,10 +733,13 @@ function ByType({ data }: { data: Data }) {
   );
 }
 
-function Detail({ data, className }: { data: Data; className?: string }) {
-  const d = data.detail;
-  const [tab, setTab] = useState(d?.tabs[0] ?? "Resume");
-  if (!d) return null;
+function Detail({ detail, className }: { detail: DetailT | null; className?: string }) {
+  const t = useTranslations("agentPrompts");
+  const [tab, setTab] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset tab on prompt change
+  useEffect(() => setTab(0), [detail?.key]);
+  if (!detail) return null;
+  const d = detail;
   return (
     <section
       className={cn(
@@ -522,7 +749,7 @@ function Detail({ data, className }: { data: Data; className?: string }) {
     >
       <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
         <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          Details du prompt
+          {t("detailEyebrow")}
         </p>
         <div className="mt-1 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -543,13 +770,13 @@ function Detail({ data, className }: { data: Data; className?: string }) {
       </div>
 
       <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
-        {d.tabs.map((tb) => {
-          const on = tb === tab;
+        {d.tabs.map((tb, i) => {
+          const on = i === tab;
           return (
             <button
               key={tb}
               type="button"
-              onClick={() => setTab(tb)}
+              onClick={() => setTab(i)}
               className={cn(
                 "-mb-px border-b-2 py-2.5 text-[0.72rem] transition-colors",
                 on
@@ -564,106 +791,139 @@ function Detail({ data, className }: { data: Data; className?: string }) {
       </nav>
 
       <div className="flex flex-col gap-4 p-3.5">
-        <div>
-          <h3 className="mb-1 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
-            Description
-          </h3>
-          <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
-            {d.description}
-          </p>
-        </div>
+        {tab === 0 ? (
+          <>
+            <div>
+              <h3 className="mb-1 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+                {t("descriptionLabel")}
+              </h3>
+              <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+                {d.description}
+              </p>
+            </div>
+            <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+              {d.fields.map((f) => (
+                <li key={f.label} className="flex items-center justify-between gap-2">
+                  <span className="text-[var(--tessera-text-muted)]">{f.label}</span>
+                  <span className="font-medium text-[var(--tessera-text)]">{f.value}</span>
+                </li>
+              ))}
+            </ul>
+            <div>
+              <p className="mb-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+                {d.tags_label}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {d.tags.map((tg) => (
+                  <span
+                    key={tg}
+                    className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-0.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]"
+                  >
+                    {tg}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
 
-        <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-          {d.fields.map((f) => (
-            <li key={f.label} className="flex items-center justify-between gap-2">
-              <span className="text-[var(--tessera-text-muted)]">{f.label}</span>
-              <span
-                className={cn(
-                  "font-medium",
-                  f.tone === "good" ? "text-emerald-300" : "text-[var(--tessera-text)]",
-                )}
-              >
-                {f.value}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {tab === 1 ? <Content content={d.content} /> : null}
 
-        <div>
-          <p className="mb-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">{d.tags_label}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {d.tags.map((tg) => (
-              <span
-                key={tg}
-                className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-0.5 text-[0.62rem] text-[var(--tessera-text-muted)]"
-              >
-                {tg}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <DetailBlock title={d.config_title} cta={d.config_cta}>
-          <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-            {d.config.map((c) => (
-              <li key={c.label} className="flex items-center justify-between gap-2">
-                <span className="text-[var(--tessera-text-muted)]">{c.label}</span>
-                <span className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
-                  {c.value}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </DetailBlock>
-
-        <DetailBlock title={d.rbac_title} cta={d.rbac_cta}>
-          <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-            {d.rbac.map((r) => (
-              <li key={r.role} className="flex items-center justify-between gap-2">
-                <span className="text-[var(--tessera-text-muted)]">{r.role}</span>
-                <span className="font-medium text-[var(--tessera-text)]">{r.access}</span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            className="mt-2 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
-          >
-            {d.rbac_more} <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </DetailBlock>
-
-        <div>
-          <h3 className="mb-2 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
-            {d.info_title}
-          </h3>
-          <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-            {d.info.map((it) => (
-              <li key={it.label} className="flex items-center justify-between gap-2">
-                <span className="text-[var(--tessera-text-muted)]">{it.label}</span>
-                <span className="font-medium text-[var(--tessera-text)]">{it.value}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {tab === 2 ? (
+          <>
+            <DetailBlock title={d.config_title}>
+              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                {d.config.map((c) => (
+                  <li key={c.label} className="flex items-center justify-between gap-2">
+                    <span className="text-[var(--tessera-text-muted)]">{c.label}</span>
+                    <span className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+                      {c.value}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </DetailBlock>
+            <DetailBlock title={d.rbac_title}>
+              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                {d.rbac.map((r) => (
+                  <li key={r.role} className="flex items-center justify-between gap-2">
+                    <span className="text-[var(--tessera-text-muted)]">{r.role}</span>
+                    <span className="font-medium tabular-nums text-[var(--tessera-text)]">
+                      {r.access}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </DetailBlock>
+            <div>
+              <h3 className="mb-2 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+                {d.info_title}
+              </h3>
+              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                {d.info.map((it) => (
+                  <li key={it.label} className="flex items-center justify-between gap-2">
+                    <span className="text-[var(--tessera-text-muted)]">{it.label}</span>
+                    <span className="font-medium text-[var(--tessera-text)]">{it.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        ) : null}
       </div>
     </section>
   );
 }
 
-function DetailBlock({
-  title,
-  cta,
-  children,
-}: { title: string; cta: string; children: React.ReactNode }) {
+function Content({ content }: { content: DetailT["content"] }) {
+  const t = useTranslations("agentPrompts");
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = async (lang: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(lang);
+      setTimeout(() => setCopied((c) => (c === lang ? null : c)), 1500);
+    } catch {
+      // clipboard may be unavailable; ignore
+    }
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      {content.map((c) => (
+        <div key={c.lang}>
+          <div className="mb-1 flex items-center justify-between">
+            <span className="font-mono text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {c.lang}
+            </span>
+            <button
+              type="button"
+              onClick={() => copy(c.lang, c.text)}
+              className="flex items-center gap-1 text-[0.62rem] text-[#b9a6ff] hover:text-white"
+            >
+              {copied === c.lang ? (
+                <>
+                  <Check className="h-3 w-3" /> {t("copied")}
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" /> {t("copy")}
+                </>
+              )}
+            </button>
+          </div>
+          <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5 font-mono text-[0.66rem] leading-relaxed text-[var(--tessera-text)]">
+            {c.text}
+          </pre>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-[0.7rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
-        <button type="button" className="text-[0.64rem] text-[#b9a6ff] hover:text-white">
-          {cta}
-        </button>
-      </div>
+      <h3 className="mb-2 text-[0.7rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
       {children}
     </div>
   );

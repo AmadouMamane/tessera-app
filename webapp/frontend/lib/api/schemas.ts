@@ -3737,6 +3737,7 @@ export const AgentPromptsSchema = z.object({
     .object({
       search: z.string(),
       selects: z.array(z.object({ label: z.string(), value: z.string() })),
+      var_options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
       more: z.string(),
     })
     .optional(),
@@ -3747,17 +3748,21 @@ export const AgentPromptsSchema = z.object({
       pages: z.number(),
       rows: z.array(
         z.object({
+          key: z.string(),
           name: z.string(),
           type: z.string(),
           type_tone: z.string(),
           status: z.string(),
           status_tone: z.string(),
           version: z.string(),
+          langs_present: z.array(z.string()),
           quality: z.string(),
           quality_tone: z.string(),
+          vars_count: z.number(),
           updated: z.string(),
           owner: z.string(),
           tests: z.string(),
+          fr_len: z.number(),
         }),
       ),
     })
@@ -3769,7 +3774,12 @@ export const AgentPromptsSchema = z.object({
       items: z.array(z.object({ title: z.string(), detail: z.string(), tone: z.string() })),
     })
     .optional(),
-  quick: z.object({ title: z.string(), items: z.array(z.string()) }).optional(),
+  quick: z
+    .object({
+      title: z.string(),
+      items: z.array(z.object({ label: z.string(), href: z.string() })),
+    })
+    .optional(),
   by_type: z
     .object({
       title: z.string(),
@@ -3779,28 +3789,33 @@ export const AgentPromptsSchema = z.object({
       ),
     })
     .optional(),
-  detail: z
-    .object({
-      name: z.string(),
-      id: z.string(),
-      status: z.string(),
-      tabs: z.array(z.string()),
-      description: z.string(),
-      fields: z.array(
-        z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
-      ),
-      tags_label: z.string(),
-      tags: z.array(z.string()),
-      config_title: z.string(),
-      config_cta: z.string(),
-      config: z.array(z.object({ label: z.string(), value: z.string() })),
-      rbac_title: z.string(),
-      rbac_cta: z.string(),
-      rbac: z.array(z.object({ role: z.string(), access: z.string() })),
-      rbac_more: z.string(),
-      info_title: z.string(),
-      info: z.array(z.object({ label: z.string(), value: z.string() })),
-    })
+  details: z
+    .array(
+      z.object({
+        key: z.string(),
+        name: z.string(),
+        id: z.string(),
+        status: z.string(),
+        status_tone: z.string(),
+        tabs: z.array(z.string()),
+        description: z.string(),
+        fields: z.array(
+          z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
+        ),
+        content: z.array(z.object({ lang: z.string(), text: z.string() })),
+        tags_label: z.string(),
+        tags: z.array(z.string()),
+        config_title: z.string(),
+        config_cta: z.string(),
+        config: z.array(z.object({ label: z.string(), value: z.string() })),
+        rbac_title: z.string(),
+        rbac_cta: z.string(),
+        rbac: z.array(z.object({ role: z.string(), access: z.string() })),
+        rbac_more: z.string(),
+        info_title: z.string(),
+        info: z.array(z.object({ label: z.string(), value: z.string() })),
+      }),
+    )
     .optional(),
   footer: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
 });

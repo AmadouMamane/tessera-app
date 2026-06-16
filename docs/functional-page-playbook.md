@@ -406,9 +406,43 @@ it dirty.
   the filter bar wraps and a `right-0` popover can land over the sidebar -> add
   `test.use({ viewport: { width: 1672, height: 1000 } })` at the top of the spec.
 
+## Round-11 skills (Prompts: the YAML source of truth, read-only)
+
+- **The source IS the page.** Prompts read
+  `src/tessera/agent/prompts/{fr,de,en}.yaml` (14 keys x 3 langs) - the same
+  files the agent loads. Every value is real: category (editorial grouping of the
+  key), languages present, template variables (`{name}` via regex, deduped),
+  char/word length per language, file mtime. The detail's **Content** tab renders
+  the actual prompt text per language in a `<pre>` with a copy button - the
+  highest-signal real feature, and free.
+- **Read-only is a legitimate "functional".** Prompts live in Git (edited via PR,
+  loaded at start-up); editing files from the UI is out of scope and a fake
+  toggle would be a meaningless control. So there is NO mutation endpoint - the
+  two axes are satisfied by real data + wired search/filter/select/nav (verified
+  e2e). Do NOT invent a durable mutation just to have one; a dead/meaningless
+  control is worse than none. State the read-only nature in the module docstring.
+- **Pick filters that actually bite.** All 14 prompts are present in all 3 langs,
+  so a "Language" filter would never change the row count (a weak control).
+  Replaced it with a **Variables** filter (Toutes / Avec variables / Sans
+  variables) which genuinely partitions the rows. When choosing a filter axis,
+  prefer one whose values are non-uniform across the data.
+- **Relabel the KPI/column slots honestly.** No per-prompt version/quality/owner/
+  test-run store exists, so the normative's Version/Qualite/Proprietaire/Tests
+  columns became Langues / Variables / Source(file) / Longueur(chars), and the
+  KPIs became Prompts / Categories / Couverture i18n / Variables uniques /
+  Longueur moyenne / Langues manquantes - all computed from the YAML.
+- **e2e accent gotcha.** `getByText`/`getByRole({name})` do NOT strip accents:
+  the FR detail eyebrow is "Détails du prompt", so a selector written
+  "Details du prompt" silently never matches. Copy the accented string verbatim.
+
 ## Status of the agent pages (update as you go)
 
-- **Real + functional:** Garde-fous (policy.yaml rules + live audit-log firing
+- **Real + functional:** Prompts (live `prompts/{fr,de,en}.yaml` inventory:
+  categories, languages, template variables, lengths + the real prompt text per
+  language in the detail Content tab; search + category/variables filters +
+  removable chips; FR/DE/EN; read-only by design - no UI mutation;
+  `tests/unit/test_prompts.py` + `e2e/prompts.spec.ts`). Garde-fous (policy.yaml
+  rules + live audit-log firing
   stats + chain integrity, durable enable/disable toggle, search + category/
   status/severity dropdowns + advanced Mode popover + removable chips, row-click
   detail with tab-gated content, FR/DE/EN, `tests/unit/test_garde_fous.py` +
@@ -420,5 +454,4 @@ it dirty.
   ancres" (real transcript traffic count) -- with a live count badge + reset).
 - **Real data (read-only):** Evaluations, Historique, Synthese (eval run);
   Configurations (repo introspection — form not yet persisted).
-- **Still fixture / blocked:** Prompts (real source = prompt YAML; per-prompt
-  scores unsourced). Other pages' filters/exports/RBAC are static.
+- **Still fixture / blocked:** Other pages' filters/exports/RBAC are static.

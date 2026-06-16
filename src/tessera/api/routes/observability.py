@@ -661,15 +661,18 @@ async def observability_agent_evaluations() -> dict[str, object]:
 
 
 @router.get("/observability/agent-prompts")
-async def observability_agent_prompts() -> dict[str, object]:
+async def observability_agent_prompts(lang: str = "fr") -> dict[str, object]:
     """Agent Prompts ("Prompts") dashboard (reference image 28).
 
-    Inner tab strip, active-snapshot bar, KPI strip, filterable prompts table,
-    watchlist, quick actions, quality-by-type and a per-prompt detail panel.
-    Deterministic fixture; degrades to ``available: false``.
+    Backed by the live YAML source of truth
+    (``src/tessera/agent/prompts/{fr,de,en}.yaml``): the prompt inventory,
+    categories, languages, template variables, lengths and the per-prompt text
+    in the detail panel are all real. Read-only (prompts live in Git). Display
+    labels are localized via ``lang`` (fr/de/en). Degrades to
+    ``available: false`` on failure.
     """
     try:
-        return {"available": True, **agent_prompts_mod.compute_agent_prompts()}
+        return {"available": True, **(await agent_prompts_mod.build_agent_prompts(lang))}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_prompts: failed: {exc}\n")
         return {"available": False}

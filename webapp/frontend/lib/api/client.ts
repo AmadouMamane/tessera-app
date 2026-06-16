@@ -1148,8 +1148,12 @@ export async function mutateGardeFousRule(body: {
   );
 }
 
-export async function fetchAgentPrompts(signal?: AbortSignal): Promise<AgentPrompts> {
-  return request("/observability/agent-prompts", { signal }, AgentPromptsSchema);
+export async function fetchAgentPrompts(
+  lang?: string,
+  signal?: AbortSignal,
+): Promise<AgentPrompts> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/agent-prompts${q}`, { signal }, AgentPromptsSchema);
 }
 
 export async function fetchAgentEvaluations(signal?: AbortSignal): Promise<AgentEvaluations> {

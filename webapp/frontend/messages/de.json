@@ -4534,7 +4534,20 @@
     "subtitle": "Verwalten Sie die System-Prompts, Vorlagen und Anweisungen des Assistenten und der Agenten.",
     "loading": "Prompts werden geladen…",
     "unavailable": "Prompts nicht verfügbar.",
-    "realtime": "Live"
+    "realtime": "Live",
+    "searchPrefix": "Suche",
+    "clearAll": "Alle löschen",
+    "filterCategory": "Kategorie",
+    "filterVariables": "Variablen",
+    "withVariables": "Mit Variablen",
+    "withoutVariables": "Ohne Variablen",
+    "reset": "Zurücksetzen",
+    "noResults": "Kein Prompt entspricht den Filtern.",
+    "promptCount": "{shown} von {total} Prompts",
+    "detailEyebrow": "Prompt-Details",
+    "descriptionLabel": "Beschreibung",
+    "copy": "Kopieren",
+    "copied": "Kopiert"
   },
   "agentEvaluations": {
     "title": "Evaluierungen",
