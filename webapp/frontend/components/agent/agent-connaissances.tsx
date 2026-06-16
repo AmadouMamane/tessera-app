@@ -1153,7 +1153,7 @@ function DetailDrawer({
   }, [onClose]);
   return (
     <div
-      className="absolute inset-0 z-30 flex justify-end overflow-hidden rounded-lg bg-[#020817]/70 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-[#020817]/70 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
