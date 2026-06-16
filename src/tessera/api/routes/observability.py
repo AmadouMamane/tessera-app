@@ -717,10 +717,10 @@ async def observability_agent_garde_fous_mutate(
 async def observability_agent_a_faire() -> dict[str, object]:
     """Agent "A faire" personal action queue (reference image 23).
 
-    Temporal rail + event timeline, KPI strip, saved-views filter rail, task
-    table and a right column (type donut, SLA buckets, quick actions, recent
-    activity, status footer). Deterministic fixture; degrades to
-    ``available: false``.
+    Backed by the real operator backlog (failed eval cases with durable
+    status/assignee): temporal rail + event timeline, KPI strip, saved-views
+    filter rail, task table, per-item detail band and the right column.
+    Degrades to ``available: false`` on failure.
     """
     try:
         return {"available": True, **agent_a_faire_mod.compute_agent_a_faire()}
@@ -890,6 +890,17 @@ async def observability_inbox_mutate(body: _ItemStateBody) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="unknown item")
     operator_items_mod.set_item_state(body.item_id, status=body.status, assignee=body.assignee)
     return {"available": True, **inbox_mod.compute_inbox_overview()}
+
+
+@router.post("/observability/agent-a-faire/item-state")
+async def observability_agent_a_faire_mutate(body: _ItemStateBody) -> dict[str, object]:
+    """Persist a status/assignee change for one A-faire item; return fresh payload."""
+    from tessera.observability import operator_items as operator_items_mod
+
+    if body.item_id not in operator_items_mod.available_item_ids():
+        raise HTTPException(status_code=404, detail="unknown item")
+    operator_items_mod.set_item_state(body.item_id, status=body.status, assignee=body.assignee)
+    return {"available": True, **agent_a_faire_mod.compute_agent_a_faire()}
 
 
 @router.get("/observability/parameters")

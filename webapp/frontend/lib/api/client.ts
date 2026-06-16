@@ -1153,6 +1153,23 @@ export async function fetchAgentAFaire(signal?: AbortSignal): Promise<AgentAFair
   return request("/observability/agent-a-faire", { signal }, AgentAFaireSchema);
 }
 
+/** Persist a status/assignee change for one A-faire item; returns the fresh payload. */
+export async function mutateAFaireItem(body: {
+  item_id: string;
+  status?: string;
+  assignee?: string;
+}): Promise<AgentAFaire> {
+  return request(
+    "/observability/agent-a-faire/item-state",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    AgentAFaireSchema,
+  );
+}
+
 export async function fetchAgentGardeFous(
   lang?: string,
   signal?: AbortSignal,

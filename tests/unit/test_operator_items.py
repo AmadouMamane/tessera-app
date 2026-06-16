@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from tessera.observability import inbox, operator_items as oi
+from tessera.observability import agent_a_faire, inbox, operator_items as oi
 from tessera.observability.eval_data import SessionRow
 
 if TYPE_CHECKING:
@@ -159,3 +159,27 @@ def test_inbox_aggregates_real_items(monkeypatch: pytest.MonkeyPatch) -> None:
     assert row_a["sla"] == "En retard"
     row_d = next(r for r in payload["items"] if r["id"] == "d.fr")
     assert row_d["status"] == "resolved"  # done -> resolved
+
+
+def test_a_faire_aggregates_and_exposes_details(monkeypatch: pytest.MonkeyPatch) -> None:
+    items = [
+        _item("a", "crit", "todo", hours_ago=3),  # overdue
+        _item("b", "mod", "progress", hours_ago=1),  # in progress, assigned Moi
+        _item("c", "crit", "done", hours_ago=5),  # resolved
+    ]
+    monkeypatch.setattr(agent_a_faire, "load_items", lambda: items)
+    payload = agent_a_faire.compute_agent_a_faire()
+    kpis = {k["key"]: k["value"] for k in payload["kpis"]}
+    assert kpis["total"] == "2"  # 2 open (a, b)
+    assert kpis["late"] == "1"  # a overdue
+    assert kpis["mine"] == "1"  # b assigned Moi
+    assert kpis["resolved"] == "1"
+    # one detail per item, keyed; workflow status is independent of SLA breach.
+    assert len(payload["details"]) == 3
+    det_a = next(d for d in payload["details"] if d["key"] == "a.fr")
+    assert det_a["current_status"] == "A traiter"  # overdue does NOT mask workflow status
+    task_a = next(t for t in payload["table"]["tasks"] if t["key"] == "a.fr")
+    assert task_a["sla"] == "En retard"  # breach shown in the SLA cell
+    assert task_a["status"] == "A traiter"
+    det_b = next(d for d in payload["details"] if d["key"] == "b.fr")
+    assert det_b["current_status"] == "En cours"

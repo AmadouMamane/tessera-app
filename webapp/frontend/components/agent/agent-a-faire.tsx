@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -16,11 +16,14 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
-import { fetchAgentAFaire } from "@/lib/api/client";
+import { fetchAgentAFaire, mutateAFaireItem } from "@/lib/api/client";
 import type { AgentAFaire as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+
+type TaskT = NonNullable<Data["table"]>["tasks"][number];
+type DetailT = NonNullable<Data["details"]>[number];
 
 const SPARK: Record<string, string> = {
   red: "#f87171",
@@ -53,12 +56,36 @@ const EVENT_DOT: Record<string, string> = {
 
 export function AgentAFaire() {
   const t = useTranslations("agentAFaire");
+  const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["agent-a-faire"],
     queryFn: ({ signal }) => fetchAgentAFaire(signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
+  const mutate = useMutation({
+    mutationFn: mutateAFaireItem,
+    onSuccess: (fresh) => qc.setQueryData(["agent-a-faire"], fresh),
+  });
+
+  const tasks = data?.table?.tasks ?? [];
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (q === "") return tasks;
+    return tasks.filter(
+      (it) =>
+        it.title.toLowerCase().includes(q) ||
+        it.type.toLowerCase().includes(q) ||
+        it.source.toLowerCase().includes(q) ||
+        it.ref.toLowerCase().includes(q),
+    );
+  }, [tasks, search]);
+
+  const details = data?.details ?? [];
+  const detail = details.find((d) => d.key === selected) ?? data?.detail ?? null;
 
   if (!data?.available) {
     return (
@@ -67,6 +94,13 @@ export function AgentAFaire() {
       </div>
     );
   }
+
+  const setStatus = (status: string) => {
+    if (detail?.selected.key) mutate.mutate({ item_id: detail.selected.key, status });
+  };
+  const assignMe = () => {
+    if (detail?.selected.key) mutate.mutate({ item_id: detail.selected.key, assignee: "Moi" });
+  };
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
@@ -80,10 +114,15 @@ export function AgentAFaire() {
       </div>
 
       <div className="grid min-w-0 gap-2.5 xl:grid-cols-[200px_minmax(0,1fr)]">
-        <Filters data={data} />
+        <Filters data={data} search={search} setSearch={setSearch} />
         <div className="flex min-w-0 flex-col gap-2.5">
           <div className="grid min-w-0 gap-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
-            <TaskTable data={data} />
+            <TaskTable
+              data={data}
+              tasks={filtered}
+              selected={detail?.selected.key ?? null}
+              onSelect={setSelected}
+            />
             <aside className="flex min-w-0 flex-col gap-2.5">
               <Donut data={data} />
               <Sla data={data} />
@@ -91,7 +130,14 @@ export function AgentAFaire() {
               <Activity data={data} />
             </aside>
           </div>
-          <DetailBand data={data} />
+          <DetailBand
+            data={data}
+            detail={detail}
+            busy={mutate.isPending}
+            onTake={() => setStatus("progress")}
+            onResolve={() => setStatus("done")}
+            onAssign={assignMe}
+          />
         </div>
       </div>
 
@@ -222,7 +268,15 @@ function Spark({
   );
 }
 
-function Filters({ data }: { data: Data }) {
+function Filters({
+  data,
+  search,
+  setSearch,
+}: {
+  data: Data;
+  search: string;
+  setSearch: (v: string) => void;
+}) {
   const f = data.filters;
   if (!f) return null;
   return (
@@ -230,7 +284,13 @@ function Filters({ data }: { data: Data }) {
       <h3 className="text-[0.74rem] font-semibold text-[var(--tessera-text)]">{f.title}</h3>
       <div className="flex h-8 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5">
         <Search className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        <span className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">{f.search}</span>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={f.search}
+          aria-label={f.search}
+          className="w-full bg-transparent text-[0.66rem] text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
+        />
       </div>
       <ul className="flex flex-col gap-2">
         {f.selects.map((s) => (
@@ -283,7 +343,17 @@ function Filters({ data }: { data: Data }) {
   );
 }
 
-function TaskTable({ data }: { data: Data }) {
+function TaskTable({
+  data,
+  tasks,
+  selected,
+  onSelect,
+}: {
+  data: Data;
+  tasks: TaskT[];
+  selected: string | null;
+  onSelect: (key: string) => void;
+}) {
   const tbl = data.table;
   if (!tbl) return null;
   return (
@@ -303,10 +373,25 @@ function TaskTable({ data }: { data: Data }) {
             </tr>
           </thead>
           <tbody>
-            {tbl.tasks.map((it) => (
+            {tasks.map((it) => (
               <tr
-                key={`${it.title}-${it.ref}`}
-                className="cursor-pointer border-b border-[var(--tessera-border)]/60 transition-colors last:border-0 hover:bg-[var(--tessera-bg)]/50"
+                key={it.key ?? `${it.title}-${it.ref}`}
+                // biome-ignore lint/a11y/useSemanticElements: a data row selects the item and stays keyboard reachable
+                role="button"
+                tabIndex={0}
+                aria-label={it.title}
+                aria-pressed={it.key === selected}
+                onClick={() => it.key && onSelect(it.key)}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && it.key) {
+                    e.preventDefault();
+                    onSelect(it.key);
+                  }
+                }}
+                className={cn(
+                  "cursor-pointer border-b border-[var(--tessera-border)]/60 transition-colors last:border-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#7c5cf5]",
+                  it.key === selected ? "bg-[#6d4aed]/10" : "hover:bg-[var(--tessera-bg)]/50",
+                )}
               >
                 <td className="px-2.5 py-2">
                   <Badge className={PRIO_TONE[it.prio_tone] ?? PRIO_TONE.mod}>{it.priority}</Badge>
@@ -372,8 +457,22 @@ function TaskTable({ data }: { data: Data }) {
   );
 }
 
-function DetailBand({ data }: { data: Data }) {
-  const d = data.detail;
+function DetailBand({
+  data,
+  detail,
+  busy,
+  onTake,
+  onResolve,
+  onAssign,
+}: {
+  data: Data;
+  detail: DetailT | null;
+  busy: boolean;
+  onTake: () => void;
+  onResolve: () => void;
+  onAssign: () => void;
+}) {
+  const d = detail;
   const s = data.status;
   if (!d) return null;
   return (
@@ -480,7 +579,9 @@ function DetailBand({ data }: { data: Data }) {
           </div>
           <button
             type="button"
-            className="mt-auto flex items-center justify-center gap-1 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 px-2.5 py-1.5 text-[0.66rem] text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
+            onClick={onAssign}
+            disabled={busy}
+            className="mt-auto flex items-center justify-center gap-1 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 px-2.5 py-1.5 text-[0.66rem] text-[#c4b5fd] hover:bg-[#4c3fb0]/60 disabled:opacity-50"
           >
             {d.reassign}
           </button>
@@ -493,22 +594,23 @@ function DetailBand({ data }: { data: Data }) {
               <h4 className="text-[0.7rem] font-semibold text-[var(--tessera-text)]">{s.title}</h4>
               <div>
                 <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.label}</p>
-                <button
-                  type="button"
-                  className="mt-0.5 flex h-8 w-full items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.68rem] text-[var(--tessera-text)]"
-                >
-                  {s.value} <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-                </button>
+                <span className="mt-0.5 flex h-8 w-full items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.68rem] text-[var(--tessera-text)]">
+                  {d.current_status ?? s.value}
+                </span>
               </div>
               <button
                 type="button"
-                className="mt-auto flex h-9 items-center justify-center rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-[0.7rem] font-medium text-white hover:bg-[#7c5cf5]"
+                onClick={onTake}
+                disabled={busy}
+                className="mt-auto flex h-9 items-center justify-center rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-[0.7rem] font-medium text-white hover:bg-[#7c5cf5] disabled:opacity-50"
               >
                 {s.primary}
               </button>
               <button
                 type="button"
-                className="flex h-8 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+                onClick={onResolve}
+                disabled={busy}
+                className="flex h-8 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-50"
               >
                 {s.secondary}
               </button>

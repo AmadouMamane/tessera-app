@@ -469,9 +469,43 @@ it dirty.
 - **Configurations stays FR-only** (it never had a `lang` param); don't localize
   it just for parity - match the page's existing contract.
 
+## Round-13 skills (A faire / A traiter: a shared derived backlog)
+
+- **Two queue pages, one real source.** "A faire" and "A traiter" were both
+  fixtures. Instead of inventing a task store, derive the backlog from artifacts
+  that already exist: `tessera.observability.operator_items` turns every **failed
+  eval case** (`load_eval_snapshot().sessions` where `not passed`) into a queue
+  item (id = `case_id.lang`), mapping category -> priority/source and a
+  per-priority SLA target; `now`-relative age/overdue are computed on read. One
+  shared module feeds both `inbox.py` (a-traiter) and `agent_a_faire.py`, each
+  shaping it to its own existing payload.
+- **Durable status/assignee = the functional axis.** A single
+  `operator_items_state.json` + `set_item_state(id, status?, assignee?)` backs
+  both pages; each page got a `.../item-state` POST (404 on unknown id) returning
+  its fresh payload. a-traiter wires a status-badge that cycles
+  todo->in_progress->resolved; a-faire wires row-click selection + the detail's
+  "Prendre en charge"/"Marquer resolu"/"M'assigner" buttons.
+- **Don't let SLA breach mask workflow status.** First cut folded "overdue" into
+  the status badge, so "Prendre en charge" on an overdue item showed no visible
+  change (77/84 items are overdue - the eval run is hours old). Separate the two:
+  the **status badge** reflects only the durable workflow state (A traiter / En
+  cours / Resolu); the **SLA cell** carries the breach ("En retard", red). Now
+  the action is visibly effective. (Unit-tested explicitly.)
+- **Honest distributions over fake sparklines.** No per-KPI time-series exists,
+  so the compact KPI sparkline uses a real per-priority/per-type **distribution**;
+  KPI deltas with no historical basis are `-`, and "avg handling time" is `-`
+  (not instrumented) rather than a fabricated number.
+- **Endpoint ordering with a shared Pydantic body.** `_ItemStateBody` lives next
+  to the inbox route; the a-faire mutation must be declared **after** it (FastAPI
+  resolves the annotation at decoration time), or place the model earlier.
+
 ## Status of the agent pages (update as you go)
 
-- **Real + functional:** Configurations (real settings/repo introspection +
+- **Real + functional:** A faire + A traiter (shared `operator_items` backlog =
+  failed eval cases, per-priority SLA, durable status/assignee via the item-state
+  endpoints; search + filters + status mutation; `tests/unit/test_operator_items.py`
+  + `e2e/{a-faire,a-traiter}.spec.ts`). Configurations (real settings/repo
+  introspection +
   editable agent-profile overrides persisted via `agent_config.json` and the
   `config` endpoint: name/description/language/owner/behaviour selects +
   sampling sliders/routing/parallel-tools toggle/tags, dirty-gated Save+Annuler;

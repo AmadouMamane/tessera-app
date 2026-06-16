@@ -1,22 +1,80 @@
 """Agent "A faire" cockpit overview (reference image 23).
 
-The "A faire" page is the operator's personal action queue: a temporal rail and
-a 24h event timeline, a KPI strip (to-do total/urgent, SLA under 2h, overdue,
-assigned to me, resolved today, mean handling time, SLA met), a saved-views
-filter rail, the task table (priority, type, title, source, assignee, SLA, due,
-status) and a right column with a type-breakdown donut, SLA buckets, quick
-actions, recent activity and a status/action footer.
-
-This is the sibling of the "A traiter" inbox (page 24). It ships without a live
-task store, so the payload is a deterministic reference fixture: values are
-stable across calls. Colours/priorities/statuses are emitted as keys; the
-frontend maps each key to its label colour. Free-text data is verbatim French
-with ASCII-only punctuation.
+The operator's personal action queue, now backed by the real operator backlog
+(:mod:`tessera.observability.operator_items` - failed evaluation cases with a
+durable per-item status/assignee). It exposes the KPI strip, the saved-views
+filter rail, the task table, a per-item detail band and the right column
+(type donut, SLA buckets, quick actions, recent activity). Status is mutated by
+the item-state endpoint, so the page is functional, not a fixture.
 """
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+from tessera.observability.operator_items import load_items
+
+if TYPE_CHECKING:
+    from tessera.observability.operator_items import OperatorItem
+
 __all__ = ["compute_agent_a_faire"]
+
+_HOUR = 3600
+_WARN = 2 * _HOUR
+
+_PRIO_LABEL = {"crit": "Critique", "high": "Elevee", "mod": "Moyenne", "low": "Faible"}
+_TYPE_COLOR = {
+    "crit": "#f87171",
+    "high": "#e0763a",
+    "mod": "#e0a23a",
+    "low": "#34d399",
+}
+_TEAM = {
+    "Garde-fous": "AI Safety",
+    "Confidentialite": "Privacy",
+    "RAG": "Knowledge",
+    "Outils": "Platform",
+    "Reglementaire": "Compliance",
+    "Multilingue": "Localization",
+    "Assistant": "Support",
+}
+
+
+def _fmt_remaining(item: OperatorItem, now: datetime) -> tuple[str, str]:
+    """(label, tone) for the SLA cell."""
+    if item.status == "done":
+        return "Resolu", "ok"
+    remaining = item.remaining_seconds(now)
+    if remaining < 0:
+        return "En retard", "crit"
+    hours = int(remaining // _HOUR)
+    minutes = int((remaining % _HOUR) // 60)
+    label = f"{hours}h {minutes:02d}m" if hours else f"{minutes} min"
+    return label, ("warn" if remaining < _WARN else "ok")
+
+
+def _status_label(item: OperatorItem) -> tuple[str, str]:
+    """(label, tone) for the workflow status badge.
+
+    Reflects the durable workflow state only; SLA breach is shown separately in
+    the SLA cell, so taking charge of an overdue item is visibly reflected here.
+    """
+    if item.status == "done":
+        return "Resolu", "done"
+    if item.status == "progress":
+        return "En cours", "progress"
+    return "A traiter", "todo"
+
+
+def _fmt_dt(dt: datetime) -> str:
+    return dt.strftime("%d/%m/%Y %H:%M")
+
+
+def _fmt_age(seconds: float) -> str:
+    hours = int(seconds // _HOUR)
+    minutes = int((seconds % _HOUR) // 60)
+    return f"{hours}h {minutes:02d}m" if hours else f"{minutes} min"
 
 
 def _kpi(
@@ -33,365 +91,293 @@ def _kpi(
     }
 
 
-def _task(
-    priority: str,
-    prio_tone: str,
-    type_: str,
-    title: str,
-    source: str,
-    ref: str,
-    assignee: str,
-    sla: str,
-    sla_tone: str,
-    due: str,
-    status: str,
-    status_tone: str,
-) -> dict[str, object]:
+def _task(item: OperatorItem, now: datetime) -> dict[str, object]:
+    sla, sla_tone = _fmt_remaining(item, now)
+    status, status_tone = _status_label(item)
     return {
-        "priority": priority,
-        "prio_tone": prio_tone,
-        "type": type_,
-        "title": title,
-        "source": source,
-        "ref": ref,
-        "assignee": assignee,
+        "key": item.item_id,
+        "priority": _PRIO_LABEL.get(item.priority, "Moyenne"),
+        "prio_tone": item.priority,
+        "type": item.type_label,
+        "title": item.title,
+        "source": item.source,
+        "ref": item.case_id,
+        "assignee": item.assignee or "Non assigne",
         "sla": sla,
         "sla_tone": sla_tone,
-        "due": due,
+        "due": _fmt_dt(item.due_at()),
         "status": status,
         "status_tone": status_tone,
     }
 
 
-def compute_agent_a_faire() -> dict[str, object]:
-    """Return the full "A faire" overview payload (deterministic fixture)."""
-    rail: dict[str, object] = {
-        "live": "Live",
-        "segments": ["File actuelle", "Donnees en temps reel", "SLA en temps reel"],
-        "period": "24h",
-        "updated": "11/06/2026 10:42:15",
-        "now": "Maintenant",
-        "scope": "Ce matin (08:00)",
-        "bulk": "Actions groupees",
-    }
-
-    timeline: dict[str, object] = {
-        "title": "Timeline evenements (24h)",
-        "cta": "Voir la timeline complete",
-        "events": [
-            {"time": "09:12", "label": "Ticket cree", "ref": "BC-8318", "tone": "ok"},
-            {"time": "09:45", "label": "Assignation", "ref": "BC-8316", "tone": "warn"},
-            {"time": "10:05", "label": "SLA risque", "ref": "BC-8309", "tone": "warn"},
-            {"time": "10:18", "label": "Escalade", "ref": "BC-8305", "tone": "crit"},
-            {"time": "10:25", "label": "Ticket resolu", "ref": "BC-8302", "tone": "ok"},
-            {"time": "10:38", "label": "Reouverture", "ref": "BC-8301", "tone": "crit"},
+def _detail(item: OperatorItem, now: datetime) -> dict[str, object]:
+    sla, _ = _fmt_remaining(item, now)
+    status, status_tone = _status_label(item)
+    remaining = item.remaining_seconds(now)
+    sla_value = ("-" if remaining < 0 else "") + _fmt_age(abs(remaining))
+    sla_note = "Depasse" if remaining < 0 else "Dans les delais"
+    return {
+        "key": item.item_id,
+        "title": "Detail selectionne",
+        "selected": {
+            "key": item.item_id,
+            "id": item.item_id,
+            "priority": _PRIO_LABEL.get(item.priority, "Moyenne"),
+            "prio_tone": item.priority,
+            "title": item.title,
+            "subtitle": f"{item.type_label} - {item.source}",
+            "cta": "Ouvrir dans les evaluations",
+        },
+        "tabs": ["Contexte", "Historique", "Preuves", "Relations"],
+        "context": [
+            {"label": "Cas", "value": item.case_id},
+            {"label": "Categorie", "value": item.type_label},
+            {"label": "Langue", "value": item.language.upper()},
+            {"label": "Source", "value": item.source},
+            {"label": "Date", "value": _fmt_dt(item.created_at)},
         ],
+        "summary_label": "Resume",
+        "summary": f"Cas d'evaluation en echec a revoir : {item.title}.",
+        "sla_title": "Echeance & SLA",
+        "sla_value": sla_value,
+        "sla_note": sla_note,
+        "sla_rows": [
+            {"label": "Echeance", "value": _fmt_dt(item.due_at())},
+            {"label": "Cree le", "value": _fmt_dt(item.created_at)},
+            {"label": "Age", "value": _fmt_age(item.age_seconds(now))},
+        ],
+        "assign_title": "Assignation",
+        "assign_label": "Assigne a",
+        "assignee": item.assignee or "Non assigne",
+        "team_label": "Equipe",
+        "team": _TEAM.get(item.source, "Support"),
+        "reassign": "M'assigner",
+        "current_status": status,
+        "current_status_tone": status_tone,
+        "sla_cell": sla,
     }
 
-    kpis: list[dict[str, object]] = [
+
+def compute_agent_a_faire() -> dict[str, object]:
+    """Return the full "A faire" overview payload from the real backlog."""
+    now = datetime.now(UTC)
+    items = load_items()
+    open_items = [i for i in items if i.status != "done"]
+
+    urgent = sum(1 for i in open_items if i.priority == "crit")
+    sla2h = sum(1 for i in open_items if 0 <= i.remaining_seconds(now) < _WARN)
+    late = sum(1 for i in open_items if i.remaining_seconds(now) < 0)
+    mine = sum(1 for i in open_items if i.assignee == "Moi")
+    resolved = sum(1 for i in items if i.status == "done")
+    on_time = len(open_items) - late
+    sla_ok = round(100 * on_time / len(open_items)) if open_items else 100
+
+    prio_series = [
+        sum(1 for i in open_items if i.priority == p) for p in ("crit", "high", "mod", "low")
+    ]
+
+    kpis = [
         _kpi(
             "total",
             "A traiter (total)",
-            "23",
-            "+18% vs ce matin",
+            str(len(open_items)),
+            "file reelle",
             False,
             "red",
-            [14, 16, 15, 18, 19, 21, 23],
+            prio_series,
         ),
-        _kpi("urgent", "A traiter (urgents)", "6", "+33%", False, "red", [3, 3, 4, 4, 5, 5, 6]),
-        _kpi("sla2h", "SLA < 2h", "4", "+100%", False, "red", [1, 1, 2, 2, 3, 3, 4]),
-        _kpi("late", "En retard (SLA depasse)", "3", "+50%", False, "red", [1, 1, 2, 2, 2, 3, 3]),
-        _kpi("mine", "Assignes a moi", "9", "+11%", True, "teal", [6, 7, 7, 8, 8, 9, 9]),
         _kpi(
-            "resolved",
-            "Resolus aujourd'hui",
-            "18",
-            "+22%",
-            True,
-            "teal",
-            [10, 12, 13, 14, 16, 17, 18],
+            "urgent",
+            "A traiter (urgents)",
+            str(urgent),
+            "priorite crit.",
+            False,
+            "red",
+            prio_series,
         ),
+        _kpi("sla2h", "SLA < 2h", str(sla2h), "echeance proche", False, "amber", prio_series),
+        _kpi("late", "En retard (SLA depasse)", str(late), "hors delai", False, "red", prio_series),
+        _kpi("mine", "Assignes a moi", str(mine), "assignation", True, "teal", prio_series),
+        _kpi("resolved", "Resolus", str(resolved), "traites", True, "teal", prio_series),
         _kpi(
             "avgtime",
             "Temps moyen de traitement",
-            "1h 42m",
-            "-12%",
+            "-",
+            "non instrumente",
             True,
             "amber",
-            [128, 122, 118, 112, 108, 104, 102],
+            prio_series,
         ),
-        _kpi("slaok", "SLA respectes", "92%", "+5 pts", True, "teal", [85, 86, 88, 89, 90, 91, 92]),
+        _kpi(
+            "slaok",
+            "SLA respectes",
+            f"{sla_ok}%",
+            "ouverts dans les delais",
+            True,
+            "teal",
+            prio_series,
+        ),
     ]
 
-    filters: dict[str, object] = {
+    tasks = [_task(i, now) for i in items]
+    details = [_detail(i, now) for i in items]
+
+    return {
+        "title": "A faire",
+        "subtitle": "Vos taches, revues et validations en attente de traitement.",
+        "rail": {
+            "live": "Live",
+            "segments": ["File reelle", "Cas d'evaluation en echec", "SLA en temps reel"],
+            "period": "Run d'evaluation",
+            "updated": now.strftime("%d/%m/%Y %H:%M:%S"),
+            "now": "Maintenant",
+            "scope": "Dernier run",
+            "bulk": "Actions groupees",
+        },
+        "timeline": _timeline(items),
+        "kpis": kpis,
+        "filters": _filters(),
+        "table": {
+            "columns": [
+                "Priorite",
+                "Type",
+                "Titre",
+                "Source",
+                "Assigne a",
+                "SLA",
+                "Echeance",
+                "Statut",
+            ],
+            "tasks": tasks,
+            "count": f"{len(open_items)} ouverts / {len(items)} elements",
+            "showing": f"Afficher 1 - {len(tasks)} sur {len(tasks)}",
+            "pages": [1],
+            "per_page_label": "Lignes par page",
+            "per_page": str(len(tasks)),
+        },
+        "detail": details[0] if details else None,
+        "details": details,
+        "donut": _donut(items),
+        "sla": _sla(open_items, now),
+        "quick": {
+            "title": "Actions rapides",
+            "items": [
+                "Prendre en charge",
+                "M'assigner",
+                "Marquer resolu",
+                "Rouvrir",
+                "Ouvrir les evaluations",
+                "Exporter la liste",
+            ],
+        },
+        "activity": _activity(items),
+        "status": {
+            "title": "Statut & actions",
+            "label": "Statut",
+            "value": details[0]["current_status"] if details else "A traiter",
+            "primary": "Prendre en charge",
+            "secondary": "Marquer resolu",
+        },
+        "footer": {
+            "check": f"Derniere synchronisation : {now.strftime('%d/%m/%Y %H:%M:%S')}",
+            "status": "OK",
+        },
+    }
+
+
+def _filters() -> dict[str, object]:
+    return {
         "title": "Filtres actifs",
         "search": "Rechercher dans la liste...",
         "selects": [
             {"label": "Priorite", "value": "Toutes"},
             {"label": "Type", "value": "Tous les types"},
             {"label": "Statut", "value": "Tous les statuts"},
-            {"label": "Assigne a", "value": "Moi"},
-            {"label": "Echeance", "value": "Toutes"},
-            {"label": "SLA", "value": "Toutes"},
+            {"label": "Assigne a", "value": "Tous"},
         ],
         "more": "Plus de filtres",
         "views_title": "Vues enregistrees",
-        "views": ["Ma vue par defaut", "Urgents", "SLA en risque", "Incidents critiques"],
+        "views": ["Tous les cas", "Urgents", "SLA en risque", "Assignes a moi"],
         "views_cta": "Gerer les vues",
     }
 
-    columns = [
-        "Priorite",
-        "Type",
-        "Titre",
-        "Source",
-        "Assigne a",
-        "SLA",
-        "Echeance",
-        "Statut",
-    ]
-    tasks: list[dict[str, object]] = [
-        _task(
-            "Critique",
-            "crit",
-            "Incident",
-            "Reponse inappropriee detectee",
-            "Assistant",
-            "#C-8921",
-            "Alice Martin",
-            "En retard",
-            "crit",
-            "11/06/2026 10:30",
-            "En retard",
-            "crit",
-        ),
-        _task(
-            "Elevee",
-            "high",
-            "Incident",
-            "Fuite de donnees suspectee",
-            "Assistant",
-            "#C-8916",
-            "Bob Levy",
-            "1h 20m",
-            "warn",
-            "11/06/2026 12:00",
-            "A traiter",
-            "todo",
-        ),
-        _task(
-            "Elevee",
-            "high",
-            "Demande acces",
-            "Demande d'acces a des sources sensibles",
-            "RAG",
-            "#A-4442",
-            "Vous",
-            "1h 35m",
-            "warn",
-            "11/06/2026 12:15",
-            "A traiter",
-            "todo",
-        ),
-        _task(
-            "Moyenne",
-            "mod",
-            "Habilitation",
-            "Habilitation a revoir",
-            "RAG",
-            "#A-4419",
-            "Vous",
-            "2h 20m",
-            "ok",
-            "11/06/2026 13:00",
-            "En cours",
-            "progress",
-        ),
-        _task(
-            "Critique",
-            "crit",
-            "Garde-fou",
-            "Contournement de garde-fou",
-            "Garde-fous",
-            "#GF-2231",
-            "Clara Dubois",
-            "0h 45m",
-            "crit",
-            "11/06/2026 11:25",
-            "En retard",
-            "crit",
-        ),
-        _task(
-            "Moyenne",
-            "mod",
-            "Anomalie",
-            "Anomalie d'utilisation detectee",
-            "Connecteur",
-            "#CON-774",
-            "Vous",
-            "3h 10m",
-            "ok",
-            "11/06/2026 13:50",
-            "A traiter",
-            "todo",
-        ),
-        _task(
-            "Faible",
-            "low",
-            "Acces",
-            "Acces a l'environnement systeme",
-            "Connecteur",
-            "#CON-768",
-            "Hugo D.",
-            "5h 40m",
-            "ok",
-            "11/06/2026 16:20",
-            "A traiter",
-            "todo",
-        ),
-        _task(
-            "Moyenne",
-            "mod",
-            "Qualite",
-            "Score qualite en baisse",
-            "Evaluations",
-            "#EV-5531",
-            "Alice Martin",
-            "4h 05m",
-            "ok",
-            "11/06/2026 14:45",
-            "En cours",
-            "progress",
-        ),
-    ]
 
-    donut: dict[str, object] = {
-        "title": "Repartition par type",
-        "cta": "Voir le detail",
-        "center": "23",
-        "center_label": "Total",
-        "segments": [
-            {"label": "Conversations IA", "count": 9, "share": "39%", "color": "#4c8bf5"},
-            {"label": "Incidents", "count": 6, "share": "26%", "color": "#8b7cf0"},
-            {"label": "Alertes", "count": 4, "share": "17%", "color": "#e0a23a"},
-            {"label": "Approbations", "count": 2, "share": "9%", "color": "#e0763a"},
-            {"label": "Demandes d'acces", "count": 1, "share": "4%", "color": "#34d399"},
-            {"label": "Autres", "count": 1, "share": "4%", "color": "#64748b"},
+def _timeline(items: list[OperatorItem]) -> dict[str, object]:
+    recent = sorted(items, key=lambda i: i.created_at, reverse=True)[:6]
+    tone = {"crit": "crit", "high": "warn", "mod": "warn", "low": "ok"}
+    return {
+        "title": "Timeline evenements (run)",
+        "cta": "Voir la timeline complete",
+        "events": [
+            {
+                "time": i.created_at.strftime("%H:%M"),
+                "label": i.type_label,
+                "ref": i.case_id,
+                "tone": tone.get(i.priority, "ok"),
+            }
+            for i in recent
         ],
     }
 
-    sla: dict[str, object] = {
+
+def _donut(items: list[OperatorItem]) -> dict[str, object]:
+    counts: dict[str, int] = {}
+    labels: dict[str, str] = {}
+    for i in items:
+        counts[i.priority] = counts.get(i.priority, 0) + 1
+        labels[i.priority] = _PRIO_LABEL.get(i.priority, i.priority)
+    total = len(items) or 1
+    segments = [
+        {
+            "label": labels[p],
+            "count": counts[p],
+            "share": f"{round(100 * counts[p] / total)}%",
+            "color": _TYPE_COLOR[p],
+        }
+        for p in ("crit", "high", "mod", "low")
+        if counts.get(p)
+    ]
+    return {
+        "title": "Repartition par priorite",
+        "cta": "Voir le detail",
+        "center": str(len(items)),
+        "center_label": "Total",
+        "segments": segments,
+    }
+
+
+def _sla(open_items: list[OperatorItem], now: datetime) -> dict[str, object]:
+    counts = {"late": 0, "lt2h": 0, "h2_8": 0, "gt8h": 0}
+    for i in open_items:
+        remaining = i.remaining_seconds(now)
+        if remaining < 0:
+            counts["late"] += 1
+        elif remaining < _WARN:
+            counts["lt2h"] += 1
+        elif remaining < 8 * _HOUR:
+            counts["h2_8"] += 1
+        else:
+            counts["gt8h"] += 1
+    return {
         "title": "SLA & echeances",
         "cta": "Voir les SLA",
         "buckets": [
-            {"label": "En retard", "count": 3, "color": "#f87171"},
-            {"label": "< 2h", "count": 4, "color": "#e0763a"},
-            {"label": "2h - 8h", "count": 9, "color": "#e0a23a"},
-            {"label": "> 8h", "count": 7, "color": "#34d399"},
+            {"label": "En retard", "count": counts["late"], "color": "#f87171"},
+            {"label": "< 2h", "count": counts["lt2h"], "color": "#e0763a"},
+            {"label": "2h - 8h", "count": counts["h2_8"], "color": "#e0a23a"},
+            {"label": "> 8h", "count": counts["gt8h"], "color": "#34d399"},
         ],
     }
 
-    quick: dict[str, object] = {
-        "title": "Actions rapides",
-        "items": [
-            "Escalader",
-            "Assigner",
-            "Ajouter une note",
-            "Marquer resolu",
-            "Creer une vue",
-            "Demander une revue",
-        ],
-    }
 
-    activity: dict[str, object] = {
-        "title": "Activite recente",
-        "cta": "Voir toute l'activite (24)",
-        "items": [
-            {"actor": "incident risque", "action": "Fuite de donnees suspectee", "time": "08:42"},
-            {
-                "actor": "approbation accordee",
-                "action": "Acces a des donnees sensibles",
-                "time": "08:30",
-            },
-            {"actor": "alerte creee", "action": "Anomalie d'utilisation detectee", "time": "08:18"},
-            {
-                "actor": "conversation analysee",
-                "action": "Contexte potentiellement dangereux",
-                "time": "08:05",
-            },
-        ],
-    }
-
-    status: dict[str, object] = {
-        "title": "Statut & actions",
-        "label": "Statut",
-        "value": "A traiter",
-        "primary": "Prendre en charge",
-        "secondary": "Escalader",
-    }
-
-    detail: dict[str, object] = {
-        "title": "Detail selectionne",
-        "selected": {
-            "id": "#C-8921",
-            "priority": "Critique",
-            "prio_tone": "crit",
-            "title": "Reponse inappropriee detectee",
-            "subtitle": "Securite - Assistant",
-            "cta": "Ouvrir dans le contexte",
-        },
-        "tabs": ["Contexte", "Historique", "Preuves", "Relations (3)"],
-        "context": [
-            {"label": "Utilisateur", "value": "Sophie L."},
-            {"label": "E-mail", "value": "john.smith@acme.com"},
-            {"label": "Modele & runtime", "value": "Llama 3.2 70B"},
-            {"label": "Conversation", "value": "CONV-7745"},
-            {"label": "Date", "value": "11/06/2026 09:05"},
-        ],
-        "summary_label": "Resume",
-        "summary": "Le modele a genere une reponse contenant des instructions inappropriees.",
-        "sla_title": "Echeance & SLA",
-        "sla_value": "-1h 15m",
-        "sla_note": "Depasse depuis 09:27",
-        "sla_rows": [
-            {"label": "Echeance", "value": "11/06/2026 09:15"},
-            {"label": "Cree le", "value": "11/06/2026 09:05"},
-            {"label": "Age", "value": "1h 37m"},
-        ],
-        "assign_title": "Assignation",
-        "assign_label": "Assigne a",
-        "assignee": "Alice Martin",
-        "team_label": "Equipe",
-        "team": "AI Safety",
-        "reassign": "Reassigner",
-    }
-
-    footer: dict[str, object] = {
-        "check": "Derniere verification d'integrite : 11/06/2026 10:42:15",
-        "status": "OK",
-    }
-
+def _activity(items: list[OperatorItem]) -> dict[str, object]:
+    recent = sorted(items, key=lambda i: i.created_at, reverse=True)[:4]
     return {
-        "title": "A faire",
-        "subtitle": "Vos taches, revues et validations en attente de traitement.",
-        "rail": rail,
-        "timeline": timeline,
-        "kpis": kpis,
-        "filters": filters,
-        "table": {
-            "columns": columns,
-            "tasks": tasks,
-            "count": "23 elements",
-            "showing": "Afficher 1 - 8 sur 23",
-            "pages": [1, 2, 3],
-            "per_page_label": "Lignes par page",
-            "per_page": "20",
-        },
-        "detail": detail,
-        "donut": donut,
-        "sla": sla,
-        "quick": quick,
-        "activity": activity,
-        "status": status,
-        "footer": footer,
+        "title": "Activite recente",
+        "cta": "Voir toute l'activite",
+        "items": [
+            {"actor": i.source, "action": i.title, "time": i.created_at.strftime("%H:%M")}
+            for i in recent
+        ],
     }

@@ -3162,6 +3162,37 @@ export const AgentSyntheseSchema = z.object({
 });
 export type AgentSynthese = z.infer<typeof AgentSyntheseSchema>;
 
+const AgentAFaireDetailSchema = z.object({
+  key: z.string().optional(),
+  title: z.string().optional(),
+  selected: z.object({
+    key: z.string().optional(),
+    id: z.string(),
+    priority: z.string(),
+    prio_tone: z.string(),
+    title: z.string(),
+    subtitle: z.string(),
+    cta: z.string(),
+  }),
+  tabs: z.array(z.string()),
+  context: z.array(z.object({ label: z.string(), value: z.string() })),
+  summary_label: z.string(),
+  summary: z.string(),
+  sla_title: z.string(),
+  sla_value: z.string(),
+  sla_note: z.string(),
+  sla_rows: z.array(z.object({ label: z.string(), value: z.string() })),
+  assign_title: z.string(),
+  assign_label: z.string(),
+  assignee: z.string(),
+  team_label: z.string(),
+  team: z.string(),
+  reassign: z.string(),
+  current_status: z.string().optional(),
+  current_status_tone: z.string().optional(),
+  sla_cell: z.string().optional(),
+});
+
 export const AgentAFaireSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),
@@ -3220,6 +3251,7 @@ export const AgentAFaireSchema = z.object({
       per_page: z.string(),
       tasks: z.array(
         z.object({
+          key: z.string().optional(),
           priority: z.string(),
           prio_tone: z.string(),
           type: z.string(),
@@ -3236,33 +3268,8 @@ export const AgentAFaireSchema = z.object({
       ),
     })
     .optional(),
-  detail: z
-    .object({
-      title: z.string(),
-      selected: z.object({
-        id: z.string(),
-        priority: z.string(),
-        prio_tone: z.string(),
-        title: z.string(),
-        subtitle: z.string(),
-        cta: z.string(),
-      }),
-      tabs: z.array(z.string()),
-      context: z.array(z.object({ label: z.string(), value: z.string() })),
-      summary_label: z.string(),
-      summary: z.string(),
-      sla_title: z.string(),
-      sla_value: z.string(),
-      sla_note: z.string(),
-      sla_rows: z.array(z.object({ label: z.string(), value: z.string() })),
-      assign_title: z.string(),
-      assign_label: z.string(),
-      assignee: z.string(),
-      team_label: z.string(),
-      team: z.string(),
-      reassign: z.string(),
-    })
-    .optional(),
+  detail: AgentAFaireDetailSchema.optional(),
+  details: z.array(AgentAFaireDetailSchema).optional(),
   donut: z
     .object({
       title: z.string(),
