@@ -31,24 +31,81 @@ __all__ = [
     "set_source_state",
 ]
 
-# category id -> (display name, type label, type tone, corpus)
-_SOURCE_META: dict[str, tuple[str, str, str]] = {
-    "dora": ("DORA - Résilience opérationnelle", "Reglementation", "reg"),
-    "gdpr": ("RGPD - Protection des données", "Reglementation", "reg"),
-    "bafin": ("BaFin - Supervision DE", "Reglementation", "reg"),
-    "cnil": ("CNIL - Données personnelles FR", "Reglementation", "reg"),
-    "comptes": ("Crédit Aurore - Comptes", "Corpus produit", "prod"),
-    "cartes": ("Crédit Aurore - Cartes", "Corpus produit", "prod"),
-    "credit": ("Crédit Aurore - Crédit", "Corpus produit", "prod"),
-    "epargne": ("Crédit Aurore - Épargne", "Corpus produit", "prod"),
-    "assurance": ("Crédit Aurore - Assurances", "Corpus produit", "prod"),
-    "operations": ("Crédit Aurore - Opérations", "Corpus produit", "prod"),
-    "securite": ("Crédit Aurore - Sécurité", "Corpus produit", "prod"),
-    "service": ("Crédit Aurore - Service client", "Corpus produit", "prod"),
-    "conditions": ("Crédit Aurore - Conditions générales", "Corpus produit", "prod"),
-    "packages": ("Crédit Aurore - Offres groupées", "Corpus produit", "prod"),
-    "fidelite": ("Crédit Aurore - Fidélité", "Corpus produit", "prod"),
+# category id -> type tone ("reg" | "prod"). Names live in _SOURCE_NAME below.
+_SOURCE_META: dict[str, str] = {
+    "dora": "reg",
+    "gdpr": "reg",
+    "bafin": "reg",
+    "cnil": "reg",
+    "comptes": "prod",
+    "cartes": "prod",
+    "credit": "prod",
+    "epargne": "prod",
+    "assurance": "prod",
+    "operations": "prod",
+    "securite": "prod",
+    "service": "prod",
+    "conditions": "prod",
+    "packages": "prod",
+    "fidelite": "prod",
 }
+
+# Localized source display names (fr, de, en). The brand/regulation prefix is
+# kept; the descriptive suffix and well-known acronyms (RGPD/GDPR/DSGVO) translate.
+_SOURCE_NAME: dict[str, tuple[str, str, str]] = {
+    "dora": (
+        "DORA - Résilience opérationnelle",
+        "DORA - Operative Resilienz",
+        "DORA - Operational resilience",
+    ),
+    "gdpr": ("RGPD - Protection des données", "DSGVO - Datenschutz", "GDPR - Data protection"),
+    "bafin": ("BaFin - Supervision DE", "BaFin - Aufsicht DE", "BaFin - Supervision DE"),
+    "cnil": (
+        "CNIL - Données personnelles FR",
+        "CNIL - Personenbezogene Daten FR",
+        "CNIL - Personal data FR",
+    ),
+    "comptes": ("Crédit Aurore - Comptes", "Crédit Aurore - Konten", "Crédit Aurore - Accounts"),
+    "cartes": ("Crédit Aurore - Cartes", "Crédit Aurore - Karten", "Crédit Aurore - Cards"),
+    "credit": ("Crédit Aurore - Crédit", "Crédit Aurore - Kredit", "Crédit Aurore - Credit"),
+    "epargne": ("Crédit Aurore - Épargne", "Crédit Aurore - Sparen", "Crédit Aurore - Savings"),
+    "assurance": (
+        "Crédit Aurore - Assurances",
+        "Crédit Aurore - Versicherungen",
+        "Crédit Aurore - Insurance",
+    ),
+    "operations": (
+        "Crédit Aurore - Opérations",
+        "Crédit Aurore - Transaktionen",
+        "Crédit Aurore - Operations",
+    ),
+    "securite": (
+        "Crédit Aurore - Sécurité",
+        "Crédit Aurore - Sicherheit",
+        "Crédit Aurore - Security",
+    ),
+    "service": (
+        "Crédit Aurore - Service client",
+        "Crédit Aurore - Kundenservice",
+        "Crédit Aurore - Customer service",
+    ),
+    "conditions": (
+        "Crédit Aurore - Conditions générales",
+        "Crédit Aurore - AGB",
+        "Crédit Aurore - General terms",
+    ),
+    "packages": (
+        "Crédit Aurore - Offres groupées",
+        "Crédit Aurore - Paketangebote",
+        "Crédit Aurore - Bundled offers",
+    ),
+    "fidelite": ("Crédit Aurore - Fidélité", "Crédit Aurore - Treue", "Crédit Aurore - Loyalty"),
+}
+
+
+def _source_name(cat: str, lang: str) -> str:
+    """Localized display name for a source category (falls back to French)."""
+    return _SOURCE_NAME[cat][_LANG_IDX.get(lang, 0)]
 
 # --- Localization (fr/de/en). Logic keys (tones, fresh_days, coverage) stay
 # stable; only display labels are translated here. ASCII-only per file convention.
@@ -290,12 +347,21 @@ async def build_connaissances(lang: str = "fr") -> dict[str, object]:
     Display labels are localized via ``lang`` (fr/de/en); logic keys
     (``status_tone``, ``type_tone``, ``fresh_days``, ``coverage``) stay stable.
     """
+    return _assemble(await _fetch_rows(), _load_state(), _load_probe(), _load_traffic(), lang)
+
+
+def _assemble(
+    raw_rows: list[dict[str, object]],
+    state: dict[str, dict[str, bool]],
+    probe: dict[str, object],
+    traffic: dict[str, object],
+    lang: str,
+    now: datetime | None = None,
+) -> dict[str, object]:
+    """Pure assembly of the Connaissances payload (no I/O) - unit-testable."""
     lang = _norm_lang(lang)
-    now = datetime.now(UTC)
-    state = _load_state()
-    probe = _load_probe()
-    traffic = _load_traffic()
-    agg = _aggregate(await _fetch_rows())
+    now = now or datetime.now(UTC)
+    agg = _aggregate(raw_rows)
     chunks, freshest, docs = agg.chunks, agg.freshest, agg.docs
 
     total_chunks = sum(chunks.values()) or 1
@@ -318,7 +384,8 @@ async def build_connaissances(lang: str = "fr") -> dict[str, object]:
     rows_out: list[dict[str, object]] = []
     attachable: list[dict[str, object]] = []
     for cat in ordered:
-        meta_name, _type_fr, type_tone = _SOURCE_META[cat]
+        type_tone = _SOURCE_META[cat]
+        meta_name = _source_name(cat, lang)
         type_label = _t("type_reg" if type_tone == "reg" else "type_prod", lang)
         st = state.get(cat, {"attached": True, "active": True})
         if not st.get("attached", True):
