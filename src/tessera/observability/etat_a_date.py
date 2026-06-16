@@ -284,7 +284,9 @@ def _short_uuid(value: object) -> str:
     return str(value).split("-")[0].upper() if value else "-"
 
 
-def _card(rows: list[tuple[str, str]], diff: list[str], cta: str, href: str) -> dict[str, object]:
+def _card(
+    rows: list[tuple[str, str]], diff: list[dict[str, str]], cta: str, href: str
+) -> dict[str, object]:
     return {
         "rows": [{"label": k, "value": v} for k, v in rows],
         "diff": diff,
@@ -293,12 +295,17 @@ def _card(rows: list[tuple[str, str]], diff: list[str], cta: str, href: str) -> 
     }
 
 
-def _changed(when: datetime | None, at: datetime | None, after: str, before: str) -> str:
-    """Honest diff line: did `when` happen after T (i.e. changed since T)?"""
+def _d(kind: str, text: str) -> dict[str, str]:
+    """A typed diff line. kind in {added, removed, changed, unchanged}."""
+    return {"kind": kind, "text": text}
+
+
+def _changed(when: datetime | None, at: datetime | None, after: str, before: str) -> dict[str, str]:
+    """Typed diff line: 'changed' (amber) if `when` is after T, else 'unchanged'."""
     when, at = _aware(when), _aware(at)
-    if when is None or at is None:
-        return before
-    return after if when > at else before
+    if when is not None and at is not None and when > at:
+        return _d("changed", after)
+    return _d("unchanged", before)
 
 
 def _guardrails_card(
@@ -309,9 +316,9 @@ def _guardrails_card(
         len(policy.prompt_injection_deny) + len(policy.pii_patterns) + len(policy.tools)
     )
     diff = [
-        f"{_fmt_int(after)} décisions du guard journalisées après T"
+        _d("changed", f"{_fmt_int(after)} décisions du guard journalisées après T")
         if after > 0
-        else "Aucune décision du guard après T",
+        else _d("unchanged", "Aucune décision du guard après T"),
         _changed(
             ctx.policy_mtime, at, "Politique modifiée après T", "Politique inchangée depuis T"
         ),
@@ -335,7 +342,7 @@ def _prompt_model_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
         _changed(
             ctx.prompt_mtime, at, "System prompt modifié après T", "System prompt inchangé depuis T"
         ),
-        "Modèle inchangé",
+        _d("unchanged", "Modèle inchangé"),
     ]
     return _card(
         [

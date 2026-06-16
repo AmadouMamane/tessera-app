@@ -112,16 +112,24 @@ def test_guardrails_diff_is_a_real_two_point_count() -> None:
     gr = payload["guardrails"]
     rows = {r["label"]: r["value"] for r in gr["rows"]}  # type: ignore[index]
     assert rows["Bundle de politiques"] == "Guardrails Banking v2"
-    assert any("14 900 décisions" in d for d in gr["diff"])  # type: ignore[index]
+    diff = gr["diff"]  # type: ignore[index]
+    changed = next(d for d in diff if "14 900 décisions" in d["text"])
+    assert changed["kind"] == "changed"
 
 
 def test_prompt_diff_reflects_mtime_vs_t() -> None:
     after = ead._assemble(
         _rows(), _audit(), _StubPolicy(), _ctx(prompt_after=True), _original(), T_MID, now=NOW
     )
-    assert any("modifié après T" in d for d in after["prompt_model"]["diff"])  # type: ignore[index]
+    assert any(  # type: ignore[index]
+        d["kind"] == "changed" and "modifié après T" in d["text"]
+        for d in after["prompt_model"]["diff"]
+    )
     before = _assemble()
-    assert any("inchangé depuis T" in d for d in before["prompt_model"]["diff"])  # type: ignore[index]
+    assert any(  # type: ignore[index]
+        d["kind"] == "unchanged" and "inchangé depuis T" in d["text"]
+        for d in before["prompt_model"]["diff"]
+    )
 
 
 def test_original_card_is_the_real_transcript_turn() -> None:

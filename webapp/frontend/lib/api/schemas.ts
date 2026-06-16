@@ -3193,7 +3193,7 @@ export type AgentSynthese = z.infer<typeof AgentSyntheseSchema>;
 const EtatGovCardSchema = z.object({
   title: z.string(),
   rows: z.array(z.object({ label: z.string(), value: z.string() })),
-  diff: z.array(z.string()),
+  diff: z.array(z.object({ kind: z.string(), text: z.string() })),
   cta: z.string(),
   cta_href: z.string(),
 });

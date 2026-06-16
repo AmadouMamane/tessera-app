@@ -43,6 +43,19 @@ const KIND_DOT: Record<string, string> = {
   ok: "bg-emerald-400",
   warn: "bg-amber-400",
 };
+// Diff colour code (matches the normative): added/removed/changed/unchanged.
+const DIFF_GLYPH: Record<string, string> = {
+  added: "+",
+  removed: "-",
+  changed: "~",
+  unchanged: "=",
+};
+const DIFF_TONE: Record<string, string> = {
+  added: "text-emerald-400",
+  removed: "text-red-400",
+  changed: "text-amber-400",
+  unchanged: "text-[var(--tessera-text-muted)]",
+};
 const ROWS_PER_PAGE_OPTS = [10, 25, 50];
 
 function useDismiss(open: boolean, onClose: () => void) {
@@ -564,11 +577,19 @@ function GovCardView({
         <ul className="mt-1 flex flex-col gap-1">
           {card.diff.map((d) => (
             <li
-              key={d}
+              key={d.text}
               className="flex items-start gap-1.5 text-[0.68rem] text-[var(--tessera-text)]"
             >
-              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#b9a6ff]" />
-              {d}
+              <span
+                className={cn(
+                  "w-2.5 shrink-0 text-center font-semibold tabular-nums",
+                  DIFF_TONE[d.kind] ?? "text-[var(--tessera-text-muted)]",
+                )}
+                aria-hidden
+              >
+                {DIFF_GLYPH[d.kind] ?? "="}
+              </span>
+              {d.text}
             </li>
           ))}
         </ul>
