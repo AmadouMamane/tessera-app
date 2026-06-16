@@ -177,6 +177,25 @@ it dirty.
   mutation route returns the localized payload). `page.tsx` prefetch must use the
   same `["key", locale]` queryKey and `?lang=` or hydration won't match.
 
+## Round-9 skills (committed frontend e2e)
+
+- **Commit a Playwright e2e, don't rely on throwaway scripts.** The repo had the
+  `test:e2e` script + `@playwright/test` dep but NO `playwright.config.ts` and no
+  tests - so all the rich frontend logic was unprotected. Add the config
+  (`testDir ./e2e`, `baseURL` from `E2E_BASE_URL`, a `webServer` that reuses a
+  running `:3390` and sets `TESSERA_BACKEND_URL`) and a spec covering the
+  behaviour that must survive refactors: tone-based filtering, **index** sorting,
+  drawer open + Escape close, dropdown outside-click dismissal, URL-synced filters.
+- **E2e selector lessons (same as the throwaway runs, now permanent).** Use
+  web-first assertions (`expect(locator).toBeVisible()/toHaveCount()`), not manual
+  waits. Disambiguate: sortable header buttons collide with filter triggers, so
+  target the trigger by its full accessible name (`"Statut Tous"`) and the header
+  by exact (`{name:"Volume", exact:true}`); a substring name like `"Active"` also
+  matches `"Desactivee"` -> use `exact`. For "outside click" dismissal, click a
+  real neutral element (the search input via `getByPlaceholder`), not raw
+  coordinates - coordinates can land on a row and open the drawer instead.
+- `playwright-report/` and `test-results/` are already git/biome-ignored.
+
 ## Round-8 skills (testability, source-name i18n, URL state)
 
 - **Extract a pure assembler so the payload is unit-testable.** `build_<area>`
