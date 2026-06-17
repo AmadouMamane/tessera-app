@@ -25,7 +25,12 @@ from __future__ import annotations
 from datetime import date
 from typing import TYPE_CHECKING
 
-from tessera.observability.eval_data import load_eval_snapshot
+from tessera.agent.identity import DEFAULT_AGENT_ID
+from tessera.observability.eval.agent_judge import load_agent_judge
+from tessera.observability.eval_data import (
+    load_agent_or_global_snapshot,
+    load_agent_run_history,
+)
 
 if TYPE_CHECKING:
     from tessera.observability.eval_data import CategoryStat, EvalSnapshot
@@ -149,9 +154,55 @@ def _run_labels(snap: EvalSnapshot) -> tuple[str, str]:
     return stamp, rel
 
 
-def compute_agent_evaluations() -> dict[str, object]:
-    """Return the Evaluations dashboard payload from a real llama3.2:3b run."""
-    snap = load_eval_snapshot()
+def _judge_block(agent_id: str) -> dict[str, object]:
+    """Real per-agent judged metrics (faithfulness/grounding/hallucination)."""
+    report = load_agent_judge()
+    scores = report.for_agent(agent_id)
+    if scores is None:
+        return {"available": False}
+    return {
+        "available": True,
+        "judge_model": report.judge_model,
+        "context_basis": report.context_basis,
+        "faithfulness": scores.faithfulness,
+        "grounding": scores.grounding,
+        "hallucination": scores.hallucination,
+        "n": scores.n,
+    }
+
+
+def _runs_rail(agent_id: str) -> dict[str, object]:
+    """ER-01 rail: the agent's run history (which run/scores were current when)."""
+    history = load_agent_run_history(agent_id)
+    items: list[dict[str, object]] = []
+    for entry in history:
+        moment = entry.run_datetime()
+        items.append(
+            {
+                "run_at": entry.run_at,
+                "label": moment.strftime("%d/%m %H:%M") if moment else entry.run_at,
+                "pass_rate": round(entry.pass_rate, 4),
+                "score": _dot(entry.pass_rate * 10),
+                "gate_passed": entry.gate_passed,
+                "eval_set": entry.eval_set,
+            }
+        )
+    return {
+        "title": "Historique des runs (ER-01)",
+        "subtitle": "Reconstruit quel run et quels scores étaient courants à chaque date.",
+        "items": items,
+        "count": len(items),
+    }
+
+
+def compute_agent_evaluations(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, object]:
+    """Return the Evaluations dashboard payload from this agent's real run.
+
+    Args:
+        agent_id: the agent whose own run (over its own curated set) to read; the
+            quality figures, judged metrics and run history are all scoped to it.
+    """
+    snap = load_agent_or_global_snapshot(agent_id)
     stamp, rel = _run_labels(snap)
     n_lang = len(snap.languages)
     lang_str = ", ".join(code for code, _ in snap.languages)
@@ -376,4 +427,24 @@ def compute_agent_evaluations() -> dict[str, object]:
         "watch": watch,
         "quick": quick,
         "trend": trend,
+        "agent_id": snap.agent_id or agent_id,
+        "scoped": bool(snap.agent_id),
+        "gate": {
+            "passed": snap.gate_passed,
+            "failed_critical": list(snap.gate_failed_critical),
+            "min_pass_rate": snap.gate_min_pass_rate,
+            "standard_passed": snap.gate_standard_passed,
+            "standard_total": snap.gate_standard_total,
+            "label": (
+                "Bloqué (socle critique)"
+                if snap.gate_passed is False and snap.gate_failed_critical
+                else "Bloqué"
+                if snap.gate_passed is False
+                else "Validé"
+                if snap.gate_passed is True
+                else "—"
+            ),
+        },
+        "judge": _judge_block(snap.agent_id or agent_id),
+        "runs": _runs_rail(snap.agent_id or agent_id),
     }

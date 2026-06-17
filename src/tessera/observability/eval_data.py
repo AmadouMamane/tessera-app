@@ -20,7 +20,14 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-__all__ = ["CategoryStat", "EvalSnapshot", "load_eval_snapshot"]
+__all__ = [
+    "CategoryStat",
+    "EvalSnapshot",
+    "RunHistoryEntry",
+    "load_agent_or_global_snapshot",
+    "load_agent_run_history",
+    "load_eval_snapshot",
+]
 
 _REPORTS_DIR = Path(__file__).resolve().parents[3] / "eval" / "reports"
 # The brief is explicit: source quality numbers from the smallest model only.
@@ -108,6 +115,14 @@ class EvalSnapshot:
     escalations: int
     tool_invocations: int
     sessions: tuple[SessionRow, ...]
+    # Per-agent provenance (empty/None for the global catalogue snapshot).
+    agent_id: str = ""
+    eval_set: str = ""
+    gate_passed: bool | None = None
+    gate_failed_critical: tuple[str, ...] = ()
+    gate_min_pass_rate: float | None = None
+    gate_standard_passed: int = 0
+    gate_standard_total: int = 0
 
     def latencies_ms(self) -> list[float]:
         """Sorted positive per-session durations (empty if untimed)."""
@@ -157,6 +172,81 @@ class EvalSnapshot:
             return None
 
 
+@dataclass(frozen=True, slots=True)
+class RunHistoryEntry:
+    """One per-agent run, for the ER-01 rail (run history) on the Evaluations page."""
+
+    run_at: str
+    total: int
+    passed: int
+    gate_passed: bool | None
+    eval_set: str
+
+    @property
+    def pass_rate(self) -> float:
+        """Overall pass rate of this run (0.0 when empty)."""
+        return self.passed / self.total if self.total else 0.0
+
+    def run_datetime(self) -> datetime | None:
+        """Parse the compact run_at stamp, or None."""
+        try:
+            return datetime.strptime(self.run_at, "%Y%m%dT%H%M%SZ")
+        except (ValueError, TypeError):
+            return None
+
+
+def load_agent_run_history(agent_id: str, limit: int = 24) -> tuple[RunHistoryEntry, ...]:
+    """Return an agent's runs (newest first), deduped by run_at — the ER-01 rail.
+
+    Reconstructs which run/scores were current over time by reading every
+    per-agent report (archives + the per-agent latest) under ``eval/reports``.
+    """
+    by_run: dict[str, RunHistoryEntry] = {}
+    for path in _REPORTS_DIR.glob("*.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if not isinstance(payload, dict) or payload.get("agent_id") != agent_id:
+            continue
+        if payload.get("model") != SMALLEST_MODEL:
+            continue
+        summary = payload.get("summary")
+        summary = summary if isinstance(summary, dict) else {}
+        run_at = str(payload.get("run_at", ""))
+        gate = payload.get("gate") if isinstance(payload.get("gate"), dict) else {}
+        gate = gate if isinstance(gate, dict) else {}
+        gate_passed = gate.get("passed")
+        entry = RunHistoryEntry(
+            run_at=run_at,
+            total=int(summary.get("total", 0) or 0),
+            passed=int(summary.get("passed", 0) or 0),
+            gate_passed=bool(gate_passed) if isinstance(gate_passed, bool) else None,
+            eval_set=str(payload.get("eval_set") or ""),
+        )
+        # Dedup by run_at; keep the richest copy (latest mirrors an archive).
+        existing = by_run.get(run_at)
+        if existing is None or entry.total > existing.total:
+            by_run[run_at] = entry
+    history = sorted(by_run.values(), key=lambda e: e.run_at, reverse=True)
+    return tuple(history[:limit])
+
+
+def load_agent_or_global_snapshot(agent_id: str | None) -> EvalSnapshot:
+    """Prefer an agent's own run; fall back to the global catalogue snapshot.
+
+    Lets agent pages show the agent's OWN quality when a per-agent run exists, and
+    degrade gracefully (rather than 500) to the cross-agent snapshot when it does
+    not yet — without ever fabricating numbers.
+    """
+    if agent_id:
+        try:
+            return load_eval_snapshot(agent_id)
+        except FileNotFoundError:
+            pass
+    return load_eval_snapshot(None)
+
+
 def _score_report(payload: dict[str, object]) -> tuple[int, str]:
     """Rank a report: more results wins, then most recent run_at."""
     results = payload.get("results")
@@ -165,9 +255,15 @@ def _score_report(payload: dict[str, object]) -> tuple[int, str]:
     return n, str(run_at) if isinstance(run_at, str) else ""
 
 
-@lru_cache(maxsize=1)
-def load_eval_snapshot() -> EvalSnapshot:
+@lru_cache(maxsize=8)
+def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
     """Return aggregates from the richest ``llama3.2:3b`` run in eval/reports.
+
+    Args:
+        agent_id: when set, select the richest run whose ``agent_id`` matches
+            (each agent reads its OWN run over its OWN set, so quality genuinely
+            differs per agent). When ``None``, select the richest *catalogue* run
+            (a report with no ``agent_id``) — the global, cross-agent snapshot.
 
     Raises:
         FileNotFoundError: if no usable report for the smallest model exists.
@@ -183,12 +279,19 @@ def load_eval_snapshot() -> EvalSnapshot:
             continue
         if payload.get("model") != SMALLEST_MODEL:
             continue
+        report_agent = payload.get("agent_id")
+        if agent_id is None:
+            if report_agent:  # keep the global snapshot a pure catalogue run
+                continue
+        elif report_agent != agent_id:
+            continue
         rank = _score_report(payload)
         if rank > best_rank:
             best, best_rank = payload, rank
 
     if best is None or best_rank[0] == 0:
-        msg = f"no usable {SMALLEST_MODEL} report under {_REPORTS_DIR}"
+        scope = f"agent {agent_id!r}" if agent_id else "catalogue"
+        msg = f"no usable {SMALLEST_MODEL} {scope} report under {_REPORTS_DIR}"
         raise FileNotFoundError(msg)
 
     raw_results = best.get("results")
@@ -233,6 +336,12 @@ def load_eval_snapshot() -> EvalSnapshot:
         passed = int(summary["passed"])
         total = int(summary.get("total", total))
 
+    gate = best.get("gate") if isinstance(best.get("gate"), dict) else {}
+    gate = gate if isinstance(gate, dict) else {}
+    failed_critical = gate.get("failed_critical")
+    gate_passed = gate.get("passed")
+    min_rate = gate.get("min_pass_rate")
+
     return EvalSnapshot(
         model=str(best.get("model", SMALLEST_MODEL)),
         run_at=str(best.get("run_at", "")),
@@ -244,4 +353,13 @@ def load_eval_snapshot() -> EvalSnapshot:
         escalations=escalations,
         tool_invocations=tool_invocations,
         sessions=sessions,
+        agent_id=str(best.get("agent_id") or ""),
+        eval_set=str(best.get("eval_set") or ""),
+        gate_passed=bool(gate_passed) if isinstance(gate_passed, bool) else None,
+        gate_failed_critical=tuple(str(c) for c in failed_critical)
+        if isinstance(failed_critical, list)
+        else (),
+        gate_min_pass_rate=float(min_rate) if isinstance(min_rate, int | float) else None,
+        gate_standard_passed=int(gate.get("standard_passed", 0) or 0),
+        gate_standard_total=int(gate.get("standard_total", 0) or 0),
     )

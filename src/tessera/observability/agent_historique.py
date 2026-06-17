@@ -28,7 +28,7 @@ from statistics import median
 from typing import TYPE_CHECKING
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
-from tessera.observability.eval_data import SessionRow, load_eval_snapshot
+from tessera.observability.eval_data import SessionRow, load_agent_or_global_snapshot
 
 if TYPE_CHECKING:
     from tessera.observability.eval_data import EvalSnapshot
@@ -396,4 +396,4 @@ def _assemble(snap: EvalSnapshot, agent_id: str = DEFAULT_AGENT_ID) -> dict[str,
 
 def compute_agent_historique(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, object]:
     """Return the Historique payload from the real llama3.2:3b session run."""
-    return _assemble(load_eval_snapshot(), agent_id)
+    return _assemble(load_agent_or_global_snapshot(agent_id), agent_id)

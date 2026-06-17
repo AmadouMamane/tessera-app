@@ -707,15 +707,25 @@ async def observability_agents_propose(body: _AgentProposeBody) -> dict[str, obj
 
 
 @router.get("/observability/agent-evaluations")
-async def observability_agent_evaluations() -> dict[str, object]:
+async def observability_agent_evaluations(
+    agent_id: str = DEFAULT_AGENT_ID,
+) -> dict[str, object]:
     """Agent Evaluations ("Evaluations") dashboard (reference image 29).
 
     Inner tab strip, active-snapshot bar, KPI strip, filterable evaluations
     table, watchlist, quick actions, global-score trend and a per-evaluation
-    detail panel. Deterministic fixture; degrades to ``available: false``.
+    detail panel. Scored from the agent's OWN run over its OWN set (real
+    llama3.2:3b), with the two-level gate verdict, per-agent judged metrics and
+    the ER-01 run-history rail; degrades to ``available: false``.
+
+    The ``agent_id`` query param scopes the page to one agent; it defaults to the
+    single agent.
     """
     try:
-        return {"available": True, **agent_evaluations_mod.compute_agent_evaluations()}
+        return {
+            "available": True,
+            **agent_evaluations_mod.compute_agent_evaluations(agent_id),
+        }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_evaluations: failed: {exc}\n")
         return {"available": False}

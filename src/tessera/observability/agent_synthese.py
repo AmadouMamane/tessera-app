@@ -40,7 +40,7 @@ from psycopg.rows import dict_row
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.guard.audit import verify_audit_chain
 from tessera.observability.agent_configurations import _effective
-from tessera.observability.eval_data import EvalSnapshot, load_eval_snapshot
+from tessera.observability.eval_data import EvalSnapshot, load_agent_or_global_snapshot
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
 
@@ -705,7 +705,7 @@ async def compute_agent_synthese(
         period_days: Trailing window (in days) the transcript-derived figures are
             restricted to. ``None`` means the whole history.
     """
-    snap = load_eval_snapshot()
+    snap = load_agent_or_global_snapshot(agent_id)
     tx = await _fetch_transcript(agent_id, period_days)
     try:
         chain = verify_audit_chain(get_settings().guard.audit_file)
