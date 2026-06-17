@@ -197,6 +197,14 @@ _STR: dict[str, tuple[str, str, str]] = {
         "Die vom Agenten geladenen Systemprompts, Vorlagen und Anweisungen (live YAML).",
         "The system prompts, templates and instructions the agent loads (live YAML).",
     ),
+    "governance": (
+        "Definition : les prompts sont versionnes dans Git et charges au demarrage de "
+        "l'agent. Toute modification passe par une revue (PR) ; cette page est en lecture seule.",
+        "Definition: Prompts sind in Git versioniert und werden beim Start des Agenten "
+        "geladen. Jede Aenderung laeuft ueber ein Review (PR); diese Seite ist schreibgeschuetzt.",
+        "Definition: prompts are versioned in Git and loaded at agent start-up. Every "
+        "change goes through review (PR); this page is read-only.",
+    ),
     "act_asof": ("Voir a date (as-of)", "Stand anzeigen (as-of)", "View as-of"),
     "act_create": ("Ouvrir le Playground", "Playground oeffnen", "Open the Playground"),
     "snap_tag": ("SNAPSHOT ACTIF", "AKTIVER SNAPSHOT", "ACTIVE SNAPSHOT"),
@@ -455,6 +463,7 @@ def _assemble(
     return {
         "title": _t(_STR["title"], lang),
         "subtitle": _t(_STR["subtitle"], lang),
+        "governance_banner": _t(_STR["governance"], lang),
         "actions": {"asof": _t(_STR["act_asof"], lang), "create": _t(_STR["act_create"], lang)},
         "subtabs": _subtabs(lang),
         "snapshot": {

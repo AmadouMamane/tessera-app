@@ -3932,6 +3932,7 @@ export const AgentPromptsSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),
   subtitle: z.string().optional(),
+  governance_banner: z.string().optional(),
   actions: z.object({ asof: z.string(), create: z.string() }).optional(),
   subtabs: z.array(z.string()).optional(),
   snapshot: z

@@ -285,3 +285,13 @@ the truthful shape of this eval-heavy journal, not a fabrication). Deviations: t
 normative's **`Mode d'application`** donut and **`Overrides`** panel are not built —
 mode is derivable from the policy but low-value here, and there is **no real source for
 manual overrides** (would be a fixture). Left out per zéro-hardcode. **À confirmer**.
+
+**Prompts governance banner (image 07, conformance pass).** The page is fully real
+(YAML source of truth `agent/prompts/{fr,de,en}.yaml`, read-only — prompts are edited
+via Git PR and loaded at start-up). Added the §9 **governance banner** stating that
+governance model (define in Git → review (PR) → load), which is the truthful
+define/choose/govern story for prompts. Deviation: the normative's explicit numbered
+**`1. Définition (catalogue)` / `2. Configuration pour cet agent (instance)`** two-block
+split is **not** rendered as two side-by-side panels — the page keeps its KPIs + table +
+per-prompt detail (Résumé/Contenu/Configuration). No CONFIGURER prompts-catalogue route
+exists yet. **À confirmer** demain : faut-il les 2 blocs numérotés.
