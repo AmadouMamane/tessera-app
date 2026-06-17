@@ -295,3 +295,14 @@ define/choose/govern story for prompts. Deviation: the normative's explicit numb
 split is **not** rendered as two side-by-side panels — the page keeps its KPIs + table +
 per-prompt detail (Résumé/Contenu/Configuration). No CONFIGURER prompts-catalogue route
 exists yet. **À confirmer** demain : faut-il les 2 blocs numérotés.
+
+**Console XT-01 (image 05, conformance pass).** The page is real: quality metrics are
+live eval scores (`_latest_score`), the model/prompt/sources/guard versions come from
+source files, and live turns stream real responses through the same `/chat` route as
+the product console (the per-turn debug trace is attached to the SSE envelope). Named
+the execution-trace panel **`XT-01 · Trace d'exécution`** per the rails registry.
+Deviations: (1) the **initial transcript is a seeded example** (fixed Q with the answer
+assembled from *real* corpus excerpts) shown before the operator interacts — live turns
+are real; flagged **à confirmer** whether to start from a real empty console instead.
+(2) The XT-01 trace is a **tab** in the inspector, not the normative's persistent 3rd
+column. Layout deviation, logged.

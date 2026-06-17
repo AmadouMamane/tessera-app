@@ -270,7 +270,7 @@ def _guardrails_panel() -> dict[str, object]:
 
 def _trace_panel() -> dict[str, object]:
     return {
-        "title": "Trace en temps réel",
+        "title": "XT-01 · Trace d'exécution",
         "cta": "Voir la trace complète",
         "rows": [
             {"label": "Réception de la requête", "value": "live"},
