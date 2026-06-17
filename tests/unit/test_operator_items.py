@@ -146,7 +146,7 @@ def test_inbox_aggregates_real_items(monkeypatch: pytest.MonkeyPatch) -> None:
         _item("d", "crit", "done", hours_ago=5),  # resolved
     ]
     monkeypatch.setattr(inbox, "load_items", lambda: items)
-    payload = inbox.compute_inbox_overview()
+    payload = inbox.compute_inbox_overview(now=NOW)
     kpis = {k["key"]: k["value"] for k in payload["kpis"]}
     assert kpis["total"] == "3"  # 3 open
     assert kpis["resolved"] == "1"
@@ -168,7 +168,7 @@ def test_a_faire_aggregates_and_exposes_details(monkeypatch: pytest.MonkeyPatch)
         _item("c", "crit", "done", hours_ago=5),  # resolved
     ]
     monkeypatch.setattr(agent_a_faire, "load_items", lambda: items)
-    payload = agent_a_faire.compute_agent_a_faire()
+    payload = agent_a_faire.compute_agent_a_faire(now=NOW)
     kpis = {k["key"]: k["value"] for k in payload["kpis"]}
     assert kpis["total"] == "2"  # 2 open (a, b)
     assert kpis["late"] == "1"  # a overdue

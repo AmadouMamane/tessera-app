@@ -77,9 +77,13 @@ def _kpi(
     }
 
 
-def compute_inbox_overview() -> dict[str, object]:
-    """Return the full Inbox / A traiter overview payload from real items."""
-    now = datetime.now(UTC)
+def compute_inbox_overview(now: datetime | None = None) -> dict[str, object]:
+    """Return the full Inbox / A traiter overview payload from real items.
+
+    ``now`` is the reference instant for all SLA/age computations; it defaults
+    to the current time and is injectable so tests are deterministic.
+    """
+    now = now or datetime.now(UTC)
     items = load_items()
     open_items = [i for i in items if i.status != "done"]
     done_items = [i for i in items if i.status == "done"]

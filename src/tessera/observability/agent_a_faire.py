@@ -159,9 +159,13 @@ def _detail(item: OperatorItem, now: datetime) -> dict[str, object]:
     }
 
 
-def compute_agent_a_faire() -> dict[str, object]:
-    """Return the full "A faire" overview payload from the real backlog."""
-    now = datetime.now(UTC)
+def compute_agent_a_faire(now: datetime | None = None) -> dict[str, object]:
+    """Return the full "A faire" overview payload from the real backlog.
+
+    ``now`` is the reference instant for all SLA/age computations; it defaults
+    to the current time and is injectable so tests are deterministic.
+    """
+    now = now or datetime.now(UTC)
     items = load_items()
     open_items = [i for i in items if i.status != "done"]
 
