@@ -118,6 +118,60 @@ def _save_overrides(state: dict[str, Any]) -> None:
     )
 
 
+# --- Durable change-log: real, append-only record of every config save ---------
+
+_HISTORY_LIMIT = 50
+
+# Human-facing French label for each persistable key (used in the change-log).
+_KEY_LABEL: dict[str, str] = {
+    "name": "Nom de l'agent",
+    "description": "Description",
+    "owner": "Propriétaire",
+    "timezone": "Fuseau horaire",
+    "fallback_strategy": "Stratégie de bascule",
+    "tone": "Ton",
+    "detail": "Détail des réponses",
+    "max_length": "Longueur max",
+    "temperature": "Température",
+    "top_p": "Top P",
+    "frequency_penalty": "Pénalité de fréquence",
+    "presence_penalty": "Pénalité de présence",
+    "routing_strategy": "Stratégie de routage",
+    "parallel_tools": "Exécution parallèle d'outils",
+    "tags": "Tags",
+    "archived": "Archivage",
+    "default_language": "Langue par défaut",
+}
+
+
+def _history_path() -> Path:
+    return get_settings().guard.audit_file.parent / "agent_config_history.json"
+
+
+def _load_change_log() -> list[dict[str, Any]]:
+    path = _history_path()
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    return data if isinstance(data, list) else []
+
+
+def _record_change(keys: list[str]) -> None:
+    """Append a real, timestamped entry for a config save (most recent first)."""
+    if not keys:
+        return
+    entries = _load_change_log()
+    entries.insert(0, {"at": datetime.now(_PARIS).isoformat(), "keys": keys})
+    path = _history_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(entries[:_HISTORY_LIMIT], indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
 # Persisted alongside _DEFAULTS but its base value comes from live settings.
 _LANG_KEY = "default_language"
 
@@ -145,13 +199,19 @@ def _coerce(key: str, value: Any) -> Any:
 
 
 def set_agent_config(changes: Mapping[str, Any]) -> None:
-    """Persist a set of agent-profile overrides (unknown keys are ignored)."""
+    """Persist a set of agent-profile overrides and record the change durably."""
     state = _load_overrides()
     allowed = available_config_keys()
+    changed: list[str] = []
     for key, value in changes.items():
-        if key in allowed:
-            state[key] = _coerce(key, value)
+        if key not in allowed:
+            continue
+        coerced = _coerce(key, value)
+        if state.get(key) != coerced:
+            changed.append(key)
+        state[key] = coerced
     _save_overrides(state)
+    _record_change(changed)
 
 
 def _effective() -> dict[str, Any]:
@@ -170,12 +230,50 @@ def _lang_label(code: str) -> str:
     return {"fr": "Français", "de": "Allemand", "en": "Anglais"}.get(code, code)
 
 
-def _fmt_mtime(path: Path) -> str:
+def _mtime_dt(path: Path) -> datetime:
     try:
-        dt = datetime.fromtimestamp(path.stat().st_mtime, tz=_PARIS)
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=_PARIS)
     except FileNotFoundError:
-        dt = datetime.now(_PARIS)
-    return dt.strftime("%d/%m/%Y %H:%M")
+        return datetime.now(_PARIS)
+
+
+def _fmt_mtime(path: Path) -> str:
+    return _mtime_dt(path).strftime("%d/%m/%Y %H:%M")
+
+
+def _build_history(policy_path: Path) -> list[dict[str, str]]:
+    """Real change history: durable form-save log + real config-file mtimes.
+
+    No invented events - each row is either a real persisted override save
+    (timestamp + the fields that actually changed) or a real file modification
+    (the source's actual mtime), newest first.
+    """
+    events: list[tuple[datetime, str, str]] = []
+    for entry in _load_change_log():
+        try:
+            when = datetime.fromisoformat(str(entry.get("at")))
+        except (TypeError, ValueError):
+            continue
+        keys = [str(k) for k in entry.get("keys", [])]
+        labels = ", ".join(_KEY_LABEL.get(k, k) for k in keys) or "configuration"
+        plural = "s" if len(keys) > 1 else ""
+        events.append((when, "Console", f"{len(keys)} champ{plural} modifié{plural} : {labels}"))
+    sources = [
+        (_ROOT / "src" / "tessera" / "settings.py", "Paramètres système (settings.py)"),
+        (policy_path, "Politique garde-fous (policy.yaml)"),
+        (_PROMPTS_DIR / "fr.yaml", "Prompts (fr.yaml)"),
+    ]
+    newest_corpus = max(_CORPUS_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, default=None)
+    if newest_corpus is not None:
+        sources.append((newest_corpus, f"Corpus ({newest_corpus.name})"))
+    for path, label in sources:
+        if path.exists():
+            events.append((_mtime_dt(path), "Dépôt (Git)", f"{label} mis à jour"))
+    events.sort(key=lambda e: e[0], reverse=True)
+    return [
+        {"time": when.strftime("%d/%m/%Y %H:%M"), "actor": actor, "label": label}
+        for when, actor, label in events[:6]
+    ]
 
 
 def _prompt_count() -> int:
@@ -281,7 +379,6 @@ def compute_agent_configurations() -> dict[str, object]:
     knowledge_count = _knowledge_count()
     tool_count = _tool_count()
     settings_updated = _fmt_mtime(_ROOT / "src" / "tessera" / "settings.py")
-    policy_updated = _fmt_mtime(settings.guard.policy_path)
     prompts_updated = _fmt_mtime(_PROMPTS_DIR / "fr.yaml")
     agent_id = f"tessera-assistant-{settings.environment.value}"
     default_lang_label = _lang_label(settings.default_language.value)
@@ -437,23 +534,7 @@ def compute_agent_configurations() -> dict[str, object]:
         "history": {
             "title": "Historique des modifications",
             "cta": "Voir tout",
-            "items": [
-                {
-                    "time": settings_updated,
-                    "actor": "Tessera Ops",
-                    "label": f"Mise à jour du modèle principal ({active_model})",
-                },
-                {
-                    "time": prompts_updated,
-                    "actor": "Tessera Ops",
-                    "label": "Modification des paramètres de comportement",
-                },
-                {
-                    "time": policy_updated,
-                    "actor": "Tessera Ops",
-                    "label": "Configuration initiale de l'agent",
-                },
-            ],
+            "items": _build_history(settings.guard.policy_path),
         },
         "links": {
             "title": "Liens utiles",

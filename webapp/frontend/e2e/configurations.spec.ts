@@ -75,6 +75,16 @@ test("the archive button toggles the durable status badge", async ({ page }) => 
   await expect(status.getByText("Actif", { exact: true }).first()).toBeVisible();
 });
 
+test("the change history is real (file mtimes / console saves, no invented author)", async ({
+  page,
+}) => {
+  const panel = page.locator("section", { hasText: "Historique des modifications" });
+  await expect(panel).toBeVisible();
+  // Real source events, not the old fabricated "Tessera Ops" author.
+  await expect(panel.getByText(/mis à jour/).first()).toBeVisible();
+  await expect(panel.getByText("Tessera Ops")).toHaveCount(0);
+});
+
 test("the overflow menu offers a real config export", async ({ page }) => {
   await page.getByRole("button", { name: "..." }).click();
   await expect(

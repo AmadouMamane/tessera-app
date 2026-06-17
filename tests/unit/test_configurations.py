@@ -85,3 +85,39 @@ def test_editable_flag_separates_real_from_readonly(monkeypatch: pytest.MonkeyPa
     assert model_left["editable"] is False
     fallback = next(f for f in payload["model"]["right"] if f.get("key") == "fallback_strategy")
     assert fallback["editable"] is True
+
+
+def test_change_log_records_only_real_changes(
+    tmp_path: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pathlib import Path
+
+    state: dict[str, object] = {}
+    log: list[dict[str, object]] = []
+    monkeypatch.setattr(c, "_load_overrides", lambda: dict(state))
+    monkeypatch.setattr(c, "_save_overrides", lambda s: state.update(s))
+    monkeypatch.setattr(c, "_load_change_log", lambda: list(log))
+    monkeypatch.setattr(c, "_history_path", lambda: Path(str(tmp_path)) / "h.json")
+
+    def _capture(keys: list[str]) -> None:
+        if keys:
+            log.insert(0, {"at": "2026-06-17T08:00:00+02:00", "keys": keys})
+
+    monkeypatch.setattr(c, "_record_change", _capture)
+
+    c.set_agent_config({"tone": "Amical"})
+    assert log[0]["keys"] == ["tone"]
+    # Saving the same value again records nothing (no real change).
+    log.clear()
+    c.set_agent_config({"tone": "Amical"})
+    assert log == []
+
+
+def test_build_history_is_real_sources_only() -> None:
+    from tessera.settings import get_settings
+
+    items = c._build_history(get_settings().guard.policy_path)
+    assert items, "real config file mtimes should always yield rows"
+    # No invented actor: every row is either a console save or a Git source.
+    assert all(it["actor"] in {"Console", "Dépôt (Git)"} for it in items)
+    assert any("mis à jour" in it["label"] for it in items)
