@@ -3509,7 +3509,12 @@ export const AgentConfigurationsSchema = z.object({
       title: z.string(),
       selects: z.array(AgentConfigFieldSchema),
       sliders: z.array(AgentConfigSliderSchema),
-      tools: z.object({ label: z.string(), value: z.string() }),
+      tools: z.object({
+        label: z.string(),
+        value: z.string(),
+        items: z.array(z.string()).optional(),
+        href: z.string().optional(),
+      }),
       note: z.string(),
     })
     .optional(),

@@ -570,7 +570,6 @@ function ChatCard({
           <span>Contexte : {f.context}</span>
           <span className="inline-flex items-center gap-1">
             Langue : <span className="text-[var(--tessera-text)]">{f.language}</span>
-            <ChevronDown className="h-3 w-3" />
           </span>
         </div>
       ) : null}

@@ -21,6 +21,23 @@ fixture that visually matches the normative is NOT "real".
 
 These are mandatory and override the normative screenshots:
 
+- **AUDIT EVERY AFFORDANCE BOTH WAYS — this is the #1 thing reviews keep catching.**
+  "Wired + e2e-green" is NOT "done". Before declaring a page finished, scan every
+  element for the two failure directions:
+  1. *Looks interactive but is dead* — a `<span>`/row carrying a **chevron, arrow,
+     `>`, caret, external-link or `+` icon** that has no `onClick`/`<Link>`/`<select>`.
+     The icon is a promise of interactivity; a static element wearing one is a dead
+     control (e.g. "Outils autorisés N sélectionnés ›" was a `<span>` with a
+     `ChevronRight` → made a real disclosure of the allowed tools + a manage link).
+  2. *Works but looks static* — a real `<select>`/`<input>`/`<a>` styled identically
+     to read-only text, so the user never tries it (Configurations form). Give
+     editable controls a distinct interactive look (hover/focus glow, cursor,
+     coloured chevron); keep read-only facts flat/dashed.
+  Practical sweep per page: `grep -nE 'Chevron|ArrowRight|ExternalLink|>›'` and
+  for each hit confirm the enclosing element is a `button`/`a`/`select`; DOM-inspect
+  (`querySelector("select,textarea,input,button,a")` per labelled field) to confirm
+  a control exists where one is implied. A chevron with no handler = a bug.
+
 - **EVERY main-table row click MUST open a detail drawer.** This is the *single
   allowed deviation from the normative images* — even if a normative shows an
   inline detail panel (or no detail at all), the row click opens a right-anchored

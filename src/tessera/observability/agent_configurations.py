@@ -86,6 +86,15 @@ _OPTIONS: dict[str, list[str]] = {
     "default_language": ["Français", "Allemand", "Anglais"],
 }
 
+# Human labels for the LLM-callable tools governed by the guard policy.
+_TOOL_LABELS: dict[str, str] = {
+    "account_balance": "Consultation de solde",
+    "card_block": "Blocage de carte",
+    "transaction_search": "Recherche de transactions",
+    "loan_simulate": "Simulation de crédit",
+    "ticket_escalate": "Escalade vers un conseiller",
+}
+
 _SLIDERS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
 _SLIDER_MAX: dict[str, float] = {
     "temperature": 1.0,
@@ -373,7 +382,12 @@ def compute_agent_configurations() -> dict[str, object]:
         settings.openai.models[0] if settings.openai.models else settings.openai.chat_model
     )
     policy = load_policy(settings.guard.policy_path)
-    allowed_tools = sum(1 for tool in policy.tools.values() if tool.allow)
+    allowed_tool_names = [
+        _TOOL_LABELS.get(name, name.replace("_", " ").title())
+        for name, tool in policy.tools.items()
+        if tool.allow
+    ]
+    allowed_tools = len(allowed_tool_names)
     guard_count = len(policy.tools) + len(policy.prompt_injection_deny) + len(policy.pii_patterns)
     prompt_count = _prompt_count()
     knowledge_count = _knowledge_count()
@@ -447,7 +461,12 @@ def compute_agent_configurations() -> dict[str, object]:
                 ),
                 _slider("presence_penalty", "Pénalité de présence", float(cfg["presence_penalty"])),
             ],
-            "tools": {"label": "Outils autorisés", "value": f"{allowed_tools} sélectionnés"},
+            "tools": {
+                "label": "Outils autorisés",
+                "value": f"{allowed_tools} sélectionnés",
+                "items": allowed_tool_names,
+                "href": "/agent/garde-fous",
+            },
             "note": (
                 "Les paramètres du modèle et du comportement s'appliquent à "
                 "l'environnement de production."

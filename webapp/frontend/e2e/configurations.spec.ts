@@ -125,3 +125,13 @@ test("the agent status reflects the real /readyz probe, not a literal", async ({
   await expect(status.getByText("LLM injoignable")).toBeVisible({ timeout: 15_000 });
   await context.unroute("**/api/readyz");
 });
+
+test("the 'Outils autorisés' control opens the real allowed-tools list", async ({ page }) => {
+  // It used to be a static span with a misleading chevron; now it's a real disclosure.
+  await page.getByRole("button", { name: /sélectionnés/ }).click();
+  const menu = page.getByRole("menu").filter({ hasText: "Gérer dans les garde-fous" });
+  await expect(menu.getByText("Blocage de carte")).toBeVisible();
+  await expect(menu.getByText("Consultation de solde")).toBeVisible();
+  await menu.getByRole("link", { name: /Gérer dans les garde-fous/ }).click();
+  await page.waitForURL(/\/agent\/garde-fous/, { timeout: 15_000 });
+});

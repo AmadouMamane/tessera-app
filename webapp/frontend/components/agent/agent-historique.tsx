@@ -791,7 +791,7 @@ function PanelCard({
         <h3 className="text-[0.72rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
         {control ? (
           <span className="inline-flex items-center gap-1 rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.6rem] text-[var(--tessera-text-muted)]">
-            {control} <ChevronDown className="h-3 w-3" />
+            {control}
           </span>
         ) : null}
       </div>

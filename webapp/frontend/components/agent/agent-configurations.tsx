@@ -11,6 +11,7 @@ import {
   Plus,
   RotateCcw,
   Save,
+  ShieldCheck,
   Trash2,
   X,
 } from "lucide-react";
@@ -423,19 +424,72 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           {b.sliders.slice(1).map((item) => (
             <SliderRow key={item.key ?? item.label} item={item} ctx={ctx} />
           ))}
-          <div className="grid grid-cols-[170px_1fr] items-center gap-3">
-            <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{b.tools.label}</span>
-            <span className="flex h-7 items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-3 text-[0.76rem] text-[var(--tessera-text)]">
-              {b.tools.value}
-              <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-            </span>
-          </div>
+          <ToolsRow tools={b.tools} />
         </div>
       </div>
       <p className="mt-2 flex items-center gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
         <Info className="h-3.5 w-3.5 text-cyan-300" />
         {b.note}
       </p>
+    </div>
+  );
+}
+
+function ToolsRow({ tools }: { tools: NonNullable<Data["behavior"]>["tools"] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(
+    open,
+    useCallback(() => setOpen(false), []),
+  );
+  const items = tools.items ?? [];
+  return (
+    <div className="grid grid-cols-[170px_1fr] items-center gap-3">
+      <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{tools.label}</span>
+      <div className="relative" ref={ref}>
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          className="flex h-7 w-full items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-3 text-[0.76rem] text-[var(--tessera-text)] transition-colors hover:border-[#5fd0c6]/45"
+        >
+          {tools.value}
+          <ChevronDown
+            className={cn("h-3.5 w-3.5 text-[#5fd0c6] transition-transform", open && "rotate-180")}
+          />
+        </button>
+        {open ? (
+          <div
+            role="menu"
+            className="absolute right-0 z-30 mt-1 w-64 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1.5 shadow-lg"
+          >
+            <ul className="flex flex-col gap-0.5">
+              {items.map((tool) => (
+                <li
+                  key={tool}
+                  className="flex items-center gap-2 rounded px-2 py-1.5 text-[0.72rem] text-[var(--tessera-text)]"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  {tool}
+                </li>
+              ))}
+              {items.length === 0 ? (
+                <li className="px-2 py-1.5 text-[0.72rem] text-[var(--tessera-text-muted)]">
+                  Aucun outil autorisé
+                </li>
+              ) : null}
+            </ul>
+            {tools.href ? (
+              <Link
+                href={tools.href as "/agent/garde-fous"}
+                className="mt-1 flex items-center gap-1 border-t border-[var(--tessera-border)] px-2 pt-1.5 text-[0.68rem] text-[#5fd0c6] hover:text-white"
+              >
+                Gérer dans les garde-fous <ChevronRight className="h-3 w-3" />
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
