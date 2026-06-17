@@ -293,6 +293,12 @@ function FieldColumn({
 
 const FIELD_BOX =
   "relative flex items-center rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-3 text-[0.78rem] text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]";
+// Editable controls get a clear interactive affordance (hover + focus glow);
+// read-only fields stay flat + dimmed so the two are visually distinguishable.
+const EDIT_BOX =
+  `${FIELD_BOX} transition-colors hover:border-[#5fd0c6]/45 focus-within:border-[#5fd0c6]/70 focus-within:ring-1 focus-within:ring-[#5fd0c6]/25`;
+const READONLY_BOX =
+  "relative flex items-center rounded-md border border-dashed border-[var(--tessera-border)]/70 bg-[rgba(5,20,35,0.4)] px-3 text-[0.78rem] text-[var(--tessera-text-muted)]";
 
 function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
   const editable = field.editable && field.key;
@@ -305,18 +311,18 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
         value={current}
         aria-label={field.label}
         onChange={(e) => ctx.setField(field.key as string, field.value, e.target.value)}
-        className={cn(FIELD_BOX, "min-h-[44px] resize-none py-1.5 leading-snug")}
+        className={cn(EDIT_BOX, "min-h-[44px] cursor-text resize-none py-1.5 leading-snug")}
         rows={2}
       />
     );
   } else if (editable && field.kind === "select") {
     control = (
-      <span className={cn(FIELD_BOX, "h-7 pr-2")}>
+      <span className={cn(EDIT_BOX, "h-7 cursor-pointer pr-2")}>
         <select
           value={current}
           aria-label={field.label}
           onChange={(e) => ctx.setField(field.key as string, field.value, e.target.value)}
-          className="w-full appearance-none bg-transparent text-[0.78rem] text-[var(--tessera-text)] outline-none"
+          className="w-full cursor-pointer appearance-none bg-transparent text-[0.78rem] text-[var(--tessera-text)] outline-none"
         >
           {(field.options ?? [current]).map((o) => (
             <option key={o} value={o} className="bg-[#0a1f33] text-[var(--tessera-text)]">
@@ -324,13 +330,13 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none ml-auto h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+        <ChevronDown className="pointer-events-none ml-auto h-3.5 w-3.5 shrink-0 text-[#5fd0c6]" />
       </span>
     );
   } else if (editable && field.kind === "toggle") {
     const on = (ctx.draft[field.key as string] ?? field.value === "Activé") === true;
     control = (
-      <span className={cn(FIELD_BOX, "h-7 justify-between")}>
+      <span className={cn(EDIT_BOX, "h-7 justify-between")}>
         <span className="text-[var(--tessera-text-muted)]">{on ? "Activé" : "Désactivée"}</span>
         <Toggle
           on={on}
@@ -345,14 +351,16 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
         value={current}
         aria-label={field.label}
         onChange={(e) => ctx.setField(field.key as string, field.value, e.target.value)}
-        className={cn(FIELD_BOX, "h-7")}
+        className={cn(EDIT_BOX, "h-7 cursor-text")}
       />
     );
   } else {
+    // Read-only: copy fields keep an interactive button; pure facts read as dashed/dimmed.
+    const box = field.kind === "copy" ? FIELD_BOX : READONLY_BOX;
     control = (
       <span
         className={cn(
-          FIELD_BOX,
+          box,
           field.kind === "textarea" ? "min-h-[38px] items-start py-1.5 leading-snug" : "h-7",
         )}
       >
@@ -367,11 +375,11 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
         {field.kind === "copy" ? (
           <button
             type="button"
-            aria-label="Copier"
+            aria-label="Copier l'identifiant"
             onClick={() => navigator.clipboard?.writeText(current)}
-            className="ml-auto shrink-0 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            className="ml-auto flex shrink-0 items-center gap-1 rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text-muted)] transition-colors hover:border-[#5fd0c6]/50 hover:text-[#5fd0c6]"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-3.5 w-3.5" /> Copier
           </button>
         ) : null}
         {field.kind === "info" ? (
@@ -721,17 +729,17 @@ function LinksPanel({ data }: { data: Data }) {
           <Link
             key={link.href}
             href={link.href}
-            className="grid grid-cols-[1fr_auto] gap-3 rounded-md text-left hover:text-cyan-200"
+            className="group grid cursor-pointer grid-cols-[1fr_auto] items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2 text-left transition-colors hover:border-[#5fd0c6]/50 hover:bg-[rgba(95,208,198,0.06)]"
           >
             <span className="min-w-0">
-              <span className="block text-[0.76rem] font-medium text-[var(--tessera-text)]">
+              <span className="block text-[0.76rem] font-medium text-[var(--tessera-text)] group-hover:text-[#5fd0c6]">
                 {link.title}
               </span>
               <span className="mt-0.5 block text-[0.68rem] leading-snug text-[var(--tessera-text-muted)]">
                 {link.desc}
               </span>
             </span>
-            <ExternalLink className="mt-1 h-4 w-4 text-[var(--tessera-text-muted)]" />
+            <ExternalLink className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)] transition-colors group-hover:text-[#5fd0c6]" />
           </Link>
         ))}
       </div>

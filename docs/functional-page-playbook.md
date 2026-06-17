@@ -835,6 +835,33 @@ it dirty.
   file better than found: a one-line `biome-ignore` clears it (exit 0). When
   touching a legacy file, run `biome check` on it and clear what you can.
 
+## Round-21 skills (affordance: a working control that LOOKS static is still a failure)
+
+- **"Wired + e2e-green" is not "done" - audit visual affordance too.** Configurations'
+  selects/textarea/copy button/links were all real controls (the DOM had
+  `<select>`/`<textarea>`/`<button>`/`<a>`, and clicking worked), yet they shared
+  one `FIELD_BOX` style with the read-only fact fields - so the whole form read as
+  flat static text and the user (rightly) thought nothing was clickable. A control
+  the user can't tell is interactive is as good as dead. When you finish a form,
+  screenshot it and ask "does each editable thing LOOK editable, and does each
+  read-only fact LOOK like a fact?"
+- **Split the styles by interactivity.** Introduced `EDIT_BOX` (solid border +
+  `hover:border` glow + `focus-within:ring` + `cursor-pointer`/`cursor-text` + a
+  coloured select chevron) for editable controls, and `READONLY_BOX` (dashed,
+  dimmed, no hover) for pure facts (model/version/fallback). Now editable vs
+  read-only is obvious at a glance; the read-only fallback model no longer
+  masquerades as an input.
+- **Make link rows look like cards, not prose.** The "Liens utiles" items were
+  `<a>` with only a `hover:text` colour and a muted icon - they read as embedded
+  text. Gave each a bordered card with `cursor-pointer` + `hover:border`/`hover:bg`
+  + a group-hover icon colour so they clearly invite a click.
+- **Prove the specific controls, not a representative one.** The e2e had only
+  exercised the "Ton" select + the toggle, so I'd claimed the form worked without
+  proving Langue/Proprietaire/Identifiant. Add a test that operates the exact
+  controls the user will touch (selectOption on Langue + Propriétaire, assert the
+  copy button exists). DOM-inspect (`querySelector("select,textarea,input,button")`
+  per labelled field) is a fast way to confirm what's a real control vs text.
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** A faire + A traiter (shared `operator_items` backlog =

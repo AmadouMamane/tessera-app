@@ -49,6 +49,20 @@ test("a behaviour edit persists across a reload, then restores", async ({ page }
   await expect(page.getByLabel("Ton")).toHaveValue("Professionnel");
 });
 
+test("the identity selects (language, owner) are operable and dirty the form", async ({ page }) => {
+  const lang = page.getByLabel("Langue par défaut");
+  await expect(lang).toBeVisible();
+  await lang.selectOption("Anglais");
+  await expect(lang).toHaveValue("Anglais");
+  await expect(save(page)).toBeEnabled();
+  const owner = page.getByLabel("Propriétaire");
+  await owner.selectOption("Équipe Produit");
+  await expect(owner).toHaveValue("Équipe Produit");
+  // Identifiant has a real copy button (not a decorative icon).
+  await expect(page.getByRole("button", { name: "Copier l'identifiant" })).toBeVisible();
+  await page.getByRole("button", { name: "Annuler" }).click();
+});
+
 test("the archive button toggles the durable status badge", async ({ page }) => {
   const status = page.locator("section", { hasText: "Statut de l'agent" });
   await expect(status.getByText("Actif", { exact: true }).first()).toBeVisible();
