@@ -1,173 +1,183 @@
 """Unit tests for the Synthese dashboard payload assembler.
 
-`agent_synthese._assemble` is exercised with a synthetic eval snapshot + a
-synthetic transcript dict (the DB layer is abstracted by `_fetch_transcript`,
-so no Postgres is needed here). Asserts the KPI strip, profile, language mix,
-recent-conversation mapping, timeline ordering, alert tone and the wired CTA
-hrefs.
+``agent_synthese._assemble`` is exercised with the governed registry agent + a
+synthetic transcript dict + a synthetic S1-journal scan (the DB and the file
+journal are abstracted by ``_fetch_transcript`` / ``_scan_journal``, so no
+Postgres or audit file is needed here). The Synthese is **operational** (events
+only): it asserts the 7-KPI strip, the honest empty states (CSAT / users), the
+operational resolution rate, the routing-motive distribution, the AT-01 activity
+feed, the operational alert thresholds and the wired CTA hrefs.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from collections import Counter
+from datetime import UTC, datetime
 
+from tessera.agent.registry import get_agent
 from tessera.observability import agent_synthese as syn
-from tessera.observability.eval_data import CategoryStat, EvalSnapshot, SessionRow
 
 NOW = datetime(2026, 6, 16, 12, 0, tzinfo=UTC)
+AGENT = get_agent("support-client")
 
 
-def _session(case_id: str, category: str, *, passed: bool, lang: str, ms: float) -> SessionRow:
-    return SessionRow(
-        case_id=case_id,
-        language=lang,
-        category=category,
-        title=f"{case_id} title",
-        passed=passed,
-        needs_escalation=not passed,
-        tools=("account_balance",) if not passed else (),
-        duration_ms=ms,
-        input_tokens=10,
-        output_tokens=20,
-        response="r",
-        started_at=(NOW - timedelta(minutes=int(ms))).isoformat(),
-    )
-
-
-def _snap() -> EvalSnapshot:
-    sessions = [
-        _session("01", "pii_leak", passed=False, lang="fr", ms=1000),
-        _session("02", "pii_leak", passed=True, lang="de", ms=2000),
-        _session("03", "hallucination", passed=True, lang="en", ms=3000),
-        _session("04", "hallucination", passed=False, lang="fr", ms=4000),
-    ]
-    return EvalSnapshot(
-        model="llama3.2:3b",
-        run_at="2026-06-16T07:51:00+00:00",
-        catalogue_version="Failure Catalogue v1",
-        total=4,
-        passed=2,
-        languages=(("fr", 2), ("de", 1), ("en", 1)),
-        categories=(
-            CategoryStat(category="pii_leak", total=2, passed=1),
-            CategoryStat(category="hallucination", total=2, passed=1),
-        ),
-        escalations=2,
-        tool_invocations=2,
-        sessions=tuple(sessions),
-    )
+def _cfg() -> dict[str, object]:
+    return {
+        "name": "Support Client",
+        "description": "SAV bancaire.",
+        "owner": "Équipe Support",
+        "timezone": "Europe/Paris",
+        "default_language": "Français",
+    }
 
 
 def _tx() -> dict[str, object]:
     d1 = datetime(2026, 6, 14, 9, 0, tzinfo=UTC)
     d2 = datetime(2026, 6, 15, 9, 0, tzinfo=UTC)
     return {
-        "totals": {"convs": 1008, "msgs": 2108, "turns": 1054, "last_at": d2},
+        "totals": {
+            "convs": 1008,
+            "msgs": 2108,
+            "turns": 1054,
+            "answers": 1050,
+            "escal_convs": 134,
+            "lat_ms": 2340.0,
+            "last_at": d2,
+        },
         "daily": [
-            {"day": d1, "convs": 4, "msgs": 8, "turns": 4},
-            {"day": d2, "convs": 5, "msgs": 10, "turns": 5},
+            {"day": d1, "convs": 4, "escal_convs": 1, "turns": 4, "lat_ms": 2000.0},
+            {"day": d2, "convs": 5, "escal_convs": 0, "turns": 5, "lat_ms": 1800.0},
         ],
         "recent_convs": [
-            {"conversation_id": "a", "ended": d2, "turns": 3, "first_q": "Quel est mon solde ?",
-             "escalated": True},
-            {"conversation_id": "b", "ended": d1, "turns": 1, "first_q": "Bonjour",
-             "escalated": False},
+            {
+                "conversation_id": "a",
+                "ended": d2,
+                "turns": 3,
+                "first_q": "Quel est mon solde ?",
+                "escalated": True,
+            },
+            {
+                "conversation_id": "b",
+                "ended": d1,
+                "turns": 1,
+                "first_q": "Bonjour",
+                "escalated": False,
+            },
         ],
         "recent_msgs": [
-            {"role": "assistant", "content": "ok", "created_at": d2},
-            {"role": "user", "content": "hi", "created_at": d2},
+            {"role": "assistant", "content": "ok", "latency_ms": 1840.0, "created_at": d2},
+            {"role": "user", "content": "hi", "latency_ms": None, "created_at": d2},
         ],
-        "newest_doc": {"locator": "Catalogue 2026", "inserted_at": d1},
         "doc_count": 238,
         "cat_count": 15,
     }
 
 
-def test_assemble_is_real_and_well_formed() -> None:
-    payload = syn._assemble(_snap(), _tx(), chain_ok=True, now=NOW)
+def _journal(in_: int = 0, out: int = 0) -> dict[str, object]:
+    return {
+        "in": in_,
+        "out": out,
+        "routing": Counter({"stay": 3, "intent": 1}),
+        "events": [
+            {
+                "when": datetime(2026, 6, 15, 9, 1, tzinfo=UTC),
+                "label": "Conversation transférée",
+                "detail": "Vers onboarding",
+                "kind": "warn",
+                "badge": "Handoff sortant",
+            }
+        ],
+    }
 
-    # KPI strip: tiles from the two sources + the observable handoff metric.
+
+def test_kpis_are_operational_with_honest_empty_states() -> None:
+    payload = syn._assemble(AGENT, _cfg(), _tx(), _journal(in_=2, out=3), chain_ok=True, now=NOW)
+
     kpis = {k["key"]: k for k in payload["kpis"]}  # type: ignore[union-attr]
     assert set(kpis) == {
-        "conversations", "turns", "resolution", "latency", "handoffs", "errors",
-        "sources", "messages",
+        "conversations",
+        "turns",
+        "users",
+        "resolution",
+        "satisfaction",
+        "latency",
+        "handoffs",
     }
-    # Handoff metric is in/out from S1 (none in this synthetic fixture).
-    assert kpis["handoffs"]["value"] == "0 / 0"
-    # Latency reroutes to the per-agent transcript; absent in the fixture -> "-".
-    assert kpis["latency"]["value"] == "-"
-    # integer counts are grouped French-style with a space separator
+    # French-grouped integer counts.
     assert kpis["conversations"]["value"] == "1 008"
     assert kpis["turns"]["value"] == "1 054"
-    assert kpis["messages"]["value"] == "2 108"
-    assert kpis["sources"]["value"] == "15"
-    assert "238 fragments" in kpis["sources"]["delta"]
-    # resolution = 2/4 = 50,0%
-    assert kpis["resolution"]["value"] == "50,0%"
-    # transcript sparkline is the real daily series
+    # Users + satisfaction have no real source -> honest empty.
+    assert kpis["users"]["value"] == "—"
+    assert kpis["satisfaction"]["value"] == "—"
+    assert "CSAT" in kpis["satisfaction"]["delta"]
+    # Operational resolution = (1008-134)/1008 = 86,7%.
+    assert kpis["resolution"]["value"] == "86,7%"
+    # Latency from the transcript's measured latency_ms.
+    assert kpis["latency"]["value"] == "2,3 s"
+    # Handoffs total + breakdown from the S1 journal.
+    assert kpis["handoffs"]["value"] == "5"
+    assert kpis["handoffs"]["delta"] == "2 entrants / 3 sortants"
+    # Conversations sparkline is the real daily series + "vs hier" delta.
     assert kpis["conversations"]["series"] == [4, 5]
-    # last-vs-previous bucket delta: (5-4)/4 = +25%
-    assert kpis["conversations"]["delta"] == "+25% vs jour précédent"
+    assert kpis["conversations"]["delta"] == "+25% vs hier"
 
 
-def test_profile_and_language_mix_are_sourced() -> None:
-    payload = syn._assemble(_snap(), _tx(), chain_ok=True, now=NOW)
-    fields = {f["label"]: f["value"] for f in payload["profile"]["fields"]}  # type: ignore[union-attr]
-    assert fields["Modèle principal"] == "llama3.2:3b"
-    assert fields["Connaissances"] == "15 sources / 238 fragments"
-    assert fields["Conversations"] == "1 008"
-    assert payload["profile"]["ctaHref"] == "/agents/support-client/configurations"  # type: ignore[index]
+def test_context_capabilities_and_repartition_are_sourced() -> None:
+    payload = syn._assemble(AGENT, _cfg(), _tx(), _journal(), chain_ok=True, now=NOW)
 
-    # Channels relabelled to the real eval language mix.
-    chan = payload["channels"]
-    assert "langue" in chan["title"].lower()  # type: ignore[index]
-    labels = [i["label"] for i in chan["items"]]  # type: ignore[index]
-    assert "Français" in labels and "Allemand" in labels
+    ctx = payload["context"]
+    assert ctx["name"] == "Support Client"  # type: ignore[index]
+    assert ctx["agentId"] == "support-client"  # type: ignore[index]
+    fields = {f["label"]: f["value"] for f in ctx["fields"]}  # type: ignore[index]
+    assert fields["Modèle principal"] == AGENT.model
+    assert fields["Propriétaire"] == "Équipe Support"
+
+    # Capabilities come from the agent's governed tool bindings (registry).
+    caps = payload["capabilities"]["items"]  # type: ignore[index]
+    assert "Consultation de solde" in caps and "Blocage de carte" in caps
+
+    # Répartition is by routing motive (real S1 events): stay 3 / intent 1 -> 75 / 25.
+    rep = payload["repartition"]
+    assert rep["subtitle"] == "Par motif de routage"  # type: ignore[index]
+    items = {i["label"]: i["pct"] for i in rep["items"]}  # type: ignore[index]
+    assert items["Continuité de session"] == 75
+    assert items["Changement d'intention"] == 25
 
 
-def test_conversations_timeline_alerts_and_ctas() -> None:
-    payload = syn._assemble(_snap(), _tx(), chain_ok=False, now=NOW)
+def test_activity_feed_merges_transcript_and_journal_newest_first() -> None:
+    payload = syn._assemble(AGENT, _cfg(), _tx(), _journal(out=1), chain_ok=True, now=NOW)
+    rows = payload["activity"]["rows"]  # type: ignore[index]
+    badges = [r["badge"] for r in rows]
+    assert "Handoff sortant" in badges and "Réponse" in badges
+    # The assistant response carries its real measured latency.
+    resp = next(r for r in rows if r["badge"] == "Réponse")
+    assert "1,8 s" in resp["detail"]
 
-    rows = payload["conversations"]["rows"]  # type: ignore[index]
-    assert rows[0]["status"] == "escalade"  # escalated heuristic
-    assert rows[0]["user"] == "3 échanges"
-    assert rows[1]["user"] == "1 échange"  # singular
 
-    # Timeline events are sorted newest-first: the latest transcript activity
-    # (15/06) leads, ahead of the older repo file mtimes.
-    labels = [r["label"] for r in payload["timeline"]["rows"]]  # type: ignore[index]
-    assert labels[0] == "Dernière conversation"
-    assert "Prompts mis à jour" in labels
+def test_alerts_use_real_thresholds() -> None:
+    # Below thresholds -> no operational alert.
+    quiet = syn._assemble(AGENT, _cfg(), _tx(), _journal(out=1), chain_ok=True, now=NOW)
+    assert quiet["opAlerts"]["items"] == []  # type: ignore[index]
 
-    # Audit-chain alert reflects the broken chain.
-    chain_alert = next(
-        i for i in payload["alerts"]["items"] if i["label"] == "Chaîne d'audit"  # type: ignore[index]
-    )
-    assert chain_alert["value"] == "Rompue" and chain_alert["tone"] == "crit"
+    # Broken chain + many outgoing handoffs -> two alerts.
+    loud = syn._assemble(AGENT, _cfg(), _tx(), _journal(out=99), chain_ok=False, now=NOW)
+    labels = [i["label"] for i in loud["opAlerts"]["items"]]  # type: ignore[index]
+    assert "Handoffs sortants élevés" in labels
+    assert "Chaîne d'audit rompue" in labels
 
-    # Quick-config items are real navigable, agent-scoped links.
-    hrefs = {i["href"] for i in payload["quick_config"]["items"]}  # type: ignore[index]
-    assert (
-        "/agents/support-client/connaissances" in hrefs
-        and "/agents/support-client/garde-fous" in hrefs
-    )
+
+def test_quick_access_and_meta_are_wired() -> None:
+    payload = syn._assemble(AGENT, _cfg(), _tx(), _journal(), chain_ok=True, now=NOW)
+    hrefs = {i["href"] for i in payload["quickAccess"]["items"]}  # type: ignore[index]
+    assert "/agents/support-client/connaissances" in hrefs
+    assert "/surveiller" in hrefs
+    assert payload["meta"]["replayAt"] == "État à date"  # type: ignore[index]
 
 
 def test_period_label_reflects_the_window() -> None:
-    assert syn._assemble(_snap(), _tx(), chain_ok=True, period_days=7, now=NOW)["meta"][
-        "period"
-    ] == "7 derniers jours"  # type: ignore[index]
-    assert syn._assemble(_snap(), _tx(), chain_ok=True, period_days=1, now=NOW)["meta"][
-        "period"
-    ] == "24 dernières heures"  # type: ignore[index]
-    assert syn._assemble(_snap(), _tx(), chain_ok=True, period_days=None, now=NOW)["meta"][
-        "period"
-    ] == "Tout l'historique"  # type: ignore[index]
-
-
-def test_chain_ok_alert_is_good() -> None:
-    payload = syn._assemble(_snap(), _tx(), chain_ok=True, now=NOW)
-    chain_alert = next(
-        i for i in payload["alerts"]["items"] if i["label"] == "Chaîne d'audit"  # type: ignore[index]
-    )
-    assert chain_alert["value"] == "Intacte" and chain_alert["tone"] == "good"
+    cases = [(7, "7 derniers jours"), (1, "24 dernières heures"), (None, "Tout l'historique")]
+    for days, label in cases:
+        payload = syn._assemble(
+            AGENT, _cfg(), _tx(), _journal(), chain_ok=True, period_days=days, now=NOW
+        )
+        assert payload["meta"]["period"] == label  # type: ignore[index]

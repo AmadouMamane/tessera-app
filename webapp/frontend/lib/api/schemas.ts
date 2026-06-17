@@ -3071,6 +3071,38 @@ export const AgentSyntheseSchema = z.object({
     })
     .optional(),
   kpis: z.array(SynKpiSchema).optional(),
+  context: z
+    .object({
+      name: z.string(),
+      status: z.string(),
+      agentId: z.string(),
+      description: z.string(),
+      fields: z.array(SynLabelValueSchema),
+      cta: z.string(),
+      ctaHref: z.string().optional(),
+    })
+    .optional(),
+  opAlerts: z
+    .object({
+      title: z.string(),
+      cta: z.string(),
+      ctaHref: z.string().optional(),
+      items: z.array(
+        z.object({
+          label: z.string(),
+          detail: z.string(),
+          tone: z.string(),
+          badge: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  quickAccess: z
+    .object({
+      title: z.string(),
+      items: z.array(z.object({ label: z.string(), sublabel: z.string(), href: z.string() })),
+    })
+    .optional(),
   profile: z
     .object({
       name: z.string(),
@@ -3088,12 +3120,11 @@ export const AgentSyntheseSchema = z.object({
       ctaHref: z.string().optional(),
     })
     .optional(),
-  topics: z
+  repartition: z
     .object({
       title: z.string(),
+      subtitle: z.string(),
       items: z.array(SynBarSchema),
-      cta: z.string(),
-      ctaHref: z.string().optional(),
     })
     .optional(),
   performance: z
@@ -3107,14 +3138,6 @@ export const AgentSyntheseSchema = z.object({
           good: z.boolean(),
         }),
       ),
-      cta: z.string(),
-      ctaHref: z.string().optional(),
-    })
-    .optional(),
-  config: z
-    .object({
-      title: z.string(),
-      rows: z.array(SynLabelValueSchema),
       cta: z.string(),
       ctaHref: z.string().optional(),
     })
@@ -3137,7 +3160,17 @@ export const AgentSyntheseSchema = z.object({
   activity: z
     .object({
       title: z.string(),
-      rows: z.array(z.object({ time: z.string(), label: z.string(), kind: z.string() })),
+      cta: z.string(),
+      ctaHref: z.string().optional(),
+      rows: z.array(
+        z.object({
+          time: z.string(),
+          label: z.string(),
+          detail: z.string(),
+          kind: z.string(),
+          badge: z.string(),
+        }),
+      ),
     })
     .optional(),
   prompts: z
@@ -3153,38 +3186,6 @@ export const AgentSyntheseSchema = z.object({
           updated: z.string(),
         }),
       ),
-    })
-    .optional(),
-  channels: z.object({ title: z.string(), items: z.array(SynBarSchema) }).optional(),
-  timeline: z
-    .object({
-      title: z.string(),
-      cta: z.string(),
-      ctaHref: z.string().optional(),
-      rows: z.array(
-        z.object({
-          time: z.string(),
-          label: z.string(),
-          detail: z.string(),
-          kind: z.string(),
-        }),
-      ),
-    })
-    .optional(),
-  alerts: z
-    .object({
-      title: z.string(),
-      cta: z.string(),
-      ctaHref: z.string().optional(),
-      items: z.array(z.object({ label: z.string(), value: z.string(), tone: z.string() })),
-    })
-    .optional(),
-  quick_config: z
-    .object({
-      title: z.string(),
-      cta: z.string(),
-      ctaHref: z.string().optional(),
-      items: z.array(z.object({ label: z.string(), href: z.string() })),
     })
     .optional(),
 });

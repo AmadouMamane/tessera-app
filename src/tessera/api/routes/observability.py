@@ -972,10 +972,11 @@ async def observability_agent_synthese(
 ) -> dict[str, object]:
     """Agent overview ("Synthese de l'agent") dashboard (reference image 25).
 
-    KPI strip, agent profile and capabilities, top topics, detailed performance,
-    current configuration, recent conversations, live activity, active prompts,
-    language mix, change timeline, alerts and quick config. Sourced end to end
-    from the transcript + eval run + pgvector; degrades to ``available: false``.
+    Operational (events only): KPI strip, agent context/profile and capabilities,
+    routing-motive distribution, detailed operational performance, recent
+    conversations, the AT-01 activity feed, active prompts, operational alerts and
+    quick access. Sourced end to end from the transcript + S1 journal + registry +
+    pgvector; degrades to ``available: false``.
 
     The ``period`` query param (``h24``/``d7``/``d30``) restricts the
     transcript-derived figures to that trailing window; unknown values mean the

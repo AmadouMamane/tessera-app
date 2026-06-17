@@ -228,3 +228,24 @@ operator queue — not a per-agent surface — it moved to the **top level**
 sidebar for proximity, but its links are global and it is never scoped by
 `agentId`. This matches the plan's "GOUVERNER / Inbox / PLATEFORME stay global"
 rule; the deep-link `/agent/a-traiter` redirects to `/a-traiter` for compat.
+
+**Synthèse made operational (image 25, conformance pass).** The Synthèse body was
+aligned to the multi-agent normative `25-agent-synthese-multi-agent-normative.png`
+and made **events-only** (the AT-01 trap): the two eval blocks (`Top catégories
+évaluées`, `Répartition par langue (évaluation)`) were removed — eval signals live
+in the Évaluations page (ER-01), linked not duplicated — and the page no longer
+loads the eval snapshot at all. Added the **right column** (`Contexte de l'agent`
+from the governed registry + editable overrides · `Alertes opérationnelles` on real
+S1 thresholds · `Accès rapides`), the AT-01 4-segment rail (`MODE · PÉRIODE · VOIR
+À DATE · COMPARAISON` + mode banner + `État à date`, driven by the existing
+component-local temporal state — no temporal→URL refactor), the 7 operational KPIs,
+a `Répartition des conversations` bound to real supervisor routing events
+(`tessera.agent.routing`, by motive prefix; empty when none), and a rich activity
+feed merging the transcript with the S1 journal (handoff / garde-fou / outil badges).
+Two KPIs have **no real source** and render an honest empty state (`—`), not a
+fabricated number — logged here as the only data deviations:
+- **Satisfaction (CSAT)** — no satisfaction signal is instrumented anywhere
+  (delta reads `CSAT non instrumenté`). Surfacing 4,6/5 would be fabricated.
+- **Utilisateurs servis** — there is no per-client identity on a transcript turn
+  (no `user_id` column); seeding distinct client ids is a cheap **follow-up**. The
+  count is left empty rather than relabelling `conversations` as `utilisateurs`.
