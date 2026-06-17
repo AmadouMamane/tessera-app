@@ -4151,6 +4151,46 @@ export const AgentEvaluationsSchema = z.object({
       series: z.array(z.number()),
     })
     .optional(),
+  agent_id: z.string().optional(),
+  scoped: z.boolean().optional(),
+  gate: z
+    .object({
+      passed: z.boolean().nullable(),
+      failed_critical: z.array(z.string()),
+      min_pass_rate: z.number().nullable(),
+      standard_passed: z.number(),
+      standard_total: z.number(),
+      label: z.string(),
+    })
+    .optional(),
+  judge: z
+    .object({
+      available: z.boolean(),
+      judge_model: z.string().nullable().optional(),
+      context_basis: z.string().nullable().optional(),
+      faithfulness: z.number().nullable().optional(),
+      grounding: z.number().nullable().optional(),
+      hallucination: z.number().nullable().optional(),
+      n: z.number().optional(),
+    })
+    .optional(),
+  runs: z
+    .object({
+      title: z.string(),
+      subtitle: z.string(),
+      count: z.number(),
+      items: z.array(
+        z.object({
+          run_at: z.string(),
+          label: z.string(),
+          pass_rate: z.number(),
+          score: z.string(),
+          gate_passed: z.boolean().nullable(),
+          eval_set: z.string(),
+        }),
+      ),
+    })
+    .optional(),
 });
 export type AgentEvaluations = z.infer<typeof AgentEvaluationsSchema>;
 

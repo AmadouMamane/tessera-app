@@ -137,9 +137,10 @@ export function AgentEvaluations() {
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const [subtab, setSubtab] = useState("");
+  const agentId = useAgentId();
   const { data } = useQuery({
-    queryKey: ["agent-evaluations"],
-    queryFn: ({ signal }) => fetchAgentEvaluations(signal),
+    queryKey: ["agent-evaluations", agentId],
+    queryFn: ({ signal }) => fetchAgentEvaluations(agentId, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -242,6 +243,8 @@ export function AgentEvaluations() {
         ))}
       </div>
 
+      <GateJudgeRail data={data} />
+
       <div className="grid gap-2.5 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
           <Filters
@@ -287,6 +290,109 @@ export function AgentEvaluations() {
         </div>
         <Detail data={data} row={selectedRow} className="xl:col-span-4" />
       </div>
+    </div>
+  );
+}
+
+function pct(value: number | null | undefined): string {
+  return typeof value === "number" ? `${Math.round(value * 100)}%` : "—";
+}
+
+function GateJudgeRail({ data }: { data: Data }) {
+  const gate = data.gate;
+  const judge = data.judge;
+  const runs = data.runs;
+  if (!gate && !judge && !runs) return null;
+
+  const blocked = gate?.passed === false;
+  const passed = gate?.passed === true;
+  const gateTone = blocked
+    ? "border-[#e0566f] bg-[#2a1320] text-[#ff9bb0]"
+    : passed
+      ? "border-[#3fb37f] bg-[#10231b] text-[#7fe3b3]"
+      : "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text-muted)]";
+
+  return (
+    <div className="grid gap-2.5 xl:grid-cols-12">
+      {/* Eval-gate verdict (two-level) */}
+      <section
+        className={`flex min-w-0 flex-col gap-1.5 rounded-lg border p-3 xl:col-span-4 ${gateTone}`}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] uppercase tracking-wide opacity-80">Eval-gate</span>
+          <span className="text-xs font-semibold">{gate?.label ?? "—"}</span>
+        </div>
+        <div className="text-[11px] leading-snug opacity-90">
+          Socle critique{" "}
+          {gate && gate.failed_critical.length > 0
+            ? `— échec : ${gate.failed_critical.join(", ")}`
+            : "OK (zéro tolérance)"}
+        </div>
+        <div className="text-[11px] opacity-75">
+          Domaine {gate?.standard_passed ?? 0}/{gate?.standard_total ?? 0}
+          {typeof gate?.min_pass_rate === "number"
+            ? ` (seuil ${Math.round(gate.min_pass_rate * 100)}%)`
+            : ""}
+        </div>
+      </section>
+
+      {/* Per-agent judged metrics (real local judge) */}
+      <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            Métriques jugées
+          </span>
+          <span className="text-[10px] text-[var(--tessera-text-muted)]">
+            {judge?.available ? (judge.judge_model ?? "") : "indisponible"}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {(
+            [
+              ["Fidélité", judge?.faithfulness],
+              ["Ancrage", judge?.grounding],
+              ["Anti-halluc.", judge?.hallucination],
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label} className="flex flex-col">
+              <span className="text-base font-semibold text-[var(--tessera-text)]">
+                {judge?.available ? pct(value) : "—"}
+              </span>
+              <span className="text-[10px] text-[var(--tessera-text-muted)]">{label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ER-01 rail: per-agent run history */}
+      <section className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-4">
+        <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          {runs?.title ?? "Historique des runs"}
+        </span>
+        <div className="flex flex-wrap gap-1.5">
+          {(runs?.items ?? []).length === 0 ? (
+            <span className="text-[11px] text-[var(--tessera-text-muted)]">Aucun run.</span>
+          ) : (
+            (runs?.items ?? []).map((r) => (
+              <div
+                key={r.run_at}
+                title={`${r.label} — ${r.score}/10 — ${r.gate_passed ? "validé" : "bloqué"}`}
+                className="flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-1"
+              >
+                <span
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${
+                    r.gate_passed ? "bg-[#3fb37f]" : "bg-[#e0566f]"
+                  }`}
+                />
+                <span className="text-[10px] text-[var(--tessera-text-muted)]">{r.label}</span>
+                <span className="text-[10px] font-medium text-[var(--tessera-text)]">
+                  {r.score}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </div>
   );
 }

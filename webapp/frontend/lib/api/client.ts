@@ -1281,8 +1281,12 @@ export async function fetchAgentPrompts(
   return request(`/observability/agent-prompts?${params}`, { signal }, AgentPromptsSchema);
 }
 
-export async function fetchAgentEvaluations(signal?: AbortSignal): Promise<AgentEvaluations> {
-  return request("/observability/agent-evaluations", { signal }, AgentEvaluationsSchema);
+export async function fetchAgentEvaluations(
+  agentId: string,
+  signal?: AbortSignal,
+): Promise<AgentEvaluations> {
+  const q = `?agent_id=${encodeURIComponent(agentId)}`;
+  return request(`/observability/agent-evaluations${q}`, { signal }, AgentEvaluationsSchema);
 }
 
 export async function fetchAgentHistorique(
