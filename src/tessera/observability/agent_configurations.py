@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
+from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.guard.decisions import load_policy
 from tessera.settings import LLMProfile, get_settings
 
@@ -370,8 +371,13 @@ def _slider(key: str, label: str, value: float) -> dict[str, object]:
     }
 
 
-def compute_agent_configurations() -> dict[str, object]:
-    """Return the active agent configuration payload (real + editable overrides)."""
+def compute_agent_configurations(agent_slug: str = DEFAULT_AGENT_ID) -> dict[str, object]:
+    """Return the active agent configuration payload (real + editable overrides).
+
+    ``agent_slug`` is the URL slug of the agent in scope; it scopes the in-page
+    navigation links (``/agents/<agent_slug>/...``). It is distinct from the
+    internal display id ``agent_id`` (``tessera-assistant-<env>``).
+    """
     settings = get_settings()
     cfg = _effective()
     profile = settings.resolved_llm_profile()
@@ -476,7 +482,7 @@ def compute_agent_configurations() -> dict[str, object]:
                 "label": "Outils autorisés",
                 "value": f"{allowed_tools} sélectionnés",
                 "items": allowed_tool_names,
-                "href": "/agent/garde-fous",
+                "href": f"/agents/{agent_slug}/garde-fous",
             },
             "note": (
                 "Les paramètres du modèle et du comportement s'appliquent à "
@@ -586,12 +592,12 @@ def compute_agent_configurations() -> dict[str, object]:
                 {
                     "title": "Garde-fous",
                     "desc": "Voir les politiques de garde-fou appliquées à cet agent",
-                    "href": "/agent/garde-fous",
+                    "href": f"/agents/{agent_slug}/garde-fous",
                 },
                 {
                     "title": "Prompts",
                     "desc": "Gérer les prompts de cet agent",
-                    "href": "/agent/prompts",
+                    "href": f"/agents/{agent_slug}/prompts",
                 },
             ],
         },

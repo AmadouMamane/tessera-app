@@ -1123,10 +1123,11 @@ export async function saveEtatSnapshot(asOf: string | null): Promise<EtatADate> 
 
 /** Agent overview ("Synthese de l'agent") dashboard (reference image 25). */
 export async function fetchAgentSynthese(
+  agentId: string,
   period: string,
   signal?: AbortSignal,
 ): Promise<AgentSynthese> {
-  const query = new URLSearchParams({ period }).toString();
+  const query = new URLSearchParams({ period, agent_id: agentId }).toString();
   return request(`/observability/agent-synthese?${query}`, { signal }, AgentSyntheseSchema);
 }
 
@@ -1164,16 +1165,22 @@ export async function saveConsoleFeedback(
   );
 }
 
-export async function fetchAgentConfigurations(signal?: AbortSignal): Promise<AgentConfigurations> {
-  return request("/observability/agent-configurations", { signal }, AgentConfigurationsSchema);
+export async function fetchAgentConfigurations(
+  agentId: string,
+  signal?: AbortSignal,
+): Promise<AgentConfigurations> {
+  const q = `?agent_id=${encodeURIComponent(agentId)}`;
+  return request(`/observability/agent-configurations${q}`, { signal }, AgentConfigurationsSchema);
 }
 
 /** Persist editable agent-profile overrides; returns the refreshed payload. */
 export async function saveAgentConfigurations(
+  agentId: string,
   changes: Record<string, unknown>,
 ): Promise<AgentConfigurations> {
+  const q = `?agent_id=${encodeURIComponent(agentId)}`;
   return request(
-    "/observability/agent-configurations/config",
+    `/observability/agent-configurations/config${q}`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -1260,17 +1267,23 @@ export async function mutateGardeFousRule(body: {
 }
 
 export async function fetchAgentPrompts(
+  agentId: string,
   lang?: string,
   signal?: AbortSignal,
 ): Promise<AgentPrompts> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
-  return request(`/observability/agent-prompts${q}`, { signal }, AgentPromptsSchema);
+  const params = new URLSearchParams({ agent_id: agentId });
+  if (lang) params.set("lang", lang);
+  return request(`/observability/agent-prompts?${params}`, { signal }, AgentPromptsSchema);
 }
 
 export async function fetchAgentEvaluations(signal?: AbortSignal): Promise<AgentEvaluations> {
   return request("/observability/agent-evaluations", { signal }, AgentEvaluationsSchema);
 }
 
-export async function fetchAgentHistorique(signal?: AbortSignal): Promise<AgentHistorique> {
-  return request("/observability/agent-historique", { signal }, AgentHistoriqueSchema);
+export async function fetchAgentHistorique(
+  agentId: string,
+  signal?: AbortSignal,
+): Promise<AgentHistorique> {
+  const q = `?agent_id=${encodeURIComponent(agentId)}`;
+  return request(`/observability/agent-historique${q}`, { signal }, AgentHistoriqueSchema);
 }

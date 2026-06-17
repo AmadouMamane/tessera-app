@@ -111,7 +111,7 @@ def test_profile_and_language_mix_are_sourced() -> None:
     assert fields["Modèle principal"] == "llama3.2:3b"
     assert fields["Connaissances"] == "15 sources / 238 fragments"
     assert fields["Conversations"] == "1 008"
-    assert payload["profile"]["ctaHref"] == "/agent/configurations"  # type: ignore[index]
+    assert payload["profile"]["ctaHref"] == "/agents/support-client/configurations"  # type: ignore[index]
 
     # Channels relabelled to the real eval language mix.
     chan = payload["channels"]
@@ -140,9 +140,12 @@ def test_conversations_timeline_alerts_and_ctas() -> None:
     )
     assert chain_alert["value"] == "Rompue" and chain_alert["tone"] == "crit"
 
-    # Quick-config items are real navigable links.
+    # Quick-config items are real navigable, agent-scoped links.
     hrefs = {i["href"] for i in payload["quick_config"]["items"]}  # type: ignore[index]
-    assert "/agent/connaissances" in hrefs and "/agent/garde-fous" in hrefs
+    assert (
+        "/agents/support-client/connaissances" in hrefs
+        and "/agents/support-client/garde-fous" in hrefs
+    )
 
 
 def test_period_label_reflects_the_window() -> None:

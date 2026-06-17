@@ -7,7 +7,7 @@ import { AgentConfigurationsSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
 interface PageProps {
-  params: Promise<{ locale: string }>;
+  params: Promise<{ locale: string; agentId: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -16,11 +16,12 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: t("title") };
 }
 
-async function prefetch(queryClient: QueryClient) {
+async function prefetch(queryClient: QueryClient, agentId: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["agent-configurations"],
+    queryKey: ["agent-configurations", agentId],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/agent-configurations`, {
+      const q = `?agent_id=${encodeURIComponent(agentId)}`;
+      const response = await fetch(`${backendUrl()}/observability/agent-configurations${q}`, {
         cache: "no-store",
         headers: backendHeaders({ Accept: "application/json" }),
       });
@@ -31,12 +32,12 @@ async function prefetch(queryClient: QueryClient) {
 }
 
 export default async function AgentConfigurationsPage({ params }: PageProps) {
-  const { locale } = await params;
+  const { locale, agentId } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "agentConfigurations" });
   const queryClient = new QueryClient();
   try {
-    await prefetch(queryClient);
+    await prefetch(queryClient, agentId);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

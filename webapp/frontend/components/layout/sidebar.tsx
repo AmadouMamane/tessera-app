@@ -37,7 +37,9 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { Link, usePathname } from "@/i18n/navigation";
+import { agentPath } from "@/lib/agent-context";
 import { cn } from "@/lib/cn";
+import { useAgentId } from "@/lib/use-agent-id";
 
 type RouteHref =
   | "/produit"
@@ -45,16 +47,11 @@ type RouteHref =
   | "/produit/documents"
   | "/produit/alertes"
   | "/produit/parametres"
-  | "/agent/synthese"
-  | "/agent/configurations"
-  | "/agent/connaissances"
-  | "/agent/garde-fous"
-  | "/agent/prompts"
-  | "/agent/evaluations"
-  | "/agent/console"
-  | "/agent/historique"
-  | "/agent/a-traiter"
-  | "/agent/a-faire"
+  // AGENT section is scoped to the selected agent (`/agents/<agentId>/...`).
+  | `/agents/${string}/synthese`
+  // Inbox is GLOBAL (not under /agents/:id) — operator queue across agents.
+  | "/a-traiter"
+  | "/a-faire"
   | "/surveiller/vue-ensemble"
   | "/surveiller/qualite-ia"
   | "/surveiller/securite-privacy"
@@ -117,25 +114,37 @@ type NavNode = Leaf | Branch;
 
 const isBranch = (n: NavNode): n is Branch => "children" in n;
 
-const TREE: ReadonlyArray<NavNode> = [
-  {
+// The AGENT super-section is scoped to the selected agent, so its hrefs depend
+// on the active agent id (read from the URL). It is built per-render in
+// `Sidebar()` via `agentBranch(agentId)` and prepended to this static tree.
+function agentBranch(agentId: string): Branch {
+  return {
     key: "agent",
     icon: Bot,
     labelKey: "super.agent",
     accent: "green",
     children: [
-      { href: "/agent/synthese", icon: LayoutDashboard, labelKey: "item.synthese" },
       {
-        href: "/agent/a-traiter",
+        href: agentPath(agentId, "synthese") as RouteHref,
+        icon: LayoutDashboard,
+        labelKey: "item.synthese",
+      },
+      // Inbox stays GLOBAL (across agents), so its hrefs are top-level, not
+      // scoped under /agents/:id.
+      {
+        href: "/a-traiter",
         icon: Inbox,
         labelKey: "item.aTraiter",
         badge: "24",
         badgeTone: "danger",
         separatorBefore: true,
       },
-      { href: "/agent/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
+      { href: "/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
     ],
-  },
+  };
+}
+
+const TREE: ReadonlyArray<NavNode> = [
   {
     key: "gouverner",
     icon: ShieldHalf,
@@ -280,6 +289,17 @@ const ANCESTORS: Record<string, string[]> = (() => {
 })();
 
 function activeBranchKeys(pathname: string): string[] {
+  // The AGENT branch is dynamic (not in the static ANCESTORS map): any
+  // agent-scoped route, plus the global Inbox, belongs to the "agent" trail.
+  if (
+    pathname.startsWith("/agents/") ||
+    pathname === "/a-traiter" ||
+    pathname === "/a-faire" ||
+    pathname.startsWith("/a-traiter/") ||
+    pathname.startsWith("/a-faire/")
+  ) {
+    return ["agent"];
+  }
   for (const [href, trail] of Object.entries(ANCESTORS)) {
     if (pathname === href || pathname.startsWith(`${href}/`)) return trail;
   }
@@ -289,6 +309,11 @@ function activeBranchKeys(pathname: string): string[] {
 export function Sidebar() {
   const pathname = usePathname();
   const t = useTranslations("nav");
+  const agentId = useAgentId();
+
+  // The AGENT branch is scoped to the active agent (URL-derived); prepend it to
+  // the static governance/platform tree.
+  const tree = useMemo<ReadonlyArray<NavNode>>(() => [agentBranch(agentId), ...TREE], [agentId]);
 
   // Everything is collapsed by default; only the branches on the active path are
   // auto-expanded so the current page stays visible. The user expands the rest.
@@ -317,7 +342,7 @@ export function Sidebar() {
       <BrandHeader />
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 md:px-3">
         <ul className="flex flex-col gap-2">
-          {TREE.map((node) => (
+          {tree.map((node) => (
             <NavTreeNode
               key={isBranch(node) ? node.key : node.href}
               node={node}

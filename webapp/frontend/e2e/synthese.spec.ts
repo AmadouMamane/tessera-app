@@ -5,7 +5,7 @@ import { type Page, expect, test } from "@playwright/test";
 // conversations, and the wired CTAs / quick-config links that navigate to the
 // other agent pages (a dead button would be a failure).
 
-const PAGE = "/fr/agent/synthese";
+const PAGE = "/fr/agents/support-client/synthese";
 
 test.use({ viewport: { width: 1672, height: 1050 } });
 
@@ -44,7 +44,7 @@ test("quick-config links navigate to the real agent pages", async ({ page }) => 
   const card = page.locator("section", { hasText: "Configuration rapide" });
   await card.getByRole("link", { name: "Garde-fous", exact: true }).click();
   await page.waitForURL(/\/agent\/garde-fous/, { timeout: 15_000 });
-  expect(page.url()).toContain("/agent/garde-fous");
+  expect(page.url()).toContain("/agents/support-client/garde-fous");
 });
 
 test("the period control re-queries the transcript window", async ({ page }) => {
@@ -62,5 +62,5 @@ test("the period control re-queries the transcript window", async ({ page }) => 
 test("the Configurer CTA navigates to the configuration page", async ({ page }) => {
   await page.getByRole("link", { name: /Configurer l'assistant/ }).click();
   await page.waitForURL(/\/agent\/configurations/, { timeout: 15_000 });
-  expect(page.url()).toContain("/agent/configurations");
+  expect(page.url()).toContain("/agents/support-client/configurations");
 });

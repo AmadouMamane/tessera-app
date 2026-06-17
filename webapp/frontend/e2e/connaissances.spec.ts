@@ -3,7 +3,7 @@ import { type Page, expect, test } from "@playwright/test";
 // Covers the behaviour that survives localization: tone-based filtering, index
 // sorting, the detail drawer, popover dismissal, and URL-synced filter state.
 
-const PAGE = "/fr/agent/connaissances";
+const PAGE = "/fr/agents/support-client/connaissances";
 
 async function login(page: Page) {
   await page.goto("/fr/login");

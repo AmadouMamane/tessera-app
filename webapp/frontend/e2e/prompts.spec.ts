@@ -5,7 +5,7 @@ import { type Page, expect, test } from "@playwright/test";
 // row-click selection driving the detail panel and the Content tab that shows
 // the actual prompt text.
 
-const PAGE = "/fr/agent/prompts";
+const PAGE = "/fr/agents/support-client/prompts";
 
 test.use({ viewport: { width: 1672, height: 1000 } });
 

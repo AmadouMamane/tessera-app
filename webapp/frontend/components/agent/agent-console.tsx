@@ -31,6 +31,7 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Link } from "@/i18n/navigation";
+import { agentPath } from "@/lib/agent-context";
 import { fetchAgentConsole, fetchConsoleFeedback, saveConsoleFeedback } from "@/lib/api/client";
 import type {
   ChatCitation,
@@ -40,6 +41,7 @@ import type {
 } from "@/lib/api/schemas";
 import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
+import { useAgentId } from "@/lib/use-agent-id";
 
 type Rating = "up" | "down";
 
@@ -830,7 +832,7 @@ function PanelHead({
 }: {
   title: string;
   cta?: string;
-  href?: "/agent/connaissances" | "/prouver/audit-logs";
+  href?: string;
 }) {
   const cls = "inline-flex items-center gap-0.5 text-[0.64rem] text-[#f4c76a] hover:text-white";
   return (
@@ -880,9 +882,10 @@ function Quality({ q }: { q: NonNullable<Data["quality"]> }) {
 }
 
 function SourcesPanel({ s }: { s: NonNullable<Data["sources"]> }) {
+  const agentId = useAgentId();
   return (
     <div className="p-3.5">
-      <PanelHead title={s.title} cta={s.cta} href="/agent/connaissances" />
+      <PanelHead title={s.title} cta={s.cta} href={agentPath(agentId, "connaissances")} />
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
         {s.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">

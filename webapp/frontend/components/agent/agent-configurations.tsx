@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { Download } from "lucide-react";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -27,6 +28,7 @@ import {
 } from "@/lib/api/client";
 import type { AgentConfigurations as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useAgentId } from "@/lib/use-agent-id";
 
 type Field = NonNullable<Data["identity"]>["left"][number];
 type Slider = NonNullable<Data["behavior"]>["sliders"][number];
@@ -43,9 +45,11 @@ interface Ctx {
 export function AgentConfigurations() {
   const t = useTranslations("agentConfigurations");
   const qc = useQueryClient();
+  const agentId = useAgentId();
+  const queryKey = ["agent-configurations", agentId];
   const { data } = useQuery({
-    queryKey: ["agent-configurations"],
-    queryFn: ({ signal }) => fetchAgentConfigurations(signal),
+    queryKey,
+    queryFn: ({ signal }) => fetchAgentConfigurations(agentId, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -53,18 +57,18 @@ export function AgentConfigurations() {
   const [draft, setDraft] = useState<Draft>({});
   const [error, setError] = useState(false);
   const save = useMutation({
-    mutationFn: saveAgentConfigurations,
+    mutationFn: (changes: Draft) => saveAgentConfigurations(agentId, changes),
     onSuccess: (fresh) => {
       setError(false);
       setDraft({});
-      qc.setQueryData(["agent-configurations"], fresh);
+      qc.setQueryData(queryKey, fresh);
     },
     onError: () => setError(true),
   });
   // Archive is a standalone durable toggle (it must not clobber pending edits).
   const archiveMut = useMutation({
-    mutationFn: saveAgentConfigurations,
-    onSuccess: (fresh) => qc.setQueryData(["agent-configurations"], fresh),
+    mutationFn: (changes: Draft) => saveAgentConfigurations(agentId, changes),
+    onSuccess: (fresh) => qc.setQueryData(queryKey, fresh),
   });
 
   const setField = (key: string, serverValue: Override, value: Override) => {
@@ -509,7 +513,7 @@ function ToolsRow({ tools }: { tools: NonNullable<Data["behavior"]>["tools"] }) 
             </ul>
             {tools.href ? (
               <Link
-                href={tools.href as "/agent/garde-fous"}
+                href={tools.href as Route}
                 className="mt-1 flex items-center gap-1 border-t border-[var(--tessera-border)] px-2 pt-1.5 text-[0.68rem] text-[#5fd0c6] hover:text-white"
               >
                 Gérer dans les garde-fous <ChevronRight className="h-3 w-3" />

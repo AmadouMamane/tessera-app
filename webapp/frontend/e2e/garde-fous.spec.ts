@@ -5,7 +5,7 @@ import { type Page, expect, test } from "@playwright/test";
 // popover, row-click selection driving the detail panel, and the enable/disable
 // toggle that mutates durable state (reverted at the end of the test).
 
-const PAGE = "/fr/agent/garde-fous";
+const PAGE = "/fr/agents/support-client/garde-fous";
 
 // Pin a wide desktop viewport so the filter bar does not wrap (the page lays the
 // rule table + detail panel side by side at xl+).

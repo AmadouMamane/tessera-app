@@ -107,11 +107,21 @@ def _build_entry(
     error: str | None,
     model: str | None,
     data_residency: str,
+    agent_id: str,
 ) -> dict[str, Any]:
+    # Bitemporal stamps (S1 substrate): valid_* is when the event is effective
+    # for the agent, recorded_at is when Tessera learned it (transaction time).
+    # A guard decision is effective the instant it is taken and stays so (open
+    # interval), and is recorded at the same instant. Both feed the hash.
+    now = datetime.now(UTC).isoformat()
     return {
         "type": "tessera.guard.audit",
-        "version": 1,
-        "occurred_at": datetime.now(UTC).isoformat(),
+        "version": 2,
+        "occurred_at": now,
+        "agent_id": agent_id,
+        "valid_from": now,
+        "valid_to": None,
+        "recorded_at": now,
         "target": target,
         "outcome": outcome,
         "model": model,
@@ -163,13 +173,19 @@ def emit_audit(
     sink: Literal["stdout", "file", "cloud_logging", "postgres"],
     outcome: _Outcome,
     error: str | None = None,
+    agent_id: str | None = None,
 ) -> None:
     """Emit a single audit entry to ``sink``.
 
     The function is fire-and-forget: callers do not need to await on it.
     Failures in the sink are swallowed and logged to stderr so that audit
     issues never block the agent's main path.
+
+    ``agent_id`` attributes the event to an agent (per-turn attribution); it
+    defaults to the acting agent on the current turn so the data is partitioned
+    by agent and the cockpit can scope by it.
     """
+    from tessera.agent.identity import resolve_agent_id
     from tessera.settings import LLMProfile, get_settings
 
     settings = get_settings()
@@ -190,6 +206,7 @@ def emit_audit(
         error=error,
         model=model,
         data_residency=settings.observability.data_residency,
+        agent_id=resolve_agent_id(agent_id),
     )
     # Link this entry into the tamper-evident chain (idea #3). The file sink
     # resumes the chain from disk so it survives restarts; other sinks chain

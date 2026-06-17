@@ -191,20 +191,65 @@ def compute_agent_evaluations() -> dict[str, object]:
 
     score_note, score_tone = _quality_note(score10)
     kpis: list[dict[str, object]] = [
-        _kpi("score", "Score global", _comma(score10), "/10", score_note, score_tone,
-             f"{snap.passed}/{snap.total} cas réussis", "muted"),
-        _kpi("success", "Taux de réussite", "", "", score_note, score_tone,
-             f"{snap.passed}/{snap.total} cas", "muted", gauge=round(snap.pass_rate * 100)),
-        _kpi("halluc", "Hallucinations", _pct(halluc_rate), "",
-             "Élevé" if halluc_rate >= _HIGH_HALLUC else "Maîtrisé",
-             "bad" if halluc_rate >= _HIGH_HALLUC else "good",
-             f"{fact_failed}/{fact_total} sondes factualité", "muted"),
-        _kpi("relevance", "Pertinence", _comma(beh_rate * 10), "/10", *_quality_note(beh_rate * 10),
-             f"{beh_pass}/{beh_total} cas agent", "muted"),
-        _kpi("fidelity", "Fidélité (sources)", _pct(cite_rate), "", *_quality_note(cite_rate * 10),
-             f"{cite_passed}/{cite_total} cas citation", "muted"),
-        _kpi("coverage", "Couverture du set", str(snap.total), "", "tests exécutés", "muted",
-             f"{len(snap.categories)} catégories - {n_lang} langues", "muted"),
+        _kpi(
+            "score",
+            "Score global",
+            _comma(score10),
+            "/10",
+            score_note,
+            score_tone,
+            f"{snap.passed}/{snap.total} cas réussis",
+            "muted",
+        ),
+        _kpi(
+            "success",
+            "Taux de réussite",
+            "",
+            "",
+            score_note,
+            score_tone,
+            f"{snap.passed}/{snap.total} cas",
+            "muted",
+            gauge=round(snap.pass_rate * 100),
+        ),
+        _kpi(
+            "halluc",
+            "Hallucinations",
+            _pct(halluc_rate),
+            "",
+            "Élevé" if halluc_rate >= _HIGH_HALLUC else "Maîtrisé",
+            "bad" if halluc_rate >= _HIGH_HALLUC else "good",
+            f"{fact_failed}/{fact_total} sondes factualité",
+            "muted",
+        ),
+        _kpi(
+            "relevance",
+            "Pertinence",
+            _comma(beh_rate * 10),
+            "/10",
+            *_quality_note(beh_rate * 10),
+            f"{beh_pass}/{beh_total} cas agent",
+            "muted",
+        ),
+        _kpi(
+            "fidelity",
+            "Fidélité (sources)",
+            _pct(cite_rate),
+            "",
+            *_quality_note(cite_rate * 10),
+            f"{cite_passed}/{cite_total} cas citation",
+            "muted",
+        ),
+        _kpi(
+            "coverage",
+            "Couverture du set",
+            str(snap.total),
+            "",
+            "tests exécutés",
+            "muted",
+            f"{len(snap.categories)} catégories - {n_lang} langues",
+            "muted",
+        ),
     ]
 
     # Filter options that genuinely partition the rows (type / quality band /
@@ -231,8 +276,16 @@ def compute_agent_evaluations() -> dict[str, object]:
     }
 
     columns = [
-        "Nom de l'évaluation", "Type", "Statut", "Version", "Score global",
-        "Taux réussite", "Hallucinations", "Dernière exécution", "Propriétaire", "Tests",
+        "Nom de l'évaluation",
+        "Type",
+        "Statut",
+        "Version",
+        "Score global",
+        "Taux réussite",
+        "Hallucinations",
+        "Dernière exécution",
+        "Propriétaire",
+        "Tests",
     ]
     version_label = snap.catalogue_version[:9] or "v1"
     rows = [
@@ -243,15 +296,18 @@ def compute_agent_evaluations() -> dict[str, object]:
     worst = snap.categories_by_pass_rate()
     watch_tones = ["crit", "crit", "warn"]
     watch_items = [
-        {"title": f"{stat.label} - {_pct(stat.pass_rate)} de réussite",
-         "detail": f"{stat.passed}/{stat.total} cas - {n_lang} langues", "tone": tone}
+        {
+            "title": f"{stat.label} - {_pct(stat.pass_rate)} de réussite",
+            "detail": f"{stat.passed}/{stat.total} cas - {n_lang} langues",
+            "tone": tone,
+        }
         for stat, tone in zip(worst[:3], watch_tones, strict=False)
     ]
     n_alert = sum(1 for c in snap.categories if c.pass_rate < _ALERT_PASS_RATE)
     watch: dict[str, object] = {
         "title": "À surveiller",
         "cta": f"Voir toutes les alertes ({n_alert})",
-        "cta_href": "/agent/a-traiter",
+        "cta_href": "/a-traiter",
         "items": watch_items,
     }
 
@@ -281,8 +337,14 @@ def compute_agent_evaluations() -> dict[str, object]:
         ),
         "actions": {"asof": "Voir à date (as-of)", "create": "Créer une évaluation"},
         "subtabs": [
-            "Vue d'ensemble", "Jeux d'évaluations", "Résultats", "Dimensions",
-            "Comparaisons", "Erreurs", "Versions & historique", "Exports",
+            "Vue d'ensemble",
+            "Jeux d'évaluations",
+            "Résultats",
+            "Dimensions",
+            "Comparaisons",
+            "Erreurs",
+            "Versions & historique",
+            "Exports",
         ],
         "meta": {
             "model": snap.model,

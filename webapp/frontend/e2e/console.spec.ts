@@ -6,7 +6,7 @@ import { type Page, expect, test } from "@playwright/test";
 // chat stream + thumbs feedback need the live LLM, so they are exercised
 // separately; here we assert the deterministic, non-LLM controls are alive.
 
-const PAGE = "/fr/agent/console";
+const PAGE = "/fr/agents/support-client/console";
 
 test.use({ viewport: { width: 1672, height: 1000 } });
 

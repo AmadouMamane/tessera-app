@@ -23,6 +23,7 @@ import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Link } from "@/i18n/navigation";
+import { DEFAULT_AGENT_ID, agentPath } from "@/lib/agent-context";
 import { cn } from "@/lib/cn";
 
 type Accent = "gold" | "cyan";
@@ -178,7 +179,7 @@ export function LandingLauncher() {
               ns="operator"
               accent="cyan"
               badgeIcon={<ShieldCheck className="h-[23px] w-[23px]" />}
-              href="/agent/synthese"
+              href={agentPath(DEFAULT_AGENT_ID, "synthese")}
               items={OPERATOR_ITEMS}
               visual={<CockpitVisual />}
             />
@@ -221,7 +222,7 @@ function SpaceToggle({ t }: { t: T }) {
         {t("toggle.product")}
       </Link>
       <Link
-        href="/agent/synthese"
+        href={agentPath(DEFAULT_AGENT_ID, "synthese")}
         className="flex h-[36px] flex-1 items-center justify-center gap-[8px] rounded-[10px] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]"
       >
         <ShieldCheck className="h-[15px] w-[15px] stroke-[var(--cyan)] stroke-[2]" />
@@ -244,7 +245,7 @@ function SpaceCard({
   ns: "client" | "operator";
   accent: Accent;
   badgeIcon: ReactNode;
-  href: "/produit" | "/agent/synthese";
+  href: "/produit" | `/agents/${string}/synthese`;
   items: SpaceItem[];
   visual: ReactNode;
 }) {

@@ -4,7 +4,7 @@ import { type Page, expect, test } from "@playwright/test";
 // edit, a changed select persists across a reload (durable override store), and
 // the test restores the default so it leaves the profile clean.
 
-const PAGE = "/fr/agent/configurations";
+const PAGE = "/fr/agents/support-client/configurations";
 
 test.use({ viewport: { width: 1672, height: 1000 } });
 // These tests mutate + restore one shared durable store (agent_config.json) and

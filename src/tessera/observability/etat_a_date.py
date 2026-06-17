@@ -32,6 +32,7 @@ from zoneinfo import ZoneInfo
 
 from psycopg.rows import dict_row
 
+from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.guard.decisions import load_policy
 from tessera.observability._asof import occurred_before
 from tessera.observability.agent_configurations import _effective
@@ -312,9 +313,7 @@ def _guardrails_card(
     policy: Policy, audit: _AuditAsOf, ctx: _Context, at: datetime | None
 ) -> dict[str, object]:
     after = ctx.audit_total - audit.decisions  # real decisions logged after T
-    rules_active = (
-        len(policy.prompt_injection_deny) + len(policy.pii_patterns) + len(policy.tools)
-    )
+    rules_active = len(policy.prompt_injection_deny) + len(policy.pii_patterns) + len(policy.tools)
     diff = [
         _d("changed", f"{_fmt_int(after)} décisions du guard journalisées après T")
         if after > 0
@@ -333,7 +332,7 @@ def _guardrails_card(
         ],
         diff,
         "Voir le détail des règles",
-        "/agent/garde-fous",
+        f"/agents/{DEFAULT_AGENT_ID}/garde-fous",
     )
 
 
@@ -354,7 +353,7 @@ def _prompt_model_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
         ],
         diff,
         "Voir le contenu du prompt",
-        "/agent/prompts",
+        f"/agents/{DEFAULT_AGENT_ID}/prompts",
     )
 
 
@@ -377,7 +376,7 @@ def _release_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
         ],
         diff,
         "Voir le détail de la release",
-        "/agent/evaluations",
+        f"/agents/{DEFAULT_AGENT_ID}/evaluations",
     )
 
 
@@ -386,22 +385,24 @@ def _table(states: dict[str, _CatState]) -> list[dict[str, object]]:
     for cat, st in sorted(states.items(), key=lambda kv: -kv[1].chunks_at_t):
         accessible = st.chunks_at_t > 0
         tone_key = _SOURCE_META[cat]
-        rows.append({
-            "key": cat,
-            "source": _source_name(cat, "fr"),
-            "type": _TYPE_LABEL[tone_key],
-            "type_key": tone_key,
-            "type_tone": _TYPE_TONE[tone_key],
-            "langs": "/".join(sorted(st.langs)) if st.langs else "-",
-            "chunks": st.chunks_at_t,
-            "total_chunks": st.chunks_total,
-            "version": f"ingéré {_fmt(st.first_ins)}" if st.first_ins else "-",
-            "accessible_until": _fmt(st.last_ins_at_t),
-            "updated": _fmt(st.last_ins_at_t),
-            "first_seen": _fmt(st.first_ins),
-            "status": "accessible" if accessible else "pending",
-            "status_label": "Accessible" if accessible else "Pas encore indexée",
-        })
+        rows.append(
+            {
+                "key": cat,
+                "source": _source_name(cat, "fr"),
+                "type": _TYPE_LABEL[tone_key],
+                "type_key": tone_key,
+                "type_tone": _TYPE_TONE[tone_key],
+                "langs": "/".join(sorted(st.langs)) if st.langs else "-",
+                "chunks": st.chunks_at_t,
+                "total_chunks": st.chunks_total,
+                "version": f"ingéré {_fmt(st.first_ins)}" if st.first_ins else "-",
+                "accessible_until": _fmt(st.last_ins_at_t),
+                "updated": _fmt(st.last_ins_at_t),
+                "first_seen": _fmt(st.first_ins),
+                "status": "accessible" if accessible else "pending",
+                "status_label": "Accessible" if accessible else "Pas encore indexée",
+            }
+        )
     return rows
 
 
@@ -536,7 +537,7 @@ def _assemble(
             "rows": [
                 {"label": "Journal d'événements à date T", "href": "/prouver/audit-logs"},
                 {"label": "Evidence pack qualité", "href": "/prouver/evidence-store"},
-                {"label": "Sources & mémoire", "href": "/agent/connaissances"},
+                {"label": "Sources & mémoire", "href": f"/agents/{DEFAULT_AGENT_ID}/connaissances"},
             ],
         },
         "summary": {

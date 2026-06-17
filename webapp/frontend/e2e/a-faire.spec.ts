@@ -4,7 +4,7 @@ import { type Page, expect, test } from "@playwright/test";
 // lists real items, the rail search filters them, a row click drives the detail
 // band, and "Prendre en charge" persists the durable workflow status.
 
-const PAGE = "/fr/agent/a-faire";
+const PAGE = "/fr/a-faire";
 
 test.use({ viewport: { width: 1672, height: 1000 } });
 

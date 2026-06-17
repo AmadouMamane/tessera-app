@@ -22,22 +22,24 @@ import {
 } from "@/components/overview/temporal-rail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, usePathname } from "@/i18n/navigation";
+import { type AgentPage, agentPath } from "@/lib/agent-context";
 import { fetchAgentSynthese } from "@/lib/api/client";
 import type { AgentSynthese as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import type { OverviewTone } from "@/lib/overview";
+import { useAgentId } from "@/lib/use-agent-id";
 
 type T = ReturnType<typeof useTranslations<"agentSynthese">>;
 
-const TABS = [
-  { href: "/agent/synthese", labelKey: "item.vueEnsemble" },
-  { href: "/agent/configurations", labelKey: "item.configurations" },
-  { href: "/agent/connaissances", labelKey: "item.connaissances" },
-  { href: "/agent/garde-fous", labelKey: "item.agentGuardrails" },
-  { href: "/agent/prompts", labelKey: "item.prompts" },
-  { href: "/agent/evaluations", labelKey: "item.evaluations" },
-  { href: "/agent/historique", labelKey: "item.historique" },
-] as const;
+const TABS: ReadonlyArray<{ page: AgentPage; labelKey: string }> = [
+  { page: "synthese", labelKey: "item.vueEnsemble" },
+  { page: "configurations", labelKey: "item.configurations" },
+  { page: "connaissances", labelKey: "item.connaissances" },
+  { page: "garde-fous", labelKey: "item.agentGuardrails" },
+  { page: "prompts", labelKey: "item.prompts" },
+  { page: "evaluations", labelKey: "item.evaluations" },
+  { page: "historique", labelKey: "item.historique" },
+];
 
 const BAR_TONE: Record<string, string> = {
   violet: "bg-[#8b7cf0]",
@@ -71,11 +73,12 @@ export function AgentSynthese() {
   const t = useTranslations("agentSynthese");
   const tn = useTranslations("nav");
   const pathname = usePathname();
+  const agentId = useAgentId();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const { data } = useQuery({
-    queryKey: ["agent-synthese", temporal.periodKey],
-    queryFn: ({ signal }) => fetchAgentSynthese(temporal.periodKey, signal),
+    queryKey: ["agent-synthese", agentId, temporal.periodKey],
+    queryFn: ({ signal }) => fetchAgentSynthese(agentId, temporal.periodKey, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -93,7 +96,7 @@ export function AgentSynthese() {
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <CommandBar t={t} tn={tn} pathname={pathname} />
+      <CommandBar t={t} tn={tn} pathname={pathname} agentId={agentId} />
 
       <TemporalRail
         mode={temporal.mode}
@@ -172,16 +175,23 @@ function CommandBar({
   t,
   tn,
   pathname,
-}: { t: T; tn: ReturnType<typeof useTranslations<"nav">>; pathname: string }) {
+  agentId,
+}: {
+  t: T;
+  tn: ReturnType<typeof useTranslations<"nav">>;
+  pathname: string;
+  agentId: string;
+}) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
       <nav className="flex min-w-0 flex-wrap items-center gap-1">
         {TABS.map((tab) => {
-          const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          const href = agentPath(agentId, tab.page);
+          const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
-              key={tab.href}
-              href={tab.href}
+              key={tab.page}
+              href={href}
               className={cn(
                 "-mb-px shrink-0 border-b-2 px-3 py-2 text-[0.8rem] transition-colors",
                 active
@@ -195,9 +205,13 @@ function CommandBar({
         })}
       </nav>
       <div className="flex shrink-0 items-center gap-2">
-        <GhostLink icon={FlaskConical} label={t("actions.test")} href="/agent/evaluations" />
+        <GhostLink
+          icon={FlaskConical}
+          label={t("actions.test")}
+          href={agentPath(agentId, "evaluations")}
+        />
         <Link
-          href="/agent/configurations"
+          href={agentPath(agentId, "configurations")}
           className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
         >
           <Settings2 className="h-4 w-4" /> {t("actions.configure")}

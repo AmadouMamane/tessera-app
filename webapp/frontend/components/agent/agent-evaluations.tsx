@@ -29,9 +29,11 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Link } from "@/i18n/navigation";
+import { agentPath } from "@/lib/agent-context";
 import { fetchAgentEvaluations } from "@/lib/api/client";
 import type { AgentEvaluations as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSubtabs } from "./agent-subtabs";
 import { AgentTabs } from "./agent-tabs";
 
@@ -66,12 +68,13 @@ const WATCH_DOT: Record<string, string> = {
 const PER_PAGE_OPTS = [10, 25, 50];
 const MAX_PAGE_BUTTONS = 5;
 const NUMERIC_COLS = new Set([4, 5, 6, 9]);
-const QUICK_HREF: Record<string, Route> = {
+// AGENT-scoped targets depend on the active agent; GOUVERNER targets are global.
+const quickHref = (agentId: string): Record<string, Route> => ({
   run: "/agir/curation-eval-set" as Route,
   compare: "/prouver/etat-a-date" as Route,
-  results: "/agent/historique" as Route,
+  results: agentPath(agentId, "historique") as Route,
   sets: "/agir/curation-eval-set" as Route,
-};
+});
 
 function useDismiss(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
@@ -863,8 +866,10 @@ function Watch({ data }: { data: Data }) {
 
 function Quick({ data }: { data: Data }) {
   const q = data.quick;
+  const agentId = useAgentId();
   if (!q) return null;
   const icons = [Play, GitCompare, BarChart3, Layers];
+  const hrefs = quickHref(agentId);
   return (
     <PanelCard title={q.title}>
       <div className="grid grid-cols-2 gap-2">
@@ -873,7 +878,7 @@ function Quick({ data }: { data: Data }) {
           return (
             <Link
               key={it.key}
-              href={QUICK_HREF[it.key] ?? ("/agent/evaluations" as Route)}
+              href={hrefs[it.key] ?? (agentPath(agentId, "evaluations") as Route)}
               className="flex flex-col items-start gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.68rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
             >
               <Icon className="h-4 w-4 text-[#b9a6ff]" />
@@ -950,6 +955,7 @@ function Detail({
   row: RowT | null;
   className?: string;
 }) {
+  const agentId = useAgentId();
   const labels = data.detail_labels;
   const meta = data.meta;
   const tabs = labels?.tabs ?? ["Résumé", "Configuration", "Résultats", "Activité"];
@@ -1104,7 +1110,7 @@ function Detail({
               ))}
             </ul>
             <Link
-              href={"/agent/historique" as Route}
+              href={agentPath(agentId, "historique") as Route}
               className="mt-2 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
             >
               {labels.results_cta} <ChevronRight className="h-3.5 w-3.5" />

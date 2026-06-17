@@ -5,7 +5,7 @@ import { type Page, expect, test } from "@playwright/test";
 // the detail panel (with the real question/answer in the Messages tab), and the
 // client pagination advances. All sourced from the real llama3.2:3b eval run.
 
-const PAGE = "/fr/agent/historique";
+const PAGE = "/fr/agents/support-client/historique";
 
 test.use({ viewport: { width: 1672, height: 1050 } });
 

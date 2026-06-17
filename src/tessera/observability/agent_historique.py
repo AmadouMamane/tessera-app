@@ -27,6 +27,7 @@ from datetime import datetime
 from statistics import median
 from typing import TYPE_CHECKING
 
+from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.observability.eval_data import SessionRow, load_eval_snapshot
 
 if TYPE_CHECKING:
@@ -153,7 +154,7 @@ def _row(session: SessionRow) -> dict[str, object]:
     }
 
 
-def _assemble(snap: EvalSnapshot) -> dict[str, object]:
+def _assemble(snap: EvalSnapshot, agent_id: str = DEFAULT_AGENT_ID) -> dict[str, object]:
     """Assemble the Historique payload from the eval snapshot (pure, I/O-free)."""
     chrono = sorted(snap.sessions, key=lambda s: s.started_at)
     total = snap.total
@@ -168,22 +169,60 @@ def _assemble(snap: EvalSnapshot) -> dict[str, object]:
 
     b7 = _bucketize(chrono, 7)
     kpis: list[dict[str, object]] = [
-        _kpi("sessions", "Sessions totales", _fr_int(total),
-             f"{len(snap.categories)} catégories - {n_lang} langues", "muted", "violet",
-             [_bucket_count(b) for b in b7]),
-        _kpi("messages", "Messages échangés", _fr_int(total * 2),
-             "1 entrant + 1 sortant par session", "muted", "blue",
-             [_bucket_count(b) * 2 for b in b7]),
-        _kpi("answers", "Réponses générées", _fr_int(total), "1 réponse par session", "muted",
-             "green", [_bucket_count(b) for b in b7]),
-        _kpi("success", "Taux de réussite", f"{pass_rate * 100:.1f} %".replace(".", ","),
-             f"{passed}/{total} cas réussis", "good" if pass_rate >= _GOOD_RATE else "bad",
-             "green", [_bucket_passrate(b) for b in b7]),
-        _kpi("latency", "Temps de réponse (p50)", _secs(p50), f"p95 {_secs(p95)}", "muted",
-             "amber", [_bucket_p50(b) for b in b7]),
-        _kpi("tokens", "Tokens consommés", _compact(tok_total),
-             f"{_compact(tok_in)} entrée / {_compact(tok_out)} sortie", "muted", "violet",
-             [_bucket_tokens(b) for b in b7]),
+        _kpi(
+            "sessions",
+            "Sessions totales",
+            _fr_int(total),
+            f"{len(snap.categories)} catégories - {n_lang} langues",
+            "muted",
+            "violet",
+            [_bucket_count(b) for b in b7],
+        ),
+        _kpi(
+            "messages",
+            "Messages échangés",
+            _fr_int(total * 2),
+            "1 entrant + 1 sortant par session",
+            "muted",
+            "blue",
+            [_bucket_count(b) * 2 for b in b7],
+        ),
+        _kpi(
+            "answers",
+            "Réponses générées",
+            _fr_int(total),
+            "1 réponse par session",
+            "muted",
+            "green",
+            [_bucket_count(b) for b in b7],
+        ),
+        _kpi(
+            "success",
+            "Taux de réussite",
+            f"{pass_rate * 100:.1f} %".replace(".", ","),
+            f"{passed}/{total} cas réussis",
+            "good" if pass_rate >= _GOOD_RATE else "bad",
+            "green",
+            [_bucket_passrate(b) for b in b7],
+        ),
+        _kpi(
+            "latency",
+            "Temps de réponse (p50)",
+            _secs(p50),
+            f"p95 {_secs(p95)}",
+            "muted",
+            "amber",
+            [_bucket_p50(b) for b in b7],
+        ),
+        _kpi(
+            "tokens",
+            "Tokens consommés",
+            _compact(tok_total),
+            f"{_compact(tok_in)} entrée / {_compact(tok_out)} sortie",
+            "muted",
+            "violet",
+            [_bucket_tokens(b) for b in b7],
+        ),
     ]
 
     cat_options = [
@@ -204,8 +243,15 @@ def _assemble(snap: EvalSnapshot) -> dict[str, object]:
     }
 
     columns = [
-        "Session ID", "Utilisateur", "Agent", "Début de session", "Messages",
-        "Score", "Statut", "Temps de réponse (p50)", "Tokens",
+        "Session ID",
+        "Utilisateur",
+        "Agent",
+        "Début de session",
+        "Messages",
+        "Score",
+        "Statut",
+        "Temps de réponse (p50)",
+        "Tokens",
     ]
     recent = sorted(snap.sessions, key=lambda s: s.started_at, reverse=True)
     rows = [_row(s) for s in recent]
@@ -225,10 +271,14 @@ def _assemble(snap: EvalSnapshot) -> dict[str, object]:
     by_agent: dict[str, object] = {
         "title": "Sessions par catégorie (Top 5)",
         "cta": "Voir toutes les catégories",
-        "cta_href": "/agent/evaluations",
+        "cta_href": f"/agents/{agent_id}/evaluations",
         "items": [
-            {"label": c.label, "value": _fr_int(c.total), "pct": round(100 * c.total / max_cat),
-             "share": f"{100 * c.total / total:.1f}%".replace(".", ",")}
+            {
+                "label": c.label,
+                "value": _fr_int(c.total),
+                "pct": round(100 * c.total / max_cat),
+                "share": f"{100 * c.total / total:.1f}%".replace(".", ","),
+            }
             for c in top_cats
         ],
     }
@@ -244,12 +294,27 @@ def _assemble(snap: EvalSnapshot) -> dict[str, object]:
         "center": _fr_int(total),
         "center_label": "Sessions",
         "segments": [
-            {"label": "Réussies", "value": _fr_int(passed), "share": _share(passed),
-             "pct": round(100 * passed / total) if total else 0, "tone": "green"},
-            {"label": "Échecs (escalade)", "value": _fr_int(escalated), "share": _share(escalated),
-             "pct": round(100 * escalated / total) if total else 0, "tone": "amber"},
-            {"label": "Échecs (gérés)", "value": _fr_int(blocked), "share": _share(blocked),
-             "pct": round(100 * blocked / total) if total else 0, "tone": "red"},
+            {
+                "label": "Réussies",
+                "value": _fr_int(passed),
+                "share": _share(passed),
+                "pct": round(100 * passed / total) if total else 0,
+                "tone": "green",
+            },
+            {
+                "label": "Échecs (escalade)",
+                "value": _fr_int(escalated),
+                "share": _share(escalated),
+                "pct": round(100 * escalated / total) if total else 0,
+                "tone": "amber",
+            },
+            {
+                "label": "Échecs (gérés)",
+                "value": _fr_int(blocked),
+                "share": _share(blocked),
+                "pct": round(100 * blocked / total) if total else 0,
+                "tone": "red",
+            },
         ],
     }
 
@@ -259,7 +324,7 @@ def _assemble(snap: EvalSnapshot) -> dict[str, object]:
         "value": f"{pass_rate * 100:.1f}%".replace(".", ","),
         "note": "Réussie" if pass_rate >= _GOOD_RATE else "À surveiller",
         "cta": "Voir le détail",
-        "cta_href": "/agent/evaluations",
+        "cta_href": f"/agents/{agent_id}/evaluations",
     }
 
     worst = snap.categories_by_pass_rate()[:3]
@@ -268,10 +333,13 @@ def _assemble(snap: EvalSnapshot) -> dict[str, object]:
     watch: dict[str, object] = {
         "title": "À surveiller",
         "cta": f"Voir toutes les alertes ({n_failing})",
-        "cta_href": "/agent/a-traiter",
+        "cta_href": "/a-traiter",
         "items": [
-            {"title": f"{c.label} - {c.failed} échecs sur {c.total}",
-             "detail": f"{_secs(p50)} p50 - {n_lang} langues", "tone": tone}
+            {
+                "title": f"{c.label} - {c.failed} échecs sur {c.total}",
+                "detail": f"{_secs(p50)} p50 - {n_lang} langues",
+                "tone": tone,
+            }
             for c, tone in zip(worst, watch_tones, strict=False)
         ],
     }
@@ -291,8 +359,15 @@ def _assemble(snap: EvalSnapshot) -> dict[str, object]:
         "subtitle": "Analysez les sessions de conversation, leur qualité et leur conformité.",
         "actions": {"export": "Exporter", "compare": "Comparer", "create": "Créer un rapport"},
         "subtabs": [
-            "Vue d'ensemble", "Sessions", "Messages", "Evaluations", "Traces & outils",
-            "Utilisateurs", "Contenu & sources", "Erreurs", "Exports",
+            "Vue d'ensemble",
+            "Sessions",
+            "Messages",
+            "Evaluations",
+            "Traces & outils",
+            "Utilisateurs",
+            "Contenu & sources",
+            "Erreurs",
+            "Exports",
         ],
         "meta": {"model": snap.model, "catalogue_version": snap.catalogue_version},
         "detail_labels": {
@@ -319,6 +394,6 @@ def _assemble(snap: EvalSnapshot) -> dict[str, object]:
     }
 
 
-def compute_agent_historique() -> dict[str, object]:
+def compute_agent_historique(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, object]:
     """Return the Historique payload from the real llama3.2:3b session run."""
-    return _assemble(load_eval_snapshot())
+    return _assemble(load_eval_snapshot(), agent_id)

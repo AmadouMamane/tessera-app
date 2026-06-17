@@ -21,6 +21,7 @@ from starlette.responses import StreamingResponse
 
 from tessera.agent import build_graph, reporter as reporter_module
 from tessera.agent.grounding import select_grounded_citations
+from tessera.agent.identity import current_agent_id, resolve_agent_id
 from tessera.agent.state import (
     Citation,
     ConversationMessage,
@@ -390,6 +391,12 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     # Record the effective model on audit entries emitted during this turn
     # (memory governance, guard) — not just the server default.
     current_model.set(request.model)
+    # Per-turn agent attribution (multi-agent foundation): bind the acting agent
+    # for this turn so every audit event, metric and transcript message is
+    # stamped with it. The supervisor (Phase 2) will route this per turn; today
+    # it resolves to the single default agent.
+    agent_id = resolve_agent_id()
+    current_agent_id.set(agent_id)
 
     graph = _streaming_graph()
     config: dict[str, object] = {"configurable": {"thread_id": str(turn_id)}}
@@ -403,7 +410,9 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
         try:
             await graph.ainvoke(initial, config=config)  # type: ignore[attr-defined]
         except Exception as exc:
-            AGENT_TURNS_TOTAL.labels(language=language.value, outcome="error").inc()
+            AGENT_TURNS_TOTAL.labels(
+                agent_id=agent_id, language=language.value, outcome="error"
+            ).inc()
             yield _sse("turn.error", {"error": str(exc)})
             return
 
@@ -443,10 +452,14 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
 
     duration = time.perf_counter() - started
     resolved_language: LanguageCode = state.get("language", language)
-    AGENT_TURN_DURATION.labels(language=resolved_language.value).observe(duration)
+    AGENT_TURN_DURATION.labels(agent_id=agent_id, language=resolved_language.value).observe(
+        duration
+    )
     needs_escalation = bool(state.get("needs_escalation", False))
     outcome: Literal["complete", "escalated"] = "escalated" if needs_escalation else "complete"
-    AGENT_TURNS_TOTAL.labels(language=resolved_language.value, outcome=outcome).inc()
+    AGENT_TURNS_TOTAL.labels(
+        agent_id=agent_id, language=resolved_language.value, outcome=outcome
+    ).inc()
 
     # Persist this turn to the durable transcript (ADR 0007, Mechanism A). A
     # transcript failure must never break the user's response, so it degrades
@@ -454,7 +467,9 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     user_msg = ConversationMessage(role="user", content=request.message)
     assistant_msg = ConversationMessage(role="assistant", content=final_response)
     try:
-        await append_messages(conversation_id, turn_id, [user_msg, assistant_msg])
+        await append_messages(
+            conversation_id, turn_id, [user_msg, assistant_msg], agent_id=agent_id
+        )
     except Exception as exc:  # audit/persistence must not block a turn
         sys.stderr.write(f"tessera.memory.transcript: append failed: {exc}\n")
 

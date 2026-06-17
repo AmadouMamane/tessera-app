@@ -5,7 +5,7 @@ import { type Page, expect, test } from "@playwright/test";
 // detail panel (with the per-tab content). All sourced from the real
 // llama3.2:3b failure-catalogue run.
 
-const PAGE = "/fr/agent/evaluations";
+const PAGE = "/fr/agents/support-client/evaluations";
 
 test.use({ viewport: { width: 1672, height: 1050 } });
 

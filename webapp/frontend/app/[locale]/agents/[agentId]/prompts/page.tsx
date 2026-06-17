@@ -7,7 +7,7 @@ import { AgentPromptsSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
 interface PageProps {
-  params: Promise<{ locale: string }>;
+  params: Promise<{ locale: string; agentId: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -16,17 +16,15 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: t("title") };
 }
 
-async function prefetch(queryClient: QueryClient, locale: string) {
+async function prefetch(queryClient: QueryClient, locale: string, agentId: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["agent-prompts", locale],
+    queryKey: ["agent-prompts", agentId, locale],
     queryFn: async () => {
-      const response = await fetch(
-        `${backendUrl()}/observability/agent-prompts?lang=${encodeURIComponent(locale)}`,
-        {
-          cache: "no-store",
-          headers: backendHeaders({ Accept: "application/json" }),
-        },
-      );
+      const params = new URLSearchParams({ agent_id: agentId, lang: locale });
+      const response = await fetch(`${backendUrl()}/observability/agent-prompts?${params}`, {
+        cache: "no-store",
+        headers: backendHeaders({ Accept: "application/json" }),
+      });
       if (!response.ok) throw new Error(`Backend agent-prompts returned ${response.status}`);
       return AgentPromptsSchema.parse(await response.json());
     },
@@ -34,12 +32,12 @@ async function prefetch(queryClient: QueryClient, locale: string) {
 }
 
 export default async function AgentPromptsPage({ params }: PageProps) {
-  const { locale } = await params;
+  const { locale, agentId } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "agentPrompts" });
   const queryClient = new QueryClient();
   try {
-    await prefetch(queryClient, locale);
+    await prefetch(queryClient, locale, agentId);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

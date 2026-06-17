@@ -4,7 +4,7 @@ import { type Page, expect, test } from "@playwright/test";
 // cases): the table lists real items, search + the priority filter narrow it,
 // and clicking a status badge cycles + persists the durable status.
 
-const PAGE = "/fr/agent/a-traiter";
+const PAGE = "/fr/a-traiter";
 
 test.use({ viewport: { width: 1672, height: 1000 } });
 

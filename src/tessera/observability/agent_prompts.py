@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -366,10 +367,15 @@ def _variables(per_lang: dict[str, dict[str, str]], key: str) -> list[str]:
 # --- Public builder -----------------------------------------------------------
 
 
-async def build_agent_prompts(lang: str = "fr") -> dict[str, object]:
-    """Assemble the Prompts payload from the live YAML source of truth."""
+async def build_agent_prompts(
+    lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID
+) -> dict[str, object]:
+    """Assemble the Prompts payload from the live YAML source of truth.
+
+    ``agent_id`` scopes the in-page navigation links (``/agents/<agent_id>/...``).
+    """
     per_lang, newest = _load_all()
-    return _assemble(per_lang, newest, lang, now=datetime.now(UTC))
+    return _assemble(per_lang, newest, lang, agent_id, now=datetime.now(UTC))
 
 
 def _present_langs(per_lang: dict[str, dict[str, str]], key: str) -> list[str]:
@@ -380,6 +386,7 @@ def _assemble(
     per_lang: Mapping[str, dict[str, str]],
     newest: datetime,
     lang: str,
+    agent_id: str = DEFAULT_AGENT_ID,
     now: datetime | None = None,
 ) -> dict[str, object]:
     """Pure assembly of the Prompts payload (no I/O) - unit-testable."""
@@ -521,8 +528,8 @@ def _assemble(
             "title": _t(_STR["quick_title"], lang),
             "items": [
                 {"label": _t(_STR["q_playground"], lang), "href": "/assistant"},
-                {"label": _t(_STR["q_eval"], lang), "href": "/agent/evaluations"},
-                {"label": _t(_STR["q_history"], lang), "href": "/agent/historique"},
+                {"label": _t(_STR["q_eval"], lang), "href": f"/agents/{agent_id}/evaluations"},
+                {"label": _t(_STR["q_history"], lang), "href": f"/agents/{agent_id}/historique"},
                 {"label": _t(_STR["q_memory"], lang), "href": "/configurer/sources-memoire"},
             ],
         },

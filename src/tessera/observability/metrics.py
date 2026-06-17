@@ -34,15 +34,15 @@ registry = CollectorRegistry(auto_describe=True)
 
 AGENT_TURNS_TOTAL = Counter(
     "tessera_agent_turns_total",
-    "Number of agent turns processed, partitioned by language and outcome.",
-    labelnames=("language", "outcome"),
+    "Number of agent turns processed, partitioned by agent, language and outcome.",
+    labelnames=("agent_id", "language", "outcome"),
     registry=registry,
 )
 
 AGENT_TURN_DURATION = Histogram(
     "tessera_agent_turn_duration_seconds",
-    "Latency of a single agent turn, end to end.",
-    labelnames=("language",),
+    "Latency of a single agent turn, end to end, partitioned by agent.",
+    labelnames=("agent_id", "language"),
     buckets=(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0),
     registry=registry,
 )

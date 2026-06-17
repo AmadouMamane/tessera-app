@@ -39,20 +39,29 @@ super-headers.
 
 ### AGENT (primary, flat group — pages are direct children, no `assistant` wrapper)
 
+**Scoped to the selected agent (multi-agent Phase 0, shipped).** The AGENT
+section lives under `/agents/:agentId/*`; `/agent` and `/agent/*` redirect to the
+default agent (`support-client`). Links are built with `agentPath(agentId, page)`
+and the active agent is read with `useAgentId()` — never a hard-coded id or a
+literal `/agents/...` path. The **Inbox (`a-traiter` / `a-faire`) is GLOBAL** (a
+cross-agent operator queue) and therefore lives at the **top level**, not under
+`/agents/:id` — see the deviation note at the bottom.
+
 | Route | Page | Source |
 | --- | --- | --- |
-| `/agent` | redirect -> `/agent/synthese` | redirect |
-| `/agent/synthese` | Agent dashboard (NOT "Vue d'ensemble") | reuse assistant overview |
-| `/agent/configurations` | instance config | scaffold |
-| `/agent/connaissances` | knowledge | scaffold |
-| `/agent/garde-fous` | instance guardrails | scaffold |
-| `/agent/prompts` | prompts | scaffold |
-| `/agent/evaluations` | evaluations | scaffold |
-| `/agent/console` | debug/sandbox console (DEBUG.SANDBOX banner, env=debug, excluded from prod metrics & audit) | reuse assistant console |
-| `/agent/historique` | session history | scaffold |
-| `/agent/historique/:sessionId` | session detail (drill-down, absent from sidebar) | scaffold |
-| `/agent/a-traiter` | operator queue (red/amber badge) | reuse `InboxOverview` |
-| `/agent/a-faire` | backlog (badge) | scaffold |
+| `/agent`, `/agent/*` | redirect -> `/agents/support-client/*` (compat) | redirect |
+| `/agents/:agentId` | redirect -> `/agents/:agentId/synthese` | redirect |
+| `/agents/:agentId/synthese` | Agent dashboard (NOT "Vue d'ensemble") | reuse assistant overview |
+| `/agents/:agentId/configurations` | instance config | scaffold |
+| `/agents/:agentId/connaissances` | knowledge | scaffold |
+| `/agents/:agentId/garde-fous` | instance guardrails | scaffold |
+| `/agents/:agentId/prompts` | prompts | scaffold |
+| `/agents/:agentId/evaluations` | evaluations | scaffold |
+| `/agents/:agentId/console` | debug/sandbox console (DEBUG.SANDBOX banner, env=debug, excluded from prod metrics & audit) | reuse assistant console |
+| `/agents/:agentId/historique` | session history | scaffold |
+| `/agents/:agentId/historique/:sessionId` | session detail (drill-down, absent from sidebar) | scaffold |
+| `/a-traiter` | operator queue, **global** (red/amber badge) | reuse `InboxOverview` |
+| `/a-faire` | backlog, **global** (badge) | scaffold |
 
 ### GOUVERNER
 
@@ -166,6 +175,14 @@ The cockpit supervises **multiple agents**; the customer sees **one** assistant.
   `useAgentId()` hook + `agentPath()` helper, and stamp `agent_id` on every event,
   metric and **message** (per-turn) immediately. Defer the switcher / fleet / handoff
   UI / cross-agent rollups until agent #2 is real.
+  - **Phase 0 shipped.** Routes are `/agents/:agentId/*` (`/agent/*` redirects);
+    `useAgentId()` / `agentPath()` are centralized (`lib/agent-context.ts` pure +
+    `lib/use-agent-id.ts` client hook); `agent_id` is stamped on the guard audit
+    chain (now bitemporal: `valid_from`/`valid_to`/`recorded_at`, v2), on the turn
+    metrics (`agent_id` label), and on each transcript message; the Synthèse
+    aggregations are scoped by `agent_id` at the **turn grain** (one `user` message
+    = one turn). The acting agent is propagated per-turn via a `ContextVar` set at
+    the chat turn boundary (single agent until the supervisor lands in Phase 2).
 - **Per-turn attribution.** Routing is a supervisor that re-evaluates each turn
   (context + intent + active policies), with agent->agent **handoff** (distinct from human
   escalation). `agent_id` is recorded **per message**, so one conversation can span
@@ -202,3 +219,12 @@ For any config surface (model, prompts, guardrails, knowledge):
 This two-app `produit/` + grouped cockpit tree deviates from the single flat
 `app/[locale]/<page>` tree implied by CLAUDE.md. It is intentional and recorded
 here; a dedicated ADR will follow if the split hardens.
+
+**Inbox globalised (Phase 0).** The Inbox (`a-traiter` / `a-faire`) previously
+sat under the AGENT routes (`/agent/a-traiter`). Because it is a **cross-agent**
+operator queue — not a per-agent surface — it moved to the **top level**
+(`/a-traiter`, `/a-faire`) when the AGENT section became agent-scoped
+(`/agents/:agentId/*`). It still renders inside the AGENT super-section of the
+sidebar for proximity, but its links are global and it is never scoped by
+`agentId`. This matches the plan's "GOUVERNER / Inbox / PLATEFORME stay global"
+rule; the deep-link `/agent/a-traiter` redirects to `/a-traiter` for compat.

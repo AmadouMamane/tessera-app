@@ -16,6 +16,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.observability import (
     ablation as ablation_mod,
     access as access_mod,
@@ -632,16 +633,21 @@ async def observability_improvement() -> dict[str, object]:
 
 
 @router.get("/observability/agent-historique")
-async def observability_agent_historique() -> dict[str, object]:
+async def observability_agent_historique(
+    agent_id: str = DEFAULT_AGENT_ID,
+) -> dict[str, object]:
     """Agent Session History dashboard (reference image 30).
 
     Inner tab strip, KPI strip, filterable sessions table, chart row (trend,
     sessions by agent, score distribution, success gauge), watchlist, quick
     actions and a per-session detail panel. Deterministic fixture; degrades to
-    ``available: false``.
+    ``available: false``. ``agent_id`` scopes the in-page navigation links.
     """
     try:
-        return {"available": True, **agent_historique_mod.compute_agent_historique()}
+        return {
+            "available": True,
+            **agent_historique_mod.compute_agent_historique(agent_id),
+        }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_historique: failed: {exc}\n")
         return {"available": False}
@@ -663,18 +669,20 @@ async def observability_agent_evaluations() -> dict[str, object]:
 
 
 @router.get("/observability/agent-prompts")
-async def observability_agent_prompts(lang: str = "fr") -> dict[str, object]:
+async def observability_agent_prompts(
+    lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID
+) -> dict[str, object]:
     """Agent Prompts ("Prompts") dashboard (reference image 28).
 
     Backed by the live YAML source of truth
     (``src/tessera/agent/prompts/{fr,de,en}.yaml``): the prompt inventory,
     categories, languages, template variables, lengths and the per-prompt text
     in the detail panel are all real. Read-only (prompts live in Git). Display
-    labels are localized via ``lang`` (fr/de/en). Degrades to
-    ``available: false`` on failure.
+    labels are localized via ``lang`` (fr/de/en). ``agent_id`` scopes the
+    in-page navigation links. Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **(await agent_prompts_mod.build_agent_prompts(lang))}
+        return {"available": True, **(await agent_prompts_mod.build_agent_prompts(lang, agent_id))}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_prompts: failed: {exc}\n")
         return {"available": False}
@@ -767,16 +775,21 @@ async def observability_agent_connaissances_mutate(
 
 
 @router.get("/observability/agent-configurations")
-async def observability_agent_configurations() -> dict[str, object]:
+async def observability_agent_configurations(
+    agent_id: str = DEFAULT_AGENT_ID,
+) -> dict[str, object]:
     """Agent Configurations dashboard (reference image 26).
 
     Composes the active settings, guard policy, prompt bundles, tools and
     corpus-backed sources into the operator configuration form. Degrades to
     ``available: false`` so the dashboard keeps rendering if a local source is
-    temporarily unreadable.
+    temporarily unreadable. ``agent_id`` scopes the in-page navigation links.
     """
     try:
-        return {"available": True, **agent_configurations_mod.compute_agent_configurations()}
+        return {
+            "available": True,
+            **agent_configurations_mod.compute_agent_configurations(agent_id),
+        }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_configurations: failed: {exc}\n")
         return {"available": False}
@@ -789,13 +802,18 @@ class _AgentConfigBody(BaseModel):
 
 
 @router.post("/observability/agent-configurations/config")
-async def observability_agent_configurations_save(body: _AgentConfigBody) -> dict[str, object]:
+async def observability_agent_configurations_save(
+    body: _AgentConfigBody, agent_id: str = DEFAULT_AGENT_ID
+) -> dict[str, object]:
     """Persist editable agent-profile overrides and return the fresh payload."""
     unknown = set(body.changes) - agent_configurations_mod.available_config_keys()
     if unknown:
         raise HTTPException(status_code=422, detail=f"unknown keys: {sorted(unknown)}")
     agent_configurations_mod.set_agent_config(body.changes)
-    return {"available": True, **agent_configurations_mod.compute_agent_configurations()}
+    return {
+        "available": True,
+        **agent_configurations_mod.compute_agent_configurations(agent_id),
+    }
 
 
 @router.get("/observability/agent-console")
@@ -845,7 +863,9 @@ _SYNTHESE_PERIODS: dict[str, int | None] = {"h24": 1, "d7": 7, "d30": 30}
 
 
 @router.get("/observability/agent-synthese")
-async def observability_agent_synthese(period: str = "d7") -> dict[str, object]:
+async def observability_agent_synthese(
+    period: str = "d7", agent_id: str = DEFAULT_AGENT_ID
+) -> dict[str, object]:
     """Agent overview ("Synthese de l'agent") dashboard (reference image 25).
 
     KPI strip, agent profile and capabilities, top topics, detailed performance,
@@ -855,11 +875,12 @@ async def observability_agent_synthese(period: str = "d7") -> dict[str, object]:
 
     The ``period`` query param (``h24``/``d7``/``d30``) restricts the
     transcript-derived figures to that trailing window; unknown values mean the
-    whole history.
+    whole history. The ``agent_id`` query param scopes the slice to one agent
+    (per-turn attribution); it defaults to the single agent.
     """
     period_days = _SYNTHESE_PERIODS.get(period)
     try:
-        payload = await agent_synthese_mod.compute_agent_synthese(period_days)
+        payload = await agent_synthese_mod.compute_agent_synthese(agent_id, period_days)
         return {"available": True, **payload}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_synthese: failed: {exc}\n")

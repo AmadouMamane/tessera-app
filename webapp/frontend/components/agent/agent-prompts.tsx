@@ -30,9 +30,11 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Link } from "@/i18n/navigation";
+import { agentPath } from "@/lib/agent-context";
 import { fetchAgentPrompts } from "@/lib/api/client";
 import type { AgentPrompts as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSubtabs } from "./agent-subtabs";
 import { AgentTabs } from "./agent-tabs";
 
@@ -88,12 +90,13 @@ function useDismiss(open: boolean, onClose: () => void) {
 export function AgentPrompts() {
   const t = useTranslations("agentPrompts");
   const locale = useLocale();
+  const agentId = useAgentId();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const [subtab, setSubtab] = useState("");
   const { data } = useQuery({
-    queryKey: ["agent-prompts", locale],
-    queryFn: ({ signal }) => fetchAgentPrompts(locale, signal),
+    queryKey: ["agent-prompts", agentId, locale],
+    queryFn: ({ signal }) => fetchAgentPrompts(agentId, locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -660,9 +663,10 @@ function PanelCard({
 
 function Watch({ data }: { data: Data }) {
   const w = data.watch;
+  const agentId = useAgentId();
   if (!w) return null;
   return (
-    <PanelCard title={w.title} cta={w.cta} href={"/agent/evaluations" as Route}>
+    <PanelCard title={w.title} cta={w.cta} href={agentPath(agentId, "evaluations") as Route}>
       <ul className="flex flex-col gap-2.5">
         {w.items.map((it) => (
           <li key={it.title} className="flex items-start gap-2">

@@ -19,13 +19,16 @@ import {
   Target,
   X,
 } from "lucide-react";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Link } from "@/i18n/navigation";
+import { agentPath } from "@/lib/agent-context";
 import { fetchAgentHistorique } from "@/lib/api/client";
 import type { AgentHistorique as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSubtabs } from "./agent-subtabs";
 import { AgentTabs } from "./agent-tabs";
 
@@ -133,10 +136,11 @@ function compareRows(a: RowT, b: RowT, col: number, dir: "asc" | "desc"): number
 
 export function AgentHistorique() {
   const t = useTranslations("agentHistorique");
+  const agentId = useAgentId();
   const [subtab, setSubtab] = useState("");
   const { data } = useQuery({
-    queryKey: ["agent-historique"],
-    queryFn: ({ signal }) => fetchAgentHistorique(signal),
+    queryKey: ["agent-historique", agentId],
+    queryFn: ({ signal }) => fetchAgentHistorique(agentId, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -798,7 +802,7 @@ function PanelCard({
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       {cta && ctaHref ? (
         <Link
-          href={ctaHref as "/agent/evaluations"}
+          href={ctaHref as Route}
           className="mt-2.5 flex items-center gap-1 self-start text-[0.64rem] text-[#b9a6ff] hover:text-white"
         >
           {cta} <ChevronRight className="h-3 w-3" />
@@ -1036,13 +1040,14 @@ function Quick({
   onExport: () => void;
 }) {
   const q = data.quick;
+  const agentId = useAgentId();
   if (!q) return null;
   const icons = [BarChart3, Target, Download, Play];
   const cls =
     "flex items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.68rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50";
-  const HREF: Record<string, "/agent/evaluations" | "/agent/console"> = {
-    scores: "/agent/evaluations",
-    evaluate: "/agent/console",
+  const HREF: Record<string, string> = {
+    scores: agentPath(agentId, "evaluations"),
+    evaluate: agentPath(agentId, "console"),
   };
   return (
     <PanelCard title={q.title}>
@@ -1058,7 +1063,7 @@ function Quick({
           const href = HREF[it.key];
           if (href) {
             return (
-              <Link key={it.key} href={href} className={cls}>
+              <Link key={it.key} href={href as Route} className={cls}>
                 {inner}
               </Link>
             );
@@ -1088,6 +1093,7 @@ function Detail({
   row: RowT | null;
   className?: string;
 }) {
+  const agentId = useAgentId();
   const labels = data.detail_labels;
   const meta = data.meta;
   const tabs = labels?.tabs ?? ["Resume", "Messages (2)", "Evaluation", "Activite"];
@@ -1275,7 +1281,7 @@ function Detail({
               ))}
             </ul>
             <Link
-              href="/agent/evaluations"
+              href={agentPath(agentId, "evaluations") as Route}
               className="mt-2 flex items-center gap-1 self-start text-[0.64rem] text-[#b9a6ff] hover:text-white"
             >
               {labels.eval_cta} <ChevronRight className="h-3 w-3" />

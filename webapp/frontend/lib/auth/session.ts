@@ -8,6 +8,7 @@
 import "server-only";
 
 import { auth } from "@/auth";
+import { DEFAULT_AGENT_ID, agentPath } from "@/lib/agent-context";
 import type { Role } from "@/lib/auth/accounts";
 
 export async function currentRole(): Promise<Role | null> {
@@ -42,8 +43,8 @@ export function hasDualSpaceAccess(role: Role | null): boolean {
 
 export function spaceRedirectForRole(
   role: Role | null,
-): "/select-space" | "/produit" | "/agent/synthese" {
+): "/select-space" | "/produit" | `/agents/${string}/synthese` {
   if (hasDualSpaceAccess(role)) return "/select-space";
-  if (hasCockpitAccess(role)) return "/agent/synthese";
+  if (hasCockpitAccess(role)) return agentPath(DEFAULT_AGENT_ID, "synthese");
   return "/produit";
 }

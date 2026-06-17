@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Final
 from psycopg import sql
 from psycopg.rows import dict_row
 
+from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.agent.state import ConversationMessage
 from tessera.retrieval.store import get_pool
 
@@ -59,19 +60,32 @@ async def ensure_transcript_schema() -> None:
             conversation_id uuid        NOT NULL,
             turn_id         uuid        NOT NULL,
             seq             int         NOT NULL,
+            agent_id        text        NOT NULL DEFAULT {default_agent},
             role            text        NOT NULL,
             content         text        NOT NULL,
             name            text,
             created_at      timestamptz NOT NULL DEFAULT now()
         );
         """
-    ).format(table=_TABLE)
+    ).format(table=_TABLE, default_agent=sql.Literal(DEFAULT_AGENT_ID))
+    # Per-turn agent attribution: stamp each message with the acting agent so a
+    # conversation can span agents (handoff, Phase 2) and metrics partition by
+    # agent. Added idempotently for tables created before the multi-agent work.
+    add_agent_col = sql.SQL(
+        "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS agent_id text "
+        "NOT NULL DEFAULT {default_agent};"
+    ).format(table=_TABLE, default_agent=sql.Literal(DEFAULT_AGENT_ID))
     create_index = sql.SQL(
         "CREATE INDEX IF NOT EXISTS {idx} ON {table} (conversation_id, id);"
     ).format(idx=sql.Identifier("conversation_messages_conversation"), table=_TABLE)
+    create_agent_index = sql.SQL(
+        "CREATE INDEX IF NOT EXISTS {idx} ON {table} (agent_id, created_at);"
+    ).format(idx=sql.Identifier("conversation_messages_agent"), table=_TABLE)
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute(create_table)
+        await cur.execute(add_agent_col)
         await cur.execute(create_index)
+        await cur.execute(create_agent_index)
         await conn.commit()
 
 
@@ -133,24 +147,29 @@ async def append_messages(
     conversation_id: UUID,
     turn_id: UUID,
     messages: Sequence[ConversationMessage],
+    *,
+    agent_id: str = DEFAULT_AGENT_ID,
 ) -> None:
     """Append a finished turn's user/assistant messages to the transcript.
 
     Only ``user`` and ``assistant`` roles are persisted; transient ``system``
     and ``tool`` messages are not part of the conversational record. Ordering
     within the turn is captured by ``seq``.
+
+    ``agent_id`` attributes the turn to an agent (per-turn attribution); it
+    defaults to the single agent until the supervisor (Phase 2) routes.
     """
     persisted = [m for m in messages if m.role in _PERSISTED_ROLES]
     if not persisted:
         return
     insert = sql.SQL(
         """
-        INSERT INTO {table} (conversation_id, turn_id, seq, role, content, name)
-        VALUES (%s, %s, %s, %s, %s, %s);
+        INSERT INTO {table} (conversation_id, turn_id, seq, agent_id, role, content, name)
+        VALUES (%s, %s, %s, %s, %s, %s, %s);
         """
     ).format(table=_TABLE)
     rows = [
-        (conversation_id, turn_id, seq, m.role, m.content, m.name)
+        (conversation_id, turn_id, seq, agent_id, m.role, m.content, m.name)
         for seq, m in enumerate(persisted)
     ]
     pool = get_pool()
