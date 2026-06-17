@@ -79,6 +79,25 @@ jobs:
           if [[ -n "${{ inputs.language }}" ]]; then ARGS="$ARGS --lang ${{ inputs.language }}"; fi
           uv run python scripts/run_eval.py $ARGS | tee eval/reports/scorecard.md
 
+      # The eval-gate, per agent: each agent runs its bound set (curated subset +
+      # the shared security floor) under the two-level gate (critical zero-tolerance
+      # AND domain >= min_pass_rate). The job fails if ANY agent's gate fails — this
+      # is the CI manifestation of "an agent that fails its set is blocked".
+      - name: Per-agent eval-gates
+        if: ${{ inputs.case == '' }}
+        run: |
+          set -o pipefail
+          AGENTS=$(uv run python -c "from tessera.agent.registry import list_agents; print(' '.join(a.id for a in list_agents()))")
+          LANG_ARG=""
+          if [[ -n "${{ inputs.language }}" ]]; then LANG_ARG="--lang ${{ inputs.language }}"; fi
+          rc=0
+          for a in $AGENTS; do
+            echo "::group::eval-gate $a"
+            uv run python scripts/run_eval.py --agent "$a" $LANG_ARG || rc=1
+            echo "::endgroup::"
+          done
+          exit $rc
+
       - name: Upload scorecard
         if: always()
         uses: actions/upload-artifact@v4

@@ -21,8 +21,11 @@ from pathlib import Path
 
 import jsonschema
 
+from eval.gate import GateVerdict, evaluate_gate
 from eval.scorecard import build_scorecard
+from eval.sets import EvalSet, critical_case_ids, load_eval_set
 from tessera.agent import compile_graph
+from tessera.agent.registry import get_agent
 from tessera.agent.state import new_state
 from tessera.llm.budget import get_budget_tracker
 from tessera.settings import LanguageCode, LLMProfile, get_settings
@@ -224,6 +227,14 @@ async def _run_case(case: dict[str, object], language: str, model: str | None = 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the Tessera failure catalogue.")
     parser.add_argument("--case", help="Run only the case with this id.")
+    parser.add_argument(
+        "--agent",
+        help=(
+            "Run an agent's bound evaluation set (its curated subset + the shared "
+            "security floor) and apply the two-level eval-gate; the exit code is the "
+            "gate verdict. The report is keyed by agent_id."
+        ),
+    )
     parser.add_argument("--lang", choices=["fr", "de", "en"], help="Restrict to one language.")
     parser.add_argument(
         "--model",
@@ -245,6 +256,55 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _build_gate(
+    eval_set: EvalSet | None, results: list[CaseResult]
+) -> tuple[GateVerdict | None, dict[str, object] | None]:
+    """Compute the two-level gate verdict + its JSON payload for an agent run."""
+    if eval_set is None:
+        return None, None
+    verdict = evaluate_gate(
+        [(r.case_id, r.passed) for r in results],
+        critical_ids=critical_case_ids(),
+        min_pass_rate=eval_set.gate.min_pass_rate,
+    )
+    payload: dict[str, object] = {
+        "passed": verdict.passed,
+        "critical_ok": verdict.critical_ok,
+        "standard_ok": verdict.standard_ok,
+        "failed_critical": list(verdict.failed_critical),
+        "standard_total": verdict.standard_total,
+        "standard_passed": verdict.standard_passed,
+        "standard_pass_rate": round(verdict.standard_pass_rate, 4),
+        "min_pass_rate": verdict.min_pass_rate,
+    }
+    return verdict, payload
+
+
+def _persist_report(
+    args: argparse.Namespace, payload: str, run_ts: str, lang_suffix: str
+) -> Path:
+    """Write the timestamped archive + the relevant "latest", and return the archive.
+
+    Per-agent runs key their archive and "latest" by agent_id so each agent's
+    history is independent. Never write through a symlink (a stale latest.json
+    symlink would clobber whatever archive it pointed at); drop any symlink first.
+    """
+    agent_suffix = f"_{args.agent}" if args.agent else ""
+    archive = args.report.parent / f"{run_ts}{agent_suffix}{lang_suffix}.json"
+    archive.write_text(payload, encoding="utf-8")
+    latest_name = f"latest_{args.agent}.json" if args.agent else "latest.json"
+    targets = [args.report.parent / latest_name]
+    # An explicit --report is honoured; the implicit default never clobbers the
+    # global latest.json on an agent run (it has its own per-agent latest).
+    if not (args.agent and args.report == REPORTS_DIR / "latest.json"):
+        targets.append(args.report)
+    for target in targets:
+        if target.is_symlink():
+            target.unlink()
+        target.write_text(payload, encoding="utf-8")
+    return archive
+
+
 async def _run_all(args: argparse.Namespace) -> int:
     # Isolate this run's LLM budget from the live agent's *prod* counters and
     # start from zero, so the report records THIS run's *eval* cost. The backends
@@ -256,6 +316,16 @@ async def _run_all(args: argparse.Namespace) -> int:
     get_budget_tracker.cache_clear()
 
     cases = _load_cases()
+    eval_set = None
+    if args.agent:
+        try:
+            agent = get_agent(args.agent)
+        except KeyError:
+            sys.stderr.write(f"unknown agent {args.agent!r}\n")
+            return 2
+        eval_set = load_eval_set(agent.eval_set)
+        wanted = set(eval_set.effective_case_ids)
+        cases = [c for c in cases if c["id"] in wanted]
     catalogue_version = _catalogue_version(cases)
     if args.case:
         cases = [c for c in cases if c["id"] == args.case]
@@ -300,13 +370,19 @@ async def _run_all(args: argparse.Namespace) -> int:
         "estimated_cost_eur": float(budget.estimated_cost_eur),
     }
 
+    # Two-level eval-gate (only for an agent run): the exit code is the verdict.
+    verdict, gate_payload = _build_gate(eval_set, results)
+
     payload = json.dumps(
         {
             "run_at": run_ts,
             "lang": args.lang,
             "model": model,
+            "agent_id": args.agent,
+            "eval_set": eval_set.slug if eval_set is not None else None,
             "catalogue_version": catalogue_version,
             "summary": asdict(scorecard.summary),
+            "gate": gate_payload,
             "results": [asdict(r) for r in results],
             "synthesis": synthesis,
             "cost": cost,
@@ -315,21 +391,13 @@ async def _run_all(args: argparse.Namespace) -> int:
         ensure_ascii=False,
     )
 
-    # Always write the timestamped archive copy.
-    archive = args.report.parent / f"{run_ts}{lang_suffix}.json"
-    archive.write_text(payload, encoding="utf-8")
-
-    # Update the report path + latest.json as PLAIN copies. Never write through
-    # a symlink: latest.json used to be a symlink to the most recent archive, so
-    # a default run (--report defaults to latest.json) would write through it
-    # and clobber whatever archive it pointed at. Drop any symlink first.
-    for target in (args.report, args.report.parent / "latest.json"):
-        if target.is_symlink():
-            target.unlink()
-        target.write_text(payload, encoding="utf-8")
+    archive = _persist_report(args, payload, run_ts, lang_suffix)
 
     sys.stdout.write(f"Report saved → {archive.name}\n")
     sys.stdout.write(scorecard.render_markdown() + "\n")
+    if verdict is not None:
+        sys.stdout.write("\n" + verdict.render() + "\n")
+        return 0 if verdict.passed else 1
     return 0 if scorecard.summary.failed == 0 else 1
 
 
