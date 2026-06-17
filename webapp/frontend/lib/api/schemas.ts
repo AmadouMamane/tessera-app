@@ -4283,3 +4283,37 @@ export const AgentHistoriqueSchema = z.object({
     .optional(),
 });
 export type AgentHistorique = z.infer<typeof AgentHistoriqueSchema>;
+
+// Conversation session detail — turn-by-turn with per-turn agent attribution.
+export const SessionDetailSchema = z.object({
+  available: z.boolean(),
+  conversation_id: z.string().optional(),
+  title: z.string().optional(),
+  spans_agents: z.boolean().optional(),
+  agents: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+  handoffs: z
+    .array(
+      z.object({
+        from: z.string(),
+        from_name: z.string(),
+        to: z.string(),
+        to_name: z.string(),
+        reason: z.string(),
+      }),
+    )
+    .optional(),
+  turns: z
+    .array(
+      z.object({
+        turn: z.number(),
+        agent_id: z.string(),
+        agent_name: z.string(),
+        question: z.string(),
+        answer: z.string(),
+        time: z.string(),
+      }),
+    )
+    .optional(),
+  stats: z.object({ turns: z.number(), agents: z.number() }).optional(),
+});
+export type SessionDetail = z.infer<typeof SessionDetailSchema>;

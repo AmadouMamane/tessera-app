@@ -21,7 +21,7 @@ from starlette.responses import StreamingResponse
 
 from tessera.agent import build_graph, reporter as reporter_module
 from tessera.agent.grounding import select_grounded_citations
-from tessera.agent.identity import current_agent_id, resolve_agent_id
+from tessera.agent.identity import current_agent_id
 from tessera.agent.state import (
     Citation,
     ConversationMessage,
@@ -31,10 +31,11 @@ from tessera.agent.state import (
     ToolCallRecord,
     new_state,
 )
-from tessera.guard.audit import current_model
+from tessera.agent.supervisor import route_turn
+from tessera.guard.audit import current_model, emit_handoff
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
-from tessera.memory.transcript import append_messages, load_transcript
+from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
 from tessera.observability import instrument, replay
 from tessera.observability.eval import online as online_eval
 from tessera.observability.lineage import build_lineage
@@ -391,12 +392,23 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     # Record the effective model on audit entries emitted during this turn
     # (memory governance, guard) — not just the server default.
     current_model.set(request.model)
-    # Per-turn agent attribution (multi-agent foundation): bind the acting agent
-    # for this turn so every audit event, metric and transcript message is
-    # stamped with it. The supervisor (Phase 2) will route this per turn; today
-    # it resolves to the single default agent.
-    agent_id = resolve_agent_id()
+    # Per-turn agent attribution: the supervisor routes this turn to an agent
+    # (parcours by default; an intent can trigger a governed handoff). The chosen
+    # agent handles the whole turn and is stamped on every event, metric and
+    # message. One conversation can therefore span agents.
+    prev_agent = await last_agent_for(conversation_id)
+    decision = route_turn(prev_agent, request.message)
+    agent_id = decision.agent_id
     current_agent_id.set(agent_id)
+    if decision.handoff and decision.from_agent is not None:
+        # Agent->agent handoff is a distinct S1 event (never human escalation).
+        emit_handoff(
+            from_agent=decision.from_agent,
+            to_agent=agent_id,
+            conversation_id=str(conversation_id),
+            turn_id=str(turn_id),
+            reason=decision.reason,
+        )
 
     graph = _streaming_graph()
     config: dict[str, object] = {"configurable": {"thread_id": str(turn_id)}}

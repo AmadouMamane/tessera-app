@@ -1,10 +1,12 @@
+import { ArrowRight, Bot, User } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { ScaffoldView } from "@/components/common/scaffold-view";
 import { AppShell } from "@/components/layout/app-shell";
+import { SessionDetailSchema } from "@/lib/api/schemas";
+import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
 interface PageProps {
-  params: Promise<{ locale: string; sessionId: string }>;
+  params: Promise<{ locale: string; agentId: string; sessionId: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -13,14 +15,119 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: `${t("sessionDetail.title")} ${sessionId}` };
 }
 
+// Per-turn agent accent: a conversation that spans agents reads as a hand-over.
+const AGENT_ACCENT: Record<string, string> = {
+  "support-client": "border-[#6d4aed]/40 bg-[#6d4aed]/15 text-[#b9a6ff]",
+  onboarding: "border-cyan-500/40 bg-cyan-500/15 text-cyan-300",
+  recouvrement: "border-amber-500/40 bg-amber-500/15 text-amber-300",
+};
+const accent = (id: string) =>
+  AGENT_ACCENT[id] ?? "border-slate-500/40 bg-slate-500/15 text-slate-300";
+
+async function loadDetail(conversationId: string) {
+  try {
+    const q = `?conversation_id=${encodeURIComponent(conversationId)}`;
+    const res = await fetch(`${backendUrl()}/observability/session-detail${q}`, {
+      cache: "no-store",
+      headers: backendHeaders({ Accept: "application/json" }),
+    });
+    if (!res.ok) return null;
+    return SessionDetailSchema.parse(await res.json());
+  } catch {
+    return null;
+  }
+}
+
 export default async function SessionDetailPage({ params }: PageProps) {
   const { locale, sessionId } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "assistant" });
-  const title = `${t("sessionDetail.title")} ${sessionId}`;
+  const data = await loadDetail(sessionId);
+
+  const title = `${t("sessionDetail.title")}`;
+
+  if (!data?.available || !data.turns?.length) {
+    return (
+      <AppShell title={title} description={t("sessionDetail.subtitle")} contentWidth="full">
+        <div className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--tessera-text-muted)]">
+          {t("sessionDetail.empty")}
+        </div>
+      </AppShell>
+    );
+  }
+
+  const agents = data.agents ?? [];
+  const handoffs = data.handoffs ?? [];
+
   return (
     <AppShell title={title} description={t("sessionDetail.subtitle")} contentWidth="full">
-      <ScaffoldView title={title} />
+      <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+        {/* Header: conversation + involved agents */}
+        <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
+          <p className="truncate text-[0.95rem] font-semibold">{data.title}</p>
+          <p className="mt-1 font-mono text-[0.66rem] text-[var(--tessera-text-muted)]">
+            {data.conversation_id}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {agents.map((a) => (
+              <span
+                key={a.id}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.7rem] ${accent(a.id)}`}
+              >
+                <Bot className="h-3.5 w-3.5" /> {a.name}
+              </span>
+            ))}
+            {data.spans_agents ? (
+              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 text-[0.7rem] text-emerald-300">
+                {t("sessionDetail.spansAgents")}
+              </span>
+            ) : null}
+          </div>
+        </section>
+
+        {/* Handoff events (S1, distinct from human escalation) */}
+        {handoffs.map((h, i) => (
+          <div
+            key={`${h.from}-${h.to}-${i}`}
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-[0.78rem]"
+          >
+            <span className="font-medium text-emerald-300">{t("sessionDetail.handoff")}</span>
+            <span className="inline-flex items-center gap-1.5">
+              {h.from_name} <ArrowRight className="h-3.5 w-3.5" /> {h.to_name}
+            </span>
+            <span className="text-[var(--tessera-text-muted)]">· {h.reason}</span>
+          </div>
+        ))}
+
+        {/* Turns, each attributed to the agent that handled it */}
+        <ol className="flex flex-col gap-2.5">
+          {data.turns.map((turn) => (
+            <li
+              key={turn.turn}
+              className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3.5"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+                  {t("sessionDetail.turn")} {turn.turn} · {turn.time}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.66rem] ${accent(turn.agent_id)}`}
+                >
+                  <Bot className="h-3 w-3" /> {turn.agent_name}
+                </span>
+              </div>
+              <p className="flex gap-2 text-[0.8rem]">
+                <User className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+                <span>{turn.question}</span>
+              </p>
+              <p className="mt-2 flex gap-2 text-[0.8rem] text-[var(--tessera-text-muted)]">
+                <Bot className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>{turn.answer}</span>
+              </p>
+            </li>
+          ))}
+        </ol>
+      </div>
     </AppShell>
   );
 }

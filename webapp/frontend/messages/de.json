@@ -4355,7 +4355,11 @@
     "debugBanner": "DEBUG · SANDBOX — Konversationen env=debug, von Produktionsmetriken und Audit ausgeschlossen.",
     "sessionDetail": {
       "title": "Sitzung",
-      "subtitle": "Sitzungsdetail (schreibgeschützt)."
+      "subtitle": "Sitzungsdetail (schreibgeschützt).",
+      "empty": "Keine Konversation für diese Kennung.",
+      "spansAgents": "Geteilte Konversation (Übergabe)",
+      "handoff": "Agent-zu-Agent-Übergabe",
+      "turn": "Runde"
     }
   },
   "product": {

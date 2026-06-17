@@ -26,9 +26,16 @@ if TYPE_CHECKING:
 
     from tessera.agent.state import GuardDecisionRecord
 
-__all__ = ["ChainStatus", "current_model", "emit_audit", "verify_audit_chain"]
+__all__ = [
+    "ChainStatus",
+    "current_model",
+    "emit_audit",
+    "emit_handoff",
+    "verify_audit_chain",
+]
 
 _Outcome = Literal["allowed", "denied", "error"]
+_Sink = Literal["stdout", "file", "cloud_logging", "postgres"]
 
 # ── Tamper-evident hash chain (ADR 0010, idea #3) ─────────────────────────────
 # Each audit entry carries the hash of the previous entry and its own SHA-256,
@@ -208,12 +215,20 @@ def emit_audit(
         data_residency=settings.observability.data_residency,
         agent_id=resolve_agent_id(agent_id),
     )
-    # Link this entry into the tamper-evident chain (idea #3). The file sink
-    # resumes the chain from disk so it survives restarts; other sinks chain
-    # in-process from genesis.
+    _append_to_chain(entry, sink, settings.guard.audit_file)
+
+
+def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> None:
+    """Link ``entry`` into the tamper-evident hash chain and emit it to ``sink``.
+
+    Shared by every S1 event type (guard audit, agent handoff, …) so they all
+    live in one append-only, hash-chained journal verifiable by
+    :func:`verify_audit_chain`. The file sink resumes the chain from disk so it
+    survives restarts; other sinks chain in-process from genesis.
+    """
     global _last_hash
     if _last_hash is None:
-        _last_hash = _seed_last_hash(settings.guard.audit_file) if sink == "file" else _GENESIS_HASH
+        _last_hash = _seed_last_hash(audit_file) if sink == "file" else _GENESIS_HASH
     entry["prev_hash"] = _last_hash
     entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
     _last_hash = entry["hash"]
@@ -222,13 +237,53 @@ def emit_audit(
             case "stdout":
                 _emit_stdout(entry)
             case "file":
-                _emit_file(entry, settings.guard.audit_file)
+                _emit_file(entry, audit_file)
             case "cloud_logging":
                 _emit_cloud_logging(entry)
             case "postgres":
                 _emit_postgres(entry)
     except Exception as exc:
         sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")
+
+
+def emit_handoff(
+    *,
+    from_agent: str,
+    to_agent: str,
+    conversation_id: str,
+    turn_id: str,
+    reason: str,
+    sink: _Sink | None = None,
+) -> None:
+    """Emit an agent->agent handoff event into the S1 journal.
+
+    A handoff is a first-class S1 event (``type: tessera.agent.handoff``),
+    **distinct from human escalation** (``ticket_escalate``): it records that the
+    supervisor moved a turn from one agent to another, attributed to ``to_agent``
+    (the agent that now handles the turn). It is hash-chained like every other S1
+    event, so it is tamper-evident and reconstructable in État à date.
+    """
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    now = datetime.now(UTC).isoformat()
+    entry: dict[str, Any] = {
+        "type": "tessera.agent.handoff",
+        "version": 1,
+        "occurred_at": now,
+        "agent_id": to_agent,
+        "from_agent": from_agent,
+        "to_agent": to_agent,
+        "valid_from": now,
+        "valid_to": None,
+        "recorded_at": now,
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+        "reason": reason,
+        "actor": "system",
+    }
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
 
 
 @dataclass(frozen=True, slots=True)

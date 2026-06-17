@@ -4355,7 +4355,11 @@
     "debugBanner": "DEBUG · SANDBOX — conversations env=debug, exclues des métriques de production et de l’audit.",
     "sessionDetail": {
       "title": "Session",
-      "subtitle": "Détail de la session (lecture seule)."
+      "subtitle": "Détail de la session (lecture seule).",
+      "empty": "Aucune conversation pour cet identifiant.",
+      "spansAgents": "Conversation partagée (handoff)",
+      "handoff": "Transfert agent → agent",
+      "turn": "Tour"
     }
   },
   "product": {

@@ -55,6 +55,7 @@ from tessera.observability import (
     failure_clustering as failure_clustering_mod,
     failure_predictor as failure_predictor_mod,
     firewall_efficacy as firewall_mod,
+    fleet as fleet_mod,
     funnel as funnel_mod,
     graph_topology as graph_topology_mod,
     guard_explain as guard_explain_mod,
@@ -90,6 +91,7 @@ from tessera.observability import (
     roadmap as roadmap_mod,
     robustness as robustness_mod,
     routing_intent as routing_intent_mod,
+    session_detail as session_detail_mod,
     sessions as sessions_mod,
     sft_export as sft_export_mod,
     shadow as shadow_mod,
@@ -650,6 +652,33 @@ async def observability_agent_historique(
         }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_historique: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/session-detail")
+async def observability_session_detail(
+    conversation_id: str, at: str | None = None
+) -> dict[str, object]:
+    """Turn-by-turn detail of one conversation with per-turn agent attribution.
+
+    Shows which agent handled each turn (so a handed-over conversation reads as a
+    clear hand-over) plus the S1 handoff events. ``at`` bounds the handoff read
+    (as-of). Degrades to ``available: false`` for an unknown/empty conversation.
+    """
+    try:
+        return await session_detail_mod.compute_session_detail(conversation_id, at)
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.session_detail: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/fleet-rollup")
+async def observability_fleet_rollup() -> dict[str, object]:
+    """Cross-agent rollup with conversation-level dedup (org totals count once)."""
+    try:
+        return {"available": True, **await fleet_mod.compute_fleet_rollup()}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.fleet: failed: {exc}\n")
         return {"available": False}
 
 

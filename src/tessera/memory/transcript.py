@@ -40,6 +40,7 @@ __all__ = [
     "append_messages",
     "delete_transcript",
     "ensure_transcript_schema",
+    "last_agent_for",
     "load_transcript",
 ]
 
@@ -178,6 +179,25 @@ async def append_messages(
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.executemany(insert, rows)
         await conn.commit()
+
+
+async def last_agent_for(conversation_id: UUID) -> str | None:
+    """Return the agent that handled the most recent turn of a conversation.
+
+    The supervisor uses this as the routing default (the conversation's
+    *parcours*): a new turn stays with the agent already on the conversation
+    unless a handoff is warranted. ``None`` when the conversation is new.
+    """
+    query = sql.SQL(
+        "SELECT agent_id FROM {table} WHERE conversation_id = %s ORDER BY id DESC LIMIT 1;"
+    ).format(table=_TABLE)
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor() as cur:
+        await cur.execute(query, (conversation_id,))
+        row = await cur.fetchone()
+    return str(row[0]) if row else None
 
 
 async def delete_transcript(conversation_id: UUID) -> None:

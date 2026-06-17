@@ -201,6 +201,8 @@ import {
   SLOReportSchema,
   type ScoreSeries,
   ScoreSeriesSchema,
+  type SessionDetail,
+  SessionDetailSchema,
   type SessionReport,
   SessionReportSchema,
   type ShadowReport,
@@ -1286,4 +1288,13 @@ export async function fetchAgentHistorique(
 ): Promise<AgentHistorique> {
   const q = `?agent_id=${encodeURIComponent(agentId)}`;
   return request(`/observability/agent-historique${q}`, { signal }, AgentHistoriqueSchema);
+}
+
+/** Conversation session detail (turn-by-turn, per-turn agent attribution). */
+export async function fetchSessionDetail(
+  conversationId: string,
+  signal?: AbortSignal,
+): Promise<SessionDetail> {
+  const q = `?conversation_id=${encodeURIComponent(conversationId)}`;
+  return request(`/observability/session-detail${q}`, { signal }, SessionDetailSchema);
 }
