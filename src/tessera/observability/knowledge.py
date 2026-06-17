@@ -107,6 +107,7 @@ def _source_name(cat: str, lang: str) -> str:
     """Localized display name for a source category (falls back to French)."""
     return _SOURCE_NAME[cat][_LANG_IDX.get(lang, 0)]
 
+
 # --- Localization (fr/de/en). Logic keys (tones, fresh_days, coverage) stay
 # stable; only display labels are translated here. ASCII-only per file convention.
 _LANG_IDX: dict[str, int] = {"fr": 0, "de": 1, "en": 2}
@@ -176,6 +177,13 @@ _TR: dict[str, tuple[str, str, str]] = {
     "p_distance": ("Distance", "Distanz", "Distance"),
     "p_status": ("Statut d'ancrage", "Verankerungsstatus", "Grounding status"),
     "actions_title": ("Actions", "Aktionen", "Actions"),
+    "attach_title": ("État du rattachement", "Verknüpfungsstatus", "Attachment state"),
+    "a_attached": ("Rattachée à l'agent", "Mit dem Agenten verknüpft", "Attached to the agent"),
+    "a_active": ("Active pour cet agent", "Für diesen Agenten aktiv", "Active for this agent"),
+    "a_index": ("Dernière indexation", "Letzte Indexierung", "Last indexing"),
+    "a_used": ("Dernière utilisation", "Letzte Nutzung", "Last use"),
+    "yes": ("Oui", "Ja", "Yes"),
+    "no": ("Non", "Nein", "No"),
     "toggle_label": ("Active pour cet agent", "Für diesen Agenten aktiv", "Active for this agent"),
     "detach": ("Détacher de l'agent", "Vom Agenten lösen", "Detach from agent"),
     "full_sheet": (
@@ -580,6 +588,30 @@ def _build_detail(
             {"label": _t("p_distance", lang), "value": "cosine"},
             {"label": _t("p_status", lang), "value": str(row["status"])},
         ],
+        # OT-01 object-trace: the attachment state of this source for this agent.
+        # Sourced from the durable attach/active store + the real pgvector ingestion
+        # timestamp + traffic. Note: attach/detach are not yet S1-audited, so this
+        # is current state + ingestion, not a full versioned event history.
+        "attachment": {
+            "title": _t("attach_title", lang),
+            "rows": [
+                {
+                    "label": _t("a_attached", lang),
+                    "value": _t("yes" if st.get("attached", True) else "no", lang),
+                },
+                {
+                    "label": _t("a_active", lang),
+                    "value": _t("yes" if st.get("active", True) else "no", lang),
+                },
+                {
+                    "label": _t("a_index", lang),
+                    "value": (
+                        agg.freshest[cat].strftime("%d/%m/%Y") if cat in agg.freshest else "-"
+                    ),
+                },
+                {"label": _t("a_used", lang), "value": last_used},
+            ],
+        },
         "actions_title": _t("actions_title", lang),
         "toggle_label": _t("toggle_label", lang),
         "toggle_on": bool(st.get("active", True)),

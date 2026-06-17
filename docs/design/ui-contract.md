@@ -261,3 +261,16 @@ sidebar), not the normative's strict two-column *Définition left / Instance rig
 the existing editable form was extended in place, not rebuilt. The CONFIGURER link
 points to `/configurer/parametres` (there is no dedicated `/configurer/configurations`
 catalogue page yet). **À confirmer** demain : faut-il la vraie disposition 2 colonnes.
+
+**Connaissances OT-01 (image 03, conformance pass).** The page is real (live pgvector
+`knowledge.py`) and functional (attach/detach/activate, durable). Added the normative's
+**`État du rattachement`** block to the source detail, sourced from real data
+(attach/active store + pgvector ingestion date + traffic last-use). Also **deleted a
+dead deterministic fixture** module (`observability/agent_connaissances.py`) that was
+unreferenced — a hardcode landmine that contradicted the zéro-hardcode discipline.
+Deviations: (1) the source detail is a **drawer** opened on row-click, not the
+normative's **persistent right OT-01 column** (extended the existing drawer in place
+rather than rebuilding the layout); (2) the **OT-01 versioned event history** is not
+built — attach/detach mutations are durable but **not yet S1-audited**, so there is no
+real lifecycle-event source; only current state + ingestion date are shown (honest).
+**Follow-up à confirmer** : auditer attach/detach en S1 + passer le détail en colonne OT-01 persistante.

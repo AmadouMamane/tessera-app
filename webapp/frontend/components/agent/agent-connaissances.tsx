@@ -1376,6 +1376,22 @@ function DetailPanel({
           </div>
         ) : null}
 
+        {d.attachment ? (
+          <div>
+            <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+              {d.attachment.title}
+            </h3>
+            <ul className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.72rem]">
+              {d.attachment.rows.map((r) => (
+                <li key={r.label} className="flex items-center justify-between gap-2">
+                  <span className="text-[var(--tessera-text-muted)]">{r.label}</span>
+                  <span className="font-medium text-[var(--tessera-text)]">{r.value}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <div>
           <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
             {d.actions_title}

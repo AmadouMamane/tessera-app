@@ -3776,6 +3776,12 @@ export const AgentConnaissancesSchema = z.object({
         ),
         params_title: z.string().optional(),
         params: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+        attachment: z
+          .object({
+            title: z.string(),
+            rows: z.array(z.object({ label: z.string(), value: z.string() })),
+          })
+          .optional(),
         actions_title: z.string(),
         toggle_label: z.string(),
         toggle_on: z.boolean(),
