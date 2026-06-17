@@ -379,7 +379,6 @@ def compute_agent_configurations() -> dict[str, object]:
     knowledge_count = _knowledge_count()
     tool_count = _tool_count()
     settings_updated = _fmt_mtime(_ROOT / "src" / "tessera" / "settings.py")
-    prompts_updated = _fmt_mtime(_PROMPTS_DIR / "fr.yaml")
     agent_id = f"tessera-assistant-{settings.environment.value}"
     default_lang_label = _lang_label(settings.default_language.value)
     lang_value = str(_load_overrides().get(_LANG_KEY) or default_lang_label)
@@ -486,8 +485,14 @@ def compute_agent_configurations() -> dict[str, object]:
             "metadata_label": "Métadonnées",
             "metadata": "Aucune métadonnée",
             "add_metadata": "Ajouter",
-            "created": f"Créé le {prompts_updated} par Julie Delacroix",
-            "modified": f"Dernière modification le {settings_updated} par Tessera Ops",
+            # Honest provenance: no invented author. "created" = the repo config
+            # baseline; "modified" = the real last override save (or defaults).
+            "created": "Profil issu du dépôt (settings.py + policy.yaml + prompts)",
+            "modified": (
+                f"Dernière sauvegarde via la console le {_fmt_mtime(_state_path())}"
+                if _state_path().exists()
+                else "Valeurs par défaut - aucune surcharge enregistrée"
+            ),
             "archive": "Désarchiver cet agent" if archived else "Archiver cet agent",
             "archived": archived,
         },
@@ -506,8 +511,8 @@ def compute_agent_configurations() -> dict[str, object]:
                     "value": "Archivé" if archived else "En ligne",
                     "online": not archived,
                 },
-                {"label": "Depuis", "value": settings_updated},
-                {"label": "Dernier redemarrage", "value": settings_updated, "info": True},
+                {"label": "Config modifiée le", "value": settings_updated},
+                {"label": "Source", "value": "settings.py (dépôt)", "info": True},
             ],
         },
         "active_model": {
