@@ -706,6 +706,47 @@ async def observability_agents_propose(body: _AgentProposeBody) -> dict[str, obj
     return {"available": True, "proposed": name}
 
 
+@router.get("/observability/agent-lifecycle")
+async def observability_agent_lifecycle(
+    agent_id: str = DEFAULT_AGENT_ID,
+) -> dict[str, object]:
+    """Governed lifecycle of an agent: state, gated release decision, S1 history.
+
+    Closes the propose -> review -> approve -> release loop: the release decision
+    is the agent's own two-level eval-gate verdict. Degrades to ``available:false``.
+    """
+    from tessera.observability import agent_lifecycle as lifecycle_mod
+
+    try:
+        return {"available": True, **lifecycle_mod.compute_agent_lifecycle(agent_id)}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.agent_lifecycle: failed: {exc}\n")
+        return {"available": False}
+
+
+class _AgentReleaseBody(BaseModel):
+    """A governed request to promote an agent (version) to live."""
+
+    agent_id: str
+
+
+@router.post("/observability/agents/release")
+async def observability_agents_release(body: _AgentReleaseBody) -> dict[str, object]:
+    """Attempt to promote an agent to live — gated by its eval-gate.
+
+    An agent only goes live once a run of ITS own set cleared the two-level gate.
+    The attempt is recorded as a hash-chained S1 event (``released`` on success,
+    ``release_blocked`` otherwise), so the promotion is opposable either way.
+    """
+    from tessera.observability.agent_lifecycle import request_release
+
+    agent_id = body.agent_id.strip()
+    if not agent_id:
+        raise HTTPException(status_code=422, detail="agent_id is required")
+    decision = request_release(agent_id)
+    return {"available": True, **decision.as_dict()}
+
+
 @router.get("/observability/agent-evaluations")
 async def observability_agent_evaluations(
     agent_id: str = DEFAULT_AGENT_ID,

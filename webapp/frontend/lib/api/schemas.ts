@@ -4405,3 +4405,15 @@ export const ProposeAgentSchema = z.object({
   proposed: z.string().optional(),
 });
 export type ProposeAgent = z.infer<typeof ProposeAgentSchema>;
+
+export const ReleaseAgentSchema = z.object({
+  available: z.boolean(),
+  agent_id: z.string(),
+  allowed: z.boolean(),
+  reason: z.string(),
+  has_run: z.boolean(),
+  gate_passed: z.boolean().nullable(),
+  failed_critical: z.array(z.string()),
+  run_at: z.string(),
+});
+export type ReleaseAgent = z.infer<typeof ReleaseAgentSchema>;

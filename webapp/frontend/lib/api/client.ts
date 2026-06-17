@@ -166,6 +166,8 @@ import {
   ProposeAgentSchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
+  type ReleaseAgent,
+  ReleaseAgentSchema,
   type QualityDatasetsReport,
   QualityDatasetsReportSchema,
   type RedTeamResponse,
@@ -1323,5 +1325,18 @@ export async function proposeAgent(
       body: JSON.stringify({ name }),
     },
     ProposeAgentSchema,
+  );
+}
+
+/** Attempt to promote an agent to live — gated server-side by its eval-gate. */
+export async function requestAgentRelease(agentId: string): Promise<ReleaseAgent> {
+  return request(
+    "/observability/agents/release",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: agentId }),
+    },
+    ReleaseAgentSchema,
   );
 }

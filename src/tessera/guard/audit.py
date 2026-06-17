@@ -27,8 +27,10 @@ if TYPE_CHECKING:
     from tessera.agent.state import GuardDecisionRecord
 
 __all__ = [
+    "AGENT_LIFECYCLE_PHASES",
     "ChainStatus",
     "current_model",
+    "emit_agent_lifecycle",
     "emit_agent_proposed",
     "emit_audit",
     "emit_handoff",
@@ -350,6 +352,57 @@ def emit_agent_proposed(*, name: str, actor: str = "operator", sink: _Sink | Non
         "recorded_at": now,
         "proposed_name": name,
         "actor": actor,
+    }
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+
+
+# The governed agent lifecycle: propose -> review -> approve -> release. Each is a
+# distinct S1 event in the same hash chain; "released" (go-live) is gated by the
+# agent's eval-gate (see tessera.observability.agent_lifecycle).
+AGENT_LIFECYCLE_PHASES: tuple[str, ...] = (
+    "reviewed",
+    "approved",
+    "released",
+    "release_blocked",
+)
+
+
+def emit_agent_lifecycle(
+    *,
+    agent_id: str,
+    phase: str,
+    actor: str = "operator",
+    detail: Mapping[str, Any] | None = None,
+    sink: _Sink | None = None,
+) -> None:
+    """Emit a governed agent lifecycle transition (S1 event).
+
+    Args:
+        agent_id: the agent the transition applies to.
+        phase: one of :data:`AGENT_LIFECYCLE_PHASES`. The event type is
+            ``tessera.agent.<phase>``, hash-chained alongside the proposal.
+        actor: who performed the transition (operator/admin/system).
+        detail: extra opposable fields (e.g. the gate verdict on release).
+        sink: override the configured audit sink (tests).
+    """
+    if phase not in AGENT_LIFECYCLE_PHASES:
+        msg = f"unknown agent lifecycle phase {phase!r}"
+        raise ValueError(msg)
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    now = datetime.now(UTC).isoformat()
+    entry: dict[str, Any] = {
+        "type": f"tessera.agent.{phase}",
+        "version": 1,
+        "occurred_at": now,
+        "valid_from": now,
+        "valid_to": None,
+        "recorded_at": now,
+        "agent_id": agent_id,
+        "actor": actor,
+        **(dict(detail) if detail else {}),
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
 

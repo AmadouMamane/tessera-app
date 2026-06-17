@@ -30,7 +30,7 @@ import {
 } from "@/components/overview/temporal-rail";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
-import { fetchAgentEvaluations } from "@/lib/api/client";
+import { fetchAgentEvaluations, requestAgentRelease } from "@/lib/api/client";
 import type { AgentEvaluations as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
@@ -298,6 +298,42 @@ function pct(value: number | null | undefined): string {
   return typeof value === "number" ? `${Math.round(value * 100)}%` : "—";
 }
 
+function ReleaseControl() {
+  const agentId = useAgentId();
+  const [state, setState] = useState<"idle" | "pending" | "done">("idle");
+  const [result, setResult] = useState<{ allowed: boolean; reason: string } | null>(null);
+
+  async function onClick() {
+    setState("pending");
+    try {
+      const r = await requestAgentRelease(agentId);
+      setResult({ allowed: r.allowed, reason: r.reason });
+    } catch {
+      setResult({ allowed: false, reason: "échec de la demande de mise en prod." });
+    } finally {
+      setState("done");
+    }
+  }
+
+  return (
+    <div className="mt-1 flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={state === "pending"}
+        className="self-start rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80 disabled:opacity-50"
+      >
+        Promouvoir en prod (gated)
+      </button>
+      {result ? (
+        <span className="text-[10px] opacity-90">
+          {result.allowed ? "✓ Promu (live)" : "✗ Bloqué"} — {result.reason}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function GateJudgeRail({ data }: { data: Data }) {
   const gate = data.gate;
   const judge = data.judge;
@@ -334,6 +370,7 @@ function GateJudgeRail({ data }: { data: Data }) {
             ? ` (seuil ${Math.round(gate.min_pass_rate * 100)}%)`
             : ""}
         </div>
+        <ReleaseControl />
       </section>
 
       {/* Per-agent judged metrics (real local judge) */}
