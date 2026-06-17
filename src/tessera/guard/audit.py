@@ -31,6 +31,7 @@ __all__ = [
     "current_model",
     "emit_audit",
     "emit_handoff",
+    "emit_routing",
     "verify_audit_chain",
 ]
 
@@ -281,6 +282,47 @@ def emit_handoff(
         "conversation_id": conversation_id,
         "turn_id": turn_id,
         "reason": reason,
+        "actor": "system",
+    }
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+
+
+def emit_routing(
+    *,
+    agent_id: str,
+    conversation_id: str,
+    turn_id: str,
+    reason: str,
+    handoff: bool,
+    from_agent: str | None = None,
+    sink: _Sink | None = None,
+) -> None:
+    """Emit the supervisor's routing decision for a turn into the S1 journal.
+
+    Every turn's decision is recorded (``type: tessera.agent.routing``), not only
+    the hand-overs — so you can prove *why a turn went to a given agent* from the
+    start (``reason``: stay/parcours, intent, policy), not just *that* it switched.
+    ``handoff`` flags a switch (which additionally emits a distinct
+    :func:`emit_handoff` event). Hash-chained and reconstructable in État à date.
+    """
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    now = datetime.now(UTC).isoformat()
+    entry: dict[str, Any] = {
+        "type": "tessera.agent.routing",
+        "version": 1,
+        "occurred_at": now,
+        "agent_id": agent_id,
+        "from_agent": from_agent,
+        "valid_from": now,
+        "valid_to": None,
+        "recorded_at": now,
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+        "reason": reason,
+        "handoff": handoff,
         "actor": "system",
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)

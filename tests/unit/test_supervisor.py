@@ -93,3 +93,30 @@ def test_handoff_event_is_a_distinct_s1_type_in_the_same_chain(audit_file: Path)
     status = audit.verify_audit_chain(audit_file)
     assert status.verified is True
     assert status.length == 2
+
+
+def test_every_routing_decision_is_audited_with_its_reason(audit_file: Path) -> None:
+    # A stay decision AND a switch decision are both recorded (not only handoffs),
+    # so routing is opposable from the start.
+    audit.emit_routing(
+        agent_id="support-client",
+        conversation_id="conv-1",
+        turn_id="turn-1",
+        reason="stay->support-client",
+        handoff=False,
+    )
+    audit.emit_routing(
+        agent_id="onboarding",
+        conversation_id="conv-1",
+        turn_id="turn-2",
+        reason="intent->onboarding (handoff support-client->onboarding)",
+        handoff=True,
+        from_agent="support-client",
+    )
+    lines = [json.loads(line) for line in audit_file.read_text().splitlines() if line.strip()]
+    assert all(line["type"] == "tessera.agent.routing" for line in lines)
+    assert lines[0]["handoff"] is False  # the initial "why this agent" is proven
+    assert lines[0]["reason"] == "stay->support-client"
+    assert lines[1]["handoff"] is True
+    assert lines[1]["from_agent"] == "support-client"
+    assert audit.verify_audit_chain(audit_file).verified is True

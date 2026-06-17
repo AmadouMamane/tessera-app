@@ -32,7 +32,7 @@ from tessera.agent.state import (
     new_state,
 )
 from tessera.agent.supervisor import route_turn
-from tessera.guard.audit import current_model, emit_handoff
+from tessera.guard.audit import current_model, emit_handoff, emit_routing
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
@@ -400,8 +400,20 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     decision = route_turn(prev_agent, request.message)
     agent_id = decision.agent_id
     current_agent_id.set(agent_id)
+    # Audit EVERY routing decision (stay or switch) with its reason, so routing is
+    # opposable end to end — you can prove why a turn went to a given agent from
+    # the start, not just that it switched.
+    emit_routing(
+        agent_id=agent_id,
+        conversation_id=str(conversation_id),
+        turn_id=str(turn_id),
+        reason=decision.reason,
+        handoff=decision.handoff,
+        from_agent=decision.from_agent,
+    )
     if decision.handoff and decision.from_agent is not None:
-        # Agent->agent handoff is a distinct S1 event (never human escalation).
+        # A switch additionally emits the distinct agent->agent handoff event
+        # (never the human-escalation path).
         emit_handoff(
             from_agent=decision.from_agent,
             to_agent=agent_id,

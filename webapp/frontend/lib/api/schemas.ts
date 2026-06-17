@@ -4311,6 +4311,7 @@ export const SessionDetailSchema = z.object({
         question: z.string(),
         answer: z.string(),
         time: z.string(),
+        routing_reason: z.string().optional(),
       }),
     )
     .optional(),

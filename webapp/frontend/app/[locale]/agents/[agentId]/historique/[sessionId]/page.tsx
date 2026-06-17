@@ -112,10 +112,20 @@ export default async function SessionDetailPage({ params }: PageProps) {
                 </span>
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.66rem] ${accent(turn.agent_id)}`}
+                  title={
+                    turn.routing_reason
+                      ? `${t("sessionDetail.routedBy")}: ${turn.routing_reason}`
+                      : undefined
+                  }
                 >
                   <Bot className="h-3 w-3" /> {turn.agent_name}
                 </span>
               </div>
+              {turn.routing_reason ? (
+                <p className="mb-1.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
+                  {t("sessionDetail.routedBy")}: {turn.routing_reason}
+                </p>
+              ) : null}
               <p className="flex gap-2 text-[0.8rem]">
                 <User className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
                 <span>{turn.question}</span>

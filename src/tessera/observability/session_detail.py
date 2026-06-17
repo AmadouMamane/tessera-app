@@ -50,8 +50,10 @@ def _fmt_time(value: Any) -> str:
         return str(value)
 
 
-def _read_handoffs(conversation_id: str, audit_path: Path, at: str | None) -> list[dict[str, Any]]:
-    """Read agent->agent handoff events for this conversation from the S1 journal."""
+def _read_s1(
+    conversation_id: str, audit_path: Path, at: str | None, event_type: str
+) -> list[dict[str, Any]]:
+    """Read S1 events of ``event_type`` for one conversation (as-of ``at``)."""
     if not audit_path.exists():
         return []
     out: list[dict[str, Any]] = []
@@ -64,20 +66,13 @@ def _read_handoffs(conversation_id: str, audit_path: Path, at: str | None) -> li
                 obj = json.loads(stripped)
             except json.JSONDecodeError:
                 continue
-            if obj.get("type") != "tessera.agent.handoff":
+            if obj.get("type") != event_type:
                 continue
             if obj.get("conversation_id") != conversation_id:
                 continue
             if not occurred_before(obj.get("occurred_at"), at):
                 continue
-            out.append(
-                {
-                    "from": str(obj.get("from_agent", "")),
-                    "to": str(obj.get("to_agent", "")),
-                    "reason": str(obj.get("reason", "")),
-                    "turn_id": str(obj.get("turn_id", "")),
-                }
-            )
+            out.append(obj)
     return out
 
 
@@ -123,6 +118,14 @@ async def compute_session_detail(
         elif r["role"] == "assistant":
             by_turn[tid]["answer"] = r["content"]
 
+    # Routing decision per turn (the "why this agent" — stay or switch), keyed by
+    # turn_id from the S1 routing events.
+    audit_path = get_settings().guard.audit_file
+    routing_by_turn = {
+        str(r.get("turn_id", "")): str(r.get("reason", ""))
+        for r in _read_s1(conversation_id, audit_path, at, "tessera.agent.routing")
+    }
+
     agents_seen: list[str] = []
     for i, tid in enumerate(order, start=1):
         t = by_turn[tid]
@@ -137,10 +140,21 @@ async def compute_session_detail(
                 "question": str(t.get("question", "")),
                 "answer": str(t.get("answer", "")),
                 "time": _fmt_time(t.get("created_at")),
+                "routing_reason": routing_by_turn.get(tid, ""),
             }
         )
 
-    handoffs = _read_handoffs(conversation_id, get_settings().guard.audit_file, at)
+    handoff_events = _read_s1(
+        conversation_id, audit_path, at, "tessera.agent.handoff"
+    )
+    handoffs = [
+        {
+            "from": str(h.get("from_agent", "")),
+            "to": str(h.get("to_agent", "")),
+            "reason": str(h.get("reason", "")),
+        }
+        for h in handoff_events
+    ]
     first_q = next((t["question"] for t in turns if t["question"]), "Conversation")
     return {
         "available": True,
