@@ -267,10 +267,11 @@ export function AgentGardeFous() {
             selected={detail?.key ?? null}
             onSelect={setSelected}
           />
-          <div className="grid gap-2.5 md:grid-cols-3">
+          <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
             <Watch data={data} />
             <Quick data={data} />
             <Coverage data={data} />
+            <Reasons data={data} />
           </div>
         </div>
         <Detail
@@ -883,6 +884,34 @@ function Coverage({ data }: { data: Data }) {
             <div className="flex items-center justify-between text-[0.7rem]">
               <span className="text-[var(--tessera-text)]">{it.label}</span>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">{it.pct}%</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+              <div
+                className={cn("h-full rounded-full", COV_BAR[it.tone] ?? "bg-slate-500")}
+                style={{ width: `${it.pct}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </PanelCard>
+  );
+}
+
+function Reasons({ data }: { data: Data }) {
+  const r = data.reasons;
+  if (!r) return null;
+  return (
+    <PanelCard title={r.title}>
+      {r.items.length === 0 ? (
+        <p className="py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">Aucun blocage.</p>
+      ) : null}
+      <ul className="flex flex-col gap-2.5">
+        {r.items.map((it) => (
+          <li key={it.label} className="flex flex-col gap-1">
+            <div className="flex items-center justify-between text-[0.7rem]">
+              <span className="text-[var(--tessera-text)]">{it.label}</span>
+              <span className="tabular-nums text-[var(--tessera-text-muted)]">{it.count}</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
               <div

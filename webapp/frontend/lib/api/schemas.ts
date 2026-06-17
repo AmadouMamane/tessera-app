@@ -3882,6 +3882,19 @@ export const AgentGardeFousSchema = z.object({
       items: z.array(z.object({ label: z.string(), pct: z.number(), tone: z.string() })),
     })
     .optional(),
+  reasons: z
+    .object({
+      title: z.string(),
+      items: z.array(
+        z.object({
+          label: z.string(),
+          pct: z.number(),
+          count: z.string(),
+          tone: z.string(),
+        }),
+      ),
+    })
+    .optional(),
   details: z
     .array(
       z.object({

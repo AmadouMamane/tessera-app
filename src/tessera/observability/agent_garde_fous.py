@@ -584,6 +584,7 @@ _STR: dict[str, tuple[str, str, str]] = {
     "q_policies": ("Politiques de conformite", "Compliance-Richtlinien", "Compliance policies"),
     "q_catalog": ("Catalogue de signaux", "Signalkatalog", "Signal catalogue"),
     "cov_title": ("Couverture par catégorie", "Abdeckung nach Kategorie", "Coverage by category"),
+    "reasons_title": ("Top raisons de blocage", "Top Blockiergründe", "Top block reasons"),
     "detail_eyebrow": ("Détails du garde-fou", "Details der Schutzregel", "Guardrail details"),
     "tab_summary": ("Résumé", "Zusammenfassung", "Summary"),
     "tab_config": ("Configuration", "Konfiguration", "Configuration"),
@@ -857,6 +858,43 @@ def _build_coverage(
     return {"title": _t(_STR["cov_title"], lang), "items": items}
 
 
+# Humanized labels for the policy_rule keys carried by guard decisions.
+_REASON_LABELS: dict[str, tuple[str, str, str]] = {
+    "prompt_injection.deny_patterns": (
+        "Injection de prompt",
+        "Prompt-Injektion",
+        "Prompt injection",
+    ),
+    "pii.patterns": ("Donnée personnelle (PII)", "Personenbezogene Daten", "Personal data (PII)"),
+    "tools.allow": ("Outil non autorisé", "Nicht erlaubtes Werkzeug", "Disallowed tool"),
+}
+
+
+def _reason_label(rule: str, lang: str) -> str:
+    if rule in _REASON_LABELS:
+        return _t(_REASON_LABELS[rule], lang)
+    return rule.replace("_", " ").replace(".", " · ").capitalize()
+
+
+def _build_reasons(scan: _AuditScan, lang: str) -> dict[str, object]:
+    """Top block reasons, from the real per-rule denial counts in the S1 journal."""
+    ranked = sorted(
+        ((rule, st.denials) for rule, st in scan.per_rule.items() if st.denials > 0),
+        key=lambda kv: -kv[1],
+    )
+    top = scan.denials or 1
+    items = [
+        {
+            "label": _reason_label(rule, lang),
+            "pct": round(100 * n / top),
+            "count": _fmt_int(n),
+            "tone": "red" if n >= top / 2 else "amber",
+        }
+        for rule, n in ranked[:6]
+    ]
+    return {"title": _t(_STR["reasons_title"], lang), "items": items}
+
+
 def _build_detail(
     rule: _RuleDef,
     stat: _RuleStat,
@@ -1033,5 +1071,6 @@ def _assemble(
             ],
         },
         "coverage": _build_coverage(per_cat_total, per_cat_active, lang),
+        "reasons": _build_reasons(scan, lang),
         "details": details,
     }

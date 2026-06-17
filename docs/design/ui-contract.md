@@ -274,3 +274,14 @@ rather than rebuilding the layout); (2) the **OT-01 versioned event history** is
 built — attach/detach mutations are durable but **not yet S1-audited**, so there is no
 real lifecycle-event source; only current state + ingestion date are shown (honest).
 **Follow-up à confirmer** : auditer attach/detach en S1 + passer le détail en colonne OT-01 persistante.
+
+**Garde-fous bottom charts (image 06, conformance pass).** The page is real (rules
+from `policy.yaml`, firing stats from the live guard S1 journal — KPIs match the
+journal: 15 338 denials / 15 702 decisions) with the `Couverture par catégorie` chart,
+CONFIGURER links and a define/instance rule detail. Added the normative's **`Top
+raisons de blocage`** chart, sourced from the real per-rule denial counts in the
+journal (currently a single dominant reason — *Injection de prompt, 15 338* — which is
+the truthful shape of this eval-heavy journal, not a fabrication). Deviations: the
+normative's **`Mode d'application`** donut and **`Overrides`** panel are not built —
+mode is derivable from the policy but low-value here, and there is **no real source for
+manual overrides** (would be a fixture). Left out per zéro-hardcode. **À confirmer**.
