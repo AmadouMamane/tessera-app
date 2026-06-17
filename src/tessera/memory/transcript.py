@@ -76,6 +76,12 @@ async def ensure_transcript_schema() -> None:
         "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS agent_id text "
         "NOT NULL DEFAULT {default_agent};"
     ).format(table=_TABLE, default_agent=sql.Literal(DEFAULT_AGENT_ID))
+    # Per-turn latency (ms), so the Synthèse latency KPI can be derived per agent
+    # from real traffic instead of a shared eval run. Nullable: rows without a
+    # measured latency render an honest "-".
+    add_latency_col = sql.SQL(
+        "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS latency_ms double precision;"
+    ).format(table=_TABLE)
     create_index = sql.SQL(
         "CREATE INDEX IF NOT EXISTS {idx} ON {table} (conversation_id, id);"
     ).format(idx=sql.Identifier("conversation_messages_conversation"), table=_TABLE)
@@ -85,6 +91,7 @@ async def ensure_transcript_schema() -> None:
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute(create_table)
         await cur.execute(add_agent_col)
+        await cur.execute(add_latency_col)
         await cur.execute(create_index)
         await cur.execute(create_agent_index)
         await conn.commit()
@@ -150,6 +157,7 @@ async def append_messages(
     messages: Sequence[ConversationMessage],
     *,
     agent_id: str = DEFAULT_AGENT_ID,
+    latency_ms: float | None = None,
 ) -> None:
     """Append a finished turn's user/assistant messages to the transcript.
 
@@ -159,18 +167,30 @@ async def append_messages(
 
     ``agent_id`` attributes the turn to an agent (per-turn attribution); it
     defaults to the single agent until the supervisor (Phase 2) routes.
+    ``latency_ms`` is the measured end-to-end turn latency; it is stored on the
+    assistant row so the Synthèse latency KPI can be derived per agent.
     """
     persisted = [m for m in messages if m.role in _PERSISTED_ROLES]
     if not persisted:
         return
     insert = sql.SQL(
         """
-        INSERT INTO {table} (conversation_id, turn_id, seq, agent_id, role, content, name)
-        VALUES (%s, %s, %s, %s, %s, %s, %s);
+        INSERT INTO {table}
+            (conversation_id, turn_id, seq, agent_id, role, content, name, latency_ms)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
         """
     ).format(table=_TABLE)
     rows = [
-        (conversation_id, turn_id, seq, agent_id, m.role, m.content, m.name)
+        (
+            conversation_id,
+            turn_id,
+            seq,
+            agent_id,
+            m.role,
+            m.content,
+            m.name,
+            latency_ms if m.role == "assistant" else None,
+        )
         for seq, m in enumerate(persisted)
     ]
     pool = get_pool()

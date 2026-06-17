@@ -1,56 +1,102 @@
-"""Cross-agent rollups with conversation-level dedup (multi-agent Phase 2/3).
+"""Fleet rollup — per-agent health/volume + conversation-level dedup (Phase 3).
 
-Org totals must count a conversation **once**, even when it spans two agents
-(a handoff). Naively summing per-agent conversation counts double-counts every
-shared conversation. This module exposes both — the per-agent slices and the
-deduplicated org total — so the fleet view (Phase 3) and SURVEILLER can show
-honest org figures while the per-agent Synthèse keeps its own slice.
+The fleet view and the agent switcher read this. It combines the registry (so
+all agents appear, with their names/owners, even with no traffic), the durable
+transcript (volume + observable escalation rate + per-agent latency) and the S1
+journal (handoffs in/out). Org totals count a conversation **once** even when it
+spans two agents — never the naive per-agent sum.
 
-Sourced from the durable transcript; numbers are real, never summed naively.
+Observable KPIs (volume, escalation rate, latency, handoffs) are real and differ
+per agent. Judged quality (resolution/faithfulness) stays shared until per-agent
+eval (Phase 4) and is intentionally absent here.
 """
 
 from __future__ import annotations
 
-from typing import Any
+import json
+from typing import TYPE_CHECKING, Any
 
 from psycopg.rows import dict_row
 
 from tessera.retrieval.store import _connection
+from tessera.settings import get_settings
 
-__all__ = ["compute_fleet_rollup"]
+if TYPE_CHECKING:
+    from pathlib import Path
+
+__all__ = ["compute_fleet"]
+
+_ESCALATION_ILIKE = (
+    "content ILIKE '%%escalad%%' OR content ILIKE '%%conseiller%%' "
+    "OR content ILIKE '%%ticket%%' OR content ILIKE '%%transf%%'"
+)
+_GOOD_ESCALATION = 20.0  # % escalated turns under which an agent reads "healthy"
+_WARN_ESCALATION = 35.0
 
 
-def _agent_name(agent_id: str) -> str:
+def _registry_agents() -> list[dict[str, str]]:
     try:
-        from tessera.agent.registry import get_agent
+        from tessera.agent.registry import list_agents
 
-        return get_agent(agent_id).name
-    except (KeyError, OSError, ValueError):
-        return agent_id
+        return [{"id": a.id, "name": a.name, "owner": a.owner} for a in list_agents()]
+    except (OSError, ValueError):
+        return []
 
 
-async def compute_fleet_rollup() -> dict[str, object]:
-    """Per-agent conversation/turn counts + the deduplicated org total.
+def _handoff_counts(audit_path: Path) -> tuple[dict[str, int], dict[str, int]]:
+    """Count S1 handoff events per agent: (incoming by to_agent, outgoing by from_agent)."""
+    incoming: dict[str, int] = {}
+    outgoing: dict[str, int] = {}
+    if not audit_path.exists():
+        return incoming, outgoing
+    with audit_path.open("r", encoding="utf-8") as fp:
+        for raw in fp:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            try:
+                obj = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("type") != "tessera.agent.handoff":
+                continue
+            to_agent = str(obj.get("to_agent", ""))
+            from_agent = str(obj.get("from_agent", ""))
+            if to_agent:
+                incoming[to_agent] = incoming.get(to_agent, 0) + 1
+            if from_agent:
+                outgoing[from_agent] = outgoing.get(from_agent, 0) + 1
+    return incoming, outgoing
 
-    ``org.conversations`` counts distinct conversation ids across all agents (a
-    shared conversation once); ``naive_sum_conversations`` sums the per-agent
-    counts (a shared conversation twice). ``dedup_saved`` is their difference —
-    the number of cross-agent conversations that a naive sum would double-count.
-    """
+
+def _health(escalation_rate: float) -> str:
+    if escalation_rate <= _GOOD_ESCALATION:
+        return "good"
+    if escalation_rate <= _WARN_ESCALATION:
+        return "warn"
+    return "crit"
+
+
+async def compute_fleet() -> dict[str, object]:
+    """Return the fleet payload: per-agent observable KPIs + deduplicated org totals."""
     async with _connection() as conn:
         conn.row_factory = dict_row
         async with conn.cursor() as cur:
             await cur.execute(
-                "SELECT agent_id, count(DISTINCT conversation_id) AS convs, "
-                "count(*) FILTER (WHERE role = 'user') AS turns "
-                "FROM conversation_messages GROUP BY agent_id ORDER BY agent_id"
+                "SELECT agent_id, "  # noqa: S608  (escalation clause is a constant)
+                "count(DISTINCT conversation_id) AS convs, "
+                "count(*) FILTER (WHERE role = 'user') AS turns, "
+                "count(*) AS msgs, "
+                f"count(*) FILTER (WHERE role = 'assistant' AND ({_ESCALATION_ILIKE})) AS escal, "
+                "count(*) FILTER (WHERE role = 'assistant') AS answers, "
+                "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat "
+                "FROM conversation_messages GROUP BY agent_id"
             )
-            per_agent_rows = list(await cur.fetchall())
+            by_agent = {str(r["agent_id"]): r for r in await cur.fetchall()}
 
             await cur.execute(
                 "SELECT count(DISTINCT conversation_id) AS convs, "
-                "count(*) FILTER (WHERE role = 'user') AS turns "
-                "FROM conversation_messages"
+                "count(*) FILTER (WHERE role = 'user') AS turns FROM conversation_messages"
             )
             org = await cur.fetchone() or {}
 
@@ -62,22 +108,41 @@ async def compute_fleet_rollup() -> dict[str, object]:
             )
             shared = (await cur.fetchone() or {}).get("n", 0)
 
-    per_agent: list[dict[str, Any]] = [
-        {
-            "id": str(r["agent_id"]),
-            "name": _agent_name(str(r["agent_id"])),
-            "conversations": int(r["convs"] or 0),
-            "turns": int(r["turns"] or 0),
-        }
-        for r in per_agent_rows
-    ]
-    naive_sum = sum(a["conversations"] for a in per_agent)
+    incoming, outgoing = _handoff_counts(get_settings().guard.audit_file)
+
+    # Registry first (every agent appears), enriched with its real slice.
+    agents: list[dict[str, Any]] = []
+    naive_sum = 0
+    for reg in _registry_agents():
+        aid = reg["id"]
+        row = by_agent.get(aid, {})
+        convs = int(row.get("convs") or 0)
+        answers = int(row.get("answers") or 0)
+        escal = int(row.get("escal") or 0)
+        escalation_rate = round(100 * escal / answers, 1) if answers else 0.0
+        lat = row.get("lat")
+        naive_sum += convs
+        agents.append(
+            {
+                "id": aid,
+                "name": reg["name"],
+                "owner": reg["owner"],
+                "conversations": convs,
+                "turns": int(row.get("turns") or 0),
+                "messages": int(row.get("msgs") or 0),
+                "escalation_rate": escalation_rate,
+                "latency_ms": round(float(lat), 1) if lat is not None else None,
+                "handoffs_in": int(incoming.get(aid, 0)),
+                "handoffs_out": int(outgoing.get(aid, 0)),
+                "health": _health(escalation_rate),
+            }
+        )
+
     org_convs = int(org.get("convs") or 0)
     return {
-        "agents": per_agent,
+        "agents": agents,
         "org": {"conversations": org_convs, "turns": int(org.get("turns") or 0)},
         "naive_sum_conversations": naive_sum,
         "shared_conversations": int(shared or 0),
-        # What a naive per-agent sum would over-count (one extra hit per shared conv).
         "dedup_saved": naive_sum - org_convs,
     }

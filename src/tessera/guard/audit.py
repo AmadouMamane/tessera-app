@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 __all__ = [
     "ChainStatus",
     "current_model",
+    "emit_agent_proposed",
     "emit_audit",
     "emit_handoff",
     "emit_routing",
@@ -324,6 +325,31 @@ def emit_routing(
         "reason": reason,
         "handoff": handoff,
         "actor": "system",
+    }
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+
+
+def emit_agent_proposed(*, name: str, actor: str = "operator", sink: _Sink | None = None) -> None:
+    """Emit a governed proposal to add an agent to the fleet (S1 event).
+
+    The registry is approved as a unit (ADR 0012), so creation is a proposal, not
+    a runtime mutation: this records the intent as a hash-chained
+    ``tessera.agent.proposed`` event feeding the propose -> review -> release flow.
+    """
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    now = datetime.now(UTC).isoformat()
+    entry: dict[str, Any] = {
+        "type": "tessera.agent.proposed",
+        "version": 1,
+        "occurred_at": now,
+        "valid_from": now,
+        "valid_to": None,
+        "recorded_at": now,
+        "proposed_name": name,
+        "actor": actor,
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
 

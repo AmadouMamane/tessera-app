@@ -672,14 +672,38 @@ async def observability_session_detail(
         return {"available": False}
 
 
-@router.get("/observability/fleet-rollup")
-async def observability_fleet_rollup() -> dict[str, object]:
-    """Cross-agent rollup with conversation-level dedup (org totals count once)."""
+@router.get("/observability/fleet")
+async def observability_fleet() -> dict[str, object]:
+    """Fleet rollup: per-agent observable KPIs + deduplicated org totals."""
     try:
-        return {"available": True, **await fleet_mod.compute_fleet_rollup()}
+        return {"available": True, **await fleet_mod.compute_fleet()}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.fleet: failed: {exc}\n")
         return {"available": False}
+
+
+class _AgentProposeBody(BaseModel):
+    """A governed proposal to add a new agent to the fleet."""
+
+    name: str
+
+
+@router.post("/observability/agents/propose")
+async def observability_agents_propose(body: _AgentProposeBody) -> dict[str, object]:
+    """Record a governed, audited proposal to add an agent.
+
+    An agent is a package approved as a unit (ADR 0012), so the registry is not
+    mutated at runtime: this emits an auditable S1 event (proposal) that feeds the
+    propose -> review -> release flow. RBAC is enforced on the client; the event
+    captures the intent durably either way.
+    """
+    from tessera.guard.audit import emit_agent_proposed
+
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="name is required")
+    emit_agent_proposed(name=name)
+    return {"available": True, "proposed": name}
 
 
 @router.get("/observability/agent-evaluations")

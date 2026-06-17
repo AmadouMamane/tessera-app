@@ -31,8 +31,23 @@ from tessera.retrieval.store import get_pool
 
 LOG = get_logger("tessera.seed_agents")
 
-# One INSERT row: (conversation_id, turn_id, seq, agent_id, role, content, name, created_at).
-Row = tuple[uuid.UUID, uuid.UUID, int, str, str, str, str | None, datetime]
+# One INSERT row:
+# (conversation_id, turn_id, seq, agent_id, role, content, name, created_at, latency_ms).
+Row = tuple[uuid.UUID, uuid.UUID, int, str, str, str, str | None, datetime, float | None]
+
+# Per-agent latency profile (ms) for the SYNTHETIC demo history — so the observable
+# latency KPI genuinely differs per agent. Real turns capture real latency via the
+# transcript's latency_ms column; only this seeded demo data is synthetic.
+_LATENCY_MS: dict[str, float] = {
+    "support-client": 2400.0,
+    "onboarding": 3300.0,
+    "recouvrement": 4600.0,
+}
+
+
+def _latency(agent_id: str, rng: random.Random) -> float:
+    base = _LATENCY_MS.get(agent_id, 3000.0)
+    return round(base + rng.uniform(-600, 900), 1)
 
 # Fixed namespace so seeded conversation ids are deterministic + collision-free
 # with real traffic. Bump the suffix to invalidate a previous seed generation.
@@ -151,9 +166,19 @@ def _rows_for_agent(agent_id: str, rng: random.Random, now: datetime) -> list[Ro
             q, a = rng.choice(pool)
             turn_id = uuid.uuid5(_NS, f"{conv}:{t}")
             ts = start + timedelta(minutes=2 * t)
-            rows.append((conv, turn_id, 0, agent_id, "user", q, None, ts))
+            rows.append((conv, turn_id, 0, agent_id, "user", q, None, ts, None))
             rows.append(
-                (conv, turn_id, 1, agent_id, "assistant", a, None, ts + timedelta(seconds=20))
+                (
+                    conv,
+                    turn_id,
+                    1,
+                    agent_id,
+                    "assistant",
+                    a,
+                    None,
+                    ts + timedelta(seconds=20),
+                    _latency(agent_id, rng),
+                )
             )
     return rows
 
@@ -167,9 +192,19 @@ def _rows_for_shared(rng: random.Random, now: datetime) -> list[Row]:
         for t, (agent_id, q, a) in enumerate(_HANDOFF):
             turn_id = uuid.uuid5(_NS, f"{conv}:{t}")
             ts = start + timedelta(minutes=3 * t)
-            rows.append((conv, turn_id, 0, agent_id, "user", q, None, ts))
+            rows.append((conv, turn_id, 0, agent_id, "user", q, None, ts, None))
             rows.append(
-                (conv, turn_id, 1, agent_id, "assistant", a, None, ts + timedelta(seconds=25))
+                (
+                    conv,
+                    turn_id,
+                    1,
+                    agent_id,
+                    "assistant",
+                    a,
+                    None,
+                    ts + timedelta(seconds=25),
+                    _latency(agent_id, rng),
+                )
             )
     return rows
 
@@ -206,8 +241,8 @@ async def seed(*, dry_run: bool = False) -> dict[str, int]:
         await pool.open()
     insert = sql.SQL(
         "INSERT INTO conversation_messages "
-        "(conversation_id, turn_id, seq, agent_id, role, content, name, created_at) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"
+        "(conversation_id, turn_id, seq, agent_id, role, content, name, created_at, latency_ms) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);"
     )
     async with pool.connection() as conn, conn.cursor() as cur:
         # Idempotent: drop this seed generation's rows, then reinsert.

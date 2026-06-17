@@ -29,6 +29,8 @@ import { cn } from "@/lib/cn";
 import type { OverviewTone } from "@/lib/overview";
 import { useAgentId } from "@/lib/use-agent-id";
 
+import { AgentSwitcher } from "./agent-switcher";
+
 type T = ReturnType<typeof useTranslations<"agentSynthese">>;
 
 const TABS: ReadonlyArray<{ page: AgentPage; labelKey: string }> = [
@@ -184,26 +186,29 @@ function CommandBar({
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
-      <nav className="flex min-w-0 flex-wrap items-center gap-1">
-        {TABS.map((tab) => {
-          const href = agentPath(agentId, tab.page);
-          const active = pathname === href || pathname.startsWith(`${href}/`);
-          return (
-            <Link
-              key={tab.page}
-              href={href}
-              className={cn(
-                "-mb-px shrink-0 border-b-2 px-3 py-2 text-[0.8rem] transition-colors",
-                active
-                  ? "border-[#6d4aed] font-medium text-[var(--tessera-text)]"
-                  : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
-              )}
-            >
-              {tn(tab.labelKey)}
-            </Link>
-          );
-        })}
-      </nav>
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <AgentSwitcher />
+        <nav className="flex min-w-0 flex-wrap items-center gap-1">
+          {TABS.map((tab) => {
+            const href = agentPath(agentId, tab.page);
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
+                key={tab.page}
+                href={href}
+                className={cn(
+                  "-mb-px shrink-0 border-b-2 px-3 py-2 text-[0.8rem] transition-colors",
+                  active
+                    ? "border-[#6d4aed] font-medium text-[var(--tessera-text)]"
+                    : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+                )}
+              >
+                {tn(tab.labelKey)}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
       <div className="flex shrink-0 items-center gap-2">
         <GhostLink
           icon={FlaskConical}

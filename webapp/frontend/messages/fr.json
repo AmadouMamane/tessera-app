@@ -4363,6 +4363,20 @@
       "routedBy": "Routage"
     }
   },
+  "fleet": {
+    "title": "Flotte d'agents",
+    "subtitle": "Comparer les agents — santé, volume, transferts. Totaux org dédupliqués.",
+    "orgConversations": "Conversations (org, dédupliqué)",
+    "naiveSum": "Somme naïve par agent",
+    "dedupSaved": "Dédoublonnées",
+    "shared": "conversations partagées",
+    "volume": "Volume",
+    "latency": "Latence (réel)",
+    "escalation": "Refus/escalade",
+    "handoffs": "Transferts (e/s)",
+    "open": "Ouvrir l'agent",
+    "judgedNote": "Les scores qualité jugés (résolution, fidélité) restent partagés jusqu'à l'évaluation per-agent (Phase 4) ; seuls les signaux observables diffèrent ici."
+  },
   "product": {
     "nav": {
       "brand": "Crédit Aurore",

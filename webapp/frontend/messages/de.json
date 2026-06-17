@@ -4363,6 +4363,20 @@
       "routedBy": "Routing"
     }
   },
+  "fleet": {
+    "title": "Agentenflotte",
+    "subtitle": "Agenten vergleichen — Zustand, Volumen, Übergaben. Org-Summen dedupliziert.",
+    "orgConversations": "Konversationen (Org, dedupliziert)",
+    "naiveSum": "Naive Summe pro Agent",
+    "dedupSaved": "Dedupliziert",
+    "shared": "geteilte Konversationen",
+    "volume": "Volumen",
+    "latency": "Latenz (real)",
+    "escalation": "Ablehnung/Eskalation",
+    "handoffs": "Übergaben (e/a)",
+    "open": "Agent öffnen",
+    "judgedNote": "Bewertete Qualitätswerte (Lösung, Treue) bleiben geteilt bis zur Per-Agent-Evaluierung (Phase 4); hier unterscheiden sich nur beobachtbare Signale."
+  },
   "product": {
     "nav": {
       "brand": "Crédit Aurore",

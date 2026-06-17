@@ -492,7 +492,11 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     assistant_msg = ConversationMessage(role="assistant", content=final_response)
     try:
         await append_messages(
-            conversation_id, turn_id, [user_msg, assistant_msg], agent_id=agent_id
+            conversation_id,
+            turn_id,
+            [user_msg, assistant_msg],
+            agent_id=agent_id,
+            latency_ms=duration * _MS_PER_SECOND,
         )
     except Exception as exc:  # audit/persistence must not block a turn
         sys.stderr.write(f"tessera.memory.transcript: append failed: {exc}\n")

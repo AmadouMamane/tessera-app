@@ -3286,6 +3286,20 @@ export const EtatADateSchema = z.object({
       rows: z.array(z.object({ label: z.string(), href: z.string() })),
     })
     .optional(),
+  handoffs: z
+    .object({
+      title: z.string(),
+      subtitle: z.string().optional(),
+      rows: z.array(
+        z.object({
+          from: z.string(),
+          to: z.string(),
+          reason: z.string(),
+          at: z.string(),
+        }),
+      ),
+    })
+    .optional(),
   snapshots: z
     .object({
       title: z.string(),
@@ -4318,3 +4332,36 @@ export const SessionDetailSchema = z.object({
   stats: z.object({ turns: z.number(), agents: z.number() }).optional(),
 });
 export type SessionDetail = z.infer<typeof SessionDetailSchema>;
+
+// Fleet rollup — per-agent observable KPIs + deduplicated org totals.
+export const FleetSchema = z.object({
+  available: z.boolean(),
+  agents: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        owner: z.string(),
+        conversations: z.number(),
+        turns: z.number(),
+        messages: z.number(),
+        escalation_rate: z.number(),
+        latency_ms: z.number().nullable(),
+        handoffs_in: z.number(),
+        handoffs_out: z.number(),
+        health: z.string(),
+      }),
+    )
+    .optional(),
+  org: z.object({ conversations: z.number(), turns: z.number() }).optional(),
+  naive_sum_conversations: z.number().optional(),
+  shared_conversations: z.number().optional(),
+  dedup_saved: z.number().optional(),
+});
+export type Fleet = z.infer<typeof FleetSchema>;
+
+export const ProposeAgentSchema = z.object({
+  available: z.boolean(),
+  proposed: z.string().optional(),
+});
+export type ProposeAgent = z.infer<typeof ProposeAgentSchema>;

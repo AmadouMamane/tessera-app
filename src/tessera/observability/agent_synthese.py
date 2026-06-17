@@ -150,6 +150,11 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
             await cur.execute(
                 "SELECT count(DISTINCT conversation_id) AS convs, count(*) AS msgs, "  # noqa: S608
                 "count(*) FILTER (WHERE role = 'user') AS turns, "
+                "count(*) FILTER (WHERE role = 'assistant') AS answers, "
+                "count(*) FILTER (WHERE role = 'assistant' AND ("
+                "  content ILIKE '%%escalad%%' OR content ILIKE '%%conseiller%%' "
+                "  OR content ILIKE '%%ticket%%' OR content ILIKE '%%transf%%')) AS escal, "
+                "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat_ms, "
                 f"max(created_at) AS last_at FROM conversation_messages WHERE {where}",
                 (agent_id,),
             )
@@ -197,6 +202,7 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
             await cur.execute("SELECT count(DISTINCT metadata->>'category') AS n FROM documents")
             cat_count = (await cur.fetchone() or {}).get("n", 0)
 
+    handoffs_in, handoffs_out = _handoff_counts(agent_id)
     return {
         "totals": totals,
         "daily": daily,
@@ -205,7 +211,35 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
         "newest_doc": newest_doc,
         "doc_count": int(doc_count or 0),
         "cat_count": int(cat_count or 0),
+        "handoffs_in": handoffs_in,
+        "handoffs_out": handoffs_out,
     }
+
+
+def _handoff_counts(agent_id: str) -> tuple[int, int]:
+    """Count S1 handoff events for an agent: (incoming, outgoing)."""
+    import json
+
+    path = get_settings().guard.audit_file
+    incoming = outgoing = 0
+    if not path.exists():
+        return 0, 0
+    with path.open("r", encoding="utf-8") as fp:
+        for raw in fp:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            try:
+                obj = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("type") != "tessera.agent.handoff":
+                continue
+            if obj.get("to_agent") == agent_id:
+                incoming += 1
+            if obj.get("from_agent") == agent_id:
+                outgoing += 1
+    return incoming, outgoing
 
 
 def _prompt_inventory() -> tuple[list[dict[str, Any]], datetime | None]:
@@ -298,8 +332,6 @@ def _assemble(
     escal_pct = round(100 - pass_pct, 1) if total else 0.0
     p50 = snap.latency_percentile(50)
     p95 = snap.latency_percentile(95)
-    durations = [s.duration_ms for s in snap.sessions if s.duration_ms > 0]
-    mean_ms = sum(durations) / len(durations) if durations else 0.0
 
     # eval-derived sparklines (chronological buckets of the real run)
     chrono = sorted(snap.sessions, key=lambda s: s.started_at)
@@ -324,6 +356,16 @@ def _assemble(
     last_at = totals.get("last_at")
     cat_count = tx["cat_count"]
     doc_count = tx["doc_count"]
+
+    # Observable, per-agent signals (real, differ per agent) — distinct from the
+    # shared eval run. Latency from the transcript's measured latency_ms; refusal/
+    # escalation from the assistant turns; handoffs from the S1 journal.
+    n_answers = int(totals.get("answers") or 0)
+    n_escal = int(totals.get("escal") or 0)
+    obs_lat_ms = totals.get("lat_ms")
+    obs_escal_pct = round(100 * n_escal / n_answers, 1) if n_answers else 0.0
+    handoffs_in = int(tx.get("handoffs_in") or 0)
+    handoffs_out = int(tx.get("handoffs_out") or 0)
 
     # category chunk distribution for the sources sparkline (real per-category)
     cat_series = [c.total for c in sorted(snap.categories, key=lambda c: -c.total)][:_SPARK_DAYS]
@@ -356,10 +398,18 @@ def _assemble(
         _kpi(
             "latency",
             "Temps de réponse moyen",
-            _secs(mean_ms),
-            f"p50 {_secs(p50)} - p95 {_secs(p95)}",
-            mean_ms <= _GOOD_MEAN_MS,
+            _secs(obs_lat_ms) if obs_lat_ms is not None else "-",
+            ("trafic réel de l'agent" if obs_lat_ms is not None else "aucun tour mesuré"),
+            (obs_lat_ms is not None and obs_lat_ms <= _GOOD_MEAN_MS),
             lat_series,
+        ),
+        _kpi(
+            "handoffs",
+            "Transferts (entrée/sortie)",
+            f"{handoffs_in} / {handoffs_out}",
+            "passations agent→agent (S1)",
+            True,
+            [],
         ),
         _kpi(
             "errors",
@@ -550,12 +600,12 @@ def _assemble(
         "ctaHref": _page(agent_id, "garde-fous"),
         "items": [
             {
-                "label": "Taux d'escalade (eval)",
-                "value": f"{escal_pct:.1f} %".replace(".", ","),
-                "tone": "warn" if escal_pct >= _ESCAL_WARN_PCT else "good",
+                "label": "Taux de refus/escalade (réel)",
+                "value": f"{obs_escal_pct:.1f} %".replace(".", ","),
+                "tone": "warn" if obs_escal_pct >= _ESCAL_WARN_PCT else "good",
             },
             {
-                "label": "Temps de réponse P95",
+                "label": "Temps de réponse P95 (eval)",
                 "value": _secs(p95),
                 "tone": "warn" if p95 > _GOOD_P95_MS else "good",
             },

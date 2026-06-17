@@ -99,6 +99,8 @@ import {
   FailedRunsReportSchema,
   type FirewallEfficacy,
   FirewallEfficacySchema,
+  type Fleet,
+  FleetSchema,
   type FreshnessReport,
   FreshnessReportSchema,
   type FunnelReport,
@@ -161,6 +163,7 @@ import {
   ProofsOverviewSchema,
   type PropagationReport,
   PropagationReportSchema,
+  ProposeAgentSchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
   type QualityDatasetsReport,
@@ -1297,4 +1300,24 @@ export async function fetchSessionDetail(
 ): Promise<SessionDetail> {
   const q = `?conversation_id=${encodeURIComponent(conversationId)}`;
   return request(`/observability/session-detail${q}`, { signal }, SessionDetailSchema);
+}
+
+/** Fleet rollup (per-agent observable KPIs + deduplicated org totals). */
+export async function fetchFleet(signal?: AbortSignal): Promise<Fleet> {
+  return request("/observability/fleet", { signal }, FleetSchema);
+}
+
+/** Governed, audited proposal to add a new agent (registry is approved as a unit). */
+export async function proposeAgent(
+  name: string,
+): Promise<{ available: boolean; proposed?: string }> {
+  return request(
+    "/observability/agents/propose",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    },
+    ProposeAgentSchema,
+  );
 }

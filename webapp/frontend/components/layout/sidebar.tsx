@@ -129,20 +129,23 @@ function agentBranch(agentId: string): Branch {
         icon: LayoutDashboard,
         labelKey: "item.synthese",
       },
-      // Inbox stays GLOBAL (across agents), so its hrefs are top-level, not
-      // scoped under /agents/:id.
-      {
-        href: "/a-traiter",
-        icon: Inbox,
-        labelKey: "item.aTraiter",
-        badge: "24",
-        badgeTone: "danger",
-        separatorBefore: true,
-      },
-      { href: "/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
     ],
   };
 }
+
+// Inbox is GLOBAL (a cross-agent operator queue), so it sits OUTSIDE the AGENT
+// super-section as top-level leaves — never scoped under /agents/:id.
+const INBOX: ReadonlyArray<Leaf> = [
+  {
+    href: "/a-traiter",
+    icon: Inbox,
+    labelKey: "item.aTraiter",
+    badge: "24",
+    badgeTone: "danger",
+    separatorBefore: true,
+  },
+  { href: "/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
+];
 
 const TREE: ReadonlyArray<NavNode> = [
   {
@@ -290,14 +293,9 @@ const ANCESTORS: Record<string, string[]> = (() => {
 
 function activeBranchKeys(pathname: string): string[] {
   // The AGENT branch is dynamic (not in the static ANCESTORS map): any
-  // agent-scoped route, plus the global Inbox, belongs to the "agent" trail.
-  if (
-    pathname.startsWith("/agents/") ||
-    pathname === "/a-traiter" ||
-    pathname === "/a-faire" ||
-    pathname.startsWith("/a-traiter/") ||
-    pathname.startsWith("/a-faire/")
-  ) {
+  // agent-scoped route auto-expands it. The global Inbox is a top-level leaf
+  // (outside the AGENT super-section), so it needs no trail.
+  if (pathname.startsWith("/agents/")) {
     return ["agent"];
   }
   for (const [href, trail] of Object.entries(ANCESTORS)) {
@@ -313,7 +311,10 @@ export function Sidebar() {
 
   // The AGENT branch is scoped to the active agent (URL-derived); prepend it to
   // the static governance/platform tree.
-  const tree = useMemo<ReadonlyArray<NavNode>>(() => [agentBranch(agentId), ...TREE], [agentId]);
+  const tree = useMemo<ReadonlyArray<NavNode>>(
+    () => [agentBranch(agentId), ...INBOX, ...TREE],
+    [agentId],
+  );
 
   // Everything is collapsed by default; only the branches on the active path are
   // auto-expanded so the current page stays visible. The user expands the rest.

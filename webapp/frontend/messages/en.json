@@ -4363,6 +4363,20 @@
       "routedBy": "Routing"
     }
   },
+  "fleet": {
+    "title": "Agent fleet",
+    "subtitle": "Compare agents — health, volume, handoffs. Org totals deduplicated.",
+    "orgConversations": "Conversations (org, deduplicated)",
+    "naiveSum": "Naive per-agent sum",
+    "dedupSaved": "Deduplicated",
+    "shared": "shared conversations",
+    "volume": "Volume",
+    "latency": "Latency (real)",
+    "escalation": "Refusal/escalation",
+    "handoffs": "Handoffs (in/out)",
+    "open": "Open agent",
+    "judgedNote": "Judged quality scores (resolution, faithfulness) stay shared until per-agent evaluation (Phase 4); only observable signals differ here."
+  },
   "product": {
     "nav": {
       "brand": "Crédit Aurore",

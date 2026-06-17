@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowRight,
   Bookmark,
   CalendarDays,
   ChevronDown,
@@ -347,6 +348,7 @@ export function EtatADate() {
           <div className="flex flex-col gap-2.5 xl:col-span-4">
             <Chronology data={data} />
             <Integrity data={data} />
+            <Handoffs data={data} />
             <AuditPieces data={data} />
             <Snapshots data={data} onReload={reloadAt} />
           </div>
@@ -937,6 +939,39 @@ function AuditPieces({ data, className }: { data: Data; className?: string }) {
           </li>
         ))}
       </ul>
+    </Panel>
+  );
+}
+
+function Handoffs({ data, className }: { data: Data; className?: string }) {
+  const h = data.handoffs;
+  if (!h) return null;
+  return (
+    <Panel title={h.title} icon={ArrowRight} iconClass="text-emerald-400" className={className}>
+      {h.subtitle ? (
+        <p className="mb-2 text-[0.62rem] text-[var(--tessera-text-muted)]">{h.subtitle}</p>
+      ) : null}
+      {h.rows.length === 0 ? (
+        <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+          Aucune passation jusqu'à T.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {h.rows.map((r, i) => (
+            <li
+              key={`${r.from}-${r.to}-${r.at}-${i}`}
+              className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.72rem]"
+            >
+              <span className="flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
+                {r.from} <ArrowRight className="h-3.5 w-3.5 text-emerald-400" /> {r.to}
+              </span>
+              <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
+                {r.at} · {r.reason}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </Panel>
   );
 }

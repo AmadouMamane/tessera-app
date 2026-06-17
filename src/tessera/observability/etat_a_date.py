@@ -228,6 +228,44 @@ def _scan_audit(path: Path, at: datetime | None) -> _AuditAsOf:
     return scan
 
 
+def _scan_handoffs(path: Path, at: datetime | None) -> list[dict[str, Any]]:
+    """Agent->agent handoff events at or before T, newest first (closes as-of loop).
+
+    The same S1 journal that proves config also proves routing: the handoffs that
+    had happened by T are part of the opposable state at T.
+    """
+    if not path.exists():
+        return []
+    found: list[tuple[str, dict[str, Any]]] = []
+    with path.open(encoding="utf-8") as fp:
+        for raw in fp:
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if entry.get("type") != "tessera.agent.handoff":
+                continue
+            occurred = entry.get("occurred_at")
+            if not occurred_before(occurred, at.isoformat() if at else None):
+                continue
+            found.append(
+                (
+                    str(occurred or ""),
+                    {
+                        "from": str(entry.get("from_agent", "")),
+                        "to": str(entry.get("to_agent", "")),
+                        "reason": str(entry.get("reason", "")),
+                        "at": _fmt(_parse_at(occurred)) if isinstance(occurred, str) else "-",
+                    },
+                )
+            )
+    found.sort(key=lambda e: e[0], reverse=True)
+    return [item for _, item in found]
+
+
 async def _fetch_documents() -> list[dict[str, Any]]:
     table = get_settings().postgres.vector_table
     async with _connection() as conn:
@@ -466,6 +504,7 @@ def _assemble(
     as_of: str | None,
     snapshots: list[dict[str, Any]] | None = None,
     now: datetime | None = None,
+    handoffs: list[dict[str, Any]] | None = None,
 ) -> dict[str, object]:
     """Assemble the reconstruction payload. Pure and I/O-free for unit testing."""
     now = now or datetime.now(UTC)
@@ -532,6 +571,11 @@ def _assemble(
             "chain_label": f"{_fmt_int(audit.decisions)} décisions journalisées jusqu'à T",
         },
         "table": {"title": "Sources accessibles à l'instant T", "rows": _table(states)},
+        "handoffs": {
+            "title": "Passations agent→agent à l'instant T",
+            "subtitle": "Routage opposable : qui tenait la conversation, reconstitué à T.",
+            "rows": handoffs or [],
+        },
         "audit_pieces": {
             "title": "Preuves d'audit disponibles",
             "rows": [
@@ -585,9 +629,12 @@ async def build_etat_a_date(as_of: str | None = None) -> dict[str, object]:
     rows = await _fetch_documents()
     original = await _fetch_original(at)
     audit = _scan_audit(get_settings().guard.audit_file, at)
+    handoffs = _scan_handoffs(get_settings().guard.audit_file, at)
     policy = load_policy()
     ctx = _build_context()
-    return _assemble(rows, audit, policy, ctx, original, as_of, _load_snapshots())
+    return _assemble(
+        rows, audit, policy, ctx, original, as_of, _load_snapshots(), handoffs=handoffs
+    )
 
 
 def _snapshot_record(
@@ -624,7 +671,10 @@ async def save_etat_snapshot(as_of: str | None = None) -> dict[str, object]:
     audit = _scan_audit(get_settings().guard.audit_file, at)
     policy = load_policy()
     ctx = _build_context()
+    handoffs = _scan_handoffs(get_settings().guard.audit_file, at)
     snapshots = _load_snapshots()
     snapshots.insert(0, _snapshot_record(rows, audit, as_of, datetime.now(UTC)))
     _save_snapshots(snapshots)
-    return _assemble(rows, audit, policy, ctx, original, as_of, snapshots)
+    return _assemble(
+        rows, audit, policy, ctx, original, as_of, snapshots, handoffs=handoffs
+    )

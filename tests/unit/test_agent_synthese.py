@@ -86,11 +86,16 @@ def _tx() -> dict[str, object]:
 def test_assemble_is_real_and_well_formed() -> None:
     payload = syn._assemble(_snap(), _tx(), chain_ok=True, now=NOW)
 
-    # KPI strip: 7 tiles, all real values from the two sources.
+    # KPI strip: tiles from the two sources + the observable handoff metric.
     kpis = {k["key"]: k for k in payload["kpis"]}  # type: ignore[union-attr]
     assert set(kpis) == {
-        "conversations", "turns", "resolution", "latency", "errors", "sources", "messages",
+        "conversations", "turns", "resolution", "latency", "handoffs", "errors",
+        "sources", "messages",
     }
+    # Handoff metric is in/out from S1 (none in this synthetic fixture).
+    assert kpis["handoffs"]["value"] == "0 / 0"
+    # Latency reroutes to the per-agent transcript; absent in the fixture -> "-".
+    assert kpis["latency"]["value"] == "-"
     # integer counts are grouped French-style with a space separator
     assert kpis["conversations"]["value"] == "1 008"
     assert kpis["turns"]["value"] == "1 054"
