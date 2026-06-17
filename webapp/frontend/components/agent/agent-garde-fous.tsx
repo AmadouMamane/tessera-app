@@ -30,7 +30,6 @@ import { Link } from "@/i18n/navigation";
 import { fetchAgentGardeFous, mutateGardeFousRule } from "@/lib/api/client";
 import type { AgentGardeFous as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
-import { AgentTabs } from "./agent-tabs";
 
 type RowT = NonNullable<Data["table"]>["rows"][number];
 type DetailT = NonNullable<Data["details"]>[number];
@@ -164,25 +163,21 @@ export function AgentGardeFous() {
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <AgentTabs
-        actions={
-          <>
-            <button
-              type="button"
-              onClick={() => temporal.changeMode("replay")}
-              className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <CalendarClock className="h-4 w-4" /> {a?.asof}
-            </button>
-            <Link
-              href={"/configurer/garde-fous" as Route}
-              className="flex h-9 items-center gap-2 rounded-md border border-[#d98b1f] bg-[#e0a23a] px-3 text-xs font-medium text-[#1b1402] hover:bg-[#eab44e]"
-            >
-              <Plus className="h-4 w-4" /> {a?.create}
-            </Link>
-          </>
-        }
-      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => temporal.changeMode("replay")}
+          className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        >
+          <CalendarClock className="h-4 w-4" /> {a?.asof}
+        </button>
+        <Link
+          href={"/configurer/garde-fous" as Route}
+          className="flex h-9 items-center gap-2 rounded-md border border-[#d98b1f] bg-[#e0a23a] px-3 text-xs font-medium text-[#1b1402] hover:bg-[#eab44e]"
+        >
+          <Plus className="h-4 w-4" /> {a?.create}
+        </Link>
+      </div>
 
       <TemporalRail
         mode={temporal.mode}

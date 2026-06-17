@@ -2,7 +2,6 @@ import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AgentEvaluations } from "@/components/agent/agent-evaluations";
-import { AppShell } from "@/components/layout/app-shell";
 import { AgentEvaluationsSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
@@ -34,7 +33,6 @@ async function prefetch(queryClient: QueryClient, agentId: string) {
 export default async function AgentEvaluationsPage({ params }: PageProps) {
   const { locale, agentId } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "agentEvaluations" });
   const queryClient = new QueryClient();
   try {
     await prefetch(queryClient, agentId);
@@ -43,10 +41,8 @@ export default async function AgentEvaluationsPage({ params }: PageProps) {
   }
 
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
-      <HydrationBoundary state={dehydrate(queryClient)}>
-        <AgentEvaluations />
-      </HydrationBoundary>
-    </AppShell>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <AgentEvaluations />
+    </HydrationBoundary>
   );
 }

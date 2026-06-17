@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { type AgentPage, agentPath } from "@/lib/agent-context";
@@ -11,10 +10,12 @@ import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSwitcher } from "./agent-switcher";
 
 /**
- * Shared command-bar tab strip for the AGENT section (same tabs as the
- * Synthese overview). Each page renders it with its own action buttons on the
- * right via the `actions` slot. Hrefs are agent-scoped via `agentPath` — no
- * literal `/agents/...` path and no hard-coded agent id.
+ * Shared command-bar tab strip + agent switcher for the AGENT section. Mounted
+ * ONCE by `agents/[agentId]/layout.tsx` so it persists across every sub-page
+ * (only the body swaps). The active tab derives from the URL; hrefs are
+ * agent-scoped via `agentPath` — no literal `/agents/...` path, no hard-coded id.
+ * Page-specific actions live in each page's body (until time/scope move to the
+ * URL and they move to a parallel `@actions` slot).
  */
 const TABS: ReadonlyArray<{ page: AgentPage; labelKey: string }> = [
   { page: "synthese", labelKey: "item.synthese" },
@@ -27,12 +28,12 @@ const TABS: ReadonlyArray<{ page: AgentPage; labelKey: string }> = [
   { page: "historique", labelKey: "item.historique" },
 ];
 
-export function AgentTabs({ actions }: { actions?: ReactNode }) {
+export function AgentTabs() {
   const tn = useTranslations("nav");
   const pathname = usePathname();
   const agentId = useAgentId();
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
+    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--tessera-border)] pb-1.5">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <AgentSwitcher />
         <nav className="flex min-w-0 flex-wrap items-center gap-1">
@@ -56,7 +57,6 @@ export function AgentTabs({ actions }: { actions?: ReactNode }) {
           })}
         </nav>
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </div>
   );
 }

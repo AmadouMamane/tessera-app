@@ -44,3 +44,35 @@ export function agentPath(agentId: string, page?: AgentPage | string): string;
 export function agentPath(agentId: string, page: AgentPage | string = ""): string {
   return page ? `/agents/${agentId}/${page}` : `/agents/${agentId}`;
 }
+
+/**
+ * i18n namespace carrying each AGENT page's `title` + `subtitle`. Co-located with
+ * the route registry so the section header (rendered once by the AGENT-area
+ * layout) and the tab strip stay in sync — the title derives from the URL, never
+ * from page-local state (see `ui-contract.md`).
+ */
+export const AGENT_PAGE_NAMESPACE: Record<AgentPage, string> = {
+  synthese: "agentSynthese",
+  configurations: "agentConfigurations",
+  connaissances: "agentConnaissances",
+  "garde-fous": "agentGardeFous",
+  prompts: "agentPrompts",
+  evaluations: "agentEvaluations",
+  console: "agentConsole",
+  historique: "agentHistorique",
+};
+
+/**
+ * Resolve the topbar header namespace for an AGENT-area pathname (locale-stripped,
+ * e.g. `/agents/support-client/evaluations`). The fleet list and each section map
+ * to the namespace whose `title`/`subtitle` describe the active view. Drill-downs
+ * (`/agents/<id>/historique/<sessionId>`) reuse their section's header and render
+ * their own in-body header for the specific item.
+ */
+export function agentAreaHeaderNamespace(pathname: string): string {
+  const seg = pathname.split("/").filter(Boolean);
+  if (seg[0] !== "agents") return "fleet";
+  if (seg.length === 1) return "fleet";
+  if (seg.length === 2) return AGENT_PAGE_NAMESPACE.synthese; // /agents/<id> → redirects to synthese
+  return AGENT_PAGE_NAMESPACE[seg[2] as AgentPage] ?? AGENT_PAGE_NAMESPACE.synthese;
+}

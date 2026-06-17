@@ -30,7 +30,6 @@ import type { AgentHistorique as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSubtabs } from "./agent-subtabs";
-import { AgentTabs } from "./agent-tabs";
 
 type RowT = NonNullable<Data["table"]>["rows"][number];
 
@@ -228,31 +227,27 @@ export function AgentHistorique() {
   const active = subtab || subtabs[0] || "";
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <AgentTabs
-        actions={
-          <>
-            <button
-              type="button"
-              onClick={exportCsv}
-              className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <Download className="h-4 w-4" /> {a?.export}
-            </button>
-            <Link
-              href="/prouver/etat-a-date"
-              className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <GitCompare className="h-4 w-4" /> {a?.compare}
-            </Link>
-            <Link
-              href="/prouver/evidence-store"
-              className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
-            >
-              {a?.create}
-            </Link>
-          </>
-        }
-      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={exportCsv}
+          className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        >
+          <Download className="h-4 w-4" /> {a?.export}
+        </button>
+        <Link
+          href="/prouver/etat-a-date"
+          className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        >
+          <GitCompare className="h-4 w-4" /> {a?.compare}
+        </Link>
+        <Link
+          href="/prouver/evidence-store"
+          className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
+        >
+          {a?.create}
+        </Link>
+      </div>
 
       <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
 

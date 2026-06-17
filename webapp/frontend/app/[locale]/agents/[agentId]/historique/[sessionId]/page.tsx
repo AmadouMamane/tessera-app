@@ -1,7 +1,6 @@
 import { ArrowRight, Bot, User } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { SessionDetailSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
@@ -44,15 +43,11 @@ export default async function SessionDetailPage({ params }: PageProps) {
   const t = await getTranslations({ locale, namespace: "assistant" });
   const data = await loadDetail(sessionId);
 
-  const title = `${t("sessionDetail.title")}`;
-
   if (!data?.available || !data.turns?.length) {
     return (
-      <AppShell title={title} description={t("sessionDetail.subtitle")} contentWidth="full">
-        <div className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--tessera-text-muted)]">
-          {t("sessionDetail.empty")}
-        </div>
-      </AppShell>
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--tessera-text-muted)]">
+        {t("sessionDetail.empty")}
+      </div>
     );
   }
 
@@ -60,9 +55,8 @@ export default async function SessionDetailPage({ params }: PageProps) {
   const handoffs = data.handoffs ?? [];
 
   return (
-    <AppShell title={title} description={t("sessionDetail.subtitle")} contentWidth="full">
-      <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-        {/* Header: conversation + involved agents */}
+    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      {/* Header: conversation + involved agents */}
         <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
           <p className="truncate text-[0.95rem] font-semibold">{data.title}</p>
           <p className="mt-1 font-mono text-[0.66rem] text-[var(--tessera-text-muted)]">
@@ -137,7 +131,6 @@ export default async function SessionDetailPage({ params }: PageProps) {
             </li>
           ))}
         </ol>
-      </div>
-    </AppShell>
+    </div>
   );
 }

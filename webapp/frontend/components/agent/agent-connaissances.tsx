@@ -29,7 +29,6 @@ import { fetchAgentConnaissances, mutateConnaissancesSource } from "@/lib/api/cl
 import type { AgentConnaissances as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import type { OverviewTone } from "@/lib/overview";
-import { AgentTabs } from "./agent-tabs";
 
 /** Close a popover on outside-click and Escape; attach the returned ref to its root. */
 function useDismiss(open: boolean, onClose: () => void) {
@@ -220,20 +219,14 @@ export function AgentConnaissances() {
 
   return (
     <div className="relative flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <div data-agent-tabs>
-        <AgentTabs
-          actions={
-            <>
-              <GhostLink href={CATALOG_HREF} label={a?.manage ?? ""} />
-              <GhostLink href={MEMORY_HREF} label={a?.memory ?? ""} />
-              <AttachMenu
-                label={a?.attach ?? ""}
-                items={data.attachable ?? []}
-                pending={mut.isPending}
-                onAttach={(key) => mut.mutate({ key, attached: true })}
-              />
-            </>
-          }
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <GhostLink href={CATALOG_HREF} label={a?.manage ?? ""} />
+        <GhostLink href={MEMORY_HREF} label={a?.memory ?? ""} />
+        <AttachMenu
+          label={a?.attach ?? ""}
+          items={data.attachable ?? []}
+          pending={mut.isPending}
+          onAttach={(key) => mut.mutate({ key, attached: true })}
         />
       </div>
 

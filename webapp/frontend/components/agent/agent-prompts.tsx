@@ -36,7 +36,6 @@ import type { AgentPrompts as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSubtabs } from "./agent-subtabs";
-import { AgentTabs } from "./agent-tabs";
 
 type RowT = NonNullable<Data["table"]>["rows"][number];
 type DetailT = NonNullable<Data["details"]>[number];
@@ -139,25 +138,21 @@ export function AgentPrompts() {
   };
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <AgentTabs
-        actions={
-          <>
-            <button
-              type="button"
-              onClick={() => temporal.changeMode("replay")}
-              className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <CalendarClock className="h-4 w-4" /> {a?.asof}
-            </button>
-            <Link
-              href={"/assistant" as Route}
-              className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
-            >
-              <Plus className="h-4 w-4" /> {a?.create}
-            </Link>
-          </>
-        }
-      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => temporal.changeMode("replay")}
+          className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        >
+          <CalendarClock className="h-4 w-4" /> {a?.asof}
+        </button>
+        <Link
+          href={"/assistant" as Route}
+          className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
+        >
+          <Plus className="h-4 w-4" /> {a?.create}
+        </Link>
+      </div>
 
       <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
 

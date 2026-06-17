@@ -2,7 +2,6 @@ import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AgentGardeFous } from "@/components/agent/agent-garde-fous";
-import { AppShell } from "@/components/layout/app-shell";
 import { AgentGardeFousSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
@@ -36,7 +35,6 @@ async function prefetch(queryClient: QueryClient, locale: string) {
 export default async function AgentGardeFousPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "agentGardeFous" });
   const queryClient = new QueryClient();
   try {
     await prefetch(queryClient, locale);
@@ -45,10 +43,8 @@ export default async function AgentGardeFousPage({ params }: PageProps) {
   }
 
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
-      <HydrationBoundary state={dehydrate(queryClient)}>
-        <AgentGardeFous />
-      </HydrationBoundary>
-    </AppShell>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <AgentGardeFous />
+    </HydrationBoundary>
   );
 }

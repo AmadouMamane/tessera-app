@@ -21,27 +21,13 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link, usePathname } from "@/i18n/navigation";
-import { type AgentPage, agentPath } from "@/lib/agent-context";
+import { Link } from "@/i18n/navigation";
+import { agentPath } from "@/lib/agent-context";
 import { fetchAgentSynthese } from "@/lib/api/client";
 import type { AgentSynthese as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import type { OverviewTone } from "@/lib/overview";
 import { useAgentId } from "@/lib/use-agent-id";
-
-import { AgentSwitcher } from "./agent-switcher";
-
-type T = ReturnType<typeof useTranslations<"agentSynthese">>;
-
-const TABS: ReadonlyArray<{ page: AgentPage; labelKey: string }> = [
-  { page: "synthese", labelKey: "item.vueEnsemble" },
-  { page: "configurations", labelKey: "item.configurations" },
-  { page: "connaissances", labelKey: "item.connaissances" },
-  { page: "garde-fous", labelKey: "item.agentGuardrails" },
-  { page: "prompts", labelKey: "item.prompts" },
-  { page: "evaluations", labelKey: "item.evaluations" },
-  { page: "historique", labelKey: "item.historique" },
-];
 
 const BAR_TONE: Record<string, string> = {
   violet: "bg-[#8b7cf0]",
@@ -73,8 +59,6 @@ const ALERT_TONE: Record<string, string> = {
 
 export function AgentSynthese() {
   const t = useTranslations("agentSynthese");
-  const tn = useTranslations("nav");
-  const pathname = usePathname();
   const agentId = useAgentId();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
@@ -98,7 +82,19 @@ export function AgentSynthese() {
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <CommandBar t={t} tn={tn} pathname={pathname} agentId={agentId} />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <GhostLink
+          icon={FlaskConical}
+          label={t("actions.test")}
+          href={agentPath(agentId, "evaluations")}
+        />
+        <Link
+          href={agentPath(agentId, "configurations")}
+          className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
+        >
+          <Settings2 className="h-4 w-4" /> {t("actions.configure")}
+        </Link>
+      </div>
 
       <TemporalRail
         mode={temporal.mode}
@@ -172,59 +168,6 @@ function SyntheseSkeleton() {
 }
 
 // ── chrome ─────────────────────────────────────────────────────────────────
-
-function CommandBar({
-  t,
-  tn,
-  pathname,
-  agentId,
-}: {
-  t: T;
-  tn: ReturnType<typeof useTranslations<"nav">>;
-  pathname: string;
-  agentId: string;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <AgentSwitcher />
-        <nav className="flex min-w-0 flex-wrap items-center gap-1">
-          {TABS.map((tab) => {
-            const href = agentPath(agentId, tab.page);
-            const active = pathname === href || pathname.startsWith(`${href}/`);
-            return (
-              <Link
-                key={tab.page}
-                href={href}
-                className={cn(
-                  "-mb-px shrink-0 border-b-2 px-3 py-2 text-[0.8rem] transition-colors",
-                  active
-                    ? "border-[#6d4aed] font-medium text-[var(--tessera-text)]"
-                    : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
-                )}
-              >
-                {tn(tab.labelKey)}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <GhostLink
-          icon={FlaskConical}
-          label={t("actions.test")}
-          href={agentPath(agentId, "evaluations")}
-        />
-        <Link
-          href={agentPath(agentId, "configurations")}
-          className="flex h-9 items-center gap-2 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5]"
-        >
-          <Settings2 className="h-4 w-4" /> {t("actions.configure")}
-        </Link>
-      </div>
-    </div>
-  );
-}
 
 function GhostLink({
   icon: Icon,
