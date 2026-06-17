@@ -331,3 +331,14 @@ from the non-concluant count), and **per-(cas × langue)** gating. The shipped g
 policy-*conservative* (no waiver ⇒ nothing wrongly unblocked). Tier 0 is detected
 structurally from the case id (pii/regulatory) pending a curated, versioned socle set.
 **À confirmer** : socle curé explicite + waiver store + Venn + cas×langue.
+
+**Historique CT-01 + per-turn agent (images 30/301, conformance pass).** The session
+**detail** already satisfies the multi-agent invariant: turns come from
+`conversation_messages` (real `agent_id` per message) and handoffs from the S1 journal,
+each turn rendered with its handling agent + per-agent accent + routing reason — real,
+verified on a 10-turn conversation. Named the turns timeline **`CT-01 · Chronologie de
+la session`** per the rails registry. The **list** is real (eval-run sessions + Agent
+column + KPIs). Deviation: the list rows are **eval-run sessions** (case × langue), whose
+`sid` is not a `conversation_messages` id — so opening one yields the empty state; only
+**real chat conversations** (UUID) resolve to the full per-turn detail. Logged;
+**à confirmer** whether the list should also surface real chat conversations.
