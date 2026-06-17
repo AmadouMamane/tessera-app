@@ -3488,6 +3488,7 @@ export const AgentConfigurationsSchema = z.object({
       saved: z.string().optional(),
       reset: z.string().optional(),
       more: z.string(),
+      propose: z.string().optional(),
     })
     .optional(),
   identity: z
@@ -3495,6 +3496,7 @@ export const AgentConfigurationsSchema = z.object({
       title: z.string(),
       left: z.array(AgentConfigFieldSchema),
       right: z.array(AgentConfigFieldSchema),
+      link: z.object({ label: z.string(), href: z.string() }).optional(),
     })
     .optional(),
   model: z
@@ -3502,6 +3504,7 @@ export const AgentConfigurationsSchema = z.object({
       title: z.string(),
       left: z.array(AgentConfigFieldSchema),
       right: z.array(AgentConfigFieldSchema),
+      link: z.object({ label: z.string(), href: z.string() }).optional(),
     })
     .optional(),
   behavior: z
@@ -3523,8 +3526,10 @@ export const AgentConfigurationsSchema = z.object({
       title: z.string(),
       left: z.array(AgentConfigFieldSchema),
       right: z.array(AgentConfigFieldSchema),
+      link: z.object({ label: z.string(), href: z.string() }).optional(),
     })
     .optional(),
+  governed: z.boolean().optional(),
   tags: z
     .object({
       title: z.string(),

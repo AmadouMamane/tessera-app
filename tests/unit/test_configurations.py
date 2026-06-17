@@ -121,3 +121,21 @@ def test_build_history_is_real_sources_only() -> None:
     # No invented actor: every row is either a console save or a Git source.
     assert all(it["actor"] in {"Console", "Dépôt (Git)"} for it in items)
     assert any("mis à jour" in it["label"] for it in items)
+
+
+def test_model_section_is_read_only_with_a_registry_link() -> None:
+    payload = c.compute_agent_configurations()
+    model = payload["model"]
+    # The model itself is read-only here (defined in the registry), never editable.
+    for field in [*model["left"], *model["right"]]:  # type: ignore[index]
+        if field["label"].startswith(("Modèle", "Version")):
+            assert field["editable"] is False
+    # Only the fallback strategy is editable, and it is a bounded select.
+    strat = next(f for f in model["right"] if f.get("key") == "fallback_strategy")  # type: ignore[index]
+    assert strat["kind"] == "select"
+    assert model["link"]["href"] == "/configurer/modeles"  # type: ignore[index]
+
+
+def test_governed_flag_tracks_production() -> None:
+    # Local dev is not governed; the flag exists for the prod release-control flow.
+    assert c.compute_agent_configurations()["governed"] is False

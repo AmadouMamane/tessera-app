@@ -879,6 +879,29 @@ it dirty.
   copy button exists). DOM-inspect (`querySelector("select,textarea,input,button")`
   per labelled field) is a fast way to confirm what's a real control vs text.
 
+## Round-22 skills (the edit-governance triptych for Configurations sections)
+
+Every Configurations section (model, behaviour, guardrails, knowledge) obeys one
+triptych — and editability is a correctness property, not a UX nicety:
+
+- **Define = CONFIGURER (read-only here).** Registry-owned facts (model
+  provider/snapshots/context/cost, approved model list) are read-only on this
+  page and carry a `link` to their registry (`/configurer/modeles`). The Modèle
+  section already did this right — `Modèle principal`/`fallback`/`snapshot` are
+  `_ro`, never a free-text input (typing an unapproved `gpt-4o` must be
+  impossible), with a "Gérer dans le registre des modèles" link.
+- **Choose = bounded selector, never free text.** Anything an operator may change
+  inline is a `<select>`/slider/toggle bound to an option list (fallback
+  strategy, tone, routing…), so an out-of-registry value can't be entered.
+- **Mutate in prod = governed, not a silent inline save.** A banking agent's
+  model/behaviour change is load-bearing + regulated, so it must land in the
+  audit + in `Etat a date` ("which model at T"). Payload carries
+  `governed = settings.is_production()`; when true the header's inline Save is
+  replaced by "Proposer un changement" → Release Control (RBAC + versioned event
+  + dual-control via AGIR). Local/staging keep the inline save. Tests:
+  `test_model_section_is_read_only_with_a_registry_link`, `test_governed_flag_*`,
+  + an e2e following the registry link.
+
 ## Status of the agent pages (update as you go)
 
 - **Real + functional:** A faire + A traiter (shared `operator_items` backlog =

@@ -236,15 +236,28 @@ function Header({
             <RotateCcw className="h-3.5 w-3.5" /> {actions?.reset}
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={!dirty || saving}
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-cyan-400/45 bg-[linear-gradient(180deg,#58d6df,#2597a6)] px-4 text-xs font-semibold text-[#04131b] shadow-[0_8px_20px_rgba(37,151,166,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Save className="h-3.5 w-3.5" />
-          {actions?.save}
-        </button>
+        {data.governed ? (
+          // Production: model/behaviour changes are governed - route the pending
+          // edit to Release Control (RBAC + versioned + dual-control) instead of
+          // a silent inline save.
+          <Link
+            href="/agir/release-control"
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-[#d98b1f]/55 bg-[linear-gradient(180deg,#f4c76a,#b87923)] px-4 text-xs font-semibold text-[#08111d]"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            {actions?.propose ?? "Proposer un changement"}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!dirty || saving}
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-cyan-400/45 bg-[linear-gradient(180deg,#58d6df,#2597a6)] px-4 text-xs font-semibold text-[#04131b] shadow-[0_8px_20px_rgba(37,151,166,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Save className="h-3.5 w-3.5" />
+            {actions?.save}
+          </button>
+        )}
         <MoreMenu data={data} label={actions?.more ?? "Plus d'options"} />
       </div>
     </div>
@@ -256,16 +269,31 @@ function FieldSection({
   ctx,
   compact = false,
 }: {
-  block?: { title: string; left: Field[]; right: Field[] };
+  block?: {
+    title: string;
+    left: Field[];
+    right: Field[];
+    link?: { label: string; href: string };
+  };
   ctx: Ctx;
   compact?: boolean;
 }) {
   if (!block) return null;
   return (
     <div className={cn("border-b border-[var(--tessera-border)] px-5 py-2.5", compact && "py-2")}>
-      <h2 className="mb-1.5 font-sans text-[0.92rem] font-semibold text-[var(--tessera-text)]">
-        {block.title}
-      </h2>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <h2 className="font-sans text-[0.92rem] font-semibold text-[var(--tessera-text)]">
+          {block.title}
+        </h2>
+        {block.link ? (
+          <Link
+            href={block.link.href as "/configurer/modeles"}
+            className="inline-flex items-center gap-1 text-[0.68rem] text-[#5fd0c6] hover:text-white"
+          >
+            {block.link.label} <ChevronRight className="h-3 w-3" />
+          </Link>
+        ) : null}
+      </div>
       <div className="grid gap-x-12 gap-y-2 lg:grid-cols-2">
         <FieldColumn fields={block.left} ctx={ctx} compact={compact} />
         <FieldColumn fields={block.right} ctx={ctx} compact={compact} />

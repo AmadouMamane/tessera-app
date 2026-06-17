@@ -401,11 +401,16 @@ def compute_agent_configurations() -> dict[str, object]:
     return {
         "title": "Configurations",
         "subtitle": "Réglages de cet agent : identité, modèle, comportement et statut.",
+        # In production, changes are load-bearing + regulated: the inline save is
+        # replaced by a governed "propose change" flow (RBAC + versioned event +
+        # audit via Release Control). Direct inline save stays for local/staging.
+        "governed": get_settings().is_production(),
         "actions": {
             "save": "Enregistrer les modifications",
             "saved": "Modifications enregistrées",
             "reset": "Annuler",
             "more": "...",
+            "propose": "Proposer un changement",
         },
         "identity": {
             "title": "Identité",
@@ -445,6 +450,12 @@ def compute_agent_configurations() -> dict[str, object]:
                     "select",
                 ),
             ],
+            # The model itself is read-only here: it is defined (and approved) in
+            # the CONFIGURER model registry, never typed free-text on this page.
+            "link": {
+                "label": "Gérer dans le registre des modèles",
+                "href": "/configurer/modeles",
+            },
         },
         "behavior": {
             "title": "Comportement",

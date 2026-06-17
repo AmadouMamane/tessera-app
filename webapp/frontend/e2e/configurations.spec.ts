@@ -135,3 +135,11 @@ test("the 'Outils autorisés' control opens the real allowed-tools list", async 
   await menu.getByRole("link", { name: /Gérer dans les garde-fous/ }).click();
   await page.waitForURL(/\/agent\/garde-fous/, { timeout: 15_000 });
 });
+
+test("the Modèle section links to the model registry (define = CONFIGURER)", async ({ page }) => {
+  const model = page.locator("div", { hasText: "Modèle principal" }).first();
+  await expect(model).toBeVisible();
+  await page.getByRole("link", { name: /Gérer dans le registre des modèles/ }).click();
+  await page.waitForURL(/\/configurer\/modeles/, { timeout: 15_000 });
+  expect(page.url()).toContain("/configurer/modeles");
+});
