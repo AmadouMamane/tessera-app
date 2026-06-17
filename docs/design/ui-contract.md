@@ -306,3 +306,28 @@ assembled from *real* corpus excerpts) shown before the operator interacts — l
 are real; flagged **à confirmer** whether to start from a real empty console instead.
 (2) The XT-01 trace is a **tab** in the inspector, not the normative's persistent 3rd
 column. Layout deviation, logged.
+
+**Évaluations vs eval-gate-policy (image 09 + binding policy, conformance pass).** The
+binding `eval-gate-policy.md` **primes over the image** for verdict/numbers. The page
+is real (gate from a real llama3.2:3b failure-catalogue run; verdict = BLOQUÉ par le
+socle on 3 real PII failures; score 6,6/10). Verified policy invariants that **hold**:
+- **Verdict is the headline wording** — relabelled to policy terms `BLOQUÉ par le socle`
+  / `BLOQUÉ (domaine)` / `PASSE` (was "Bloqué (socle critique)" / "Validé").
+- **Aggregate colour tied to conformity** — the verdict card is red when blocked; the
+  global score (6,6) is neutral, not green.
+- **Non-concluant = bloquant** — the two-level gate already treats critical failure as
+  blocking (no "pass" credit for non-executed).
+- **Case-distinct critical breakdown (§6)** — added `Critiques bloquants : N (dont Tier 0
+  non-dérogeable : M) · Sous dérogation : 0`. **T0 ∩ dérogations = ∅** holds vacuously:
+  the 3 PII failures are marked **Tier 0 non-dérogeable** and `waived = 0` (no waiver
+  store), so no `Dérogé actif` can ever appear on a socle/T0 case.
+- **Numeric coherence** — 41 cas = 35 domaine + 6 socle ; 27 réussis (24 domaine + 3) /
+  14 échoués (11 + 3 critiques) reconciles; taux 66% ↔ score 6,6.
+**Major deviation (NOT built — logged, follow-up):** the full **three-tier** model
+(T0/T1/T2 as first-class), **governed waiver objects** (S1 event, RBAC, expiry,
+compensating controls), the **structural Venn** (membership summing to totals, distinct
+from the non-concluant count), and **per-(cas × langue)** gating. The shipped gate is
+**two-level** (socle critique zéro-tolérance + domaine ≥ `min_pass_rate`), which is
+policy-*conservative* (no waiver ⇒ nothing wrongly unblocked). Tier 0 is detected
+structurally from the case id (pii/regulatory) pending a curated, versioned socle set.
+**À confirmer** : socle curé explicite + waiver store + Venn + cas×langue.

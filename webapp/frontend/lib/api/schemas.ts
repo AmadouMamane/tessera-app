@@ -4191,6 +4191,13 @@ export const AgentEvaluationsSchema = z.object({
       standard_passed: z.number(),
       standard_total: z.number(),
       label: z.string(),
+      breakdown: z
+        .object({
+          critical_blocking: z.number(),
+          tier0_non_derogeable: z.number(),
+          waived: z.number(),
+        })
+        .optional(),
     })
     .optional(),
   judge: z

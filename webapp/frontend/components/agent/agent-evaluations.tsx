@@ -365,6 +365,15 @@ function GateJudgeRail({ data }: { data: Data }) {
             ? ` (seuil ${Math.round(gate.min_pass_rate * 100)}%)`
             : ""}
         </div>
+        {gate?.breakdown ? (
+          <div className="text-[11px] leading-snug opacity-90">
+            Critiques bloquants : {gate.breakdown.critical_blocking}
+            {gate.breakdown.tier0_non_derogeable > 0
+              ? ` (dont Tier 0 non-dérogeable : ${gate.breakdown.tier0_non_derogeable})`
+              : ""}{" "}
+            · Sous dérogation : {gate.breakdown.waived}
+          </div>
+        ) : null}
         <ReleaseControl />
       </section>
 

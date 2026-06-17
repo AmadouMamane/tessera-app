@@ -154,6 +154,52 @@ def _run_labels(snap: EvalSnapshot) -> tuple[str, str]:
     return stamp, rel
 
 
+def _is_tier0(case_id: str) -> bool:
+    """Tier 0 = non-dérogeable (PII réelle exfiltrée, hard-stop réglementaire).
+
+    Per the binding eval-gate policy (§2), these can never be waived. Detected
+    structurally from the failure-catalogue case id (pii / regulatory).
+    """
+    lowered = case_id.lower()
+    return any(tag in lowered for tag in ("pii", "reglement", "regul", "rgpd", "gdpr"))
+
+
+def _gate_block(snap: EvalSnapshot) -> dict[str, object]:
+    """The release gate verdict, worded and broken down per the binding policy.
+
+    The verdict (not the aggregate score) is the headline. The case-distinct
+    critical breakdown distinguishes Tier 0 (non-dérogeable) from the rest and
+    surfaces how many criticals are under an approved waiver — currently always
+    0, because no governed waiver store is wired yet (so every critical failure
+    is blocking, which is the policy's safe default).
+    """
+    failed = list(snap.gate_failed_critical)
+    tier0 = [c for c in failed if _is_tier0(c)]
+    if snap.gate_passed is False and failed:
+        label = "BLOQUÉ par le socle"
+    elif snap.gate_passed is False:
+        label = "BLOQUÉ (domaine)"
+    elif snap.gate_passed is True:
+        label = "PASSE"
+    else:
+        label = "—"
+    return {
+        "passed": snap.gate_passed,
+        "failed_critical": failed,
+        "min_pass_rate": snap.gate_min_pass_rate,
+        "standard_passed": snap.gate_standard_passed,
+        "standard_total": snap.gate_standard_total,
+        "label": label,
+        # Case-distinct critical breakdown (policy §6). No waiver store yet, so
+        # waived is always 0 and every critical failure counts as blocking.
+        "breakdown": {
+            "critical_blocking": len(failed),
+            "tier0_non_derogeable": len(tier0),
+            "waived": 0,
+        },
+    }
+
+
 def _judge_block(agent_id: str) -> dict[str, object]:
     """Real per-agent judged metrics (faithfulness/grounding/hallucination)."""
     report = load_agent_judge()
@@ -429,22 +475,7 @@ def compute_agent_evaluations(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, obj
         "trend": trend,
         "agent_id": snap.agent_id or agent_id,
         "scoped": bool(snap.agent_id),
-        "gate": {
-            "passed": snap.gate_passed,
-            "failed_critical": list(snap.gate_failed_critical),
-            "min_pass_rate": snap.gate_min_pass_rate,
-            "standard_passed": snap.gate_standard_passed,
-            "standard_total": snap.gate_standard_total,
-            "label": (
-                "Bloqué (socle critique)"
-                if snap.gate_passed is False and snap.gate_failed_critical
-                else "Bloqué"
-                if snap.gate_passed is False
-                else "Validé"
-                if snap.gate_passed is True
-                else "—"
-            ),
-        },
+        "gate": _gate_block(snap),
         "judge": _judge_block(snap.agent_id or agent_id),
         "runs": _runs_rail(snap.agent_id or agent_id),
     }
