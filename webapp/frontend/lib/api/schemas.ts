@@ -3497,6 +3497,15 @@ export const AgentConfigurationsSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),
   subtitle: z.string().optional(),
+  governance_banner: z.string().optional(),
+  definition: z
+    .object({
+      title: z.string(),
+      subtitle: z.string(),
+      link: z.object({ label: z.string(), href: z.string() }),
+      rows: z.array(z.object({ label: z.string(), value: z.string() })),
+    })
+    .optional(),
   actions: z
     .object({
       save: z.string(),

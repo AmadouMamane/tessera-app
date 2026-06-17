@@ -422,6 +422,37 @@ def _slider(key: str, label: str, value: float) -> dict[str, object]:
     }
 
 
+def _definition_block(agent_slug: str) -> dict[str, object]:
+    """The read-only *definition* (catalogue) this agent binds to.
+
+    Sourced from the governed registry package (``agents.yaml``) — never typed
+    free-text. This is the ``define`` half of define/choose/govern: the agent
+    *chooses* and *tunes* this definition via the editable instance sections.
+    """
+    from tessera.agent.registry import get_agent
+
+    try:
+        agent = get_agent(agent_slug)
+    except KeyError:
+        agent = get_agent(DEFAULT_AGENT_ID)
+    return {
+        "title": "Définition (catalogue)",
+        "subtitle": "lecture seule",
+        "link": {
+            "label": "Voir la définition dans CONFIGURER → Paramètres",
+            "href": "/configurer/parametres",
+        },
+        "rows": [
+            {"label": "Nom de la définition", "value": agent.name},
+            {"label": "Propriétaire", "value": agent.owner},
+            {"label": "Modèle de définition", "value": agent.model},
+            {"label": "Langue par défaut", "value": _lang_label(agent.default_language)},
+            {"label": "Politique de garde-fous", "value": agent.guardrails},
+            {"label": "Jeu d'évaluation", "value": agent.eval_set},
+        ],
+    }
+
+
 def compute_agent_configurations(agent_slug: str = DEFAULT_AGENT_ID) -> dict[str, object]:
     """Return the active agent configuration payload (real + editable overrides).
 
@@ -456,10 +487,19 @@ def compute_agent_configurations(agent_slug: str = DEFAULT_AGENT_ID) -> dict[str
     default_lang_label = _lang_label(_registry_default_language(agent_slug, settings))
     lang_value = str(_load_overrides(agent_slug).get(_LANG_KEY) or default_lang_label)
     archived = bool(cfg["archived"])
+    definition = _definition_block(agent_slug)
 
     return {
         "title": "Configurations",
         "subtitle": "Réglages de cet agent : identité, modèle, comportement et statut.",
+        # define / choose / govern: the registry package (agents.yaml) is the
+        # read-only *definition* this agent binds to; the sections below are the
+        # editable *instance* overrides. In production every change is governed.
+        "definition": definition,
+        "governance_banner": (
+            "Cette configuration s'applique uniquement à cet agent. Toute modification "
+            "en environnement de production est gouvernée, versionnée et auditée."
+        ),
         # In production, changes are load-bearing + regulated: the inline save is
         # replaced by a governed "propose change" flow (RBAC + versioned event +
         # audit via Release Control). Direct inline save stays for local/staging.

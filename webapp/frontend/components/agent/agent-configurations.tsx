@@ -101,6 +101,7 @@ export function AgentConfigurations() {
         onSave={() => save.mutate(draft)}
         onReset={() => setDraft({})}
       />
+      <DefinitionBanner data={data} />
       <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className="min-w-0 overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[linear-gradient(180deg,rgba(8,28,48,0.94),rgba(5,20,35,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
           <FieldSection block={data.identity} ctx={ctx} />
@@ -122,6 +123,50 @@ export function AgentConfigurations() {
           <LinksPanel data={data} />
         </aside>
       </div>
+    </div>
+  );
+}
+
+/** Define/choose/govern framing: the read-only catalogue definition this agent
+ *  binds to + the production-governance banner. */
+function DefinitionBanner({ data }: { data: Data }) {
+  const def = data.definition;
+  return (
+    <div className="flex flex-col gap-2.5">
+      {def ? (
+        <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-[0.82rem] font-semibold text-[var(--tessera-text)]">
+              {def.title}
+              <span className="rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-0.5 text-[0.58rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                {def.subtitle}
+              </span>
+            </h2>
+            <Link
+              href={def.link.href as Route}
+              className="flex items-center gap-1 text-[0.7rem] text-[#b9a6ff] hover:text-white"
+            >
+              {def.link.label} <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[0.72rem] md:grid-cols-3">
+            {def.rows.map((r) => (
+              <div key={r.label} className="flex items-center justify-between gap-2">
+                <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
+                <dd className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+                  {r.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
+      {data.governance_banner ? (
+        <div className="flex items-start gap-2 rounded-lg border border-[#1f3a5f]/60 bg-[#0e1f33]/40 px-3 py-2.5 text-[0.72rem] text-[var(--tessera-text-muted)]">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
+          <span>{data.governance_banner}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

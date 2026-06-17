@@ -249,3 +249,15 @@ fabricated number — logged here as the only data deviations:
 - **Utilisateurs servis** — there is no per-client identity on a transcript turn
   (no `user_id` column); seeding distinct client ids is a cheap **follow-up**. The
   count is left empty rather than relabelling `conversations` as `utilisateurs`.
+
+**Configurations define/instance (image 04, conformance pass).** Added the
+define/choose/govern framing the normative shows: a read-only **`Définition
+(catalogue)`** block sourced from the governed registry package (`agents.yaml` —
+name/owner/model/langue/garde-fous/jeu d'éval, never free-text) + a production
+**governance banner** + a `Voir la définition dans CONFIGURER` link. The editable
+sections below are the **instance** overrides (already real + durably saved).
+Deviation: rendered as *Définition on top + Instance below* (one main column + right
+sidebar), not the normative's strict two-column *Définition left / Instance right* —
+the existing editable form was extended in place, not rebuilt. The CONFIGURER link
+points to `/configurer/parametres` (there is no dedicated `/configurer/configurations`
+catalogue page yet). **À confirmer** demain : faut-il la vraie disposition 2 colonnes.
