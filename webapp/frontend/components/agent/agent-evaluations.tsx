@@ -14,6 +14,8 @@ import {
   Play,
   Plus,
   Search,
+  Shield,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Target,
@@ -219,6 +221,8 @@ export function AgentEvaluations() {
 
       <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
 
+      <VerdictBanner data={data} />
+
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("realtime")}
@@ -329,56 +333,88 @@ function ReleaseControl() {
   );
 }
 
-function GateJudgeRail({ data }: { data: Data }) {
+/** Release-gate verdict as the page headline (policy §6: the verdict — not the
+ *  aggregate score — is the title). Full-width banner, colour tied to conformity. */
+function VerdictBanner({ data }: { data: Data }) {
   const gate = data.gate;
+  if (!gate) return null;
+  const blocked = gate.passed === false;
+  const passed = gate.passed === true;
+  const tone = blocked
+    ? "border-[#e0566f] bg-[#2a1320]"
+    : passed
+      ? "border-[#3fb37f] bg-[#10231b]"
+      : "border-[var(--tessera-border)] bg-[var(--tessera-surface)]";
+  const labelColor = blocked
+    ? "text-[#ff9bb0]"
+    : passed
+      ? "text-[#7fe3b3]"
+      : "text-[var(--tessera-text)]";
+  const bd = gate.breakdown;
+  return (
+    <section className={`flex flex-col gap-2 rounded-lg border p-3.5 ${tone}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {blocked ? (
+            <ShieldAlert className="h-6 w-6 shrink-0 text-[#ff9bb0]" />
+          ) : passed ? (
+            <ShieldCheck className="h-6 w-6 shrink-0 text-[#7fe3b3]" />
+          ) : (
+            <Shield className="h-6 w-6 shrink-0 text-[var(--tessera-text-muted)]" />
+          )}
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              Verdict du gate de release
+            </p>
+            <p className={`text-[1.15rem] font-semibold leading-tight ${labelColor}`}>
+              {gate.label}
+            </p>
+          </div>
+        </div>
+        <ReleaseControl />
+      </div>
+      <div className="grid gap-2 text-[11px] sm:grid-cols-3">
+        <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
+          <span className="text-[var(--tessera-text-muted)]">Socle critique (zéro tolérance)</span>
+          <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
+            {gate.failed_critical.length > 0
+              ? `Échec : ${gate.failed_critical.join(", ")}`
+              : "Conforme"}
+          </p>
+        </div>
+        <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
+          <span className="text-[var(--tessera-text-muted)]">Gate domaine</span>
+          <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
+            {gate.standard_passed}/{gate.standard_total}
+            {typeof gate.min_pass_rate === "number"
+              ? ` (seuil ${Math.round(gate.min_pass_rate * 100)}%)`
+              : ""}
+          </p>
+        </div>
+        <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
+          <span className="text-[var(--tessera-text-muted)]">
+            Critiques (grain cas distinct)
+          </span>
+          <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
+            {bd ? `${bd.critical_blocking} bloquants` : "—"}
+            {bd && bd.tier0_non_derogeable > 0 ? ` · Tier 0 : ${bd.tier0_non_derogeable}` : ""}
+            {bd ? ` · ${bd.waived} dérogé` : ""}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GateJudgeRail({ data }: { data: Data }) {
   const judge = data.judge;
   const runs = data.runs;
-  if (!gate && !judge && !runs) return null;
-
-  const blocked = gate?.passed === false;
-  const passed = gate?.passed === true;
-  const gateTone = blocked
-    ? "border-[#e0566f] bg-[#2a1320] text-[#ff9bb0]"
-    : passed
-      ? "border-[#3fb37f] bg-[#10231b] text-[#7fe3b3]"
-      : "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text-muted)]";
+  if (!judge && !runs) return null;
 
   return (
     <div className="grid gap-2.5 xl:grid-cols-12">
-      {/* Eval-gate verdict (two-level) */}
-      <section
-        className={`flex min-w-0 flex-col gap-1.5 rounded-lg border p-3 xl:col-span-4 ${gateTone}`}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] uppercase tracking-wide opacity-80">Eval-gate</span>
-          <span className="text-xs font-semibold">{gate?.label ?? "—"}</span>
-        </div>
-        <div className="text-[11px] leading-snug opacity-90">
-          Socle critique{" "}
-          {gate && gate.failed_critical.length > 0
-            ? `— échec : ${gate.failed_critical.join(", ")}`
-            : "OK (zéro tolérance)"}
-        </div>
-        <div className="text-[11px] opacity-75">
-          Domaine {gate?.standard_passed ?? 0}/{gate?.standard_total ?? 0}
-          {typeof gate?.min_pass_rate === "number"
-            ? ` (seuil ${Math.round(gate.min_pass_rate * 100)}%)`
-            : ""}
-        </div>
-        {gate?.breakdown ? (
-          <div className="text-[11px] leading-snug opacity-90">
-            Critiques bloquants : {gate.breakdown.critical_blocking}
-            {gate.breakdown.tier0_non_derogeable > 0
-              ? ` (dont Tier 0 non-dérogeable : ${gate.breakdown.tier0_non_derogeable})`
-              : ""}{" "}
-            · Sous dérogation : {gate.breakdown.waived}
-          </div>
-        ) : null}
-        <ReleaseControl />
-      </section>
-
       {/* Per-agent judged metrics (real local judge) */}
-      <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-4">
+      <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-6">
         <div className="flex items-center justify-between">
           <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             Métriques jugées
@@ -406,7 +442,7 @@ function GateJudgeRail({ data }: { data: Data }) {
       </section>
 
       {/* ER-01 rail: per-agent run history */}
-      <section className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-4">
+      <section className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-6">
         <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
           {runs?.title ?? "Historique des runs"}
         </span>
