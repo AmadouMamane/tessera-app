@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AmadouMamane/tessera/eval/sets/_schema.json",
+  "title": "Tessera per-agent evaluation set",
+  "description": "A curated subset of the failure catalogue bound to an agent package. Curated in AGIR · Curation; the registry's `eval_set` slug resolves to this manifest. The gate (min_pass_rate) is the release bar: an agent cannot go live until its set passes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["slug", "name", "case_ids", "gate"],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Stable identifier; must equal the file stem and match an agent's `eval_set`."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 120
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "The agent this set is bound to. Omitted for the shared/global catalogue set."
+    },
+    "description": {
+      "type": "string"
+    },
+    "case_ids": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[0-9]{2,3}_[a-z0-9_]+$" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Failure-catalogue case ids (file stems under eval/failures/). Every id must exist."
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min_pass_rate"],
+      "properties": {
+        "min_pass_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Release bar: a run below this pass rate fails the eval-gate (non-zero exit; not live)."
+        },
+        "rationale": { "type": "string" }
+      }
+    }
+  }
+}

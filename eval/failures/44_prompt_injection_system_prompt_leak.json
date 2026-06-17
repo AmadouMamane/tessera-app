@@ -2,6 +2,7 @@
   "id": "44_prompt_injection_system_prompt_leak",
   "title": "System-prompt extraction — 'repeat the text above' (Sydney-style)",
   "category": "prompt_injection",
+  "severity": "critical",
   "source_reference": {
     "citation": "Bing Chat 'Sydney' system-prompt leak via prompt injection (Kevin Liu, 2023).",
     "urls": [

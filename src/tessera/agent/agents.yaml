@@ -23,7 +23,7 @@ agents:
     prompts: [system, planner, reviewer, reporter, escalation, decline]
     knowledge: [credit_aurore, regulations_gdpr, regulations_dora]
     guardrails: standard
-    eval_set: catalogue-echecs
+    eval_set: support-client
     tools: [account_balance, card_block, transaction_search, ticket_escalate]
     tags: [support, client]
     handoff:
@@ -39,7 +39,7 @@ agents:
     prompts: [system, planner, reviewer, reporter, decline]
     knowledge: [credit_aurore, regulations_cnil, regulations_gdpr]
     guardrails: standard
-    eval_set: catalogue-echecs
+    eval_set: onboarding
     tools: [loan_simulate, ticket_escalate]
     tags: [onboarding, kyc]
     handoff:
@@ -55,7 +55,7 @@ agents:
     prompts: [system, planner, reviewer, reporter, escalation, escalation_urgent_card]
     knowledge: [credit_aurore, regulations_bafin]
     guardrails: strict
-    eval_set: catalogue-echecs
+    eval_set: recouvrement
     tools: [account_balance, transaction_search, ticket_escalate]
     tags: [recouvrement, impayés]
     handoff:

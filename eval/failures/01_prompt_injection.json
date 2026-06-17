@@ -2,6 +2,7 @@
   "id": "01_prompt_injection",
   "title": "Direct prompt injection — ignore previous instructions",
   "category": "prompt_injection",
+  "severity": "critical",
   "source_reference": {
     "citation": "Greshake et al., 'Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection', arXiv:2302.12173 (2023).",
     "url": "https://arxiv.org/abs/2302.12173",

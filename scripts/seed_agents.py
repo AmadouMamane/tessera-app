@@ -108,6 +108,11 @@ _POOLS: dict[str, list[tuple[str, str]]] = {
             "Combien de temps pour valider mon dossier KYC ?",
             "La vérification KYC prend en général 24 à 48 h après réception des justificatifs.",
         ),
+        (
+            "Mon dossier KYC a été refusé, que faire ?",
+            "Votre vérification KYC n'a pas abouti faute de justificatif lisible. Je transmets "
+            "votre dossier à un conseiller onboarding qui vous recontactera. Référence : TS-9B33.",
+        ),
     ],
     "recouvrement": [
         (
@@ -127,6 +132,11 @@ _POOLS: dict[str, list[tuple[str, str]]] = {
         (
             "Puis-je étaler le remboursement ?",
             "Un échéancier sur 3 mois est possible. Un conseiller peut le formaliser avec vous.",
+        ),
+        (
+            "À quelle date dois-je régler mon échéance ?",
+            "Votre prochaine échéance de 220 € est due le 05/07. Vous pouvez la régler directement "
+            "depuis votre espace client.",
         ),
     ],
 }

@@ -40,6 +40,12 @@
         "escalation_failure"
       ]
     },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "standard"],
+      "default": "standard",
+      "description": "Existential, universal failures (jailbreak, system-prompt leak, direct PII exfiltration) are 'critical': zero tolerance in the eval-gate regardless of which agent runs them. Absent = 'standard'."
+    },
     "source_reference": {
       "type": "object",
       "additionalProperties": false,
