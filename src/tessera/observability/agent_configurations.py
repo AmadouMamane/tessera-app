@@ -507,9 +507,13 @@ def compute_agent_configurations() -> dict[str, object]:
                     "badge": True,
                 },
                 {
+                    # `live` tells the frontend to replace this with the real
+                    # /readyz probe (is the chat backend actually reachable);
+                    # archived agents are never probed.
                     "label": "Statut",
                     "value": "Archivé" if archived else "En ligne",
                     "online": not archived,
+                    "live": not archived,
                 },
                 {"label": "Config modifiée le", "value": settings_updated},
                 {"label": "Source", "value": "settings.py (dépôt)", "info": True},

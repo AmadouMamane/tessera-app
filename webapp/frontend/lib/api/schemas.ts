@@ -3546,6 +3546,7 @@ export const AgentConfigurationsSchema = z.object({
           badge: z.boolean().optional(),
           online: z.boolean().optional(),
           info: z.boolean().optional(),
+          live: z.boolean().optional(),
         }),
       ),
     })

@@ -7,6 +7,9 @@ import { type Page, expect, test } from "@playwright/test";
 const PAGE = "/fr/agent/configurations";
 
 test.use({ viewport: { width: 1672, height: 1000 } });
+// These tests mutate + restore one shared durable store (agent_config.json) and
+// the live readiness probe, so they must not race each other across workers.
+test.describe.configure({ mode: "serial" });
 
 async function login(page: Page) {
   await page.goto("/fr/login");
@@ -16,8 +19,7 @@ async function login(page: Page) {
   await page.waitForURL((url) => !url.pathname.endsWith("/login"), { timeout: 15_000 });
 }
 
-const save = (page: Page) =>
-  page.getByRole("button", { name: "Enregistrer les modifications" });
+const save = (page: Page) => page.getByRole("button", { name: "Enregistrer les modifications" });
 
 test.beforeEach(async ({ page }) => {
   await login(page);
@@ -102,4 +104,24 @@ test("the parallel-tools toggle flips and enables save", async ({ page }) => {
   // Cancel the pending edit (no persistence) to leave the profile clean.
   await page.getByRole("button", { name: "Annuler" }).click();
   await expect(toggle).toHaveAttribute("aria-checked", "true");
+});
+
+test("the agent status reflects the real /readyz probe, not a literal", async ({
+  page,
+  context,
+}) => {
+  const status = page.locator("section", { hasText: "Statut de l'agent" });
+  // Nominal: backend reachable -> En ligne.
+  await expect(status.getByText("En ligne")).toBeVisible();
+  // Force the readiness probe to fail -> the row flips to the real degraded state.
+  await context.route("**/api/readyz", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: '{"status":"llm_unreachable","version":"x"}',
+    }),
+  );
+  await page.reload();
+  await expect(status.getByText("LLM injoignable")).toBeVisible({ timeout: 15_000 });
+  await context.unroute("**/api/readyz");
 });

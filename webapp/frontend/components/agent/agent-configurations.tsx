@@ -19,7 +19,11 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Link } from "@/i18n/navigation";
-import { fetchAgentConfigurations, saveAgentConfigurations } from "@/lib/api/client";
+import {
+  fetchAgentConfigurations,
+  fetchReadiness,
+  saveAgentConfigurations,
+} from "@/lib/api/client";
 import type { AgentConfigurations as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
@@ -295,8 +299,7 @@ const FIELD_BOX =
   "relative flex items-center rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-3 text-[0.78rem] text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]";
 // Editable controls get a clear interactive affordance (hover + focus glow);
 // read-only fields stay flat + dimmed so the two are visually distinguishable.
-const EDIT_BOX =
-  `${FIELD_BOX} transition-colors hover:border-[#5fd0c6]/45 focus-within:border-[#5fd0c6]/70 focus-within:ring-1 focus-within:ring-[#5fd0c6]/25`;
+const EDIT_BOX = `${FIELD_BOX} transition-colors hover:border-[#5fd0c6]/45 focus-within:border-[#5fd0c6]/70 focus-within:ring-1 focus-within:ring-[#5fd0c6]/25`;
 const READONLY_BOX =
   "relative flex items-center rounded-md border border-dashed border-[var(--tessera-border)]/70 bg-[rgba(5,20,35,0.4)] px-3 text-[0.78rem] text-[var(--tessera-text-muted)]";
 
@@ -590,7 +593,18 @@ function Tags({
 
 function Status({ data }: { data: Data }) {
   const s = data.status;
+  // Real liveness: the /readyz probe verifies the chat backend is reachable
+  // (503/error when the LLM is down). Parallel + cached, so it never blocks the
+  // page; the row marked `live` is replaced with this real signal.
+  const readiness = useQuery({
+    queryKey: ["agent-readiness"],
+    queryFn: ({ signal }) => fetchReadiness(signal),
+    retry: false,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
   if (!s) return null;
+  const liveReady = !readiness.isError && readiness.data?.status === "ready";
   return (
     <Panel>
       <div className="mb-2.5 flex items-center gap-3 border-b border-[var(--tessera-border)] pb-2">
@@ -609,16 +623,36 @@ function Status({ data }: { data: Data }) {
         </span>
       </div>
       <div className="grid gap-2">
-        {s.rows.map((row) => (
-          <div key={row.label} className="grid grid-cols-[1fr_auto] gap-3 text-[0.72rem]">
-            <span className="text-[var(--tessera-text-muted)]">{row.label}</span>
-            <span className="flex items-center gap-2 text-right text-[var(--tessera-text)]">
-              {row.badge ? <Badge>{row.value}</Badge> : row.value}
-              {row.online ? <span className="h-2 w-2 rounded-full bg-emerald-400" /> : null}
-              {row.info ? <Info className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" /> : null}
-            </span>
-          </div>
-        ))}
+        {s.rows.map((row) => {
+          // Replace the placeholder liveness with the real readiness probe.
+          const online = row.live ? liveReady : row.online;
+          const value = row.live
+            ? readiness.isLoading
+              ? "Verification..."
+              : liveReady
+                ? "En ligne"
+                : "LLM injoignable"
+            : row.value;
+          return (
+            <div key={row.label} className="grid grid-cols-[1fr_auto] gap-3 text-[0.72rem]">
+              <span className="text-[var(--tessera-text-muted)]">{row.label}</span>
+              <span className="flex items-center gap-2 text-right text-[var(--tessera-text)]">
+                {row.badge ? (
+                  <Badge>{value}</Badge>
+                ) : (
+                  <span className={cn(row.live && !online && "text-red-300")}>{value}</span>
+                )}
+                {online ? <span className="h-2 w-2 rounded-full bg-emerald-400" /> : null}
+                {row.live && !online && !readiness.isLoading ? (
+                  <span className="h-2 w-2 rounded-full bg-red-400" />
+                ) : null}
+                {row.info ? (
+                  <Info className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+                ) : null}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </Panel>
   );
