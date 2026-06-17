@@ -1,0 +1,63 @@
+# Agent registry — the governed fleet (multi-agent Phase 1).
+#
+# Each agent is a governed *package*, not just an id: it BINDS reusable building
+# blocks from the CONFIGURER catalogue (model, prompts, knowledge, guardrails,
+# eval set, tool permissions) — it never redefines them (define/choose/govern).
+# The `handoff` block is the governed agent graph: which agents this one may hand
+# to / receive from. Slugs here are the URL segments (`/agents/<id>/...`) and the
+# `agent_id` stamped on every event, metric and message.
+#
+# This file is the source of truth read by `tessera.agent.registry`. The seed
+# (`scripts/seed_agents.py`) populates each agent's history; per-agent editable
+# overrides live in the durable config store, layered on top of the bindings here.
+
+default: support-client
+
+agents:
+  - id: support-client
+    name: "Support Client"
+    description: "SAV bancaire : solde, opérations, blocage de carte, questions réglementaires."
+    owner: "Équipe Support"
+    default_language: fr
+    model: "llama3.2:3b"
+    prompts: [system, planner, reviewer, reporter, escalation, decline]
+    knowledge: [credit_aurore, regulations_gdpr, regulations_dora]
+    guardrails: standard
+    eval_set: catalogue-echecs
+    tools: [account_balance, card_block, transaction_search, ticket_escalate]
+    tags: [support, client]
+    handoff:
+      to: [onboarding, recouvrement]
+      from: [onboarding, recouvrement]
+
+  - id: onboarding
+    name: "Onboarding"
+    description: "Ouverture de compte : éligibilité, pièces justificatives, parcours KYC."
+    owner: "Équipe Produit"
+    default_language: fr
+    model: "llama3.2:3b"
+    prompts: [system, planner, reviewer, reporter, decline]
+    knowledge: [credit_aurore, regulations_cnil, regulations_gdpr]
+    guardrails: standard
+    eval_set: catalogue-echecs
+    tools: [loan_simulate, ticket_escalate]
+    tags: [onboarding, kyc]
+    handoff:
+      to: [support-client]
+      from: [support-client]
+
+  - id: recouvrement
+    name: "Recouvrement"
+    description: "Relances et impayés : échéanciers, rappels, escalade conseiller."
+    owner: "Équipe Conformité"
+    default_language: fr
+    model: "llama3.2:3b"
+    prompts: [system, planner, reviewer, reporter, escalation, escalation_urgent_card]
+    knowledge: [credit_aurore, regulations_bafin]
+    guardrails: strict
+    eval_set: catalogue-echecs
+    tools: [account_balance, transaction_search, ticket_escalate]
+    tags: [recouvrement, impayés]
+    handoff:
+      to: [support-client]
+      from: [support-client]

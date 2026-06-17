@@ -809,7 +809,7 @@ async def observability_agent_configurations_save(
     unknown = set(body.changes) - agent_configurations_mod.available_config_keys()
     if unknown:
         raise HTTPException(status_code=422, detail=f"unknown keys: {sorted(unknown)}")
-    agent_configurations_mod.set_agent_config(body.changes)
+    agent_configurations_mod.set_agent_config(body.changes, agent_id)
     return {
         "available": True,
         **agent_configurations_mod.compute_agent_configurations(agent_id),

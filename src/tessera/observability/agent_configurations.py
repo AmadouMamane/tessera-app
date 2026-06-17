@@ -109,7 +109,12 @@ def _state_path() -> Path:
     return get_settings().guard.audit_file.parent / "agent_config.json"
 
 
-def _load_overrides() -> dict[str, Any]:
+def _load_all_overrides() -> dict[str, Any]:
+    """Read the whole durable override store, keyed by agent_id.
+
+    Backward-compat: a legacy *flat* file (config keys at the top level, written
+    before the multi-agent split) is read as the default agent's overrides.
+    """
     path = _state_path()
     if not path.exists():
         return {}
@@ -117,14 +122,26 @@ def _load_overrides() -> dict[str, Any]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return {}
-    return data if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        return {}
+    # Legacy flat shape -> nest under the default agent.
+    if data and any(k in available_config_keys() for k in data):
+        return {DEFAULT_AGENT_ID: data}
+    return data
 
 
-def _save_overrides(state: dict[str, Any]) -> None:
+def _load_overrides(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, Any]:
+    bucket = _load_all_overrides().get(agent_id, {})
+    return bucket if isinstance(bucket, dict) else {}
+
+
+def _save_overrides(state: dict[str, Any], agent_id: str = DEFAULT_AGENT_ID) -> None:
     path = _state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
+    store = _load_all_overrides()
+    store[agent_id] = state
     path.write_text(
-        json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8"
+        json.dumps(store, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8"
     )
 
 
@@ -169,12 +186,12 @@ def _load_change_log() -> list[dict[str, Any]]:
     return data if isinstance(data, list) else []
 
 
-def _record_change(keys: list[str]) -> None:
+def _record_change(keys: list[str], agent_id: str = DEFAULT_AGENT_ID) -> None:
     """Append a real, timestamped entry for a config save (most recent first)."""
     if not keys:
         return
     entries = _load_change_log()
-    entries.insert(0, {"at": datetime.now(_PARIS).isoformat(), "keys": keys})
+    entries.insert(0, {"at": datetime.now(_PARIS).isoformat(), "agent_id": agent_id, "keys": keys})
     path = _history_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -208,9 +225,9 @@ def _coerce(key: str, value: Any) -> Any:
     return str(value)
 
 
-def set_agent_config(changes: Mapping[str, Any]) -> None:
-    """Persist a set of agent-profile overrides and record the change durably."""
-    state = _load_overrides()
+def set_agent_config(changes: Mapping[str, Any], agent_id: str = DEFAULT_AGENT_ID) -> None:
+    """Persist agent-profile overrides for one agent and record the change durably."""
+    state = _load_overrides(agent_id)
     allowed = available_config_keys()
     changed: list[str] = []
     for key, value in changes.items():
@@ -220,14 +237,48 @@ def set_agent_config(changes: Mapping[str, Any]) -> None:
         if state.get(key) != coerced:
             changed.append(key)
         state[key] = coerced
-    _save_overrides(state)
-    _record_change(changed)
+    _save_overrides(state, agent_id)
+    _record_change(changed, agent_id)
 
 
-def _effective() -> dict[str, Any]:
-    """Defaults merged with the durable overrides."""
+def _registry_base(agent_id: str) -> dict[str, Any]:
+    """Identity bindings the registry pins for ``agent_id`` (override _DEFAULTS).
+
+    The registry is the source of truth for who an agent *is* (name, owner,
+    description, tags, default language); editable overrides layer on top. Unknown
+    agents (e.g. before the registry is populated) fall back to plain defaults.
+    """
+    try:
+        from tessera.agent.registry import get_agent
+
+        agent = get_agent(agent_id)
+    except (KeyError, OSError, ValueError):
+        return {}
+    return {
+        "name": agent.name,
+        "description": agent.description,
+        "owner": agent.owner,
+        "tags": list(agent.tags),
+    }
+
+
+def _registry_default_language(agent_id: str, settings: Any) -> str:
+    """The agent's bound default-language code, else the global setting."""
+    try:
+        from tessera.agent.registry import get_agent
+
+        return get_agent(agent_id).default_language
+    except (KeyError, OSError, ValueError):
+        return str(settings.default_language.value)
+
+
+def _effective(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, Any]:
+    """Defaults <- registry bindings <- durable per-agent overrides."""
     merged = dict(_DEFAULTS)
-    for key, value in _load_overrides().items():
+    for key, value in _registry_base(agent_id).items():
+        if key in merged:
+            merged[key] = value
+    for key, value in _load_overrides(agent_id).items():
         if key in merged:
             merged[key] = _coerce(key, value)
     return merged
@@ -379,7 +430,7 @@ def compute_agent_configurations(agent_slug: str = DEFAULT_AGENT_ID) -> dict[str
     internal display id ``agent_id`` (``tessera-assistant-<env>``).
     """
     settings = get_settings()
-    cfg = _effective()
+    cfg = _effective(agent_slug)
     profile = settings.resolved_llm_profile()
     active_model = (
         settings.ollama.chat_model if profile is LLMProfile.ON_PREM else settings.vertex.chat_model
@@ -399,9 +450,11 @@ def compute_agent_configurations(agent_slug: str = DEFAULT_AGENT_ID) -> dict[str
     knowledge_count = _knowledge_count()
     tool_count = _tool_count()
     settings_updated = _fmt_mtime(_ROOT / "src" / "tessera" / "settings.py")
-    agent_id = f"tessera-assistant-{settings.environment.value}"
-    default_lang_label = _lang_label(settings.default_language.value)
-    lang_value = str(_load_overrides().get(_LANG_KEY) or default_lang_label)
+    # Identifiant = the agent's URL slug (the same id stamped on its data),
+    # so the displayed identity matches /agents/<slug>/... and the registry.
+    agent_id = agent_slug
+    default_lang_label = _lang_label(_registry_default_language(agent_slug, settings))
+    lang_value = str(_load_overrides(agent_slug).get(_LANG_KEY) or default_lang_label)
     archived = bool(cfg["archived"])
 
     return {

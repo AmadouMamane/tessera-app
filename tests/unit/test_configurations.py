@@ -39,7 +39,7 @@ def test_available_keys_include_language() -> None:
 
 
 def test_compute_uses_defaults_when_no_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(c, "_load_overrides", dict)
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
     payload = c.compute_agent_configurations()
     tone = next(s for s in payload["behavior"]["selects"] if s["key"] == "tone")
     assert tone["value"] == "Professionnel"
@@ -54,7 +54,7 @@ def test_compute_merges_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         c,
         "_load_overrides",
-        lambda: {
+        lambda *_a: {
             "tone": "Amical",
             "temperature": 5.0,  # out of range -> clamped to 1.0
             "parallel_tools": False,
@@ -78,7 +78,7 @@ def test_compute_merges_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_editable_flag_separates_real_from_readonly(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(c, "_load_overrides", dict)
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
     payload = c.compute_agent_configurations()
     # The model name is read-only (no key); the fallback strategy is editable.
     model_left = payload["model"]["left"][0]
@@ -94,12 +94,12 @@ def test_change_log_records_only_real_changes(
 
     state: dict[str, object] = {}
     log: list[dict[str, object]] = []
-    monkeypatch.setattr(c, "_load_overrides", lambda: dict(state))
-    monkeypatch.setattr(c, "_save_overrides", lambda s: state.update(s))
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: dict(state))
+    monkeypatch.setattr(c, "_save_overrides", lambda s, *_a: state.update(s))
     monkeypatch.setattr(c, "_load_change_log", lambda: list(log))
     monkeypatch.setattr(c, "_history_path", lambda: Path(str(tmp_path)) / "h.json")
 
-    def _capture(keys: list[str]) -> None:
+    def _capture(keys: list[str], *_a: object) -> None:
         if keys:
             log.insert(0, {"at": "2026-06-17T08:00:00+02:00", "keys": keys})
 
