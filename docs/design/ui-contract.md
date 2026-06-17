@@ -125,6 +125,78 @@ ships.
   shadow (`/agir/replay-shadow`).
 - Staff access to a client conversation = **audited impersonation** (DORA/CNIL).
 
+## Temporal rails & modes
+
+Time is a global, URL-carried context, not a page. Each page renders one of the
+temporal **rails** defined in `registre-rails-temporels.md` (S1–S4 substrates,
+C1–C4 components, 8 named rails TE-01…SR-01). Rule of thumb: **config -> versions,
+signals -> scrubber (Surveiller), proof -> as-of (Prouver)**.
+
+- The active mode is always shown explicitly (Live / Historique / As-of). No page
+  silently switches to a historical view: "Voir à date" flips the indicator and shows
+  an "état au [T]" banner.
+- **"Voir à date" (as-of read) is NOT "Replay".** Replay (re-execution) belongs to
+  AGIR (`/agir/replay-shadow`); the cockpit-wide as-of read never re-runs the model.
+- Synthèse carries `Live · Période · Voir à date · Comparaison`; its AT-01 activity
+  feed shows events only — continuous signals live in SURVEILLER (link, don't duplicate).
+
+## Opposability badge (Prouver / État à date)
+
+The État-à-date seal badge is **dynamic**, computed at render from the integrity
+check — never stored, never cosmetic (full spec in `registre-rails-temporels.md` §9):
+
+- **Scellé / opposable** — hash chain verified AND third-party seal (Hica) verified.
+- **Intégrité partielle** — chain valid but seal absent / unverifiable.
+- **Non scellé** — integrity failure.
+- (transient) **Vérification en cours** — no opposability status until `verify()` completes.
+
+Caption under the badge: "Statut attribué uniquement après vérification réussie."
+The `1·2·3·A·D` numbered reading order is reserved for the Evidence Pack export, not
+the operational screen.
+
+## Multi-agent model
+
+The cockpit supervises **multiple agents**; the customer sees **one** assistant.
+
+- **The AGENT section is scoped to a selected agent.** Routes become
+  `/agents/:agentId/*` (e.g. `/agents/support-client/synthese`); `/agent/*` redirects
+  to the default agent. An agent **switcher** sets the scope; a fleet page `/agents`
+  lists/compares/creates agents ("+ Nouvel agent", RBAC-gated, audited).
+- **Foundation now, machinery later.** Adopt the scoped routes + a centralized
+  `useAgentId()` hook + `agentPath()` helper, and stamp `agent_id` on every event,
+  metric and **message** (per-turn) immediately. Defer the switcher / fleet / handoff
+  UI / cross-agent rollups until agent #2 is real.
+- **Per-turn attribution.** Routing is a supervisor that re-evaluates each turn
+  (context + intent + active policies), with agent->agent **handoff** (distinct from human
+  escalation). `agent_id` is recorded **per message**, so one conversation can span
+  agents; État à date / Session detail show which agent answered which turn.
+- **Page scope.** AGENT (and its rails) = per-agent. GOUVERNER (Surveiller/Agir/Prouver)
+  and PLATEFORME stay **global, filterable by agent**; org/cross-agent totals (deduped)
+  live in the fleet `/agents` and SURVEILLER, never on a single agent's page.
+- **Client side unchanged.** One unified chat; a new agent is wired via server-side
+  orchestration/routing, invisible to the customer (no "products" menu).
+- **An agent is a governed *package*, not just an id.** Conceptually onboarding is
+  "a new `agentId`"; operationally it bundles model, prompts, knowledge, tools,
+  guardrails, evaluations, permissions and a **handoff contract** (which agents it may
+  hand to / receive from). The package is **versioned and approved as a unit** (release
+  + eval-gate + rollback); the handoff contract defines the governed agent graph,
+  checked at runtime and reconstructable in État à date.
+- **Routing is auditable.** Each routing decision and handoff is a versioned, audited
+  event — you can prove *why* a turn went to a given agent (active policy, at T), not
+  just *that* it did.
+
+## Editability (define / choose / govern)
+
+For any config surface (model, prompts, guardrails, knowledge):
+
+- **Define** a reusable building block -> `CONFIGURER/*` (read-only here).
+- **Choose / tune** it for this agent -> `AGENT/*`, via a **bounded picker** (never free-text).
+- **Mutate in production** -> a **governed** action: RBAC + a versioned event + audit
+  (ideally propose -> review/dual-control -> deploy via Release Control), not a silent
+  inline save. Direct edit allowed only in staging.
+- A chosen object's metadata (provider, snapshots, cost) is read-only, inherited from
+  the catalogue.
+
 ## Deviation note
 
 This two-app `produit/` + grouped cockpit tree deviates from the single flat
