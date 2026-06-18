@@ -4728,5 +4728,12 @@
     "integrityBroken": "Integrity: chain broken — investigate",
     "env": "on-prem · EU residency · SOC 2",
     "note": "Status assigned only after successful verification."
+  },
+  "signalHero": {
+    "title": "Breached signal (SLO)",
+    "breached": "SLO breached · {metric} — {rate} < threshold {threshold}",
+    "ok": "SLO met · {metric} — {rate} ≥ threshold {threshold}",
+    "burn": "Burn ×{x} · {bad}/{n} bad in window",
+    "remediate": "Remediate in Incidents"
   }
 }

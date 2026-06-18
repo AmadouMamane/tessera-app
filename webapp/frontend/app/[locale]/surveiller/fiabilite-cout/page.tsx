@@ -26,7 +26,7 @@ export default async function ReliabilityPage({ params, searchParams }: Reliabil
   return (
     <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
       <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} />
+        <GovScopeSection fleet={fleet} scope={scope} locale={locale} signalHero />
       </div>
       <ReliabilityDashboard />
     </AppShell>

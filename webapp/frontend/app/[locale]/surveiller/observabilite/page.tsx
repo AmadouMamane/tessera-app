@@ -26,7 +26,7 @@ export default async function HealthPage({ params, searchParams }: HealthPagePro
   return (
     <AppShell title={t("title")} description={t("description")}>
       <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} />
+        <GovScopeSection fleet={fleet} scope={scope} locale={locale} signalHero />
       </div>
       <HealthDashboard />
     </AppShell>

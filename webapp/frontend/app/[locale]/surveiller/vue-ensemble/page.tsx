@@ -4,6 +4,7 @@ import { AgentBreakdown } from "@/components/agent/agent-breakdown";
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { AppShell } from "@/components/layout/app-shell";
 import { OverviewDashboard } from "@/components/overview/overview-dashboard";
+import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
 import { loadFleet } from "@/lib/server/fleet";
 
@@ -74,6 +75,10 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
         },
       ]}
     >
+      {/* P2 — lead with the named breached signal (real SLO) + remediation. */}
+      <div className="mb-3">
+        <SignalBreachHero />
+      </div>
       {/* GOUVERNER global agent filter — distinct from the AGENT switcher. */}
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <AgentScopeFilter />

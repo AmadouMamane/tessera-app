@@ -4728,5 +4728,12 @@
     "integrityBroken": "Integrität: Kette gebrochen — zu untersuchen",
     "env": "on-prem · EU-Residenz · SOC 2",
     "note": "Status erst nach erfolgreicher Prüfung vergeben."
+  },
+  "signalHero": {
+    "title": "Verletztes Signal (SLO)",
+    "breached": "SLO verletzt · {metric} — {rate} < Schwelle {threshold}",
+    "ok": "SLO eingehalten · {metric} — {rate} ≥ Schwelle {threshold}",
+    "burn": "Burn ×{x} · {bad}/{n} schlecht im Fenster",
+    "remediate": "In Vorfällen beheben"
   }
 }

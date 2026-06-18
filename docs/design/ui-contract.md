@@ -222,6 +222,13 @@ For any config surface (model, prompts, guardrails, knowledge):
 integrity (`/audit/integrity`, ✓/✗ honest) + env (on-prem · EU · SOC 2). Benefits
 every cockpit + AGENT page at once. No data invented.
 
+**Surveiller — P2 signal hero (per page).** Every SURVEILLER page now leads with
+the **named breached signal**: a shared `SignalBreachHero` fetching the real SLO
+(`/observability/slo`) — metric (e.g. Fidélité), observed rate vs threshold, burn
+rate, bad/total — with a direct **Remédier dans Incidents →** link. Honest: green
+"SLO respecté" when not breaching, nothing fabricated. Wired via a `signalHero`
+prop on `GovScopeSection` (6 pages) + inline on vue-ensemble.
+
 **AGENT + GOUVERNER/PLATEFORME — P3 cross-links.** Shared `AgentCrossLinks`
 (governance → AGIR Release Control · definition → CONFIGURER · linked AGENT data)
 mounted on the AGENT instance pages (configurations, garde-fous, prompts,
