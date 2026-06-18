@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { ScaffoldView } from "@/components/common/scaffold-view";
+import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
+import { CatalogueConsumers } from "@/components/configurer/catalogue-consumers";
 import { AppShell } from "@/components/layout/app-shell";
 
 interface PageProps {
@@ -13,14 +14,22 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: t("item.platformGuardrails") };
 }
 
-export default async function ScaffoldPage({ params }: PageProps) {
+export default async function PlatformGuardrailsPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "nav" });
-  const title = t("item.platformGuardrails");
+  const tn = await getTranslations({ locale, namespace: "nav" });
+  const t = await getTranslations({ locale, namespace: "usedBy" });
   return (
-    <AppShell title={title} contentWidth="full">
-      <ScaffoldView title={title} />
+    <AppShell
+      title={tn("item.platformGuardrails")}
+      description={t("guardrailsSubtitle")}
+      contentWidth="full"
+    >
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <AgentScopeFilter />
+        <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>
+      </div>
+      <CatalogueConsumers kind="guardrails" />
     </AppShell>
   );
 }

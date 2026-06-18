@@ -706,6 +706,27 @@ async def observability_agents_propose(body: _AgentProposeBody) -> dict[str, obj
     return {"available": True, "proposed": name}
 
 
+@router.get("/observability/catalogue-consumers")
+async def observability_catalogue_consumers(
+    kind: str, agent: str = "all"
+) -> dict[str, object]:
+    """CONFIGURER "used-by": which agents consume each catalogue item of ``kind``.
+
+    The inverse of the AGENT instance binding — each shared definition shows its
+    consumer agents + their release verdict, so a change's re-gate blast radius is
+    explicit. Global, filterable by agent. Degrades to ``available: false``.
+    """
+    from tessera.observability import catalogue_consumers as cc_mod
+
+    try:
+        return {"available": True, **cc_mod.catalogue_consumers(kind, agent_scope=agent)}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.catalogue_consumers: failed: {exc}\n")
+        return {"available": False}
+
+
 @router.get("/observability/release-control")
 async def observability_release_control(agent: str = "all") -> dict[str, object]:
     """Release Control (AGIR): per-agent release pipeline + eval-gate verdict.

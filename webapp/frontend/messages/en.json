@@ -4693,5 +4693,15 @@
       "approved": "Approved",
       "live": "Live"
     }
+  },
+  "usedBy": {
+    "hint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher.",
+    "modelsSubtitle": "Shared model catalogue (read-only here) — which agents consume each model.",
+    "guardrailsSubtitle": "Shared guardrail profiles (read-only here) — which agents consume each profile.",
+    "consumers": "{count} agent(s)",
+    "regate": "{count} to re-validate",
+    "loading": "Loading…",
+    "empty": "No catalogue item consumed (for this filter).",
+    "note": "\"Used by\" = the inverse of the AGENT instance binding. Changing a shared definition re-gates the consuming agents (define → consumers → re-validate). The dot = the agent's current eval-gate verdict."
   }
 }

@@ -97,6 +97,8 @@ import {
   FailedCasesReportSchema,
   type FailedRunsReport,
   FailedRunsReportSchema,
+  type CatalogueConsumers,
+  CatalogueConsumersSchema,
   type FirewallEfficacy,
   FirewallEfficacySchema,
   type Fleet,
@@ -1311,6 +1313,16 @@ export async function fetchSessionDetail(
 /** Fleet rollup (per-agent observable KPIs + deduplicated org totals). */
 export async function fetchFleet(signal?: AbortSignal): Promise<Fleet> {
   return request("/observability/fleet", { signal }, FleetSchema);
+}
+
+/** CONFIGURER "used-by": consumer agents of each catalogue item of `kind`. */
+export async function fetchCatalogueConsumers(
+  kind: string,
+  agent: string,
+  signal?: AbortSignal,
+): Promise<CatalogueConsumers> {
+  const params = new URLSearchParams({ kind, agent });
+  return request(`/observability/catalogue-consumers?${params}`, { signal }, CatalogueConsumersSchema);
 }
 
 /** Governed, audited proposal to add a new agent (registry is approved as a unit). */

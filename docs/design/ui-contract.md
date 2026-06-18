@@ -236,6 +236,18 @@ release" per-agent: eval-gate verdict + candidate version, colour tied to gate
 conformity. Resolution rate stays intentionally absent (judged quality shared
 until per-agent eval). Org totals stay deduplicated.
 
+**Configurer / "used-by" — the inverse binding (Tier 2).**
+`observability/catalogue_consumers.py` inverts the governed registry bindings: for
+a catalogue `kind` (model / guardrails / knowledge / prompts / tools / eval_set),
+each shared item lists its **consumer agents** + each consumer's eval-gate verdict,
+so a change's re-gate blast radius is explicit (`regate_count` = consumers not
+passing-clean). Endpoint `/observability/catalogue-consumers?kind=&agent=`. Reusable
+`CatalogueConsumers` panel; the **modeles** and **garde-fous** scaffolds are now real
+(global filter + used-by panel). All real from `agents.yaml` bindings. **Follow-up:**
+the other CONFIGURER pages (knowledge/policies/tools) can mount the same panel; the
+"changement → re-gate" is currently *surfaced* (count + verdict), the governed
+re-gate *action* runs through Release Control, not from this read-only catalogue.
+
 **Agir / Release Control — built real (was a scaffold).** Each agent is a governed
 package; the page is the per-agent release pipeline. `observability/release_control.py`
 combines the **policy-correct** eval-gate verdict (`agent_release` → `build_gate_view`

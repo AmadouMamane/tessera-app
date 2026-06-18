@@ -4693,5 +4693,15 @@
       "approved": "Genehmigt",
       "live": "Live"
     }
+  },
+  "usedBy": {
+    "hint": "Globaler GOUVERNER/PLATEFORME-Filter — getrennt vom AGENT-Umschalter.",
+    "modelsSubtitle": "Katalog geteilter Modelle (hier schreibgeschützt) — welche Agenten jedes Modell nutzen.",
+    "guardrailsSubtitle": "Geteilte Guardrail-Profile (hier schreibgeschützt) — welche Agenten jedes Profil nutzen.",
+    "consumers": "{count} Agent(en)",
+    "regate": "{count} neu zu validieren",
+    "loading": "Wird geladen…",
+    "empty": "Keine genutzten Katalogelemente (für diesen Filter).",
+    "note": "„Verwendet von“ = Umkehrung des AGENT-Instanz-Bindings. Eine geteilte Definition zu ändern re-gated die nutzenden Agenten (Definieren → Nutzer → neu validieren). Der Punkt = aktuelles Eval-Gate-Verdikt des Agenten."
   }
 }

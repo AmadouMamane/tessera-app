@@ -4693,5 +4693,15 @@
       "approved": "Approuvé",
       "live": "Live"
     }
+  },
+  "usedBy": {
+    "hint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT.",
+    "modelsSubtitle": "Catalogue de modèles partagés (lecture seule ici) — quels agents consomment chaque modèle.",
+    "guardrailsSubtitle": "Profils de garde-fous partagés (lecture seule ici) — quels agents consomment chaque profil.",
+    "consumers": "{count} agent(s)",
+    "regate": "{count} à re-valider",
+    "loading": "Chargement…",
+    "empty": "Aucun item de catalogue consommé (pour ce filtre).",
+    "note": "« Utilisé par » = inverse du binding d'instance AGENT. Modifier une définition partagée re-gate les agents consommateurs (define → consommateurs → re-valider). La pastille = verdict eval-gate actuel de l'agent."
   }
 }

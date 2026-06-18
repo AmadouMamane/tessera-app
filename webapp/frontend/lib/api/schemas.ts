@@ -4658,6 +4658,33 @@ export const ReleaseControlSchema = z.object({
 export type ReleaseControl = z.infer<typeof ReleaseControlSchema>;
 export type ReleaseControlAgent = z.infer<typeof ReleaseControlAgentSchema>;
 
+export const CatalogueConsumerSchema = z.object({
+  agent_id: z.string(),
+  name: z.string(),
+  release: z.object({
+    available: z.boolean(),
+    passed: z.boolean(),
+    verdict_label: z.string(),
+    verdict_tone: z.string(),
+  }),
+});
+export const CatalogueConsumersSchema = z.object({
+  available: z.boolean(),
+  kind: z.string().optional(),
+  route: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        item: z.string(),
+        consumer_count: z.number(),
+        regate_count: z.number(),
+        consumers: z.array(CatalogueConsumerSchema),
+      }),
+    )
+    .optional(),
+});
+export type CatalogueConsumers = z.infer<typeof CatalogueConsumersSchema>;
+
 export const ProposeAgentSchema = z.object({
   available: z.boolean(),
   proposed: z.string().optional(),
