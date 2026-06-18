@@ -4611,6 +4611,53 @@ export const FleetSchema = z.object({
 });
 export type Fleet = z.infer<typeof FleetSchema>;
 
+export const ReleaseControlAgentSchema = z.object({
+  agent_id: z.string(),
+  name: z.string(),
+  owner: z.string(),
+  state: z.string(),
+  state_tone: z.string(),
+  last_phase: z.string(),
+  flow: z.array(z.string()),
+  history: z.array(
+    z.object({
+      phase: z.string(),
+      type: z.string(),
+      occurred_at: z.string(),
+      actor: z.string(),
+      reason: z.string(),
+    }),
+  ),
+  release: z.object({
+    agent_id: z.string(),
+    available: z.boolean(),
+    passed: z.boolean(),
+    verdict_label: z.string(),
+    verdict_tone: z.string(),
+    candidate_version: z.string(),
+    eval_set: z.string(),
+    executions: z.number(),
+    socle_ok: z.boolean(),
+    blocking_socle: z.number(),
+    blocking_t1: z.number(),
+    waived_active: z.number(),
+  }),
+});
+export const ReleaseControlSchema = z.object({
+  available: z.boolean(),
+  agents: z.array(ReleaseControlAgentSchema).optional(),
+  summary: z
+    .object({
+      total: z.number(),
+      passing: z.number(),
+      blocked: z.number(),
+      not_run: z.number(),
+    })
+    .optional(),
+});
+export type ReleaseControl = z.infer<typeof ReleaseControlSchema>;
+export type ReleaseControlAgent = z.infer<typeof ReleaseControlAgentSchema>;
+
 export const ProposeAgentSchema = z.object({
   available: z.boolean(),
   proposed: z.string().optional(),

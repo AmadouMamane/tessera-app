@@ -706,6 +706,23 @@ async def observability_agents_propose(body: _AgentProposeBody) -> dict[str, obj
     return {"available": True, "proposed": name}
 
 
+@router.get("/observability/release-control")
+async def observability_release_control(agent: str = "all") -> dict[str, object]:
+    """Release Control (AGIR): per-agent release pipeline + eval-gate verdict.
+
+    Global, filterable by agent (``?agent=all|<id>``) — distinct from the AGENT
+    switcher. Each agent is a governed package; the verdict is the policy-correct
+    gate over the agent's OWN run. Degrades to ``available: false``.
+    """
+    from tessera.observability import release_control as rc_mod
+
+    try:
+        return {"available": True, **rc_mod.compute_release_control(agent)}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.release_control: failed: {exc}\n")
+        return {"available": False}
+
+
 @router.get("/observability/agent-lifecycle")
 async def observability_agent_lifecycle(
     agent_id: str = DEFAULT_AGENT_ID,

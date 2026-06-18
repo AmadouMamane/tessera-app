@@ -236,6 +236,19 @@ release" per-agent: eval-gate verdict + candidate version, colour tied to gate
 conformity. Resolution rate stays intentionally absent (judged quality shared
 until per-agent eval). Org totals stay deduplicated.
 
+**Agir / Release Control — built real (was a scaffold).** Each agent is a governed
+package; the page is the per-agent release pipeline. `observability/release_control.py`
+combines the **policy-correct** eval-gate verdict (`agent_release` → `build_gate_view`
+over each agent's OWN run, eval-gate-policy primes) with the governed lifecycle state
++ S1 history (`agent_lifecycle`). Endpoint `/observability/release-control?agent=`
+(global filter, distinct from the switcher). The page shows an org summary
+(distinct-agent counts by readiness — NOT deduped conversation totals, which would
+be the wrong grain here), per-agent cards with the verdict headline (colour tied to
+conformity, §6), the gate breakdown (executions case×langue, socle T0 OK/ÉCHEC,
+bloquants socle/T1, dérogés actifs — reconciled with Évaluations), the
+proposed→reviewed→approved→live flow stepper and the last S1 event. Real for all 3
+agents (all BLOQUÉ par le socle). No temporal rail (governance flow, not a scrubber).
+
 **Surveiller — agent filter + breakdown (per page).** Each Surveiller page gets
 the global `AgentScopeFilter` + a real `AgentBreakdown` (fleet rollup: observable
 KPIs that genuinely differ per agent + deduped org total). Removed the **fake

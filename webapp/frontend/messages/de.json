@@ -4668,5 +4668,30 @@
     "dedupExplain": "Naive Summe {naive} · {saved} dedupliziert · {shared} geteilte Konversationen (Übergabe = 1)",
     "empty": "Keine Flottendaten verfügbar.",
     "orgSignalsNote": "Filter aktiv auf der Agentenansicht oben. Die Org-Signale unten (S4) sind noch nicht pro Agent aufgeschlüsselt."
+  },
+  "releaseControl": {
+    "title": "Release Control",
+    "subtitle": "Release-Pipeline pro Agent — Eval-Gate-Verdikt, versioniertes verwaltetes Paket.",
+    "total": "Agenten",
+    "passing": "Promotionsbereit",
+    "blocked": "Blockiert (Eval-Gate)",
+    "notRun": "Kein Lauf",
+    "evalNotRun": "Evaluierung nicht ausgeführt",
+    "evalSet": "Eval-Set",
+    "executions": "Ausführungen (Fall × Sprache)",
+    "socle": "Sockel (T0)",
+    "socleOk": "OK",
+    "socleFail": "FEHLER",
+    "blockingSocle": "Blockierend Sockel",
+    "blockingT1": "Blockierend T1",
+    "waived": "Aktive Ausnahmen",
+    "lastEvent": "Letztes Ereignis",
+    "empty": "Keine Agenten / Release-Daten verfügbar.",
+    "flow": {
+      "proposed": "Vorgeschlagen",
+      "reviewed": "Geprüft",
+      "approved": "Genehmigt",
+      "live": "Live"
+    }
   }
 }

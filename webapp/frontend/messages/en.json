@@ -4668,5 +4668,30 @@
     "dedupExplain": "Naive sum {naive} · {saved} deduplicated · {shared} shared conversations (handoff = 1)",
     "empty": "No fleet data available.",
     "orgSignalsNote": "Filter active on the per-agent view above. The org signals below (S4) are not yet broken down per agent."
+  },
+  "releaseControl": {
+    "title": "Release Control",
+    "subtitle": "Per-agent release pipeline — eval-gate verdict, versioned governed package.",
+    "total": "Agents",
+    "passing": "Ready to promote",
+    "blocked": "Blocked (eval-gate)",
+    "notRun": "No run",
+    "evalNotRun": "Evaluation not run",
+    "evalSet": "Eval set",
+    "executions": "Executions (case × language)",
+    "socle": "Socle (T0)",
+    "socleOk": "OK",
+    "socleFail": "FAIL",
+    "blockingSocle": "Blocking socle",
+    "blockingT1": "Blocking T1",
+    "waived": "Active waivers",
+    "lastEvent": "Last event",
+    "empty": "No agents / release data available.",
+    "flow": {
+      "proposed": "Proposed",
+      "reviewed": "Reviewed",
+      "approved": "Approved",
+      "live": "Live"
+    }
   }
 }

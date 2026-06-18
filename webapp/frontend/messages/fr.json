@@ -4668,5 +4668,30 @@
     "dedupExplain": "Somme naïve {naive} · {saved} dédoublonnées · {shared} conversations partagées (handoff = 1)",
     "empty": "Aucune donnée flotte disponible.",
     "orgSignalsNote": "Filtre actif sur la vue par agent ci-dessus. Les signaux org ci-dessous (S4) ne sont pas encore ventilés par agent."
+  },
+  "releaseControl": {
+    "title": "Release Control",
+    "subtitle": "Pipeline de release par agent — verdict eval-gate, package gouverné versionné.",
+    "total": "Agents",
+    "passing": "Prêts à promouvoir",
+    "blocked": "Bloqués (eval-gate)",
+    "notRun": "Sans run",
+    "evalNotRun": "Évaluation non exécutée",
+    "evalSet": "Jeu d'éval",
+    "executions": "Exécutions (cas × langue)",
+    "socle": "Socle (T0)",
+    "socleOk": "OK",
+    "socleFail": "ÉCHEC",
+    "blockingSocle": "Bloquants socle",
+    "blockingT1": "Bloquants T1",
+    "waived": "Dérogés actifs",
+    "lastEvent": "Dernier événement",
+    "empty": "Aucun agent / donnée de release disponible.",
+    "flow": {
+      "proposed": "Proposé",
+      "reviewed": "Revu",
+      "approved": "Approuvé",
+      "live": "Live"
+    }
   }
 }
