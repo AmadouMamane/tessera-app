@@ -202,7 +202,7 @@ export function AgentEvaluations() {
   const subtabs = data.subtabs ?? [];
   const active = subtab || subtabs[0] || "";
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"
@@ -221,11 +221,26 @@ export function AgentEvaluations() {
 
       <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
 
+      {/* Verdict leads, with cross-links inline + remediation in the banner. */}
       <VerdictBanner data={data} />
-
-      <LifecycleBar data={data} />
-
       <LiensUtiles />
+
+      {/* Cycle de vie + active snapshot, side by side (dense, normative order). */}
+      <div className="grid gap-2.5 xl:grid-cols-2">
+        <LifecycleBar data={data} />
+        <Snapshot data={data} onAsof={() => temporal.changeMode("replay")} />
+      </div>
+
+      {/* Scores right under the verdict — informative, never the verdict. */}
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
+        {(data.kpis ?? []).map((k, i) => (
+          <Kpi key={k.key} kpi={k} Icon={KPI_ICONS[i % KPI_ICONS.length] ?? Sparkles} />
+        ))}
+      </div>
+      <p className="-mt-1 text-[10px] text-[var(--tessera-text-muted)]">
+        Scores <span className="font-medium">informatifs</span> — ils ne déterminent pas le verdict
+        du gate (cœur non dérogeable + socle ; cf. eval-gate-policy §6).
+      </p>
 
       <GatePolicySection data={data} />
 
@@ -239,18 +254,6 @@ export function AgentEvaluations() {
         onPeriodChange={temporal.setPeriodKey}
         onModeChange={temporal.changeMode}
       />
-
-      <Snapshot data={data} onAsof={() => temporal.changeMode("replay")} />
-
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
-        {(data.kpis ?? []).map((k, i) => (
-          <Kpi key={k.key} kpi={k} Icon={KPI_ICONS[i % KPI_ICONS.length] ?? Sparkles} />
-        ))}
-      </div>
-      <p className="-mt-1 text-[10px] text-[var(--tessera-text-muted)]">
-        Scores <span className="font-medium">informatifs</span> — ils ne déterminent pas le verdict
-        du gate (cœur non dérogeable + socle ; cf. eval-gate-policy §6).
-      </p>
 
       <GateJudgeRail data={data} />
 
@@ -368,7 +371,7 @@ function LifecycleBar({ data }: { data: Data }) {
     { label: "Période du run", value: candidate ? fmtRunStamp(candidate) : "—" },
   ];
   return (
-    <section className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-2.5">
+    <section className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
       <span className="text-[10px] uppercase tracking-wide text-[#b9a6ff]">Cycle de vie</span>
       {cells.map((c) => (
         <div key={c.label} className="flex flex-col gap-0.5">
@@ -442,7 +445,7 @@ function VerdictBanner({ data }: { data: Data }) {
   const bd = gate.breakdown;
   const bg = gate.breakdown_grain;
   return (
-    <section className={`flex flex-col gap-2 rounded-lg border p-3.5 ${tone}`}>
+    <section className={`flex flex-col gap-2 rounded-lg border p-3 ${tone}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           {blocked ? (
@@ -903,8 +906,8 @@ function Snapshot({ data, onAsof }: { data: Data; onAsof: () => void }) {
   const s = data.snapshot;
   if (!s) return null;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-2.5">
-      <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <Field>
           <span className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {s.tag}
