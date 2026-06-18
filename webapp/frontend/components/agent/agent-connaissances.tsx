@@ -30,6 +30,8 @@ import type { AgentConnaissances as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import type { OverviewTone } from "@/lib/overview";
 
+import { AgentCrossLinks } from "./agent-cross-links";
+
 /** Close a popover on outside-click and Escape; attach the returned ref to its root. */
 function useDismiss(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
@@ -219,6 +221,7 @@ export function AgentConnaissances() {
 
   return (
     <div className="relative flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      <AgentCrossLinks page="connaissances" />
       <div className="flex flex-wrap items-center justify-end gap-2">
         <GhostLink href={CATALOG_HREF} label={a?.manage ?? ""} />
         <GhostLink href={MEMORY_HREF} label={a?.memory ?? ""} />

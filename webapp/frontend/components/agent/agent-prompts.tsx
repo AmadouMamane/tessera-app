@@ -35,6 +35,7 @@ import { fetchAgentPrompts } from "@/lib/api/client";
 import type { AgentPrompts as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
+import { AgentCrossLinks } from "./agent-cross-links";
 import { AgentSubtabs } from "./agent-subtabs";
 import { DefineInstanceBanner } from "./define-instance-banner";
 
@@ -139,6 +140,7 @@ export function AgentPrompts() {
   };
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      <AgentCrossLinks page="prompts" />
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"

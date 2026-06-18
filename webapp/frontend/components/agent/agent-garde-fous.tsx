@@ -31,6 +31,8 @@ import { fetchAgentGardeFous, mutateGardeFousRule } from "@/lib/api/client";
 import type { AgentGardeFous as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
+import { AgentCrossLinks } from "./agent-cross-links";
+
 type RowT = NonNullable<Data["table"]>["rows"][number];
 type DetailT = NonNullable<Data["details"]>[number];
 
@@ -163,6 +165,7 @@ export function AgentGardeFous() {
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      <AgentCrossLinks page="garde-fous" />
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"

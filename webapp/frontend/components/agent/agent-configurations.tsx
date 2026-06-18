@@ -29,6 +29,7 @@ import {
 import type { AgentConfigurations as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
+import { AgentCrossLinks } from "./agent-cross-links";
 import { DefineInstanceBanner } from "./define-instance-banner";
 
 type Field = NonNullable<Data["identity"]>["left"][number];
@@ -94,6 +95,7 @@ export function AgentConfigurations() {
 
   return (
     <div className="flex min-h-0 flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      <AgentCrossLinks page="configurations" />
       <Header
         data={data}
         dirty={dirty}
