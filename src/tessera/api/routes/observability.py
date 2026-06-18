@@ -708,7 +708,7 @@ async def observability_agents_propose(body: _AgentProposeBody) -> dict[str, obj
 
 @router.get("/observability/rbac-matrix")
 async def observability_rbac_matrix(agent: str = "all") -> dict[str, object]:
-    """RBAC role × agent matrix (real roles × real agents). Global, filterable.
+    """RBAC role x agent matrix (real roles x real agents). Global, filterable.
 
     The enforced roles are currently org-wide; the matrix states that truthfully
     rather than fabricating per-agent grants. Degrades to ``available: false``.
