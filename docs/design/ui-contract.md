@@ -318,8 +318,11 @@ the execution-trace panel **`XT-01 · Trace d'exécution`** per the rails regist
 Deviations: (1) the **initial transcript is a seeded example** (fixed Q with the answer
 assembled from *real* corpus excerpts) shown before the operator interacts — live turns
 are real; flagged **à confirmer** whether to start from a real empty console instead.
-(2) The XT-01 trace is a **tab** in the inspector, not the normative's persistent 3rd
-column. Layout deviation, logged.
+(2) Resolved (Phase 2): the XT-01 trace is now a **persistent 3rd column**
+(`TraceColumn`, titled "XT-01 · Trace d'exécution"), no longer a tab — the main
+grid is chat (6) · inspector (3) · XT-01 (3), and "Trace" was removed from the
+inspector tabs. The column reuses the same real per-turn debug trace and shows an
+honest empty state before the operator runs a turn.
 
 **Évaluations vs eval-gate-policy (image 09 + binding policy, conformance pass).** The
 binding `eval-gate-policy.md` **primes over the image** for verdict/numbers. The page

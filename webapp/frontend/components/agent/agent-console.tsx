@@ -306,7 +306,7 @@ export function AgentConsole() {
       />
 
       <div className="grid gap-3 xl:grid-cols-12">
-        <div className="flex min-w-0 flex-col gap-3 xl:col-span-8">
+        <div className="flex min-w-0 flex-col gap-3 xl:col-span-6">
           <TemporalRail
             mode={temporal.mode}
             liveStatus={t("realtime")}
@@ -332,9 +332,15 @@ export function AgentConsole() {
           />
         </div>
 
-        <div className="flex min-w-0 flex-col gap-3 xl:col-span-4">
+        <div className="flex min-w-0 flex-col gap-3 xl:col-span-3">
           <KpiRow data={data} />
           <Inspector data={data} debug={liveDebug} sessionId={conversationId} t={t} />
+        </div>
+
+        {/* XT-01 — execution-trace rail, a persistent 3rd column (rails registry,
+            normative 05), no longer a tab inside the inspector. */}
+        <div className="flex min-w-0 flex-col gap-3 xl:col-span-3">
+          <TraceColumn data={data} debug={liveDebug} />
         </div>
       </div>
     </div>
@@ -736,6 +742,30 @@ function LiveAssistantMsg({
   );
 }
 
+// ── XT-01 — persistent execution-trace column (normative 05) ────────────────
+
+/** The XT-01 execution trace as a persistent 3rd column (was an inspector tab).
+ *  Reuses the same real per-turn debug trace streamed on the SSE envelope; renders
+ *  an honest empty state before the operator runs a turn. */
+function TraceColumn({ data, debug }: { data: Data; debug: ChatDebug | null }) {
+  const trace = debug?.trace ?? data.trace;
+  return (
+    <section className="flex min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+      <div className="flex items-center gap-2 border-b border-[var(--tessera-border)] px-3.5 py-2.5">
+        <Activity className="h-4 w-4 text-[#e0a23a]" />
+        <span className="text-[0.72rem] font-medium text-[#e0a23a]">XT-01 · Trace d&apos;exécution</span>
+      </div>
+      {trace ? (
+        <TracePanel tr={trace} />
+      ) : (
+        <p className="px-3.5 py-6 text-center text-[0.72rem] text-[var(--tessera-text-muted)]">
+          La trace d&apos;exécution apparaîtra ici après un tour.
+        </p>
+      )}
+    </section>
+  );
+}
+
 // ── right: KPIs + inspector ────────────────────────────────────────────────
 
 function KpiRow({ data }: { data: Data }) {
@@ -774,14 +804,14 @@ function Inspector({
   sessionId: string | null;
   t: T;
 }) {
-  const tabs = data.tabs ?? [];
+  // "Trace" now lives in its own persistent XT-01 column, not as a tab here.
+  const tabs = (data.tabs ?? []).filter((tb) => tb !== "Trace");
   const [active, setActive] = useState(tabs[0] ?? "Contexte");
   const visibleSession = sessionId ? `sess_${sessionId.slice(0, 8)}` : data.footer?.session_id;
   const quality = debug?.quality ?? data.quality;
   const sources = debug?.sources ?? data.sources;
   const tools = debug?.tools ?? data.tools;
   const guardrails = debug?.guardrails ?? data.guardrails;
-  const trace = debug?.trace ?? data.trace;
   return (
     <section className="flex min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
@@ -816,7 +846,6 @@ function Inspector({
         {(active === "Contexte" || active === "Garde-fous") && guardrails ? (
           <GuardrailsPanel g={guardrails} />
         ) : null}
-        {(active === "Contexte" || active === "Trace") && trace ? <TracePanel tr={trace} /> : null}
       </div>
       <div className="mt-auto border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
         {t("idSession")}: <span className="tabular-nums">{visibleSession}</span>
