@@ -1,10 +1,14 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { AppShell } from "@/components/layout/app-shell";
 import { SecurityDashboard } from "@/components/security/security-dashboard";
+import { readAgentScope } from "@/lib/agent-scope";
+import { loadFleet } from "@/lib/server/fleet";
 
 interface SecurityPageProps {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: SecurityPageProps) {
@@ -13,12 +17,17 @@ export async function generateMetadata({ params }: SecurityPageProps) {
   return { title: t("title") };
 }
 
-export default async function SecurityPage({ params }: SecurityPageProps) {
+export default async function SecurityPage({ params, searchParams }: SecurityPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "security" });
+  const scope = readAgentScope(await searchParams);
+  const fleet = await loadFleet();
   return (
     <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+      <div className="mb-3">
+        <GovScopeSection fleet={fleet} scope={scope} locale={locale} />
+      </div>
       <SecurityDashboard />
     </AppShell>
   );
