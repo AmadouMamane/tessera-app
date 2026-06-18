@@ -34,6 +34,7 @@ const PAGE: Record<string, string> = {
   "garde-fous": "Garde-fous",
   prompts: "Prompts",
   evaluations: "Évaluations",
+  "evaluations-mock": "Évaluations — Maquette (réf.)",
   console: "Console",
   historique: "Historique",
   "vue-ensemble": "Vue d'ensemble",
