@@ -245,6 +245,10 @@ export function AgentEvaluations() {
           <Kpi key={k.key} kpi={k} Icon={KPI_ICONS[i % KPI_ICONS.length] ?? Sparkles} />
         ))}
       </div>
+      <p className="-mt-1 text-[10px] text-[var(--tessera-text-muted)]">
+        Scores <span className="font-medium">informatifs</span> — ils ne déterminent pas le verdict
+        du gate (cœur non dérogeable + socle ; cf. eval-gate-policy §6).
+      </p>
 
       <GateJudgeRail data={data} />
 
@@ -474,7 +478,44 @@ function VerdictBanner({ data }: { data: Data }) {
           </p>
         </div>
       </div>
+      {blocked ? <ActionsRequises gate={gate} socleFails={socleFails.length} /> : null}
     </section>
+  );
+}
+
+/** P2 — concrete remediation steps to reach a PASSE gate, derived from the real
+ *  gate state. No fabrication: each line only shows when its condition holds. */
+function ActionsRequises({
+  gate,
+  socleFails,
+}: {
+  gate: NonNullable<Data["gate"]>;
+  socleFails: number;
+}) {
+  const bg = gate.breakdown_grain;
+  const actions: string[] = [];
+  if (gate.socle ? !gate.socle.ok : socleFails > 0)
+    actions.push("Corriger les cas du socle (T0) — cœur non dérogeable");
+  if (bg && bg.blocking_t1 > 0)
+    actions.push(`Corriger ou déroger ${bg.blocking_t1} cas critique(s) T1`);
+  if (bg && bg.non_executed_critical > 0)
+    actions.push(`Rejouer ${bg.non_executed_critical} cas critique(s) non exécuté(s)`);
+  if (gate.domain && !gate.domain.ok) actions.push("Remonter le taux du domaine (T2) au seuil");
+  actions.push("Obtenir un gate PASSE avant toute promotion en prod");
+  return (
+    <div className="rounded-md border border-[#e0566f]/40 bg-black/20 px-2.5 py-2 text-[11px]">
+      <p className="mb-1 text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+        Actions requises
+      </p>
+      <ul className="flex flex-col gap-0.5">
+        {actions.map((a) => (
+          <li key={a} className="flex items-start gap-1.5 text-[var(--tessera-text)]">
+            <span className="mt-[3px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff9bb0]" />
+            {a}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -589,7 +630,7 @@ function GatePolicySection({ data }: { data: Data }) {
                   className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5"
                 >
                   <p className="text-[9px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-                    {t.tier} · {t.waivable ? "dérogeable" : "non-dérog."}
+                    {t.tier} · {t.tier === "T2" ? "gradé" : t.waivable ? "dérogeable" : "non-dérog."}
                   </p>
                   <p className="text-sm font-semibold tabular-nums text-[var(--tessera-text)]">
                     {t.count}
@@ -1499,7 +1540,7 @@ function Detail({
     { label: "Taux de réussite", value: row.success },
     { label: "Cas réussis", value: `${row.passed} / ${row.total}` },
     { label: "Cas échoués", value: `${row.failed} / ${row.total}` },
-    { label: "Score global du run", value: `${meta.score10} / 10` },
+    { label: "Score global du run (informatif)", value: `${meta.score10} / 10` },
     { label: "Escalades requises", value: String(meta.escalations) },
     { label: "Invocations d'outils", value: String(meta.tool_invocations) },
   ];

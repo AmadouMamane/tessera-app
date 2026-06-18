@@ -1,8 +1,10 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 
 import { usePathname } from "@/i18n/navigation";
+import { fetchFleet } from "@/lib/api/client";
 
 /**
  * Global breadcrumb (P1) — `SUPER › Section › Page`, derived from the route and
@@ -64,10 +66,21 @@ export function AppBreadcrumb() {
   const pathname = usePathname();
   const segs = pathname.split("/").filter(Boolean);
   const first = segs[0];
+  const isAgentSub = first === "agents" && segs.length > 1;
+  // Resolve the real agent name from the registry for an agent sub-page, so the
+  // trail reads "AGENT › Support Client › …" — never the literal "Agent" or slug.
+  const { data: fleet } = useQuery({
+    queryKey: ["fleet-switcher"],
+    queryFn: ({ signal }) => fetchFleet(signal),
+    staleTime: 60_000,
+    enabled: isAgentSub,
+  });
   if (!first || !SECTION[first]) return null;
   const section = SECTION[first];
-  // An agent sub-page (/agents/:id/<page>) is scoped to an agent, not the fleet.
-  const sectionLabel = first === "agents" && segs.length > 1 ? "Agent" : section.label;
+  const agentName = isAgentSub
+    ? (fleet?.agents?.find((a) => a.id === segs[1])?.name ?? segs[1])
+    : undefined;
+  const sectionLabel = agentName ?? section.label;
   const leaf = segs[segs.length - 1];
   const pageLabel = leaf && leaf !== first ? PAGE[leaf] : undefined;
 
