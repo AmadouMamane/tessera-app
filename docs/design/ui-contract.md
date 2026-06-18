@@ -281,10 +281,16 @@ journal: 15 338 denials / 15 702 decisions) with the `Couverture par catégorie`
 CONFIGURER links and a define/instance rule detail. Added the normative's **`Top
 raisons de blocage`** chart, sourced from the real per-rule denial counts in the
 journal (currently a single dominant reason — *Injection de prompt, 15 338* — which is
-the truthful shape of this eval-heavy journal, not a fabrication). Deviations: the
-normative's **`Mode d'application`** donut and **`Overrides`** panel are not built —
-mode is derivable from the policy but low-value here, and there is **no real source for
-manual overrides** (would be a fixture). Left out per zéro-hardcode. **À confirmer**.
+the truthful shape of this eval-heavy journal, not a fabrication). The normative's **`Mode d'application`** and **`Overrides`** panels are now built
+for real (Phase 2): `Mode d'application` aggregates the guard rules by enforcement
+mechanism (block / limit / confirm / allow) derived from `policy.yaml`, with the
+per-mode decision volume from the S1 journal; `Overrides` binds to the **real**
+rule-state store (`set_rule_state` / `_load_state`) and lists the rules currently
+disabled for this agent — rendering an honest empty state ("Aucune dérogation
+manuelle") when none are, never a fixture. Deviation: rendered as two horizontal
+panels under the existing Watch/Quick/Coverage/Reasons row, not a donut; the rule
+detail stays a right-hand panel (the persistent OT-01 column refactor is a
+separate follow-up).
 
 **Prompts governance banner (image 07, conformance pass).** The page is fully real
 (YAML source of truth `agent/prompts/{fr,de,en}.yaml`, read-only — prompts are edited

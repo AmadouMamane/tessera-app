@@ -273,6 +273,10 @@ export function AgentGardeFous() {
             <Coverage data={data} />
             <Reasons data={data} />
           </div>
+          <div className="grid gap-2.5 md:grid-cols-2">
+            <ModeDistribution data={data} />
+            <Overrides data={data} />
+          </div>
         </div>
         <Detail
           detail={detail}
@@ -922,6 +926,76 @@ function Reasons({ data }: { data: Data }) {
           </li>
         ))}
       </ul>
+    </PanelCard>
+  );
+}
+
+/** Enforcement-mode distribution, derived from the real policy mechanisms. */
+function ModeDistribution({ data }: { data: Data }) {
+  const m = data.mode_distribution;
+  if (!m) return null;
+  return (
+    <PanelCard title={m.title}>
+      <p className="-mt-1 mb-1 text-[0.66rem] text-[var(--tessera-text-muted)]">{m.subtitle}</p>
+      <ul className="flex flex-col gap-2.5">
+        {m.items.map((it) => (
+          <li key={it.mode} className="flex flex-col gap-1">
+            <div className="flex items-center justify-between text-[0.7rem]">
+              <span className="flex items-center gap-1.5 text-[var(--tessera-text)]">
+                <span
+                  className={cn("h-2 w-2 rounded-full", MODE_DOT[it.mode] ?? "bg-slate-400")}
+                />
+                {it.label}
+                <span className="text-[var(--tessera-text-muted)]">
+                  · {it.active}/{it.count} actives
+                </span>
+              </span>
+              <span className="tabular-nums text-[var(--tessera-text-muted)]">
+                {it.decisions.toLocaleString("fr-FR")} déc.
+              </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+              <div
+                className={cn("h-full rounded-full", MODE_DOT[it.mode] ?? "bg-slate-500")}
+                style={{ width: `${Math.max(it.pct, 3)}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </PanelCard>
+  );
+}
+
+/** Manual overrides = rules disabled in the durable state store (real source). */
+function Overrides({ data }: { data: Data }) {
+  const o = data.overrides;
+  if (!o) return null;
+  return (
+    <PanelCard title={o.title}>
+      <p className="-mt-1 mb-1 text-[0.66rem] text-[var(--tessera-text-muted)]">{o.subtitle}</p>
+      {o.items.length === 0 ? (
+        <p className="py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">{o.empty}</p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {o.items.map((it) => (
+            <li
+              key={it.key}
+              className="flex items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5"
+            >
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-[0.72rem] text-[var(--tessera-text)]">{it.name}</span>
+                <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
+                  {it.category} · {it.mode}
+                </span>
+              </span>
+              <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[0.62rem] font-medium text-amber-200">
+                {it.status}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </PanelCard>
   );
 }

@@ -3925,6 +3925,40 @@ export const AgentGardeFousSchema = z.object({
       }),
     )
     .optional(),
+  mode_distribution: z
+    .object({
+      title: z.string(),
+      subtitle: z.string(),
+      total: z.number(),
+      items: z.array(
+        z.object({
+          label: z.string(),
+          mode: z.string(),
+          count: z.number(),
+          active: z.number(),
+          decisions: z.number(),
+          pct: z.number(),
+        }),
+      ),
+    })
+    .optional(),
+  overrides: z
+    .object({
+      title: z.string(),
+      subtitle: z.string(),
+      count: z.number(),
+      empty: z.string(),
+      items: z.array(
+        z.object({
+          key: z.string(),
+          name: z.string(),
+          category: z.string(),
+          mode: z.string(),
+          status: z.string(),
+        }),
+      ),
+    })
+    .optional(),
 });
 export type AgentGardeFous = z.infer<typeof AgentGardeFousSchema>;
 

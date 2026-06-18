@@ -895,6 +895,94 @@ def _build_reasons(scan: _AuditScan, lang: str) -> dict[str, object]:
     return {"title": _t(_STR["reasons_title"], lang), "items": items}
 
 
+# Mode d'application + Overrides — i18n triples (logic keys stay stable).
+_MODE_TITLE: tuple[str, str, str] = (
+    "Mode d'application",
+    "Durchsetzungsmodus",
+    "Enforcement mode",
+)
+_MODE_SUB: tuple[str, str, str] = (
+    "Répartition des règles par mécanisme (dérivé de policy.yaml).",
+    "Verteilung der Regeln nach Mechanismus (aus policy.yaml).",
+    "Rule distribution by mechanism (derived from policy.yaml).",
+)
+_OVR_TITLE: tuple[str, str, str] = ("Dérogations (overrides)", "Ausnahmen (Overrides)", "Overrides")
+_OVR_SUB: tuple[str, str, str] = (
+    "Règles désactivées manuellement pour cet agent (journal d'état réel).",
+    "Manuell deaktivierte Regeln für diesen Agenten (realer Zustand).",
+    "Rules manually disabled for this agent (real state store).",
+)
+_OVR_EMPTY: tuple[str, str, str] = (
+    "Aucune dérogation manuelle — toutes les règles sont au réglage par défaut.",
+    "Keine manuelle Ausnahme — alle Regeln auf Standard.",
+    "No manual override — every rule is at its default.",
+)
+_OVR_OFF: tuple[str, str, str] = ("Désactivée", "Deaktiviert", "Disabled")
+
+
+def _build_mode_distribution(
+    state: dict[str, dict[str, bool]], scan: _AuditScan, lang: str
+) -> dict[str, object]:
+    """Enforcement-mode distribution, derived from the real policy mechanisms.
+
+    Each guardrail rule maps to a policy enforcement mode (block / limit /
+    confirm / allow); the counts come from the live rule set and the per-rule
+    decision volume from the S1 journal. No fabricated values.
+    """
+    n_total = len(_RULES) or 1
+    items: list[dict[str, object]] = []
+    for mode in ("block", "limit", "confirm", "allow"):
+        rules = [r for r in _RULES if r.mode == mode]
+        if not rules:
+            continue
+        active = sum(1 for r in rules if _enabled(state, r.key))
+        decisions = sum(scan.per_rule.get(r.key, _RuleStat()).decisions for r in rules)
+        items.append(
+            {
+                "label": _t(_MODE[mode], lang),
+                "mode": mode,
+                "count": len(rules),
+                "active": active,
+                "decisions": decisions,
+                "pct": round(100 * len(rules) / n_total),
+            }
+        )
+    return {
+        "title": _t(_MODE_TITLE, lang),
+        "subtitle": _t(_MODE_SUB, lang),
+        "items": items,
+        "total": len(_RULES),
+    }
+
+
+def _build_overrides(state: dict[str, dict[str, bool]], lang: str) -> dict[str, object]:
+    """Manual overrides = rules disabled in the durable state store (real source).
+
+    The override panel binds to the same `set_rule_state` store the toggle
+    writes to. When nothing is overridden it renders an honest empty state
+    rather than a fabricated list.
+    """
+    items: list[dict[str, object]] = []
+    for rule in _RULES:
+        if not _enabled(state, rule.key):
+            items.append(
+                {
+                    "key": rule.key,
+                    "name": _t(rule.name, lang),
+                    "category": _t(_CATEGORY[rule.category], lang),
+                    "mode": _t(_MODE[rule.mode], lang),
+                    "status": _t(_OVR_OFF, lang),
+                }
+            )
+    return {
+        "title": _t(_OVR_TITLE, lang),
+        "subtitle": _t(_OVR_SUB, lang),
+        "items": items,
+        "count": len(items),
+        "empty": _t(_OVR_EMPTY, lang),
+    }
+
+
 def _build_detail(
     rule: _RuleDef,
     stat: _RuleStat,
@@ -1072,5 +1160,7 @@ def _assemble(
         },
         "coverage": _build_coverage(per_cat_total, per_cat_active, lang),
         "reasons": _build_reasons(scan, lang),
+        "mode_distribution": _build_mode_distribution(state, scan, lang),
+        "overrides": _build_overrides(state, lang),
         "details": details,
     }
