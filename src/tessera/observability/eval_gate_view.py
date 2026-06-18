@@ -27,11 +27,13 @@ from tessera.observability.eval_tiers import Tier, load_tier_map
 from tessera.observability.eval_waivers import EffectiveWaiver, effective_waivers
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from tessera.observability.eval_data import EvalSnapshot
 
 _FAILURES_DIR = Path(__file__).resolve().parents[3] / "eval" / "failures"
 
-__all__ = ["GateCaseStatus", "GateView", "build_gate_view"]
+__all__ = ["GateCaseStatus", "GateView", "build_gate_view", "structural_gate"]
 
 # Per-(case, language) gate status keys, with French labels + a tone the
 # frontend styles. These are the cells of the critical-cases table.
@@ -163,6 +165,63 @@ def _verdict(
         reason = "Le taux de réussite du domaine (T2) est sous le seuil requis."
         return False, "BLOQUÉ (domaine)", "bad", reason
     return True, "PASSE", "good", "Socle intact, aucun critique non dérogé, domaine conforme."
+
+
+def structural_gate(
+    results: Sequence[tuple[str, str, bool]], *, min_pass_rate: float
+) -> dict[str, object]:
+    """The tier-aware **structural** gate, at the (case, langue) grain — no waivers.
+
+    This is the policy-shaped gate the *run itself* can carry (stamped into the
+    report by the eval runner), so the report is authoritative for the structural
+    verdict instead of the cruder two-level block. It deliberately excludes
+    waivers and expiry: those are **dynamic** (clock-dependent) and resolved at
+    render by :func:`build_gate_view`, which layers the active-waiver delta on top
+    of this same tier classification. ``results`` are ``(case_id, language,
+    passed)`` triples for the reference run.
+    """
+    tiers = load_tier_map()
+    counts = {"T0": 0, "T1": 0, "T2": 0}
+    socle_total = socle_passed = 0
+    domain_total = domain_passed = 0
+    blocking_socle = blocking_t1 = 0
+    for case_id, _lang, passed in results:
+        tier = tiers.tier_of(case_id)
+        counts[tier] += 1
+        if tier == "T0":
+            socle_total += 1
+            socle_passed += int(passed)
+            blocking_socle += int(not passed)
+        elif tier == "T1":
+            blocking_t1 += int(not passed)
+        else:
+            domain_total += 1
+            domain_passed += int(passed)
+    socle_ok = socle_total > 0 and socle_passed == socle_total
+    domain_rate = domain_passed / domain_total if domain_total else 1.0
+    domain_ok = domain_rate >= min_pass_rate
+    passed, label, tone, reason = _verdict(
+        socle_ok=socle_ok, t1_unwaived=blocking_t1, non_exec_crit=0, domain_ok=domain_ok
+    )
+    return {
+        "grain": "case_language",
+        "passed": passed,
+        "label": label,
+        "tone": tone,
+        "reason": reason,
+        "min_pass_rate": min_pass_rate,
+        "tier_counts": counts,
+        "executions": sum(counts.values()),
+        "socle": {"ok": socle_ok, "passed": socle_passed, "total": socle_total},
+        "domain": {
+            "ok": domain_ok,
+            "passed": domain_passed,
+            "total": domain_total,
+            "rate": round(domain_rate, 4),
+        },
+        "breakdown": {"blocking_socle": blocking_socle, "blocking_t1": blocking_t1},
+        "note": "Gate structurel (sans dérogations) ; les dérogations sont résolues au rendu.",
+    }
 
 
 def build_gate_view(snap: EvalSnapshot, *, now: datetime | None = None) -> GateView:

@@ -28,6 +28,7 @@ from tessera.agent import compile_graph
 from tessera.agent.registry import get_agent
 from tessera.agent.state import new_state
 from tessera.llm.budget import get_budget_tracker
+from tessera.observability.eval_gate_view import structural_gate
 from tessera.settings import LanguageCode, LLMProfile, get_settings
 
 FAILURES_DIR = Path(__file__).parent / "failures"
@@ -280,9 +281,7 @@ def _build_gate(
     return verdict, payload
 
 
-def _persist_report(
-    args: argparse.Namespace, payload: str, run_ts: str, lang_suffix: str
-) -> Path:
+def _persist_report(args: argparse.Namespace, payload: str, run_ts: str, lang_suffix: str) -> Path:
     """Write the timestamped archive + the relevant "latest", and return the archive.
 
     Per-agent runs key their archive and "latest" by agent_id so each agent's
@@ -372,6 +371,17 @@ async def _run_all(args: argparse.Namespace) -> int:
 
     # Two-level eval-gate (only for an agent run): the exit code is the verdict.
     verdict, gate_payload = _build_gate(eval_set, results)
+    # Tier-aware *structural* policy gate carried by the run itself, so the report
+    # is authoritative for the structural verdict (the page only layers the
+    # dynamic waiver delta on top at render). None for a non-agent catalogue run.
+    policy_gate = (
+        structural_gate(
+            [(r.case_id, r.language, r.passed) for r in results],
+            min_pass_rate=eval_set.gate.min_pass_rate,
+        )
+        if eval_set is not None
+        else None
+    )
 
     payload = json.dumps(
         {
@@ -383,6 +393,7 @@ async def _run_all(args: argparse.Namespace) -> int:
             "catalogue_version": catalogue_version,
             "summary": asdict(scorecard.summary),
             "gate": gate_payload,
+            "policy_gate": policy_gate,
             "results": [asdict(r) for r in results],
             "synthesis": synthesis,
             "cost": cost,

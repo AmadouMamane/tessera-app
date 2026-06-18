@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from eval.sets import load_security_floor
 from tessera.observability.agent_evaluations import compute_agent_evaluations
 from tessera.observability.eval_data import load_agent_or_global_snapshot
-from tessera.observability.eval_gate_view import build_gate_view
+from tessera.observability.eval_gate_view import build_gate_view, structural_gate
 from tessera.observability.eval_tiers import is_waivable, load_tier_map, tier_for
 from tessera.observability.eval_waivers import effective_waivers, verify_waiver_chain
 
@@ -61,13 +61,26 @@ def test_gate_view_counters_reconcile_at_case_language_grain() -> None:
     # The tier partition sums to the executions (structural Venn property).
     assert sum(gv.tier_counts.values()) == gv.executions
     # Critical breakdown reconciles: every T1 failure is either blocking or waived.
-    t1_fail = sum(
-        1 for s in gv.statuses if s.tier == "T1" and not s.passed and s.executed
-    )
+    t1_fail = sum(1 for s in gv.statuses if s.tier == "T1" and not s.passed and s.executed)
     assert gv.blocking_t1 + gv.waived_active == t1_fail
     # Every socle (T0) failure is a hard block (none can be waived).
     t0_fail = sum(1 for s in gv.statuses if s.tier == "T0" and not s.passed and s.executed)
     assert gv.blocking_socle == t0_fail
+
+
+def test_structural_gate_carried_by_the_run_matches_the_render() -> None:
+    # The run-carried structural gate (no waivers) must share the render's tier
+    # classification; the only difference is the dynamic waiver delta layered at
+    # render: structural.blocking_t1 == render.blocking_t1 + render.waived_active.
+    snap = load_agent_or_global_snapshot("support-client")
+    triples = [(s.case_id, s.language, s.passed) for s in snap.sessions]
+    sg = structural_gate(triples, min_pass_rate=snap.gate_min_pass_rate or 0.0)
+    gv = build_gate_view(snap)
+    assert sg["tier_counts"] == gv.tier_counts
+    bd = sg["breakdown"]
+    assert isinstance(bd, dict)
+    assert bd["blocking_socle"] == gv.blocking_socle
+    assert bd["blocking_t1"] == gv.blocking_t1 + gv.waived_active
 
 
 def test_verdict_is_the_headline_and_tied_to_conformity() -> None:
