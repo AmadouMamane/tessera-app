@@ -4716,5 +4716,13 @@
     "empty": "Keine RBAC-Daten verfügbar.",
     "followup": "Aktuelle Reichweite: Org (jede Rolle deckt alle Agenten ab). Die Zuweisung einer Rolle zu bestimmten Agenten (Rolle-x-Agent-Binding-Store) ist ein Follow-up.",
     "agentFilterHint": "Globaler GOUVERNER/PLATEFORME-Filter — getrennt vom AGENT-Umschalter."
+  },
+  "appFooter": {
+    "sourceOfTruth": "Quelle der Wahrheit: YAML · Git",
+    "checking": "Integrität: wird geprüft…",
+    "integrityOk": "Hash-Kette verifiziert ({n} Ereignisse)",
+    "integrityBroken": "Integrität: Kette gebrochen — zu untersuchen",
+    "env": "on-prem · EU-Residenz · SOC 2",
+    "note": "Status erst nach erfolgreicher Prüfung vergeben."
   }
 }

@@ -4716,5 +4716,13 @@
     "empty": "No RBAC data available.",
     "followup": "Current scope: org (every role covers all agents). Assigning a role to specific agents (role x agent binding store) is a follow-up.",
     "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher."
+  },
+  "appFooter": {
+    "sourceOfTruth": "Source of truth: YAML · Git",
+    "checking": "Integrity: verifying…",
+    "integrityOk": "Hash-chain verified ({n} events)",
+    "integrityBroken": "Integrity: chain broken — investigate",
+    "env": "on-prem · EU residency · SOC 2",
+    "note": "Status assigned only after successful verification."
   }
 }

@@ -4716,5 +4716,13 @@
     "empty": "Aucune donnée RBAC disponible.",
     "followup": "Portée actuelle : org (chaque rôle couvre tous les agents). L'affectation d'un rôle à des agents spécifiques (store de binding rôle x agent) est un suivi.",
     "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT."
+  },
+  "appFooter": {
+    "sourceOfTruth": "Source de vérité : YAML · Git",
+    "checking": "Intégrité : vérification…",
+    "integrityOk": "Intégrité hash-chaînée vérifiée ({n} événements)",
+    "integrityBroken": "Intégrité : chaîne rompue — à investiguer",
+    "env": "on-prem · résidence UE · SOC 2",
+    "note": "Statut attribué uniquement après vérification réussie."
   }
 }

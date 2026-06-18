@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { AppBreadcrumb } from "./app-breadcrumb";
+import { AppFooter } from "./app-footer";
 import { Sidebar } from "./sidebar";
 import { Topbar, type TopbarAction, type TopbarContextItem } from "./topbar";
 
@@ -47,8 +49,12 @@ export function AppShell({
           breadcrumb={breadcrumb}
         />
         <main className={`min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto ${mainPadding}`}>
-          <div className={`mx-auto flex h-full w-full ${maxWidth} flex-col`}>{children}</div>
+          <div className={`mx-auto flex h-full w-full ${maxWidth} flex-col`}>
+            <AppBreadcrumb />
+            {children}
+          </div>
         </main>
+        <AppFooter />
       </div>
     </div>
   );
