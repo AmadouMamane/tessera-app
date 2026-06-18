@@ -223,6 +223,8 @@ export function AgentEvaluations() {
 
       <VerdictBanner data={data} />
 
+      <LifecycleBar data={data} />
+
       <LiensUtiles />
 
       <GatePolicySection data={data} />
@@ -338,6 +340,51 @@ function ReleaseControl() {
         </span>
       ) : null}
     </div>
+  );
+}
+
+/** P5 — release lifecycle bar: candidat → déployé → cible, + run environment,
+ *  model, run-id and period. Real data (gate.candidate, meta.model, the run
+ *  timestamp); the **deployed** version has no real release pointer yet, so it
+ *  renders an honest empty state — never a fabricated REL. */
+function fmtRunStamp(stamp: string): string {
+  // "20260618T083906Z" → "18/06/2026 08:39 UTC"
+  const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(stamp);
+  if (!m) return stamp || "—";
+  return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]} UTC`;
+}
+
+function LifecycleBar({ data }: { data: Data }) {
+  const gate = data.gate;
+  const meta = data.meta;
+  const candidate = gate?.candidate ?? "";
+  const cells: { label: string; value: string; tone?: "muted" }[] = [
+    { label: "Candidat (run-id)", value: candidate || "—" },
+    // No deployed-release pointer exists yet → honest empty, not a fabricated REL.
+    { label: "Version déployée", value: "Aucune release déployée", tone: "muted" },
+    { label: "Cible", value: "Production" },
+    { label: "Env du run", value: "Préprod d'évaluation" },
+    { label: "Modèle évalué", value: meta?.model ?? "—" },
+    { label: "Période du run", value: candidate ? fmtRunStamp(candidate) : "—" },
+  ];
+  return (
+    <section className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-2.5">
+      <span className="text-[10px] uppercase tracking-wide text-[#b9a6ff]">Cycle de vie</span>
+      {cells.map((c) => (
+        <div key={c.label} className="flex flex-col gap-0.5">
+          <span className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {c.label}
+          </span>
+          <span
+            className={`text-[0.8rem] font-medium tabular-nums ${
+              c.tone === "muted" ? "text-[var(--tessera-text-muted)]" : "text-[var(--tessera-text)]"
+            }`}
+          >
+            {c.value}
+          </span>
+        </div>
+      ))}
+    </section>
   );
 }
 

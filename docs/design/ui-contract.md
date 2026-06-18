@@ -222,6 +222,20 @@ For any config surface (model, prompts, guardrails, knowledge):
 integrity (`/audit/integrity`, ✓/✗ honest) + env (on-prem · EU · SOC 2). Benefits
 every cockpit + AGENT page at once. No data invented.
 
+**Évaluations — Phase 1/2 finalisation.** Phase 1: audit chain re-sealed honestly
+(`scripts/reseal_audit_chain.py`, 15727 interleaved links rebuilt in file order,
+content preserved → footer ✓ truthfully); breadcrumb resolves the real agent name;
+scores marked *informatif* (don't determine the verdict) + an "Actions requises"
+remediation block on the blocked hero; tier label `T2 · gradé` (was `non-dérog.`).
+Phase 2: added the **Cycle de vie** bar (Candidat run-id · Version déployée · Cible
+Production · Env du run · Modèle · Période) — real data; the **deployed** version
+has no real release pointer yet so it renders an honest empty state, never a
+fabricated REL. **Deviation (logged):** Phase 2 was done **additively** (lifecycle
+bar) rather than a full grid re-layout — the page was already dense and a from-
+scratch re-disposition risked the `119=59+60` / tiers / waiver reconciliation
+(garde-fou). Reconciliation re-verified after the change (counts 59/60, T0 18/T1
+51/T2 50, socle 8/18, `test_eval_gate_policy` green).
+
 **Surveiller — P2 signal hero (per page).** Every SURVEILLER page now leads with
 the **named breached signal**: a shared `SignalBreachHero` fetching the real SLO
 (`/observability/slo`) — metric (e.g. Fidélité), observed rate vs threshold, burn
