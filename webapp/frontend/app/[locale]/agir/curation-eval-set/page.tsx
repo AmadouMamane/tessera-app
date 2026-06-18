@@ -3,11 +3,15 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { CurationOverview } from "@/components/curation/curation-overview";
 import { AppShell } from "@/components/layout/app-shell";
+import { GovScopeSection } from "@/components/agent/gov-scope-section";
+import { readAgentScope } from "@/lib/agent-scope";
+import { loadFleet } from "@/lib/server/fleet";
 import { CurationOverviewSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
 interface CurationPageProps {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: CurationPageProps) {
@@ -30,9 +34,11 @@ async function prefetchCuration(queryClient: QueryClient) {
   });
 }
 
-export default async function CurationPage({ params }: CurationPageProps) {
+export default async function CurationPage({ params, searchParams }: CurationPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const scope = readAgentScope(await searchParams);
+  const fleet = await loadFleet();
   const t = await getTranslations({ locale, namespace: "curation" });
   const queryClient = new QueryClient();
   try {
@@ -43,6 +49,9 @@ export default async function CurationPage({ params }: CurationPageProps) {
 
   return (
     <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+      <div className="mb-3">
+        <GovScopeSection fleet={fleet} scope={scope} locale={locale} />
+      </div>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <CurationOverview />
       </HydrationBoundary>

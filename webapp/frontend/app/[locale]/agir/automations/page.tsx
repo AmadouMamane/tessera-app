@@ -3,11 +3,15 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AutomationsOverview } from "@/components/automations/automations-overview";
 import { AppShell } from "@/components/layout/app-shell";
+import { GovScopeSection } from "@/components/agent/gov-scope-section";
+import { readAgentScope } from "@/lib/agent-scope";
+import { loadFleet } from "@/lib/server/fleet";
 import { AutomationsOverviewSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
 interface AutomationsPageProps {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: AutomationsPageProps) {
@@ -30,9 +34,11 @@ async function prefetchAutomations(queryClient: QueryClient) {
   });
 }
 
-export default async function AutomationsPage({ params }: AutomationsPageProps) {
+export default async function AutomationsPage({ params, searchParams }: AutomationsPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const scope = readAgentScope(await searchParams);
+  const fleet = await loadFleet();
   const t = await getTranslations({ locale, namespace: "automations" });
   const queryClient = new QueryClient();
   try {
@@ -43,6 +49,9 @@ export default async function AutomationsPage({ params }: AutomationsPageProps) 
 
   return (
     <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+      <div className="mb-3">
+        <GovScopeSection fleet={fleet} scope={scope} locale={locale} />
+      </div>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <AutomationsOverview />
       </HydrationBoundary>
