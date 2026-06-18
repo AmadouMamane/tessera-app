@@ -4375,7 +4375,11 @@
     "escalation": "Refusal/escalation",
     "handoffs": "Handoffs (in/out)",
     "open": "Open agent",
-    "judgedNote": "Judged quality scores (resolution, faithfulness) stay shared until per-agent evaluation (Phase 4); only observable signals differ here."
+    "judgedNote": "Judged quality scores (resolution, faithfulness) stay shared until per-agent evaluation (Phase 4); only observable signals differ here.",
+    "release": "Release state",
+    "releaseNotRun": "Eval not run",
+    "candidate": "Candidate",
+    "releaseNote": "Per-agent eval-gate verdict (reference run, case × language grain) — each agent is a governed package."
   },
   "product": {
     "nav": {

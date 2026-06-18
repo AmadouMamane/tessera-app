@@ -4375,7 +4375,11 @@
     "escalation": "Ablehnung/Eskalation",
     "handoffs": "Übergaben (e/a)",
     "open": "Agent öffnen",
-    "judgedNote": "Bewertete Qualitätswerte (Lösung, Treue) bleiben geteilt bis zur Per-Agent-Evaluierung (Phase 4); hier unterscheiden sich nur beobachtbare Signale."
+    "judgedNote": "Bewertete Qualitätswerte (Lösung, Treue) bleiben geteilt bis zur Per-Agent-Evaluierung (Phase 4); hier unterscheiden sich nur beobachtbare Signale.",
+    "release": "Release-Status",
+    "releaseNotRun": "Eval nicht ausgeführt",
+    "candidate": "Kandidat",
+    "releaseNote": "Eval-Gate-Verdikt pro Agent (Referenzlauf, Fall × Sprache) — jeder Agent ist ein verwaltetes Paket."
   },
   "product": {
     "nav": {

@@ -4584,6 +4584,23 @@ export const FleetSchema = z.object({
         handoffs_in: z.number(),
         handoffs_out: z.number(),
         health: z.string(),
+        release: z
+          .object({
+            agent_id: z.string(),
+            available: z.boolean(),
+            passed: z.boolean(),
+            verdict_label: z.string(),
+            verdict_tone: z.string(),
+            candidate_version: z.string(),
+            eval_set: z.string(),
+            executions: z.number(),
+            socle_ok: z.boolean(),
+            blocking_socle: z.number(),
+            blocking_t1: z.number(),
+            waived_active: z.number(),
+          })
+          .nullable()
+          .optional(),
       }),
     )
     .optional(),

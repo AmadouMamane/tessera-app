@@ -21,6 +21,15 @@ const HEALTH: Record<string, { dot: string; label: string }> = {
   crit: { dot: "bg-red-400", label: "Critique" },
 };
 
+// Release verdict tone — colour is tied to gate conformity (eval-gate-policy §6:
+// green only when the gate passes), never cosmetic.
+const RELEASE_TONE: Record<string, string> = {
+  good: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+  crit: "border-red-500/40 bg-red-500/10 text-red-300",
+  bad: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+  muted: "border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)]",
+};
+
 const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
 const fmtSecs = (ms: number | null) =>
   ms === null ? "-" : `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
@@ -110,6 +119,30 @@ export default async function FleetPage({ params }: PageProps) {
                   />
                   <Stat label={t("handoffs")} value={`${a.handoffs_in} / ${a.handoffs_out}`} />
                 </dl>
+                {/* État de release — per-agent eval-gate verdict (each agent = a governed package). */}
+                <div className="flex flex-col gap-1 border-t border-[var(--tessera-border)] pt-2">
+                  <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">
+                    {t("release")}
+                  </span>
+                  {a.release && a.release.available ? (
+                    <span className="flex items-center justify-between gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[0.62rem] font-medium ${
+                          RELEASE_TONE[a.release.verdict_tone] ?? RELEASE_TONE.muted
+                        }`}
+                      >
+                        {a.release.verdict_label}
+                      </span>
+                      <span className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
+                        {t("candidate")} {a.release.candidate_version}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
+                      {t("releaseNotRun")}
+                    </span>
+                  )}
+                </div>
                 <span className="mt-1 inline-flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] group-hover:text-white">
                   {t("open")} <ArrowRight className="h-3 w-3" />
                 </span>
@@ -117,6 +150,7 @@ export default async function FleetPage({ params }: PageProps) {
             );
           })}
         </div>
+        <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("releaseNote")}</p>
         <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("judgedNote")}</p>
     </div>
   );

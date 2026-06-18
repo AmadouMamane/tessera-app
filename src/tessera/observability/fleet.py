@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any
 
 from psycopg.rows import dict_row
 
+from tessera.observability.agent_release import fleet_release_states
+from tessera.observability.agent_scope import dedup_org_total
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
 
@@ -95,39 +97,35 @@ async def compute_fleet() -> dict[str, object]:
             by_agent = {str(r["agent_id"]): r for r in await cur.fetchall()}
 
             await cur.execute(
-                "SELECT count(DISTINCT conversation_id) AS convs, "
-                "count(*) FILTER (WHERE role = 'user') AS turns FROM conversation_messages"
+                "SELECT count(*) FILTER (WHERE role = 'user') AS turns FROM conversation_messages"
             )
-            org = await cur.fetchone() or {}
+            org_turns = int((await cur.fetchone() or {}).get("turns") or 0)
 
-            await cur.execute(
-                "SELECT count(*) AS n FROM ("
-                "  SELECT conversation_id FROM conversation_messages "
-                "  GROUP BY conversation_id HAVING count(DISTINCT agent_id) > 1"
-                ") s"
+            # Deduplicated conversation rollup via the shared helper — a handoff
+            # conversation counts ONCE for the org, never the per-agent sum.
+            rollup = await dedup_org_total(
+                cur, table="conversation_messages", entity_col="conversation_id"
             )
-            shared = (await cur.fetchone() or {}).get("n", 0)
 
     incoming, outgoing = _handoff_counts(get_settings().guard.audit_file)
+    releases = fleet_release_states()
 
     # Registry first (every agent appears), enriched with its real slice.
     agents: list[dict[str, Any]] = []
-    naive_sum = 0
     for reg in _registry_agents():
         aid = reg["id"]
         row = by_agent.get(aid, {})
-        convs = int(row.get("convs") or 0)
         answers = int(row.get("answers") or 0)
         escal = int(row.get("escal") or 0)
         escalation_rate = round(100 * escal / answers, 1) if answers else 0.0
         lat = row.get("lat")
-        naive_sum += convs
+        rel = releases.get(aid)
         agents.append(
             {
                 "id": aid,
                 "name": reg["name"],
                 "owner": reg["owner"],
-                "conversations": convs,
+                "conversations": int(row.get("convs") or 0),
                 "turns": int(row.get("turns") or 0),
                 "messages": int(row.get("msgs") or 0),
                 "escalation_rate": escalation_rate,
@@ -135,14 +133,14 @@ async def compute_fleet() -> dict[str, object]:
                 "handoffs_in": int(incoming.get(aid, 0)),
                 "handoffs_out": int(outgoing.get(aid, 0)),
                 "health": _health(escalation_rate),
+                "release": rel.as_dict() if rel else None,
             }
         )
 
-    org_convs = int(org.get("convs") or 0)
     return {
         "agents": agents,
-        "org": {"conversations": org_convs, "turns": int(org.get("turns") or 0)},
-        "naive_sum_conversations": naive_sum,
-        "shared_conversations": int(shared or 0),
-        "dedup_saved": naive_sum - org_convs,
+        "org": {"conversations": rollup.org, "turns": org_turns},
+        "naive_sum_conversations": rollup.naive_sum,
+        "shared_conversations": rollup.shared,
+        "dedup_saved": rollup.dedup_saved,
     }
