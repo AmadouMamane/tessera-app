@@ -274,6 +274,17 @@ the other CONFIGURER pages (knowledge/policies/tools) can mount the same panel; 
 "changement → re-gate" is currently *surfaced* (count + verdict), the governed
 re-gate *action* runs through Release Control, not from this read-only catalogue.
 
+**Rest of Surveiller + Agir — same pattern (Tier 3).** The remaining SURVEILLER
+pages (conformité, fiabilité-coût, observabilité, amélioration) and AGIR pages
+(incidents-playbooks, replay-shadow, curation-eval-set, automations) all mount the
+shared `GovScopeSection` (global filter + real per-agent fleet breakdown + deduped
+org total) atop their existing dashboard. **Deviation (logged):** the dashboards /
+entities below (compliance signals, incidents, replays, automations…) are not yet
+ventilated/tagged per agent — the filter scopes the per-agent breakdown (real) and
+the honest banner states the body below is org-wide. Real-able follow-up: tag those
+entities/signals with `agent_id` so the same filter scopes them too. No fabricated
+per-agent value is shown.
+
 **Agir / Release Control — built real (was a scaffold).** Each agent is a governed
 package; the page is the per-agent release pipeline. `observability/release_control.py`
 combines the **policy-correct** eval-gate verdict (`agent_release` → `build_gate_view`
