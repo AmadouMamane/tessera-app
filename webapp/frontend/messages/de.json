@@ -481,7 +481,8 @@
         "policy": "Policy Engine",
         "decision": "Entscheidung",
         "proof": "Nachweis"
-      }
+      },
+      "agent": "Agent (pro Turn)"
     },
     "actions": {
       "title": "Schnellaktionen",
@@ -499,7 +500,8 @@
       "proofs": "Nachweise",
       "lastCheck": "Letzte Prüfung",
       "clock": "Systemuhr"
-    }
+    },
+    "agentFilterHint": "Globaler GOUVERNER/PLATEFORME-Filter — getrennt vom AGENT-Umschalter; filtert die Audit-Kette nach agent_id (gestempelte Ereignisse)."
   },
   "eval": {
     "title": "Regressionsscore",

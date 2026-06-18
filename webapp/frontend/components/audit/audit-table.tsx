@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { DeltaBadge, MetricCard } from "@/components/cockpit/metric-card";
@@ -39,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchAudit, fetchAuditOverview } from "@/lib/api/client";
 import type {
   AuditActorRole,
@@ -89,6 +91,11 @@ export function AuditTable({ initialWindow }: { initialWindow?: AuditWindow }) {
   const [scope, setScope] = useState<SelectValueState>("all");
   const [selected, setSelected] = useState<AuditEntry | null>(null);
 
+  // Global GOUVERNER/PLATEFORME agent scope (?agent=), distinct from the AGENT
+  // switcher — it scopes the audit trail to events stamped with that agent_id.
+  const searchParams = useSearchParams();
+  const agentScope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
+
   const filters = useMemo(
     () => ({
       outcome: outcome === "all" ? undefined : outcome,
@@ -98,8 +105,9 @@ export function AuditTable({ initialWindow }: { initialWindow?: AuditWindow }) {
       query: query.trim() || undefined,
       since: window.since,
       until: window.until,
+      agent: agentScope === "all" ? undefined : agentScope,
     }),
-    [actorRole, eventType, outcome, query, scope, window.since, window.until],
+    [actorRole, agentScope, eventType, outcome, query, scope, window.since, window.until],
   );
 
   const overview = useQuery({
@@ -809,6 +817,7 @@ function AuditDetails({
             badge={t(`roles.${entry.actor_role}`)}
           />
           <DetailRow label={t("detail.scope")} value={entry.scope} />
+          {entry.agent_id ? <DetailRow label={t("detail.agent")} value={entry.agent_id} /> : null}
           <DetailRow label={t("detail.action")} value={entry.target} />
           <DetailRow label={t("detail.object")} value={entry.object_label} />
           <DetailRow label={t("detail.policy")} value={rationale} />

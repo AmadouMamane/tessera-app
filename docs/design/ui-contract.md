@@ -236,6 +236,19 @@ release" per-agent: eval-gate verdict + candidate version, colour tied to gate
 conformity. Resolution rate stays intentionally absent (judged quality shared
 until per-agent eval). Org totals stay deduplicated.
 
+**Prouver / Audit — agent_id filter (Tier 2).** The guard audit chain already
+carries `agent_id` (Phase 0). Surfaced it: `AuditEntry` now parses `agent_id`; the
+`/audit` + `/audit/overview` handlers accept `?agent=` and `_filter_entries` filters
+by it; the page mounts the global `AgentScopeFilter` (distinct from the switcher) and
+`AuditTable` reads `?agent=` into its query so both the list and the scoped metrics
+follow it; the detail panel shows the per-turn `Agent`. Real — only the ~390
+agent-stamped events resolve when scoped; pre-stamping records (no `agent_id`) are
+honestly excluded from a scoped view. **Deviations (logged):** (1) chain integrity is
+computed over the **whole** chain (the seal is chain-wide), not the filtered subset —
+correct, a filter is a view not a re-seal; (2) a full per-agent **État à date** seal
+(as-of-T scoped by agent) is a follow-up; the filter scopes the audit view that feeds
+it.
+
 **Configurer / "used-by" — the inverse binding (Tier 2).**
 `observability/catalogue_consumers.py` inverts the governed registry bindings: for
 a catalogue `kind` (model / guardrails / knowledge / prompts / tools / eval_set),

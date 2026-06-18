@@ -481,7 +481,8 @@
         "policy": "Policy Engine",
         "decision": "Decision",
         "proof": "Proof"
-      }
+      },
+      "agent": "Agent (per-turn)"
     },
     "actions": {
       "title": "Quick actions",
@@ -499,7 +500,8 @@
       "proofs": "Proofs",
       "lastCheck": "Last verification",
       "clock": "System clock"
-    }
+    },
+    "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher; filters the audit chain by agent_id (stamped events)."
   },
   "eval": {
     "title": "Regression scorecard",

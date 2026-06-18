@@ -481,7 +481,8 @@
         "policy": "Policy Engine",
         "decision": "Décision",
         "proof": "Preuve"
-      }
+      },
+      "agent": "Agent (per-turn)"
     },
     "actions": {
       "title": "Actions rapides",
@@ -499,7 +500,8 @@
       "proofs": "Preuves",
       "lastCheck": "Dernière vérification",
       "clock": "Horloge système"
-    }
+    },
+    "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT ; filtre la chaîne d'audit par agent_id (événements stampés)."
   },
   "eval": {
     "title": "Score de non-régression",

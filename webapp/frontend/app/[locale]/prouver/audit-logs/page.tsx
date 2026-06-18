@@ -1,6 +1,7 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { AuditTable } from "@/components/audit/audit-table";
 import { OperatorLocked } from "@/components/auth/operator-locked";
 import { AppShell } from "@/components/layout/app-shell";
@@ -92,6 +93,10 @@ export default async function AuditPage({ params }: AuditPageProps) {
     <AppShell title={t("title")} description={t("description")} contentWidth="full">
       {isOperator(role) ? (
         <HydrationBoundary state={dehydrate(queryClient)}>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <AgentScopeFilter />
+            <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("agentFilterHint")}</span>
+          </div>
           <AuditTable initialWindow={window} />
         </HydrationBoundary>
       ) : (

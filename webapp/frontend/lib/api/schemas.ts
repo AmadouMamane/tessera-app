@@ -139,6 +139,7 @@ export const AuditEntrySchema = z.object({
   object_label: z.string().default("audit event"),
   policy_rule: z.string().nullable().optional(),
   proof_ref: z.string().nullable().optional(),
+  agent_id: z.string().nullable().optional(),
 });
 export type AuditEntry = z.infer<typeof AuditEntrySchema>;
 

@@ -323,6 +323,7 @@ export interface FetchAuditOptions {
   query?: string;
   since?: string;
   until?: string;
+  agent?: string;
   signal?: AbortSignal;
 }
 
@@ -336,6 +337,7 @@ function appendAuditParams(params: URLSearchParams, options: FetchAuditOptions):
   if (options.query) params.set("q", options.query);
   if (options.since) params.set("since", options.since);
   if (options.until) params.set("until", options.until);
+  if (options.agent && options.agent !== "all") params.set("agent", options.agent);
 }
 
 export async function fetchAudit(options: FetchAuditOptions = {}): Promise<AuditPage> {

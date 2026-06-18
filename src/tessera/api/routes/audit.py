@@ -60,6 +60,7 @@ class AuditEntry(BaseModel):
     object_label: str = "audit event"
     policy_rule: str | None = None
     proof_ref: str | None = None
+    agent_id: str | None = None
 
 
 class AuditPage(BaseModel):
@@ -293,6 +294,7 @@ def _entry_from_payload(payload: dict[str, object]) -> AuditEntry:
         object_label=_object_label(target, arguments, policy_rule),
         policy_rule=policy_rule,
         proof_ref=hash_value[:12] if hash_value else None,
+        agent_id=_first_text(payload.get("agent_id")),
     )
 
 
@@ -401,8 +403,11 @@ def _filter_entries(
     q: str | None,
     since: datetime | None,
     until: datetime | None,
+    agent: str | None = None,
 ) -> list[AuditEntry]:
     filtered = [entry for entry in entries if _within(entry, since, until)]
+    if agent and agent != "all":
+        filtered = [entry for entry in filtered if entry.agent_id == agent]
     if target:
         filtered = [entry for entry in filtered if entry.target == target]
     if outcome:
@@ -578,6 +583,7 @@ def _build_overview(
     scope: str | None = None,
     policy_rule: str | None = None,
     q: str | None = None,
+    agent: str | None = None,
 ) -> AuditOverview:
     start, end = _window_bounds(entries, since, until)
     current = _filter_entries(
@@ -591,6 +597,7 @@ def _build_overview(
         q=q,
         since=start,
         until=end,
+        agent=agent,
     )
     duration = end - start
     previous = _filter_entries(
@@ -604,6 +611,7 @@ def _build_overview(
         q=q,
         since=start - duration,
         until=start,
+        agent=agent,
     )
 
     values = _measure(current, integrity)
@@ -666,6 +674,7 @@ async def audit_list(
     q: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
     since: Annotated[str | None, Query()] = None,
     until: Annotated[str | None, Query()] = None,
+    agent: Annotated[str | None, Query()] = None,
 ) -> AuditPage:
     """Return a paged slice of the audit log."""
     path = _resolve_audit_path()
@@ -680,6 +689,7 @@ async def audit_list(
         q=q,
         since=_parse_datetime(since),
         until=_parse_datetime(until),
+        agent=agent,
     )
     entries = _newest_first(entries)  # most recent activity at the top
     slice_ = entries[cursor : cursor + limit]
@@ -701,6 +711,7 @@ async def audit_overview(
     q: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
     since: Annotated[str | None, Query()] = None,
     until: Annotated[str | None, Query()] = None,
+    agent: Annotated[str | None, Query()] = None,
 ) -> AuditOverview:
     """Return aggregate audit cockpit data for the selected window."""
     path = _resolve_audit_path()
@@ -717,6 +728,7 @@ async def audit_overview(
         scope=scope,
         policy_rule=policy_rule,
         q=q,
+        agent=agent,
     )
 
 
