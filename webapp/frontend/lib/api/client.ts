@@ -99,6 +99,8 @@ import {
   FailedRunsReportSchema,
   type CatalogueConsumers,
   CatalogueConsumersSchema,
+  type RbacMatrix,
+  RbacMatrixSchema,
   type FirewallEfficacy,
   FirewallEfficacySchema,
   type Fleet,
@@ -1315,6 +1317,12 @@ export async function fetchSessionDetail(
 /** Fleet rollup (per-agent observable KPIs + deduplicated org totals). */
 export async function fetchFleet(signal?: AbortSignal): Promise<Fleet> {
   return request("/observability/fleet", { signal }, FleetSchema);
+}
+
+/** RBAC role × agent matrix (real roles × real registry agents). */
+export async function fetchRbacMatrix(agent: string, signal?: AbortSignal): Promise<RbacMatrix> {
+  const params = new URLSearchParams({ agent });
+  return request(`/observability/rbac-matrix?${params}`, { signal }, RbacMatrixSchema);
 }
 
 /** CONFIGURER "used-by": consumer agents of each catalogue item of `kind`. */

@@ -3822,7 +3822,8 @@
     "footer": {
       "total": "{n} roles",
       "source": "Source of truth: {src}"
-    }
+    },
+    "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher."
   },
   "integrations": {
     "title": "Integrations",
@@ -4705,5 +4706,15 @@
     "loading": "Loading…",
     "empty": "No catalogue item consumed (for this filter).",
     "note": "\"Used by\" = the inverse of the AGENT instance binding. Changing a shared definition re-gates the consuming agents (define → consumers → re-validate). The dot = the agent's current eval-gate verdict."
+  },
+  "rbac": {
+    "title": "RBAC — role x agent",
+    "orgNote": "Actually-enforced roles x real agents.",
+    "role": "Role",
+    "scopeOrg": "org",
+    "loading": "Loading…",
+    "empty": "No RBAC data available.",
+    "followup": "Current scope: org (every role covers all agents). Assigning a role to specific agents (role x agent binding store) is a follow-up.",
+    "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher."
   }
 }

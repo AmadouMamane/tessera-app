@@ -4686,6 +4686,32 @@ export const CatalogueConsumersSchema = z.object({
 });
 export type CatalogueConsumers = z.infer<typeof CatalogueConsumersSchema>;
 
+export const RbacMatrixSchema = z.object({
+  available: z.boolean(),
+  scope_model: z.string().optional(),
+  agents: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+  roles: z
+    .array(
+      z.object({
+        role: z.string(),
+        label: z.string(),
+        caps: z.array(z.string()),
+        scope: z.string(),
+        agent_count: z.number(),
+        cells: z.array(
+          z.object({
+            agent_id: z.string(),
+            name: z.string(),
+            granted: z.boolean(),
+            scope: z.string(),
+          }),
+        ),
+      }),
+    )
+    .optional(),
+});
+export type RbacMatrix = z.infer<typeof RbacMatrixSchema>;
+
 export const ProposeAgentSchema = z.object({
   available: z.boolean(),
   proposed: z.string().optional(),

@@ -706,6 +706,22 @@ async def observability_agents_propose(body: _AgentProposeBody) -> dict[str, obj
     return {"available": True, "proposed": name}
 
 
+@router.get("/observability/rbac-matrix")
+async def observability_rbac_matrix(agent: str = "all") -> dict[str, object]:
+    """RBAC role × agent matrix (real roles × real agents). Global, filterable.
+
+    The enforced roles are currently org-wide; the matrix states that truthfully
+    rather than fabricating per-agent grants. Degrades to ``available: false``.
+    """
+    from tessera.observability import rbac as rbac_mod
+
+    try:
+        return {"available": True, **rbac_mod.rbac_matrix(agent)}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.rbac: failed: {exc}\n")
+        return {"available": False}
+
+
 @router.get("/observability/catalogue-consumers")
 async def observability_catalogue_consumers(
     kind: str, agent: str = "all"

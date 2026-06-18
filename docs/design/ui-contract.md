@@ -236,6 +236,19 @@ release" per-agent: eval-gate verdict + candidate version, colour tied to gate
 conformity. Resolution rate stays intentionally absent (judged quality shared
 until per-agent eval). Org totals stay deduplicated.
 
+**Admin / Rôles & accès — RBAC role × agent (Tier 3).** `observability/rbac.py`
+crosses the **real** enforced roles (mirrored from `lib/auth/session.ts` —
+admin/auditor/superadmin + their capabilities) with the **real** registry agents.
+Endpoint `/observability/rbac-matrix?agent=`. The page mounts the global filter +
+a `RbacAgentMatrix` (role × agent grid). **Honest current state:** the enforced
+roles are **org-wide**, so every cell reads "org" — stated truthfully, not a
+fabricated per-agent grant. **Follow-up (logged):** a per-agent role-binding store
+(assigning a role to specific agents, e.g. "ML Eng on support-client"). **Deviation
+(pre-existing, flagged not fixed):** the legacy `AccessOverview` panel below is a
+deterministic **fixture** (`observability/access.py` — hardcoded counts/users); it
+predates this pass and is out of scope here, but it contradicts the zéro-hardcode
+discipline and should be made real or removed in a dedicated cleanup.
+
 **Prouver / Audit — agent_id filter (Tier 2).** The guard audit chain already
 carries `agent_id` (Phase 0). Surfaced it: `AuditEntry` now parses `agent_id`; the
 `/audit` + `/audit/overview` handlers accept `?agent=` and `_filter_entries` filters

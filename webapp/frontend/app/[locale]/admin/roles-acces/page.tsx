@@ -2,6 +2,8 @@ import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AccessOverview } from "@/components/access/access-overview";
+import { RbacAgentMatrix } from "@/components/access/rbac-agent-matrix";
+import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { AppShell } from "@/components/layout/app-shell";
 import { AccessOverviewSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
@@ -43,6 +45,13 @@ export default async function AccessPage({ params }: AccessPageProps) {
 
   return (
     <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <AgentScopeFilter />
+        <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("agentFilterHint")}</span>
+      </div>
+      <div className="mb-3">
+        <RbacAgentMatrix />
+      </div>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <AccessOverview />
       </HydrationBoundary>
