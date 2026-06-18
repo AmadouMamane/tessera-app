@@ -222,6 +222,15 @@ For any config surface (model, prompts, guardrails, knowledge):
 integrity (`/audit/integrity`, ✓/✗ honest) + env (on-prem · EU · SOC 2). Benefits
 every cockpit + AGENT page at once. No data invented.
 
+**AGENT + GOUVERNER/PLATEFORME — P3 cross-links.** Shared `AgentCrossLinks`
+(governance → AGIR Release Control · definition → CONFIGURER · linked AGENT data)
+mounted on the AGENT instance pages (configurations, garde-fous, prompts,
+connaissances, console). `GovScopeSection` gained a scope-carrying cockpit
+cross-links row (→ Release Control · → Audit · → Signal catalogue), so every
+Surveiller/Agir page using it gets P3 at once. **Remaining (logged):** per-page P2
+hero naming the *specific* breached signal/incident on each Surveiller dashboard is
+a deeper per-page pass; the per-agent breakdown + filter + cross-links are in place.
+
 **Évaluations — P2/P3 (P4–P6 already strong).** P2: the verdict hero now **names**
 the concrete blocking socle/T0 cases ("Cœur non dérogeable en échec : <ids>",
 derived from the real `critical_cases` rows) + a direct **remédier dans Release
