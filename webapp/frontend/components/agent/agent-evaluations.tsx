@@ -223,6 +223,8 @@ export function AgentEvaluations() {
 
       <VerdictBanner data={data} />
 
+      <LiensUtiles />
+
       <GatePolicySection data={data} />
 
       <TemporalRail
@@ -335,13 +337,47 @@ function ReleaseControl() {
   );
 }
 
+/** P3 — cross-links making the control plane navigable: definition (CONFIGURER),
+ *  governance (AGIR Release Control), linked data (applied garde-fous, knowledge). */
+function LiensUtiles() {
+  const agentId = useAgentId();
+  const items: { href: Route; label: string }[] = [
+    { href: ("/agir/release-control?agent=" + agentId) as Route, label: "Gouvernance · Release Control" },
+    { href: "/configurer/parametres" as Route, label: "Définition · jeu d'éval (CONFIGURER)" },
+    { href: agentPath(agentId, "garde-fous") as Route, label: "Garde-fous appliqués" },
+    { href: agentPath(agentId, "connaissances") as Route, label: "Connaissances liées" },
+  ];
+  return (
+    <section className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
+      <span className="text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+        Liens utiles
+      </span>
+      {items.map((it) => (
+        <Link
+          key={it.label}
+          href={it.href}
+          className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[11px] text-[var(--tessera-text)] transition-colors hover:border-[#7c5cf5]/50 hover:text-white"
+        >
+          {it.label} →
+        </Link>
+      ))}
+    </section>
+  );
+}
+
 /** Release-gate verdict as the page headline (policy §6: the verdict — not the
  *  aggregate score — is the title). Full-width banner, colour tied to conformity. */
 function VerdictBanner({ data }: { data: Data }) {
+  const agentId = useAgentId();
   const gate = data.gate;
   if (!gate) return null;
   const blocked = gate.passed === false;
   const passed = gate.passed === true;
+  // P2 — name the concrete blocking socle (T0) cases in the hero, not buried in
+  // the table below. Derived from the real critical-cases rows (socle = T0).
+  const socleFails = Array.from(
+    new Set((gate.critical_cases?.rows ?? []).filter((r) => r.socle).map((r) => r.case_id)),
+  );
   const tone = blocked
     ? "border-[#e0566f] bg-[#2a1320]"
     : passed
@@ -374,6 +410,19 @@ function VerdictBanner({ data }: { data: Data }) {
             </p>
             {gate.reason ? (
               <p className="mt-0.5 text-[11px] text-[var(--tessera-text-muted)]">{gate.reason}</p>
+            ) : null}
+            {blocked && socleFails.length > 0 ? (
+              <p className="mt-1 text-[11px] text-[#ff9bb0]">
+                <span className="text-[var(--tessera-text-muted)]">Cœur non dérogeable en échec : </span>
+                <span className="font-mono font-medium">{socleFails.join(", ")}</span>
+                {" — "}
+                <Link
+                  href={"/agir/release-control?agent=" + agentId as Route}
+                  className="underline underline-offset-2 hover:text-white"
+                >
+                  remédier dans Release Control →
+                </Link>
+              </p>
             ) : null}
           </div>
         </div>

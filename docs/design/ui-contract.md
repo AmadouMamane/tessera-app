@@ -214,6 +214,21 @@ For any config surface (model, prompts, guardrails, knowledge):
 - A chosen object's metadata (provider, snapshots, cost) is read-only, inherited from
   the catalogue.
 
+## Presentation-conformance (P1–P6) pass
+
+**P1 — global chrome (fix once in shell).** `AppShell` now renders `AppBreadcrumb`
+(SUPER › Section › Page from the route, presentation labels) atop `<main>` and
+`AppFooter` at the bottom: "Source de vérité : YAML · Git" + **real** hash-chain
+integrity (`/audit/integrity`, ✓/✗ honest) + env (on-prem · EU · SOC 2). Benefits
+every cockpit + AGENT page at once. No data invented.
+
+**Évaluations — P2/P3 (P4–P6 already strong).** P2: the verdict hero now **names**
+the concrete blocking socle/T0 cases ("Cœur non dérogeable en échec : <ids>",
+derived from the real `critical_cases` rows) + a direct **remédier dans Release
+Control →** link. P3: a "Liens utiles" bar (→ AGIR Release Control · → CONFIGURER
+eval-set definition · → Garde-fous appliqués · → Connaissances). The 119=59+60
+reconciliation, case×langue grain and waiver chain are untouched.
+
 ## Deviation note
 
 This two-app `produit/` + grouped cockpit tree deviates from the single flat
