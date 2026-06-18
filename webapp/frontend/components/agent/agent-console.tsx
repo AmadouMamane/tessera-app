@@ -43,6 +43,8 @@ import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
 
+import { AgentCrossLinks } from "./agent-cross-links";
+
 type Rating = "up" | "down";
 
 type T = ReturnType<typeof useTranslations<"agentConsole">>;
@@ -296,6 +298,7 @@ export function AgentConsole() {
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      <AgentCrossLinks page="console" />
       <StatusBar
         data={data}
         sessionId={conversationId}
