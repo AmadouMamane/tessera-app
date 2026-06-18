@@ -1,5 +1,5 @@
 .PHONY: install lint typecheck format test test-integration test-all \
-        coverage eval seed ingest run run-on-prem precommit check ci help
+        coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
@@ -68,6 +68,12 @@ eval-case: install
 eval-lang: install
 	uv run python scripts/run_eval.py --lang $(LANG)
 
+# Populate the Evaluations demo data (eval/reports + governed waivers) on a fresh
+# environment: runs the agent's FR/DE/EN eval, then seeds its waivers. Idempotent.
+# This is the post-deploy step for the demo (see docs/runbook.md).
+eval-demo: install
+	PYTHONPATH=src uv run python scripts/bootstrap_eval_demo.py
+
 # ── Corpus management ───────────────────────────────────────────────────────
 
 # Re-generate the Crédit Aurore product pages (overwrites data/ JSON files)
@@ -82,12 +88,13 @@ ingest-regulations: install
 seed: install
 	uv run python scripts/seed_demo.py
 
-# Full local setup: boot Postgres, ingest all corpora
+# Full local setup: boot Postgres, ingest all corpora, populate eval demo data
 bootstrap: install
 	docker compose up -d postgres
 	sleep 3
 	$(MAKE) ingest-regulations
 	$(MAKE) seed
+	$(MAKE) eval-demo
 
 # ── Local development ───────────────────────────────────────────────────────
 

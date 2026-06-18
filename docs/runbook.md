@@ -299,7 +299,17 @@ tessera-ingest` + `… python scripts/seed_demo.py`); (2) deploy the front to
 Vercel, setting `TESSERA_BACKEND_URL` and `TESSERA_BACKEND_TOKEN` as Vercel env
 vars (server-only, **not** `NEXT_PUBLIC_*`); (3) expose the agent (Cloud Run, or
 a named tunnel from the on-prem box for the Ollama path) and point
-`TESSERA_BACKEND_URL` at it. Note: a Claude/OpenAI **consumer subscription is
+`TESSERA_BACKEND_URL` at it.
+
+**Evaluations demo data (required, else the page is empty).** `eval/reports` and
+the governed waiver journal are **runtime artifacts** (reports gitignored; the
+waiver store lives in the guard audit directory). A fresh environment therefore
+serves an empty Evaluations page until the candidate run + waivers exist. Run the
+idempotent bootstrap **against the deployed agent's environment** (same
+`TESSERA_LLM_PROFILE` / audit dir the API reads) as a post-deploy step:
+`make eval-demo` (≡ `PYTHONPATH=src uv run python scripts/bootstrap_eval_demo.py`)
+— it runs the agent's FR/DE/EN evaluation, then seeds the governed waivers bound
+to that run. `make bootstrap` now includes this for local setup. Note: a Claude/OpenAI **consumer subscription is
 not API access** — the `frontier` path needs billed API credentials; Anthropic
 has no embeddings API (use Ollama locally or OpenAI `text-embedding-3-small`).
 
