@@ -256,11 +256,16 @@ define/choose/govern framing the normative shows: a read-only **`Définition
 name/owner/model/langue/garde-fous/jeu d'éval, never free-text) + a production
 **governance banner** + a `Voir la définition dans CONFIGURER` link. The editable
 sections below are the **instance** overrides (already real + durably saved).
-Deviation: rendered as *Définition on top + Instance below* (one main column + right
-sidebar), not the normative's strict two-column *Définition left / Instance right* —
-the existing editable form was extended in place, not rebuilt. The CONFIGURER link
-points to `/configurer/parametres` (there is no dedicated `/configurer/configurations`
-catalogue page yet). **À confirmer** demain : faut-il la vraie disposition 2 colonnes.
+Phase 2: the define/instance framing is now a **shared component**
+(`components/agent/define-instance-banner.tsx`) used by **both Configurations and
+Prompts**, rendering the normative's **numbered two-block** split — `1 · Définition
+(catalogue · lecture seule)` (real registry rows + CONFIGURER link) then
+`2 · Configuration pour cet agent (instance)` introducing the editable sections +
+the production-governance banner. Deviation (kept): the instance controls stay in
+the existing one-main-column + right-sidebar form below the banner, not a strict
+left/right split — the editable form was extended in place, not rebuilt. The
+CONFIGURER link still points to `/configurer/parametres` (no dedicated catalogue
+route yet).
 
 **Connaissances OT-01 (image 03, conformance pass).** The page is real (live pgvector
 `knowledge.py`) and functional (attach/detach/activate, durable). Added the normative's
@@ -296,11 +301,14 @@ separate follow-up).
 (YAML source of truth `agent/prompts/{fr,de,en}.yaml`, read-only — prompts are edited
 via Git PR and loaded at start-up). Added the §9 **governance banner** stating that
 governance model (define in Git → review (PR) → load), which is the truthful
-define/choose/govern story for prompts. Deviation: the normative's explicit numbered
+define/choose/govern story for prompts. Phase 2: the normative's explicit numbered
 **`1. Définition (catalogue)` / `2. Configuration pour cet agent (instance)`** two-block
-split is **not** rendered as two side-by-side panels — the page keeps its KPIs + table +
-per-prompt detail (Résumé/Contenu/Configuration). No CONFIGURER prompts-catalogue route
-exists yet. **À confirmer** demain : faut-il les 2 blocs numérotés.
+split **is now rendered**, via the **shared** `DefineInstanceBanner` component (same as
+Configurations). A real `definition` block was added to the Prompts payload — owner +
+eval-set from the governed registry, source/languages/count from the live YAML
+catalogue. The page keeps its KPIs + table + per-prompt detail below the banner. No
+CONFIGURER prompts-catalogue route exists yet (the link points to
+`/configurer/parametres`).
 
 **Console XT-01 (image 05, conformance pass).** The page is real: quality metrics are
 live eval scores (`_latest_score`), the model/prompt/sources/guard versions come from

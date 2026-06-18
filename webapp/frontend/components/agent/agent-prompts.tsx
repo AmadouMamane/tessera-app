@@ -11,7 +11,6 @@ import {
   Copy,
   FileCode2,
   FlaskConical,
-  GitBranch,
   Hash,
   Languages,
   type LucideIcon,
@@ -37,6 +36,7 @@ import type { AgentPrompts as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSubtabs } from "./agent-subtabs";
+import { DefineInstanceBanner } from "./define-instance-banner";
 
 type RowT = NonNullable<Data["table"]>["rows"][number];
 type DetailT = NonNullable<Data["details"]>[number];
@@ -170,12 +170,12 @@ export function AgentPrompts() {
 
       <Snapshot data={data} />
 
-      {data.governance_banner ? (
-        <div className="flex items-start gap-2 rounded-lg border border-[#1f3a5f]/60 bg-[#0e1f33]/40 px-3 py-2.5 text-[0.72rem] text-[var(--tessera-text-muted)]">
-          <GitBranch className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
-          <span>{data.governance_banner}</span>
-        </div>
-      ) : null}
+      <DefineInstanceBanner
+        definition={data.definition}
+        governanceBanner={data.governance_banner}
+        instanceLabel="Configuration pour cet agent (instance)"
+        instanceHint="prompts actifs · édités par PR Git"
+      />
 
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
         {(data.kpis ?? []).map((k, i) => (

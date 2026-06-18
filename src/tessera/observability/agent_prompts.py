@@ -390,6 +390,57 @@ def _present_langs(per_lang: dict[str, dict[str, str]], key: str) -> list[str]:
     return [lng for lng in _LANGS if per_lang.get(lng, {}).get(key, "").strip()]
 
 
+_DEF_STR: dict[str, tuple[str, str, str]] = {
+    "title": ("Définition (catalogue)", "Definition (Katalog)", "Definition (catalogue)"),
+    "subtitle": ("lecture seule", "schreibgeschützt", "read-only"),
+    "link": (
+        "Voir la définition dans CONFIGURER → Paramètres",
+        "Definition in KONFIGURIEREN → Parameter ansehen",
+        "View the definition in CONFIGURE → Settings",
+    ),
+    "owner": ("Propriétaire", "Eigentümer", "Owner"),
+    "source": ("Source de définition", "Definitionsquelle", "Definition source"),
+    "langs": ("Langues", "Sprachen", "Languages"),
+    "count": ("Prompts définis", "Definierte Prompts", "Prompts defined"),
+    "gov": ("Gouvernance", "Governance", "Governance"),
+    "gov_v": (
+        "Édition par PR Git · chargé au démarrage",
+        "Bearbeitung per Git-PR · beim Start geladen",
+        "Edited via Git PR · loaded at start-up",
+    ),
+    "evalset": ("Jeu d'évaluation lié", "Verknüpfter Eval-Satz", "Linked eval set"),
+}
+
+
+def _definition_block(agent_id: str, n_prompts: int, lang: str) -> dict[str, object]:
+    """Read-only catalogue definition this agent's prompts bind to (registry + Git).
+
+    Mirrors the Configurations define/instance framing with a shared shape:
+    every value is real — the owner / eval-set come from the governed registry
+    package, the source / languages / count from the live YAML catalogue.
+    """
+    from tessera.agent.registry import get_agent
+
+    try:
+        agent = get_agent(agent_id)
+        owner, eval_set = agent.owner, agent.eval_set
+    except (KeyError, OSError, ValueError):
+        owner, eval_set = "-", "-"
+    return {
+        "title": _t(_DEF_STR["title"], lang),
+        "subtitle": _t(_DEF_STR["subtitle"], lang),
+        "link": {"label": _t(_DEF_STR["link"], lang), "href": "/configurer/parametres"},
+        "rows": [
+            {"label": _t(_DEF_STR["owner"], lang), "value": owner},
+            {"label": _t(_DEF_STR["source"], lang), "value": "Git · prompts/{fr,de,en}.yaml"},
+            {"label": _t(_DEF_STR["langs"], lang), "value": "FR / DE / EN"},
+            {"label": _t(_DEF_STR["count"], lang), "value": str(n_prompts)},
+            {"label": _t(_DEF_STR["gov"], lang), "value": _t(_DEF_STR["gov_v"], lang)},
+            {"label": _t(_DEF_STR["evalset"], lang), "value": eval_set},
+        ],
+    }
+
+
 def _assemble(
     per_lang: Mapping[str, dict[str, str]],
     newest: datetime,
@@ -463,6 +514,7 @@ def _assemble(
     return {
         "title": _t(_STR["title"], lang),
         "subtitle": _t(_STR["subtitle"], lang),
+        "definition": _definition_block(agent_id, n_prompts, lang),
         "governance_banner": _t(_STR["governance"], lang),
         "actions": {"asof": _t(_STR["act_asof"], lang), "create": _t(_STR["act_create"], lang)},
         "subtabs": _subtabs(lang),
