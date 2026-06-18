@@ -223,6 +223,8 @@ export function AgentEvaluations() {
 
       <VerdictBanner data={data} />
 
+      <GatePolicySection data={data} />
+
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("realtime")}
@@ -351,6 +353,7 @@ function VerdictBanner({ data }: { data: Data }) {
       ? "text-[#7fe3b3]"
       : "text-[var(--tessera-text)]";
   const bd = gate.breakdown;
+  const bg = gate.breakdown_grain;
   return (
     <section className={`flex flex-col gap-2 rounded-lg border p-3.5 ${tone}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -369,40 +372,325 @@ function VerdictBanner({ data }: { data: Data }) {
             <p className={`text-[1.15rem] font-semibold leading-tight ${labelColor}`}>
               {gate.label}
             </p>
+            {gate.reason ? (
+              <p className="mt-0.5 text-[11px] text-[var(--tessera-text-muted)]">{gate.reason}</p>
+            ) : null}
           </div>
         </div>
-        <ReleaseControl />
+        <div className="flex flex-col items-end gap-1">
+          {gate.grains ? (
+            <span className="text-[10px] text-[var(--tessera-text-muted)]">
+              {gate.grains.executions} exéc. · {gate.grains.distinct_cases} cas ·{" "}
+              {gate.grains.socle_cases} socle
+            </span>
+          ) : null}
+          <ReleaseControl />
+        </div>
       </div>
       <div className="grid gap-2 text-[11px] sm:grid-cols-3">
         <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
-          <span className="text-[var(--tessera-text-muted)]">Socle critique (zéro tolérance)</span>
-          <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
-            {gate.failed_critical.length > 0
-              ? `Échec : ${gate.failed_critical.join(", ")}`
-              : "Conforme"}
+          <span className="text-[var(--tessera-text-muted)]">Socle dur (T0, zéro tolérance)</span>
+          <p
+            className={`mt-0.5 font-medium ${gate.socle?.ok ? "text-[#7fe3b3]" : "text-[#ff9bb0]"}`}
+          >
+            {gate.socle
+              ? gate.socle.ok
+                ? `Conforme — ${gate.socle.passed}/${gate.socle.total}`
+                : `ÉCHEC — ${gate.socle.passed}/${gate.socle.total} réussis`
+              : gate.failed_critical.length > 0
+                ? "Échec"
+                : "Conforme"}
           </p>
         </div>
         <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
-          <span className="text-[var(--tessera-text-muted)]">Gate domaine</span>
-          <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
-            {gate.standard_passed}/{gate.standard_total}
+          <span className="text-[var(--tessera-text-muted)]">Gate domaine (T2)</span>
+          <p
+            className={`mt-0.5 font-medium ${gate.domain?.ok ? "text-[#7fe3b3]" : "text-[#ffce8a]"}`}
+          >
+            {gate.domain ? `${gate.domain.passed}/${gate.domain.total}` : `${gate.standard_passed}/${gate.standard_total}`}
             {typeof gate.min_pass_rate === "number"
               ? ` (seuil ${Math.round(gate.min_pass_rate * 100)}%)`
               : ""}
           </p>
         </div>
         <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
-          <span className="text-[var(--tessera-text-muted)]">
-            Critiques (grain cas distinct)
-          </span>
+          <span className="text-[var(--tessera-text-muted)]">Critiques (cas × langue)</span>
           <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
-            {bd ? `${bd.critical_blocking} bloquants` : "—"}
-            {bd && bd.tier0_non_derogeable > 0 ? ` · Tier 0 : ${bd.tier0_non_derogeable}` : ""}
-            {bd ? ` · ${bd.waived} dérogé` : ""}
+            {bg
+              ? `${bg.blocking_socle + bg.blocking_t1} bloquants · ${bg.waived_active} dérogé${bg.waived_active > 1 ? "s" : ""}`
+              : bd
+                ? `${bd.critical_blocking} bloquants · ${bd.waived} dérogé`
+                : "—"}
+            {bg && bg.non_executed_critical > 0 ? ` · ${bg.non_executed_critical} non exéc.` : ""}
           </p>
         </div>
       </div>
     </section>
+  );
+}
+
+const VENN_TONE: Record<string, string> = {
+  crit: "border-[#e0566f]/50 bg-[#e0566f]/12 text-[#ff9bb0]",
+  warn: "border-amber-500/40 bg-amber-500/12 text-amber-200",
+  muted: "border-[var(--tessera-border)] bg-black/15 text-[var(--tessera-text-muted)]",
+};
+const STATUS_PILL: Record<string, string> = {
+  crit: "border-[#e0566f]/50 bg-[#e0566f]/15 text-[#ff9bb0]",
+  warn: "border-amber-500/40 bg-amber-500/15 text-amber-200",
+  bad: "border-orange-500/40 bg-orange-500/15 text-orange-200",
+  good: "border-emerald-500/40 bg-emerald-500/15 text-emerald-200",
+};
+
+/** Policy gate detail (eval-gate-policy.md): three tiers + structural Venn, the
+ *  per-category socle markers, the critical-cases table (case × langue) and the
+ *  governed-waiver registry. Every count reconciles with the verdict banner. */
+function GatePolicySection({ data }: { data: Data }) {
+  const gate = data.gate;
+  if (!gate || !gate.venn || !gate.tiers) return null;
+  const v = gate.venn;
+  const cc = gate.critical_cases;
+  const wv = gate.waivers;
+  const socleCats = gate.socle_by_category ?? [];
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      {/* Tiers + structural Venn + socle-by-category markers */}
+      <div className="grid gap-2.5 xl:grid-cols-12">
+        <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-7">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              Appartenance structurelle (Venn) — somme = exécutions
+            </span>
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 text-[10px]",
+                v.reconciles ? "text-emerald-300" : "text-red-300",
+              )}
+            >
+              {v.socle} + {v.t1} + {v.domaine} = {v.universe}
+            </span>
+          </div>
+          {/* Nested: Critiques contains Socle; dérogations ⊂ T1, jamais socle */}
+          <div className="rounded-md border border-[#e0566f]/40 bg-[#e0566f]/[0.06] p-2">
+            <div className="mb-1 flex items-center justify-between text-[10px] text-[#ff9bb0]">
+              <span>Critiques (T0 ∪ T1)</span>
+              <span className="tabular-nums">{v.critiques}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className={cn("rounded border px-2 py-1.5", VENN_TONE.crit)}>
+                <p className="text-[10px] opacity-80">Socle (T0) · non-dérogeable</p>
+                <p className="text-sm font-semibold tabular-nums">{v.socle}</p>
+              </div>
+              <div className={cn("rounded border px-2 py-1.5", VENN_TONE.warn)}>
+                <p className="text-[10px] opacity-80">Critique (T1) · dérogeable</p>
+                <p className="text-sm font-semibold tabular-nums">
+                  {v.t1}
+                  <span className="ml-1 text-[10px] font-normal opacity-80">
+                    dont {v.deroges} dérogé{v.deroges > 1 ? "s" : ""}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className={cn("rounded border px-2 py-1.5", VENN_TONE.muted)}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px]">Domaine (T2) · gradé</span>
+              <span className="text-sm font-semibold tabular-nums">{v.domaine}</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-[var(--tessera-text-muted)]">
+            Socle ∩ dérogations = ∅ — une dérogation n&apos;est jamais effective sur le socle.
+          </p>
+        </section>
+
+        {/* Socle OK / ÉCHEC per category — no green score may mask a breach */}
+        <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-5">
+          <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            Socle par catégorie
+          </span>
+          {socleCats.length === 0 ? (
+            <span className="text-[11px] text-[var(--tessera-text-muted)]">
+              Aucune catégorie socle.
+            </span>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {socleCats.map((c) => (
+                <div
+                  key={c.category}
+                  className="flex items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5"
+                >
+                  <span className="truncate text-[11px] text-[var(--tessera-text)]">{c.label}</span>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                      c.ok ? STATUS_PILL.good : STATUS_PILL.crit,
+                    )}
+                  >
+                    {c.ok ? "Socle OK" : "Socle ÉCHEC"} · {c.passed}/{c.total}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {gate.tiers ? (
+            <div className="mt-1 grid grid-cols-3 gap-1.5">
+              {gate.tiers.map((t) => (
+                <div
+                  key={t.tier}
+                  className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5"
+                >
+                  <p className="text-[9px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                    {t.tier} · {t.waivable ? "dérogeable" : "non-dérog."}
+                  </p>
+                  <p className="text-sm font-semibold tabular-nums text-[var(--tessera-text)]">
+                    {t.count}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      </div>
+
+      {/* Critical-cases table (case × langue) + waiver registry */}
+      <div className="grid gap-2.5 xl:grid-cols-12">
+        {cc ? (
+          <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-7">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                {cc.title}
+              </span>
+              <span className="text-[10px] text-[var(--tessera-text-muted)]">{cc.total} cas</span>
+            </div>
+            {cc.rows.length === 0 ? (
+              <span className="text-[11px] text-emerald-300">
+                Aucun cas critique non concluant.
+              </span>
+            ) : (
+              <div className="max-h-[19rem] overflow-auto">
+                <table className="w-full text-left text-[11px]">
+                  <thead className="sticky top-0 bg-[var(--tessera-surface)] text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                    <tr>
+                      <th className="py-1 pr-2 font-medium">Cas</th>
+                      <th className="py-1 pr-2 font-medium">Tier</th>
+                      <th className="py-1 pr-2 font-medium">Lg</th>
+                      <th className="py-1 pr-2 font-medium">Statut gate</th>
+                      <th className="py-1 font-medium">Socle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cc.rows.map((r, i) => (
+                      <tr
+                        key={`${r.case_id}-${r.language}-${i}`}
+                        className="border-t border-[var(--tessera-border)]/40"
+                      >
+                        <td className="max-w-[12rem] truncate py-1 pr-2" title={r.title}>
+                          {r.case_id}
+                        </td>
+                        <td className="py-1 pr-2">
+                          <span
+                            className={cn(
+                              "rounded px-1 py-0.5 text-[9px] font-medium",
+                              STATUS_PILL[r.tier_tone] ?? STATUS_PILL.warn,
+                            )}
+                          >
+                            {r.tier}
+                          </span>
+                        </td>
+                        <td className="py-1 pr-2 text-[var(--tessera-text-muted)]">{r.language}</td>
+                        <td className="py-1 pr-2">
+                          <span
+                            className={cn(
+                              "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                              STATUS_PILL[r.status_tone] ?? STATUS_PILL.bad,
+                            )}
+                          >
+                            {r.status_label}
+                          </span>
+                        </td>
+                        <td className="py-1 text-[var(--tessera-text-muted)]">
+                          {r.socle ? "Socle" : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {wv ? (
+          <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                {wv.title}
+              </span>
+              <span
+                className={cn(
+                  "rounded px-1.5 py-0.5 text-[10px]",
+                  wv.chain_verified ? "text-emerald-300" : "text-red-300",
+                )}
+                title="Intégrité de la chaîne de hash"
+              >
+                {wv.chain_verified ? "chaîne ✓" : "chaîne ✗"} · {wv.active} active
+                {wv.active > 1 ? "s" : ""}/{wv.total}
+              </span>
+            </div>
+            <p className="text-[10px] text-[var(--tessera-text-muted)]">{wv.subtitle}</p>
+            <div className="flex max-h-[19rem] flex-col gap-1.5 overflow-auto">
+              {wv.items.length === 0 ? (
+                <span className="text-[11px] text-[var(--tessera-text-muted)]">
+                  Aucune dérogation.
+                </span>
+              ) : (
+                wv.items.map((it) => (
+                  <div
+                    key={it.id}
+                    className={cn(
+                      "rounded-md border px-2 py-1.5",
+                      it.active
+                        ? "border-amber-500/40 bg-amber-500/[0.07]"
+                        : "border-[var(--tessera-border)] bg-[var(--tessera-bg)]",
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-[11px] font-medium text-[var(--tessera-text)]">
+                        {it.case_id} · {it.language}
+                      </span>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium",
+                          it.active
+                            ? STATUS_PILL.warn
+                            : "border border-[var(--tessera-border)] text-[var(--tessera-text-muted)]",
+                        )}
+                      >
+                        {it.status_label}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 line-clamp-2 text-[10px] text-[var(--tessera-text-muted)]">
+                      {it.justification}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] text-[var(--tessera-text-muted)]">
+                      <span>Demande : {it.requester}</span>
+                      <span>Appro. : {it.approver}</span>
+                      <span>Échéance : {it.expires_at}</span>
+                      {it.incident_ref ? <span>{it.incident_ref}</span> : null}
+                    </div>
+                    {it.controls.length > 0 ? (
+                      <p className="mt-0.5 text-[9px] text-[var(--tessera-text-muted)]">
+                        Contrôles : {it.controls.join(" · ")}
+                      </p>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

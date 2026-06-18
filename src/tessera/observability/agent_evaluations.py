@@ -23,14 +23,18 @@ cross-page navigation, verified end to end. Free-text data is verbatim French
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.observability.eval.agent_judge import load_agent_judge
 from tessera.observability.eval_data import (
+    CATEGORY_LABELS,
     load_agent_or_global_snapshot,
     load_agent_run_history,
 )
+from tessera.observability.eval_gate_view import GateView, build_gate_view
+from tessera.observability.eval_tiers import Tier, load_tier_map
+from tessera.observability.eval_waivers import verify_waiver_chain
 
 if TYPE_CHECKING:
     from tessera.observability.eval_data import CategoryStat, EvalSnapshot
@@ -154,49 +158,190 @@ def _run_labels(snap: EvalSnapshot) -> tuple[str, str]:
     return stamp, rel
 
 
-def _is_tier0(case_id: str) -> bool:
-    """Tier 0 = non-dérogeable (PII réelle exfiltrée, hard-stop réglementaire).
+_TIER_TONE: dict[str, str] = {"T0": "crit", "T1": "warn", "T2": "muted"}
+_LANG_LABEL: dict[str, str] = {"fr": "FR", "de": "DE", "en": "EN"}
 
-    Per the binding eval-gate policy (§2), these can never be waived. Detected
-    structurally from the failure-catalogue case id (pii / regulatory).
+
+def _critical_cases(gv: GateView, titles: dict[str, str]) -> dict[str, object]:
+    """Table of the critical (T0/T1) executions that are NOT conforme.
+
+    One row per ``(case, langue)``: tier, language, gate status and a socle
+    marker. Sorted by blocking severity so the existential failures surface
+    first. This is the policy's "table cas critiques".
     """
-    lowered = case_id.lower()
-    return any(tag in lowered for tag in ("pii", "reglement", "regul", "rgpd", "gdpr"))
+    order = {"bloquant_socle": 0, "non_execute": 1, "bloquant_t1": 2, "deroge_actif": 3}
+    crit = [s for s in gv.statuses if s.is_critical and s.status_key != "conforme"]
+    crit.sort(key=lambda s: (order.get(s.status_key, 9), s.case_id, s.language))
+    tm = load_tier_map()
+    rows = [
+        {
+            "case_id": s.case_id,
+            "title": titles.get(s.case_id, s.case_id),
+            "tier": s.tier,
+            "tier_label": tm.label(s.tier),
+            "tier_tone": _TIER_TONE[s.tier],
+            "language": _LANG_LABEL.get(s.language, s.language.upper()),
+            "status_key": s.status_key,
+            "status_label": s.status_label,
+            "status_tone": s.status_tone,
+            "socle": s.socle,
+        }
+        for s in crit
+    ]
+    return {
+        "title": "Cas critiques (grain cas x langue)",
+        "columns": ["Cas", "Tier", "Langue", "Statut gate", "Socle"],
+        "rows": rows,
+        "total": len(rows),
+    }
+
+
+def _socle_by_category(gv: GateView) -> list[dict[str, object]]:
+    """Per-category socle OK / ÉCHEC markers (no green score may mask a breach)."""
+    cats: dict[str, list[bool]] = {}
+    for s in gv.statuses:
+        if s.socle and s.executed:
+            cats.setdefault(s.category or "", []).append(s.passed)
+    out: list[dict[str, object]] = []
+    for cat, results in sorted(cats.items()):
+        passed = sum(1 for r in results if r)
+        out.append(
+            {
+                "category": cat,
+                "label": CATEGORY_LABELS.get(cat, cat),
+                "ok": all(results),
+                "passed": passed,
+                "total": len(results),
+            }
+        )
+    return out
+
+
+def _venn(gv: GateView) -> dict[str, object]:
+    """Structural Venn: tier membership summing to the total (≠ failure count).
+
+    Nested: Critiques (T0/T1) contains the Socle (T0); active derogations are a
+    subset of T1, never of the socle (``T0 inter derog = empty``). The disjoint regions
+    Socle + T1 + Domaine sum to the total executions.
+    """
+    t0 = gv.tier_counts.get("T0", 0)
+    t1 = gv.tier_counts.get("T1", 0)
+    t2 = gv.tier_counts.get("T2", 0)
+    return {
+        "universe": gv.executions,
+        "critiques": t0 + t1,
+        "socle": t0,
+        "t1": t1,
+        "domaine": t2,
+        "deroges": gv.waived_active,
+        "reconciles": (t0 + t1 + t2) == gv.executions,
+        "reconcile_total": gv.executions,
+    }
+
+
+def _waivers_block(gv: GateView) -> dict[str, object]:
+    """The active-waiver registry, resolved against the candidate and clock."""
+    tm = load_tier_map()
+    items: list[dict[str, object]] = []
+    for w in gv.waivers:
+        e = w.event
+        items.append(
+            {
+                "id": e.event_id,
+                "case_id": e.case_id,
+                "language": _LANG_LABEL.get(e.language, e.language.upper()),
+                "tier": w.tier,
+                "tier_label": tm.label(w.tier),
+                "status": w.status,
+                "status_label": w.status_label,
+                "active": w.active,
+                "justification": e.justification,
+                "requester": e.requester,
+                "requester_role": e.requester_role,
+                "approver": e.approver,
+                "approver_role": e.approver_role,
+                "scope": e.scope,
+                "controls": list(e.compensating_controls),
+                "incident_ref": e.incident_ref,
+                "expires_at": e.expires_at[:10],
+            }
+        )
+    # Active first, then by status, then by id.
+    items.sort(key=lambda i: (not bool(i["active"]), str(i["status"]), str(i["id"])))
+    return {
+        "title": "Registre des dérogations",
+        "subtitle": "Objets gouvernes S1: RBAC, expiration, controles compensatoires, hash-chaine.",
+        "active": gv.waived_active,
+        "total": len(items),
+        "chain_verified": verify_waiver_chain(),
+        "items": items,
+    }
 
 
 def _gate_block(snap: EvalSnapshot) -> dict[str, object]:
-    """The release gate verdict, worded and broken down per the binding policy.
+    """The release gate verdict + full policy breakdown, at the (case, langue) grain.
 
-    The verdict (not the aggregate score) is the headline. The case-distinct
-    critical breakdown distinguishes Tier 0 (non-dérogeable) from the rest and
-    surfaces how many criticals are under an approved waiver — currently always
-    0, because no governed waiver store is wired yet (so every critical failure
-    is blocking, which is the policy's safe default).
+    The binding ``eval-gate-policy.md`` primes over the image: the verdict (not
+    the aggregate score) is the headline, every critical failure is blocking
+    unless lifted by an *active governed waiver*, and Tier 0 (the socle) can
+    never be waived. Every count is recomputed from the real run + the versioned
+    tiers + the hash-chained waiver store, and all counters reconcile.
     """
-    failed = list(snap.gate_failed_critical)
-    tier0 = [c for c in failed if _is_tier0(c)]
-    if snap.gate_passed is False and failed:
-        label = "BLOQUÉ par le socle"
-    elif snap.gate_passed is False:
-        label = "BLOQUÉ (domaine)"
-    elif snap.gate_passed is True:
-        label = "PASSE"
-    else:
-        label = "—"
+    gv = build_gate_view(snap)
+    titles = {s.case_id: s.title for s in snap.sessions}
     return {
-        "passed": snap.gate_passed,
-        "failed_critical": failed,
-        "min_pass_rate": snap.gate_min_pass_rate,
-        "standard_passed": snap.gate_standard_passed,
-        "standard_total": snap.gate_standard_total,
-        "label": label,
-        # Case-distinct critical breakdown (policy §6). No waiver store yet, so
-        # waived is always 0 and every critical failure counts as blocking.
+        # ── compat fields kept for the existing banner ──────────────────────
+        "passed": gv.passed,
+        "failed_critical": sorted(
+            {s.case_id for s in gv.statuses if s.status_key == "bloquant_socle"}
+        ),
+        "min_pass_rate": gv.min_pass_rate,
+        "standard_passed": gv.domain_passed,
+        "standard_total": gv.domain_total,
+        "label": gv.verdict_label,
         "breakdown": {
-            "critical_blocking": len(failed),
-            "tier0_non_derogeable": len(tier0),
-            "waived": 0,
+            "critical_blocking": gv.blocking_socle + gv.blocking_t1,
+            "tier0_non_derogeable": gv.blocking_socle,
+            "waived": gv.waived_active,
         },
+        # ── policy-correct enrichments ──────────────────────────────────────
+        "tone": gv.verdict_tone,
+        "reason": gv.verdict_reason,
+        "candidate": gv.candidate_version,
+        "grains": {
+            "executions": gv.executions,
+            "distinct_cases": gv.distinct_cases,
+            "socle_cases": gv.socle_cases,
+        },
+        "counts": {"passed": gv.passed_exec, "failed": gv.failed_exec},
+        "socle": {"ok": gv.socle_ok, "passed": gv.socle_passed, "total": gv.socle_total},
+        "domain": {
+            "ok": gv.domain_ok,
+            "passed": gv.domain_passed,
+            "total": gv.domain_total,
+            "rate": round(gv.domain_pass_rate, 4),
+            "min": gv.min_pass_rate,
+        },
+        "breakdown_grain": {
+            "blocking_socle": gv.blocking_socle,
+            "blocking_t1": gv.blocking_t1,
+            "waived_active": gv.waived_active,
+            "non_executed_critical": gv.non_executed_critical,
+        },
+        "tiers": [
+            {
+                "tier": t,
+                "label": load_tier_map().label(t),
+                "count": gv.tier_counts.get(t, 0),
+                "tone": _TIER_TONE[t],
+                "waivable": load_tier_map().waivable(t),
+            }
+            for t in get_args(Tier)
+        ],
+        "venn": _venn(gv),
+        "socle_by_category": _socle_by_category(gv),
+        "critical_cases": _critical_cases(gv, titles),
+        "waivers": _waivers_block(gv),
     }
 
 

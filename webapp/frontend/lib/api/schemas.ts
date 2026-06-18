@@ -4198,6 +4198,121 @@ export const AgentEvaluationsSchema = z.object({
           waived: z.number(),
         })
         .optional(),
+      // Policy-correct enrichments (eval-gate-policy.md, case × langue grain).
+      tone: z.string().optional(),
+      reason: z.string().optional(),
+      candidate: z.string().optional(),
+      grains: z
+        .object({
+          executions: z.number(),
+          distinct_cases: z.number(),
+          socle_cases: z.number(),
+        })
+        .optional(),
+      counts: z.object({ passed: z.number(), failed: z.number() }).optional(),
+      socle: z.object({ ok: z.boolean(), passed: z.number(), total: z.number() }).optional(),
+      domain: z
+        .object({
+          ok: z.boolean(),
+          passed: z.number(),
+          total: z.number(),
+          rate: z.number(),
+          min: z.number(),
+        })
+        .optional(),
+      breakdown_grain: z
+        .object({
+          blocking_socle: z.number(),
+          blocking_t1: z.number(),
+          waived_active: z.number(),
+          non_executed_critical: z.number(),
+        })
+        .optional(),
+      tiers: z
+        .array(
+          z.object({
+            tier: z.string(),
+            label: z.string(),
+            count: z.number(),
+            tone: z.string(),
+            waivable: z.boolean(),
+          }),
+        )
+        .optional(),
+      venn: z
+        .object({
+          universe: z.number(),
+          critiques: z.number(),
+          socle: z.number(),
+          t1: z.number(),
+          domaine: z.number(),
+          deroges: z.number(),
+          reconciles: z.boolean(),
+          reconcile_total: z.number(),
+        })
+        .optional(),
+      socle_by_category: z
+        .array(
+          z.object({
+            category: z.string(),
+            label: z.string(),
+            ok: z.boolean(),
+            passed: z.number(),
+            total: z.number(),
+          }),
+        )
+        .optional(),
+      critical_cases: z
+        .object({
+          title: z.string(),
+          columns: z.array(z.string()),
+          total: z.number(),
+          rows: z.array(
+            z.object({
+              case_id: z.string(),
+              title: z.string(),
+              tier: z.string(),
+              tier_label: z.string(),
+              tier_tone: z.string(),
+              language: z.string(),
+              status_key: z.string(),
+              status_label: z.string(),
+              status_tone: z.string(),
+              socle: z.boolean(),
+            }),
+          ),
+        })
+        .optional(),
+      waivers: z
+        .object({
+          title: z.string(),
+          subtitle: z.string(),
+          active: z.number(),
+          total: z.number(),
+          chain_verified: z.boolean(),
+          items: z.array(
+            z.object({
+              id: z.string(),
+              case_id: z.string(),
+              language: z.string(),
+              tier: z.string(),
+              tier_label: z.string(),
+              status: z.string(),
+              status_label: z.string(),
+              active: z.boolean(),
+              justification: z.string(),
+              requester: z.string(),
+              requester_role: z.string(),
+              approver: z.string(),
+              approver_role: z.string(),
+              scope: z.string(),
+              controls: z.array(z.string()),
+              incident_ref: z.string(),
+              expires_at: z.string(),
+            }),
+          ),
+        })
+        .optional(),
     })
     .optional(),
   judge: z

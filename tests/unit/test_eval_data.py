@@ -7,8 +7,13 @@ derived KPIs / table stay internally consistent with the snapshot.
 
 from __future__ import annotations
 
+from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.observability.agent_evaluations import compute_agent_evaluations
-from tessera.observability.eval_data import SMALLEST_MODEL, load_eval_snapshot
+from tessera.observability.eval_data import (
+    SMALLEST_MODEL,
+    load_agent_or_global_snapshot,
+    load_eval_snapshot,
+)
 
 
 def test_snapshot_comes_from_smallest_model() -> None:
@@ -24,7 +29,9 @@ def test_snapshot_comes_from_smallest_model() -> None:
 
 
 def test_evaluations_payload_is_consistent_with_the_run() -> None:
-    snap = load_eval_snapshot()
+    # The payload reads the agent's OWN run (agent-or-global), not the global
+    # catalogue snapshot — assert against the same source it actually uses.
+    snap = load_agent_or_global_snapshot(DEFAULT_AGENT_ID)
     payload = compute_agent_evaluations()
 
     # One eval-set row per scored category; the total agrees.

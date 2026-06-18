@@ -323,14 +323,35 @@ socle on 3 real PII failures; score 6,6/10). Verified policy invariants that **h
   store), so no `Dérogé actif` can ever appear on a socle/T0 case.
 - **Numeric coherence** — 41 cas = 35 domaine + 6 socle ; 27 réussis (24 domaine + 3) /
   14 échoués (11 + 3 critiques) reconciles; taux 66% ↔ score 6,6.
-**Major deviation (NOT built — logged, follow-up):** the full **three-tier** model
-(T0/T1/T2 as first-class), **governed waiver objects** (S1 event, RBAC, expiry,
-compensating controls), the **structural Venn** (membership summing to totals, distinct
-from the non-concluant count), and **per-(cas × langue)** gating. The shipped gate is
-**two-level** (socle critique zéro-tolérance + domaine ≥ `min_pass_rate`), which is
-policy-*conservative* (no waiver ⇒ nothing wrongly unblocked). Tier 0 is detected
-structurally from the case id (pii/regulatory) pending a curated, versioned socle set.
-**À confirmer** : socle curé explicite + waiver store + Venn + cas×langue.
+**Resolved (Phase 2, conformance pass) — the full policy is now built for real.**
+The earlier two-level gate is replaced by a policy-correct one recomputed from
+first principles over a fresh FR/DE/EN run (119 case×langue executions):
+- **Three-tier model (T0/T1/T2) as first-class.** T0 = the curated, versioned
+  socle (`eval/sets/socle-securite.json`); T1 = a curated, versioned list
+  (`eval/tiers.yaml`) of dérogeable criticals (hors socle); T2 = the graded
+  remainder. Loaded + invariant-checked by `observability/eval_tiers.py`
+  (T0 ∩ T1 = ∅ asserted at load; T0 never waivable).
+- **Governed waiver objects** — `observability/eval_waivers.py`: an **S1,
+  append-only, hash-chained** event store (RBAC roles, separation of duties
+  enforced — requester ≠ approver — compensating controls, incident ref,
+  **expiry → auto re-block** computed at render, never stored). Seeded
+  idempotently against the **real candidate run** by
+  `scripts/seed_eval_waivers.py`: 2 active, 1 expired (auto re-block demo) and 1
+  **Tier 0 attempt** rendered "sans effet" — the `T0 ∩ dérog = ∅` invariant shown
+  with a real event, not asserted in prose.
+- **Per-(cas × langue) gating + structural Venn** — `observability/eval_gate_view.py`
+  classifies every (case, langue) execution; the Venn is **structural membership**
+  (Socle + T1 + Domaine = executions), distinct from the failure count. Verdict,
+  breakdown, socle/hors-socle split, socle-by-category markers, critical-cases
+  table and the waiver registry **all reconcile** at the case×langue grain
+  (locked by `tests/unit/test_eval_gate_policy.py`).
+- Data is **real, not fabricated**: only the waiver *governance envelopes* are
+  seeded (metadata bound to real failing T1 case×langue of the real run).
+**À confirmer** : T1 curation is a documented judgment call (`eval/tiers.yaml`);
+the waiver **grant** flow is read-only on the page — waivers are created via the
+governed script, not yet editable from the UI (propose → approve). The category
+labels in the socle markers reuse the existing ASCII `CATEGORY_LABELS`
+(pre-existing source, e.g. "Confidentialite"), unchanged here.
 
 **Historique CT-01 + per-turn agent (images 30/301, conformance pass).** The session
 **detail** already satisfies the multi-agent invariant: turns come from
