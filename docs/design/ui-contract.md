@@ -220,6 +220,33 @@ This two-app `produit/` + grouped cockpit tree deviates from the single flat
 `app/[locale]/<page>` tree implied by CLAUDE.md. It is intentional and recorded
 here; a dedicated ADR will follow if the split hardens.
 
+**Multi-agent GOUVERNER/PLATEFORME — shared mechanism (this pass).** Built the
+global agent-scope mechanism once, reused across GOUVERNER/PLATEFORME:
+- Backend `observability/agent_scope.py` `dedup_org_total()` — org rollup at the
+  DISTINCT entity grain (handoff conversation = 1); `fleet.py` consumes it.
+- Backend `observability/agent_release.py` — per-agent eval-gate verdict
+  (`build_gate_view` over each agent's OWN run); real for all 3 agents.
+- Frontend `lib/agent-scope.ts` + `AgentScopeFilter` (URL `?agent=all|<id>`,
+  **distinct** from `useAgentId`/the AGENT switcher — query scope, not path scope)
+  + presentational `AgentBreakdown` (per-agent rows + distinct **Total org
+  (dédup)** row showing naive sum / dedup saved / shared).
+
+**Flotte `/agents` — release column (real).** Added the normative's "état de
+release" per-agent: eval-gate verdict + candidate version, colour tied to gate
+conformity. Resolution rate stays intentionally absent (judged quality shared
+until per-agent eval). Org totals stay deduplicated.
+
+**Surveiller — agent filter + breakdown (per page).** Each Surveiller page gets
+the global `AgentScopeFilter` + a real `AgentBreakdown` (fleet rollup: observable
+KPIs that genuinely differ per agent + deduped org total). Removed the **fake
+hardcoded `banking`/`support` agent select** from `vue-ensemble`'s topbar (it was
+exactly the "no real notion of agent" landmine).
+**Deviation (logged):** the existing org-wide signal panels below the breakdown
+(SLO, cost, refusal… — S4 time-series) are **not yet ventilated per agent**; the
+filter scopes the per-agent breakdown (real) and an honest banner states the org
+signals are not per-agent. Real-able follow-up: stamp `agent_id` on the S4 signal
+series so the same filter scopes them too. No fabricated per-agent signal is shown.
+
 **Inbox globalised (Phase 0).** The Inbox (`a-traiter` / `a-faire`) previously
 sat under the AGENT routes (`/agent/a-traiter`). Because it is a **cross-agent**
 operator queue — not a per-agent surface — it moved to the **top level**

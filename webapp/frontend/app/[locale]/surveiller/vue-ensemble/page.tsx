@@ -1,10 +1,15 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { AgentBreakdown } from "@/components/agent/agent-breakdown";
+import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { AppShell } from "@/components/layout/app-shell";
 import { OverviewDashboard } from "@/components/overview/overview-dashboard";
+import { readAgentScope } from "@/lib/agent-scope";
+import { loadFleet } from "@/lib/server/fleet";
 
 interface OverviewPageProps {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: OverviewPageProps) {
@@ -13,10 +18,14 @@ export async function generateMetadata({ params }: OverviewPageProps) {
   return { title: t("title") };
 }
 
-export default async function OverviewPage({ params }: OverviewPageProps) {
+export default async function OverviewPage({ params, searchParams }: OverviewPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "overview" });
+  const ts = await getTranslations({ locale, namespace: "agentScope" });
+
+  const scope = readAgentScope(await searchParams);
+  const fleet = await loadFleet();
 
   return (
     <AppShell
@@ -47,15 +56,6 @@ export default async function OverviewPage({ params }: OverviewPageProps) {
             { value: "d30", label: t("context.lifecycle30d") },
           ],
         },
-        {
-          label: t("context.agent"),
-          value: "banking",
-          control: "select",
-          options: [
-            { value: "banking", label: t("context.agentValue") },
-            { value: "support", label: t("context.agentSupport") },
-          ],
-        },
         { label: t("context.model"), value: "Llama 3.2 3B", control: "model" },
         { label: t("context.language"), value: "FR", leading: "globe", control: "locale" },
       ]}
@@ -74,6 +74,15 @@ export default async function OverviewPage({ params }: OverviewPageProps) {
         },
       ]}
     >
+      {/* GOUVERNER global agent filter — distinct from the AGENT switcher. */}
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <AgentScopeFilter />
+        <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{ts("hint")}</span>
+      </div>
+      <div className="mb-3">
+        <AgentBreakdown fleet={fleet} scope={scope} locale={locale} />
+      </div>
+      <p className="mb-3 text-[0.62rem] text-[var(--tessera-text-muted)]">{ts("orgSignalsNote")}</p>
       <OverviewDashboard />
     </AppShell>
   );

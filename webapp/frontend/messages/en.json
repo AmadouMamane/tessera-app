@@ -4650,5 +4650,23 @@
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "sealed": "Sealed"
+  },
+  "agentScope": {
+    "label": "Agent filter:",
+    "all": "All agents",
+    "hint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher.",
+    "breakdownTitle": "Per-agent view",
+    "breakdownNote": "Real observable per-agent KPIs — org totals deduplicated.",
+    "colAgent": "Agent",
+    "colVolume": "Volume",
+    "colEscalation": "Refusal/escalation",
+    "colLatency": "Latency",
+    "colHandoffs": "Handoffs (in/out)",
+    "colRelease": "Release state",
+    "orgTotal": "Org total (dedup)",
+    "releaseNotRun": "Eval not run",
+    "dedupExplain": "Naive sum {naive} · {saved} deduplicated · {shared} shared conversations (handoff = 1)",
+    "empty": "No fleet data available.",
+    "orgSignalsNote": "Filter active on the per-agent view above. The org signals below (S4) are not yet broken down per agent."
   }
 }

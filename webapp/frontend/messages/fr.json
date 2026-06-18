@@ -4650,5 +4650,23 @@
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
     "sealed": "Scellé"
+  },
+  "agentScope": {
+    "label": "Filtre agent :",
+    "all": "Tous les agents",
+    "hint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT.",
+    "breakdownTitle": "Vue par agent",
+    "breakdownNote": "KPIs observables réels par agent — totaux org dédupliqués.",
+    "colAgent": "Agent",
+    "colVolume": "Volume",
+    "colEscalation": "Refus/escalade",
+    "colLatency": "Latence",
+    "colHandoffs": "Transferts (e/s)",
+    "colRelease": "État de release",
+    "orgTotal": "Total org (dédup)",
+    "releaseNotRun": "Éval non exécutée",
+    "dedupExplain": "Somme naïve {naive} · {saved} dédoublonnées · {shared} conversations partagées (handoff = 1)",
+    "empty": "Aucune donnée flotte disponible.",
+    "orgSignalsNote": "Filtre actif sur la vue par agent ci-dessus. Les signaux org ci-dessous (S4) ne sont pas encore ventilés par agent."
   }
 }
