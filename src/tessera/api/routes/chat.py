@@ -321,20 +321,58 @@ def _debug_guardrails(guard_decisions: list[GuardDecisionRecord]) -> dict[str, o
     return {"title": f"Garde-fous declenches ({len(rows)})", "rows": rows}
 
 
-def _debug_trace(timings: Mapping[str, float], total_ms: float) -> dict[str, object]:
-    labels = {
-        "router": "Analyse & classification",
-        "planner": "Planification",
-        "dispatch": "Recherche / outils",
-        "reviewer": "Garde-fous & revue",
-        "reporter": "Generation de la reponse",
+_TRACE_LABELS = {
+    "router": "Routage",
+    "planner": "Planification",
+    "dispatch": "Recherche / outils",
+    "product_lookup": "Recherche produit",
+    "regulation_lookup": "Recherche reglementaire",
+    "account_lookup": "Recherche compte",
+    "simulator": "Simulation",
+    "escalation_worker": "Escalade",
+    "reviewer": "Garde-fous & revue",
+    "reporter": "Generation de la reponse",
+}
+
+
+def _trace_label(key: str) -> str:
+    return _TRACE_LABELS.get(key, key.replace("_", " ").title())
+
+
+def _debug_trace(
+    timings: Mapping[str, float],
+    *,
+    warn_keys: frozenset[str] = frozenset(),
+) -> dict[str, object]:
+    """Build the XT-01 waterfall from the *real* per-node timings (ADR 0010 #4).
+
+    Spans are laid end-to-end in execution order (the graph backbone runs
+    router -> planner -> worker -> reviewer -> reporter sequentially), so the
+    cumulative ``start_ms`` is meaningful and the total is the sum of the real
+    node durations. No stage is fabricated: only nodes that actually ran (and
+    were timed) appear. ``status`` is derived from real signals — a node is
+    ``warn`` only when the turn's guard decisions flagged it.
+    """
+    spans: list[dict[str, object]] = []
+    start = 0.0
+    for key, ms in timings.items():
+        duration = float(ms)
+        spans.append(
+            {
+                "key": key,
+                "label": _trace_label(key),
+                "start_ms": round(start, 1),
+                "duration_ms": round(duration, 1),
+                "status": "warn" if key in warn_keys else "ok",
+            }
+        )
+        start += duration
+    return {
+        "title": "XT-01 - Trace d'execution",
+        "total_ms": round(start, 1),
+        "count": len(spans),
+        "spans": spans,
     }
-    rows = [{"label": "Reception de la requete", "value": "0ms"}]
-    for key, label in labels.items():
-        if key in timings:
-            rows.append({"label": label, "value": _fmt_ms(timings[key])})
-    rows.append({"label": "Temps total", "value": _fmt_ms(total_ms)})
-    return {"title": "Trace en temps reel", "cta": "Voir la trace complete", "rows": rows}
 
 
 def _debug_from_state(
@@ -342,7 +380,6 @@ def _debug_from_state(
     state: Mapping[str, object],
     timings: Mapping[str, float],
     citations: list[Citation],
-    duration_ms: float,
     final_response: str,
 ) -> dict[str, object]:
     docs = cast(list[RetrievedDocument], state.get("retrieved_documents", []))
@@ -351,6 +388,10 @@ def _debug_from_state(
     confidence_raw = state.get("confidence")
     confidence = float(confidence_raw) if isinstance(confidence_raw, int | float) else None
     denied_count = sum(1 for decision in guard_decisions if decision.decision == "deny")
+    # The reviewer node is where the output guard runs; mark its span as warn
+    # only when the turn's real guard decisions denied or redacted output.
+    flagged = denied_count > 0 or any(decision.redactions for decision in guard_decisions)
+    warn_keys = frozenset({"reviewer"}) if flagged else frozenset()
     return {
         "quality": _debug_quality(
             confidence=confidence,
@@ -362,7 +403,7 @@ def _debug_from_state(
         "sources": _debug_sources(docs, citations),
         "tools": _debug_tools(tool_calls, docs, timings),
         "guardrails": _debug_guardrails(guard_decisions),
-        "trace": _debug_trace(timings, duration_ms),
+        "trace": _debug_trace(timings, warn_keys=warn_keys),
         "tokens": len(final_response.split()),
     }
 
@@ -560,7 +601,6 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
             state=state,
             timings=node_timings,
             citations=turn_citations,
-            duration_ms=duration * 1000.0,
             final_response=final_response,
         ),
     )
