@@ -379,7 +379,7 @@ def _runs_rail(agent_id: str) -> dict[str, object]:
             }
         )
     return {
-        "title": "Historique des runs (ER-01)",
+        "title": "Historique des runs",
         "subtitle": "Reconstruit quel run et quels scores étaient courants à chaque date.",
         "items": items,
         "count": len(items),

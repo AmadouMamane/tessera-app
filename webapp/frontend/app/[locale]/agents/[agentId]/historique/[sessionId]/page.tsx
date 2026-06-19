@@ -94,10 +94,10 @@ export default async function SessionDetailPage({ params }: PageProps) {
         </div>
       ))}
 
-      {/* CT-01 Conversation Timeline Rail: turns in order, each attributed to
-            the agent that handled it (per-turn agent_id). */}
+      {/* CT-01 Conversation Timeline Rail (internal code): turns in order, each
+          attributed to the agent that handled it (per-turn agent_id). */}
       <p className="mt-1 text-[0.66rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
-        CT-01 · Chronologie de la session
+        Chronologie de la session
       </p>
       {/* Turns, each attributed to the agent that handled it */}
       <ol className="flex flex-col gap-2.5">

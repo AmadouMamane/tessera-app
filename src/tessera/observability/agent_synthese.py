@@ -691,7 +691,7 @@ def _assemble(
     }
 
     activity: dict[str, object] = {
-        "title": "Activité de l'agent (AT-01)",
+        "title": "Activité de l'agent",
         "cta": "Voir toutes les activités",
         "ctaHref": _page(agent_id, "historique"),
         "rows": _activity_rows(tx, journal),
