@@ -4755,6 +4755,17 @@
   "shell": {
     "focus": {
       "exitHint": "to exit focus mode"
+    },
+    "palette": {
+      "title": "Command palette",
+      "placeholder": "Search agents, pages, actions…",
+      "empty": "No results",
+      "agents": "Agent",
+      "pages": "Page",
+      "actions": "Action",
+      "toggleFocus": "Toggle focus mode",
+      "toggleSidebar": "Collapse / expand menu",
+      "fleet": "View the agent fleet"
     }
   }
 }

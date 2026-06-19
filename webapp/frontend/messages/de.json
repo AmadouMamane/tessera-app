@@ -4755,6 +4755,17 @@
   "shell": {
     "focus": {
       "exitHint": "zum Verlassen des Fokusmodus"
+    },
+    "palette": {
+      "title": "Befehlspalette",
+      "placeholder": "Agenten, Seiten, Aktionen suchen…",
+      "empty": "Keine Ergebnisse",
+      "agents": "Agent",
+      "pages": "Seite",
+      "actions": "Aktion",
+      "toggleFocus": "Fokusmodus umschalten",
+      "toggleSidebar": "Menü ein-/ausklappen",
+      "fleet": "Agentenflotte ansehen"
     }
   }
 }

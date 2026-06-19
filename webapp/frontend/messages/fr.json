@@ -4755,6 +4755,17 @@
   "shell": {
     "focus": {
       "exitHint": "pour quitter le mode focus"
+    },
+    "palette": {
+      "title": "Palette de commandes",
+      "placeholder": "Rechercher agents, pages, actions…",
+      "empty": "Aucun résultat",
+      "agents": "Agent",
+      "pages": "Page",
+      "actions": "Action",
+      "toggleFocus": "Basculer le mode focus",
+      "toggleSidebar": "Replier / déployer le menu",
+      "fleet": "Voir la flotte des agents"
     }
   }
 }

@@ -18,6 +18,7 @@ import { useEffect, useState, useTransition } from "react";
 import { AuthControl } from "@/components/auth/auth-control";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ModelBadge } from "@/components/layout/model-badge";
+import { useShellChrome } from "@/components/layout/shell-chrome";
 import { StatusBadge } from "@/components/layout/status-badge";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,7 @@ export function Topbar({
   breadcrumb,
 }: TopbarProps) {
   const t = useTranslations("app");
+  const { setPaletteOpen } = useShellChrome();
   const [pending, setPending] = useState<string | null>(null);
   const hasOverviewHeader = contextItems.length > 0 || actions.length > 0;
 
@@ -253,7 +255,12 @@ export function Topbar({
       <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
         <StatusBadge />
         <ModelBadge />
-        <HeaderIconButton icon={Search} label="Recherche" className="hidden lg:inline-flex" />
+        <HeaderIconButton
+          icon={Search}
+          label="Rechercher (⌘K)"
+          className="hidden lg:inline-flex"
+          onClick={() => setPaletteOpen(true)}
+        />
         <HeaderIconButton
           icon={Bell}
           label="Notifications"
@@ -447,16 +454,19 @@ function HeaderIconButton({
   label,
   badge,
   className,
+  onClick,
 }: {
   icon: LucideIcon;
   label: string;
   badge?: string;
   className?: string;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
+      onClick={onClick}
       className={cn(
         "relative h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]",
         className ?? "inline-flex",

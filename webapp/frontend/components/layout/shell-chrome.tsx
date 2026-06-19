@@ -3,6 +3,8 @@
 import { useTranslations } from "next-intl";
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useState } from "react";
 
+import { CommandPalette } from "./command-palette";
+
 /**
  * Shell-wide chrome state + power-user keyboard gestures, mounted once in the
  * AppShell so every cockpit page inherits them:
@@ -68,6 +70,9 @@ export function ShellChrome({ children }: { children: ReactNode }) {
       } else if (meta && event.key === ".") {
         event.preventDefault();
         setFocus((f) => !f);
+      } else if (meta && key === "k") {
+        event.preventDefault();
+        setPaletteOpen((o) => !o);
       } else if (event.key === "Escape" && focus && !paletteOpen) {
         setFocus(false);
       }
@@ -90,6 +95,7 @@ export function ShellChrome({ children }: { children: ReactNode }) {
     >
       {children}
       {focus ? <FocusHint onExit={exitFocus} /> : null}
+      <CommandPalette />
     </ShellChromeContext.Provider>
   );
 }

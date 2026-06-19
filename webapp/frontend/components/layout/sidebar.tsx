@@ -307,6 +307,26 @@ function activeBranchKeys(pathname: string): string[] {
   return [];
 }
 
+/** A flat, navigable view of the real route map — reused by the command palette
+ *  so it navigates to the SAME pages the sidebar exposes (no parallel list). */
+export interface NavLeafRef {
+  href: string;
+  labelKey: string;
+  icon: LucideIcon;
+}
+
+export function navLeaves(agentId: string): NavLeafRef[] {
+  const out: NavLeafRef[] = [];
+  const walk = (nodes: ReadonlyArray<NavNode>) => {
+    for (const node of nodes) {
+      if (isBranch(node)) walk(node.children);
+      else out.push({ href: node.href, labelKey: node.labelKey, icon: node.icon });
+    }
+  };
+  walk([agentBranch(agentId), ...INBOX, ...TREE]);
+  return out;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const t = useTranslations("nav");
