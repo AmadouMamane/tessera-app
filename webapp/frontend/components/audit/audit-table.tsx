@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { DeltaBadge, MetricCard } from "@/components/cockpit/metric-card";
 import { StretchChart, sampleTicks } from "@/components/cockpit/stretch-chart";
@@ -76,6 +76,29 @@ function makeWindow(preset: Period, anchor: Date = new Date()): AuditWindow {
 }
 
 export function AuditTable({ initialWindow }: { initialWindow?: AuditWindow }) {
+  return (
+    <Suspense fallback={<AuditTableFallback />}>
+      <AuditTableInner initialWindow={initialWindow} />
+    </Suspense>
+  );
+}
+
+function AuditTableFallback() {
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <Skeleton className="h-12 w-full rounded-lg" />
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        <Skeleton className="h-20 w-full rounded-lg" />
+        <Skeleton className="h-20 w-full rounded-lg" />
+        <Skeleton className="h-20 w-full rounded-lg" />
+        <Skeleton className="h-20 w-full rounded-lg" />
+      </div>
+      <Skeleton className="h-64 w-full rounded-lg" />
+    </div>
+  );
+}
+
+function AuditTableInner({ initialWindow }: { initialWindow?: AuditWindow }) {
   const t = useTranslations("audit");
   const tCommon = useTranslations("common");
   const formatter = useFormatter();

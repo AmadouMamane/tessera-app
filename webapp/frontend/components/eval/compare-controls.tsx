@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 import {
   Select,
@@ -9,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { RunMeta } from "@/lib/api/schemas";
 import { shortRunDate } from "@/lib/format";
@@ -26,17 +28,30 @@ function optionLabel(run: RunMeta): string {
  * (?run=A&vs=B) so the server re-renders the comparison for any two runs the
  * user chooses — not just the latest per model.
  */
-export function CompareControls({
-  runs,
-  aFile,
-  bFile,
-  labels,
-}: {
+type CompareControlsProps = {
   runs: RunMeta[];
   aFile?: string;
   bFile?: string;
   labels: { a: string; b: string };
-}) {
+};
+
+export function CompareControls(props: CompareControlsProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-wrap items-end gap-4">
+          <Skeleton className="h-9 w-64 rounded-md" />
+          <span className="pb-2 text-sm text-[var(--muted-foreground)]">vs</span>
+          <Skeleton className="h-9 w-64 rounded-md" />
+        </div>
+      }
+    >
+      <CompareControlsInner {...props} />
+    </Suspense>
+  );
+}
+
+function CompareControlsInner({ runs, aFile, bFile, labels }: CompareControlsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();

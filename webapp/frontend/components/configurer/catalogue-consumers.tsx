@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchCatalogueConsumers } from "@/lib/api/client";
 
@@ -25,6 +27,21 @@ const VERDICT_DOT: Record<string, string> = {
  * the governed registry bindings; honest empty state when none.
  */
 export function CatalogueConsumers({ kind }: { kind: string }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col gap-2.5">
+          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
+        </div>
+      }
+    >
+      <CatalogueConsumersInner kind={kind} />
+    </Suspense>
+  );
+}
+
+function CatalogueConsumersInner({ kind }: { kind: string }) {
   const t = useTranslations("usedBy");
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));

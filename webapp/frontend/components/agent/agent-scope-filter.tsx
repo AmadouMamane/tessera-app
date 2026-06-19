@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronDown, Filter } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 import {
   DropdownMenu,
@@ -12,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { AGENT_SCOPE_ALL, AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchFleet } from "@/lib/api/client";
@@ -26,6 +28,14 @@ import { fetchFleet } from "@/lib/api/client";
  * so an operator never confuses it with the AGENT switcher.
  */
 export function AgentScopeFilter() {
+  return (
+    <Suspense fallback={<Skeleton className="h-8 w-[11rem] rounded-md" />}>
+      <AgentScopeFilterInner />
+    </Suspense>
+  );
+}
+
+function AgentScopeFilterInner() {
   const t = useTranslations("agentScope");
   const pathname = usePathname();
   const router = useRouter();

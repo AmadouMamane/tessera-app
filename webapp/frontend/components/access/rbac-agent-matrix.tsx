@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchRbacMatrix } from "@/lib/api/client";
 
@@ -17,6 +19,21 @@ import { fetchRbacMatrix } from "@/lib/api/client";
  * role-binding store is a logged follow-up.
  */
 export function RbacAgentMatrix() {
+  return (
+    <Suspense
+      fallback={
+        <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
+          <Skeleton className="h-4 w-40 rounded" />
+          <Skeleton className="mt-4 h-32 w-full rounded" />
+        </section>
+      }
+    >
+      <RbacAgentMatrixInner />
+    </Suspense>
+  );
+}
+
+function RbacAgentMatrixInner() {
   const t = useTranslations("rbac");
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));

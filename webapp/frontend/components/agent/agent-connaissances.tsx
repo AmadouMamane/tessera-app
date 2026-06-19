@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -78,6 +78,14 @@ const MEMORY_HREF = "/configurer/sources-memoire" as const;
 type NavHref = typeof CATALOG_HREF | typeof MEMORY_HREF;
 
 export function AgentConnaissances() {
+  return (
+    <Suspense fallback={<ConnaissancesSkeleton />}>
+      <AgentConnaissancesInner />
+    </Suspense>
+  );
+}
+
+function AgentConnaissancesInner() {
   const t = useTranslations("agentConnaissances");
   const tCommon = useTranslations("common");
   const locale = useLocale();
