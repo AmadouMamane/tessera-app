@@ -1,23 +1,13 @@
 "use client";
 
-import {
-  AlertTriangle,
-  BookOpen,
-  Check,
-  ChevronDown,
-  Copy,
-  FileText,
-  Pencil,
-  Sparkles,
-  User2,
-} from "lucide-react";
+import { AlertTriangle, Check, Copy, Pencil, Sparkles, User2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/lib/stores/chat-store";
-import { Markdown } from "./markdown";
+import { CitationList, MessageContent } from "./message-content";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -174,12 +164,10 @@ export function MessageBubble({
                 className="w-full resize-none bg-transparent text-sm leading-relaxed text-navy-50 dark:text-navy-950 focus:outline-none"
               />
             ) : (
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-justify hyphens-auto">
-                {message.content}
-              </p>
+              <MessageContent speaker="user" content={message.content} />
             )
           ) : (
-            <Markdown>{message.content}</Markdown>
+            <MessageContent speaker="assistant" content={message.content} />
           )}
         </div>
 
@@ -290,60 +278,5 @@ function ConfidenceBadge({ value }: { value: number }) {
     >
       {pct}%
     </span>
-  );
-}
-
-function CitationList({
-  citations,
-  sourcesLabel,
-}: {
-  citations: NonNullable<ChatMessage["citations"]>;
-  sourcesLabel: string;
-}) {
-  const t = useTranslations("chat");
-  return (
-    <div className="mt-1.5 flex flex-col gap-1 px-1">
-      <span className="flex items-center gap-1 text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
-        <BookOpen className="h-3 w-3" />
-        {sourcesLabel}
-      </span>
-      <ol className="flex flex-col gap-1">
-        {citations.map((c, idx) => {
-          const hasTitle = Boolean(c.locator?.trim());
-          const title = hasTitle ? c.locator : c.source;
-          return (
-            <li key={`${c.source}-${c.locator}-${idx}`}>
-              <details className="group rounded-md border border-[var(--border)] bg-[var(--muted)]/30 transition-colors open:border-gold-500/50 open:bg-gold-500/5 hover:border-gold-500/50 hover:bg-gold-500/5">
-                <summary className="grid min-h-10 cursor-pointer list-none grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1.5 text-[0.68rem] [&::-webkit-details-marker]:hidden">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--background)] text-[0.62rem] font-semibold text-[var(--muted-foreground)] tabular-nums transition-colors group-hover:text-gold-700 dark:group-hover:text-gold-300">
-                    {idx + 1}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-1 font-medium text-[var(--foreground)]">
-                      <FileText className="h-3 w-3 shrink-0 text-gold-600 dark:text-gold-400" />
-                      <span className="truncate">{title}</span>
-                    </span>
-                    {hasTitle && (
-                      <span className="block truncate font-mono text-[0.62rem] text-[var(--muted-foreground)]">
-                        {c.source}
-                      </span>
-                    )}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-1.5">
-                    <span className="rounded border border-[var(--border)] px-1 py-px text-[0.55rem] font-medium text-[var(--muted-foreground)] uppercase tracking-wide">
-                      {c.language}
-                    </span>
-                    <ChevronDown className="h-3.5 w-3.5 text-[var(--muted-foreground)] transition-transform group-open:rotate-180" />
-                  </span>
-                </summary>
-                <p className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words border-[var(--border)] border-t px-2.5 py-2 text-[var(--foreground)]/90 text-xs leading-relaxed">
-                  {c.excerpt?.trim() ? c.excerpt : t("noExcerpt")}
-                </p>
-              </details>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
   );
 }
