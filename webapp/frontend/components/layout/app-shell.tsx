@@ -19,7 +19,6 @@ interface AppShellProps {
   contentWidth?: "default" | "wide" | "full";
   topbarContext?: TopbarContextItem[];
   topbarActions?: TopbarAction[];
-  breadcrumb?: { section: string; label: string };
   /** Override the left rail (defaults to the cockpit sidebar). */
   sidebar?: ReactNode;
 }
@@ -30,7 +29,6 @@ export function AppShell({
   children,
   topbarContext,
   topbarActions,
-  breadcrumb,
   sidebar,
 }: AppShellProps) {
   return (
@@ -43,7 +41,6 @@ export function AppShell({
             description={description}
             contextItems={topbarContext}
             actions={topbarActions}
-            breadcrumb={breadcrumb}
           />
         }
         footer={<AppFooter />}

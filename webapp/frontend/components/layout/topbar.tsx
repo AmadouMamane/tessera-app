@@ -76,7 +76,6 @@ interface TopbarProps {
   description?: string;
   contextItems?: TopbarContextItem[];
   actions?: TopbarAction[];
-  breadcrumb?: { section: string; label: string };
 }
 
 function downloadJson(name: string, obj: unknown) {
@@ -134,42 +133,11 @@ async function runAction(kind: "export" | "evidence") {
   });
 }
 
-export function Topbar({
-  title,
-  description,
-  contextItems = [],
-  actions = [],
-  breadcrumb,
-}: TopbarProps) {
+export function Topbar({ title, description, contextItems = [], actions = [] }: TopbarProps) {
   const t = useTranslations("app");
   const { setPaletteOpen } = useShellChrome();
   const [pending, setPending] = useState<string | null>(null);
   const hasOverviewHeader = contextItems.length > 0 || actions.length > 0;
-
-  if (breadcrumb) {
-    return (
-      <header className="relative flex min-h-12 items-center justify-between gap-4 border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-6 py-2">
-        <div className="flex min-w-0 items-center gap-2 text-[0.72rem] font-medium">
-          <span className="uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            {breadcrumb.section}
-          </span>
-          <ChevronDown className="h-3.5 w-3.5 -rotate-90 text-[var(--tessera-text-muted)]" />
-          <span className="truncate text-[var(--tessera-text)]">{breadcrumb.label}</span>
-        </div>
-        <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
-          <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
-          <HeaderIconButton
-            icon={Bell}
-            label="Notifications"
-            badge="7"
-            className="hidden lg:inline-flex"
-          />
-          <div className="mx-2 h-6 w-px bg-[var(--tessera-border)]" />
-          <AuthControl />
-        </div>
-      </header>
-    );
-  }
 
   async function onAction(action: TopbarAction) {
     if (!action.action) return;
@@ -181,16 +149,54 @@ export function Topbar({
     }
   }
 
-  if (hasOverviewHeader) {
-    return (
-      <header className="relative bg-[var(--tessera-bg)]">
-        <div className="relative flex min-h-[5.5rem] min-w-0 items-center justify-end gap-4 border-b border-[var(--tessera-border)] px-4 md:px-5">
-          <div className="flex min-w-0 flex-wrap items-center justify-center gap-3 min-[1500px]:absolute min-[1500px]:left-1/2 min-[1500px]:-translate-x-1/2">
+  return (
+    <header className="relative border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)]">
+      {/* Row 1 — the single global topbar, rendered IDENTICALLY on every page
+          (AGENT / GOUVERNER / PLATEFORME): title + status · model · ⌘K · notifs ·
+          aide · langue · thème · compte. The ⌘K affordance always sits here, in
+          the same place — there is no per-section header variant. */}
+      <div className="flex min-h-[5.5rem] items-center justify-between gap-4 px-6 py-3">
+        <div className="min-w-0">
+          <h1 className="truncate font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
+            {title}
+          </h1>
+          <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">
+            {description ?? t("tagline")}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
+          <StatusBadge />
+          <ModelBadge />
+          <HeaderIconButton
+            icon={Search}
+            label="Rechercher (⌘K)"
+            className="hidden lg:inline-flex"
+            onClick={() => setPaletteOpen(true)}
+          />
+          <HeaderIconButton
+            icon={Bell}
+            label="Notifications"
+            badge="7"
+            className="hidden lg:inline-flex"
+          />
+          <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
+          <LanguageSwitcher />
+          <ThemeToggle className="h-9 w-9 rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]" />
+          <AuthControl />
+        </div>
+      </div>
+
+      {/* Row 2 — page-scoped context + actions, ONLY when the page provides them.
+          It sits below the global chrome so the global cluster (incl. ⌘K) never
+          shifts position from one page to the next. */}
+      {hasOverviewHeader ? (
+        <div className="flex min-h-[3.25rem] flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-6 py-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             {contextItems.map((item) => (
               <ContextControl key={item.label} item={item} />
             ))}
           </div>
-          <div className="relative z-10 flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             {actions.map((action) => {
               const Icon = action.icon === "download" ? Download : PackageCheck;
               return (
@@ -214,64 +220,9 @@ export function Topbar({
                 </Button>
               );
             })}
-            <HeaderIconButton
-              icon={Bell}
-              label="Notifications"
-              badge="7"
-              className="hidden min-[1800px]:inline-flex"
-            />
-            <HeaderIconButton
-              icon={CircleHelp}
-              label="Aide"
-              className="hidden min-[1800px]:inline-flex"
-            />
-            <ThemeToggle className="hidden h-9 w-9 rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)] min-[1800px]:inline-flex" />
           </div>
         </div>
-        <div className="px-4 py-3 text-center md:px-5">
-          <h1 className="font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
-            {title}
-          </h1>
-          <p className="mt-1 text-sm leading-none text-[var(--tessera-text-muted)]">
-            {description ?? t("tagline")}
-          </p>
-        </div>
-      </header>
-    );
-  }
-
-  return (
-    <header className="relative flex min-h-[5.5rem] items-center justify-between gap-4 border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-6 py-3">
-      <div className="min-w-0">
-        <h1 className="truncate font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
-          {title}
-        </h1>
-        {description ? (
-          <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">{description}</p>
-        ) : (
-          <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">{t("tagline")}</p>
-        )}
-      </div>
-      <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
-        <StatusBadge />
-        <ModelBadge />
-        <HeaderIconButton
-          icon={Search}
-          label="Rechercher (⌘K)"
-          className="hidden lg:inline-flex"
-          onClick={() => setPaletteOpen(true)}
-        />
-        <HeaderIconButton
-          icon={Bell}
-          label="Notifications"
-          badge="7"
-          className="hidden lg:inline-flex"
-        />
-        <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
-        <LanguageSwitcher />
-        <ThemeToggle className="h-9 w-9 rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]" />
-        <AuthControl />
-      </div>
+      ) : null}
     </header>
   );
 }
