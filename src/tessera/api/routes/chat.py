@@ -247,29 +247,23 @@ def _debug_quality(
 
 def _debug_sources(docs: list[RetrievedDocument], citations: list[Citation]) -> dict[str, object]:
     rows: list[dict[str, object]] = []
+    # Dedup on the *displayed label* so a source that is both cited and retrieved
+    # as a document (the two loops keyed differently — locator vs chunk_id) cannot
+    # surface twice. The label is also the React key on the frontend.
     seen: set[str] = set()
+
+    def _add(source: str, locator: str) -> None:
+        label = f"{source} - {locator}"
+        if label in seen or len(rows) >= _MAX_DEBUG_SOURCES:
+            return
+        seen.add(label)
+        rows.append({"label": label, "scope": _source_scope(source)})
+
     for citation in citations:
-        key = f"{citation.source}:{citation.locator}"
-        if key in seen:
-            continue
-        seen.add(key)
-        rows.append(
-            {
-                "label": f"{citation.source} - {citation.locator}",
-                "scope": _source_scope(citation.source),
-            }
-        )
-        if len(rows) >= _MAX_DEBUG_SOURCES:
-            break
+        _add(citation.source, citation.locator)
     for doc in docs:
-        key = f"{doc.source}:{doc.chunk_id}"
-        if key in seen:
-            continue
-        seen.add(key)
         locator = doc.metadata.get("locator") or doc.chunk_id
-        rows.append({"label": f"{doc.source} - {locator}", "scope": _source_scope(doc.source)})
-        if len(rows) >= _MAX_DEBUG_SOURCES:
-            break
+        _add(doc.source, str(locator))
     return {"title": f"Sources utilisees ({len(rows)})", "cta": "Voir toutes", "rows": rows}
 
 

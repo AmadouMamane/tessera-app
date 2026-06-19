@@ -943,8 +943,8 @@ function SourcesPanel({ s }: { s: NonNullable<ChatDebug["sources"]> }) {
     <div className="p-3.5">
       <PanelHead title={s.title} cta={s.cta} href={agentPath(agentId, "connaissances")} />
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-        {s.rows.map((r) => (
-          <li key={r.label} className="flex items-center justify-between gap-2">
+        {s.rows.map((r, i) => (
+          <li key={`${r.label}-${i}`} className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[var(--tessera-text)]">{r.label}</span>
             <span className="shrink-0 text-[0.64rem] text-[var(--tessera-text-muted)]">
               {r.scope}
