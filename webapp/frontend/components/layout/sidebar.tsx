@@ -20,6 +20,8 @@ import {
   LockKeyhole,
   type LucideIcon,
   MemoryStick,
+  PanelLeftClose,
+  PanelLeftOpen,
   PlayCircle,
   Plug,
   ScrollText,
@@ -40,6 +42,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
+import { useShellChrome } from "./shell-chrome";
 
 type RouteHref =
   | "/produit"
@@ -337,6 +340,28 @@ export function Sidebar() {
   }, [activeTrail]);
 
   const toggle = (key: string) => setOpen((p) => ({ ...p, [key]: !p[key] }));
+  const { collapsed, toggleCollapsed } = useShellChrome();
+
+  if (collapsed) {
+    return (
+      <aside className="flex h-full w-16 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)]">
+        <BrandHeader collapsed />
+        <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+          <ul className="flex flex-col gap-1">
+            {tree.map((node) => (
+              <RailNode
+                key={isBranch(node) ? node.key : node.href}
+                node={node}
+                pathname={pathname}
+                t={t}
+              />
+            ))}
+          </ul>
+        </nav>
+        <CollapseToggle collapsed onToggle={toggleCollapsed} t={t} />
+      </aside>
+    );
+  }
 
   return (
     <aside className="flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] md:w-[218px]">
@@ -356,8 +381,108 @@ export function Sidebar() {
           ))}
         </ul>
       </nav>
+      <CollapseToggle onToggle={toggleCollapsed} t={t} />
       <IdentityBlock />
     </aside>
+  );
+}
+
+/** A sidebar collapse/expand control. Keyboard equivalent is ⌘B (shell-chrome). */
+function CollapseToggle({
+  collapsed = false,
+  onToggle,
+  t,
+}: {
+  collapsed?: boolean;
+  onToggle: () => void;
+  t: T;
+}) {
+  const label = collapsed ? t("rail.expand") : t("rail.collapse");
+  return (
+    <div className="border-t border-[var(--tessera-border)] p-2">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={label}
+        title={`${label} (⌘B)`}
+        className={cn(
+          "flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-[0.78rem] font-medium text-[var(--tessera-text-muted)] transition-colors hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)] motion-reduce:transition-none",
+          collapsed && "justify-center",
+        )}
+      >
+        {collapsed ? (
+          <PanelLeftOpen className="h-4 w-4 shrink-0" />
+        ) : (
+          <>
+            <PanelLeftClose className="h-4 w-4 shrink-0" />
+            <span className="truncate">{label}</span>
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/** A flattened, icon-only rail entry (collapsed sidebar). Branches render their
+ *  own icon as a non-interactive section marker; leaves are reachable icon links
+ *  with a native tooltip — nav is never lost in the rail. */
+function RailNode({
+  node,
+  pathname,
+  t,
+}: {
+  node: NavNode;
+  pathname: string;
+  t: T;
+}) {
+  if (isBranch(node)) {
+    return (
+      <>
+        <li
+          aria-hidden
+          className="mx-2 mt-2 mb-1 flex items-center justify-center border-[var(--tessera-border)] border-t pt-2"
+          title={t(node.labelKey)}
+        >
+          <node.icon className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/70" />
+        </li>
+        {node.children.map((child) => (
+          <RailNode
+            key={isBranch(child) ? child.key : child.href}
+            node={child}
+            pathname={pathname}
+            t={t}
+          />
+        ))}
+      </>
+    );
+  }
+  const active = pathname === node.href || pathname.startsWith(`${node.href}/`);
+  const label = t(node.labelKey);
+  return (
+    <li>
+      <Link
+        href={node.href}
+        aria-current={active ? "page" : undefined}
+        aria-label={label}
+        title={label}
+        className={cn(
+          "group relative flex h-10 items-center justify-center rounded-md transition-colors motion-reduce:transition-none",
+          active
+            ? "bg-[var(--tessera-surface-elevated)] text-white"
+            : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+        )}
+      >
+        <node.icon className="h-4.5 w-4.5 shrink-0" />
+        {node.pulse ? (
+          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+        ) : null}
+        {node.badge ? (
+          <span className="absolute top-1 right-1 inline-flex min-w-3.5 items-center justify-center rounded-full bg-[var(--tessera-danger,#b4453a)] px-1 text-[0.55rem] font-semibold text-white">
+            {node.badge}
+          </span>
+        ) : null}
+      </Link>
+    </li>
   );
 }
 
@@ -511,17 +636,24 @@ function Badge({
   );
 }
 
-function BrandHeader() {
+function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
   const t = useTranslations("app");
   return (
-    <div className="flex min-h-[5.5rem] items-center justify-center gap-3 border-b border-[var(--tessera-border)] px-3 md:justify-start md:px-5">
+    <div
+      className={cn(
+        "flex min-h-[5.5rem] items-center gap-3 border-b border-[var(--tessera-border)]",
+        collapsed ? "justify-center px-2" : "justify-center px-3 md:justify-start md:px-5",
+      )}
+    >
       <TesseraMark />
-      <div className="hidden min-w-0 flex-col leading-tight md:flex">
-        <span className="font-sans text-xl font-semibold tracking-normal text-white">
-          {t("title")}
-        </span>
-        <span className="truncate text-xs text-[var(--tessera-text-muted)]">{t("subtitle")}</span>
-      </div>
+      {collapsed ? null : (
+        <div className="hidden min-w-0 flex-col leading-tight md:flex">
+          <span className="font-sans text-xl font-semibold tracking-normal text-white">
+            {t("title")}
+          </span>
+          <span className="truncate text-xs text-[var(--tessera-text-muted)]">{t("subtitle")}</span>
+        </div>
+      )}
     </div>
   );
 }

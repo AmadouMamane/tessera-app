@@ -111,6 +111,10 @@
       "documents": "Dokumente",
       "alertes": "Benachrichtigungen",
       "etatADate": "Stand zum Datum"
+    },
+    "rail": {
+      "collapse": "Menü einklappen",
+      "expand": "Menü ausklappen"
     }
   },
   "common": {
@@ -4747,5 +4751,10 @@
     "ok": "SLO eingehalten · {metric} — {rate} ≥ Schwelle {threshold}",
     "burn": "Burn ×{x} · {bad}/{n} schlecht im Fenster",
     "remediate": "In Vorfällen beheben"
+  },
+  "shell": {
+    "focus": {
+      "exitHint": "zum Verlassen des Fokusmodus"
+    }
   }
 }
