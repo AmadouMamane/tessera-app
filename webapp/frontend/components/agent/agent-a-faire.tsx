@@ -187,8 +187,8 @@ function Timeline({ data }: { data: Data }) {
       <span className="text-[0.6rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {tl.title}
       </span>
-      {tl.events.map((e) => (
-        <span key={`${e.time}-${e.ref}`} className="flex items-center gap-2">
+      {tl.events.map((e, i) => (
+        <span key={`${e.time}-${e.ref}-${i}`} className="flex items-center gap-2">
           <span className={cn("h-1.5 w-1.5 rounded-full", EVENT_DOT[e.tone] ?? "bg-slate-400")} />
           <span className="text-[0.68rem]">
             <span className="tabular-nums text-[var(--tessera-text-muted)]">{e.time}</span>{" "}
@@ -760,8 +760,8 @@ function Activity({ data }: { data: Data }) {
   return (
     <Panel title={a.title} cta={a.cta}>
       <ul className="flex flex-col gap-1.5">
-        {a.items.map((it) => (
-          <li key={`${it.time}-${it.action}`} className="flex items-center gap-2 text-[0.64rem]">
+        {a.items.map((it, i) => (
+          <li key={`${it.time}-${it.action}-${i}`} className="flex items-center gap-2 text-[0.64rem]">
             <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
             <span className="shrink-0 font-medium text-[var(--tessera-text)]">{it.actor}</span>
             <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">

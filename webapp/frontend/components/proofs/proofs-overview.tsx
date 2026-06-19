@@ -522,8 +522,8 @@ function ProofsRail({ t, data }: { t: T; data: Data }) {
 
       <Panel title={t("zone.journal")} action={<ViewAll label={t("viewAll.all")} />}>
         <ul className="flex flex-col gap-1.5">
-          {data.export_journal.map((j) => (
-            <li key={`${j.time}-${j.label}`} className="flex items-center gap-2 text-[0.7rem]">
+          {data.export_journal.map((j, i) => (
+            <li key={`${j.time}-${j.label}-${i}`} className="flex items-center gap-2 text-[0.7rem]">
               <span
                 className={cn(
                   "h-1.5 w-1.5 shrink-0 rounded-full",

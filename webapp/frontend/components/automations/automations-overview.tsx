@@ -338,9 +338,9 @@ function Journal({ t, data }: { t: T; data: Data }) {
             </tr>
           </thead>
           <tbody>
-            {data.journal.map((r) => (
+            {data.journal.map((r, i) => (
               <tr
-                key={`${r.time}-${r.automation}`}
+                key={`${r.time}-${r.automation}-${i}`}
                 className="border-b border-[var(--tessera-border)]/60 last:border-0"
               >
                 <td className="whitespace-nowrap px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]">

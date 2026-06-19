@@ -579,9 +579,9 @@ function RecentActivity({ t, data, className }: { t: T; data: Data; className?: 
           </tr>
         </thead>
         <tbody>
-          {data.recent_activity.map((a) => (
+          {data.recent_activity.map((a, i) => (
             <tr
-              key={`${a.time}-${a.action}`}
+              key={`${a.time}-${a.action}-${i}`}
               className="border-b border-[var(--tessera-border)]/60 last:border-0"
             >
               <td className="px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]">

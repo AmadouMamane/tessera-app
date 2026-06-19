@@ -471,8 +471,8 @@ function Activity({ t, data }: { t: T; data: Data }) {
   return (
     <Panel title={t("zone.activity")}>
       <ul className="flex flex-col gap-1.5">
-        {data.recent_activity.map((a) => (
-          <li key={`${a.time}-${a.action}`} className="flex items-center gap-2 text-[0.66rem]">
+        {data.recent_activity.map((a, i) => (
+          <li key={`${a.time}-${a.action}-${i}`} className="flex items-center gap-2 text-[0.66rem]">
             <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
             <span className="font-medium text-[var(--tessera-text)]">{a.actor}</span>
             <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">

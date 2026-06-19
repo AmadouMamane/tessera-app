@@ -818,7 +818,7 @@ function History({ data }: { data: Data }) {
       <div className="grid gap-2.5">
         {h.items.map((item, index) => (
           <div
-            key={`${item.time}-${item.label}`}
+            key={`${item.time}-${item.label}-${index}`}
             className="relative grid grid-cols-[34px_1fr] gap-2"
           >
             <span className="relative flex justify-center">

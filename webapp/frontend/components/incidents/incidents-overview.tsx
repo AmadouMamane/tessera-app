@@ -449,9 +449,9 @@ function ResponseJournal({ t, data, className }: { t: T; data: Data; className?:
           </tr>
         </thead>
         <tbody>
-          {data.response_journal.map((r) => (
+          {data.response_journal.map((r, i) => (
             <tr
-              key={`${r.time}-${r.incident}`}
+              key={`${r.time}-${r.incident}-${i}`}
               className="border-b border-[var(--tessera-border)]/60 last:border-0"
             >
               <td className="px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]">
