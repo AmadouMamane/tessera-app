@@ -23,7 +23,10 @@ function makeQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 30_000,
+        // Revisiting an already-seen tab reads from cache instantly, then
+        // revalidates in the background (stale-while-revalidate). gcTime keeps
+        // the cache around for ~5 min so back/forward stays instant too.
+        staleTime: 60_000,
         gcTime: 5 * 60_000,
         refetchOnWindowFocus: false,
         retry: 1,
