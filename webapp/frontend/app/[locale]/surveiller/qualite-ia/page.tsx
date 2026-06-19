@@ -24,7 +24,7 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
   const scope = readAgentScope(await searchParams);
   const fleet = await loadFleet();
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+    <AppShell title={t("title")} description={t("subtitle")}>
       <div className="mb-3">
         <GovScopeSection fleet={fleet} scope={scope} locale={locale} signalHero />
       </div>

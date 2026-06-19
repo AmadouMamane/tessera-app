@@ -1,10 +1,10 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { GovScopeSection } from "@/components/agent/gov-scope-section";
+import { AppShell } from "@/components/layout/app-shell";
+import { ReliabilityDashboard } from "@/components/reliability/reliability-dashboard";
 import { readAgentScope } from "@/lib/agent-scope";
 import { loadFleet } from "@/lib/server/fleet";
-import { ReliabilityDashboard } from "@/components/reliability/reliability-dashboard";
 
 interface ReliabilityPageProps {
   params: Promise<{ locale: string }>;
@@ -24,7 +24,7 @@ export default async function ReliabilityPage({ params, searchParams }: Reliabil
   const fleet = await loadFleet();
   const t = await getTranslations({ locale, namespace: "reliability" });
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+    <AppShell title={t("title")} description={t("subtitle")}>
       <div className="mb-3">
         <GovScopeSection fleet={fleet} scope={scope} locale={locale} signalHero />
       </div>

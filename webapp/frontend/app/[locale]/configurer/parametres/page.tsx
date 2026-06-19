@@ -42,7 +42,7 @@ export default async function ParametresPage({ params }: ParametresPageProps) {
   }
 
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+    <AppShell title={t("title")} description={t("subtitle")}>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <ParametersOverview />
       </HydrationBoundary>

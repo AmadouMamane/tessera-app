@@ -32,7 +32,6 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
     <AppShell
       title={t("title")}
       description={t("subtitle")}
-      contentWidth="wide"
       topbarContext={[
         {
           label: t("context.environment"),

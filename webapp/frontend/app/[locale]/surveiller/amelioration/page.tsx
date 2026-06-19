@@ -1,8 +1,8 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { ImprovementDashboard } from "@/components/improvement/improvement-dashboard";
 import { AppShell } from "@/components/layout/app-shell";
-import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { readAgentScope } from "@/lib/agent-scope";
 import { loadFleet } from "@/lib/server/fleet";
 
@@ -24,7 +24,7 @@ export default async function ImprovementPage({ params, searchParams }: Improvem
   const fleet = await loadFleet();
   const t = await getTranslations({ locale, namespace: "improvement" });
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+    <AppShell title={t("title")} description={t("subtitle")}>
       <div className="mb-3">
         <GovScopeSection fleet={fleet} scope={scope} locale={locale} signalHero />
       </div>

@@ -20,11 +20,7 @@ export default async function PlatformGuardrailsPage({ params }: PageProps) {
   const tn = await getTranslations({ locale, namespace: "nav" });
   const t = await getTranslations({ locale, namespace: "usedBy" });
   return (
-    <AppShell
-      title={tn("item.platformGuardrails")}
-      description={t("guardrailsSubtitle")}
-      contentWidth="full"
-    >
+    <AppShell title={tn("item.platformGuardrails")} description={t("guardrailsSubtitle")}>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <AgentScopeFilter />
         <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>

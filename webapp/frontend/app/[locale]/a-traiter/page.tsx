@@ -42,7 +42,7 @@ export default async function InboxPage({ params }: InboxPageProps) {
   }
 
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+    <AppShell title={t("title")} description={t("subtitle")}>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <InboxOverview />
       </HydrationBoundary>

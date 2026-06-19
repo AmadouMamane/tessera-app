@@ -20,7 +20,7 @@ export default async function ModelesPage({ params }: PageProps) {
   const tn = await getTranslations({ locale, namespace: "nav" });
   const t = await getTranslations({ locale, namespace: "usedBy" });
   return (
-    <AppShell title={tn("item.modeles")} description={t("modelsSubtitle")} contentWidth="full">
+    <AppShell title={tn("item.modeles")} description={t("modelsSubtitle")}>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <AgentScopeFilter />
         <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>

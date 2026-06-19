@@ -25,7 +25,7 @@ export default function AgentsAreaLayout({ children }: { children: ReactNode }) 
   const subtitle = t.has(`${ns}.subtitle`) ? t(`${ns}.subtitle`) : undefined;
 
   return (
-    <AppShell title={title} description={subtitle} contentWidth="full">
+    <AppShell title={title} description={subtitle}>
       {children}
     </AppShell>
   );

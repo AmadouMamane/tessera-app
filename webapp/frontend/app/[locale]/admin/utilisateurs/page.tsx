@@ -19,7 +19,7 @@ export default async function ScaffoldPage({ params }: PageProps) {
   const t = await getTranslations({ locale, namespace: "nav" });
   const title = t("item.utilisateurs");
   return (
-    <AppShell title={title} contentWidth="full">
+    <AppShell title={title}>
       <ScaffoldView title={title} />
     </AppShell>
   );

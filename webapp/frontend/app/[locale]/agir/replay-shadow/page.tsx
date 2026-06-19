@@ -1,13 +1,13 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { GovScopeSection } from "@/components/agent/gov-scope-section";
-import { readAgentScope } from "@/lib/agent-scope";
-import { loadFleet } from "@/lib/server/fleet";
+import { AppShell } from "@/components/layout/app-shell";
 import { ReplayOverview } from "@/components/replay/replay-overview";
+import { readAgentScope } from "@/lib/agent-scope";
 import { ReplayShadowOverviewSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
+import { loadFleet } from "@/lib/server/fleet";
 
 interface ReplayPageProps {
   params: Promise<{ locale: string }>;
@@ -48,7 +48,7 @@ export default async function ReplayPage({ params, searchParams }: ReplayPagePro
   }
 
   return (
-    <AppShell title={t("title")} description={t("subtitle")} contentWidth="full">
+    <AppShell title={t("title")} description={t("subtitle")}>
       <div className="mb-3">
         <GovScopeSection fleet={fleet} scope={scope} locale={locale} />
       </div>
