@@ -27,6 +27,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Final, Literal
 
 from psycopg import sql
+from psycopg.rows import dict_row
 
 from tessera.agent.state import GuardDecisionRecord
 from tessera.guard.adapter import check_user_input
@@ -172,12 +173,12 @@ async def consent_allows(subject_id: str) -> bool:
     pool = get_pool()
     if pool.closed:
         await pool.open()
-    async with pool.connection() as conn, conn.cursor() as cur:
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(query, (subject_id,))
         row = await cur.fetchone()
     if row is None:
         return get_settings().memory.consent_default
-    return bool(row[0])
+    return bool(row["granted"])
 
 
 async def set_consent(subject_id: str, *, granted: bool) -> None:

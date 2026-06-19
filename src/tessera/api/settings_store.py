@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Final
 
 from psycopg import sql
+from psycopg.rows import dict_row
 
 from tessera.retrieval.store import get_pool
 
@@ -47,13 +48,13 @@ async def _get_flag(key: str, *, default: bool = False) -> bool:
     """Return a boolean flag, or ``default`` when it has never been set."""
     await _ensure_schema()
     pool = get_pool()
-    async with pool.connection() as conn, conn.cursor() as cur:
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             sql.SQL("SELECT value FROM {table} WHERE key = %s;").format(table=_TABLE),
             (key,),
         )
         row = await cur.fetchone()
-    return bool(row[0]) if row is not None else default
+    return bool(row["value"]) if row is not None else default
 
 
 async def _set_flag(key: str, *, enabled: bool) -> bool:

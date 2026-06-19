@@ -214,10 +214,10 @@ async def last_agent_for(conversation_id: UUID) -> str | None:
     pool = get_pool()
     if pool.closed:
         await pool.open()
-    async with pool.connection() as conn, conn.cursor() as cur:
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(query, (conversation_id,))
         row = await cur.fetchone()
-    return str(row[0]) if row else None
+    return str(row["agent_id"]) if row else None
 
 
 async def delete_transcript(conversation_id: UUID) -> None:
