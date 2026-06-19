@@ -9,7 +9,8 @@ import { CommandPalette } from "./command-palette";
  * Shell-wide chrome state + power-user keyboard gestures, mounted once in the
  * AppShell so every cockpit page inherits them:
  *
- *  - ⌘B  toggle the sidebar between full and an icon rail (persisted).
+ *  - ⌘B  collapse the sidebar to an icon rail and back (persisted; logos stay
+ *        visible). A discreet edge handle on the right border is the pointer twin.
  *  - ⌘.  toggle a distraction-free focus mode (session only — never persisted,
  *        so a reload never strands the operator with no chrome).
  *  - Esc  exit focus mode (and the command palette, wired in shell-chrome too).

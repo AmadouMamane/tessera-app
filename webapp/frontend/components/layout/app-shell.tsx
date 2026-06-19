@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { AppBreadcrumb } from "./app-breadcrumb";
 import { AppFooter } from "./app-footer";
 import { ShellChrome } from "./shell-chrome";
 import { ShellFrame } from "./shell-frame";
@@ -45,7 +44,6 @@ export function AppShell({
         }
         footer={<AppFooter />}
       >
-        <AppBreadcrumb />
         {children}
       </ShellFrame>
     </ShellChrome>

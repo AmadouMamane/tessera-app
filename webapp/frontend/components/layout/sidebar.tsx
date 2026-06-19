@@ -6,6 +6,7 @@ import {
   Bot,
   Boxes,
   CalendarClock,
+  ChevronLeft,
   ChevronRight,
   Cpu,
   DatabaseZap,
@@ -20,8 +21,6 @@ import {
   LockKeyhole,
   type LucideIcon,
   MemoryStick,
-  PanelLeftClose,
-  PanelLeftOpen,
   PlayCircle,
   Plug,
   ScrollText,
@@ -363,8 +362,10 @@ export function Sidebar() {
   const { collapsed, toggleCollapsed } = useShellChrome();
 
   if (collapsed) {
+    // Reduced to an icon rail — the brand mark + nav logos stay visible (never a
+    // blank gutter); the edge handle expands it back. ⌘B is the keyboard twin.
     return (
-      <aside className="flex h-full w-16 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)]">
+      <aside className="group/sidebar relative flex h-full w-16 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)]">
         <BrandHeader collapsed />
         <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
           <ul className="flex flex-col gap-1">
@@ -378,13 +379,13 @@ export function Sidebar() {
             ))}
           </ul>
         </nav>
-        <CollapseToggle collapsed onToggle={toggleCollapsed} t={t} />
+        <EdgeCollapseHandle collapsed onToggle={toggleCollapsed} label={t("rail.expand")} />
       </aside>
     );
   }
 
   return (
-    <aside className="flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] md:w-[218px]">
+    <aside className="group/sidebar relative flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] md:w-[218px]">
       <BrandHeader />
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 md:px-3">
         <ul className="flex flex-col gap-2">
@@ -401,45 +402,38 @@ export function Sidebar() {
           ))}
         </ul>
       </nav>
-      <CollapseToggle onToggle={toggleCollapsed} t={t} />
       <IdentityBlock />
+      <EdgeCollapseHandle onToggle={toggleCollapsed} label={t("rail.collapse")} />
     </aside>
   );
 }
 
-/** A sidebar collapse/expand control. Keyboard equivalent is ⌘B (shell-chrome). */
-function CollapseToggle({
+/** Discreet handle straddling the sidebar's right border, collapsing the panel to
+ *  the icon rail and back. ⌘B (shell-chrome) is the keyboard equivalent. On the
+ *  full sidebar it stays hidden until hover; on the narrow rail it rests faintly
+ *  visible so the way back out is never lost. */
+function EdgeCollapseHandle({
   collapsed = false,
   onToggle,
-  t,
+  label,
 }: {
   collapsed?: boolean;
   onToggle: () => void;
-  t: T;
+  label: string;
 }) {
-  const label = collapsed ? t("rail.expand") : t("rail.collapse");
   return (
-    <div className="border-t border-[var(--tessera-border)] p-2">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={label}
-        title={`${label} (⌘B)`}
-        className={cn(
-          "flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-[0.78rem] font-medium text-[var(--tessera-text-muted)] transition-colors hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)] motion-reduce:transition-none",
-          collapsed && "justify-center",
-        )}
-      >
-        {collapsed ? (
-          <PanelLeftOpen className="h-4 w-4 shrink-0" />
-        ) : (
-          <>
-            <PanelLeftClose className="h-4 w-4 shrink-0" />
-            <span className="truncate">{label}</span>
-          </>
-        )}
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={label}
+      title={`${label} (⌘B)`}
+      className={cn(
+        "absolute top-1/2 -right-3 z-20 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text-muted)] shadow-sm transition-all hover:text-[var(--tessera-text)] focus-visible:opacity-100 group-hover/sidebar:opacity-100 motion-reduce:transition-none",
+        collapsed ? "opacity-60" : "opacity-0",
+      )}
+    >
+      {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+    </button>
   );
 }
 
