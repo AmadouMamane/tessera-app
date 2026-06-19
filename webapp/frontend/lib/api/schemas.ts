@@ -61,16 +61,29 @@ export const ChatDebugSchema = z.object({
       ),
     })
     .optional(),
+  // XT-01 waterfall — real per-node spans (ADR 0010 #4), laid end-to-end in
+  // execution order: cumulative start_ms, real duration_ms, total = sum, status
+  // derived from the turn's guard decisions. No fabricated stage or ms.
   trace: z
     .object({
       title: z.string(),
-      cta: z.string(),
-      rows: z.array(z.object({ label: z.string(), value: z.string() })),
+      total_ms: z.number(),
+      count: z.number().int().nonnegative(),
+      spans: z.array(
+        z.object({
+          key: z.string(),
+          label: z.string(),
+          start_ms: z.number(),
+          duration_ms: z.number(),
+          status: z.string(),
+        }),
+      ),
     })
     .optional(),
   tokens: z.number().int().nonnegative().optional(),
 });
 export type ChatDebug = z.infer<typeof ChatDebugSchema>;
+export type ChatTrace = NonNullable<ChatDebug["trace"]>;
 
 export const ChatStartEventSchema = z.object({
   conversation_id: z.string().uuid(),
@@ -3620,50 +3633,18 @@ export const AgentConsoleSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),
   subtitle: z.string().optional(),
-  status: z
+  // Context strip atop the central "Résumé de la réponse" column (relocated from
+  // the old full-width status bar). Real: env Sandbox + model + version stamps.
+  context: z
     .object({
       session_id: z.string(),
-      live: z.boolean(),
       fields: z.array(z.object({ label: z.string(), value: z.string() })),
     })
     .optional(),
-  transcript: z
-    .array(
-      z.object({
-        role: z.string(),
-        time: z.string(),
-        text: z.string().optional(),
-        latency: z.string().optional(),
-        intro: z.string().optional(),
-        points: z
-          .array(z.object({ ref: z.string(), title: z.string(), body: z.string() }))
-          .optional(),
-        closing: z.string().optional(),
-        chips: z.array(z.object({ label: z.string(), kind: z.string() })).optional(),
-      }),
-    )
-    .optional(),
-  kpis: z
-    .array(z.object({ key: z.string(), label: z.string(), value: z.string(), good: z.boolean() }))
-    .optional(),
   tabs: z.array(z.string()).optional(),
-  quality: z
-    .object({
-      title: z.string(),
-      badge: z.string(),
-      badge_tone: z.string(),
-      rows: z.array(
-        z.object({ label: z.string(), value: z.string(), scale: z.string(), tone: z.string() }),
-      ),
-    })
-    .optional(),
-  sources: z
-    .object({
-      title: z.string(),
-      cta: z.string(),
-      rows: z.array(z.object({ label: z.string(), scope: z.string() })),
-    })
-    .optional(),
+  // Loaded tools / guardrails from the policy — real configuration, honest
+  // pre-turn (titled "disponibles" / "chargés"; the live debug swaps to the
+  // "appelés" / "déclenchés" turn data).
   tools: z
     .object({
       title: z.string(),
@@ -3680,11 +3661,15 @@ export const AgentConsoleSchema = z.object({
       ),
     })
     .optional(),
-  trace: z
+  // Latest automated-eval run (real, not per-turn): metrics with an honest empty
+  // value when a metric has no recorded score.
+  evaluation: z
     .object({
       title: z.string(),
+      note: z.string(),
       cta: z.string(),
-      rows: z.array(z.object({ label: z.string(), value: z.string() })),
+      available: z.boolean(),
+      rows: z.array(z.object({ label: z.string(), value: z.string().nullable() })),
     })
     .optional(),
   footer: z

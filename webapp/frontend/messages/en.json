@@ -4501,7 +4501,19 @@
     "send": "Send",
     "stop": "Stop",
     "newSession": "New session",
-    "generating": "Generating…"
+    "generating": "Generating…",
+    "emptyTitle": "No turn yet",
+    "emptyBody": "Ask a question to start a live turn: the answer streams through the same model as the Product console, with its execution trace.",
+    "summaryTitle": "Response summary",
+    "qualityAwaiting": "Quality is computed after a turn.",
+    "sourcesAwaiting": "No sources — cited sources appear after a turn.",
+    "traceTitle": "XT-01 · Execution trace",
+    "traceWaterfall": "Waterfall",
+    "traceTree": "Span tree",
+    "traceTotal": "Total duration",
+    "traceSpans": "spans",
+    "traceExport": "Export (JSONL)",
+    "traceEmpty": "The execution trace will appear here after a turn."
   },
   "agentConnaissances": {
     "title": "Knowledge",

@@ -3,12 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
-  ChevronDown,
+  AlertTriangle,
+  Check,
   ChevronRight,
   Cpu,
   Database,
   Download,
-  History,
   MessageSquare,
   Paperclip,
   Plus,
@@ -25,11 +25,6 @@ import { useLocale } from "next-intl";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import { fetchAgentConsole, fetchConsoleFeedback, saveConsoleFeedback } from "@/lib/api/client";
@@ -37,6 +32,7 @@ import type {
   ChatCitation,
   ChatDebug,
   ChatEndEvent,
+  ChatTrace,
   AgentConsole as Data,
 } from "@/lib/api/schemas";
 import { streamChat } from "@/lib/api/sse";
@@ -51,11 +47,6 @@ type T = ReturnType<typeof useTranslations<"agentConsole">>;
 
 const FIELD_ICONS: LucideIcon[] = [Cpu, Tag, Database, Shield, Activity];
 
-const CHIP_TONE: Record<string, string> = {
-  info: "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
-  warn: "border-amber-500/30 bg-amber-500/10 text-amber-300",
-  ghost: "border-[var(--tessera-border)] bg-transparent text-[var(--tessera-text-muted)]",
-};
 const SCORE_TONE: Record<string, string> = {
   good: "text-emerald-300",
   warn: "text-amber-300",
@@ -105,8 +96,6 @@ function formatTime(ts: number): string {
 export function AgentConsole() {
   const t = useTranslations("agentConsole");
   const locale = useLocale() as "fr" | "de" | "en";
-  const temporal = useTemporalState();
-  const railTimeline = useRailTimeline();
   const abortRef = useRef<AbortController | null>(null);
   const streamStartedAt = useRef<number>(0);
   const [messages, setMessages] = useState<LiveMessage[]>([]);
@@ -296,30 +285,28 @@ export function AgentConsole() {
     );
   }
 
+  const liveSession = conversationId
+    ? `sess_${conversationId.slice(0, 8)}`
+    : data.context?.session_id;
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <AgentCrossLinks page="console" />
-      <StatusBar
-        data={data}
-        sessionId={conversationId}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        onReplay={() => temporal.changeMode("replay")}
-        onNewSession={resetSession}
-      />
+
+      {/* Top action row — the Console rail is XT-01 (registre : Console = XT-01 +
+          Live); no temporal scrubber here. "Nouvelle session" sits top-right per
+          normative 05. */}
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={resetSession}
+          className="flex h-8 items-center gap-1.5 rounded-md border border-[#d98b1f]/55 bg-[linear-gradient(180deg,#3a2a14,#21180d)] px-3 text-[0.72rem] font-medium text-[#f4c76a] hover:border-[#f4c76a]/65"
+        >
+          <Plus className="h-3.5 w-3.5" /> {data.actions?.new_session ?? t("newSession")}
+        </button>
+      </div>
 
       <div className="grid gap-3 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-3 xl:col-span-6">
-          <TemporalRail
-            mode={temporal.mode}
-            liveStatus={t("realtime")}
-            timeline={railTimeline.data}
-            selectedAt={temporal.selectedAt}
-            onSelectedAtChange={temporal.setSelectedAt}
-            periodKey={temporal.periodKey}
-            onPeriodChange={temporal.setPeriodKey}
-            onModeChange={temporal.changeMode}
-          />
           <ChatCard
             data={data}
             input={input}
@@ -335,94 +322,16 @@ export function AgentConsole() {
           />
         </div>
 
+        {/* Central "Résumé de la réponse" — context strip + response panels.
+            Live debug swaps the pre-turn config panels for the real turn data. */}
         <div className="flex min-w-0 flex-col gap-3 xl:col-span-3">
-          <KpiRow data={data} />
-          <Inspector data={data} debug={liveDebug} sessionId={conversationId} t={t} />
+          <ResponseSummary data={data} debug={liveDebug} sessionId={liveSession} t={t} />
         </div>
 
-        {/* XT-01 — execution-trace rail, a persistent 3rd column (rails registry,
-            normative 05), no longer a tab inside the inspector. */}
+        {/* XT-01 — the page's temporal rail, a persistent waterfall column. */}
         <div className="flex min-w-0 flex-col gap-3 xl:col-span-3">
-          <TraceColumn data={data} debug={liveDebug} />
+          <TraceColumn debug={liveDebug} sessionId={liveSession} t={t} />
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ── status sub-bar ───────────────────────────────────────────────────────────
-
-const PERIOD_LABEL: Record<string, string> = { h24: "24h", d7: "7j", d30: "30j" };
-
-function StatusBar({
-  data,
-  sessionId,
-  periodKey,
-  onPeriodChange,
-  onReplay,
-  onNewSession,
-}: {
-  data: Data;
-  sessionId: string | null;
-  periodKey: string;
-  onPeriodChange: (key: string) => void;
-  onReplay: () => void;
-  onNewSession: () => void;
-}) {
-  const s = data.status;
-  const a = data.actions;
-  if (!s || !a) return null;
-  const visibleSession = sessionId ? `sess_${sessionId.slice(0, 8)}` : s.session_id;
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1.5 text-[0.72rem]">
-        <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Session active
-        </span>
-        <span className="text-[var(--tessera-text-muted)]">
-          ID: <span className="tabular-nums text-[var(--tessera-text)]">{visibleSession}</span>
-        </span>
-        {s.fields.map((f, i) => {
-          const Icon: LucideIcon = FIELD_ICONS[i % FIELD_ICONS.length] ?? Cpu;
-          return (
-            <span key={f.label} className="inline-flex items-center gap-1.5">
-              <Icon className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-              <span className="text-[var(--tessera-text-muted)]">{f.label}</span>
-              <span className="font-medium text-[var(--tessera-text)]">{f.value}</span>
-            </span>
-          );
-        })}
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={onReplay}
-          className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.72rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <History className="h-3.5 w-3.5" /> {a.replay}
-        </button>
-        <div className="relative flex h-8 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[0.72rem] text-[var(--tessera-text-muted)]">
-          <select
-            aria-label="Fenetre temporelle"
-            value={periodKey}
-            onChange={(event) => onPeriodChange(event.target.value)}
-            className="h-full cursor-pointer appearance-none bg-transparent pr-7 pl-2.5 text-[var(--tessera-text)] outline-none"
-          >
-            {Object.entries(PERIOD_LABEL).map(([key, label]) => (
-              <option key={key} value={key} className="bg-[var(--tessera-surface)]">
-                {label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2 h-3.5 w-3.5" />
-        </div>
-        <button
-          type="button"
-          onClick={onNewSession}
-          className="flex h-8 items-center gap-1.5 rounded-md border border-[#d98b1f]/55 bg-[linear-gradient(180deg,#3a2a14,#21180d)] px-3 text-[0.72rem] font-medium text-[#f4c76a] hover:border-[#f4c76a]/65"
-        >
-          <Plus className="h-3.5 w-3.5" /> {a.new_session}
-        </button>
       </div>
     </div>
   );
@@ -473,35 +382,31 @@ function ChatCard({
       </div>
 
       <div className="flex min-h-[430px] flex-col gap-4 p-3.5">
-        {hasLiveMessages
-          ? messages.map((message) => {
-              if (message.role === "user") {
-                return (
-                  <UserMsg
-                    key={message.id}
-                    time={formatTime(message.createdAt)}
-                    text={message.content}
-                  />
-                );
-              }
-              assistantTurn += 1;
-              const turn = assistantTurn;
+        {hasLiveMessages ? (
+          messages.map((message) => {
+            if (message.role === "user") {
               return (
-                <LiveAssistantMsg
+                <UserMsg
                   key={message.id}
-                  message={message}
-                  rating={ratings[String(turn)] as Rating | undefined}
-                  onRate={(rating) => onRate(turn, rating)}
+                  time={formatTime(message.createdAt)}
+                  text={message.content}
                 />
               );
-            })
-          : (data.transcript ?? []).map((m) =>
-              m.role === "user" ? (
-                <UserMsg key={`u-${m.time}`} time={m.time} text={m.text ?? ""} />
-              ) : (
-                <AssistantMsg key={`a-${m.time}`} m={m} />
-              ),
-            )}
+            }
+            assistantTurn += 1;
+            const turn = assistantTurn;
+            return (
+              <LiveAssistantMsg
+                key={message.id}
+                message={message}
+                rating={ratings[String(turn)] as Rating | undefined}
+                onRate={(rating) => onRate(turn, rating)}
+              />
+            );
+          })
+        ) : (
+          <EmptyConversation t={t} />
+        )}
       </div>
 
       <div className="border-t border-[var(--tessera-border)] p-3.5">
@@ -601,48 +506,18 @@ function UserMsg({ time, text }: { time: string; text: string }) {
   );
 }
 
-function AssistantMsg({ m }: { m: NonNullable<Data["transcript"]>[number] }) {
+/** Honest empty state — the console starts with no turn; the seeded example
+ *  transcript was removed. Real turns are produced live by the operator. */
+function EmptyConversation({ t }: { t: T }) {
   return (
-    <div className="flex flex-col gap-2">
-      <span className="inline-flex items-center gap-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
-        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-          <ShieldCheck className="h-3 w-3" />
-        </span>
-        <span className="font-medium text-[var(--tessera-text)]">Assistant</span> {m.time}
-        {m.latency ? <span>- {m.latency}</span> : null}
+    <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10 text-center">
+      <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
+        <MessageSquare className="h-5 w-5" />
       </span>
-      <div className="rounded-xl rounded-tl-sm border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3.5 py-3 text-[0.78rem] leading-relaxed text-[var(--tessera-text)]">
-        {m.intro ? <p>{m.intro}</p> : null}
-        {m.points ? (
-          <ol className="mt-2 flex list-decimal flex-col gap-1.5 pl-4 marker:text-[var(--tessera-text-muted)]">
-            {m.points.map((p) => (
-              <li key={p.ref}>
-                <span className="font-medium text-[#e0a23a]">
-                  {p.title} ({p.ref})
-                </span>{" "}
-                : {p.body}
-              </li>
-            ))}
-          </ol>
-        ) : null}
-        {m.closing ? <p className="mt-2">{m.closing}</p> : null}
-
-        {m.chips ? (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {m.chips.map((c) => (
-              <span
-                key={c.label}
-                className={cn(
-                  "rounded-md border px-2 py-1 text-[0.64rem]",
-                  CHIP_TONE[c.kind] ?? CHIP_TONE.info,
-                )}
-              >
-                {c.label}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      <p className="text-[0.8rem] font-medium text-[var(--tessera-text)]">{t("emptyTitle")}</p>
+      <p className="max-w-[36ch] text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        {t("emptyBody")}
+      </p>
     </div>
   );
 }
@@ -745,58 +620,175 @@ function LiveAssistantMsg({
   );
 }
 
-// ── XT-01 — persistent execution-trace column (normative 05) ────────────────
+// ── XT-01 — persistent execution-trace waterfall (normative 05) ─────────────
 
-/** The XT-01 execution trace as a persistent 3rd column (was an inspector tab).
- *  Reuses the same real per-turn debug trace streamed on the SSE envelope; renders
- *  an honest empty state before the operator runs a turn. */
-function TraceColumn({ data, debug }: { data: Data; debug: ChatDebug | null }) {
-  const trace = debug?.trace ?? data.trace;
+const SPAN_STATUS_TONE: Record<string, string> = {
+  ok: "text-emerald-400",
+  warn: "text-amber-300",
+  crit: "text-red-400",
+};
+const SPAN_BAR_TONE: Record<string, string> = {
+  ok: "bg-emerald-400/70",
+  warn: "bg-amber-300/80",
+  crit: "bg-red-400/80",
+};
+
+function fmtMs(ms: number): string {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${Math.round(ms)} ms`;
+}
+
+/** The XT-01 execution trace as a persistent waterfall column. The spans are the
+ *  *real* per-node timings from the live SSE debug envelope (no static fallback);
+ *  renders an honest empty state before the operator runs a turn. */
+function TraceColumn({
+  debug,
+  sessionId,
+  t,
+}: {
+  debug: ChatDebug | null;
+  sessionId?: string;
+  t: T;
+}) {
+  const [view, setView] = useState<"waterfall" | "tree">("waterfall");
+  const trace = debug?.trace;
+
+  const exportJsonl = useCallback(() => {
+    if (!trace) return;
+    const lines = trace.spans.map((s) => JSON.stringify(s)).join("\n");
+    const blob = new Blob([lines], { type: "application/x-ndjson" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tessera-trace-${sessionId ?? "session"}.jsonl`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [trace, sessionId]);
+
   return (
     <section className="flex min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
-      <div className="flex items-center gap-2 border-b border-[var(--tessera-border)] px-3.5 py-2.5">
-        <Activity className="h-4 w-4 text-[#e0a23a]" />
-        <span className="text-[0.72rem] font-medium text-[#e0a23a]">XT-01 · Trace d&apos;exécution</span>
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-2.5">
+        <span className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-[#e0a23a]">
+          <Activity className="h-4 w-4" /> {t("traceTitle")}
+        </span>
+        {trace ? (
+          <div className="flex h-7 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-0.5 text-[0.62rem]">
+            {(["waterfall", "tree"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setView(key)}
+                className={cn(
+                  "h-6 rounded px-2",
+                  view === key
+                    ? "bg-[#123e6a] text-[#d8eaff]"
+                    : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+                )}
+              >
+                {key === "waterfall" ? t("traceWaterfall") : t("traceTree")}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
+
       {trace ? (
-        <TracePanel tr={trace} />
+        <>
+          <div className="flex flex-col gap-1.5 p-3.5">
+            {trace.spans.map((span) => (
+              <TraceSpan key={span.key} span={span} total={trace.total_ms} view={view} />
+            ))}
+          </div>
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
+            <span>
+              {t("traceTotal")} <span className="tabular-nums">{fmtMs(trace.total_ms)}</span> ·{" "}
+              <span className="tabular-nums">{trace.count}</span> {t("traceSpans")}
+            </span>
+            <button
+              type="button"
+              onClick={exportJsonl}
+              className="inline-flex items-center gap-1 text-[#f4c76a] hover:text-white"
+            >
+              <Download className="h-3.5 w-3.5" /> {t("traceExport")}
+            </button>
+          </div>
+          {sessionId ? (
+            <div className="border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.62rem] text-[var(--tessera-text-muted)]">
+              {t("idSession")}: <span className="tabular-nums">{sessionId}</span>
+            </div>
+          ) : null}
+        </>
       ) : (
-        <p className="px-3.5 py-6 text-center text-[0.72rem] text-[var(--tessera-text-muted)]">
-          La trace d&apos;exécution apparaîtra ici après un tour.
+        <p className="px-3.5 py-10 text-center text-[0.72rem] text-[var(--tessera-text-muted)]">
+          {t("traceEmpty")}
         </p>
       )}
     </section>
   );
 }
 
-// ── right: KPIs + inspector ────────────────────────────────────────────────
-
-function KpiRow({ data }: { data: Data }) {
-  const a = data.actions;
+function TraceSpan({
+  span,
+  total,
+  view,
+}: {
+  span: ChatTrace["spans"][number];
+  total: number;
+  view: "waterfall" | "tree";
+}) {
+  const denom = total > 0 ? total : 1;
+  const left = (span.start_ms / denom) * 100;
+  const width = Math.max((span.duration_ms / denom) * 100, 1.5);
   return (
-    <div className="flex items-stretch gap-2.5">
-      {(data.kpis ?? []).map((k) => (
-        <div
-          key={k.key}
-          className="flex flex-1 flex-col justify-center rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2"
-        >
-          <p className="truncate text-[0.64rem] text-[var(--tessera-text-muted)]">{k.label}</p>
-          <p className="mt-0.5 text-[1.1rem] font-semibold tabular-nums text-emerald-300">
-            {k.value}
-          </p>
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between gap-2 text-[0.7rem]">
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <span className={cn("shrink-0", SPAN_STATUS_TONE[span.status] ?? SPAN_STATUS_TONE.ok)}>
+            {span.status === "ok" ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <AlertTriangle className="h-3.5 w-3.5" />
+            )}
+          </span>
+          <span className="truncate text-[var(--tessera-text)]">{span.label}</span>
+        </span>
+        <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
+          {fmtMs(span.duration_ms)}
+        </span>
+      </div>
+      {view === "waterfall" ? (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+          <div
+            className={cn("h-full rounded-full", SPAN_BAR_TONE[span.status] ?? SPAN_BAR_TONE.ok)}
+            style={{ marginLeft: `${left}%`, width: `${width}%` }}
+          />
         </div>
-      ))}
-      <Link
-        href="/prouver/audit-logs"
-        className="flex shrink-0 items-center rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-      >
-        {a?.timeline_incidents}
-      </Link>
+      ) : null}
     </div>
   );
 }
 
-function Inspector({
+// ── central "Résumé de la réponse" column ──────────────────────────────────
+
+/** Context strip atop the response summary (relocated from the old full-width
+ *  status bar). Real config: env Sandbox · model · prompt/sources/guard stamps. */
+function ContextStrip({ ctx }: { ctx: NonNullable<Data["context"]> }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-[var(--tessera-border)] px-3.5 py-2.5 text-[0.68rem]">
+      {ctx.fields.map((f, i) => {
+        const Icon: LucideIcon = FIELD_ICONS[i % FIELD_ICONS.length] ?? Cpu;
+        return (
+          <span key={f.label} className="inline-flex items-center gap-1.5">
+            <Icon className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+            <span className="text-[var(--tessera-text-muted)]">{f.label}</span>
+            <span className="font-medium text-[var(--tessera-text)]">{f.value}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function ResponseSummary({
   data,
   debug,
   sessionId,
@@ -804,19 +796,34 @@ function Inspector({
 }: {
   data: Data;
   debug: ChatDebug | null;
-  sessionId: string | null;
+  sessionId?: string;
   t: T;
 }) {
-  // "Trace" now lives in its own persistent XT-01 column, not as a tab here.
-  const tabs = (data.tabs ?? []).filter((tb) => tb !== "Trace");
-  const [active, setActive] = useState(tabs[0] ?? "Contexte");
-  const visibleSession = sessionId ? `sess_${sessionId.slice(0, 8)}` : data.footer?.session_id;
-  const quality = debug?.quality ?? data.quality;
-  const sources = debug?.sources ?? data.sources;
+  const tabs = data.tabs ?? ["Sources", "Outils", "Garde-fous", "Évaluation"];
+  const [active, setActive] = useState(tabs[0] ?? "Sources");
+  // Response-specific signals come from the live turn only (no static fallback);
+  // config panels (tools/guardrails) fall back to the real loaded policy pre-turn.
+  const quality = debug?.quality;
+  const sources = debug?.sources;
   const tools = debug?.tools ?? data.tools;
   const guardrails = debug?.guardrails ?? data.guardrails;
   return (
     <section className="flex min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+      {data.context ? <ContextStrip ctx={data.context} /> : null}
+      <div className="border-b border-[var(--tessera-border)] px-3.5 py-2.5">
+        <h2 className="text-[0.82rem] font-semibold text-[var(--tessera-text)]">
+          {t("summaryTitle")}
+        </h2>
+      </div>
+
+      {/* Response quality — live-derived & distinct after a turn; honest awaiting
+          state before (no per-turn quality to show yet). */}
+      {quality ? (
+        <Quality q={quality} />
+      ) : (
+        <Awaiting className="border-b border-[var(--tessera-border)]" text={t("qualityAwaiting")} />
+      )}
+
       <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
         {tabs.map((tab) => {
           const on = tab === active;
@@ -838,22 +845,39 @@ function Inspector({
         })}
       </nav>
 
-      <div className="flex flex-col divide-y divide-[var(--tessera-border)]">
-        {(active === "Contexte" || active === "Trace") && quality && active === "Contexte" ? (
-          <Quality q={quality} />
+      <div className="flex flex-col">
+        {active === "Sources" ? (
+          sources ? (
+            <SourcesPanel s={sources} />
+          ) : (
+            <Awaiting text={t("sourcesAwaiting")} />
+          )
         ) : null}
-        {(active === "Contexte" || active === "Sources") && sources ? (
-          <SourcesPanel s={sources} />
-        ) : null}
-        {(active === "Contexte" || active === "Outils") && tools ? <ToolsPanel tl={tools} /> : null}
-        {(active === "Contexte" || active === "Garde-fous") && guardrails ? (
-          <GuardrailsPanel g={guardrails} />
-        ) : null}
+        {active === "Outils" && tools ? <ToolsPanel tl={tools} /> : null}
+        {active === "Garde-fous" && guardrails ? <GuardrailsPanel g={guardrails} /> : null}
+        {active === "Évaluation" ? <EvaluationPanel ev={data.evaluation} /> : null}
       </div>
-      <div className="mt-auto border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
-        {t("idSession")}: <span className="tabular-nums">{visibleSession}</span>
-      </div>
+
+      {sessionId ? (
+        <div className="mt-auto border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
+          {t("idSession")}: <span className="tabular-nums">{sessionId}</span>
+        </div>
+      ) : null}
     </section>
+  );
+}
+
+/** Honest awaiting / empty placeholder for a response-specific panel. */
+function Awaiting({ text, className }: { text: string; className?: string }) {
+  return (
+    <p
+      className={cn(
+        "px-3.5 py-5 text-center text-[0.7rem] text-[var(--tessera-text-muted)]",
+        className,
+      )}
+    >
+      {text}
+    </p>
   );
 }
 
@@ -879,7 +903,7 @@ function PanelHead({
   );
 }
 
-function Quality({ q }: { q: NonNullable<Data["quality"]> }) {
+function Quality({ q }: { q: NonNullable<ChatDebug["quality"]> }) {
   return (
     <div className="p-3.5">
       <div className="mb-2.5 flex items-center justify-between gap-2">
@@ -913,7 +937,7 @@ function Quality({ q }: { q: NonNullable<Data["quality"]> }) {
   );
 }
 
-function SourcesPanel({ s }: { s: NonNullable<Data["sources"]> }) {
+function SourcesPanel({ s }: { s: NonNullable<ChatDebug["sources"]> }) {
   const agentId = useAgentId();
   return (
     <div className="p-3.5">
@@ -981,19 +1005,23 @@ function GuardrailsPanel({ g }: { g: NonNullable<Data["guardrails"]> }) {
   );
 }
 
-function TracePanel({ tr }: { tr: NonNullable<Data["trace"]> }) {
+/** "Évaluation automatique" — latest real eval-run metrics (not per-turn). Honest
+ *  empty value ("—") when a metric has no recorded score; links to Évaluations. */
+function EvaluationPanel({ ev }: { ev: Data["evaluation"] }) {
+  const agentId = useAgentId();
+  if (!ev) return null;
   return (
     <div className="p-3.5">
-      <PanelHead title={tr.title} cta={tr.cta} href="/prouver/audit-logs" />
+      <PanelHead title={ev.title} cta={ev.cta} href={agentPath(agentId, "evaluations")} />
+      <p className="mb-2 text-[0.62rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        {ev.note}
+      </p>
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-        {tr.rows.map((r) => (
+        {ev.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">
-            <span className="inline-flex min-w-0 items-center gap-2 text-[var(--tessera-text)]">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-              <span className="truncate">{r.label}</span>
-            </span>
+            <span className="min-w-0 truncate text-[var(--tessera-text)]">{r.label}</span>
             <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
-              {r.value}
+              {r.value ?? "—"}
             </span>
           </li>
         ))}

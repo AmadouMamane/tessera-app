@@ -4501,7 +4501,19 @@
     "send": "Envoyer",
     "stop": "Stop",
     "newSession": "Nouvelle session",
-    "generating": "Génération en cours…"
+    "generating": "Génération en cours…",
+    "emptyTitle": "Aucun tour pour l'instant",
+    "emptyBody": "Posez une question pour lancer un tour en direct : la réponse streamera via le même modèle que la console Produit, avec sa trace d'exécution.",
+    "summaryTitle": "Résumé de la réponse",
+    "qualityAwaiting": "Qualité calculée après un tour.",
+    "sourcesAwaiting": "Aucune source — les sources citées apparaîtront après un tour.",
+    "traceTitle": "XT-01 · Trace d'exécution",
+    "traceWaterfall": "Waterfall",
+    "traceTree": "Arbre des spans",
+    "traceTotal": "Durée totale",
+    "traceSpans": "spans",
+    "traceExport": "Exporter (JSONL)",
+    "traceEmpty": "La trace d'exécution apparaîtra ici après un tour."
   },
   "agentConnaissances": {
     "title": "Connaissances",

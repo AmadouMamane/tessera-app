@@ -4501,7 +4501,19 @@
     "send": "Senden",
     "stop": "Stopp",
     "newSession": "Neue Sitzung",
-    "generating": "Generierung läuft…"
+    "generating": "Generierung läuft…",
+    "emptyTitle": "Noch keine Runde",
+    "emptyBody": "Stellen Sie eine Frage, um eine Live-Runde zu starten: Die Antwort wird über dasselbe Modell wie die Produkt-Konsole gestreamt, mit ihrer Ausführungsspur.",
+    "summaryTitle": "Antwortzusammenfassung",
+    "qualityAwaiting": "Qualität wird nach einer Runde berechnet.",
+    "sourcesAwaiting": "Keine Quellen — die zitierten Quellen erscheinen nach einer Runde.",
+    "traceTitle": "XT-01 · Ausführungsspur",
+    "traceWaterfall": "Waterfall",
+    "traceTree": "Span-Baum",
+    "traceTotal": "Gesamtdauer",
+    "traceSpans": "Spans",
+    "traceExport": "Exportieren (JSONL)",
+    "traceEmpty": "Die Ausführungsspur erscheint hier nach einer Runde."
   },
   "agentConnaissances": {
     "title": "Wissen",
