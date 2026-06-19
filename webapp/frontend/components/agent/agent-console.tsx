@@ -634,12 +634,15 @@ const SPAN_BAR_TONE: Record<string, string> = {
 };
 
 function fmtMs(ms: number): string {
+  if (ms < 1) return "< 1 ms";
   return ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${Math.round(ms)} ms`;
 }
 
-/** The XT-01 execution trace as a persistent waterfall column. The spans are the
- *  *real* per-node timings from the live SSE debug envelope (no static fallback);
- *  renders an honest empty state before the operator runs a turn. */
+/** The execution-trace waterfall column. Spans are the *real* per-node timings
+ *  from the live SSE debug envelope — positioned by their measured start offset
+ *  so the bars cascade. There is a single view: a real span tree (parent/child
+ *  nesting) is not captured yet, so no redundant second view is offered. Renders
+ *  an honest empty state before the operator runs a turn. */
 function TraceColumn({
   debug,
   sessionId,
@@ -649,7 +652,6 @@ function TraceColumn({
   sessionId?: string;
   t: T;
 }) {
-  const [view, setView] = useState<"waterfall" | "tree">("waterfall");
   const trace = debug?.trace;
 
   const exportJsonl = useCallback(() => {
@@ -670,32 +672,13 @@ function TraceColumn({
         <span className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-[#e0a23a]">
           <Activity className="h-4 w-4" /> {t("traceTitle")}
         </span>
-        {trace ? (
-          <div className="flex h-7 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-0.5 text-[0.62rem]">
-            {(["waterfall", "tree"] as const).map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setView(key)}
-                className={cn(
-                  "h-6 rounded px-2",
-                  view === key
-                    ? "bg-[#123e6a] text-[#d8eaff]"
-                    : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
-                )}
-              >
-                {key === "waterfall" ? t("traceWaterfall") : t("traceTree")}
-              </button>
-            ))}
-          </div>
-        ) : null}
       </div>
 
       {trace ? (
         <>
           <div className="flex flex-col gap-1.5 p-3.5">
             {trace.spans.map((span) => (
-              <TraceSpan key={span.key} span={span} total={trace.total_ms} view={view} />
+              <TraceSpan key={span.key} span={span} total={trace.total_ms} />
             ))}
           </div>
           <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
@@ -729,15 +712,15 @@ function TraceColumn({
 function TraceSpan({
   span,
   total,
-  view,
 }: {
   span: ChatTrace["spans"][number];
   total: number;
-  view: "waterfall" | "tree";
 }) {
   const denom = total > 0 ? total : 1;
-  const left = (span.start_ms / denom) * 100;
-  const width = Math.max((span.duration_ms / denom) * 100, 1.5);
+  const left = Math.min((span.start_ms / denom) * 100, 99);
+  // Sub-ms spans render as a small point rather than a fabricated wide bar.
+  const subMs = span.duration_ms < 1;
+  const width = subMs ? 0.8 : Math.max((span.duration_ms / denom) * 100, 1);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between gap-2 text-[0.7rem]">
@@ -755,14 +738,16 @@ function TraceSpan({
           {fmtMs(span.duration_ms)}
         </span>
       </div>
-      {view === "waterfall" ? (
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--tessera-bg)]">
-          <div
-            className={cn("h-full rounded-full", SPAN_BAR_TONE[span.status] ?? SPAN_BAR_TONE.ok)}
-            style={{ marginLeft: `${left}%`, width: `${width}%` }}
-          />
-        </div>
-      ) : null}
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+        <div
+          className={cn("h-full rounded-full", SPAN_BAR_TONE[span.status] ?? SPAN_BAR_TONE.ok)}
+          style={{
+            marginLeft: `${left}%`,
+            width: `${width}%`,
+            minWidth: subMs ? "3px" : undefined,
+          }}
+        />
+      </div>
     </div>
   );
 }

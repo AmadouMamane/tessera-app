@@ -335,22 +335,24 @@ def _trace_label(key: str) -> str:
 
 def _debug_trace(
     timings: Mapping[str, float],
+    starts: Mapping[str, float],
     *,
     warn_keys: frozenset[str] = frozenset(),
 ) -> dict[str, object]:
-    """Build the XT-01 waterfall from the *real* per-node timings (ADR 0010 #4).
+    """Build the trace waterfall from the *real* per-node timings (ADR 0010 #4).
 
-    Spans are laid end-to-end in execution order (the graph backbone runs
-    router -> planner -> worker -> reviewer -> reporter sequentially), so the
-    cumulative ``start_ms`` is meaningful and the total is the sum of the real
-    node durations. No stage is fabricated: only nodes that actually ran (and
-    were timed) appear. ``status`` is derived from real signals — a node is
-    ``warn`` only when the turn's guard decisions flagged it.
+    Each span is positioned by its **real measured start offset** (ms from the
+    turn's collection origin, captured by ``instrument``) and sized by its real
+    duration — so the bars cascade and parallel nodes overlap, rather than all
+    starting at 0. Spans are ordered by start. The total is the real end of the
+    last span (max start+duration), not a sum. No stage is fabricated: only nodes
+    that actually ran (and were timed) appear. ``status`` is derived from real
+    signals — a node is ``warn`` only when the turn's guard decisions flagged it.
     """
     spans: list[dict[str, object]] = []
-    start = 0.0
     for key, ms in timings.items():
         duration = float(ms)
+        start = float(starts.get(key, 0.0))
         spans.append(
             {
                 "key": key,
@@ -360,10 +362,14 @@ def _debug_trace(
                 "status": "warn" if key in warn_keys else "ok",
             }
         )
-        start += duration
+    spans.sort(key=lambda s: (cast(float, s["start_ms"]), cast(str, s["label"])))
+    total = max(
+        (cast(float, s["start_ms"]) + cast(float, s["duration_ms"]) for s in spans),
+        default=0.0,
+    )
     return {
-        "title": "XT-01 - Trace d'execution",
-        "total_ms": round(start, 1),
+        "title": "Trace d'execution",
+        "total_ms": round(total, 1),
         "count": len(spans),
         "spans": spans,
     }
@@ -373,6 +379,7 @@ def _debug_from_state(
     *,
     state: Mapping[str, object],
     timings: Mapping[str, float],
+    starts: Mapping[str, float],
     citations: list[Citation],
     final_response: str,
 ) -> dict[str, object]:
@@ -397,7 +404,7 @@ def _debug_from_state(
         "sources": _debug_sources(docs, citations),
         "tools": _debug_tools(tool_calls, docs, timings),
         "guardrails": _debug_guardrails(guard_decisions),
-        "trace": _debug_trace(timings, warn_keys=warn_keys),
+        "trace": _debug_trace(timings, starts, warn_keys=warn_keys),
         "tokens": len(final_response.split()),
     }
 
@@ -465,6 +472,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     # Phase 1: run graph up to (but not including) the reporter node.
     # Escalation and injection-block paths complete fully here. Per-node latencies
     # are collected for the critical-path breakdown (idea #48).
+    node_starts: dict[str, float] = {}
     with instrument.collect_node_timings() as node_timings:
         try:
             await graph.ainvoke(initial, config=config)  # type: ignore[attr-defined]
@@ -474,6 +482,9 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
             ).inc()
             yield _sse("turn.error", {"error": str(exc)})
             return
+        # Read the real per-node start offsets while still inside the context
+        # (the ContextVar is reset on exit). Feeds the trace waterfall.
+        node_starts = instrument.node_start_offsets()
 
     snapshot = graph.get_state(config)  # type: ignore[attr-defined]
     state = snapshot.values
@@ -594,6 +605,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
         debug=_debug_from_state(
             state=state,
             timings=node_timings,
+            starts=node_starts,
             citations=turn_citations,
             final_response=final_response,
         ),

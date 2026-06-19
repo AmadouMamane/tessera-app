@@ -33,12 +33,17 @@ if TYPE_CHECKING:
 
     from tessera.settings import LanguageCode
 
-__all__ = ["collect_node_timings", "instrument_node", "tool_span"]
+__all__ = ["collect_node_timings", "instrument_node", "node_start_offsets", "tool_span"]
 
-# Per-turn node latencies (ms), collected via collect_node_timings (idea #48).
+# Per-turn node latencies (ms) + start offsets (ms from the collection origin),
+# collected via collect_node_timings (idea #48). The start offsets make the
+# Console trace a *real* waterfall: a node is positioned by when it actually
+# began, so parallel nodes overlap instead of all starting at 0.
 _node_timings: ContextVar[dict[str, float] | None] = ContextVar(
     "tessera_node_timings", default=None
 )
+_node_starts: ContextVar[dict[str, float] | None] = ContextVar("tessera_node_starts", default=None)
+_collect_origin: ContextVar[float | None] = ContextVar("tessera_collect_origin", default=None)
 
 
 @contextmanager
@@ -46,20 +51,47 @@ def collect_node_timings() -> Iterator[dict[str, float]]:
     """Collect per-node durations (ms) for the duration of the context.
 
     The yielded dict is populated as instrumented nodes run within the same
-    async task; repeated runs of a node are summed.
+    async task; repeated runs of a node are summed. Per-node *start offsets*
+    (ms from the context origin) are collected in parallel and read with
+    :func:`node_start_offsets` while still inside the context.
     """
     timings: dict[str, float] = {}
-    token = _node_timings.set(timings)
+    starts: dict[str, float] = {}
+    timings_token = _node_timings.set(timings)
+    starts_token = _node_starts.set(starts)
+    origin_token = _collect_origin.set(time.perf_counter())
     try:
         yield timings
     finally:
-        _node_timings.reset(token)
+        _node_timings.reset(timings_token)
+        _node_starts.reset(starts_token)
+        _collect_origin.reset(origin_token)
+
+
+def node_start_offsets() -> dict[str, float]:
+    """Per-node start offsets (ms) measured from the collection origin.
+
+    Real, measured offsets — not a synthetic cascade. Must be read while still
+    inside the :func:`collect_node_timings` context (the ContextVar is reset on
+    exit). If a node ran more than once the earliest start is kept.
+    """
+    return dict(_node_starts.get() or {})
 
 
 def _record_timing(name: str, elapsed_ms: float) -> None:
     current = _node_timings.get()
     if current is not None:
         current[name] = current.get(name, 0.0) + elapsed_ms
+
+
+def _record_start(name: str, start_perf: float) -> None:
+    starts = _node_starts.get()
+    origin = _collect_origin.get()
+    if starts is None or origin is None:
+        return
+    offset = max(0.0, (start_perf - origin) * 1000.0)
+    prior = starts.get(name)
+    starts[name] = offset if prior is None else min(prior, offset)
 
 
 def _language_value(language: object) -> str:
@@ -106,6 +138,7 @@ def instrument_node(name: str, fn: Callable[..., Any]) -> Callable[..., Any]:
                 start = time.perf_counter()
                 result = await fn(state, *args, **kwargs)
                 _record_timing(name, (time.perf_counter() - start) * 1000.0)
+                _record_start(name, start)
                 _record_node_errors(span, result)
                 return result
 
@@ -118,6 +151,7 @@ def instrument_node(name: str, fn: Callable[..., Any]) -> Callable[..., Any]:
             start = time.perf_counter()
             result = fn(state, *args, **kwargs)
             _record_timing(name, (time.perf_counter() - start) * 1000.0)
+            _record_start(name, start)
             _record_node_errors(span, result)
             return result
 
