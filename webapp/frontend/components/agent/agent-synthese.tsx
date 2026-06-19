@@ -488,9 +488,9 @@ function Conversations({ data, className }: { data: Data; className?: string }) 
     <Card title={c.title} cta={c.cta} ctaHref={c.ctaHref} className={className}>
       {c.rows.length === 0 ? <EmptyRow /> : null}
       <ul className="flex flex-col gap-2">
-        {c.rows.map((r) => (
+        {c.rows.map((r, i) => (
           <li
-            key={r.title}
+            key={`${r.title}-${r.user}-${r.time}-${i}`}
             className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)]/50 pb-2 last:border-0 last:pb-0"
           >
             <span className="min-w-0">
