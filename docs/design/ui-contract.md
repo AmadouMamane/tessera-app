@@ -458,6 +458,54 @@ grid is chat (6) · inspector (3) · XT-01 (3), and "Trace" was removed from the
 inspector tabs. The column reuses the same real per-turn debug trace and shows an
 honest empty state before the operator runs a turn.
 
+**Console refonte (image 05, 2026-06-19).** Aligned the Console body to normative
+05, one zone at a time, with honest data throughout (verified e2e on a live Ollama
+turn). Changes + deviations (logged):
+- **Seeded turn removed** — the console starts on an honest empty state ("Aucun
+  tour pour l'instant"); only live turns produce content. Resolves the prior
+  "à confirmer" (start from a real empty console). The backend no longer emits a
+  `transcript`.
+- **Chrome chat** — removed the full-width "Session active" StatusBar and the
+  `TemporalRail` from the chat column. **The Console's temporal rail IS XT-01**
+  (registre : Console = XT-01 + Live); there is deliberately **no as-of scrubber**
+  here. The model/prompt/sources/guard context was **relocated** (same real data,
+  new place) into a **context strip** atop the central "Résumé de la réponse"
+  column, with `Environnement = Sandbox` (the console is the debug/sandbox surface).
+- **KpiRow removed (deviation).** SLA/MTTR are ops signals → they live in
+  **SURVEILLER**, not a debug console. Removed rather than relocated.
+- **Titles/tabs** — chat card "Conversation de test"; central column "Résumé de la
+  réponse"; tabs → Sources / Outils / Garde-fous / Évaluation (dropped "Contexte",
+  added "Évaluation"). **Deviation (logged):** the panel shows **one section at a
+  time** (tab switch) whereas the normative stacks all sections; the Quality block
+  is always shown above the tabbed section. Kept the existing tab pattern rather
+  than a full stacked re-layout.
+- **XT-01 waterfall** — rebuilt `TraceColumn` as a real waterfall at the **node
+  grain** from the live SSE `debug.trace` (per-node `latency_ms`, ADR 0010 #4):
+  cumulative `start_ms` bars, real `duration_ms`, ✓/⚠ status (warn derived from the
+  turn's real guard deny/redaction on the reviewer node), total = sum of node
+  durations, span count, **Exporter (JSONL)**, session id, Waterfall ↔ Arbre des
+  spans toggle. **Deviation (logged):** the normative's *fine* stages (garde-fou
+  pré/post, "5 chunks récupérés", "prompt assemblé") are **not** rendered — they are
+  not separately timed, and a fabricated ms is forbidden; only the real timed graph
+  nodes appear. A node not timed on a given turn (e.g. the streamed reporter) is
+  honestly absent rather than shown at 0 with a made-up value.
+- **Data honesty (pre-turn vs post-turn).** Response-specific panels (quality,
+  sources used, trace) come from the **live turn only** — honest awaiting state
+  before. **Quality** is 4 **distinct** live-derived scores after a turn (verified
+  9.8 / 9.7 / 9.4 / 9.7); the old pre-turn `_quality()` placeholder (which
+  collapsed to 4× the same value via `g/h = … or f`) was **removed**. Tools/
+  guardrails keep the real loaded policy pre-turn ("disponibles"/"chargés") and swap
+  to the real turn data ("appelés"/"déclenchés") after. The new **Évaluation
+  automatique** tab surfaces the **latest real eval run** (faithfulness/grounding/
+  hallucination), labelled "dernier run — la console ne ré-évalue pas chaque tour";
+  honest "—" when a metric has no score. **À confirmer:** these latest-run values
+  can legitimately coincide (real data property), distinct from the removed quality
+  *collapse*.
+- **Dev note (logged):** the codex frontend (`:3097`) proxies to this repo's own
+  backend on **`:8392`** (`TESSERA_BACKEND_URL`); a stale sibling-repo backend had
+  been occupying it and serving the old payload. Re-pointed to this repo's backend
+  for the conformance capture.
+
 **Évaluations vs eval-gate-policy (image 09 + binding policy, conformance pass).** The
 binding `eval-gate-policy.md` **primes over the image** for verdict/numbers. The page
 is real (gate from a real llama3.2:3b failure-catalogue run; verdict = BLOQUÉ par le
