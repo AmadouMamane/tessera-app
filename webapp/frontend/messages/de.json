@@ -3869,10 +3869,12 @@
     "actions": {
       "test": "Konnektivität testen",
       "import": "Konfig. importieren",
-      "create": "Neue Integration"
+      "create": "Neue Integration",
+      "export": "Exportieren",
+      "managePolicy": "Politik verwalten"
     },
     "filters": {
-      "search": "Integration suchen…",
+      "search": "Tool suchen…",
       "status": "Status",
       "type": "Typ",
       "environment": "Umgebung",
@@ -3882,14 +3884,12 @@
       "all": "Alle"
     },
     "kpi": {
-      "total": "Integrationen gesamt",
-      "active": "Aktiv",
-      "warnings": "Warnungen",
-      "errors": "Fehler",
-      "calls": "Aufrufe (24h)",
-      "success_rate": "Erfolgsrate (24h)",
-      "response_time": "Antwortzeit (p95)",
-      "cost": "Kosten (30 Tage)"
+      "tools": "Tools",
+      "allowed": "Erlaubt",
+      "confirmation": "Bestätigung nötig",
+      "calls": "Protokollierte Aufrufe",
+      "blocked": "Abgelehnt",
+      "idle": "Ungenutzt"
     },
     "col": {
       "name": "Name",
@@ -3903,12 +3903,10 @@
       "lastSync": "Letzte Sync."
     },
     "type": {
-      "database": "Datenbank",
-      "warehouse": "Data Warehouse",
-      "api": "API",
-      "saas": "SaaS",
-      "queue": "Message Queue",
-      "storage": "Speicher"
+      "lecture": "Lesen",
+      "simulation": "Simulation",
+      "action": "Aktion",
+      "escalade": "Eskalation"
     },
     "status": {
       "active": "Aktiv",
@@ -3922,30 +3920,27 @@
       "high": "Hoch"
     },
     "detailTabs": {
-      "config": "Konfigurieren",
-      "endpoints": "Endpoint & Keys",
-      "secrets": "Secrets & Auth",
-      "mappings": "Mappings",
-      "policies": "Policies",
-      "calls": "Ihre Aufrufe",
-      "history": "Verlauf"
+      "overview": "Überblick",
+      "policy": "Schutz",
+      "security": "Firewall",
+      "usage": "Nutzung"
     },
     "detail": {
       "connectivity": "Status & Konnektivität",
       "lastSync": "Letzte Sync.",
-      "responseTime": "Antwortzeit (24h)",
-      "successRate": "Erfolgsrate (24h)",
+      "responseTime": "Antwortzeit",
+      "successRate": "Erlaubt-Quote",
       "general": "Allgemeine Infos",
       "owner": "Owner",
       "environment": "Umgebung",
       "region": "Region",
       "criticality": "Kritikalität",
-      "usage": "Nutzung (30 Tage)",
-      "read": "Gelesene Daten",
-      "write": "Geschriebene Daten",
-      "cost": "Kosten",
+      "usage": "Nutzung (Audit-Log)",
+      "read": "Aufrufe",
+      "write": "Ablehnungen",
+      "cost": "Max / Zug",
       "viewDetail": "Details anzeigen",
-      "config": "Hauptkonfiguration",
+      "config": "Schutz-Vertrag",
       "url": "URL",
       "version": "Version",
       "auth": "Authentifizierung",
@@ -3953,17 +3948,19 @@
       "retry": "Retry",
       "rateLimit": "Rate Limit",
       "pagination": "Pagination",
-      "security": "Sicherheit & Authentifizierung",
+      "security": "Firewall-Durchsetzung",
       "method": "Authentifizierungsmethode",
       "clientId": "Client-ID",
       "cert": "Zertifikat / Privater Schlüssel",
       "keyRotation": "Schlüsselrotation",
-      "lastRotation": "Letzte Rotation"
+      "lastRotation": "Letzte Rotation",
+      "selectHint": "Wählen Sie ein Tool für Details.",
+      "close": "Schließen"
     },
     "zone": {
       "byType": "Verteilung nach Typ",
-      "byEnv": "Aufrufe pro Umgebung",
-      "top": "Top-Integrationen nach Aufrufen"
+      "byEnv": "Aufrufe pro Tool",
+      "top": "Top-Tools nach Aufrufen"
     },
     "env": {
       "prod": "Prod",
@@ -3973,7 +3970,12 @@
     },
     "footer": {
       "total": "{n} Integrationen",
-      "source": "Quelle der Wahrheit: {src}"
+      "source": "Quelle der Wahrheit: {src}",
+      "shown": "{n} Tools angezeigt"
+    },
+    "readonlyNote": "Tools im Code definiert, Politik in policy.yaml (PR)",
+    "empty": {
+      "rows": "Kein passendes Tool."
     }
   },
   "systemProfile": {

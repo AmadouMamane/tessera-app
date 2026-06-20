@@ -3869,10 +3869,12 @@
     "actions": {
       "test": "Test connectivity",
       "import": "Import config.",
-      "create": "New integration"
+      "create": "New integration",
+      "export": "Export",
+      "managePolicy": "Manage policy"
     },
     "filters": {
-      "search": "Search an integration…",
+      "search": "Search a tool…",
       "status": "Status",
       "type": "Type",
       "environment": "Environment",
@@ -3882,14 +3884,12 @@
       "all": "All"
     },
     "kpi": {
-      "total": "Total integrations",
-      "active": "Active",
-      "warnings": "Warnings",
-      "errors": "Errors",
-      "calls": "Calls (24h)",
-      "success_rate": "Success rate (24h)",
-      "response_time": "Response time (p95)",
-      "cost": "Cost (30 days)"
+      "tools": "Tools",
+      "allowed": "Allowed",
+      "confirmation": "Confirmation required",
+      "calls": "Logged calls",
+      "blocked": "Denied",
+      "idle": "Idle"
     },
     "col": {
       "name": "Name",
@@ -3903,12 +3903,10 @@
       "lastSync": "Last sync"
     },
     "type": {
-      "database": "Database",
-      "warehouse": "Data Warehouse",
-      "api": "API",
-      "saas": "SaaS",
-      "queue": "Message Queue",
-      "storage": "Storage"
+      "lecture": "Read",
+      "simulation": "Simulation",
+      "action": "Action",
+      "escalade": "Escalation"
     },
     "status": {
       "active": "Active",
@@ -3922,30 +3920,27 @@
       "high": "High"
     },
     "detailTabs": {
-      "config": "Configure",
-      "endpoints": "Endpoint & keys",
-      "secrets": "Secrets & auth",
-      "mappings": "Mappings",
-      "policies": "Policies",
-      "calls": "Your calls",
-      "history": "History"
+      "overview": "Overview",
+      "policy": "Guardrail",
+      "security": "Firewall",
+      "usage": "Usage"
     },
     "detail": {
       "connectivity": "Status & connectivity",
       "lastSync": "Last sync",
-      "responseTime": "Response time (24h)",
-      "successRate": "Success rate (24h)",
+      "responseTime": "Response time",
+      "successRate": "Allowed rate",
       "general": "General info",
       "owner": "Owner",
       "environment": "Environment",
       "region": "Region",
       "criticality": "Criticality",
-      "usage": "Usage (30 days)",
-      "read": "Data read",
-      "write": "Data written",
-      "cost": "Cost",
+      "usage": "Usage (audit log)",
+      "read": "Calls",
+      "write": "Denials",
+      "cost": "Max / turn",
       "viewDetail": "View detail",
-      "config": "Main configuration",
+      "config": "Guardrail contract",
       "url": "URL",
       "version": "Version",
       "auth": "Authentication",
@@ -3953,17 +3948,19 @@
       "retry": "Retry",
       "rateLimit": "Rate limit",
       "pagination": "Pagination",
-      "security": "Security & authentication",
+      "security": "Firewall enforcement",
       "method": "Authentication method",
       "clientId": "Client ID",
       "cert": "Certificate / Private key",
       "keyRotation": "Key rotation",
-      "lastRotation": "Last rotation"
+      "lastRotation": "Last rotation",
+      "selectHint": "Select a tool to view details.",
+      "close": "Close"
     },
     "zone": {
       "byType": "Distribution by type",
-      "byEnv": "Calls by environment",
-      "top": "Top integrations by calls"
+      "byEnv": "Calls per tool",
+      "top": "Top tools by calls"
     },
     "env": {
       "prod": "Prod",
@@ -3973,7 +3970,12 @@
     },
     "footer": {
       "total": "{n} integrations",
-      "source": "Source of truth: {src}"
+      "source": "Source of truth: {src}",
+      "shown": "{n} tools shown"
+    },
+    "readonlyNote": "Tools defined in code, policy in policy.yaml (PR)",
+    "empty": {
+      "rows": "No matching tool."
     }
   },
   "systemProfile": {

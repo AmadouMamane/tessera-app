@@ -3869,10 +3869,12 @@
     "actions": {
       "test": "Tester la connectivité",
       "import": "Importer config.",
-      "create": "Nouvelle intégration"
+      "create": "Nouvelle intégration",
+      "export": "Exporter",
+      "managePolicy": "Gérer la politique"
     },
     "filters": {
-      "search": "Rechercher une intégration…",
+      "search": "Rechercher un outil…",
       "status": "Statut",
       "type": "Type",
       "environment": "Environnement",
@@ -3882,14 +3884,12 @@
       "all": "Tous"
     },
     "kpi": {
-      "total": "Intégrations totales",
-      "active": "Actives",
-      "warnings": "Avertissements",
-      "errors": "Erreurs",
-      "calls": "Appels (24h)",
-      "success_rate": "Taux de succès (24h)",
-      "response_time": "Temps de réponse (p95)",
-      "cost": "Coût (30 jours)"
+      "tools": "Outils",
+      "allowed": "Autorisés",
+      "confirmation": "Confirmation requise",
+      "calls": "Appels journalisés",
+      "blocked": "Refus",
+      "idle": "Inactifs"
     },
     "col": {
       "name": "Nom",
@@ -3903,12 +3903,10 @@
       "lastSync": "Dernière sync."
     },
     "type": {
-      "database": "Base de données",
-      "warehouse": "Data Warehouse",
-      "api": "API",
-      "saas": "SaaS",
-      "queue": "Message Queue",
-      "storage": "Stockage"
+      "lecture": "Lecture",
+      "simulation": "Simulation",
+      "action": "Action",
+      "escalade": "Escalade"
     },
     "status": {
       "active": "Active",
@@ -3922,30 +3920,27 @@
       "high": "Élevée"
     },
     "detailTabs": {
-      "config": "Configurer",
-      "endpoints": "Endpoint & clés",
-      "secrets": "Secrets & auth",
-      "mappings": "Mappages",
-      "policies": "Politiques",
-      "calls": "Vos appels",
-      "history": "Historique"
+      "overview": "Vue d'ensemble",
+      "policy": "Garde-fou",
+      "security": "Pare-feu",
+      "usage": "Usage"
     },
     "detail": {
       "connectivity": "État & connectivité",
       "lastSync": "Dernière sync.",
-      "responseTime": "Temps de réponse (24h)",
-      "successRate": "Taux de succès (24h)",
+      "responseTime": "Temps de réponse",
+      "successRate": "Taux autorisé",
       "general": "Informations générales",
       "owner": "Propriétaire",
       "environment": "Environnement",
       "region": "Région",
       "criticality": "Criticité",
-      "usage": "Utilisation (30 jours)",
-      "read": "Données lues",
-      "write": "Données écrites",
-      "cost": "Coût",
+      "usage": "Usage (journal d'audit)",
+      "read": "Appels",
+      "write": "Refus",
+      "cost": "Max / tour",
       "viewDetail": "Voir le détail",
-      "config": "Configuration principale",
+      "config": "Contrat garde-fou",
       "url": "URL",
       "version": "Version",
       "auth": "Authentification",
@@ -3953,17 +3948,19 @@
       "retry": "Retry",
       "rateLimit": "Rate limit",
       "pagination": "Pagination",
-      "security": "Sécurité & authentification",
+      "security": "Application du pare-feu",
       "method": "Méthode d’authentification",
       "clientId": "Client ID",
       "cert": "Certificat / Clé privée",
       "keyRotation": "Rotation des clés",
-      "lastRotation": "Dernière rotation"
+      "lastRotation": "Dernière rotation",
+      "selectHint": "Sélectionnez un outil pour voir le détail.",
+      "close": "Fermer"
     },
     "zone": {
       "byType": "Répartition par type",
-      "byEnv": "Appels par environnement",
-      "top": "Top intégrations par appels"
+      "byEnv": "Appels par outil",
+      "top": "Top outils par appels"
     },
     "env": {
       "prod": "Prod",
@@ -3973,7 +3970,12 @@
     },
     "footer": {
       "total": "{n} intégrations",
-      "source": "Source de vérité : {src}"
+      "source": "Source de vérité : {src}",
+      "shown": "{n} outils affichés"
+    },
+    "readonlyNote": "Outils définis dans le code, politique dans policy.yaml (PR)",
+    "empty": {
+      "rows": "Aucun outil ne correspond."
     }
   },
   "systemProfile": {

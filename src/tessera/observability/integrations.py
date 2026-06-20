@@ -1,212 +1,358 @@
-"""Integrations cockpit overview (page #19).
+"""Integrations cockpit overview (page #19, configurer/integrations).
 
-Composes the "Intégrations" overview: the integration posture (total / active /
-warning / error integrations, 24h calls, success rate, response time, cost), the
-integration catalogue table, the selected-integration detail (connectivity,
-general info, usage, configuration, security) and the type / environment / top
-distributions.
+Distinct from **Connecteurs** (the infrastructure topology: LLM, pgvector, guard,
+GCP), this surfaces the agent's *real* business integrations — the LLM-callable
+tools in :mod:`tessera.agent.tools` that reach the banking back ends
+(account balance, card block, transaction search, loan simulation, ticket
+escalation). It is **not** an invented SaaS catalogue (Salesforce/Snowflake/...).
 
-The dataset is a deterministic reference fixture; values are stable across calls
-so the page never "dances".
+Each tool is crossed with two real sources:
+  * the compiled guard policy (``policy.yaml`` via :func:`load_policy`): per-tool
+    ``allow`` / ``requires_confirmation`` / ``max_calls_per_turn`` / argument
+    rules — the contract the firewall actually enforces;
+  * the JSON-Lines guard audit log (``GuardSettings.audit_file``): the real number
+    of ``tool.<name>.allow`` decisions, denials and last invocation.
+
+The implementations are honest demo stubs (the docstrings say so), so the
+"environment" reads **Démo** and there is no fabricated latency/cost. Read-only by
+design (tools + policy are code/PR-owned), like Prompts: the functional axis is
+wired search / filter / sort / row-select / nav + export, not a fake mutation.
 """
 
 from __future__ import annotations
 
+import json
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+from tessera.guard.decisions import Policy, ToolPolicy, load_policy
+from tessera.settings import get_settings
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from pathlib import Path
 
 __all__ = ["compute_integrations_overview"]
 
-_TYPE_COLOR = {
-    "database": "#60a5fa",
-    "warehouse": "#a78bfa",
-    "api": "#34d399",
-    "saas": "#fbbf24",
-    "queue": "#f472b6",
-    "storage": "#f87171",
+_MINUTE = 60.0
+_HOUR = 3600.0
+_DAY = 86_400.0
+
+# Real tool metadata: the banking system each integrates with, a category (the
+# filter/donut axis) and a one-line description. Names mirror the modules in
+# tessera/agent/tools/. ASCII-only source (accents in literals are fine).
+_TOOLS: list[dict[str, str]] = [
+    {
+        "id": "account_balance",
+        "name": "Solde de compte",
+        "system": "Core banking",
+        "category": "lecture",
+        "request": "AccountBalanceRequest",
+        "response": "AccountBalance",
+        "description": "Solde disponible du compte (lecture core-banking).",
+    },
+    {
+        "id": "transaction_search",
+        "name": "Recherche de transactions",
+        "system": "Registre des transactions",
+        "category": "lecture",
+        "request": "TransactionSearchRequest",
+        "response": "TransactionSearchResult",
+        "description": "Recherche dans l'historique des transactions du client.",
+    },
+    {
+        "id": "loan_simulate",
+        "name": "Simulation de crédit",
+        "system": "Moteur de crédit",
+        "category": "simulation",
+        "request": "LoanSimulationRequest",
+        "response": "LoanSimulation",
+        "description": "Simulation d'un crédit : mensualités, TAEG, coût total.",
+    },
+    {
+        "id": "card_block",
+        "name": "Blocage de carte",
+        "system": "Gestion des cartes",
+        "category": "action",
+        "request": "CardBlockRequest",
+        "response": "CardBlock",
+        "description": "Opposition / blocage d'une carte - action sensible, confirmée.",
+    },
+    {
+        "id": "ticket_escalate",
+        "name": "Escalade ticket",
+        "system": "Ticketing / CRM",
+        "category": "escalade",
+        "request": "TicketRequest",
+        "response": "Ticket",
+        "description": "Escalade vers un agent humain (création de ticket).",
+    },
+]
+
+_CATEGORY_COLOR = {
+    "lecture": "#60a5fa",
+    "simulation": "#a78bfa",
+    "action": "#f87171",
+    "escalade": "#fbbf24",
 }
 
 
-def _kpi(key: str, value: str, sub: str, series: list[float]) -> dict[str, object]:
-    return {"key": key, "value": value, "sub": sub, "series": series}
+@dataclass
+class _ToolStat:
+    decisions: int = 0
+    denials: int = 0
+    c24: int = 0
+    last: datetime | None = None
+
+
+@dataclass
+class _Scan:
+    per_tool: dict[str, _ToolStat] = field(default_factory=dict)
+
+    def stat(self, name: str) -> _ToolStat:
+        return self.per_tool.setdefault(name, _ToolStat())
+
+
+def _parse_dt(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _record(scan: _Scan, decision: dict[str, object], now: datetime) -> None:
+    """Fold one ``tool.<name>.allow`` decision into the per-tool stats."""
+    rule = str(decision.get("policy_rule", ""))
+    if not (rule.startswith("tool.") and rule.endswith(".allow")):
+        return
+    name = rule[len("tool.") : -len(".allow")]
+    stat = scan.stat(name)
+    stat.decisions += 1
+    if str(decision.get("decision")) == "deny":
+        stat.denials += 1
+    when = _parse_dt(decision.get("occurred_at"))
+    if when is None:
+        return
+    if stat.last is None or when > stat.last:
+        stat.last = when
+    if (now - when).total_seconds() < _DAY:
+        stat.c24 += 1
+
+
+def _scan_audit(path: Path, now: datetime) -> _Scan:
+    """Aggregate per-tool decision stats from the guard audit log."""
+    scan = _Scan()
+    if not path.exists():
+        return scan
+    with path.open("r", encoding="utf-8") as fp:
+        for raw in fp:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            try:
+                obj = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("type") != "tessera.guard.audit":
+                continue
+            decisions = obj.get("decisions")
+            if not isinstance(decisions, list):
+                continue
+            for decision in decisions:
+                if isinstance(decision, dict):
+                    _record(scan, decision, now)
+    return scan
+
+
+def _kpi(key: str, value: str, sub: str, series: Sequence[float]) -> dict[str, object]:
+    return {"key": key, "value": value, "sub": sub, "series": list(series)}
+
+
+def _fmt_int(value: int) -> str:
+    return f"{value:,}".replace(",", " ")
+
+
+def _rel(when: datetime | None, now: datetime) -> str:
+    if when is None:
+        return "-"
+    secs = (now - when).total_seconds()
+    if secs < _MINUTE:
+        return "à l'instant"
+    if secs < _HOUR:
+        return f"il y a {int(secs // _MINUTE)} min"
+    if secs < _DAY:
+        return f"il y a {int(secs // _HOUR)} h"
+    return when.strftime("%d/%m/%Y %H:%M")
+
+
+def _status(tp: ToolPolicy, stat: _ToolStat) -> str:
+    """Map the guard policy + activity to the table's status enum."""
+    if not tp.allow:
+        return "error"  # blocked by policy
+    if tp.requires_confirmation:
+        return "warning"  # allowed but gated by confirmation
+    if stat.decisions == 0:
+        return "disabled"  # allowed but never exercised
+    return "active"
+
+
+def _criticality(tp: ToolPolicy, category: str) -> str:
+    if tp.requires_confirmation or category == "action":
+        return "high"
+    if category in {"simulation", "escalade"}:
+        return "medium"
+    return "low"
+
+
+def _detail(
+    meta: dict[str, str], tp: ToolPolicy, stat: _ToolStat, now: datetime
+) -> dict[str, object]:
+    allowed = stat.decisions - stat.denials
+    rate = f"{round(allowed / stat.decisions * 100)}%" if stat.decisions else "-"
+    return {
+        "id": meta["id"],
+        "name": meta["name"],
+        "status": _status(tp, stat),
+        "response_time": "-",  # demo stubs: not instrumented
+        "success_rate": rate,
+        "last_sync": _rel(stat.last, now),
+        "description": meta["description"],
+        "owner": "Agent Tessera",
+        "environment": "Démo (implémentation simulée)",
+        "region": "local",
+        "criticality": _criticality(tp, meta["category"]),
+        # Usage = real audit counts (relabelled read/write/cost slots).
+        "usage": {
+            "read": {"value": _fmt_int(stat.decisions), "delta": f"{stat.c24} sur 24h"},
+            "write": {"value": _fmt_int(stat.denials), "delta": "refus journalisés"},
+            "cost": {"value": str(tp.max_calls_per_turn), "delta": "par tour"},
+        },
+        # Config = the real guard contract.
+        "config_rows": [
+            {"label": "Système cible", "value": meta["system"]},
+            {"label": "Schéma d'entrée", "value": meta["request"]},
+            {"label": "Schéma de sortie", "value": meta["response"]},
+            {"label": "Autorisé", "value": "Oui" if tp.allow else "Non"},
+            {
+                "label": "Confirmation requise",
+                "value": "Oui" if tp.requires_confirmation else "Non",
+            },
+            {"label": "Appels max / tour", "value": str(tp.max_calls_per_turn)},
+            {"label": "Arguments contrôlés", "value": str(len(tp.arguments))},
+        ],
+        # Security = how the firewall enforces it.
+        "security_rows": [
+            {"label": "Pare-feu", "value": "mcp-firewall"},
+            {"label": "Règle de politique", "value": f"tool.{meta['id']}.allow"},
+            {"label": "Validation des arguments", "value": "Pydantic strict (extra=forbid)"},
+            {"label": "Sur violation", "value": "Refus + journalisé"},
+            {"label": "Refus journalisés", "value": _fmt_int(stat.denials)},
+        ],
+    }
 
 
 def compute_integrations_overview() -> dict[str, object]:
-    """Return the full Integrations overview payload.
+    """Return the full Integrations overview, built from the real agent tools.
 
     Returns:
-        A JSON-serialisable mapping with the integration posture KPIs, the
-        catalogue table, the selected-integration detail and the type /
-        environment / top distributions.
+        A JSON-serialisable mapping with posture KPIs (tools, allowed, gated by
+        confirmation, real audited calls, denials, idle tools), the tool table,
+        the selected-tool detail (guard contract + real audit usage) and the
+        category / per-tool call distributions.
     """
     now = datetime.now(UTC)
+    settings = get_settings()
+    policy: Policy = load_policy()
+    scan = _scan_audit(settings.guard.audit_file, now)
+
+    rows: list[dict[str, object]] = []
+    for meta in _TOOLS:
+        tp = policy.tool(meta["id"])
+        stat = scan.stat(meta["id"])
+        allowed = stat.decisions - stat.denials
+        rows.append(
+            {
+                "id": meta["id"],
+                "name": meta["name"],
+                "type": meta["category"],
+                "status": _status(tp, stat),
+                "environment": "Démo",
+                "owner": "Agent",
+                "calls": _fmt_int(stat.decisions),
+                "success_rate": (
+                    f"{round(allowed / stat.decisions * 100)}%" if stat.decisions else "-"
+                ),
+                "response_time": "-",
+                "last_sync": _rel(stat.last, now),
+                "detail": _detail(meta, tp, stat, now),
+            }
+        )
+
+    total_calls = sum(scan.stat(m["id"]).decisions for m in _TOOLS)
+    total_denials = sum(scan.stat(m["id"]).denials for m in _TOOLS)
+    allowed_tools = sum(1 for m in _TOOLS if policy.tool(m["id"]).allow)
+    confirm_tools = sum(1 for m in _TOOLS if policy.tool(m["id"]).requires_confirmation)
+    idle_tools = sum(1 for m in _TOOLS if scan.stat(m["id"]).decisions == 0)
+    calls_per_tool = [scan.stat(m["id"]).decisions for m in _TOOLS]
+    maxcalls_per_tool = [policy.tool(m["id"]).max_calls_per_turn for m in _TOOLS]
 
     kpis = [
-        _kpi("total", "42", "+3 ce mois", [36, 37, 38, 39, 40, 41, 42]),
-        _kpi("active", "38", "90% du total", [33, 34, 35, 36, 37, 38, 38]),
-        _kpi("warnings", "3", "à surveiller", [5, 4, 4, 3, 3, 3, 3]),
-        _kpi("errors", "1", "à traiter", [2, 2, 1, 1, 2, 1, 1]),
-        _kpi("calls", "128,543", "+8% vs 24h", [110, 114, 118, 121, 124, 126, 128]),
-        _kpi("success_rate", "99.2%", "+0.3 pp", [98, 98, 99, 99, 99, 99, 99]),
-        _kpi("response_time", "432 ms", "-18 ms", [480, 470, 460, 450, 444, 438, 432]),
-        _kpi("cost", "€2,148", "+9% vs mois", [1900, 1960, 2010, 2060, 2100, 2130, 2148]),
+        _kpi("tools", str(len(_TOOLS)), "outils de l'agent", maxcalls_per_tool),
+        _kpi("allowed", str(allowed_tools), "autorises par la politique", maxcalls_per_tool),
+        _kpi("confirmation", str(confirm_tools), "confirmation requise", maxcalls_per_tool),
+        _kpi("calls", _fmt_int(total_calls), "appels journalises", calls_per_tool),
+        _kpi("blocked", _fmt_int(total_denials), "refus journalises", calls_per_tool),
+        _kpi("idle", str(idle_tools), "jamais sollicites", calls_per_tool),
     ]
 
-    integrations = [
-        {
-            "id": "INT-0001",
-            "name": "Salesforce API",
-            "type": "saas",
-            "status": "active",
-            "environment": "prod",
-            "owner": "alice",
-            "calls": "12,403",
-            "success_rate": "99.4%",
-            "response_time": "356 ms",
-            "last_sync": "11/06/2026 10:20",
-        },
-        {
-            "id": "INT-0002",
-            "name": "PostgreSQL · Clients",
-            "type": "database",
-            "status": "active",
-            "environment": "prod",
-            "owner": "alice",
-            "calls": "8,739",
-            "success_rate": "99.8%",
-            "response_time": "87 ms",
-            "last_sync": "11/06/2026 10:18",
-        },
-        {
-            "id": "INT-0003",
-            "name": "Snowflake · Finance",
-            "type": "warehouse",
-            "status": "active",
-            "environment": "prod",
-            "owner": "bob",
-            "calls": "6,221",
-            "success_rate": "99.6%",
-            "response_time": "412 ms",
-            "last_sync": "11/06/2026 10:15",
-        },
-        {
-            "id": "INT-0004",
-            "name": "Vertex AI · Embeddings",
-            "type": "api",
-            "status": "active",
-            "environment": "prod",
-            "owner": "carla",
-            "calls": "21,884",
-            "success_rate": "99.1%",
-            "response_time": "612 ms",
-            "last_sync": "11/06/2026 10:21",
-        },
-        {
-            "id": "INT-0005",
-            "name": "Kafka · Events",
-            "type": "queue",
-            "status": "warning",
-            "environment": "preprod",
-            "owner": "marc",
-            "calls": "44,920",
-            "success_rate": "97.8%",
-            "response_time": "44 ms",
-            "last_sync": "11/06/2026 10:19",
-        },
-        {
-            "id": "INT-0006",
-            "name": "S3 · Evidence store",
-            "type": "storage",
-            "status": "active",
-            "environment": "prod",
-            "owner": "claire",
-            "calls": "3,512",
-            "success_rate": "100%",
-            "response_time": "128 ms",
-            "last_sync": "11/06/2026 10:12",
-        },
-        {
-            "id": "INT-0007",
-            "name": "ServiceNow · Tickets",
-            "type": "saas",
-            "status": "error",
-            "environment": "prod",
-            "owner": "dave",
-            "calls": "1,204",
-            "success_rate": "82.4%",
-            "response_time": "1.2 s",
-            "last_sync": "11/06/2026 09:47",
-        },
-    ]
-
-    selected = {
-        "id": "INT-0001",
-        "name": "Salesforce API",
-        "status": "active",
-        "last_sync": "11/06/2026 10:20",
-        "response_time": "356 ms",
-        "success_rate": "99.4%",
-        "description": "Accès aux données Salesforce (objets clients, comptes, opportunités).",
-        "owner": "alice (AI Quality Team)",
-        "environment": "Production",
-        "region": "eu-west-1",
-        "criticality": "high",
-        "usage": {
-            "read": {"value": "256 GB", "delta": "+14%"},
-            "write": {"value": "32 GB", "delta": "+6%"},
-            "cost": {"value": "€612", "delta": "+9%"},
-        },
-        "config": {
-            "url": "https://acme-dev-ed.my.salesforce.com",
-            "version": "v59.0",
-            "auth": "OAuth 2.0 · JWT Bearer",
-            "timeout": "30 s",
-            "retry": "3 tentatives (exponential backoff)",
-            "rate_limit": "96 requêtes / min",
-            "pagination": "200 éléments / page",
-        },
-        "security": {
-            "method": "OAuth 2.0 · JWT Bearer",
-            "client_id": "…sf01",
-            "cert": "Configuré",
-            "key_rotation": "90 jours",
-            "last_rotation": "01/06/2026",
-        },
-    }
-
+    # Category distribution (donut).
+    cat_counts: dict[str, int] = {}
+    for m in _TOOLS:
+        cat_counts[m["category"]] = cat_counts.get(m["category"], 0) + 1
     by_type = [
-        {"key": "saas", "count": 12, "pct": 29, "color": _TYPE_COLOR["saas"]},
-        {"key": "api", "count": 10, "pct": 24, "color": _TYPE_COLOR["api"]},
-        {"key": "database", "count": 8, "pct": 19, "color": _TYPE_COLOR["database"]},
-        {"key": "warehouse", "count": 5, "pct": 12, "color": _TYPE_COLOR["warehouse"]},
-        {"key": "queue", "count": 4, "pct": 10, "color": _TYPE_COLOR["queue"]},
-        {"key": "storage", "count": 3, "pct": 6, "color": _TYPE_COLOR["storage"]},
+        {
+            "key": cat,
+            "count": n,
+            "pct": round(n / len(_TOOLS) * 100),
+            "color": _CATEGORY_COLOR.get(cat, "#64748b"),
+        }
+        for cat, n in sorted(cat_counts.items(), key=lambda kv: -kv[1])
     ]
 
+    # Per-tool call distribution (replaces the fabricated by-environment panel).
     by_env = [
-        {"key": "prod", "value": "98,420", "pct": 76, "color": "#34d399"},
-        {"key": "preprod", "value": "21,640", "pct": 17, "color": "#60a5fa"},
-        {"key": "staging", "value": "6,210", "pct": 5, "color": "#fbbf24"},
-        {"key": "dev", "value": "2,273", "pct": 2, "color": "#f472b6"},
+        {
+            "key": m["id"],
+            "label": m["name"],
+            "value": _fmt_int(scan.stat(m["id"]).decisions),
+            "pct": round(scan.stat(m["id"]).decisions / total_calls * 100) if total_calls else 0,
+            "color": _CATEGORY_COLOR.get(m["category"], "#64748b"),
+        }
+        for m in sorted(_TOOLS, key=lambda x: -scan.stat(x["id"]).decisions)
     ]
 
     top_integrations = [
-        {"name": "Kafka · Events", "value": 44920, "label": "44,920"},
-        {"name": "Vertex AI · Embeddings", "value": 21884, "label": "21,884"},
-        {"name": "Salesforce API", "value": 12403, "label": "12,403"},
-        {"name": "PostgreSQL · Clients", "value": 8739, "label": "8,739"},
-        {"name": "Snowflake · Finance", "value": 6221, "label": "6,221"},
+        {
+            "name": m["name"],
+            "value": scan.stat(m["id"]).decisions,
+            "label": _fmt_int(scan.stat(m["id"]).decisions),
+        }
+        for m in sorted(_TOOLS, key=lambda x: -scan.stat(x["id"]).decisions)
     ]
 
     return {
         "generated_at": now.isoformat(),
-        "total_integrations": 42,
-        "page_size": 7,
+        "total_integrations": len(_TOOLS),
+        "page_size": len(_TOOLS),
         "kpis": kpis,
-        "integrations": integrations,
-        "selected": selected,
+        "integrations": rows,
+        "selected": rows[0]["detail"],
         "by_type": by_type,
-        "by_type_total": 42,
+        "by_type_total": len(_TOOLS),
         "by_env": by_env,
         "top_integrations": top_integrations,
-        "footer": {"total": 42, "source": "YAML · Git"},
+        "footer": {"total": len(_TOOLS), "source": "agent/tools + policy.yaml + journal d'audit"},
     }
