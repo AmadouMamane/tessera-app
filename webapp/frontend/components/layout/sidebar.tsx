@@ -38,9 +38,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { Link, usePathname } from "@/i18n/navigation";
-import { agentPath } from "@/lib/agent-context";
 import { cn } from "@/lib/cn";
-import { useAgentId } from "@/lib/use-agent-id";
 import { useShellChrome } from "./shell-chrome";
 
 type RouteHref =
@@ -49,9 +47,10 @@ type RouteHref =
   | "/produit/documents"
   | "/produit/alertes"
   | "/produit/parametres"
-  // AGENT section is scoped to the selected agent (`/agents/<agentId>/...`).
-  | `/agents/${string}/synthese`
-  // Inbox is GLOBAL (not under /agents/:id) — operator queue across agents.
+  // AGENTS super-section lists SECTIONS, not per-agent pages: the fleet hub plus
+  // the global operator queue. Per-agent pages (Synthèse…Historique) live ONLY in
+  // the command-bar (AgentTabs), scoped to /agents/:id — never duplicated here.
+  | "/agents"
   | "/a-traiter"
   | "/a-faire"
   | "/surveiller/vue-ensemble"
@@ -116,40 +115,32 @@ type NavNode = Leaf | Branch;
 
 const isBranch = (n: NavNode): n is Branch => "children" in n;
 
-// The AGENT super-section is scoped to the selected agent, so its hrefs depend
-// on the active agent id (read from the URL). It is built per-render in
-// `Sidebar()` via `agentBranch(agentId)` and prepended to this static tree.
-function agentBranch(agentId: string): Branch {
-  return {
-    key: "agent",
-    icon: Bot,
-    labelKey: "super.agent",
-    accent: "green",
-    children: [
-      {
-        href: agentPath(agentId, "synthese") as RouteHref,
-        icon: LayoutDashboard,
-        labelKey: "item.synthese",
-      },
-    ],
-  };
-}
-
-// Inbox is GLOBAL (a cross-agent operator queue), so it sits OUTSIDE the AGENT
-// super-section as top-level leaves — never scoped under /agents/:id.
-const INBOX: ReadonlyArray<Leaf> = [
-  {
-    href: "/a-traiter",
-    icon: Inbox,
-    labelKey: "item.aTraiter",
-    badge: "24",
-    badgeTone: "danger",
-    separatorBefore: true,
-  },
-  { href: "/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
-];
+// The AGENTS super-section lists SECTIONS, not per-agent pages: the fleet hub
+// (Flotte → /agents) and the GLOBAL cross-agent operator queue (À traiter /
+// À faire). Per-agent pages live only in the command-bar (AgentTabs), so this
+// section is fully static — independent of the selected agent.
+const AGENTS_SECTION: Branch = {
+  key: "agents",
+  icon: Bot,
+  labelKey: "super.agents",
+  pinned: true,
+  accent: "green",
+  children: [
+    { href: "/agents", icon: LayoutDashboard, labelKey: "item.flotte" },
+    {
+      href: "/a-traiter",
+      icon: Inbox,
+      labelKey: "item.aTraiter",
+      badge: "24",
+      badgeTone: "danger",
+      separatorBefore: true,
+    },
+    { href: "/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
+  ],
+};
 
 const TREE: ReadonlyArray<NavNode> = [
+  AGENTS_SECTION,
   {
     key: "gouverner",
     icon: ShieldHalf,
@@ -294,16 +285,18 @@ const ANCESTORS: Record<string, string[]> = (() => {
 })();
 
 function activeBranchKeys(pathname: string): string[] {
-  // The AGENT branch is dynamic (not in the static ANCESTORS map): any
-  // agent-scoped route auto-expands it. The global Inbox is a top-level leaf
-  // (outside the AGENT super-section), so it needs no trail.
-  if (pathname.startsWith("/agents/")) {
-    return ["agent"];
-  }
   for (const [href, trail] of Object.entries(ANCESTORS)) {
     if (pathname === href || pathname.startsWith(`${href}/`)) return trail;
   }
   return [];
+}
+
+/** Whether a leaf is the active page. "Flotte" (/agents) matches EXACTLY so it
+ *  never lights up inside an agent workspace (/agents/:id/...) — there the active
+ *  tab lives in the command-bar (AgentTabs), and no sidebar item is active. */
+function leafActive(href: string, pathname: string): boolean {
+  if (href === "/agents") return pathname === "/agents";
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 /** A flat, navigable view of the real route map — reused by the command palette
@@ -314,7 +307,7 @@ export interface NavLeafRef {
   icon: LucideIcon;
 }
 
-export function navLeaves(agentId: string): NavLeafRef[] {
+export function navLeaves(): NavLeafRef[] {
   const out: NavLeafRef[] = [];
   const walk = (nodes: ReadonlyArray<NavNode>) => {
     for (const node of nodes) {
@@ -322,21 +315,17 @@ export function navLeaves(agentId: string): NavLeafRef[] {
       else out.push({ href: node.href, labelKey: node.labelKey, icon: node.icon });
     }
   };
-  walk([agentBranch(agentId), ...INBOX, ...TREE]);
+  walk(TREE);
   return out;
 }
 
 export function Sidebar() {
   const pathname = usePathname();
   const t = useTranslations("nav");
-  const agentId = useAgentId();
 
-  // The AGENT branch is scoped to the active agent (URL-derived); prepend it to
-  // the static governance/platform tree.
-  const tree = useMemo<ReadonlyArray<NavNode>>(
-    () => [agentBranch(agentId), ...INBOX, ...TREE],
-    [agentId],
-  );
+  // The nav tree is fully static now: the sidebar lists SECTIONS, the command-bar
+  // (AgentTabs) handles per-agent pages.
+  const tree = TREE;
 
   // Everything is collapsed by default; only the branches on the active path are
   // auto-expanded so the current page stays visible. The user expands the rest.
@@ -470,7 +459,7 @@ function RailNode({
       </>
     );
   }
-  const active = pathname === node.href || pathname.startsWith(`${node.href}/`);
+  const active = leafActive(node.href, pathname);
   const label = t(node.labelKey);
   return (
     <li>
@@ -520,7 +509,7 @@ function NavTreeNode({
   const pad = { paddingLeft: `${0.5 + depth * 0.75}rem` };
 
   if (!isBranch(node)) {
-    const active = pathname === node.href || pathname.startsWith(`${node.href}/`);
+    const active = leafActive(node.href, pathname);
     return (
       <>
         {node.separatorBefore ? (

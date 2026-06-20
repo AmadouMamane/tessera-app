@@ -9,7 +9,6 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import { fetchFleet } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
-import { useAgentId } from "@/lib/use-agent-id";
 import { useShellChrome } from "./shell-chrome";
 import { navLeaves } from "./sidebar";
 
@@ -34,7 +33,6 @@ export function CommandPalette() {
   const tp = useTranslations("shell.palette");
   const router = useRouter();
   const pathname = usePathname();
-  const agentId = useAgentId();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const [query, setQuery] = useState("");
@@ -65,7 +63,7 @@ export function CommandPalette() {
           run: () => go(agentPath(a.id, subPage)),
         }),
       ),
-      ...navLeaves(agentId).map(
+      ...navLeaves().map(
         (leaf): Command => ({
           id: `page:${leaf.href}`,
           label: t(leaf.labelKey),
@@ -102,7 +100,7 @@ export function CommandPalette() {
         run: () => go("/agents"),
       },
     ];
-  }, [agents, agentId, subPage, t, tp, router, setPaletteOpen, toggleFocus, toggleCollapsed]);
+  }, [agents, subPage, t, tp, router, setPaletteOpen, toggleFocus, toggleCollapsed]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

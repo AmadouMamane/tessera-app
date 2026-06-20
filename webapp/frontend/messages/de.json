@@ -52,7 +52,7 @@
     "observability": "Beobachtbarkeit",
     "parameters": "Einstellungen",
     "super": {
-      "agent": "Agent",
+      "agents": "Agenten",
       "gouverner": "Steuern",
       "plateforme": "Plattform",
       "cockpit": "Cockpit",
@@ -70,6 +70,7 @@
       "produit": "Kundenansicht"
     },
     "item": {
+      "flotte": "Flotte",
       "synthese": "Agent-Dashboard",
       "configurations": "Konfigurationen",
       "connaissances": "Wissen",
