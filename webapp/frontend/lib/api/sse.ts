@@ -69,6 +69,13 @@ export async function streamChat(
     openWhenHidden: true,
     onopen: async (response) => {
       if (!response.ok) {
+        if (response.status === 429) {
+          const header = Number(response.headers.get("Retry-After"));
+          // Fall back to the configured 20/hour window (3600s) if the header
+          // is absent.
+          const seconds = Number.isFinite(header) && header > 0 ? header : 3600;
+          throw new Error(rateLimitMessage(seconds, payload.language));
+        }
         const text = await response.text().catch(() => "");
         throw new Error(`chat stream returned ${response.status}: ${text || "unknown error"}`);
       }
@@ -106,6 +113,44 @@ export async function streamChat(
       throw err; // let fetchEventSource stop retrying
     },
   });
+}
+
+/**
+ * Human-readable, localized message for a 429 rate-limit response. The wait is
+ * derived from the server's `Retry-After` (seconds) and rounded up to the
+ * nearest hour/minute so the user sees the exact reset window.
+ */
+function rateLimitMessage(seconds: number, language: ChatTurnRequest["language"]): string {
+  const lang = language ?? "fr";
+  const duration = formatDuration(seconds, lang);
+  switch (lang) {
+    case "de":
+      return `Sie haben Ihr zulässiges Anfragenlimit erreicht. Bitte warten Sie ${duration}, bis Ihr Kontingent zurückgesetzt wird.`;
+    case "en":
+      return `You've reached your allowed request limit. Please wait ${duration} for your quota to reset.`;
+    default:
+      return `Vous avez atteint votre limite autorisée de requêtes. Veuillez patienter ${duration} pour la réinitialisation de votre quota.`;
+  }
+}
+
+function formatDuration(seconds: number, lang: NonNullable<ChatTurnRequest["language"]>): string {
+  const units = {
+    fr: {
+      hour: ["heure", "heures"],
+      minute: ["minute", "minutes"],
+      second: ["seconde", "secondes"],
+    },
+    de: {
+      hour: ["Stunde", "Stunden"],
+      minute: ["Minute", "Minuten"],
+      second: ["Sekunde", "Sekunden"],
+    },
+    en: { hour: ["hour", "hours"], minute: ["minute", "minutes"], second: ["second", "seconds"] },
+  }[lang];
+  const plural = (n: number, [one, many]: string[]) => `${n} ${n > 1 ? many : one}`;
+  if (seconds >= 3600) return plural(Math.ceil(seconds / 3600), units.hour);
+  if (seconds >= 60) return plural(Math.ceil(seconds / 60), units.minute);
+  return plural(Math.max(1, Math.ceil(seconds)), units.second);
 }
 
 function safeParseJson(raw: string): unknown {

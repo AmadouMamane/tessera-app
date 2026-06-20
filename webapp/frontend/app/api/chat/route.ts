@@ -65,9 +65,14 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   if (!upstream.ok || !upstream.body) {
     const detail = await upstream.text().catch(() => "");
+    // Forward Retry-After so the client can show the exact wait on a 429.
+    const retryAfter = upstream.headers.get("Retry-After");
     return NextResponse.json(
       { detail: detail || `upstream error ${upstream.status}` },
-      { status: upstream.status },
+      {
+        status: upstream.status,
+        headers: retryAfter ? { "Retry-After": retryAfter } : undefined,
+      },
     );
   }
 
