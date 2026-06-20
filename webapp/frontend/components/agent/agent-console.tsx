@@ -340,8 +340,8 @@ export function AgentConsole() {
       {/* Three panes share a viewport-bounded height on xl and scroll
           internally, so the conversation no longer towers over the summary /
           trace columns as turns accumulate. */}
-      <div className="grid gap-3 xl:grid-cols-12">
-        <div className="flex min-h-0 min-w-0 flex-col gap-3 xl:col-span-6">
+      <div className="grid items-start gap-3 xl:grid-cols-12">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3 xl:col-span-6 xl:max-w-[840px]">
           <ChatCard
             data={data}
             input={input}
@@ -568,7 +568,7 @@ function ChatCard({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
   return (
-    <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] xl:max-h-[calc(100dvh-13rem)]">
+    <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] h-[calc(100dvh-21rem)]">
       <div className="flex items-start gap-3 border-b border-[var(--tessera-border)] p-3.5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#d98b1f]/45 bg-[#d98b1f]/12 text-[#f4c76a]">
           <MessageSquare className="h-4.5 w-4.5" />
@@ -868,7 +868,7 @@ function TraceColumn({
   }, [trace, sessionId]);
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] xl:max-h-[calc(100dvh-13rem)] xl:overflow-y-auto">
+    <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] h-[460px] overflow-y-auto">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-2.5">
         <span className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-[#e0a23a]">
           <Activity className="h-4 w-4" /> {t("traceTitle")}
@@ -997,7 +997,7 @@ function ResponseSummary({
   const tools = debug?.tools ?? data.tools;
   const guardrails = debug?.guardrails ?? data.guardrails;
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] xl:max-h-[calc(100dvh-13rem)] xl:overflow-y-auto">
+    <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] h-[460px] overflow-y-auto">
       {data.context ? <ContextStrip ctx={data.context} /> : null}
       <div className="border-b border-[var(--tessera-border)] px-3.5 py-2.5">
         <h2 className="text-[0.82rem] font-semibold text-[var(--tessera-text)]">
