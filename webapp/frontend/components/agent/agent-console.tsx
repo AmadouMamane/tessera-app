@@ -11,6 +11,7 @@ import {
   Download,
   MessageSquare,
   Paperclip,
+  Pencil,
   Plus,
   RotateCcw,
   SendHorizontal,
@@ -27,7 +28,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
-import { fetchAgentConsole, fetchConsoleFeedback, saveConsoleFeedback } from "@/lib/api/client";
+import {
+  fetchAgentConsole,
+  fetchConsoleFeedback,
+  fetchSandboxConfig,
+  saveConsoleFeedback,
+} from "@/lib/api/client";
 import type {
   ChatCitation,
   ChatDebug,
@@ -35,8 +41,10 @@ import type {
   ChatTrace,
   AgentConsole as Data,
 } from "@/lib/api/schemas";
+import type { SandboxConfig } from "@/lib/api/schemas";
 import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
+import { CHAT_MODELS, getStoredModel } from "@/lib/models";
 import { useAgentId } from "@/lib/use-agent-id";
 
 import { AgentCrossLinks } from "./agent-cross-links";
@@ -103,6 +111,15 @@ export function AgentConsole() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [liveDebug, setLiveDebug] = useState<ChatDebug | null>(null);
+  // Sandbox playground overrides (env Sandbox): model / system prompt / guards.
+  const [model, setModel] = useState<string>(() => getStoredModel());
+  const [promptOverride, setPromptOverride] = useState<string | null>(null);
+  const [guardDisabled, setGuardDisabled] = useState<string[]>([]);
+  const { data: sandbox } = useQuery({
+    queryKey: ["sandbox-config", locale],
+    queryFn: ({ signal }) => fetchSandboxConfig(locale, signal),
+    staleTime: 300_000,
+  });
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["agent-console"],
@@ -188,6 +205,9 @@ export function AgentConsole() {
             subject_id: getSubjectId(),
             language: locale,
             history: history.length > 0 ? history : undefined,
+            model,
+            system_prompt_override: promptOverride ?? undefined,
+            guard_overrides: guardDisabled.length > 0 ? guardDisabled : undefined,
           },
           {
             signal: controller.signal,
@@ -226,7 +246,7 @@ export function AgentConsole() {
         setIsStreaming(false);
       }
     },
-    [conversationId, isStreaming, locale, messages],
+    [conversationId, guardDisabled, isStreaming, locale, messages, model, promptOverride],
   );
 
   const resetSession = useCallback(() => {
@@ -292,18 +312,20 @@ export function AgentConsole() {
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <AgentCrossLinks page="console" />
 
-      {/* Top action row — the Console rail is XT-01 (registre : Console = XT-01 +
-          Live); no temporal scrubber here. "Nouvelle session" sits top-right per
-          normative 05. */}
-      <div className="flex items-center justify-end">
-        <button
-          type="button"
-          onClick={resetSession}
-          className="flex h-8 items-center gap-1.5 rounded-md border border-[#d98b1f]/55 bg-[linear-gradient(180deg,#3a2a14,#21180d)] px-3 text-[0.72rem] font-medium text-[#f4c76a] hover:border-[#f4c76a]/65"
-        >
-          <Plus className="h-3.5 w-3.5" /> {data.actions?.new_session ?? t("newSession")}
-        </button>
-      </div>
+      {/* Sandbox config bar — env Sandbox playground: choose model / edit the
+          system prompt / toggle guard categories for the next turns. Overrides
+          are per-turn (never persisted). "Nouvelle session" stays top-right. */}
+      <SandboxControls
+        sandbox={sandbox}
+        model={model}
+        onModel={setModel}
+        promptOverride={promptOverride}
+        onPromptOverride={setPromptOverride}
+        guardDisabled={guardDisabled}
+        onGuardDisabled={setGuardDisabled}
+        onNewSession={resetSession}
+        newSessionLabel={data.actions?.new_session ?? t("newSession")}
+      />
 
       <div className="grid gap-3 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-3 xl:col-span-6">
@@ -334,6 +356,152 @@ export function AgentConsole() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── sandbox config bar ──────────────────────────────────────────────────────
+
+/** env Sandbox playground controls: pick the model, edit the system prompt, and
+ *  toggle guard categories. Each is a per-turn override (never persisted) sent on
+ *  the next message. Prompt + guard categories are prefilled from the live
+ *  /observability/sandbox-config (the real YAML bundle + runtime policy). */
+function SandboxControls({
+  sandbox,
+  model,
+  onModel,
+  promptOverride,
+  onPromptOverride,
+  guardDisabled,
+  onGuardDisabled,
+  onNewSession,
+  newSessionLabel,
+}: {
+  sandbox: SandboxConfig | undefined;
+  model: string;
+  onModel: (id: string) => void;
+  promptOverride: string | null;
+  onPromptOverride: (value: string | null) => void;
+  guardDisabled: string[];
+  onGuardDisabled: (next: string[]) => void;
+  onNewSession: () => void;
+  newSessionLabel: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const cats = sandbox?.guard_categories ?? [];
+  const basePrompt = sandbox?.system_prompt ?? "";
+  const promptDirty = promptOverride !== null && promptOverride !== basePrompt;
+
+  function toggleGuard(key: string) {
+    onGuardDisabled(
+      guardDisabled.includes(key)
+        ? guardDisabled.filter((k) => k !== key)
+        : [...guardDisabled, key],
+    );
+  }
+
+  return (
+    <section className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.7rem]">
+        <span className="inline-flex items-center rounded-md border border-[#d98b1f]/40 bg-[#3a2a14]/40 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wide text-[#f4c76a]">
+          env Sandbox
+        </span>
+
+        <label className="inline-flex items-center gap-1.5">
+          <Cpu className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+          <span className="text-[var(--tessera-text-muted)]">Modèle</span>
+          <select
+            value={model}
+            onChange={(e) => onModel(e.target.value)}
+            className="rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[0.7rem] text-[var(--tessera-text)]"
+          >
+            {CHAT_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <span className="inline-flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (promptOverride === null) onPromptOverride(basePrompt);
+              setEditing((e) => !e);
+            }}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[0.7rem] transition-colors hover:bg-[var(--tessera-muted)]",
+              promptDirty
+                ? "border-[#d98b1f]/55 bg-[#3a2a14]/40 text-[#f4c76a]"
+                : "border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text)]",
+            )}
+          >
+            <Pencil className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+            Prompt système{promptDirty ? " · modifié" : ""}
+          </button>
+          {promptDirty ? (
+            <button
+              type="button"
+              onClick={() => {
+                onPromptOverride(null);
+                setEditing(false);
+              }}
+              className="text-[0.66rem] text-[var(--tessera-text-muted)] underline hover:text-[var(--tessera-text)]"
+            >
+              réinitialiser
+            </button>
+          ) : null}
+        </span>
+
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          <Shield className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+          <span className="text-[var(--tessera-text-muted)]">Garde-fous</span>
+          {cats.map((c) => {
+            const on = !guardDisabled.includes(c.key);
+            return (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => toggleGuard(c.key)}
+                title={`${c.detail} (${c.count} motifs)`}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[0.66rem] transition-colors",
+                  on
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                    : "border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)] line-through",
+                )}
+              >
+                {on ? <ShieldCheck className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+                {c.label}
+              </button>
+            );
+          })}
+        </span>
+
+        <button
+          type="button"
+          onClick={onNewSession}
+          className="ml-auto flex h-8 items-center gap-1.5 rounded-md border border-[#d98b1f]/55 bg-[linear-gradient(180deg,#3a2a14,#21180d)] px-3 text-[0.72rem] font-medium text-[#f4c76a] hover:border-[#f4c76a]/65"
+        >
+          <Plus className="h-3.5 w-3.5" /> {newSessionLabel}
+        </button>
+      </div>
+
+      {editing ? (
+        <div className="flex flex-col gap-1">
+          <textarea
+            value={promptOverride ?? basePrompt}
+            onChange={(e) => onPromptOverride(e.target.value)}
+            rows={8}
+            spellCheck={false}
+            className="w-full resize-y rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg)] px-3 py-2 font-mono text-[0.68rem] leading-relaxed text-[var(--tessera-text)]"
+          />
+          <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
+            Override appliqué aux prochains messages de cette session — non persisté.
+          </p>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

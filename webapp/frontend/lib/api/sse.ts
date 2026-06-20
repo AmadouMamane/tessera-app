@@ -32,6 +32,10 @@ export interface ChatTurnRequest {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
   /** Optional chat-model override; defaults to the Settings picker choice. */
   model?: string;
+  /** Sandbox console: replace the system prompt for this turn only. */
+  system_prompt_override?: string;
+  /** Sandbox console: guard categories disabled for this turn (e.g. ["prompt_injection"]). */
+  guard_overrides?: string[];
 }
 
 export interface ChatTurnCallbacks {

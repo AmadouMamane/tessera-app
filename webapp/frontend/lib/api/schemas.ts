@@ -108,6 +108,22 @@ export const ChatTokenEventSchema = z.object({
 });
 export type ChatTokenEvent = z.infer<typeof ChatTokenEventSchema>;
 
+// Sandbox console playground defaults (live system prompt + toggleable guard
+// categories). Used to prefill the console's prompt editor and guard switches.
+export const SandboxGuardCategorySchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  count: z.number(),
+  detail: z.string(),
+});
+export const SandboxConfigSchema = z.object({
+  available: z.boolean(),
+  language: z.string().optional(),
+  system_prompt: z.string().default(""),
+  guard_categories: z.array(SandboxGuardCategorySchema).default([]),
+});
+export type SandboxConfig = z.infer<typeof SandboxConfigSchema>;
+
 export const ChatErrorEventSchema = z.object({
   error: z.string(),
 });

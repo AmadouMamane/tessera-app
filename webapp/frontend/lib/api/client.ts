@@ -55,6 +55,8 @@ import {
   BudgetSnapshotSchema,
   type Calibration,
   CalibrationSchema,
+  type CatalogueConsumers,
+  CatalogueConsumersSchema,
   type CitationResolution,
   CitationResolutionSchema,
   type CitationSummary,
@@ -97,10 +99,6 @@ import {
   FailedCasesReportSchema,
   type FailedRunsReport,
   FailedRunsReportSchema,
-  type CatalogueConsumers,
-  CatalogueConsumersSchema,
-  type RbacMatrix,
-  RbacMatrixSchema,
   type FirewallEfficacy,
   FirewallEfficacySchema,
   type Fleet,
@@ -170,16 +168,18 @@ import {
   ProposeAgentSchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
-  type ReleaseAgent,
-  ReleaseAgentSchema,
   type QualityDatasetsReport,
   QualityDatasetsReportSchema,
+  type RbacMatrix,
+  RbacMatrixSchema,
   type RedTeamResponse,
   RedTeamResponseSchema,
   type RefusalReport,
   RefusalReportSchema,
   type RegressionRisk,
   RegressionRiskSchema,
+  type ReleaseAgent,
+  ReleaseAgentSchema,
   type ReleaseStatus,
   ReleaseStatusSchema,
   type ReliabilityReport,
@@ -208,6 +208,8 @@ import {
   SFTDatasetSchema,
   type SLOReport,
   SLOReportSchema,
+  type SandboxConfig,
+  SandboxConfigSchema,
   type ScoreSeries,
   ScoreSeriesSchema,
   type SessionDetail,
@@ -1148,6 +1150,18 @@ export async function fetchAgentConsole(signal?: AbortSignal): Promise<AgentCons
   return request("/observability/agent-console", { signal }, AgentConsoleSchema);
 }
 
+/** Sandbox console defaults: the live system prompt + toggleable guard categories. */
+export async function fetchSandboxConfig(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<SandboxConfig> {
+  return request(
+    `/observability/sandbox-config?lang=${encodeURIComponent(lang)}`,
+    { signal },
+    SandboxConfigSchema,
+  );
+}
+
 /** Read the persisted operator feedback (turn -> rating) for a conversation. */
 export async function fetchConsoleFeedback(
   conversationId: string,
@@ -1332,7 +1346,11 @@ export async function fetchCatalogueConsumers(
   signal?: AbortSignal,
 ): Promise<CatalogueConsumers> {
   const params = new URLSearchParams({ kind, agent });
-  return request(`/observability/catalogue-consumers?${params}`, { signal }, CatalogueConsumersSchema);
+  return request(
+    `/observability/catalogue-consumers?${params}`,
+    { signal },
+    CatalogueConsumersSchema,
+  );
 }
 
 /** Governed, audited proposal to add a new agent (registry is approved as a unit). */
