@@ -3717,7 +3717,8 @@
     "actions": {
       "export": "Export",
       "import": "Import",
-      "create": "Create a role"
+      "create": "Create a role",
+      "viewUsers": "View users"
     },
     "tabs": {
       "overview": "Overview",
@@ -3742,13 +3743,12 @@
       "all": "All"
     },
     "kpi": {
-      "users": "Users",
+      "accounts": "Accounts",
       "roles": "Roles",
-      "groups": "Groups",
-      "active_access": "Active access (24h)",
-      "pending": "Pending requests",
-      "sod_violations": "SoD violations (active)",
-      "inactive": "Inactive accounts (>90d)"
+      "capabilities": "Capabilities",
+      "agents": "Agents covered",
+      "active": "Active accounts",
+      "mfa": "MFA"
     },
     "col": {
       "name": "Name",
@@ -3763,8 +3763,8 @@
       "status": "Status"
     },
     "type": {
-      "systeme": "System",
-      "metier": "Business"
+      "systeme": "Privileged",
+      "metier": "Read-only"
     },
     "status": {
       "active": "Active",
@@ -3791,7 +3791,12 @@
       "environment": "Environment",
       "permDist": "Permission distribution",
       "accessScope": "Access scope",
-      "viewDetail": "View detail"
+      "viewDetail": "View detail",
+      "selectHint": "Select a role to view details.",
+      "close": "Close",
+      "capabilities": "Capabilities",
+      "source": "Source",
+      "lastModified": "Last modified"
     },
     "perm": {
       "full": "Full",
@@ -3804,10 +3809,15 @@
       "guardrails": "Risks & guardrails",
       "compliance": "Compliance",
       "audit": "Audit & proofs",
-      "system": "System"
+      "system": "System",
+      "cockpit": "Cockpit",
+      "produit": "Product space",
+      "configuration": "Configuration",
+      "release": "Release",
+      "modeles": "Models"
     },
     "zone": {
-      "topRoles": "Top roles by access",
+      "topRoles": "Top roles by capabilities",
       "byResource": "Access by resource",
       "pending": "Pending requests",
       "sod": "SoD violations",
@@ -3826,9 +3836,32 @@
     },
     "footer": {
       "total": "{n} roles",
-      "source": "Source of truth: {src}"
+      "source": "Source of truth: {src}",
+      "shown": "{n} roles shown"
     },
-    "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher."
+    "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher.",
+    "readonlyNote": "Roles defined in code (session.ts), changed via PR",
+    "cap": {
+      "cockpit": "Cockpit",
+      "produit": "Product space",
+      "configurer": "Configuration",
+      "release": "Release",
+      "modeles_frontier": "Frontier models",
+      "cockpit_lecture": "Cockpit (read)",
+      "audit_lecture": "Audit (read)"
+    },
+    "memberStatus": {
+      "active": "Active",
+      "provisioned": "On demand"
+    },
+    "empty": {
+      "roles": "No matching role.",
+      "pending": "No pending requests — no request workflow in Phase 1.",
+      "sod": "No SoD conflict — one role per account.",
+      "inactive": "No inactive accounts.",
+      "members": "No users assigned.",
+      "groups": "No groups — no group concept in Phase 1."
+    }
   },
   "integrations": {
     "title": "Integrations",

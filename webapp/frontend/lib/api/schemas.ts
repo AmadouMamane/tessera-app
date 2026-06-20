@@ -2824,6 +2824,14 @@ export const AccessOverviewSchema = z.object({
       environment: z.string(),
       modified: z.string(),
       status: z.enum(["active", "deprecated", "disabled"]),
+      caps: z.array(z.string()).default([]),
+      owner: z.string().default(""),
+      created: z.string().default("-"),
+      members: z
+        .array(z.object({ name: z.string(), team: z.string(), status: z.string() }))
+        .default([]),
+      permission_dist: z.array(RaSliceSchema).default([]),
+      access_scope: z.array(RaSliceSchema).default([]),
     }),
   ),
   selected: z.object({
@@ -2840,6 +2848,7 @@ export const AccessOverviewSchema = z.object({
     members: z.array(z.object({ name: z.string(), team: z.string(), status: z.string() })),
     permission_dist: z.array(RaSliceSchema),
     access_scope: z.array(RaSliceSchema),
+    caps: z.array(z.string()).default([]),
   }),
   top_roles: z.array(z.object({ name: z.string(), value: z.number(), label: z.string() })),
   access_by_resource: z.array(RaSliceSchema),

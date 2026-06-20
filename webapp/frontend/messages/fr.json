@@ -3717,7 +3717,8 @@
     "actions": {
       "export": "Exporter",
       "import": "Importer",
-      "create": "Créer un rôle"
+      "create": "Créer un rôle",
+      "viewUsers": "Voir les utilisateurs"
     },
     "tabs": {
       "overview": "Vue d’ensemble",
@@ -3742,13 +3743,12 @@
       "all": "Tous"
     },
     "kpi": {
-      "users": "Utilisateurs",
+      "accounts": "Comptes",
       "roles": "Rôles",
-      "groups": "Groupes",
-      "active_access": "Accès actifs (24h)",
-      "pending": "Demandes en attente",
-      "sod_violations": "Violations SoD (actives)",
-      "inactive": "Comptes inactifs (>90j)"
+      "capabilities": "Capacités",
+      "agents": "Agents couverts",
+      "active": "Comptes actifs",
+      "mfa": "MFA"
     },
     "col": {
       "name": "Nom",
@@ -3763,8 +3763,8 @@
       "status": "Statut"
     },
     "type": {
-      "systeme": "Système",
-      "metier": "Métier"
+      "systeme": "Privilégié",
+      "metier": "Lecture seule"
     },
     "status": {
       "active": "Actif",
@@ -3791,7 +3791,12 @@
       "environment": "Environnement",
       "permDist": "Répartition des permissions",
       "accessScope": "Portée d’accès",
-      "viewDetail": "Voir le détail"
+      "viewDetail": "Voir le détail",
+      "selectHint": "Sélectionnez un rôle pour voir le détail.",
+      "close": "Fermer",
+      "capabilities": "Capacités",
+      "source": "Source",
+      "lastModified": "Dernière modification"
     },
     "perm": {
       "full": "Complètes",
@@ -3804,10 +3809,15 @@
       "guardrails": "Risques & garde-fous",
       "compliance": "Conformité",
       "audit": "Audit & preuves",
-      "system": "Système"
+      "system": "Système",
+      "cockpit": "Cockpit",
+      "produit": "Espace produit",
+      "configuration": "Configuration",
+      "release": "Release",
+      "modeles": "Modèles"
     },
     "zone": {
-      "topRoles": "Principaux rôles par accès",
+      "topRoles": "Principaux rôles par capacités",
       "byResource": "Accès par ressource",
       "pending": "Demandes en attente",
       "sod": "Violations SoD",
@@ -3826,9 +3836,32 @@
     },
     "footer": {
       "total": "{n} rôles",
-      "source": "Source de vérité : {src}"
+      "source": "Source de vérité : {src}",
+      "shown": "{n} rôles affichés"
     },
-    "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT."
+    "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT.",
+    "readonlyNote": "Rôles définis dans le code (session.ts), modifiés par PR",
+    "cap": {
+      "cockpit": "Cockpit",
+      "produit": "Espace produit",
+      "configurer": "Configuration",
+      "release": "Release",
+      "modeles_frontier": "Modèles frontier",
+      "cockpit_lecture": "Cockpit (lecture)",
+      "audit_lecture": "Audit (lecture)"
+    },
+    "memberStatus": {
+      "active": "Actif",
+      "provisioned": "À la demande"
+    },
+    "empty": {
+      "roles": "Aucun rôle ne correspond.",
+      "pending": "Aucune demande en attente — pas de workflow de demande en Phase 1.",
+      "sod": "Aucun conflit SoD — un rôle par compte.",
+      "inactive": "Aucun compte inactif.",
+      "members": "Aucun utilisateur affecté.",
+      "groups": "Aucun groupe — pas de notion de groupe en Phase 1."
+    }
   },
   "integrations": {
     "title": "Intégrations",

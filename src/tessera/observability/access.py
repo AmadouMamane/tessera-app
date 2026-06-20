@@ -1,219 +1,272 @@
-"""Roles & access cockpit overview (page #18).
+"""Roles & access cockpit overview (page #18, admin/roles-acces).
 
-Composes the "Rôles & accès" overview: the access posture (users, roles, groups,
-active access, pending requests, SoD violations, inactive accounts), the role
-catalogue table, the selected-role detail (members, permission distribution,
-access scope) and the governance panels (top roles, access by resource, pending
-requests, SoD violations).
+Surfaces the **real** access model the system actually enforces, not an invented
+300-seat directory. The roles come from :data:`tessera.observability.rbac.ROLE_CAPS`
+(mirrored from ``lib/auth/session.ts`` — the same caps the auth layer checks); the
+accounts are the seeded operator accounts (ADR 0009, mirror of ``accounts.ts``);
+the coverage is the real registry agent count.
 
-The dataset is a deterministic reference fixture; values are stable across calls
-so the page never "dances".
+Like Prompts, this page is **read-only by design**: RBAC roles are defined in code
+(``session.ts`` / this module) and changed via PR, so there is no UI mutation — a
+"create role" button would be a fake control. The functional axis is therefore real
+data + wired search / filter / sort / row-select / nav, not a fabricated store.
+
+Unsourceable slots (access requests, SoD conflicts, inactive sessions) have no
+Phase-1 store, so they render honest **empty** states rather than fabricated rows;
+the per-account model is 1 role each, so no separation-of-duties conflict can exist.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
+
+from tessera.observability.rbac import ROLE_CAPS
 
 __all__ = ["compute_access_overview"]
+
+# Mirror of the seeded operator accounts (accounts.ts / users.py). superadmin is
+# only registered when TESSERA_AUTH_SUPERADMIN_PASSWORD is set, so it is marked
+# provisioned-on-demand rather than counted as an active session.
+_ACCOUNTS = [
+    {"username": "admin", "team": "ML Engineering", "role": "admin", "active": True, "mfa": True},
+    {"username": "auditor", "team": "Conformité", "role": "auditor", "active": True, "mfa": True},
+    {
+        "username": "superadmin",
+        "team": "Plateforme",
+        "role": "superadmin",
+        "active": False,
+        "mfa": True,
+    },
+]
+
+# Each capability classified by privilege kind (reuses the perm.* i18n labels) and
+# mapped to a resource area (reuses the resource.* i18n labels) for the per-role and
+# global distributions. Stable keys; the frontend localises them.
+_CAP_KIND = {
+    "release": "full",
+    "modeles_frontier": "full",
+    "cockpit": "partial",
+    "produit": "partial",
+    "configurer": "partial",
+    "cockpit_lecture": "readonly",
+    "audit_lecture": "readonly",
+}
+_CAP_AREA = {
+    "cockpit": "cockpit",
+    "cockpit_lecture": "cockpit",
+    "produit": "produit",
+    "configurer": "configuration",
+    "release": "release",
+    "modeles_frontier": "modeles",
+    "audit_lecture": "audit",
+}
+_KIND_COLOR = {"full": "#60a5fa", "partial": "#a78bfa", "readonly": "#34d399", "none": "#64748b"}
+_AREA_COLOR = {
+    "cockpit": "#60a5fa",
+    "produit": "#22d3ee",
+    "configuration": "#a78bfa",
+    "release": "#f59e0b",
+    "modeles": "#f472b6",
+    "audit": "#34d399",
+}
+# Privileged (can mutate) vs read-only roles — the axis the Type filter partitions.
+_PRIVILEGED = {"admin", "superadmin"}
+
+_ROLE_DESC = {
+    "admin": "Administration de la plateforme : cockpit, produit, configuration et release.",
+    "auditor": "Lecture seule sur le cockpit et les journaux d'audit, sans action.",
+    "superadmin": "Administration complète incluant l'accès aux modèles frontier.",
+}
 
 
 def _kpi(key: str, value: str, sub: str, series: list[int]) -> dict[str, object]:
     return {"key": key, "value": value, "sub": sub, "series": series}
 
 
+def _slice(key: str, count: int, total: int, color: str) -> dict[str, object]:
+    pct = round(count / total * 100) if total else 0
+    return {"key": key, "count": count, "pct": pct, "color": color}
+
+
+def _accounts_for(role_id: str) -> list[dict[str, object]]:
+    out: list[dict[str, object]] = []
+    for acc in _ACCOUNTS:
+        if acc["role"] != role_id:
+            continue
+        status = "active" if acc["active"] else "provisioned"
+        out.append({"name": str(acc["username"]), "team": str(acc["team"]), "status": status})
+    return out
+
+
+def _role_modified() -> str:
+    """Real last-modified of the RBAC source file (dd/mm/YYYY HH:MM)."""
+    try:
+        mtime = Path(__file__).with_name("rbac.py").stat().st_mtime
+        return datetime.fromtimestamp(mtime, UTC).strftime("%d/%m/%Y %H:%M")
+    except OSError:
+        return "-"
+
+
+def _perm_dist(caps: list[str]) -> list[dict[str, object]]:
+    """Per-role capability breakdown by privilege kind (full/partial/readonly)."""
+    counts: dict[str, int] = {}
+    for cap in caps:
+        kind = _CAP_KIND.get(cap, "none")
+        counts[kind] = counts.get(kind, 0) + 1
+    total = len(caps) or 1
+    order = ["full", "partial", "readonly", "none"]
+    return [
+        _slice(k, counts[k], total, _KIND_COLOR[k]) for k in order if counts.get(k)
+    ]
+
+
+def _area_dist(caps: list[str]) -> list[dict[str, object]]:
+    """Per-role coverage by resource area."""
+    counts: dict[str, int] = {}
+    for cap in caps:
+        area = _CAP_AREA.get(cap, "cockpit")
+        counts[area] = counts.get(area, 0) + 1
+    total = len(caps) or 1
+    return [
+        _slice(area, n, total, _AREA_COLOR.get(area, "#64748b"))
+        for area, n in sorted(counts.items(), key=lambda kv: -kv[1])
+    ]
+
+
+@dataclass(frozen=True)
+class _RoleFull:
+    """A fully-resolved role: the public row fields plus caps + members."""
+
+    id: str
+    name: str
+    type: str
+    description: str
+    modified: str
+    caps: list[str]
+    members: list[dict[str, object]]
+
+    @property
+    def users(self) -> int:
+        return len(self.members)
+
+    @property
+    def permissions(self) -> int:
+        return len(self.caps)
+
+    def row(self) -> dict[str, object]:
+        """The client role row: public fields + per-role detail."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "type": self.type,
+            "description": self.description,
+            "users": self.users,
+            "groups": 0,  # honest: no group store in Phase 1
+            "permissions": self.permissions,
+            "scope": "Organisation",
+            "environment": "Tous",
+            "modified": self.modified,
+            "status": "active",
+            "caps": self.caps,
+            "members": self.members,
+            "permission_dist": _perm_dist(self.caps),
+            "access_scope": _area_dist(self.caps),
+            "owner": "Défini dans le code (session.ts)",
+            "created": "-",
+        }
+
+
+def _build_role(role_id: str, meta: dict[str, object], modified: str) -> _RoleFull:
+    caps_raw = meta.get("caps", [])
+    caps = [str(c) for c in caps_raw] if isinstance(caps_raw, list) else []
+    return _RoleFull(
+        id=role_id,
+        name=str(meta.get("label", role_id)),
+        type="systeme" if role_id in _PRIVILEGED else "metier",
+        description=_ROLE_DESC.get(role_id, ""),
+        modified=modified,
+        caps=caps,
+        members=_accounts_for(role_id),
+    )
+
+
 def compute_access_overview() -> dict[str, object]:
-    """Return the full Roles & access overview payload.
+    """Return the full Roles & access overview, built from the real RBAC model.
 
     Returns:
-        A JSON-serialisable mapping with the access posture KPIs, the role table,
-        the selected-role detail and the governance panels.
+        A JSON-serialisable mapping with the access posture KPIs (accounts, roles,
+        capabilities, agents covered, active accounts, MFA), the role catalogue
+        (one row per enforced role), the selected-role detail (members, privilege
+        and resource distributions) and the governance panels (top roles, access by
+        resource, and the honest-empty requests / SoD / inactive panels).
     """
     now = datetime.now(UTC)
+    modified = _role_modified()
+
+    try:
+        from tessera.agent.registry import list_agents
+
+        agent_count = len(list_agents())
+    except (OSError, ValueError):
+        agent_count = 0
+
+    roles_full = [_build_role(rid, meta, modified) for rid, meta in ROLE_CAPS.items()]
+
+    # ── posture ──────────────────────────────────────────────────────────────
+    accounts_per_role = [r.users for r in roles_full]
+    caps_per_role = [r.permissions for r in roles_full]
+    active_accounts = sum(1 for a in _ACCOUNTS if a["active"])
+    mfa_accounts = sum(1 for a in _ACCOUNTS if a["active"] and a["mfa"])
+    all_caps = sorted({c for r in roles_full for c in r.caps})
+    roles_granting = [sum(1 for r in roles_full if cap in r.caps) for cap in all_caps]
 
     kpis = [
-        _kpi("users", "342", "+12 ce mois", [318, 324, 329, 333, 337, 340, 342]),
-        _kpi("roles", "28", "+2", [24, 25, 26, 26, 27, 28, 28]),
-        _kpi("groups", "15", "+1", [13, 13, 14, 14, 15, 15, 15]),
-        _kpi("active_access", "1 842", "+27%", [1400, 1500, 1600, 1680, 1740, 1800, 1842]),
-        _kpi("pending", "27", "demandes", [18, 20, 22, 24, 25, 26, 27]),
-        _kpi("sod_violations", "5", "actives", [8, 7, 7, 6, 6, 5, 5]),
-        _kpi("inactive", "14", ">90 jours", [18, 17, 16, 16, 15, 15, 14]),
+        _kpi("accounts", str(len(_ACCOUNTS)), "comptes opérateurs", accounts_per_role),
+        _kpi("roles", str(len(roles_full)), "rôles appliqués", caps_per_role),
+        _kpi("capabilities", str(len(all_caps)), "capacités distinctes", roles_granting),
+        _kpi("agents", str(agent_count), "agents couverts (org)", caps_per_role),
+        _kpi("active", str(active_accounts), "comptes actifs", accounts_per_role),
+        _kpi("mfa", f"{mfa_accounts}/{active_accounts}", "MFA activée", accounts_per_role),
     ]
 
-    roles = [
-        {
-            "id": "ROLE-001",
-            "name": "Platform Admin",
-            "type": "systeme",
-            "description": "Administration complète de la plateforme",
-            "users": 3,
-            "groups": 1,
-            "permissions": 142,
-            "scope": "Globale",
-            "environment": "Tous",
-            "modified": "11/06/2026 09:12",
-            "status": "active",
-        },
-        {
-            "id": "ROLE-002",
-            "name": "Security Administrator",
-            "type": "systeme",
-            "description": "Gestion des risques, garde-fous, accès et conformité",
-            "users": 5,
-            "groups": 2,
-            "permissions": 86,
-            "scope": "Globale",
-            "environment": "Tous",
-            "modified": "11/06/2026 08:54",
-            "status": "active",
-        },
-        {
-            "id": "ROLE-003",
-            "name": "Compliance Officer",
-            "type": "metier",
-            "description": "Supervision conformité, preuves et audits",
-            "users": 12,
-            "groups": 3,
-            "permissions": 54,
-            "scope": "Globale",
-            "environment": "Tous",
-            "modified": "10/06/2026 16:33",
-            "status": "active",
-        },
-        {
-            "id": "ROLE-004",
-            "name": "AI Quality Engineer",
-            "type": "metier",
-            "description": "Évaluation et curation des jeux de test",
-            "users": 18,
-            "groups": 2,
-            "permissions": 47,
-            "scope": "Prod",
-            "environment": "Prod",
-            "modified": "10/06/2026 11:20",
-            "status": "active",
-        },
-        {
-            "id": "ROLE-005",
-            "name": "Auditor (read-only)",
-            "type": "metier",
-            "description": "Lecture seule sur les journaux et preuves",
-            "users": 9,
-            "groups": 1,
-            "permissions": 22,
-            "scope": "Globale",
-            "environment": "Tous",
-            "modified": "09/06/2026 14:02",
-            "status": "active",
-        },
-        {
-            "id": "ROLE-006",
-            "name": "Data Steward",
-            "type": "metier",
-            "description": "Gouvernance des sources et de la mémoire",
-            "users": 7,
-            "groups": 2,
-            "permissions": 38,
-            "scope": "Prod",
-            "environment": "Prod",
-            "modified": "08/06/2026 10:41",
-            "status": "active",
-        },
-        {
-            "id": "ROLE-007",
-            "name": "Legacy Operator",
-            "type": "systeme",
-            "description": "Rôle hérité — en cours de dépréciation",
-            "users": 2,
-            "groups": 0,
-            "permissions": 31,
-            "scope": "Preprod",
-            "environment": "Preprod",
-            "modified": "02/06/2026 09:27",
-            "status": "deprecated",
-        },
-    ]
+    # ── selected detail (default: first role) — SSR fallback; the client drives
+    # the panel from the selected row.
+    first = roles_full[0]
+    selected = {**first.row(), "modified": f"{modified} via PR", "scope": "Organisation"}
 
-    selected = {
-        "id": "ROLE-002",
-        "name": "Security Administrator",
-        "type": "systeme",
-        "scope": "Globale",
-        "description": (
-            "Gestion des risques, garde-fous, accès et conformité sur l'ensemble de la plateforme."
-        ),
-        "owner": "alice (AI Quality Team)",
-        "created": "05/04/2026 10:12",
-        "modified": "11/06/2026 08:54 par bob",
-        "status": "active",
-        "environment": "Tous",
-        "members": [
-            {"name": "alice", "team": "AI Quality Team", "status": "active"},
-            {"name": "bob", "team": "AI Quality Team", "status": "active"},
-            {"name": "carla", "team": "AI Quality Team", "status": "active"},
-            {"name": "dave", "team": "Data Platform", "status": "active"},
-            {"name": "eve", "team": "Compliance Team", "status": "active"},
-        ],
-        "permission_dist": [
-            {"key": "full", "count": 32, "pct": 37, "color": "#60a5fa"},
-            {"key": "partial", "count": 41, "pct": 48, "color": "#a78bfa"},
-            {"key": "readonly", "count": 9, "pct": 10, "color": "#34d399"},
-            {"key": "none", "count": 4, "pct": 3, "color": "#64748b"},
-        ],
-        "access_scope": [
-            {"key": "data", "count": 42, "pct": 43, "color": "#60a5fa"},
-            {"key": "guardrails", "count": 21, "pct": 22, "color": "#f87171"},
-            {"key": "compliance", "count": 14, "pct": 15, "color": "#a78bfa"},
-            {"key": "audit", "count": 9, "pct": 10, "color": "#34d399"},
-            {"key": "system", "count": 9, "pct": 10, "color": "#fbbf24"},
-        ],
-    }
-
+    # ── governance panels ────────────────────────────────────────────────────
     top_roles = [
-        {"name": "AI Quality Engineer", "value": 18, "label": "18 accès"},
-        {"name": "Compliance Officer", "value": 12, "label": "12 accès"},
-        {"name": "Auditor (read-only)", "value": 9, "label": "9 accès"},
-        {"name": "Data Steward", "value": 7, "label": "7 accès"},
-        {"name": "Security Administrator", "value": 5, "label": "5 accès"},
+        {"name": r.name, "value": r.permissions, "label": f"{r.permissions} capacités"}
+        for r in sorted(roles_full, key=lambda r: -r.permissions)
     ]
 
+    area_totals: dict[str, int] = {}
+    for r in roles_full:
+        for cap in r.caps:
+            area = _CAP_AREA.get(cap, "cockpit")
+            area_totals[area] = area_totals.get(area, 0) + 1
+    grand = sum(area_totals.values()) or 1
     access_by_resource = [
-        {"key": "data", "count": 642, "pct": 35, "color": "#60a5fa"},
-        {"key": "guardrails", "count": 384, "pct": 21, "color": "#f87171"},
-        {"key": "compliance", "count": 312, "pct": 17, "color": "#a78bfa"},
-        {"key": "audit", "count": 268, "pct": 15, "color": "#34d399"},
-        {"key": "system", "count": 236, "pct": 12, "color": "#fbbf24"},
+        _slice(area, n, grand, _AREA_COLOR.get(area, "#64748b"))
+        for area, n in sorted(area_totals.items(), key=lambda kv: -kv[1])
     ]
 
-    pending_requests = [
-        {"user": "frank", "role": "AI Quality Engineer", "since": "21 min", "risk": "low"},
-        {"user": "grace", "role": "Compliance Officer", "since": "1 h 05", "risk": "medium"},
-        {"user": "heidi", "role": "Platform Admin", "since": "2 h 40", "risk": "high"},
-    ]
-
-    sod_violations = [
-        {"user": "ivan", "conflict": "Auditor + Data Steward", "severity": "high"},
-        {"user": "judy", "conflict": "Compliance + Platform Admin", "severity": "high"},
-        {"user": "mallory", "conflict": "Operator + Auditor", "severity": "medium"},
-    ]
-
-    inactive_accounts = [
-        {"user": "oscar", "last_seen": "il y a 124 j", "role": "Auditor (read-only)"},
-        {"user": "peggy", "last_seen": "il y a 98 j", "role": "Data Steward"},
-        {"user": "trent", "last_seen": "il y a 92 j", "role": "Legacy Operator"},
-    ]
+    roles = [r.row() for r in roles_full]
 
     return {
         "generated_at": now.isoformat(),
-        "total_roles": 28,
-        "page_size": 7,
+        "total_roles": len(roles_full),
+        "page_size": len(roles_full),
         "kpis": kpis,
         "roles": roles,
         "selected": selected,
         "top_roles": top_roles,
         "access_by_resource": access_by_resource,
-        "pending_requests": pending_requests,
-        "sod_violations": sod_violations,
-        "inactive_accounts": inactive_accounts,
-        "footer": {"total": 28, "source": "YAML · Git"},
+        # No Phase-1 store for these — honest empty, not fabricated rows.
+        "pending_requests": [],
+        "sod_violations": [],
+        "inactive_accounts": [],
+        "footer": {"total": len(roles_full), "source": "session.ts (RBAC) · Git"},
     }
