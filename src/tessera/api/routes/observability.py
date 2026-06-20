@@ -37,6 +37,7 @@ from tessera.observability import (
     client_space as client_space_mod,
     compliance as compliance_mod,
     conformance as conformance_mod,
+    connectors as connectors_mod,
     consistency as consistency_mod,
     console_feedback as console_feedback_mod,
     context_overflow as context_overflow_mod,
@@ -110,6 +111,7 @@ from tessera.observability import (
     trace_snapshot as trace_snapshot_mod,
     trajectory as trajectory_mod,
     trends as trends_mod,
+    users as users_mod,
     whatchanged as whatchanged_mod,
     why_answer as why_answer_mod,
 )
@@ -2385,3 +2387,23 @@ class _SettingBody(BaseModel):
 async def observability_client_settings_save(body: _SettingBody) -> dict[str, object]:
     """Persist one preference and return the full settings payload."""
     return {"available": True, **client_space_mod.update_setting(body.key, body.value)}
+
+
+@router.get("/observability/connectors")
+async def observability_connectors() -> dict[str, object]:
+    """Connectors overview for the real Tessera stack (configurer/connecteurs)."""
+    try:
+        return {"available": True, **connectors_mod.compute_connectors()}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.connectors: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/users")
+async def observability_users() -> dict[str, object]:
+    """Users overview from the real seeded operator accounts (admin/utilisateurs)."""
+    try:
+        return {"available": True, **users_mod.compute_users()}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.users: failed: {exc}\n")
+        return {"available": False}

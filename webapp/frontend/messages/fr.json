@@ -4910,5 +4910,114 @@
     "footer": {
       "source": "Source : {src}"
     }
+  },
+  "connectors": {
+    "subtitle": "Les dépendances externes réelles de Tessera : LLM, récupération, garde-fou, secrets, observabilité, infrastructure.",
+    "unavailable": "Connecteurs indisponibles pour le moment.",
+    "search": "Rechercher un connecteur…",
+    "allCategories": "Toutes les catégories",
+    "allStatuses": "Tous les statuts",
+    "byCategory": "Par catégorie",
+    "rowCount": "{n} connecteurs",
+    "kpi": {
+      "total": "Connecteurs",
+      "active": "Actifs",
+      "standby": "En veille",
+      "mode": "Mode"
+    },
+    "category": {
+      "llm": "LLM",
+      "retrieval": "Récupération",
+      "guard": "Garde-fou",
+      "secrets": "Secrets",
+      "observability": "Observabilité",
+      "infra": "Infrastructure"
+    },
+    "status": {
+      "active": "Actif",
+      "standby": "En veille",
+      "degraded": "Dégradé",
+      "error": "Erreur"
+    },
+    "col": {
+      "name": "Connecteur",
+      "category": "Catégorie",
+      "status": "Statut",
+      "environment": "Environnement",
+      "latency": "Latence",
+      "lastCheck": "Dernier contrôle"
+    },
+    "drawer": {
+      "close": "Fermer",
+      "role": "Rôle",
+      "endpoint": "Point d'accès",
+      "auth": "Authentification",
+      "version": "Version",
+      "environment": "Environnement",
+      "latency": "Latence",
+      "lastCheck": "Dernier contrôle"
+    },
+    "footer": {
+      "total": "{n} connecteurs",
+      "source": "Source : {src}"
+    }
+  },
+  "users": {
+    "subtitle": "Les comptes opérateurs réellement appliqués et leurs habilitations (RBAC).",
+    "unavailable": "Utilisateurs indisponibles pour le moment.",
+    "search": "Rechercher un utilisateur…",
+    "allRoles": "Tous les rôles",
+    "mfaOn": "Activée",
+    "mfaOff": "Désactivée",
+    "phaseNote": "Phase 1 (ADR 0009) : jeu de comptes amorcés, sans annuaire utilisateurs. Les rôles s'appliquent à l'échelle de l'organisation ; le provider OIDC est un suivi planifié.",
+    "kpi": {
+      "total": "Comptes",
+      "active": "Actifs",
+      "roles": "Rôles",
+      "mfa": "MFA"
+    },
+    "role": {
+      "admin": "Administrateur",
+      "auditor": "Auditeur",
+      "superadmin": "Super-admin"
+    },
+    "status": {
+      "active": "Actif",
+      "provisioned": "À la demande",
+      "disabled": "Désactivé"
+    },
+    "col": {
+      "display": "Utilisateur",
+      "role": "Rôle",
+      "team": "Équipe",
+      "status": "Statut",
+      "mfa": "MFA",
+      "lastLogin": "Dernière connexion"
+    },
+    "scope": {
+      "org": "Organisation entière"
+    },
+    "cap": {
+      "cockpit": "Cockpit",
+      "produit": "Produit",
+      "configurer": "Configurer",
+      "release": "Release",
+      "cockpit_lecture": "Cockpit (lecture)",
+      "audit_lecture": "Audit (lecture)",
+      "modeles_frontier": "Modèles frontier"
+    },
+    "drawer": {
+      "close": "Fermer",
+      "role": "Rôle",
+      "team": "Équipe",
+      "scope": "Périmètre",
+      "mfa": "MFA",
+      "lastLogin": "Dernière connexion",
+      "caps": "Habilitations"
+    },
+    "footer": {
+      "total": "{n} comptes",
+      "source": "Source : {src}"
+    }
   }
 }

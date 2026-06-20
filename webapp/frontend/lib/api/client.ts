@@ -75,6 +75,8 @@ import {
   ComplianceReportSchema,
   type ConformanceReport,
   ConformanceReportSchema,
+  type ConnectorsOverview,
+  ConnectorsOverviewSchema,
   type ConsistencyReport,
   ConsistencyReportSchema,
   type ConsoleFeedback,
@@ -258,6 +260,8 @@ import {
   TrajectorySchema,
   type TrendReport,
   TrendReportSchema,
+  type UsersOverview,
+  UsersOverviewSchema,
   type WhatChanged,
   WhatChangedSchema,
   type WhyExplanation,
@@ -1448,4 +1452,16 @@ export async function mutateClientSetting(body: {
     },
     ClientSettingsSchema,
   );
+}
+
+// ── Connectors & Users (cockpit) ─────────────────────────────────────────────
+
+/** Connectors overview for the real Tessera stack (configurer/connecteurs). */
+export async function fetchConnectors(signal?: AbortSignal): Promise<ConnectorsOverview> {
+  return request("/observability/connectors", { signal }, ConnectorsOverviewSchema);
+}
+
+/** Users overview from the real seeded operator accounts (admin/utilisateurs). */
+export async function fetchUsers(signal?: AbortSignal): Promise<UsersOverview> {
+  return request("/observability/users", { signal }, UsersOverviewSchema);
 }

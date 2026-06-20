@@ -4910,5 +4910,114 @@
     "footer": {
       "source": "Source: {src}"
     }
+  },
+  "connectors": {
+    "subtitle": "Tessera's real external dependencies: LLM, retrieval, guard, secrets, observability, infrastructure.",
+    "unavailable": "Connectors are currently unavailable.",
+    "search": "Search a connector…",
+    "allCategories": "All categories",
+    "allStatuses": "All statuses",
+    "byCategory": "By category",
+    "rowCount": "{n} connectors",
+    "kpi": {
+      "total": "Connectors",
+      "active": "Active",
+      "standby": "Standby",
+      "mode": "Mode"
+    },
+    "category": {
+      "llm": "LLM",
+      "retrieval": "Retrieval",
+      "guard": "Guard",
+      "secrets": "Secrets",
+      "observability": "Observability",
+      "infra": "Infrastructure"
+    },
+    "status": {
+      "active": "Active",
+      "standby": "Standby",
+      "degraded": "Degraded",
+      "error": "Error"
+    },
+    "col": {
+      "name": "Connector",
+      "category": "Category",
+      "status": "Status",
+      "environment": "Environment",
+      "latency": "Latency",
+      "lastCheck": "Last check"
+    },
+    "drawer": {
+      "close": "Close",
+      "role": "Role",
+      "endpoint": "Endpoint",
+      "auth": "Authentication",
+      "version": "Version",
+      "environment": "Environment",
+      "latency": "Latency",
+      "lastCheck": "Last check"
+    },
+    "footer": {
+      "total": "{n} connectors",
+      "source": "Source: {src}"
+    }
+  },
+  "users": {
+    "subtitle": "The operator accounts actually enforced and their capabilities (RBAC).",
+    "unavailable": "Users are currently unavailable.",
+    "search": "Search a user…",
+    "allRoles": "All roles",
+    "mfaOn": "On",
+    "mfaOff": "Off",
+    "phaseNote": "Phase 1 (ADR 0009): a seeded account set, no user directory. Roles are org-wide; the OIDC provider is a planned follow-up.",
+    "kpi": {
+      "total": "Accounts",
+      "active": "Active",
+      "roles": "Roles",
+      "mfa": "MFA"
+    },
+    "role": {
+      "admin": "Administrator",
+      "auditor": "Auditor",
+      "superadmin": "Super-admin"
+    },
+    "status": {
+      "active": "Active",
+      "provisioned": "On demand",
+      "disabled": "Disabled"
+    },
+    "col": {
+      "display": "User",
+      "role": "Role",
+      "team": "Team",
+      "status": "Status",
+      "mfa": "MFA",
+      "lastLogin": "Last login"
+    },
+    "scope": {
+      "org": "Whole organisation"
+    },
+    "cap": {
+      "cockpit": "Cockpit",
+      "produit": "Product",
+      "configurer": "Configure",
+      "release": "Release",
+      "cockpit_lecture": "Cockpit (read)",
+      "audit_lecture": "Audit (read)",
+      "modeles_frontier": "Frontier models"
+    },
+    "drawer": {
+      "close": "Close",
+      "role": "Role",
+      "team": "Team",
+      "scope": "Scope",
+      "mfa": "MFA",
+      "lastLogin": "Last login",
+      "caps": "Capabilities"
+    },
+    "footer": {
+      "total": "{n} accounts",
+      "source": "Source: {src}"
+    }
   }
 }

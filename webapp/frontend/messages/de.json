@@ -4910,5 +4910,114 @@
     "footer": {
       "source": "Quelle: {src}"
     }
+  },
+  "connectors": {
+    "subtitle": "Die realen externen Abhängigkeiten von Tessera: LLM, Retrieval, Leitplanke, Secrets, Observability, Infrastruktur.",
+    "unavailable": "Konnektoren derzeit nicht verfügbar.",
+    "search": "Konnektor suchen…",
+    "allCategories": "Alle Kategorien",
+    "allStatuses": "Alle Status",
+    "byCategory": "Nach Kategorie",
+    "rowCount": "{n} Konnektoren",
+    "kpi": {
+      "total": "Konnektoren",
+      "active": "Aktiv",
+      "standby": "Standby",
+      "mode": "Modus"
+    },
+    "category": {
+      "llm": "LLM",
+      "retrieval": "Retrieval",
+      "guard": "Leitplanke",
+      "secrets": "Secrets",
+      "observability": "Observability",
+      "infra": "Infrastruktur"
+    },
+    "status": {
+      "active": "Aktiv",
+      "standby": "Standby",
+      "degraded": "Beeinträchtigt",
+      "error": "Fehler"
+    },
+    "col": {
+      "name": "Konnektor",
+      "category": "Kategorie",
+      "status": "Status",
+      "environment": "Umgebung",
+      "latency": "Latenz",
+      "lastCheck": "Letzte Prüfung"
+    },
+    "drawer": {
+      "close": "Schließen",
+      "role": "Rolle",
+      "endpoint": "Endpunkt",
+      "auth": "Authentifizierung",
+      "version": "Version",
+      "environment": "Umgebung",
+      "latency": "Latenz",
+      "lastCheck": "Letzte Prüfung"
+    },
+    "footer": {
+      "total": "{n} Konnektoren",
+      "source": "Quelle: {src}"
+    }
+  },
+  "users": {
+    "subtitle": "Die tatsächlich durchgesetzten Operator-Konten und ihre Berechtigungen (RBAC).",
+    "unavailable": "Benutzer derzeit nicht verfügbar.",
+    "search": "Benutzer suchen…",
+    "allRoles": "Alle Rollen",
+    "mfaOn": "An",
+    "mfaOff": "Aus",
+    "phaseNote": "Phase 1 (ADR 0009): vorbelegte Konten, kein Benutzerverzeichnis. Rollen gelten organisationsweit; der OIDC-Provider ist eine geplante Folgemaßnahme.",
+    "kpi": {
+      "total": "Konten",
+      "active": "Aktiv",
+      "roles": "Rollen",
+      "mfa": "MFA"
+    },
+    "role": {
+      "admin": "Administrator",
+      "auditor": "Auditor",
+      "superadmin": "Super-Admin"
+    },
+    "status": {
+      "active": "Aktiv",
+      "provisioned": "Auf Anfrage",
+      "disabled": "Deaktiviert"
+    },
+    "col": {
+      "display": "Benutzer",
+      "role": "Rolle",
+      "team": "Team",
+      "status": "Status",
+      "mfa": "MFA",
+      "lastLogin": "Letzte Anmeldung"
+    },
+    "scope": {
+      "org": "Gesamte Organisation"
+    },
+    "cap": {
+      "cockpit": "Cockpit",
+      "produit": "Produkt",
+      "configurer": "Konfigurieren",
+      "release": "Release",
+      "cockpit_lecture": "Cockpit (lesen)",
+      "audit_lecture": "Audit (lesen)",
+      "modeles_frontier": "Frontier-Modelle"
+    },
+    "drawer": {
+      "close": "Schließen",
+      "role": "Rolle",
+      "team": "Team",
+      "scope": "Geltungsbereich",
+      "mfa": "MFA",
+      "lastLogin": "Letzte Anmeldung",
+      "caps": "Berechtigungen"
+    },
+    "footer": {
+      "total": "{n} Konten",
+      "source": "Quelle: {src}"
+    }
   }
 }

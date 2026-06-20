@@ -4911,3 +4911,78 @@ export const ClientSettingsSchema = z.object({
   footer: ClientFooterSchema.optional(),
 });
 export type ClientSettings = z.infer<typeof ClientSettingsSchema>;
+
+// ---------------------------------------------------------------------------
+// Connectors (configurer/connecteurs) — the real Tessera stack
+// ---------------------------------------------------------------------------
+
+const CxKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  sub: z.string(),
+  series: z.array(z.number()),
+});
+const CxSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+
+export const ConnectorsOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string().optional(),
+  kpis: z.array(CxKpiSchema).optional(),
+  connectors: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        category: z.string(),
+        status: z.enum(["active", "standby", "degraded", "error"]),
+        environment: z.string(),
+        latency: z.string(),
+        last_check: z.string(),
+        description: z.string(),
+        endpoint: z.string(),
+        auth: z.string(),
+        version: z.string(),
+        role: z.string(),
+      }),
+    )
+    .optional(),
+  distribution: z.array(CxSliceSchema).optional(),
+  footer: z.object({ total: z.number().int().optional(), source: z.string() }).optional(),
+});
+export type ConnectorsOverview = z.infer<typeof ConnectorsOverviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Users (admin/utilisateurs) — real seeded operator accounts + RBAC caps
+// ---------------------------------------------------------------------------
+
+export const UsersOverviewSchema = z.object({
+  available: z.boolean(),
+  generated_at: z.string().optional(),
+  kpis: z.array(CxKpiSchema).optional(),
+  users: z
+    .array(
+      z.object({
+        username: z.string(),
+        display: z.string(),
+        role: z.string(),
+        role_label: z.string(),
+        team: z.string(),
+        email: z.string(),
+        status: z.string(),
+        last_login: z.string(),
+        mfa: z.boolean(),
+        caps: z.array(z.string()),
+        scope: z.string(),
+        badge: z.string(),
+      }),
+    )
+    .optional(),
+  distribution: z.array(CxSliceSchema).optional(),
+  footer: z.object({ total: z.number().int().optional(), source: z.string() }).optional(),
+});
+export type UsersOverview = z.infer<typeof UsersOverviewSchema>;
