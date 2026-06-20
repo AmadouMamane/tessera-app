@@ -4515,7 +4515,8 @@
     "traceTotal": "Gesamtdauer",
     "traceSpans": "Spans",
     "traceExport": "Exportieren (JSONL)",
-    "traceEmpty": "Die Ausführungsspur erscheint hier nach einer Runde."
+    "traceEmpty": "Die Ausführungsspur erscheint hier nach einer Runde.",
+    "debugAwaiting": "Die Interna der Runde (Prompt, Speicher, Routing, Kosten, Bewertungen) erscheinen hier nach einer Runde."
   },
   "agentConnaissances": {
     "title": "Wissen",

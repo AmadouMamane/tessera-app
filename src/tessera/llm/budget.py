@@ -20,7 +20,12 @@ from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
-__all__ = ["BudgetSnapshot", "BudgetTracker", "get_budget_tracker"]
+__all__ = [
+    "BudgetSnapshot",
+    "BudgetTracker",
+    "estimate_turn_cost",
+    "get_budget_tracker",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +72,36 @@ _PRICES: dict[tuple[str, str], _Price] = {
         eur_per_million_output=Decimal("20.00"),
     ),
 }
+
+
+def estimate_turn_cost(
+    *, model: str, input_tokens: int, output_tokens: int
+) -> tuple[str, Decimal]:
+    """Estimate the indicative EUR cost of a single turn for ``model``.
+
+    Looks the model up in the price table by name (model names are unique
+    across providers), without instantiating a backend. Returns the resolved
+    ``(provider, cost)`` pair. Unknown models — notably the small local Ollama
+    chat models used in development — resolve to the on-prem provider at zero
+    marginal cost, which is the honest figure for local inference.
+
+    Args:
+        model: The chat model that actually ran the turn.
+        input_tokens: Prompt tokens billed.
+        output_tokens: Completion tokens billed.
+
+    Returns:
+        ``(provider, cost_eur)`` — provider is ``"ollama"`` when the model is
+        not in the price table; cost is :class:`~decimal.Decimal`.
+    """
+    for (backend, table_model), price in _PRICES.items():
+        if table_model == model:
+            cost = (
+                Decimal(input_tokens) * price.eur_per_million_input
+                + Decimal(output_tokens) * price.eur_per_million_output
+            ) / Decimal(1_000_000)
+            return backend, cost
+    return "ollama", Decimal(0)
 
 
 _BUDGET_FILE = Path("/tmp/tessera/budget.json")  # noqa: S108 — ephemeral local cache; the container mounts a dedicated volume here

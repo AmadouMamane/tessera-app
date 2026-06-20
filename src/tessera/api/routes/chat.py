@@ -12,6 +12,7 @@ import json
 import sys
 import time
 import uuid
+from enum import StrEnum
 from typing import TYPE_CHECKING, Annotated, Literal, cast
 
 from fastapi import APIRouter, Body
@@ -31,8 +32,9 @@ from tessera.agent.state import (
     ToolCallRecord,
     new_state,
 )
-from tessera.agent.supervisor import route_turn
+from tessera.agent.supervisor import RoutingDecision, route_turn
 from tessera.guard.audit import current_model, emit_handoff, emit_routing, guard_disabled
+from tessera.llm.budget import estimate_turn_cost, get_budget_tracker
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
@@ -354,6 +356,7 @@ def _debug_trace(
     starts: Mapping[str, float],
     *,
     warn_keys: frozenset[str] = frozenset(),
+    reporter_ms: float | None = None,
 ) -> dict[str, object]:
     """Build the trace waterfall from the *real* per-node timings (ADR 0010 #4).
 
@@ -383,11 +386,165 @@ def _debug_trace(
         (cast(float, s["start_ms"]) + cast(float, s["duration_ms"]) for s in spans),
         default=0.0,
     )
+    # The reporter streams *after* the graph pauses before it (interrupt_before),
+    # so its synthesis duration is never captured by the Phase-1 node timings.
+    # Append it as the final span — starting where Phase 1 ends — so the trace
+    # total reconciles with the turn's wall-clock latency instead of stopping at
+    # the lookups. Measured streaming wall time, not a fabricated figure.
+    if reporter_ms is not None and reporter_ms > 0 and "reporter" not in timings:
+        spans.append(
+            {
+                "key": "reporter",
+                "label": _trace_label("reporter"),
+                "start_ms": round(total, 1),
+                "duration_ms": round(reporter_ms, 1),
+                "status": "ok",
+            }
+        )
+        total += reporter_ms
     return {
         "title": "Trace d'execution",
         "total_ms": round(total, 1),
         "count": len(spans),
         "spans": spans,
+    }
+
+
+def _opt_float(value: object) -> float | None:
+    """Coerce a state value to ``float`` for the debug envelope, or ``None``."""
+    return float(value) if isinstance(value, int | float) else None
+
+
+def _as_int(value: object) -> int:
+    """Coerce a state value to ``int`` for the debug envelope, defaulting to 0."""
+    return int(value) if isinstance(value, int | float) else 0
+
+
+def _enum_value(item: object) -> str:
+    """Render a StrEnum (or any value) as its string form."""
+    return item.value if isinstance(item, StrEnum) else str(item)
+
+
+def _debug_prompt(state: Mapping[str, object]) -> dict[str, object] | None:
+    """Surface #1 — the exact LLM message list the reporter assembled."""
+    raw = state.get("debug_prompt_messages")
+    if not isinstance(raw, list) or not raw:
+        return None
+    messages = [
+        {"role": str(m.get("role", "")), "content": str(m.get("content", ""))}
+        for m in raw
+        if isinstance(m, dict)
+    ]
+    return {
+        "title": "Prompt LLM assemblé",
+        "messages": messages,
+        "message_count": len(messages),
+        "char_count": sum(len(str(m["content"])) for m in messages),
+    }
+
+
+def _debug_memory(state: Mapping[str, object]) -> dict[str, object] | None:
+    """Surface #2 — the injected memory context (summary, ledger, long-term)."""
+    raw = state.get("debug_memory")
+    if not isinstance(raw, dict):
+        return None
+    entities = raw.get("entities")
+    long_term = raw.get("long_term")
+    return {
+        "title": "Mémoire injectée",
+        "summary": raw.get("summary"),
+        "entities": [str(e) for e in entities] if isinstance(entities, list) else [],
+        "long_term": [str(x) for x in long_term] if isinstance(long_term, list) else [],
+        "recent_verbatim": _as_int(raw.get("recent_verbatim")),
+        "backend": str(raw.get("backend", "")),
+    }
+
+
+def _debug_routing(state: Mapping[str, object], decision: RoutingDecision) -> dict[str, object]:
+    """Surface #3 — routing decision plus the planner's plan and rationale."""
+    plan = state.get("plan", [])
+    plan_items = [_enum_value(w) for w in plan] if isinstance(plan, list) else []
+    rationale = state.get("plan_rationale")
+    return {
+        "title": "Routage & plan",
+        "agent_id": decision.agent_id,
+        "reason": decision.reason,
+        "handoff": decision.handoff,
+        "from_agent": decision.from_agent,
+        "plan": plan_items,
+        "plan_rationale": str(rationale) if rationale is not None else None,
+    }
+
+
+def _debug_usage(
+    state: Mapping[str, object], *, latency_ms: float, model: str
+) -> dict[str, object]:
+    """Surface #4 — real token counts, latency, and indicative cost."""
+    input_tokens = _as_int(state.get("input_tokens"))
+    output_tokens = _as_int(state.get("output_tokens"))
+    provider, cost = estimate_turn_cost(
+        model=model, input_tokens=input_tokens, output_tokens=output_tokens
+    )
+    return {
+        "title": "Tokens, latence & coût",
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": input_tokens + output_tokens,
+        "latency_ms": round(latency_ms, 1),
+        "estimated_cost_eur": float(cost),
+        "model": model,
+        "provider": provider,
+    }
+
+
+def _debug_reviewer(state: Mapping[str, object]) -> dict[str, object]:
+    """Surface #5 — the reviewer's grounding/coverage/guard split, not just confidence."""
+    reason = state.get("escalation_reason")
+    return {
+        "title": "Scores du reviewer",
+        "confidence": _opt_float(state.get("confidence")),
+        "grounding": _opt_float(state.get("grounding_score")),
+        "coverage": _opt_float(state.get("coverage_score")),
+        "guard": _opt_float(state.get("guard_score")),
+        "needs_escalation": bool(state.get("needs_escalation", False)),
+        "reason": str(reason) if reason is not None else None,
+    }
+
+
+def _debug_language(state: Mapping[str, object], *, pinned: bool) -> dict[str, object]:
+    """Surface #6 — detected language and its confidence."""
+    return {
+        "title": "Langue détectée",
+        "detected": _enum_value(state.get("language")),
+        "confidence": _opt_float(state.get("language_confidence")),
+        "pinned": pinned,
+    }
+
+
+def _debug_draft(state: Mapping[str, object], final_response: str) -> dict[str, object]:
+    """Surface #7 — the worker draft versus the final user-facing response."""
+    draft_raw = state.get("draft_response")
+    draft = str(draft_raw) if draft_raw else None
+    return {
+        "title": "Brouillon vs réponse finale",
+        "draft": draft,
+        "final": final_response,
+        "changed": (draft or "") != final_response,
+        "draft_chars": len(draft) if draft else 0,
+        "final_chars": len(final_response),
+    }
+
+
+def _debug_config(state: Mapping[str, object], *, default_model: str) -> dict[str, object]:
+    """Surface #8 — the effective sandbox config that actually ran this turn."""
+    override_model = state.get("model")
+    guard = state.get("guard_overrides")
+    return {
+        "title": "Configuration effective",
+        "model": str(override_model) if override_model else default_model,
+        "model_source": "override" if override_model else "default",
+        "system_prompt_override": bool(state.get("system_prompt_override")),
+        "guard_overrides": [str(g) for g in guard] if isinstance(guard, list) else [],
     }
 
 
@@ -398,6 +555,10 @@ def _debug_from_state(
     starts: Mapping[str, float],
     citations: list[Citation],
     final_response: str,
+    decision: RoutingDecision,
+    latency_ms: float,
+    pinned_language: bool,
+    reporter_ms: float | None = None,
 ) -> dict[str, object]:
     docs = cast(list[RetrievedDocument], state.get("retrieved_documents", []))
     tool_calls = cast(list[ToolCallRecord], state.get("tool_calls", []))
@@ -409,7 +570,10 @@ def _debug_from_state(
     # only when the turn's real guard decisions denied or redacted output.
     flagged = denied_count > 0 or any(decision.redactions for decision in guard_decisions)
     warn_keys = frozenset({"reviewer"}) if flagged else frozenset()
-    return {
+    default_model = get_settings().ollama.chat_model
+    model_raw = state.get("model")
+    effective_model = str(model_raw) if model_raw else default_model
+    debug: dict[str, object] = {
         "quality": _debug_quality(
             confidence=confidence,
             doc_count=len(docs),
@@ -420,9 +584,26 @@ def _debug_from_state(
         "sources": _debug_sources(docs, citations),
         "tools": _debug_tools(tool_calls, docs, timings),
         "guardrails": _debug_guardrails(guard_decisions),
-        "trace": _debug_trace(timings, starts, warn_keys=warn_keys),
+        "trace": _debug_trace(timings, starts, warn_keys=warn_keys, reporter_ms=reporter_ms),
         "tokens": len(final_response.split()),
+        # Console Debug surfaces (real data only). Always present:
+        "routing": _debug_routing(state, decision),
+        "usage": _debug_usage(state, latency_ms=latency_ms, model=effective_model),
+        "reviewer": _debug_reviewer(state),
+        "language": _debug_language(state, pinned=pinned_language),
+        "draft": _debug_draft(state, final_response),
+        "config": _debug_config(state, default_model=default_model),
     }
+    # Prompt + injected memory exist only when the synthesis path ran (an
+    # escalation / injection-block turn never calls the LLM). Omit when absent
+    # so the envelope never carries a null the schema would reject.
+    prompt = _debug_prompt(state)
+    if prompt is not None:
+        debug["prompt"] = prompt
+    memory = _debug_memory(state)
+    if memory is not None:
+        debug["memory"] = memory
+    return debug
 
 
 def _sse(event: str, payload: object) -> bytes:
@@ -513,14 +694,32 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     # Otherwise (escalation / injection block) final_response is already set.
     final_response: str
     turn_citations: list[Citation] = list(state.get("citations", []))
+    # The reporter's generation (LLM synthesis) runs here in Phase 2, outside the
+    # Phase-1 node-timing context — measure it so the trace waterfall can show it.
+    reporter_ms: float | None = None
     if NodeName.REPORTER.value in (snapshot.next or ()):
+        reporter_perf_start = time.perf_counter()
         docs = state.get("retrieved_documents", [])
         draft = state.get("draft_response", "")
         tokens: list[str] = []
         if docs:
+            # The streaming synthesis path records real token counts to the
+            # budget tracker (Ollama's prompt_eval_count/eval_count) but never
+            # threads them back through the token iterator. Snapshot the tracker
+            # delta around the stream to surface the *real* per-turn usage on the
+            # Debug envelope — the synthesis call is the only LLM call recording
+            # in this synchronous section (router/reviewer are rule-based).
+            budget_before = get_budget_tracker().snapshot()
             async for token in reporter_module.astream_synthesise(state):
                 tokens.append(token)
                 yield _sse("turn.token", {"token": token})
+            budget_after = get_budget_tracker().snapshot()
+            state["input_tokens"] = max(
+                0, budget_after.input_tokens - budget_before.input_tokens
+            )
+            state["output_tokens"] = max(
+                0, budget_after.output_tokens - budget_before.output_tokens
+            )
             # Cite the chunks that actually ground the answer's claims (across
             # every worker), falling back to the worker-selected citations when
             # attribution finds nothing so a turn never loses its sources.
@@ -537,6 +736,7 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
             from tessera.agent.reporter import _FALLBACK_RESPONSES
 
             final_response = _FALLBACK_RESPONSES[state["language"]]
+        reporter_ms = (time.perf_counter() - reporter_perf_start) * _MS_PER_SECOND
     else:
         final_response = str(state.get("final_response", ""))
 
@@ -628,6 +828,10 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
             starts=node_starts,
             citations=turn_citations,
             final_response=final_response,
+            decision=decision,
+            latency_ms=duration * _MS_PER_SECOND,
+            pinned_language=request.language is not None,
+            reporter_ms=reporter_ms,
         ),
     )
     yield _sse("turn.end", envelope.model_dump())

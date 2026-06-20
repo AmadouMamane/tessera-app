@@ -153,6 +153,11 @@ def run(state: AgentState) -> dict[str, object]:
     update: dict[str, object] = {
         "confidence": outcome.confidence,
         "needs_escalation": outcome.needs_escalation,
+        # Persist the per-axis split so the console Debug surface can show the
+        # real grounding/coverage/guard breakdown behind the composite score.
+        "grounding_score": outcome.grounding_score,
+        "coverage_score": outcome.coverage_score,
+        "guard_score": outcome.guard_score,
     }
     if outcome.reason is not None:
         update["escalation_reason"] = outcome.reason

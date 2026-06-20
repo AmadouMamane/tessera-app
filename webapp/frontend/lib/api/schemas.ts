@@ -81,6 +81,95 @@ export const ChatDebugSchema = z.object({
     })
     .optional(),
   tokens: z.number().int().nonnegative().optional(),
+  // ── Console Debug surfaces (real per-turn introspection) ────────────────
+  // #1 — the exact assembled LLM message list (system + injected memory +
+  // verbatim turns + final synthesis user content).
+  prompt: z
+    .object({
+      title: z.string(),
+      messages: z.array(z.object({ role: z.string(), content: z.string() })),
+      message_count: z.number().int().nonnegative(),
+      char_count: z.number().int().nonnegative(),
+    })
+    .optional(),
+  // #2 — the injected memory context (summary, entity ledger, long-term facts).
+  memory: z
+    .object({
+      title: z.string(),
+      summary: z.string().nullable(),
+      entities: z.array(z.string()),
+      long_term: z.array(z.string()),
+      recent_verbatim: z.number().int().nonnegative(),
+      backend: z.string(),
+    })
+    .optional(),
+  // #3 — the routing decision plus the planner's plan and rationale.
+  routing: z
+    .object({
+      title: z.string(),
+      agent_id: z.string(),
+      reason: z.string(),
+      handoff: z.boolean(),
+      from_agent: z.string().nullable(),
+      plan: z.array(z.string()),
+      plan_rationale: z.string().nullable(),
+    })
+    .optional(),
+  // #4 — real token counts, latency, and indicative cost.
+  usage: z
+    .object({
+      title: z.string(),
+      input_tokens: z.number().int().nonnegative(),
+      output_tokens: z.number().int().nonnegative(),
+      total_tokens: z.number().int().nonnegative(),
+      latency_ms: z.number(),
+      estimated_cost_eur: z.number(),
+      model: z.string(),
+      provider: z.string(),
+    })
+    .optional(),
+  // #5 — the reviewer's grounding/coverage/guard split behind the composite.
+  reviewer: z
+    .object({
+      title: z.string(),
+      confidence: z.number().nullable(),
+      grounding: z.number().nullable(),
+      coverage: z.number().nullable(),
+      guard: z.number().nullable(),
+      needs_escalation: z.boolean(),
+      reason: z.string().nullable(),
+    })
+    .optional(),
+  // #6 — detected language and its confidence.
+  language: z
+    .object({
+      title: z.string(),
+      detected: z.string(),
+      confidence: z.number().nullable(),
+      pinned: z.boolean(),
+    })
+    .optional(),
+  // #7 — the worker draft versus the final user-facing response.
+  draft: z
+    .object({
+      title: z.string(),
+      draft: z.string().nullable(),
+      final: z.string(),
+      changed: z.boolean(),
+      draft_chars: z.number().int().nonnegative(),
+      final_chars: z.number().int().nonnegative(),
+    })
+    .optional(),
+  // #8 — the effective sandbox config that actually ran this turn.
+  config: z
+    .object({
+      title: z.string(),
+      model: z.string(),
+      model_source: z.string(),
+      system_prompt_override: z.boolean(),
+      guard_overrides: z.array(z.string()),
+    })
+    .optional(),
 });
 export type ChatDebug = z.infer<typeof ChatDebugSchema>;
 export type ChatTrace = NonNullable<ChatDebug["trace"]>;

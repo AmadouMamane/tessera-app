@@ -210,6 +210,21 @@ class AgentState(TypedDict):
     confidence: NotRequired[float]
     citations: Annotated[list[Citation], _dedup_concat]
 
+    # --- Reviewer sub-scores (console Debug surface) ----------------------
+    # The reviewer fuses grounding/coverage/guard into ``confidence``; the
+    # split is surfaced for the console's Debug tab. Written by the reviewer
+    # node, read by the chat route's debug envelope.
+    grounding_score: NotRequired[float]
+    coverage_score: NotRequired[float]
+    guard_score: NotRequired[float]
+
+    # --- Debug capture (console Debug surface) ----------------------------
+    # The reporter stashes the *exact* assembled LLM message list and the
+    # injected memory context here so the chat route can surface them on the
+    # turn.end event. Real data only — populated on the synthesis path.
+    debug_prompt_messages: NotRequired[list[dict[str, str]]]
+    debug_memory: NotRequired[dict[str, object]]
+
     # --- Escalation -------------------------------------------------------
     needs_escalation: bool
     escalation_reason: NotRequired[str]

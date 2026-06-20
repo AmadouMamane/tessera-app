@@ -4515,7 +4515,8 @@
     "traceTotal": "Durée totale",
     "traceSpans": "spans",
     "traceExport": "Exporter (JSONL)",
-    "traceEmpty": "La trace d'exécution apparaîtra ici après un tour."
+    "traceEmpty": "La trace d'exécution apparaîtra ici après un tour.",
+    "debugAwaiting": "Les internes du tour (prompt, mémoire, routage, coût, scores) apparaîtront ici après un tour."
   },
   "agentConnaissances": {
     "title": "Connaissances",

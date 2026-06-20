@@ -147,6 +147,25 @@ async def _build_chat_messages(
         msgs.append(ChatMessage(role="system", content=f"{header}\n{body}"))
     msgs.extend(ChatMessage(role=m.role, content=m.content) for m in context.recent_verbatim)
     msgs.append(ChatMessage(role="user", content=current_user_content))
+
+    # Capture the exact assembled prompt and the injected memory context for the
+    # console Debug surface (real data only — this is what the LLM actually sees).
+    state["debug_prompt_messages"] = [{"role": m.role, "content": m.content} for m in msgs]
+    ledger = context.entities
+    state["debug_memory"] = {
+        "summary": context.summary,
+        "entities": [
+            *ledger.amounts,
+            *ledger.account_refs,
+            *ledger.dates,
+            *ledger.ticket_refs,
+            *ledger.products,
+            *ledger.citations,
+        ],
+        "long_term": [item.text for item in context.long_term],
+        "recent_verbatim": len(context.recent_verbatim),
+        "backend": type(backend).__name__,
+    }
     return msgs
 
 

@@ -26,6 +26,7 @@ import { useSession } from "next-auth/react";
 import { useLocale } from "next-intl";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
@@ -969,7 +970,10 @@ function ResponseSummary({
   sessionId?: string;
   t: T;
 }) {
-  const tabs = data.tabs ?? ["Sources", "Outils", "Garde-fous", "Évaluation"];
+  const baseTabs = data.tabs ?? ["Sources", "Outils", "Garde-fous", "Évaluation"];
+  // The Debug tab surfaces the live turn's full internals (prompt, memory,
+  // routing, usage, reviewer split, language, draft-vs-final, effective config).
+  const tabs = baseTabs.includes("Debug") ? baseTabs : [...baseTabs, "Debug"];
   const [active, setActive] = useState(tabs[0] ?? "Sources");
   // Response-specific signals come from the live turn only (no static fallback);
   // config panels (tools/guardrails) fall back to the real loaded policy pre-turn.
@@ -1026,6 +1030,7 @@ function ResponseSummary({
         {active === "Outils" && tools ? <ToolsPanel tl={tools} /> : null}
         {active === "Garde-fous" && guardrails ? <GuardrailsPanel g={guardrails} /> : null}
         {active === "Évaluation" ? <EvaluationPanel ev={data.evaluation} /> : null}
+        {active === "Debug" ? <DebugPanel debug={debug} t={t} /> : null}
       </div>
 
       {sessionId ? (
@@ -1196,6 +1201,310 @@ function EvaluationPanel({ ev }: { ev: Data["evaluation"] }) {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+// ── Debug tab — the live turn's full internals, real data only ─────────────
+
+/** A titled, collapsible card grouping one debug surface. Collapsed by default
+ *  so the eight surfaces stay a compact stack of headers — the operator expands
+ *  only the one they need rather than scrolling a very long panel. */
+function DebugSection({
+  title,
+  children,
+  defaultOpen,
+}: {
+  title: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      className="group rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1.5 text-[0.68rem] font-semibold text-[var(--tessera-text)] [&::-webkit-details-marker]:hidden">
+        <span>{title}</span>
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] transition-transform group-open:rotate-90" />
+      </summary>
+      <div className="border-t border-[var(--tessera-border)] px-2.5 py-2 text-[0.7rem]">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+/** A compact label / value row. */
+function DebugKV({ k, v, mono }: { k: string; v: ReactNode; mono?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-0.5">
+      <span className="shrink-0 text-[0.64rem] text-[var(--tessera-text-muted)]">{k}</span>
+      <span
+        className={cn(
+          "min-w-0 truncate text-right text-[var(--tessera-text)]",
+          mono && "font-mono text-[0.66rem]",
+        )}
+      >
+        {v}
+      </span>
+    </div>
+  );
+}
+
+/** Render a 0..1 score as a percentage with a small bar; "—" when absent. */
+function ScoreRow({ label, score }: { label: string; score: number | null }) {
+  const pct = score === null ? null : Math.round(score * 100);
+  const tone = pct === null ? "warn" : pct >= 80 ? "good" : pct >= 50 ? "warn" : "crit";
+  return (
+    <div className="flex items-center gap-2 py-0.5">
+      <span className="w-20 shrink-0 text-[0.64rem] text-[var(--tessera-text-muted)]">{label}</span>
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--tessera-surface)]">
+        {pct !== null ? (
+          <div
+            className={cn("h-full rounded-full", SPAN_BAR_TONE[tone] ?? SPAN_BAR_TONE.ok)}
+            style={{ width: `${pct}%` }}
+          />
+        ) : null}
+      </div>
+      <span className={cn("w-8 shrink-0 text-right tabular-nums text-[0.66rem]", SCORE_TONE[tone])}>
+        {pct === null ? "—" : `${pct}%`}
+      </span>
+    </div>
+  );
+}
+
+const ROLE_TONE: Record<string, string> = {
+  system: "border-violet-500/30 bg-violet-500/15 text-violet-300",
+  user: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  assistant: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  tool: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+};
+
+/** Small inline pill used for plans, guard categories, language codes. */
+function Chip({ children, tone }: { children: ReactNode; tone?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[0.6rem] font-medium",
+        tone ??
+          "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text)]",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** The Debug panel: all eight live introspection surfaces. Honest awaiting
+ *  state before a turn; each surface shows only real per-turn data. */
+function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
+  if (!debug) return <Awaiting text={t("debugAwaiting")} />;
+  const { prompt, memory, routing, usage, reviewer, language, draft, config } = debug;
+  return (
+    <div className="flex flex-col gap-2.5 p-3.5">
+      {/* #3 Routing & plan */}
+      {routing ? (
+        <DebugSection title={routing.title} defaultOpen>
+          <DebugKV k="Agent" v={routing.agent_id} mono />
+          <DebugKV
+            k="Décision"
+            v={
+              <Chip tone={routing.handoff ? ROLE_TONE.tool : ROLE_TONE.assistant}>
+                {routing.handoff ? `handoff ← ${routing.from_agent ?? "?"}` : "stay"}
+              </Chip>
+            }
+          />
+          <DebugKV k="Raison" v={routing.reason} />
+          {routing.plan.length > 0 ? (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {routing.plan.map((w) => (
+                <Chip key={w}>{w}</Chip>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">Plan vide.</p>
+          )}
+          {routing.plan_rationale ? (
+            <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+              {routing.plan_rationale}
+            </p>
+          ) : null}
+        </DebugSection>
+      ) : null}
+
+      {/* #1 Exact LLM prompt */}
+      {prompt ? (
+        <DebugSection title={prompt.title}>
+          <p className="mb-1.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
+            {prompt.message_count} messages · {prompt.char_count.toLocaleString("fr-FR")} caractères
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {prompt.messages.map((m, i) => (
+              <details
+                key={`${m.role}-${i}`}
+                className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
+              >
+                <summary className="flex cursor-pointer items-center gap-2 px-2 py-1 text-[0.64rem]">
+                  <Chip tone={ROLE_TONE[m.role] ?? undefined}>{m.role}</Chip>
+                  <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+                    {m.content.slice(0, 80)}
+                  </span>
+                </summary>
+                <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words border-t border-[var(--tessera-border)] px-2 py-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text)]">
+                  {m.content}
+                </pre>
+              </details>
+            ))}
+          </div>
+        </DebugSection>
+      ) : null}
+
+      {/* #2 Injected memory context */}
+      {memory ? (
+        <DebugSection title={memory.title}>
+          <DebugKV k="Backend" v={memory.backend} mono />
+          <DebugKV k="Tours verbatim" v={memory.recent_verbatim} />
+          <DebugKV k="Résumé" v={memory.summary ? memory.summary : "—"} />
+          {memory.entities.length > 0 ? (
+            <div className="mt-1.5">
+              <p className="mb-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
+                Entités préservées
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {memory.entities.map((e) => (
+                  <Chip key={e}>{e}</Chip>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {memory.long_term.length > 0 ? (
+            <ul className="mt-1.5 flex flex-col gap-1">
+              {memory.long_term.map((x) => (
+                <li key={x} className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+                  • {x}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </DebugSection>
+      ) : null}
+
+      {/* #5 Reviewer sub-scores */}
+      {reviewer ? (
+        <DebugSection title={reviewer.title}>
+          <ScoreRow label="Confiance" score={reviewer.confidence} />
+          <ScoreRow label="Ancrage" score={reviewer.grounding} />
+          <ScoreRow label="Couverture" score={reviewer.coverage} />
+          <ScoreRow label="Garde-fous" score={reviewer.guard} />
+          <div className="mt-1.5">
+            <DebugKV
+              k="Escalade"
+              v={
+                <Chip tone={reviewer.needs_escalation ? ROLE_TONE.tool : ROLE_TONE.assistant}>
+                  {reviewer.needs_escalation ? "requise" : "non"}
+                </Chip>
+              }
+            />
+            {reviewer.reason ? (
+              <p className="mt-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
+                {reviewer.reason}
+              </p>
+            ) : null}
+          </div>
+        </DebugSection>
+      ) : null}
+
+      {/* #4 Tokens / latency / cost */}
+      {usage ? (
+        <DebugSection title={usage.title}>
+          <DebugKV k="Modèle" v={`${usage.model} · ${usage.provider}`} mono />
+          <DebugKV
+            k="Tokens"
+            v={`${usage.input_tokens} entrée · ${usage.output_tokens} sortie · ${usage.total_tokens} total`}
+          />
+          <DebugKV k="Latence" v={fmtMs(usage.latency_ms)} />
+          <DebugKV k="Coût estimé" v={`${usage.estimated_cost_eur.toFixed(6)} €`} />
+        </DebugSection>
+      ) : null}
+
+      {/* #6 Detected language */}
+      {language ? (
+        <DebugSection title={language.title}>
+          <DebugKV
+            k="Langue"
+            v={
+              <span className="inline-flex items-center gap-1.5">
+                <Chip tone={ROLE_TONE.user}>{language.detected.toUpperCase()}</Chip>
+                {language.pinned ? (
+                  <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">(imposée)</span>
+                ) : null}
+              </span>
+            }
+          />
+          <DebugKV
+            k="Confiance"
+            v={language.confidence === null ? "—" : `${Math.round(language.confidence * 100)}%`}
+          />
+        </DebugSection>
+      ) : null}
+
+      {/* #7 Draft vs final */}
+      {draft ? (
+        <DebugSection title={draft.title}>
+          <DebugKV
+            k="État"
+            v={
+              <Chip tone={draft.changed ? ROLE_TONE.tool : ROLE_TONE.assistant}>
+                {draft.changed ? "reformulé" : "identique"}
+              </Chip>
+            }
+          />
+          <DebugKV k="Brouillon" v={`${draft.draft_chars} car.`} />
+          <DebugKV k="Final" v={`${draft.final_chars} car.`} />
+          {draft.draft ? (
+            <details className="mt-1.5 rounded border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+              <summary className="cursor-pointer px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+                Voir le brouillon worker
+              </summary>
+              <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words border-t border-[var(--tessera-border)] px-2 py-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text)]">
+                {draft.draft}
+              </pre>
+            </details>
+          ) : null}
+        </DebugSection>
+      ) : null}
+
+      {/* #8 Effective config */}
+      {config ? (
+        <DebugSection title={config.title}>
+          <DebugKV k="Modèle" v={`${config.model} (${config.model_source})`} mono />
+          <DebugKV
+            k="Prompt override"
+            v={
+              <Chip tone={config.system_prompt_override ? ROLE_TONE.tool : undefined}>
+                {config.system_prompt_override ? "actif" : "défaut"}
+              </Chip>
+            }
+          />
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <span className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+              Garde-fous désactivés
+            </span>
+            {config.guard_overrides.length > 0 ? (
+              <div className="flex flex-wrap justify-end gap-1">
+                {config.guard_overrides.map((g) => (
+                  <Chip key={g} tone={ROLE_TONE.tool}>
+                    {g}
+                  </Chip>
+                ))}
+              </div>
+            ) : (
+              <span className="text-[0.66rem] text-[var(--tessera-text)]">aucun</span>
+            )}
+          </div>
+        </DebugSection>
+      ) : null}
     </div>
   );
 }
