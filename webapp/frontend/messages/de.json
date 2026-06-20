@@ -3999,34 +3999,35 @@
     },
     "kpi": {
       "status": "Globaler Status",
-      "availability": "Verfügbarkeit (30 Tage)",
-      "cpu": "Systemlast",
-      "memory": "Speichernutzung",
-      "storage": "Speichernutzung",
-      "services": "Aktive Dienste",
-      "nodes": "Aktive Knoten",
-      "last_check": "Letzte Prüfung"
+      "python": "Python",
+      "platform": "Plattform",
+      "mode": "Modus",
+      "profile": "LLM-Profil",
+      "cpus": "vCPU",
+      "memory": "Gesamtspeicher",
+      "uptime": "Laufzeit"
     },
     "zone": {
       "architecture": "Architektur & Deployment",
       "topology": "Topologie",
-      "resources": "Ressourcenverteilung",
+      "resources": "Komponenten",
       "os": "Betriebssystem",
       "health": "Health-Checks",
       "performance": "Performance (Echtzeit)",
       "services": "Dienste & Komponenten",
       "versions": "Versionen & Abhängigkeiten",
-      "licenses": "Lizenzen & Quotas"
+      "licenses": "Lizenzen & Quotas",
+      "runtime": "Laufzeit & Audit"
     },
     "arch": {
       "edition": "Edition",
       "version": "Version",
       "deployment": "Deployment-Modus",
-      "region": "Region",
+      "region": "Umgebung",
       "cluster": "Cluster",
       "deployed": "Deployment-Datum",
       "uptime": "Betriebszeit",
-      "nextMaintenance": "Nächste Wartung"
+      "nextMaintenance": "Standardsprache"
     },
     "topo": {
       "tiers": "Eingang",
@@ -4034,36 +4035,34 @@
       "stores": "Speicher"
     },
     "res": {
-      "control": "Control Plane",
-      "data": "Data Plane",
-      "worker": "Worker",
-      "system": "System"
+      "tools": "Tools",
+      "workers": "Workers",
+      "prompts": "Prompts",
+      "failures": "Fehlerfälle"
     },
     "os": {
       "os": "Betriebssystem",
       "kernel": "Kernel",
       "arch": "Architektur",
-      "virtualization": "Virtualisierung",
+      "virtualization": "Bereitstellung",
       "cpu": "CPU",
       "memory": "Gesamtspeicher",
       "systemTime": "Systemzeit",
       "timezone": "Zeitzone",
       "fqdn": "FQDN",
-      "infraId": "Installations-ID",
-      "support": "Support"
+      "infraId": "Python",
+      "support": "Umgebung"
     },
     "health": {
-      "database": "Datenbank",
-      "storage": "Speicher",
-      "cache": "Cache",
-      "queue": "Warteschlange",
-      "critical_services": "Kritische Dienste",
-      "api_gateway": "API Gateway",
-      "connectivity": "Konnektivität",
-      "security": "Sicherheit",
-      "backups": "Backups",
-      "monitoring": "Monitoring",
-      "viewAll": "Alle Prüfungen anzeigen"
+      "policy": "Schutzrichtlinie",
+      "prompts": "Prompts (FR/DE/EN)",
+      "corpus": "Regulatorisches Korpus",
+      "audit_log": "Audit-Log",
+      "audit_chain": "Audit-Kette",
+      "firewall": "Firewall (mcp-firewall)",
+      "eval_reports": "Auswertungsberichte",
+      "embeddings": "Embeddings",
+      "viewAll": "Alle Prüfungen ansehen"
     },
     "perf": {
       "cpu": "CPU",
@@ -4083,15 +4082,22 @@
       "bad": "Fehler"
     },
     "lic": {
-      "edition": "Edition",
-      "seats": "Sitze",
-      "expiry": "Ablauf",
-      "quotaCalls": "Aufruf-Quota",
-      "quotaStorage": "Speicher-Quota"
+      "edition": "Lizenz",
+      "seats": "Edition",
+      "expiry": "Sprachen",
+      "quotaCalls": "LLM-Profil",
+      "quotaStorage": "Umgebung"
     },
     "footer": {
       "version": "{v}",
       "source": "{src}"
+    },
+    "runtime": {
+      "uptime": "Laufzeit",
+      "started": "Gestartet",
+      "auditLines": "Log-Zeilen",
+      "auditChain": "Audit-Kette",
+      "viewAudit": "Log ansehen"
     }
   },
   "parameters": {

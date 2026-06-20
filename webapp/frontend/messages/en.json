@@ -3999,34 +3999,35 @@
     },
     "kpi": {
       "status": "Global status",
-      "availability": "Availability (30 days)",
-      "cpu": "System load",
-      "memory": "Memory used",
-      "storage": "Storage used",
-      "services": "Active services",
-      "nodes": "Active nodes",
-      "last_check": "Last check"
+      "python": "Python",
+      "platform": "Platform",
+      "mode": "Mode",
+      "profile": "LLM profile",
+      "cpus": "vCPU",
+      "memory": "Total memory",
+      "uptime": "Uptime"
     },
     "zone": {
       "architecture": "Architecture & deployment",
       "topology": "Topology",
-      "resources": "Resource distribution",
+      "resources": "Components",
       "os": "Operating system",
       "health": "Health checks",
       "performance": "Performance (real-time)",
       "services": "Services & components",
       "versions": "Versions & dependencies",
-      "licenses": "Licenses & quotas"
+      "licenses": "Licenses & quotas",
+      "runtime": "Runtime & audit"
     },
     "arch": {
       "edition": "Edition",
       "version": "Version",
       "deployment": "Deployment mode",
-      "region": "Region",
+      "region": "Environment",
       "cluster": "Cluster",
       "deployed": "Deployment date",
       "uptime": "Uptime",
-      "nextMaintenance": "Next maintenance"
+      "nextMaintenance": "Default language"
     },
     "topo": {
       "tiers": "Ingress",
@@ -4034,35 +4035,33 @@
       "stores": "Storage"
     },
     "res": {
-      "control": "Control Plane",
-      "data": "Data Plane",
-      "worker": "Worker",
-      "system": "System"
+      "tools": "Tools",
+      "workers": "Workers",
+      "prompts": "Prompts",
+      "failures": "Failure cases"
     },
     "os": {
       "os": "Operating system",
       "kernel": "Kernel",
       "arch": "Architecture",
-      "virtualization": "Virtualization",
+      "virtualization": "Deployment",
       "cpu": "CPU",
       "memory": "Total memory",
       "systemTime": "System time",
       "timezone": "Timezone",
       "fqdn": "FQDN",
-      "infraId": "Install ID",
-      "support": "Support"
+      "infraId": "Python",
+      "support": "Environment"
     },
     "health": {
-      "database": "Database",
-      "storage": "Storage",
-      "cache": "Cache",
-      "queue": "Queue",
-      "critical_services": "Critical services",
-      "api_gateway": "API Gateway",
-      "connectivity": "Connectivity",
-      "security": "Security",
-      "backups": "Backups",
-      "monitoring": "Monitoring",
+      "policy": "Guardrail policy",
+      "prompts": "Prompts (FR/DE/EN)",
+      "corpus": "Regulatory corpus",
+      "audit_log": "Audit log",
+      "audit_chain": "Audit chain",
+      "firewall": "Firewall (mcp-firewall)",
+      "eval_reports": "Evaluation reports",
+      "embeddings": "Embeddings",
       "viewAll": "View all checks"
     },
     "perf": {
@@ -4083,15 +4082,22 @@
       "bad": "Error"
     },
     "lic": {
-      "edition": "Edition",
-      "seats": "Seats",
-      "expiry": "Expiry",
-      "quotaCalls": "Calls quota",
-      "quotaStorage": "Storage quota"
+      "edition": "License",
+      "seats": "Edition",
+      "expiry": "Languages",
+      "quotaCalls": "LLM profile",
+      "quotaStorage": "Environment"
     },
     "footer": {
       "version": "{v}",
       "source": "{src}"
+    },
+    "runtime": {
+      "uptime": "Uptime",
+      "started": "Started",
+      "auditLines": "Log lines",
+      "auditChain": "Audit chain",
+      "viewAudit": "View log"
     }
   },
   "parameters": {

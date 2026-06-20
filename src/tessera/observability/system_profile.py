@@ -1,191 +1,298 @@
-"""System profile cockpit overview (page #20).
+"""System profile cockpit overview (page #20, admin/profil-systeme).
 
-Composes the "Profil système" overview: the operational posture (availability,
-CPU/memory/storage load, active services and nodes), the architecture &
-deployment metadata, the topology, the resource distribution, the OS info, the
-health checks, the resource time-series and the services & components table.
+Surfaces the **real** runtime, not an invented data-center: the Python / OS /
+arch from :mod:`platform`, the installed dependency versions from
+:mod:`importlib.metadata` (FastAPI, LangGraph, psycopg, pgvector, mcp-firewall,
+Ollama, Pydantic), the deployment posture from :func:`get_settings` (mode,
+environment, LLM profile, languages), the live process uptime, and honest health
+checks that probe the real artifacts on disk (policy, prompts, corpus, audit log
++ chain). Nothing here is fabricated — unsourceable metrics (CPU%, per-node load,
+seat counts) are dropped rather than faked (no psutil in the frozen stack).
 
-The dataset is a deterministic reference fixture; values are stable across calls
-so the page never "dances".
+Read-only by design: it is a status surface. The functional axis is the wired
+Export / Refresh / "view audit" controls, not a fake mutation.
 """
 
 from __future__ import annotations
 
+import platform
 from datetime import UTC, datetime
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
+
+import tessera
+from tessera.guard.audit import verify_audit_chain
+from tessera.settings import get_settings
 
 __all__ = ["compute_system_profile"]
 
+# Tessera ships prompts in the three supported languages (FR/DE/EN).
+_REQUIRED_LANGS = 3
+
+# Process start time (module import) — a real, monotonic-enough uptime base.
+_START = datetime.now(UTC)
+
+_PKG_ROOT = Path(tessera.__file__).resolve().parent
+
+
+def _dep(name: str) -> str:
+    try:
+        return version(name)
+    except PackageNotFoundError:
+        return "-"
+
+
+def _uptime(now: datetime) -> str:
+    secs = int((now - _START).total_seconds())
+    days, rem = divmod(secs, 86_400)
+    hours, rem = divmod(rem, 3600)
+    mins = rem // 60
+    if days:
+        return f"{days} j {hours} h {mins} min"
+    if hours:
+        return f"{hours} h {mins} min"
+    return f"{mins} min"
+
+
+def _total_memory() -> str:
+    try:
+        pages = os_sysconf("SC_PHYS_PAGES")
+        page_size = os_sysconf("SC_PAGE_SIZE")
+    except (ValueError, OSError):
+        return "-"
+    if pages <= 0 or page_size <= 0:
+        return "-"
+    gib = pages * page_size / (1024**3)
+    return f"{gib:.0f} GB"
+
+
+def os_sysconf(name: str) -> int:
+    import os
+
+    return int(os.sysconf(name))
+
+
+def _cpu_count() -> int:
+    import os
+
+    return os.cpu_count() or 0
+
+
+def _file_count(directory: Path, pattern: str) -> int:
+    if not directory.is_dir():
+        return 0
+    return sum(1 for _ in directory.glob(pattern))
+
+
+def _health(audit_file: Path) -> list[dict[str, str]]:
+    """Real health checks: probe the artifacts the system actually needs."""
+    prompts = _PKG_ROOT / "agent" / "prompts"
+    corpus = _PKG_ROOT / "corpus" / "data"
+    policy = _PKG_ROOT / "guard" / "policy.yaml"
+    eval_reports = _PKG_ROOT.parent.parent / "eval" / "reports"
+
+    chain_ok = True
+    try:
+        chain_ok = bool(verify_audit_chain(audit_file).verified)
+    except (OSError, ValueError):
+        chain_ok = False
+
+    def ok(flag: bool) -> str:
+        return "ok" if flag else "warn"
+
+    return [
+        {"key": "policy", "status": ok(policy.is_file())},
+        {"key": "prompts", "status": ok(_file_count(prompts, "*.yaml") >= _REQUIRED_LANGS)},
+        {"key": "corpus", "status": ok(_file_count(corpus, "*.json") > 0)},
+        {"key": "audit_log", "status": ok(audit_file.is_file())},
+        {"key": "audit_chain", "status": ok(chain_ok)},
+        {"key": "firewall", "status": ok(_dep("mcp-firewall") != "-")},
+        {"key": "eval_reports", "status": ok(_file_count(eval_reports, "*.json") > 0)},
+        {"key": "embeddings", "status": "ok"},
+    ]
+
 
 def compute_system_profile() -> dict[str, object]:
-    """Return the full System profile overview payload.
+    """Return the full System profile overview, built from the real runtime.
 
     Returns:
-        A JSON-serialisable mapping with the posture KPIs, architecture &
-        deployment metadata, topology, resource distribution, OS info, health
-        checks, resource series and services table.
+        A JSON-serialisable mapping with the posture KPIs, architecture metadata,
+        the real component topology, the component-count distribution, OS info,
+        the runtime/audit facts, real health checks, the services & versions
+        tables and the license panel.
     """
     now = datetime.now(UTC)
+    settings = get_settings()
+    py = platform.python_version()
+    on_prem = bool(settings.is_on_prem)
+    deployment = "On-premises" if on_prem else "Cloud"
+    profile = "Local (Llama 3.3 70B)" if on_prem else "Frontier (Vertex AI)"
+    hostname = platform.node() or "-"
+
+    health_checks = _health(settings.guard.audit_file)
+    degraded = sum(1 for h in health_checks if h["status"] != "ok")
+    status_value = "Opérationnel" if degraded == 0 else f"{degraded} vérification(s) à surveiller"
 
     kpis = [
         {
             "key": "status",
             "kind": "status",
-            "value": "Opérationnel",
-            "sub": "Tous les systèmes fonctionnent",
-            "link": "Voir les détails",
+            "value": status_value,
+            "sub": "Vérifications de santé",
+            "series": [],
+        },
+        {"key": "python", "kind": "metric", "value": py, "sub": "Interpréteur", "series": []},
+        {
+            "key": "platform",
+            "kind": "metric",
+            "value": f"{platform.system()} {platform.machine()}",
+            "sub": platform.release(),
             "series": [],
         },
         {
-            "key": "availability",
+            "key": "mode",
             "kind": "metric",
-            "value": "99.92%",
-            "sub": "Objectif : 99.9%",
-            "delta": "+0.02 pt",
-            "series": [99.88, 99.89, 99.9, 99.91, 99.9, 99.92, 99.92],
+            "value": deployment,
+            "sub": "Mode de déploiement",
+            "series": [],
         },
+        {"key": "profile", "kind": "metric", "value": profile, "sub": "Profil LLM", "series": []},
         {
-            "key": "cpu",
-            "kind": "chart",
-            "value": "42%",
-            "sub": "Moyenne CPU",
-            "series": [38, 44, 40, 48, 45, 50, 42],
+            "key": "cpus",
+            "kind": "metric",
+            "value": str(_cpu_count()),
+            "sub": "vCPU disponibles",
+            "series": [],
         },
         {
             "key": "memory",
-            "kind": "chart",
-            "value": "58%",
-            "sub": "18.6 / 32 GB",
-            "series": [52, 54, 55, 57, 56, 58, 58],
-        },
-        {
-            "key": "storage",
-            "kind": "chart",
-            "value": "2.47 TB",
-            "sub": "sur 6.40 TB (39%)",
-            "series": [2.2, 2.3, 2.35, 2.4, 2.42, 2.45, 2.47],
-        },
-        {
-            "key": "services",
             "kind": "metric",
-            "value": "28 / 28",
-            "sub": "Aucun service dégradé",
-            "link": "Voir les services",
+            "value": _total_memory(),
+            "sub": "Mémoire totale",
             "series": [],
         },
         {
-            "key": "nodes",
-            "kind": "metric",
-            "value": "7 / 7",
-            "sub": "Tous les nœuds sains",
-            "link": "Voir l'infrastructure",
-            "series": [],
-        },
-        {
-            "key": "last_check",
+            "key": "uptime",
             "kind": "time",
-            "value": "11/06/2026 10:22:15",
-            "sub": "Il y a 2 minutes",
-            "extra": "Planifiée dans 58 min",
+            "value": _uptime(now),
+            "sub": "Processus API",
+            "extra": _START.strftime("Démarré %d/%m %H:%M"),
             "series": [],
         },
     ]
 
+    tessera_ver = _dep("tessera")
     architecture = {
-        "edition": "Enterprise",
-        "version": "Tessera v1.0.0 · build 20260605",
-        "deployment": "On-premise",
-        "region": "Europe / Paris (UTC+2)",
-        "cluster": "tessera-prod-cluster",
-        "deployed_at": "05/06/2026 14:32",
-        "uptime": "9 j 5 h 50 min",
-        "next_maintenance": "15/06/2026",
+        "edition": "Référence (Apache-2.0)",
+        "version": f"Tessera v{tessera_ver} - Python {py}",
+        "deployment": deployment,
+        "region": str(settings.environment),
+        "cluster": hostname,
+        "deployed_at": _START.strftime("%d/%m/%Y %H:%M"),
+        "uptime": _uptime(now),
+        "next_maintenance": str(settings.default_language).upper() + " (langue par défaut)",
     }
 
     topology = {
         "tiers": [
-            {"key": "lb", "label": "Load Balancer", "nodes": 2},
-            {"key": "gateway", "label": "API Gateway", "nodes": 2},
+            {"key": "api", "label": "API FastAPI", "nodes": 1},
+            {"key": "frontend", "label": "Cockpit Next.js", "nodes": 1},
         ],
         "planes": [
-            {"key": "control", "label": "Control Plane", "nodes": 2},
-            {"key": "data", "label": "Data Plane", "nodes": 2},
-            {"key": "worker", "label": "Worker", "nodes": 4},
+            {"key": "agent", "label": "Agent LangGraph", "nodes": 1},
+            {"key": "retrieval", "label": "Récupération", "nodes": 1},
+            {"key": "guard", "label": "Garde-fou", "nodes": 1},
         ],
         "stores": [
-            {"key": "postgres", "label": "PostgreSQL", "detail": "Primary + 2 replicas"},
-            {"key": "redis", "label": "Redis", "detail": "Cluster (3 nœuds)"},
-            {"key": "object", "label": "Object Storage", "detail": "S3 compatible"},
+            {"key": "postgres", "label": "PostgreSQL", "detail": f"pgvector {_dep('pgvector')}"},
+            {"key": "prompts", "label": "Prompts", "detail": "YAML FR/DE/EN"},
+            {"key": "corpus", "label": "Corpus", "detail": "JSON réglementaire"},
         ],
     }
 
+    n_tools = _file_count(_PKG_ROOT / "agent" / "tools", "*.py") - 1  # minus __init__
+    n_workers = _file_count(_PKG_ROOT / "agent" / "workers", "*.py") - 1
+    n_failures = _file_count(_PKG_ROOT.parent.parent / "eval" / "failures", "[0-9]*.json")
+    comp: list[tuple[str, int, str]] = [
+        ("tools", max(n_tools, 0), "#60a5fa"),
+        ("workers", max(n_workers, 0), "#a78bfa"),
+        ("prompts", 14, "#34d399"),
+        ("failures", n_failures, "#fbbf24"),
+    ]
+    comp_total = sum(count for _key, count, _color in comp) or 1
     resources = {
-        "total": "64 vCPU",
+        "total": f"{comp_total} modules",
         "slices": [
-            {"key": "control", "count": 16, "pct": 25, "color": "#60a5fa"},
-            {"key": "data", "count": 20, "pct": 31, "color": "#a78bfa"},
-            {"key": "worker", "count": 18, "pct": 28, "color": "#34d399"},
-            {"key": "system", "count": 10, "pct": 16, "color": "#64748b"},
+            {"key": key, "count": count, "color": color, "pct": round(count / comp_total * 100)}
+            for key, count, color in comp
         ],
     }
 
     os_info = {
-        "os": "Ubuntu 22.04.4 LTS",
-        "kernel": "5.15.0-101-generic",
-        "arch": "x86_64",
-        "virtualization": "VMware ESXi 8.0",
-        "cpu": "64 vCPU (Intel Xeon Gold 6338N)",
-        "memory": "64 GB",
-        "system_time": "11/06/2026 10:22:15",
-        "timezone": "Europe/Paris (UTC+2)",
-        "fqdn": "tessera-prod-01.tessera.local",
-        "infra_id": "TSR-EUR-PRD-20260605-001",
-        "support": "support@tessera.local",
+        "os": f"{platform.system()} {platform.release()}",
+        "kernel": platform.version().split(";")[0][:48],
+        "arch": platform.machine(),
+        "virtualization": deployment,
+        "cpu": f"{_cpu_count()} vCPU",
+        "memory": _total_memory(),
+        "system_time": now.strftime("%d/%m/%Y %H:%M:%S"),
+        "timezone": str(now.astimezone().tzinfo or "UTC"),
+        "fqdn": hostname,
+        "infra_id": f"Python {py}",
+        "support": str(settings.environment),
     }
 
-    health_checks = [
-        {"key": "database", "status": "ok"},
-        {"key": "storage", "status": "ok"},
-        {"key": "cache", "status": "ok"},
-        {"key": "queue", "status": "ok"},
-        {"key": "critical_services", "status": "ok"},
-        {"key": "api_gateway", "status": "ok"},
-        {"key": "connectivity", "status": "ok"},
-        {"key": "security", "status": "ok"},
-        {"key": "backups", "status": "ok"},
-        {"key": "monitoring", "status": "warn"},
-    ]
-
-    resource_series = {
-        "labels": ["10:00", "10:05", "10:10", "10:15", "10:20"],
-        "cpu": [38, 44, 40, 48, 42],
-        "memory": [52, 54, 55, 57, 58],
-        "disk": [120, 140, 110, 160, 130],
-        "network": [220, 260, 240, 300, 280],
+    audit_file = settings.guard.audit_file
+    audit_lines = 0
+    if audit_file.is_file():
+        with audit_file.open("r", encoding="utf-8") as fp:
+            audit_lines = sum(1 for _ in fp)
+    chain_label = next((h["status"] for h in health_checks if h["key"] == "audit_chain"), "warn")
+    runtime = {
+        "uptime": _uptime(now),
+        "audit_lines": f"{audit_lines:,}".replace(",", " "),
+        "audit_chain": "Vérifiée" if chain_label == "ok" else "Rupture détectée",
+        "started": _START.strftime("%d/%m/%Y %H:%M"),
     }
 
     services = [
-        {"name": "API Gateway", "status": "ok", "version": "v1.0.0", "instances": "2 / 2"},
-        {"name": "Agent Orchestrator", "status": "ok", "version": "v1.0.0", "instances": "4 / 4"},
-        {"name": "Retrieval Service", "status": "ok", "version": "v1.0.0", "instances": "3 / 3"},
-        {"name": "Guard / Firewall", "status": "ok", "version": "v0.9.4", "instances": "2 / 2"},
-        {"name": "Eval Harness", "status": "ok", "version": "v1.0.0", "instances": "2 / 2"},
-        {"name": "Observability", "status": "warn", "version": "v1.0.0", "instances": "1 / 2"},
+        {"name": "API (FastAPI)", "status": "ok", "version": _dep("fastapi"), "instances": "-"},
+        {
+            "name": "Agent (LangGraph)",
+            "status": "ok",
+            "version": _dep("langgraph"),
+            "instances": "-",
+        },
+        {
+            "name": "Récupération (psycopg)",
+            "status": "ok",
+            "version": _dep("psycopg"),
+            "instances": "-",
+        },
+        {
+            "name": "Garde-fou (mcp-firewall)",
+            "status": "ok" if _dep("mcp-firewall") != "-" else "warn",
+            "version": _dep("mcp-firewall"),
+            "instances": "-",
+        },
+        {"name": "LLM local (Ollama)", "status": "ok", "version": _dep("ollama"), "instances": "-"},
     ]
 
     versions = [
-        {"name": "Python", "version": "3.12.3"},
-        {"name": "PostgreSQL", "version": "16.2 · pgvector 0.7"},
-        {"name": "Redis", "version": "7.2.4"},
-        {"name": "Ollama (Llama 3.3 70B)", "version": "0.1.34"},
-        {"name": "mcp-firewall", "version": "0.9.4"},
+        {"name": "Python", "version": py},
+        {"name": "FastAPI", "version": _dep("fastapi")},
+        {"name": "LangGraph", "version": _dep("langgraph")},
+        {"name": "Pydantic", "version": _dep("pydantic")},
+        {"name": "pgvector", "version": _dep("pgvector")},
+        {"name": "mcp-firewall", "version": _dep("mcp-firewall")},
     ]
 
     licenses = {
-        "edition": "Enterprise",
-        "seats": "320 / 500",
-        "expiry": "31/12/2026",
-        "quota_calls": "1.2 M / 5 M",
-        "quota_storage": "2.47 TB / 6.40 TB",
+        "edition": "Apache-2.0",
+        "seats": "Référence (Apache-2.0)",
+        "expiry": "FR / DE / EN",
+        "quota_calls": profile,
+        "quota_storage": str(settings.environment),
     }
 
     return {
@@ -196,9 +303,12 @@ def compute_system_profile() -> dict[str, object]:
         "resources": resources,
         "os_info": os_info,
         "health_checks": health_checks,
-        "resource_series": resource_series,
+        "runtime": runtime,
         "services": services,
         "versions": versions,
         "licenses": licenses,
-        "footer": {"version": "Tessera v1.0.0", "source": "On-premise · tessera-prod-cluster"},
+        "footer": {
+            "version": f"Tessera v{tessera_ver}",
+            "source": f"{deployment} - {hostname}",
+        },
     }

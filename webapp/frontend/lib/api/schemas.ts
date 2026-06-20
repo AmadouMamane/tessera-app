@@ -3003,12 +3003,11 @@ export const SystemProfileSchema = z.object({
     support: z.string(),
   }),
   health_checks: z.array(z.object({ key: z.string(), status: z.enum(["ok", "warn", "bad"]) })),
-  resource_series: z.object({
-    labels: z.array(z.string()),
-    cpu: z.array(z.number()),
-    memory: z.array(z.number()),
-    disk: z.array(z.number()),
-    network: z.array(z.number()),
+  runtime: z.object({
+    uptime: z.string(),
+    audit_lines: z.string(),
+    audit_chain: z.string(),
+    started: z.string(),
   }),
   services: z.array(
     z.object({

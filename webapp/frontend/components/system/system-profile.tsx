@@ -14,29 +14,19 @@ import type { ReactNode } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchSystemProfile } from "@/lib/api/client";
 import type { SystemProfile as SystemData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
-const TABS = [
-  "overview",
-  "infrastructure",
-  "services",
-  "performance",
-  "storage",
-  "network",
-  "security",
-  "licenses",
-  "configs",
-  "logs",
-] as const;
+const AUDIT_HREF = "/prouver/audit-logs";
 
 type T = ReturnType<typeof useTranslations<"systemProfile">>;
 type Data = SystemData;
 
 export function SystemProfile() {
   const t = useTranslations("systemProfile");
-  const { data } = useQuery({
+  const { data, refetch, isFetching } = useQuery({
     queryKey: ["system-profile"],
     queryFn: ({ signal }) => fetchSystemProfile(signal),
     staleTime: 30_000,
@@ -51,9 +41,19 @@ export function SystemProfile() {
     );
   }
 
+  const onExport = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tessera-system-profile.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
+      <CommandBar t={t} onExport={onExport} onRefresh={() => refetch()} refreshing={isFetching} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
         {data.kpis.map((kpi) => (
@@ -69,7 +69,7 @@ export function SystemProfile() {
 
       <div className="grid gap-3 xl:grid-cols-12">
         <OsInfo t={t} data={data} className="xl:col-span-4" />
-        <Performance t={t} data={data} className="xl:col-span-4" />
+        <Runtime t={t} data={data} className="xl:col-span-4" />
         <Health t={t} data={data} className="xl:col-span-4" />
       </div>
 
@@ -86,29 +86,22 @@ export function SystemProfile() {
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({
+  t,
+  onExport,
+  onRefresh,
+  refreshing,
+}: { t: T; onExport: () => void; onRefresh: () => void; refreshing: boolean }) {
   return (
-    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={cn(
-              "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
-              tab === "overview"
-                ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
-                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
-            )}
-          >
-            {t(`tabs.${tab}`)}
-          </button>
-        ))}
-      </div>
+    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <span className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--tessera-text)]">
+        <Server className="h-4 w-4 text-[#87bfff]" /> {t("subtitle")}
+      </span>
       <div className="flex shrink-0 items-center gap-2">
         <Button
           size="sm"
           variant="outline"
+          onClick={onExport}
           className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
         >
           <Download className="h-4 w-4" /> {t("actions.export")}
@@ -116,9 +109,12 @@ function CommandBar({ t }: { t: T }) {
         <Button
           size="sm"
           variant="outline"
+          onClick={onRefresh}
+          disabled={refreshing}
           className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
         >
-          <RefreshCcw className="h-4 w-4" /> {t("actions.refresh")}
+          <RefreshCcw className={cn("h-4 w-4", refreshing && "animate-spin")} />{" "}
+          {t("actions.refresh")}
         </Button>
       </div>
     </section>
@@ -326,27 +322,25 @@ function OsInfo({ t, data, className }: { t: T; data: Data; className?: string }
   );
 }
 
-function Performance({ t, data, className }: { t: T; data: Data; className?: string }) {
-  const s = data.resource_series;
-  const charts = [
-    { key: "cpu", values: s.cpu, tone: "success" as const },
-    { key: "memory", values: s.memory, tone: "success" as const },
-    { key: "disk", values: s.disk, tone: "success" as const },
-    { key: "network", values: s.network, tone: "success" as const },
+function Runtime({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const r = data.runtime;
+  const rows: [string, string][] = [
+    [t("runtime.uptime"), r.uptime],
+    [t("runtime.started"), r.started],
+    [t("runtime.auditLines"), r.audit_lines],
+    [t("runtime.auditChain"), r.audit_chain],
   ];
   return (
-    <Panel title={t("zone.performance")} className={className}>
-      <div className="grid grid-cols-2 gap-2">
-        {charts.map((c) => (
-          <div
-            key={c.key}
-            className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2"
-          >
-            <p className="text-[0.58rem] text-[var(--tessera-text-muted)]">{t(`perf.${c.key}`)}</p>
-            <MetricSparkline className="mt-1 h-7 w-full" values={c.values} tone={c.tone} />
-          </div>
+    <Panel
+      title={t("zone.runtime")}
+      className={className}
+      action={<ViewAll label={t("runtime.viewAudit")} href={AUDIT_HREF} />}
+    >
+      <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+        {rows.map(([k, v]) => (
+          <KV key={k} label={k} value={v} />
         ))}
-      </div>
+      </dl>
     </Panel>
   );
 }
@@ -356,7 +350,7 @@ function Health({ t, data, className }: { t: T; data: Data; className?: string }
     <Panel
       title={t("zone.health")}
       className={className}
-      action={<ViewAll label={t("health.viewAll")} />}
+      action={<ViewAll label={t("health.viewAll")} href={AUDIT_HREF} />}
     >
       <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
         {data.health_checks.map((h) => (
@@ -508,14 +502,14 @@ function KV({ label, value, mono }: { label: string; value: string; mono?: boole
   );
 }
 
-function ViewAll({ label }: { label: string }) {
+function ViewAll({ label, href }: { label: string; href: typeof AUDIT_HREF }) {
   return (
-    <button
-      type="button"
+    <Link
+      href={href}
       className="flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
     >
       {label} <ChevronRight className="h-3 w-3" />
-    </button>
+    </Link>
   );
 }
 
