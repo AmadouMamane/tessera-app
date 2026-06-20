@@ -40,6 +40,7 @@ class OllamaBackend:
         temperature: float = 0.2,
         max_output_tokens: int | None = None,
         model: str | None = None,
+        usage: dict[str, int] | None = None,
     ) -> AsyncIterator[str]:
         """Yield tokens from Ollama as they arrive."""
         effective_model = model or self.model
@@ -62,6 +63,9 @@ class OllamaBackend:
             if chunk.get("done"):
                 input_tokens = int(chunk.get("prompt_eval_count", 0) or 0)
                 output_tokens = int(chunk.get("eval_count", 0) or 0)
+        if usage is not None:
+            usage["input_tokens"] = input_tokens
+            usage["output_tokens"] = output_tokens
         get_budget_tracker().record(
             backend=self.name,
             model=effective_model,

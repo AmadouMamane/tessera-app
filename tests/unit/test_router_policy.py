@@ -51,6 +51,38 @@ class TestPolicyShortCircuit:
         assert out.get("plan") == []
         assert "exactement 5 minutes" not in str(out["final_response"])
 
+    def test_cookie_consent_cites_both_eprivacy_and_gdpr(self) -> None:
+        # Promotes the prompt-only cookies/ePrivacy rule into a deterministic
+        # short-circuit (eval case 36). Must not assert "GDPR only" and must carry
+        # a real citation so the harness's must_cite_source passes.
+        out = run(
+            _state(
+                "C'est uniquement le RGPD, et pas du tout la directive ePrivacy, qui impose "
+                "le bandeau de consentement aux cookies sur votre site, n'est-ce pas ?"
+            )
+        )
+        assert out.get("plan") == []
+        assert out["needs_escalation"] is False
+        response = str(out["final_response"])
+        assert "ePrivacy" in response
+        assert "uniquement le RGPD" not in response
+        # A short-circuit asserting a regulation must be grounded by a citation.
+        citations = out.get("citations")
+        assert isinstance(citations, list) and len(citations) == 1
+        assert "2002/58" in citations[0].source
+
+    def test_cookie_consent_multilingual(self) -> None:
+        assert (
+            _match_policy("Cookie consent is only governed by the GDPR?", LanguageCode.EN)
+            == "policy_cookie_consent"
+        )
+        assert (
+            _match_policy(
+                "Regelt die DSGVO allein die Cookie-Einwilligung?", LanguageCode.DE
+            )
+            == "policy_cookie_consent"
+        )
+
     def test_normal_query_not_short_circuited(self) -> None:
         out = run(_state("Quel est le taux du Livret Aurore ?"))
         # No policy match → the router does not force an empty plan / canned answer.

@@ -69,6 +69,7 @@ class VertexAIBackend:
         temperature: float = 0.2,
         max_output_tokens: int | None = None,
         model: str | None = None,  # noqa: ARG002  fixed at init on the frontier path
+        usage: dict[str, int] | None = None,
     ) -> AsyncIterator[str]:
         """Yield tokens from Vertex AI as they arrive."""
         gemini = self._ensure_model()
@@ -78,10 +79,19 @@ class VertexAIBackend:
             generation_config={"temperature": temperature, "max_output_tokens": max_tokens},
             stream=True,
         )
+        input_tokens = 0
+        output_tokens = 0
         async for chunk in stream:
             text = chunk.text if (chunk.candidates and chunk.text) else ""
             if text:
                 yield text
+            meta = getattr(chunk, "usage_metadata", None)
+            if meta is not None:
+                input_tokens = int(getattr(meta, "prompt_token_count", 0) or 0)
+                output_tokens = int(getattr(meta, "candidates_token_count", 0) or 0)
+        if usage is not None:
+            usage["input_tokens"] = input_tokens
+            usage["output_tokens"] = output_tokens
 
     async def chat(
         self,

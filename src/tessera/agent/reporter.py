@@ -241,14 +241,22 @@ async def astream_synthesise(state: AgentState) -> AsyncIterator[str]:
     prompts = load_prompts(language)
     system_prompt, current_user_content = _build_synthesis_input(state, prompts)
     backend = backend_for_model(state.get("model"))
+    # Exact per-call token usage, filled by the backend at stream end — attributed
+    # to this turn without racing the process-wide budget tracker (Debug surface).
+    usage: dict[str, int] = {}
     stream = backend.stream_chat(
         await _build_chat_messages(state, system_prompt, current_user_content, prompts),
         temperature=0.2,
         model=state.get("model"),
+        usage=usage,
     )
+    # Accumulate the raw (pre-strip) model output so the Debug "draft vs final"
+    # surface can show what was removed (e.g. a <think>…</think> reasoning block).
+    raw_chunks: list[str] = []
     buffer = ""
     passthrough = False
     async for token in stream:
+        raw_chunks.append(token)
         if passthrough:
             yield token
             continue
@@ -265,6 +273,10 @@ async def astream_synthesise(state: AgentState) -> AsyncIterator[str]:
             buffer = ""
     if not passthrough and buffer:
         yield _strip_reasoning(buffer)
+    state["debug_synthesis_raw"] = "".join(raw_chunks)
+    if usage:
+        state["input_tokens"] = usage.get("input_tokens", 0)
+        state["output_tokens"] = usage.get("output_tokens", 0)
 
 
 def render(state: AgentState) -> str:

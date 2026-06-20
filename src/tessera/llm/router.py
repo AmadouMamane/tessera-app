@@ -76,8 +76,15 @@ class ChatBackend(Protocol):
         temperature: float = 0.2,
         max_output_tokens: int | None = None,
         model: str | None = None,
+        usage: dict[str, int] | None = None,
     ) -> AsyncIterator[str]:
-        """Yield tokens as they are generated (streaming path)."""
+        """Yield tokens as they are generated (streaming path).
+
+        When ``usage`` is provided, the backend writes the real per-call
+        ``input_tokens`` / ``output_tokens`` into it once the stream completes,
+        so the caller can attribute usage to this exact turn without racing the
+        process-wide budget tracker.
+        """
         ...
 
 

@@ -132,6 +132,7 @@ def test_language_and_draft_and_config_surfaces() -> None:
     draft = debug["draft"]
     assert isinstance(draft, dict)
     assert draft["changed"] is True  # empty worker draft vs a real final answer
+    assert draft["draft_label"] == "Aucun brouillon"  # no raw synthesis, empty worker draft
     assert draft["final_chars"] == len("Les frais de tenue de compte sont de 0 €.")
 
     config = debug["config"]
@@ -162,6 +163,62 @@ def test_prompt_and_memory_absent_without_synthesis() -> None:
     # The always-on surfaces still render.
     assert "routing" in debug
     assert "usage" in debug
+
+
+def test_quality_panel_uses_real_reviewer_scores_not_fabrication() -> None:
+    """The quality headline must scale the reviewer's real axes (no 0.78 fallback,
+    no cosmetic formulas)."""
+    quality = _debug()["quality"]
+    assert isinstance(quality, dict)
+    assert quality["badge"] == "Bon"  # needs_escalation is False in the fixture
+    rows = {r["label"]: r["value"] for r in quality["rows"]}  # type: ignore[union-attr]
+    # confidence 0.75 → 7.5, grounding 0.5 → 5.0, coverage 1.0 → 10.0, guard → 10.0
+    assert rows == {
+        "Confiance": "7.5",
+        "Ancrage": "5.0",
+        "Couverture": "10.0",
+        "Securite": "10.0",
+    }
+
+
+def test_quality_badge_reflects_real_escalation() -> None:
+    state = _state()
+    state["needs_escalation"] = True
+    debug = _debug_from_state(
+        state=state,
+        timings={},
+        starts={},
+        citations=[],
+        final_response="Escaladé.",
+        decision=_decision(),
+        latency_ms=10.0,
+        pinned_language=True,
+    )
+    quality = debug["quality"]
+    assert isinstance(quality, dict)
+    assert quality["badge"] == "A surveiller"
+    assert quality["badge_tone"] == "warn"
+
+
+def test_draft_prefers_raw_synthesis_and_shows_stripping() -> None:
+    state = _state()
+    state["debug_synthesis_raw"] = "<think>raisonnement interne</think>Réponse finale."
+    debug = _debug_from_state(
+        state=state,
+        timings={},
+        starts={},
+        citations=[],
+        final_response="Réponse finale.",
+        decision=_decision(),
+        latency_ms=10.0,
+        pinned_language=True,
+    )
+    draft = debug["draft"]
+    assert isinstance(draft, dict)
+    assert draft["draft_label"] == "Synthèse brute (avant nettoyage)"
+    assert "<think>" in str(draft["draft"])  # the stripped reasoning is visible here
+    assert draft["final"] == "Réponse finale."
+    assert draft["changed"] is True
 
 
 def test_trace_appends_reporter_span_so_total_reconciles_with_latency() -> None:

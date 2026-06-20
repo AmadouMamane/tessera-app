@@ -224,6 +224,9 @@ class AgentState(TypedDict):
     # turn.end event. Real data only — populated on the synthesis path.
     debug_prompt_messages: NotRequired[list[dict[str, str]]]
     debug_memory: NotRequired[dict[str, object]]
+    # Raw (pre-strip) synthesis output, so the Debug "draft vs final" surface can
+    # show what reasoning/markup was removed (e.g. a <think> block).
+    debug_synthesis_raw: NotRequired[str]
 
     # --- Escalation -------------------------------------------------------
     needs_escalation: bool

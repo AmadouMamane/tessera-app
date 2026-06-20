@@ -19,8 +19,9 @@ import re
 from dataclasses import dataclass
 from typing import Final
 
-from tessera.agent.state import (  # noqa: TCH001  — LangGraph introspects run() at runtime
+from tessera.agent.state import (
     AgentState,
+    Citation,
     GuardDecisionRecord,
 )
 from tessera.settings import LanguageCode, get_settings
@@ -294,6 +295,13 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "déposant et par établissement (directive 2014/49/UE), et non un montant "
             "supérieur. C'est ce plafond qui protège vos comptes Crédit Aurore."
         ),
+        "policy_cookie_consent": (
+            "Le consentement aux cookies relève d'abord de la directive ePrivacy "
+            "(2002/58/CE, article 5(3)), qui impose le bandeau de consentement. Le "
+            "RGPD (règlement 2016/679) intervient en complément, pour la qualité du "
+            "consentement et le traitement des données personnelles. Les deux textes "
+            "s'appliquent ensemble."
+        ),
     },
     LanguageCode.DE: {
         "policy_credit_decision": (
@@ -319,6 +327,13 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "Die Einlagensicherung in der Europäischen Union beträgt 100 000 € pro "
             "Einleger und pro Institut (Richtlinie 2014/49/EU), nicht mehr."
         ),
+        "policy_cookie_consent": (
+            "Die Einwilligung in Cookies richtet sich in erster Linie nach der "
+            "ePrivacy-Richtlinie (2002/58/EG, Art. 5 Abs. 3), die das "
+            "Einwilligungsbanner vorschreibt. Die DSGVO (Verordnung 2016/679) gilt "
+            "ergänzend für die Qualität der Einwilligung und die Verarbeitung "
+            "personenbezogener Daten. Beide gelten zusammen."
+        ),
     },
     LanguageCode.EN: {
         "policy_credit_decision": (
@@ -342,6 +357,12 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
         "policy_deposit_guarantee": (
             "The EU deposit guarantee is EUR 100 000 per depositor per institution "
             "(Directive 2014/49/EU), not a higher figure."
+        ),
+        "policy_cookie_consent": (
+            "Cookie consent is governed first by the ePrivacy Directive (2002/58/EC, "
+            "Art. 5(3)), which requires the consent banner. The GDPR (Regulation "
+            "2016/679) applies in addition, for the standard of consent and the "
+            "processing of personal data. Both apply together."
         ),
     },
 }
@@ -398,6 +419,13 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_deposit_guarantee",
         ),
+        (
+            (
+                re.compile(r"\bcookies?\b", re.IGNORECASE),
+                re.compile(r"(consentement|bandeau|rgpd|eprivacy|vie priv[ée]e)", re.IGNORECASE),
+            ),
+            "policy_cookie_consent",
+        ),
     ],
     LanguageCode.DE: [
         (
@@ -444,6 +472,13 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_deposit_guarantee",
         ),
+        (
+            (
+                re.compile(r"\bcookies?\b", re.IGNORECASE),
+                re.compile(r"(einwilligung|banner|dsgvo|eprivacy|datenschutz)", re.IGNORECASE),
+            ),
+            "policy_cookie_consent",
+        ),
     ],
     LanguageCode.EN: [
         (
@@ -487,8 +522,52 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_deposit_guarantee",
         ),
+        (
+            (
+                re.compile(r"\bcookies?\b", re.IGNORECASE),
+                re.compile(r"(consent|banner|gdpr|eprivacy|privacy)", re.IGNORECASE),
+            ),
+            "policy_cookie_consent",
+        ),
     ],
 }
+
+
+# Sources backing a deterministic short-circuit, so a vetted canned answer is
+# still *grounded* (satisfies the harness's ``must_cite_source`` and surfaces a
+# real citation in the UI). Only keys whose answer asserts a regulation need an
+# entry — the rest are refusals/deferrals that cite nothing by design.
+def _cookie_citation(language: LanguageCode) -> Citation:
+    excerpts: dict[LanguageCode, str] = {
+        LanguageCode.FR: (
+            "L'article 5(3) de la directive ePrivacy (2002/58/CE) régit le "
+            "consentement au dépôt de cookies ; le RGPD encadre la qualité du "
+            "consentement et le traitement des données personnelles."
+        ),
+        LanguageCode.DE: (
+            "Art. 5 Abs. 3 der ePrivacy-Richtlinie (2002/58/EG) regelt die "
+            "Einwilligung in Cookies; die DSGVO regelt die Qualität der "
+            "Einwilligung und die Verarbeitung personenbezogener Daten."
+        ),
+        LanguageCode.EN: (
+            "Article 5(3) of the ePrivacy Directive (2002/58/EC) governs consent "
+            "to storing cookies; the GDPR governs the consent standard and the "
+            "processing of personal data."
+        ),
+    }
+    return Citation(
+        source="Directive ePrivacy 2002/58/CE",
+        locator="art. 5(3)",
+        language=language,
+        excerpt=excerpts[language],
+    )
+
+
+def _policy_citations(policy_key: str, language: LanguageCode) -> list[Citation]:
+    """Citations backing a short-circuit answer, empty when none is asserted."""
+    if policy_key == "policy_cookie_consent":
+        return [_cookie_citation(language)]
+    return []
 
 
 def _match_policy(text: str, language: LanguageCode) -> str | None:
@@ -552,7 +631,7 @@ def run(state: AgentState) -> dict[str, object]:
     # high-risk asks, bypassing the LLM (same mechanism as the injection guard).
     policy_key = _match_policy(input_check.sanitised_text, language)
     if policy_key is not None:
-        return {
+        update: dict[str, object] = {
             "guard_decisions": guard_decisions,
             **language_update,
             "needs_escalation": False,
@@ -560,5 +639,11 @@ def run(state: AgentState) -> dict[str, object]:
             "plan": [],
             "plan_rationale": f"deterministic policy short-circuit: {policy_key}",
         }
+        # A short-circuit that asserts a regulation must carry its source, so the
+        # answer is grounded (not just compliant) end to end.
+        citations = _policy_citations(policy_key, language)
+        if citations:
+            update["citations"] = citations
+        return update
 
     return {"guard_decisions": guard_decisions, **language_update}

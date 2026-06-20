@@ -53,6 +53,7 @@ class OpenAIBackend:
         temperature: float = 0.2,  # noqa: ARG002 — OpenAI reasoning models reject non-default
         max_output_tokens: int | None = None,
         model: str | None = None,
+        usage: dict[str, int] | None = None,
     ) -> AsyncIterator[str]:
         """Yield tokens from OpenAI as they arrive."""
         effective_model = model or self.model
@@ -73,6 +74,9 @@ class OpenAIBackend:
             if chunk.usage is not None:
                 input_tokens = chunk.usage.prompt_tokens
                 output_tokens = chunk.usage.completion_tokens
+        if usage is not None:
+            usage["input_tokens"] = input_tokens
+            usage["output_tokens"] = output_tokens
         get_budget_tracker().record(
             backend=self.name,
             model=effective_model,

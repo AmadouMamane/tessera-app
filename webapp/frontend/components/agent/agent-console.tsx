@@ -1460,12 +1460,12 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
               </Chip>
             }
           />
-          <DebugKV k="Brouillon" v={`${draft.draft_chars} car.`} />
-          <DebugKV k="Final" v={`${draft.final_chars} car.`} />
+          <DebugKV k={draft.draft_label} v={`${draft.draft_chars} car.`} />
+          <DebugKV k="Réponse finale" v={`${draft.final_chars} car.`} />
           {draft.draft ? (
             <details className="mt-1.5 rounded border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
               <summary className="cursor-pointer px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
-                Voir le brouillon worker
+                Voir : {draft.draft_label}
               </summary>
               <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words border-t border-[var(--tessera-border)] px-2 py-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text)]">
                 {draft.draft}

@@ -154,6 +154,7 @@ export const ChatDebugSchema = z.object({
     .object({
       title: z.string(),
       draft: z.string().nullable(),
+      draft_label: z.string(),
       final: z.string(),
       changed: z.boolean(),
       draft_chars: z.number().int().nonnegative(),

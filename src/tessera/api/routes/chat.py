@@ -34,7 +34,7 @@ from tessera.agent.state import (
 )
 from tessera.agent.supervisor import RoutingDecision, route_turn
 from tessera.guard.audit import current_model, emit_handoff, emit_routing, guard_disabled
-from tessera.llm.budget import estimate_turn_cost, get_budget_tracker
+from tessera.llm.budget import estimate_turn_cost
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
@@ -56,6 +56,7 @@ router = APIRouter(tags=["chat"])
 _BACKGROUND_TASKS: set[asyncio.Task[None]] = set()
 _MS_PER_SECOND = 1000.0
 _GOOD_SCORE_10 = 8.0
+_OK_SCORE_10 = 5.0
 _MAX_DEBUG_SOURCES = 4
 
 
@@ -234,31 +235,39 @@ def _source_scope(source: str) -> str:
     return "Interne" if source.startswith("credit-aurore") else "Externe"
 
 
+def _quality_row(label: str, score: float | None) -> dict[str, object]:
+    """One quality row from a real 0..1 reviewer score, scaled to /10."""
+    if score is None:
+        return {"label": label, "value": "—", "scale": "/10", "tone": "warn"}
+    value = _clamp_score(score * 10.0)
+    tone = "good" if value >= _GOOD_SCORE_10 else "warn" if value >= _OK_SCORE_10 else "crit"
+    return {"label": label, "value": f"{value:.1f}", "scale": "/10", "tone": tone}
+
+
 def _debug_quality(
     *,
     confidence: float | None,
-    doc_count: int,
-    citation_count: int,
-    guard_count: int,
-    denied_count: int,
+    grounding: float | None,
+    coverage: float | None,
+    guard: float | None,
+    needs_escalation: bool,
 ) -> dict[str, object]:
-    base = confidence if confidence is not None else 0.78
-    pertinence = _clamp_score(7.2 + min(doc_count, 4) * 0.45 + base)
-    exactitude = _clamp_score(7.4 + min(citation_count, 3) * 0.5 + base)
-    completude = _clamp_score(7.0 + min(doc_count, 6) * 0.28 + base)
-    securite = _clamp_score(9.6 - denied_count * 0.8 + min(guard_count, 4) * 0.05)
-    minimum = min(pertinence, exactitude, completude, securite)
-    badge = "Bon" if minimum >= _GOOD_SCORE_10 else "A surveiller"
-    tone = "good" if minimum >= _GOOD_SCORE_10 else "warn"
+    """Per-turn quality from the reviewer's *own* signals — no fabrication.
+
+    The four rows are the reviewer's real axes: the composite confidence and the
+    grounding / coverage / guard split it fused (each 0..1, scaled to /10). The
+    badge reflects the reviewer's actual escalation decision, not a synthetic
+    threshold over invented sub-scores.
+    """
     return {
         "title": "Qualite & securite de la reponse",
-        "badge": badge,
-        "badge_tone": tone,
+        "badge": "A surveiller" if needs_escalation else "Bon",
+        "badge_tone": "warn" if needs_escalation else "good",
         "rows": [
-            {"label": "Pertinence", "value": f"{pertinence:.1f}", "scale": "/10", "tone": tone},
-            {"label": "Exactitude", "value": f"{exactitude:.1f}", "scale": "/10", "tone": tone},
-            {"label": "Completude", "value": f"{completude:.1f}", "scale": "/10", "tone": tone},
-            {"label": "Securite", "value": f"{securite:.1f}", "scale": "/10", "tone": tone},
+            _quality_row("Confiance", confidence),
+            _quality_row("Ancrage", grounding),
+            _quality_row("Couverture", coverage),
+            _quality_row("Securite", guard),
         ],
     }
 
@@ -522,15 +531,29 @@ def _debug_language(state: Mapping[str, object], *, pinned: bool) -> dict[str, o
 
 
 def _debug_draft(state: Mapping[str, object], final_response: str) -> dict[str, object]:
-    """Surface #7 — the worker draft versus the final user-facing response."""
-    draft_raw = state.get("draft_response")
-    draft = str(draft_raw) if draft_raw else None
+    """Surface #7 — the model's raw output versus the final user-facing response.
+
+    Prefers the raw (pre-strip) synthesis output so a removed ``<think>`` block or
+    markup is visible; falls back to the worker draft when no LLM synthesis ran.
+    """
+    raw = state.get("debug_synthesis_raw")
+    worker_draft = state.get("draft_response")
+    if raw:
+        source: str | None = str(raw)
+        label = "Synthèse brute (avant nettoyage)"
+    elif worker_draft:
+        source = str(worker_draft)
+        label = "Brouillon worker"
+    else:
+        source = None
+        label = "Aucun brouillon"
     return {
         "title": "Brouillon vs réponse finale",
-        "draft": draft,
+        "draft": source,
+        "draft_label": label,
         "final": final_response,
-        "changed": (draft or "") != final_response,
-        "draft_chars": len(draft) if draft else 0,
+        "changed": (source or "") != final_response,
+        "draft_chars": len(source) if source else 0,
         "final_chars": len(final_response),
     }
 
@@ -576,10 +599,10 @@ def _debug_from_state(
     debug: dict[str, object] = {
         "quality": _debug_quality(
             confidence=confidence,
-            doc_count=len(docs),
-            citation_count=len(citations),
-            guard_count=len(guard_decisions),
-            denied_count=denied_count,
+            grounding=_opt_float(state.get("grounding_score")),
+            coverage=_opt_float(state.get("coverage_score")),
+            guard=_opt_float(state.get("guard_score")),
+            needs_escalation=bool(state.get("needs_escalation", False)),
         ),
         "sources": _debug_sources(docs, citations),
         "tools": _debug_tools(tool_calls, docs, timings),
@@ -703,23 +726,12 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
         draft = state.get("draft_response", "")
         tokens: list[str] = []
         if docs:
-            # The streaming synthesis path records real token counts to the
-            # budget tracker (Ollama's prompt_eval_count/eval_count) but never
-            # threads them back through the token iterator. Snapshot the tracker
-            # delta around the stream to surface the *real* per-turn usage on the
-            # Debug envelope — the synthesis call is the only LLM call recording
-            # in this synchronous section (router/reviewer are rule-based).
-            budget_before = get_budget_tracker().snapshot()
+            # astream_synthesise threads the backend's exact per-call token usage
+            # onto the state (state["input_tokens"]/["output_tokens"]) and stashes
+            # the raw pre-strip output — both consumed by the Debug envelope.
             async for token in reporter_module.astream_synthesise(state):
                 tokens.append(token)
                 yield _sse("turn.token", {"token": token})
-            budget_after = get_budget_tracker().snapshot()
-            state["input_tokens"] = max(
-                0, budget_after.input_tokens - budget_before.input_tokens
-            )
-            state["output_tokens"] = max(
-                0, budget_after.output_tokens - budget_before.output_tokens
-            )
             # Cite the chunks that actually ground the answer's claims (across
             # every worker), falling back to the worker-selected citations when
             # attribution finds nothing so a turn never loses its sources.
