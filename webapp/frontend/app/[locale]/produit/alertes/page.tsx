@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { ScaffoldView } from "@/components/common/scaffold-view";
+import { ClientAlerts } from "@/components/client/client-alerts";
 import { ProductShell } from "@/components/layout/product-shell";
 
 interface PageProps {
@@ -13,14 +13,13 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: t("alerts") };
 }
 
-export default async function ProductScaffoldPage({ params }: PageProps) {
+export default async function ProductAlertsPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "product.nav" });
-  const title = t("alerts");
   return (
-    <ProductShell title={title}>
-      <ScaffoldView title={title} />
+    <ProductShell title={t("alerts")}>
+      <ClientAlerts />
     </ProductShell>
   );
 }

@@ -4767,5 +4767,148 @@
       "toggleSidebar": "Replier / déployer le menu",
       "fleet": "Voir la flotte des agents"
     }
+  },
+  "clientDocuments": {
+    "subtitle": "Retrouvez la documentation de vos produits, vos conditions et procédures Crédit Aurore.",
+    "unavailable": "Documents indisponibles pour le moment.",
+    "empty": "Aucun document ne correspond à votre recherche.",
+    "search": "Rechercher un document…",
+    "allCategories": "Toutes les catégories",
+    "distribution": "Répartition par catégorie",
+    "kpi": {
+      "total": "Documents",
+      "products": "Fiches produit",
+      "terms": "Conditions",
+      "procedures": "Procédures"
+    },
+    "category": {
+      "products": "Produits",
+      "terms": "Conditions",
+      "procedures": "Procédures",
+      "services": "Services",
+      "other": "Autres"
+    },
+    "meta": {
+      "pages": "{n} pages",
+      "updated": "Mis à jour le"
+    },
+    "footer": {
+      "total": "{n} documents",
+      "source": "Source : {src}"
+    },
+    "drawer": {
+      "close": "Fermer",
+      "download": "Télécharger le PDF"
+    }
+  },
+  "clientRequests": {
+    "subtitle": "Suivez vos demandes auprès du service client et leur statut de traitement.",
+    "unavailable": "Demandes indisponibles pour le moment.",
+    "empty": "Aucune demande ne correspond à votre recherche.",
+    "search": "Rechercher une demande…",
+    "allStatuses": "Tous les statuts",
+    "kpi": {
+      "total": "Demandes",
+      "open": "En attente",
+      "in_progress": "En cours",
+      "resolved": "Résolues"
+    },
+    "status": {
+      "open": "En attente",
+      "in_progress": "En cours",
+      "resolved": "Résolue"
+    },
+    "channel": {
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "branch": "Agence"
+    },
+    "category": {
+      "card": "Carte",
+      "loan": "Crédit",
+      "dispute": "Litige",
+      "account": "Compte"
+    },
+    "drawer": {
+      "close": "Fermer",
+      "channel": "Canal",
+      "category": "Catégorie",
+      "opened": "Ouverte le",
+      "updated": "Mise à jour le",
+      "summary": "Résumé"
+    },
+    "footer": {
+      "total": "{n} demandes",
+      "source": "Source : {src}"
+    }
+  },
+  "clientAlerts": {
+    "subtitle": "Vos notifications de compte : relevés, échéances, sécurité.",
+    "unavailable": "Alertes indisponibles pour le moment.",
+    "empty": "Aucune alerte à afficher.",
+    "kpi": {
+      "total": "Notifications",
+      "unread": "Non lues",
+      "security": "Sécurité"
+    },
+    "filter": {
+      "all": "Toutes",
+      "unread": "Non lues"
+    },
+    "markAllRead": "Tout marquer comme lu",
+    "markRead": "Marquer comme lu",
+    "markUnread": "Marquer comme non lu",
+    "drawer": {
+      "close": "Fermer"
+    },
+    "footer": {
+      "total": "{n} notifications",
+      "source": "Source : {src}"
+    }
+  },
+  "clientSettings": {
+    "subtitle": "Gérez vos préférences, vos consentements et vos droits RGPD.",
+    "unavailable": "Paramètres indisponibles pour le moment.",
+    "updatedAt": "Dernière modification",
+    "group": {
+      "language": "Langue",
+      "notifications": "Notifications",
+      "privacy": "Confidentialité & consentements",
+      "security": "Sécurité",
+      "gdpr": "Vos droits (RGPD)"
+    },
+    "lang": {
+      "fr": "Français",
+      "de": "Deutsch",
+      "en": "English"
+    },
+    "item": {
+      "notify_email": "Notifications par e-mail",
+      "notify_sms": "Notifications par SMS",
+      "notify_push": "Notifications push",
+      "consent_marketing": "Communications marketing",
+      "consent_cookies": "Cookies de mesure d’audience",
+      "consent_data_sharing": "Partage de données avec des partenaires",
+      "strong_auth": "Authentification forte (DSP2)"
+    },
+    "hint": {
+      "notify_email": "Recevez vos relevés et alertes par e-mail.",
+      "notify_sms": "Alertes de solde et de sécurité par SMS.",
+      "notify_push": "Notifications sur l’application mobile.",
+      "consent_marketing": "Offres personnalisées de Crédit Aurore.",
+      "consent_cookies": "Aide à améliorer nos services en ligne.",
+      "consent_data_sharing": "Requis pour certains services tiers.",
+      "strong_auth": "Double validation pour les opérations sensibles."
+    },
+    "gdpr": {
+      "intro": "Conformément au RGPD, vous pouvez exercer vos droits d’accès, de portabilité et d’effacement.",
+      "export": "Exporter mes données",
+      "exportSubject": "Demande d’export de mes données personnelles",
+      "erase": "Demander l’effacement",
+      "eraseSubject": "Demande d’effacement de mes données personnelles"
+    },
+    "footer": {
+      "source": "Source : {src}"
+    }
   }
 }

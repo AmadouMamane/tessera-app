@@ -4767,5 +4767,148 @@
       "toggleSidebar": "Collapse / expand menu",
       "fleet": "View the agent fleet"
     }
+  },
+  "clientDocuments": {
+    "subtitle": "Find the documentation for your Crédit Aurore products, terms and procedures.",
+    "unavailable": "Documents are currently unavailable.",
+    "empty": "No document matches your search.",
+    "search": "Search a document…",
+    "allCategories": "All categories",
+    "distribution": "By category",
+    "kpi": {
+      "total": "Documents",
+      "products": "Product sheets",
+      "terms": "Terms",
+      "procedures": "Procedures"
+    },
+    "category": {
+      "products": "Products",
+      "terms": "Terms",
+      "procedures": "Procedures",
+      "services": "Services",
+      "other": "Other"
+    },
+    "meta": {
+      "pages": "{n} pages",
+      "updated": "Updated"
+    },
+    "footer": {
+      "total": "{n} documents",
+      "source": "Source: {src}"
+    },
+    "drawer": {
+      "close": "Close",
+      "download": "Download PDF"
+    }
+  },
+  "clientRequests": {
+    "subtitle": "Track your support requests and their processing status.",
+    "unavailable": "Requests are currently unavailable.",
+    "empty": "No request matches your search.",
+    "search": "Search a request…",
+    "allStatuses": "All statuses",
+    "kpi": {
+      "total": "Requests",
+      "open": "Pending",
+      "in_progress": "In progress",
+      "resolved": "Resolved"
+    },
+    "status": {
+      "open": "Pending",
+      "in_progress": "In progress",
+      "resolved": "Resolved"
+    },
+    "channel": {
+      "phone": "Phone",
+      "email": "Email",
+      "branch": "Branch"
+    },
+    "category": {
+      "card": "Card",
+      "loan": "Loan",
+      "dispute": "Dispute",
+      "account": "Account"
+    },
+    "drawer": {
+      "close": "Close",
+      "channel": "Channel",
+      "category": "Category",
+      "opened": "Opened",
+      "updated": "Updated",
+      "summary": "Summary"
+    },
+    "footer": {
+      "total": "{n} requests",
+      "source": "Source: {src}"
+    }
+  },
+  "clientAlerts": {
+    "subtitle": "Your account notifications: statements, due dates, security.",
+    "unavailable": "Alerts are currently unavailable.",
+    "empty": "No alerts to show.",
+    "kpi": {
+      "total": "Notifications",
+      "unread": "Unread",
+      "security": "Security"
+    },
+    "filter": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "markAllRead": "Mark all as read",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "drawer": {
+      "close": "Close"
+    },
+    "footer": {
+      "total": "{n} notifications",
+      "source": "Source: {src}"
+    }
+  },
+  "clientSettings": {
+    "subtitle": "Manage your preferences, consents and GDPR rights.",
+    "unavailable": "Settings are currently unavailable.",
+    "updatedAt": "Last change",
+    "group": {
+      "language": "Language",
+      "notifications": "Notifications",
+      "privacy": "Privacy & consents",
+      "security": "Security",
+      "gdpr": "Your rights (GDPR)"
+    },
+    "lang": {
+      "fr": "Français",
+      "de": "Deutsch",
+      "en": "English"
+    },
+    "item": {
+      "notify_email": "Email notifications",
+      "notify_sms": "SMS notifications",
+      "notify_push": "Push notifications",
+      "consent_marketing": "Marketing communications",
+      "consent_cookies": "Analytics cookies",
+      "consent_data_sharing": "Data sharing with partners",
+      "strong_auth": "Strong authentication (PSD2)"
+    },
+    "hint": {
+      "notify_email": "Receive statements and alerts by email.",
+      "notify_sms": "Balance and security alerts by SMS.",
+      "notify_push": "Notifications on the mobile app.",
+      "consent_marketing": "Personalised Crédit Aurore offers.",
+      "consent_cookies": "Helps improve our online services.",
+      "consent_data_sharing": "Required for some third-party services.",
+      "strong_auth": "Two-step validation for sensitive operations."
+    },
+    "gdpr": {
+      "intro": "Under the GDPR, you can exercise your rights of access, portability and erasure.",
+      "export": "Export my data",
+      "exportSubject": "Request to export my personal data",
+      "erase": "Request erasure",
+      "eraseSubject": "Request to erase my personal data"
+    },
+    "footer": {
+      "source": "Source: {src}"
+    }
   }
 }

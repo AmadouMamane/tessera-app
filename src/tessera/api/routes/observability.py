@@ -34,6 +34,7 @@ from tessera.observability import (
     automations as automations_mod,
     citation_resolver as citation_resolver_mod,
     citation_validity as citation_validity_mod,
+    client_space as client_space_mod,
     compliance as compliance_mod,
     conformance as conformance_mod,
     consistency as consistency_mod,
@@ -2315,3 +2316,72 @@ async def observability_provenance(bundle_id: str) -> dict[str, object]:
     report = await provenance_mod.attribute(bundle.original_answer, chunks)
     util = retrieval_quality_mod.utilization(report, len(chunks))
     return {**asdict(report), "utilization": asdict(util)}
+
+
+# ── client space (Produit) ───────────────────────────────────────────────────
+
+
+@router.get("/observability/client/documents")
+async def observability_client_documents(locale: str = "fr") -> dict[str, object]:
+    """Customer documents, sourced from the real Crédit Aurore corpus (locale-aware)."""
+    try:
+        return {"available": True, **client_space_mod.compute_documents(locale)}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.client_space.documents: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/client/requests")
+async def observability_client_requests() -> dict[str, object]:
+    """Customer support requests (escalation tickets)."""
+    try:
+        return {"available": True, **client_space_mod.compute_requests()}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.client_space.requests: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/client/alerts")
+async def observability_client_alerts() -> dict[str, object]:
+    """Account alerts with the durable read-state applied."""
+    try:
+        return {"available": True, **client_space_mod.compute_alerts()}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.client_space.alerts: failed: {exc}\n")
+        return {"available": False}
+
+
+class _AlertReadBody(BaseModel):
+    """Mark one account alert read/unread (durable)."""
+
+    alert_id: str
+    read: bool = True
+
+
+@router.post("/observability/client/alerts/read")
+async def observability_client_alerts_read(body: _AlertReadBody) -> dict[str, object]:
+    """Persist an alert's read state and return the fresh alerts payload."""
+    return {"available": True, **client_space_mod.mark_alert_read(body.alert_id, read=body.read)}
+
+
+@router.get("/observability/client/settings")
+async def observability_client_settings() -> dict[str, object]:
+    """Customer preferences (notifications, privacy/consent, security)."""
+    try:
+        return {"available": True, **client_space_mod.compute_settings()}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.client_space.settings: failed: {exc}\n")
+        return {"available": False}
+
+
+class _SettingBody(BaseModel):
+    """Update one customer preference (durable)."""
+
+    key: str
+    value: object
+
+
+@router.post("/observability/client/settings")
+async def observability_client_settings_save(body: _SettingBody) -> dict[str, object]:
+    """Persist one preference and return the full settings payload."""
+    return {"available": True, **client_space_mod.update_setting(body.key, body.value)}

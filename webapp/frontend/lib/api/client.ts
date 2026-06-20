@@ -61,6 +61,14 @@ import {
   CitationResolutionSchema,
   type CitationSummary,
   CitationSummarySchema,
+  type ClientAlerts,
+  ClientAlertsSchema,
+  type ClientDocuments,
+  ClientDocumentsSchema,
+  type ClientRequests,
+  ClientRequestsSchema,
+  type ClientSettings,
+  ClientSettingsSchema,
   type ClusterReport,
   ClusterReportSchema,
   type ComplianceReport,
@@ -1378,5 +1386,66 @@ export async function requestAgentRelease(agentId: string): Promise<ReleaseAgent
       body: JSON.stringify({ agent_id: agentId }),
     },
     ReleaseAgentSchema,
+  );
+}
+
+// ── Client space (Produit) ───────────────────────────────────────────────────
+
+/** Customer documents, sourced from the real Crédit Aurore corpus (locale-aware). */
+export async function fetchClientDocuments(
+  locale: string,
+  signal?: AbortSignal,
+): Promise<ClientDocuments> {
+  return request(
+    `/observability/client/documents?locale=${encodeURIComponent(locale)}`,
+    { signal },
+    ClientDocumentsSchema,
+  );
+}
+
+/** Customer support requests (escalation tickets). */
+export async function fetchClientRequests(signal?: AbortSignal): Promise<ClientRequests> {
+  return request("/observability/client/requests", { signal }, ClientRequestsSchema);
+}
+
+/** Account alerts with the durable read-state applied. */
+export async function fetchClientAlerts(signal?: AbortSignal): Promise<ClientAlerts> {
+  return request("/observability/client/alerts", { signal }, ClientAlertsSchema);
+}
+
+/** Persist one alert's read/unread state; returns the fresh alerts payload. */
+export async function mutateClientAlert(body: {
+  alert_id: string;
+  read: boolean;
+}): Promise<ClientAlerts> {
+  return request(
+    "/observability/client/alerts/read",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    ClientAlertsSchema,
+  );
+}
+
+/** Customer preferences (notifications, privacy/consent, security). */
+export async function fetchClientSettings(signal?: AbortSignal): Promise<ClientSettings> {
+  return request("/observability/client/settings", { signal }, ClientSettingsSchema);
+}
+
+/** Persist one preference; returns the full settings payload. */
+export async function mutateClientSetting(body: {
+  key: string;
+  value: boolean | string;
+}): Promise<ClientSettings> {
+  return request(
+    "/observability/client/settings",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    ClientSettingsSchema,
   );
 }

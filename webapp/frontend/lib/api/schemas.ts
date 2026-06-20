@@ -4820,3 +4820,94 @@ export const ReleaseAgentSchema = z.object({
   run_at: z.string(),
 });
 export type ReleaseAgent = z.infer<typeof ReleaseAgentSchema>;
+
+// ---------------------------------------------------------------------------
+// Client space (Produit) — documents / requests / alerts / settings
+// ---------------------------------------------------------------------------
+
+const ClientKpiSchema = z.object({ key: z.string(), value: z.string(), sub: z.string() });
+const ClientSliceSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+  color: z.string(),
+});
+const ClientFooterSchema = z.object({
+  total: z.number().int().optional(),
+  source: z.string(),
+});
+
+export const ClientDocumentsSchema = z.object({
+  available: z.boolean(),
+  kpis: z.array(ClientKpiSchema).optional(),
+  distribution: z.array(ClientSliceSchema).optional(),
+  documents: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        category: z.string(),
+        language: z.string(),
+        source: z.string(),
+        excerpt: z.string(),
+        body: z.string(),
+        size_kb: z.number().int(),
+        pages: z.number().int(),
+        updated: z.string(),
+      }),
+    )
+    .optional(),
+  footer: ClientFooterSchema.optional(),
+});
+export type ClientDocuments = z.infer<typeof ClientDocumentsSchema>;
+
+export const ClientRequestsSchema = z.object({
+  available: z.boolean(),
+  kpis: z.array(ClientKpiSchema).optional(),
+  requests: z
+    .array(
+      z.object({
+        reference: z.string(),
+        subject: z.string(),
+        category: z.string(),
+        channel: z.enum(["phone", "email", "branch"]),
+        status: z.enum(["open", "in_progress", "resolved"]),
+        opened: z.string(),
+        updated: z.string(),
+        summary: z.string(),
+      }),
+    )
+    .optional(),
+  footer: ClientFooterSchema.optional(),
+});
+export type ClientRequests = z.infer<typeof ClientRequestsSchema>;
+
+export const ClientAlertsSchema = z.object({
+  available: z.boolean(),
+  kpis: z.array(ClientKpiSchema).optional(),
+  alerts: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        category: z.string(),
+        severity: z.enum(["info", "warning", "success"]),
+        date: z.string(),
+        body: z.string(),
+        read: z.boolean(),
+      }),
+    )
+    .optional(),
+  footer: ClientFooterSchema.optional(),
+});
+export type ClientAlerts = z.infer<typeof ClientAlertsSchema>;
+
+export const ClientSettingsSchema = z.object({
+  available: z.boolean(),
+  values: z.record(z.string(), z.union([z.boolean(), z.string()])).optional(),
+  groups: z.array(z.object({ key: z.string(), items: z.array(z.string()) })).optional(),
+  languages: z.array(z.string()).optional(),
+  updated_at: z.string().optional(),
+  footer: ClientFooterSchema.optional(),
+});
+export type ClientSettings = z.infer<typeof ClientSettingsSchema>;

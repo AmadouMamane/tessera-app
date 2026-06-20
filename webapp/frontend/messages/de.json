@@ -4767,5 +4767,148 @@
       "toggleSidebar": "Menü ein-/ausklappen",
       "fleet": "Agentenflotte ansehen"
     }
+  },
+  "clientDocuments": {
+    "subtitle": "Finden Sie die Dokumentation zu Ihren Crédit-Aurore-Produkten, Bedingungen und Verfahren.",
+    "unavailable": "Dokumente derzeit nicht verfügbar.",
+    "empty": "Kein Dokument entspricht Ihrer Suche.",
+    "search": "Dokument suchen…",
+    "allCategories": "Alle Kategorien",
+    "distribution": "Nach Kategorie",
+    "kpi": {
+      "total": "Dokumente",
+      "products": "Produktblätter",
+      "terms": "Bedingungen",
+      "procedures": "Verfahren"
+    },
+    "category": {
+      "products": "Produkte",
+      "terms": "Bedingungen",
+      "procedures": "Verfahren",
+      "services": "Services",
+      "other": "Andere"
+    },
+    "meta": {
+      "pages": "{n} Seiten",
+      "updated": "Aktualisiert"
+    },
+    "footer": {
+      "total": "{n} Dokumente",
+      "source": "Quelle: {src}"
+    },
+    "drawer": {
+      "close": "Schließen",
+      "download": "PDF herunterladen"
+    }
+  },
+  "clientRequests": {
+    "subtitle": "Verfolgen Sie Ihre Anfragen und deren Bearbeitungsstatus.",
+    "unavailable": "Anfragen derzeit nicht verfügbar.",
+    "empty": "Keine Anfrage entspricht Ihrer Suche.",
+    "search": "Anfrage suchen…",
+    "allStatuses": "Alle Status",
+    "kpi": {
+      "total": "Anfragen",
+      "open": "Offen",
+      "in_progress": "In Bearbeitung",
+      "resolved": "Gelöst"
+    },
+    "status": {
+      "open": "Offen",
+      "in_progress": "In Bearbeitung",
+      "resolved": "Gelöst"
+    },
+    "channel": {
+      "phone": "Telefon",
+      "email": "E-Mail",
+      "branch": "Filiale"
+    },
+    "category": {
+      "card": "Karte",
+      "loan": "Kredit",
+      "dispute": "Reklamation",
+      "account": "Konto"
+    },
+    "drawer": {
+      "close": "Schließen",
+      "channel": "Kanal",
+      "category": "Kategorie",
+      "opened": "Geöffnet",
+      "updated": "Aktualisiert",
+      "summary": "Zusammenfassung"
+    },
+    "footer": {
+      "total": "{n} Anfragen",
+      "source": "Quelle: {src}"
+    }
+  },
+  "clientAlerts": {
+    "subtitle": "Ihre Kontobenachrichtigungen: Auszüge, Fälligkeiten, Sicherheit.",
+    "unavailable": "Benachrichtigungen derzeit nicht verfügbar.",
+    "empty": "Keine Benachrichtigungen.",
+    "kpi": {
+      "total": "Benachrichtigungen",
+      "unread": "Ungelesen",
+      "security": "Sicherheit"
+    },
+    "filter": {
+      "all": "Alle",
+      "unread": "Ungelesen"
+    },
+    "markAllRead": "Alle als gelesen markieren",
+    "markRead": "Als gelesen markieren",
+    "markUnread": "Als ungelesen markieren",
+    "drawer": {
+      "close": "Schließen"
+    },
+    "footer": {
+      "total": "{n} Benachrichtigungen",
+      "source": "Quelle: {src}"
+    }
+  },
+  "clientSettings": {
+    "subtitle": "Verwalten Sie Ihre Einstellungen, Einwilligungen und DSGVO-Rechte.",
+    "unavailable": "Einstellungen derzeit nicht verfügbar.",
+    "updatedAt": "Letzte Änderung",
+    "group": {
+      "language": "Sprache",
+      "notifications": "Benachrichtigungen",
+      "privacy": "Datenschutz & Einwilligungen",
+      "security": "Sicherheit",
+      "gdpr": "Ihre Rechte (DSGVO)"
+    },
+    "lang": {
+      "fr": "Français",
+      "de": "Deutsch",
+      "en": "English"
+    },
+    "item": {
+      "notify_email": "E-Mail-Benachrichtigungen",
+      "notify_sms": "SMS-Benachrichtigungen",
+      "notify_push": "Push-Benachrichtigungen",
+      "consent_marketing": "Marketingkommunikation",
+      "consent_cookies": "Analyse-Cookies",
+      "consent_data_sharing": "Datenweitergabe an Partner",
+      "strong_auth": "Starke Authentifizierung (PSD2)"
+    },
+    "hint": {
+      "notify_email": "Erhalten Sie Auszüge und Hinweise per E-Mail.",
+      "notify_sms": "Saldo- und Sicherheitshinweise per SMS.",
+      "notify_push": "Benachrichtigungen in der mobilen App.",
+      "consent_marketing": "Personalisierte Angebote von Crédit Aurore.",
+      "consent_cookies": "Hilft, unsere Online-Dienste zu verbessern.",
+      "consent_data_sharing": "Für einige Drittdienste erforderlich.",
+      "strong_auth": "Zwei-Faktor-Bestätigung für sensible Vorgänge."
+    },
+    "gdpr": {
+      "intro": "Gemäß DSGVO können Sie Ihre Rechte auf Auskunft, Übertragbarkeit und Löschung ausüben.",
+      "export": "Meine Daten exportieren",
+      "exportSubject": "Antrag auf Export meiner personenbezogenen Daten",
+      "erase": "Löschung beantragen",
+      "eraseSubject": "Antrag auf Löschung meiner personenbezogenen Daten"
+    },
+    "footer": {
+      "source": "Quelle: {src}"
+    }
   }
 }
