@@ -157,7 +157,11 @@ def _build_synthesis_input(state: AgentState, prompts: dict[str, str]) -> tuple[
     stay in sync. All user-visible strings are read from the language-specific
     YAML bundle — no hardcoded French.
     """
-    system_prompt = prompts.get("system", "You are a helpful banking assistant.")
+    # Sandbox override (console playground) replaces the bundle's system prompt
+    # for this turn only; falls back to the language-specific default.
+    system_prompt = state.get("system_prompt_override") or prompts.get(
+        "system", "You are a helpful banking assistant."
+    )
     docs = state.get("retrieved_documents", [])
     context = "\n\n".join(f"[{doc.source}]\n{doc.text}" for doc in docs[:6])
     draft = state.get("draft_response", "")

@@ -23,7 +23,7 @@ import inspect
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from tessera.guard.audit import emit_audit
+from tessera.guard.audit import emit_audit, guard_disabled
 from tessera.guard.decisions import (
     Decision,
     DecisionKind,
@@ -281,7 +281,10 @@ async def guarded_invoke(
     settings = get_settings()
     decisions = _check_tool(tool_policy, arguments, language)
     records = [_to_record(d, target=tool_name) for d in decisions]
-    audit_args = _redacted_arguments(tool_policy, arguments, active_policy.pii_patterns)
+    # The sandbox console can disable PII redaction for a turn (guard_disabled);
+    # everywhere else (eval, prod) the contextvar is empty so redaction applies.
+    pii_patterns = () if "pii" in guard_disabled.get() else active_policy.pii_patterns
+    audit_args = _redacted_arguments(tool_policy, arguments, pii_patterns)
 
     denied = any(d.kind is DecisionKind.DENY for d in decisions)
 

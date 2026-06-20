@@ -32,7 +32,7 @@ from tessera.agent.state import (
     new_state,
 )
 from tessera.agent.supervisor import route_turn
-from tessera.guard.audit import current_model, emit_handoff, emit_routing
+from tessera.guard.audit import current_model, emit_handoff, emit_routing, guard_disabled
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
@@ -183,6 +183,22 @@ class ChatRequest(BaseModel):
         default=None,
         max_length=100,
         description="Optional chat-model override (UI picker); falls back to server default.",
+    )
+    system_prompt_override: str | None = Field(
+        default=None,
+        max_length=8_000,
+        description=(
+            "Sandbox-only system-prompt override for this turn (console playground). "
+            "Replaces the language bundle's system prompt; never persisted."
+        ),
+    )
+    guard_overrides: list[str] | None = Field(
+        default=None,
+        max_length=8,
+        description=(
+            "Sandbox-only list of guard categories to disable for this turn, e.g. "
+            '["prompt_injection", "pii"]. Empty/absent = full policy applies.'
+        ),
     )
 
 
@@ -430,10 +446,14 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
         prior_messages=prior_messages,
         subject_id=request.subject_id,
         model=request.model,
+        system_prompt_override=request.system_prompt_override,
+        guard_overrides=request.guard_overrides,
     )
     # Record the effective model on audit entries emitted during this turn
     # (memory governance, guard) — not just the server default.
     current_model.set(request.model)
+    # Propagate sandbox guard toggles to the guard layer for this turn only.
+    guard_disabled.set(frozenset(request.guard_overrides or ()))
     # Per-turn agent attribution: the supervisor routes this turn to an agent
     # (parcours by default; an intent can trigger a governed handoff). The chosen
     # agent handles the whole turn and is stamped on every event, metric and

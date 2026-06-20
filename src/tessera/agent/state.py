@@ -180,6 +180,13 @@ class AgentState(TypedDict):
     # Optional per-request chat-model override (e.g. the UI model picker).
     # Falls back to the configured default (settings.ollama.chat_model).
     model: NotRequired[str]
+    # --- Sandbox overrides (console playground) ---------------------------
+    # Optional per-request system-prompt override; replaces the language
+    # bundle's ``system`` prompt for this turn only (never persisted).
+    system_prompt_override: NotRequired[str]
+    # Guard categories disabled for this turn (e.g. ["prompt_injection",
+    # "pii"]). Empty/absent = the full policy applies. Sandbox-only knob.
+    guard_overrides: NotRequired[list[str]]
 
     # --- Conversation history --------------------------------------------
     messages: Annotated[list[ConversationMessage], operator.add]
@@ -227,6 +234,8 @@ def new_state(
     prior_messages: list[ConversationMessage] | None = None,
     subject_id: str | None = None,
     model: str | None = None,
+    system_prompt_override: str | None = None,
+    guard_overrides: list[str] | None = None,
 ) -> AgentState:
     """Construct a fresh :class:`AgentState` ready to enter the graph.
 
@@ -243,6 +252,10 @@ def new_state(
             ``str(conversation_id)`` (per-thread memory) when omitted.
         model: Optional per-request chat-model override; falls back to the
             configured default when omitted.
+        system_prompt_override: Optional sandbox system-prompt override for
+            this turn only; replaces the language bundle's ``system`` prompt.
+        guard_overrides: Optional list of guard categories to disable for this
+            turn (sandbox playground), e.g. ``["prompt_injection"]``.
 
     Returns:
         A state dict with all accumulator fields initialised to empty lists.
@@ -267,4 +280,8 @@ def new_state(
     )
     if model is not None:
         state["model"] = model
+    if system_prompt_override is not None:
+        state["system_prompt_override"] = system_prompt_override
+    if guard_overrides:
+        state["guard_overrides"] = guard_overrides
     return state

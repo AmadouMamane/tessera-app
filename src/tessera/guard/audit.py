@@ -35,6 +35,7 @@ __all__ = [
     "emit_audit",
     "emit_handoff",
     "emit_routing",
+    "guard_disabled",
     "verify_audit_chain",
 ]
 
@@ -85,6 +86,13 @@ def _seed_last_hash(path: Path) -> str:
 # cross-request leak; when unset (e.g. the eval harness) emit_audit falls back to
 # the configured default.
 current_model: ContextVar[str | None] = ContextVar("tessera_audit_model", default=None)
+
+# Guard categories disabled for the current turn (sandbox console playground).
+# Set at the turn boundary, same task-isolation guarantees as current_model;
+# empty by default so the full policy applies everywhere else (eval, prod).
+guard_disabled: ContextVar[frozenset[str]] = ContextVar(
+    "tessera_guard_disabled", default=frozenset()
+)
 
 
 def _record_to_dict(record: GuardDecisionRecord) -> dict[str, Any]:

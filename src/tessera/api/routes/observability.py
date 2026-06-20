@@ -846,6 +846,49 @@ async def observability_agent_prompts(
         return {"available": False}
 
 
+@router.get("/observability/sandbox-config")
+async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
+    """Defaults for the Console sandbox playground (model/prompt/guardrails).
+
+    Returns the *live* system prompt for ``lang`` (the YAML bundle the agent
+    actually runs) and the toggleable guard categories with their real pattern
+    counts (the runtime guard policy). The console prefills its prompt editor and
+    guard switches from these — never from fabricated values. Read-only;
+    overrides are applied per-turn at chat time, never persisted here.
+    """
+    from tessera.agent.reporter import load_prompts
+    from tessera.guard.decisions import load_policy
+    from tessera.settings import LanguageCode, get_settings
+
+    langs = {"fr": LanguageCode.FR, "de": LanguageCode.DE, "en": LanguageCode.EN}
+    try:
+        language = langs.get(lang, LanguageCode.FR)
+        prompts = load_prompts(language)
+        policy = load_policy(get_settings().guard.policy_path)
+        return {
+            "available": True,
+            "language": language.value,
+            "system_prompt": prompts.get("system", ""),
+            "guard_categories": [
+                {
+                    "key": "prompt_injection",
+                    "label": "Prompt Injection",
+                    "count": len(policy.prompt_injection_deny),
+                    "detail": "Bloque l'entrée utilisateur qui matche un motif d'injection.",
+                },
+                {
+                    "key": "pii",
+                    "label": "Masquage PII",
+                    "count": len(policy.pii_patterns),
+                    "detail": "Masque les données personnelles dans la trace d'audit des outils.",
+                },
+            ],
+        }
+    except Exception as exc:  # never break the console
+        sys.stderr.write(f"tessera.observability.sandbox_config: failed: {exc}\n")
+        return {"available": False}
+
+
 @router.get("/observability/agent-garde-fous")
 async def observability_agent_garde_fous(lang: str = "fr") -> dict[str, object]:
     """Agent Guardrails ("Garde-fous") dashboard (reference image 27).
