@@ -22,6 +22,7 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useLocale } from "next-intl";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -44,7 +45,7 @@ import type {
 import type { SandboxConfig } from "@/lib/api/schemas";
 import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
-import { CHAT_MODELS, getStoredModel } from "@/lib/models";
+import { CHAT_MODELS, getStoredModel, isModelAllowedForRole } from "@/lib/models";
 import { useAgentId } from "@/lib/use-agent-id";
 
 import { AgentCrossLinks } from "./agent-cross-links";
@@ -112,6 +113,7 @@ export function AgentConsole() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [liveDebug, setLiveDebug] = useState<ChatDebug | null>(null);
   // Sandbox playground overrides (env Sandbox): model / system prompt / guards.
+  const role = useSession().data?.user?.role ?? null;
   const [model, setModel] = useState<string>(() => getStoredModel());
   const [promptOverride, setPromptOverride] = useState<string | null>(null);
   const [guardDisabled, setGuardDisabled] = useState<string[]>([]);
@@ -120,6 +122,14 @@ export function AgentConsole() {
     queryFn: ({ signal }) => fetchSandboxConfig(locale, signal),
     staleTime: 300_000,
   });
+  // Never hold a gated model the current role can't run (it would 403 at the
+  // proxy with no answer): coerce back to the first runnable model.
+  useEffect(() => {
+    if (!isModelAllowedForRole(model, role)) {
+      const ok = CHAT_MODELS.find((m) => isModelAllowedForRole(m.id, role));
+      if (ok) setModel(ok.id);
+    }
+  }, [model, role]);
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["agent-console"],
@@ -317,6 +327,7 @@ export function AgentConsole() {
           are per-turn (never persisted). "Nouvelle session" stays top-right. */}
       <SandboxControls
         sandbox={sandbox}
+        role={role}
         model={model}
         onModel={setModel}
         promptOverride={promptOverride}
@@ -367,6 +378,7 @@ export function AgentConsole() {
  *  /observability/sandbox-config (the real YAML bundle + runtime policy). */
 function SandboxControls({
   sandbox,
+  role,
   model,
   onModel,
   promptOverride,
@@ -377,6 +389,7 @@ function SandboxControls({
   newSessionLabel,
 }: {
   sandbox: SandboxConfig | undefined;
+  role: string | null;
   model: string;
   onModel: (id: string) => void;
   promptOverride: string | null;
@@ -414,11 +427,15 @@ function SandboxControls({
             onChange={(e) => onModel(e.target.value)}
             className="rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[0.7rem] text-[var(--tessera-text)]"
           >
-            {CHAT_MODELS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
+            {CHAT_MODELS.map((m) => {
+              const allowed = isModelAllowedForRole(m.id, role);
+              return (
+                <option key={m.id} value={m.id} disabled={!allowed}>
+                  {m.label}
+                  {allowed ? "" : " — super-admin"}
+                </option>
+              );
+            })}
           </select>
         </label>
 

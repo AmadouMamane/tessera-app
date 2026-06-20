@@ -281,12 +281,15 @@ async def guarded_invoke(
     settings = get_settings()
     decisions = _check_tool(tool_policy, arguments, language)
     records = [_to_record(d, target=tool_name) for d in decisions]
-    # The sandbox console can disable PII redaction for a turn (guard_disabled);
-    # everywhere else (eval, prod) the contextvar is empty so redaction applies.
-    pii_patterns = () if "pii" in guard_disabled.get() else active_policy.pii_patterns
+    # The sandbox console can disable guard categories for a turn (guard_disabled);
+    # everywhere else (eval, prod) the contextvar is empty so the full policy holds.
+    # PII off → no output redaction; tools off → policy DENYs are recorded for
+    # audit but no longer block the call.
+    disabled = guard_disabled.get()
+    pii_patterns = () if "pii" in disabled else active_policy.pii_patterns
     audit_args = _redacted_arguments(tool_policy, arguments, pii_patterns)
 
-    denied = any(d.kind is DecisionKind.DENY for d in decisions)
+    denied = "tools" not in disabled and any(d.kind is DecisionKind.DENY for d in decisions)
 
     # execute_tool span (ADR 0010, #4): carries the guard verdict so a backend
     # can show why a tool was allowed/denied without reading the audit log.

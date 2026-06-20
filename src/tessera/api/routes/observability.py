@@ -882,6 +882,12 @@ async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
                     "count": len(policy.pii_patterns),
                     "detail": "Masque les données personnelles dans la trace d'audit des outils.",
                 },
+                {
+                    "key": "tools",
+                    "label": "Privilèges outils",
+                    "count": len(policy.tools),
+                    "detail": "Allowlist + confirmations + validation d'arguments par outil.",
+                },
             ],
         }
     except Exception as exc:  # never break the console
