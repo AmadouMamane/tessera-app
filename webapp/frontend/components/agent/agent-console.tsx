@@ -321,8 +321,6 @@ export function AgentConsole() {
     : data.context?.session_id;
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-      <AgentCrossLinks page="console" />
-
       {/* Sandbox config bar — env Sandbox playground: choose model / edit the
           system prompt / toggle guard categories for the next turns. Overrides
           are per-turn (never persisted). "Nouvelle session" stays top-right. */}
@@ -339,8 +337,11 @@ export function AgentConsole() {
         newSessionLabel={data.actions?.new_session ?? t("newSession")}
       />
 
+      {/* Three panes share a viewport-bounded height on xl and scroll
+          internally, so the conversation no longer towers over the summary /
+          trace columns as turns accumulate. */}
       <div className="grid gap-3 xl:grid-cols-12">
-        <div className="flex min-w-0 flex-col gap-3 xl:col-span-6">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3 xl:col-span-6">
           <ChatCard
             data={data}
             input={input}
@@ -358,15 +359,19 @@ export function AgentConsole() {
 
         {/* Central "Résumé de la réponse" — context strip + response panels.
             Live debug swaps the pre-turn config panels for the real turn data. */}
-        <div className="flex min-w-0 flex-col gap-3 xl:col-span-3">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3 xl:col-span-3">
           <ResponseSummary data={data} debug={liveDebug} sessionId={liveSession} t={t} />
         </div>
 
         {/* XT-01 — the page's temporal rail, a persistent waterfall column. */}
-        <div className="flex min-w-0 flex-col gap-3 xl:col-span-3">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3 xl:col-span-3">
           <TraceColumn debug={liveDebug} sessionId={liveSession} t={t} />
         </div>
       </div>
+
+      {/* "Liens utiles" — see-also navigation, placed at the foot of the
+          interactive console so the sandbox bar + conversation lead. */}
+      <AgentCrossLinks page="console" />
     </div>
   );
 }
@@ -555,8 +560,15 @@ function ChatCard({
   const f = data.footer;
   const hasLiveMessages = messages.length > 0;
   let assistantTurn = -1;
+  // Keep the latest turn in view as tokens stream / turns accumulate.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: must re-run on every messages change to follow streaming output
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
   return (
-    <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+    <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] xl:max-h-[calc(100dvh-13rem)]">
       <div className="flex items-start gap-3 border-b border-[var(--tessera-border)] p-3.5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#d98b1f]/45 bg-[#d98b1f]/12 text-[#f4c76a]">
           <MessageSquare className="h-4.5 w-4.5" />
@@ -567,7 +579,10 @@ function ChatCard({
         </div>
       </div>
 
-      <div className="flex min-h-[430px] flex-col gap-4 p-3.5">
+      <div
+        ref={scrollRef}
+        className="flex min-h-[300px] flex-1 flex-col gap-4 overflow-y-auto p-3.5"
+      >
         {hasLiveMessages ? (
           messages.map((message) => {
             if (message.role === "user") {
@@ -853,7 +868,7 @@ function TraceColumn({
   }, [trace, sessionId]);
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] xl:max-h-[calc(100dvh-13rem)] xl:overflow-y-auto">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-2.5">
         <span className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-[#e0a23a]">
           <Activity className="h-4 w-4" /> {t("traceTitle")}
@@ -982,7 +997,7 @@ function ResponseSummary({
   const tools = debug?.tools ?? data.tools;
   const guardrails = debug?.guardrails ?? data.guardrails;
   return (
-    <section className="flex min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] xl:max-h-[calc(100dvh-13rem)] xl:overflow-y-auto">
       {data.context ? <ContextStrip ctx={data.context} /> : null}
       <div className="border-b border-[var(--tessera-border)] px-3.5 py-2.5">
         <h2 className="text-[0.82rem] font-semibold text-[var(--tessera-text)]">

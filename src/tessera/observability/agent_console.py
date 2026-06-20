@@ -144,15 +144,15 @@ def compute_agent_console() -> dict[str, object]:
     now = datetime.now(_PARIS)
 
     return {
-        # Context strip atop the central "Résumé de la réponse" column (normative
-        # 05). The console is the debug/sandbox surface (ui-contract: env=debug),
-        # so "Sandbox" is the real environment; the rest is derived from the live
-        # settings + source files (model, prompt/corpus/policy versions).
+        # Provenance strip atop the central "Résumé de la réponse" column
+        # (normative 05): the lineage versions the answer was produced with —
+        # prompt bundle, corpus snapshot, guard policy. The environment ("Sandbox")
+        # and the model are deliberately NOT echoed here: the top sandbox bar owns
+        # the live model selection and the Debug tab echoes the effective config,
+        # so repeating a *static* model here was both redundant and stale.
         "context": {
             "session_id": session_id,
             "fields": [
-                {"label": "Environnement", "value": "Sandbox"},
-                {"label": "Modèle", "value": model},
                 {"label": "Prompt", "value": prompt_version},
                 {"label": "Sources", "value": sources_version},
                 {"label": "Garde-fous", "value": guard_version},
