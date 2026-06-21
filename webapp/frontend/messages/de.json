@@ -5128,5 +5128,10 @@
       "total": "{n} Konten",
       "source": "Quelle: {src}"
     }
+  },
+  "models": {
+    "loading": "Modellkatalog wird geladen...",
+    "empty": "Keine Modelle im Katalog.",
+    "close": "Schließen"
   }
 }

@@ -746,6 +746,23 @@ async def observability_catalogue_consumers(
         return {"available": False}
 
 
+@router.get("/observability/model-catalogue")
+async def observability_model_catalogue(lang: str = "fr", agent: str = "all") -> dict[str, object]:
+    """CONFIGURER model catalogue (configurer/modeles): the real LLM model layer.
+
+    The configured models (vertex / ollama / openai) + the indicative tariff +
+    real cumulative usage + the consuming agents (re-gate blast radius). Filterable
+    by agent. Degrades to ``available: false`` on failure.
+    """
+    from tessera.observability import model_catalogue as mc_mod
+
+    try:
+        return {"available": True, **mc_mod.build_model_catalogue(lang, agent_scope=agent)}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.model_catalogue: failed: {exc}\n")
+        return {"available": False}
+
+
 @router.get("/observability/release-control")
 async def observability_release_control(agent: str = "all") -> dict[str, object]:
     """Release Control (AGIR): per-agent release pipeline + eval-gate verdict.

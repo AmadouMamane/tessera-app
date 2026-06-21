@@ -2884,6 +2884,60 @@ export const SourcesOverviewSchema = z.object({
 });
 export type SourcesOverview = z.infer<typeof SourcesOverviewSchema>;
 
+// --- CONFIGURER model catalogue (configurer/modeles) ----------------------
+const McConsumersSchema = z.object({
+  title: z.string(),
+  count: z.number().int(),
+  regate_count: z.number().int(),
+  regate_label: z.string(),
+  revalidate_label: z.string(),
+  empty: z.string(),
+  note: z.string(),
+  items: z.array(
+    z.object({
+      agent_id: z.string(),
+      name: z.string(),
+      tone: z.string(),
+      label: z.string(),
+      passed: z.boolean(),
+    }),
+  ),
+});
+const McDetailSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: z.enum(["active", "available"]),
+  sections: z.array(z.object({ key: z.string(), title: z.string(), rows: z.array(SmKvSchema) })),
+  consumers: McConsumersSchema,
+});
+export const ModelCatalogueSchema = z.object({
+  available: z.boolean(),
+  subtitle: z.string().optional(),
+  kpis: z.array(z.object({ key: z.string(), label: z.string(), value: z.string() })).optional(),
+  columns: z.array(z.string()).optional(),
+  models: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        provider: z.string(),
+        provider_label: z.string(),
+        role: z.enum(["chat", "embedding"]),
+        role_label: z.string(),
+        status: z.enum(["active", "available"]),
+        status_label: z.string(),
+        price: z.string(),
+        used_by: z.string(),
+        used_by_count: z.number().int(),
+        consumer_ids: z.array(z.string()),
+        detail: McDetailSchema,
+      }),
+    )
+    .optional(),
+  note: z.string().optional(),
+});
+export type ModelCatalogue = z.infer<typeof ModelCatalogueSchema>;
+
 // ---------------------------------------------------------------------------
 // Roles & access (page #18)
 // ---------------------------------------------------------------------------

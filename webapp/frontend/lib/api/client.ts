@@ -57,6 +57,8 @@ import {
   CalibrationSchema,
   type CatalogueConsumers,
   CatalogueConsumersSchema,
+  type ModelCatalogue,
+  ModelCatalogueSchema,
   type CitationResolution,
   CitationResolutionSchema,
   type CitationSummary,
@@ -1367,6 +1369,15 @@ export async function fetchCatalogueConsumers(
     { signal },
     CatalogueConsumersSchema,
   );
+}
+
+export async function fetchModelCatalogue(
+  lang: string,
+  agent: string,
+  signal?: AbortSignal,
+): Promise<ModelCatalogue> {
+  const params = new URLSearchParams({ lang, agent });
+  return request(`/observability/model-catalogue?${params}`, { signal }, ModelCatalogueSchema);
 }
 
 /** Governed, audited proposal to add a new agent (registry is approved as a unit). */
