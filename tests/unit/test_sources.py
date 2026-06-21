@@ -207,6 +207,19 @@ def test_used_by_absent_when_no_consumer_data() -> None:
     assert dora["consumer_ids"] == []
 
 
+def test_retention_and_embedding_are_real() -> None:
+    payload = sm._assemble(_rows(), _ltm(), _tx(), {}, lang="fr", now=NOW)
+    by_id = {r["id"]: r for r in payload["sources"]}
+    assert by_id["dora"]["retention"] == "Permanente"
+    assert by_id[sm._LTM_ID]["retention"] == "365 jours"  # semantic TTL
+    assert by_id[sm._TX_ID]["retention"] == "Durable (transcript)"
+    emb = payload["embedding"]
+    assert emb["model"] == "bge-m3"
+    assert emb["distance"] == "cosine"
+    assert emb["chunks"] == "5"  # 2 dora + 3 comptes
+    assert emb["languages"] == "3"
+
+
 def test_corpus_of_maps_regulation_and_product() -> None:
     assert sm._corpus_of("dora") == "regulations_dora"
     assert sm._corpus_of("gdpr") == "regulations_gdpr"

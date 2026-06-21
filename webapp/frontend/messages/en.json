@@ -3587,6 +3587,17 @@
   "sources": {
     "title": "Sources & memory",
     "subtitle": "The agent's real data substrate: pgvector corpus and memory.",
+    "tabs": {
+      "overview": "Overview",
+      "sources": "Sources",
+      "memory": "Memory",
+      "indexation": "Indexing & embeddings",
+      "quality": "Quality & freshness",
+      "access": "Access & permissions",
+      "retention": "Retention & purge",
+      "lineage": "Lineage & dependencies",
+      "history": "History & snapshots"
+    },
     "actions": {
       "export": "Export",
       "manage": "View knowledge"
@@ -3620,11 +3631,17 @@
       "languages": "Languages",
       "freshness": "Freshness",
       "citation": "Citation rate",
-      "usedBy": "Used by"
+      "usedBy": "Used by",
+      "retention": "Retention"
     },
     "detail": {
       "selectHint": "Select a source to see its detail.",
-      "close": "Close"
+      "close": "Close",
+      "tDocuments": "Documents",
+      "tChunks": "Chunks",
+      "tHits": "Queries",
+      "score": "Citation",
+      "tags": "Tags"
     },
     "empty": {
       "rows": "No source matches the filters."
@@ -3632,6 +3649,26 @@
     "footer": {
       "total": "{n} sources",
       "source": "Source: {src}"
+    },
+    "view": {
+      "embeddings": "Indexing & embeddings",
+      "model": "Embedding model",
+      "dim": "Dimension",
+      "distance": "Distance",
+      "topk": "Top-k retrieval",
+      "chunks": "Indexed chunks",
+      "documents": "Documents",
+      "languages": "Languages",
+      "chunksBySource": "Chunks per source",
+      "access": "Access per product",
+      "accessNote": "Which products access each source (real agent binding).",
+      "retention": "Retention & purge",
+      "lineage": "Lineage & dependencies",
+      "lineageNote": "Which sources each product consumes.",
+      "history": "History & snapshots",
+      "historyNote": "No versioned snapshot store here - real last indexing below.",
+      "lastIndexed": "Last indexed",
+      "memoryNote": "Memory stores written by the agent (long-term + transcript)."
     }
   },
   "roles": {

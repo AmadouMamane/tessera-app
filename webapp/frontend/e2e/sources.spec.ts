@@ -56,7 +56,7 @@ test("row click opens the tab-gated detail", async ({ page }) => {
     .getByTestId("sources-table")
     .getByRole("button", { name: "Mémoire long terme" })
     .click();
-  await expect(detail.getByText("Mémoire long terme")).toBeVisible();
+  await expect(detail.getByText("Mémoire long terme").first()).toBeVisible();
   await detail.getByRole("button", { name: "Contenu" }).click();
   await expect(detail.getByText("Sujets distincts")).toBeVisible();
   await detail.getByRole("button", { name: "Gouvernance" }).click();
@@ -118,6 +118,30 @@ test("the used-by drawer shows consumer verdicts", async ({ page }) => {
     .click();
   await expect(detail.getByText("Utilisé par")).toBeVisible();
   await expect(detail.getByText("Support Client")).toBeVisible();
+});
+
+test("the normative tab strip switches to real lens views", async ({ page }) => {
+  await expect(page.getByTestId("sources-tabs")).toBeVisible();
+  // Indexation tab -> the real embeddings facts (bge-m3 / cosine).
+  await page.getByRole("button", { name: /Indexation/ }).click();
+  await expect(page.getByText("bge-m3").first()).toBeVisible();
+  await expect(page.getByText("cosine").first()).toBeVisible();
+  // Memory tab -> the table is scoped to the two shared stores.
+  await page.getByRole("button", { name: /^Mémoire$/ }).click();
+  await expect(page.getByTestId("sources-table").locator("tbody tr")).toHaveCount(2);
+  // Access tab -> the per-product access view.
+  await page.getByRole("button", { name: /Accès/ }).click();
+  await expect(page.getByText(/Quels produits/)).toBeVisible();
+});
+
+test("the detail panel shows real metric tiles and tags", async ({ page }) => {
+  const detail = page.getByTestId("source-detail");
+  await page
+    .getByTestId("sources-table")
+    .getByRole("button", { name: "DORA - Résilience opérationnelle" })
+    .click();
+  await expect(detail.getByText("Chunks").first()).toBeVisible();
+  await expect(detail.getByText("Réglementation")).toBeVisible(); // type tag
 });
 
 test("the knowledge action links to the Connaissances page", async ({ page }) => {

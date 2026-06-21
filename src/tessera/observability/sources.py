@@ -643,6 +643,8 @@ def _assemble(
                 ),
                 "status": "active",
                 "citation": f"{round(cite)}%" if cite is not None else "-",
+                "hits": _hits(cat),
+                "retention": _t("permanent", lang),
                 "detail": _corpus_detail(cat, agg, cite, _hits(cat), share, lang),
             }
         )
@@ -663,6 +665,8 @@ def _assemble(
             "freshness": _ago(ltm.last.isoformat(), lang) if ltm.last else "-",
             "status": "active" if ltm.rows else "disabled",
             "citation": "-",
+            "hits": 0,
+            "retention": _retention_for_memory(ltm.kinds, lang),
             "detail": _memory_detail(ltm, is_ltm=True, lang=lang),
         }
     )
@@ -679,6 +683,8 @@ def _assemble(
             "freshness": _ago(tx.last.isoformat(), lang) if tx.last else "-",
             "status": "active" if tx.rows else "disabled",
             "citation": "-",
+            "hits": 0,
+            "retention": _t("ret_tx", lang),
             "detail": _memory_detail(tx, is_ltm=False, lang=lang),
         }
     )
@@ -710,6 +716,15 @@ def _assemble(
             "by_type": _t("zone_bytype", lang),
             "by_env": _t("zone_volume", lang),
             "cost": _t("zone_langs", lang),
+        },
+        "embedding": {
+            "model": "bge-m3",
+            "dim": str(embedding_dimension()),
+            "distance": "cosine",
+            "topk": "5",
+            "chunks": _fmt_int(total_chunks),
+            "documents": _fmt_int(total_docs),
+            "languages": str(len(lang_counts)),
         },
         "footer": {"total": total_sources, "source": _t("footer_source", lang)},
     }

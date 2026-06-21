@@ -3,9 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  Boxes,
   ChevronsUpDown,
+  Clock,
   Database,
   Download,
+  GitBranch,
+  Layers,
   Search,
   ShieldCheck,
   SortAsc,
@@ -42,11 +46,24 @@ const VERDICT_DOT: Record<string, string> = {
   bad: "bg-amber-400",
   muted: "bg-[var(--tessera-text-muted)]",
 };
+// The normative's 9-tab strip; each is a real lens over the same live payload.
+const VIEWS = [
+  "overview",
+  "sources",
+  "memory",
+  "indexation",
+  "quality",
+  "access",
+  "retention",
+  "lineage",
+  "history",
+] as const;
+const TABLE_VIEWS = new Set(["overview", "sources", "memory", "quality"]);
 
 type T = ReturnType<typeof useTranslations<"sources">>;
 type Data = SourcesData;
 type Row = Data["sources"][number];
-type Detail = Row["detail"];
+type View = (typeof VIEWS)[number];
 type SortKey = "name" | "type" | "volume" | "citation";
 
 export function SourcesOverview() {
@@ -58,6 +75,7 @@ export function SourcesOverview() {
     staleTime: 60_000,
   });
 
+  const [view, setView] = useState<View>("overview");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -65,7 +83,6 @@ export function SourcesOverview() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<string>("overview");
 
-  // Global product/agent scope (?agent=), shared with every PLATEFORME surface.
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
 
@@ -76,7 +93,6 @@ export function SourcesOverview() {
     const q = search.trim().toLowerCase();
     let out = data.sources.filter((s) => {
       if (typeFilter !== "all" && s.type !== typeFilter) return false;
-      // Scope by product: a shared store (infra) is read by every product.
       if (scope !== "all" && !s.infra && !s.consumer_ids.includes(scope)) return false;
       if (!q) return true;
       return s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
@@ -85,16 +101,20 @@ export function SourcesOverview() {
       const dir = sortDir === "asc" ? 1 : -1;
       out = [...out].sort((a, b) => {
         if (sortKey === "volume") return (a.volume_num - b.volume_num) * dir;
-        if (sortKey === "citation") {
-          const na = Number.parseFloat(a.citation) || -1;
-          const nb = Number.parseFloat(b.citation) || -1;
-          return (na - nb) * dir;
-        }
+        if (sortKey === "citation") return (citeNum(a) - citeNum(b)) * dir;
         return a[sortKey].localeCompare(b[sortKey], "fr") * dir;
       });
     }
     return out;
   }, [data, search, typeFilter, scope, sortKey, sortDir]);
+
+  // Per-tab lens over the (filtered/sorted) rows.
+  const viewRows = useMemo(() => {
+    if (view === "sources") return rows.filter((r) => !r.infra);
+    if (view === "memory") return rows.filter((r) => r.infra);
+    if (view === "quality" && !sortKey) return [...rows].sort((a, b) => citeNum(b) - citeNum(a));
+    return rows;
+  }, [rows, view, sortKey]);
 
   if (!data) {
     return (
@@ -104,8 +124,8 @@ export function SourcesOverview() {
     );
   }
 
-  const selected: Detail | null =
-    (selectedId && data.sources.find((s) => s.id === selectedId)?.detail) || null;
+  const selected: Row | null =
+    (selectedId && data.sources.find((s) => s.id === selectedId)) || null;
 
   const onSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -114,12 +134,10 @@ export function SourcesOverview() {
       setSortDir("asc");
     }
   };
-
   const onSelect = (id: string) => {
     setSelectedId(id);
     setTab("overview");
   };
-
   const onExport = () => {
     const blob = new Blob([JSON.stringify(data.sources, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -130,59 +148,106 @@ export function SourcesOverview() {
     URL.revokeObjectURL(url);
   };
 
+  const isTable = TABLE_VIEWS.has(view);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} note={data.readonly_note} onExport={onExport} />
+      <TabStrip t={t} view={view} onView={setView} />
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
-        {data.kpis.map((kpi) => (
-          <CompactKpi key={kpi.key} kpi={kpi} />
-        ))}
-      </div>
-
-      <FilterStrip
-        t={t}
-        search={search}
-        onSearch={setSearch}
-        typeFilter={typeFilter}
-        onType={setTypeFilter}
-        types={types}
-        count={rows.length}
-        total={data.sources.length}
-      />
-
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <SourceTable
-            t={t}
-            rows={rows}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            sortKey={sortKey}
-            sortDir={sortDir}
-            onSort={onSort}
-          />
-          <div className="grid gap-3 xl:grid-cols-3">
-            <ByType t={t} data={data} />
-            <ByVolume data={data} />
-            <ByLanguage data={data} />
-          </div>
+      {view === "overview" ? (
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
+          {data.kpis.map((kpi) => (
+            <CompactKpi key={kpi.key} kpi={kpi} />
+          ))}
         </div>
-        <DetailPanel
+      ) : null}
+
+      {isTable ? (
+        <FilterStrip
           t={t}
-          detail={selected}
-          tab={tab}
-          onTab={setTab}
-          onClose={() => setSelectedId(null)}
+          search={search}
+          onSearch={setSearch}
+          typeFilter={typeFilter}
+          onType={setTypeFilter}
+          types={types}
+          count={viewRows.length}
+          total={data.sources.length}
         />
-      </div>
+      ) : null}
+
+      {isTable ? (
+        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="flex min-w-0 flex-col gap-3">
+            {view === "memory" ? (
+              <Note text={t("view.memoryNote")} icon={<Database className="h-3.5 w-3.5" />} />
+            ) : null}
+            <SourceTable
+              t={t}
+              rows={viewRows}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+            {view === "overview" ? (
+              <div className="grid gap-3 xl:grid-cols-3">
+                <ByType t={t} data={data} />
+                <ByVolume data={data} />
+                <ByLanguage data={data} />
+              </div>
+            ) : null}
+          </div>
+          <DetailPanel
+            t={t}
+            row={selected}
+            tab={tab}
+            onTab={setTab}
+            onClose={() => setSelectedId(null)}
+          />
+        </div>
+      ) : (
+        <LensView t={t} view={view} data={data} />
+      )}
 
       <Footer t={t} data={data} />
     </div>
   );
 }
 
+function citeNum(r: Row): number {
+  const n = Number.parseFloat(r.citation);
+  return Number.isNaN(n) ? -1 : n;
+}
+
 // ── chrome ───────────────────────────────────────────────────────────────────
+
+function TabStrip({ t, view, onView }: { t: T; view: View; onView: (v: View) => void }) {
+  return (
+    <nav
+      data-testid="sources-tabs"
+      className="flex shrink-0 flex-wrap items-center gap-1 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-1.5"
+    >
+      {VIEWS.map((v) => (
+        <button
+          key={v}
+          type="button"
+          aria-current={v === view ? "page" : undefined}
+          onClick={() => onView(v)}
+          className={cn(
+            "rounded-md px-2.5 py-1.5 text-[0.7rem] font-medium transition-colors",
+            v === view
+              ? "bg-[#0d3561] text-[#d8eaff]"
+              : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+          )}
+        >
+          {t(`tabs.${v}`)}
+        </button>
+      ))}
+    </nav>
+  );
+}
 
 function CommandBar({ t, note, onExport }: { t: T; note: string; onExport: () => void }) {
   return (
@@ -428,6 +493,188 @@ function SourceTable({
   );
 }
 
+// ── non-table lens views ─────────────────────────────────────────────────────
+
+function LensView({ t, view, data }: { t: T; view: View; data: Data }) {
+  if (view === "indexation") return <IndexationView t={t} data={data} />;
+  if (view === "access") return <AccessView t={t} data={data} />;
+  if (view === "retention") return <RetentionView t={t} data={data} />;
+  if (view === "lineage") return <LineageView t={t} data={data} />;
+  return <HistoryView t={t} data={data} />;
+}
+
+function IndexationView({ t, data }: { t: T; data: Data }) {
+  const e = data.embedding;
+  const facts: [string, string][] = [
+    [t("view.model"), e.model],
+    [t("view.dim"), e.dim],
+    [t("view.distance"), e.distance],
+    [t("view.topk"), e.topk],
+    [t("view.chunks"), e.chunks],
+    [t("view.documents"), e.documents],
+    [t("view.languages"), e.languages],
+  ];
+  const corpus = data.sources.filter((s) => !s.infra);
+  const max = Math.max(...corpus.map((s) => s.volume_num), 1);
+  return (
+    <div className="grid gap-3 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <Panel title={t("view.embeddings")}>
+        <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+          {facts.map(([k, v]) => (
+            <KV key={k} label={k} value={v} />
+          ))}
+        </dl>
+      </Panel>
+      <Panel title={t("view.chunksBySource")}>
+        <ul className="flex flex-col gap-1.5">
+          {corpus.map((s) => (
+            <li key={s.id} className="flex items-center gap-2 text-[0.66rem]">
+              <span className="w-44 shrink-0 truncate text-[var(--tessera-text)]">{s.name}</span>
+              <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
+                <div
+                  className="h-full rounded-full bg-[#2e72d2]"
+                  style={{ width: `${(s.volume_num / max) * 100}%` }}
+                />
+              </div>
+              <span className="w-12 shrink-0 text-right tabular-nums text-[var(--tessera-text-muted)]">
+                {s.volume}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </div>
+  );
+}
+
+function AccessView({ t, data }: { t: T; data: Data }) {
+  return (
+    <Panel title={t("view.access")}>
+      <p className="mb-2 text-[0.64rem] text-[var(--tessera-text-muted)]">{t("view.accessNote")}</p>
+      <ul className="flex flex-col divide-y divide-[var(--tessera-border)]/60">
+        {data.sources.map((s) => (
+          <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <Database className="h-3 w-3 shrink-0 text-[#87bfff]" />
+              <span className="truncate text-[var(--tessera-text)]">{s.name}</span>
+            </span>
+            <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+              {s.detail.consumers?.items.map((c) => (
+                <span
+                  key={c.agent_id}
+                  title={c.label}
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.6rem]"
+                >
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full",
+                      VERDICT_DOT[c.tone] ?? VERDICT_DOT.muted,
+                    )}
+                  />
+                  {c.name}
+                </span>
+              ))}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+function RetentionView({ t, data }: { t: T; data: Data }) {
+  return (
+    <Panel title={t("view.retention")}>
+      <table className="w-full border-collapse text-left text-[0.7rem]">
+        <thead>
+          <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="px-2 py-1.5 font-medium">{t("col.name")}</th>
+            <th className="px-2 py-1.5 font-medium">{t("col.type")}</th>
+            <th className="px-2 py-1.5 font-medium">{t("col.retention")}</th>
+            <th className="px-2 py-1.5 font-medium">{t("col.classification")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.sources.map((s) => (
+            <tr key={s.id} className="border-b border-[var(--tessera-border)]/60">
+              <td className="px-2 py-1.5 text-[var(--tessera-text)]">{s.name}</td>
+              <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                {t(`type.${s.type}`)}
+              </td>
+              <td className="px-2 py-1.5 inline-flex items-center gap-1.5 text-[var(--tessera-text-muted)]">
+                <Clock className="h-3 w-3 text-[#87bfff]" /> {s.retention}
+              </td>
+              <td className="px-2 py-1.5">
+                <Badge className={CLASS_BADGE[s.classification]}>
+                  {t(`classification.${s.classification}`)}
+                </Badge>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Panel>
+  );
+}
+
+function LineageView({ t, data }: { t: T; data: Data }) {
+  // Group sources by the products that consume them (real consumer_ids).
+  const products = new Map<string, { name: string; sources: string[] }>();
+  for (const s of data.sources) {
+    for (const c of s.detail.consumers?.items ?? []) {
+      const entry = products.get(c.agent_id) ?? { name: c.name, sources: [] };
+      entry.sources.push(s.name);
+      products.set(c.agent_id, entry);
+    }
+  }
+  return (
+    <Panel title={t("view.lineage")}>
+      <p className="mb-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
+        {t("view.lineageNote")}
+      </p>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {[...products.values()].map((p) => (
+          <div
+            key={p.name}
+            className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5"
+          >
+            <span className="inline-flex items-center gap-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+              <GitBranch className="h-3.5 w-3.5 text-[#87bfff]" /> {p.name}
+            </span>
+            <ul className="flex flex-col gap-0.5 text-[0.64rem] text-[var(--tessera-text-muted)]">
+              {p.sources.map((name) => (
+                <li key={name} className="truncate">
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+function HistoryView({ t, data }: { t: T; data: Data }) {
+  return (
+    <Panel title={t("view.history")}>
+      <p className="mb-2 inline-flex items-center gap-1.5 text-[0.64rem] text-amber-300/90">
+        <AlertTriangle className="h-3.5 w-3.5" /> {t("view.historyNote")}
+      </p>
+      <ul className="flex flex-col divide-y divide-[var(--tessera-border)]/60">
+        {data.sources.map((s) => (
+          <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
+            <span className="truncate text-[var(--tessera-text)]">{s.name}</span>
+            <span className="inline-flex shrink-0 items-center gap-1.5 text-[var(--tessera-text-muted)]">
+              <Clock className="h-3 w-3" /> {t("view.lastIndexed")}: {s.freshness}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
 // ── bottom charts ────────────────────────────────────────────────────────────
 
 function ByType({ t, data }: { t: T; data: Data }) {
@@ -439,7 +686,6 @@ function ByType({ t, data }: { t: T; data: Data }) {
 }
 
 function ByVolume({ data }: { data: Data }) {
-  const max = Math.max(...data.by_env.map((e) => Number(e.value.replace(/\s/g, "")) || 0), 1);
   return (
     <Panel title={data.zones.by_env}>
       <ul className="flex flex-col gap-2">
@@ -454,10 +700,7 @@ function ByVolume({ data }: { data: Data }) {
             <div className="h-1.5 w-full rounded-full bg-[var(--tessera-bg)]">
               <div
                 className="h-full rounded-full"
-                style={{
-                  width: `${((Number(e.value.replace(/\s/g, "")) || 0) / max) * 100}%`,
-                  background: e.color,
-                }}
+                style={{ width: `${e.pct}%`, background: e.color }}
               />
             </div>
           </li>
@@ -497,18 +740,18 @@ function ByLanguage({ data }: { data: Data }) {
 
 function DetailPanel({
   t,
-  detail,
+  row,
   tab,
   onTab,
   onClose,
 }: {
   t: T;
-  detail: Detail | null;
+  row: Row | null;
   tab: string;
   onTab: (tab: string) => void;
   onClose: () => void;
 }) {
-  if (!detail) {
+  if (!row) {
     return (
       <aside
         data-testid="source-detail"
@@ -519,8 +762,14 @@ function DetailPanel({
       </aside>
     );
   }
+  const detail = row.detail;
   const section = detail.sections.find((s) => s.key === tab) ?? detail.sections[0];
   if (!section) return null;
+  const tags = [
+    ...(row.languages !== "-" ? row.languages.split("/") : []),
+    t(`type.${row.type}`),
+    t(`classification.${row.classification}`),
+  ];
   return (
     <aside
       data-testid="source-detail"
@@ -554,6 +803,24 @@ function DetailPanel({
         </button>
       </div>
 
+      <div className="grid grid-cols-3 gap-2">
+        <Tile
+          icon={<Layers className="h-3 w-3" />}
+          label={t("detail.tChunks")}
+          value={row.volume}
+        />
+        <Tile
+          icon={<Boxes className="h-3 w-3" />}
+          label={t("detail.tDocuments")}
+          value={row.units}
+        />
+        <Tile
+          icon={<ShieldCheck className="h-3 w-3" />}
+          label={t("detail.score")}
+          value={row.citation}
+        />
+      </div>
+
       <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
         {detail.sections.map((s) => (
           <button
@@ -584,12 +851,23 @@ function DetailPanel({
         ))}
       </dl>
 
+      <div className="flex flex-wrap gap-1">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.56rem] text-[var(--tessera-text-muted)]"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+
       {detail.consumers ? <UsedByBlock consumers={detail.consumers} /> : null}
     </aside>
   );
 }
 
-function UsedByBlock({ consumers }: { consumers: NonNullable<Detail["consumers"]> }) {
+function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["consumers"]> }) {
   return (
     <div className="border-t border-[var(--tessera-border)] pt-2">
       <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -624,6 +902,25 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Detail["consumers"]
 }
 
 // ── atoms ────────────────────────────────────────────────────────────────────
+
+function Note({ text, icon }: { text: string; icon: ReactNode }) {
+  return (
+    <p className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <span className="text-[#87bfff]">{icon}</span> {text}
+    </p>
+  );
+}
+
+function Tile({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2">
+      <p className="inline-flex items-center gap-1 truncate text-[0.54rem] text-[var(--tessera-text-muted)]">
+        <span className="text-[#87bfff]">{icon}</span> {label}
+      </p>
+      <p className="mt-0.5 text-[0.9rem] font-semibold tabular-nums text-white">{value}</p>
+    </div>
+  );
+}
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (

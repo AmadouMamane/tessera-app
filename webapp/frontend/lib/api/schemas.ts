@@ -2782,6 +2782,8 @@ export const SourcesOverviewSchema = z.object({
       freshness: z.string(),
       status: z.enum(["active", "disabled"]),
       citation: z.string(),
+      hits: z.number().int(),
+      retention: z.string(),
       used_by: z.string(),
       used_by_count: z.number().int(),
       consumer_ids: z.array(z.string()),
@@ -2810,6 +2812,15 @@ export const SourcesOverviewSchema = z.object({
     }),
   ),
   zones: z.object({ by_type: z.string(), by_env: z.string(), cost: z.string() }),
+  embedding: z.object({
+    model: z.string(),
+    dim: z.string(),
+    distance: z.string(),
+    topk: z.string(),
+    chunks: z.string(),
+    documents: z.string(),
+    languages: z.string(),
+  }),
   footer: z.object({ total: z.number().int(), source: z.string() }),
 });
 export type SourcesOverview = z.infer<typeof SourcesOverviewSchema>;
