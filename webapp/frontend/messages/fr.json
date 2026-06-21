@@ -3642,7 +3642,15 @@
       "tChunks": "Chunks",
       "tHits": "Requêtes",
       "score": "Citation",
-      "tags": "Étiquettes"
+      "tags": "Étiquettes",
+      "quickAccess": "Accès rapide",
+      "actions": "Actions",
+      "managePermissions": "Gérer les permissions",
+      "viewKnowledge": "Voir les connaissances",
+      "viewAudit": "Journal d'audit",
+      "asof": "Voir à date (as-of)",
+      "managePolicy": "Gérer la politique",
+      "readonlyHint": "Source versionnée dans Git - édition par PR (lecture seule)"
     },
     "empty": {
       "rows": "Aucune source ne correspond aux filtres."

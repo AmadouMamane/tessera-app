@@ -3642,7 +3642,15 @@
       "tChunks": "Chunks",
       "tHits": "Queries",
       "score": "Citation",
-      "tags": "Tags"
+      "tags": "Tags",
+      "quickAccess": "Quick access",
+      "actions": "Actions",
+      "managePermissions": "Manage permissions",
+      "viewKnowledge": "View knowledge",
+      "viewAudit": "Audit log",
+      "asof": "View as-of",
+      "managePolicy": "Manage policy",
+      "readonlyHint": "Git-versioned source - edited via PR (read-only)"
     },
     "empty": {
       "rows": "No source matches the filters."

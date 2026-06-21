@@ -3642,7 +3642,15 @@
       "tChunks": "Chunks",
       "tHits": "Anfragen",
       "score": "Zitation",
-      "tags": "Tags"
+      "tags": "Tags",
+      "quickAccess": "Schnellzugriff",
+      "actions": "Aktionen",
+      "managePermissions": "Berechtigungen verwalten",
+      "viewKnowledge": "Wissen ansehen",
+      "viewAudit": "Audit-Log",
+      "asof": "Stand anzeigen (as-of)",
+      "managePolicy": "Richtlinie verwalten",
+      "readonlyHint": "In Git versionierte Quelle - Bearbeitung per PR (schreibgeschuetzt)"
     },
     "empty": {
       "rows": "Keine Quelle entspricht den Filtern."

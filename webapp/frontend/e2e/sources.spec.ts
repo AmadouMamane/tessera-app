@@ -176,7 +176,7 @@ test("the as-of control links to the point-in-time page (no invented Suggestions
 }) => {
   // The non-normative "Suggestions" panel must not exist.
   await expect(page.getByRole("heading", { name: "Suggestions" })).toHaveCount(0);
-  await page.getByRole("link", { name: /Voir à date/ }).click();
+  await page.getByRole("link", { name: /Voir à date/ }).first().click();
   await page.waitForURL(/\/prouver\/etat-a-date/, { timeout: 15_000 });
   expect(page.url()).toContain("/prouver/etat-a-date");
 });
@@ -209,8 +209,19 @@ test("the recent-activity feed shows sources & memory lifecycle (not agent turns
   ).toBeVisible();
 });
 
+test("the detail has Acces rapide and Actions with real links (read-only)", async ({ page }) => {
+  const detail = page.getByTestId("source-detail");
+  await expect(detail.getByText("Accès rapide")).toBeVisible();
+  await expect(detail.getByText("Actions")).toBeVisible();
+  // honest read-only framing (no fake source-mutation buttons)
+  await expect(detail.getByText(/versionnée dans Git/)).toBeVisible();
+  await detail.getByRole("link", { name: "Gérer les permissions" }).click();
+  await page.waitForURL(/\/admin\/roles-acces/, { timeout: 15_000 });
+  expect(page.url()).toContain("/admin/roles-acces");
+});
+
 test("the knowledge action links to the Connaissances page", async ({ page }) => {
-  await page.getByRole("link", { name: "Voir les connaissances" }).click();
+  await page.getByRole("link", { name: "Voir les connaissances" }).first().click();
   await page.waitForURL(/\/agent\/connaissances/, { timeout: 15_000 });
   expect(page.url()).toContain("/agent/connaissances");
 });
