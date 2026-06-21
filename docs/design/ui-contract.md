@@ -27,7 +27,8 @@ are all siblings; the chat is the home, never a parent.
 | Route | Page | Source |
 | --- | --- | --- |
 | `/produit` | Chat (home) — **legacy presentation** | reuse `ChatRoom` |
-| `/produit/apercu` | Chat **v2 presentation** — decor host + floating widget | reuse `ChatRoom` (re-skin) |
+| `/produit/apercu` | Chat **v2 presentation** — minimal decor host + floating widget | reuse `ChatRoom` (re-skin) |
+| `/produit/apercu2` | Chat **v2 presentation #2** — "Mes comptes" portal decor + floating widget | reuse `ChatRoom` (re-skin) |
 | `/produit/mes-demandes` | Request tracking | scaffold |
 | `/produit/documents` | Statements, contracts, PDFs | scaffold |
 | `/produit/alertes` | Notifications | scaffold |
@@ -48,6 +49,17 @@ streaming or message-rendering logic. ChatRoom reflows naturally at ~400px (its
 `sm:` utilities don't trigger, so the empty state / suggestions render in their
 compact one-column form). New files: `components/product/chat-widget.tsx`,
 `components/product/apercu-host.tsx`, `app/[locale]/produit/apercu/page.tsx`.
+
+`/produit/apercu2` is a **second decor variant** of the same v2 presentation: a
+faithful reproduction of a retail-bank "Mes comptes" customer portal
+(`docs/ui-reference/produit/espace_client.png` — red top bar, secondary tabs,
+current/savings/cashback accounts + credit promo, "useful links" right rail,
+dark footer) carrying **fictitious data and no banking functionality**. It
+mounts the **same** `ChatWidget` (so the chat core is reused identically — only
+the host backdrop differs). Files: `components/product/mes-comptes-host.tsx`,
+`app/[locale]/produit/apercu2/page.tsx`. The two `apercu*` hosts are competing
+backdrops for the same widget; cut-over picks one and deletes the other along
+with the legacy presentation.
 
 **Cut-over plan (documented, NOT executed yet).** "Parallel" is a *phase*, not a
 destination. Once v2 is validated:
