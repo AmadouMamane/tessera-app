@@ -4421,6 +4421,25 @@
       "documents": "Documents",
       "alerts": "Alertes",
       "settings": "Paramètres"
+    },
+    "apercu": {
+      "brand": "Crédit Aurore",
+      "space": "Espace personnel",
+      "demoBadge": "Hôte de démo",
+      "demoNotice": "Cadre de démonstration — aucune donnée bancaire réelle. Seul l'assistant ci-dessous est fonctionnel.",
+      "tiles": {
+        "balance": "Solde des comptes",
+        "cards": "Cartes",
+        "transfers": "Virements",
+        "documents": "Documents",
+        "placeholder": "Indisponible dans la démo"
+      },
+      "widget": {
+        "title": "Assistant Aurore",
+        "subtitle": "Réponses sourcées · RGPD · DORA",
+        "open": "Ouvrir l'assistant",
+        "close": "Réduire l'assistant"
+      }
     }
   },
   "scaffold": {

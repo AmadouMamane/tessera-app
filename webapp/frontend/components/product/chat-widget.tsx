@@ -1,0 +1,98 @@
+"use client";
+
+import { MessageCircle, ShieldCheck, X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+
+import { ChatRoom } from "@/components/chat/chat-room";
+
+/**
+ * Floating chat widget — the *new presentation* (v2 shell) of the customer
+ * chat. It is a pure re-skin: a FAB + panel that mount the **existing**
+ * `<ChatRoom>` verbatim. No streaming, message-rendering or store logic is
+ * duplicated here — the widget only owns open/close state and the layout
+ * frame. The panel gives `<ChatRoom>` a fixed-height flex column so its
+ * internal `flex-1` scroll region resolves; ChatRoom's own card chrome is
+ * neutralised via the `[&>div]` utilities so it blends into the panel.
+ *
+ * Desktop: ~400px × min(620px, 80vh) anchored bottom-right above the FAB.
+ * Mobile: full-screen on open. Esc or the FAB/close button collapses it.
+ */
+export function ChatWidget() {
+  const t = useTranslations("product.apercu.widget");
+  const [open, setOpen] = useState(false);
+
+  // Esc closes the panel (only while open so we don't swallow Esc elsewhere).
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <>
+      {/* Mobile backdrop — also a click target to close. Desktop keeps the host
+          visible, so the backdrop is mobile-only. */}
+      {open && (
+        <button
+          type="button"
+          aria-hidden
+          tabIndex={-1}
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-40 bg-navy-950/30 backdrop-blur-[2px] sm:hidden"
+        />
+      )}
+
+      {/* Panel */}
+      {open && (
+        // biome-ignore lint/a11y/useSemanticElements: floating chat overlay, not a native <dialog> (no modal backdrop semantics, must coexist with the host page)
+        <div
+          role="dialog"
+          aria-label={t("title")}
+          className="fixed inset-0 z-50 flex flex-col overflow-hidden border-[var(--border)] bg-[var(--card)] shadow-2xl animate-in fade-in-0 slide-in-from-bottom-4 duration-200 sm:inset-auto sm:bottom-24 sm:right-6 sm:h-[min(620px,80vh)] sm:w-[400px] sm:rounded-2xl sm:border sm:zoom-in-95"
+        >
+          {/* Header strip */}
+          <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] bg-gradient-to-br from-navy-900 to-navy-950 px-4 py-3 text-white dark:from-navy-950 dark:to-black">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-500/15 text-gold-400 ring-1 ring-gold-500/25">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-semibold">{t("title")}</span>
+              <span className="truncate text-[0.68rem] text-white/55">{t("subtitle")}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label={t("close")}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* ChatRoom host — neutralise ChatRoom's own card chrome so it fills
+              the panel flush. Conditionally mounted so the conversation state
+              (global store) survives close/reopen without keeping ChatRoom's
+              global "/" listener active while collapsed. */}
+          <div className="relative flex min-h-0 flex-1 flex-col [&>div]:rounded-none [&>div]:border-0 [&>div]:bg-transparent [&>div]:shadow-none [&>div]:backdrop-blur-none">
+            <ChatRoom />
+          </div>
+        </div>
+      )}
+
+      {/* FAB — toggles the panel. ~56px. */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label={open ? t("close") : t("open")}
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-navy-900 text-gold-400 shadow-[0_8px_28px_-6px_oklch(0.2_0.04_255/0.5)] ring-1 ring-gold-500/25 transition-all duration-200 hover:scale-105 hover:bg-navy-800 active:scale-95 dark:bg-gold-500 dark:text-navy-950 dark:ring-gold-300/30 dark:hover:bg-gold-400"
+      >
+        {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-6 w-6" />}
+      </button>
+    </>
+  );
+}

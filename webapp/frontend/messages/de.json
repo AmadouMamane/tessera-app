@@ -4421,6 +4421,25 @@
       "documents": "Dokumente",
       "alerts": "Benachrichtigungen",
       "settings": "Einstellungen"
+    },
+    "apercu": {
+      "brand": "Crédit Aurore",
+      "space": "Persönlicher Bereich",
+      "demoBadge": "Demo-Host",
+      "demoNotice": "Demonstrationsrahmen — keine echten Bankdaten. Nur der Assistent unten ist funktionsfähig.",
+      "tiles": {
+        "balance": "Kontostand",
+        "cards": "Karten",
+        "transfers": "Überweisungen",
+        "documents": "Dokumente",
+        "placeholder": "In der Demo nicht verfügbar"
+      },
+      "widget": {
+        "title": "Aurore-Assistent",
+        "subtitle": "Belegte Antworten · DSGVO · DORA",
+        "open": "Assistent öffnen",
+        "close": "Assistent minimieren"
+      }
     }
   },
   "scaffold": {
