@@ -312,6 +312,23 @@ def test_activity_feed_is_real_transcript_and_memory_events() -> None:
     assert mem["actor"] == "b93406f4"  # truncated subject id
 
 
+def test_real_latency_telemetry_surfaces() -> None:
+    # The transcript latency_ms is the Grafana turn-duration signal, persisted.
+    payload = sm._assemble(
+        _rows(), _ltm(), _tx(), {}, {}, _fleet(), {}, {}, (True, 1, None), [],
+        (363, 4571.0), 0.0, lang="fr", now=NOW,
+    )
+    texts = " ".join(str(s["text"]) for s in payload["suggestions"]["items"])
+    assert "4,6 s" in texts  # localized seconds with a French comma
+    assert "363 tours" in texts
+    # the latency also annotates the lineage answer step
+    resp = next(s for s in payload["lineage"]["steps"] if s["key"] == "response")
+    assert "4,6 s" in resp["value"]
+    # cost.active comes from the live Prometheus gauge when provided (0 on-prem)
+    assert payload["cost"]["telemetry"] is True
+    assert payload["cost"]["active"].startswith("EUR 0")
+
+
 def test_corpus_of_maps_regulation_and_product() -> None:
     assert sm._corpus_of("dora") == "regulations_dora"
     assert sm._corpus_of("gdpr") == "regulations_gdpr"

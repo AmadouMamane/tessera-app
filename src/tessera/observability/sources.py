@@ -265,6 +265,12 @@ _TR: dict[str, tuple[str, str, str]] = {
     "ev_query": ("Requête reçue", "Anfrage empfangen", "Query received"),
     "ev_memory": ("Souvenir formé", "Erinnerung gebildet", "Memory formed"),
     "act_empty": ("Aucune activité récente", "Keine juengste Aktivitaet", "No recent activity"),
+    "sug_latency": (
+        "Latence agent : {avg} s en moyenne sur {n} tours mesurés (telemetrie)",
+        "Agent-Latenz: {avg} s im Schnitt ueber {n} gemessene Turns (Telemetrie)",
+        "Agent latency: {avg} s average over {n} measured turns (telemetry)",
+    ),
+    "ln_latency": ("lat. moy. {avg} s", "Lat. {avg} s", "avg lat. {avg} s"),
 }
 
 
@@ -437,10 +443,40 @@ async def _fetch_activity() -> list[dict[str, object]]:
     return events[:8]
 
 
+async def _fetch_latency() -> tuple[int, float | None]:
+    """Real measured agent latency from the transcript.
+
+    This is the Grafana ``tessera_agent_turn_duration_seconds`` signal, persisted
+    per turn as ``latency_ms``. Returns (measured_turns, avg_ms).
+    """
+    agg = await _scalar_stat(
+        "SELECT count(latency_ms) AS n, avg(latency_ms) AS avg_ms "
+        "FROM conversation_messages WHERE latency_ms IS NOT NULL"
+    )
+    avg = agg.get("avg_ms")
+    return _as_int(agg.get("n")), float(avg) if isinstance(avg, int | float) else None
+
+
+def _read_cost_gauge() -> float | None:
+    """The live Prometheus LLM-cost gauge (Grafana's source). None if absent."""
+    try:
+        from prometheus_client import REGISTRY
+
+        return REGISTRY.get_sample_value("tessera_llm_estimated_cost_eur")
+    except Exception:  # prometheus not initialised in this process
+        return None
+
+
 def _index_cost_eur(chars: int) -> Decimal:
     """Estimated frontier embedding cost to index ``chars`` of text (EUR)."""
     tokens = Decimal(chars) / Decimal(_CHARS_PER_TOKEN)
     return tokens / Decimal(1_000_000) * _EMBED_EUR_PER_M
+
+
+def _secs(ms: float, lang: str) -> str:
+    """Milliseconds -> a localized 'N.N' seconds string (comma for fr/de)."""
+    s = f"{ms / 1000:.1f}"
+    return s if lang == "en" else s.replace(".", ",")
 
 
 def _fmt_eur(value: Decimal) -> str:
@@ -549,8 +585,11 @@ async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
     chain = verify_audit_chain(get_settings().guard.audit_file)
     audit = (chain.verified, chain.length, chain.broken_at)
     activity = await _fetch_activity()
+    latency = await _fetch_latency()
+    cost_gauge = _read_cost_gauge()
     return _assemble(
-        rows, ltm, tx, _load_probe(), consumers, fleet, history, index_chars, audit, activity, lang
+        rows, ltm, tx, _load_probe(), consumers, fleet, history, index_chars, audit, activity,
+        latency, cost_gauge, lang,
     )
 
 
@@ -778,6 +817,8 @@ def _assemble(
     index_chars: dict[str, int] | None = None,
     audit: tuple[bool, int, int | None] | None = None,
     activity: list[dict[str, object]] | None = None,
+    latency: tuple[int, float | None] | None = None,
+    cost_gauge: float | None = None,
     lang: str = "fr",
     now: datetime | None = None,
 ) -> dict[str, object]:
@@ -788,6 +829,7 @@ def _assemble(
     mem_history = mem_history or {}
     index_chars = index_chars or {}
     activity = activity or []
+    latency = latency or (0, None)
     now = now or datetime.now(UTC)
     agg = _aggregate(raw_rows)
     total_chunks = sum(agg.chunks.values()) or 1
@@ -896,13 +938,13 @@ def _assemble(
         rows_out, chunk_series, lang_counts, ltm, tx, corpus_count, total_docs, total_chunks, lang
     )
     by_type, by_env, cost_by_source = _build_distributions(rows_out, lang_counts, lang)
-    cost_active = _fmt_eur(Decimal(0))
-    cost_frontier_s = _fmt_eur(cost_frontier)
+    cost_block = _build_cost(cost_gauge, cost_frontier, lang)
     suggestions = _build_suggestions(
-        rows_out, fleet, mem_history, cost_active, cost_frontier_s, lang
+        rows_out, fleet, mem_history, str(cost_block["active"]), str(cost_block["frontier"]),
+        latency, lang,
     )
     lineage, audit_block, activity_block = _build_footer(
-        rows_out, fleet, total_docs, total_chunks, tx, ltm, audit, activity, now, lang
+        rows_out, fleet, total_docs, total_chunks, tx, ltm, audit, activity, latency, now, lang
     )
 
     return {
@@ -918,11 +960,7 @@ def _assemble(
         "by_type_total": total_sources,
         "by_env": by_env,
         "cost_by_source": cost_by_source,
-        "cost": {
-            "active": cost_active,
-            "frontier": cost_frontier_s,
-            "note": _t("l_cost", lang),
-        },
+        "cost": cost_block,
         "suggestions": {"title": _t("sug_title", lang), "items": suggestions},
         "lineage": lineage,
         "audit": audit_block,
@@ -974,6 +1012,7 @@ def _build_lineage(
     tx: _MemStat,
     ltm: _MemStat,
     audit_len: int,
+    latency: tuple[int, float | None],
     lang: str,
 ) -> dict[str, object]:
     """The real source-to-answer pipeline (the normative footer lineage).
@@ -988,6 +1027,10 @@ def _build_lineage(
     agent_name = str(fleet[0]["name"]) if fleet else "-"
     last_answer = tx.last or ltm.last
     answer_value = last_answer.strftime("%d/%m/%Y %H:%M") if last_answer else "-"
+    lat_n, lat_avg = latency
+    if lat_n and lat_avg is not None:
+        lat_label = _t("ln_latency", lang).format(avg=_secs(lat_avg, lang))
+        answer_value = f"{answer_value} - {lat_label}"
     steps = [
         {"key": "source", "label": _t("ln_source", lang), "value": default_source},
         {
@@ -1012,6 +1055,17 @@ def _build_lineage(
     return {"title": _t("ln_title", lang), "steps": steps}
 
 
+def _build_cost(cost_gauge: float | None, cost_frontier: Decimal, lang: str) -> dict[str, object]:
+    """Cost block: the live Prometheus gauge (active on-prem) + the frontier estimate."""
+    gauge = Decimal(str(cost_gauge)) if cost_gauge is not None else Decimal(0)
+    return {
+        "active": _fmt_eur(gauge),
+        "frontier": _fmt_eur(cost_frontier),
+        "note": _t("l_cost", lang),
+        "telemetry": cost_gauge is not None,
+    }
+
+
 def _build_footer(
     rows_out: list[dict[str, object]],
     fleet: list[dict[str, object]],
@@ -1021,13 +1075,16 @@ def _build_footer(
     ltm: _MemStat,
     audit: tuple[bool, int, int | None] | None,
     activity: list[dict[str, object]],
+    latency: tuple[int, float | None],
     now: datetime,
     lang: str,
 ) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
     """The footer trio: the source-to-answer lineage, audit chain, activity feed."""
     audit_block = _build_audit(audit, now, lang)
     audit_len = audit[1] if audit else 0
-    lineage = _build_lineage(rows_out, fleet, total_docs, total_chunks, tx, ltm, audit_len, lang)
+    lineage = _build_lineage(
+        rows_out, fleet, total_docs, total_chunks, tx, ltm, audit_len, latency, lang
+    )
     activity_block = _build_activity(activity, fleet, lang)
     return lineage, audit_block, activity_block
 
@@ -1085,10 +1142,21 @@ def _build_suggestions(
     mem_history: dict[str, list[dict[str, object]]],
     cost_active: str,
     cost_frontier: str,
+    latency: tuple[int, float | None],
     lang: str,
 ) -> list[dict[str, object]]:
     """Real, derived recommendations from the assembled signals (no fabrication)."""
     out: list[dict[str, object]] = []
+
+    lat_n, lat_avg = latency
+    if lat_n and lat_avg is not None:
+        out.append(
+            {
+                "tone": "info",
+                "text": _t("sug_latency", lang).format(avg=_secs(lat_avg, lang), n=lat_n),
+                "href": "/agent/synthese",
+            }
+        )
 
     low = 0
     for row in rows_out:
