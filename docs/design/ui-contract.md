@@ -26,11 +26,40 @@ are all siblings; the chat is the home, never a parent.
 
 | Route | Page | Source |
 | --- | --- | --- |
-| `/produit` | Chat (home) | reuse `ChatRoom` |
+| `/produit` | Chat (home) — **legacy presentation** | reuse `ChatRoom` |
+| `/produit/apercu` | Chat **v2 presentation** — decor host + floating widget | reuse `ChatRoom` (re-skin) |
 | `/produit/mes-demandes` | Request tracking | scaffold |
 | `/produit/documents` | Statements, contracts, PDFs | scaffold |
 | `/produit/alertes` | Notifications | scaffold |
 | `/produit/parametres` | Profile, language, privacy & consents | scaffold |
+
+#### v2 chat presentation — `/produit/apercu` (re-skin, not re-fork)
+
+`/produit/apercu` is the **new presentation** of the customer chat: a decor
+host page ("Crédit Aurore · Espace personnel" header + greyed skeleton tiles
+labelled "demo host", **no real banking data**) with a floating chat **widget**
+(FAB bottom-right ~56px → panel ~400px × min(620px, 80vh) anchored bottom-right
+on desktop, full-screen on mobile; Esc / backdrop / FAB closes).
+
+Hard rule — **re-skin, not re-fork**: the widget reuses the existing core
+verbatim (`<ChatRoom>` → `streamChat` + `MessageBubble` + the chat store). It
+owns only open/close state and the layout frame; it duplicates **none** of the
+streaming or message-rendering logic. ChatRoom reflows naturally at ~400px (its
+`sm:` utilities don't trigger, so the empty state / suggestions render in their
+compact one-column form). New files: `components/product/chat-widget.tsx`,
+`components/product/apercu-host.tsx`, `app/[locale]/produit/apercu/page.tsx`.
+
+**Cut-over plan (documented, NOT executed yet).** "Parallel" is a *phase*, not a
+destination. Once v2 is validated:
+
+1. `/produit/apercu` becomes `/produit` (the widget presentation replaces the
+   legacy full-page `ChatRoom` as the customer home).
+2. The legacy full-page presentation is retired.
+3. The 4 portal sub-pages (`/produit/mes-demandes`, `/produit/documents`,
+   `/produit/alertes`, `/produit/parametres`) are removed — the decor host
+   subsumes the "portal" framing, and the chat is the only real surface.
+4. This table collapses back to a single `/produit` row sourced from the v2
+   widget; the `/produit/apercu` row is deleted.
 
 ## App 2 — COCKPIT (operator / ML eng / compliance)
 
