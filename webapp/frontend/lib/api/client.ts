@@ -754,8 +754,12 @@ export async function fetchPoliciesOverview(signal?: AbortSignal): Promise<Polic
   return request("/observability/policies", { signal }, PoliciesOverviewSchema);
 }
 
-export async function fetchSourcesOverview(signal?: AbortSignal): Promise<SourcesOverview> {
-  return request("/observability/sources", { signal }, SourcesOverviewSchema);
+export async function fetchSourcesOverview(
+  lang?: string,
+  signal?: AbortSignal,
+): Promise<SourcesOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/sources${q}`, { signal }, SourcesOverviewSchema);
 }
 
 export async function fetchAccessOverview(signal?: AbortSignal): Promise<AccessOverview> {

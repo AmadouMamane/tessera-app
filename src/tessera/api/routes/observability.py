@@ -1267,15 +1267,16 @@ async def observability_access() -> dict[str, object]:
 
 
 @router.get("/observability/sources")
-async def observability_sources() -> dict[str, object]:
+async def observability_sources(lang: str = "fr") -> dict[str, object]:
     """Sources & memory overview (page #17).
 
-    Composes the catalogue posture, the source table, the selected-source detail
-    and the type / environment / cost distributions. Degrades to
-    ``available: false`` on failure.
+    Composes the catalogue posture (corpus + memory), the source table, the
+    selected-source detail and the type / volume / language distributions, read
+    live from pgvector and the memory tables. Degrades to ``available: false``
+    on failure.
     """
     try:
-        return {"available": True, **sources_mod.compute_sources_overview()}
+        return {"available": True, **await sources_mod.build_sources_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.sources: failed: {exc}\n")
         return {"available": False}

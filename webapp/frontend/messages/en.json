@@ -3586,129 +3586,51 @@
   },
   "sources": {
     "title": "Sources & memory",
-    "subtitle": "Manage data sources, the system memory and their lifecycle.",
+    "subtitle": "The agent's real data substrate: pgvector corpus and memory.",
     "actions": {
-      "importSource": "Import a source",
-      "connectSource": "Connect a source",
-      "createSource": "Create a source"
-    },
-    "tabs": {
-      "overview": "Overview",
-      "sources": "Sources",
-      "memory": "Memory",
-      "indexation": "Indexing & embeddings",
-      "quality": "Quality & freshness",
-      "access": "Access & permissions",
-      "retention": "Retention & purge",
-      "lineage": "Lineage & dependencies",
-      "history": "History & snapshots"
+      "export": "Export",
+      "manage": "View knowledge"
     },
     "filters": {
-      "snapshot": "Active snapshot",
-      "viewSnapshot": "View snapshot at date",
-      "comparePrev": "Compare to previous snapshot",
-      "status": "Status",
+      "search": "Search a source...",
       "type": "Type",
-      "classification": "Classification",
-      "environment": "Environment",
-      "owner": "Owner",
-      "showDisabled": "show disabled",
-      "button": "Filters",
       "all": "All"
     },
-    "kpi": {
-      "total": "Total sources",
-      "active": "Active",
-      "synced": "Synced (24h)",
-      "memory": "Total memory",
-      "indexed": "Indexed",
-      "retention": "Avg retention",
-      "quality": "Avg quality",
-      "cost": "Cost (30 days)"
-    },
-    "col": {
-      "name": "Source name",
-      "type": "Type",
-      "classification": "Classification",
-      "environment": "Environment",
-      "status": "Status",
-      "dataTotal": "Data (total)",
-      "indexed": "Indexed",
-      "lastSync": "Last sync",
-      "quality": "Quality",
-      "freshness": "Freshness",
-      "owner": "Owner",
-      "cost": "Cost (30d)"
-    },
     "type": {
-      "database": "Database",
-      "vector": "Vector",
-      "api": "API",
-      "files": "Files",
-      "stream": "Stream",
-      "memory": "Memory"
+      "regulation": "Regulation",
+      "product": "Product corpus",
+      "memory": "Long-term memory",
+      "transcript": "Transcript"
+    },
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled"
     },
     "classification": {
       "public": "Public",
       "internal": "Internal",
       "confidential": "Confidential"
     },
-    "status": {
-      "active": "Active",
-      "deprecated": "Deprecated",
-      "disabled": "Disabled"
-    },
-    "detailTabs": {
-      "overview": "Overview",
-      "details": "Details",
-      "schema": "Schema & fields",
-      "access": "Access",
-      "activity": "Activity",
-      "dependencies": "Dependencies",
-      "history": "History"
+    "col": {
+      "name": "Source",
+      "type": "Type",
+      "classification": "Classification",
+      "volume": "Volume",
+      "units": "Units",
+      "languages": "Languages",
+      "freshness": "Freshness",
+      "citation": "Citation rate"
     },
     "detail": {
-      "usage": "Usage (30 days)",
-      "connector": "Connector",
-      "environment": "Environment",
-      "region": "Region",
-      "status": "Status",
-      "classification": "Classification",
-      "owner": "Owner",
-      "created": "Created",
-      "modified": "Last modified",
-      "retention": "Retention",
-      "source": "Source",
-      "tags": "Tags",
-      "documents": "Documents",
-      "queries": "Queries",
-      "cost": "Cost (30)",
-      "qualityTitle": "Data quality",
-      "scoreGlobal": "Global score",
-      "viewDetail": "View detail",
-      "quickAccess": "Quick access",
-      "actions": "Actions"
+      "selectHint": "Select a source to see its detail.",
+      "close": "Close"
     },
-    "quality": {
-      "completeness": "Completeness",
-      "freshness": "Freshness",
-      "accuracy": "Accuracy",
-      "consistency": "Consistency"
-    },
-    "zone": {
-      "byType": "Distribution by type",
-      "byEnv": "Memory by environment",
-      "costBySource": "Cost by source"
-    },
-    "env": {
-      "prod": "Prod",
-      "preprod": "Preprod",
-      "staging": "Staging",
-      "dev": "Dev"
+    "empty": {
+      "rows": "No source matches the filters."
     },
     "footer": {
       "total": "{n} sources",
-      "source": "Source of truth: {src}"
+      "source": "Source: {src}"
     }
   },
   "roles": {

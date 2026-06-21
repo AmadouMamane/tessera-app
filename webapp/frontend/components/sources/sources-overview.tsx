@@ -1,12 +1,22 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Link2, Plus, Search, UploadCloud, X } from "lucide-react";
-import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import {
+  ChevronsUpDown,
+  Database,
+  Download,
+  Search,
+  ShieldCheck,
+  SortAsc,
+  SortDesc,
+  X,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchSourcesOverview } from "@/lib/api/client";
 import type { SourcesOverview as SourcesData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -16,36 +26,58 @@ const CLASS_BADGE: Record<string, string> = {
   internal: "border-sky-500/30 bg-sky-500/15 text-sky-300",
   confidential: "border-violet-500/30 bg-violet-500/15 text-violet-300",
 };
-const STATUS_TEXT: Record<string, string> = {
-  active: "text-emerald-300",
-  deprecated: "text-amber-300",
-  disabled: "text-[var(--tessera-text-muted)]",
+const STATUS: Record<"active" | "disabled", { dot: string; text: string }> = {
+  active: { dot: "bg-emerald-400", text: "text-emerald-300" },
+  disabled: { dot: "bg-[var(--tessera-text-muted)]", text: "text-[var(--tessera-text-muted)]" },
 };
-const STATUS_DOT: Record<string, string> = {
-  active: "bg-emerald-400",
-  deprecated: "bg-amber-400",
-  disabled: "bg-[var(--tessera-text-muted)]",
-};
-const DETAIL_TABS = [
-  "overview",
-  "details",
-  "schema",
-  "access",
-  "activity",
-  "dependencies",
-  "history",
-] as const;
+const KNOWLEDGE_HREF = "/agent/connaissances";
 
 type T = ReturnType<typeof useTranslations<"sources">>;
 type Data = SourcesData;
+type Row = Data["sources"][number];
+type Detail = Row["detail"];
+type SortKey = "name" | "type" | "volume" | "citation";
 
 export function SourcesOverview() {
   const t = useTranslations("sources");
+  const locale = useLocale();
   const { data } = useQuery({
-    queryKey: ["sources-overview"],
-    queryFn: ({ signal }) => fetchSourcesOverview(signal),
+    queryKey: ["sources-overview", locale],
+    queryFn: ({ signal }) => fetchSourcesOverview(locale, signal),
     staleTime: 60_000,
   });
+
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<string>("overview");
+
+  const types = useMemo(() => (data ? [...new Set(data.sources.map((s) => s.type))] : []), [data]);
+
+  const rows = useMemo(() => {
+    if (!data) return [];
+    const q = search.trim().toLowerCase();
+    let out = data.sources.filter((s) => {
+      if (typeFilter !== "all" && s.type !== typeFilter) return false;
+      if (!q) return true;
+      return s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
+    });
+    if (sortKey) {
+      const dir = sortDir === "asc" ? 1 : -1;
+      out = [...out].sort((a, b) => {
+        if (sortKey === "volume") return (a.volume_num - b.volume_num) * dir;
+        if (sortKey === "citation") {
+          const na = Number.parseFloat(a.citation) || -1;
+          const nb = Number.parseFloat(b.citation) || -1;
+          return (na - nb) * dir;
+        }
+        return a[sortKey].localeCompare(b[sortKey], "fr") * dir;
+      });
+    }
+    return out;
+  }, [data, search, typeFilter, sortKey, sortDir]);
 
   if (!data) {
     return (
@@ -55,28 +87,77 @@ export function SourcesOverview() {
     );
   }
 
+  const selected: Detail | null =
+    (selectedId && data.sources.find((s) => s.id === selectedId)?.detail) || null;
+
+  const onSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const onSelect = (id: string) => {
+    setSelectedId(id);
+    setTab("overview");
+  };
+
+  const onExport = () => {
+    const blob = new Blob([JSON.stringify(data.sources, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tessera-sources.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
+      <CommandBar t={t} note={data.readonly_note} onExport={onExport} />
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
         {data.kpis.map((kpi) => (
-          <CompactKpi key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} />
+          <CompactKpi key={kpi.key} kpi={kpi} />
         ))}
       </div>
 
-      <FilterStrip t={t} />
+      <FilterStrip
+        t={t}
+        search={search}
+        onSearch={setSearch}
+        typeFilter={typeFilter}
+        onType={setTypeFilter}
+        types={types}
+        count={rows.length}
+        total={data.sources.length}
+      />
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="flex min-w-0 flex-col gap-3">
-          <SourceTable t={t} data={data} />
+          <SourceTable
+            t={t}
+            rows={rows}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={onSort}
+          />
           <div className="grid gap-3 xl:grid-cols-3">
             <ByType t={t} data={data} />
-            <ByEnv t={t} data={data} />
-            <CostBySource t={t} data={data} />
+            <ByVolume data={data} />
+            <ByLanguage data={data} />
           </div>
         </div>
-        <DetailPanel t={t} data={data} />
+        <DetailPanel
+          t={t}
+          detail={selected}
+          tab={tab}
+          onTab={setTab}
+          onClose={() => setSelectedId(null)}
+        />
       </div>
 
       <Footer t={t} data={data} />
@@ -86,115 +167,198 @@ export function SourcesOverview() {
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({ t, note, onExport }: { t: T; note: string; onExport: () => void }) {
   return (
-    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-end gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
-      >
-        <UploadCloud className="h-4 w-4" /> {t("actions.importSource")}
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
-      >
-        <Link2 className="h-4 w-4" /> {t("actions.connectSource")}
-      </Button>
-      <Button
-        size="sm"
-        className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
-      >
-        <Plus className="h-4 w-4" /> {t("actions.createSource")}
-      </Button>
+    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+        <ShieldCheck className="h-3.5 w-3.5" /> {note}
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onExport}
+          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
+        >
+          <Download className="h-4 w-4" /> {t("actions.export")}
+        </Button>
+        <Link
+          href={KNOWLEDGE_HREF}
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
+        >
+          <Database className="h-4 w-4" /> {t("actions.manage")}
+        </Link>
+      </div>
     </section>
   );
 }
 
-function CompactKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }) {
+function CompactKpi({ kpi }: { kpi: Data["kpis"][number] }) {
   return (
-    <div className="flex h-[92px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
-      <p className="truncate text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
-        {label}
+    <div className="flex h-[88px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
+      <p className="truncate text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
+        {kpi.label}
       </p>
       <p className="mt-0.5 text-[1.25rem] font-semibold leading-none text-white">{kpi.value}</p>
-      <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
       <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
     </div>
   );
 }
 
-function FilterStrip({ t }: { t: T }) {
-  const selects = ["status", "type", "classification", "environment", "owner"] as const;
+function FilterStrip({
+  t,
+  search,
+  onSearch,
+  typeFilter,
+  onType,
+  types,
+  count,
+  total,
+}: {
+  t: T;
+  search: string;
+  onSearch: (v: string) => void;
+  typeFilter: string;
+  onType: (v: string) => void;
+  types: string[];
+  count: number;
+  total: number;
+}) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="relative min-w-[180px] flex-1">
+      <div className="relative min-w-[200px] flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--tessera-text-muted)]" />
         <input
           type="search"
-          placeholder={t("filters.snapshot")}
-          className="h-9 w-full rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-9 pr-3 text-xs text-[var(--tessera-text)] outline-none"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          aria-label={t("filters.search")}
+          placeholder={t("filters.search")}
+          className="h-9 w-full rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-9 pr-3 text-xs text-[var(--tessera-text)] outline-none focus:border-[#2e72d2]"
         />
       </div>
-      {selects.map((s) => (
-        <div
-          key={s}
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)]"
+      <label className="relative shrink-0">
+        <span className="sr-only">{t("filters.type")}</span>
+        <select
+          value={typeFilter}
+          onChange={(e) => onType(e.target.value)}
+          className="h-9 cursor-pointer appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-3 pr-8 text-xs text-[var(--tessera-text)] outline-none hover:border-[#2e72d2] focus:border-[#2e72d2]"
         >
-          {t(`filters.${s}`)} <ChevronRight className="h-3.5 w-3.5 rotate-90" />
-        </div>
-      ))}
+          <option value="all">
+            {t("filters.type")}: {t("filters.all")}
+          </option>
+          {types.map((ty) => (
+            <option key={ty} value={ty}>
+              {t(`type.${ty}`)}
+            </option>
+          ))}
+        </select>
+        <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#87bfff]" />
+      </label>
+      <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+        {count}/{total}
+      </span>
     </section>
   );
 }
 
 // ── table ────────────────────────────────────────────────────────────────────
 
-function SourceTable({ t, data }: { t: T; data: Data }) {
-  const cols = [
-    "name",
-    "type",
-    "classification",
-    "environment",
-    "status",
-    "dataTotal",
-    "indexed",
-    "lastSync",
-    "quality",
-    "freshness",
-    "owner",
-    "cost",
-  ] as const;
+const COLS: { key: string; sort?: SortKey }[] = [
+  { key: "name", sort: "name" },
+  { key: "type", sort: "type" },
+  { key: "classification" },
+  { key: "volume", sort: "volume" },
+  { key: "units" },
+  { key: "languages" },
+  { key: "freshness" },
+  { key: "citation", sort: "citation" },
+];
+
+function SourceTable({
+  t,
+  rows,
+  selectedId,
+  onSelect,
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  t: T;
+  rows: Row[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  sortKey: SortKey | null;
+  sortDir: "asc" | "desc";
+  onSort: (key: SortKey) => void;
+}) {
   return (
-    <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+    <div
+      data-testid="sources-table"
+      className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
+    >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.72rem]">
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {cols.map((c) => (
-                <th key={c} className="whitespace-nowrap px-2 py-1.5 font-medium">
-                  {t(`col.${c}`)}
+              {COLS.map((c) => (
+                <th key={c.key} className="whitespace-nowrap px-2 py-1.5 font-medium">
+                  {c.sort ? (
+                    <button
+                      type="button"
+                      onClick={() => onSort(c.sort as SortKey)}
+                      aria-sort={
+                        sortKey === c.sort
+                          ? sortDir === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
+                      className="inline-flex items-center gap-1 hover:text-[var(--tessera-text)]"
+                    >
+                      {t(`col.${c.key}`)}
+                      {sortKey === c.sort ? (
+                        sortDir === "asc" ? (
+                          <SortAsc className="h-3 w-3 text-[#87bfff]" />
+                        ) : (
+                          <SortDesc className="h-3 w-3 text-[#87bfff]" />
+                        )
+                      ) : (
+                        <ChevronsUpDown className="h-3 w-3 opacity-40" />
+                      )}
+                    </button>
+                  ) : (
+                    t(`col.${c.key}`)
+                  )}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {data.sources.map((s) => {
-              const active = s.id === data.selected.id;
+            {rows.map((s) => {
+              const active = s.id === selectedId;
               return (
                 <tr
                   key={s.id}
+                  onClick={() => onSelect(s.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelect(s.id);
+                    }
+                  }}
+                  tabIndex={0}
+                  // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
+                  role="button"
+                  aria-label={s.name}
                   className={cn(
-                    "cursor-pointer border-b border-[var(--tessera-border)]/60 transition-colors hover:bg-[#0b2b49]",
+                    "cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
                   )}
                 >
                   <td className="px-2 py-1.5">
-                    <span className="text-[var(--tessera-text)]">{s.name}</span>
-                    <span className="ml-1.5 font-mono text-[0.56rem] text-[var(--tessera-text-muted)]">
-                      {s.id}
+                    <span className="inline-flex items-center gap-1.5 text-[var(--tessera-text)]">
+                      <Database className="h-3 w-3 text-[#87bfff]" /> {s.name}
                     </span>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
@@ -205,42 +369,35 @@ function SourceTable({ t, data }: { t: T; data: Data }) {
                       {t(`classification.${s.classification}`)}
                     </Badge>
                   </td>
-                  <td className="px-2 py-1.5 text-emerald-300">{s.environment}</td>
-                  <td className="px-2 py-1.5">
-                    <span className={cn("inline-flex items-center gap-1", STATUS_TEXT[s.status])}>
-                      <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[s.status])} />{" "}
-                      {t(`status.${s.status}`)}
-                    </span>
-                  </td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text)]">
-                    {s.data_total}
+                    {s.volume}
                   </td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
-                    {s.indexed}
+                    {s.units}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                    {s.last_sync}
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <span className="tabular-nums text-[var(--tessera-text-muted)]">
-                      {s.quality}%
-                    </span>
-                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{s.languages}</td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{s.freshness}</td>
-                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{s.owner}</td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
-                    {s.cost}
+                    {s.citation}
                   </td>
                 </tr>
               );
             })}
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={COLS.length}
+                  className="px-2 py-6 text-center text-[0.7rem] text-[var(--tessera-text-muted)]"
+                >
+                  {t("empty.rows")}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
       <div className="flex items-center justify-between border-t border-[var(--tessera-border)] px-3 py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-        <span>
-          1–{data.page_size} / {data.total_sources}
-        </span>
+        <span>{t("footer.total", { n: rows.length })}</span>
       </div>
     </div>
   );
@@ -250,28 +407,32 @@ function SourceTable({ t, data }: { t: T; data: Data }) {
 
 function ByType({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("zone.byType")}>
+    <Panel title={data.zones.by_type}>
       <Donut slices={data.by_type} total={data.by_type_total} labelOf={(k) => t(`type.${k}`)} />
     </Panel>
   );
 }
 
-function ByEnv({ t, data }: { t: T; data: Data }) {
+function ByVolume({ data }: { data: Data }) {
+  const max = Math.max(...data.by_env.map((e) => Number(e.value.replace(/\s/g, "")) || 0), 1);
   return (
-    <Panel title={t("zone.byEnv")}>
+    <Panel title={data.zones.by_env}>
       <ul className="flex flex-col gap-2">
         {data.by_env.map((e) => (
           <li key={e.key} className="flex flex-col gap-0.5 text-[0.66rem]">
             <div className="flex items-center justify-between gap-1.5">
-              <span className="text-[var(--tessera-text)]">{t(`env.${e.key}`)}</span>
+              <span className="truncate text-[var(--tessera-text)]">{e.label}</span>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">
-                {e.value} · {e.pct}%
+                {e.value} / {e.pct}%
               </span>
             </div>
             <div className="h-1.5 w-full rounded-full bg-[var(--tessera-bg)]">
               <div
                 className="h-full rounded-full"
-                style={{ width: `${e.pct}%`, background: e.color }}
+                style={{
+                  width: `${((Number(e.value.replace(/\s/g, "")) || 0) / max) * 100}%`,
+                  background: e.color,
+                }}
               />
             </div>
           </li>
@@ -281,21 +442,23 @@ function ByEnv({ t, data }: { t: T; data: Data }) {
   );
 }
 
-function CostBySource({ t, data }: { t: T; data: Data }) {
+function ByLanguage({ data }: { data: Data }) {
   const max = Math.max(...data.cost_by_source.map((c) => c.value), 1);
   return (
-    <Panel title={t("zone.costBySource")}>
+    <Panel title={data.zones.cost}>
       <ul className="flex flex-col gap-2">
         {data.cost_by_source.map((c) => (
           <li key={c.name} className="flex items-center gap-2 text-[0.66rem]">
-            <span className="w-24 shrink-0 truncate text-[var(--tessera-text)]">{c.name}</span>
+            <span className="w-10 shrink-0 truncate font-medium text-[var(--tessera-text)]">
+              {c.name}
+            </span>
             <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
               <div
-                className="h-full rounded-full bg-[#2e72d2]"
-                style={{ width: `${(c.value / max) * 100}%` }}
+                className="h-full rounded-full"
+                style={{ width: `${(c.value / max) * 100}%`, background: c.color ?? "#2e72d2" }}
               />
             </div>
-            <span className="w-10 shrink-0 text-right tabular-nums text-[var(--tessera-text-muted)]">
+            <span className="w-20 shrink-0 text-right tabular-nums text-[var(--tessera-text-muted)]">
               {c.label}
             </span>
           </li>
@@ -307,45 +470,59 @@ function CostBySource({ t, data }: { t: T; data: Data }) {
 
 // ── detail panel ─────────────────────────────────────────────────────────────
 
-function DetailPanel({ t, data }: { t: T; data: Data }) {
-  const s = data.selected;
-  const meta: [string, string][] = [
-    [t("col.type"), t(`type.${s.type}`)],
-    [t("detail.connector"), s.connector],
-    [t("detail.environment"), s.environment],
-    [t("detail.region"), s.region],
-    [t("detail.classification"), t(`classification.${s.classification}`)],
-    [t("detail.owner"), s.owner],
-    [t("detail.created"), s.created],
-    [t("detail.modified"), s.modified],
-    [t("detail.retention"), s.retention],
-    [t("detail.source"), s.source],
-  ];
-  const metrics: [string, { value: string; delta: string }][] = [
-    [t("detail.documents"), s.documents],
-    [t("detail.queries"), s.queries],
-    [t("detail.cost"), s.cost],
-  ];
+function DetailPanel({
+  t,
+  detail,
+  tab,
+  onTab,
+  onClose,
+}: {
+  t: T;
+  detail: Detail | null;
+  tab: string;
+  onTab: (tab: string) => void;
+  onClose: () => void;
+}) {
+  if (!detail) {
+    return (
+      <aside
+        data-testid="source-detail"
+        className="flex min-w-0 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-6 text-center xl:sticky xl:top-0 xl:h-fit xl:min-h-[200px]"
+      >
+        <Database className="h-5 w-5 text-[var(--tessera-text-muted)]" />
+        <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("detail.selectHint")}</p>
+      </aside>
+    );
+  }
+  const section = detail.sections.find((s) => s.key === tab) ?? detail.sections[0];
+  if (!section) return null;
   return (
-    <aside className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit">
+    <aside
+      data-testid="source-detail"
+      className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">{s.name}</p>
+          <p className="truncate text-sm font-semibold text-white">{detail.name}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-              {s.id}
-            </span>
+            <Badge className={CLASS_BADGE[detail.classification]}>
+              {t(`classification.${detail.classification}`)}
+            </Badge>
             <span
-              className={cn("inline-flex items-center gap-1 text-[0.62rem]", STATUS_TEXT[s.status])}
+              className={cn(
+                "inline-flex items-center gap-1 text-[0.62rem]",
+                STATUS[detail.status].text,
+              )}
             >
-              <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[s.status])} />{" "}
-              {t(`status.${s.status}`)}
+              <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[detail.status].dot)} />{" "}
+              {t(`status.${detail.status}`)}
             </span>
           </div>
         </div>
         <button
           type="button"
-          aria-label="close"
+          onClick={onClose}
+          aria-label={t("detail.close")}
           className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
         >
           <X className="h-4 w-4" />
@@ -353,108 +530,43 @@ function DetailPanel({ t, data }: { t: T; data: Data }) {
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
-        {DETAIL_TABS.map((tab) => (
+        {detail.sections.map((s) => (
           <button
-            key={tab}
+            key={s.key}
             type="button"
+            onClick={() => onTab(s.key)}
             className={cn(
               "rounded px-2 py-1 text-[0.62rem] font-medium",
-              tab === "overview"
+              s.key === section.key
                 ? "bg-[#0d3561] text-[#d8eaff]"
                 : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
             )}
           >
-            {t(`detailTabs.${tab}`)}
+            {s.title}
           </button>
         ))}
       </div>
 
-      <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">{s.description}</p>
+      {tab === "overview" || section.key === "overview" ? (
+        <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
+          {detail.description}
+        </p>
+      ) : null}
 
-      <div className="grid grid-cols-2 gap-3">
-        <dl className="flex flex-col gap-1 text-[0.66rem]">
-          {meta.map(([k, v]) => (
-            <KV key={k} label={k} value={v} />
-          ))}
-        </dl>
-        <dl className="flex flex-col gap-1.5 text-[0.66rem]">
-          <div>
-            <p className="text-[var(--tessera-text-muted)]">{t("detail.usage")}</p>
-            <p className="text-sm font-semibold text-white">{s.usage}</p>
-          </div>
-          {metrics.map(([k, m]) => (
-            <div key={k} className="flex items-center justify-between gap-2">
-              <dt className="text-[var(--tessera-text-muted)]">{k}</dt>
-              <dd className="flex items-baseline gap-1">
-                <span className="tabular-nums text-[var(--tessera-text)]">{m.value}</span>
-                <span className="text-[0.58rem] text-emerald-300">{m.delta}</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-
-      <div className="flex flex-wrap gap-1">
-        {s.tags.map((tag) => (
-          <span
-            key={tag}
-            className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]"
-          >
-            {tag}
-          </span>
+      <dl className="flex flex-col gap-1 text-[0.66rem]">
+        {section.rows.map((r) => (
+          <KV key={r.label} label={r.label} value={r.value} />
         ))}
-      </div>
-
-      <div className="border-t border-[var(--tessera-border)] pt-2">
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <p className="text-[0.66rem] font-semibold text-[var(--tessera-text)]">
-            {t("detail.qualityTitle")}
-          </p>
-          <button type="button" className="text-[0.62rem] text-[#87bfff]">
-            {t("detail.viewDetail")} →
-          </button>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative h-[72px] w-[72px] shrink-0">
-            <Ring
-              slices={s.quality_breakdown.map((q) => ({ pct: q.pct, color: q.color }))}
-              center={`${s.quality_global}%`}
-              caption={t("detail.scoreGlobal")}
-            />
-          </div>
-          <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.64rem]">
-            {s.quality_breakdown.map((q) => (
-              <li key={q.key} className="flex items-center gap-1.5">
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: q.color }} />
-                <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
-                  {t(`quality.${q.key}`)}
-                </span>
-                <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
-                  {q.pct}%
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      </dl>
     </aside>
   );
 }
 
 // ── atoms ────────────────────────────────────────────────────────────────────
 
-function Panel({
-  title,
-  children,
-  className,
-}: { title: string; children: ReactNode; className?: string }) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
-        className,
-      )}
-    >
+    <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <h3 className="mb-2 truncate text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {title}
       </h3>
@@ -511,7 +623,7 @@ function Donut({
           <span className="text-base font-semibold tabular-nums text-white">{total}</span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.64rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.62rem]">
         {slices.map((s) => (
           <li key={s.key} className="flex items-center gap-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
@@ -519,54 +631,12 @@ function Donut({
               {labelOf(s.key)}
             </span>
             <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
-              {s.count} · {s.pct}%
+              {s.count} / {s.pct}%
             </span>
           </li>
         ))}
       </ul>
     </div>
-  );
-}
-
-function Ring({
-  slices,
-  center,
-  caption,
-}: { slices: { pct: number; color: string }[]; center: string; caption: string }) {
-  const R = 26;
-  const C = 2 * Math.PI * R;
-  const total = slices.reduce((s, x) => s + x.pct, 0) || 1;
-  let off = 0;
-  return (
-    <>
-      <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden="true">
-        <circle cx="32" cy="32" r={R} fill="none" stroke="var(--tessera-border)" strokeWidth="7" />
-        {slices.map((s, i) => {
-          const frac = s.pct / total;
-          const seg = { dash: frac * C, gap: C - frac * C, o: -off * C };
-          off += frac;
-          return (
-            <circle
-              key={`${i}-${s.color}`}
-              cx="32"
-              cy="32"
-              r={R}
-              fill="none"
-              stroke={s.color}
-              strokeWidth="7"
-              strokeDasharray={`${seg.dash} ${seg.gap}`}
-              strokeDashoffset={seg.o}
-            />
-          );
-        })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-sm font-semibold tabular-nums text-white">{center}</span>
-        <span className="px-1 text-[0.4rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
-          {caption}
-        </span>
-      </div>
-    </>
   );
 }
 

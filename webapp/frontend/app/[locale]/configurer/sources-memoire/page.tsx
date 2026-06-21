@@ -16,14 +16,17 @@ export async function generateMetadata({ params }: SourcesPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchSources(queryClient: QueryClient) {
+async function prefetchSources(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["sources-overview"],
+    queryKey: ["sources-overview", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/sources`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/sources?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend sources returned ${response.status}`);
       return SourcesOverviewSchema.parse(await response.json());
     },
@@ -36,7 +39,7 @@ export default async function SourcesPage({ params }: SourcesPageProps) {
   const t = await getTranslations({ locale, namespace: "sources" });
   const queryClient = new QueryClient();
   try {
-    await prefetchSources(queryClient);
+    await prefetchSources(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

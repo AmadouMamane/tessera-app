@@ -2717,12 +2717,6 @@ export type PoliciesOverview = z.infer<typeof PoliciesOverviewSchema>;
 // Sources & memory (page #17)
 // ---------------------------------------------------------------------------
 
-const SmKpiSchema = z.object({
-  key: z.string(),
-  value: z.string(),
-  sub: z.string(),
-  series: z.array(z.number()),
-});
 const SmSliceSchema = z.object({
   key: z.string(),
   count: z.number().int(),
@@ -2730,60 +2724,69 @@ const SmSliceSchema = z.object({
   color: z.string(),
 });
 
+const SmKvSchema = z.object({ label: z.string(), value: z.string() });
+const SmDetailSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: z.enum(["active", "disabled"]),
+  type: z.string(),
+  classification: z.enum(["public", "internal", "confidential"]),
+  description: z.string(),
+  sections: z.array(z.object({ key: z.string(), title: z.string(), rows: z.array(SmKvSchema) })),
+});
+
 export const SourcesOverviewSchema = z.object({
   available: z.boolean(),
   generated_at: z.string(),
   total_sources: z.number().int(),
   page_size: z.number().int(),
-  kpis: z.array(SmKpiSchema),
+  subtitle: z.string(),
+  readonly_note: z.string(),
+  kpis: z.array(
+    z.object({
+      key: z.string(),
+      label: z.string(),
+      value: z.string(),
+      series: z.array(z.number()),
+    }),
+  ),
   sources: z.array(
     z.object({
       id: z.string(),
       name: z.string(),
       type: z.string(),
       classification: z.enum(["public", "internal", "confidential"]),
-      environment: z.string(),
-      status: z.enum(["active", "deprecated", "disabled"]),
-      data_total: z.string(),
-      indexed: z.string(),
-      last_sync: z.string(),
-      quality: z.number().int(),
+      volume: z.string(),
+      volume_num: z.number(),
+      units: z.string(),
+      languages: z.string(),
       freshness: z.string(),
-      owner: z.string(),
-      cost: z.string(),
+      status: z.enum(["active", "disabled"]),
+      citation: z.string(),
+      detail: SmDetailSchema,
     }),
   ),
-  selected: z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.string(),
-    status: z.enum(["active", "deprecated", "disabled"]),
-    description: z.string(),
-    connector: z.string(),
-    environment: z.string(),
-    region: z.string(),
-    classification: z.enum(["public", "internal", "confidential"]),
-    owner: z.string(),
-    created: z.string(),
-    modified: z.string(),
-    retention: z.string(),
-    source: z.string(),
-    tags: z.array(z.string()),
-    usage: z.string(),
-    documents: z.object({ value: z.string(), delta: z.string() }),
-    queries: z.object({ value: z.string(), delta: z.string() }),
-    cost: z.object({ value: z.string(), delta: z.string() }),
-    quality_global: z.number().int(),
-    quality_breakdown: z.array(
-      z.object({ key: z.string(), pct: z.number().int(), color: z.string() }),
-    ),
-  }),
+  selected: SmDetailSchema.nullable(),
   by_type: z.array(SmSliceSchema),
   by_type_total: z.number().int(),
   by_env: z.array(
-    z.object({ key: z.string(), value: z.string(), pct: z.number(), color: z.string() }),
+    z.object({
+      key: z.string(),
+      label: z.string(),
+      value: z.string(),
+      pct: z.number(),
+      color: z.string(),
+    }),
   ),
-  cost_by_source: z.array(z.object({ name: z.string(), value: z.number(), label: z.string() })),
+  cost_by_source: z.array(
+    z.object({
+      name: z.string(),
+      value: z.number(),
+      label: z.string(),
+      color: z.string().optional(),
+    }),
+  ),
+  zones: z.object({ by_type: z.string(), by_env: z.string(), cost: z.string() }),
   footer: z.object({ total: z.number().int(), source: z.string() }),
 });
 export type SourcesOverview = z.infer<typeof SourcesOverviewSchema>;
