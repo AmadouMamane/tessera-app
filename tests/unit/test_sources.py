@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from tessera.observability import sources as sm
+from tessera.retrieval.embeddings import embedding_model_name
 
 NOW = datetime(2026, 6, 20, 12, 0, tzinfo=UTC)
 
@@ -214,7 +215,7 @@ def test_retention_and_embedding_are_real() -> None:
     assert by_id[sm._LTM_ID]["retention"] == "365 jours"  # semantic TTL
     assert by_id[sm._TX_ID]["retention"] == "Durable (transcript)"
     emb = payload["embedding"]
-    assert emb["model"] == "bge-m3"
+    assert emb["model"] == embedding_model_name()  # active backend, never hardcoded
     assert emb["distance"] == "cosine"
     assert emb["chunks"] == "5"  # 2 dora + 3 comptes
     assert emb["languages"] == "3"
@@ -252,7 +253,7 @@ def test_lineage_is_the_real_source_to_answer_pipeline() -> None:
     )
     steps = {s["key"]: s["value"] for s in payload["lineage"]["steps"]}
     assert steps["corpus"] == "3 documents"  # dora.pdf + comptes_fr + comptes_de
-    assert "bge-m3" in steps["index"]
+    assert embedding_model_name() in steps["index"]
     assert "llama3.2:3b" in steps["agent"]  # real on-prem model
     assert steps["response"] == "20/06/2026 12:00"  # tx.last
     assert "16 411" in steps["proof"]  # the real audit length

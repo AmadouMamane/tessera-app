@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from psycopg.rows import dict_row
 
+from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
 
@@ -579,8 +580,8 @@ def _build_detail(
         "answers": answers,
         "params_title": _t("params_title", lang),
         "params": [
-            {"label": _t("p_embed", lang), "value": "bge-m3"},
-            {"label": _t("p_dim", lang), "value": "1024"},
+            {"label": _t("p_embed", lang), "value": embedding_model_name()},
+            {"label": _t("p_dim", lang), "value": str(embedding_dimension())},
             {"label": _t("p_corpus", lang), "value": corpus},
             {"label": _t("p_docs", lang), "value": str(len(agg.docs[cat]))},
             {"label": _t("p_langs", lang), "value": langs},

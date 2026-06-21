@@ -20,7 +20,7 @@ from tessera.settings import LLMProfile, get_settings
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__all__ = ["embed", "embedding_dimension"]
+__all__ = ["embed", "embedding_dimension", "embedding_model_name"]
 
 
 _MAX_BATCH: Final[int] = 32
@@ -32,6 +32,18 @@ def embedding_dimension() -> int:
     if settings.resolved_llm_profile() is LLMProfile.FRONTIER:
         return settings.vertex.embedding_dimension
     return settings.ollama.embedding_dimension
+
+
+def embedding_model_name() -> str:
+    """Return the model id of the active embedding backend.
+
+    The display name must reflect the backend that actually produced the index
+    (Vertex on the frontier profile, Ollama on-prem) - never a hardcoded literal.
+    """
+    settings = get_settings()
+    if settings.resolved_llm_profile() is LLMProfile.FRONTIER:
+        return settings.vertex.embedding_model
+    return settings.ollama.embedding_model
 
 
 async def _embed_vertex(texts: Sequence[str]) -> list[list[float]]:

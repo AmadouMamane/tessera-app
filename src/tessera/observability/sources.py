@@ -45,7 +45,7 @@ from tessera.observability.knowledge import (
     _norm_lang,
     _source_name,
 )
-from tessera.retrieval.embeddings import embedding_dimension
+from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
 
@@ -216,7 +216,7 @@ _TR: dict[str, tuple[str, str, str]] = {
     "ln_response": ("Réponse générée", "Generierte Antwort", "Generated answer"),
     "ln_proof": ("Preuve", "Nachweis", "Proof"),
     "ln_docs": ("{n} documents", "{n} Dokumente", "{n} documents"),
-    "ln_chunks": ("{n} chunks - bge-m3", "{n} Chunks - bge-m3", "{n} chunks - bge-m3"),
+    "ln_chunks": ("{n} chunks - {model}", "{n} Chunks - {model}", "{n} chunks - {model}"),
     "ln_entries": ("{n} entrées journalisées", "{n} Eintraege protokolliert", "{n} logged entries"),
     "audit_ok": ("Chaîne d'audit intacte", "Audit-Kette intakt", "Audit chain intact"),
     "audit_broken": (
@@ -576,7 +576,10 @@ def _corpus_detail(
                     {"label": _t("l_type", lang), "value": "regulation" if reg else "product"},
                     {"label": _t("l_classification", lang), "value": classification},
                     {"label": _t("l_store", lang), "value": "pgvector (documents)"},
-                    {"label": _t("l_connector", lang), "value": "bge-m3 / cosine"},
+                    {
+                        "label": _t("l_connector", lang),
+                        "value": f"{embedding_model_name()} / cosine",
+                    },
                     {"label": _t("l_languages", lang), "value": langs or "-"},
                     {"label": _t("l_status", lang), "value": "active"},
                 ],
@@ -588,7 +591,7 @@ def _corpus_detail(
                     {"label": _t("l_chunks", lang), "value": _fmt_int(chunks)},
                     {"label": _t("l_documents", lang), "value": str(docs)},
                     {"label": _t("l_locators", lang), "value": str(locs)},
-                    {"label": _t("l_embed", lang), "value": "bge-m3"},
+                    {"label": _t("l_embed", lang), "value": embedding_model_name()},
                     {"label": _t("l_dim", lang), "value": str(embedding_dimension())},
                     {"label": _t("l_distance", lang), "value": "cosine"},
                 ],
@@ -632,7 +635,7 @@ def _memory_detail(stat: _MemStat, *, is_ltm: bool, lang: str) -> dict[str, obje
                 "label": _t("l_kinds", lang),
                 "value": ", ".join(k for k, _ in stat.kinds) or "-",
             },
-            {"label": _t("l_embed", lang), "value": "bge-m3"},
+            {"label": _t("l_embed", lang), "value": embedding_model_name()},
             {"label": _t("l_dim", lang), "value": str(embedding_dimension())},
         ]
         if is_ltm
@@ -930,7 +933,7 @@ def _assemble(
             "cost": _t("zone_langs", lang),
         },
         "embedding": {
-            "model": "bge-m3",
+            "model": embedding_model_name(),
             "dim": str(embedding_dimension()),
             "distance": "cosine",
             "topk": "5",
@@ -1000,7 +1003,7 @@ def _build_lineage(
         {
             "key": "index",
             "label": _t("ln_index", lang),
-            "value": _t("ln_chunks", lang).format(n=total_chunks),
+            "value": _t("ln_chunks", lang).format(n=total_chunks, model=embedding_model_name()),
         },
         {"key": "agent", "label": _t("ln_agent", lang), "value": f"{agent_name} - llama3.2:3b"},
         {"key": "response", "label": _t("ln_response", lang), "value": answer_value},
