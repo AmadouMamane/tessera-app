@@ -2725,6 +2725,24 @@ const SmSliceSchema = z.object({
 });
 
 const SmKvSchema = z.object({ label: z.string(), value: z.string() });
+const SmConsumersSchema = z.object({
+  title: z.string(),
+  label: z.string(),
+  count: z.number().int(),
+  regate_count: z.number().int(),
+  regate_label: z.string(),
+  infra: z.boolean(),
+  note: z.string(),
+  items: z.array(
+    z.object({
+      agent_id: z.string(),
+      name: z.string(),
+      tone: z.string(),
+      label: z.string(),
+      passed: z.boolean(),
+    }),
+  ),
+});
 const SmDetailSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -2733,6 +2751,7 @@ const SmDetailSchema = z.object({
   classification: z.enum(["public", "internal", "confidential"]),
   description: z.string(),
   sections: z.array(z.object({ key: z.string(), title: z.string(), rows: z.array(SmKvSchema) })),
+  consumers: SmConsumersSchema.optional(),
 });
 
 export const SourcesOverviewSchema = z.object({
@@ -2763,6 +2782,10 @@ export const SourcesOverviewSchema = z.object({
       freshness: z.string(),
       status: z.enum(["active", "disabled"]),
       citation: z.string(),
+      used_by: z.string(),
+      used_by_count: z.number().int(),
+      consumer_ids: z.array(z.string()),
+      infra: z.boolean(),
       detail: SmDetailSchema,
     }),
   ),

@@ -85,6 +85,41 @@ test("sortable volume header reorders the table", async ({ page }) => {
   await expect(rows.first().getByText("Transcription des conversations")).toHaveCount(0);
 });
 
+test("the used-by column surfaces the consuming products", async ({ page }) => {
+  const table = page.getByTestId("sources-table");
+  // DORA is bound only by Support Client; the shared memory store is infra (all).
+  const dora = table.locator("tbody tr", { hasText: "DORA - Résilience" });
+  await expect(dora.getByText("Support Client")).toBeVisible();
+  const mem = table.locator("tbody tr", { hasText: "Mémoire long terme" });
+  await expect(mem.getByText(/Infra partagée/)).toBeVisible();
+});
+
+test("the product scope filter narrows the catalogue", async ({ page }) => {
+  const rows = page.getByTestId("sources-table").locator("tbody tr");
+  await expect(rows).toHaveCount(17);
+  // Select the Onboarding product (global ?agent= scope).
+  await page.getByRole("button", { name: /Filtre/ }).click();
+  await page.getByRole("menuitem", { name: "Onboarding" }).click();
+  // DORA (Support Client only) drops out; the shared memory store stays (infra).
+  await expect(
+    page.getByTestId("sources-table").locator("tbody tr", { hasText: "DORA" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("sources-table").locator("tbody tr", { hasText: "Mémoire long terme" }),
+  ).toHaveCount(1);
+  await expect(rows).not.toHaveCount(17);
+});
+
+test("the used-by drawer shows consumer verdicts", async ({ page }) => {
+  const detail = page.getByTestId("source-detail");
+  await page
+    .getByTestId("sources-table")
+    .getByRole("button", { name: "DORA - Résilience opérationnelle" })
+    .click();
+  await expect(detail.getByText("Utilisé par")).toBeVisible();
+  await expect(detail.getByText("Support Client")).toBeVisible();
+});
+
 test("the knowledge action links to the Connaissances page", async ({ page }) => {
   await page.getByRole("link", { name: "Voir les connaissances" }).click();
   await page.waitForURL(/\/agent\/connaissances/, { timeout: 15_000 });

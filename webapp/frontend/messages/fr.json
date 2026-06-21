@@ -3619,7 +3619,8 @@
       "units": "Unités",
       "languages": "Langues",
       "freshness": "Fraîcheur",
-      "citation": "Taux de citation"
+      "citation": "Taux de citation",
+      "usedBy": "Utilisé par"
     },
     "detail": {
       "selectHint": "Sélectionnez une source pour voir son détail.",

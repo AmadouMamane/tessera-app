@@ -180,6 +180,21 @@ _TR: dict[str, tuple[str, str, str]] = {
     "unit_rows": ("{n} lignes", "{n} Zeilen", "{n} rows"),
     "days": ("{n} jours", "{n} Tage", "{n} days"),
     "permanent": ("Permanente", "Permanent", "Permanent"),
+    "ub_title": ("Utilisé par", "Verwendet von", "Used by"),
+    "ub_col": ("Utilisé par", "Verwendet von", "Used by"),
+    "ub_infra": ("Infra partagée (tous)", "Geteilte Infra (alle)", "Shared infra (all)"),
+    "ub_none": ("Aucun produit", "Kein Produkt", "No product"),
+    "ub_all": ("{n} produits (tous)", "{n} Produkte (alle)", "{n} products (all)"),
+    "ub_n": ("{n} produits", "{n} Produkte", "{n} products"),
+    "ub_regate": ("{n} à re-valider", "{n} neu zu validieren", "{n} to re-validate"),
+    "ub_note": (
+        "Modifier cette source re-gate les produits consommateurs (define -> "
+        "consommateurs -> re-valider). La pastille = verdict eval-gate actuel du produit.",
+        "Diese Quelle zu aendern re-gated die konsumierenden Produkte (define -> "
+        "Konsumenten -> neu validieren). Der Punkt = aktuelles Eval-Gate-Verdikt.",
+        "Changing this source re-gates the consuming products (define -> consumers -> "
+        "re-validate). The dot = the product's current eval-gate verdict.",
+    ),
 }
 
 
@@ -285,13 +300,68 @@ def available_source_ids(corpus_categories: Sequence[str] | None = None) -> set[
     return cats | {_LTM_ID, _TX_ID}
 
 
+def _corpus_of(cat: str) -> str:
+    """Map a fine-grained corpus category to the corpus id agents actually bind.
+
+    Agents bind knowledge at the corpus level in ``agents.yaml`` (``credit_aurore``,
+    ``regulations_dora``...), while this page lists per-category rows (``dora``,
+    ``comptes``...). The regulation categories map 1-1 to ``regulations_<cat>``;
+    every product category rolls up to the single ``credit_aurore`` corpus.
+    """
+    return f"regulations_{cat}" if _SOURCE_META.get(cat) == "reg" else "credit_aurore"
+
+
+def _fetch_consumers() -> tuple[dict[str, list[dict[str, object]]], list[dict[str, object]]]:
+    """Invert the registry knowledge bindings: corpus id -> consuming products.
+
+    Returns ``(index, fleet)`` where ``index`` maps each corpus id to the list of
+    consumer products (with their current eval-gate verdict) and ``fleet`` is the
+    de-duplicated union of every consuming product (used for the shared memory
+    stores, which every agent reads/writes). Degrades to empty on any failure so
+    the page never breaks.
+    """
+    try:
+        from tessera.observability.catalogue_consumers import catalogue_consumers
+
+        data = catalogue_consumers("knowledge")
+    except Exception:  # registry/release unavailable - degrade silently
+        return {}, []
+    index: dict[str, list[dict[str, object]]] = {}
+    fleet: dict[str, dict[str, object]] = {}
+    items = data.get("items")
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        corpus_id = str(item.get("item", ""))
+        consumers: list[dict[str, object]] = []
+        raw = item.get("consumers")
+        for con in raw if isinstance(raw, list) else []:
+            if not isinstance(con, dict):
+                continue
+            rel = con.get("release")
+            rel = rel if isinstance(rel, dict) else {}
+            entry = {
+                "agent_id": str(con.get("agent_id", "")),
+                "name": str(con.get("name", con.get("agent_id", ""))),
+                "tone": str(rel.get("verdict_tone", "muted")),
+                "label": str(rel.get("verdict_label", "")),
+                "passed": bool(rel.get("passed", False)),
+            }
+            consumers.append(entry)
+            fleet[str(entry["agent_id"])] = entry
+        index[corpus_id] = consumers
+    fleet_list = sorted(fleet.values(), key=lambda c: str(c["name"]))
+    return index, fleet_list
+
+
 async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
     """Assemble the Sources & memory payload from the live Postgres substrate."""
     lang = _norm_lang(lang)
     rows = await _fetch_rows()
     ltm = await _fetch_longterm()
     tx = await _fetch_transcript()
-    return _assemble(rows, ltm, tx, _load_probe(), lang)
+    consumers, fleet = _fetch_consumers()
+    return _assemble(rows, ltm, tx, _load_probe(), consumers, fleet, lang)
 
 
 def _corpus_detail(
@@ -420,16 +490,107 @@ def _kpi(key: str, label: str, value: str, series: Sequence[float]) -> dict[str,
     return {"key": key, "label": label, "value": value, "series": list(series)}
 
 
+def _attach_descriptions(
+    rows_out: list[dict[str, object]],
+    agg: _Aggregate,
+    ltm: _MemStat,
+    tx: _MemStat,
+    lang: str,
+) -> None:
+    """Localized description + identity fields, keyed onto each row's detail."""
+    for row in rows_out:
+        rid = str(row["id"])
+        detail = row["detail"]
+        if not isinstance(detail, dict):
+            continue
+        if rid == _LTM_ID:
+            detail["description"] = _t("desc_ltm", lang).format(
+                rows=ltm.rows, subjects=ltm.subjects
+            )
+        elif rid == _TX_ID:
+            detail["description"] = _t("desc_tx", lang).format(rows=tx.rows, conv=tx.conversations)
+        else:
+            lang_str = ", ".join(sorted(agg.langs.get(rid, set())))
+            detail["description"] = _t("desc_corpus", lang).format(
+                chunks=agg.chunks[rid], docs=len(agg.docs.get(rid, set())), langs=lang_str
+            )
+        detail.update(
+            {
+                "id": rid,
+                "name": str(row["name"]),
+                "status": str(row["status"]),
+                "type": str(row["type"]),
+                "classification": str(row["classification"]),
+            }
+        )
+
+
+def _used_by_label(cons: list[dict[str, object]], *, infra: bool, total: int, lang: str) -> str:
+    """Compact 'Used by' cell: infra / all / a couple of names / a count."""
+    if infra:
+        return _t("ub_infra", lang)
+    count = len(cons)
+    if count == 0:
+        return _t("ub_none", lang)
+    if total and count >= total:
+        return _t("ub_all", lang).format(n=count)
+    if count <= 2:  # noqa: PLR2004 - two names fit, beyond that show a count
+        return ", ".join(str(c["name"]) for c in cons)
+    return _t("ub_n", lang).format(n=count)
+
+
+def _attach_used_by(
+    rows_out: list[dict[str, object]],
+    consumers: dict[str, list[dict[str, object]]],
+    fleet: list[dict[str, object]],
+    lang: str,
+) -> None:
+    """Enrich each row + its detail with the consuming products (real used-by).
+
+    Corpus rows inherit the consumers of their parent corpus binding (see
+    :func:`_corpus_of`); the shared memory stores are infra read/written by the
+    whole fleet, so they list every product. Each consumer carries its current
+    eval-gate verdict, so a shared-source change shows its re-validation blast
+    radius (define -> consumers -> re-validate).
+    """
+    total = len(fleet)
+    for row in rows_out:
+        rid = str(row["id"])
+        infra = rid in {_LTM_ID, _TX_ID}
+        cons = list(fleet) if infra else consumers.get(_corpus_of(rid), [])
+        regate = sum(1 for c in cons if not c.get("passed", False))
+        row["used_by"] = _used_by_label(cons, infra=infra, total=total, lang=lang)
+        row["used_by_count"] = len(cons)
+        row["consumer_ids"] = [str(c["agent_id"]) for c in cons]
+        row["infra"] = infra
+        detail = row["detail"]
+        if isinstance(detail, dict):
+            detail["consumers"] = {
+                "title": _t("ub_title", lang),
+                "label": row["used_by"],
+                "count": len(cons),
+                "regate_count": regate,
+                "regate_label": _t("ub_regate", lang).format(n=regate) if regate else "",
+                "infra": infra,
+                "note": _t("ub_note", lang),
+                "items": cons,
+            }
+
+
 def _assemble(
     raw_rows: list[dict[str, object]],
     ltm: _MemStat,
     tx: _MemStat,
     probe: dict[str, object],
-    lang: str,
+    consumers: dict[str, list[dict[str, object]]] | None = None,
+    fleet: list[dict[str, object]] | None = None,
+    lang: str = "fr",
     now: datetime | None = None,
 ) -> dict[str, object]:
     """Pure assembly of the Sources & memory payload (no I/O) - unit-testable."""
     lang = _norm_lang(lang)
+    consumers = consumers or {}
+    fleet = fleet or []
     now = now or datetime.now(UTC)
     agg = _aggregate(raw_rows)
     total_chunks = sum(agg.chunks.values()) or 1
@@ -522,32 +683,8 @@ def _assemble(
         }
     )
 
-    # Descriptions per row (localized free text), keyed onto the detail.
-    for row in rows_out:
-        rid = str(row["id"])
-        detail = row["detail"]
-        if not isinstance(detail, dict):
-            continue
-        if rid == _LTM_ID:
-            detail["description"] = _t("desc_ltm", lang).format(
-                rows=ltm.rows, subjects=ltm.subjects
-            )
-        elif rid == _TX_ID:
-            detail["description"] = _t("desc_tx", lang).format(rows=tx.rows, conv=tx.conversations)
-        else:
-            lang_str = ", ".join(sorted(agg.langs.get(rid, set())))
-            detail["description"] = _t("desc_corpus", lang).format(
-                chunks=agg.chunks[rid], docs=len(agg.docs.get(rid, set())), langs=lang_str
-            )
-        detail.update(
-            {
-                "id": rid,
-                "name": str(row["name"]),
-                "status": str(row["status"]),
-                "type": str(row["type"]),
-                "classification": str(row["classification"]),
-            }
-        )
+    _attach_descriptions(rows_out, agg, ltm, tx, lang)
+    _attach_used_by(rows_out, consumers, fleet, lang)
 
     total_sources = len(rows_out)
     chunk_series = [agg.chunks[c] for c in ordered] or [0]

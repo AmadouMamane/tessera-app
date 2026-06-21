@@ -3619,7 +3619,8 @@
       "units": "Units",
       "languages": "Languages",
       "freshness": "Freshness",
-      "citation": "Citation rate"
+      "citation": "Citation rate",
+      "usedBy": "Used by"
     },
     "detail": {
       "selectHint": "Select a source to see its detail.",

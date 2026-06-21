@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   ChevronsUpDown,
   Database,
   Download,
@@ -9,14 +10,18 @@ import {
   ShieldCheck,
   SortAsc,
   SortDesc,
+  Users,
   X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { type ReactNode, useMemo, useState } from "react";
 
+import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchSourcesOverview } from "@/lib/api/client";
 import type { SourcesOverview as SourcesData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -31,6 +36,12 @@ const STATUS: Record<"active" | "disabled", { dot: string; text: string }> = {
   disabled: { dot: "bg-[var(--tessera-text-muted)]", text: "text-[var(--tessera-text-muted)]" },
 };
 const KNOWLEDGE_HREF = "/agent/connaissances";
+const VERDICT_DOT: Record<string, string> = {
+  good: "bg-emerald-400",
+  crit: "bg-red-400",
+  bad: "bg-amber-400",
+  muted: "bg-[var(--tessera-text-muted)]",
+};
 
 type T = ReturnType<typeof useTranslations<"sources">>;
 type Data = SourcesData;
@@ -54,6 +65,10 @@ export function SourcesOverview() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<string>("overview");
 
+  // Global product/agent scope (?agent=), shared with every PLATEFORME surface.
+  const searchParams = useSearchParams();
+  const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
+
   const types = useMemo(() => (data ? [...new Set(data.sources.map((s) => s.type))] : []), [data]);
 
   const rows = useMemo(() => {
@@ -61,6 +76,8 @@ export function SourcesOverview() {
     const q = search.trim().toLowerCase();
     let out = data.sources.filter((s) => {
       if (typeFilter !== "all" && s.type !== typeFilter) return false;
+      // Scope by product: a shared store (infra) is read by every product.
+      if (scope !== "all" && !s.infra && !s.consumer_ids.includes(scope)) return false;
       if (!q) return true;
       return s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
     });
@@ -77,7 +94,7 @@ export function SourcesOverview() {
       });
     }
     return out;
-  }, [data, search, typeFilter, sortKey, sortDir]);
+  }, [data, search, typeFilter, scope, sortKey, sortDir]);
 
   if (!data) {
     return (
@@ -255,6 +272,7 @@ function FilterStrip({
         </select>
         <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#87bfff]" />
       </label>
+      <AgentScopeFilter />
       <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
         {count}/{total}
       </span>
@@ -273,6 +291,7 @@ const COLS: { key: string; sort?: SortKey }[] = [
   { key: "languages" },
   { key: "freshness" },
   { key: "citation", sort: "citation" },
+  { key: "usedBy" },
 ];
 
 function SourceTable({
@@ -379,6 +398,12 @@ function SourceTable({
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{s.freshness}</td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
                     {s.citation}
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className={cn("inline-flex items-center gap-1.5", s.infra && "italic")}>
+                      <Users className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <span className="truncate">{s.used_by}</span>
+                    </span>
                   </td>
                 </tr>
               );
@@ -558,7 +583,43 @@ function DetailPanel({
           <KV key={r.label} label={r.label} value={r.value} />
         ))}
       </dl>
+
+      {detail.consumers ? <UsedByBlock consumers={detail.consumers} /> : null}
     </aside>
+  );
+}
+
+function UsedByBlock({ consumers }: { consumers: NonNullable<Detail["consumers"]> }) {
+  return (
+    <div className="border-t border-[var(--tessera-border)] pt-2">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+          <Users className="h-3.5 w-3.5 text-[#87bfff]" /> {consumers.title}
+        </span>
+        {consumers.regate_count > 0 ? (
+          <span className="inline-flex items-center gap-1 text-[0.6rem] text-amber-300">
+            <AlertTriangle className="h-3 w-3" /> {consumers.regate_label}
+          </span>
+        ) : null}
+      </div>
+      <ul className="flex flex-wrap gap-1.5">
+        {consumers.items.map((c) => (
+          <li
+            key={c.agent_id}
+            title={c.label}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.62rem]"
+          >
+            <span
+              className={cn("h-1.5 w-1.5 rounded-full", VERDICT_DOT[c.tone] ?? VERDICT_DOT.muted)}
+            />
+            {c.name}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1.5 text-[0.56rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        {consumers.note}
+      </p>
+    </div>
   );
 }
 

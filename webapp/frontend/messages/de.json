@@ -3619,7 +3619,8 @@
       "units": "Einheiten",
       "languages": "Sprachen",
       "freshness": "Aktualität",
-      "citation": "Zitationsrate"
+      "citation": "Zitationsrate",
+      "usedBy": "Verwendet von"
     },
     "detail": {
       "selectHint": "Wählen Sie eine Quelle, um Details zu sehen.",
