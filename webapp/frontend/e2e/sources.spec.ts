@@ -199,6 +199,14 @@ test("the table paginates by default", async ({ page }) => {
   await expect(rows).toHaveCount(7); // 17 - 10
 });
 
+test("the overview shows the real recent-activity feed", async ({ page }) => {
+  await expect(page.getByRole("heading", { name: "Activité récente" })).toBeVisible();
+  // Real events from the transcript / memory writes.
+  await expect(
+    page.getByText(/Réponse générée|Requête reçue|Souvenir formé/).first(),
+  ).toBeVisible();
+});
+
 test("the knowledge action links to the Connaissances page", async ({ page }) => {
   await page.getByRole("link", { name: "Voir les connaissances" }).click();
   await page.waitForURL(/\/agent\/connaissances/, { timeout: 15_000 });

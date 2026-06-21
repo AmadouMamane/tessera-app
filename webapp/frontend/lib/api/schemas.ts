@@ -2837,6 +2837,18 @@ export const SourcesOverviewSchema = z.object({
     checked_label: z.string(),
     checked: z.string(),
   }),
+  activity: z.object({
+    title: z.string(),
+    empty: z.string(),
+    items: z.array(
+      z.object({
+        time: z.string(),
+        text: z.string(),
+        actor: z.string(),
+        tone: z.string(),
+      }),
+    ),
+  }),
   embedding: z.object({
     model: z.string(),
     dim: z.string(),

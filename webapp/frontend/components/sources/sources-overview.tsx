@@ -203,7 +203,10 @@ export function SourcesOverview() {
               <>
                 <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
                   <ActivityArea t={t} data={data} />
-                  <Suggestions data={data} />
+                  <div className="flex flex-col gap-3">
+                    <Suggestions data={data} />
+                    <RecentActivity data={data} />
+                  </div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   <ByType t={t} data={data} />
@@ -868,6 +871,38 @@ function Suggestions({ data }: { data: Data }) {
           );
         })}
       </ul>
+    </Panel>
+  );
+}
+
+// Real recent events from the transcript + memory writes (the corpus is static).
+function RecentActivity({ data }: { data: Data }) {
+  const { activity } = data;
+  return (
+    <Panel title={activity.title}>
+      {activity.items.length === 0 ? (
+        <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{activity.empty}</p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {activity.items.map((e, i) => (
+            <li
+              key={`${e.time}-${e.text}-${i}`}
+              className="flex items-center justify-between gap-2 text-[0.64rem]"
+            >
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", SUG_DOT[e.tone])} />
+                <span className="truncate text-[var(--tessera-text)]">{e.text}</span>
+                {e.actor ? (
+                  <span className="truncate text-[var(--tessera-text-muted)]">- {e.actor}</span>
+                ) : null}
+              </span>
+              <span className="shrink-0 font-mono text-[0.56rem] text-[var(--tessera-text-muted)]">
+                {e.time}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </Panel>
   );
 }

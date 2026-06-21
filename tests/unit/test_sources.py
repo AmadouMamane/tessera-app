@@ -289,6 +289,29 @@ def test_audit_chain_is_honest_when_broken() -> None:
     assert audit["length"] == "16 411"
 
 
+def test_activity_feed_is_real_transcript_and_memory_events() -> None:
+    events = [
+        {"at": NOW, "kind": "answer", "actor": "support-client"},
+        {"at": NOW, "kind": "query", "actor": "support-client"},
+        {"at": NOW, "kind": "memory", "actor": "b93406f4abcd"},
+        {"at": None, "kind": "answer", "actor": "x"},  # dropped (no timestamp)
+    ]
+    payload = sm._assemble(
+        _rows(), _ltm(), _tx(), {}, {}, _fleet(), {}, {}, None, events, lang="fr", now=NOW
+    )
+    items = payload["activity"]["items"]
+    assert len(items) == 3  # the null-timestamp event is skipped
+    by_text = {i["text"] for i in items}
+    assert "Réponse générée" in by_text
+    assert "Requête reçue" in by_text
+    assert "Souvenir formé" in by_text
+    # the agent id resolves to its fleet display name; memory keeps a subject prefix
+    answer = next(i for i in items if i["text"] == "Réponse générée")
+    assert answer["actor"] == "Support Client"
+    mem = next(i for i in items if i["text"] == "Souvenir formé")
+    assert mem["actor"] == "b93406f4"  # truncated subject id
+
+
 def test_corpus_of_maps_regulation_and_product() -> None:
     assert sm._corpus_of("dora") == "regulations_dora"
     assert sm._corpus_of("gdpr") == "regulations_gdpr"

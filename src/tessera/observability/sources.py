@@ -260,6 +260,11 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Letzte Integritaetspruefung",
         "Last integrity check",
     ),
+    "act_title": ("Activité récente", "Letzte Aktivitaet", "Recent activity"),
+    "ev_answer": ("Réponse générée", "Antwort generiert", "Answer generated"),
+    "ev_query": ("Requête reçue", "Anfrage empfangen", "Query received"),
+    "ev_memory": ("Souvenir formé", "Erinnerung gebildet", "Memory formed"),
+    "act_empty": ("Aucune activité récente", "Keine juengste Aktivitaet", "No recent activity"),
 }
 
 
@@ -389,6 +394,49 @@ async def _fetch_index_chars() -> dict[str, int]:
             return {}
 
 
+async def _query(sql: str) -> list[dict[str, object]]:
+    """Run one read-only SELECT; return [] if the table is absent."""
+    async with _connection() as conn:
+        conn.row_factory = dict_row
+        try:
+            async with conn.cursor() as cur:
+                await cur.execute(sql)
+                return list(await cur.fetchall())
+        except Exception:  # missing table degrades to empty
+            await conn.rollback()
+            return []
+
+
+async def _fetch_activity() -> list[dict[str, object]]:
+    """Recent real events merged from the transcript and the memory store.
+
+    The corpus is static (one ingest batch), so 'recent activity' comes from the
+    streams that actually move: the durable transcript (each user/assistant turn)
+    and the long-term memory writes. Newest first, capped.
+    """
+    events: list[dict[str, object]] = []
+    for row in await _query(
+        "SELECT created_at, role, agent_id FROM conversation_messages "
+        "ORDER BY created_at DESC LIMIT 8"
+    ):
+        events.append(
+            {
+                "at": row.get("created_at"),
+                "kind": "answer" if row.get("role") == "assistant" else "query",
+                "actor": str(row.get("agent_id", "")),
+            }
+        )
+    for row in await _query(
+        "SELECT created_at, subject_id FROM long_term_memory ORDER BY created_at DESC LIMIT 4"
+    ):
+        events.append(
+            {"at": row.get("created_at"), "kind": "memory", "actor": str(row.get("subject_id", ""))}
+        )
+    events = [e for e in events if isinstance(e["at"], datetime)]
+    events.sort(key=lambda e: e["at"], reverse=True)  # type: ignore[arg-type,return-value]
+    return events[:8]
+
+
 def _index_cost_eur(chars: int) -> Decimal:
     """Estimated frontier embedding cost to index ``chars`` of text (EUR)."""
     tokens = Decimal(chars) / Decimal(_CHARS_PER_TOKEN)
@@ -500,8 +548,9 @@ async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
     index_chars = await _fetch_index_chars()
     chain = verify_audit_chain(get_settings().guard.audit_file)
     audit = (chain.verified, chain.length, chain.broken_at)
+    activity = await _fetch_activity()
     return _assemble(
-        rows, ltm, tx, _load_probe(), consumers, fleet, history, index_chars, audit, lang
+        rows, ltm, tx, _load_probe(), consumers, fleet, history, index_chars, audit, activity, lang
     )
 
 
@@ -728,6 +777,7 @@ def _assemble(
     mem_history: dict[str, list[dict[str, object]]] | None = None,
     index_chars: dict[str, int] | None = None,
     audit: tuple[bool, int, int | None] | None = None,
+    activity: list[dict[str, object]] | None = None,
     lang: str = "fr",
     now: datetime | None = None,
 ) -> dict[str, object]:
@@ -737,6 +787,7 @@ def _assemble(
     fleet = fleet or []
     mem_history = mem_history or {}
     index_chars = index_chars or {}
+    activity = activity or []
     now = now or datetime.now(UTC)
     agg = _aggregate(raw_rows)
     total_chunks = sum(agg.chunks.values()) or 1
@@ -850,9 +901,9 @@ def _assemble(
     suggestions = _build_suggestions(
         rows_out, fleet, mem_history, cost_active, cost_frontier_s, lang
     )
-    audit_block = _build_audit(audit, now, lang)
-    audit_len = audit[1] if audit else 0
-    lineage = _build_lineage(rows_out, fleet, total_docs, total_chunks, tx, ltm, audit_len, lang)
+    lineage, audit_block, activity_block = _build_footer(
+        rows_out, fleet, total_docs, total_chunks, tx, ltm, audit, activity, now, lang
+    )
 
     return {
         "generated_at": now.isoformat(),
@@ -875,6 +926,7 @@ def _assemble(
         "suggestions": {"title": _t("sug_title", lang), "items": suggestions},
         "lineage": lineage,
         "audit": audit_block,
+        "activity": activity_block,
         "zones": {
             "by_type": _t("zone_bytype", lang),
             "by_env": _t("zone_volume", lang),
@@ -958,6 +1010,51 @@ def _build_lineage(
         },
     ]
     return {"title": _t("ln_title", lang), "steps": steps}
+
+
+def _build_footer(
+    rows_out: list[dict[str, object]],
+    fleet: list[dict[str, object]],
+    total_docs: int,
+    total_chunks: int,
+    tx: _MemStat,
+    ltm: _MemStat,
+    audit: tuple[bool, int, int | None] | None,
+    activity: list[dict[str, object]],
+    now: datetime,
+    lang: str,
+) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
+    """The footer trio: the source-to-answer lineage, audit chain, activity feed."""
+    audit_block = _build_audit(audit, now, lang)
+    audit_len = audit[1] if audit else 0
+    lineage = _build_lineage(rows_out, fleet, total_docs, total_chunks, tx, ltm, audit_len, lang)
+    activity_block = _build_activity(activity, fleet, lang)
+    return lineage, audit_block, activity_block
+
+
+def _build_activity(
+    events: list[dict[str, object]], fleet: list[dict[str, object]], lang: str
+) -> dict[str, object]:
+    """Format the recent real events (transcript + memory) for the activity feed."""
+    names = {str(c["agent_id"]): str(c["name"]) for c in fleet}
+    label = {"answer": "ev_answer", "query": "ev_query", "memory": "ev_memory"}
+    tone = {"answer": "good", "query": "info", "memory": "muted"}
+    items: list[dict[str, object]] = []
+    for ev in events:
+        when = ev.get("at")
+        if not isinstance(when, datetime):
+            continue
+        kind = str(ev.get("kind", "query"))
+        actor = str(ev.get("actor", ""))
+        items.append(
+            {
+                "time": when.strftime("%d/%m/%Y %H:%M"),
+                "text": _t(label.get(kind, "ev_query"), lang),
+                "actor": names.get(actor, actor) if kind != "memory" else actor[:8],
+                "tone": tone.get(kind, "muted"),
+            }
+        )
+    return {"title": _t("act_title", lang), "empty": _t("act_empty", lang), "items": items}
 
 
 def _build_audit(
