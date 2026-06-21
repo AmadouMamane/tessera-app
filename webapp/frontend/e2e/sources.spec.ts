@@ -171,12 +171,11 @@ test("the detail panel shows the real citation ring and facts", async ({ page })
   await expect(detail.getByText("Requêtes")).toBeVisible(); // hits fact
 });
 
-test("the overview shows real suggestions and the as-of control", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: "Suggestions" })).toBeVisible();
-  // Real derived insight (negligible indexing cost) + a deep-link suggestion.
-  await expect(page.getByText(/Coût d'indexation négligeable/)).toBeVisible();
-  await expect(page.getByText(/produit\(s\) a re-valider/)).toBeVisible();
-  // The as-of control links to the real point-in-time page.
+test("the as-of control links to the point-in-time page (no invented Suggestions)", async ({
+  page,
+}) => {
+  // The non-normative "Suggestions" panel must not exist.
+  await expect(page.getByRole("heading", { name: "Suggestions" })).toHaveCount(0);
   await page.getByRole("link", { name: /Voir à date/ }).click();
   await page.waitForURL(/\/prouver\/etat-a-date/, { timeout: 15_000 });
   expect(page.url()).toContain("/prouver/etat-a-date");
@@ -199,11 +198,14 @@ test("the table paginates by default", async ({ page }) => {
   await expect(rows).toHaveCount(7); // 17 - 10
 });
 
-test("the overview shows the real recent-activity feed", async ({ page }) => {
+test("the recent-activity feed shows sources & memory lifecycle (not agent turns)", async ({
+  page,
+}) => {
   await expect(page.getByRole("heading", { name: "Activité récente" })).toBeVisible();
-  // Real events from the transcript / memory writes.
+  // Real store-lifecycle events (corpus indexing / memory / transcript writes),
+  // not the agent's reasoning turns.
   await expect(
-    page.getByText(/Réponse générée|Requête reçue|Souvenir formé/).first(),
+    page.getByText(/Corpus indexé|Souvenir mémorisé|Transcription enrichie/).first(),
   ).toBeVisible();
 });
 

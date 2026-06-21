@@ -203,10 +203,7 @@ export function SourcesOverview() {
               <>
                 <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
                   <ActivityArea t={t} data={data} />
-                  <div className="flex flex-col gap-3">
-                    <Suggestions data={data} />
-                    <RecentActivity data={data} />
-                  </div>
+                  <RecentActivity data={data} />
                 </div>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   <ByType t={t} data={data} />
@@ -833,8 +830,7 @@ function ActivityArea({ t, data }: { t: T; data: Data }) {
   );
 }
 
-// Real derived recommendations (low-citation sources, re-validation blast radius,
-// memory growth, the honest negligible indexing cost). Each may deep-link.
+// Tone -> dot colour for the activity feed.
 const SUG_DOT: Record<string, string> = {
   warn: "bg-amber-400",
   info: "bg-sky-400",
@@ -842,40 +838,8 @@ const SUG_DOT: Record<string, string> = {
   muted: "bg-[var(--tessera-text-muted)]",
 };
 
-function Suggestions({ data }: { data: Data }) {
-  return (
-    <Panel title={data.suggestions.title}>
-      <ul className="flex flex-col gap-2">
-        {data.suggestions.items.map((s) => {
-          const body = (
-            <span className="inline-flex items-start gap-2">
-              <span className={cn("mt-1 h-1.5 w-1.5 shrink-0 rounded-full", SUG_DOT[s.tone])} />
-              <span className="text-[var(--tessera-text)]">{s.text}</span>
-            </span>
-          );
-          return (
-            <li key={s.text} className="text-[0.66rem] leading-relaxed">
-              {s.href ? (
-                <Link
-                  href={s.href as never}
-                  className="block rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 hover:border-[#2e72d2]"
-                >
-                  {body}
-                </Link>
-              ) : (
-                <span className="block rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5">
-                  {body}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </Panel>
-  );
-}
-
-// Real recent events from the transcript + memory writes (the corpus is static).
+// Real sources & memory lifecycle events (corpus indexing, memory writes,
+// transcript growth) - NOT the agent's reasoning turns.
 function RecentActivity({ data }: { data: Data }) {
   const { activity } = data;
   return (

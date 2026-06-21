@@ -245,26 +245,6 @@ def test_cost_is_real_and_negligible() -> None:
     assert by_id[sm._LTM_ID]["cost"] == "-"
 
 
-def test_suggestions_are_derived_from_real_signals() -> None:
-    # gdpr cited 0 (low), credit cited high; one product failing -> re-gate.
-    probe = {
-        "categories": {"dora": {"citation": 1, "hits": 2}, "comptes": {"citation": 40, "hits": 9}},
-    }
-    fleet = _fleet()  # support-client passed=False -> 1 re-gate
-    history = {sm._LTM_ID: [{"day": "2026-06-20", "count": 9}]}
-    payload = sm._assemble(
-        _rows(), _ltm(), _tx(), probe, _consumers(), fleet, history, {}, lang="fr", now=NOW
-    )
-    texts = " ".join(str(s["text"]) for s in payload["suggestions"]["items"])
-    assert "peu citées" in texts  # dora at 1% is below the 5% threshold
-    assert "re-valider" in texts  # support-client is failing
-    assert "croissance" in texts  # memory grew
-    assert "Coût" in texts  # honest cost line always present
-    # the low-citation suggestion deep-links to Connaissances
-    hrefs = [s["href"] for s in payload["suggestions"]["items"]]
-    assert "/agent/connaissances" in hrefs
-
-
 def test_lineage_is_the_real_source_to_answer_pipeline() -> None:
     payload = sm._assemble(
         _rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), {}, {}, (False, 16411, 16410),
@@ -289,12 +269,13 @@ def test_audit_chain_is_honest_when_broken() -> None:
     assert audit["length"] == "16 411"
 
 
-def test_activity_feed_is_real_transcript_and_memory_events() -> None:
+def test_activity_feed_is_sources_and_memory_lifecycle() -> None:
+    # Store-lifecycle events (PLATEFORME catalogue), NOT agent reasoning turns.
     events = [
-        {"at": NOW, "kind": "answer", "actor": "support-client"},
-        {"at": NOW, "kind": "query", "actor": "support-client"},
+        {"at": NOW, "kind": "corpus", "detail": 238},
         {"at": NOW, "kind": "memory", "actor": "b93406f4abcd"},
-        {"at": None, "kind": "answer", "actor": "x"},  # dropped (no timestamp)
+        {"at": NOW, "kind": "transcript", "actor": ""},
+        {"at": None, "kind": "memory", "actor": "x"},  # dropped (no timestamp)
     ]
     payload = sm._assemble(
         _rows(), _ltm(), _tx(), {}, {}, _fleet(), {}, {}, None, events, lang="fr", now=NOW
@@ -302,31 +283,31 @@ def test_activity_feed_is_real_transcript_and_memory_events() -> None:
     items = payload["activity"]["items"]
     assert len(items) == 3  # the null-timestamp event is skipped
     by_text = {i["text"] for i in items}
-    assert "Réponse générée" in by_text
-    assert "Requête reçue" in by_text
-    assert "Souvenir formé" in by_text
-    # the agent id resolves to its fleet display name; memory keeps a subject prefix
-    answer = next(i for i in items if i["text"] == "Réponse générée")
-    assert answer["actor"] == "Support Client"
-    mem = next(i for i in items if i["text"] == "Souvenir formé")
+    assert "Corpus indexé" in by_text
+    assert "Souvenir mémorisé" in by_text
+    assert "Transcription enrichie" in by_text
+    # no agent-turn framing on this PLATEFORME page
+    assert "Réponse générée" not in by_text
+    corpus = next(i for i in items if i["text"] == "Corpus indexé")
+    assert corpus["actor"] == "238 chunks"
+    mem = next(i for i in items if i["text"] == "Souvenir mémorisé")
     assert mem["actor"] == "b93406f4"  # truncated subject id
 
 
-def test_real_latency_telemetry_surfaces() -> None:
+def test_latency_annotates_the_lineage_and_cost_uses_the_gauge() -> None:
     # The transcript latency_ms is the Grafana turn-duration signal, persisted.
     payload = sm._assemble(
         _rows(), _ltm(), _tx(), {}, {}, _fleet(), {}, {}, (True, 1, None), [],
         (363, 4571.0), 0.0, lang="fr", now=NOW,
     )
-    texts = " ".join(str(s["text"]) for s in payload["suggestions"]["items"])
-    assert "4,6 s" in texts  # localized seconds with a French comma
-    assert "363 tours" in texts
-    # the latency also annotates the lineage answer step
+    # latency annotates the source-to-answer lineage (part of the pipeline story)
     resp = next(s for s in payload["lineage"]["steps"] if s["key"] == "response")
     assert "4,6 s" in resp["value"]
     # cost.active comes from the live Prometheus gauge when provided (0 on-prem)
     assert payload["cost"]["telemetry"] is True
     assert payload["cost"]["active"].startswith("EUR 0")
+    # the invented "suggestions" panel is gone
+    assert "suggestions" not in payload
 
 
 def test_corpus_of_maps_regulation_and_product() -> None:

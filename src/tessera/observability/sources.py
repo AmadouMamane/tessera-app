@@ -198,37 +198,6 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Changing this source re-gates the consuming products (define -> consumers -> "
         "re-validate). The dot = the product's current eval-gate verdict.",
     ),
-    "sug_title": ("Suggestions", "Vorschlaege", "Suggestions"),
-    "sug_lowcite": (
-        "{n} sources peu citées (< 5% de citation) - a revoir",
-        "{n} Quellen kaum zitiert (< 5% Zitation) - pruefen",
-        "{n} sources rarely cited (< 5% citation) - review",
-    ),
-    "sug_regate": (
-        "{n} produit(s) a re-valider apres un changement de source partagee",
-        "{n} Produkt(e) nach Aenderung einer geteilten Quelle neu zu validieren",
-        "{n} product(s) to re-validate after a shared-source change",
-    ),
-    "sug_growth": (
-        "Mémoire en croissance : +{ltm} souvenirs, +{tx} messages (30 j)",
-        "Speicher waechst: +{ltm} Erinnerungen, +{tx} Nachrichten (30 T)",
-        "Memory growing: +{ltm} memories, +{tx} messages (30d)",
-    ),
-    "sug_cost": (
-        "Coût d'indexation négligeable : {active} (on-prem) / {frontier} estimé (frontier)",
-        "Indexierungskosten vernachlaessigbar: {active} (on-prem) / {frontier} (Frontier gesch.)",
-        "Indexing cost negligible: {active} (on-prem) / {frontier} estimated (frontier)",
-    ),
-    "sug_disabled": (
-        "{n} source(s) désactivée(s)",
-        "{n} deaktivierte Quelle(n)",
-        "{n} disabled source(s)",
-    ),
-    "sug_clean": (
-        "Catalogue sain - aucune alerte",
-        "Katalog gesund - keine Warnung",
-        "Catalogue healthy - no alert",
-    ),
     "l_cost": (
         "Coût d'indexation (frontier est.)",
         "Indexierungskosten (Frontier gesch.)",
@@ -261,15 +230,13 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Last integrity check",
     ),
     "act_title": ("Activité récente", "Letzte Aktivitaet", "Recent activity"),
-    "ev_answer": ("Réponse générée", "Antwort generiert", "Answer generated"),
-    "ev_query": ("Requête reçue", "Anfrage empfangen", "Query received"),
-    "ev_memory": ("Souvenir formé", "Erinnerung gebildet", "Memory formed"),
+    # Store-lifecycle events (this PLATEFORME page is about the data substrate,
+    # not the agent's reasoning turns).
+    "ev_corpus": ("Corpus indexé", "Korpus indexiert", "Corpus indexed"),
+    "ev_memory": ("Souvenir mémorisé", "Erinnerung gespeichert", "Memory stored"),
+    "ev_transcript": ("Transcription enrichie", "Transkript erweitert", "Transcript extended"),
+    "ev_corpus_detail": ("{n} chunks", "{n} Chunks", "{n} chunks"),
     "act_empty": ("Aucune activité récente", "Keine juengste Aktivitaet", "No recent activity"),
-    "sug_latency": (
-        "Latence agent : {avg} s en moyenne sur {n} tours mesurés (telemetrie)",
-        "Agent-Latenz: {avg} s im Schnitt ueber {n} gemessene Turns (Telemetrie)",
-        "Agent latency: {avg} s average over {n} measured turns (telemetry)",
-    ),
     "ln_latency": ("lat. moy. {avg} s", "Lat. {avg} s", "avg lat. {avg} s"),
 }
 
@@ -414,30 +381,27 @@ async def _query(sql: str) -> list[dict[str, object]]:
 
 
 async def _fetch_activity() -> list[dict[str, object]]:
-    """Recent real events merged from the transcript and the memory store.
+    """Recent **sources & memory** lifecycle events (not agent reasoning turns).
 
-    The corpus is static (one ingest batch), so 'recent activity' comes from the
-    streams that actually move: the durable transcript (each user/assistant turn)
-    and the long-term memory writes. Newest first, capped.
+    This page is the PLATEFORME data-substrate catalogue, so 'recent activity' is
+    the lifecycle of the *stores*: corpus indexing (``documents`` ingest), memory
+    writes (``long_term_memory``) and transcript-store growth
+    (``conversation_messages``). Newest first, capped.
     """
     events: list[dict[str, object]] = []
+    ingest = await _scalar_stat("SELECT max(inserted_at) AS at, count(*) AS n FROM documents")
+    if isinstance(ingest.get("at"), datetime):
+        events.append({"at": ingest["at"], "kind": "corpus", "detail": _as_int(ingest.get("n"))})
     for row in await _query(
-        "SELECT created_at, role, agent_id FROM conversation_messages "
-        "ORDER BY created_at DESC LIMIT 8"
-    ):
-        events.append(
-            {
-                "at": row.get("created_at"),
-                "kind": "answer" if row.get("role") == "assistant" else "query",
-                "actor": str(row.get("agent_id", "")),
-            }
-        )
-    for row in await _query(
-        "SELECT created_at, subject_id FROM long_term_memory ORDER BY created_at DESC LIMIT 4"
+        "SELECT created_at, subject_id FROM long_term_memory ORDER BY created_at DESC LIMIT 5"
     ):
         events.append(
             {"at": row.get("created_at"), "kind": "memory", "actor": str(row.get("subject_id", ""))}
         )
+    for row in await _query(
+        "SELECT created_at FROM conversation_messages ORDER BY created_at DESC LIMIT 4"
+    ):
+        events.append({"at": row.get("created_at"), "kind": "transcript", "actor": ""})
     events = [e for e in events if isinstance(e["at"], datetime)]
     events.sort(key=lambda e: e["at"], reverse=True)  # type: ignore[arg-type,return-value]
     return events[:8]
@@ -939,10 +903,6 @@ def _assemble(
     )
     by_type, by_env, cost_by_source = _build_distributions(rows_out, lang_counts, lang)
     cost_block = _build_cost(cost_gauge, cost_frontier, lang)
-    suggestions = _build_suggestions(
-        rows_out, fleet, mem_history, str(cost_block["active"]), str(cost_block["frontier"]),
-        latency, lang,
-    )
     lineage, audit_block, activity_block = _build_footer(
         rows_out, fleet, total_docs, total_chunks, tx, ltm, audit, activity, latency, now, lang
     )
@@ -961,7 +921,6 @@ def _assemble(
         "by_env": by_env,
         "cost_by_source": cost_by_source,
         "cost": cost_block,
-        "suggestions": {"title": _t("sug_title", lang), "items": suggestions},
         "lineage": lineage,
         "audit": audit_block,
         "activity": activity_block,
@@ -1085,29 +1044,31 @@ def _build_footer(
     lineage = _build_lineage(
         rows_out, fleet, total_docs, total_chunks, tx, ltm, audit_len, latency, lang
     )
-    activity_block = _build_activity(activity, fleet, lang)
+    activity_block = _build_activity(activity, lang)
     return lineage, audit_block, activity_block
 
 
-def _build_activity(
-    events: list[dict[str, object]], fleet: list[dict[str, object]], lang: str
-) -> dict[str, object]:
-    """Format the recent real events (transcript + memory) for the activity feed."""
-    names = {str(c["agent_id"]): str(c["name"]) for c in fleet}
-    label = {"answer": "ev_answer", "query": "ev_query", "memory": "ev_memory"}
-    tone = {"answer": "good", "query": "info", "memory": "muted"}
+def _build_activity(events: list[dict[str, object]], lang: str) -> dict[str, object]:
+    """Format the recent sources & memory lifecycle events for the feed."""
+    label = {"corpus": "ev_corpus", "memory": "ev_memory", "transcript": "ev_transcript"}
+    tone = {"corpus": "good", "memory": "info", "transcript": "muted"}
     items: list[dict[str, object]] = []
     for ev in events:
         when = ev.get("at")
         if not isinstance(when, datetime):
             continue
-        kind = str(ev.get("kind", "query"))
-        actor = str(ev.get("actor", ""))
+        kind = str(ev.get("kind", "memory"))
+        if kind == "corpus":
+            actor = _t("ev_corpus_detail", lang).format(n=_as_int(ev.get("detail")))
+        elif kind == "memory":
+            actor = str(ev.get("actor", ""))[:8]  # subject id prefix
+        else:
+            actor = ""
         items.append(
             {
                 "time": when.strftime("%d/%m/%Y %H:%M"),
-                "text": _t(label.get(kind, "ev_query"), lang),
-                "actor": names.get(actor, actor) if kind != "memory" else actor[:8],
+                "text": _t(label.get(kind, "ev_memory"), lang),
+                "actor": actor,
                 "tone": tone.get(kind, "muted"),
             }
         )
@@ -1131,87 +1092,6 @@ def _build_audit(
         "checked_label": _t("audit_checked", lang),
         "checked": now.strftime("%d/%m/%Y %H:%M:%S"),
     }
-
-
-_LOW_CITE_PCT = 5.0
-
-
-def _build_suggestions(
-    rows_out: list[dict[str, object]],
-    fleet: list[dict[str, object]],
-    mem_history: dict[str, list[dict[str, object]]],
-    cost_active: str,
-    cost_frontier: str,
-    latency: tuple[int, float | None],
-    lang: str,
-) -> list[dict[str, object]]:
-    """Real, derived recommendations from the assembled signals (no fabrication)."""
-    out: list[dict[str, object]] = []
-
-    lat_n, lat_avg = latency
-    if lat_n and lat_avg is not None:
-        out.append(
-            {
-                "tone": "info",
-                "text": _t("sug_latency", lang).format(avg=_secs(lat_avg, lang), n=lat_n),
-                "href": "/agent/synthese",
-            }
-        )
-
-    low = 0
-    for row in rows_out:
-        cite = str(row.get("citation", "-")).rstrip("%")
-        try:
-            if float(cite) < _LOW_CITE_PCT:
-                low += 1
-        except ValueError:
-            continue
-    if low:
-        out.append(
-            {
-                "tone": "warn",
-                "text": _t("sug_lowcite", lang).format(n=low),
-                "href": "/agent/connaissances",
-            }
-        )
-
-    regate = sum(1 for c in fleet if not c.get("passed", False))
-    if regate:
-        out.append(
-            {
-                "tone": "warn",
-                "text": _t("sug_regate", lang).format(n=regate),
-                "href": "/configurer/garde-fous",
-            }
-        )
-
-    disabled = sum(1 for r in rows_out if r.get("status") == "disabled")
-    if disabled:
-        out.append(
-            {"tone": "muted", "text": _t("sug_disabled", lang).format(n=disabled), "href": ""}
-        )
-
-    ltm_recent = sum(_as_int(d.get("count")) for d in mem_history.get(_LTM_ID, []))
-    tx_recent = sum(_as_int(d.get("count")) for d in mem_history.get(_TX_ID, []))
-    if ltm_recent or tx_recent:
-        out.append(
-            {
-                "tone": "info",
-                "text": _t("sug_growth", lang).format(ltm=ltm_recent, tx=tx_recent),
-                "href": "",
-            }
-        )
-
-    out.append(
-        {
-            "tone": "good",
-            "text": _t("sug_cost", lang).format(active=cost_active, frontier=cost_frontier),
-            "href": "",
-        }
-    )
-    if not any(s["tone"] == "warn" for s in out):
-        out.insert(0, {"tone": "good", "text": _t("sug_clean", lang), "href": ""})
-    return out
 
 
 def _build_kpis(
