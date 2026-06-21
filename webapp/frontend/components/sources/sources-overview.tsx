@@ -10,6 +10,7 @@ import {
   Database,
   Download,
   GitBranch,
+  History,
   Layers,
   Search,
   ShieldCheck,
@@ -1096,6 +1097,8 @@ function DetailPanel({
         ))}
       </div>
 
+      {detail.versions ? <VersionsBlock t={t} versions={detail.versions} /> : null}
+
       {detail.consumers ? <UsedByBlock consumers={detail.consumers} /> : null}
 
       <div className="grid grid-cols-2 gap-2 border-t border-[var(--tessera-border)] pt-2">
@@ -1117,6 +1120,71 @@ function DetailPanel({
         />
       </div>
     </aside>
+  );
+}
+
+function VersionsBlock({
+  t,
+  versions,
+}: {
+  t: T;
+  versions: NonNullable<Row["detail"]["versions"]>;
+}) {
+  return (
+    <div className="border-t border-[var(--tessera-border)] pt-2" data-testid="source-versions">
+      <div className="mb-1.5 inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+        <History className="h-3.5 w-3.5 text-[#87bfff]" /> {versions.title}
+      </div>
+      {versions.drift?.changed ? (
+        <p className="mb-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[0.6rem] text-amber-300">
+          <AlertTriangle className="h-3 w-3" /> {versions.drift.label}
+        </p>
+      ) : null}
+      <p className="mb-1 text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+        {versions.current_title}
+      </p>
+      <dl className="mb-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[0.62rem]">
+        {versions.current.map((r) => (
+          <KV key={r.label} label={r.label} value={r.value} />
+        ))}
+      </dl>
+      <p className="mb-1 text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+        {versions.runs_title}
+      </p>
+      {versions.runs.length > 0 ? (
+        <ul className="flex flex-col gap-1.5">
+          {versions.runs.map((run) => (
+            <li
+              key={run.run_id}
+              className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-[0.62rem]"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
+                  <GitBranch className="h-3 w-3 text-[#87bfff]" /> {run.run_id}
+                  {run.language !== "-" ? (
+                    <span className="rounded border border-[var(--tessera-border)] px-1 text-[0.54rem] text-[var(--tessera-text-muted)]">
+                      {run.language}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="tabular-nums text-[var(--tessera-text-muted)]">{run.when}</span>
+              </div>
+              <p className="mt-0.5 text-[var(--tessera-text-muted)]">
+                {run.model} · {run.chunks} {t("version.chunksUnit")} · {run.chunking} ·{" "}
+                {run.trigger}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-md border border-dashed border-[var(--tessera-border)] px-2 py-1.5 text-[0.6rem] leading-relaxed text-[var(--tessera-text-muted)]">
+          {versions.empty}
+        </p>
+      )}
+      <p className="mt-1.5 text-[0.56rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        {versions.note}
+      </p>
+    </div>
   );
 }
 

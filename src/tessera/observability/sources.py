@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING
 
 from psycopg.rows import dict_row
 
+from tessera.corpus.lineage import IngestionRun, load_ingestion_runs
 from tessera.guard.audit import verify_audit_chain
 from tessera.memory.governance import ttl_for
 from tessera.observability.knowledge import (
@@ -45,6 +46,7 @@ from tessera.observability.knowledge import (
     _norm_lang,
     _source_name,
 )
+from tessera.retrieval.chunking import ChunkerConfig
 from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
@@ -229,6 +231,55 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Letzte Integritaetspruefung",
         "Last integrity check",
     ),
+    # OT-01 — per-object version history = the data/embedding ingestion lineage.
+    "ver_title": (
+        "Versions (lignée d'ingestion)",
+        "Versionen (Ingestions-Lineage)",
+        "Versions (ingestion lineage)",
+    ),
+    "ver_current": ("Version courante", "Aktuelle Version", "Current version"),
+    "ver_model": ("Modèle d'embedding", "Embedding-Modell", "Embedding model"),
+    "ver_dim": ("Dimension", "Dimension", "Dimension"),
+    "ver_chunking": (
+        "Chunking (cible/chevauch.)",
+        "Chunking (Ziel/Ueberlap.)",
+        "Chunking (target/overlap)",
+    ),
+    "ver_indexstate": ("État de l'index", "Indexstatus", "Index state"),
+    "ver_chunks": ("Chunks indexés", "Indexierte Chunks", "Indexed chunks"),
+    "ver_lastindex": ("Dernière indexation", "Letzte Indexierung", "Last indexed"),
+    "ver_indexed": ("Indexé", "Indexiert", "Indexed"),
+    "ver_runs": ("Historique des runs", "Run-Historie", "Run history"),
+    "ver_empty": (
+        "Aucun run d'ingestion versionné n'est encore journalisé. La version courante "
+        "ci-dessus est dérivée de l'index réel (pgvector) ; l'historique se remplit dès "
+        "qu'un run d'ingestion est exécuté (corpus/ingestion.py).",
+        "Es ist noch kein versionierter Ingestionslauf protokolliert. Die aktuelle Version "
+        "oben wird aus dem realen Index (pgvector) abgeleitet; die Historie fuellt sich, "
+        "sobald ein Ingestionslauf ausgefuehrt wird.",
+        "No versioned ingestion run is logged yet. The current version above is derived "
+        "from the real index (pgvector); the history fills in as soon as an ingestion run "
+        "executes (corpus/ingestion.py).",
+    ),
+    "ver_note": (
+        "Une version = le run d'ingestion qui a produit l'index (modèle + dimension + "
+        "config de chunking). Re-embarquer avec un autre modèle crée une nouvelle version. "
+        "Voir à date reconstitue ce qui était indexé à T.",
+        "Eine Version = der Ingestionslauf, der den Index erzeugt hat (Modell + Dimension + "
+        "Chunking). Ein Re-Embedding mit anderem Modell erzeugt eine neue Version.",
+        "A version = the ingestion run that produced the index (model + dimension + chunking "
+        "config). Re-embedding with another model creates a new version. View as-of "
+        "reconstructs what was indexed at T.",
+    ),
+    "ver_mem_empty": (
+        "La configuration mémoire n'est pas versionnée (pas de config-as-code). Aucun run "
+        "de lignée. À construire : un store de versions de la config mémoire (follow-up).",
+        "Die Speicherkonfiguration ist nicht versioniert (kein Config-as-Code). Kein "
+        "Lineage-Lauf. Zu bauen: ein Versionsspeicher der Speicherkonfig (Follow-up).",
+        "Memory configuration is not versioned (no config-as-code). No lineage run. To "
+        "build: a memory-config version store (follow-up).",
+    ),
+    "ver_trigger": ("Déclencheur", "Ausloeser", "Trigger"),
     "act_title": ("Activité récente", "Letzte Aktivitaet", "Recent activity"),
     # Store-lifecycle events (this PLATEFORME page is about the data substrate,
     # not the agent's reasoning turns).
@@ -491,6 +542,17 @@ def _corpus_of(cat: str) -> str:
     return f"regulations_{cat}" if _SOURCE_META.get(cat) == "reg" else "credit_aurore"
 
 
+def _ingest_corpus_of(cat: str) -> str:
+    """Map a category to the corpus id the *ingestion pipeline* writes lineage for.
+
+    Unlike :func:`_corpus_of` (agent binding granularity, ``regulations_dora``),
+    ingestion groups every regulation file under one ``regulations`` corpus and
+    every product file under ``credit_aurore`` (see ``corpus/ingestion.py``), so a
+    category inherits the ingestion lineage of its corpus.
+    """
+    return "regulations" if _SOURCE_META.get(cat) == "reg" else "credit_aurore"
+
+
 def _fetch_consumers() -> tuple[dict[str, list[dict[str, object]]], list[dict[str, object]]]:
     """Invert the registry knowledge bindings: corpus id -> consuming products.
 
@@ -534,6 +596,22 @@ def _fetch_consumers() -> tuple[dict[str, list[dict[str, object]]], list[dict[st
     return index, fleet_list
 
 
+def _lineage_by_corpus() -> dict[str, list[IngestionRun]]:
+    """Group the real ingestion-lineage runs by corpus id (newest first).
+
+    Degrades to empty on any read failure so the page never breaks; an empty
+    store renders the honest OT-01 empty state, never fabricated runs.
+    """
+    index: dict[str, list[IngestionRun]] = {}
+    try:
+        runs = load_ingestion_runs()
+    except (OSError, ValueError):
+        return {}
+    for run in reversed(runs):  # newest first
+        index.setdefault(run.corpus, []).append(run)
+    return index
+
+
 async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
     """Assemble the Sources & memory payload from the live Postgres substrate."""
     lang = _norm_lang(lang)
@@ -541,6 +619,7 @@ async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
     ltm = await _fetch_longterm()
     tx = await _fetch_transcript()
     consumers, fleet = _fetch_consumers()
+    lineage = _lineage_by_corpus()
     history = {
         _LTM_ID: await _daily_growth("long_term_memory"),
         _TX_ID: await _daily_growth("conversation_messages"),
@@ -553,7 +632,7 @@ async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
     cost_gauge = _read_cost_gauge()
     return _assemble(
         rows, ltm, tx, _load_probe(), consumers, fleet, history, index_chars, audit, activity,
-        latency, cost_gauge, lang,
+        latency, cost_gauge, lang, lineage_runs=lineage,
     )
 
 
@@ -773,6 +852,104 @@ def _attach_used_by(
             }
 
 
+def _fmt_run_ts(iso: str) -> str:
+    try:
+        return datetime.fromisoformat(iso).strftime("%d/%m/%Y %H:%M")
+    except ValueError:
+        return iso
+
+
+def _run_view(run: IngestionRun) -> dict[str, object]:
+    """One ingestion run, formatted as a version-history entry."""
+    return {
+        "run_id": run.run_id,
+        "when": _fmt_run_ts(run.recorded_at),
+        "model": f"{run.embedding_model} ({run.embedding_dimension}-d)",
+        "chunking": f"{run.chunk_target_chars}/{run.chunk_overlap_chars}",
+        "chunks": _fmt_int(run.chunk_count),
+        "language": run.language.upper() if run.language else "-",
+        "trigger": run.trigger,
+    }
+
+
+def _corpus_versions(
+    cat: str, agg: _Aggregate, runs: list[IngestionRun], lang: str
+) -> dict[str, object]:
+    """OT-01 for a corpus source: real current version + the run history."""
+    chunks = agg.chunks.get(cat, 0)
+    last = agg.freshest[cat].strftime("%d/%m/%Y") if cat in agg.freshest else "-"
+    cfg = ChunkerConfig()
+    current = [
+        {"label": _t("ver_model", lang), "value": embedding_model_name()},
+        {"label": _t("ver_dim", lang), "value": str(embedding_dimension())},
+        {
+            "label": _t("ver_chunking", lang),
+            "value": f"{cfg.target_chars}/{cfg.overlap_chars}",
+        },
+        {"label": _t("ver_indexstate", lang), "value": _t("ver_indexed", lang)},
+        {"label": _t("ver_chunks", lang), "value": _fmt_int(chunks)},
+        {"label": _t("ver_lastindex", lang), "value": last},
+    ]
+    return {
+        "title": _t("ver_title", lang),
+        "current_title": _t("ver_current", lang),
+        "current": current,
+        "runs_title": _t("ver_runs", lang),
+        "runs": [_run_view(r) for r in runs],
+        "empty": _t("ver_empty", lang),
+        "note": _t("ver_note", lang),
+    }
+
+
+def _memory_versions(*, is_ltm: bool, lang: str) -> dict[str, object]:
+    """OT-01 for a memory store: current embedding facts; config is unversioned."""
+    current = (
+        [
+            {"label": _t("ver_model", lang), "value": embedding_model_name()},
+            {"label": _t("ver_dim", lang), "value": str(embedding_dimension())},
+        ]
+        if is_ltm
+        else []
+    )
+    return {
+        "title": _t("ver_title", lang),
+        "current_title": _t("ver_current", lang),
+        "current": current,
+        "runs_title": _t("ver_runs", lang),
+        "runs": [],
+        "empty": _t("ver_mem_empty", lang),
+        "note": _t("ver_note", lang),
+    }
+
+
+def _attach_versions(
+    rows_out: list[dict[str, object]],
+    agg: _Aggregate,
+    lineage: dict[str, list[IngestionRun]],
+    lang: str,
+) -> None:
+    """Attach the OT-01 version block (data/embedding lineage) to each row.
+
+    Corpus rows get a real current version (active model/dim/chunking + the real
+    indexed-chunk count) plus the run history of their parent corpus binding (see
+    :func:`_corpus_of`); the store starts empty, so the history renders an honest
+    empty state rather than a fabricated run. Memory stores carry their embedding
+    facts; their config is not versioned (follow-up).
+    """
+    for row in rows_out:
+        rid = str(row["id"])
+        detail = row["detail"]
+        if not isinstance(detail, dict):
+            continue
+        if rid == _LTM_ID:
+            detail["versions"] = _memory_versions(is_ltm=True, lang=lang)
+        elif rid == _TX_ID:
+            detail["versions"] = _memory_versions(is_ltm=False, lang=lang)
+        else:
+            runs = lineage.get(_ingest_corpus_of(rid), [])
+            detail["versions"] = _corpus_versions(rid, agg, runs, lang)
+
+
 def _assemble(
     raw_rows: list[dict[str, object]],
     ltm: _MemStat,
@@ -788,12 +965,14 @@ def _assemble(
     cost_gauge: float | None = None,
     lang: str = "fr",
     now: datetime | None = None,
+    lineage_runs: dict[str, list[IngestionRun]] | None = None,
 ) -> dict[str, object]:
     """Pure assembly of the Sources & memory payload (no I/O) - unit-testable."""
     lang = _norm_lang(lang)
     consumers = consumers or {}
     fleet = fleet or []
     mem_history = mem_history or {}
+    lineage_runs = lineage_runs or {}
     index_chars = index_chars or {}
     activity = activity or []
     latency = latency or (0, None)
@@ -897,6 +1076,7 @@ def _assemble(
 
     _attach_descriptions(rows_out, agg, ltm, tx, lang)
     _attach_used_by(rows_out, consumers, fleet, lang)
+    _attach_versions(rows_out, agg, lineage_runs, lang)
     cost_frontier = _attach_growth_cost(rows_out, mem_history, index_chars)
 
     total_sources = len(rows_out)

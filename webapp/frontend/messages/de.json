@@ -3678,7 +3678,7 @@
       "historyNote": "Kein versionierter Snapshot-Speicher hier - reale letzte Indexierung unten.",
       "lastIndexed": "Letzte Indexierung",
       "memoryNote": "Vom Agenten geschriebene Speicher (Langzeit + Transkript).",
-      "memoryGrowth": "Speicherwachstum (pro Tag)",
+      "memoryGrowth": "Wachstum / Volumen (pro Tag)",
       "corpusHeading": "Korpus (Provenienz Git / Ingestion)",
       "total": "Gesamt",
       "activity": "Speicheraktivität (pro Tag)",
@@ -3689,6 +3689,9 @@
       "prev": "Zurück",
       "next": "Weiter",
       "perPage": "Zeilen pro Seite"
+    },
+    "version": {
+      "chunksUnit": "Chunks"
     }
   },
   "roles": {

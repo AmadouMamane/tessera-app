@@ -3678,7 +3678,7 @@
       "historyNote": "No versioned snapshot store here - real last indexing below.",
       "lastIndexed": "Last indexed",
       "memoryNote": "Memory stores written by the agent (long-term + transcript).",
-      "memoryGrowth": "Memory growth (per day)",
+      "memoryGrowth": "Growth / Volume (per day)",
       "corpusHeading": "Corpus (Git / ingestion provenance)",
       "total": "Total",
       "activity": "Memory activity (per day)",
@@ -3689,6 +3689,9 @@
       "prev": "Previous",
       "next": "Next",
       "perPage": "Rows per page"
+    },
+    "version": {
+      "chunksUnit": "chunks"
     }
   },
   "roles": {

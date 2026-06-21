@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tessera.corpus.lineage import IngestionRun
 from tessera.observability import sources as sm
 from tessera.retrieval.embeddings import embedding_model_name
 
@@ -219,6 +220,42 @@ def test_retention_and_embedding_are_real() -> None:
     assert emb["distance"] == "cosine"
     assert emb["chunks"] == "5"  # 2 dora + 3 comptes
     assert emb["languages"] == "3"
+
+
+def test_versions_ot01_from_real_lineage() -> None:
+    run = IngestionRun(
+        run_id="ING-0001",
+        corpus="regulations",
+        language="en",
+        embedding_model="bge-m3",
+        embedding_dimension=1024,
+        chunk_target_chars=800,
+        chunk_overlap_chars=150,
+        chunk_count=12,
+        documents=2,
+        trigger="ingest_cli",
+        recorded_at="2026-06-20T10:00:00+00:00",
+        prev_hash="0" * 64,
+        hash="deadbeef",
+    )
+    payload = sm._assemble(
+        _rows(), _ltm(), _tx(), {}, lang="fr", now=NOW, lineage_runs={"regulations": [run]}
+    )
+    by_id = {r["id"]: r for r in payload["sources"]}
+    # dora (a regulation category) inherits the regulations ingestion run.
+    dora_v = by_id["dora"]["detail"]["versions"]
+    assert dora_v["current"]  # real current version (active model/dim/chunking)
+    assert [r["run_id"] for r in dora_v["runs"]] == ["ING-0001"]
+    assert dora_v["runs"][0]["model"] == "bge-m3 (1024-d)"
+    assert dora_v["runs"][0]["when"] == "20/06/2026 10:00"  # ts formatted, no tz shift
+    # comptes (a product category) has no credit_aurore run -> honest empty state.
+    comptes_v = by_id["comptes"]["detail"]["versions"]
+    assert comptes_v["runs"] == []
+    assert comptes_v["empty"]
+    # memory store: unversioned config -> honest empty + follow-up note.
+    ltm_v = by_id[sm._LTM_ID]["detail"]["versions"]
+    assert ltm_v["runs"] == []
+    assert ltm_v["empty"]
 
 
 def test_growth_attaches_to_memory_and_not_corpus() -> None:

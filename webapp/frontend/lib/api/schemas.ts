@@ -2743,6 +2743,29 @@ const SmConsumersSchema = z.object({
     }),
   ),
 });
+const SmVersionRunSchema = z.object({
+  run_id: z.string(),
+  when: z.string(),
+  model: z.string(),
+  chunking: z.string(),
+  chunks: z.string(),
+  language: z.string(),
+  trigger: z.string(),
+});
+const SmVersionsSchema = z.object({
+  title: z.string(),
+  current_title: z.string(),
+  current: z.array(SmKvSchema),
+  runs_title: z.string(),
+  runs: z.array(SmVersionRunSchema),
+  empty: z.string(),
+  note: z.string(),
+  // Re-gate signal raised when the active embedding model drifts from the index
+  // (added by Commit 3); optional so the schema is forward-compatible.
+  drift: z
+    .object({ changed: z.boolean(), from: z.string(), to: z.string(), label: z.string() })
+    .optional(),
+});
 const SmDetailSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -2752,6 +2775,7 @@ const SmDetailSchema = z.object({
   description: z.string(),
   sections: z.array(z.object({ key: z.string(), title: z.string(), rows: z.array(SmKvSchema) })),
   consumers: SmConsumersSchema.optional(),
+  versions: SmVersionsSchema.optional(),
 });
 
 export const SourcesOverviewSchema = z.object({

@@ -3678,7 +3678,7 @@
       "historyNote": "Aucun magasin de snapshots versionnés ici - dernière indexation réelle ci-dessous.",
       "lastIndexed": "Dernière indexation",
       "memoryNote": "Magasins mémoire écrits par l'agent (long terme + transcription).",
-      "memoryGrowth": "Croissance de la mémoire (par jour)",
+      "memoryGrowth": "Croissance / Volume (par jour)",
       "corpusHeading": "Corpus (provenance Git / ingestion)",
       "total": "Total",
       "activity": "Activité mémoire (par jour)",
@@ -3689,6 +3689,9 @@
       "prev": "Précédent",
       "next": "Suivant",
       "perPage": "Lignes par page"
+    },
+    "version": {
+      "chunksUnit": "chunks"
     }
   },
   "roles": {

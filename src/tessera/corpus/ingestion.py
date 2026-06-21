@@ -8,9 +8,10 @@ from importlib import resources
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from tessera.corpus.lineage import record_ingestion_run
 from tessera.observability.logging import get_logger
 from tessera.retrieval import embeddings
-from tessera.retrieval.chunking import chunk_text
+from tessera.retrieval.chunking import ChunkerConfig, chunk_text
 from tessera.retrieval.store import DocumentRecord, ensure_schema, insert_documents
 from tessera.settings import LanguageCode
 
@@ -61,12 +62,21 @@ def _iter_data_files(corpus_filter: str | None) -> Iterable[tuple[Path, str, Lan
         yield Path(str(entry)), corpus, language
 
 
-async def ingest_path(path: Path, corpus: str, language: LanguageCode) -> int:
-    """Ingest a single JSON file into pgvector."""
+async def ingest_path(
+    path: Path, corpus: str, language: LanguageCode, *, trigger: str = "ingest_cli"
+) -> int:
+    """Ingest a single JSON file into pgvector.
+
+    Records a real ingestion-lineage run (the source's version stamp: active
+    embedding model + dimension, chunking config, chunk count, trigger) so the
+    OT-01 version history is built from genuine runs, never fabricated.
+    """
     docs = _load(path)
+    sources: set[str] = set()
     records: list[DocumentRecord] = []
     for doc in docs:
         source = str(doc["source"])
+        sources.add(source)
         text = str(doc["text"])
         raw_meta = doc.get("metadata")
         metadata = {
@@ -89,6 +99,18 @@ async def ingest_path(path: Path, corpus: str, language: LanguageCode) -> int:
                 )
             )
     inserted = await insert_documents(records)
+    cfg = ChunkerConfig()
+    run = record_ingestion_run(
+        corpus=corpus,
+        language=language.value,
+        embedding_model=embeddings.embedding_model_name(),
+        embedding_dimension=embeddings.embedding_dimension(),
+        chunk_target_chars=cfg.target_chars,
+        chunk_overlap_chars=cfg.overlap_chars,
+        chunk_count=len(records),
+        documents=len(sources),
+        trigger=trigger,
+    )
     LOG.info(
         "corpus.ingest_file",
         path=str(path),
@@ -96,6 +118,8 @@ async def ingest_path(path: Path, corpus: str, language: LanguageCode) -> int:
         language=language.value,
         records=len(records),
         inserted=inserted,
+        lineage_run=run.run_id,
+        embedding_model=run.embedding_model,
     )
     return inserted
 
