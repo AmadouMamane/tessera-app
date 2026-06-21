@@ -30,9 +30,11 @@ import { useTranslations } from "next-intl";
 /**
  * Decor host #2 for the v2 product preview (`/produit/apercu2`). A faithful
  * reproduction of a retail-bank "Mes comptes" customer portal
- * (`docs/ui-reference/produit/espace_client.png`): red top bar, secondary
- * tabs, a two-column accounts layout (current / savings / cashback + a credit
- * promo) and a "useful links" right rail, over a dark footer.
+ * (`docs/ui-reference/produit/espace_client.png`), re-themed in Tessera's
+ * navy/gold palette (follows the active light/dark theme via CSS tokens):
+ * top bar, secondary tabs, a two-column accounts layout (current / savings /
+ * cashback + a credit promo) and a "useful links" right rail, over a dark
+ * footer.
  *
  * It is pure stage set — **fictitious data, no banking functionality**. The
  * only real, functional element is the floating `ChatWidget` mounted on top by
@@ -85,15 +87,15 @@ export function MesComptesHost() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] text-slate-800">
-      {/* Top red bar */}
-      <header className="bg-[#e2001a] text-white">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      {/* Top bar — Tessera navy/gold */}
+      <header className="bg-gradient-to-r from-navy-900 to-navy-950 text-white dark:from-navy-950 dark:to-black">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-white text-sm font-extrabold tracking-tight text-[#e2001a]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold-500 text-sm font-extrabold tracking-tight text-navy-950">
             CA
           </div>
           <span className="hidden text-sm font-semibold tracking-wide sm:inline">{t("brand")}</span>
-          <span className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/10 px-2.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider">
+          <span className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-gold-500/30 bg-gold-500/10 px-2.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-gold-300">
             <Lock className="h-3 w-3" />
             {t("demoBadge")}
           </span>
@@ -101,12 +103,12 @@ export function MesComptesHost() {
             {headerIcons.map(({ key, label, Icon, badge }) => (
               <span
                 key={key}
-                className="relative flex flex-col items-center gap-0.5 text-[0.6rem] font-medium text-white/90"
+                className="relative flex flex-col items-center gap-0.5 text-[0.6rem] font-medium text-white/85"
               >
                 <span className="relative">
                   <Icon className="h-[18px] w-[18px]" />
                   {badge && (
-                    <span className="absolute -right-1.5 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-white px-1 text-[0.55rem] font-bold text-[#e2001a]">
+                    <span className="absolute -right-1.5 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-gold-500 px-1 text-[0.55rem] font-bold text-navy-950">
                       3
                     </span>
                   )}
@@ -119,15 +121,15 @@ export function MesComptesHost() {
       </header>
 
       {/* Secondary tabs */}
-      <div className="border-b border-slate-200 bg-white">
+      <div className="border-b border-[var(--border)] bg-[var(--card)]">
         <div className="mx-auto flex max-w-6xl gap-6 overflow-x-auto px-5 text-sm">
           {tabs.map((tab, i) => (
             <span
               key={tab.key}
               className={`whitespace-nowrap border-b-2 py-3.5 ${
                 i === 0
-                  ? "border-[#e2001a] font-semibold text-[#e2001a]"
-                  : "border-transparent text-slate-600"
+                  ? "border-gold-500 font-semibold text-gold-600 dark:text-gold-400"
+                  : "border-transparent text-[var(--muted-foreground)]"
               }`}
             >
               {tab.label}
@@ -137,11 +139,13 @@ export function MesComptesHost() {
       </div>
 
       {/* Title */}
-      <h1 className="pt-7 text-center text-2xl font-semibold text-slate-900">{t("title")}</h1>
+      <h1 className="pt-7 text-center text-2xl font-semibold text-[var(--foreground)]">
+        {t("title")}
+      </h1>
 
       {/* Demo notice */}
       <div className="mx-auto mt-4 max-w-6xl px-5">
-        <p className="rounded-lg border border-dashed border-slate-300 bg-amber-50/60 px-4 py-2.5 text-xs text-slate-600">
+        <p className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted)]/30 px-4 py-2.5 text-xs text-[var(--muted-foreground)]">
           {t("demoNotice")}
         </p>
       </div>
@@ -188,54 +192,56 @@ export function MesComptesHost() {
           </Card>
 
           {/* Credit promo banner */}
-          <div className="flex items-stretch overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-r from-[#1a1a3a] to-[#2d1240] text-white shadow-sm">
+          <div className="flex items-stretch overflow-hidden rounded-xl border border-navy-800/60 bg-gradient-to-r from-navy-900 to-navy-950 text-white shadow-sm">
             <div className="flex flex-1 flex-col gap-2 p-5">
-              <span className="w-fit rounded-full bg-white/15 px-2.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider">
+              <span className="w-fit rounded-full bg-gold-500/15 px-2.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-gold-300">
                 {t("promo.tag")}
               </span>
               <div className="flex items-end gap-2">
-                <span className="text-3xl font-bold text-[#f6c945]">{t("promo.rate")}</span>
+                <span className="text-3xl font-bold text-gold-400">{t("promo.rate")}</span>
                 <span className="pb-1 text-sm font-medium">{t("promo.title")}</span>
               </div>
               <p className="max-w-md text-[0.62rem] leading-snug text-white/60">
                 {t("promo.legal")}
               </p>
-              <span className="mt-1 w-fit rounded-lg bg-[#e2001a] px-4 py-2 text-xs font-semibold">
+              <span className="mt-1 w-fit rounded-lg bg-gold-500 px-4 py-2 text-xs font-semibold text-navy-950">
                 {t("promo.cta")}
               </span>
             </div>
             <div
               aria-hidden
-              className="hidden w-40 shrink-0 bg-[radial-gradient(circle_at_70%_30%,oklch(0.7_0.14_85/0.5),transparent_60%)] sm:block"
+              className="hidden w-40 shrink-0 bg-[radial-gradient(circle_at_70%_30%,oklch(0.8_0.066_85/0.45),transparent_60%)] sm:block"
             />
           </div>
         </div>
 
         {/* Right rail — Liens utiles */}
         <aside className="space-y-4">
-          <h2 className="px-1 text-sm font-semibold text-slate-900">{t("links.title")}</h2>
+          <h2 className="px-1 text-sm font-semibold text-[var(--foreground)]">
+            {t("links.title")}
+          </h2>
           {linkGroups.map((group) => (
             <div
               key={group.title}
-              className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+              className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-sm"
             >
               <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                   {group.title}
                 </span>
-                <ChevronUp className="h-4 w-4 text-slate-400" />
+                <ChevronUp className="h-4 w-4 text-[var(--muted-foreground)]" />
               </div>
-              <div className="divide-y divide-slate-100 border-t border-slate-100">
+              <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
                 {group.items.map(({ label, Icon }) => (
                   <div
                     key={label}
-                    className="flex items-center gap-3 px-4 py-3 text-sm text-slate-700"
+                    className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--foreground)]"
                   >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-[#e2001a]">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--muted)] text-gold-600 dark:text-gold-400">
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="flex-1">{label}</span>
-                    <ChevronRight className="h-4 w-4 text-slate-300" />
+                    <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]/60" />
                   </div>
                 ))}
               </div>
@@ -245,7 +251,7 @@ export function MesComptesHost() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#15162b] text-white/75">
+      <footer className="bg-navy-950 text-white/70 dark:bg-black">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-5 py-5 text-xs">
           <span>{t("footer.faq")}</span>
           <span>{t("footer.findAgency")}</span>
@@ -266,10 +272,12 @@ export function MesComptesHost() {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
-        <ChevronUp className="h-4 w-4 text-slate-400" />
+    <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-sm">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+          {title}
+        </h2>
+        <ChevronUp className="h-4 w-4 text-[var(--muted-foreground)]" />
       </div>
       <div className="px-5 py-1">{children}</div>
     </section>
@@ -277,7 +285,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 function Divider() {
-  return <div className="h-px bg-slate-100" />;
+  return <div className="h-px bg-[var(--border)]" />;
 }
 
 function AccountRow({
@@ -297,23 +305,23 @@ function AccountRow({
 }) {
   return (
     <div className="flex items-center gap-3 py-4">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--muted)] text-[var(--muted-foreground)]">
         <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-slate-800">{label}</span>
+          <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
           {badge && (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.6rem] font-medium text-slate-500">
+            <span className="rounded-full bg-[var(--muted)] px-2 py-0.5 text-[0.6rem] font-medium text-[var(--muted-foreground)]">
               {badge}
             </span>
           )}
         </div>
-        {sub && <p className="mt-0.5 truncate text-xs text-slate-400">{sub}</p>}
+        {sub && <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">{sub}</p>}
       </div>
       <span
         className={`shrink-0 text-sm font-semibold tabular-nums ${
-          negative ? "text-[#e2001a]" : "text-slate-900"
+          negative ? "text-rose-500 dark:text-rose-400" : "text-[var(--foreground)]"
         }`}
       >
         {amount}
