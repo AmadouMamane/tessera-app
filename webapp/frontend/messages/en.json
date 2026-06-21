@@ -4440,6 +4440,72 @@
         "open": "Open the assistant",
         "close": "Minimize the assistant"
       }
+    },
+    "apercu2": {
+      "brand": "Crédit Aurore",
+      "demoBadge": "Demo host",
+      "demoNotice": "Mockup reproduction — fictitious data, no real banking operations. Only the floating assistant is functional.",
+      "header": {
+        "search": "Search",
+        "notifications": "Notifications",
+        "messages": "Messages",
+        "subscribe": "Subscribe",
+        "profile": "Profile"
+      },
+      "tabs": {
+        "accounts": "My accounts",
+        "cards": "Cards and loans",
+        "savings": "Save",
+        "insurance": "Insurance",
+        "debits": "Direct debits",
+        "budget": "My budget",
+        "offers": "Our offers"
+      },
+      "title": "My accounts",
+      "sections": {
+        "bank": "Bank accounts",
+        "savings": "Savings accounts",
+        "cashback": "Cashback"
+      },
+      "accounts": {
+        "current": "Current account",
+        "visa": "Visa Premier card",
+        "noOverdraft": "no overdraft",
+        "livretA": "Livret A",
+        "ceiling": "Deposit ceiling: €22,950.00",
+        "used": "0.1% used",
+        "cagnotte": "My pot",
+        "pending": "Refunds pending validation: €0.00",
+        "cashbackNote": "Earn cashback on eligible purchases at our partners."
+      },
+      "promo": {
+        "tag": "Crédit Expresso",
+        "rate": "5.99%",
+        "title": "Your summer projects start here!",
+        "legal": "A loan commits you and must be repaid. Check your repayment capacity before committing.",
+        "cta": "Discover"
+      },
+      "links": {
+        "title": "Useful links",
+        "management": "My management",
+        "rib": "Download my bank details",
+        "statements": "View my statements",
+        "customize": "Customize my accounts",
+        "security": "Banking security & fraud",
+        "services": "My services",
+        "service1": "Go to Aurore Pay",
+        "service2": "Go to Aurore Pro",
+        "mobility": "Manage my bank switch",
+        "referral": "Refer my friends",
+        "contacts": "My contacts",
+        "agency": "Contact branch services"
+      },
+      "footer": {
+        "faq": "FAQ",
+        "findAgency": "Find a branch",
+        "otherSites": "Other Crédit Aurore sites",
+        "feedback": "Your feedback"
+      }
     }
   },
   "scaffold": {

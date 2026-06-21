@@ -4440,6 +4440,72 @@
         "open": "Assistent öffnen",
         "close": "Assistent minimieren"
       }
+    },
+    "apercu2": {
+      "brand": "Crédit Aurore",
+      "demoBadge": "Demo-Host",
+      "demoNotice": "Mockup-Nachbau — fiktive Daten, keine echten Bankvorgänge. Nur der schwebende Assistent ist funktionsfähig.",
+      "header": {
+        "search": "Suchen",
+        "notifications": "Benachrichtigungen",
+        "messages": "Nachrichten",
+        "subscribe": "Abschließen",
+        "profile": "Profil"
+      },
+      "tabs": {
+        "accounts": "Meine Konten",
+        "cards": "Karten und Kredite",
+        "savings": "Sparen",
+        "insurance": "Versicherungen",
+        "debits": "Lastschriften",
+        "budget": "Mein Budget",
+        "offers": "Unsere Angebote"
+      },
+      "title": "Meine Konten",
+      "sections": {
+        "bank": "Bankkonten",
+        "savings": "Sparkonten",
+        "cashback": "Cashback"
+      },
+      "accounts": {
+        "current": "Bankkonto",
+        "visa": "CB Visa Premier",
+        "noOverdraft": "ohne Dispo",
+        "livretA": "Sparbuch A",
+        "ceiling": "Einzahlungslimit: 22 950,00 €",
+        "used": "zu 0,1 % genutzt",
+        "cagnotte": "Mein Bonustopf",
+        "pending": "Ausstehende Erstattungen: 0,00 €",
+        "cashbackNote": "Sammeln Sie Cashback auf qualifizierte Einkäufe bei unseren Partnern."
+      },
+      "promo": {
+        "tag": "Crédit Expresso",
+        "rate": "5,99 %",
+        "title": "Ihre Sommerprojekte beginnen hier!",
+        "legal": "Ein Kredit verpflichtet Sie und muss zurückgezahlt werden. Prüfen Sie Ihre Rückzahlungsfähigkeit, bevor Sie sich verpflichten.",
+        "cta": "Entdecken"
+      },
+      "links": {
+        "title": "Nützliche Links",
+        "management": "Meine Verwaltung",
+        "rib": "Bankverbindung herunterladen",
+        "statements": "Kontoauszüge ansehen",
+        "customize": "Konten anpassen",
+        "security": "Banksicherheit & Betrug",
+        "services": "Meine Dienste",
+        "service1": "Zu Aurore Pay",
+        "service2": "Zu Aurore Pro",
+        "mobility": "Bankwechsel verwalten",
+        "referral": "Freunde werben",
+        "contacts": "Meine Kontakte",
+        "agency": "Filialservice kontaktieren"
+      },
+      "footer": {
+        "faq": "Häufige Fragen",
+        "findAgency": "Filiale finden",
+        "otherSites": "Andere Crédit-Aurore-Seiten",
+        "feedback": "Ihre Meinung"
+      }
     }
   },
   "scaffold": {

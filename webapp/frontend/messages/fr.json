@@ -4440,6 +4440,72 @@
         "open": "Ouvrir l'assistant",
         "close": "Réduire l'assistant"
       }
+    },
+    "apercu2": {
+      "brand": "Crédit Aurore",
+      "demoBadge": "Hôte de démo",
+      "demoNotice": "Reproduction de maquette — données fictives, aucune opération bancaire réelle. Seul l'assistant flottant est fonctionnel.",
+      "header": {
+        "search": "Rechercher",
+        "notifications": "Notifications",
+        "messages": "Messagerie",
+        "subscribe": "Souscrire",
+        "profile": "Profil"
+      },
+      "tabs": {
+        "accounts": "Mes comptes",
+        "cards": "Cartes et crédits",
+        "savings": "Épargner",
+        "insurance": "Assurances",
+        "debits": "Prélèvements",
+        "budget": "Mon budget",
+        "offers": "Nos offres"
+      },
+      "title": "Mes comptes",
+      "sections": {
+        "bank": "Comptes bancaires",
+        "savings": "Comptes d'épargne",
+        "cashback": "Cashback"
+      },
+      "accounts": {
+        "current": "Compte Bancaire",
+        "visa": "CB Visa Premier",
+        "noOverdraft": "sans découvert",
+        "livretA": "Livret A",
+        "ceiling": "Plafond de versement : 22 950,00 €",
+        "used": "utilisé à 0,1 %",
+        "cagnotte": "Ma cagnotte",
+        "pending": "Remboursements en attente de validation : 0,00 €",
+        "cashbackNote": "Cumulez du cashback sur vos achats éligibles chez nos partenaires."
+      },
+      "promo": {
+        "tag": "Crédit Expresso",
+        "rate": "5,99 %",
+        "title": "Vos projets d'été commencent ici !",
+        "legal": "Un crédit vous engage et doit être remboursé. Vérifiez vos capacités de remboursement avant de vous engager.",
+        "cta": "Je découvre"
+      },
+      "links": {
+        "title": "Liens utiles",
+        "management": "Ma gestion",
+        "rib": "Télécharger mon RIB",
+        "statements": "Voir mes relevés",
+        "customize": "Personnaliser mes comptes",
+        "security": "Sécurité bancaire & fraude",
+        "services": "Mes services",
+        "service1": "Accéder à Aurore Pay",
+        "service2": "Accéder à Aurore Pro",
+        "mobility": "Gérer ma mobilité bancaire",
+        "referral": "Parrainer mes proches",
+        "contacts": "Mes contacts",
+        "agency": "Contacter les services d'agence"
+      },
+      "footer": {
+        "faq": "Questions fréquentes",
+        "findAgency": "Trouver une agence",
+        "otherSites": "Autres sites Crédit Aurore",
+        "feedback": "Votre avis"
+      }
     }
   },
   "scaffold": {
