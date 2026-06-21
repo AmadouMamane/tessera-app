@@ -3600,7 +3600,8 @@
     },
     "actions": {
       "export": "Exporter",
-      "manage": "Voir les connaissances"
+      "manage": "Voir les connaissances",
+      "asof": "Voir à date (as-of)"
     },
     "filters": {
       "search": "Rechercher une source...",

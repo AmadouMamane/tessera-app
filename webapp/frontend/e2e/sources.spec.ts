@@ -168,6 +168,17 @@ test("the detail panel shows the real citation ring and facts", async ({ page })
   await expect(detail.getByText("Requêtes")).toBeVisible(); // hits fact
 });
 
+test("the overview shows real suggestions and the as-of control", async ({ page }) => {
+  await expect(page.getByRole("heading", { name: "Suggestions" })).toBeVisible();
+  // Real derived insight (negligible indexing cost) + a deep-link suggestion.
+  await expect(page.getByText(/Coût d'indexation négligeable/)).toBeVisible();
+  await expect(page.getByText(/produit\(s\) a re-valider/)).toBeVisible();
+  // The as-of control links to the real point-in-time page.
+  await page.getByRole("link", { name: /Voir à date/ }).click();
+  await page.waitForURL(/\/prouver\/etat-a-date/, { timeout: 15_000 });
+  expect(page.url()).toContain("/prouver/etat-a-date");
+});
+
 test("the knowledge action links to the Connaissances page", async ({ page }) => {
   await page.getByRole("link", { name: "Voir les connaissances" }).click();
   await page.waitForURL(/\/agent\/connaissances/, { timeout: 15_000 });

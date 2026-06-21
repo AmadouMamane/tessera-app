@@ -231,6 +231,40 @@ def test_growth_attaches_to_memory_and_not_corpus() -> None:
     assert by_id["dora"]["growth"] == []  # corpus has no time axis
 
 
+def test_cost_is_real_and_negligible() -> None:
+    # 5 chunks, ~small char volume -> on-prem 0, frontier sub-cent. Never the fixture.
+    index_chars = {"dora": 24000, "comptes": 12000}
+    payload = sm._assemble(
+        _rows(), _ltm(), _tx(), {}, {}, [], {}, index_chars, lang="fr", now=NOW
+    )
+    assert payload["cost"]["active"].startswith("EUR 0")
+    assert payload["cost"]["frontier"].startswith("EUR 0")
+    # Per-corpus-row cost is a real estimate; memory rows have none.
+    by_id = {r["id"]: r for r in payload["sources"]}
+    assert by_id["dora"]["cost"].startswith("EUR")
+    assert by_id[sm._LTM_ID]["cost"] == "-"
+
+
+def test_suggestions_are_derived_from_real_signals() -> None:
+    # gdpr cited 0 (low), credit cited high; one product failing -> re-gate.
+    probe = {
+        "categories": {"dora": {"citation": 1, "hits": 2}, "comptes": {"citation": 40, "hits": 9}},
+    }
+    fleet = _fleet()  # support-client passed=False -> 1 re-gate
+    history = {sm._LTM_ID: [{"day": "2026-06-20", "count": 9}]}
+    payload = sm._assemble(
+        _rows(), _ltm(), _tx(), probe, _consumers(), fleet, history, {}, lang="fr", now=NOW
+    )
+    texts = " ".join(str(s["text"]) for s in payload["suggestions"]["items"])
+    assert "peu citées" in texts  # dora at 1% is below the 5% threshold
+    assert "re-valider" in texts  # support-client is failing
+    assert "croissance" in texts  # memory grew
+    assert "Coût" in texts  # honest cost line always present
+    # the low-citation suggestion deep-links to Connaissances
+    hrefs = [s["href"] for s in payload["suggestions"]["items"]]
+    assert "/agent/connaissances" in hrefs
+
+
 def test_corpus_of_maps_regulation_and_product() -> None:
     assert sm._corpus_of("dora") == "regulations_dora"
     assert sm._corpus_of("gdpr") == "regulations_gdpr"

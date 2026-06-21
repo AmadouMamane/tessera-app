@@ -2813,6 +2813,11 @@ export const SourcesOverviewSchema = z.object({
     }),
   ),
   zones: z.object({ by_type: z.string(), by_env: z.string(), cost: z.string() }),
+  cost: z.object({ active: z.string(), frontier: z.string(), note: z.string() }),
+  suggestions: z.object({
+    title: z.string(),
+    items: z.array(z.object({ tone: z.string(), text: z.string(), href: z.string() })),
+  }),
   embedding: z.object({
     model: z.string(),
     dim: z.string(),

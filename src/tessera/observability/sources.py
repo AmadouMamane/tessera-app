@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from psycopg.rows import dict_row
@@ -195,6 +196,43 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Changing this source re-gates the consuming products (define -> consumers -> "
         "re-validate). The dot = the product's current eval-gate verdict.",
     ),
+    "sug_title": ("Suggestions", "Vorschlaege", "Suggestions"),
+    "sug_lowcite": (
+        "{n} sources peu citées (< 5% de citation) - a revoir",
+        "{n} Quellen kaum zitiert (< 5% Zitation) - pruefen",
+        "{n} sources rarely cited (< 5% citation) - review",
+    ),
+    "sug_regate": (
+        "{n} produit(s) a re-valider apres un changement de source partagee",
+        "{n} Produkt(e) nach Aenderung einer geteilten Quelle neu zu validieren",
+        "{n} product(s) to re-validate after a shared-source change",
+    ),
+    "sug_growth": (
+        "Mémoire en croissance : +{ltm} souvenirs, +{tx} messages (30 j)",
+        "Speicher waechst: +{ltm} Erinnerungen, +{tx} Nachrichten (30 T)",
+        "Memory growing: +{ltm} memories, +{tx} messages (30d)",
+    ),
+    "sug_cost": (
+        "Coût d'indexation négligeable : {active} (on-prem) / {frontier} estimé (frontier)",
+        "Indexierungskosten vernachlaessigbar: {active} (on-prem) / {frontier} (Frontier gesch.)",
+        "Indexing cost negligible: {active} (on-prem) / {frontier} estimated (frontier)",
+    ),
+    "sug_disabled": (
+        "{n} source(s) désactivée(s)",
+        "{n} deaktivierte Quelle(n)",
+        "{n} disabled source(s)",
+    ),
+    "sug_clean": (
+        "Catalogue sain - aucune alerte",
+        "Katalog gesund - keine Warnung",
+        "Catalogue healthy - no alert",
+    ),
+    "l_cost": (
+        "Coût d'indexation (frontier est.)",
+        "Indexierungskosten (Frontier gesch.)",
+        "Indexing cost (frontier est.)",
+    ),
+    "act_asof": ("Voir à date (as-of)", "Stand anzeigen (as-of)", "View as-of"),
 }
 
 
@@ -297,6 +335,44 @@ async def _fetch_transcript() -> _MemStat:
 # How many trailing days of memory growth the Historique tab plots.
 _HISTORY_DAYS = 30
 
+# Indicative Vertex text-embedding price (EUR / million tokens). The active
+# on-prem profile (Ollama bge-m3) has *zero* marginal cost - this is only the
+# estimated cost on the frontier path, kept indicative like tessera.llm.budget.
+_EMBED_EUR_PER_M = Decimal("0.02")
+_CHARS_PER_TOKEN = 4
+
+
+async def _fetch_index_chars() -> dict[str, int]:
+    """Real character volume per corpus category (for the indexing-cost estimate)."""
+    async with _connection() as conn:
+        conn.row_factory = dict_row
+        try:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    "SELECT metadata->>'category' AS cat, sum(length(text)) AS chars "
+                    "FROM documents GROUP BY 1"
+                )
+                return {
+                    str(r["cat"]): int(r["chars"] or 0)
+                    for r in await cur.fetchall()
+                    if r["cat"]
+                }
+        except Exception:
+            await conn.rollback()
+            return {}
+
+
+def _index_cost_eur(chars: int) -> Decimal:
+    """Estimated frontier embedding cost to index ``chars`` of text (EUR)."""
+    tokens = Decimal(chars) / Decimal(_CHARS_PER_TOKEN)
+    return tokens / Decimal(1_000_000) * _EMBED_EUR_PER_M
+
+
+def _fmt_eur(value: Decimal) -> str:
+    """Format an EUR amount with a French decimal comma, 4 decimals for sub-cent."""
+    decimals = 2 if value >= Decimal("0.01") else 4
+    return f"EUR {value:.{decimals}f}".replace(".", ",")
+
 
 async def _daily_growth(table: str) -> list[dict[str, object]]:
     """Real per-day row counts for a memory table (last _HISTORY_DAYS days).
@@ -394,7 +470,8 @@ async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
         _LTM_ID: await _daily_growth("long_term_memory"),
         _TX_ID: await _daily_growth("conversation_messages"),
     }
-    return _assemble(rows, ltm, tx, _load_probe(), consumers, fleet, history, lang)
+    index_chars = await _fetch_index_chars()
+    return _assemble(rows, ltm, tx, _load_probe(), consumers, fleet, history, index_chars, lang)
 
 
 def _corpus_detail(
@@ -618,6 +695,7 @@ def _assemble(
     consumers: dict[str, list[dict[str, object]]] | None = None,
     fleet: list[dict[str, object]] | None = None,
     mem_history: dict[str, list[dict[str, object]]] | None = None,
+    index_chars: dict[str, int] | None = None,
     lang: str = "fr",
     now: datetime | None = None,
 ) -> dict[str, object]:
@@ -626,6 +704,7 @@ def _assemble(
     consumers = consumers or {}
     fleet = fleet or []
     mem_history = mem_history or {}
+    index_chars = index_chars or {}
     now = now or datetime.now(UTC)
     agg = _aggregate(raw_rows)
     total_chunks = sum(agg.chunks.values()) or 1
@@ -726,9 +805,7 @@ def _assemble(
 
     _attach_descriptions(rows_out, agg, ltm, tx, lang)
     _attach_used_by(rows_out, consumers, fleet, lang)
-    for row in rows_out:
-        # Real daily growth for the memory stores; corpus has no time axis -> [].
-        row["growth"] = mem_history.get(str(row["id"]), [])
+    cost_frontier = _attach_growth_cost(rows_out, mem_history, index_chars)
 
     total_sources = len(rows_out)
     chunk_series = [agg.chunks[c] for c in ordered] or [0]
@@ -736,6 +813,11 @@ def _assemble(
         rows_out, chunk_series, lang_counts, ltm, tx, corpus_count, total_docs, total_chunks, lang
     )
     by_type, by_env, cost_by_source = _build_distributions(rows_out, lang_counts, lang)
+    cost_active = _fmt_eur(Decimal(0))
+    cost_frontier_s = _fmt_eur(cost_frontier)
+    suggestions = _build_suggestions(
+        rows_out, fleet, mem_history, cost_active, cost_frontier_s, lang
+    )
 
     return {
         "generated_at": now.isoformat(),
@@ -750,6 +832,12 @@ def _assemble(
         "by_type_total": total_sources,
         "by_env": by_env,
         "cost_by_source": cost_by_source,
+        "cost": {
+            "active": cost_active,
+            "frontier": cost_frontier_s,
+            "note": _t("l_cost", lang),
+        },
+        "suggestions": {"title": _t("sug_title", lang), "items": suggestions},
         "zones": {
             "by_type": _t("zone_bytype", lang),
             "by_env": _t("zone_volume", lang),
@@ -766,6 +854,97 @@ def _assemble(
         },
         "footer": {"total": total_sources, "source": _t("footer_source", lang)},
     }
+
+
+def _attach_growth_cost(
+    rows_out: list[dict[str, object]],
+    mem_history: dict[str, list[dict[str, object]]],
+    index_chars: dict[str, int],
+) -> Decimal:
+    """Attach the real daily growth (memory) and indexing cost (corpus) per row.
+
+    Returns the total estimated frontier indexing cost across the corpus.
+    """
+    cost_frontier = Decimal(0)
+    for row in rows_out:
+        row["growth"] = mem_history.get(str(row["id"]), [])
+        if row["id"] in {_LTM_ID, _TX_ID}:
+            row["cost"] = "-"  # memory embeddings are on-prem (free); no estimate
+        else:
+            cost = _index_cost_eur(index_chars.get(str(row["id"]), 0))
+            cost_frontier += cost
+            row["cost"] = _fmt_eur(cost)
+    return cost_frontier
+
+
+_LOW_CITE_PCT = 5.0
+
+
+def _build_suggestions(
+    rows_out: list[dict[str, object]],
+    fleet: list[dict[str, object]],
+    mem_history: dict[str, list[dict[str, object]]],
+    cost_active: str,
+    cost_frontier: str,
+    lang: str,
+) -> list[dict[str, object]]:
+    """Real, derived recommendations from the assembled signals (no fabrication)."""
+    out: list[dict[str, object]] = []
+
+    low = 0
+    for row in rows_out:
+        cite = str(row.get("citation", "-")).rstrip("%")
+        try:
+            if float(cite) < _LOW_CITE_PCT:
+                low += 1
+        except ValueError:
+            continue
+    if low:
+        out.append(
+            {
+                "tone": "warn",
+                "text": _t("sug_lowcite", lang).format(n=low),
+                "href": "/agent/connaissances",
+            }
+        )
+
+    regate = sum(1 for c in fleet if not c.get("passed", False))
+    if regate:
+        out.append(
+            {
+                "tone": "warn",
+                "text": _t("sug_regate", lang).format(n=regate),
+                "href": "/configurer/garde-fous",
+            }
+        )
+
+    disabled = sum(1 for r in rows_out if r.get("status") == "disabled")
+    if disabled:
+        out.append(
+            {"tone": "muted", "text": _t("sug_disabled", lang).format(n=disabled), "href": ""}
+        )
+
+    ltm_recent = sum(_as_int(d.get("count")) for d in mem_history.get(_LTM_ID, []))
+    tx_recent = sum(_as_int(d.get("count")) for d in mem_history.get(_TX_ID, []))
+    if ltm_recent or tx_recent:
+        out.append(
+            {
+                "tone": "info",
+                "text": _t("sug_growth", lang).format(ltm=ltm_recent, tx=tx_recent),
+                "href": "",
+            }
+        )
+
+    out.append(
+        {
+            "tone": "good",
+            "text": _t("sug_cost", lang).format(active=cost_active, frontier=cost_frontier),
+            "href": "",
+        }
+    )
+    if not any(s["tone"] == "warn" for s in out):
+        out.insert(0, {"tone": "good", "text": _t("sug_clean", lang), "href": ""})
+    return out
 
 
 def _build_kpis(

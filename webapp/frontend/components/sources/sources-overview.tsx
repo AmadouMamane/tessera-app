@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Boxes,
+  CalendarClock,
   ChevronsUpDown,
   Clock,
   Database,
@@ -40,6 +41,7 @@ const STATUS: Record<"active" | "disabled", { dot: string; text: string }> = {
   disabled: { dot: "bg-[var(--tessera-text-muted)]", text: "text-[var(--tessera-text-muted)]" },
 };
 const KNOWLEDGE_HREF = "/agent/connaissances";
+const ASOF_HREF = "/prouver/etat-a-date";
 const VERDICT_DOT: Record<string, string> = {
   good: "bg-emerald-400",
   crit: "bg-red-400",
@@ -199,7 +201,10 @@ export function SourcesOverview() {
             />
             {view === "overview" ? (
               <>
-                <ActivityArea t={t} data={data} />
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+                  <ActivityArea t={t} data={data} />
+                  <Suggestions data={data} />
+                </div>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   <ByType t={t} data={data} />
                   <ByVolume data={data} />
@@ -266,6 +271,12 @@ function CommandBar({ t, note, onExport }: { t: T; note: string; onExport: () =>
         <ShieldCheck className="h-3.5 w-3.5" /> {note}
       </span>
       <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href={ASOF_HREF}
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] hover:border-[#2e72d2]"
+        >
+          <CalendarClock className="h-4 w-4" /> {t("actions.asof")}
+        </Link>
         <Button
           size="sm"
           variant="outline"
@@ -766,6 +777,48 @@ function ActivityArea({ t, data }: { t: T; data: Data }) {
         <path d={area} fill="url(#sm-area)" />
         <polyline points={line} fill="none" stroke="#34d399" strokeWidth="1.5" />
       </svg>
+    </Panel>
+  );
+}
+
+// Real derived recommendations (low-citation sources, re-validation blast radius,
+// memory growth, the honest negligible indexing cost). Each may deep-link.
+const SUG_DOT: Record<string, string> = {
+  warn: "bg-amber-400",
+  info: "bg-sky-400",
+  good: "bg-emerald-400",
+  muted: "bg-[var(--tessera-text-muted)]",
+};
+
+function Suggestions({ data }: { data: Data }) {
+  return (
+    <Panel title={data.suggestions.title}>
+      <ul className="flex flex-col gap-2">
+        {data.suggestions.items.map((s) => {
+          const body = (
+            <span className="inline-flex items-start gap-2">
+              <span className={cn("mt-1 h-1.5 w-1.5 shrink-0 rounded-full", SUG_DOT[s.tone])} />
+              <span className="text-[var(--tessera-text)]">{s.text}</span>
+            </span>
+          );
+          return (
+            <li key={s.text} className="text-[0.66rem] leading-relaxed">
+              {s.href ? (
+                <Link
+                  href={s.href as never}
+                  className="block rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 hover:border-[#2e72d2]"
+                >
+                  {body}
+                </Link>
+              ) : (
+                <span className="block rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5">
+                  {body}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </Panel>
   );
 }

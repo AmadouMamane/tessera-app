@@ -3600,7 +3600,8 @@
     },
     "actions": {
       "export": "Exportieren",
-      "manage": "Wissen ansehen"
+      "manage": "Wissen ansehen",
+      "asof": "Stand anzeigen (as-of)"
     },
     "filters": {
       "search": "Quelle suchen...",
