@@ -220,6 +220,17 @@ def test_retention_and_embedding_are_real() -> None:
     assert emb["languages"] == "3"
 
 
+def test_growth_attaches_to_memory_and_not_corpus() -> None:
+    history = {
+        sm._LTM_ID: [{"day": "2026-06-19", "count": 10}, {"day": "2026-06-20", "count": 12}],
+    }
+    payload = sm._assemble(_rows(), _ltm(), _tx(), {}, {}, [], history, lang="fr", now=NOW)
+    by_id = {r["id"]: r for r in payload["sources"]}
+    assert by_id[sm._LTM_ID]["growth"] == history[sm._LTM_ID]
+    assert by_id[sm._TX_ID]["growth"] == []  # no history supplied for transcript
+    assert by_id["dora"]["growth"] == []  # corpus has no time axis
+
+
 def test_corpus_of_maps_regulation_and_product() -> None:
     assert sm._corpus_of("dora") == "regulations_dora"
     assert sm._corpus_of("gdpr") == "regulations_gdpr"

@@ -656,22 +656,62 @@ function LineageView({ t, data }: { t: T; data: Data }) {
 }
 
 function HistoryView({ t, data }: { t: T; data: Data }) {
+  const withGrowth = data.sources.filter((s) => s.growth.length > 0);
+  const corpus = data.sources.filter((s) => s.growth.length === 0);
   return (
-    <Panel title={t("view.history")}>
-      <p className="mb-2 inline-flex items-center gap-1.5 text-[0.64rem] text-amber-300/90">
-        <AlertTriangle className="h-3.5 w-3.5" /> {t("view.historyNote")}
-      </p>
-      <ul className="flex flex-col divide-y divide-[var(--tessera-border)]/60">
-        {data.sources.map((s) => (
-          <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
-            <span className="truncate text-[var(--tessera-text)]">{s.name}</span>
-            <span className="inline-flex shrink-0 items-center gap-1.5 text-[var(--tessera-text-muted)]">
-              <Clock className="h-3 w-3" /> {t("view.lastIndexed")}: {s.freshness}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </Panel>
+    <div className="flex flex-col gap-3">
+      <Panel title={t("view.memoryGrowth")}>
+        <p className="mb-2 inline-flex items-center gap-1.5 text-[0.64rem] text-amber-300/90">
+          <AlertTriangle className="h-3.5 w-3.5" /> {t("view.historyNote")}
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {withGrowth.map((s) => (
+            <GrowthCard key={s.id} t={t} source={s} />
+          ))}
+        </div>
+      </Panel>
+      <Panel title={t("view.corpusHeading")}>
+        <ul className="flex flex-col divide-y divide-[var(--tessera-border)]/60">
+          {corpus.map((s) => (
+            <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
+              <span className="truncate text-[var(--tessera-text)]">{s.name}</span>
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-[var(--tessera-text-muted)]">
+                <Clock className="h-3 w-3" /> {t("view.lastIndexed")}: {s.freshness}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </div>
+  );
+}
+
+function GrowthCard({ t, source }: { t: T; source: Row }) {
+  const total = source.growth.reduce((sum, d) => sum + d.count, 0);
+  const first = source.growth.at(0)?.day ?? "";
+  const last = source.growth.at(-1)?.day ?? "";
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex min-w-0 items-center gap-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+          <Database className="h-3.5 w-3.5 shrink-0 text-[#87bfff]" />
+          <span className="truncate">{source.name}</span>
+        </span>
+        <span className="shrink-0 text-[0.62rem] text-[var(--tessera-text-muted)]">
+          {t("view.total")}:{" "}
+          <span className="tabular-nums text-white">{total.toLocaleString("fr-FR")}</span>
+        </span>
+      </div>
+      <MetricSparkline
+        className="h-10 w-full"
+        values={source.growth.map((d) => d.count)}
+        tone="success"
+      />
+      <div className="flex items-center justify-between text-[0.56rem] tabular-nums text-[var(--tessera-text-muted)]">
+        <span>{first}</span>
+        <span>{last}</span>
+      </div>
+    </div>
   );
 }
 

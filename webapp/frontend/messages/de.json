@@ -3668,7 +3668,10 @@
       "history": "Historie & Snapshots",
       "historyNote": "Kein versionierter Snapshot-Speicher hier - reale letzte Indexierung unten.",
       "lastIndexed": "Letzte Indexierung",
-      "memoryNote": "Vom Agenten geschriebene Speicher (Langzeit + Transkript)."
+      "memoryNote": "Vom Agenten geschriebene Speicher (Langzeit + Transkript).",
+      "memoryGrowth": "Speicherwachstum (pro Tag)",
+      "corpusHeading": "Korpus (Provenienz Git / Ingestion)",
+      "total": "Gesamt"
     }
   },
   "roles": {

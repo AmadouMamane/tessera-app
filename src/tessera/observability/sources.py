@@ -294,6 +294,35 @@ async def _fetch_transcript() -> _MemStat:
     return stat
 
 
+# How many trailing days of memory growth the Historique tab plots.
+_HISTORY_DAYS = 30
+
+
+async def _daily_growth(table: str) -> list[dict[str, object]]:
+    """Real per-day row counts for a memory table (last _HISTORY_DAYS days).
+
+    The corpus has no time axis (one ingest batch), but the two memory tables
+    carry a real ``created_at`` spanning weeks - so this is genuine history, not
+    a fabricated snapshot timeline. Returns [] if the table is absent.
+    """
+    async with _connection() as conn:
+        conn.row_factory = dict_row
+        try:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    f"SELECT date_trunc('day', created_at)::date AS day, count(*) AS n "  # noqa: S608
+                    f"FROM {table} "
+                    f"WHERE created_at >= now() - interval '{int(_HISTORY_DAYS)} days' "
+                    "GROUP BY 1 ORDER BY 1"
+                )
+                return [
+                    {"day": str(r["day"]), "count": int(r["n"])} for r in await cur.fetchall()
+                ]
+        except Exception:
+            await conn.rollback()
+            return []
+
+
 def available_source_ids(corpus_categories: Sequence[str] | None = None) -> set[str]:
     """The known source ids (corpus categories + the two memory stores)."""
     cats = set(corpus_categories) if corpus_categories is not None else set(_SOURCE_META)
@@ -361,7 +390,11 @@ async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
     ltm = await _fetch_longterm()
     tx = await _fetch_transcript()
     consumers, fleet = _fetch_consumers()
-    return _assemble(rows, ltm, tx, _load_probe(), consumers, fleet, lang)
+    history = {
+        _LTM_ID: await _daily_growth("long_term_memory"),
+        _TX_ID: await _daily_growth("conversation_messages"),
+    }
+    return _assemble(rows, ltm, tx, _load_probe(), consumers, fleet, history, lang)
 
 
 def _corpus_detail(
@@ -584,6 +617,7 @@ def _assemble(
     probe: dict[str, object],
     consumers: dict[str, list[dict[str, object]]] | None = None,
     fleet: list[dict[str, object]] | None = None,
+    mem_history: dict[str, list[dict[str, object]]] | None = None,
     lang: str = "fr",
     now: datetime | None = None,
 ) -> dict[str, object]:
@@ -591,6 +625,7 @@ def _assemble(
     lang = _norm_lang(lang)
     consumers = consumers or {}
     fleet = fleet or []
+    mem_history = mem_history or {}
     now = now or datetime.now(UTC)
     agg = _aggregate(raw_rows)
     total_chunks = sum(agg.chunks.values()) or 1
@@ -691,6 +726,9 @@ def _assemble(
 
     _attach_descriptions(rows_out, agg, ltm, tx, lang)
     _attach_used_by(rows_out, consumers, fleet, lang)
+    for row in rows_out:
+        # Real daily growth for the memory stores; corpus has no time axis -> [].
+        row["growth"] = mem_history.get(str(row["id"]), [])
 
     total_sources = len(rows_out)
     chunk_series = [agg.chunks[c] for c in ordered] or [0]

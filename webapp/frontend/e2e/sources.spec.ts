@@ -144,6 +144,16 @@ test("the detail panel shows real metric tiles and tags", async ({ page }) => {
   await expect(detail.getByText("Réglementation")).toBeVisible(); // type tag
 });
 
+test("the history tab plots real memory growth, corpus stays provenance", async ({ page }) => {
+  await page.getByRole("button", { name: /Historique/ }).click();
+  // Real per-day growth chart for the two memory stores.
+  await expect(page.getByText(/Croissance de la mémoire/)).toBeVisible();
+  await expect(page.getByText("Mémoire long terme")).toBeVisible();
+  // Corpus has no time axis -> shown under a provenance heading with last-indexed.
+  await expect(page.getByText(/provenance Git/)).toBeVisible();
+  await expect(page.getByText(/snapshots versionnés/)).toBeVisible();
+});
+
 test("the knowledge action links to the Connaissances page", async ({ page }) => {
   await page.getByRole("link", { name: "Voir les connaissances" }).click();
   await page.waitForURL(/\/agent\/connaissances/, { timeout: 15_000 });

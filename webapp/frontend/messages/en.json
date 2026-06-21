@@ -3668,7 +3668,10 @@
       "history": "History & snapshots",
       "historyNote": "No versioned snapshot store here - real last indexing below.",
       "lastIndexed": "Last indexed",
-      "memoryNote": "Memory stores written by the agent (long-term + transcript)."
+      "memoryNote": "Memory stores written by the agent (long-term + transcript).",
+      "memoryGrowth": "Memory growth (per day)",
+      "corpusHeading": "Corpus (Git / ingestion provenance)",
+      "total": "Total"
     }
   },
   "roles": {

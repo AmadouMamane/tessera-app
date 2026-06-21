@@ -3668,7 +3668,10 @@
       "history": "Historique & snapshots",
       "historyNote": "Aucun magasin de snapshots versionnés ici - dernière indexation réelle ci-dessous.",
       "lastIndexed": "Dernière indexation",
-      "memoryNote": "Magasins mémoire écrits par l'agent (long terme + transcription)."
+      "memoryNote": "Magasins mémoire écrits par l'agent (long terme + transcription).",
+      "memoryGrowth": "Croissance de la mémoire (par jour)",
+      "corpusHeading": "Corpus (provenance Git / ingestion)",
+      "total": "Total"
     }
   },
   "roles": {

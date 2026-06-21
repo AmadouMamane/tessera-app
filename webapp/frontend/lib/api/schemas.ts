@@ -2788,6 +2788,7 @@ export const SourcesOverviewSchema = z.object({
       used_by_count: z.number().int(),
       consumer_ids: z.array(z.string()),
       infra: z.boolean(),
+      growth: z.array(z.object({ day: z.string(), count: z.number().int() })),
       detail: SmDetailSchema,
     }),
   ),
