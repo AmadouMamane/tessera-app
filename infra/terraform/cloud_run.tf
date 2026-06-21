@@ -95,7 +95,7 @@ resource "google_cloud_run_v2_service" "agent" {
         value = var.vertex_embedding_model
       }
       env {
-        name  = "TESSERA_OBS__CLOUD_LOGGING_PROJECT"
+        name  = "TESSERA_OBSERVABILITY__CLOUD_LOGGING_PROJECT"
         value = var.project_id
       }
       env {

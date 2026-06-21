@@ -11,7 +11,7 @@
 #
 # Usage:
 #   docker compose -f docker-compose.obs.claude.yml up -d
-#   Point the agent at the Collector: TESSERA_OBS__OTEL_COLLECTOR_ENDPOINT=http://localhost:4418
+#   Point the agent at the Collector: TESSERA_OBSERVABILITY__OTEL_COLLECTOR_ENDPOINT=http://localhost:4418
 # Backends:
 #   Phoenix (canonical)  http://localhost:16006
 #   Langfuse (2nd export) http://localhost:3900   (login: claude@tessera.local / claude-demo-pw)

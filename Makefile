@@ -1,5 +1,6 @@
 .PHONY: install lint typecheck format test test-integration test-all \
-        coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help
+        coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
+        obs-up obs-down obs-logs
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
@@ -95,6 +96,19 @@ bootstrap: install
 	$(MAKE) ingest-regulations
 	$(MAKE) seed
 	$(MAKE) eval-demo
+
+# ── Observability stack (OTel collector -> Phoenix + Langfuse) ──────────────
+# The agent only feeds traces when TESSERA_OBSERVABILITY__OTEL_ENDPOINT points at the
+# collector (see .env.example). `obs-up` boots the collector + Phoenix (UI on
+# http://localhost:16006); add `langfuse-web` for the LLMOps view.
+obs-up:
+	docker compose -f docker-compose.obs.claude.yml up -d otel-collector phoenix
+
+obs-down:
+	docker compose -f docker-compose.obs.claude.yml down
+
+obs-logs:
+	docker compose -f docker-compose.obs.claude.yml logs -f otel-collector phoenix
 
 # ── Local development ───────────────────────────────────────────────────────
 

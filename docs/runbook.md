@@ -98,7 +98,7 @@ are resolved from Secret Manager at start. Defaults are from
 | `TESSERA_VERTEX__LOCATION`        | `europe-west1`                | plain (region)                    |
 | `TESSERA_VERTEX__CHAT_MODEL`      | `gemini-2.0-flash-001`        | plain                             |
 | `TESSERA_VERTEX__EMBEDDING_MODEL` | `text-multilingual-embedding-002` | plain                         |
-| `TESSERA_OBS__CLOUD_LOGGING_PROJECT` | unset                      | plain (project id)                |
+| `TESSERA_OBSERVABILITY__CLOUD_LOGGING_PROJECT` | unset                      | plain (project id)                |
 | `TESSERA_GUARD__AUDIT_SINK`       | `file`                        | plain (`cloud_logging`)           |
 | `TESSERA_POSTGRES__DSN`           | local DSN                     | **secret** `postgres_url`         |
 | `TESSERA_API__BEARER_TOKEN`       | unset                         | **secret** `bearer_token`         |

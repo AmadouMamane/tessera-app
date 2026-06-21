@@ -54,7 +54,7 @@ jobs:
     env:
       TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@localhost:5432/tessera
       TESSERA_LLM_PROFILE: on_prem
-      TESSERA_OBS__METRICS_ENABLED: "false"
+      TESSERA_OBSERVABILITY__METRICS_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
 
