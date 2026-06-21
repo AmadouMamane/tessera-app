@@ -3671,7 +3671,9 @@
       "memoryNote": "Magasins mémoire écrits par l'agent (long terme + transcription).",
       "memoryGrowth": "Croissance de la mémoire (par jour)",
       "corpusHeading": "Corpus (provenance Git / ingestion)",
-      "total": "Total"
+      "total": "Total",
+      "activity": "Activité mémoire (par jour)",
+      "citationBySource": "Citation par source"
     }
   },
   "roles": {

@@ -124,8 +124,14 @@ export function SourcesOverview() {
     );
   }
 
+  // Persistent detail like the normative: default to the first source; an
+  // explicit close ("__none__") falls back to the empty hint.
   const selected: Row | null =
-    (selectedId && data.sources.find((s) => s.id === selectedId)) || null;
+    selectedId === "__none__"
+      ? null
+      : selectedId
+        ? (data.sources.find((s) => s.id === selectedId) ?? null)
+        : (data.sources[0] ?? null);
 
   const onSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -192,11 +198,15 @@ export function SourcesOverview() {
               onSort={onSort}
             />
             {view === "overview" ? (
-              <div className="grid gap-3 xl:grid-cols-3">
-                <ByType t={t} data={data} />
-                <ByVolume data={data} />
-                <ByLanguage data={data} />
-              </div>
+              <>
+                <ActivityArea t={t} data={data} />
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <ByType t={t} data={data} />
+                  <ByVolume data={data} />
+                  <ByCitation t={t} data={data} />
+                  <ByLanguage data={data} />
+                </div>
+              </>
             ) : null}
           </div>
           <DetailPanel
@@ -204,7 +214,7 @@ export function SourcesOverview() {
             row={selected}
             tab={tab}
             onTab={setTab}
-            onClose={() => setSelectedId(null)}
+            onClose={() => setSelectedId("__none__")}
           />
         </div>
       ) : (
@@ -717,6 +727,49 @@ function GrowthCard({ t, source }: { t: T; source: Row }) {
 
 // ── bottom charts ────────────────────────────────────────────────────────────
 
+// Real memory activity: merge the two memory stores' daily growth into one
+// wide area curve (the normative's prominent time-series). No fabricated axis -
+// the corpus has none, but the memory tables span weeks of real created_at.
+function ActivityArea({ t, data }: { t: T; data: Data }) {
+  const byDay = new Map<string, number>();
+  for (const s of data.sources) {
+    for (const d of s.growth) byDay.set(d.day, (byDay.get(d.day) ?? 0) + d.count);
+  }
+  const days = [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b));
+  if (days.length < 2) return null;
+  const W = 600;
+  const H = 80;
+  const max = Math.max(...days.map(([, n]) => n), 1);
+  const step = W / (days.length - 1);
+  const pts = days.map(([, n], i) => [i * step, H - (n / max) * (H - 8)] as const);
+  const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const area = `M0,${H} L${line.replaceAll(" ", " L")} L${W},${H} Z`;
+  return (
+    <Panel title={t("view.activity")}>
+      <div className="flex items-end justify-between gap-2 text-[0.56rem] tabular-nums text-[var(--tessera-text-muted)]">
+        <span>{days.at(0)?.[0]}</span>
+        <span>{days.at(-1)?.[0]}</span>
+      </div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="mt-1 h-20 w-full"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <title>{t("view.activity")}</title>
+        <defs>
+          <linearGradient id="sm-area" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#34d399" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#sm-area)" />
+        <polyline points={line} fill="none" stroke="#34d399" strokeWidth="1.5" />
+      </svg>
+    </Panel>
+  );
+}
+
 function ByType({ t, data }: { t: T; data: Data }) {
   return (
     <Panel title={data.zones.by_type}>
@@ -743,6 +796,35 @@ function ByVolume({ data }: { data: Data }) {
                 style={{ width: `${e.pct}%`, background: e.color }}
               />
             </div>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+// Real per-source citation rate (from the cached retrieval probe).
+function ByCitation({ t, data }: { t: T; data: Data }) {
+  const rows = data.sources
+    .map((s) => ({ name: s.name, pct: Number.parseFloat(s.citation) }))
+    .filter((r) => !Number.isNaN(r.pct))
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 6);
+  return (
+    <Panel title={t("view.citationBySource")}>
+      <ul className="flex flex-col gap-2">
+        {rows.map((r) => (
+          <li key={r.name} className="flex items-center gap-2 text-[0.66rem]">
+            <span className="w-28 shrink-0 truncate text-[var(--tessera-text)]">{r.name}</span>
+            <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
+              <div
+                className="h-full rounded-full bg-[#34d399]"
+                style={{ width: `${Math.min(100, r.pct)}%` }}
+              />
+            </div>
+            <span className="w-9 shrink-0 text-right tabular-nums text-[var(--tessera-text-muted)]">
+              {Math.round(r.pct)}%
+            </span>
           </li>
         ))}
       </ul>
@@ -843,22 +925,30 @@ function DetailPanel({
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <Tile
-          icon={<Layers className="h-3 w-3" />}
-          label={t("detail.tChunks")}
-          value={row.volume}
-        />
-        <Tile
-          icon={<Boxes className="h-3 w-3" />}
-          label={t("detail.tDocuments")}
-          value={row.units}
-        />
-        <Tile
-          icon={<ShieldCheck className="h-3 w-3" />}
-          label={t("detail.score")}
-          value={row.citation}
-        />
+      <div className="flex items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
+        <ScoreRing value={row.citation} caption={t("detail.score")} />
+        <dl className="grid min-w-0 flex-1 grid-cols-2 gap-x-3 gap-y-1 text-[0.62rem]">
+          <Fact
+            icon={<Layers className="h-3 w-3" />}
+            label={t("detail.tChunks")}
+            value={row.volume}
+          />
+          <Fact
+            icon={<Boxes className="h-3 w-3" />}
+            label={t("detail.tDocuments")}
+            value={row.units}
+          />
+          <Fact
+            icon={<Database className="h-3 w-3" />}
+            label={t("col.languages")}
+            value={row.languages}
+          />
+          <Fact
+            icon={<ShieldCheck className="h-3 w-3" />}
+            label={t("detail.tHits")}
+            value={String(row.hits)}
+          />
+        </dl>
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
@@ -951,13 +1041,49 @@ function Note({ text, icon }: { text: string; icon: ReactNode }) {
   );
 }
 
-function Tile({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2">
-      <p className="inline-flex items-center gap-1 truncate text-[0.54rem] text-[var(--tessera-text-muted)]">
+    <div className="min-w-0">
+      <dt className="inline-flex items-center gap-1 truncate text-[0.54rem] text-[var(--tessera-text-muted)]">
         <span className="text-[#87bfff]">{icon}</span> {label}
-      </p>
-      <p className="mt-0.5 text-[0.9rem] font-semibold tabular-nums text-white">{value}</p>
+      </dt>
+      <dd className="truncate text-[0.78rem] font-semibold tabular-nums text-white">{value}</dd>
+    </div>
+  );
+}
+
+// A single-arc score ring (the real citation rate); "-" renders an empty ring.
+function ScoreRing({ value, caption }: { value: string; caption: string }) {
+  const pct = Number.parseFloat(value);
+  const has = !Number.isNaN(pct);
+  const R = 24;
+  const C = 2 * Math.PI * R;
+  const filled = has ? Math.min(100, Math.max(0, pct)) : 0;
+  return (
+    <div className="relative h-[64px] w-[64px] shrink-0">
+      <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden="true">
+        <circle cx="32" cy="32" r={R} fill="none" stroke="var(--tessera-border)" strokeWidth="6" />
+        {has ? (
+          <circle
+            cx="32"
+            cy="32"
+            r={R}
+            fill="none"
+            stroke="#34d399"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={`${(filled / 100) * C} ${C}`}
+          />
+        ) : null}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="text-[0.82rem] font-semibold tabular-nums text-white">
+          {has ? `${Math.round(pct)}%` : "-"}
+        </span>
+        <span className="px-1 text-[0.4rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
+          {caption}
+        </span>
+      </div>
     </div>
   );
 }

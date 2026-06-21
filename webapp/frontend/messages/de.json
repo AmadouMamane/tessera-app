@@ -3671,7 +3671,9 @@
       "memoryNote": "Vom Agenten geschriebene Speicher (Langzeit + Transkript).",
       "memoryGrowth": "Speicherwachstum (pro Tag)",
       "corpusHeading": "Korpus (Provenienz Git / Ingestion)",
-      "total": "Gesamt"
+      "total": "Gesamt",
+      "activity": "Speicheraktivität (pro Tag)",
+      "citationBySource": "Zitation pro Quelle"
     }
   },
   "roles": {

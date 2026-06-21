@@ -49,9 +49,10 @@ test("the Type select filters by category", async ({ page }) => {
   await expect(rows).toHaveCount(4); // dora, gdpr, bafin, cnil
 });
 
-test("row click opens the tab-gated detail", async ({ page }) => {
+test("row click drives the tab-gated detail", async ({ page }) => {
   const detail = page.getByTestId("source-detail");
-  await expect(detail.getByText("Sélectionnez une source")).toBeVisible();
+  // The detail is populated by default (persistent panel, like the normative).
+  await expect(detail.getByText("DORA - Résilience opérationnelle").first()).toBeVisible();
   await page
     .getByTestId("sources-table")
     .getByRole("button", { name: "Mémoire long terme" })
@@ -152,6 +153,19 @@ test("the history tab plots real memory growth, corpus stays provenance", async 
   // Corpus has no time axis -> shown under a provenance heading with last-indexed.
   await expect(page.getByText(/provenance Git/)).toBeVisible();
   await expect(page.getByText(/snapshots versionnés/)).toBeVisible();
+});
+
+test("the overview shows the real activity area chart and citation panel", async ({ page }) => {
+  await expect(page.getByRole("heading", { name: /Activité mémoire/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Citation par source" })).toBeVisible();
+});
+
+test("the detail panel shows the real citation ring and facts", async ({ page }) => {
+  // Default-populated persistent panel (DORA): ring caption + the hits fact.
+  const detail = page.getByTestId("source-detail");
+  await expect(detail.getByText("DORA - Résilience opérationnelle").first()).toBeVisible();
+  await expect(detail.getByText("Citation").first()).toBeVisible(); // ring caption
+  await expect(detail.getByText("Requêtes")).toBeVisible(); // hits fact
 });
 
 test("the knowledge action links to the Connaissances page", async ({ page }) => {

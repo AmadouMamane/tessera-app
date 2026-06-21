@@ -3671,7 +3671,9 @@
       "memoryNote": "Memory stores written by the agent (long-term + transcript).",
       "memoryGrowth": "Memory growth (per day)",
       "corpusHeading": "Corpus (Git / ingestion provenance)",
-      "total": "Total"
+      "total": "Total",
+      "activity": "Memory activity (per day)",
+      "citationBySource": "Citation per source"
     }
   },
   "roles": {
