@@ -5133,5 +5133,10 @@
     "loading": "Modellkatalog wird geladen...",
     "empty": "Keine Modelle im Katalog.",
     "close": "Schließen"
+  },
+  "guardrailCatalogue": {
+    "loading": "Guardrail-Katalog wird geladen...",
+    "empty": "Keine Guardrail-Profile.",
+    "close": "Schließen"
   }
 }

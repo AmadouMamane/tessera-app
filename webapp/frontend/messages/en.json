@@ -5133,5 +5133,10 @@
     "loading": "Loading model catalogue...",
     "empty": "No models in the catalogue.",
     "close": "Close"
+  },
+  "guardrailCatalogue": {
+    "loading": "Loading guardrail catalogue...",
+    "empty": "No guardrail profiles.",
+    "close": "Close"
   }
 }

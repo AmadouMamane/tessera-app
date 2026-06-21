@@ -2938,6 +2938,32 @@ export const ModelCatalogueSchema = z.object({
 });
 export type ModelCatalogue = z.infer<typeof ModelCatalogueSchema>;
 
+// --- CONFIGURER platform guardrail catalogue (configurer/garde-fous) -------
+export const GuardrailCatalogueSchema = z.object({
+  available: z.boolean(),
+  subtitle: z.string().optional(),
+  kpis: z.array(z.object({ key: z.string(), label: z.string(), value: z.string() })).optional(),
+  columns: z.array(z.string()).optional(),
+  blocks: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        scope: z.string(),
+        composition: z.string(),
+        status: z.enum(["active", "available"]),
+        status_label: z.string(),
+        used_by: z.string(),
+        used_by_count: z.number().int(),
+        consumer_ids: z.array(z.string()),
+        detail: McDetailSchema,
+      }),
+    )
+    .optional(),
+  note: z.string().optional(),
+});
+export type GuardrailCatalogue = z.infer<typeof GuardrailCatalogueSchema>;
+
 // ---------------------------------------------------------------------------
 // Roles & access (page #18)
 // ---------------------------------------------------------------------------

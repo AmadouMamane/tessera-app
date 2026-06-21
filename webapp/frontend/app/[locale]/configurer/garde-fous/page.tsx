@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
-import { CatalogueConsumers } from "@/components/configurer/catalogue-consumers";
+import { GuardrailCatalogue } from "@/components/configurer/guardrail-catalogue";
 import { AppShell } from "@/components/layout/app-shell";
 
 interface PageProps {
@@ -25,7 +25,7 @@ export default async function PlatformGuardrailsPage({ params }: PageProps) {
         <AgentScopeFilter />
         <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>
       </div>
-      <CatalogueConsumers kind="guardrails" />
+      <GuardrailCatalogue />
     </AppShell>
   );
 }

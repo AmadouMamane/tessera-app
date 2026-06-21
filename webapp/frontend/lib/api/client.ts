@@ -57,8 +57,6 @@ import {
   CalibrationSchema,
   type CatalogueConsumers,
   CatalogueConsumersSchema,
-  type ModelCatalogue,
-  ModelCatalogueSchema,
   type CitationResolution,
   CitationResolutionSchema,
   type CitationSummary,
@@ -123,6 +121,8 @@ import {
   GraphTopologySchema,
   type GuardExplainReport,
   GuardExplainReportSchema,
+  type GuardrailCatalogue,
+  GuardrailCatalogueSchema,
   type HandoffReport,
   HandoffReportSchema,
   type HealthResponse,
@@ -155,6 +155,8 @@ import {
   MemoryObsReportSchema,
   type MetricPairs,
   MetricPairsSchema,
+  type ModelCatalogue,
+  ModelCatalogueSchema,
   type ModelComparison,
   ModelComparisonSchema,
   type ObsCostReport,
@@ -1378,6 +1380,19 @@ export async function fetchModelCatalogue(
 ): Promise<ModelCatalogue> {
   const params = new URLSearchParams({ lang, agent });
   return request(`/observability/model-catalogue?${params}`, { signal }, ModelCatalogueSchema);
+}
+
+export async function fetchGuardrailCatalogue(
+  lang: string,
+  agent: string,
+  signal?: AbortSignal,
+): Promise<GuardrailCatalogue> {
+  const params = new URLSearchParams({ lang, agent });
+  return request(
+    `/observability/guardrail-catalogue?${params}`,
+    { signal },
+    GuardrailCatalogueSchema,
+  );
 }
 
 /** Governed, audited proposal to add a new agent (registry is approved as a unit). */

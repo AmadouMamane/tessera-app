@@ -763,6 +763,25 @@ async def observability_model_catalogue(lang: str = "fr", agent: str = "all") ->
         return {"available": False}
 
 
+@router.get("/observability/guardrail-catalogue")
+async def observability_guardrail_catalogue(
+    lang: str = "fr", agent: str = "all"
+) -> dict[str, object]:
+    """CONFIGURER platform guardrail catalogue (configurer/garde-fous).
+
+    The guardrail profiles agents bind, with the real shared-policy composition,
+    audit posture and consuming agents (re-gate blast radius). Filterable by
+    agent. Degrades to ``available: false`` on failure.
+    """
+    from tessera.observability import guardrail_catalogue as gc_mod
+
+    try:
+        return {"available": True, **gc_mod.build_guardrail_catalogue(lang, agent_scope=agent)}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.guardrail_catalogue: failed: {exc}\n")
+        return {"available": False}
+
+
 @router.get("/observability/release-control")
 async def observability_release_control(agent: str = "all") -> dict[str, object]:
     """Release Control (AGIR): per-agent release pipeline + eval-gate verdict.

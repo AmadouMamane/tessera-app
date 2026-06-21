@@ -5133,5 +5133,10 @@
     "loading": "Chargement du catalogue de modèles...",
     "empty": "Aucun modèle au catalogue.",
     "close": "Fermer"
+  },
+  "guardrailCatalogue": {
+    "loading": "Chargement du catalogue de garde-fous...",
+    "empty": "Aucun profil de garde-fous.",
+    "close": "Fermer"
   }
 }
