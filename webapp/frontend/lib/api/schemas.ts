@@ -2731,6 +2731,8 @@ const SmConsumersSchema = z.object({
   count: z.number().int(),
   regate_count: z.number().int(),
   regate_label: z.string(),
+  model_changed: z.boolean(),
+  revalidate_label: z.string(),
   infra: z.boolean(),
   note: z.string(),
   items: z.array(

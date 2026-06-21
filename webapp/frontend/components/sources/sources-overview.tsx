@@ -46,6 +46,7 @@ const ASOF_HREF = "/prouver/etat-a-date";
 const ROLES_HREF = "/admin/roles-acces";
 const POLICY_HREF = "/configurer/garde-fous";
 const AUDIT_HREF = "/prouver/audit-logs";
+const REVALIDATE_HREF = "/agir/release-control";
 const VERDICT_DOT: Record<string, string> = {
   good: "bg-emerald-400",
   crit: "bg-red-400",
@@ -1218,6 +1219,17 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
       <p className="mt-1.5 text-[0.56rem] leading-relaxed text-[var(--tessera-text-muted)]">
         {consumers.note}
       </p>
+      {consumers.count > 0 ? (
+        <Link
+          href={REVALIDATE_HREF}
+          className={cn(
+            "mt-1.5 inline-flex items-center gap-1 text-[0.6rem] font-medium hover:underline",
+            consumers.model_changed ? "text-amber-300" : "text-[#87bfff]",
+          )}
+        >
+          <GitBranch className="h-3 w-3" /> {consumers.revalidate_label}
+        </Link>
+      ) : null}
     </div>
   );
 }

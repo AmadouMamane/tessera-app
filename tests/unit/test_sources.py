@@ -258,6 +258,40 @@ def test_versions_ot01_from_real_lineage() -> None:
     assert ltm_v["empty"]
 
 
+def test_model_change_drifts_and_regates_consumers() -> None:
+    # A run recorded with a different model than the active backend = drift.
+    stale = IngestionRun(
+        run_id="ING-0009",
+        corpus="regulations",
+        language="en",
+        embedding_model="text-embedding-legacy",
+        embedding_dimension=768,
+        chunk_target_chars=800,
+        chunk_overlap_chars=150,
+        chunk_count=10,
+        documents=1,
+        trigger="ingest_cli",
+        recorded_at="2026-05-01T00:00:00+00:00",
+        prev_hash="0" * 64,
+        hash="x",
+    )
+    payload = sm._assemble(
+        _rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), {}, {}, None, [], None, None,
+        "fr", NOW, {"regulations": [stale]},
+    )
+    by_id = {r["id"]: r for r in payload["sources"]}
+    dora = by_id["dora"]["detail"]
+    # OT-01 surfaces the drift; the embedding-model change is a re-gate trigger.
+    assert dora["versions"]["drift"]["changed"] is True
+    assert dora["versions"]["drift"]["from"] == "text-embedding-legacy"
+    assert dora["consumers"]["model_changed"] is True
+    # Model change re-gates EVERY consumer (1 consumer of regulations_dora here).
+    assert dora["consumers"]["regate_count"] == 1
+    assert dora["consumers"]["revalidate_label"]
+    # A product source with no drift keeps the normal (pass-based) re-gate.
+    assert by_id["comptes"]["detail"]["consumers"]["model_changed"] is False
+
+
 def test_growth_attaches_to_memory_and_not_corpus() -> None:
     history = {
         sm._LTM_ID: [{"day": "2026-06-19", "count": 10}, {"day": "2026-06-20", "count": 12}],

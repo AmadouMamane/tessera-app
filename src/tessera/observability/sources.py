@@ -280,6 +280,21 @@ _TR: dict[str, tuple[str, str, str]] = {
         "build: a memory-config version store (follow-up).",
     ),
     "ver_trigger": ("Déclencheur", "Ausloeser", "Trigger"),
+    "ver_drift": (
+        "Modèle d'embedding modifié ({old} -> {new}) - ré-indexation + re-validation requises",
+        "Embedding-Modell geaendert ({old} -> {new}) - Neuindexierung + Neuvalidierung noetig",
+        "Embedding model changed ({old} -> {new}) - re-index + re-validation required",
+    ),
+    "ub_revalidate": (
+        "Re-valider les consommateurs",
+        "Konsumenten neu validieren",
+        "Re-validate consumers",
+    ),
+    "ub_regate_model": (
+        "{n} à re-valider (modèle changé)",
+        "{n} neu zu validieren (Modell geaendert)",
+        "{n} to re-validate (model changed)",
+    ),
     "act_title": ("Activité récente", "Letzte Aktivitaet", "Recent activity"),
     # Store-lifecycle events (this PLATEFORME page is about the data substrate,
     # not the agent's reasoning turns).
@@ -553,6 +568,30 @@ def _ingest_corpus_of(cat: str) -> str:
     return "regulations" if _SOURCE_META.get(cat) == "reg" else "credit_aurore"
 
 
+def _model_drift_map(
+    lineage_runs: dict[str, list[IngestionRun]], lang: str
+) -> dict[str, dict[str, object]]:
+    """Per ingest-corpus drift: the latest run's model vs the active backend.
+
+    A re-embed with a different embedding model is a re-gate trigger: the index a
+    consumer was validated against no longer matches the model now in force, so
+    every consuming agent must be re-validated. Computed from real state (the
+    lineage store + the active backend); empty when the index matches the model.
+    """
+    active = embedding_model_name()
+    out: dict[str, dict[str, object]] = {}
+    for corpus, runs in lineage_runs.items():
+        if runs and runs[0].embedding_model != active:
+            old = runs[0].embedding_model
+            out[corpus] = {
+                "changed": True,
+                "from": old,
+                "to": active,
+                "label": _t("ver_drift", lang).format(old=old, new=active),
+            }
+    return out
+
+
 def _fetch_consumers() -> tuple[dict[str, list[dict[str, object]]], list[dict[str, object]]]:
     """Invert the registry knowledge bindings: corpus id -> consuming products.
 
@@ -818,6 +857,7 @@ def _attach_used_by(
     rows_out: list[dict[str, object]],
     consumers: dict[str, list[dict[str, object]]],
     fleet: list[dict[str, object]],
+    drift_map: dict[str, dict[str, object]],
     lang: str,
 ) -> None:
     """Enrich each row + its detail with the consuming products (real used-by).
@@ -833,7 +873,17 @@ def _attach_used_by(
         rid = str(row["id"])
         infra = rid in {_LTM_ID, _TX_ID}
         cons = list(fleet) if infra else consumers.get(_corpus_of(rid), [])
-        regate = sum(1 for c in cons if not c.get("passed", False))
+        # An embedding-model change invalidates EVERY consumer's prior gate, so it
+        # re-gates all of them - otherwise only consumers not currently passing.
+        model_changed = not infra and _ingest_corpus_of(rid) in drift_map
+        regate = len(cons) if model_changed else sum(1 for c in cons if not c.get("passed", False))
+        regate_label = (
+            _t("ub_regate_model", lang).format(n=regate)
+            if model_changed and regate
+            else _t("ub_regate", lang).format(n=regate)
+            if regate
+            else ""
+        )
         row["used_by"] = _used_by_label(cons, infra=infra, total=total, lang=lang)
         row["used_by_count"] = len(cons)
         row["consumer_ids"] = [str(c["agent_id"]) for c in cons]
@@ -845,7 +895,9 @@ def _attach_used_by(
                 "label": row["used_by"],
                 "count": len(cons),
                 "regate_count": regate,
-                "regate_label": _t("ub_regate", lang).format(n=regate) if regate else "",
+                "regate_label": regate_label,
+                "model_changed": model_changed,
+                "revalidate_label": _t("ub_revalidate", lang),
                 "infra": infra,
                 "note": _t("ub_note", lang),
                 "items": cons,
@@ -857,6 +909,44 @@ def _fmt_run_ts(iso: str) -> str:
         return datetime.fromisoformat(iso).strftime("%d/%m/%Y %H:%M")
     except ValueError:
         return iso
+
+
+def _memory_rows(ltm: _MemStat, tx: _MemStat, lang: str) -> list[dict[str, object]]:
+    """The two non-corpus memory store rows (long-term memory + transcript)."""
+    return [
+        {
+            "id": _LTM_ID,
+            "name": _t("name_ltm", lang),
+            "type": "memory",
+            "classification": "confidential",
+            "volume": _fmt_int(ltm.rows),
+            "volume_num": ltm.rows,
+            "units": str(ltm.subjects),
+            "languages": "-",
+            "freshness": _ago(ltm.last.isoformat(), lang) if ltm.last else "-",
+            "status": "active" if ltm.rows else "disabled",
+            "citation": "-",
+            "hits": 0,
+            "retention": _retention_for_memory(ltm.kinds, lang),
+            "detail": _memory_detail(ltm, is_ltm=True, lang=lang),
+        },
+        {
+            "id": _TX_ID,
+            "name": _t("name_tx", lang),
+            "type": "transcript",
+            "classification": "confidential",
+            "volume": _fmt_int(tx.rows),
+            "volume_num": tx.rows,
+            "units": _fmt_int(tx.conversations),
+            "languages": "-",
+            "freshness": _ago(tx.last.isoformat(), lang) if tx.last else "-",
+            "status": "active" if tx.rows else "disabled",
+            "citation": "-",
+            "hits": 0,
+            "retention": _t("ret_tx", lang),
+            "detail": _memory_detail(tx, is_ltm=False, lang=lang),
+        },
+    ]
 
 
 def _run_view(run: IngestionRun) -> dict[str, object]:
@@ -926,6 +1016,7 @@ def _attach_versions(
     rows_out: list[dict[str, object]],
     agg: _Aggregate,
     lineage: dict[str, list[IngestionRun]],
+    drift_map: dict[str, dict[str, object]],
     lang: str,
 ) -> None:
     """Attach the OT-01 version block (data/embedding lineage) to each row.
@@ -946,8 +1037,12 @@ def _attach_versions(
         elif rid == _TX_ID:
             detail["versions"] = _memory_versions(is_ltm=False, lang=lang)
         else:
-            runs = lineage.get(_ingest_corpus_of(rid), [])
-            detail["versions"] = _corpus_versions(rid, agg, runs, lang)
+            ic = _ingest_corpus_of(rid)
+            versions = _corpus_versions(rid, agg, lineage.get(ic, []), lang)
+            drift = drift_map.get(ic)
+            if drift:
+                versions["drift"] = drift
+            detail["versions"] = versions
 
 
 def _assemble(
@@ -1037,46 +1132,12 @@ def _assemble(
     corpus_count = len(rows_out)
     total_docs = sum(len(agg.docs.get(c, set())) for c in ordered)
 
-    rows_out.append(
-        {
-            "id": _LTM_ID,
-            "name": _t("name_ltm", lang),
-            "type": "memory",
-            "classification": "confidential",
-            "volume": _fmt_int(ltm.rows),
-            "volume_num": ltm.rows,
-            "units": str(ltm.subjects),
-            "languages": "-",
-            "freshness": _ago(ltm.last.isoformat(), lang) if ltm.last else "-",
-            "status": "active" if ltm.rows else "disabled",
-            "citation": "-",
-            "hits": 0,
-            "retention": _retention_for_memory(ltm.kinds, lang),
-            "detail": _memory_detail(ltm, is_ltm=True, lang=lang),
-        }
-    )
-    rows_out.append(
-        {
-            "id": _TX_ID,
-            "name": _t("name_tx", lang),
-            "type": "transcript",
-            "classification": "confidential",
-            "volume": _fmt_int(tx.rows),
-            "volume_num": tx.rows,
-            "units": _fmt_int(tx.conversations),
-            "languages": "-",
-            "freshness": _ago(tx.last.isoformat(), lang) if tx.last else "-",
-            "status": "active" if tx.rows else "disabled",
-            "citation": "-",
-            "hits": 0,
-            "retention": _t("ret_tx", lang),
-            "detail": _memory_detail(tx, is_ltm=False, lang=lang),
-        }
-    )
+    rows_out.extend(_memory_rows(ltm, tx, lang))
 
+    drift_map = _model_drift_map(lineage_runs, lang)
     _attach_descriptions(rows_out, agg, ltm, tx, lang)
-    _attach_used_by(rows_out, consumers, fleet, lang)
-    _attach_versions(rows_out, agg, lineage_runs, lang)
+    _attach_used_by(rows_out, consumers, fleet, drift_map, lang)
+    _attach_versions(rows_out, agg, lineage_runs, drift_map, lang)
     cost_frontier = _attach_growth_cost(rows_out, mem_history, index_chars)
 
     total_sources = len(rows_out)
