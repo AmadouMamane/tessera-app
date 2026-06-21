@@ -23,6 +23,9 @@ test.beforeEach(async ({ page }) => {
   await login(page);
   await page.goto(PAGE);
   await expect(page.getByTestId("sources-table").locator("tbody tr").first()).toBeVisible();
+  // Show all rows by default so count-based assertions are page-independent; the
+  // dedicated pagination test resets this to verify the default-10 behaviour.
+  await page.getByLabel("Lignes par page").selectOption("50");
 });
 
 test("lists the real corpus + memory sources", async ({ page }) => {
@@ -177,6 +180,23 @@ test("the overview shows real suggestions and the as-of control", async ({ page 
   await page.getByRole("link", { name: /Voir à date/ }).click();
   await page.waitForURL(/\/prouver\/etat-a-date/, { timeout: 15_000 });
   expect(page.url()).toContain("/prouver/etat-a-date");
+});
+
+test("the footer shows the real source-to-answer lineage and audit chain", async ({ page }) => {
+  await expect(page.getByRole("heading", { name: /Lineage/ })).toBeVisible();
+  // Real pipeline steps + the honest (broken) audit-chain status.
+  await expect(page.getByText("76 documents")).toBeVisible();
+  await expect(page.getByText("238 chunks - bge-m3")).toBeVisible();
+  await expect(page.getByText(/Chaîne d'audit/)).toBeVisible();
+});
+
+test("the table paginates by default", async ({ page }) => {
+  const rows = page.getByTestId("sources-table").locator("tbody tr");
+  await page.getByLabel("Lignes par page").selectOption("10");
+  await expect(rows).toHaveCount(10);
+  await expect(page.getByText(/1-10 sur 17/)).toBeVisible();
+  await page.getByLabel("Suivant").click();
+  await expect(rows).toHaveCount(7); // 17 - 10
 });
 
 test("the knowledge action links to the Connaissances page", async ({ page }) => {

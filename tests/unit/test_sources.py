@@ -265,6 +265,30 @@ def test_suggestions_are_derived_from_real_signals() -> None:
     assert "/agent/connaissances" in hrefs
 
 
+def test_lineage_is_the_real_source_to_answer_pipeline() -> None:
+    payload = sm._assemble(
+        _rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), {}, {}, (False, 16411, 16410),
+        lang="fr", now=NOW,
+    )
+    steps = {s["key"]: s["value"] for s in payload["lineage"]["steps"]}
+    assert steps["corpus"] == "3 documents"  # dora.pdf + comptes_fr + comptes_de
+    assert "bge-m3" in steps["index"]
+    assert "llama3.2:3b" in steps["agent"]  # real on-prem model
+    assert steps["response"] == "20/06/2026 12:00"  # tx.last
+    assert "16 411" in steps["proof"]  # the real audit length
+
+
+def test_audit_chain_is_honest_when_broken() -> None:
+    payload = sm._assemble(
+        _rows(), _ltm(), _tx(), {}, {}, [], {}, {}, (False, 16411, 16410), lang="fr", now=NOW
+    )
+    audit = payload["audit"]
+    assert audit["verified"] is False
+    assert audit["tone"] == "crit"
+    assert "16410" in audit["label"]  # honest break location, not a fake "intact"
+    assert audit["length"] == "16 411"
+
+
 def test_corpus_of_maps_regulation_and_product() -> None:
     assert sm._corpus_of("dora") == "regulations_dora"
     assert sm._corpus_of("gdpr") == "regulations_gdpr"

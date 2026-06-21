@@ -2818,6 +2818,25 @@ export const SourcesOverviewSchema = z.object({
     title: z.string(),
     items: z.array(z.object({ tone: z.string(), text: z.string(), href: z.string() })),
   }),
+  lineage: z.object({
+    title: z.string(),
+    steps: z.array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        value: z.string(),
+        href: z.string().optional(),
+      }),
+    ),
+  }),
+  audit: z.object({
+    verified: z.boolean(),
+    tone: z.string(),
+    label: z.string(),
+    length: z.string(),
+    checked_label: z.string(),
+    checked: z.string(),
+  }),
   embedding: z.object({
     model: z.string(),
     dim: z.string(),

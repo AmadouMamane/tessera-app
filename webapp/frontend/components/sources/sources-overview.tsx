@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -226,6 +226,7 @@ export function SourcesOverview() {
         <LensView t={t} view={view} data={data} />
       )}
 
+      {view === "overview" ? <LineageFooter data={data} /> : null}
       <Footer t={t} data={data} />
     </div>
   );
@@ -397,6 +398,15 @@ function SourceTable({
   sortDir: "asc" | "desc";
   onSort: (key: SortKey) => void;
 }) {
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset to page 1 when the filtered set or page size changes.
+  useEffect(() => setPage(1), [rows.length, perPage]);
+  const total = rows.length;
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const safePage = Math.min(page, pages);
+  const start = (safePage - 1) * perPage;
+  const paged = rows.slice(start, start + perPage);
   return (
     <div
       data-testid="sources-table"
@@ -440,7 +450,7 @@ function SourceTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((s) => {
+            {paged.map((s) => {
               const active = s.id === selectedId;
               return (
                 <tr
@@ -507,8 +517,47 @@ function SourceTable({
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between border-t border-[var(--tessera-border)] px-3 py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-        <span>{t("footer.total", { n: rows.length })}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+        <span className="tabular-nums">
+          {total === 0 ? 0 : start + 1}-{Math.min(start + perPage, total)} {t("page.of")} {total}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+            aria-label={t("page.prev")}
+            className="rounded border border-[var(--tessera-border)] px-1.5 py-0.5 disabled:opacity-40 hover:enabled:border-[#2e72d2]"
+          >
+            ‹
+          </button>
+          <span className="tabular-nums">
+            {safePage}/{pages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(pages, p + 1))}
+            disabled={safePage >= pages}
+            aria-label={t("page.next")}
+            className="rounded border border-[var(--tessera-border)] px-1.5 py-0.5 disabled:opacity-40 hover:enabled:border-[#2e72d2]"
+          >
+            ›
+          </button>
+          <label className="ml-1 inline-flex items-center gap-1">
+            <span className="sr-only">{t("page.perPage")}</span>
+            <select
+              value={perPage}
+              onChange={(e) => setPerPage(Number(e.target.value))}
+              className="cursor-pointer appearance-none rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[var(--tessera-text)] hover:border-[#2e72d2]"
+            >
+              {[10, 25, 50].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
     </div>
   );
@@ -1236,6 +1285,64 @@ function KV({ label, value }: { label: string; value: string }) {
       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{label}</dt>
       <dd className="min-w-0 truncate text-right text-[var(--tessera-text)]">{value}</dd>
     </div>
+  );
+}
+
+// The normative footer: the real source-to-answer lineage + audit-chain integrity.
+function LineageFooter({ data }: { data: Data }) {
+  const { lineage, audit } = data;
+  return (
+    <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+          {lineage.title}
+        </h3>
+        <span className="inline-flex items-center gap-2 text-[0.62rem] text-[var(--tessera-text-muted)]">
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                audit.tone === "good" ? "bg-emerald-400" : "bg-red-400",
+              )}
+            />
+            <span className={audit.tone === "good" ? "text-emerald-300" : "text-red-300"}>
+              {audit.label}
+            </span>
+          </span>
+          <span className="hidden sm:inline">
+            {audit.checked_label} : {audit.checked}
+          </span>
+        </span>
+      </div>
+      <div className="flex flex-wrap items-stretch gap-1.5">
+        {lineage.steps.map((s, i) => {
+          const inner = (
+            <div className="flex h-full min-w-[120px] flex-col rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5">
+              <span className="text-[0.52rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                {s.label}
+              </span>
+              <span className="truncate text-[0.68rem] font-medium text-[var(--tessera-text)]">
+                {s.value}
+              </span>
+            </div>
+          );
+          return (
+            <div key={s.key} className="flex items-center gap-1.5">
+              {s.href ? (
+                <Link href={s.href as never} className="hover:opacity-80">
+                  {inner}
+                </Link>
+              ) : (
+                inner
+              )}
+              {i < lineage.steps.length - 1 ? (
+                <span className="text-[var(--tessera-text-muted)]">→</span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

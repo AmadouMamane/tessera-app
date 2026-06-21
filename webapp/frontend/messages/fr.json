@@ -3675,6 +3675,12 @@
       "total": "Total",
       "activity": "Activité mémoire (par jour)",
       "citationBySource": "Citation par source"
+    },
+    "page": {
+      "of": "sur",
+      "prev": "Précédent",
+      "next": "Suivant",
+      "perPage": "Lignes par page"
     }
   },
   "roles": {

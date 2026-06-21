@@ -3675,6 +3675,12 @@
       "total": "Gesamt",
       "activity": "Speicheraktivität (pro Tag)",
       "citationBySource": "Zitation pro Quelle"
+    },
+    "page": {
+      "of": "von",
+      "prev": "Zurück",
+      "next": "Weiter",
+      "perPage": "Zeilen pro Seite"
     }
   },
   "roles": {

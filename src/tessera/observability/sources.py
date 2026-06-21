@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING
 
 from psycopg.rows import dict_row
 
+from tessera.guard.audit import verify_audit_chain
 from tessera.memory.governance import ttl_for
 from tessera.observability.knowledge import (
     _LANG_IDX,
@@ -46,6 +47,7 @@ from tessera.observability.knowledge import (
 )
 from tessera.retrieval.embeddings import embedding_dimension
 from tessera.retrieval.store import _connection
+from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -233,6 +235,31 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Indexing cost (frontier est.)",
     ),
     "act_asof": ("Voir à date (as-of)", "Stand anzeigen (as-of)", "View as-of"),
+    "ln_title": (
+        "Lineage : de la source à la réponse",
+        "Lineage: von der Quelle zur Antwort",
+        "Lineage: from source to answer",
+    ),
+    "ln_source": ("Source de données", "Datenquelle", "Data source"),
+    "ln_corpus": ("Corpus", "Korpus", "Corpus"),
+    "ln_index": ("Index embeddings", "Embedding-Index", "Embedding index"),
+    "ln_agent": ("Agent", "Agent", "Agent"),
+    "ln_response": ("Réponse générée", "Generierte Antwort", "Generated answer"),
+    "ln_proof": ("Preuve", "Nachweis", "Proof"),
+    "ln_docs": ("{n} documents", "{n} Dokumente", "{n} documents"),
+    "ln_chunks": ("{n} chunks - bge-m3", "{n} Chunks - bge-m3", "{n} chunks - bge-m3"),
+    "ln_entries": ("{n} entrées journalisées", "{n} Eintraege protokolliert", "{n} logged entries"),
+    "audit_ok": ("Chaîne d'audit intacte", "Audit-Kette intakt", "Audit chain intact"),
+    "audit_broken": (
+        "Chaîne d'audit rompue (entrée {n})",
+        "Audit-Kette gebrochen (Eintrag {n})",
+        "Audit chain broken (entry {n})",
+    ),
+    "audit_checked": (
+        "Dernière vérification d'intégrité",
+        "Letzte Integritaetspruefung",
+        "Last integrity check",
+    ),
 }
 
 
@@ -471,7 +498,11 @@ async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
         _TX_ID: await _daily_growth("conversation_messages"),
     }
     index_chars = await _fetch_index_chars()
-    return _assemble(rows, ltm, tx, _load_probe(), consumers, fleet, history, index_chars, lang)
+    chain = verify_audit_chain(get_settings().guard.audit_file)
+    audit = (chain.verified, chain.length, chain.broken_at)
+    return _assemble(
+        rows, ltm, tx, _load_probe(), consumers, fleet, history, index_chars, audit, lang
+    )
 
 
 def _corpus_detail(
@@ -696,6 +727,7 @@ def _assemble(
     fleet: list[dict[str, object]] | None = None,
     mem_history: dict[str, list[dict[str, object]]] | None = None,
     index_chars: dict[str, int] | None = None,
+    audit: tuple[bool, int, int | None] | None = None,
     lang: str = "fr",
     now: datetime | None = None,
 ) -> dict[str, object]:
@@ -818,6 +850,9 @@ def _assemble(
     suggestions = _build_suggestions(
         rows_out, fleet, mem_history, cost_active, cost_frontier_s, lang
     )
+    audit_block = _build_audit(audit, now, lang)
+    audit_len = audit[1] if audit else 0
+    lineage = _build_lineage(rows_out, fleet, total_docs, total_chunks, tx, ltm, audit_len, lang)
 
     return {
         "generated_at": now.isoformat(),
@@ -838,6 +873,8 @@ def _assemble(
             "note": _t("l_cost", lang),
         },
         "suggestions": {"title": _t("sug_title", lang), "items": suggestions},
+        "lineage": lineage,
+        "audit": audit_block,
         "zones": {
             "by_type": _t("zone_bytype", lang),
             "by_env": _t("zone_volume", lang),
@@ -875,6 +912,71 @@ def _attach_growth_cost(
             cost_frontier += cost
             row["cost"] = _fmt_eur(cost)
     return cost_frontier
+
+
+def _build_lineage(
+    rows_out: list[dict[str, object]],
+    fleet: list[dict[str, object]],
+    total_docs: int,
+    total_chunks: int,
+    tx: _MemStat,
+    ltm: _MemStat,
+    audit_len: int,
+    lang: str,
+) -> dict[str, object]:
+    """The real source-to-answer pipeline (the normative footer lineage).
+
+    Every step is a real artifact: a corpus source -> the corpus documents -> the
+    pgvector embedding index -> a consuming agent (registry) -> the latest real
+    transcript answer -> the audit log as the proof. The agent model is the real
+    on-prem model the agents run (llama3.2:3b).
+    """
+    corpus_rows = [r for r in rows_out if not r["infra"]]
+    default_source = str(corpus_rows[0]["name"]) if corpus_rows else "-"
+    agent_name = str(fleet[0]["name"]) if fleet else "-"
+    last_answer = tx.last or ltm.last
+    answer_value = last_answer.strftime("%d/%m/%Y %H:%M") if last_answer else "-"
+    steps = [
+        {"key": "source", "label": _t("ln_source", lang), "value": default_source},
+        {
+            "key": "corpus",
+            "label": _t("ln_corpus", lang),
+            "value": _t("ln_docs", lang).format(n=total_docs),
+        },
+        {
+            "key": "index",
+            "label": _t("ln_index", lang),
+            "value": _t("ln_chunks", lang).format(n=total_chunks),
+        },
+        {"key": "agent", "label": _t("ln_agent", lang), "value": f"{agent_name} - llama3.2:3b"},
+        {"key": "response", "label": _t("ln_response", lang), "value": answer_value},
+        {
+            "key": "proof",
+            "label": _t("ln_proof", lang),
+            "value": _t("ln_entries", lang).format(n=_fmt_int(audit_len)),
+            "href": "/prouver/audit-logs",
+        },
+    ]
+    return {"title": _t("ln_title", lang), "steps": steps}
+
+
+def _build_audit(
+    audit: tuple[bool, int, int | None] | None, now: datetime, lang: str
+) -> dict[str, object]:
+    """Real audit-chain integrity (verify_audit_chain). Honest when broken."""
+    verified, length, broken_at = audit or (True, 0, None)
+    if verified:
+        label = _t("audit_ok", lang)
+    else:
+        label = _t("audit_broken", lang).format(n=broken_at if broken_at is not None else "?")
+    return {
+        "verified": verified,
+        "tone": "good" if verified else "crit",
+        "label": label,
+        "length": _fmt_int(length),
+        "checked_label": _t("audit_checked", lang),
+        "checked": now.strftime("%d/%m/%Y %H:%M:%S"),
+    }
 
 
 _LOW_CITE_PCT = 5.0
