@@ -10,6 +10,7 @@ import {
   PackageCheck,
   RotateCcw,
   Search,
+  SquareArrowOutUpRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -29,7 +30,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { LOCALE_LABELS, type Locale, routing } from "@/i18n/routing";
 import {
   fetchAIAct,
@@ -180,6 +181,17 @@ export function Topbar({ title, description, contextItems = [], actions = [] }: 
             className="hidden lg:inline-flex"
           />
           <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
+          {/* Operator switcher (ADR 0013) — the cockpit is operator-only by
+              construction (the operator-rbac guard gates these routes), so this
+              "view the customer product" affordance is inherently operator-only.
+              The customer never sees the cockpit, so never sees this control. */}
+          <Link
+            href="/produit"
+            className="hidden h-9 items-center gap-2 rounded-full border border-[var(--tessera-border-strong)] bg-transparent px-3 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)] lg:inline-flex"
+          >
+            <SquareArrowOutUpRight className="h-4 w-4" />
+            {t("viewProduct")}
+          </Link>
           <LanguageSwitcher />
           <ThemeToggle className="h-9 w-9 rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]" />
           <AuthControl />

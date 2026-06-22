@@ -11,8 +11,9 @@ import { useRouter } from "@/i18n/navigation";
 
 /**
  * Credentials sign-in form (ADR 0009). Calls Auth.js with redirect:false so we
- * can show an inline error, then navigates to the selector on success. The
- * server route redirects single-space users to their only allowed shell.
+ * can show an inline error, then sends the user to the locale root on success.
+ * The root role-routes server-side (ADR 0013): identity is the door, so an
+ * operator lands in the cockpit — not on the demo picker.
  */
 export function LoginForm() {
   const t = useTranslations("auth.login");
@@ -32,7 +33,7 @@ export function LoginForm() {
       setError(true);
       return;
     }
-    router.push("/select-space");
+    router.push("/");
     router.refresh();
   }
 

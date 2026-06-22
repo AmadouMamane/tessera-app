@@ -5,6 +5,7 @@
     "bank": "Crédit Aurore",
     "tagline": "Pare-feu actif · Ancrage réglementaire UE",
     "operational": "Opérationnel",
+    "viewProduct": "Voir le produit",
     "disclaimer": "Crédit Aurore — démo non destinée à la production. Données fictives."
   },
   "nav": {
@@ -4534,6 +4535,9 @@
   "landing": {
     "welcome": "Bienvenue sur Tessera",
     "choose": "Choisissez votre espace pour continuer",
+    "demoBadge": "Démonstration",
+    "demoTitle": "Démonstration Tessera",
+    "demoSubtitle": "Raccourci d’évaluation : ouvrez l’un ou l’autre espace. Ce n’est pas la porte d’entrée du produit — un vrai utilisateur entre par son identité.",
     "brandTagline": "AI Control Plane",
     "user": {
       "initials": "TO",

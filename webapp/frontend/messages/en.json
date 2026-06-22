@@ -5,6 +5,7 @@
     "bank": "Crédit Aurore",
     "tagline": "Active firewall · EU regulatory grounding",
     "operational": "Operational",
+    "viewProduct": "View product",
     "disclaimer": "Crédit Aurore — demo, not for production use. Fictitious data."
   },
   "nav": {
@@ -4534,6 +4535,9 @@
   "landing": {
     "welcome": "Welcome to Tessera",
     "choose": "Choose your space to continue",
+    "demoBadge": "Demo",
+    "demoTitle": "Tessera demonstration",
+    "demoSubtitle": "Reviewer shortcut: open either space. This is not the product’s front door — a real user enters by identity.",
     "brandTagline": "AI Control Plane",
     "user": {
       "initials": "TO",

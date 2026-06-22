@@ -149,12 +149,18 @@ export function LandingLauncher() {
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header t={t} />
         <main className="flex flex-1 flex-col items-center justify-center px-6 pt-2 pb-36">
-          <section className="text-center">
+          <section className="flex flex-col items-center text-center">
+            {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
+                front door. Make the "démonstration" framing explicit and visible. */}
+            <span className="mb-[14px] inline-flex items-center gap-[7px] rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] px-[12px] py-[5px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--gold-strong)]">
+              <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold-strong)]" />
+              {t("demoBadge")}
+            </span>
             <h1 className="font-sans text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-[var(--text-primary)]">
-              {t("welcome")}
+              {t("demoTitle")}
             </h1>
-            <p className="mt-[10px] text-[15px] font-normal leading-[1.4] tracking-[0.01em] text-[var(--text-secondary)]">
-              {t("choose")}
+            <p className="mt-[10px] max-w-[560px] text-[15px] font-normal leading-[1.4] tracking-[0.01em] text-[var(--text-secondary)]">
+              {t("demoSubtitle")}
             </p>
           </section>
 
