@@ -1499,26 +1499,31 @@ function DetailPanel({
         </button>
       </div>
 
-      <div className="flex items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
-        <ScoreRing value={row.citation} caption={t("detail.score")} />
-        <dl className="grid min-w-0 flex-1 grid-cols-2 gap-x-3 gap-y-1 text-[0.62rem]">
+      <div className="flex items-stretch gap-4 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3.5">
+        <div className="flex shrink-0 flex-col items-center justify-center gap-1.5 border-r border-[var(--tessera-border)] pr-4">
+          <ScoreRing value={row.citation} />
+          <span className="text-[0.58rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {t("detail.score")}
+          </span>
+        </div>
+        <dl className="grid min-w-0 flex-1 grid-cols-2 items-center gap-x-5 gap-y-3.5">
           <Fact
-            icon={<Layers className="h-3 w-3" />}
+            icon={<Layers className="h-3.5 w-3.5" />}
             label={t("detail.tChunks")}
             value={row.volume}
           />
           <Fact
-            icon={<Boxes className="h-3 w-3" />}
+            icon={<Boxes className="h-3.5 w-3.5" />}
             label={t("detail.tDocuments")}
             value={row.units}
           />
           <Fact
-            icon={<Database className="h-3 w-3" />}
+            icon={<Database className="h-3.5 w-3.5" />}
             label={t("col.languages")}
             value={row.languages}
           />
           <Fact
-            icon={<ShieldCheck className="h-3 w-3" />}
+            icon={<ShieldCheck className="h-3.5 w-3.5" />}
             label={t("detail.tHits")}
             value={String(row.hits)}
           />
@@ -1719,29 +1724,32 @@ function Note({ text, icon }: { text: string; icon: ReactNode }) {
 function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <dt className="inline-flex items-center gap-1 truncate text-[0.64rem] text-[var(--tessera-text-muted)]">
-        <span className="text-[#87bfff]">{icon}</span> {label}
+      <dt className="flex items-center gap-1.5 text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+        <span className="shrink-0 text-[#87bfff]">{icon}</span>
+        <span className="truncate">{label}</span>
       </dt>
-      <dd className="truncate text-[0.78rem] font-semibold tabular-nums text-white">{value}</dd>
+      <dd className="mt-1 truncate text-[0.95rem] font-semibold leading-none tabular-nums text-white">
+        {value}
+      </dd>
     </div>
   );
 }
 
 // A single-arc score ring (the real citation rate); "-" renders an empty ring.
-function ScoreRing({ value, caption }: { value: string; caption: string }) {
+function ScoreRing({ value }: { value: string }) {
   const pct = Number.parseFloat(value);
   const has = !Number.isNaN(pct);
-  const R = 24;
+  const R = 27;
   const C = 2 * Math.PI * R;
   const filled = has ? Math.min(100, Math.max(0, pct)) : 0;
   return (
-    <div className="relative h-[64px] w-[64px] shrink-0">
-      <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden="true">
-        <circle cx="32" cy="32" r={R} fill="none" stroke="var(--tessera-border)" strokeWidth="6" />
+    <div className="relative h-[68px] w-[68px] shrink-0">
+      <svg viewBox="0 0 68 68" className="h-full w-full -rotate-90" aria-hidden="true">
+        <circle cx="34" cy="34" r={R} fill="none" stroke="var(--tessera-border)" strokeWidth="6" />
         {has ? (
           <circle
-            cx="32"
-            cy="32"
+            cx="34"
+            cy="34"
             r={R}
             fill="none"
             stroke="#34d399"
@@ -1751,12 +1759,9 @@ function ScoreRing({ value, caption }: { value: string; caption: string }) {
           />
         ) : null}
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-[0.82rem] font-semibold tabular-nums text-white">
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-[1.05rem] font-semibold tabular-nums text-white">
           {has ? `${Math.round(pct)}%` : "-"}
-        </span>
-        <span className="px-1 text-[0.4rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
-          {caption}
         </span>
       </div>
     </div>
