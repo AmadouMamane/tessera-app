@@ -1042,23 +1042,36 @@ function RecentActivity({ data }: { data: Data }) {
   return (
     <Panel title={activity.title}>
       {activity.items.length === 0 ? (
-        <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{activity.empty}</p>
+        <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">{activity.empty}</p>
       ) : (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-col gap-2.5">
           {activity.items.map((e, i) => (
-            <li
-              key={`${e.time}-${e.text}-${i}`}
-              className="flex items-center justify-between gap-2 text-[0.64rem]"
-            >
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", SUG_DOT[e.tone])} />
-                <span className="truncate text-[var(--tessera-text)]">{e.text}</span>
-                {e.actor ? (
-                  <span className="truncate text-[var(--tessera-text-muted)]">- {e.actor}</span>
-                ) : null}
+            <li key={`${e.time}-${e.text}-${i}`} className="relative flex gap-2.5 text-[0.72rem]">
+              {/* connecting thread, centered on the dot column (w-4 -> 8px) */}
+              {i < activity.items.length - 1 ? (
+                <span
+                  aria-hidden
+                  className="-translate-x-1/2 absolute top-[7px] left-2 h-[calc(100%+0.625rem)] w-px bg-[var(--tessera-border)]"
+                />
+              ) : null}
+              <span className="flex w-4 shrink-0 justify-center">
+                <span
+                  className={cn(
+                    "z-10 mt-1 h-1.5 w-1.5 rounded-full ring-2 ring-[var(--tessera-surface)]",
+                    SUG_DOT[e.tone] ?? "bg-slate-400",
+                  )}
+                />
               </span>
-              <span className="shrink-0 font-mono text-[0.56rem] text-[var(--tessera-text-muted)]">
-                {e.time}
+              <span className="min-w-0">
+                <span className="block tabular-nums text-[var(--tessera-text-muted)]">
+                  {e.time}
+                </span>
+                <span className="text-[var(--tessera-text)]">
+                  {e.text}
+                  {e.actor ? (
+                    <span className="text-[var(--tessera-text-muted)]"> — {e.actor}</span>
+                  ) : null}
+                </span>
               </span>
             </li>
           ))}
