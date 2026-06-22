@@ -223,7 +223,7 @@ export function SourcesOverview() {
                   <ByLanguage data={data} />
                 </div>
               </div>
-              <RecentActivity data={data} />
+              <RecentActivity t={t} data={data} />
             </div>
           ) : null}
         </div>
@@ -1057,7 +1057,7 @@ const SUG_DOT: Record<string, string> = {
 
 // Real sources & memory lifecycle events (corpus indexing, memory writes,
 // transcript growth) - NOT the agent's reasoning turns.
-function RecentActivity({ data }: { data: Data }) {
+function RecentActivity({ t, data }: { t: T; data: Data }) {
   const { activity } = data;
   return (
     <Panel title={activity.title}>
@@ -1087,6 +1087,12 @@ function RecentActivity({ data }: { data: Data }) {
                   {e.time}
                 </span>
                 <span className="text-[var(--tessera-text)]">{e.text}</span>
+                {e.actor ? (
+                  <span className="block text-[0.66rem] text-[var(--tessera-text-muted)]">
+                    {t("activitySubject")}{" "}
+                    <span className="font-mono text-[var(--tessera-text)]">{e.actor}</span>
+                  </span>
+                ) : null}
               </span>
             </li>
           ))}

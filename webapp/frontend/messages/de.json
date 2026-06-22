@@ -3587,6 +3587,7 @@
   "sources": {
     "title": "Quellen & Speicher",
     "subtitle": "Das reale Datensubstrat des Agenten: pgvector-Korpus und Speicher.",
+    "activitySubject": "Subjekt",
     "tabs": {
       "overview": "Überblick",
       "sources": "Quellen",

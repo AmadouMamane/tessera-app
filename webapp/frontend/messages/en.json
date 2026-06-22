@@ -3587,6 +3587,7 @@
   "sources": {
     "title": "Sources & memory",
     "subtitle": "The agent's real data substrate: pgvector corpus and memory.",
+    "activitySubject": "subject",
     "tabs": {
       "overview": "Overview",
       "sources": "Sources",
