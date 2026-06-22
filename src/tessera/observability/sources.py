@@ -140,6 +140,9 @@ _TR: dict[str, tuple[str, str, str]] = {
     "l_conversations": ("Conversations", "Konversationen", "Conversations"),
     "l_citation": ("Taux de citation", "Zitationsrate", "Citation rate"),
     "l_hits": ("Requêtes ayant cité", "Anfragen mit Treffer", "Queries that cited"),
+    "q_ok": ("À jour", "Aktuell", "Up to date"),
+    "q_stale": ("Périmé", "Veraltet", "Stale"),
+    "q_unused": ("Jamais cité", "Nie zitiert", "Never cited"),
     "l_share": ("Part du corpus", "Korpusanteil", "Corpus share"),
     "l_lastindex": ("Dernière indexation", "Letzte Indexierung", "Last indexed"),
     "l_lastwrite": ("Dernière écriture", "Letzte Schreibung", "Last write"),
@@ -911,7 +914,7 @@ def _fmt_run_ts(iso: str) -> str:
         return iso
 
 
-def _memory_rows(ltm: _MemStat, tx: _MemStat, lang: str) -> list[dict[str, object]]:
+def _memory_rows(ltm: _MemStat, tx: _MemStat, now: datetime, lang: str) -> list[dict[str, object]]:
     """The two non-corpus memory store rows (long-term memory + transcript)."""
     return [
         {
@@ -924,8 +927,10 @@ def _memory_rows(ltm: _MemStat, tx: _MemStat, lang: str) -> list[dict[str, objec
             "units": str(ltm.subjects),
             "languages": "-",
             "freshness": _ago(ltm.last.isoformat(), lang) if ltm.last else "-",
+            "freshness_days": (now.date() - ltm.last.date()).days if ltm.last else None,
             "status": "active" if ltm.rows else "disabled",
             "citation": "-",
+            "citation_pct": None,
             "hits": 0,
             "retention": _retention_for_memory(ltm.kinds, lang),
             "detail": _memory_detail(ltm, is_ltm=True, lang=lang),
@@ -940,8 +945,10 @@ def _memory_rows(ltm: _MemStat, tx: _MemStat, lang: str) -> list[dict[str, objec
             "units": _fmt_int(tx.conversations),
             "languages": "-",
             "freshness": _ago(tx.last.isoformat(), lang) if tx.last else "-",
+            "freshness_days": (now.date() - tx.last.date()).days if tx.last else None,
             "status": "active" if tx.rows else "disabled",
             "citation": "-",
+            "citation_pct": None,
             "hits": 0,
             "retention": _t("ret_tx", lang),
             "detail": _memory_detail(tx, is_ltm=False, lang=lang),
@@ -1045,6 +1052,69 @@ def _attach_versions(
             detail["versions"] = versions
 
 
+_STALE_DAYS = 30
+
+
+def _attach_quality(
+    rows_out: list[dict[str, object]],
+    lineage_runs: dict[str, list[IngestionRun]],
+    lang: str,
+) -> None:
+    """Attach the quality-lens fields: effective version + a freshness/citation badge.
+
+    The badge is derived from real signals only: a source not (re)indexed for more
+    than ``_STALE_DAYS`` is flagged stale; a corpus source that no real query has
+    ever cited (citation 0) is flagged unused. Memory stores carry no citation
+    signal, so they are judged on freshness alone.
+    """
+    for row in rows_out:
+        rid = str(row["id"])
+        infra = bool(row.get("infra"))
+        fd = row.get("freshness_days")
+        pct = row.get("citation_pct")
+        # Effective version = the most recent ingestion run's embedding model, or
+        # the active model when no run is recorded (still the current version).
+        if rid == _TX_ID:
+            version = "—"
+        elif not infra:
+            runs = lineage_runs.get(_ingest_corpus_of(rid), [])
+            version = runs[0].embedding_model if runs else embedding_model_name()
+        else:
+            version = embedding_model_name()
+        stale = isinstance(fd, int) and fd > _STALE_DAYS
+        unused = (not infra) and isinstance(pct, int | float) and pct <= 0.0
+        if stale:
+            tone, label = "warn", _t("q_stale", lang)
+        elif unused:
+            tone, label = "warn", _t("q_unused", lang)
+        else:
+            tone, label = "good", _t("q_ok", lang)
+        row["version"] = version
+        row["quality_tone"] = tone
+        row["quality_label"] = label
+
+
+def _enrich_rows(
+    rows_out: list[dict[str, object]],
+    agg: _Aggregate,
+    ltm: _MemStat,
+    tx: _MemStat,
+    consumers: dict[str, list[dict[str, object]]],
+    fleet: list[dict[str, object]],
+    lineage_runs: dict[str, list[IngestionRun]],
+    mem_history: dict[str, list[dict[str, object]]],
+    index_chars: dict[str, int],
+    lang: str,
+) -> Decimal:
+    """Attach all per-row enrichments in order; return the frontier cost total."""
+    drift_map = _model_drift_map(lineage_runs, lang)
+    _attach_descriptions(rows_out, agg, ltm, tx, lang)
+    _attach_used_by(rows_out, consumers, fleet, drift_map, lang)
+    _attach_versions(rows_out, agg, lineage_runs, drift_map, lang)
+    _attach_quality(rows_out, lineage_runs, lang)
+    return _attach_growth_cost(rows_out, mem_history, index_chars)
+
+
 def _assemble(
     raw_rows: list[dict[str, object]],
     ltm: _MemStat,
@@ -1121,8 +1191,12 @@ def _assemble(
                 "freshness": (
                     _freshness(now, agg.freshest[cat], lang) if cat in agg.freshest else "-"
                 ),
+                "freshness_days": (
+                    (now.date() - agg.freshest[cat].date()).days if cat in agg.freshest else None
+                ),
                 "status": "active",
                 "citation": f"{round(cite)}%" if cite is not None else "-",
+                "citation_pct": cite,
                 "hits": _hits(cat),
                 "retention": _t("permanent", lang),
                 "detail": _corpus_detail(cat, agg, cite, _hits(cat), share, lang),
@@ -1132,13 +1206,11 @@ def _assemble(
     corpus_count = len(rows_out)
     total_docs = sum(len(agg.docs.get(c, set())) for c in ordered)
 
-    rows_out.extend(_memory_rows(ltm, tx, lang))
+    rows_out.extend(_memory_rows(ltm, tx, now, lang))
 
-    drift_map = _model_drift_map(lineage_runs, lang)
-    _attach_descriptions(rows_out, agg, ltm, tx, lang)
-    _attach_used_by(rows_out, consumers, fleet, drift_map, lang)
-    _attach_versions(rows_out, agg, lineage_runs, drift_map, lang)
-    cost_frontier = _attach_growth_cost(rows_out, mem_history, index_chars)
+    cost_frontier = _enrich_rows(
+        rows_out, agg, ltm, tx, consumers, fleet, lineage_runs, mem_history, index_chars, lang
+    )
 
     total_sources = len(rows_out)
     chunk_series = [agg.chunks[c] for c in ordered] or [0]

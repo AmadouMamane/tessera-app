@@ -389,6 +389,38 @@ def test_corpus_of_maps_regulation_and_product() -> None:
     assert sm._corpus_of("cartes") == "credit_aurore"
 
 
+def test_attach_quality_flags_stale_unused_and_ok() -> None:
+    rows: list[dict[str, object]] = [
+        {"id": "cartes", "infra": False, "freshness_days": 2, "citation_pct": 20.0},
+        {"id": "dora", "infra": False, "freshness_days": 100, "citation_pct": 15.0},
+        {"id": "service", "infra": False, "freshness_days": 1, "citation_pct": 0.0},
+        {"id": sm._LTM_ID, "infra": True, "freshness_days": 1, "citation_pct": None},
+        {"id": sm._TX_ID, "infra": True, "freshness_days": 400, "citation_pct": None},
+    ]
+    sm._attach_quality(rows, {}, "fr")
+    tones = {str(r["id"]): r["quality_tone"] for r in rows}
+    assert tones["cartes"] == "good"
+    assert tones["dora"] == "warn"  # not (re)indexed for > 30 days
+    assert tones["service"] == "warn"  # never cited (citation 0)
+    assert tones[sm._LTM_ID] == "good"  # memory: fresh, citation N/A
+    assert tones[sm._TX_ID] == "warn"  # memory judged on freshness alone
+    # Effective version falls back to the active embedding model when no run is recorded.
+    cartes = next(r for r in rows if r["id"] == "cartes")
+    assert cartes["version"] == embedding_model_name()
+    tx = next(r for r in rows if r["id"] == sm._TX_ID)
+    assert tx["version"] == "—"
+
+
+def test_assemble_rows_carry_quality_fields() -> None:
+    payload = sm._assemble(_rows(), _ltm(), _tx(), {}, lang="fr", now=NOW)
+    for row in payload["sources"]:
+        assert "quality_tone" in row
+        assert "quality_label" in row
+        assert "version" in row
+        assert "freshness_days" in row
+        assert "citation_pct" in row
+
+
 def test_localization_switches_free_text() -> None:
     fr = sm._assemble(_rows(), _ltm(), _tx(), {}, lang="fr", now=NOW)
     en = sm._assemble(_rows(), _ltm(), _tx(), {}, lang="en", now=NOW)

@@ -3635,6 +3635,23 @@
       "usedBy": "Used by",
       "retention": "Retention"
     },
+    "quality": {
+      "subtitle": "Index freshness and real citation rate per source — spot the stale and the unused.",
+      "signalEvaluated": "Sources evaluated",
+      "signalFreshness": "Median freshness",
+      "signalCitation": "Median citation",
+      "signalWatch": "To watch",
+      "colSource": "Source",
+      "colType": "Type",
+      "colFreshness": "Freshness",
+      "colCitation": "Citation rate",
+      "colHits": "Hits",
+      "colVersion": "Version (ingestion run)",
+      "colState": "State",
+      "daysUnit": "d",
+      "na": "N/A",
+      "empty": "No source to evaluate."
+    },
     "detail": {
       "selectHint": "Select a source to see its detail.",
       "close": "Close",

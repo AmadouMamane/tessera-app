@@ -3635,6 +3635,23 @@
       "usedBy": "Verwendet von",
       "retention": "Aufbewahrung"
     },
+    "quality": {
+      "subtitle": "Indexierungs-Aktualität und reale Zitationsrate je Quelle — erkennt Veraltetes und Ungenutztes.",
+      "signalEvaluated": "Bewertete Quellen",
+      "signalFreshness": "Median-Aktualität",
+      "signalCitation": "Median-Zitation",
+      "signalWatch": "Zu beobachten",
+      "colSource": "Quelle",
+      "colType": "Typ",
+      "colFreshness": "Aktualität",
+      "colCitation": "Zitationsrate",
+      "colHits": "Hits",
+      "colVersion": "Version (Ingestion-Run)",
+      "colState": "Status",
+      "daysUnit": "T",
+      "na": "N/V",
+      "empty": "Keine Quelle zu bewerten."
+    },
     "detail": {
       "selectHint": "Wählen Sie eine Quelle, um Details zu sehen.",
       "close": "Schließen",

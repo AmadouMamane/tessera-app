@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Boxes,
   CalendarClock,
+  CheckCircle2,
   ChevronsUpDown,
   Clock,
   Database,
@@ -16,6 +17,8 @@ import {
   ShieldCheck,
   SortAsc,
   SortDesc,
+  Sparkles,
+  Tag,
   Users,
   X,
 } from "lucide-react";
@@ -65,7 +68,7 @@ const VIEWS = [
   "lineage",
   "history",
 ] as const;
-const TABLE_VIEWS = new Set(["overview", "sources", "memory", "quality"]);
+const TABLE_VIEWS = new Set(["overview", "sources", "memory"]);
 
 type T = ReturnType<typeof useTranslations<"sources">>;
 type Data = SourcesData;
@@ -119,9 +122,8 @@ export function SourcesOverview() {
   const viewRows = useMemo(() => {
     if (view === "sources") return rows.filter((r) => !r.infra);
     if (view === "memory") return rows.filter((r) => r.infra);
-    if (view === "quality" && !sortKey) return [...rows].sort((a, b) => citeNum(b) - citeNum(a));
     return rows;
-  }, [rows, view, sortKey]);
+  }, [rows, view]);
 
   if (!data) {
     return (
@@ -176,7 +178,7 @@ export function SourcesOverview() {
         </div>
       ) : null}
 
-      {isTable ? (
+      {isTable || view === "quality" ? (
         <FilterStrip
           t={t}
           search={search}
@@ -184,12 +186,27 @@ export function SourcesOverview() {
           typeFilter={typeFilter}
           onType={setTypeFilter}
           types={types}
-          count={viewRows.length}
+          count={view === "quality" ? rows.length : viewRows.length}
           total={data.sources.length}
         />
       ) : null}
 
-      {isTable ? (
+      {view === "quality" ? (
+        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="flex min-w-0 flex-col gap-3">
+            <Note text={t("quality.subtitle")} icon={<Sparkles className="h-3.5 w-3.5" />} />
+            <QualitySignals t={t} rows={rows} />
+            <QualityTable t={t} rows={rows} selectedId={selectedId} onSelect={onSelect} />
+          </div>
+          <DetailPanel
+            t={t}
+            row={selected}
+            tab={tab}
+            onTab={setTab}
+            onClose={() => setSelectedId("__none__")}
+          />
+        </div>
+      ) : isTable ? (
         <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="flex min-w-0 flex-col gap-3">
             {view === "memory" ? (
@@ -965,6 +982,239 @@ function ByLanguage({ data }: { data: Data }) {
 }
 
 // ── detail panel ─────────────────────────────────────────────────────────────
+
+// ── quality & freshness lens ───────────────────────────────────────────────
+
+function median(nums: number[]): number | null {
+  if (nums.length === 0) return null;
+  const s = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  const hi = s[mid] ?? 0;
+  if (s.length % 2) return hi;
+  const lo = s[mid - 1] ?? hi;
+  return (lo + hi) / 2;
+}
+
+function QualitySignals({ t, rows }: { t: T; rows: Row[] }) {
+  const corpus = rows.filter((r) => r.citation_pct !== null);
+  const freshDays = rows.map((r) => r.freshness_days).filter((d): d is number => d !== null);
+  const medFresh = median(freshDays);
+  const medCite = median(corpus.map((r) => r.citation_pct as number));
+  const watch = rows.filter((r) => r.quality_tone === "warn").length;
+  const cards: { key: string; label: string; value: string; tone?: string }[] = [
+    { key: "evaluated", label: t("quality.signalEvaluated"), value: String(corpus.length) },
+    {
+      key: "freshness",
+      label: t("quality.signalFreshness"),
+      value: medFresh === null ? "—" : `${medFresh} ${t("quality.daysUnit")}`,
+    },
+    {
+      key: "citation",
+      label: t("quality.signalCitation"),
+      value: medCite === null ? "—" : `${Math.round(medCite)} %`,
+    },
+    {
+      key: "watch",
+      label: t("quality.signalWatch"),
+      value: String(watch),
+      tone: watch > 0 ? "warn" : "good",
+    },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      {cards.map((c) => (
+        <div
+          key={c.key}
+          className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
+        >
+          <p className="text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {c.label}
+          </p>
+          <p
+            className={cn(
+              "mt-1 font-mono text-[0.95rem] font-semibold",
+              c.tone === "warn" ? "text-amber-300" : "text-white",
+            )}
+          >
+            {c.value}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+type QSort = "freshness" | "citation";
+
+function QualityTable({
+  t,
+  rows,
+  selectedId,
+  onSelect,
+}: {
+  t: T;
+  rows: Row[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const [sortKey, setSortKey] = useState<QSort | null>(null);
+  const [dir, setDir] = useState<"asc" | "desc">("desc");
+  const onSort = (k: QSort) => {
+    if (sortKey === k) setDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(k);
+      setDir("desc");
+    }
+  };
+  const sorted = useMemo(() => {
+    const arr = [...rows];
+    if (!sortKey) {
+      // Default lens: rows to watch first, then most stale (oldest) first.
+      return arr.sort((a, b) => {
+        const aw = a.quality_tone === "warn" ? 0 : 1;
+        const bw = b.quality_tone === "warn" ? 0 : 1;
+        if (aw !== bw) return aw - bw;
+        return (b.freshness_days ?? -1) - (a.freshness_days ?? -1);
+      });
+    }
+    const m = dir === "asc" ? 1 : -1;
+    return arr.sort((a, b) => {
+      if (sortKey === "freshness") return ((a.freshness_days ?? -1) - (b.freshness_days ?? -1)) * m;
+      return ((a.citation_pct ?? -1) - (b.citation_pct ?? -1)) * m;
+    });
+  }, [rows, sortKey, dir]);
+
+  if (sorted.length === 0) {
+    return (
+      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
+        {t("quality.empty")}
+      </p>
+    );
+  }
+
+  const sortHead = (key: QSort, label: string) => (
+    <th className="whitespace-nowrap px-2 py-1.5 font-medium">
+      <button
+        type="button"
+        onClick={() => onSort(key)}
+        className="inline-flex items-center gap-1 hover:text-[var(--tessera-text)]"
+      >
+        {label}
+        {sortKey === key ? (
+          dir === "asc" ? (
+            <SortAsc className="h-3 w-3 text-[#87bfff]" />
+          ) : (
+            <SortDesc className="h-3 w-3 text-[#87bfff]" />
+          )
+        ) : (
+          <ChevronsUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </button>
+    </th>
+  );
+
+  return (
+    <div
+      data-testid="quality-table"
+      className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.72rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-2 py-1.5 font-medium">{t("quality.colSource")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("quality.colType")}</th>
+              {sortHead("freshness", t("quality.colFreshness"))}
+              {sortHead("citation", t("quality.colCitation"))}
+              <th className="px-2 py-1.5 font-medium">{t("quality.colHits")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("quality.colVersion")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("quality.colState")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((s) => {
+              const active = s.id === selectedId;
+              const warn = s.quality_tone === "warn";
+              return (
+                <tr
+                  key={s.id}
+                  onClick={() => onSelect(s.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelect(s.id);
+                    }
+                  }}
+                  tabIndex={0}
+                  // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
+                  role="button"
+                  aria-label={s.name}
+                  className={cn(
+                    "cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
+                    active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
+                  )}
+                >
+                  <td className="px-2 py-1.5">
+                    <span className="inline-flex items-center gap-1.5 text-[var(--tessera-text)]">
+                      <Database className="h-3 w-3 text-[#87bfff]" /> {s.name}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    {t(`type.${s.type}`)}
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{s.freshness}</td>
+                  <td className="px-2 py-1.5">
+                    {s.citation_pct === null ? (
+                      <span className="text-[var(--tessera-text-muted)]">{t("quality.na")}</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-1.5 w-14 overflow-hidden rounded-full bg-[var(--tessera-border)]">
+                          <span
+                            className="block h-full rounded-full bg-[#5b8def]"
+                            style={{ width: `${Math.min(100, s.citation_pct)}%` }}
+                          />
+                        </span>
+                        <span className="tabular-nums text-[var(--tessera-text)]">
+                          {s.citation}
+                        </span>
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
+                    {s.hits}
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Tag className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <span className="truncate">{s.version}</span>
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[0.6rem]",
+                        warn
+                          ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                          : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+                      )}
+                    >
+                      {warn ? (
+                        <AlertTriangle className="h-3 w-3" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3" />
+                      )}
+                      {s.quality_label}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 function DetailPanel({
   t,

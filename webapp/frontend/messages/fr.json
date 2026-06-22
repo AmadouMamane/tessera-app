@@ -3635,6 +3635,23 @@
       "usedBy": "Utilisé par",
       "retention": "Rétention"
     },
+    "quality": {
+      "subtitle": "Fraîcheur d'indexation et taux de citation réel par source — repère le périmé et l'inutilisé.",
+      "signalEvaluated": "Sources évaluées",
+      "signalFreshness": "Fraîcheur médiane",
+      "signalCitation": "Citation médiane",
+      "signalWatch": "À surveiller",
+      "colSource": "Source",
+      "colType": "Type",
+      "colFreshness": "Fraîcheur",
+      "colCitation": "Taux de citation",
+      "colHits": "Hits",
+      "colVersion": "Version (run d'ingestion)",
+      "colState": "État",
+      "daysUnit": "j",
+      "na": "N/A",
+      "empty": "Aucune source à évaluer."
+    },
     "detail": {
       "selectHint": "Sélectionnez une source pour voir son détail.",
       "close": "Fermer",
