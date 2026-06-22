@@ -1077,19 +1077,19 @@ function ByCitation({ t, data }: { t: T; data: Data }) {
     <Panel title={t("view.citationBySource")}>
       <ul className="flex flex-col gap-2">
         {rows.map((r) => (
-          <li key={r.name} className="flex items-center gap-2 text-[0.68rem]">
-            <span title={r.name} className="w-32 shrink-0 truncate text-[var(--tessera-text)]">
-              {r.name}
-            </span>
-            <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
+          <li key={r.name} className="flex flex-col gap-1 text-[0.66rem]">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate text-[var(--tessera-text)]">{r.name}</span>
+              <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
+                {Math.round(r.pct)}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-[var(--tessera-bg)]">
               <div
                 className="h-full rounded-full bg-[#34d399]"
                 style={{ width: `${Math.min(100, r.pct)}%` }}
               />
             </div>
-            <span className="w-9 shrink-0 text-right tabular-nums text-[var(--tessera-text-muted)]">
-              {Math.round(r.pct)}%
-            </span>
           </li>
         ))}
       </ul>
@@ -1418,14 +1418,14 @@ function DetailPanel({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-base font-semibold text-white">{detail.name}</p>
+          <p className="truncate text-sm font-semibold text-white">{detail.name}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <Badge className={CLASS_BADGE[detail.classification]}>
               {t(`classification.${detail.classification}`)}
             </Badge>
             <span
               className={cn(
-                "inline-flex items-center gap-1 text-[0.72rem]",
+                "inline-flex items-center gap-1 text-[0.62rem]",
                 STATUS[detail.status].text,
               )}
             >
@@ -1446,7 +1446,7 @@ function DetailPanel({
 
       <div className="flex items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
         <ScoreRing value={row.citation} caption={t("detail.score")} />
-        <dl className="grid min-w-0 flex-1 grid-cols-2 gap-x-3 gap-y-1.5 text-[0.72rem]">
+        <dl className="grid min-w-0 flex-1 grid-cols-2 gap-x-3 gap-y-1 text-[0.62rem]">
           <Fact
             icon={<Layers className="h-3 w-3" />}
             label={t("detail.tChunks")}
@@ -1477,7 +1477,7 @@ function DetailPanel({
             type="button"
             onClick={() => onTab(s.key)}
             className={cn(
-              "rounded px-2 py-1 text-[0.72rem] font-medium",
+              "rounded px-2 py-1 text-[0.62rem] font-medium",
               s.key === section.key
                 ? "bg-[#0d3561] text-[#d8eaff]"
                 : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
@@ -1489,12 +1489,12 @@ function DetailPanel({
       </div>
 
       {tab === "overview" || section.key === "overview" ? (
-        <p className="text-[0.82rem] leading-relaxed text-[var(--tessera-text)]">
+        <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
           {detail.description}
         </p>
       ) : null}
 
-      <dl className="flex flex-col gap-1.5 text-[0.78rem]">
+      <dl className="flex flex-col gap-1 text-[0.66rem]">
         {section.rows.map((r) => (
           <KV key={r.label} label={r.label} value={r.value} />
         ))}
@@ -1504,7 +1504,7 @@ function DetailPanel({
         {tags.map((tag) => (
           <span
             key={tag}
-            className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]"
+            className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.64rem] text-[var(--tessera-text-muted)]"
           >
             {tag}
           </span>
@@ -1546,18 +1546,18 @@ function VersionsBlock({
 }) {
   return (
     <div className="border-t border-[var(--tessera-border)] pt-2" data-testid="source-versions">
-      <div className="mb-1.5 inline-flex items-center gap-1.5 text-[0.78rem] font-semibold text-[var(--tessera-text)]">
-        <History className="h-4 w-4 text-[#87bfff]" /> {versions.title}
+      <div className="mb-1.5 inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+        <History className="h-3.5 w-3.5 text-[#87bfff]" /> {versions.title}
       </div>
       {versions.drift?.changed ? (
-        <p className="mb-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[0.68rem] text-amber-300">
+        <p className="mb-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[0.64rem] text-amber-300">
           <AlertTriangle className="h-3 w-3" /> {versions.drift.label}
         </p>
       ) : null}
       <p className="mb-1 text-[0.64rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {versions.current_title}
       </p>
-      <dl className="mb-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[0.74rem]">
+      <dl className="mb-2 flex flex-col gap-1 text-[0.62rem]">
         {versions.current.map((r) => (
           <KV key={r.label} label={r.label} value={r.value} />
         ))}
@@ -1570,7 +1570,7 @@ function VersionsBlock({
           {versions.runs.map((run) => (
             <li
               key={run.run_id}
-              className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-[0.72rem]"
+              className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-[0.62rem]"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
@@ -1591,11 +1591,11 @@ function VersionsBlock({
           ))}
         </ul>
       ) : (
-        <p className="rounded-md border border-dashed border-[var(--tessera-border)] px-2 py-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        <p className="rounded-md border border-dashed border-[var(--tessera-border)] px-2 py-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text-muted)]">
           {versions.empty}
         </p>
       )}
-      <p className="mt-1.5 text-[0.66rem] leading-relaxed text-[var(--tessera-text-muted)]">
+      <p className="mt-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text-muted)]">
         {versions.note}
       </p>
     </div>
@@ -1606,11 +1606,11 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
   return (
     <div className="border-t border-[var(--tessera-border)] pt-2">
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[0.78rem] font-semibold text-[var(--tessera-text)]">
-          <Users className="h-4 w-4 text-[#87bfff]" /> {consumers.title}
+        <span className="inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+          <Users className="h-3.5 w-3.5 text-[#87bfff]" /> {consumers.title}
         </span>
         {consumers.regate_count > 0 ? (
-          <span className="inline-flex items-center gap-1 text-[0.68rem] text-amber-300">
+          <span className="inline-flex items-center gap-1 text-[0.64rem] text-amber-300">
             <AlertTriangle className="h-3 w-3" /> {consumers.regate_label}
           </span>
         ) : null}
@@ -1620,7 +1620,7 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
           <li
             key={c.agent_id}
             title={c.label}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.72rem]"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.62rem]"
           >
             <span
               className={cn("h-1.5 w-1.5 rounded-full", VERDICT_DOT[c.tone] ?? VERDICT_DOT.muted)}
@@ -1629,14 +1629,14 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
           </li>
         ))}
       </ul>
-      <p className="mt-1.5 text-[0.66rem] leading-relaxed text-[var(--tessera-text-muted)]">
+      <p className="mt-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text-muted)]">
         {consumers.note}
       </p>
       {consumers.count > 0 ? (
         <Link
           href={REVALIDATE_HREF}
           className={cn(
-            "mt-1.5 inline-flex items-center gap-1 text-[0.68rem] font-medium hover:underline",
+            "mt-1.5 inline-flex items-center gap-1 text-[0.64rem] font-medium hover:underline",
             consumers.model_changed ? "text-amber-300" : "text-[#87bfff]",
           )}
         >
@@ -1663,7 +1663,7 @@ function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: s
       <dt className="inline-flex items-center gap-1 truncate text-[0.64rem] text-[var(--tessera-text-muted)]">
         <span className="text-[#87bfff]">{icon}</span> {label}
       </dt>
-      <dd className="truncate text-[0.88rem] font-semibold tabular-nums text-white">{value}</dd>
+      <dd className="truncate text-[0.78rem] font-semibold tabular-nums text-white">{value}</dd>
     </div>
   );
 }
@@ -1784,7 +1784,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.64rem] font-medium",
         className,
       )}
     >
@@ -1873,14 +1873,14 @@ function MiniLinks({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <p className="text-[0.66rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <p className="text-[0.64rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {title}
       </p>
       {links.map((l) => (
         <Link
           key={l.href}
           href={l.href as never}
-          className="inline-flex items-center gap-1 truncate text-[0.72rem] text-[#87bfff] hover:underline"
+          className="inline-flex items-center gap-1 truncate text-[0.64rem] text-[#87bfff] hover:underline"
         >
           {l.label}
         </Link>
