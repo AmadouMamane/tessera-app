@@ -265,7 +265,7 @@ export function SourcesOverview() {
           ) : null}
         </div>
       ) : (
-        <LensView t={t} view={view} data={data} />
+        <LensView t={t} view={view} data={data} onSelect={onSelect} />
       )}
 
       <Footer t={t} data={data} />
@@ -823,12 +823,32 @@ function SourceTable({
 
 // ── non-table lens views ─────────────────────────────────────────────────────
 
-function LensView({ t, view, data }: { t: T; view: View; data: Data }) {
+function LensView({
+  t,
+  view,
+  data,
+  onSelect,
+}: {
+  t: T;
+  view: View;
+  data: Data;
+  onSelect: (id: string) => void;
+}) {
   if (view === "indexation") return <IndexationView t={t} data={data} />;
-  if (view === "access") return <AccessView t={t} data={data} />;
-  if (view === "retention") return <RetentionView t={t} data={data} />;
+  if (view === "access") return <AccessView t={t} data={data} onSelect={onSelect} />;
+  if (view === "retention") return <RetentionView t={t} data={data} onSelect={onSelect} />;
   if (view === "lineage") return <LineageView t={t} data={data} />;
   return <HistoryView t={t} data={data} />;
+}
+
+// Shared row interactivity for the lens lists/tables (click -> open the drawer).
+const ROW_INTERACT =
+  "group cursor-pointer outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]";
+function rowKeyActivate(e: ReactKeyboardEvent<HTMLElement>, fn: () => void) {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    fn();
+  }
 }
 
 function IndexationView({ t, data }: { t: T; data: Data }) {
@@ -875,7 +895,15 @@ function IndexationView({ t, data }: { t: T; data: Data }) {
   );
 }
 
-function AccessView({ t, data }: { t: T; data: Data }) {
+function AccessView({
+  t,
+  data,
+  onSelect,
+}: {
+  t: T;
+  data: Data;
+  onSelect: (id: string) => void;
+}) {
   return (
     <Panel title={t("view.access")}>
       <p className="mb-2 text-[0.64rem] text-[var(--tessera-text-muted)]">{t("view.accessNote")}</p>
@@ -883,7 +911,19 @@ function AccessView({ t, data }: { t: T; data: Data }) {
         {data.sources.map((s) => {
           const Icon = TYPE_ICON[s.type] ?? Database;
           return (
-            <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
+            <li
+              key={s.id}
+              onClick={() => onSelect(s.id)}
+              onKeyDown={(e) => rowKeyActivate(e, () => onSelect(s.id))}
+              tabIndex={0}
+              // biome-ignore lint/a11y/useSemanticElements: a list row opens the detail drawer; keyboard + role provided.
+              role="button"
+              aria-label={s.name}
+              className={cn(
+                "-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-[0.7rem]",
+                ROW_INTERACT,
+              )}
+            >
               <span className="inline-flex min-w-0 items-center gap-1.5">
                 <Icon
                   className={cn("h-3 w-3 shrink-0", TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]")}
@@ -906,6 +946,7 @@ function AccessView({ t, data }: { t: T; data: Data }) {
                     {c.name}
                   </span>
                 ))}
+                <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
               </span>
             </li>
           );
@@ -915,7 +956,15 @@ function AccessView({ t, data }: { t: T; data: Data }) {
   );
 }
 
-function RetentionView({ t, data }: { t: T; data: Data }) {
+function RetentionView({
+  t,
+  data,
+  onSelect,
+}: {
+  t: T;
+  data: Data;
+  onSelect: (id: string) => void;
+}) {
   return (
     <Panel title={t("view.retention")}>
       <table className="w-full border-collapse text-left text-[0.7rem]">
@@ -925,22 +974,37 @@ function RetentionView({ t, data }: { t: T; data: Data }) {
             <th className="px-2 py-1.5 font-medium">{t("col.type")}</th>
             <th className="px-2 py-1.5 font-medium">{t("col.retention")}</th>
             <th className="px-2 py-1.5 font-medium">{t("col.classification")}</th>
+            <th className="w-6 px-2 py-1.5" aria-hidden="true" />
           </tr>
         </thead>
         <tbody>
           {data.sources.map((s) => (
-            <tr key={s.id} className="border-b border-[var(--tessera-border)]/60">
+            <tr
+              key={s.id}
+              onClick={() => onSelect(s.id)}
+              onKeyDown={(e) => rowKeyActivate(e, () => onSelect(s.id))}
+              tabIndex={0}
+              // biome-ignore lint/a11y/useSemanticElements: a table row opens the detail drawer; keyboard + role provided.
+              role="button"
+              aria-label={s.name}
+              className={cn("border-b border-[var(--tessera-border)]/60", ROW_INTERACT)}
+            >
               <td className="px-2 py-1.5 text-[var(--tessera-text)]">{s.name}</td>
               <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
                 {t(`type.${s.type}`)}
               </td>
-              <td className="px-2 py-1.5 inline-flex items-center gap-1.5 text-[var(--tessera-text-muted)]">
-                <Clock className="h-3 w-3 text-[#87bfff]" /> {s.retention}
+              <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="h-3 w-3 text-[#87bfff]" /> {s.retention}
+                </span>
               </td>
               <td className="px-2 py-1.5">
                 <Badge className={CLASS_BADGE[s.classification]}>
                   {t(`classification.${s.classification}`)}
                 </Badge>
+              </td>
+              <td className="px-2 py-1.5 text-right">
+                <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
               </td>
             </tr>
           ))}
