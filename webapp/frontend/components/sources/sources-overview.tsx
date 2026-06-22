@@ -640,6 +640,7 @@ function SourceTable({
                   )}
                 </th>
               ))}
+              <th className="w-6 px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
@@ -660,7 +661,7 @@ function SourceTable({
                   role="button"
                   aria-label={s.name}
                   className={cn(
-                    "cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
+                    "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
                   )}
                 >
@@ -694,13 +695,16 @@ function SourceTable({
                       <span className="truncate">{s.used_by}</span>
                     </span>
                   </td>
+                  <td className="px-2 py-1.5 text-right">
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                  </td>
                 </tr>
               );
             })}
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={COLS.length}
+                  colSpan={COLS.length + 1}
                   className="px-2 py-6 text-center text-[0.7rem] text-[var(--tessera-text-muted)]"
                 >
                   {t("empty.rows")}
@@ -1281,6 +1285,7 @@ function QualityTable({
               <th className="px-2 py-1.5 font-medium">{t("quality.colHits")}</th>
               <th className="px-2 py-1.5 font-medium">{t("quality.colVersion")}</th>
               <th className="px-2 py-1.5 font-medium">{t("quality.colState")}</th>
+              <th className="w-6 px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
@@ -1302,7 +1307,7 @@ function QualityTable({
                   role="button"
                   aria-label={s.name}
                   className={cn(
-                    "cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
+                    "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
                   )}
                 >
@@ -1357,6 +1362,9 @@ function QualityTable({
                       )}
                       {s.quality_label}
                     </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-right">
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
                   </td>
                 </tr>
               );
