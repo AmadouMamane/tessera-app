@@ -4583,11 +4583,33 @@
         }
       }
     },
+    "recouvrement": {
+      "badge": "Business",
+      "title": "Collections console",
+      "desc": "The collections officer’s internal business tool: talk to the recouvrement agent (dunning, arrears, repayment schedules).",
+      "cta": "Open the collections console",
+      "authNote": "“collections” role sign-in required",
+      "items": {
+        "console": {
+          "title": "Chat console",
+          "desc": "Talk to the internal recouvrement agent"
+        },
+        "scope": {
+          "title": "Dunning & arrears",
+          "desc": "Schedules, reminders, advisor escalation"
+        },
+        "audit": {
+          "title": "Logged exchanges",
+          "desc": "Everything is traced in the audit log"
+        }
+      }
+    },
     "operator": {
       "badge": "Cockpit",
       "title": "Operator space",
       "desc": "A complete cockpit to supervise, configure and operate the AI platform.",
       "cta": "Enter the cockpit",
+      "authNote": "Operator sign-in required",
       "items": {
         "supervision": {
           "title": "Supervision",

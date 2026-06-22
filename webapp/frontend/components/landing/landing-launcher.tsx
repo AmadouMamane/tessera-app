@@ -5,6 +5,8 @@ import {
   Bell,
   ChevronRight,
   CircleHelp,
+  HandCoins,
+  Lock,
   MessageSquare,
   Search,
   ShieldCheck,
@@ -22,7 +24,7 @@ import { Link } from "@/i18n/navigation";
 import { DEFAULT_AGENT_ID, agentPath } from "@/lib/agent-context";
 import { cn } from "@/lib/cn";
 
-type Accent = "gold" | "cyan";
+type Accent = "gold" | "cyan" | "amber";
 type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
 
 interface SpaceItem {
@@ -42,6 +44,7 @@ const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--border-subtle": "rgba(148, 163, 184, 0.14)",
   "--border-gold": "rgba(214, 182, 106, 0.28)",
   "--border-cyan": "rgba(45, 212, 191, 0.26)",
+  "--border-amber": "rgba(245, 158, 11, 0.28)",
   "--text-primary": "#F8FAFC",
   "--text-secondary": "#A6B3C8",
   "--champagne": "#D6B66A",
@@ -50,24 +53,35 @@ const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--gold-strong": "var(--champagne-strong)",
   "--cyan": "#2DD4BF",
   "--cyan-soft": "#67E8F9",
+  "--amber": "#F59E0B",
+  "--amber-soft": "#FBBF24",
   "--success": "#22C55E",
   "--radius-lg": "24px",
   "--radius-md": "16px",
   "--shadow-gold": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
   "--shadow-cyan": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
+  "--shadow-amber": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
 // Cut-over: the customer space is a single surface — the chat. The former portal
 // sub-pages (requests/documents/alerts/settings) were retired (ui-contract.md).
-const CLIENT_ITEMS: SpaceItem[] = [
-  { icon: MessageSquare, key: "chat", href: "/produit" },
-];
+const CLIENT_ITEMS: SpaceItem[] = [{ icon: MessageSquare, key: "chat", href: "/produit" }];
 
 const OPERATOR_ITEMS: SpaceItem[] = [
   { icon: EyeIcon, key: "supervision", href: "/surveiller/vue-ensemble" },
   { icon: ShieldCheck, key: "management", href: "/agir/incidents-playbooks" },
   { icon: SlidersHorizontal, key: "configuration", href: "/configurer/signal-catalog" },
   { icon: UsersRound, key: "platform", href: "/admin/utilisateurs" },
+];
+
+// Recouvrement business console (ADR 0010 Phase C) — the internal collections
+// agent's own workspace (business plane), distinct from the cockpit (governance /
+// control plane). One surface: the real chat. The items describe its scope; they
+// all open the single /recouvrement console.
+const RECOUVREMENT_ITEMS: SpaceItem[] = [
+  { icon: MessageSquare, key: "console", href: "/recouvrement" },
+  { icon: HandCoins, key: "scope", href: "/recouvrement" },
+  { icon: ShieldCheck, key: "audit", href: "/recouvrement" },
 ];
 
 const ACCENT: Record<
@@ -111,6 +125,21 @@ const ACCENT: Record<
     icon: "text-[var(--cyan)]",
     soft: "text-[var(--cyan-soft)]",
     tone: "text-[var(--cyan)]",
+  },
+  amber: {
+    border: "border-[var(--border-amber)]",
+    button: "border-[var(--border-amber)] text-[var(--text-primary)]",
+    buttonStyle: {
+      background:
+        "linear-gradient(180deg, rgba(245,158,11,0.24), rgba(120,72,12,0.72) 55%, rgba(60,38,8,0.92))",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
+    },
+    cardStyle: {
+      boxShadow: "var(--shadow-amber)",
+    },
+    icon: "text-[var(--amber)]",
+    soft: "text-[var(--amber-soft)]",
+    tone: "text-[var(--amber-soft)]",
   },
 };
 
@@ -164,7 +193,7 @@ export function LandingLauncher() {
             </p>
           </section>
 
-          <section className="mt-16 grid w-full max-w-[1112px] grid-cols-1 gap-8 xl:grid-cols-[540px_540px]">
+          <section className="mt-14 grid w-full max-w-[1200px] grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             <SpaceCard
               t={t}
               ns="client"
@@ -176,12 +205,23 @@ export function LandingLauncher() {
             />
             <SpaceCard
               t={t}
+              ns="recouvrement"
+              accent="amber"
+              badgeIcon={<HandCoins className="h-[23px] w-[23px]" />}
+              href="/recouvrement"
+              items={RECOUVREMENT_ITEMS}
+              visual={<RecouvrementVisual />}
+              authRequired
+            />
+            <SpaceCard
+              t={t}
               ns="operator"
               accent="cyan"
               badgeIcon={<ShieldCheck className="h-[23px] w-[23px]" />}
               href={agentPath(DEFAULT_AGENT_ID, "synthese")}
               items={OPERATOR_ITEMS}
               visual={<CockpitVisual />}
+              authRequired
             />
           </section>
         </main>
@@ -240,14 +280,20 @@ function SpaceCard({
   href,
   items,
   visual,
+  authRequired = false,
 }: {
   t: T;
-  ns: "client" | "operator";
+  ns: "client" | "operator" | "recouvrement";
   accent: Accent;
   badgeIcon: ReactNode;
-  href: "/produit" | `/agents/${string}/synthese`;
+  href: "/produit" | "/recouvrement" | `/agents/${string}/synthese`;
   items: SpaceItem[];
   visual: ReactNode;
+  // Guarded surfaces (cockpit → platform roles; recouvrement → collections role)
+  // surface a "sign-in required" note so an unauthenticated reviewer understands
+  // they will hit the gate, not just bounce to /produit. routing ≠ authorization:
+  // the layout guard still decides; this only informs and links (ADR 0013).
+  authRequired?: boolean;
 }) {
   const a = ACCENT[accent];
 
@@ -286,6 +332,18 @@ function SpaceCard({
             <p className="mt-[10px] max-w-[330px] text-[13px] font-normal leading-[1.5] text-[var(--text-secondary)]">
               {t(`${ns}.desc`)}
             </p>
+            {authRequired ? (
+              <span
+                className={cn(
+                  "mt-[12px] inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[4px] text-[11px] font-medium",
+                  a.border,
+                  a.soft,
+                )}
+              >
+                <Lock className="h-[12px] w-[12px]" />
+                {t(`${ns}.authNote`)}
+              </span>
+            ) : null}
           </div>
           <div
             className={cn(
@@ -413,6 +471,28 @@ function CockpitVisual() {
             />
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function RecouvrementVisual() {
+  return (
+    <div className="relative h-[140px] w-[244px]">
+      {/* A small "relance / échéancier" statement motif — decorative only. */}
+      <div className="absolute right-0 top-0 h-[92px] w-[150px] rounded-[8px] border border-[var(--border-amber)] bg-[var(--bg-panel-soft)] p-[12px] shadow-[var(--shadow-amber)]">
+        <div className="flex items-center justify-between">
+          <span className="h-[6px] w-[64px] rounded-full bg-[var(--amber-soft)] opacity-70" />
+          <HandCoins className="h-[16px] w-[16px] text-[var(--amber)]" />
+        </div>
+        <div className="mt-[14px] h-[5px] w-[110px] rounded-full bg-[var(--border-subtle)]" />
+        <div className="mt-[10px] h-[5px] w-[88px] rounded-full bg-[var(--border-subtle)]" />
+        <div className="mt-[10px] h-[5px] w-[100px] rounded-full bg-[var(--border-subtle)]" />
+      </div>
+      <div className="absolute left-0 bottom-[6px] h-[64px] w-[120px] rounded-[8px] border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-[11px]">
+        <span className="block h-[5px] w-[40px] rounded-full bg-[var(--amber)] opacity-60" />
+        <div className="mt-[11px] h-[5px] w-[80px] rounded-full bg-[var(--border-subtle)]" />
+        <div className="mt-[9px] h-[5px] w-[58px] rounded-full bg-[var(--border-subtle)]" />
       </div>
     </div>
   );

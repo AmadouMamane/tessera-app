@@ -4583,11 +4583,33 @@
         }
       }
     },
+    "recouvrement": {
+      "badge": "Fachbereich",
+      "title": "Inkasso-Konsole",
+      "desc": "Das interne Fachwerkzeug des Inkasso-Sachbearbeiters: Sprechen Sie mit dem Inkasso-Agenten (Mahnungen, Rückstände, Tilgungspläne).",
+      "cta": "Inkasso-Konsole öffnen",
+      "authNote": "Anmeldung mit Rolle „collections“ erforderlich",
+      "items": {
+        "console": {
+          "title": "Chat-Konsole",
+          "desc": "Sprechen Sie mit dem internen Inkasso-Agenten"
+        },
+        "scope": {
+          "title": "Mahnungen & Rückstände",
+          "desc": "Tilgungspläne, Erinnerungen, Beratereskalation"
+        },
+        "audit": {
+          "title": "Protokollierte Gespräche",
+          "desc": "Alles wird im Audit-Protokoll erfasst"
+        }
+      }
+    },
     "operator": {
       "badge": "Cockpit",
       "title": "Betreiberbereich",
       "desc": "Ein vollständiges Cockpit zum Überwachen, Konfigurieren und Steuern der KI-Plattform.",
       "cta": "Zum Cockpit",
+      "authNote": "Betreiber-Anmeldung erforderlich",
       "items": {
         "supervision": {
           "title": "Überwachung",

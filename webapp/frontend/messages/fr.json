@@ -4583,11 +4583,33 @@
         }
       }
     },
+    "recouvrement": {
+      "badge": "Métier",
+      "title": "Console recouvrement",
+      "desc": "L’outil métier interne du chargé de recouvrement : échangez avec l’agent recouvrement (relances, impayés, échéanciers).",
+      "cta": "Ouvrir la console recouvrement",
+      "authNote": "Connexion rôle « collections » requise",
+      "items": {
+        "console": {
+          "title": "Console de chat",
+          "desc": "Échangez avec l’agent recouvrement interne"
+        },
+        "scope": {
+          "title": "Relances & impayés",
+          "desc": "Échéanciers, rappels, escalade conseiller"
+        },
+        "audit": {
+          "title": "Échanges journalisés",
+          "desc": "Tout est tracé dans le journal d’audit"
+        }
+      }
+    },
     "operator": {
       "badge": "Cockpit",
       "title": "Espace opérateur",
       "desc": "Un cockpit complet pour superviser, configurer et piloter la plateforme IA.",
       "cta": "Accéder au cockpit",
+      "authNote": "Connexion opérateur requise",
       "items": {
         "supervision": {
           "title": "Supervision",
