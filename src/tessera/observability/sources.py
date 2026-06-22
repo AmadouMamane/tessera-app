@@ -42,9 +42,9 @@ from tessera.observability.knowledge import (
     _ago,
     _fetch_rows,
     _freshness,
-    _load_probe,
     _norm_lang,
     _source_name,
+    load_citation_probe,
 )
 from tessera.retrieval.chunking import ChunkerConfig
 from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
@@ -670,8 +670,8 @@ async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
     latency = await _fetch_latency()
     cost_gauge = _read_cost_gauge()
     return _assemble(
-        rows, ltm, tx, _load_probe(), consumers, fleet, history, index_chars, audit, activity,
-        latency, cost_gauge, lang, lineage_runs=lineage,
+        rows, ltm, tx, await load_citation_probe(), consumers, fleet, history, index_chars,
+        audit, activity, latency, cost_gauge, lang, lineage_runs=lineage,
     )
 
 

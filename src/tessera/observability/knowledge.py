@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from psycopg.rows import dict_row
 
+from tessera.retrieval import citations
 from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
@@ -232,7 +233,13 @@ def _save_state(state: dict[str, dict[str, bool]]) -> None:
 
 
 def _load_probe() -> dict[str, object]:
-    """Return the full cached retrieval-probe payload (categories + _overall)."""
+    """Return the full cached retrieval-probe payload (categories + _overall).
+
+    Offline fallback only — the live path is :func:`load_citation_probe`, which
+    reads the durable Postgres counters. This still reads the file written by
+    ``scripts/probe_retrieval.py`` so an offline replay keeps working when the
+    database has no recorded queries yet.
+    """
     path = _probe_path()
     if not path.exists():
         return {}
@@ -241,6 +248,49 @@ def _load_probe() -> dict[str, object]:
     except (json.JSONDecodeError, OSError):
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def citation_probe_from_counts(counts: citations.CitationCounts) -> dict[str, object]:
+    """Shape durable citation counters into the probe payload (categories + _overall).
+
+    Identical format to ``scripts/probe_retrieval.py`` so the dashboards consume
+    it unchanged: ``categories[cat] = {citation, hits}`` plus an ``_overall``
+    block carrying citation / hitrate / coverage.
+    """
+    denom = counts.queries or 1
+    n_cats = len(_SOURCE_META)
+    cats: dict[str, object] = {
+        cat: {
+            "citation": round(100 * counts.hits.get(cat, 0) / denom, 1),
+            "hits": counts.hits.get(cat, 0),
+        }
+        for cat in _SOURCE_META
+    }
+    overall = {
+        "citation": round(100 * sum(counts.hits.values()) / (denom * n_cats), 1),
+        "hitrate": round(100 * counts.queries_with_hit / denom, 1),
+        "coverage": round(100 * sum(1 for v in counts.hits.values() if v) / n_cats, 1),
+    }
+    return {
+        "run_at": datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"),
+        "source": "postgres",
+        "queries": counts.queries,
+        "categories": cats,
+        "_overall": overall,
+    }
+
+
+async def load_citation_probe() -> dict[str, object]:
+    """Live citation telemetry: durable Postgres counters, file as fallback.
+
+    Reads the per-source citation counters recorded on every real retrieval
+    (:func:`tessera.retrieval.citations.record_retrieval_query`). Falls back to
+    the offline probe cache when the counters are unavailable or still empty.
+    """
+    counts = await citations.load_citation_counts()
+    if counts is None or counts.queries == 0:
+        return _load_probe()
+    return citation_probe_from_counts(counts)
 
 
 def _load_traffic() -> dict[str, object]:
@@ -356,7 +406,9 @@ async def build_connaissances(lang: str = "fr") -> dict[str, object]:
     Display labels are localized via ``lang`` (fr/de/en); logic keys
     (``status_tone``, ``type_tone``, ``fresh_days``, ``coverage``) stay stable.
     """
-    return _assemble(await _fetch_rows(), _load_state(), _load_probe(), _load_traffic(), lang)
+    return _assemble(
+        await _fetch_rows(), _load_state(), await load_citation_probe(), _load_traffic(), lang
+    )
 
 
 def _assemble(
