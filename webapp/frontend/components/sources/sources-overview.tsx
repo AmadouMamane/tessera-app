@@ -573,6 +573,19 @@ const COLS: { key: string; sort?: SortKey }[] = [
   { key: "citation", sort: "citation" },
   { key: "usedBy" },
 ];
+// Balanced fixed widths (table-fixed): wide enough for readable source names,
+// narrow for the numeric columns. Percentages are scaled by the browser to fill.
+const COL_W: Record<string, string> = {
+  name: "w-[22%]",
+  type: "w-[10%]",
+  classification: "w-[10%]",
+  volume: "w-[7%]",
+  units: "w-[7%]",
+  languages: "w-[9%]",
+  freshness: "w-[10%]",
+  citation: "w-[13%]",
+  usedBy: "w-[12%]",
+};
 
 function SourceTable({
   t,
@@ -610,7 +623,14 @@ function SourceTable({
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c) => (
-                <th key={c.key} className="truncate px-2 py-1.5 text-left font-medium">
+                <th
+                  key={c.key}
+                  className={cn(
+                    "truncate py-1.5 text-left font-medium",
+                    COL_W[c.key],
+                    c.key === "name" ? "pl-5 pr-2" : "px-2",
+                  )}
+                >
                   {c.sort ? (
                     <button
                       type="button"
@@ -665,7 +685,7 @@ function SourceTable({
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
                   )}
                 >
-                  <td className="px-2 py-1.5">
+                  <td className="py-1.5 pl-5 pr-2">
                     <span
                       className="flex items-center gap-1.5 text-[var(--tessera-text)]"
                       title={s.name}
@@ -1260,8 +1280,8 @@ function QualityTable({
     );
   }
 
-  const sortHead = (key: QSort, label: string) => (
-    <th className="whitespace-nowrap px-2 py-1.5 font-medium">
+  const sortHead = (key: QSort, label: string, width: string) => (
+    <th className={cn("truncate px-2 py-1.5 font-medium", width)}>
       <button
         type="button"
         onClick={() => onSort(key)}
@@ -1290,13 +1310,17 @@ function QualityTable({
         <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              <th className="truncate px-2 py-1.5 font-medium">{t("quality.colSource")}</th>
-              <th className="px-2 py-1.5 font-medium">{t("quality.colType")}</th>
-              {sortHead("freshness", t("quality.colFreshness"))}
-              {sortHead("citation", t("quality.colCitation"))}
-              <th className="px-2 py-1.5 font-medium">{t("quality.colHits")}</th>
-              <th className="px-2 py-1.5 font-medium">{t("quality.colVersion")}</th>
-              <th className="px-2 py-1.5 font-medium">{t("quality.colState")}</th>
+              <th className="w-[26%] truncate py-1.5 pl-5 pr-2 font-medium">
+                {t("quality.colSource")}
+              </th>
+              <th className="w-[12%] truncate px-2 py-1.5 font-medium">{t("quality.colType")}</th>
+              {sortHead("freshness", t("quality.colFreshness"), "w-[12%]")}
+              {sortHead("citation", t("quality.colCitation"), "w-[15%]")}
+              <th className="w-[8%] truncate px-2 py-1.5 font-medium">{t("quality.colHits")}</th>
+              <th className="w-[14%] truncate px-2 py-1.5 font-medium">
+                {t("quality.colVersion")}
+              </th>
+              <th className="w-[13%] truncate px-2 py-1.5 font-medium">{t("quality.colState")}</th>
               <th className="w-28 px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
@@ -1323,7 +1347,7 @@ function QualityTable({
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
                   )}
                 >
-                  <td className="px-2 py-1.5">
+                  <td className="py-1.5 pl-5 pr-2">
                     <span
                       className="flex items-center gap-1.5 text-[var(--tessera-text)]"
                       title={s.name}
