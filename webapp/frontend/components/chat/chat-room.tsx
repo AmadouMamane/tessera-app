@@ -70,13 +70,24 @@ const SUGGESTED_PROMPTS: Record<string, Suggestion[]> = {
   ],
 };
 
-export function ChatRoom() {
+export interface ExternalChatPrompt {
+  id: string;
+  prompt: string;
+}
+
+interface ChatRoomProps {
+  externalPrompt?: ExternalChatPrompt | null;
+  onExternalPromptHandled?: (id: string) => void;
+}
+
+export function ChatRoom({ externalPrompt, onExternalPromptHandled }: ChatRoomProps = {}) {
   const t = useTranslations("chat");
   const locale = useLocale() as Locale;
   const composerRef = useRef<ChatComposerHandle>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const handledExternalPromptRef = useRef<string | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
 
   const {
@@ -308,6 +319,15 @@ export function ChatRoom() {
     removeLastExchange();
     void sendMessage(lastUserMsg.content);
   }, [isStreaming, messages, removeLastExchange, sendMessage]);
+
+  useEffect(() => {
+    if (!externalPrompt || isStreaming || handledExternalPromptRef.current === externalPrompt.id) {
+      return;
+    }
+    handledExternalPromptRef.current = externalPrompt.id;
+    onExternalPromptHandled?.(externalPrompt.id);
+    void sendMessage(externalPrompt.prompt);
+  }, [externalPrompt, isStreaming, onExternalPromptHandled, sendMessage]);
 
   const suggestions = SUGGESTED_PROMPTS[locale] ?? SUGGESTED_PROMPTS.en ?? [];
 

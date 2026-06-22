@@ -5,7 +5,18 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
+import type { ExternalChatPrompt } from "@/components/chat/chat-room";
 import { CustomerSessionBar } from "@/components/product/customer-session-bar";
+
+export const PRODUCT_CHAT_EVENT = "tessera:open-product-chat";
+
+interface ProductChatEventDetail {
+  prompt?: string;
+}
+
+interface ChatWidgetProps {
+  hideLauncher?: boolean;
+}
 
 /**
  * Floating chat widget — the *new presentation* (v2 shell) of the customer
@@ -19,9 +30,10 @@ import { CustomerSessionBar } from "@/components/product/customer-session-bar";
  * Desktop: ~400px × min(620px, 80vh) anchored bottom-right above the FAB.
  * Mobile: full-screen on open. Esc or the FAB/close button collapses it.
  */
-export function ChatWidget() {
+export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
   const t = useTranslations("product.apercu.widget");
   const [open, setOpen] = useState(false);
+  const [externalPrompt, setExternalPrompt] = useState<ExternalChatPrompt | null>(null);
 
   // Esc closes the panel (only while open so we don't swallow Esc elsewhere).
   useEffect(() => {
@@ -32,6 +44,21 @@ export function ChatWidget() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  useEffect(() => {
+    function onOpenChat(event: Event) {
+      const detail = (event as CustomEvent<ProductChatEventDetail>).detail;
+      setOpen(true);
+      if (detail?.prompt) {
+        setExternalPrompt({
+          id: globalThis.crypto?.randomUUID() ?? `${Date.now()}`,
+          prompt: detail.prompt,
+        });
+      }
+    }
+    window.addEventListener(PRODUCT_CHAT_EVENT, onOpenChat);
+    return () => window.removeEventListener(PRODUCT_CHAT_EVENT, onOpenChat);
+  }, []);
 
   return (
     <>
@@ -84,21 +111,27 @@ export function ChatWidget() {
               (global store) survives close/reopen without keeping ChatRoom's
               global "/" listener active while collapsed. */}
           <div className="relative flex min-h-0 flex-1 flex-col [&>div]:rounded-none [&>div]:border-0 [&>div]:bg-transparent [&>div]:shadow-none [&>div]:backdrop-blur-none">
-            <ChatRoom />
+            <ChatRoom
+              externalPrompt={externalPrompt}
+              onExternalPromptHandled={(id) => {
+                setExternalPrompt((prompt) => (prompt?.id === id ? null : prompt));
+              }}
+            />
           </div>
         </div>
       )}
 
-      {/* FAB — toggles the panel. ~56px. */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-label={open ? t("close") : t("open")}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-navy-900 text-gold-400 shadow-[0_8px_28px_-6px_oklch(0.2_0.04_255/0.5)] ring-1 ring-gold-500/25 transition-all duration-200 hover:scale-105 hover:bg-navy-800 active:scale-95 dark:bg-gold-500 dark:text-navy-950 dark:ring-gold-300/30 dark:hover:bg-gold-400"
-      >
-        {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-6 w-6" />}
-      </button>
+      {!hideLauncher && (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-label={open ? t("close") : t("open")}
+          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-navy-900 text-gold-400 shadow-[0_8px_28px_-6px_oklch(0.2_0.04_255/0.5)] ring-1 ring-gold-500/25 transition-all duration-200 hover:scale-105 hover:bg-navy-800 active:scale-95 dark:bg-gold-500 dark:text-navy-950 dark:ring-gold-300/30 dark:hover:bg-gold-400"
+        >
+          {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-6 w-6" />}
+        </button>
+      )}
     </>
   );
 }
