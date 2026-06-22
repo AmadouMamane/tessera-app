@@ -213,18 +213,18 @@ export function SourcesOverview() {
             onSort={onSort}
           />
           {view === "overview" ? (
-            <>
-              <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="flex min-w-0 flex-col gap-3">
                 <ActivityArea t={t} data={data} />
-                <RecentActivity data={data} />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <ByType t={t} data={data} />
+                  <ByVolume data={data} />
+                  <ByCitation t={t} data={data} />
+                  <ByLanguage data={data} />
+                </div>
               </div>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <ByType t={t} data={data} />
-                <ByVolume data={data} />
-                <ByCitation t={t} data={data} />
-                <ByLanguage data={data} />
-              </div>
-            </>
+              <RecentActivity data={data} />
+            </div>
           ) : null}
         </div>
       ) : (
