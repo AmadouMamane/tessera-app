@@ -26,6 +26,7 @@ Single customer surface — the chat. No cockpit chrome.
 | Route | Page | Source |
 | --- | --- | --- |
 | `/produit` | Customer chat — honest decor host + floating widget | reuse `ChatRoom` (re-skin) |
+| `/produit/apercu3` | Crédit Aurore demo portal — fictitious banking decor, real Tessera chat | reuse `ChatWidget` / `ChatRoom` |
 
 #### Customer chat presentation — `/produit` (re-skin, not re-fork)
 
@@ -57,10 +58,12 @@ recouvrement and the account tools.
    subsumes the "portal" framing, and the chat is the only real surface. Their
    orphaned client components (`ProductShell`, `ClientSidebar`, `client/*`) went
    with them.
-4. The competing decor variants (`/produit/apercu`, `apercu2`, `apercu3` and the
-   `mes-comptes-host` / `credit-aurore-mes-comptes-host` backdrops) were
-   **deleted** — one live presentation. The chat **core was not touched**:
-   `ChatRoom` + `streamChat` are reused exactly as before.
+4. The competing decor variants (`/produit/apercu`, `apercu2` and the older
+   `mes-comptes-host` backdrop) were **deleted** — one live production
+   presentation. `/produit/apercu3` remains as an explicit demo portal: all
+   banking chrome and data are fictitious, while every meaningful action routes
+   into the same real `ChatWidget` / `ChatRoom` flow. The chat **core was not
+   touched**: `ChatRoom` + `streamChat` are reused exactly as before.
 
 ## App 2 — COCKPIT (operator / ML eng / compliance)
 

@@ -80,14 +80,15 @@ const styles = `
   }
 
   .ca-apercu3 .util-bar {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(250px, 0.7fr) minmax(0, 1.8fr) minmax(150px, 0.7fr);
     align-items: center;
-    justify-content: space-between;
+    gap: 14px;
     background: var(--ca-ink);
     color: #fff;
     font-size: 12px;
     font-weight: 700;
-    padding: 8px 15px 7px;
+    padding: 7px 15px;
   }
 
   .ca-apercu3 .util-bar span {
@@ -99,6 +100,14 @@ const styles = `
   .ca-apercu3 .util-bar svg {
     width: 15px;
     height: 15px;
+  }
+
+  .ca-apercu3 .util-left {
+    justify-self: start;
+  }
+
+  .ca-apercu3 .util-help {
+    justify-self: end;
   }
 
   .ca-apercu3 .main-head {
@@ -279,16 +288,18 @@ const styles = `
 
   .ca-apercu3 .demo-strip {
     display: flex;
-    min-height: 56px;
+    min-height: 38px;
     align-items: center;
     justify-content: center;
-    gap: 18px;
-    border-bottom: 3px solid var(--ca-gold);
-    background: linear-gradient(90deg, #050816 0%, #111b3d 58%, #050816 100%);
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid rgb(185 146 69 / 0.82);
+    border-radius: 4px;
+    background: linear-gradient(90deg, rgb(255 255 255 / 0.04), rgb(185 146 69 / 0.18));
     color: #fff;
     font-size: 13px;
     font-weight: 800;
-    padding: 9px 18px;
+    padding: 3px 6px;
   }
 
   .ca-apercu3 .demo-kicker {
@@ -937,6 +948,16 @@ const styles = `
   }
 
   @media (max-width: 1180px) {
+    .ca-apercu3 .util-bar {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .ca-apercu3 .util-left,
+    .ca-apercu3 .util-help {
+      justify-self: start;
+    }
+
     .ca-apercu3 .main-head {
       flex-wrap: wrap;
     }
@@ -981,7 +1002,7 @@ const styles = `
     }
 
     .ca-apercu3 .util-bar span:first-child {
-      max-width: 62%;
+      max-width: 100%;
     }
 
     .ca-apercu3 .main-head {
@@ -1121,7 +1142,6 @@ export function CreditAuroreMesComptesHost() {
     <div className="ca-apercu3">
       <style>{styles}</style>
       <div className="portal-window">
-        <DemoStrip />
         <UtilityBar />
         <MainHeader />
         <SubNav />
@@ -1203,11 +1223,12 @@ export function CreditAuroreMesComptesHost() {
 function UtilityBar() {
   return (
     <div className="util-bar">
-      <span>
+      <span className="util-left">
         Espace clients professionnels Crédit Aurore
         <ChevronRight />
       </span>
-      <span>
+      <DemoStrip />
+      <span className="util-help">
         <AlertTriangle />
         Aide et contacts
       </span>

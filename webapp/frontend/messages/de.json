@@ -3676,8 +3676,7 @@
       "rows": "Keine Quelle entspricht den Filtern."
     },
     "footer": {
-      "total": "{n} Quellen",
-      "source": "Quelle: {src}"
+      "source": "Live-Daten · {src}"
     },
     "view": {
       "embeddings": "Indexierung & Embeddings",
@@ -4435,14 +4434,6 @@
     "releaseNote": "Eval-Gate-Verdikt pro Agent (Referenzlauf, Fall × Sprache) — jeder Agent ist ein verwaltetes Paket."
   },
   "product": {
-    "nav": {
-      "brand": "Crédit Aurore",
-      "chat": "Assistent",
-      "requests": "Meine Anfragen",
-      "documents": "Dokumente",
-      "alerts": "Benachrichtigungen",
-      "settings": "Einstellungen"
-    },
     "apercu": {
       "brand": "Crédit Aurore",
       "space": "Persönlicher Bereich",

@@ -3676,8 +3676,7 @@
       "rows": "No source matches the filters."
     },
     "footer": {
-      "total": "{n} sources",
-      "source": "Source: {src}"
+      "source": "Live data · {src}"
     },
     "view": {
       "embeddings": "Indexing & embeddings",
@@ -4435,14 +4434,6 @@
     "releaseNote": "Per-agent eval-gate verdict (reference run, case × language grain) — each agent is a governed package."
   },
   "product": {
-    "nav": {
-      "brand": "Crédit Aurore",
-      "chat": "Assistant",
-      "requests": "My requests",
-      "documents": "Documents",
-      "alerts": "Alerts",
-      "settings": "Settings"
-    },
     "apercu": {
       "brand": "Crédit Aurore",
       "space": "Personal space",

@@ -3676,8 +3676,7 @@
       "rows": "Aucune source ne correspond aux filtres."
     },
     "footer": {
-      "total": "{n} sources",
-      "source": "Source : {src}"
+      "source": "Données live · {src}"
     },
     "view": {
       "embeddings": "Indexation & embeddings",
@@ -4435,14 +4434,6 @@
     "releaseNote": "Verdict eval-gate par agent (run de référence, grain cas × langue) — chaque agent est un package gouverné."
   },
   "product": {
-    "nav": {
-      "brand": "Crédit Aurore",
-      "chat": "Assistant",
-      "requests": "Mes demandes",
-      "documents": "Documents",
-      "alerts": "Alertes",
-      "settings": "Paramètres"
-    },
     "apercu": {
       "brand": "Crédit Aurore",
       "space": "Espace personnel",
