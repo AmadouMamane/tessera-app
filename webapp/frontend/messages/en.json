@@ -3668,7 +3668,7 @@
       "managePermissions": "Manage permissions",
       "viewKnowledge": "View knowledge",
       "viewAudit": "Audit log",
-      "asof": "View as-of",
+      "asof": "View as-of date",
       "managePolicy": "Manage policy",
       "readonlyHint": "Read-only source - reindexed per ingestion run (data/embedding lineage)"
     },
@@ -4635,6 +4635,10 @@
     "send": "Send",
     "stop": "Stop",
     "newSession": "New session",
+    "operatorContext": {
+      "operator": "Operator context · {role} · cockpit surface — the operator fleet (recouvrement) is reachable.",
+      "visitor": "Customer surface · sign in as an operator to reach the operator fleet (recouvrement)."
+    },
     "generating": "Generating…",
     "emptyTitle": "No turn yet",
     "emptyBody": "Ask a question to start a live turn: the answer streams through the same model as the Product console, with its execution trace.",
@@ -4797,7 +4801,9 @@
     "goToDate": "Go to a date",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
-    "sealed": "Sealed"
+    "sealed": "Sealed",
+    "scopeLabel": "Filtered by source:",
+    "scopeClear": "All sources"
   },
   "agentScope": {
     "label": "Agent filter:",

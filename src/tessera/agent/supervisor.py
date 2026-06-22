@@ -95,12 +95,15 @@ def route_turn(
     the trusted entry and session — never asserted by the client.
 
     Default = the conversation's current agent (parcours), provided it is still in
-    the routable pool; otherwise it falls back to the default agent (e.g. a parcours
-    agent that the current surface/auth no longer permits — the safe direction). A
-    clear intent for a *different* routable agent triggers a handoff, but only when
-    the governed, surface/auth-scoped contract allows the edge.
+    the routable pool; otherwise it falls back to a routable agent for this
+    surface/auth (the default agent when it qualifies — the customer widget case —
+    else the first agent the surface does permit, e.g. the operator console where
+    only the cockpit-embedded fleet is reachable). A clear intent for a *different*
+    routable agent triggers a handoff, but only when the governed, surface/auth-
+    scoped contract allows the edge.
     """
-    pool = {agent.id for agent in routable(surface, auth_state)}
+    pool_agents = routable(surface, auth_state)
+    pool = {agent.id for agent in pool_agents}
 
     base = current_agent or DEFAULT_AGENT_ID
     try:
@@ -108,10 +111,18 @@ def route_turn(
     except (KeyError, OSError, ValueError):
         base = DEFAULT_AGENT_ID
     # A parcours agent no longer permitted on this surface/auth must not keep the
-    # turn — fall back to the default agent (which, on the customer widget, is the
-    # anonymous-ok support agent). Never silently retain a gated-out agent.
+    # turn (never silently retain a gated-out agent). Prefer the default agent when
+    # it is itself routable here (the customer widget); otherwise fall back to the
+    # first agent the surface/auth actually permits (deterministic), so an operator
+    # console — where the default support agent is off-surface — still lands on a
+    # real, routable agent rather than an off-surface default.
     if base not in pool:
-        base = DEFAULT_AGENT_ID
+        if DEFAULT_AGENT_ID in pool:
+            base = DEFAULT_AGENT_ID
+        elif pool_agents:
+            base = pool_agents[0].id
+        else:
+            base = DEFAULT_AGENT_ID
 
     intent = _detect_intent(user_input)
     if (

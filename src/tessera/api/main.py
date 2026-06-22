@@ -24,6 +24,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from tessera import __version__
 from tessera.api.limits import RequestSizeLimitMiddleware
 from tessera.api.middleware import AuthMiddleware, RequestIdMiddleware
+from tessera.api.operator import validate_operator_assertion_key
 from tessera.api.ratelimit import RateLimitMiddleware
 from tessera.api.routes import (
     audit,
@@ -71,10 +72,12 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
 def build_app() -> FastAPI:
     """Construct the FastAPI application."""
     settings = get_settings()
-    # Fail-closed config validation (ADR 0008/0009): refuse to boot in production
-    # without a real session signing key instead of silently degrading to an
-    # ephemeral one. No-op in dev/CI.
+    # Fail-closed config validation (ADR 0008/0009/0010): refuse to boot in
+    # production without the real signing keys instead of silently degrading. The
+    # customer-session key (ADR 0008/0009) and the operator-assertion key (ADR 0010
+    # Phase B) are both required in prod; no-op in dev/CI.
     validate_session_signing_key()
+    validate_operator_assertion_key()
     # Docs/OpenAPI are on for local dev, off in production, and can be closed
     # explicitly (expose_docs=False) on an internet-reachable non-prod agent.
     docs_on = settings.api.expose_docs and not settings.is_production()

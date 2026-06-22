@@ -222,6 +222,10 @@ export function AgentConsole() {
           },
           {
             signal: controller.signal,
+            // Signal the cockpit console surface so the BFF can — only for a
+            // verified operator session — route on cockpit-embedded (ADR 0010
+            // Phase B). A hint, not a privilege: no operator session, no change.
+            surface: "console",
             onStart: ({ conversation_id }) => setConversationId(conversation_id),
             onToken: (token) => {
               const id = ensureAssistant();
@@ -321,6 +325,21 @@ export function AgentConsole() {
     : data.context?.session_id;
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      {/* Operator-context strip — honestly reflects the surface this turn runs
+          on (ADR 0010 Phase B). With a verified operator session the console
+          reaches the operator fleet (recouvrement) on the cockpit surface;
+          otherwise it stays on the customer surface. No secret is shown. */}
+      <p
+        className={cn(
+          "rounded-md border px-2.5 py-1 text-[0.7rem]",
+          role
+            ? "border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text)]"
+            : "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text-muted)]",
+        )}
+      >
+        {role ? t("operatorContext.operator", { role }) : t("operatorContext.visitor")}
+      </p>
+
       {/* Sandbox config bar — env Sandbox playground: choose model / edit the
           system prompt / toggle guard categories for the next turns. Overrides
           are per-turn (never persisted). "Nouvelle session" stays top-right. */}

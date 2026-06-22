@@ -26,7 +26,6 @@ from starlette.responses import StreamingResponse
 from tessera.agent import build_graph, reporter as reporter_module
 from tessera.agent.grounding import select_grounded_citations
 from tessera.agent.identity import current_agent_id
-from tessera.agent.registry import Surface
 from tessera.agent.state import (
     Citation,
     ConversationMessage,
@@ -37,7 +36,7 @@ from tessera.agent.state import (
     new_state,
 )
 from tessera.agent.supervisor import RoutingDecision, route_turn
-from tessera.api.session import SessionContext, resolve_session
+from tessera.api.operator import resolve_request_context
 from tessera.guard.audit import (
     current_auth_state,
     current_model,
@@ -58,15 +57,11 @@ from tessera.settings import LanguageCode, get_settings
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Coroutine, Mapping
 
+    from tessera.agent.registry import Surface
+    from tessera.api.session import SessionContext
     from tessera.observability.lineage import Lineage
 
 router = APIRouter(tags=["chat"])
-
-# The produit chat endpoint *is* the shared customer widget entry. Surface is a
-# property of this trusted server entry, not a client-supplied field — declaring
-# it here (rather than on ChatRequest) is what keeps a client from asserting a
-# surface that would widen its routable pool (ADR 0008).
-_PRODUIT_SURFACE = Surface.SHARED_CUSTOMER_WIDGET
 
 
 # Strong references to in-flight background memory-formation tasks, so the event
@@ -894,13 +889,14 @@ async def chat(
 
     Rate limiting is applied by RateLimitMiddleware (ADR 0008), not a decorator.
 
-    The entry surface (the shared customer widget) and the session's auth-state are
-    resolved here, server-side, and passed to the supervisor — never read from the
-    request body (ADR 0008). This is what scopes routing/handoff to the agents the
-    surface and auth permit.
+    The entry surface and the session's auth-state are resolved here, server-side,
+    from trusted signals — never read from the request body (ADR 0008). The customer
+    path (signed cookie → CUSTOMER/ANONYMOUS on the shared-customer-widget) is the
+    default; a valid signed operator assertion forwarded by the Next BFF lifts the
+    turn to (OPERATOR, cockpit-embedded) (ADR 0010 Phase B). This is what scopes
+    routing/handoff to the agents the surface and auth permit.
     """
-    surface = _PRODUIT_SURFACE
-    session = resolve_session(request)
+    session, surface = resolve_request_context(request)
     return StreamingResponse(
         _stream_turn(payload, surface=surface, session=session),
         media_type="text/event-stream",

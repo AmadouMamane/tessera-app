@@ -94,6 +94,20 @@ def test_anonymous_widget_never_routes_into_recouvrement() -> None:
     assert d.handoff is False
 
 
+def test_operator_console_lands_on_the_routable_operator_agent() -> None:
+    # ADR 0010 Phase B: on the cockpit-embedded operator surface the default
+    # support agent is off-surface, so the supervisor falls back to the agent the
+    # surface actually permits (recouvrement) rather than the off-surface default.
+    d = supervisor.route_turn(
+        None,
+        "Bonjour",
+        surface=Surface.COCKPIT_EMBEDDED,
+        auth_state=AuthState.OPERATOR,
+    )
+    assert d.agent_id == "recouvrement"
+    assert d.handoff is False
+
+
 def test_a_gated_out_parcours_agent_falls_back_to_the_default() -> None:
     # A conversation parked on recouvrement, seen now under an anonymous session,
     # must not retain the gated-out agent — it falls back to the default.

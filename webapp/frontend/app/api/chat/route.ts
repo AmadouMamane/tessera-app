@@ -13,12 +13,23 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isGatedModel } from "@/lib/models";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
+import {
+  mintOperatorAssertion,
+  OPERATOR_ASSERTION_HEADER,
+} from "@/lib/server/operator-assertion";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const SESSION_COOKIE = "tessera_sid";
 const SESSION_MAX_AGE = 60 * 60 * 24; // 24h
+
+// The client surface hint the cockpit console sends (see lib/api/sse.ts). It is
+// NOT a privilege: it only selects the operator branch *when* the request also
+// carries a verified operator session (auth()). A forged hint from a visitor
+// mints nothing — the turn stays customer/widget.
+const CLIENT_SURFACE_HEADER = "x-tessera-client-surface";
+const CONSOLE_SURFACE = "console";
 
 export async function POST(request: NextRequest): Promise<Response> {
   const body = await request.text();
@@ -33,8 +44,10 @@ export async function POST(request: NextRequest): Promise<Response> {
   } catch {
     requestedModel = undefined;
   }
+  // Resolve the operator session once (server-verified next-auth JWT). It gates
+  // both the paid-model lock and the operator-assertion minting below.
+  const session = await auth();
   if (requestedModel && isGatedModel(requestedModel)) {
-    const session = await auth();
     if (session?.user?.role !== "superadmin") {
       return NextResponse.json(
         { detail: "Ce modèle frontier est réservé au compte super-admin." },
@@ -42,6 +55,19 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
   }
+
+  // Operator forwarding (ADR 0010 Phase B): when the request comes from the
+  // cockpit console AND carries a verified operator session, mint a signed
+  // assertion the agent verifies to derive AuthState.OPERATOR + cockpit-embedded.
+  // The privilege portal is auth() (the next-auth session cookie verified
+  // server-side), never the client hint — without an operator session, no
+  // assertion is minted and the turn stays on the customer/widget path.
+  const fromConsole = request.headers.get(CLIENT_SURFACE_HEADER) === CONSOLE_SURFACE;
+  const operatorRole = session?.user?.role;
+  const operatorAssertion =
+    fromConsole && operatorRole
+      ? mintOperatorAssertion(session.user?.name ?? operatorRole, operatorRole)
+      : null;
 
   // Per-browser session id — the rate-limit key. Reuse the cookie if present,
   // otherwise mint one and set it on the response. httpOnly so client JS can
@@ -62,6 +88,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       Accept: "text/event-stream",
       "X-Session-Id": sessionId,
       ...(customerSession ? { Cookie: `tessera_session=${customerSession}` } : {}),
+      ...(operatorAssertion ? { [OPERATOR_ASSERTION_HEADER]: operatorAssertion } : {}),
     }),
     body,
     // Propagate the client's abort (stop button / navigation) to the backend so

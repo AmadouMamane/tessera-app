@@ -241,6 +241,16 @@ class APISettings(BaseSettings):
     # dev / CI) the session layer falls back to a process-ephemeral key.
     session_signing_key: SecretStr | None = None
 
+    # HMAC key for the signed OPERATOR assertion (ADR 0010 Phase B). The Next BFF
+    # mints the assertion after verifying a next-auth operator session; the agent
+    # verifies it here to derive AuthState.OPERATOR. Because mint (front) and
+    # verify (agent) live in *different* processes, both MUST share this exact
+    # value via env / GCP Secret Manager (TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY)
+    # — there is no ephemeral fallback (a per-process key could never match across
+    # the trust boundary). Required in production (fail-closed); when unset in
+    # dev/CI the operator path is simply inert (no assertion ever verifies).
+    operator_assertion_signing_key: SecretStr | None = None
+
     # -- Security hardening (ADR 0008) ---------------------------------------
     # TLS is terminated by Cloud Run; an on-prem reverse proxy may not, in which
     # case HSTS must stay off. Drives the security-headers middleware.

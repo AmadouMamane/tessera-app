@@ -47,6 +47,14 @@ export interface ChatTurnCallbacks {
 
 export interface StreamChatOptions extends ChatTurnCallbacks {
   signal?: AbortSignal;
+  /**
+   * Originating client surface. The cockpit console passes `"console"` so the
+   * BFF can — only for a verified operator session — forward an operator
+   * assertion and route on the cockpit-embedded surface (ADR 0010 Phase B). It
+   * is a hint, not a privilege: without an operator session the BFF ignores it
+   * and the turn stays on the customer widget. The default widget path omits it.
+   */
+  surface?: "console";
 }
 
 /**
@@ -55,7 +63,7 @@ export interface StreamChatOptions extends ChatTurnCallbacks {
  */
 export async function streamChat(
   payload: ChatTurnRequest,
-  { signal, onStart, onToken, onEnd, onError }: StreamChatOptions = {},
+  { signal, surface, onStart, onToken, onEnd, onError }: StreamChatOptions = {},
 ): Promise<void> {
   const model = payload.model ?? getStoredModel();
   await fetchEventSource("/api/chat", {
@@ -63,6 +71,7 @@ export async function streamChat(
     headers: {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
+      ...(surface === "console" ? { "X-Tessera-Client-Surface": "console" } : {}),
     },
     body: JSON.stringify(model ? { ...payload, model } : payload),
     signal,

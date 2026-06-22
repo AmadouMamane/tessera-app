@@ -3668,7 +3668,7 @@
       "managePermissions": "Berechtigungen verwalten",
       "viewKnowledge": "Wissen ansehen",
       "viewAudit": "Audit-Log",
-      "asof": "Stand anzeigen (as-of)",
+      "asof": "Stand zum Datum",
       "managePolicy": "Richtlinie verwalten",
       "readonlyHint": "Schreibgeschützte Quelle - per Ingestion-Run neu indexiert (Data-/Embedding-Lineage)"
     },
@@ -4635,6 +4635,10 @@
     "send": "Senden",
     "stop": "Stopp",
     "newSession": "Neue Sitzung",
+    "operatorContext": {
+      "operator": "Operator-Kontext · {role} · Cockpit-Oberfläche — die Operator-Flotte (Inkasso) ist erreichbar.",
+      "visitor": "Kundenoberfläche · Melden Sie sich als Operator an, um die Operator-Flotte (Inkasso) zu erreichen."
+    },
     "generating": "Generierung läuft…",
     "emptyTitle": "Noch keine Runde",
     "emptyBody": "Stellen Sie eine Frage, um eine Live-Runde zu starten: Die Antwort wird über dasselbe Modell wie die Produkt-Konsole gestreamt, mit ihrer Ausführungsspur.",
@@ -4797,7 +4801,9 @@
     "goToDate": "Zu einem Datum",
     "prevMonth": "Voriger Monat",
     "nextMonth": "Nächster Monat",
-    "sealed": "Versiegelt"
+    "sealed": "Versiegelt",
+    "scopeLabel": "Nach Quelle gefiltert:",
+    "scopeClear": "Alle Quellen"
   },
   "agentScope": {
     "label": "Agentfilter:",

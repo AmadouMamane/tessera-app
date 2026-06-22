@@ -3668,7 +3668,7 @@
       "managePermissions": "Gérer les permissions",
       "viewKnowledge": "Voir les connaissances",
       "viewAudit": "Journal d'audit",
-      "asof": "Voir à date (as-of)",
+      "asof": "Voir à date",
       "managePolicy": "Gérer la politique",
       "readonlyHint": "Source en lecture seule - réindexée par run d'ingestion (lignée data/embedding)"
     },
@@ -4635,6 +4635,10 @@
     "send": "Envoyer",
     "stop": "Stop",
     "newSession": "Nouvelle session",
+    "operatorContext": {
+      "operator": "Contexte opérateur · {role} · surface cockpit — la flotte opérateur (recouvrement) est joignable.",
+      "visitor": "Surface client · connectez-vous en opérateur pour atteindre la flotte opérateur (recouvrement)."
+    },
     "generating": "Génération en cours…",
     "emptyTitle": "Aucun tour pour l'instant",
     "emptyBody": "Posez une question pour lancer un tour en direct : la réponse streamera via le même modèle que la console Produit, avec sa trace d'exécution.",
@@ -4797,7 +4801,9 @@
     "goToDate": "Aller à une date",
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
-    "sealed": "Scellé"
+    "sealed": "Scellé",
+    "scopeLabel": "Filtré par source :",
+    "scopeClear": "Toutes les sources"
   },
   "agentScope": {
     "label": "Filtre agent :",

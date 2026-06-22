@@ -73,3 +73,18 @@ IdP with an email allow-list.
 - `TESSERA_DASHBOARD_PUBLIC` is retired in favour of role checks.
 - Adds `/[locale]/login`, `/api/auth/*`, and a `SessionProvider` in the locale
   layout; adds a demo-credentials banner and lock affordances on gated nav.
+
+## Update — operator identity forwarding to the agent (done for the operator tier)
+
+This ADR deferred *"propagating identity to the agent … so the agent enforces
+server-side RBAC"* as out of scope. **ADR 0010 Phase B does exactly that, for the
+operator tier.** The Next BFF — which already holds the agent bearer and the
+verified next-auth session — mints a short-lived **signed operator assertion**
+(HMAC, the same pattern as the customer-session cookie) after `auth()` confirms an
+operator session, and forwards it to the agent. The agent verifies it and derives
+`AuthState.OPERATOR` on the `cockpit-embedded` surface; everything else stays on
+the unchanged customer path. The identity remains **demo-grade** (seeded
+Credentials accounts, no production IdP), but the forwarding is architecturally
+real: server-verified, unforgeable by the browser, off-repo key, fail-closed in
+production. See `docs/decisions/0010-…md` (Implementation note — Phase B) and
+`tessera.api.operator`.
