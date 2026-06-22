@@ -4,7 +4,7 @@ Date: 2026-06-22
 
 ## Status
 
-Accepted, **not yet implemented**. This ADR extends the agent manifest
+Accepted and implemented. This ADR extends the agent manifest
 (`src/tessera/agent/agents.yaml`) and the supervisor
 (`src/tessera/agent/supervisor.py`) with three first-class agent properties —
 `audience`, `surface`, `auth` — and makes turn routing and handoff **scoped by

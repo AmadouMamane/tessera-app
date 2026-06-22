@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from pydantic import SecretStr
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -23,12 +24,13 @@ from tessera.api.session import (
     issue_session_token,
     resolve_session,
     set_session_cookie,
+    validate_session_signing_key,
     verify_session_token,
 )
 from tessera.authz import AuthState
 from tessera.guard.adapter import guarded_invoke
 from tessera.guard.audit import current_auth_state
-from tessera.settings import LanguageCode
+from tessera.settings import Environment, LanguageCode, get_settings
 
 _WIDGET = Surface.SHARED_CUSTOMER_WIDGET
 
@@ -140,8 +142,42 @@ def test_signing_key_is_not_in_the_repo_and_forgery_fails() -> None:
     # The key is read from settings (env / Secret Manager), defaulting to None in
     # the repo — there is no committed secret. A token signed with a foreign key
     # must not verify.
-    from tessera.settings import get_settings
-
     assert get_settings().api.session_signing_key is None
     foreign = "deadbeef.deadbeefsignaturethatdoesnotmatch"
     assert verify_session_token(foreign) is None
+
+
+# --- prod hardening: fail-closed when the signing key is missing ----------------
+
+
+def test_production_without_key_refuses_to_start(monkeypatch: pytest.MonkeyPatch) -> None:
+    # (a) prod + no key → the startup validation raises (refuse to boot), and the
+    # lazy path refuses too (defence in depth) — never a silent ephemeral key.
+    settings = get_settings()
+    monkeypatch.setattr(settings, "environment", Environment.PRODUCTION)
+    monkeypatch.setattr(settings.api, "session_signing_key", None)
+    with pytest.raises(RuntimeError, match="required in production"):
+        validate_session_signing_key()
+    with pytest.raises(RuntimeError, match="required in production"):
+        session_mod._signing_key()
+
+
+def test_non_production_without_key_uses_ephemeral(monkeypatch: pytest.MonkeyPatch) -> None:
+    # (b) non-prod + no key → ephemeral fallback, startup passes, signing works.
+    settings = get_settings()
+    monkeypatch.setattr(settings, "environment", Environment.LOCAL)
+    monkeypatch.setattr(settings.api, "session_signing_key", None)
+    validate_session_signing_key()  # no raise
+    token = issue_session_token(DEMO_CUSTOMER_ID, AuthState.CUSTOMER)
+    assert verify_session_token(token) is not None
+
+
+def test_configured_key_is_used_in_any_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    # (c) key present → it is used, and prod startup passes.
+    settings = get_settings()
+    monkeypatch.setattr(settings, "environment", Environment.PRODUCTION)
+    monkeypatch.setattr(settings.api, "session_signing_key", SecretStr("a-real-secret-key"))
+    validate_session_signing_key()  # no raise — key present
+    assert session_mod._signing_key() == b"a-real-secret-key"
+    token = issue_session_token(DEMO_CUSTOMER_ID, AuthState.CUSTOMER)
+    assert verify_session_token(token) is not None

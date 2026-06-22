@@ -49,6 +49,7 @@ __all__ = [
     "issue_session_token",
     "resolve_session",
     "set_session_cookie",
+    "validate_session_signing_key",
     "verify_session_token",
 ]
 
@@ -72,11 +73,38 @@ _EPHEMERAL_KEY = secrets.token_bytes(32)
 _warned_ephemeral = False
 
 
+_MISSING_KEY_IN_PROD = (
+    "TESSERA_API_SESSION_SIGNING_KEY is required in production (resolve it from "
+    "GCP Secret Manager). Refusing to use a process-ephemeral session key, which "
+    "is non-persistent and inconsistent across replicas."
+)
+
+
+def validate_session_signing_key() -> None:
+    """Fail-closed startup check: a production process must have a real signing key.
+
+    Called once at app startup (``build_app``) so a misconfiguration **refuses to
+    boot** rather than silently degrading to an ephemeral key at the first request
+    (ADR 0008/0009). No-op in non-production (dev/CI keep the ephemeral fallback).
+    """
+    settings = get_settings()
+    if settings.is_production() and settings.api.session_signing_key is None:
+        raise RuntimeError(_MISSING_KEY_IN_PROD)
+
+
 def _signing_key() -> bytes:
-    """Return the HMAC signing key: configured secret, else a process-ephemeral key."""
-    configured = get_settings().api.session_signing_key
+    """Return the HMAC signing key: configured secret, else a process-ephemeral key.
+
+    In production a missing key raises (defence in depth behind the startup check
+    in :func:`validate_session_signing_key`); in dev/CI it falls back to a
+    process-ephemeral key with a one-time warning.
+    """
+    settings = get_settings()
+    configured = settings.api.session_signing_key
     if configured is not None:
         return configured.get_secret_value().encode("utf-8")
+    if settings.is_production():
+        raise RuntimeError(_MISSING_KEY_IN_PROD)
     global _warned_ephemeral
     if not _warned_ephemeral:
         sys.stderr.write(
