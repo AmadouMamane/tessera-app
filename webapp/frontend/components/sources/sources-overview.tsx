@@ -58,6 +58,13 @@ const TYPE_ICON: Record<string, LucideIcon> = {
   memory: Brain,
   transcript: MessagesSquare,
 };
+// Per-type icon colour so the source kind reads at a glance.
+const TYPE_ICON_TONE: Record<string, string> = {
+  regulation: "text-amber-300",
+  product: "text-[#87bfff]",
+  memory: "text-fuchsia-300",
+  transcript: "text-emerald-300",
+};
 const KNOWLEDGE_HREF = "/agent/connaissances";
 const ASOF_HREF = "/prouver/etat-a-date";
 const ROLES_HREF = "/admin/roles-acces";
@@ -698,7 +705,12 @@ function SourceTable({
                       className="flex items-center gap-1.5 text-[var(--tessera-text)]"
                       title={s.name}
                     >
-                      <Icon className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <Icon
+                        className={cn(
+                          "h-3 w-3 shrink-0",
+                          TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]",
+                        )}
+                      />
                       <span className="truncate">{s.name}</span>
                     </span>
                   </td>
@@ -830,7 +842,9 @@ function AccessView({ t, data }: { t: T; data: Data }) {
           return (
             <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
               <span className="inline-flex min-w-0 items-center gap-1.5">
-                <Icon className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                <Icon
+                  className={cn("h-3 w-3 shrink-0", TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]")}
+                />
                 <span className="truncate text-[var(--tessera-text)]">{s.name}</span>
               </span>
               <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
@@ -1395,7 +1409,12 @@ function QualityTable({
                       className="flex items-center gap-1.5 text-[var(--tessera-text)]"
                       title={s.name}
                     >
-                      <Icon className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <Icon
+                        className={cn(
+                          "h-3 w-3 shrink-0",
+                          TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]",
+                        )}
+                      />
                       <span className="truncate">{s.name}</span>
                     </span>
                   </td>
