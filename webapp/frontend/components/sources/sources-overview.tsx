@@ -167,7 +167,7 @@ export function SourcesOverview() {
   const isTable = TABLE_VIEWS.has(view);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+    <div className="flex min-w-0 flex-col gap-3 text-[var(--tessera-text)]">
       <CommandBar t={t} note={data.readonly_note} onExport={onExport} />
       <TabStrip t={t} view={view} onView={setView} />
 
