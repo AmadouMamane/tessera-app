@@ -231,7 +231,6 @@ export function SourcesOverview() {
         <LensView t={t} view={view} data={data} />
       )}
 
-      {view === "overview" ? <LineageFooter data={data} /> : null}
       <Footer t={t} data={data} />
 
       {selected ? (
@@ -289,6 +288,12 @@ function CommandBar({ t, note, onExport }: { t: T; note: string; onExport: () =>
         <ShieldCheck className="h-3.5 w-3.5" /> {note}
       </span>
       <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href={AUDIT_HREF}
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] hover:border-[#2e72d2]"
+        >
+          <GitBranch className="h-4 w-4" /> {t("actions.trace")}
+        </Link>
         <Link
           href={ASOF_HREF}
           className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] hover:border-[#2e72d2]"
@@ -1901,64 +1906,6 @@ function KV({ label, value }: { label: string; value: string }) {
       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{label}</dt>
       <dd className="min-w-0 truncate text-right text-[var(--tessera-text)]">{value}</dd>
     </div>
-  );
-}
-
-// The normative footer: the real source-to-answer lineage + audit-chain integrity.
-function LineageFooter({ data }: { data: Data }) {
-  const { lineage, audit } = data;
-  return (
-    <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
-          {lineage.title}
-        </h3>
-        <span className="inline-flex items-center gap-2 text-[0.62rem] text-[var(--tessera-text-muted)]">
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              className={cn(
-                "h-1.5 w-1.5 rounded-full",
-                audit.tone === "good" ? "bg-emerald-400" : "bg-red-400",
-              )}
-            />
-            <span className={audit.tone === "good" ? "text-emerald-300" : "text-red-300"}>
-              {audit.label}
-            </span>
-          </span>
-          <span className="hidden sm:inline">
-            {audit.checked_label} : {audit.checked}
-          </span>
-        </span>
-      </div>
-      <div className="flex flex-wrap items-stretch gap-1.5">
-        {lineage.steps.map((s, i) => {
-          const inner = (
-            <div className="flex h-full min-w-[120px] flex-col rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5">
-              <span className="text-[0.52rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-                {s.label}
-              </span>
-              <span className="truncate text-[0.68rem] font-medium text-[var(--tessera-text)]">
-                {s.value}
-              </span>
-            </div>
-          );
-          return (
-            <div key={s.key} className="flex items-center gap-1.5">
-              {s.href ? (
-                <Link href={s.href as never} className="hover:opacity-80">
-                  {inner}
-                </Link>
-              ) : (
-                inner
-              )}
-              {i < lineage.steps.length - 1 ? (
-                <span className="text-[var(--tessera-text-muted)]">→</span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 
