@@ -4549,6 +4549,7 @@
     "demoBadge": "Démonstration",
     "demoTitle": "Démonstration Tessera",
     "demoSubtitle": "Raccourci d’évaluation : ouvrez l’un ou l’autre espace. Ce n’est pas la porte d’entrée du produit — un vrai utilisateur entre par son identité.",
+    "fleetNote": "Flotte : 3 agents gouvernés — support-client + onboarding (assistant client) · recouvrement (interne).",
     "brandTagline": "AI Control Plane",
     "user": {
       "initials": "TO",
@@ -4573,7 +4574,7 @@
       "badge": "Produit",
       "kind": "Externe",
       "title": "Espace client",
-      "desc": "Une interface simple pour échanger avec votre assistant IA et suivre vos demandes.",
+      "desc": "L’assistant client unique, routé par le superviseur : Support (solde, opérations, carte) et Onboarding (ouverture de compte, KYC).",
       "cta": "Accéder à l’espace client",
       "items": {
         "chat": {

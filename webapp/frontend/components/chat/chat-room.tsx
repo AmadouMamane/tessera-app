@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
+  UserPlus,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -46,6 +47,12 @@ type Suggestion = { text: string; Icon: LucideIcon };
 const SUGGESTED_PROMPTS: Record<string, Suggestion[]> = {
   fr: [
     { text: "Ma carte bancaire vient d'être volée — que faire en urgence ?", Icon: CreditCard },
+    // Onboarding — "KYC" matches the supervisor's intent regex (language-agnostic),
+    // so this routes the turn to the onboarding agent inside the single assistant.
+    {
+      text: "Je veux ouvrir un compte : quelles pièces justificatives pour le KYC ?",
+      Icon: UserPlus,
+    },
     { text: "Quels sont mes droits RGPD sur mes données bancaires ?", Icon: ShieldCheck },
     { text: "Expliquez-moi la garantie des dépôts en France.", Icon: Landmark },
     { text: "Quels délais pour un virement SEPA international ?", Icon: Clock },
@@ -54,6 +61,7 @@ const SUGGESTED_PROMPTS: Record<string, Suggestion[]> = {
   ],
   de: [
     { text: "Meine Karte wurde gestohlen — was muss ich sofort tun?", Icon: CreditCard },
+    { text: "Ich möchte ein Konto eröffnen — welche KYC-Unterlagen brauche ich?", Icon: UserPlus },
     { text: "Welche DSGVO-Rechte habe ich bezüglich meiner Bankdaten?", Icon: ShieldCheck },
     { text: "Wie funktioniert die Einlagensicherung in Deutschland?", Icon: Landmark },
     { text: "Wie lange dauert eine internationale SEPA-Überweisung?", Icon: Clock },
@@ -62,6 +70,7 @@ const SUGGESTED_PROMPTS: Record<string, Suggestion[]> = {
   ],
   en: [
     { text: "My card was just stolen — what should I do urgently?", Icon: CreditCard },
+    { text: "I'd like to open an account — what KYC documents are required?", Icon: UserPlus },
     { text: "What are my GDPR rights regarding my banking data?", Icon: ShieldCheck },
     { text: "Explain how deposit guarantees work in the EU.", Icon: Landmark },
     { text: "What are the timelines for an international SEPA transfer?", Icon: Clock },

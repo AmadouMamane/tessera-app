@@ -4549,6 +4549,7 @@
     "demoBadge": "Demonstration",
     "demoTitle": "Tessera-Demonstration",
     "demoSubtitle": "Prüfer-Shortcut: Öffnen Sie einen der beiden Bereiche. Dies ist nicht der Eingang des Produkts — ein echter Nutzer betritt es über seine Identität.",
+    "fleetNote": "Flotte: 3 verwaltete Agenten — support-client + onboarding (Kundenassistent) · recouvrement (intern).",
     "brandTagline": "AI Control Plane",
     "user": {
       "initials": "TO",
@@ -4573,7 +4574,7 @@
       "badge": "Produkt",
       "kind": "Extern",
       "title": "Kundenbereich",
-      "desc": "Eine einfache Oberfläche, um mit Ihrem KI-Assistenten zu kommunizieren und Ihre Anfragen zu verfolgen.",
+      "desc": "Der einzige Kundenassistent, vom Supervisor geroutet: Support (Saldo, Transaktionen, Karte) und Onboarding (Kontoeröffnung, KYC).",
       "cta": "Zum Kundenbereich",
       "items": {
         "chat": {

@@ -192,6 +192,14 @@ export function LandingLauncher() {
             <BusinessPlaneCard t={t} />
             <ControlPlaneCard t={t} />
           </section>
+
+          {/* Fleet note — showcase, NOT navigation (ADR 0008/0010). Names the
+              governed fleet so a visitor sees onboarding exists without a
+              dedicated entry: it is a supervisor-routed agent of the customer
+              assistant, not a surface of its own. */}
+          <p className="mt-9 max-w-[680px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
+            {t("fleetNote")}
+          </p>
         </main>
       </div>
     </div>

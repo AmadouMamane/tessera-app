@@ -4549,6 +4549,7 @@
     "demoBadge": "Demo",
     "demoTitle": "Tessera demonstration",
     "demoSubtitle": "Reviewer shortcut: open either space. This is not the product’s front door — a real user enters by identity.",
+    "fleetNote": "Fleet: 3 governed agents — support-client + onboarding (customer assistant) · recouvrement (internal).",
     "brandTagline": "AI Control Plane",
     "user": {
       "initials": "TO",
@@ -4573,7 +4574,7 @@
       "badge": "Product",
       "kind": "External",
       "title": "Client space",
-      "desc": "A simple interface to chat with your AI assistant and track your requests.",
+      "desc": "The single customer assistant, supervisor-routed: Support (balance, transactions, card) and Onboarding (account opening, KYC).",
       "cta": "Enter the client space",
       "items": {
         "chat": {
