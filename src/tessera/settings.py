@@ -28,6 +28,11 @@ from typing import Annotated, Literal
 from pydantic import Field, HttpUrl, PostgresDsn, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Resolve bundled defaults relative to the installed package, not the process
+# working directory: the backend may be launched from anywhere (uvicorn, tests,
+# Cloud Run) and must still find the policy shipped at src/tessera/guard/.
+_PACKAGE_ROOT = Path(__file__).resolve().parent
+
 __all__ = [
     "DeploymentMode",
     "Environment",
@@ -156,7 +161,7 @@ class GuardSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="TESSERA_GUARD_", extra="ignore")
 
-    policy_path: Path = Path("src/tessera/guard/policy.yaml")
+    policy_path: Path = _PACKAGE_ROOT / "guard" / "policy.yaml"
     audit_sink: Literal["stdout", "file", "cloud_logging", "postgres"] = "file"
     audit_file: Path = Path("/tmp/tessera/audit.log")  # noqa: S108  default local audit sink
     fail_closed: bool = True
