@@ -1728,7 +1728,7 @@ function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: s
         <span className="shrink-0 text-[#87bfff]">{icon}</span>
         <span className="truncate">{label}</span>
       </dt>
-      <dd className="mt-1 truncate text-[0.95rem] font-semibold leading-none tabular-nums text-white">
+      <dd className="mt-1 truncate text-[0.82rem] font-semibold leading-none tabular-nums text-white">
         {value}
       </dd>
     </div>
