@@ -4,7 +4,6 @@ import {
   ArrowRight,
   Bell,
   Boxes,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   HandCoins,
@@ -17,7 +16,6 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
-import { useState } from "react";
 
 import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
@@ -188,7 +186,7 @@ export function LandingLauncher() {
               (do the work — external customer + internal collections) and the
               CONTROL plane (govern — the cockpit). The business card reveals its
               two sub-surfaces in place. */}
-          <section className="mt-14 grid w-full max-w-[1080px] grid-cols-1 items-start gap-7 lg:grid-cols-2">
+          <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 gap-7 lg:grid-cols-2">
             <BusinessPlaneCard t={t} />
             <ControlPlaneCard t={t} />
           </section>
@@ -305,21 +303,21 @@ function PlaneHeader({
   );
 }
 
-// Business plane (ADR 0013): external customer + internal collections. Two
-// sub-surfaces revealed in place on click — distinct from the cockpit.
+// Business plane (ADR 0013): external customer + internal collections — its two
+// sub-surfaces shown together, distinct from the cockpit. Equal height with the
+// control card (flex column + the sub-surfaces anchored to the bottom).
 function BusinessPlaneCard({ t }: { t: T }) {
-  const [open, setOpen] = useState(false);
   const a = ACCENT.gold;
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[24px] pt-[26px] backdrop-blur-[2px]",
+        "relative flex h-full min-h-[472px] flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
     >
       <CardGlow />
-      <div className="relative">
+      <div className="relative flex flex-1 flex-col">
         <PlaneHeader
           a={a}
           icon={<Boxes className="h-[23px] w-[23px]" />}
@@ -327,34 +325,17 @@ function BusinessPlaneCard({ t }: { t: T }) {
           title={t("business.title")}
           desc={t("business.desc")}
         />
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          className={cn(
-            "mt-[18px] flex w-full items-center justify-between rounded-[12px] border px-[16px] py-[12px] text-[13px] font-semibold transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]",
-            a.border,
-            a.soft,
-          )}
-        >
-          <span>{t(open ? "business.collapse" : "business.reveal")}</span>
-          <ChevronDown
-            className={cn("h-[16px] w-[16px] transition-transform", open && "rotate-180")}
+        <div className="mt-[22px] flex flex-col gap-[12px]">
+          <SubSurface t={t} ns="client" accent="gold" href="/produit" icon={UserRound} />
+          <SubSurface
+            t={t}
+            ns="recouvrement"
+            accent="amber"
+            href="/recouvrement"
+            icon={HandCoins}
+            authRequired
           />
-        </button>
-        {open ? (
-          <div className="mt-[14px] flex flex-col gap-[12px]">
-            <SubSurface t={t} ns="client" accent="gold" href="/produit" icon={UserRound} />
-            <SubSurface
-              t={t}
-              ns="recouvrement"
-              accent="amber"
-              href="/recouvrement"
-              icon={HandCoins}
-              authRequired
-            />
-          </div>
-        ) : null}
+        </div>
       </div>
     </section>
   );
@@ -439,7 +420,7 @@ function ControlPlaneCard({ t }: { t: T }) {
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[24px] pt-[26px] backdrop-blur-[2px]",
+        "relative flex h-full min-h-[472px] flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
@@ -448,7 +429,7 @@ function ControlPlaneCard({ t }: { t: T }) {
       <div className="pointer-events-none absolute right-0 top-[20px] scale-[0.82] opacity-[0.2]">
         <CockpitVisual />
       </div>
-      <div className="relative">
+      <div className="relative flex flex-1 flex-col">
         <PlaneHeader
           a={a}
           icon={<ShieldCheck className="h-[23px] w-[23px]" />}
@@ -457,7 +438,7 @@ function ControlPlaneCard({ t }: { t: T }) {
           desc={t("control.desc")}
           authNote={t("control.authNote")}
         />
-        <ul className="mt-[18px] flex flex-col gap-[16px]">
+        <ul className="mt-[20px] flex flex-col gap-[16px]">
           {OPERATOR_ITEMS.map((item) => (
             <li key={item.key}>
               <Link
@@ -484,7 +465,7 @@ function ControlPlaneCard({ t }: { t: T }) {
         <Link
           href={agentPath(DEFAULT_AGENT_ID, "synthese")}
           className={cn(
-            "mt-[22px] flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
             a.button,
           )}
           style={a.buttonStyle}
