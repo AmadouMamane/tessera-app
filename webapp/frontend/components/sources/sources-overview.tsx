@@ -1511,9 +1511,13 @@ function DetailPanel({
         ))}
       </div>
 
-      {detail.versions ? <VersionsBlock t={t} versions={detail.versions} /> : null}
+      {section.key === "content" && detail.versions ? (
+        <VersionsBlock t={t} versions={detail.versions} />
+      ) : null}
 
-      {detail.consumers ? <UsedByBlock consumers={detail.consumers} /> : null}
+      {section.key === "governance" && detail.consumers ? (
+        <UsedByBlock consumers={detail.consumers} />
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2 border-t border-[var(--tessera-border)] pt-2">
         <MiniLinks
