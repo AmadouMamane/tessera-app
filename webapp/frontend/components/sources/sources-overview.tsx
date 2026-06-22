@@ -716,10 +716,7 @@ function SourceTable({
                     {s.citation}
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span
-                      className={cn("flex items-center gap-1.5", s.infra && "italic")}
-                      title={s.used_by}
-                    >
+                    <span className="flex items-center gap-1.5" title={s.used_by}>
                       <Users className="h-3 w-3 shrink-0 text-[#87bfff]" />
                       <span className="truncate">{s.used_by}</span>
                     </span>
