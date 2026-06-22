@@ -9,6 +9,7 @@ import pytest
 
 from tessera.agent import supervisor
 from tessera.agent.identity import DEFAULT_AGENT_ID
+from tessera.agent.registry import AuthState, Surface
 from tessera.guard import audit
 from tessera.settings import get_settings
 
@@ -16,25 +17,37 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+# The shared customer widget is the only live surface; tests pin the auth-state
+# explicitly to exercise the gating (anonymous vs an authenticated customer).
+_WIDGET = Surface.SHARED_CUSTOMER_WIDGET
+
+
 # --- supervisor routing --------------------------------------------------------
 
 
 def test_stays_on_current_agent_without_a_clear_intent() -> None:
-    d = supervisor.route_turn("support-client", "Quel est mon solde ?")
+    d = supervisor.route_turn(
+        "support-client", "Quel est mon solde ?", surface=_WIDGET, auth_state=AuthState.ANONYMOUS
+    )
     assert d.agent_id == "support-client"
     assert d.handoff is False
     assert d.from_agent is None
 
 
 def test_new_conversation_defaults_to_the_default_agent() -> None:
-    d = supervisor.route_turn(None, "Bonjour")
+    d = supervisor.route_turn(None, "Bonjour", surface=_WIDGET, auth_state=AuthState.ANONYMOUS)
     assert d.agent_id == DEFAULT_AGENT_ID
     assert d.handoff is False
 
 
 def test_intent_triggers_a_governed_handoff() -> None:
     # support-client -> onboarding is declared on both ends -> allowed.
-    d = supervisor.route_turn("support-client", "Je voudrais ouvrir un nouveau compte.")
+    d = supervisor.route_turn(
+        "support-client",
+        "Je voudrais ouvrir un nouveau compte.",
+        surface=_WIDGET,
+        auth_state=AuthState.ANONYMOUS,
+    )
     assert d.agent_id == "onboarding"
     assert d.handoff is True
     assert d.from_agent == "support-client"
@@ -43,15 +56,66 @@ def test_intent_triggers_a_governed_handoff() -> None:
 
 def test_handoff_is_refused_when_the_contract_does_not_allow_the_edge() -> None:
     # recouvrement -> onboarding is NOT declared -> stay put despite the intent.
-    d = supervisor.route_turn("recouvrement", "Je voudrais ouvrir un compte.")
+    # Requires an authenticated session, else recouvrement is gated out entirely.
+    d = supervisor.route_turn(
+        "recouvrement",
+        "Je voudrais ouvrir un compte.",
+        surface=_WIDGET,
+        auth_state=AuthState.CUSTOMER,
+    )
     assert d.agent_id == "recouvrement"
     assert d.handoff is False
 
 
 def test_no_self_handoff_when_intent_matches_current_agent() -> None:
-    d = supervisor.route_turn("onboarding", "Quelles pièces pour ouvrir un compte ?")
+    d = supervisor.route_turn(
+        "onboarding",
+        "Quelles pièces pour ouvrir un compte ?",
+        surface=_WIDGET,
+        auth_state=AuthState.ANONYMOUS,
+    )
     assert d.agent_id == "onboarding"
     assert d.handoff is False
+
+
+# --- ADR 0008: surface/auth-scoped routing ------------------------------------
+
+
+def test_anonymous_widget_never_routes_into_recouvrement() -> None:
+    # (a) The anonymous widget pool excludes recouvrement: even an explicit
+    # recouvrement intent cannot route or hand into the customer-auth agent.
+    d = supervisor.route_turn(
+        "support-client",
+        "J'ai un impayé, je voudrais un échéancier de recouvrement.",
+        surface=_WIDGET,
+        auth_state=AuthState.ANONYMOUS,
+    )
+    assert d.agent_id == "support-client"
+    assert d.handoff is False
+
+
+def test_a_gated_out_parcours_agent_falls_back_to_the_default() -> None:
+    # A conversation parked on recouvrement, seen now under an anonymous session,
+    # must not retain the gated-out agent — it falls back to the default.
+    d = supervisor.route_turn(
+        "recouvrement", "Bonjour", surface=_WIDGET, auth_state=AuthState.ANONYMOUS
+    )
+    assert d.agent_id == DEFAULT_AGENT_ID
+    assert d.handoff is False
+
+
+def test_authenticated_customer_can_be_routed_into_recouvrement() -> None:
+    # (c) Once the session is authenticated, recouvrement is in the pool and the
+    # governed support-client -> recouvrement edge becomes a legal handoff.
+    d = supervisor.route_turn(
+        "support-client",
+        "J'ai un impayé, je voudrais un échéancier de recouvrement.",
+        surface=_WIDGET,
+        auth_state=AuthState.CUSTOMER,
+    )
+    assert d.agent_id == "recouvrement"
+    assert d.handoff is True
+    assert d.from_agent == "support-client"
 
 
 # --- S1 handoff event ----------------------------------------------------------

@@ -14,6 +14,7 @@ top in the durable config store; this module never mutates anything.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -27,14 +28,87 @@ if TYPE_CHECKING:
 
 __all__ = [
     "Agent",
+    "Audience",
+    "Auth",
+    "AuthState",
     "HandoffContract",
+    "Surface",
     "can_handoff",
     "get_agent",
     "list_agents",
     "registry_path",
+    "routable",
 ]
 
 _REGISTRY_FILE = Path(__file__).resolve().parent / "agents.yaml"
+
+
+# --- Audience / surface / auth (ADR 0008) -------------------------------------
+#
+# Three first-class, governed agent properties. `audience` and `surface` are
+# *bindings on the agent* (who it serves, through which channel); `auth` is the
+# *minimum identity a session must carry* to reach it. `AuthState` is the
+# distinct, **server-derived** thing — the authorization a live session actually
+# has — never asserted by the client. Routing compares the two: an agent is
+# reachable only when the entry surface is one of its surfaces and the session's
+# `AuthState` satisfies the agent's `Auth` floor. Unknown enum values fail fast
+# at registry load (see `_coerce_agent`), so the manifest can never declare an
+# audience/surface/auth the router does not understand.
+
+
+class Audience(StrEnum):
+    """The primary human an agent converses with."""
+
+    CUSTOMER = "customer"
+    OPERATOR = "operator"
+
+
+class Surface(StrEnum):
+    """The delivery channel an agent is exposed through."""
+
+    SHARED_CUSTOMER_WIDGET = "shared-customer-widget"
+    DEDICATED_UI = "dedicated-ui"
+    COCKPIT_EMBEDDED = "cockpit-embedded"
+    API_ONLY = "api-only"
+
+
+class Auth(StrEnum):
+    """The minimum identity/authorization a session must satisfy to reach an agent."""
+
+    ANONYMOUS_OK = "anonymous-ok"
+    CUSTOMER_AUTH = "customer-auth"
+    OPERATOR_RBAC = "operator-rbac"
+
+
+class AuthState(StrEnum):
+    """The authorization a *session* actually carries.
+
+    Derived server-side, never from the request body, and compared against an
+    agent's :class:`Auth` floor.
+    """
+
+    ANONYMOUS = "anonymous"
+    CUSTOMER = "customer"
+    OPERATOR = "operator"
+
+
+# Monotone ladder: a session of rank N satisfies any agent floor of rank <= N.
+# anonymous (0) < customer (1) < operator (2).
+_AUTH_FLOOR_RANK: dict[Auth, int] = {
+    Auth.ANONYMOUS_OK: 0,
+    Auth.CUSTOMER_AUTH: 1,
+    Auth.OPERATOR_RBAC: 2,
+}
+_AUTH_STATE_RANK: dict[AuthState, int] = {
+    AuthState.ANONYMOUS: 0,
+    AuthState.CUSTOMER: 1,
+    AuthState.OPERATOR: 2,
+}
+
+
+def _auth_satisfies(auth_state: AuthState, floor: Auth) -> bool:
+    """Whether a session's ``auth_state`` meets an agent's ``auth`` floor (auth_state ⊇ auth)."""
+    return _AUTH_STATE_RANK[auth_state] >= _AUTH_FLOOR_RANK[floor]
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +134,9 @@ class Agent:
     guardrails: str
     eval_set: str
     tools: tuple[str, ...]
+    audience: Audience
+    surface: tuple[Surface, ...]
+    auth: Auth
     tags: tuple[str, ...] = ()
     handoff: HandoffContract = field(default_factory=HandoffContract)
 
@@ -76,16 +153,47 @@ def _as_str_tuple(value: object) -> tuple[str, ...]:
     return ()
 
 
+def _coerce_surface(value: object, agent_id: str) -> tuple[Surface, ...]:
+    """Coerce the `surface` binding into a tuple of :class:`Surface`, fail-fast.
+
+    Accepts a single value or a list; an out-of-list value or an empty/absent
+    declaration raises at load so the manifest can never name a surface the
+    router does not enforce.
+    """
+    items = value if isinstance(value, list) else [value]
+    try:
+        surfaces = tuple(Surface(str(v)) for v in items)
+    except ValueError as exc:
+        raise ValueError(f"agent {agent_id!r}: unknown surface {value!r}") from exc
+    if not surfaces:
+        raise ValueError(f"agent {agent_id!r}: surface must declare at least one channel")
+    return surfaces
+
+
+def _coerce_enum[E: StrEnum](enum: type[E], value: object, field_name: str, agent_id: str) -> E:
+    """Coerce a scalar into ``enum``, raising a clear error on an out-of-list value."""
+    try:
+        return enum(str(value))
+    except ValueError as exc:
+        raise ValueError(f"agent {agent_id!r}: unknown {field_name} {value!r}") from exc
+
+
 def _coerce_agent(raw: Mapping[str, object]) -> Agent:
+    agent_id = str(raw["id"])
     handoff_raw = raw.get("handoff")
     handoff_map: Mapping[str, object] = handoff_raw if isinstance(handoff_raw, dict) else {}
     handoff = HandoffContract(
         to=_as_str_tuple(handoff_map.get("to")),
         from_=_as_str_tuple(handoff_map.get("from")),
     )
+    # audience / surface / auth are required, governed bindings (ADR 0008): a
+    # missing key (KeyError) or an out-of-list value (ValueError) fails the load.
+    audience = _coerce_enum(Audience, raw["audience"], "audience", agent_id)
+    surface = _coerce_surface(raw["surface"], agent_id)
+    auth = _coerce_enum(Auth, raw["auth"], "auth", agent_id)
     return Agent(
-        id=str(raw["id"]),
-        name=str(raw.get("name", raw["id"])),
+        id=agent_id,
+        name=str(raw.get("name", agent_id)),
         description=str(raw.get("description", "")),
         owner=str(raw.get("owner", "-")),
         default_language=str(raw.get("default_language", "fr")),
@@ -95,6 +203,9 @@ def _coerce_agent(raw: Mapping[str, object]) -> Agent:
         guardrails=str(raw.get("guardrails", "standard")),
         eval_set=str(raw.get("eval_set", "")),
         tools=_as_str_tuple(raw.get("tools")),
+        audience=audience,
+        surface=surface,
+        auth=auth,
         tags=_as_str_tuple(raw.get("tags")),
         handoff=handoff,
     )
@@ -133,13 +244,34 @@ def get_agent(agent_id: str) -> Agent:
     return agents[agent_id]
 
 
-def can_handoff(src: str, dst: str) -> bool:
-    """Whether ``src`` may hand off to ``dst`` per both ends of the contract.
+def routable(surface: Surface, auth_state: AuthState) -> list[Agent]:
+    """The pool reachable from an entry ``surface`` under a session ``auth_state``.
 
-    The edge must be declared on the source's ``to`` *and* the destination's
-    ``from`` — a handoff is only governed when both packages agree.
+    ``routable(surface, auth_state) = { a : surface ∈ a.surface ∧ auth_state ⊇ a.auth }``
+    (ADR 0008). This is the *only* set routing and handoff may select from — the
+    seam that keeps a sensitive agent off a surface/auth it does not belong on.
+    """
+    return [
+        agent
+        for agent in _load().values()
+        if surface in agent.surface and _auth_satisfies(auth_state, agent.auth)
+    ]
+
+
+def can_handoff(src: str, dst: str, *, surface: Surface, auth_state: AuthState) -> bool:
+    """Whether ``src`` may hand off to ``dst`` on ``surface`` under ``auth_state``.
+
+    Two gates, both required (ADR 0008): the contract edge must be declared on the
+    source's ``to`` *and* the destination's ``from`` (a handoff is only governed
+    when both packages agree), **and** both endpoints must be in the routable pool
+    for this surface/auth. The second gate forbids a silent cross-surface or
+    under-authenticated handoff — moving a customer from the public widget into a
+    customer-auth collections context is never an implicit route.
     """
     agents = _load()
     if src not in agents or dst not in agents:
         return False
-    return dst in agents[src].handoff.to and src in agents[dst].handoff.from_
+    if dst not in agents[src].handoff.to or src not in agents[dst].handoff.from_:
+        return False
+    pool = {agent.id for agent in routable(surface, auth_state)}
+    return src in pool and dst in pool

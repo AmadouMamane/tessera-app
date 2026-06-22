@@ -18,11 +18,15 @@ from typing import TYPE_CHECKING, Annotated, Literal, cast
 from fastapi import APIRouter, Body
 from langgraph.checkpoint.memory import MemorySaver
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.requests import (
+    Request,  # noqa: TCH002  runtime-needed: FastAPI resolves the handler annotation
+)
 from starlette.responses import StreamingResponse
 
 from tessera.agent import build_graph, reporter as reporter_module
 from tessera.agent.grounding import select_grounded_citations
 from tessera.agent.identity import current_agent_id
+from tessera.agent.registry import AuthState, Surface
 from tessera.agent.state import (
     Citation,
     ConversationMessage,
@@ -50,6 +54,29 @@ if TYPE_CHECKING:
     from tessera.observability.lineage import Lineage
 
 router = APIRouter(tags=["chat"])
+
+# The produit chat endpoint *is* the shared customer widget entry. Surface is a
+# property of this trusted server entry, not a client-supplied field — declaring
+# it here (rather than on ChatRequest) is what keeps a client from asserting a
+# surface that would widen its routable pool (ADR 0008).
+_PRODUIT_SURFACE = Surface.SHARED_CUSTOMER_WIDGET
+
+
+def _derive_auth_state(request: Request) -> AuthState:
+    """Derive the session's auth-state server-side — never from the request body.
+
+    ADR 0008 invariant: no field asserted by the client may grant access to a
+    higher-auth agent. The produit widget has **no customer-authentication
+    mechanism wired yet**, so every widget session is ANONYMOUS. This is the safe
+    default and an honest one: it gates the ``customer-auth`` ``recouvrement``
+    agent out of the anonymous widget until real customer auth exists. When a real
+    customer session is introduced, this is the single place that resolves it
+    (from the verified session, e.g. a signed session cookie), and the rest of the
+    routing scoping already enforces the consequence.
+    """
+    del request  # no customer-auth signal exists to read yet; anonymous by default
+    return AuthState.ANONYMOUS
+
 
 # Strong references to in-flight background memory-formation tasks, so the event
 # loop does not garbage-collect them before they finish (ADR 0007, Mechanism B).
@@ -634,7 +661,12 @@ def _sse(event: str, payload: object) -> bytes:
     return f"event: {event}\ndata: {body}\n\n".encode()
 
 
-async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: PLR0915  SSE turn handler is inherently statement-heavy (graph run + stream + persist + eval)
+async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently statement-heavy (graph run + stream + persist + eval)
+    request: ChatRequest,
+    *,
+    surface: Surface,
+    auth_state: AuthState,
+) -> AsyncIterator[bytes]:
     conversation_id = request.conversation_id or uuid.uuid4()
     turn_id = uuid.uuid4()
     language = request.language or get_settings().default_language
@@ -663,7 +695,10 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
     # agent handles the whole turn and is stamped on every event, metric and
     # message. One conversation can therefore span agents.
     prev_agent = await last_agent_for(conversation_id)
-    decision = route_turn(prev_agent, request.message)
+    # Routing is scoped to the entry surface and the server-derived auth-state
+    # (ADR 0008): the anonymous widget pool excludes the customer-auth recouvrement
+    # agent, so a walk-up can never be routed or handed into it.
+    decision = route_turn(prev_agent, request.message, surface=surface, auth_state=auth_state)
     agent_id = decision.agent_id
     current_agent_id.set(agent_id)
     # Audit EVERY routing decision (stay or switch) with its reason, so routing is
@@ -851,14 +886,22 @@ async def _stream_turn(request: ChatRequest) -> AsyncIterator[bytes]:  # noqa: P
 
 @router.post("/chat")
 async def chat(
+    request: Request,
     payload: Annotated[ChatRequest, Body(...)],
 ) -> StreamingResponse:
     """POST /chat — Server-Sent-Events stream of the agent's turn.
 
     Rate limiting is applied by RateLimitMiddleware (ADR 0008), not a decorator.
+
+    The entry surface (the shared customer widget) and the session's auth-state are
+    resolved here, server-side, and passed to the supervisor — never read from the
+    request body (ADR 0008). This is what scopes routing/handoff to the agents the
+    surface and auth permit.
     """
+    surface = _PRODUIT_SURFACE
+    auth_state = _derive_auth_state(request)
     return StreamingResponse(
-        _stream_turn(payload),
+        _stream_turn(payload, surface=surface, auth_state=auth_state),
         media_type="text/event-stream",
         headers={
             "cache-control": "no-cache",

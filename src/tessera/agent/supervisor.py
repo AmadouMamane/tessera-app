@@ -20,7 +20,7 @@ import re
 from dataclasses import dataclass
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
-from tessera.agent.registry import can_handoff, get_agent
+from tessera.agent.registry import AuthState, Surface, can_handoff, get_agent, routable
 
 __all__ = ["RoutingDecision", "route_turn"]
 
@@ -80,27 +80,49 @@ def _detect_intent(text: str) -> str | None:
     return None
 
 
-def route_turn(current_agent: str | None, user_input: str) -> RoutingDecision:
-    """Decide which agent handles this turn.
+def route_turn(
+    current_agent: str | None,
+    user_input: str,
+    *,
+    surface: Surface,
+    auth_state: AuthState,
+) -> RoutingDecision:
+    """Decide which agent handles this turn, scoped to a surface and auth-state.
 
-    Default = the conversation's current agent (parcours); a clear intent for a
-    *different* agent triggers a handoff, but only if the governed contract
-    allows the edge. Unknown/empty current agent falls back to the default agent.
+    Routing only ever selects from ``routable(surface, auth_state)`` (ADR 0008):
+    the agents whose ``surface`` includes the entry and whose ``auth`` floor the
+    session satisfies. ``surface`` and ``auth_state`` are derived server-side from
+    the trusted entry and session — never asserted by the client.
+
+    Default = the conversation's current agent (parcours), provided it is still in
+    the routable pool; otherwise it falls back to the default agent (e.g. a parcours
+    agent that the current surface/auth no longer permits — the safe direction). A
+    clear intent for a *different* routable agent triggers a handoff, but only when
+    the governed, surface/auth-scoped contract allows the edge.
     """
+    pool = {agent.id for agent in routable(surface, auth_state)}
+
     base = current_agent or DEFAULT_AGENT_ID
     try:
         get_agent(base)
     except (KeyError, OSError, ValueError):
         base = DEFAULT_AGENT_ID
+    # A parcours agent no longer permitted on this surface/auth must not keep the
+    # turn — fall back to the default agent (which, on the customer widget, is the
+    # anonymous-ok support agent). Never silently retain a gated-out agent.
+    if base not in pool:
+        base = DEFAULT_AGENT_ID
 
     intent = _detect_intent(user_input)
-    if intent and intent != base and can_handoff(base, intent):
+    if (
+        intent
+        and intent != base
+        and can_handoff(base, intent, surface=surface, auth_state=auth_state)
+    ):
         return RoutingDecision(
             agent_id=intent,
             handoff=True,
             from_agent=base,
             reason=f"intent->{intent} (handoff {base}->{intent})",
         )
-    return RoutingDecision(
-        agent_id=base, handoff=False, from_agent=None, reason=f"stay->{base}"
-    )
+    return RoutingDecision(agent_id=base, handoff=False, from_agent=None, reason=f"stay->{base}")

@@ -24,7 +24,7 @@ from datetime import UTC, datetime, timedelta
 
 from psycopg import sql
 
-from tessera.agent.registry import can_handoff, list_agents
+from tessera.agent.registry import AuthState, Surface, can_handoff, list_agents
 from tessera.memory.transcript import ensure_transcript_schema
 from tessera.observability.logging import get_logger
 from tessera.retrieval.store import get_pool
@@ -48,6 +48,7 @@ _LATENCY_MS: dict[str, float] = {
 def _latency(agent_id: str, rng: random.Random) -> float:
     base = _LATENCY_MS.get(agent_id, 3000.0)
     return round(base + rng.uniform(-600, 900), 1)
+
 
 # Fixed namespace so seeded conversation ids are deterministic + collision-free
 # with real traffic. Bump the suffix to invalidate a previous seed generation.
@@ -240,7 +241,14 @@ async def seed(*, dry_run: bool = False) -> dict[str, int]:
         "messages": len(rows),
         "conversations": len(conv_ids),
         "shared": _SHARED,
-        "handoff_ok": int(can_handoff("support-client", "onboarding")),
+        "handoff_ok": int(
+            can_handoff(
+                "support-client",
+                "onboarding",
+                surface=Surface.SHARED_CUSTOMER_WIDGET,
+                auth_state=AuthState.ANONYMOUS,
+            )
+        ),
     }
     LOG.info("seed.plan", **stats)
     if dry_run:
