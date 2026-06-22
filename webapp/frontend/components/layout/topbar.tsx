@@ -17,6 +17,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
 
 import { AuthControl } from "@/components/auth/auth-control";
+import { DemoLauncherLink } from "@/components/layout/demo-launcher-link";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ModelBadge } from "@/components/layout/model-badge";
 import { useShellChrome } from "@/components/layout/shell-chrome";
@@ -181,6 +182,9 @@ export function Topbar({ title, description, contextItems = [], actions = [] }: 
             className="hidden lg:inline-flex"
           />
           <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
+          {/* Discreet demo-launcher shortcut (ADR 0013) — a reviewer convenience
+              to explore both spaces, never the front door. */}
+          <DemoLauncherLink className="hidden xl:inline-flex" />
           {/* Operator switcher (ADR 0013) — the cockpit is operator-only by
               construction (the operator-rbac guard gates these routes), so this
               "view the customer product" affordance is inherently operator-only.

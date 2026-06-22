@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { DemoLauncherLink } from "@/components/layout/demo-launcher-link";
 import { ApercuHost } from "@/components/product/apercu-host";
 import { ChatWidget } from "@/components/product/chat-widget";
 
@@ -30,6 +31,7 @@ export default async function ProductChatPage({ params }: PageProps) {
     <>
       <ApercuHost />
       <ChatWidget />
+      <DemoLauncherLink floating />
     </>
   );
 }
