@@ -65,11 +65,7 @@ const TYPE_ICON_TONE: Record<string, string> = {
   memory: "text-fuchsia-300",
   transcript: "text-emerald-300",
 };
-const KNOWLEDGE_HREF = "/agent/connaissances";
 const ASOF_HREF = "/prouver/etat-a-date";
-const ROLES_HREF = "/admin/roles-acces";
-const POLICY_HREF = "/configurer/garde-fous";
-const AUDIT_HREF = "/prouver/audit-logs";
 const REVALIDATE_HREF = "/agir/release-control";
 const VERDICT_DOT: Record<string, string> = {
   good: "bg-emerald-400",
@@ -1645,25 +1641,6 @@ function DetailPanel({
       {section.key === "governance" && detail.consumers ? (
         <UsedByBlock consumers={detail.consumers} />
       ) : null}
-
-      <div className="grid grid-cols-2 gap-2 border-t border-[var(--tessera-border)] pt-2">
-        <MiniLinks
-          title={t("detail.quickAccess")}
-          links={[
-            { label: t("detail.viewKnowledge"), href: KNOWLEDGE_HREF },
-            { label: t("detail.managePermissions"), href: ROLES_HREF },
-            { label: t("detail.viewAudit"), href: AUDIT_HREF },
-          ]}
-        />
-        <MiniLinks
-          title={t("detail.actions")}
-          links={[
-            { label: t("detail.asof"), href: ASOF_HREF },
-            { label: t("detail.managePolicy"), href: POLICY_HREF },
-          ]}
-          note={t("detail.readonlyHint")}
-        />
-      </div>
     </aside>
   );
 }
@@ -1929,40 +1906,6 @@ function KV({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between gap-2">
       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{label}</dt>
       <dd className="min-w-0 truncate text-right text-[var(--tessera-text)]">{value}</dd>
-    </div>
-  );
-}
-
-// The normative's bottom-right "Acces rapide" / "Actions" panels - real nav links
-// only; the corpus is Git/PR-owned, so no fake source-mutation buttons.
-function MiniLinks({
-  title,
-  links,
-  note,
-}: {
-  title: string;
-  links: { label: string; href: string }[];
-  note?: string;
-}) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <p className="text-[0.64rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
-        {title}
-      </p>
-      {links.map((l) => (
-        <Link
-          key={l.href}
-          href={l.href as never}
-          className="inline-flex items-center gap-1 truncate text-[0.64rem] text-[#87bfff] hover:underline"
-        >
-          {l.label}
-        </Link>
-      ))}
-      {note ? (
-        <p className="mt-0.5 text-[0.64rem] leading-tight text-[var(--tessera-text-muted)]">
-          {note}
-        </p>
-      ) : null}
     </div>
   );
 }
