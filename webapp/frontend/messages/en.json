@@ -4555,8 +4555,23 @@
       "name": "Tessera Ops",
       "role": "Platform admin"
     },
+    "business": {
+      "badge": "Business plane",
+      "title": "Products / Business spaces",
+      "desc": "Do the work: the external customer space and the internal collections console.",
+      "reveal": "Explore the business spaces",
+      "collapse": "Collapse"
+    },
+    "control": {
+      "badge": "Control plane",
+      "title": "Cockpit · Governance",
+      "desc": "Govern the AI platform: supervision, configuration, audit and administration.",
+      "cta": "Enter the cockpit",
+      "authNote": "Operator sign-in required"
+    },
     "client": {
       "badge": "Product",
+      "kind": "External",
       "title": "Client space",
       "desc": "A simple interface to chat with your AI assistant and track your requests.",
       "cta": "Enter the client space",
@@ -4585,6 +4600,7 @@
     },
     "recouvrement": {
       "badge": "Business",
+      "kind": "Internal · collections",
       "title": "Collections console",
       "desc": "The collections officer’s internal business tool: talk to the recouvrement agent (dunning, arrears, repayment schedules).",
       "cta": "Open the collections console",

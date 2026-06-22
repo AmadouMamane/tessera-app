@@ -4555,8 +4555,23 @@
       "name": "Tessera Ops",
       "role": "Admin plateforme"
     },
+    "business": {
+      "badge": "Plan métier",
+      "title": "Produits / Espaces métier",
+      "desc": "Faire le travail : l’espace client externe et la console recouvrement interne.",
+      "reveal": "Explorer les espaces métier",
+      "collapse": "Réduire"
+    },
+    "control": {
+      "badge": "Plan de contrôle",
+      "title": "Cockpit · Gouvernance",
+      "desc": "Gouverner la plateforme IA : supervision, configuration, audit et administration.",
+      "cta": "Accéder au cockpit",
+      "authNote": "Connexion opérateur requise"
+    },
     "client": {
       "badge": "Produit",
+      "kind": "Externe",
       "title": "Espace client",
       "desc": "Une interface simple pour échanger avec votre assistant IA et suivre vos demandes.",
       "cta": "Accéder à l’espace client",
@@ -4585,6 +4600,7 @@
     },
     "recouvrement": {
       "badge": "Métier",
+      "kind": "Interne · collections",
       "title": "Console recouvrement",
       "desc": "L’outil métier interne du chargé de recouvrement : échangez avec l’agent recouvrement (relances, impayés, échéanciers).",
       "cta": "Ouvrir la console recouvrement",

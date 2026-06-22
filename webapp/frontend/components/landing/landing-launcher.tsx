@@ -3,11 +3,12 @@
 import {
   ArrowRight,
   Bell,
+  Boxes,
+  ChevronDown,
   ChevronRight,
   CircleHelp,
   HandCoins,
   Lock,
-  MessageSquare,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
+import { useState } from "react";
 
 import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
@@ -63,10 +65,7 @@ const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--shadow-amber": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
-// Cut-over: the customer space is a single surface — the chat. The former portal
-// sub-pages (requests/documents/alerts/settings) were retired (ui-contract.md).
-const CLIENT_ITEMS: SpaceItem[] = [{ icon: MessageSquare, key: "chat", href: "/produit" }];
-
+// Cockpit (control plane) sub-areas — listed inside the governance card.
 const OPERATOR_ITEMS: SpaceItem[] = [
   { icon: EyeIcon, key: "supervision", href: "/surveiller/vue-ensemble" },
   { icon: ShieldCheck, key: "management", href: "/agir/incidents-playbooks" },
@@ -74,28 +73,20 @@ const OPERATOR_ITEMS: SpaceItem[] = [
   { icon: UsersRound, key: "platform", href: "/admin/utilisateurs" },
 ];
 
-// Recouvrement business console (ADR 0010 Phase C) — the internal collections
-// agent's own workspace (business plane), distinct from the cockpit (governance /
-// control plane). One surface: the real chat. The items describe its scope; they
-// all open the single /recouvrement console.
-const RECOUVREMENT_ITEMS: SpaceItem[] = [
-  { icon: MessageSquare, key: "console", href: "/recouvrement" },
-  { icon: HandCoins, key: "scope", href: "/recouvrement" },
-  { icon: ShieldCheck, key: "audit", href: "/recouvrement" },
-];
+const CARD_BG =
+  "linear-gradient(145deg, var(--panel) 0%, var(--panel-soft) 56%, rgba(2,8,23,0.94) 100%)";
 
-const ACCENT: Record<
-  Accent,
-  {
-    border: string;
-    button: string;
-    buttonStyle: CSSProperties;
-    cardStyle: CSSProperties;
-    icon: string;
-    soft: string;
-    tone: string;
-  }
-> = {
+type AccentStyle = {
+  border: string;
+  button: string;
+  buttonStyle: CSSProperties;
+  cardStyle: CSSProperties;
+  icon: string;
+  soft: string;
+  tone: string;
+};
+
+const ACCENT: Record<Accent, AccentStyle> = {
   gold: {
     border: "border-[var(--border-gold)]",
     button: "border-[var(--border-gold)] text-[var(--text-primary)]",
@@ -193,36 +184,13 @@ export function LandingLauncher() {
             </p>
           </section>
 
-          <section className="mt-14 grid w-full max-w-[1200px] grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            <SpaceCard
-              t={t}
-              ns="client"
-              accent="gold"
-              badgeIcon={<UserRound className="h-[24px] w-[24px]" />}
-              href="/produit"
-              items={CLIENT_ITEMS}
-              visual={<ChatVisual />}
-            />
-            <SpaceCard
-              t={t}
-              ns="recouvrement"
-              accent="amber"
-              badgeIcon={<HandCoins className="h-[23px] w-[23px]" />}
-              href="/recouvrement"
-              items={RECOUVREMENT_ITEMS}
-              visual={<RecouvrementVisual />}
-              authRequired
-            />
-            <SpaceCard
-              t={t}
-              ns="operator"
-              accent="cyan"
-              badgeIcon={<ShieldCheck className="h-[23px] w-[23px]" />}
-              href={agentPath(DEFAULT_AGENT_ID, "synthese")}
-              items={OPERATOR_ITEMS}
-              visual={<CockpitVisual />}
-              authRequired
-            />
+          {/* Two PLANES (ADR 0013), not three flat surfaces: the BUSINESS plane
+              (do the work — external customer + internal collections) and the
+              CONTROL plane (govern — the cockpit). The business card reveals its
+              two sub-surfaces in place. */}
+          <section className="mt-14 grid w-full max-w-[1080px] grid-cols-1 items-start gap-7 lg:grid-cols-2">
+            <BusinessPlaneCard t={t} />
+            <ControlPlaneCard t={t} />
           </section>
         </main>
       </div>
@@ -272,95 +240,217 @@ function SpaceToggle({ t }: { t: T }) {
   );
 }
 
-function SpaceCard({
-  t,
-  ns,
-  accent,
-  badgeIcon,
-  href,
-  items,
-  visual,
-  authRequired = false,
-}: {
-  t: T;
-  ns: "client" | "operator" | "recouvrement";
-  accent: Accent;
-  badgeIcon: ReactNode;
-  href: "/produit" | "/recouvrement" | `/agents/${string}/synthese`;
-  items: SpaceItem[];
-  visual: ReactNode;
-  // Guarded surfaces (cockpit → platform roles; recouvrement → collections role)
-  // surface a "sign-in required" note so an unauthenticated reviewer understands
-  // they will hit the gate, not just bounce to /produit. routing ≠ authorization:
-  // the layout guard still decides; this only informs and links (ADR 0013).
-  authRequired?: boolean;
-}) {
-  const a = ACCENT[accent];
+function CardGlow() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        background:
+          "radial-gradient(circle at 74% 10%, rgba(248,250,252,0.032), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.014), transparent 34%)",
+      }}
+    />
+  );
+}
 
+function PlaneHeader({
+  a,
+  icon,
+  badge,
+  title,
+  desc,
+  authNote,
+}: {
+  a: AccentStyle;
+  icon: ReactNode;
+  badge: string;
+  title: string;
+  desc: string;
+  authNote?: string;
+}) {
+  return (
+    <div className="max-w-[440px]">
+      <div className="flex items-center gap-[14px]">
+        <HexBadge className={cn(a.icon, a.soft)}>{icon}</HexBadge>
+        <span className={cn("text-[12px] font-semibold uppercase tracking-[0.16em]", a.tone)}>
+          {badge}
+        </span>
+      </div>
+      <h2 className="mt-[14px] font-sans text-[22px] font-semibold leading-[1.1] tracking-[-0.01em] text-[var(--text-primary)]">
+        {title}
+      </h2>
+      <p className="mt-[10px] text-[13px] font-normal leading-[1.5] text-[var(--text-secondary)]">
+        {desc}
+      </p>
+      {authNote ? (
+        <span
+          className={cn(
+            "mt-[12px] inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[4px] text-[11px] font-medium",
+            a.border,
+            a.soft,
+          )}
+        >
+          <Lock className="h-[12px] w-[12px]" />
+          {authNote}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+// Business plane (ADR 0013): external customer + internal collections. Two
+// sub-surfaces revealed in place on click — distinct from the cockpit.
+function BusinessPlaneCard({ t }: { t: T }) {
+  const [open, setOpen] = useState(false);
+  const a = ACCENT.gold;
   return (
     <section
       className={cn(
-        "relative h-[540px] overflow-hidden rounded-[var(--radius-lg)] border px-[30px] pb-[20px] pt-[26px] backdrop-blur-[2px]",
+        "relative overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[24px] pt-[26px] backdrop-blur-[2px]",
         a.border,
       )}
-      style={{
-        ...a.cardStyle,
-        background:
-          "linear-gradient(145deg, var(--panel) 0%, var(--panel-soft) 56%, rgba(2,8,23,0.94) 100%)",
-      }}
+      style={{ ...a.cardStyle, background: CARD_BG }}
     >
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(circle at 74% 10%, rgba(248,250,252,0.032), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.014), transparent 34%)",
-        }}
-      />
-
+      <CardGlow />
       <div className="relative">
-        <div className="relative min-h-[168px]">
-          <div className="min-w-0 max-w-[365px]">
-            <div className="flex items-center gap-[14px]">
-              <HexBadge className={cn(a.icon, a.soft)}>{badgeIcon}</HexBadge>
-              <span className={cn("text-[12px] font-semibold uppercase tracking-[0.16em]", a.tone)}>
-                {t(`${ns}.badge`)}
-              </span>
-            </div>
-            <h2 className="mt-[14px] font-sans text-[22px] font-semibold leading-[1.1] tracking-[-0.01em] text-[var(--text-primary)]">
-              {t(`${ns}.title`)}
-            </h2>
-            <p className="mt-[10px] max-w-[330px] text-[13px] font-normal leading-[1.5] text-[var(--text-secondary)]">
-              {t(`${ns}.desc`)}
-            </p>
-            {authRequired ? (
-              <span
-                className={cn(
-                  "mt-[12px] inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[4px] text-[11px] font-medium",
-                  a.border,
-                  a.soft,
-                )}
-              >
-                <Lock className="h-[12px] w-[12px]" />
-                {t(`${ns}.authNote`)}
-              </span>
-            ) : null}
+        <PlaneHeader
+          a={a}
+          icon={<Boxes className="h-[23px] w-[23px]" />}
+          badge={t("business.badge")}
+          title={t("business.title")}
+          desc={t("business.desc")}
+        />
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className={cn(
+            "mt-[18px] flex w-full items-center justify-between rounded-[12px] border px-[16px] py-[12px] text-[13px] font-semibold transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]",
+            a.border,
+            a.soft,
+          )}
+        >
+          <span>{t(open ? "business.collapse" : "business.reveal")}</span>
+          <ChevronDown
+            className={cn("h-[16px] w-[16px] transition-transform", open && "rotate-180")}
+          />
+        </button>
+        {open ? (
+          <div className="mt-[14px] flex flex-col gap-[12px]">
+            <SubSurface t={t} ns="client" accent="gold" href="/produit" icon={UserRound} />
+            <SubSurface
+              t={t}
+              ns="recouvrement"
+              accent="amber"
+              href="/recouvrement"
+              icon={HandCoins}
+              authRequired
+            />
           </div>
-          <div
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+// One revealed business sub-surface (external client / internal collections).
+function SubSurface({
+  t,
+  ns,
+  accent,
+  href,
+  icon: Icon,
+  authRequired = false,
+}: {
+  t: T;
+  ns: "client" | "recouvrement";
+  accent: Accent;
+  href: "/produit" | "/recouvrement";
+  icon: React.ComponentType<{ className?: string }>;
+  // Guarded sub-surface (recouvrement → collections role) shows a "sign-in
+  // required" note so a reviewer understands the gate. routing ≠ authorization:
+  // the layout guard decides; this only informs and links (ADR 0013).
+  authRequired?: boolean;
+}) {
+  const a = ACCENT[accent];
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group flex items-start gap-[14px] rounded-[14px] border bg-[color-mix(in_srgb,var(--bg-panel)_60%,transparent)] px-[16px] py-[14px] transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]",
+        a.border,
+      )}
+    >
+      <span
+        className={cn(
+          "mt-[2px] grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] border",
+          a.border,
+          a.icon,
+        )}
+      >
+        <Icon className="h-[17px] w-[17px]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-[8px]">
+          <span className="text-[14px] font-semibold text-[var(--text-primary)]">
+            {t(`${ns}.title`)}
+          </span>
+          <span
             className={cn(
-              "absolute top-[2px] scale-[0.86] opacity-[0.24]",
-              ns === "client" ? "-right-[5px]" : "right-0",
+              "rounded-full border px-[8px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.1em]",
+              a.border,
+              a.tone,
             )}
           >
-            {visual}
-          </div>
-        </div>
+            {t(`${ns}.kind`)}
+          </span>
+        </span>
+        <span className="mt-[5px] block text-[12px] leading-[1.45] text-[var(--text-secondary)]">
+          {t(`${ns}.desc`)}
+        </span>
+        {authRequired ? (
+          <span
+            className={cn(
+              "mt-[8px] inline-flex items-center gap-[5px] text-[11px] font-medium",
+              a.soft,
+            )}
+          >
+            <Lock className="h-[11px] w-[11px]" />
+            {t(`${ns}.authNote`)}
+          </span>
+        ) : null}
+      </span>
+      <ArrowRight className="mt-[3px] h-[16px] w-[16px] shrink-0 text-[var(--text-secondary)] transition-transform group-hover:translate-x-[2px] group-hover:text-[var(--text-primary)]" />
+    </Link>
+  );
+}
 
-        <div className="h-px w-full bg-[var(--border-subtle)]" />
-
-        <ul
-          className={cn("mt-[16px] flex flex-col", ns === "operator" ? "gap-[18px]" : "gap-[8px]")}
-        >
-          {items.map((item) => (
+// Control plane (ADR 0013): the cockpit — govern the platform. Guarded to the
+// platform roles; the card surfaces the "sign-in required" note and links.
+function ControlPlaneCard({ t }: { t: T }) {
+  const a = ACCENT.cyan;
+  return (
+    <section
+      className={cn(
+        "relative overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[24px] pt-[26px] backdrop-blur-[2px]",
+        a.border,
+      )}
+      style={{ ...a.cardStyle, background: CARD_BG }}
+    >
+      <CardGlow />
+      <div className="pointer-events-none absolute right-0 top-[20px] scale-[0.82] opacity-[0.2]">
+        <CockpitVisual />
+      </div>
+      <div className="relative">
+        <PlaneHeader
+          a={a}
+          icon={<ShieldCheck className="h-[23px] w-[23px]" />}
+          badge={t("control.badge")}
+          title={t("control.title")}
+          desc={t("control.desc")}
+          authNote={t("control.authNote")}
+        />
+        <ul className="mt-[18px] flex flex-col gap-[16px]">
+          {OPERATOR_ITEMS.map((item) => (
             <li key={item.key}>
               <Link
                 href={item.href}
@@ -369,10 +459,10 @@ function SpaceCard({
                 <item.icon className={cn("h-[18px] w-[18px] stroke-[1.6]", a.icon)} />
                 <span className="min-w-0 pl-[14px]">
                   <span className="block text-[13px] font-semibold leading-[1.2] text-[var(--text-primary)]">
-                    {t(`${ns}.items.${item.key}.title`)}
+                    {t(`operator.items.${item.key}.title`)}
                   </span>
                   <span className="mt-[4px] block text-[11.5px] font-normal leading-[1.25] text-[var(--text-secondary)]">
-                    {t(`${ns}.items.${item.key}.desc`)}
+                    {t(`operator.items.${item.key}.desc`)}
                   </span>
                 </span>
                 <ChevronRight
@@ -383,50 +473,19 @@ function SpaceCard({
             </li>
           ))}
         </ul>
+        <Link
+          href={agentPath(DEFAULT_AGENT_ID, "synthese")}
+          className={cn(
+            "mt-[22px] flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+            a.button,
+          )}
+          style={a.buttonStyle}
+        >
+          {t("control.cta")}
+          <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
+        </Link>
       </div>
-
-      <Link
-        href={href}
-        className={cn(
-          "absolute bottom-[18px] left-[31px] right-[31px] flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
-          a.button,
-        )}
-        style={a.buttonStyle}
-      >
-        {t(`${ns}.cta`)}
-        <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
-      </Link>
     </section>
-  );
-}
-
-function ChatVisual() {
-  return (
-    <div className="relative h-[136px] w-[238px]">
-      <div className="absolute right-0 top-0 h-[55px] w-[148px] rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] shadow-[0_10px_28px_rgba(0,0,0,0.22)]">
-        <div className="ml-[17px] mt-[18px] h-[6px] w-[86px] rounded-full bg-[var(--text-secondary)] opacity-55" />
-        <div className="ml-[17px] mt-[14px] h-[6px] w-[112px] rounded-full bg-[var(--border-subtle)]" />
-      </div>
-      <div className="absolute right-0 top-[40px] h-[55px] w-[128px] rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel)]">
-        <div className="ml-[18px] mt-[15px] h-[6px] w-[58px] rounded-full bg-[var(--border-subtle)]" />
-        <div className="ml-[18px] mt-[14px] h-[6px] w-[88px] rounded-full bg-[var(--border-subtle)]" />
-        <div className="absolute -bottom-[11px] right-[24px] h-0 w-0 border-l-[15px] border-r-0 border-t-[12px] border-l-transparent border-t-[var(--bg-panel)]" />
-      </div>
-      <div className="absolute left-0 top-[27px] h-[59px] w-[74px] rounded-[10px] border border-[var(--border-gold)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gold)_54%,var(--bg-panel-soft)),color-mix(in_srgb,var(--gold)_22%,var(--bg-panel)))] shadow-[var(--shadow-gold)]">
-        <div className="ml-[17px] mt-[17px] h-[5px] w-[23px] rounded-full bg-[var(--gold-strong)]" />
-        <div className="ml-[49px] mt-[-5px] h-[5px] w-[17px] rounded-full bg-[var(--gold-strong)]" />
-        <div className="ml-[17px] mt-[12px] h-[5px] w-[39px] rounded-full bg-[var(--gold-strong)]" />
-        <div className="absolute -bottom-[13px] left-[17px] h-0 w-0 border-l-[16px] border-r-0 border-t-[14px] border-l-transparent border-t-[var(--bg-panel)]" />
-      </div>
-      <div className="absolute bottom-[2px] left-[62px] h-[47px] w-[73px] rounded-[9px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)]">
-        <div className="flex h-full items-center justify-center gap-[9px]">
-          <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold)]" />
-          <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold)]" />
-          <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold)]" />
-        </div>
-        <div className="absolute -bottom-[11px] right-[14px] h-0 w-0 border-l-[13px] border-r-0 border-t-[11px] border-l-transparent border-t-[var(--bg-panel-soft)]" />
-      </div>
-    </div>
   );
 }
 
@@ -471,28 +530,6 @@ function CockpitVisual() {
             />
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function RecouvrementVisual() {
-  return (
-    <div className="relative h-[140px] w-[244px]">
-      {/* A small "relance / échéancier" statement motif — decorative only. */}
-      <div className="absolute right-0 top-0 h-[92px] w-[150px] rounded-[8px] border border-[var(--border-amber)] bg-[var(--bg-panel-soft)] p-[12px] shadow-[var(--shadow-amber)]">
-        <div className="flex items-center justify-between">
-          <span className="h-[6px] w-[64px] rounded-full bg-[var(--amber-soft)] opacity-70" />
-          <HandCoins className="h-[16px] w-[16px] text-[var(--amber)]" />
-        </div>
-        <div className="mt-[14px] h-[5px] w-[110px] rounded-full bg-[var(--border-subtle)]" />
-        <div className="mt-[10px] h-[5px] w-[88px] rounded-full bg-[var(--border-subtle)]" />
-        <div className="mt-[10px] h-[5px] w-[100px] rounded-full bg-[var(--border-subtle)]" />
-      </div>
-      <div className="absolute left-0 bottom-[6px] h-[64px] w-[120px] rounded-[8px] border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-[11px]">
-        <span className="block h-[5px] w-[40px] rounded-full bg-[var(--amber)] opacity-60" />
-        <div className="mt-[11px] h-[5px] w-[80px] rounded-full bg-[var(--border-subtle)]" />
-        <div className="mt-[9px] h-[5px] w-[58px] rounded-full bg-[var(--border-subtle)]" />
       </div>
     </div>
   );

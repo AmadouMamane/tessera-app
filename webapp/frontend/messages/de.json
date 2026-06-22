@@ -4555,8 +4555,23 @@
       "name": "Tessera Ops",
       "role": "Plattform-Admin"
     },
+    "business": {
+      "badge": "Fachebene",
+      "title": "Produkte / Fachbereiche",
+      "desc": "Die Arbeit erledigen: der externe Kundenbereich und die interne Inkasso-Konsole.",
+      "reveal": "Fachbereiche erkunden",
+      "collapse": "Einklappen"
+    },
+    "control": {
+      "badge": "Kontrollebene",
+      "title": "Cockpit · Governance",
+      "desc": "Die KI-Plattform steuern: Überwachung, Konfiguration, Audit und Administration.",
+      "cta": "Zum Cockpit",
+      "authNote": "Betreiber-Anmeldung erforderlich"
+    },
     "client": {
       "badge": "Produkt",
+      "kind": "Extern",
       "title": "Kundenbereich",
       "desc": "Eine einfache Oberfläche, um mit Ihrem KI-Assistenten zu kommunizieren und Ihre Anfragen zu verfolgen.",
       "cta": "Zum Kundenbereich",
@@ -4585,6 +4600,7 @@
     },
     "recouvrement": {
       "badge": "Fachbereich",
+      "kind": "Intern · collections",
       "title": "Inkasso-Konsole",
       "desc": "Das interne Fachwerkzeug des Inkasso-Sachbearbeiters: Sprechen Sie mit dem Inkasso-Agenten (Mahnungen, Rückstände, Tilgungspläne).",
       "cta": "Inkasso-Konsole öffnen",
