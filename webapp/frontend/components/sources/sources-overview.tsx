@@ -1503,7 +1503,7 @@ function DetailPanel({
             {t("detail.score")}
           </span>
         </div>
-        <dl className="grid flex-1 grid-cols-[max-content_max-content] items-center justify-center gap-x-8 gap-y-3.5">
+        <dl className="grid flex-1 grid-cols-[max-content_max-content] items-center justify-evenly gap-y-3.5">
           <Fact
             icon={<Layers className="h-3.5 w-3.5" />}
             label={t("detail.tChunks")}
