@@ -519,7 +519,9 @@ function SourcesDrawer({
       // far screen edge on wide viewports.
       const c = document.querySelector("[data-shell-content]") ?? m;
       const cr = c.getBoundingClientRect();
-      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
+      // Extend the right edge to the page border (main), so the panel sits flush
+      // against it; keep the left at the content column so it still overlays the table.
+      setRect({ top: mr.top, left: cr.left, width: mr.right - cr.left, height: mr.bottom - mr.top });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -535,7 +537,7 @@ function SourcesDrawer({
   }, [onClose]);
   return (
     <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 p-2.5 backdrop-blur-[2px]"
+      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
       style={rect ?? { inset: 0 }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
