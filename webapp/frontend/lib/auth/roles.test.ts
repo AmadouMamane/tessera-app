@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   hasCockpitAccess,
+  hasCollectionsAccess,
   hasProductAccess,
   isOperator,
   spaceRedirectForRole,
@@ -38,5 +39,26 @@ describe("entry routing by audience (ADR 0013)", () => {
     for (const role of OPERATOR_ROLES) {
       expect(hasProductAccess(role)).toBe(true);
     }
+  });
+});
+
+// ADR 0010 Phase C — the collections business plane. Reached directly via
+// /recouvrement, never the cockpit; platform roles may supervise it.
+describe("collections business plane (ADR 0010 Phase C)", () => {
+  it("routes the collections role directly to its business console", () => {
+    expect(spaceRedirectForRole("collections")).toBe("/recouvrement");
+  });
+
+  it("gates /recouvrement to collections + platform operators (not customers)", () => {
+    expect(hasCollectionsAccess("collections")).toBe(true);
+    for (const role of OPERATOR_ROLES) {
+      expect(hasCollectionsAccess(role)).toBe(true);
+    }
+    expect(hasCollectionsAccess(null)).toBe(false);
+  });
+
+  it("keeps collections off the cockpit (business plane ≠ platform plane)", () => {
+    expect(hasCockpitAccess("collections")).toBe(false);
+    expect(isOperator("collections")).toBe(false);
   });
 });

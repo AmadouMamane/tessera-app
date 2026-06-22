@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 
 import { redirect } from "@/i18n/navigation";
-import { DEFAULT_AGENT_ID, agentPath } from "@/lib/agent-context";
-import { currentRole, hasProductAccess } from "@/lib/auth/session";
+import { currentRole, hasProductAccess, spaceRedirectForRole } from "@/lib/auth/session";
 
 interface ProductLayoutProps {
   children: ReactNode;
@@ -16,7 +15,10 @@ export default async function ProductLayout({ children, params }: ProductLayoutP
   const role = await currentRole();
 
   if (!hasProductAccess(role)) {
-    redirect({ href: agentPath(DEFAULT_AGENT_ID, "synthese"), locale });
+    // Send a denied session to ITS landing (ADR 0013), not a hard-coded surface:
+    // a collections role lands on /recouvrement, not the cockpit (which it cannot
+    // reach) — avoiding a redirect loop.
+    redirect({ href: spaceRedirectForRole(role), locale });
   }
 
   return children;

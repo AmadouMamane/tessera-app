@@ -4532,6 +4532,16 @@
   "scaffold": {
     "body": "This page is under construction. Navigation, routing and states are in place; content will be wired up shortly."
   },
+  "recouvrement": {
+    "title": "Collections console",
+    "subtitle": "Internal business console — recouvrement agent",
+    "badge": "Business plane · internal",
+    "roleLabel": "Role",
+    "panelTitle": "Activity",
+    "panelEmpty": "No collections back-office in this demo. Tessera has no case backend: no dossier, schedule or payment plan is fabricated. Only the real exchanges with the agent (left) and their timestamped audit log exist.",
+    "contextTitle": "Context",
+    "context": "You are talking to the internal “recouvrement” agent through its real chat core. Access is opened by a signed, server-verified operator assertion — never via the customer widget."
+  },
   "landing": {
     "welcome": "Welcome to Tessera",
     "choose": "Choose your space to continue",

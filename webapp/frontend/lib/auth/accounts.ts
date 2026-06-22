@@ -15,7 +15,7 @@ import "server-only";
 
 import { timingSafeEqual } from "node:crypto";
 
-export type Role = "admin" | "auditor" | "superadmin";
+export type Role = "admin" | "auditor" | "superadmin" | "collections";
 
 interface Account {
   username: string;
@@ -40,6 +40,14 @@ const ACCOUNTS: Account[] = [
     username: "auditor",
     password: process.env.TESSERA_AUTH_AUDITOR_PASSWORD ?? "tessera-auditor",
     role: "auditor",
+  },
+  {
+    // Business-plane role (ADR 0010 Phase C / 0013): reaches recouvrement's
+    // dedicated console directly, never the cockpit. Distinct from the platform
+    // roles above.
+    username: "collections",
+    password: process.env.TESSERA_AUTH_COLLECTIONS_PASSWORD ?? "tessera-collections",
+    role: "collections",
   },
   ...(SUPERADMIN_PASSWORD
     ? [{ username: "superadmin", password: SUPERADMIN_PASSWORD, role: "superadmin" as const }]

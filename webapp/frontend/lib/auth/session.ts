@@ -13,6 +13,7 @@ import type { Role } from "@/lib/auth/accounts";
 
 export {
   hasCockpitAccess,
+  hasCollectionsAccess,
   hasProductAccess,
   isAdmin,
   isOperator,

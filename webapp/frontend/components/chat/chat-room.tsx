@@ -78,9 +78,16 @@ export interface ExternalChatPrompt {
 interface ChatRoomProps {
   externalPrompt?: ExternalChatPrompt | null;
   onExternalPromptHandled?: (id: string) => void;
+  /**
+   * Originating surface hint forwarded to the BFF (ADR 0010 Phase C). The
+   * recouvrement business console passes `"recouvrement"` so a verified
+   * collections/operator session is routed to recouvrement on the dedicated-ui
+   * surface. Omitted (default) for the customer widget — that path is unchanged.
+   */
+  surface?: "recouvrement";
 }
 
-export function ChatRoom({ externalPrompt, onExternalPromptHandled }: ChatRoomProps = {}) {
+export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: ChatRoomProps = {}) {
   const t = useTranslations("chat");
   const locale = useLocale() as Locale;
   const composerRef = useRef<ChatComposerHandle>(null);
@@ -226,6 +233,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled }: ChatRoomPr
           },
           {
             signal: controller.signal,
+            surface,
             onStart: ({ conversation_id, turn_id }) => start(conversation_id, turn_id),
             onToken: (token) => {
               if (assistantId === null) assistantId = crypto.randomUUID();
@@ -294,6 +302,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled }: ChatRoomPr
       setStreaming,
       start,
       startAssistant,
+      surface,
       t,
     ],
   );

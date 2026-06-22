@@ -4532,6 +4532,16 @@
   "scaffold": {
     "body": "Diese Seite ist im Aufbau. Navigation, Routing und Zustände stehen; der Inhalt wird in Kürze angebunden."
   },
+  "recouvrement": {
+    "title": "Inkasso-Konsole",
+    "subtitle": "Interne Fachkonsole — Inkasso-Agent",
+    "badge": "Fachebene · intern",
+    "roleLabel": "Rolle",
+    "panelTitle": "Aktivität",
+    "panelEmpty": "Kein Inkasso-Backend in dieser Demo. Tessera hat kein Fall-Backend: Es werden keine Akten, Zahlpläne oder Tilgungspläne erfunden. Es existieren nur die echten Gespräche mit dem Agenten (links) und ihr zeitgestempeltes Audit-Protokoll.",
+    "contextTitle": "Kontext",
+    "context": "Sie sprechen über den echten Chat-Kern mit dem internen „Inkasso“-Agenten. Der Zugang wird durch eine signierte, serverseitig verifizierte Operator-Assertion geöffnet — niemals über das Kunden-Widget."
+  },
   "landing": {
     "welcome": "Willkommen bei Tessera",
     "choose": "Wählen Sie Ihren Bereich, um fortzufahren",

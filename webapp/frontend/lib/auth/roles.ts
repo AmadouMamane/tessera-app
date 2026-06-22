@@ -44,12 +44,27 @@ export function hasCockpitAccess(role: Role | null): boolean {
 }
 
 /**
+ * Who may reach recouvrement's dedicated business console (`/recouvrement`, ADR
+ * 0010 Phase C). The `collections` business-plane role enters it directly; the
+ * platform operators may also enter to supervise. A customer/anonymous session
+ * never can. This gates the console route; the agent independently re-checks the
+ * signed operator assertion (the authority is server-side, not this predicate).
+ */
+export function hasCollectionsAccess(role: Role | null): boolean {
+  return role === "collections" || isOperator(role);
+}
+
+/**
  * The landing surface for a resolved role (ADR 0013). Identity is the door: an
  * authenticated operator lands in the operator area (cockpit by default); everyone
  * else (anonymous/customer) lands on the customer product. The manual picker is no
  * longer an entry — it survives only as a labelled demo launcher reached by URL.
  */
-export function spaceRedirectForRole(role: Role | null): "/produit" | `/agents/${string}/synthese` {
+export function spaceRedirectForRole(
+  role: Role | null,
+): "/produit" | "/recouvrement" | `/agents/${string}/synthese` {
+  // Business-plane role lands directly in its own console (never the cockpit).
+  if (role === "collections") return "/recouvrement";
   if (isOperator(role)) return agentPath(DEFAULT_AGENT_ID, "synthese");
   return "/produit";
 }

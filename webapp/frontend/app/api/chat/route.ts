@@ -11,12 +11,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { hasCollectionsAccess, isOperator } from "@/lib/auth/roles";
 import { isGatedModel } from "@/lib/models";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
-import {
-  mintOperatorAssertion,
-  OPERATOR_ASSERTION_HEADER,
-} from "@/lib/server/operator-assertion";
+import { OPERATOR_ASSERTION_HEADER, mintOperatorAssertion } from "@/lib/server/operator-assertion";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,12 +22,13 @@ export const runtime = "nodejs";
 const SESSION_COOKIE = "tessera_sid";
 const SESSION_MAX_AGE = 60 * 60 * 24; // 24h
 
-// The client surface hint the cockpit console sends (see lib/api/sse.ts). It is
-// NOT a privilege: it only selects the operator branch *when* the request also
-// carries a verified operator session (auth()). A forged hint from a visitor
-// mints nothing — the turn stays customer/widget.
+// The client surface hint a privileged surface sends (see lib/api/sse.ts). It is
+// NOT a privilege: it only selects an operator branch *when* the request also
+// carries the right verified next-auth session (auth()). A forged hint from a
+// visitor mints nothing — the turn stays customer/widget.
 const CLIENT_SURFACE_HEADER = "x-tessera-client-surface";
-const CONSOLE_SURFACE = "console";
+const CONSOLE_SURFACE = "console"; // cockpit operator console (Phase B)
+const RECOUVREMENT_SURFACE = "recouvrement"; // recouvrement business console (Phase C)
 
 export async function POST(request: NextRequest): Promise<Response> {
   const body = await request.text();
@@ -56,18 +55,25 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   }
 
-  // Operator forwarding (ADR 0010 Phase B): when the request comes from the
-  // cockpit console AND carries a verified operator session, mint a signed
-  // assertion the agent verifies to derive AuthState.OPERATOR + cockpit-embedded.
-  // The privilege portal is auth() (the next-auth session cookie verified
-  // server-side), never the client hint — without an operator session, no
-  // assertion is minted and the turn stays on the customer/widget path.
-  const fromConsole = request.headers.get(CLIENT_SURFACE_HEADER) === CONSOLE_SURFACE;
-  const operatorRole = session?.user?.role;
-  const operatorAssertion =
-    fromConsole && operatorRole
-      ? mintOperatorAssertion(session.user?.name ?? operatorRole, operatorRole)
-      : null;
+  // Operator forwarding (ADR 0010 Phase B/C): mint a signed assertion the agent
+  // verifies to derive AuthState.OPERATOR on the carried surface. The privilege
+  // portal is auth() (the next-auth session cookie verified server-side), never
+  // the client hint — without the right session role, no assertion is minted and
+  // the turn stays on the customer/widget path.
+  //   - cockpit console (Phase B) → cockpit-embedded, for platform operators;
+  //   - recouvrement business console (Phase C) → dedicated-ui, for the
+  //     collections role (or a platform operator supervising).
+  const clientSurface = request.headers.get(CLIENT_SURFACE_HEADER);
+  const role = session?.user?.role;
+  const principal = session?.user?.name ?? role;
+  let operatorAssertion: string | null = null;
+  if (role && principal) {
+    if (clientSurface === CONSOLE_SURFACE && isOperator(role)) {
+      operatorAssertion = mintOperatorAssertion(principal, role, "cockpit-embedded");
+    } else if (clientSurface === RECOUVREMENT_SURFACE && hasCollectionsAccess(role)) {
+      operatorAssertion = mintOperatorAssertion(principal, role, "dedicated-ui");
+    }
+  }
 
   // Per-browser session id — the rate-limit key. Reuse the cookie if present,
   // otherwise mint one and set it on the response. httpOnly so client JS can
