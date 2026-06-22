@@ -1496,17 +1496,17 @@ function DetailPanel({
         </button>
       </div>
 
-      {/* Ring kept tight (small fixed gaps on each side); the rest of the space
-          is shared evenly between divider, chunks col, docs col and the edge. */}
+      {/* Ring kept tight on the left; the divider sits midway between the ring and
+          the chunks column because divider/cols/edge share space evenly. */}
       <div className="flex items-stretch rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] py-3.5 pl-4">
-        <div className="mr-4 flex flex-col items-center justify-center gap-1.5">
+        <div className="flex flex-col items-center justify-center gap-1.5">
           <ScoreRing value={row.citation} />
           <span className="text-[0.58rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {t("detail.score")}
           </span>
         </div>
-        <div className="w-px self-stretch bg-[var(--tessera-border)]" />
-        <div className="flex flex-1 justify-evenly">
+        <div className="flex flex-1 items-stretch justify-evenly">
+          <div className="w-px self-stretch bg-[var(--tessera-border)]" />
           <dl className="flex flex-col justify-center gap-3.5">
             <Fact
               icon={<Layers className="h-3.5 w-3.5" />}
