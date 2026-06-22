@@ -214,7 +214,7 @@ export function SourcesOverview() {
           />
           {view === "overview" ? (
             <>
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <ActivityArea t={t} data={data} />
                 <RecentActivity data={data} />
               </div>
@@ -1001,28 +1001,48 @@ function ActivityArea({ t, data }: { t: T; data: Data }) {
   const pts = days.map(([, n], i) => [i * step, H - (n / max) * (H - 8)] as const);
   const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
   const area = `M0,${H} L${line.replaceAll(" ", " L")} L${W},${H} Z`;
+  const fmtMax = max.toLocaleString("fr-FR");
   return (
     <Panel title={t("view.activity")}>
-      <div className="flex items-end justify-between gap-2 text-[0.56rem] tabular-nums text-[var(--tessera-text-muted)]">
-        <span>{days.at(0)?.[0]}</span>
-        <span>{days.at(-1)?.[0]}</span>
+      <div className="flex gap-2">
+        {/* y reference: peak at top, zero at bottom */}
+        <div className="flex shrink-0 flex-col justify-between py-0.5 text-right text-[0.5rem] tabular-nums leading-none text-[var(--tessera-text-muted)]">
+          <span>{fmtMax}</span>
+          <span>0</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            className="h-16 w-full"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <title>{t("view.activity")}</title>
+            <defs>
+              <linearGradient id="sm-area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#34d399" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {/* peak + baseline reference lines */}
+            <line
+              x1="0"
+              y1="8"
+              x2={W}
+              y2="8"
+              stroke="var(--tessera-border)"
+              strokeDasharray="3 4"
+            />
+            <line x1="0" y1={H} x2={W} y2={H} stroke="var(--tessera-border)" />
+            <path d={area} fill="url(#sm-area)" />
+            <polyline points={line} fill="none" stroke="#34d399" strokeWidth="1.5" />
+          </svg>
+          <div className="mt-1 flex items-center justify-between text-[0.56rem] tabular-nums text-[var(--tessera-text-muted)]">
+            <span>{days.at(0)?.[0]}</span>
+            <span>{days.at(-1)?.[0]}</span>
+          </div>
+        </div>
       </div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="mt-1 h-20 w-full"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <title>{t("view.activity")}</title>
-        <defs>
-          <linearGradient id="sm-area" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#34d399" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={area} fill="url(#sm-area)" />
-        <polyline points={line} fill="none" stroke="#34d399" strokeWidth="1.5" />
-      </svg>
     </Panel>
   );
 }
