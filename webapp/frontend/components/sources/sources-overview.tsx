@@ -519,9 +519,9 @@ function SourcesDrawer({
       // far screen edge on wide viewports.
       const c = document.querySelector("[data-shell-content]") ?? m;
       const cr = c.getBoundingClientRect();
-      // Extend the right edge to the page border (main), so the panel sits flush
-      // against it; keep the left at the content column so it still overlays the table.
-      setRect({ top: mr.top, left: cr.left, width: mr.right - cr.left, height: mr.bottom - mr.top });
+      // Span the content column so the panel's right edge lines up with the main
+      // table's right border (not the screen edge); no right padding keeps it flush.
+      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
     };
     measure();
     window.addEventListener("resize", measure);
