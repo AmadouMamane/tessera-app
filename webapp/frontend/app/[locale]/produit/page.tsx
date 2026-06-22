@@ -1,35 +1,35 @@
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
 
 import { DemoLauncherLink } from "@/components/layout/demo-launcher-link";
-import { ApercuHost } from "@/components/product/apercu-host";
 import { ChatWidget } from "@/components/product/chat-widget";
+import { CreditAuroreMesComptesHost } from "@/components/product/credit-aurore-mes-comptes-host";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps) {
-  const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "product.apercu" });
-  return { title: `${t("brand")} · ${t("space")}` };
+export function generateMetadata() {
+  return { title: "Crédit Aurore · Mes comptes" };
 }
 
 /**
- * Customer chat — the single live presentation (cut-over done; see
- * `docs/design/ui-contract.md`). It is an honest decor host (badge + notice +
- * skeletons, NO fabricated banking data) with the floating `ChatWidget` on top.
+ * Customer product — the v2 cut-over (decision recorded): `/produit` now renders
+ * the "Crédit Aurore · Mes comptes" host (formerly `/produit/apercu3`) with the
+ * real chat. It is an honest fictional decor host — its visible "Page client
+ * fictive, chat réel" label is kept — and the floating `ChatWidget` reuses the
+ * shared `<ChatRoom>` core verbatim (re-skin, NOT a fork: `streamChat` stays the
+ * single chat entry point). The launcher bubble is persistent (no `hideLauncher`).
  *
- * Re-skin, not re-fork: the widget reuses the existing `<ChatRoom>` core verbatim
- * (`streamChat` + `MessageBubble` + the chat store). This page owns no streaming
- * or message-rendering logic. `produit/layout.tsx` applies the product access gate
- * above it. The former portal presentation and its sub-pages were retired.
+ * `produit/layout.tsx` applies the product access gate above; the host is full-
+ * bleed (no shell chrome) so there is no double chrome. `/produit/apercu3`
+ * redirects here; `/produit/apercu` and `/produit/apercu2` are left untouched.
  */
 export default async function ProductChatPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   return (
     <>
-      <ApercuHost />
+      <CreditAuroreMesComptesHost />
       <ChatWidget />
       <DemoLauncherLink floating />
     </>

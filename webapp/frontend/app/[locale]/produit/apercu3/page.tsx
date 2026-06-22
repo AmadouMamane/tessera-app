@@ -1,24 +1,15 @@
-import { setRequestLocale } from "next-intl/server";
-
-import { ChatWidget } from "@/components/product/chat-widget";
-import { CreditAuroreMesComptesHost } from "@/components/product/credit-aurore-mes-comptes-host";
+import { redirect } from "@/i18n/navigation";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
 }
 
-export function generateMetadata() {
-  return { title: "Crédit Aurore · Mes comptes" };
-}
+export const dynamic = "force-dynamic";
 
+// v2 cut-over: apercu3 became the real product. This route now redirects to
+// /produit (which renders the same CreditAuroreMesComptesHost + ChatWidget). Kept
+// as a stable redirect so existing links/bookmarks to /produit/apercu3 still land.
 export default async function ProductApercu3Page({ params }: PageProps) {
   const { locale } = await params;
-  setRequestLocale(locale);
-
-  return (
-    <>
-      <CreditAuroreMesComptesHost />
-      <ChatWidget hideLauncher />
-    </>
-  );
+  redirect({ href: "/produit", locale });
 }
