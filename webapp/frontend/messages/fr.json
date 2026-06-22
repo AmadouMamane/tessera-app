@@ -3650,7 +3650,7 @@
       "viewAudit": "Journal d'audit",
       "asof": "Voir à date (as-of)",
       "managePolicy": "Gérer la politique",
-      "readonlyHint": "Source versionnée dans Git - édition par PR (lecture seule)"
+      "readonlyHint": "Source en lecture seule - réindexée par run d'ingestion (lignée data/embedding)"
     },
     "empty": {
       "rows": "Aucune source ne correspond aux filtres."

@@ -3650,7 +3650,7 @@
       "viewAudit": "Audit log",
       "asof": "View as-of",
       "managePolicy": "Manage policy",
-      "readonlyHint": "Git-versioned source - edited via PR (read-only)"
+      "readonlyHint": "Read-only source - reindexed per ingestion run (data/embedding lineage)"
     },
     "empty": {
       "rows": "No source matches the filters."

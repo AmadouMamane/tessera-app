@@ -3650,7 +3650,7 @@
       "viewAudit": "Audit-Log",
       "asof": "Stand anzeigen (as-of)",
       "managePolicy": "Richtlinie verwalten",
-      "readonlyHint": "In Git versionierte Quelle - Bearbeitung per PR (schreibgeschuetzt)"
+      "readonlyHint": "Schreibgeschützte Quelle - per Ingestion-Run neu indexiert (Data-/Embedding-Lineage)"
     },
     "empty": {
       "rows": "Keine Quelle entspricht den Filtern."
