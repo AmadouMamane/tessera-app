@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 /**
- * Decor host for the v2 product preview (`/produit/apercu`). Pure stage set:
+ * Decor host for the customer chat (`/produit`). Pure stage set:
  * a fake "Crédit Aurore — Espace personnel" customer portal made of greyed
  * skeleton tiles explicitly labelled "demo host". It carries **no real banking
  * data and no banking functionality** — its only job is to be the backdrop the

@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { ChatRoom } from "@/components/chat/chat-room";
-import { ProductShell } from "@/components/layout/product-shell";
+import { ApercuHost } from "@/components/product/apercu-host";
+import { ChatWidget } from "@/components/product/chat-widget";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -9,17 +9,27 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "chat" });
-  return { title: t("title") };
+  const t = await getTranslations({ locale, namespace: "product.apercu" });
+  return { title: `${t("brand")} · ${t("space")}` };
 }
 
+/**
+ * Customer chat — the single live presentation (cut-over done; see
+ * `docs/design/ui-contract.md`). It is an honest decor host (badge + notice +
+ * skeletons, NO fabricated banking data) with the floating `ChatWidget` on top.
+ *
+ * Re-skin, not re-fork: the widget reuses the existing `<ChatRoom>` core verbatim
+ * (`streamChat` + `MessageBubble` + the chat store). This page owns no streaming
+ * or message-rendering logic. `produit/layout.tsx` applies the product access gate
+ * above it. The former portal presentation and its sub-pages were retired.
+ */
 export default async function ProductChatPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "chat" });
   return (
-    <ProductShell title={t("title")}>
-      <ChatRoom />
-    </ProductShell>
+    <>
+      <ApercuHost />
+      <ChatWidget />
+    </>
   );
 }

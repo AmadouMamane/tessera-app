@@ -43,10 +43,6 @@ import { useShellChrome } from "./shell-chrome";
 
 type RouteHref =
   | "/produit"
-  | "/produit/mes-demandes"
-  | "/produit/documents"
-  | "/produit/alertes"
-  | "/produit/parametres"
   // AGENTS super-section lists SECTIONS, not per-agent pages: the fleet hub plus
   // the global operator queue. Per-agent pages (Synthèse…Historique) live ONLY in
   // the command-bar (AgentTabs), scoped to /agents/:id — never duplicated here.

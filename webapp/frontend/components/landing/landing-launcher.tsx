@@ -3,14 +3,10 @@
 import {
   ArrowRight,
   Bell,
-  BellRing,
   ChevronRight,
   CircleHelp,
-  FileText,
-  ListChecks,
   MessageSquare,
   Search,
-  Settings,
   ShieldCheck,
   SlidersHorizontal,
   UserRound,
@@ -61,12 +57,10 @@ const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--shadow-cyan": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
+// Cut-over: the customer space is a single surface — the chat. The former portal
+// sub-pages (requests/documents/alerts/settings) were retired (ui-contract.md).
 const CLIENT_ITEMS: SpaceItem[] = [
   { icon: MessageSquare, key: "chat", href: "/produit" },
-  { icon: ListChecks, key: "requests", href: "/produit/mes-demandes" },
-  { icon: FileText, key: "documents", href: "/produit/documents" },
-  { icon: BellRing, key: "alerts", href: "/produit/alertes" },
-  { icon: Settings, key: "settings", href: "/produit/parametres" },
 ];
 
 const OPERATOR_ITEMS: SpaceItem[] = [

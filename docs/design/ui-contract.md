@@ -21,57 +21,46 @@ super-headers AGENT / GOUVERNER / PLATEFORME are typographic only.
 
 ## App 1 — PRODUIT (end customer)
 
-Client shell (`ProductShell`): client auth, simple nav, no cockpit chrome. Pages
-are all siblings; the chat is the home, never a parent.
+Single customer surface — the chat. No cockpit chrome.
 
 | Route | Page | Source |
 | --- | --- | --- |
-| `/produit` | Chat (home) — **legacy presentation** | reuse `ChatRoom` |
-| `/produit/apercu` | Chat **v2 presentation** — minimal decor host + floating widget | reuse `ChatRoom` (re-skin) |
-| `/produit/apercu2` | Chat **v2 presentation #2** — "Mes comptes" portal decor + floating widget | reuse `ChatRoom` (re-skin) |
-| `/produit/mes-demandes` | Request tracking | scaffold |
-| `/produit/documents` | Statements, contracts, PDFs | scaffold |
-| `/produit/alertes` | Notifications | scaffold |
-| `/produit/parametres` | Profile, language, privacy & consents | scaffold |
+| `/produit` | Customer chat — honest decor host + floating widget | reuse `ChatRoom` (re-skin) |
 
-#### v2 chat presentation — `/produit/apercu` (re-skin, not re-fork)
+#### Customer chat presentation — `/produit` (re-skin, not re-fork)
 
-`/produit/apercu` is the **new presentation** of the customer chat: a decor
-host page ("Crédit Aurore · Espace personnel" header + greyed skeleton tiles
-labelled "demo host", **no real banking data**) with a floating chat **widget**
-(FAB bottom-right ~56px → panel ~400px × min(620px, 80vh) anchored bottom-right
-on desktop, full-screen on mobile; Esc / backdrop / FAB closes).
+`/produit` is the customer chat: a decor host page ("Crédit Aurore · Espace
+personnel" header + greyed skeleton tiles labelled "demo host", **no real banking
+data**) with a floating chat **widget** (FAB bottom-right ~56px → panel ~400px ×
+min(620px, 80vh) anchored bottom-right on desktop, full-screen on mobile; Esc /
+backdrop / FAB closes).
 
 Hard rule — **re-skin, not re-fork**: the widget reuses the existing core
 verbatim (`<ChatRoom>` → `streamChat` + `MessageBubble` + the chat store). It
 owns only open/close state and the layout frame; it duplicates **none** of the
 streaming or message-rendering logic. ChatRoom reflows naturally at ~400px (its
 `sm:` utilities don't trigger, so the empty state / suggestions render in their
-compact one-column form). New files: `components/product/chat-widget.tsx`,
-`components/product/apercu-host.tsx`, `app/[locale]/produit/apercu/page.tsx`.
+compact one-column form). Files: `components/product/chat-widget.tsx`,
+`components/product/apercu-host.tsx`, `app/[locale]/produit/page.tsx`. The widget
+is **auth-aware** (`components/product/customer-session-bar.tsx`): it reflects the
+server-derived session (anonymous vs. demo customer) and exposes demo login/logout
+(ADR 0008/0009) — anonymous gets general info, an authenticated session unlocks
+recouvrement and the account tools.
 
-`/produit/apercu2` is a **second decor variant** of the same v2 presentation: a
-faithful reproduction of a retail-bank "Mes comptes" customer portal
-(`docs/ui-reference/produit/espace_client.png` — red top bar, secondary tabs,
-current/savings/cashback accounts + credit promo, "useful links" right rail,
-dark footer) carrying **fictitious data and no banking functionality**. It
-mounts the **same** `ChatWidget` (so the chat core is reused identically — only
-the host backdrop differs). Files: `components/product/mes-comptes-host.tsx`,
-`app/[locale]/produit/apercu2/page.tsx`. The two `apercu*` hosts are competing
-backdrops for the same widget; cut-over picks one and deletes the other along
-with the legacy presentation.
+**Cut-over: DONE.** "Parallel" was a *phase*, not a destination, and it is over:
 
-**Cut-over plan (documented, NOT executed yet).** "Parallel" is a *phase*, not a
-destination. Once v2 is validated:
-
-1. `/produit/apercu` becomes `/produit` (the widget presentation replaces the
-   legacy full-page `ChatRoom` as the customer home).
-2. The legacy full-page presentation is retired.
+1. The widget presentation **became `/produit`** (replacing the legacy full-page
+   `ChatRoom` as the customer home).
+2. The legacy full-page presentation was **retired**.
 3. The 4 portal sub-pages (`/produit/mes-demandes`, `/produit/documents`,
-   `/produit/alertes`, `/produit/parametres`) are removed — the decor host
-   subsumes the "portal" framing, and the chat is the only real surface.
-4. This table collapses back to a single `/produit` row sourced from the v2
-   widget; the `/produit/apercu` row is deleted.
+   `/produit/alertes`, `/produit/parametres`) were **removed** — the decor host
+   subsumes the "portal" framing, and the chat is the only real surface. Their
+   orphaned client components (`ProductShell`, `ClientSidebar`, `client/*`) went
+   with them.
+4. The competing decor variants (`/produit/apercu`, `apercu2`, `apercu3` and the
+   `mes-comptes-host` / `credit-aurore-mes-comptes-host` backdrops) were
+   **deleted** — one live presentation. The chat **core was not touched**:
+   `ChatRoom` + `streamChat` are reused exactly as before.
 
 ## App 2 — COCKPIT (operator / ML eng / compliance)
 
