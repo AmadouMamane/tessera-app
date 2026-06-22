@@ -21,7 +21,6 @@ import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Link } from "@/i18n/navigation";
-import { DEFAULT_AGENT_ID, agentPath } from "@/lib/agent-context";
 import { cn } from "@/lib/cn";
 
 type Accent = "gold" | "cyan" | "amber";
@@ -236,7 +235,7 @@ function SpaceToggle({ t }: { t: T }) {
         {t("toggle.product")}
       </Link>
       <Link
-        href={agentPath(DEFAULT_AGENT_ID, "synthese")}
+        href="/agents"
         className="flex h-[36px] flex-1 items-center justify-center gap-[8px] rounded-[10px] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]"
       >
         <ShieldCheck className="h-[15px] w-[15px] stroke-[var(--cyan)] stroke-[2]" />
@@ -463,7 +462,7 @@ function ControlPlaneCard({ t }: { t: T }) {
           ))}
         </ul>
         <Link
-          href={agentPath(DEFAULT_AGENT_ID, "synthese")}
+          href="/agents"
           className={cn(
             "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
             a.button,

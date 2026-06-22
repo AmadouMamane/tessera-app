@@ -9,7 +9,9 @@ import {
   spaceRedirectForRole,
 } from "@/lib/auth/roles";
 
-const COCKPIT_LANDING = "/agents/support-client/synthese";
+// List-first (list → detail): an operator lands on the fleet list, not a
+// presumed agent's synthèse.
+const COCKPIT_LANDING = "/agents";
 const OPERATOR_ROLES = ["admin", "auditor", "superadmin"] as const;
 
 // ADR 0013 — entry routing by audience. `spaceRedirectForRole` only chooses the

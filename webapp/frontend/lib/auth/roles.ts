@@ -12,7 +12,6 @@
  * the cockpit layouts (`hasCockpitAccess`) remains the authority. Routing never
  * substitutes for authorization.
  */
-import { DEFAULT_AGENT_ID, agentPath } from "@/lib/agent-context";
 import type { Role } from "@/lib/auth/accounts";
 
 export function isOperator(role: Role | null): boolean {
@@ -83,15 +82,16 @@ export function operatorSurfaceForHint(
 
 /**
  * The landing surface for a resolved role (ADR 0013). Identity is the door: an
- * authenticated operator lands in the operator area (cockpit by default); everyone
- * else (anonymous/customer) lands on the customer product. The manual picker is no
- * longer an entry — it survives only as a labelled demo launcher reached by URL.
+ * authenticated operator lands on the **fleet list** (`/agents`), not a specific
+ * agent's synthèse — the cockpit follows a list-first (list → detail) pattern, so
+ * the operator picks an agent rather than presuming support-client. The collections
+ * role lands directly in its own console; everyone else on the customer product.
+ * The manual picker is no longer an entry — it survives only as a labelled demo
+ * launcher reached by URL.
  */
-export function spaceRedirectForRole(
-  role: Role | null,
-): "/produit" | "/recouvrement" | `/agents/${string}/synthese` {
+export function spaceRedirectForRole(role: Role | null): "/produit" | "/recouvrement" | "/agents" {
   // Business-plane role lands directly in its own console (never the cockpit).
   if (role === "collections") return "/recouvrement";
-  if (isOperator(role)) return agentPath(DEFAULT_AGENT_ID, "synthese");
+  if (isOperator(role)) return "/agents";
   return "/produit";
 }
