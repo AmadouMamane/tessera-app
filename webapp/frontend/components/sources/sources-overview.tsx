@@ -606,17 +606,11 @@ function SourceTable({
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+        <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c) => (
-                <th
-                  key={c.key}
-                  className={cn(
-                    "whitespace-nowrap px-2 py-1.5 font-medium",
-                    (c.key === "name" || c.key === "usedBy") && "w-1/2",
-                  )}
-                >
+                <th key={c.key} className="truncate px-2 py-1.5 text-left font-medium">
                   {c.sort ? (
                     <button
                       type="button"
@@ -646,7 +640,7 @@ function SourceTable({
                   )}
                 </th>
               ))}
-              <th className="w-[92px] px-2 py-1.5" aria-hidden="true" />
+              <th className="w-28 px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
@@ -672,8 +666,12 @@ function SourceTable({
                   )}
                 >
                   <td className="px-2 py-1.5">
-                    <span className="inline-flex items-center gap-1.5 text-[var(--tessera-text)]">
-                      <Database className="h-3 w-3 text-[#87bfff]" /> {s.name}
+                    <span
+                      className="flex items-center gap-1.5 text-[var(--tessera-text)]"
+                      title={s.name}
+                    >
+                      <Database className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <span className="truncate">{s.name}</span>
                     </span>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
@@ -696,7 +694,10 @@ function SourceTable({
                     {s.citation}
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className={cn("inline-flex items-center gap-1.5", s.infra && "italic")}>
+                    <span
+                      className={cn("flex items-center gap-1.5", s.infra && "italic")}
+                      title={s.used_by}
+                    >
                       <Users className="h-3 w-3 shrink-0 text-[#87bfff]" />
                       <span className="truncate">{s.used_by}</span>
                     </span>
@@ -1286,17 +1287,17 @@ function QualityTable({
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+        <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              <th className="w-1/2 px-2 py-1.5 font-medium">{t("quality.colSource")}</th>
+              <th className="truncate px-2 py-1.5 font-medium">{t("quality.colSource")}</th>
               <th className="px-2 py-1.5 font-medium">{t("quality.colType")}</th>
               {sortHead("freshness", t("quality.colFreshness"))}
               {sortHead("citation", t("quality.colCitation"))}
               <th className="px-2 py-1.5 font-medium">{t("quality.colHits")}</th>
               <th className="px-2 py-1.5 font-medium">{t("quality.colVersion")}</th>
-              <th className="w-1/2 px-2 py-1.5 font-medium">{t("quality.colState")}</th>
-              <th className="w-[92px] px-2 py-1.5" aria-hidden="true" />
+              <th className="px-2 py-1.5 font-medium">{t("quality.colState")}</th>
+              <th className="w-28 px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
@@ -1323,8 +1324,12 @@ function QualityTable({
                   )}
                 >
                   <td className="px-2 py-1.5">
-                    <span className="inline-flex items-center gap-1.5 text-[var(--tessera-text)]">
-                      <Database className="h-3 w-3 text-[#87bfff]" /> {s.name}
+                    <span
+                      className="flex items-center gap-1.5 text-[var(--tessera-text)]"
+                      title={s.name}
+                    >
+                      <Database className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <span className="truncate">{s.name}</span>
                     </span>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
