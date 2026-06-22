@@ -213,7 +213,7 @@ export function SourcesOverview() {
             onSort={onSort}
           />
           {view === "overview" ? (
-            <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_260px]">
               <div className="flex min-w-0 flex-col gap-3">
                 <ActivityArea t={t} data={data} />
                 <div className="grid gap-3 sm:grid-cols-2">
