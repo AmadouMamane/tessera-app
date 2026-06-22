@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Boxes,
+  Brain,
   CalendarClock,
   CheckCircle2,
   ChevronLeft,
@@ -15,6 +16,10 @@ import {
   GitBranch,
   History,
   Layers,
+  type LucideIcon,
+  MessagesSquare,
+  Package,
+  Scale,
   Search,
   ShieldCheck,
   SortAsc,
@@ -45,6 +50,13 @@ const CLASS_BADGE: Record<string, string> = {
 const STATUS: Record<"active" | "disabled", { dot: string; text: string }> = {
   active: { dot: "bg-emerald-400", text: "text-emerald-300" },
   disabled: { dot: "bg-[var(--tessera-text-muted)]", text: "text-[var(--tessera-text-muted)]" },
+};
+// Source-type icon: regulation (law), product (package), memory (brain), transcript (chat).
+const TYPE_ICON: Record<string, LucideIcon> = {
+  regulation: Scale,
+  product: Package,
+  memory: Brain,
+  transcript: MessagesSquare,
 };
 const KNOWLEDGE_HREF = "/agent/connaissances";
 const ASOF_HREF = "/prouver/etat-a-date";
@@ -661,6 +673,7 @@ function SourceTable({
           <tbody>
             {paged.map((s) => {
               const active = s.id === selectedId;
+              const Icon = TYPE_ICON[s.type] ?? Database;
               return (
                 <tr
                   key={s.id}
@@ -685,7 +698,7 @@ function SourceTable({
                       className="flex items-center gap-1.5 text-[var(--tessera-text)]"
                       title={s.name}
                     >
-                      <Database className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <Icon className="h-3 w-3 shrink-0 text-[#87bfff]" />
                       <span className="truncate">{s.name}</span>
                     </span>
                   </td>
@@ -812,31 +825,34 @@ function AccessView({ t, data }: { t: T; data: Data }) {
     <Panel title={t("view.access")}>
       <p className="mb-2 text-[0.64rem] text-[var(--tessera-text-muted)]">{t("view.accessNote")}</p>
       <ul className="flex flex-col divide-y divide-[var(--tessera-border)]/60">
-        {data.sources.map((s) => (
-          <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
-            <span className="inline-flex min-w-0 items-center gap-1.5">
-              <Database className="h-3 w-3 shrink-0 text-[#87bfff]" />
-              <span className="truncate text-[var(--tessera-text)]">{s.name}</span>
-            </span>
-            <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              {s.detail.consumers?.items.map((c) => (
-                <span
-                  key={c.agent_id}
-                  title={c.label}
-                  className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.6rem]"
-                >
+        {data.sources.map((s) => {
+          const Icon = TYPE_ICON[s.type] ?? Database;
+          return (
+            <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <Icon className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                <span className="truncate text-[var(--tessera-text)]">{s.name}</span>
+              </span>
+              <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                {s.detail.consumers?.items.map((c) => (
                   <span
-                    className={cn(
-                      "h-1.5 w-1.5 rounded-full",
-                      VERDICT_DOT[c.tone] ?? VERDICT_DOT.muted,
-                    )}
-                  />
-                  {c.name}
-                </span>
-              ))}
-            </span>
-          </li>
-        ))}
+                    key={c.agent_id}
+                    title={c.label}
+                    className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.6rem]"
+                  >
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        VERDICT_DOT[c.tone] ?? VERDICT_DOT.muted,
+                      )}
+                    />
+                    {c.name}
+                  </span>
+                ))}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </Panel>
   );
@@ -1354,6 +1370,7 @@ function QualityTable({
             {paged.map((s) => {
               const active = s.id === selectedId;
               const warn = s.quality_tone === "warn";
+              const Icon = TYPE_ICON[s.type] ?? Database;
               return (
                 <tr
                   key={s.id}
@@ -1378,7 +1395,7 @@ function QualityTable({
                       className="flex items-center gap-1.5 text-[var(--tessera-text)]"
                       title={s.name}
                     >
-                      <Database className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <Icon className="h-3 w-3 shrink-0 text-[#87bfff]" />
                       <span className="truncate">{s.name}</span>
                     </span>
                   </td>
