@@ -513,8 +513,13 @@ function SourcesDrawer({
     const measure = () => {
       const m = document.querySelector("main");
       if (!m) return;
-      const r = m.getBoundingClientRect();
-      setRect({ top: r.top, left: r.left, width: r.width, height: r.bottom - r.top });
+      const mr = m.getBoundingClientRect();
+      // Vertical extent = the visible scroll viewport (main); horizontal extent =
+      // the centred content column, so the panel sits over the table, not at the
+      // far screen edge on wide viewports.
+      const c = document.querySelector("[data-shell-content]") ?? m;
+      const cr = c.getBoundingClientRect();
+      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
     };
     measure();
     window.addEventListener("resize", measure);

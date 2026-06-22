@@ -31,6 +31,7 @@ export function ShellFrame({
         {focus ? null : topbar}
         <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6">
           <div
+            data-shell-content
             className={cn(
               "mx-auto flex h-full w-full flex-col",
               focus ? "max-w-[1760px]" : "max-w-[1600px]",
