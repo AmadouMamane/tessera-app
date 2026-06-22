@@ -32,6 +32,18 @@ import { PRODUCT_CHAT_EVENT } from "@/components/product/chat-widget";
 const APPOINTMENT_PROMPT =
   "Je souhaite prendre rendez-vous avec un conseiller Crédit Aurore pour faire le point sur mes comptes.";
 const GENERAL_HELP_PROMPT = "Bonjour, j'ai besoin d'aide sur mon espace client Crédit Aurore.";
+const DEMO_ACTION_PROMPTS = {
+  rib: "Je souhaite obtenir mon RIB dans cette démo Crédit Aurore. Que peut réellement faire Tessera ici ?",
+  statements: "Je souhaite comprendre mes relevés bancaires dans cette démo Crédit Aurore.",
+  customize: "Je souhaite personnaliser mes comptes dans cette démo Crédit Aurore.",
+  security: "J'ai une question de sécurité bancaire et de fraude dans cette démo Crédit Aurore.",
+  youth: "Je veux des informations sur l'espace jeunes Aurore dans cette démo.",
+  impact: "Je souhaite comprendre le bilan impact présenté dans cette démo Crédit Aurore.",
+  mobility: "Je souhaite gérer ma mobilité bancaire dans cette démo Crédit Aurore.",
+  referral: "Je souhaite parrainer un proche dans cette démo Crédit Aurore.",
+  emergency: "Je souhaite contacter les services d'urgence dans cette démo Crédit Aurore.",
+  creditOffer: "Je souhaite comprendre l'offre Prêt Aurore affichée dans cette démo.",
+};
 
 function openProductChat(prompt?: string) {
   window.dispatchEvent(new CustomEvent(PRODUCT_CHAT_EVENT, { detail: { prompt } }));
@@ -263,6 +275,91 @@ const styles = `
     height: 3px;
     background: var(--ca-gold);
     content: "";
+  }
+
+  .ca-apercu3 .demo-strip {
+    display: flex;
+    min-height: 56px;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    border-bottom: 3px solid var(--ca-gold);
+    background: linear-gradient(90deg, #050816 0%, #111b3d 58%, #050816 100%);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 9px 18px;
+  }
+
+  .ca-apercu3 .demo-kicker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    border-radius: 4px;
+    background: var(--ca-gold);
+    color: var(--ca-ink);
+    font-size: 13px;
+    font-weight: 900;
+    padding: 0 12px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .ca-apercu3 .demo-copy {
+    color: rgb(255 255 255 / 0.82);
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .ca-apercu3 .demo-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    border: 1px solid rgb(255 255 255 / 0.24);
+    border-radius: 4px;
+    background: rgb(255 255 255 / 0.08);
+    color: #fff;
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+
+  .ca-apercu3 .demo-dot {
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-radius: 999px;
+    background: #35c76e;
+    box-shadow: 0 0 0 4px rgb(53 199 110 / 0.2);
+  }
+
+  .ca-apercu3 .demo-action {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid rgb(255 255 255 / 0.2);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--ca-ink);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 900;
+    padding: 0 13px;
+    white-space: nowrap;
+  }
+
+  .ca-apercu3 .demo-action:hover {
+    background: #f3e8c7;
+  }
+
+  .ca-apercu3 .demo-action svg {
+    width: 17px;
+    height: 17px;
+    stroke-width: 2.2;
   }
 
   .ca-apercu3 .page {
@@ -623,14 +720,10 @@ const styles = `
     border-left: 0;
     background: transparent;
     color: #333;
-    cursor: default;
+    cursor: pointer;
     font-size: 15px;
     font: inherit;
     text-align: left;
-  }
-
-  .ca-apercu3 button.util-link {
-    cursor: pointer;
   }
 
   .ca-apercu3 button.util-link:hover {
@@ -865,6 +958,12 @@ const styles = `
       padding-right: 24px;
     }
 
+    .ca-apercu3 .demo-strip {
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      gap: 8px 10px;
+    }
+
     .ca-apercu3 .layout {
       grid-template-columns: minmax(0, 1fr);
       max-width: 860px;
@@ -914,6 +1013,25 @@ const styles = `
 
     .ca-apercu3 .head-icons .hi:not(.search) {
       display: none;
+    }
+
+    .ca-apercu3 .demo-strip {
+      align-items: stretch;
+      padding: 10px 12px;
+    }
+
+    .ca-apercu3 .demo-copy {
+      flex-basis: 100%;
+      white-space: normal;
+    }
+
+    .ca-apercu3 .demo-live {
+      flex: 1 1 220px;
+      white-space: normal;
+    }
+
+    .ca-apercu3 .demo-action {
+      flex: 1 0 auto;
     }
 
     .ca-apercu3 h1 {
@@ -1003,6 +1121,7 @@ export function CreditAuroreMesComptesHost() {
     <div className="ca-apercu3">
       <style>{styles}</style>
       <div className="portal-window">
+        <DemoStrip />
         <UtilityBar />
         <MainHeader />
         <SubNav />
@@ -1092,6 +1211,27 @@ function UtilityBar() {
         <AlertTriangle />
         Aide et contacts
       </span>
+    </div>
+  );
+}
+
+function DemoStrip() {
+  return (
+    <div className="demo-strip" role="note" aria-label="Statut de la démonstration">
+      <strong className="demo-kicker">Démo Tessera</strong>
+      <span className="demo-live">
+        <span className="demo-dot" aria-hidden="true" />
+        Assistant intégré et fonctionnel
+      </span>
+      <span className="demo-copy">Données bancaires fictives sur cette page</span>
+      <button
+        className="demo-action"
+        type="button"
+        onClick={() => openProductChat(GENERAL_HELP_PROMPT)}
+      >
+        <MessageCircle aria-hidden="true" />
+        Ouvrir l'assistant
+      </button>
     </div>
   );
 }
@@ -1258,7 +1398,11 @@ function PromoBanner() {
             Avec un prêt Aurore<sup>(1)</sup> d'un montant de 7 001 € à 50 000 € sur une durée de 48
             à 60 mois. <b>En plus, les frais de dossier sont offerts !</b>
           </p>
-          <button className="btn-primary" type="button" tabIndex={-1}>
+          <button
+            className="btn-primary"
+            type="button"
+            onClick={() => openProductChat(DEMO_ACTION_PROMPTS.creditOffer)}
+          >
             Je découvre
           </button>
         </div>
@@ -1278,19 +1422,35 @@ function UsefulLinks({ onOpenAppointment }: { onOpenAppointment: () => void }) {
       <UtilCard
         title="Ma gestion"
         items={[
-          { icon: <RibIcon />, label: "Télécharger mon RIB" },
-          { icon: <FileSearch />, label: "Voir mes relevés" },
-          { icon: <Settings />, label: "Personnaliser mes comptes" },
-          { icon: <ShieldCheck />, label: "Sécurité Bancaire & Fraude" },
+          { icon: <RibIcon />, label: "Télécharger mon RIB", prompt: DEMO_ACTION_PROMPTS.rib },
+          {
+            icon: <FileSearch />,
+            label: "Voir mes relevés",
+            prompt: DEMO_ACTION_PROMPTS.statements,
+          },
+          {
+            icon: <Settings />,
+            label: "Personnaliser mes comptes",
+            prompt: DEMO_ACTION_PROMPTS.customize,
+          },
+          {
+            icon: <ShieldCheck />,
+            label: "Sécurité Bancaire & Fraude",
+            prompt: DEMO_ACTION_PROMPTS.security,
+          },
         ]}
       />
       <UtilCard
         title="Mes services"
         items={[
-          { icon: <Users />, label: "Espace jeunes Aurore" },
-          { icon: <Sprout />, label: "Bilan impact" },
-          { icon: <Share />, label: "Gérer ma mobilité bancaire" },
-          { icon: <Users />, label: "Parrainer mes proches" },
+          { icon: <Users />, label: "Espace jeunes Aurore", prompt: DEMO_ACTION_PROMPTS.youth },
+          { icon: <Sprout />, label: "Bilan impact", prompt: DEMO_ACTION_PROMPTS.impact },
+          {
+            icon: <Share />,
+            label: "Gérer ma mobilité bancaire",
+            prompt: DEMO_ACTION_PROMPTS.mobility,
+          },
+          { icon: <Users />, label: "Parrainer mes proches", prompt: DEMO_ACTION_PROMPTS.referral },
         ]}
       />
       <UtilCard
@@ -1301,7 +1461,11 @@ function UsefulLinks({ onOpenAppointment }: { onOpenAppointment: () => void }) {
             label: "Prendre rendez-vous",
             onClick: onOpenAppointment,
           },
-          { icon: <AlertTriangle />, label: "Contacter les services d'urgence" },
+          {
+            icon: <AlertTriangle />,
+            label: "Contacter les services d'urgence",
+            prompt: DEMO_ACTION_PROMPTS.emergency,
+          },
         ]}
       />
     </aside>
@@ -1313,7 +1477,7 @@ function UtilCard({
   items,
 }: {
   title: string;
-  items: { icon: ReactNode; label: string; onClick?: () => void }[];
+  items: { icon: ReactNode; label: string; onClick?: () => void; prompt?: string }[];
 }) {
   return (
     <section className="util-card">
@@ -1321,19 +1485,17 @@ function UtilCard({
         {title}
         <ChevronUp />
       </h4>
-      {items.map((item) =>
-        item.onClick ? (
-          <button className="util-link" key={item.label} type="button" onClick={item.onClick}>
-            <span className="ico">{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        ) : (
-          <div className="util-link" key={item.label}>
-            <span className="ico">{item.icon}</span>
-            <span>{item.label}</span>
-          </div>
-        ),
-      )}
+      {items.map((item) => (
+        <button
+          className="util-link"
+          key={item.label}
+          type="button"
+          onClick={item.onClick ?? (() => openProductChat(item.prompt))}
+        >
+          <span className="ico">{item.icon}</span>
+          <span>{item.label}</span>
+        </button>
+      ))}
     </section>
   );
 }
