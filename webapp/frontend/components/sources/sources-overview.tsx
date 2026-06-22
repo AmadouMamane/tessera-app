@@ -289,12 +289,6 @@ function CommandBar({ t, note, onExport }: { t: T; note: string; onExport: () =>
       </span>
       <div className="flex flex-wrap items-center gap-2">
         <Link
-          href={AUDIT_HREF}
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] hover:border-[#2e72d2]"
-        >
-          <GitBranch className="h-4 w-4" /> {t("actions.trace")}
-        </Link>
-        <Link
           href={ASOF_HREF}
           className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] hover:border-[#2e72d2]"
         >
@@ -308,12 +302,6 @@ function CommandBar({ t, note, onExport }: { t: T; note: string; onExport: () =>
         >
           <Download className="h-4 w-4" /> {t("actions.export")}
         </Button>
-        <Link
-          href={KNOWLEDGE_HREF}
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
-        >
-          <Database className="h-4 w-4" /> {t("actions.manage")}
-        </Link>
       </div>
     </section>
   );
@@ -1944,10 +1932,12 @@ function MiniLinks({
 }
 
 function Footer({ t, data }: { t: T; data: Data }) {
+  // Provenance only — the "this is live, not a fixture" proof. The redundant
+  // total and the divider rule were dropped; the table + KPIs already carry the
+  // count. The raw table names are the honesty signal on an operator cockpit.
   return (
-    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-      <span>{t("footer.total", { n: data.footer.total })}</span>
-      <span>{t("footer.source", { src: data.footer.source })}</span>
+    <footer className="mt-1 shrink-0 pb-4 text-[0.68rem] text-[var(--tessera-text-muted)]">
+      <span>{t("footer.source", { src: data.footer.source.replaceAll(" + ", " · ") })}</span>
     </footer>
   );
 }
