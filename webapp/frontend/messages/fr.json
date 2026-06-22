@@ -3654,6 +3654,7 @@
     },
     "detail": {
       "selectHint": "Sélectionnez une source pour voir son détail.",
+      "open": "Voir le détail",
       "close": "Fermer",
       "tDocuments": "Documents",
       "tChunks": "Chunks",

@@ -610,7 +610,13 @@ function SourceTable({
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c) => (
-                <th key={c.key} className="whitespace-nowrap px-2 py-1.5 font-medium">
+                <th
+                  key={c.key}
+                  className={cn(
+                    "whitespace-nowrap px-2 py-1.5 font-medium",
+                    c.key === "name" && "w-full",
+                  )}
+                >
                   {c.sort ? (
                     <button
                       type="button"
@@ -622,7 +628,7 @@ function SourceTable({
                             : "descending"
                           : "none"
                       }
-                      className="inline-flex items-center gap-1 hover:text-[var(--tessera-text)]"
+                      className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-[var(--tessera-text)]"
                     >
                       {t(`col.${c.key}`)}
                       {sortKey === c.sort ? (
@@ -640,7 +646,7 @@ function SourceTable({
                   )}
                 </th>
               ))}
-              <th className="w-6 px-2 py-1.5" aria-hidden="true" />
+              <th className="w-[92px] px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
@@ -695,8 +701,13 @@ function SourceTable({
                       <span className="truncate">{s.used_by}</span>
                     </span>
                   </td>
-                  <td className="px-2 py-1.5 text-right">
-                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                  <td className="px-2 py-1.5">
+                    <span className="flex items-center justify-end gap-1 whitespace-nowrap">
+                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                        {t("detail.open")}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                    </span>
                   </td>
                 </tr>
               );
@@ -1253,7 +1264,7 @@ function QualityTable({
       <button
         type="button"
         onClick={() => onSort(key)}
-        className="inline-flex items-center gap-1 hover:text-[var(--tessera-text)]"
+        className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-[var(--tessera-text)]"
       >
         {label}
         {sortKey === key ? (
@@ -1278,14 +1289,14 @@ function QualityTable({
         <table className="w-full border-collapse text-left text-[0.72rem]">
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              <th className="px-2 py-1.5 font-medium">{t("quality.colSource")}</th>
+              <th className="w-full px-2 py-1.5 font-medium">{t("quality.colSource")}</th>
               <th className="px-2 py-1.5 font-medium">{t("quality.colType")}</th>
               {sortHead("freshness", t("quality.colFreshness"))}
               {sortHead("citation", t("quality.colCitation"))}
               <th className="px-2 py-1.5 font-medium">{t("quality.colHits")}</th>
               <th className="px-2 py-1.5 font-medium">{t("quality.colVersion")}</th>
               <th className="px-2 py-1.5 font-medium">{t("quality.colState")}</th>
-              <th className="w-6 px-2 py-1.5" aria-hidden="true" />
+              <th className="w-[92px] px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
@@ -1363,8 +1374,13 @@ function QualityTable({
                       {s.quality_label}
                     </span>
                   </td>
-                  <td className="px-2 py-1.5 text-right">
-                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                  <td className="px-2 py-1.5">
+                    <span className="flex items-center justify-end gap-1 whitespace-nowrap">
+                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                        {t("detail.open")}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                    </span>
                   </td>
                 </tr>
               );
