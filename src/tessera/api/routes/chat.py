@@ -664,7 +664,7 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
     pinned_confidence = 1.0 if request.language is not None else 0.0
     auth_state = session.auth_state
     # An authenticated session binds the turn to its verified customer identity —
-    # memory, account tools, and recouvrement all resolve to one subject. The
+    # memory and the account tools resolve to one subject. The
     # client-supplied subject_id is only a fallback for the anonymous case; it can
     # never raise auth (auth_state comes from the signed session, not the body).
     effective_subject = session.subject_id or request.subject_id
@@ -696,8 +696,9 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
     # message. One conversation can therefore span agents.
     prev_agent = await last_agent_for(conversation_id)
     # Routing is scoped to the entry surface and the server-derived auth-state
-    # (ADR 0008): the anonymous widget pool excludes the customer-auth recouvrement
-    # agent, so a walk-up can never be routed or handed into it.
+    # (ADR 0008): the customer widget pool is {support-client, onboarding}. The
+    # recouvrement agent is operator-only (ADR 0010 Phase A) — off this surface
+    # entirely, so no customer session can be routed or handed into it.
     decision = route_turn(prev_agent, request.message, surface=surface, auth_state=auth_state)
     agent_id = decision.agent_id
     current_agent_id.set(agent_id)

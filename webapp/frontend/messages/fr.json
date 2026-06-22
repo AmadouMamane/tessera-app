@@ -4453,9 +4453,9 @@
         "close": "Réduire l'assistant",
         "session": {
           "anonymous": "Session anonyme",
-          "anonymousHint": "Connectez-vous (démo) pour débloquer le recouvrement et les opérations de compte.",
+          "anonymousHint": "Connectez-vous (démo) pour débloquer les opérations de compte.",
           "demoActive": "Session de démonstration",
-          "demoHint": "Connecté en client démo (demo-customer-001) — recouvrement et opérations de compte disponibles. Identité seedée, sans authentification réelle.",
+          "demoHint": "Connecté en client démo (demo-customer-001) — opérations de compte disponibles. Identité seedée, sans authentification réelle.",
           "login": "Se connecter (démo)",
           "logout": "Se déconnecter"
         }

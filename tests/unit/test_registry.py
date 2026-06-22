@@ -45,9 +45,10 @@ def test_handoff_contract_is_bidirectional_and_governed() -> None:
     assert can_handoff(
         "onboarding", "support-client", surface=_WIDGET, auth_state=AuthState.ANONYMOUS
     )
-    # recouvrement <-> onboarding is NOT declared -> refused (even authenticated).
+    # support-client -> recouvrement is removed (ADR 0010 Phase A: no cross-audience
+    # handoff into collections) -> refused even on an authenticated customer session.
     assert not can_handoff(
-        "recouvrement", "onboarding", surface=_WIDGET, auth_state=AuthState.CUSTOMER
+        "support-client", "recouvrement", surface=_WIDGET, auth_state=AuthState.CUSTOMER
     )
     # unknown agents -> refused, never raises.
     assert not can_handoff(
@@ -63,27 +64,42 @@ def test_get_agent_unknown_raises() -> None:
 # --- ADR 0008: audience / surface / auth bindings + scoped pool ----------------
 
 
-def test_agents_declare_audience_surface_auth() -> None:
-    from tessera.agent.registry import Audience, Auth
+def test_recouvrement_is_an_internal_operator_agent() -> None:
+    # ADR 0010 Phase A: recouvrement is reclassified off the customer widget onto
+    # an operator surface, gated by operator-rbac — and it has no handoff edges.
+    from tessera.agent.registry import Audience, Auth, Surface
 
     recouvrement = get_agent("recouvrement")
-    assert recouvrement.audience is Audience.CUSTOMER
-    assert _WIDGET in recouvrement.surface
-    # The single behavioural change: recouvrement is gated to customer-auth.
-    assert recouvrement.auth is Auth.CUSTOMER_AUTH
-    assert get_agent("support-client").auth is Auth.ANONYMOUS_OK
+    assert recouvrement.audience is Audience.OPERATOR
+    assert recouvrement.surface == (Surface.COCKPIT_EMBEDDED,)
+    assert _WIDGET not in recouvrement.surface
+    assert recouvrement.auth is Auth.OPERATOR_RBAC
+    assert recouvrement.handoff.to == ()
+    assert recouvrement.handoff.from_ == ()
+    # support-client no longer wires the cross-audience edge to/from collections.
+    support = get_agent("support-client")
+    assert "recouvrement" not in support.handoff.to
+    assert "recouvrement" not in support.handoff.from_
+    assert support.auth is Auth.ANONYMOUS_OK
 
 
-def test_anonymous_widget_pool_excludes_recouvrement() -> None:
-    # (a) The least-privileged surface cannot reach the most sensitive agent.
-    pool = {a.id for a in routable(_WIDGET, AuthState.ANONYMOUS)}
-    assert "recouvrement" not in pool
-    assert {"support-client", "onboarding"} <= pool
+def test_customer_widget_pool_excludes_recouvrement_at_every_auth() -> None:
+    # (a) recouvrement is off every customer-reachable pool by construction: it is
+    # not on the widget surface, so neither anonymous nor an authenticated customer
+    # can reach it. The customer pool is exactly {support-client, onboarding}.
+    for auth_state in (AuthState.ANONYMOUS, AuthState.CUSTOMER):
+        pool = {a.id for a in routable(_WIDGET, auth_state)}
+        assert "recouvrement" not in pool
+        assert pool == {"support-client", "onboarding"}
 
 
-def test_authenticated_widget_pool_includes_recouvrement() -> None:
-    # (c) An authenticated customer session reaches recouvrement.
-    pool = {a.id for a in routable(_WIDGET, AuthState.CUSTOMER)}
+def test_recouvrement_is_parked_on_the_operator_surface_not_deleted() -> None:
+    # The agent is moved, not removed: it sits on the cockpit-embedded operator
+    # pool (static contract). Honest reachability note — no interactive session yet
+    # produces AuthState.OPERATOR (ADR 0010 Phase A parks it until Phase B).
+    from tessera.agent.registry import Surface
+
+    pool = {a.id for a in routable(Surface.COCKPIT_EMBEDDED, AuthState.OPERATOR)}
     assert "recouvrement" in pool
 
 

@@ -103,7 +103,8 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
 
           {/* Customer session strip — reflects anonymous vs. demo-customer and
               exposes login/logout. Authenticating lifts the agent's auth_state
-              (server-derived), unlocking recouvrement + account tools. */}
+              (server-derived), unlocking the account tools. (Recouvrement is
+              operator-only, off this widget — ADR 0010 Phase A.) */}
           <CustomerSessionBar />
 
           {/* ChatRoom host — neutralise ChatRoom's own card chrome so it fills

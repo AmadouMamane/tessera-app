@@ -33,8 +33,8 @@ agents:
     auth: anonymous-ok
     tags: [support, client]
     handoff:
-      to: [onboarding, recouvrement]
-      from: [onboarding, recouvrement]
+      to: [onboarding]
+      from: [onboarding]
 
   - id: onboarding
     name: "Onboarding"
@@ -66,15 +66,22 @@ agents:
     guardrails: strict
     eval_set: recouvrement
     tools: [account_balance, transaction_search, ticket_escalate]
-    # Sensitive by construction (Équipe Conformité, strict guardrails). It reuses
-    # the shared widget for now (no dedicated UI yet) but is gated to customer-auth:
-    # an anonymous walk-up can no longer be routed or handed into it. Since no real
-    # customer-auth is wired yet, widget sessions are anonymous and this agent is
-    # therefore unreachable from the widget until that auth exists (ADR 0008).
-    audience: customer
-    surface: [shared-customer-widget]
-    auth: customer-auth
+    # Internal back-office collections (ADR 0010 Phase A): owned by Équipe
+    # Conformité, strict guardrails. Reclassified from the customer widget to an
+    # OPERATOR agent — audience: operator, surface: cockpit-embedded, auth:
+    # operator-rbac. It is therefore OFF every customer-reachable pool by
+    # construction. Honest reachability note: no server-derived session yet
+    # produces AuthState.OPERATOR (ADR 0009 keeps operator identity in the front;
+    # api/session derives only anonymous/customer), so this agent is *parked* —
+    # interactively unreachable until Phase B forwards operator identity. It stays
+    # exercised offline by the eval harness (which runs the package directly,
+    # independent of surface/auth) and observable in the cockpit as a governed
+    # package. Cross-audience handoff edges to/from support-client are removed:
+    # a customer support chat can never hand into collections (Phase A).
+    audience: operator
+    surface: [cockpit-embedded]
+    auth: operator-rbac
     tags: [recouvrement, impayés]
     handoff:
-      to: [support-client]
-      from: [support-client]
+      to: []
+      from: []

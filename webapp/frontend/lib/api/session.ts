@@ -4,7 +4,8 @@
  * Thin wrapper over the `/api/session*` proxy. The signed session cookie is
  * httpOnly, so JS never reads it — these calls only observe/flip the state. On
  * success the agent's auth_state (server-derived from the cookie) becomes
- * `customer`, which makes recouvrement and the account tools reachable.
+ * `customer`, which makes the account tools reachable. (Not recouvrement: that
+ * agent is operator-only, off the customer widget — ADR 0010 Phase A.)
  */
 
 export interface SessionState {

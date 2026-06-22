@@ -4453,9 +4453,9 @@
         "close": "Assistent minimieren",
         "session": {
           "anonymous": "Anonyme Sitzung",
-          "anonymousHint": "Melden Sie sich (Demo) an, um Inkasso und Kontofunktionen freizuschalten.",
+          "anonymousHint": "Melden Sie sich (Demo) an, um Kontofunktionen freizuschalten.",
           "demoActive": "Demo-Sitzung",
-          "demoHint": "Als Demo-Kunde angemeldet (demo-customer-001) — Inkasso und Kontofunktionen verfügbar. Geseedete Identität, ohne echte Authentifizierung.",
+          "demoHint": "Als Demo-Kunde angemeldet (demo-customer-001) — Kontofunktionen verfügbar. Geseedete Identität, ohne echte Authentifizierung.",
           "login": "Anmelden (Demo)",
           "logout": "Abmelden"
         }

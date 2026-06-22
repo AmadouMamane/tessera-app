@@ -58,7 +58,7 @@ SESSION_COOKIE = "tessera_session"
 
 #: The single seeded customer identity a demo login authenticates as. It matches
 #: the account-tools demo dataset (``account_balance._DEMO_ACCOUNTS``) so that
-#: memory, account tools, and recouvrement all resolve to one coherent customer.
+#: memory and the account tools resolve to one coherent customer.
 DEMO_CUSTOMER_ID = "demo-customer-001"
 DEMO_CUSTOMER_LABEL = "Client démo · demo-customer-001"
 

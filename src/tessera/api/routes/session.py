@@ -64,8 +64,9 @@ async def session_login() -> JSONResponse:
 
     Demo-assumed: no credentials are checked; this authenticates as the single
     seeded customer. Real part: it issues a signed cookie whose ``auth_state`` the
-    server reads back, which is what makes recouvrement and the account tools
-    reachable (ADR 0008 gating).
+    server reads back, which is what makes the account tools reachable (ADR 0008
+    gating). It does not unlock recouvrement — that agent is operator-only
+    (ADR 0010 Phase A), off every customer-reachable surface.
     """
     token = issue_session_token(DEMO_CUSTOMER_ID, AuthState.CUSTOMER)
     body = SessionState(

@@ -55,15 +55,15 @@ def test_intent_triggers_a_governed_handoff() -> None:
 
 
 def test_handoff_is_refused_when_the_contract_does_not_allow_the_edge() -> None:
-    # recouvrement -> onboarding is NOT declared -> stay put despite the intent.
-    # Requires an authenticated session, else recouvrement is gated out entirely.
+    # onboarding -> recouvrement is NOT declared (and recouvrement is off the
+    # widget entirely) -> stay put despite the intent, even when authenticated.
     d = supervisor.route_turn(
-        "recouvrement",
-        "Je voudrais ouvrir un compte.",
+        "onboarding",
+        "J'ai un impayé, je voudrais un échéancier de recouvrement.",
         surface=_WIDGET,
         auth_state=AuthState.CUSTOMER,
     )
-    assert d.agent_id == "recouvrement"
+    assert d.agent_id == "onboarding"
     assert d.handoff is False
 
 
@@ -104,18 +104,18 @@ def test_a_gated_out_parcours_agent_falls_back_to_the_default() -> None:
     assert d.handoff is False
 
 
-def test_authenticated_customer_can_be_routed_into_recouvrement() -> None:
-    # (c) Once the session is authenticated, recouvrement is in the pool and the
-    # governed support-client -> recouvrement edge becomes a legal handoff.
+def test_authenticated_customer_still_cannot_reach_recouvrement() -> None:
+    # (b) ADR 0010 Phase A: recouvrement is operator-only, off the customer widget.
+    # Even an authenticated customer with an explicit impayé intent stays on
+    # support-client — the cross-audience handoff edge no longer exists.
     d = supervisor.route_turn(
         "support-client",
         "J'ai un impayé, je voudrais un échéancier de recouvrement.",
         surface=_WIDGET,
         auth_state=AuthState.CUSTOMER,
     )
-    assert d.agent_id == "recouvrement"
-    assert d.handoff is True
-    assert d.from_agent == "support-client"
+    assert d.agent_id == "support-client"
+    assert d.handoff is False
 
 
 # --- S1 handoff event ----------------------------------------------------------

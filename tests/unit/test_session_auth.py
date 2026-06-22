@@ -1,7 +1,9 @@
 """Customer-auth wiring end to end (ADR 0008/0009).
 
-Covers the four contract tests: (a) no session → anonymous → recouvrement and the
-account tools are excluded; (b) a signed session → customer → both reachable;
+Covers the four contract tests: (a) no session → anonymous → the account tools are
+excluded; (b) a signed session → customer → the account tools become reachable
+(recouvrement does NOT — it is operator-only, off the customer widget, ADR 0010
+Phase A — so the customer pool excludes it at every auth state);
 (c) auth_state comes from the *signed session*, never the body — a tampered token
 buys nothing; (d) the cookie is httpOnly/SameSite and the signing key lives off
 the repo (a forged signature is rejected).
@@ -57,7 +59,7 @@ async def _try_account_balance() -> bool:
     return result.allowed
 
 
-# --- (a) anonymous: recouvrement + account tools excluded ----------------------
+# --- (a) anonymous: account tools excluded; recouvrement off the widget --------
 
 
 def test_anonymous_session_is_anonymous_and_excludes_recouvrement() -> None:
@@ -77,17 +79,20 @@ async def test_anonymous_session_is_denied_account_tools() -> None:
         current_auth_state.reset(token)
 
 
-# --- (b) authenticated: recouvrement + account tools reachable -----------------
+# --- (b) authenticated: account tools reachable; recouvrement still excluded ---
 
 
-def test_signed_session_is_customer_and_includes_recouvrement() -> None:
+def test_signed_session_is_customer_but_excludes_operator_recouvrement() -> None:
     signed = issue_session_token(DEMO_CUSTOMER_ID, AuthState.CUSTOMER)
     ctx = resolve_session(_request_with_cookie(signed))
     assert ctx.auth_state is AuthState.CUSTOMER
     assert ctx.authenticated is True
     assert ctx.subject_id == DEMO_CUSTOMER_ID
+    # A customer login unlocks the account tools (asserted below) but NOT
+    # recouvrement: it is operator-only (ADR 0010 Phase A), off the customer pool.
     pool = {a.id for a in routable(_WIDGET, ctx.auth_state)}
-    assert "recouvrement" in pool
+    assert "recouvrement" not in pool
+    assert pool == {"support-client", "onboarding"}
 
 
 @pytest.mark.asyncio

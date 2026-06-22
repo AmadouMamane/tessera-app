@@ -11,9 +11,10 @@ import { fetchSessionState, loginDemo, logoutSession, type SessionState } from "
  *
  * Reflects the *real* server-derived session (anonymous vs. an authenticated
  * demo customer) and exposes the demo login/logout. Authenticating flips the
- * agent's auth_state — read server-side from the signed cookie — so recouvrement
- * and the account tools become reachable in the very next turn. The "demo"
- * labelling is explicit: this is a seeded identity, not a real login.
+ * agent's auth_state — read server-side from the signed cookie — so the account
+ * tools become reachable in the very next turn. (It does not unlock recouvrement:
+ * that agent is operator-only, off the customer widget — ADR 0010 Phase A.) The
+ * "demo" labelling is explicit: this is a seeded identity, not a real login.
  */
 export function CustomerSessionBar() {
   const t = useTranslations("product.apercu.widget.session");
