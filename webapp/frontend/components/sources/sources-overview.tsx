@@ -6,6 +6,8 @@ import {
   Boxes,
   CalendarClock,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ChevronsUpDown,
   Clock,
   Database,
@@ -69,6 +71,8 @@ const VIEWS = [
   "history",
 ] as const;
 const TABLE_VIEWS = new Set(["overview", "sources", "memory"]);
+const MAX_PAGE_BUTTONS = 5;
+const ROWS_PER_PAGE_OPTS = [10, 25, 50];
 
 type T = ReturnType<typeof useTranslations<"sources">>;
 type Data = SourcesData;
@@ -133,14 +137,11 @@ export function SourcesOverview() {
     );
   }
 
-  // Persistent detail like the normative: default to the first source; an
-  // explicit close ("__none__") falls back to the empty hint.
+  // Detail opens as a right-entering drawer on click (no row selected by default).
   const selected: Row | null =
-    selectedId === "__none__"
-      ? null
-      : selectedId
-        ? (data.sources.find((s) => s.id === selectedId) ?? null)
-        : (data.sources[0] ?? null);
+    selectedId && selectedId !== "__none__"
+      ? (data.sources.find((s) => s.id === selectedId) ?? null)
+      : null;
 
   const onSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -192,57 +193,39 @@ export function SourcesOverview() {
       ) : null}
 
       {view === "quality" ? (
-        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="flex min-w-0 flex-col gap-3">
-            <Note text={t("quality.subtitle")} icon={<Sparkles className="h-3.5 w-3.5" />} />
-            <QualitySignals t={t} rows={rows} />
-            <QualityTable t={t} rows={rows} selectedId={selectedId} onSelect={onSelect} />
-          </div>
-          <DetailPanel
-            t={t}
-            row={selected}
-            tab={tab}
-            onTab={setTab}
-            onClose={() => setSelectedId("__none__")}
-          />
+        <div className="flex min-w-0 flex-col gap-3">
+          <Note text={t("quality.subtitle")} icon={<Sparkles className="h-3.5 w-3.5" />} />
+          <QualitySignals t={t} rows={rows} />
+          <QualityTable t={t} rows={rows} selectedId={selectedId} onSelect={onSelect} />
         </div>
       ) : isTable ? (
-        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="flex min-w-0 flex-col gap-3">
-            {view === "memory" ? (
-              <Note text={t("view.memoryNote")} icon={<Database className="h-3.5 w-3.5" />} />
-            ) : null}
-            <SourceTable
-              t={t}
-              rows={viewRows}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              sortKey={sortKey}
-              sortDir={sortDir}
-              onSort={onSort}
-            />
-            {view === "overview" ? (
-              <>
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-                  <ActivityArea t={t} data={data} />
-                  <RecentActivity data={data} />
-                </div>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <ByType t={t} data={data} />
-                  <ByVolume data={data} />
-                  <ByCitation t={t} data={data} />
-                  <ByLanguage data={data} />
-                </div>
-              </>
-            ) : null}
-          </div>
-          <DetailPanel
+        <div className="flex min-w-0 flex-col gap-3">
+          {view === "memory" ? (
+            <Note text={t("view.memoryNote")} icon={<Database className="h-3.5 w-3.5" />} />
+          ) : null}
+          <SourceTable
             t={t}
-            row={selected}
-            tab={tab}
-            onTab={setTab}
-            onClose={() => setSelectedId("__none__")}
+            rows={viewRows}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={onSort}
           />
+          {view === "overview" ? (
+            <>
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <ActivityArea t={t} data={data} />
+                <RecentActivity data={data} />
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <ByType t={t} data={data} />
+                <ByVolume data={data} />
+                <ByCitation t={t} data={data} />
+                <ByLanguage data={data} />
+              </div>
+            </>
+          ) : null}
         </div>
       ) : (
         <LensView t={t} view={view} data={data} />
@@ -250,6 +233,18 @@ export function SourcesOverview() {
 
       {view === "overview" ? <LineageFooter data={data} /> : null}
       <Footer t={t} data={data} />
+
+      {selected ? (
+        <SourcesDrawer ariaLabel={selected.name} onClose={() => setSelectedId(null)}>
+          <DetailPanel
+            t={t}
+            row={selected}
+            tab={tab}
+            onTab={setTab}
+            onClose={() => setSelectedId(null)}
+          />
+        </SourcesDrawer>
+      ) : null}
     </div>
   );
 }
@@ -386,6 +381,177 @@ function FilterStrip({
         {count}/{total}
       </span>
     </section>
+  );
+}
+
+// ── pagination + drawer (shared style: agents/connaissances) ─────────────────
+
+function pageWindow(page: number, totalPages: number): number[] {
+  const span = Math.min(MAX_PAGE_BUTTONS, totalPages);
+  let first = Math.max(1, page - Math.floor(span / 2));
+  first = Math.min(first, totalPages - span + 1);
+  return Array.from({ length: span }, (_, i) => first + i);
+}
+
+function PageArrow({
+  t,
+  dir,
+  disabled,
+  onClick,
+}: {
+  t: T;
+  dir: "prev" | "next";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const Icon = dir === "prev" ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={dir === "prev" ? t("page.prev") : t("page.next")}
+      onClick={onClick}
+      className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
+function Pagination({
+  t,
+  page,
+  totalPages,
+  start,
+  end,
+  total,
+  perPage,
+  onPage,
+  onPerPage,
+}: {
+  t: T;
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  total: number;
+  perPage: number;
+  onPage: (p: number) => void;
+  onPerPage: (n: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <span className="tabular-nums" aria-live="polite">
+        {t("page.summary", { start, end, total })}
+      </span>
+      <div className="flex items-center gap-1">
+        <PageArrow
+          t={t}
+          dir="prev"
+          disabled={page <= 1}
+          onClick={() => onPage(Math.max(1, page - 1))}
+        />
+        {pageWindow(page, totalPages).map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-current={n === page ? "page" : undefined}
+            onClick={() => onPage(n)}
+            className={cn(
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              n === page
+                ? "border-[#5b8def]/60 bg-[#5b8def]/15 font-medium text-white"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {n}
+          </button>
+        ))}
+        <PageArrow
+          t={t}
+          dir="next"
+          disabled={page >= totalPages}
+          onClick={() => onPage(Math.min(totalPages, page + 1))}
+        />
+      </div>
+      <label className="flex items-center gap-2">
+        <span>{t("page.perPage")}</span>
+        <select
+          value={perPage}
+          onChange={(e) => onPerPage(Number(e.target.value))}
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+        >
+          {ROWS_PER_PAGE_OPTS.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+/** Right-entering overlay drawer anchored to the main content area. */
+function SourcesDrawer({
+  ariaLabel,
+  onClose,
+  children,
+}: {
+  ariaLabel: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const [rect, setRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const measure = () => {
+      const m = document.querySelector("main");
+      if (!m) return;
+      const r = m.getBoundingClientRect();
+      setRect({ top: r.top, left: r.left, width: r.width, height: r.bottom - r.top });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  useEffect(() => {
+    setShown(true);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div
+      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 p-2.5 backdrop-blur-[2px]"
+      style={rect ?? { inset: 0 }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <dialog
+        open
+        aria-modal="true"
+        aria-label={ariaLabel}
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+        className={cn(
+          "static m-0 block h-full w-full max-w-[440px] bg-transparent p-0 transition-transform duration-200 ease-out",
+          shown ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        {children}
+      </dialog>
+    </div>
   );
 }
 
@@ -539,48 +705,17 @@ function SourceTable({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-        <span className="tabular-nums">
-          {total === 0 ? 0 : start + 1}-{Math.min(start + perPage, total)} {t("page.of")} {total}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={safePage <= 1}
-            aria-label={t("page.prev")}
-            className="rounded border border-[var(--tessera-border)] px-1.5 py-0.5 disabled:opacity-40 hover:enabled:border-[#2e72d2]"
-          >
-            ‹
-          </button>
-          <span className="tabular-nums">
-            {safePage}/{pages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(pages, p + 1))}
-            disabled={safePage >= pages}
-            aria-label={t("page.next")}
-            className="rounded border border-[var(--tessera-border)] px-1.5 py-0.5 disabled:opacity-40 hover:enabled:border-[#2e72d2]"
-          >
-            ›
-          </button>
-          <label className="ml-1 inline-flex items-center gap-1">
-            <span className="sr-only">{t("page.perPage")}</span>
-            <select
-              value={perPage}
-              onChange={(e) => setPerPage(Number(e.target.value))}
-              className="cursor-pointer appearance-none rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[var(--tessera-text)] hover:border-[#2e72d2]"
-            >
-              {[10, 25, 50].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
+      <Pagination
+        t={t}
+        page={safePage}
+        totalPages={pages}
+        start={total === 0 ? 0 : start + 1}
+        end={Math.min(start + perPage, total)}
+        total={total}
+        perPage={perPage}
+        onPage={setPage}
+        onPerPage={setPerPage}
+      />
     </div>
   );
 }
@@ -1059,6 +1194,8 @@ function QualityTable({
 }) {
   const [sortKey, setSortKey] = useState<QSort | null>(null);
   const [dir, setDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const onSort = (k: QSort) => {
     if (sortKey === k) setDir((d) => (d === "asc" ? "desc" : "asc"));
     else {
@@ -1066,6 +1203,8 @@ function QualityTable({
       setDir("desc");
     }
   };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset to page 1 when the set/sort/size changes.
+  useEffect(() => setPage(1), [rows.length, perPage, sortKey, dir]);
   const sorted = useMemo(() => {
     const arr = [...rows];
     if (!sortKey) {
@@ -1084,7 +1223,13 @@ function QualityTable({
     });
   }, [rows, sortKey, dir]);
 
-  if (sorted.length === 0) {
+  const total = sorted.length;
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const safePage = Math.min(page, pages);
+  const start = (safePage - 1) * perPage;
+  const paged = sorted.slice(start, start + perPage);
+
+  if (total === 0) {
     return (
       <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
         {t("quality.empty")}
@@ -1132,7 +1277,7 @@ function QualityTable({
             </tr>
           </thead>
           <tbody>
-            {sorted.map((s) => {
+            {paged.map((s) => {
               const active = s.id === selectedId;
               const warn = s.quality_tone === "warn";
               return (
@@ -1212,6 +1357,17 @@ function QualityTable({
           </tbody>
         </table>
       </div>
+      <Pagination
+        t={t}
+        page={safePage}
+        totalPages={pages}
+        start={start + 1}
+        end={Math.min(start + perPage, total)}
+        total={total}
+        perPage={perPage}
+        onPage={setPage}
+        onPerPage={setPerPage}
+      />
     </div>
   );
 }
@@ -1251,7 +1407,7 @@ function DetailPanel({
   return (
     <aside
       data-testid="source-detail"
-      className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit"
+      className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">

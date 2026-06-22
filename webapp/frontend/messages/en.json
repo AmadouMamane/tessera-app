@@ -3703,9 +3703,10 @@
     },
     "page": {
       "of": "of",
-      "prev": "Previous",
-      "next": "Next",
-      "perPage": "Rows per page"
+      "prev": "Previous page",
+      "next": "Next page",
+      "perPage": "Rows per page",
+      "summary": "Showing {start} - {end} of {total}"
     },
     "version": {
       "chunksUnit": "chunks"
