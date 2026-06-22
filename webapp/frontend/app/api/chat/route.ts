@@ -11,7 +11,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { hasCollectionsAccess, isOperator } from "@/lib/auth/roles";
+import { operatorSurfaceForHint } from "@/lib/auth/roles";
 import { isGatedModel } from "@/lib/models";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 import { OPERATOR_ASSERTION_HEADER, mintOperatorAssertion } from "@/lib/server/operator-assertion";
@@ -23,12 +23,10 @@ const SESSION_COOKIE = "tessera_sid";
 const SESSION_MAX_AGE = 60 * 60 * 24; // 24h
 
 // The client surface hint a privileged surface sends (see lib/api/sse.ts). It is
-// NOT a privilege: it only selects an operator branch *when* the request also
-// carries the right verified next-auth session (auth()). A forged hint from a
-// visitor mints nothing — the turn stays customer/widget.
+// NOT a privilege: it only *selects* among the surfaces the verified role already
+// authorizes (operatorSurfaceForHint). A forged hint from a visitor — or from a
+// role lacking the authority — mints nothing; the turn stays customer/widget.
 const CLIENT_SURFACE_HEADER = "x-tessera-client-surface";
-const CONSOLE_SURFACE = "console"; // cockpit operator console (Phase B)
-const RECOUVREMENT_SURFACE = "recouvrement"; // recouvrement business console (Phase C)
 
 export async function POST(request: NextRequest): Promise<Response> {
   const body = await request.text();
@@ -58,22 +56,19 @@ export async function POST(request: NextRequest): Promise<Response> {
   // Operator forwarding (ADR 0010 Phase B/C): mint a signed assertion the agent
   // verifies to derive AuthState.OPERATOR on the carried surface. The privilege
   // portal is auth() (the next-auth session cookie verified server-side), never
-  // the client hint — without the right session role, no assertion is minted and
-  // the turn stays on the customer/widget path.
-  //   - cockpit console (Phase B) → cockpit-embedded, for platform operators;
-  //   - recouvrement business console (Phase C) → dedicated-ui, for the
-  //     collections role (or a platform operator supervising).
+  // the client hint. The minted surface is DERIVED FROM THE ROLE's authority
+  // (operatorSurfaceForHint), not trusted from the hint: cockpit-embedded is
+  // reserved to platform operators, so a `collections` session can only ever mint
+  // dedicated-ui — spoofing the "console" hint yields nothing. Without the right
+  // role, no assertion is minted and the turn stays on the customer/widget path.
   const clientSurface = request.headers.get(CLIENT_SURFACE_HEADER);
-  const role = session?.user?.role;
+  const role = session?.user?.role ?? null;
   const principal = session?.user?.name ?? role;
-  let operatorAssertion: string | null = null;
-  if (role && principal) {
-    if (clientSurface === CONSOLE_SURFACE && isOperator(role)) {
-      operatorAssertion = mintOperatorAssertion(principal, role, "cockpit-embedded");
-    } else if (clientSurface === RECOUVREMENT_SURFACE && hasCollectionsAccess(role)) {
-      operatorAssertion = mintOperatorAssertion(principal, role, "dedicated-ui");
-    }
-  }
+  const mintedSurface = operatorSurfaceForHint(role, clientSurface);
+  const operatorAssertion =
+    role && principal && mintedSurface
+      ? mintOperatorAssertion(principal, role, mintedSurface)
+      : null;
 
   // Per-browser session id — the rate-limit key. Reuse the cookie if present,
   // otherwise mint one and set it on the response. httpOnly so client JS can

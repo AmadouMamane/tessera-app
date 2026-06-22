@@ -5,6 +5,7 @@ import {
   hasCollectionsAccess,
   hasProductAccess,
   isOperator,
+  operatorSurfaceForHint,
   spaceRedirectForRole,
 } from "@/lib/auth/roles";
 
@@ -60,5 +61,33 @@ describe("collections business plane (ADR 0010 Phase C)", () => {
   it("keeps collections off the cockpit (business plane ≠ platform plane)", () => {
     expect(hasCockpitAccess("collections")).toBe(false);
     expect(isOperator("collections")).toBe(false);
+  });
+});
+
+// BFF hardening: the minted operator surface is derived from the ROLE's authority,
+// not trusted from the client hint (ADR 0010 Phase B/C).
+describe("operatorSurfaceForHint — surface bound to the role, not the hint", () => {
+  it("reserves cockpit-embedded to platform operators", () => {
+    for (const role of OPERATOR_ROLES) {
+      expect(operatorSurfaceForHint(role, "console")).toBe("cockpit-embedded");
+    }
+  });
+
+  it("gives collections ONLY dedicated-ui — even when it spoofs the console hint", () => {
+    // The whole point: a forged "console" hint cannot lift collections to the
+    // cockpit surface; it only ever reaches its business console.
+    expect(operatorSurfaceForHint("collections", "console")).toBeNull();
+    expect(operatorSurfaceForHint("collections", "recouvrement")).toBe("dedicated-ui");
+  });
+
+  it("lets a platform operator supervise the business console (dedicated-ui)", () => {
+    expect(operatorSurfaceForHint("admin", "recouvrement")).toBe("dedicated-ui");
+  });
+
+  it("mints nothing without a role, or with no/unknown hint", () => {
+    expect(operatorSurfaceForHint(null, "console")).toBeNull();
+    expect(operatorSurfaceForHint(null, "recouvrement")).toBeNull();
+    expect(operatorSurfaceForHint("admin", null)).toBeNull();
+    expect(operatorSurfaceForHint("admin", "widget")).toBeNull();
   });
 });

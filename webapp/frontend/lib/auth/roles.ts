@@ -54,6 +54,33 @@ export function hasCollectionsAccess(role: Role | null): boolean {
   return role === "collections" || isOperator(role);
 }
 
+/** The operator surfaces an assertion may carry (mirrors tessera.api.operator). */
+export type OperatorSurface = "cockpit-embedded" | "dedicated-ui";
+
+/**
+ * The operator surface a session of `role` may mint for a given client-surface
+ * hint — or `null` (no operator assertion). The surface is DERIVED FROM THE
+ * ROLE's authority, never trusted from the hint (ADR 0010 Phase B/C hardening):
+ *
+ * - `cockpit-embedded` is reserved to platform operators (admin/auditor/
+ *   superadmin) — the cockpit console;
+ * - `dedicated-ui` is recouvrement's business console: the `collections` role, or
+ *   a platform operator supervising.
+ *
+ * Consequence (the point of this function): a `collections` session can ONLY ever
+ * mint `dedicated-ui`. Even if it spoofs the `console` hint, `isOperator` is false
+ * so cockpit-embedded is unreachable — the hint cannot widen the surface. The hint
+ * only selects *which* surface among those the role already authorizes.
+ */
+export function operatorSurfaceForHint(
+  role: Role | null,
+  hint: string | null,
+): OperatorSurface | null {
+  if (hint === "console" && isOperator(role)) return "cockpit-embedded";
+  if (hint === "recouvrement" && hasCollectionsAccess(role)) return "dedicated-ui";
+  return null;
+}
+
 /**
  * The landing surface for a resolved role (ADR 0013). Identity is the door: an
  * authenticated operator lands in the operator area (cockpit by default); everyone
