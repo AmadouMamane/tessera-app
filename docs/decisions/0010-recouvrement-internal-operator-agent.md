@@ -158,4 +158,41 @@ assertion verifies), which is the safe direction.
 Credentials demo (ADR 0009), and the assertion binds `principal = username`. This
 is the operator analogue of the demo customer session: architecturally real
 (server-verified, unforgeable, fail-closed) but seeded identities, not a production
-IdP. Phase C (the dedicated case console) remains future work.
+IdP.
+
+## Implementation note — Phase C (dedicated business console) — done
+
+Phase C gives recouvrement its own **business-plane** surface, reached **directly**
+by a **`collections`** role — never via the cockpit — and re-skins, it does not
+fork.
+
+**The agent side opens a second operator surface.** `recouvrement.surface` is now
+`[cockpit-embedded, dedicated-ui]`, so `routable(dedicated-ui, OPERATOR) =
+{recouvrement}`. `tessera.api.operator` accepts the `collections` role (in
+`OPERATOR_ROLES`, distinct from the platform roles) and an assertion carrying
+**either** operator surface; `verify_operator_assertion` returns the surface
+*carried by the assertion* (no hard-coded value), never the customer widget. All
+operator roles still map to `AuthState.OPERATOR`; the role string is the audit
+label.
+
+**The front is a re-skin over the real chat core.** `/recouvrement`
+(`app/[locale]/recouvrement/`) is a standalone console gated to `hasCollectionsAccess`
+(collections + platform supervision) that **mounts the shared premium `<ChatRoom>`**
+(not the debug console) with the `recouvrement` surface hint. The BFF
+(`app/api/chat/route.ts`) mints `{role, surface: dedicated-ui}` for a verified
+collections/operator session; the minted surface is derived from the role's
+authority, so a `collections` session can only ever reach `dedicated-ui` (it can
+never obtain `cockpit-embedded`). `streamChat` stays the single chat entry — no
+fork.
+
+**Panels are real or honest-empty.** The console's side panel states plainly that
+Tessera has **no collections-case backend**: it fabricates **no dossiers,
+échéanciers or payment plans**. Only the real exchanges with the agent and their
+timestamped audit log exist.
+
+**Where collections access comes from:** exclusively the verified signed assertion
+(constant-time MAC, freshness, operator surface, operator role). A raw/unsigned
+header, a forged token, or a widget-surface claim is rejected and falls back to the
+customer path. The customer widget and the cockpit console are untouched; the key
+stays off-repo and fail-closed in production.
+
