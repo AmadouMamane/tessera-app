@@ -40,19 +40,15 @@ function openProductChat(prompt?: string) {
 const styles = `
   .ca-apercu3 {
     --ca-gold: #b99245;
-    --ca-forest: #153f35;
-    --ca-forest-dark: #071a17;
     --ca-ink: #050816;
-    --ca-ivory: #f7f2e8;
-    --ca-card: #fffdf7;
-    --ca-page-bg: #efe7d8;
-    --ca-card-border: #e4d8c4;
-    --ca-line: #d7cbb8;
-    --ca-text: #1e211c;
-    --ca-muted: #665f51;
+    --ca-page-bg: #f0f1f2;
+    --ca-card-border: #e1e1e6;
+    --ca-text: #171717;
+    --ca-muted: #565656;
+    --ca-green: #2f8b46;
     height: 100vh;
     overflow-y: auto;
-    background: #d9d2c4;
+    background: #c9ccd1;
     color: var(--ca-text);
     font-family: Arial, Helvetica, "Helvetica Neue", sans-serif;
     font-synthesis-weight: none;
@@ -68,15 +64,15 @@ const styles = `
     min-height: 100vh;
     margin: 0 auto;
     overflow: hidden;
-    background: var(--ca-ivory);
+    background: #fff;
   }
 
   .ca-apercu3 .util-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--ca-forest);
-    color: var(--ca-ivory);
+    background: var(--ca-ink);
+    color: #fff;
     font-size: 12px;
     font-weight: 700;
     padding: 8px 15px 7px;
@@ -98,8 +94,8 @@ const styles = `
     min-height: 69px;
     align-items: center;
     gap: 36px;
-    border-bottom: 1px solid var(--ca-card-border);
-    background: var(--ca-card);
+    border-bottom: 1px solid #d0d0d0;
+    background: #fff;
     padding: 12px 23px 11px;
   }
 
@@ -153,7 +149,7 @@ const styles = `
 
   .ca-apercu3 .primary span {
     position: relative;
-    color: #24302a;
+    color: #222;
     font-size: 13px;
     font-weight: 700;
     line-height: 1;
@@ -161,7 +157,7 @@ const styles = `
   }
 
   .ca-apercu3 .primary .active {
-    color: var(--ca-forest);
+    color: var(--ca-gold);
   }
 
   .ca-apercu3 .primary .active::after {
@@ -170,7 +166,7 @@ const styles = `
     bottom: -25px;
     left: 0;
     height: 3px;
-    background: var(--ca-forest);
+    background: var(--ca-gold);
     content: "";
   }
 
@@ -214,8 +210,8 @@ const styles = `
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: var(--ca-forest);
-    color: var(--ca-ivory);
+    background: var(--ca-gold);
+    color: var(--ca-ink);
     font-size: 9px;
     font-weight: 800;
     padding: 0 4px;
@@ -228,8 +224,8 @@ const styles = `
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: var(--ca-forest);
-    color: var(--ca-ivory);
+    background: var(--ca-gold);
+    color: var(--ca-ink);
   }
 
   .ca-apercu3 .power svg {
@@ -241,21 +237,21 @@ const styles = `
     display: flex;
     justify-content: flex-start;
     gap: 33px;
-    border-bottom: 1px solid var(--ca-line);
-    background: #f2eadc;
+    border-bottom: 1px solid #d8d8d8;
+    background: #f5f4f2;
     padding: 9px 0 8px 139px;
   }
 
   .ca-apercu3 .subnav span {
     position: relative;
-    color: #3a3f34;
+    color: #333;
     font-size: 13px;
     line-height: 1;
     white-space: nowrap;
   }
 
   .ca-apercu3 .subnav .active {
-    color: var(--ca-forest);
+    color: var(--ca-gold);
     font-weight: 700;
   }
 
@@ -265,7 +261,7 @@ const styles = `
     bottom: -11px;
     left: 0;
     height: 3px;
-    background: var(--ca-forest);
+    background: var(--ca-gold);
     content: "";
   }
 
@@ -286,7 +282,7 @@ const styles = `
   }
 
   .ca-apercu3 h1 {
-    background: var(--ca-ivory);
+    background: #fff;
     text-align: center;
     font-size: 40px;
     line-height: 1;
@@ -328,7 +324,7 @@ const styles = `
     overflow: hidden;
     border: 1px solid var(--ca-card-border);
     border-radius: 4px;
-    background: var(--ca-card);
+    background: #fff;
     box-shadow: 0 2px 5px rgb(0 0 0 / 0.08);
   }
 
@@ -341,7 +337,7 @@ const styles = `
   }
 
   .ca-apercu3 .acct-row + .acct-row {
-    border-top: 1px solid var(--ca-line);
+    border-top: 1px solid #e6e6e6;
   }
 
   .ca-apercu3 .acct-left {
@@ -383,7 +379,7 @@ const styles = `
     left: 0;
     width: 9px;
     height: 20px;
-    background: var(--ca-forest);
+    background: #de001d;
   }
 
   .ca-apercu3 .visa-card .chip {
@@ -400,7 +396,7 @@ const styles = `
     position: absolute;
     right: 5px;
     bottom: 4px;
-    color: var(--ca-ivory);
+    color: #fff;
     content: "VISA";
     font-size: 4px;
     font-weight: 800;
@@ -409,9 +405,9 @@ const styles = `
 
   .ca-apercu3 .badge-diff {
     margin-left: -6px;
-    border: 1px solid var(--ca-forest);
+    border: 1px solid #111;
     border-radius: 4px;
-    color: var(--ca-forest);
+    color: #111;
     font-size: 10px;
     font-weight: 700;
     padding: 3px 8px;
@@ -434,17 +430,17 @@ const styles = `
     height: 8px;
     overflow: hidden;
     border-radius: 999px;
-    background: #ded4c2;
+    background: #ddd;
   }
 
   .ca-apercu3 .progress i {
     display: block;
     height: 100%;
-    background: #9c927f;
+    background: #aaa;
   }
 
   .ca-apercu3 .progress.green i {
-    background: var(--ca-forest);
+    background: var(--ca-green);
   }
 
   .ca-apercu3 .save-bottom {
@@ -465,8 +461,8 @@ const styles = `
   .ca-apercu3 .promo {
     overflow: hidden;
     margin-top: 31px;
-    border: 1px solid var(--ca-card-border);
-    background: var(--ca-card);
+    border: 1px solid #d5d5d5;
+    background: #fff;
   }
 
   .ca-apercu3 .promo-main {
@@ -480,7 +476,7 @@ const styles = `
     width: 160px;
     flex: none;
     overflow: hidden;
-    background: linear-gradient(160deg, #dce9df, #f4e5c6 54%, #b99245);
+    background: linear-gradient(160deg, #bfe8ee, #f1d4af 50%, #cf8054);
   }
 
   .ca-apercu3 .promo .pic svg {
@@ -499,8 +495,8 @@ const styles = `
   .ca-apercu3 .promo .tag {
     display: inline-block;
     border-radius: 4px;
-    background: var(--ca-forest);
-    color: var(--ca-ivory);
+    background: var(--ca-ink);
+    color: #fff;
     font-size: 13px;
     font-weight: 800;
     padding: 6px 10px 7px;
@@ -563,13 +559,13 @@ const styles = `
   .ca-apercu3 .promo .desc {
     max-width: 435px;
     margin-top: 8px;
-    color: #4a463d;
+    color: #444;
     font-size: 14px;
     line-height: 1.45;
   }
 
   .ca-apercu3 .promo .desc b {
-    color: var(--ca-forest);
+    color: #333;
   }
 
   .ca-apercu3 .btn-primary {
@@ -578,8 +574,8 @@ const styles = `
     top: 97px;
     border: 0;
     border-radius: 20px;
-    background: var(--ca-forest);
-    color: var(--ca-ivory);
+    background: var(--ca-gold);
+    color: var(--ca-ink);
     cursor: default;
     font-size: 14px;
     font-weight: 800;
@@ -588,7 +584,7 @@ const styles = `
   }
 
   .ca-apercu3 .promo .legal {
-    background: #ded4c2;
+    background: #d7d7d7;
     color: var(--ca-muted);
     font-size: 13px;
     line-height: 1.1;
@@ -621,12 +617,12 @@ const styles = `
     align-items: center;
     gap: 12px;
     min-height: 60px;
-    border-top: 1px solid var(--ca-line);
+    border-top: 1px solid #e6e6e6;
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
     background: transparent;
-    color: #343a31;
+    color: #333;
     cursor: default;
     font-size: 15px;
     font: inherit;
@@ -638,14 +634,14 @@ const styles = `
   }
 
   .ca-apercu3 button.util-link:hover {
-    color: var(--ca-forest);
+    color: var(--ca-ink);
   }
 
   .ca-apercu3 .util-link .ico {
     display: flex;
     width: 31px;
     justify-content: center;
-    color: var(--ca-forest);
+    color: #111;
   }
 
   .ca-apercu3 .util-link svg {
@@ -659,8 +655,8 @@ const styles = `
     align-items: center;
     gap: 82px;
     min-height: 110px;
-    background: var(--ca-forest-dark);
-    color: var(--ca-ivory);
+    background: #000;
+    color: #fff;
     padding: 30px 211px;
   }
 
@@ -668,7 +664,7 @@ const styles = `
     display: inline-flex;
     align-items: center;
     gap: 13px;
-    color: var(--ca-ivory);
+    color: #fff;
     font-size: 16px;
     font-weight: 700;
     white-space: nowrap;
@@ -702,7 +698,7 @@ const styles = `
     display: flex;
     flex-direction: column;
     gap: 19px;
-    background: var(--ca-forest);
+    background: var(--ca-ink);
     box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
     padding: 18px 14px;
     transform: translateY(-50%);
@@ -720,14 +716,14 @@ const styles = `
   }
 
   .ca-apercu3 .side-widget .rail-action + .rail-action {
-    border-top: 1px solid rgb(247 242 232 / 0.68);
+    border-top: 1px solid rgb(255 255 255 / 0.75);
     padding-top: 19px;
   }
 
   .ca-apercu3 .side-widget svg {
     width: 27px;
     height: 27px;
-    color: var(--ca-ivory);
+    color: #fff;
   }
 
   .ca-apercu3 .appointment-popover {
@@ -743,8 +739,8 @@ const styles = `
     align-items: center;
     border: 0;
     border-radius: 4px;
-    background: var(--ca-forest);
-    color: var(--ca-ivory);
+    background: var(--ca-ink);
+    color: #fff;
     box-shadow: 0 16px 38px rgb(0 0 0 / 0.28);
     padding: 34px 42px 36px;
     margin: 0;
@@ -763,7 +759,7 @@ const styles = `
     justify-content: center;
     border: 0;
     background: transparent;
-    color: var(--ca-ivory);
+    color: #fff;
     cursor: pointer;
     font-size: 25px;
     font-weight: 300;
@@ -774,7 +770,7 @@ const styles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--ca-ivory);
+    color: #fff;
     margin-bottom: 10px;
   }
 
@@ -785,7 +781,7 @@ const styles = `
   }
 
   .ca-apercu3 .appointment-popover h3 {
-    color: var(--ca-ivory);
+    color: #fff;
     font-size: 23px;
     font-weight: 800;
     line-height: 1.15;
@@ -793,7 +789,7 @@ const styles = `
   }
 
   .ca-apercu3 .appointment-popover p {
-    color: var(--ca-ivory);
+    color: #fff;
     font-size: 16px;
     font-weight: 800;
     line-height: 1.35;
@@ -817,7 +813,7 @@ const styles = `
   .ca-apercu3 .appointment-secondary {
     border: 0;
     background: transparent;
-    color: var(--ca-ivory);
+    color: #fff;
     cursor: pointer;
     font-size: 13px;
     font-weight: 800;
@@ -835,8 +831,8 @@ const styles = `
     align-items: center;
     gap: 9px;
     border-radius: 4px 4px 0 0;
-    background: var(--ca-forest);
-    color: var(--ca-ivory);
+    background: var(--ca-ink);
+    color: #fff;
     font-size: 14px;
     font-weight: 800;
     padding: 13px 18px;
@@ -1216,13 +1212,13 @@ function PromoBanner() {
           <svg viewBox="0 0 160 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
             <defs>
               <linearGradient id="caPromoSky" x1="0" x2="1" y1="0" y2="1">
-                <stop offset="0" stopColor="#dce9df" />
-                <stop offset="0.45" stopColor="#f7f2e8" />
-                <stop offset="1" stopColor="#d1b36c" />
+                <stop offset="0" stopColor="#bfe8ee" />
+                <stop offset="0.45" stopColor="#eef1d2" />
+                <stop offset="1" stopColor="#d38a5f" />
               </linearGradient>
               <linearGradient id="caPromoDress" x1="0" x2="1" y1="0" y2="1">
-                <stop offset="0" stopColor="#fffdf7" />
-                <stop offset="1" stopColor="#efe7d8" />
+                <stop offset="0" stopColor="#ffffff" />
+                <stop offset="1" stopColor="#e9edf2" />
               </linearGradient>
             </defs>
             <rect width="160" height="160" fill="url(#caPromoSky)" />
@@ -1231,11 +1227,11 @@ function PromoBanner() {
             <circle cx="70" cy="65" r="14" fill="#c88962" />
             <circle cx="104" cy="62" r="14" fill="#b87852" />
             <path d="M38 160c9-45 27-67 52-66 24 1 40 24 45 66z" fill="url(#caPromoDress)" />
-            <path d="M82 160c8-42 24-62 47-59 22 3 31 25 31 59z" fill="#efe7d8" />
-            <path d="M40 112c18 11 43 14 67 2" fill="none" stroke="#9b6f32" strokeWidth="10" />
+            <path d="M82 160c8-42 24-62 47-59 22 3 31 25 31 59z" fill="#f2f2f2" />
+            <path d="M40 112c18 11 43 14 67 2" fill="none" stroke="#c97846" strokeWidth="10" />
             <circle cx="66" cy="62" r="7" fill="#111" />
             <circle cx="99" cy="59" r="7" fill="#111" />
-            <path d="M27 127c18-14 39-15 61-1" fill="none" stroke="#fffdf7" strokeWidth="7" />
+            <path d="M27 127c18-14 39-15 61-1" fill="none" stroke="#fff" strokeWidth="7" />
           </svg>
         </div>
         <div className="body">
