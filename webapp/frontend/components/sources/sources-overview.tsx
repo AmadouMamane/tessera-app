@@ -1496,40 +1496,42 @@ function DetailPanel({
         </button>
       </div>
 
-      {/* Equal spacing everywhere via justify-evenly: box-edge | ring | divider |
-          chunks col | docs col | box-edge are all the same gap. */}
-      <div className="flex items-stretch justify-evenly rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] py-3.5">
-        <div className="flex flex-col items-center justify-center gap-1.5">
+      {/* Ring kept tight (small fixed gaps on each side); the rest of the space
+          is shared evenly between divider, chunks col, docs col and the edge. */}
+      <div className="flex items-stretch rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] py-3.5 pl-4">
+        <div className="mr-4 flex flex-col items-center justify-center gap-1.5">
           <ScoreRing value={row.citation} />
           <span className="text-[0.58rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {t("detail.score")}
           </span>
         </div>
         <div className="w-px self-stretch bg-[var(--tessera-border)]" />
-        <dl className="flex flex-col justify-center gap-3.5">
-          <Fact
-            icon={<Layers className="h-3.5 w-3.5" />}
-            label={t("detail.tChunks")}
-            value={row.volume}
-          />
-          <Fact
-            icon={<Database className="h-3.5 w-3.5" />}
-            label={t("col.languages")}
-            value={row.languages}
-          />
-        </dl>
-        <dl className="flex flex-col justify-center gap-3.5">
-          <Fact
-            icon={<Boxes className="h-3.5 w-3.5" />}
-            label={t("detail.tDocuments")}
-            value={row.units}
-          />
-          <Fact
-            icon={<ShieldCheck className="h-3.5 w-3.5" />}
-            label={t("detail.tHits")}
-            value={String(row.hits)}
-          />
-        </dl>
+        <div className="flex flex-1 justify-evenly">
+          <dl className="flex flex-col justify-center gap-3.5">
+            <Fact
+              icon={<Layers className="h-3.5 w-3.5" />}
+              label={t("detail.tChunks")}
+              value={row.volume}
+            />
+            <Fact
+              icon={<Database className="h-3.5 w-3.5" />}
+              label={t("col.languages")}
+              value={row.languages}
+            />
+          </dl>
+          <dl className="flex flex-col justify-center gap-3.5">
+            <Fact
+              icon={<Boxes className="h-3.5 w-3.5" />}
+              label={t("detail.tDocuments")}
+              value={row.units}
+            />
+            <Fact
+              icon={<ShieldCheck className="h-3.5 w-3.5" />}
+              label={t("detail.tHits")}
+              value={String(row.hits)}
+            />
+          </dl>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
