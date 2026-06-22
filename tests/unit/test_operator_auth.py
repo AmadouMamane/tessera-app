@@ -55,11 +55,13 @@ def _request(*, assertion: str | None = None, customer_cookie: str | None = None
 
 def test_valid_assertion_yields_an_operator_session(operator_key: None) -> None:
     token = issue_operator_assertion("admin", "admin")
-    ctx = verify_operator_assertion(token)
-    assert ctx is not None
+    verified = verify_operator_assertion(token)
+    assert verified is not None
+    ctx, surface = verified
     assert ctx.auth_state is AuthState.OPERATOR
     assert ctx.authenticated is True
     assert ctx.subject_id == "admin"
+    assert surface is Surface.COCKPIT_EMBEDDED
 
 
 def test_console_operator_resolves_cockpit_surface_and_reaches_recouvrement(
@@ -145,8 +147,11 @@ def test_assertion_with_a_non_operator_role_is_rejected(operator_key: None) -> N
     assert verify_operator_assertion(token) is None
 
 
-def test_assertion_must_carry_the_cockpit_surface(monkeypatch: pytest.MonkeyPatch) -> None:
-    # A validly-signed token claiming a different surface is still refused.
+def test_assertion_must_carry_an_operator_surface_not_the_widget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A validly-signed token claiming the customer widget surface is still refused:
+    # an assertion can never claim the widget (only cockpit-embedded / dedicated-ui).
     settings = get_settings()
     monkeypatch.setattr(settings.api, "operator_assertion_signing_key", SecretStr(_OP_KEY))
     import hashlib
@@ -168,6 +173,62 @@ def test_assertion_must_carry_the_cockpit_surface(monkeypatch: pytest.MonkeyPatc
         hmac.new(_OP_KEY.encode(), payload.encode("ascii"), hashlib.sha256).digest()
     )
     assert verify_operator_assertion(f"{payload}.{sig}") is None
+
+
+# --- Phase C: collections role + dedicated-ui business console ------------------
+
+
+def test_collections_role_on_dedicated_ui_reaches_recouvrement(operator_key: None) -> None:
+    # (a) A collections session, entering recouvrement's business console, mints an
+    # assertion {role: collections, surface: dedicated-ui}. The agent verifies it →
+    # OPERATOR on dedicated-ui, where the routable pool is exactly {recouvrement},
+    # and the supervisor lands the turn on recouvrement (the real chat core).
+    token = issue_operator_assertion("collections-001", "collections", Surface.DEDICATED_UI)
+    ctx, surface = resolve_request_context(_request(assertion=token))
+    assert ctx.auth_state is AuthState.OPERATOR
+    assert surface is Surface.DEDICATED_UI
+    assert ctx.subject_id == "collections-001"
+    pool = {a.id for a in routable(surface, ctx.auth_state)}
+    assert pool == {"recouvrement"}
+    decision = supervisor.route_turn(None, "Bonjour", surface=surface, auth_state=ctx.auth_state)
+    assert decision.agent_id == "recouvrement"
+
+
+def test_platform_role_may_supervise_the_dedicated_ui_console(operator_key: None) -> None:
+    # A platform operator may supervise the business console — the assertion carries
+    # its real role but the dedicated-ui surface; it still reaches recouvrement only.
+    token = issue_operator_assertion("admin", "admin", Surface.DEDICATED_UI)
+    ctx, surface = resolve_request_context(_request(assertion=token))
+    assert ctx.auth_state is AuthState.OPERATOR
+    assert surface is Surface.DEDICATED_UI
+
+
+def test_dedicated_ui_does_not_widen_the_customer_or_cockpit_pools(operator_key: None) -> None:
+    # (c) dedicated-ui carries only recouvrement; the customer widget and the
+    # cockpit pools are unchanged by Phase C.
+    assert {a.id for a in routable(Surface.SHARED_CUSTOMER_WIDGET, AuthState.CUSTOMER)} == {
+        "support-client",
+        "onboarding",
+    }
+    assert "recouvrement" in {a.id for a in routable(Surface.COCKPIT_EMBEDDED, AuthState.OPERATOR)}
+
+
+def test_collections_assertion_forged_is_rejected(operator_key: None) -> None:
+    # (d) A forged dedicated-ui/collections token (tampered payload, stale sig) is
+    # rejected and falls back to the customer path — no business-console access.
+    token = issue_operator_assertion("collections-001", "collections", Surface.DEDICATED_UI)
+    _, _, signature = token.partition(".")
+    forged_payload = operator_mod._b64e(
+        json.dumps(
+            {
+                "principal": "attacker",
+                "role": "collections",
+                "surface": "dedicated-ui",
+                "iat": 9_999_999_999,
+            }
+        ).encode()
+    )
+    assert verify_operator_assertion(f"{forged_payload}.{signature}") is None
 
 
 # --- (e) production without the key is fail-closed -----------------------------

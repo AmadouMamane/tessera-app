@@ -71,7 +71,8 @@ def test_recouvrement_is_an_internal_operator_agent() -> None:
 
     recouvrement = get_agent("recouvrement")
     assert recouvrement.audience is Audience.OPERATOR
-    assert recouvrement.surface == (Surface.COCKPIT_EMBEDDED,)
+    # Two operator surfaces: cockpit-embedded (Phase B) + dedicated-ui (Phase C).
+    assert recouvrement.surface == (Surface.COCKPIT_EMBEDDED, Surface.DEDICATED_UI)
     assert _WIDGET not in recouvrement.surface
     assert recouvrement.auth is Auth.OPERATOR_RBAC
     assert recouvrement.handoff.to == ()

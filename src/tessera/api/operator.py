@@ -55,14 +55,21 @@ __all__ = [
 OPERATOR_ASSERTION_HEADER = "x-tessera-operator-assertion"
 
 #: The next-auth roles that count as an operator (mirrors lib/auth/accounts.ts).
-OPERATOR_ROLES: frozenset[str] = frozenset({"admin", "auditor", "superadmin"})
+#: ``collections`` is the business-plane role for recouvrement's dedicated console
+#: (ADR 0010 Phase C / 0013), distinct from the platform roles (admin/auditor/
+#: superadmin). All map to ``AuthState.OPERATOR`` on the agent — the role string is
+#: carried for the audit label, the auth floor it satisfies is operator-rbac.
+OPERATOR_ROLES: frozenset[str] = frozenset({"admin", "auditor", "superadmin", "collections"})
 
 #: Assertion lifetime. Short — it is minted per turn from a live session, not stored.
 OPERATOR_ASSERTION_MAX_AGE_SECONDS = 5 * 60
 
-#: The only surface an operator assertion may carry (ADR 0010 Phase B). The agent
-#: refuses any other value so a console assertion can never claim the widget.
-_OPERATOR_SURFACE_VALUE = Surface.COCKPIT_EMBEDDED.value
+#: The operator surfaces an assertion may carry: the cockpit console (Phase B) and
+#: recouvrement's dedicated business console (Phase C). The agent honours the
+#: surface *carried by the verified assertion* — never a single hard-coded value,
+#: and never the customer widget (an assertion can never claim it).
+_OPERATOR_SURFACES: frozenset[Surface] = frozenset({Surface.COCKPIT_EMBEDDED, Surface.DEDICATED_UI})
+_OPERATOR_SURFACE_VALUES: frozenset[str] = frozenset(s.value for s in _OPERATOR_SURFACES)
 
 
 _MISSING_KEY_IN_PROD = (
@@ -110,20 +117,26 @@ def _b64d(text: str) -> bytes:
     return base64.urlsafe_b64decode(text + padding)
 
 
-def issue_operator_assertion(principal: str, role: str) -> str:
-    """Sign an operator assertion binding ``principal``/``role`` to the cockpit surface.
+def issue_operator_assertion(
+    principal: str, role: str, surface: Surface = Surface.COCKPIT_EMBEDDED
+) -> str:
+    """Sign an operator assertion binding ``principal``/``role`` to an operator surface.
 
     This is the Python reference for the token the Next BFF mints (the BFF mirrors
     the exact wire format). Used by the agent's tests; in production the BFF is the
-    real minter. Raises if no key is available (cannot sign without one).
+    real minter. ``surface`` must be an operator surface (cockpit-embedded for the
+    Phase B console, dedicated-ui for the Phase C business console). Raises if no
+    key is available (cannot sign without one) or the surface is not an operator one.
     """
     key = _operator_key()
     if key is None:
         raise RuntimeError("no operator assertion signing key configured")
+    if surface not in _OPERATOR_SURFACES:
+        raise ValueError(f"not an operator surface: {surface!r}")
     payload = {
         "principal": principal,
         "role": role,
-        "surface": _OPERATOR_SURFACE_VALUE,
+        "surface": surface.value,
         "iat": int(time.time()),
     }
     body = _b64e(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
@@ -131,12 +144,14 @@ def issue_operator_assertion(principal: str, role: str) -> str:
     return f"{body}.{signature}"
 
 
-def verify_operator_assertion(token: str) -> SessionContext | None:  # noqa: PLR0911  fail-closed: each invalid shape returns None explicitly
-    """Verify a signed operator assertion; return an OPERATOR session, else ``None``.
+def verify_operator_assertion(token: str) -> tuple[SessionContext, Surface] | None:  # noqa: PLR0911  fail-closed: each invalid shape returns None explicitly
+    """Verify a signed operator assertion; return ``(session, surface)`` else ``None``.
 
-    Any failure — no key configured, bad shape, forged/edited signature, expired
-    stamp, wrong surface, or a non-operator role — yields ``None`` (the turn is not
-    operator). The signature check is constant-time.
+    The returned surface is the one *carried by the verified assertion* (cockpit-
+    embedded or dedicated-ui) — never assumed. Any failure — no key configured, bad
+    shape, forged/edited signature, expired stamp, a non-operator surface, or a
+    non-operator role — yields ``None`` (the turn is not operator). The signature
+    check is constant-time.
     """
     key = _operator_key()
     if key is None:
@@ -163,9 +178,10 @@ def verify_operator_assertion(token: str) -> SessionContext | None:  # noqa: PLR
         or time.time() - issued_at > OPERATOR_ASSERTION_MAX_AGE_SECONDS
     ):
         return None
-    # The assertion may only ever carry the cockpit surface and an operator role —
+    # The assertion may only ever carry an operator surface and an operator role —
     # a valid signature over any other value is still refused (defence in depth).
-    if payload.get("surface") != _OPERATOR_SURFACE_VALUE:
+    surface_value = payload.get("surface")
+    if not isinstance(surface_value, str) or surface_value not in _OPERATOR_SURFACE_VALUES:
         return None
     role = payload.get("role")
     if not isinstance(role, str) or role not in OPERATOR_ROLES:
@@ -173,28 +189,30 @@ def verify_operator_assertion(token: str) -> SessionContext | None:  # noqa: PLR
     principal = payload.get("principal")
     if not isinstance(principal, str) or not principal:
         return None
-    return SessionContext(
+    session = SessionContext(
         auth_state=AuthState.OPERATOR,
         subject_id=principal,
         authenticated=True,
         label=f"Opérateur · {principal} ({role})",
         demo=True,
     )
+    return session, Surface(surface_value)
 
 
 def resolve_request_context(request: Request) -> tuple[SessionContext, Surface]:
     """Resolve the turn's ``(session, surface)`` from trusted, server-verified signals.
 
-    Operator path (ADR 0010 Phase B): a valid signed operator assertion header →
-    ``(OPERATOR, cockpit-embedded)``. Otherwise the existing customer path (ADR
-    0008/0009) is untouched: the signed cookie resolves to ``CUSTOMER``/``ANONYMOUS``
-    on the ``shared-customer-widget``. The operator branch is strictly additive —
-    a forged assertion falls through to the cookie path (never an error, never an
-    escalation).
+    Operator path (ADR 0010 Phase B/C): a valid signed operator assertion header →
+    ``(OPERATOR, <surface carried by the assertion>)`` — cockpit-embedded for the
+    operator console, dedicated-ui for recouvrement's business console. Otherwise
+    the existing customer path (ADR 0008/0009) is untouched: the signed cookie
+    resolves to ``CUSTOMER``/``ANONYMOUS`` on the ``shared-customer-widget``. The
+    operator branch is strictly additive — a forged assertion falls through to the
+    cookie path (never an error, never an escalation).
     """
     raw = request.headers.get(OPERATOR_ASSERTION_HEADER)
     if raw:
-        operator = verify_operator_assertion(raw)
-        if operator is not None:
-            return operator, Surface.COCKPIT_EMBEDDED
+        verified = verify_operator_assertion(raw)
+        if verified is not None:
+            return verified
     return resolve_session(request), Surface.SHARED_CUSTOMER_WIDGET

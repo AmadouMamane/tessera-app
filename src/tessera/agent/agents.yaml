@@ -66,20 +66,19 @@ agents:
     guardrails: strict
     eval_set: recouvrement
     tools: [account_balance, transaction_search, ticket_escalate]
-    # Internal back-office collections (ADR 0010 Phase A): owned by Équipe
-    # Conformité, strict guardrails. Reclassified from the customer widget to an
-    # OPERATOR agent — audience: operator, surface: cockpit-embedded, auth:
-    # operator-rbac. It is therefore OFF every customer-reachable pool by
-    # construction. Honest reachability note: no server-derived session yet
-    # produces AuthState.OPERATOR (ADR 0009 keeps operator identity in the front;
-    # api/session derives only anonymous/customer), so this agent is *parked* —
-    # interactively unreachable until Phase B forwards operator identity. It stays
-    # exercised offline by the eval harness (which runs the package directly,
-    # independent of surface/auth) and observable in the cockpit as a governed
-    # package. Cross-audience handoff edges to/from support-client are removed:
-    # a customer support chat can never hand into collections (Phase A).
+    # Internal back-office collections (ADR 0010): owned by Équipe Conformité,
+    # strict guardrails. An OPERATOR agent — audience: operator, auth:
+    # operator-rbac — OFF every customer-reachable pool by construction. It is
+    # exposed on two operator surfaces: cockpit-embedded (Phase B — supervision
+    # from the operator console) and dedicated-ui (Phase C — its own business
+    # console reached directly by the `collections` role, never via the cockpit).
+    # Reachability comes only from a verified signed operator assertion forwarded
+    # by the Next BFF (tessera.api.operator); no customer session can satisfy it.
+    # It stays exercised offline by the eval harness (package run directly,
+    # independent of surface/auth). Cross-audience handoff edges to/from
+    # support-client are removed: a customer chat can never hand into collections.
     audience: operator
-    surface: [cockpit-embedded]
+    surface: [cockpit-embedded, dedicated-ui]
     auth: operator-rbac
     tags: [recouvrement, impayés]
     handoff:
