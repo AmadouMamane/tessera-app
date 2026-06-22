@@ -21,6 +21,11 @@ from datetime import UTC, datetime
 from pathlib import Path  # noqa: TCH003  used at runtime by the file sink
 from typing import TYPE_CHECKING, Any, Literal
 
+# Leaf import (stdlib-only module): the authz vocabulary is shared with the agent
+# registry but lives outside ``tessera.agent`` so the guard never pulls the
+# LangGraph at import time (no cycle).
+from tessera.authz import AuthState
+
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
@@ -29,6 +34,7 @@ if TYPE_CHECKING:
 __all__ = [
     "AGENT_LIFECYCLE_PHASES",
     "ChainStatus",
+    "current_auth_state",
     "current_model",
     "emit_agent_lifecycle",
     "emit_agent_proposed",
@@ -92,6 +98,14 @@ current_model: ContextVar[str | None] = ContextVar("tessera_audit_model", defaul
 # empty by default so the full policy applies everywhere else (eval, prod).
 guard_disabled: ContextVar[frozenset[str]] = ContextVar(
     "tessera_guard_disabled", default=frozenset()
+)
+
+# Server-derived authorization of the current session (ADR 0008/0009). Set at the
+# turn boundary from the signed session cookie — never from the request body — so
+# the guard's tool allowlist can gate account/PII tools on the real auth-state.
+# ANONYMOUS by default (safe), with the same task-isolation guarantees as above.
+current_auth_state: ContextVar[AuthState] = ContextVar(
+    "tessera_auth_state", default=AuthState.ANONYMOUS
 )
 
 

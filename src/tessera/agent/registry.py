@@ -23,6 +23,12 @@ import yaml
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
 
+# Audience / surface / auth (ADR 0008) are the governed agent properties; the
+# vocabulary and the satisfaction ladder live in the leaf ``tessera.authz`` so
+# the guard layer can share them without an import cycle. Re-exported here for
+# back-compat: callers keep importing them from ``tessera.agent.registry``.
+from tessera.authz import Audience, Auth, AuthState, Surface, auth_satisfies
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -41,74 +47,6 @@ __all__ = [
 ]
 
 _REGISTRY_FILE = Path(__file__).resolve().parent / "agents.yaml"
-
-
-# --- Audience / surface / auth (ADR 0008) -------------------------------------
-#
-# Three first-class, governed agent properties. `audience` and `surface` are
-# *bindings on the agent* (who it serves, through which channel); `auth` is the
-# *minimum identity a session must carry* to reach it. `AuthState` is the
-# distinct, **server-derived** thing — the authorization a live session actually
-# has — never asserted by the client. Routing compares the two: an agent is
-# reachable only when the entry surface is one of its surfaces and the session's
-# `AuthState` satisfies the agent's `Auth` floor. Unknown enum values fail fast
-# at registry load (see `_coerce_agent`), so the manifest can never declare an
-# audience/surface/auth the router does not understand.
-
-
-class Audience(StrEnum):
-    """The primary human an agent converses with."""
-
-    CUSTOMER = "customer"
-    OPERATOR = "operator"
-
-
-class Surface(StrEnum):
-    """The delivery channel an agent is exposed through."""
-
-    SHARED_CUSTOMER_WIDGET = "shared-customer-widget"
-    DEDICATED_UI = "dedicated-ui"
-    COCKPIT_EMBEDDED = "cockpit-embedded"
-    API_ONLY = "api-only"
-
-
-class Auth(StrEnum):
-    """The minimum identity/authorization a session must satisfy to reach an agent."""
-
-    ANONYMOUS_OK = "anonymous-ok"
-    CUSTOMER_AUTH = "customer-auth"
-    OPERATOR_RBAC = "operator-rbac"
-
-
-class AuthState(StrEnum):
-    """The authorization a *session* actually carries.
-
-    Derived server-side, never from the request body, and compared against an
-    agent's :class:`Auth` floor.
-    """
-
-    ANONYMOUS = "anonymous"
-    CUSTOMER = "customer"
-    OPERATOR = "operator"
-
-
-# Monotone ladder: a session of rank N satisfies any agent floor of rank <= N.
-# anonymous (0) < customer (1) < operator (2).
-_AUTH_FLOOR_RANK: dict[Auth, int] = {
-    Auth.ANONYMOUS_OK: 0,
-    Auth.CUSTOMER_AUTH: 1,
-    Auth.OPERATOR_RBAC: 2,
-}
-_AUTH_STATE_RANK: dict[AuthState, int] = {
-    AuthState.ANONYMOUS: 0,
-    AuthState.CUSTOMER: 1,
-    AuthState.OPERATOR: 2,
-}
-
-
-def _auth_satisfies(auth_state: AuthState, floor: Auth) -> bool:
-    """Whether a session's ``auth_state`` meets an agent's ``auth`` floor (auth_state ⊇ auth)."""
-    return _AUTH_STATE_RANK[auth_state] >= _AUTH_FLOOR_RANK[floor]
 
 
 @dataclass(frozen=True, slots=True)
@@ -254,7 +192,7 @@ def routable(surface: Surface, auth_state: AuthState) -> list[Agent]:
     return [
         agent
         for agent in _load().values()
-        if surface in agent.surface and _auth_satisfies(auth_state, agent.auth)
+        if surface in agent.surface and auth_satisfies(auth_state, agent.auth)
     ]
 
 

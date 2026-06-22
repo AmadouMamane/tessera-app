@@ -30,6 +30,9 @@ tools:
   account_balance:
     allow: true
     requires_confirmation: false
+    # Reaches a customer's account data → requires an authenticated customer
+    # session (ADR 0008/0009). An anonymous session is denied at the guard.
+    require_auth: customer-auth
     max_calls_per_turn: 2
     arguments:
       customer_id:
@@ -39,6 +42,7 @@ tools:
   card_block:
     allow: true
     requires_confirmation: true
+    require_auth: customer-auth
     max_calls_per_turn: 1
     arguments:
       customer_id:
@@ -54,6 +58,7 @@ tools:
   transaction_search:
     allow: true
     requires_confirmation: false
+    require_auth: customer-auth
     max_calls_per_turn: 3
     arguments:
       customer_id:

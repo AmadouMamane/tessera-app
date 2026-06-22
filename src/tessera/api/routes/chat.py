@@ -26,7 +26,7 @@ from starlette.responses import StreamingResponse
 from tessera.agent import build_graph, reporter as reporter_module
 from tessera.agent.grounding import select_grounded_citations
 from tessera.agent.identity import current_agent_id
-from tessera.agent.registry import AuthState, Surface
+from tessera.agent.registry import Surface
 from tessera.agent.state import (
     Citation,
     ConversationMessage,
@@ -37,7 +37,14 @@ from tessera.agent.state import (
     new_state,
 )
 from tessera.agent.supervisor import RoutingDecision, route_turn
-from tessera.guard.audit import current_model, emit_handoff, emit_routing, guard_disabled
+from tessera.api.session import SessionContext, resolve_session
+from tessera.guard.audit import (
+    current_auth_state,
+    current_model,
+    emit_handoff,
+    emit_routing,
+    guard_disabled,
+)
 from tessera.llm.budget import estimate_turn_cost
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
@@ -60,22 +67,6 @@ router = APIRouter(tags=["chat"])
 # it here (rather than on ChatRequest) is what keeps a client from asserting a
 # surface that would widen its routable pool (ADR 0008).
 _PRODUIT_SURFACE = Surface.SHARED_CUSTOMER_WIDGET
-
-
-def _derive_auth_state(request: Request) -> AuthState:
-    """Derive the session's auth-state server-side — never from the request body.
-
-    ADR 0008 invariant: no field asserted by the client may grant access to a
-    higher-auth agent. The produit widget has **no customer-authentication
-    mechanism wired yet**, so every widget session is ANONYMOUS. This is the safe
-    default and an honest one: it gates the ``customer-auth`` ``recouvrement``
-    agent out of the anonymous widget until real customer auth exists. When a real
-    customer session is introduced, this is the single place that resolves it
-    (from the verified session, e.g. a signed session cookie), and the rest of the
-    routing scoping already enforces the consequence.
-    """
-    del request  # no customer-auth signal exists to read yet; anonymous by default
-    return AuthState.ANONYMOUS
 
 
 # Strong references to in-flight background memory-formation tasks, so the event
@@ -665,12 +656,18 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
     request: ChatRequest,
     *,
     surface: Surface,
-    auth_state: AuthState,
+    session: SessionContext,
 ) -> AsyncIterator[bytes]:
     conversation_id = request.conversation_id or uuid.uuid4()
     turn_id = uuid.uuid4()
     language = request.language or get_settings().default_language
     pinned_confidence = 1.0 if request.language is not None else 0.0
+    auth_state = session.auth_state
+    # An authenticated session binds the turn to its verified customer identity —
+    # memory, account tools, and recouvrement all resolve to one subject. The
+    # client-supplied subject_id is only a fallback for the anonymous case; it can
+    # never raise auth (auth_state comes from the signed session, not the body).
+    effective_subject = session.subject_id or request.subject_id
 
     prior_messages = await _prior_messages(conversation_id, request)
     initial = new_state(
@@ -680,7 +677,7 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
         language=language,
         language_confidence=pinned_confidence,
         prior_messages=prior_messages,
-        subject_id=request.subject_id,
+        subject_id=effective_subject,
         model=request.model,
         system_prompt_override=request.system_prompt_override,
         guard_overrides=request.guard_overrides,
@@ -690,6 +687,9 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
     current_model.set(request.model)
     # Propagate sandbox guard toggles to the guard layer for this turn only.
     guard_disabled.set(frozenset(request.guard_overrides or ()))
+    # Publish the server-derived auth-state so the guard's tool allowlist gates
+    # account/PII tools on the real session (anonymous → denied, customer → ok).
+    current_auth_state.set(auth_state)
     # Per-turn agent attribution: the supervisor routes this turn to an agent
     # (parcours by default; an intent can trigger a governed handoff). The chosen
     # agent handles the whole turn and is stamped on every event, metric and
@@ -818,7 +818,7 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
     # No-op for the window backend; real work for summary/persistent backends.
     _spawn_background(
         get_memory_backend().record(
-            scope=scope_for(conversation_id, resolved_language, subject_id=request.subject_id),
+            scope=scope_for(conversation_id, resolved_language, subject_id=effective_subject),
             turn=TurnRecord(
                 user_input=request.message,
                 final_response=final_response,
@@ -899,9 +899,9 @@ async def chat(
     surface and auth permit.
     """
     surface = _PRODUIT_SURFACE
-    auth_state = _derive_auth_state(request)
+    session = resolve_session(request)
     return StreamingResponse(
-        _stream_turn(payload, surface=surface, auth_state=auth_state),
+        _stream_turn(payload, surface=surface, session=session),
         media_type="text/event-stream",
         headers={
             "cache-control": "no-cache",

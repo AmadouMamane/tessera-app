@@ -235,6 +235,12 @@ class APISettings(BaseSettings):
     streaming_enabled: bool = True
     bearer_token: SecretStr | None = None
 
+    # HMAC key for the signed customer-session cookie (ADR 0008/0009). Resolved
+    # from the environment — in production from GCP Secret Manager, mounted as
+    # TESSERA_API_SESSION_SIGNING_KEY — and NEVER committed. When unset (local
+    # dev / CI) the session layer falls back to a process-ephemeral key.
+    session_signing_key: SecretStr | None = None
+
     # -- Security hardening (ADR 0008) ---------------------------------------
     # TLS is terminated by Cloud Run; an on-prem reverse proxy may not, in which
     # case HSTS must stay off. Drives the security-headers middleware.

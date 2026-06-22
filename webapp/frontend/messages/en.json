@@ -3602,7 +3602,8 @@
     "actions": {
       "export": "Export",
       "manage": "View knowledge",
-      "asof": "View as-of"
+      "asof": "View as-of",
+      "trace": "Trace an answer"
     },
     "filters": {
       "search": "Search a source...",
@@ -4458,7 +4459,15 @@
         "title": "Aurore assistant",
         "subtitle": "Sourced answers · GDPR · DORA",
         "open": "Open the assistant",
-        "close": "Minimize the assistant"
+        "close": "Minimize the assistant",
+        "session": {
+          "anonymous": "Anonymous session",
+          "anonymousHint": "Sign in (demo) to unlock recouvrement and account operations.",
+          "demoActive": "Demo session",
+          "demoHint": "Signed in as the demo customer (demo-customer-001) — recouvrement and account operations available. Seeded identity, no real authentication.",
+          "login": "Sign in (demo)",
+          "logout": "Sign out"
+        }
       }
     },
     "apercu2": {

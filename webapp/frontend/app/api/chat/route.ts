@@ -50,12 +50,18 @@ export async function POST(request: NextRequest): Promise<Response> {
   const isNewSession = !sessionId;
   if (!sessionId) sessionId = crypto.randomUUID();
 
+  // Forward the signed customer-session cookie so the backend can derive
+  // auth_state from it (ADR 0008/0009). It is the *only* thing that lifts the
+  // turn from anonymous to customer — never the request body.
+  const customerSession = request.cookies.get("tessera_session")?.value;
+
   const upstream = await fetch(`${backendUrl()}/chat`, {
     method: "POST",
     headers: backendHeaders({
       "Content-Type": "application/json",
       Accept: "text/event-stream",
       "X-Session-Id": sessionId,
+      ...(customerSession ? { Cookie: `tessera_session=${customerSession}` } : {}),
     }),
     body,
     // Propagate the client's abort (stop button / navigation) to the backend so

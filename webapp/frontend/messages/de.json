@@ -3602,7 +3602,8 @@
     "actions": {
       "export": "Exportieren",
       "manage": "Wissen ansehen",
-      "asof": "Stand anzeigen (as-of)"
+      "asof": "Stand anzeigen (as-of)",
+      "trace": "Antwort nachverfolgen"
     },
     "filters": {
       "search": "Quelle suchen...",
@@ -4458,7 +4459,15 @@
         "title": "Aurore-Assistent",
         "subtitle": "Belegte Antworten · DSGVO · DORA",
         "open": "Assistent öffnen",
-        "close": "Assistent minimieren"
+        "close": "Assistent minimieren",
+        "session": {
+          "anonymous": "Anonyme Sitzung",
+          "anonymousHint": "Melden Sie sich (Demo) an, um Inkasso und Kontofunktionen freizuschalten.",
+          "demoActive": "Demo-Sitzung",
+          "demoHint": "Als Demo-Kunde angemeldet (demo-customer-001) — Inkasso und Kontofunktionen verfügbar. Geseedete Identität, ohne echte Authentifizierung.",
+          "login": "Anmelden (Demo)",
+          "logout": "Abmelden"
+        }
       }
     },
     "apercu2": {

@@ -3602,7 +3602,8 @@
     "actions": {
       "export": "Exporter",
       "manage": "Voir les connaissances",
-      "asof": "Voir à date (as-of)"
+      "asof": "Voir à date (as-of)",
+      "trace": "Tracer une réponse"
     },
     "filters": {
       "search": "Rechercher une source...",
@@ -4458,7 +4459,15 @@
         "title": "Assistant Aurore",
         "subtitle": "Réponses sourcées · RGPD · DORA",
         "open": "Ouvrir l'assistant",
-        "close": "Réduire l'assistant"
+        "close": "Réduire l'assistant",
+        "session": {
+          "anonymous": "Session anonyme",
+          "anonymousHint": "Connectez-vous (démo) pour débloquer le recouvrement et les opérations de compte.",
+          "demoActive": "Session de démonstration",
+          "demoHint": "Connecté en client démo (demo-customer-001) — recouvrement et opérations de compte disponibles. Identité seedée, sans authentification réelle.",
+          "login": "Se connecter (démo)",
+          "logout": "Se déconnecter"
+        }
       }
     },
     "apercu2": {

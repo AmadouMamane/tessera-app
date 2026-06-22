@@ -23,7 +23,8 @@ import inspect
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from tessera.guard.audit import emit_audit, guard_disabled
+from tessera.authz import auth_satisfies
+from tessera.guard.audit import current_auth_state, emit_audit, guard_disabled
 from tessera.guard.decisions import (
     Decision,
     DecisionKind,
@@ -98,6 +99,22 @@ def _check_tool(
                 kind=DecisionKind.DENY,
                 rule=f"tool.{policy.name}.allow",
                 rationale=f"tool {policy.name!r} is not in the allowlist",
+            )
+        ]
+
+    # Auth-floor gate (ADR 0008/0009): a tool reaching customer data requires an
+    # authenticated session. auth_state is server-derived (the signed cookie), read
+    # from the contextvar set at the turn boundary — never from a tool argument.
+    auth_state = current_auth_state.get()
+    if policy.require_auth is not None and not auth_satisfies(auth_state, policy.require_auth):
+        return [
+            Decision(
+                kind=DecisionKind.DENY,
+                rule=f"tool.{policy.name}.require_auth",
+                rationale=(
+                    f"tool {policy.name!r} requires {policy.require_auth.value}; "
+                    f"session auth-state is {auth_state.value}"
+                ),
             )
         ]
 

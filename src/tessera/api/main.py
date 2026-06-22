@@ -31,6 +31,7 @@ from tessera.api.routes import (
     health,
     memory,
     observability as observability_routes,
+    session as session_routes,
     settings as settings_routes,
 )
 from tessera.api.security import SecurityHeadersMiddleware, require_bearer
@@ -104,6 +105,9 @@ def build_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(chat.router)
+    # Customer-facing session (demo login/logout) — public like /chat, no bearer
+    # gate. It is the server-side source of auth_state the supervisor reads.
+    app.include_router(session_routes.router)
     # Aggregate eval scores are a public surface (ADR 0009) — no bearer gate.
     app.include_router(observability_routes.router)
     # Defence in depth: the read surfaces require the bearer token at the route

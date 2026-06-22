@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
+import { CustomerSessionBar } from "@/components/product/customer-session-bar";
 
 /**
  * Floating chat widget — the *new presentation* (v2 shell) of the customer
@@ -72,6 +73,11 @@ export function ChatWidget() {
               <X className="h-4 w-4" />
             </button>
           </div>
+
+          {/* Customer session strip — reflects anonymous vs. demo-customer and
+              exposes login/logout. Authenticating lifts the agent's auth_state
+              (server-derived), unlocking recouvrement + account tools. */}
+          <CustomerSessionBar />
 
           {/* ChatRoom host — neutralise ChatRoom's own card chrome so it fills
               the panel flush. Conditionally mounted so the conversation state

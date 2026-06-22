@@ -11,6 +11,7 @@ from typing import Literal
 
 import yaml
 
+from tessera.authz import Auth
 from tessera.settings import LanguageCode, get_settings
 
 __all__ = [
@@ -68,6 +69,10 @@ class ToolPolicy:
     allow: bool = False
     requires_confirmation: bool = False
     require_languages: frozenset[LanguageCode] = field(default_factory=frozenset)
+    # Minimum session authorization to invoke this tool (ADR 0008/0009). ``None``
+    # = no auth floor (e.g. simulators, escalation). Account/PII tools declare
+    # ``customer-auth`` so an anonymous session is denied them at the guard.
+    require_auth: Auth | None = None
     max_calls_per_turn: int = 1
     arguments: dict[str, ArgumentRule] = field(default_factory=dict)
 
@@ -104,11 +109,14 @@ def _compile_tool(name: str, raw: dict[str, object]) -> ToolPolicy:
     if not isinstance(languages_raw, list):
         raise TypeError(f"tool {name!r}: require_languages must be a list")
     languages: frozenset[LanguageCode] = frozenset(LanguageCode(item) for item in languages_raw)
+    auth_raw = raw.get("require_auth")
+    require_auth = Auth(str(auth_raw)) if auth_raw else None  # fail-fast on a bad value
     return ToolPolicy(
         name=name,
         allow=bool(raw.get("allow", False)),
         requires_confirmation=bool(raw.get("requires_confirmation", False)),
         require_languages=languages,
+        require_auth=require_auth,
         max_calls_per_turn=int(raw.get("max_calls_per_turn") or 1),  # type: ignore[call-overload]
         arguments={
             arg_name: _compile_arg(arg_raw)
