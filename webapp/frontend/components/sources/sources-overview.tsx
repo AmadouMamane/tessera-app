@@ -31,7 +31,14 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -95,6 +102,25 @@ type Row = Data["sources"][number];
 type View = (typeof VIEWS)[number];
 type SortKey = "name" | "type" | "volume" | "citation";
 
+function SourcesSkeleton() {
+  return (
+    <div className="flex min-w-0 animate-pulse flex-col gap-3" aria-hidden="true">
+      <div className="h-[54px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]" />
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list
+            key={i}
+            className="h-[88px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
+          />
+        ))}
+      </div>
+      <div className="h-9 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]" />
+      <div className="h-[420px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]" />
+    </div>
+  );
+}
+
 export function SourcesOverview() {
   const t = useTranslations("sources");
   const locale = useLocale();
@@ -145,11 +171,7 @@ export function SourcesOverview() {
   }, [rows, view]);
 
   if (!data) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-[var(--tessera-text-muted)]">
-        …
-      </div>
-    );
+    return <SourcesSkeleton />;
   }
 
   // Detail opens as a right-entering drawer on click (no row selected by default).
@@ -517,6 +539,29 @@ function SourcesDrawer({
     height: number;
   } | null>(null);
   const [shown, setShown] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
+  // Focus into the drawer on open and return focus to the opener (the row) on close.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    return () => opener?.focus?.();
+  }, []);
+  // Trap Tab inside the drawer (a non-modal <dialog open> isn't modal natively).
+  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
+    if (event.key !== "Tab" || !dialogRef.current) return;
+    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+    const first = f[0];
+    const last = f[f.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
   useEffect(() => {
     const measure = () => {
       const m = document.querySelector("main");
@@ -552,9 +597,11 @@ function SourcesDrawer({
       }}
     >
       <dialog
+        ref={dialogRef}
         open
         aria-modal="true"
         aria-label={ariaLabel}
+        onKeyDown={onTrapKey}
         onCancel={(event) => {
           event.preventDefault();
           onClose();
