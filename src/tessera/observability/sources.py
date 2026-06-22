@@ -180,9 +180,9 @@ _TR: dict[str, tuple[str, str, str]] = {
     "zone_volume": ("Volume par source", "Volumen pro Quelle", "Volume per source"),
     "zone_langs": ("Répartition par langue", "Verteilung nach Sprache", "Distribution by language"),
     "footer_source": (
-        "pgvector (documents) + long_term_memory + conversation_messages",
-        "pgvector (documents) + long_term_memory + conversation_messages",
-        "pgvector (documents) + long_term_memory + conversation_messages",
+        "pgvector + long_term_memory + conversation_messages",
+        "pgvector + long_term_memory + conversation_messages",
+        "pgvector + long_term_memory + conversation_messages",
     ),
     "unit_chunks": ("{n} chunks", "{n} Chunks", "{n} chunks"),
     "unit_rows": ("{n} lignes", "{n} Zeilen", "{n} rows"),
@@ -1052,7 +1052,10 @@ def _attach_versions(
             detail["versions"] = versions
 
 
-_STALE_DAYS = 30
+# Re-validation cadence for an indexed source: a quarter. Regulatory and product
+# corpora don't change monthly, so "stale" means "not re-ingested in ~90 days",
+# not merely "indexed a while ago".
+_STALE_DAYS = 90
 
 
 def _attach_quality(
