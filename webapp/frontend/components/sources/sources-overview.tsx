@@ -1086,12 +1086,7 @@ function RecentActivity({ data }: { data: Data }) {
                 <span className="block tabular-nums text-[var(--tessera-text-muted)]">
                   {e.time}
                 </span>
-                <span className="text-[var(--tessera-text)]">
-                  {e.text}
-                  {e.actor ? (
-                    <span className="text-[var(--tessera-text-muted)]"> — {e.actor}</span>
-                  ) : null}
-                </span>
+                <span className="text-[var(--tessera-text)]">{e.text}</span>
               </span>
             </li>
           ))}
