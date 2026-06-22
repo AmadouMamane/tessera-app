@@ -1499,7 +1499,7 @@ function DetailPanel({
       {/* Ring kept tight on the left; the divider sits midway between the ring and
           the chunks column because divider/cols/edge share space evenly. */}
       <div className="flex items-stretch rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] py-3.5 pl-5">
-        <div className="relative left-1 flex flex-col items-center justify-center gap-1.5">
+        <div className="relative left-2 flex flex-col items-center justify-center gap-1.5">
           <ScoreRing value={row.citation} />
           <span className="text-[0.58rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {t("detail.score")}
