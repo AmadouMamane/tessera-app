@@ -40,7 +40,10 @@ def _registry_agents() -> list[dict[str, str]]:
     try:
         from tessera.agent.registry import list_agents
 
-        return [{"id": a.id, "name": a.name, "owner": a.owner} for a in list_agents()]
+        return [
+            {"id": a.id, "name": a.name, "owner": a.owner, "audience": a.audience.value}
+            for a in list_agents()
+        ]
     except (OSError, ValueError):
         return []
 
@@ -125,6 +128,7 @@ async def compute_fleet() -> dict[str, object]:
                 "id": aid,
                 "name": reg["name"],
                 "owner": reg["owner"],
+                "audience": reg.get("audience", "operator"),
                 "conversations": int(row.get("convs") or 0),
                 "turns": int(row.get("turns") or 0),
                 "messages": int(row.get("msgs") or 0),

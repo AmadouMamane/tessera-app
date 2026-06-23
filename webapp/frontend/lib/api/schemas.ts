@@ -4852,6 +4852,7 @@ export const FleetSchema = z.object({
         id: z.string(),
         name: z.string(),
         owner: z.string(),
+        audience: z.string().optional(),
         conversations: z.number(),
         turns: z.number(),
         messages: z.number(),
