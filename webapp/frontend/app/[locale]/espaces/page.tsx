@@ -123,6 +123,18 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
             "radial-gradient(circle at 50% 12%, rgba(13, 38, 71, 0.55), transparent 46%), linear-gradient(180deg, #001025 0%, #00101f 60%, #000b18 100%)",
         }}
       />
+      {/* Same continuous wave band as the launcher — visual continuity. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[300px]"
+        style={{
+          backgroundImage: "url('/assets/tessera-waves-band.png')",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center bottom",
+          backgroundSize: "100% 100%",
+          maskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
+        }}
+      />
       <div className="relative z-10 flex min-h-screen flex-col">
         <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-6">
           <Link href="/select-space" className="flex items-center gap-2">

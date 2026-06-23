@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Boxes, Lock, LogIn, UsersRound } from "lucide-react";
+import { ArrowRight, Boxes, HandCoins, Lock, LogIn, UserRound, UsersRound } from "lucide-react";
 import { signIn } from "next-auth/react";
 import type { CSSProperties } from "react";
 import { useState } from "react";
@@ -41,18 +41,77 @@ export interface DirectoryLabels {
   open: string;
 }
 
-const HEALTH_DOT: Record<SurfaceView["healthTone"], string> = {
+const CARD_BG =
+  "linear-gradient(145deg, var(--panel) 0%, var(--panel-soft) 56%, rgba(2,8,23,0.94) 100%)";
+
+type Accent = "gold" | "amber";
+
+const ACCENT: Record<
+  Accent,
+  { border: string; emblem: string; pill: string; buttonStyle: CSSProperties; shadow: string }
+> = {
+  gold: {
+    border: "border-[var(--border-gold)]",
+    emblem: "text-[var(--gold-strong)]",
+    pill: "text-[var(--gold-strong)]",
+    buttonStyle: {
+      background:
+        "linear-gradient(180deg, rgba(214,182,106,0.30), rgba(88,62,24,0.78) 58%, rgba(42,31,18,0.92))",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
+    },
+    shadow: "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
+  },
+  amber: {
+    border: "border-[var(--border-amber)]",
+    emblem: "text-[var(--amber-soft)]",
+    pill: "text-[var(--amber-soft)]",
+    buttonStyle: {
+      background:
+        "linear-gradient(180deg, rgba(245,158,11,0.24), rgba(120,72,12,0.72) 55%, rgba(60,38,8,0.92))",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
+    },
+    shadow: "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
+  },
+};
+
+const HEALTH: Record<SurfaceView["healthTone"], string> = {
   good: "var(--success)",
   warn: "var(--amber)",
   crit: "#F87171",
   unknown: "var(--text-secondary)",
 };
 
-const GROUP_ICON = { external: UsersRound, internal: Boxes } as const;
+const SURFACE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+  client: UserRound,
+  recouvrement: HandCoins,
+};
+
+const FOCUS =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--text-primary)_72%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)]";
+
+function CardGlow() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        background:
+          "radial-gradient(circle at 82% 6%, rgba(248,250,252,0.035), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.014), transparent 30%)",
+      }}
+    />
+  );
+}
+
+function tone(color: string, fill: number, border: number): CSSProperties {
+  return {
+    color,
+    borderColor: `color-mix(in srgb, ${color} ${border}%, transparent)`,
+    background: `color-mix(in srgb, ${color} ${fill}%, transparent)`,
+  };
+}
 
 // 1-click seeded-account login (demo mode only): opens a REAL next-auth session
 // then navigates — it satisfies the guard by logging in, never a bypass.
-function DemoEnter({ surface }: { surface: SurfaceView }) {
+function DemoEnter({ surface, accent }: { surface: SurfaceView; accent: Accent }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const demo = surface.demo;
@@ -77,12 +136,12 @@ function DemoEnter({ surface }: { surface: SurfaceView }) {
       type="button"
       onClick={enter}
       disabled={pending}
-      className="flex h-[42px] items-center justify-center gap-[9px] rounded-[12px] border border-[var(--border-amber)] text-[13px] font-semibold leading-none text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--text-primary)_72%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)] disabled:opacity-70"
-      style={{
-        background:
-          "linear-gradient(180deg, rgba(245,158,11,0.24), rgba(120,72,12,0.72) 55%, rgba(60,38,8,0.92))",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
-      }}
+      className={cn(
+        "flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none text-[var(--text-primary)] disabled:opacity-70 md:w-[188px]",
+        ACCENT[accent].border,
+        FOCUS,
+      )}
+      style={ACCENT[accent].buttonStyle}
     >
       <LogIn className="h-[16px] w-[16px]" />
       {demo.label}
@@ -91,67 +150,84 @@ function DemoEnter({ surface }: { surface: SurfaceView }) {
 }
 
 function SurfaceCard({ surface, labels }: { surface: SurfaceView; labels: DirectoryLabels }) {
-  const external = !surface.authRequired;
-  const accentBorder = external ? "border-[var(--border-gold)]" : "border-[var(--border-amber)]";
-  const accentTone = external ? "text-[var(--gold-strong)]" : "text-[var(--amber-soft)]";
+  const accent: Accent = surface.authRequired ? "amber" : "gold";
+  const a = ACCENT[accent];
+  const Icon = SURFACE_ICON[surface.key] ?? Boxes;
   return (
-    <div
+    <article
       className={cn(
-        "flex flex-col gap-[12px] rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] p-[18px]",
-        accentBorder,
+        "relative flex flex-col gap-[18px] overflow-hidden rounded-[var(--radius-lg)] border px-[24px] py-[22px] backdrop-blur-[2px] md:flex-row md:items-center md:gap-[22px]",
+        a.border,
       )}
+      style={{ background: CARD_BG, boxShadow: a.shadow }}
     >
-      <div className="flex items-start justify-between gap-[10px]">
-        <span className="text-[15px] font-semibold text-[var(--text-primary)]">{surface.name}</span>
-        {/* Public-safe health: verdict tone + label, never a failure category. */}
-        <span className="inline-flex shrink-0 items-center gap-[6px] text-[11px] text-[var(--text-secondary)]">
+      <CardGlow />
+      {/* Emblem */}
+      <span
+        className={cn(
+          "relative grid h-[56px] w-[56px] shrink-0 place-items-center rounded-[16px] border",
+          a.border,
+          a.emblem,
+        )}
+        style={{ background: "color-mix(in srgb, var(--bg-app) 45%, transparent)" }}
+      >
+        <Icon className="h-[26px] w-[26px]" />
+      </span>
+
+      {/* Identity + description */}
+      <div className="relative min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-[10px]">
+          <span className="text-[16px] font-semibold leading-none text-[var(--text-primary)]">
+            {surface.name}
+          </span>
           <span
-            className="h-[8px] w-[8px] rounded-full"
-            style={{ background: HEALTH_DOT[surface.healthTone] }}
-            aria-hidden="true"
-          />
-          {surface.healthLabel}
-        </span>
+            className="inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11px] text-[var(--text-secondary)]"
+            style={{ borderColor: "var(--border-subtle)" }}
+          >
+            <span
+              className="h-[6px] w-[6px] rounded-full"
+              style={{ background: HEALTH[surface.healthTone] }}
+              aria-hidden="true"
+            />
+            {surface.healthLabel}
+          </span>
+        </div>
+        <p className="mt-[9px] max-w-[460px] text-[12.5px] leading-[1.5] text-[var(--text-secondary)]">
+          {surface.desc}
+        </p>
+        {surface.authRequired ? (
+          <span
+            className={cn(
+              "mt-[10px] inline-flex items-center gap-[5px] text-[11px] font-medium",
+              a.pill,
+            )}
+          >
+            <Lock className="h-[12px] w-[12px]" />
+            {surface.demo ? surface.authNote : labels.authRequired}
+          </span>
+        ) : null}
       </div>
-      <p className="text-[12px] leading-[1.45] text-[var(--text-secondary)]">{surface.desc}</p>
-      {surface.authRequired ? (
-        <span
-          className={cn("inline-flex items-center gap-[5px] text-[11px] font-medium", accentTone)}
-        >
-          <Lock className="h-[12px] w-[12px]" />
-          {surface.demo ? surface.authNote : labels.authRequired}
-        </span>
-      ) : null}
-      {/* Guarded surface in demo mode → 1-click real login; otherwise a plain link
-          (which hits the layout guard if unauthenticated — never a bypass). */}
-      {surface.demo ? (
-        <DemoEnter surface={surface} />
-      ) : (
-        <Link
-          href={surface.href}
-          className={cn(
-            "flex h-[42px] items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--text-primary)_72%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)]",
-            accentBorder,
-          )}
-          style={
-            external
-              ? ({
-                  background:
-                    "linear-gradient(180deg, rgba(214,182,106,0.30), rgba(88,62,24,0.78) 58%, rgba(42,31,18,0.92))",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
-                } as CSSProperties)
-              : ({
-                  background:
-                    "linear-gradient(180deg, rgba(245,158,11,0.24), rgba(120,72,12,0.72) 55%, rgba(60,38,8,0.92))",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
-                } as CSSProperties)
-          }
-        >
-          {labels.open}
-          <ArrowRight className="h-[16px] w-[16px] stroke-[1.8]" />
-        </Link>
-      )}
-    </div>
+
+      {/* Action — 1-click demo login on a guarded surface, else a plain link. */}
+      <div className="relative shrink-0">
+        {surface.demo ? (
+          <DemoEnter surface={surface} accent={accent} />
+        ) : (
+          <Link
+            href={surface.href}
+            className={cn(
+              "flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none text-[var(--text-primary)] md:w-[160px]",
+              a.border,
+              FOCUS,
+            )}
+            style={a.buttonStyle}
+          >
+            {labels.open}
+            <ArrowRight className="h-[16px] w-[16px] stroke-[1.8]" />
+          </Link>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -163,22 +239,33 @@ export function SpacesDirectory({
   labels,
 }: { groups: SurfaceGroup[]; labels: DirectoryLabels }) {
   return (
-    <div className="flex w-full max-w-[1040px] flex-col gap-[28px]">
+    <div className="flex w-full max-w-[1040px] flex-col gap-[30px]">
       {groups.map((group) => {
-        const GroupIcon = group.key === "internal" ? GROUP_ICON.internal : GROUP_ICON.external;
+        const GroupIcon = group.key === "internal" ? Boxes : UsersRound;
+        const groupColor = group.key === "internal" ? "var(--amber-soft)" : "var(--gold-strong)";
         return (
           <section key={group.key} className="flex flex-col gap-[14px]">
-            <div className="flex items-center gap-[10px]">
-              <GroupIcon
-                className="h-[16px] w-[16px] text-[var(--text-secondary)]"
-                aria-hidden="true"
-              />
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">
+            <div className="flex items-center gap-[12px]">
+              <span
+                className="grid h-[26px] w-[26px] place-items-center rounded-[8px] border"
+                style={{ ...tone(groupColor, 10, 38) }}
+              >
+                <GroupIcon className="h-[14px] w-[14px]" aria-hidden="true" />
+              </span>
+              <h2
+                className="text-[12px] font-semibold uppercase tracking-[0.16em]"
+                style={{ color: groupColor }}
+              >
                 {group.label}
               </h2>
-              <span className="text-[12px] text-[var(--text-secondary)]">· {group.desc}</span>
+              <span className="text-[12px] text-[var(--text-secondary)]">{group.desc}</span>
+              <span
+                className="ml-[4px] h-px flex-1"
+                style={{ background: "var(--border-subtle)" }}
+                aria-hidden="true"
+              />
             </div>
-            <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-[16px]">
               {group.surfaces.map((surface) => (
                 <SurfaceCard key={surface.key} surface={surface} labels={labels} />
               ))}
