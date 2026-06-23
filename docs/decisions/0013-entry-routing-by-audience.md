@@ -73,12 +73,18 @@ plane** card (*Cockpit · Gouvernance* — "govern") enters the cockpit (platfor
 roles). The launcher also keeps a public-safe **signal digest** (verdict rollup —
 *Contrôle actif · N/M agents libérables*) and the reconciled **per-agent footer**.
 
-The surface list lives in `/espaces`, **symmetric to the Flotte agent directory**
-(`/agents`): Flotte is a list of governed **agents** (list → agent détail);
-`/espaces` is a list of business **surfaces** grouped by audience (list → surface),
-**never** a list of agents. Each surface shows its audience (external/internal), a
-"connexion requise" note when guarded (with a 1-click demo login in demo mode), and
-a **public-safe health** = the release verdict of its backing agent(s) (ADR 0009 —
+The surface list lives in `/espaces`. Its shape **echoes** the Flotte agent
+directory (`/agents`) — Flotte lists governed **agents** (list → agent détail),
+`/espaces` lists business **surfaces** grouped by audience (list → surface), never
+a list of agents. **This symmetry is a design rationale, not a user link**: a
+business page links to **nothing in the control plane**, and a control page links
+to nothing in the business plane. The two planes meet **only at the launcher**. The
+sole allowed cross-plane direction is the **operator→product** header toggle
+(operator-only, higher privilege); business→control is **never** offered — a
+`collections` user has no cockpit access, so such a link would be a dead end into
+the RBAC guard. Each surface shows its audience (external/internal), a "connexion
+requise" note when guarded (with a 1-click demo login in demo mode), and a
+**public-safe health** = the release verdict of its backing agent(s) (ADR 0009 —
 the failure category stays operator-only). support-client and onboarding still
 share the single *Espace client* surface; adding an agent never adds an entry.
 The card **informs and links**, while the layout RBAC remains the **authority**

@@ -4688,7 +4688,7 @@
   },
   "spaces": {
     "title": "Espaces métier",
-    "subtitle": "Le répertoire des surfaces métier — symétrique de la Flotte (liste → surface). Démonstration : ouvrez l’une ou l’autre surface.",
+    "subtitle": "Le répertoire des surfaces métier. Démonstration : ouvrez l’une ou l’autre surface.",
     "demoBadge": "Démonstration",
     "groupExternal": "Externe",
     "groupExternalDesc": "Surfaces ouvertes aux clients.",

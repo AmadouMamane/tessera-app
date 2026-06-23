@@ -4688,7 +4688,7 @@
   },
   "spaces": {
     "title": "Business spaces",
-    "subtitle": "The directory of business surfaces — symmetric to the Fleet (list → surface). Demonstration: open either surface.",
+    "subtitle": "The directory of business surfaces. Demonstration: open either surface.",
     "demoBadge": "Demonstration",
     "groupExternal": "External",
     "groupExternalDesc": "Surfaces open to customers.",

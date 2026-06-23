@@ -4688,7 +4688,7 @@
   },
   "spaces": {
     "title": "Fachbereiche",
-    "subtitle": "Das Verzeichnis der Geschäftsoberflächen — symmetrisch zur Flotte (Liste → Oberfläche). Demonstration: öffnen Sie eine der Oberflächen.",
+    "subtitle": "Das Verzeichnis der Geschäftsoberflächen. Demonstration: öffnen Sie eine der Oberflächen.",
     "demoBadge": "Demonstration",
     "groupExternal": "Extern",
     "groupExternalDesc": "Für Kunden offene Oberflächen.",

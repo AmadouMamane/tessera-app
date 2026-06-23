@@ -1,4 +1,3 @@
-import { ArrowRight, Network } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AuthControl } from "@/components/auth/auth-control";
@@ -158,15 +157,9 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
             <p className="max-w-[680px] text-[14px] leading-[1.5] text-[var(--text-secondary)]">
               {t("subtitle")}
             </p>
-            {/* Explicit symmetry with the Flotte agent directory. */}
-            <Link
-              href="/agents"
-              className="mt-[2px] inline-flex items-center gap-[7px] text-[12px] font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-            >
-              <Network className="h-[14px] w-[14px]" aria-hidden="true" />
-              {t("fleetLink")}
-              <ArrowRight className="h-[13px] w-[13px]" aria-hidden="true" />
-            </Link>
+            {/* No cross-plane link here (ADR 0013): a business page shows ONLY its
+                plane. The /espaces↔Flotte symmetry is a design rationale, not a
+                user link — the two planes meet only at the launcher. */}
           </section>
 
           {fleet ? (
