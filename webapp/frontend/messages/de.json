@@ -4560,9 +4560,11 @@
       "agentReleasable": "Grün",
       "agentBlocked": "Blockiert",
       "agentUnknown": "Nicht bewertet",
-      "agentStrict": "{rate} % bestanden",
-      "perAgentLegend": "Release-Verdikt und strikte Erfolgsquote — real, pro Agent.",
-      "lastEval": "Letzte Auswertung: {date}"
+      "agentRate": "{rate} % · eig. Set",
+      "agentCat": "Kat. v{v}",
+      "agentSocle": "Basis {passed}/{total}",
+      "agentStale": "Veraltet · neu prüfen",
+      "perAgentLegend": "Quote gegen das eigene Set jedes Agenten — nicht vergleichbar; nur die Basis (gleiche Fälle überall) ist es."
     },
     "demoLogin": {
       "note": "Demo-Sitzung · geseedetes Konto",

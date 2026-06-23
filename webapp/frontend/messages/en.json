@@ -4560,9 +4560,11 @@
       "agentReleasable": "Green",
       "agentBlocked": "Blocked",
       "agentUnknown": "Not evaluated",
-      "agentStrict": "{rate}% passed",
-      "perAgentLegend": "Release verdict and strict pass rate — real, per agent.",
-      "lastEval": "Last eval: {date}"
+      "agentRate": "{rate}% · own set",
+      "agentCat": "cat v{v}",
+      "agentSocle": "floor {passed}/{total}",
+      "agentStale": "Stale · re-eval",
+      "perAgentLegend": "Rate is against each agent's own set — not comparable; only the floor (same cases everywhere) is."
     },
     "demoLogin": {
       "note": "Demo session · seeded account",

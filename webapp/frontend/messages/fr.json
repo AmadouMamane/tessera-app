@@ -4560,9 +4560,11 @@
       "agentReleasable": "Au vert",
       "agentBlocked": "Bloqué",
       "agentUnknown": "Non évalué",
-      "agentStrict": "{rate} % réussi",
-      "perAgentLegend": "Verdict de release et taux de réussite stricte — réel, par agent.",
-      "lastEval": "Dernière éval : {date}"
+      "agentRate": "{rate} % · son set",
+      "agentCat": "cat v{v}",
+      "agentSocle": "socle {passed}/{total}",
+      "agentStale": "Périmé · re-éval",
+      "perAgentLegend": "Taux contre le set propre de chaque agent — non comparable ; seul le socle (mêmes cas partout) l’est."
     },
     "demoLogin": {
       "note": "Session de démonstration · compte seedé",

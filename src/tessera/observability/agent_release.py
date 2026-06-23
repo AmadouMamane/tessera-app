@@ -14,6 +14,7 @@ state — never a fabricated verdict.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 
 from tessera.observability.eval_data import load_eval_snapshot
@@ -22,12 +23,39 @@ from tessera.observability.eval_gate_view import build_gate_view
 __all__ = ["AgentRelease", "agent_release_state", "fleet_release_states"]
 
 
+def _current_catalogue_version(eval_set_slug: str) -> str:
+    """Version (``count-hash``) of an agent's eval set AS IT EXISTS NOW.
+
+    Mirrors ``eval.runner._catalogue_version`` over the set's current effective
+    case ids so a run scored against a SUPERSEDED catalogue can be flagged
+    "verdict périmé". Real source — the live eval-set manifest + failure
+    catalogue — never a fabricated number. Returns ``""`` if it can't be derived
+    (so the caller never invents a drift it can't prove).
+    """
+    try:
+        from eval.sets import load_eval_set
+
+        ids = sorted(load_eval_set(eval_set_slug).effective_case_ids)
+    except (ImportError, KeyError, OSError, ValueError):
+        return ""
+    if not ids:
+        return ""
+    digest = hashlib.sha256("\n".join(ids).encode()).hexdigest()[:8]
+    return f"{len(ids)}-{digest}"
+
+
 @dataclass(frozen=True, slots=True)
 class AgentRelease:
     """The release/eval-gate state of one agent package.
 
     ``available`` is ``False`` when the agent has no usable reference run; the
     verdict fields are then empty and the UI shows "évaluation non exécutée".
+
+    Each agent is governed INDEPENDENTLY (ADR 0010): its run is staggered in time
+    (``run_at``) and scored against its OWN catalogue version (``catalogue_version``)
+    over its OWN domain set, so ``summary_*`` pass counts are NOT comparable across
+    agents — only ``socle_*`` (the shared security floor, identical cases for every
+    agent) is a legitimate cross-agent comparator.
     """
 
     agent_id: str
@@ -38,11 +66,30 @@ class AgentRelease:
     candidate_version: str = ""
     eval_set: str = ""
     executions: int = 0
-    passed_exec: int = 0
     socle_ok: bool = False
     blocking_socle: int = 0
     blocking_t1: int = 0
     waived_active: int = 0
+    # Provenance — what this verdict was actually measured on.
+    run_at: str = ""
+    catalogue_version: str = ""
+    current_catalogue_version: str = ""
+    # Pass rate AS THE REPORT/COCKPIT SHOW IT (summary grain: passed / total of
+    # this run, against the agent's own set). NOT comparable across agents.
+    summary_passed: int = 0
+    summary_total: int = 0
+    # Shared security floor — the ONLY cross-agent comparable axis.
+    socle_passed: int = 0
+    socle_total: int = 0
+
+    @property
+    def verdict_stale(self) -> bool:
+        """True when the run was scored against a SUPERSEDED catalogue version."""
+        return bool(
+            self.current_catalogue_version
+            and self.catalogue_version
+            and self.catalogue_version != self.current_catalogue_version
+        )
 
     def as_dict(self) -> dict[str, object]:
         """Serialise for the API payload (fleet + release control)."""
@@ -55,11 +102,18 @@ class AgentRelease:
             "candidate_version": self.candidate_version,
             "eval_set": self.eval_set,
             "executions": self.executions,
-            "passed_exec": self.passed_exec,
             "socle_ok": self.socle_ok,
             "blocking_socle": self.blocking_socle,
             "blocking_t1": self.blocking_t1,
             "waived_active": self.waived_active,
+            "run_at": self.run_at,
+            "catalogue_version": self.catalogue_version,
+            "current_catalogue_version": self.current_catalogue_version,
+            "verdict_stale": self.verdict_stale,
+            "summary_passed": self.summary_passed,
+            "summary_total": self.summary_total,
+            "socle_passed": self.socle_passed,
+            "socle_total": self.socle_total,
         }
 
 
@@ -79,11 +133,17 @@ def agent_release_state(agent_id: str) -> AgentRelease:
         candidate_version=gate.candidate_version,
         eval_set=snap.eval_set,
         executions=gate.executions,
-        passed_exec=gate.passed_exec,
         socle_ok=gate.socle_ok,
         blocking_socle=gate.blocking_socle,
         blocking_t1=gate.blocking_t1,
         waived_active=gate.waived_active,
+        run_at=snap.run_at,
+        catalogue_version=snap.catalogue_version,
+        current_catalogue_version=_current_catalogue_version(snap.eval_set),
+        summary_passed=snap.passed,
+        summary_total=snap.total,
+        socle_passed=gate.socle_passed,
+        socle_total=gate.socle_total,
     )
 
 

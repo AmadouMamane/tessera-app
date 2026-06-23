@@ -206,7 +206,7 @@ export function LandingLauncher({
             <p className="mt-[10px] max-w-[560px] text-[15px] font-normal leading-[1.4] tracking-[0.01em] text-[var(--text-secondary)]">
               {t("demoSubtitle")}
             </p>
-            <SignalBand t={t} signal={signal} locale={locale} />
+            <SignalBand t={t} signal={signal} />
           </section>
 
           {/* Two PLANES (ADR 0013), not three flat surfaces: the BUSINESS plane
@@ -227,7 +227,7 @@ export function LandingLauncher({
             <div className="mt-9 flex flex-col items-center gap-[12px]">
               <div className="flex flex-wrap items-stretch justify-center gap-[12px]">
                 {signal.agents.map((a) => (
-                  <AgentVerdict key={a.name} t={t} agent={a} />
+                  <AgentVerdict key={a.name} t={t} agent={a} locale={locale} />
                 ))}
               </div>
               <p className="text-center text-[11px] leading-[1.4] text-[var(--text-secondary)]">
@@ -305,11 +305,7 @@ function DemoEnterButton({
 // AND the count it currently clears). The per-agent verdict + strict pass rate
 // live in the footer below; WHICH case failed (the failure category) is never
 // shown publicly — it lives behind the operator gate.
-function SignalBand({
-  t,
-  signal,
-  locale,
-}: { t: T; signal: LauncherSignal | null; locale: string }) {
+function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
   const neutral =
     "inline-flex items-center gap-[7px] rounded-full border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_70%,transparent)] px-[12px] py-[6px] text-[12px] leading-none text-[var(--text-secondary)]";
   if (!signal) {
@@ -344,11 +340,6 @@ function SignalBand({
           {t("signal.live")}
         </span>
         <span className={neutral}>{t("signal.agents", { count: signal.agentsCount })}</span>
-        {signal.lastEvalAt ? (
-          <span className={neutral}>
-            {t("signal.lastEval", { date: new Date(signal.lastEvalAt).toLocaleDateString(locale) })}
-          </span>
-        ) : null}
       </div>
       {/* Verdict rollup headline: control is active (positive) AND the count of
           releasable agents (the only honest fleet number). */}
@@ -381,18 +372,61 @@ function SignalBand({
   );
 }
 
-// One per-agent verdict tile (public boundary): release verdict + the agent's own
-// strict pass rate. Never a failure category — that stays operator-only.
-function AgentVerdict({ t, agent }: { t: T; agent: LauncherAgentSignal }) {
+// "20260618T083906Z" → localized date, or null if it can't be parsed (never a
+// fabricated date).
+function fmtRunDate(runAt: string | null, locale: string): string | null {
+  if (!runAt) return null;
+  const m = runAt.match(/^(\d{4})(\d{2})(\d{2})T/);
+  if (!m) return null;
+  const dt = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`);
+  return Number.isNaN(dt.getTime()) ? null : dt.toLocaleDateString(locale);
+}
+
+// One per-agent verdict tile (public boundary, ADR 0009): release VERDICT + the
+// agent's own pass rate (against its OWN set — not comparable across agents) +
+// its run date and catalogue version (so the staggered, independent nature is
+// visible) + the SOCLE score (the only cross-agent comparator). A "verdict
+// périmé" chip when scored against a superseded catalogue. NEVER a failure
+// category — the "why" stays operator-only.
+function AgentVerdict({ t, agent, locale }: { t: T; agent: LauncherAgentSignal; locale: string }) {
   const released = agent.gatePassed === true;
   const blocked = agent.gatePassed === false;
   const color = released ? "var(--success)" : blocked ? "#F87171" : "var(--text-secondary)";
-  const pct = agent.strictPassRate != null ? Math.round(agent.strictPassRate * 100) : null;
+  const pct = agent.passRate != null ? Math.round(agent.passRate * 100) : null;
+  const date = fmtRunDate(agent.runAt, locale);
+  const cat = agent.catalogueVersion ? agent.catalogueVersion.split("-")[0] : null;
+  const meta = [
+    date,
+    cat ? t("signal.agentCat", { v: cat }) : null,
+    agent.soclePassed != null && agent.socleTotal != null
+      ? t("signal.agentSocle", { passed: agent.soclePassed, total: agent.socleTotal })
+      : null,
+  ].filter(Boolean);
   return (
-    <div className="flex min-w-[176px] flex-col gap-[8px] rounded-[14px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[15px] py-[12px]">
-      <span className="text-[13px] font-semibold leading-none text-[var(--text-primary)]">
-        {agent.name}
-      </span>
+    <div
+      className="flex min-w-[188px] flex-col gap-[8px] rounded-[14px] border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[15px] py-[12px]"
+      style={{
+        borderColor: agent.verdictStale
+          ? "color-mix(in srgb, var(--amber) 50%, transparent)"
+          : "var(--border-subtle)",
+      }}
+    >
+      <div className="flex items-center justify-between gap-[8px]">
+        <span className="text-[13px] font-semibold leading-none text-[var(--text-primary)]">
+          {agent.name}
+        </span>
+        {agent.verdictStale ? (
+          <span
+            className="inline-flex items-center rounded-full border px-[6px] py-[2px] text-[9.5px] font-semibold uppercase leading-none tracking-[0.04em]"
+            style={{
+              color: "var(--amber)",
+              borderColor: "color-mix(in srgb, var(--amber) 45%, transparent)",
+            }}
+          >
+            {t("signal.agentStale")}
+          </span>
+        ) : null}
+      </div>
       <div className="flex items-center justify-between gap-[10px]">
         <span
           className="inline-flex items-center gap-[5px] text-[11.5px] font-semibold leading-none"
@@ -413,10 +447,15 @@ function AgentVerdict({ t, agent }: { t: T; agent: LauncherAgentSignal }) {
         </span>
         {pct != null ? (
           <span className="text-[12px] font-medium leading-none text-[var(--text-secondary)]">
-            {t("signal.agentStrict", { rate: pct })}
+            {t("signal.agentRate", { rate: pct })}
           </span>
         ) : null}
       </div>
+      {meta.length > 0 ? (
+        <span className="text-[10.5px] leading-[1.3] text-[var(--text-secondary)]">
+          {meta.join(" · ")}
+        </span>
+      ) : null}
     </div>
   );
 }
