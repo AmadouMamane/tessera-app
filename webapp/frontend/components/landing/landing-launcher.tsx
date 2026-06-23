@@ -86,6 +86,11 @@ const OPERATOR_ITEMS: SpaceItem[] = [
 const CARD_BG =
   "linear-gradient(145deg, var(--panel) 0%, var(--panel-soft) 56%, rgba(2,8,23,0.94) 100%)";
 
+// Always-visible keyboard focus ring (a bright near-white ring reads on every
+// accent over the night-blue base) — WCAG 2.4.7 on this dark launcher.
+const FOCUS =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--text-primary)_72%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)]";
+
 type AccentStyle = {
   border: string;
   button: string;
@@ -286,6 +291,7 @@ function DemoEnterButton({
       className={cn(
         "flex h-[46px] w-full items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em] disabled:opacity-70",
         a.button,
+        FOCUS,
       )}
       style={a.buttonStyle}
     >
@@ -378,14 +384,20 @@ function SpaceToggle({ t }: { t: T }) {
     <nav className="absolute left-1/2 top-1/2 flex h-[38px] w-[332px] -translate-x-1/2 -translate-y-1/2 items-center rounded-[11px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_76%,transparent)] p-0 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--text-primary)_4%,transparent),0_0_32px_rgba(0,0,0,0.18)]">
       <Link
         href="/produit"
-        className="flex h-[36px] w-[164px] items-center justify-center gap-[8px] rounded-[10px] border border-[rgba(214,182,106,0.50)] bg-[linear-gradient(180deg,rgba(214,182,106,0.22),rgba(55,38,14,0.86))] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--gold)] shadow-[0_0_14px_rgba(214,182,106,0.10),inset_0_1px_0_rgba(255,255,255,0.07)]"
+        className={cn(
+          "flex h-[36px] w-[164px] items-center justify-center gap-[8px] rounded-[10px] border border-[rgba(214,182,106,0.50)] bg-[linear-gradient(180deg,rgba(214,182,106,0.22),rgba(55,38,14,0.86))] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--gold)] shadow-[0_0_14px_rgba(214,182,106,0.10),inset_0_1px_0_rgba(255,255,255,0.07)]",
+          FOCUS,
+        )}
       >
         <UserRound className="h-[15px] w-[15px] fill-[color-mix(in_srgb,var(--gold-strong)_70%,transparent)] stroke-[var(--gold-strong)] stroke-[2]" />
         {t("toggle.product")}
       </Link>
       <Link
         href="/surveiller/vue-ensemble"
-        className="flex h-[36px] flex-1 items-center justify-center gap-[8px] rounded-[10px] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]"
+        className={cn(
+          "flex h-[36px] flex-1 items-center justify-center gap-[8px] rounded-[10px] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]",
+          FOCUS,
+        )}
       >
         <ShieldCheck className="h-[15px] w-[15px] stroke-[var(--cyan)] stroke-[2]" />
         {t("toggle.cockpit")}
@@ -574,6 +586,7 @@ function SubSurface({
           className={cn(
             "flex h-[42px] items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none tracking-[0.01em]",
             a.button,
+            FOCUS,
           )}
           style={a.buttonStyle}
         >
@@ -615,7 +628,10 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
             <li key={item.key}>
               <Link
                 href={item.href}
-                className="group/row -mx-[8px] grid grid-cols-[20px_1fr_14px] items-center rounded-[8px] px-[8px] py-[3px] transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]"
+                className={cn(
+                  "group/row -mx-[8px] grid grid-cols-[20px_1fr_14px] items-center rounded-[8px] px-[8px] py-[3px] transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]",
+                  FOCUS,
+                )}
               >
                 <item.icon className={cn("h-[18px] w-[18px] stroke-[1.6]", a.icon)} />
                 <span className="min-w-0 pl-[14px]">
@@ -649,6 +665,7 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
             className={cn(
               "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
               a.button,
+              FOCUS,
             )}
             style={a.buttonStyle}
           >
