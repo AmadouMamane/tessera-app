@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, ChevronRight, HandCoins, Lock, Search, UserRound, UsersRound } from "lucide-react";
+import { Boxes, HandCoins, Lock, Search, UserRound } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
@@ -37,32 +37,29 @@ export interface SurfaceGroup {
   surfaces: SurfaceView[];
 }
 
-type Accent = "gold" | "amber";
-type Filter = "all" | "external" | "internal";
+type Audience = "external" | "internal";
+type Filter = "all" | Audience;
+type FlatSurface = SurfaceView & { audience: Audience };
 
-const ACCENT: Record<Accent, { border: string; icon: string; pill: CSSProperties; hover: string }> =
-  {
-    gold: {
-      border: "border-[var(--border-gold)]",
-      icon: "text-[var(--gold-strong)]",
-      pill: {
-        color: "var(--gold-strong)",
-        borderColor: "color-mix(in srgb, var(--gold-strong) 38%, transparent)",
-        background: "color-mix(in srgb, var(--gold-strong) 10%, transparent)",
-      },
-      hover: "hover:border-[color-mix(in_srgb,var(--gold-strong)_45%,transparent)]",
-    },
-    amber: {
-      border: "border-[var(--border-amber)]",
-      icon: "text-[var(--amber-soft)]",
-      pill: {
-        color: "var(--amber-soft)",
-        borderColor: "color-mix(in srgb, var(--amber-soft) 38%, transparent)",
-        background: "color-mix(in srgb, var(--amber-soft) 10%, transparent)",
-      },
-      hover: "hover:border-[color-mix(in_srgb,var(--amber-soft)_45%,transparent)]",
-    },
-  };
+const CARD_BG =
+  "linear-gradient(160deg, var(--panel) 0%, var(--panel-soft) 60%, rgba(2,8,23,0.94) 100%)";
+
+const ACCENT: Record<Audience, { border: string; icon: string; dot: string; iconBg: string }> = {
+  external: {
+    border: "border-[var(--border-gold)]",
+    icon: "text-[var(--gold-strong)]",
+    dot: "var(--gold-strong)",
+    iconBg:
+      "linear-gradient(150deg, color-mix(in srgb, var(--gold-strong) 26%, transparent), color-mix(in srgb, var(--gold-strong) 6%, transparent))",
+  },
+  internal: {
+    border: "border-[var(--border-amber)]",
+    icon: "text-[var(--amber-soft)]",
+    dot: "var(--amber-soft)",
+    iconBg:
+      "linear-gradient(150deg, color-mix(in srgb, var(--amber-soft) 26%, transparent), color-mix(in srgb, var(--amber-soft) 6%, transparent))",
+  },
+};
 
 const HEALTH: Record<SurfaceView["healthTone"], string> = {
   good: "var(--success)",
@@ -79,100 +76,83 @@ const SURFACE_ICON: Record<string, React.ComponentType<{ className?: string }>> 
 const FOCUS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--text-primary)_72%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)]";
 
-const ROW =
-  "group/row relative flex w-full items-center gap-[16px] rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[14px] text-left transition-colors";
+const CARD =
+  "group/card relative flex min-h-[188px] flex-col items-center justify-center gap-[14px] overflow-hidden rounded-[20px] border px-[18px] py-[22px] text-center transition-[border-color,transform] hover:-translate-y-[2px]";
 
-function RowInner({
+function CardInner({
   surface,
-  accent,
+  audience,
   audienceLabel,
   actionLabel,
 }: {
   surface: SurfaceView;
-  accent: Accent;
+  audience: Audience;
   audienceLabel: string;
   actionLabel: string;
 }) {
-  const a = ACCENT[accent];
+  const a = ACCENT[audience];
   const Icon = SURFACE_ICON[surface.key] ?? Boxes;
   const hc = HEALTH[surface.healthTone];
   return (
     <>
+      {/* Discreet corner: guard + public verdict dot — honest, never a category. */}
+      <span className="absolute top-[12px] right-[12px] flex items-center gap-[7px]">
+        {surface.authRequired ? (
+          <Lock className="h-[12px] w-[12px] text-[var(--text-secondary)]" aria-hidden="true" />
+        ) : null}
+        <span
+          className="h-[8px] w-[8px] rounded-full"
+          style={{ background: hc }}
+          title={surface.healthLabel}
+          aria-label={surface.healthLabel}
+        />
+      </span>
+
       <span
         className={cn(
-          "grid h-[44px] w-[44px] shrink-0 place-items-center rounded-[12px] border",
+          "grid h-[60px] w-[60px] place-items-center rounded-[18px] border",
           a.border,
           a.icon,
         )}
-        style={{ background: "color-mix(in srgb, var(--bg-app) 45%, transparent)" }}
+        style={{ background: a.iconBg }}
       >
-        <Icon className="h-[21px] w-[21px]" />
+        <Icon className="h-[28px] w-[28px]" />
       </span>
 
-      <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-        <span className="flex flex-wrap items-center gap-[8px]">
-          <span className="text-[14px] font-semibold leading-none text-[var(--text-primary)]">
-            {surface.name}
-          </span>
+      <span className="flex flex-col items-center gap-[8px]">
+        <span className="text-[15px] font-semibold leading-none text-[var(--text-primary)]">
+          {surface.name}
+        </span>
+        <span className="inline-flex items-center gap-[6px] text-[12px] text-[var(--text-secondary)]">
           <span
-            className="rounded-full border px-[8px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.08em]"
-            style={a.pill}
-          >
-            {audienceLabel}
-          </span>
-          {surface.authRequired ? (
-            <span
-              className="inline-flex items-center gap-[4px] text-[10px] font-medium"
-              style={{ color: a.pill.color }}
-            >
-              <Lock className="h-[10px] w-[10px]" />
-              {surface.authNote}
-            </span>
-          ) : null}
-        </span>
-        <span className="truncate text-[12px] leading-[1.4] text-[var(--text-secondary)]">
-          {surface.desc}
+            className="h-[6px] w-[6px] rounded-full"
+            style={{ background: a.dot }}
+            aria-hidden="true"
+          />
+          {audienceLabel}
         </span>
       </span>
 
-      {/* Public-safe verdict — dot + label, never a failure category. */}
-      <span
-        className="hidden shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11px] font-medium md:inline-flex"
-        style={{
-          color: hc,
-          borderColor: `color-mix(in srgb, ${hc} 42%, transparent)`,
-          background: `color-mix(in srgb, ${hc} 12%, transparent)`,
-        }}
-      >
-        <span
-          className="h-[6px] w-[6px] rounded-full"
-          style={{ background: hc }}
-          aria-hidden="true"
-        />
-        {surface.healthLabel}
-      </span>
-
-      <span className="flex shrink-0 items-center gap-[6px] text-[12px] font-semibold text-[var(--text-primary)]">
-        {actionLabel}
-        <ChevronRight className="h-[15px] w-[15px] text-[var(--text-secondary)] transition-transform group-hover/row:translate-x-[2px] group-hover/row:text-[var(--text-primary)]" />
+      {/* Action revealed on hover — keeps the card clean by default. */}
+      <span className="absolute inset-x-0 bottom-[12px] text-[11px] font-medium text-[var(--text-secondary)] opacity-0 transition-opacity group-hover/card:opacity-100">
+        {actionLabel} →
       </span>
     </>
   );
 }
 
-// One premium surface ROW. The whole row is the affordance: a guarded surface in
+// One premium surface CARD. The whole card is the affordance: a guarded surface in
 // demo mode does a 1-click real seeded login then navigates (never a bypass);
-// otherwise it is a plain link (which hits the layout RBAC guard if
-// unauthenticated). The action label reads "Ouvrir" / "Entrer en démo".
-function SurfaceRow({ surface, group }: { surface: SurfaceView; group: SurfaceGroup["key"] }) {
+// otherwise a plain link (which hits the layout RBAC guard if unauthenticated).
+function SurfaceCard({ surface }: { surface: FlatSurface }) {
   const t = useTranslations("spaces");
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const accent: Accent = group === "internal" ? "amber" : "gold";
-  const a = ACCENT[accent];
-  const audienceLabel = group === "internal" ? t("groupInternal") : t("groupExternal");
+  const a = ACCENT[surface.audience];
+  const audienceLabel = surface.audience === "internal" ? t("groupInternal") : t("groupExternal");
   const demo = surface.demo;
 
+  const style: CSSProperties = { background: CARD_BG };
   if (demo) {
     const enter = async () => {
       setPending(true);
@@ -193,11 +173,12 @@ function SurfaceRow({ surface, group }: { surface: SurfaceView; group: SurfaceGr
         type="button"
         onClick={enter}
         disabled={pending}
-        className={cn(ROW, a.border, a.hover, FOCUS, "disabled:opacity-70")}
+        className={cn(CARD, a.border, FOCUS, "disabled:opacity-70")}
+        style={style}
       >
-        <RowInner
+        <CardInner
           surface={surface}
-          accent={accent}
+          audience={surface.audience}
           audienceLabel={audienceLabel}
           actionLabel={demo.label}
         />
@@ -205,10 +186,10 @@ function SurfaceRow({ surface, group }: { surface: SurfaceView; group: SurfaceGr
     );
   }
   return (
-    <Link href={surface.href} className={cn(ROW, a.border, a.hover, FOCUS)}>
-      <RowInner
+    <Link href={surface.href} className={cn(CARD, a.border, FOCUS)} style={style}>
+      <CardInner
         surface={surface}
-        accent={accent}
+        audience={surface.audience}
         audienceLabel={audienceLabel}
         actionLabel={t("open")}
       />
@@ -216,32 +197,33 @@ function SurfaceRow({ surface, group }: { surface: SurfaceView; group: SurfaceGr
   );
 }
 
-// Directory of business SURFACES grouped by audience — search + audience filters
-// (with real counters) + premium rows. It lists SURFACES, never agents; the
-// shape echoes the Flotte agent directory but is NOT linked to it (ADR 0013).
+// Directory of business SURFACES — search + audience filters (real counters) + a
+// grid of premium cards. It lists SURFACES, never agents; the shape echoes the
+// Flotte agent directory but is NOT linked to it (ADR 0013).
 export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
   const t = useTranslations("spaces");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
-  const counts = useMemo(() => {
-    const ext = groups.find((g) => g.key === "external")?.surfaces.length ?? 0;
-    const int = groups.find((g) => g.key === "internal")?.surfaces.length ?? 0;
-    return { all: ext + int, external: ext, internal: int };
-  }, [groups]);
+  const all = useMemo<FlatSurface[]>(
+    () => groups.flatMap((g) => g.surfaces.map((s) => ({ ...s, audience: g.key }))),
+    [groups],
+  );
+  const counts = useMemo(
+    () => ({
+      all: all.length,
+      external: all.filter((s) => s.audience === "external").length,
+      internal: all.filter((s) => s.audience === "internal").length,
+    }),
+    [all],
+  );
 
   const q = query.trim().toLowerCase();
-  const shown = groups
-    .filter((g) => filter === "all" || g.key === filter)
-    .map((g) => ({
-      ...g,
-      surfaces: q
-        ? g.surfaces.filter(
-            (s) => s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q),
-          )
-        : g.surfaces,
-    }))
-    .filter((g) => g.surfaces.length > 0);
+  const shown = all.filter((s) => {
+    if (filter !== "all" && s.audience !== filter) return false;
+    if (q && !(s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q))) return false;
+    return true;
+  });
 
   const FILTERS: Array<{ key: Filter; label: string; count: number }> = [
     { key: "all", label: t("filterAll"), count: counts.all },
@@ -250,7 +232,7 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
   ];
 
   return (
-    <div className="flex w-full max-w-[1040px] flex-col gap-[22px]">
+    <div className="flex w-full max-w-[1040px] flex-col gap-[20px]">
       {/* Toolbar — search + audience filters with real counters. */}
       <div className="flex flex-wrap items-center gap-[10px]">
         <div className="relative min-w-[220px] flex-1">
@@ -260,7 +242,7 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("searchPlaceholder")}
             className={cn(
-              "h-[40px] w-full rounded-[12px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_60%,transparent)] pr-[14px] pl-[36px] text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)] focus:border-[color-mix(in_srgb,var(--text-primary)_30%,transparent)]",
+              "h-[42px] w-full rounded-[12px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_60%,transparent)] pr-[14px] pl-[36px] text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)] focus:border-[color-mix(in_srgb,var(--text-primary)_30%,transparent)]",
               FOCUS,
             )}
           />
@@ -272,7 +254,7 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
               type="button"
               onClick={() => setFilter(f.key)}
               className={cn(
-                "inline-flex items-center gap-[7px] rounded-full border px-[14px] py-[8px] text-[12px] font-medium transition-colors",
+                "inline-flex items-center gap-[7px] rounded-full border px-[14px] py-[9px] text-[12px] font-medium transition-colors",
                 FOCUS,
                 filter === f.key
                   ? "border-[color-mix(in_srgb,var(--text-primary)_28%,transparent)] bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-primary)]"
@@ -289,57 +271,15 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
       </div>
 
       {shown.length === 0 ? (
-        <p className="rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[20px] text-center text-[13px] text-[var(--text-secondary)]">
+        <p className="rounded-[18px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[24px] text-center text-[13px] text-[var(--text-secondary)]">
           {t("noMatch")}
         </p>
       ) : (
-        shown.map((group) => {
-          const GroupIcon = group.key === "internal" ? Boxes : UsersRound;
-          const groupColor = group.key === "internal" ? "var(--amber-soft)" : "var(--gold-strong)";
-          return (
-            <section key={group.key} className="flex flex-col gap-[12px]">
-              <div className="flex items-center gap-[12px]">
-                <span
-                  className="grid h-[26px] w-[26px] place-items-center rounded-[8px] border"
-                  style={{
-                    color: groupColor,
-                    borderColor: `color-mix(in srgb, ${groupColor} 38%, transparent)`,
-                    background: `color-mix(in srgb, ${groupColor} 10%, transparent)`,
-                  }}
-                >
-                  <GroupIcon className="h-[14px] w-[14px]" aria-hidden="true" />
-                </span>
-                <h2
-                  className="text-[12px] font-semibold uppercase tracking-[0.16em]"
-                  style={{ color: groupColor }}
-                >
-                  {group.label}
-                </h2>
-                <span
-                  className="rounded-full border px-[7px] py-[1px] text-[10px] font-semibold tabular-nums"
-                  style={{
-                    color: groupColor,
-                    borderColor: `color-mix(in srgb, ${groupColor} 38%, transparent)`,
-                    background: `color-mix(in srgb, ${groupColor} 10%, transparent)`,
-                  }}
-                >
-                  {group.surfaces.length}
-                </span>
-                <span className="text-[12px] text-[var(--text-secondary)]">{group.desc}</span>
-                <span
-                  className="ml-[4px] h-px flex-1"
-                  style={{ background: "var(--border-subtle)" }}
-                  aria-hidden="true"
-                />
-              </div>
-              <div className="flex flex-col gap-[10px]">
-                {group.surfaces.map((surface) => (
-                  <SurfaceRow key={surface.key} surface={surface} group={group.key} />
-                ))}
-              </div>
-            </section>
-          );
-        })
+        <div className="grid grid-cols-2 gap-[16px] sm:grid-cols-3 lg:grid-cols-4">
+          {shown.map((surface) => (
+            <SurfaceCard key={surface.key} surface={surface} />
+          ))}
+        </div>
       )}
     </div>
   );
