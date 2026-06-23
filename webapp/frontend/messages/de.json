@@ -4687,6 +4687,10 @@
     }
   },
   "spaces": {
+    "searchPlaceholder": "Oberfläche suchen…",
+    "filterAll": "Alle",
+    "filterExternal": "Extern",
+    "filterInternal": "Intern",
     "title": "Fachbereiche",
     "subtitle": "Das Verzeichnis der Geschäftsoberflächen. Demonstration: öffnen Sie eine der Oberflächen.",
     "demoBadge": "Demonstration",

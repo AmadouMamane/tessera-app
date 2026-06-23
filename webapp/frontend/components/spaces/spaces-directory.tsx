@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowRight, Boxes, HandCoins, Lock, LogIn, UserRound, UsersRound } from "lucide-react";
+import { Boxes, ChevronRight, HandCoins, Lock, Search, UserRound, UsersRound } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
@@ -36,43 +37,32 @@ export interface SurfaceGroup {
   surfaces: SurfaceView[];
 }
 
-export interface DirectoryLabels {
-  authRequired: string;
-  open: string;
-}
-
-const CARD_BG =
-  "linear-gradient(145deg, var(--panel) 0%, var(--panel-soft) 56%, rgba(2,8,23,0.94) 100%)";
-
 type Accent = "gold" | "amber";
+type Filter = "all" | "external" | "internal";
 
-const ACCENT: Record<
-  Accent,
-  { border: string; emblem: string; pill: string; buttonStyle: CSSProperties; shadow: string }
-> = {
-  gold: {
-    border: "border-[var(--border-gold)]",
-    emblem: "text-[var(--gold-strong)]",
-    pill: "text-[var(--gold-strong)]",
-    buttonStyle: {
-      background:
-        "linear-gradient(180deg, rgba(214,182,106,0.30), rgba(88,62,24,0.78) 58%, rgba(42,31,18,0.92))",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
+const ACCENT: Record<Accent, { border: string; icon: string; pill: CSSProperties; hover: string }> =
+  {
+    gold: {
+      border: "border-[var(--border-gold)]",
+      icon: "text-[var(--gold-strong)]",
+      pill: {
+        color: "var(--gold-strong)",
+        borderColor: "color-mix(in srgb, var(--gold-strong) 38%, transparent)",
+        background: "color-mix(in srgb, var(--gold-strong) 10%, transparent)",
+      },
+      hover: "hover:border-[color-mix(in_srgb,var(--gold-strong)_45%,transparent)]",
     },
-    shadow: "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
-  },
-  amber: {
-    border: "border-[var(--border-amber)]",
-    emblem: "text-[var(--amber-soft)]",
-    pill: "text-[var(--amber-soft)]",
-    buttonStyle: {
-      background:
-        "linear-gradient(180deg, rgba(245,158,11,0.24), rgba(120,72,12,0.72) 55%, rgba(60,38,8,0.92))",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
+    amber: {
+      border: "border-[var(--border-amber)]",
+      icon: "text-[var(--amber-soft)]",
+      pill: {
+        color: "var(--amber-soft)",
+        borderColor: "color-mix(in srgb, var(--amber-soft) 38%, transparent)",
+        background: "color-mix(in srgb, var(--amber-soft) 10%, transparent)",
+      },
+      hover: "hover:border-[color-mix(in_srgb,var(--amber-soft)_45%,transparent)]",
     },
-    shadow: "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
-  },
-};
+  };
 
 const HEALTH: Record<SurfaceView["healthTone"], string> = {
   good: "var(--success)",
@@ -89,206 +79,268 @@ const SURFACE_ICON: Record<string, React.ComponentType<{ className?: string }>> 
 const FOCUS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--text-primary)_72%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)]";
 
-function CardGlow() {
-  return (
-    <div
-      className="pointer-events-none absolute inset-0"
-      style={{
-        background:
-          "radial-gradient(circle at 82% 6%, rgba(248,250,252,0.035), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.014), transparent 30%)",
-      }}
-    />
-  );
-}
+const ROW =
+  "group/row relative flex w-full items-center gap-[16px] rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[14px] text-left transition-colors";
 
-function tone(color: string, fill: number, border: number): CSSProperties {
-  return {
-    color,
-    borderColor: `color-mix(in srgb, ${color} ${border}%, transparent)`,
-    background: `color-mix(in srgb, ${color} ${fill}%, transparent)`,
-  };
-}
-
-// 1-click seeded-account login (demo mode only): opens a REAL next-auth session
-// then navigates — it satisfies the guard by logging in, never a bypass.
-function DemoEnter({ surface, accent }: { surface: SurfaceView; accent: Accent }) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  const demo = surface.demo;
-  if (!demo) return null;
-  async function enter() {
-    if (!demo) return;
-    setPending(true);
-    const res = await signIn("credentials", {
-      username: demo.username,
-      password: demo.password,
-      redirect: false,
-    });
-    if (res && !res.error) {
-      router.push(surface.href);
-      router.refresh();
-    } else {
-      setPending(false);
-    }
-  }
-  return (
-    <button
-      type="button"
-      onClick={enter}
-      disabled={pending}
-      className={cn(
-        "flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none text-[var(--text-primary)] transition-[filter] hover:enabled:brightness-110 disabled:opacity-70 md:w-[188px]",
-        ACCENT[accent].border,
-        FOCUS,
-      )}
-      style={ACCENT[accent].buttonStyle}
-    >
-      <LogIn className="h-[16px] w-[16px]" />
-      {demo.label}
-    </button>
-  );
-}
-
-function SurfaceCard({ surface, labels }: { surface: SurfaceView; labels: DirectoryLabels }) {
-  const accent: Accent = surface.authRequired ? "amber" : "gold";
+function RowInner({
+  surface,
+  accent,
+  audienceLabel,
+  actionLabel,
+}: {
+  surface: SurfaceView;
+  accent: Accent;
+  audienceLabel: string;
+  actionLabel: string;
+}) {
   const a = ACCENT[accent];
   const Icon = SURFACE_ICON[surface.key] ?? Boxes;
   const hc = HEALTH[surface.healthTone];
-  const strip =
-    accent === "amber"
-      ? "linear-gradient(90deg, transparent, rgba(245,158,11,0.55), transparent)"
-      : "linear-gradient(90deg, transparent, rgba(214,182,106,0.55), transparent)";
   return (
-    <article
-      className={cn(
-        "relative flex flex-col gap-[18px] overflow-hidden rounded-[var(--radius-lg)] border px-[24px] py-[22px] backdrop-blur-[2px] md:flex-row md:items-center md:gap-[22px]",
-        a.border,
-      )}
-      style={{ background: CARD_BG, boxShadow: a.shadow }}
-    >
-      <CardGlow />
-      {/* Accent strip — a quiet premium cue of the surface's audience. */}
-      <span
-        className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
-        style={{ background: strip }}
-        aria-hidden="true"
-      />
-      {/* Emblem */}
+    <>
       <span
         className={cn(
-          "relative grid h-[56px] w-[56px] shrink-0 place-items-center rounded-[16px] border",
+          "grid h-[44px] w-[44px] shrink-0 place-items-center rounded-[12px] border",
           a.border,
-          a.emblem,
+          a.icon,
         )}
         style={{ background: "color-mix(in srgb, var(--bg-app) 45%, transparent)" }}
       >
-        <Icon className="h-[26px] w-[26px]" />
+        <Icon className="h-[21px] w-[21px]" />
       </span>
 
-      {/* Identity + description */}
-      <div className="relative min-w-0 flex-1">
-        <span className="block text-[16px] font-semibold leading-none text-[var(--text-primary)]">
-          {surface.name}
-        </span>
-        <p className="mt-[10px] max-w-[480px] text-[12.5px] leading-[1.5] text-[var(--text-secondary)]">
-          {surface.desc}
-        </p>
-        {surface.authRequired ? (
-          <span
-            className={cn(
-              "mt-[10px] inline-flex items-center gap-[5px] text-[11px] font-medium",
-              a.pill,
-            )}
-          >
-            <Lock className="h-[12px] w-[12px]" />
-            {surface.demo ? surface.authNote : labels.authRequired}
+      <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
+        <span className="flex flex-wrap items-center gap-[8px]">
+          <span className="text-[14px] font-semibold leading-none text-[var(--text-primary)]">
+            {surface.name}
           </span>
-        ) : null}
-      </div>
-
-      {/* Status + action (right rail) — the public-safe verdict over the CTA.
-          1-click demo login on a guarded surface, else a plain link. */}
-      <div className="relative flex shrink-0 flex-col gap-[12px] md:items-end">
-        <span
-          className="inline-flex items-center gap-[6px] self-start rounded-full border px-[10px] py-[3px] text-[11px] font-medium md:self-end"
-          style={tone(hc, 12, 42)}
-        >
           <span
-            className="h-[6px] w-[6px] rounded-full"
-            style={{ background: hc }}
-            aria-hidden="true"
-          />
-          {surface.healthLabel}
-        </span>
-        {surface.demo ? (
-          <DemoEnter surface={surface} accent={accent} />
-        ) : (
-          <Link
-            href={surface.href}
-            className={cn(
-              "flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none text-[var(--text-primary)] transition-[filter] hover:brightness-110 md:w-[170px]",
-              a.border,
-              FOCUS,
-            )}
-            style={a.buttonStyle}
+            className="rounded-full border px-[8px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.08em]"
+            style={a.pill}
           >
-            {labels.open}
-            <ArrowRight className="h-[16px] w-[16px] stroke-[1.8]" />
-          </Link>
-        )}
-      </div>
-    </article>
+            {audienceLabel}
+          </span>
+          {surface.authRequired ? (
+            <span
+              className="inline-flex items-center gap-[4px] text-[10px] font-medium"
+              style={{ color: a.pill.color }}
+            >
+              <Lock className="h-[10px] w-[10px]" />
+              {surface.authNote}
+            </span>
+          ) : null}
+        </span>
+        <span className="truncate text-[12px] leading-[1.4] text-[var(--text-secondary)]">
+          {surface.desc}
+        </span>
+      </span>
+
+      {/* Public-safe verdict — dot + label, never a failure category. */}
+      <span
+        className="hidden shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11px] font-medium md:inline-flex"
+        style={{
+          color: hc,
+          borderColor: `color-mix(in srgb, ${hc} 42%, transparent)`,
+          background: `color-mix(in srgb, ${hc} 12%, transparent)`,
+        }}
+      >
+        <span
+          className="h-[6px] w-[6px] rounded-full"
+          style={{ background: hc }}
+          aria-hidden="true"
+        />
+        {surface.healthLabel}
+      </span>
+
+      <span className="flex shrink-0 items-center gap-[6px] text-[12px] font-semibold text-[var(--text-primary)]">
+        {actionLabel}
+        <ChevronRight className="h-[15px] w-[15px] text-[var(--text-secondary)] transition-transform group-hover/row:translate-x-[2px] group-hover/row:text-[var(--text-primary)]" />
+      </span>
+    </>
   );
 }
 
-// Directory of business SURFACES grouped by audience (external / internal) —
-// symmetric to the Flotte agent directory (list → surface). It lists SURFACES,
-// never agents. Built to scale: more internal consoles drop into their group.
-export function SpacesDirectory({
-  groups,
-  labels,
-}: { groups: SurfaceGroup[]; labels: DirectoryLabels }) {
+// One premium surface ROW. The whole row is the affordance: a guarded surface in
+// demo mode does a 1-click real seeded login then navigates (never a bypass);
+// otherwise it is a plain link (which hits the layout RBAC guard if
+// unauthenticated). The action label reads "Ouvrir" / "Entrer en démo".
+function SurfaceRow({ surface, group }: { surface: SurfaceView; group: SurfaceGroup["key"] }) {
+  const t = useTranslations("spaces");
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const accent: Accent = group === "internal" ? "amber" : "gold";
+  const a = ACCENT[accent];
+  const audienceLabel = group === "internal" ? t("groupInternal") : t("groupExternal");
+  const demo = surface.demo;
+
+  if (demo) {
+    const enter = async () => {
+      setPending(true);
+      const res = await signIn("credentials", {
+        username: demo.username,
+        password: demo.password,
+        redirect: false,
+      });
+      if (res && !res.error) {
+        router.push(surface.href);
+        router.refresh();
+      } else {
+        setPending(false);
+      }
+    };
+    return (
+      <button
+        type="button"
+        onClick={enter}
+        disabled={pending}
+        className={cn(ROW, a.border, a.hover, FOCUS, "disabled:opacity-70")}
+      >
+        <RowInner
+          surface={surface}
+          accent={accent}
+          audienceLabel={audienceLabel}
+          actionLabel={demo.label}
+        />
+      </button>
+    );
+  }
   return (
-    <div className="flex w-full max-w-[1040px] flex-col gap-[30px]">
-      {groups.map((group) => {
-        const GroupIcon = group.key === "internal" ? Boxes : UsersRound;
-        const groupColor = group.key === "internal" ? "var(--amber-soft)" : "var(--gold-strong)";
-        return (
-          <section key={group.key} className="flex flex-col gap-[14px]">
-            <div className="flex items-center gap-[12px]">
-              <span
-                className="grid h-[26px] w-[26px] place-items-center rounded-[8px] border"
-                style={{ ...tone(groupColor, 10, 38) }}
-              >
-                <GroupIcon className="h-[14px] w-[14px]" aria-hidden="true" />
+    <Link href={surface.href} className={cn(ROW, a.border, a.hover, FOCUS)}>
+      <RowInner
+        surface={surface}
+        accent={accent}
+        audienceLabel={audienceLabel}
+        actionLabel={t("open")}
+      />
+    </Link>
+  );
+}
+
+// Directory of business SURFACES grouped by audience — search + audience filters
+// (with real counters) + premium rows. It lists SURFACES, never agents; the
+// shape echoes the Flotte agent directory but is NOT linked to it (ADR 0013).
+export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
+  const t = useTranslations("spaces");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+
+  const counts = useMemo(() => {
+    const ext = groups.find((g) => g.key === "external")?.surfaces.length ?? 0;
+    const int = groups.find((g) => g.key === "internal")?.surfaces.length ?? 0;
+    return { all: ext + int, external: ext, internal: int };
+  }, [groups]);
+
+  const q = query.trim().toLowerCase();
+  const shown = groups
+    .filter((g) => filter === "all" || g.key === filter)
+    .map((g) => ({
+      ...g,
+      surfaces: q
+        ? g.surfaces.filter(
+            (s) => s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q),
+          )
+        : g.surfaces,
+    }))
+    .filter((g) => g.surfaces.length > 0);
+
+  const FILTERS: Array<{ key: Filter; label: string; count: number }> = [
+    { key: "all", label: t("filterAll"), count: counts.all },
+    { key: "external", label: t("filterExternal"), count: counts.external },
+    { key: "internal", label: t("filterInternal"), count: counts.internal },
+  ];
+
+  return (
+    <div className="flex w-full max-w-[1040px] flex-col gap-[22px]">
+      {/* Toolbar — search + audience filters with real counters. */}
+      <div className="flex flex-wrap items-center gap-[10px]">
+        <div className="relative min-w-[220px] flex-1">
+          <Search className="-translate-y-1/2 absolute top-1/2 left-[12px] h-[15px] w-[15px] text-[var(--text-secondary)]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className={cn(
+              "h-[40px] w-full rounded-[12px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_60%,transparent)] pr-[14px] pl-[36px] text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)] focus:border-[color-mix(in_srgb,var(--text-primary)_30%,transparent)]",
+              FOCUS,
+            )}
+          />
+        </div>
+        <div className="flex flex-wrap gap-[8px]">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "inline-flex items-center gap-[7px] rounded-full border px-[14px] py-[8px] text-[12px] font-medium transition-colors",
+                FOCUS,
+                filter === f.key
+                  ? "border-[color-mix(in_srgb,var(--text-primary)_28%,transparent)] bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-primary)]"
+                  : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+              )}
+            >
+              {f.label}
+              <span className="rounded-full bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] px-[7px] text-[10px] tabular-nums">
+                {f.count}
               </span>
-              <h2
-                className="text-[12px] font-semibold uppercase tracking-[0.16em]"
-                style={{ color: groupColor }}
-              >
-                {group.label}
-              </h2>
-              <span
-                className="rounded-full border px-[7px] py-[1px] text-[10px] font-semibold tabular-nums"
-                style={{ ...tone(groupColor, 10, 38) }}
-              >
-                {group.surfaces.length}
-              </span>
-              <span className="text-[12px] text-[var(--text-secondary)]">{group.desc}</span>
-              <span
-                className="ml-[4px] h-px flex-1"
-                style={{ background: "var(--border-subtle)" }}
-                aria-hidden="true"
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-[16px]">
-              {group.surfaces.map((surface) => (
-                <SurfaceCard key={surface.key} surface={surface} labels={labels} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[20px] text-center text-[13px] text-[var(--text-secondary)]">
+          {t("noMatch")}
+        </p>
+      ) : (
+        shown.map((group) => {
+          const GroupIcon = group.key === "internal" ? Boxes : UsersRound;
+          const groupColor = group.key === "internal" ? "var(--amber-soft)" : "var(--gold-strong)";
+          return (
+            <section key={group.key} className="flex flex-col gap-[12px]">
+              <div className="flex items-center gap-[12px]">
+                <span
+                  className="grid h-[26px] w-[26px] place-items-center rounded-[8px] border"
+                  style={{
+                    color: groupColor,
+                    borderColor: `color-mix(in srgb, ${groupColor} 38%, transparent)`,
+                    background: `color-mix(in srgb, ${groupColor} 10%, transparent)`,
+                  }}
+                >
+                  <GroupIcon className="h-[14px] w-[14px]" aria-hidden="true" />
+                </span>
+                <h2
+                  className="text-[12px] font-semibold uppercase tracking-[0.16em]"
+                  style={{ color: groupColor }}
+                >
+                  {group.label}
+                </h2>
+                <span
+                  className="rounded-full border px-[7px] py-[1px] text-[10px] font-semibold tabular-nums"
+                  style={{
+                    color: groupColor,
+                    borderColor: `color-mix(in srgb, ${groupColor} 38%, transparent)`,
+                    background: `color-mix(in srgb, ${groupColor} 10%, transparent)`,
+                  }}
+                >
+                  {group.surfaces.length}
+                </span>
+                <span className="text-[12px] text-[var(--text-secondary)]">{group.desc}</span>
+                <span
+                  className="ml-[4px] h-px flex-1"
+                  style={{ background: "var(--border-subtle)" }}
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="flex flex-col gap-[10px]">
+                {group.surfaces.map((surface) => (
+                  <SurfaceRow key={surface.key} surface={surface} group={group.key} />
+                ))}
+              </div>
+            </section>
+          );
+        })
+      )}
     </div>
   );
 }

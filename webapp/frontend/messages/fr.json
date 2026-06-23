@@ -4687,6 +4687,10 @@
     }
   },
   "spaces": {
+    "searchPlaceholder": "Rechercher une surface…",
+    "filterAll": "Toutes",
+    "filterExternal": "Externes",
+    "filterInternal": "Internes",
     "title": "Espaces métier",
     "subtitle": "Le répertoire des surfaces métier. Démonstration : ouvrez l’une ou l’autre surface.",
     "demoBadge": "Démonstration",

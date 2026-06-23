@@ -4687,6 +4687,10 @@
     }
   },
   "spaces": {
+    "searchPlaceholder": "Search a surface…",
+    "filterAll": "All",
+    "filterExternal": "External",
+    "filterInternal": "Internal",
     "title": "Business spaces",
     "subtitle": "The directory of business surfaces. Demonstration: open either surface.",
     "demoBadge": "Demonstration",

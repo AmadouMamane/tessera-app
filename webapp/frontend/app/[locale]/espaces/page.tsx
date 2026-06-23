@@ -163,10 +163,7 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
           </section>
 
           {fleet ? (
-            <SpacesDirectory
-              groups={groups}
-              labels={{ authRequired: t("authRequired"), open: t("open") }}
-            />
+            <SpacesDirectory groups={groups} />
           ) : (
             <p className="w-full max-w-[1040px] text-[13px] text-[var(--text-secondary)]">
               {t("unavailable")}
