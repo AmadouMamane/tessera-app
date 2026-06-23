@@ -20,19 +20,21 @@ export interface LauncherAgentSignal {
   health: AgentHealth;
   gatePassed: boolean | null;
   gateLabel: string | null;
+  // Per-agent STRICT pass rate (0..1): passed executions over total executions of
+  // THIS agent's own reference run. A real, public-safe rollup that maps to a
+  // single agent — the verdict + this rate are showcase-safe; WHICH case failed
+  // (the failure category) stays operator-only (ADR 0009). `null` if no run.
+  strictPassRate: number | null;
 }
 
 export interface LauncherSignal {
   agentsCount: number;
+  // The only legitimate fleet-level number: how many agents are releasable
+  // (gate green) out of those with a run. No blended fleet "%" — a rate belongs
+  // to one agent, never to the fleet.
   passedAgents: number;
   agentsWithRelease: number;
   gateVerdict: "pass" | "blocked" | "unknown";
-  // Aggregate, public-safe case pass rate (0..1): blocking eval failures over
-  // total executions across the fleet. It tells the honest nuance — most cases
-  // pass even while the release gate stays blocked on the security baseline. It
-  // is a rollup number (no per-case reasons), so it stays inside the ADR 0009
-  // showcase boundary. `null` when no agent has run an eval.
-  casesPassRate: number | null;
   lastEvalAt: string | null;
   agents: LauncherAgentSignal[];
 }
@@ -64,38 +66,31 @@ export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
   const fleet = await loadFleet();
   if (!fleet?.available || !fleet.agents || fleet.agents.length === 0) return null;
 
-  const agents: LauncherAgentSignal[] = fleet.agents.map((a) => ({
-    name: a.name,
-    health: asHealth(a.health),
-    gatePassed: a.release ? a.release.passed : null,
-    gateLabel: a.release?.verdict_label ?? null,
-  }));
+  const agents: LauncherAgentSignal[] = fleet.agents.map((a) => {
+    // Strict pass rate of THIS agent's own run: passed executions / total
+    // executions. Real, maps to exactly one agent — never a fleet blend.
+    const exec = a.release?.executions ?? 0;
+    const passed = a.release?.passed_exec ?? null;
+    const strictPassRate =
+      a.release && passed !== null && exec > 0 ? Math.max(0, Math.min(1, passed / exec)) : null;
+    return {
+      name: a.name,
+      health: asHealth(a.health),
+      gatePassed: a.release ? a.release.passed : null,
+      gateLabel: a.release?.verdict_label ?? null,
+      strictPassRate,
+    };
+  });
   const withRelease = agents.filter((a) => a.gatePassed !== null);
   const passedAgents = withRelease.filter((a) => a.gatePassed === true).length;
   const gateVerdict: LauncherSignal["gateVerdict"] =
     withRelease.length === 0 ? "unknown" : passedAgents === withRelease.length ? "pass" : "blocked";
-
-  // Real aggregate from the fleet release rollup: total eval executions and the
-  // count that blocks the gate (socle baseline + tier-1). Pass rate is the share
-  // that did NOT block — never fabricated, never per-case.
-  let totalExecutions = 0;
-  let totalBlocking = 0;
-  for (const a of fleet.agents) {
-    if (!a.release) continue;
-    totalExecutions += a.release.executions;
-    totalBlocking += a.release.blocking_socle + a.release.blocking_t1;
-  }
-  const casesPassRate =
-    totalExecutions > 0
-      ? Math.max(0, Math.min(1, (totalExecutions - totalBlocking) / totalExecutions))
-      : null;
 
   return {
     agentsCount: agents.length,
     passedAgents,
     agentsWithRelease: withRelease.length,
     gateVerdict,
-    casesPassRate,
     lastEvalAt: await latestEvalAt(),
     agents,
   };

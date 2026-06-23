@@ -4870,6 +4870,7 @@ export const FleetSchema = z.object({
             candidate_version: z.string(),
             eval_set: z.string(),
             executions: z.number(),
+            passed_exec: z.number().optional(),
             socle_ok: z.boolean(),
             blocking_socle: z.number(),
             blocking_t1: z.number(),

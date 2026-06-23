@@ -38,6 +38,7 @@ class AgentRelease:
     candidate_version: str = ""
     eval_set: str = ""
     executions: int = 0
+    passed_exec: int = 0
     socle_ok: bool = False
     blocking_socle: int = 0
     blocking_t1: int = 0
@@ -54,6 +55,7 @@ class AgentRelease:
             "candidate_version": self.candidate_version,
             "eval_set": self.eval_set,
             "executions": self.executions,
+            "passed_exec": self.passed_exec,
             "socle_ok": self.socle_ok,
             "blocking_socle": self.blocking_socle,
             "blocking_t1": self.blocking_t1,
@@ -77,6 +79,7 @@ def agent_release_state(agent_id: str) -> AgentRelease:
         candidate_version=gate.candidate_version,
         eval_set=snap.eval_set,
         executions=gate.executions,
+        passed_exec=gate.passed_exec,
         socle_ok=gate.socle_ok,
         blocking_socle=gate.blocking_socle,
         blocking_t1=gate.blocking_t1,

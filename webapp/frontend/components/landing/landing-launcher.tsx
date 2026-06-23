@@ -27,7 +27,7 @@ import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
-import type { AgentHealth, LauncherSignal } from "@/lib/server/launcher-signal";
+import type { LauncherAgentSignal, LauncherSignal } from "@/lib/server/launcher-signal";
 
 export interface DemoCred {
   username: string;
@@ -153,13 +153,6 @@ const ACCENT: Record<Accent, AccentStyle> = {
 
 type T = ReturnType<typeof useTranslations<"landing">>;
 
-const HEALTH_COLOR: Record<AgentHealth, string> = {
-  good: "var(--success)",
-  warn: "var(--amber)",
-  crit: "#F87171",
-  unknown: "var(--text-secondary)",
-};
-
 export function LandingLauncher({
   signal,
   demoLogin,
@@ -225,22 +218,21 @@ export function LandingLauncher({
             <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} />
           </section>
 
-          {/* Fleet note — showcase, NOT navigation (ADR 0008/0010). When the real
-              signal is available, show a per-agent HEALTH dot + gate verdict (it
-              also surfaces onboarding's existence without a dedicated entry); else
-              the honest descriptive line. No fabricated data either way. */}
+          {/* Per-agent footer — showcase, NOT navigation (ADR 0008/0010). PUBLIC
+              boundary (ADR 0009): each agent shows its release VERDICT + its own
+              STRICT pass rate (a real number that maps to exactly one agent).
+              WHICH case failed (the failure category, e.g. PII) is NEVER shown
+              here — that lives behind the operator gate, in the cockpit. */}
           {signal ? (
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-x-[18px] gap-y-[9px] text-[12px] text-[var(--text-secondary)]">
-              {signal.agents.map((a) => (
-                <span key={a.name} className="inline-flex items-center gap-[7px]">
-                  <span
-                    className="h-[8px] w-[8px] rounded-full"
-                    style={{ background: HEALTH_COLOR[a.health] }}
-                  />
-                  <span className="font-medium text-[var(--text-primary)]">{a.name}</span>
-                  {a.gateLabel ? <span className="opacity-70">· {a.gateLabel}</span> : null}
-                </span>
-              ))}
+            <div className="mt-9 flex flex-col items-center gap-[12px]">
+              <div className="flex flex-wrap items-stretch justify-center gap-[12px]">
+                {signal.agents.map((a) => (
+                  <AgentVerdict key={a.name} t={t} agent={a} />
+                ))}
+              </div>
+              <p className="text-center text-[11px] leading-[1.4] text-[var(--text-secondary)]">
+                {t("signal.perAgentLegend")}
+              </p>
             </div>
           ) : (
             <p className="mt-9 max-w-[680px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
@@ -303,24 +295,23 @@ function DemoEnterButton({
   );
 }
 
-// Real public-safe signal band (ADR 0009): aggregate fleet rollup only. Renders a
-// "live" pulse ONLY when real data is present; honest "indisponible" otherwise.
+// Real public-safe signal band (ADR 0009). Renders a "live" pulse ONLY when real
+// data is present; honest "indisponible" otherwise.
 //
-// The blocked verdict is FRAMED, never masked: we surface it as two distinct
-// facts — "Contrôle actif" (the gate is doing its job — positive) and "Release
-// bloquée · socle non conforme" (the assumed red verdict) — plus a sober caption
-// explaining the baseline is holding the release on purpose. No data is changed.
+// HONESTY OF SCOPE: a release verdict and a pass rate belong to ONE agent, never
+// to the fleet. The only legitimate fleet-level number is the verdict rollup —
+// how many agents are releasable. So the headline is "Contrôle actif ·
+// {passed}/{total} agents libérables" (the gate is doing its job — positive —
+// AND the count it currently clears). The per-agent verdict + strict pass rate
+// live in the footer below; WHICH case failed (the failure category) is never
+// shown publicly — it lives behind the operator gate.
 function SignalBand({
   t,
   signal,
   locale,
 }: { t: T; signal: LauncherSignal | null; locale: string }) {
-  const pill =
-    "inline-flex items-center gap-[7px] rounded-full border px-[12px] py-[6px] text-[12px] leading-none";
-  const neutral = cn(
-    pill,
-    "border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_70%,transparent)] text-[var(--text-secondary)]",
-  );
+  const neutral =
+    "inline-flex items-center gap-[7px] rounded-full border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_70%,transparent)] px-[12px] py-[6px] text-[12px] leading-none text-[var(--text-secondary)]";
   if (!signal) {
     return (
       <div className={cn("mt-7", neutral)}>
@@ -332,15 +323,16 @@ function SignalBand({
       </div>
     );
   }
-  const gatePass = signal.gateVerdict === "pass";
-  const gateBlocked = signal.gateVerdict === "blocked";
-  const pct = signal.casesPassRate != null ? Math.round(signal.casesPassRate * 100) : null;
-  const tone = (color: string, fill: number, border: number) =>
-    ({
-      color,
-      borderColor: `color-mix(in srgb, ${color} ${border}%, transparent)`,
-      background: `color-mix(in srgb, ${color} ${fill}%, transparent)`,
-    }) as CSSProperties;
+  // The verdict rollup is the only fleet number. Its tone is the honest verdict:
+  // green when every agent clears the gate, red while none do, amber in between.
+  const allReleasable =
+    signal.agentsWithRelease > 0 && signal.passedAgents === signal.agentsWithRelease;
+  const noneReleasable = signal.agentsWithRelease > 0 && signal.passedAgents === 0;
+  const rollupColor = allReleasable
+    ? "var(--success)"
+    : noneReleasable
+      ? "#F87171"
+      : "var(--amber)";
   return (
     <div className="mt-7 flex max-w-[760px] flex-col items-center gap-[12px]">
       <div className="flex flex-wrap items-center justify-center gap-[10px]">
@@ -352,57 +344,79 @@ function SignalBand({
           {t("signal.live")}
         </span>
         <span className={neutral}>{t("signal.agents", { count: signal.agentsCount })}</span>
-        {/* Positive: the control plane is actively evaluating and gating. */}
-        <span className={cn(pill, "font-semibold")} style={tone("var(--success)", 12, 45)}>
-          <ShieldCheck className="h-[13px] w-[13px]" aria-hidden="true" />
-          {t("signal.controlActive")}
-        </span>
-        {/* The verdict, assumed in full — red when blocked, never hidden. */}
-        <span
-          className={cn(pill, "font-semibold")}
-          style={
-            gatePass
-              ? tone("var(--success)", 12, 45)
-              : gateBlocked
-                ? tone("#F87171", 12, 48)
-                : { color: "var(--text-secondary)", borderColor: "var(--border-subtle)" }
-          }
-        >
-          {gatePass ? (
-            <CircleCheck className="h-[13px] w-[13px]" aria-hidden="true" />
-          ) : gateBlocked ? (
-            <ShieldAlert className="h-[13px] w-[13px]" aria-hidden="true" />
-          ) : null}
-          {t(
-            gatePass
-              ? "signal.releasePass"
-              : gateBlocked
-                ? "signal.releaseBlocked"
-                : "signal.gateUnknown",
-          )}
-        </span>
-        {pct != null ? (
-          <span className={neutral}>{t("signal.passRate", { rate: pct })}</span>
-        ) : null}
-        {signal.agentsWithRelease > 0 ? (
-          <span className={neutral}>
-            {t("signal.greenRatio", {
-              passed: signal.passedAgents,
-              total: signal.agentsWithRelease,
-            })}
-          </span>
-        ) : null}
         {signal.lastEvalAt ? (
           <span className={neutral}>
             {t("signal.lastEval", { date: new Date(signal.lastEvalAt).toLocaleDateString(locale) })}
           </span>
         ) : null}
       </div>
-      {gateBlocked ? (
+      {/* Verdict rollup headline: control is active (positive) AND the count of
+          releasable agents (the only honest fleet number). */}
+      {signal.agentsWithRelease > 0 ? (
+        <div className="flex flex-wrap items-center justify-center gap-x-[8px] gap-y-[4px] text-[13px] leading-[1.3]">
+          <span
+            className="inline-flex items-center gap-[6px] font-semibold"
+            style={{ color: "var(--success)" }}
+          >
+            <ShieldCheck className="h-[14px] w-[14px]" aria-hidden="true" />
+            {t("signal.controlActive")}
+          </span>
+          <span className="text-[var(--text-secondary)]" aria-hidden="true">
+            ·
+          </span>
+          <span className="font-semibold" style={{ color: rollupColor }}>
+            {t("signal.releasableRollup", {
+              passed: signal.passedAgents,
+              total: signal.agentsWithRelease,
+            })}
+          </span>
+        </div>
+      ) : null}
+      {!allReleasable && signal.agentsWithRelease > 0 ? (
         <p className="max-w-[600px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
           {t("signal.gateContext")}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+// One per-agent verdict tile (public boundary): release verdict + the agent's own
+// strict pass rate. Never a failure category — that stays operator-only.
+function AgentVerdict({ t, agent }: { t: T; agent: LauncherAgentSignal }) {
+  const released = agent.gatePassed === true;
+  const blocked = agent.gatePassed === false;
+  const color = released ? "var(--success)" : blocked ? "#F87171" : "var(--text-secondary)";
+  const pct = agent.strictPassRate != null ? Math.round(agent.strictPassRate * 100) : null;
+  return (
+    <div className="flex min-w-[176px] flex-col gap-[8px] rounded-[14px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[15px] py-[12px]">
+      <span className="text-[13px] font-semibold leading-none text-[var(--text-primary)]">
+        {agent.name}
+      </span>
+      <div className="flex items-center justify-between gap-[10px]">
+        <span
+          className="inline-flex items-center gap-[5px] text-[11.5px] font-semibold leading-none"
+          style={{ color }}
+        >
+          {released ? (
+            <CircleCheck className="h-[13px] w-[13px]" aria-hidden="true" />
+          ) : blocked ? (
+            <ShieldAlert className="h-[13px] w-[13px]" aria-hidden="true" />
+          ) : null}
+          {t(
+            released
+              ? "signal.agentReleasable"
+              : blocked
+                ? "signal.agentBlocked"
+                : "signal.agentUnknown",
+          )}
+        </span>
+        {pct != null ? (
+          <span className="text-[12px] font-medium leading-none text-[var(--text-secondary)]">
+            {t("signal.agentStrict", { rate: pct })}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
