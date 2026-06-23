@@ -65,19 +65,26 @@ business-vs-control split lives in **roles + which surface each role enters**.
 
 ### Demo launcher (not the front door)
 
-The select-space page becomes a **labelled demo launcher** ("démonstration"),
-structured **by plane, not as a flat list of surfaces**: **two** high-level cards.
-The **business plane** card (*Produits / Espaces métier* — "do the work") reveals,
-in place, its two sub-surfaces — *Espace client* (external, anonymous/customer →
-`/produit`) and *Console recouvrement* (internal · `collections` → `/recouvrement`).
-The **control plane** card (*Cockpit · Gouvernance* — "govern") enters the cockpit
-(platform roles). This is **not** the "agent list" anti-pattern: each card is a
-**plane**, and each revealed sub-surface a distinct **audience-surface**, never an
-arbitrary agent (support-client and onboarding still share the single customer
-sub-surface). Guarded sub-surfaces (recouvrement → `collections`; cockpit →
-platform) carry a "connexion requise" note: the card **informs and links**, while
-the layout RBAC remains the **authority** (routing ≠ authorization). It exists only
-so a reviewer can explore every surface without juggling accounts.
+The select-space page is a **labelled demo launcher** ("démonstration") that is a
+**chooser of the two planes**, not a flat surface list: **two** high-level cards.
+The **business plane** card (*Produits / Espaces métier* — "do the work") links to
+**`/espaces`**, a dedicated **directory of business surfaces**; the **control
+plane** card (*Cockpit · Gouvernance* — "govern") enters the cockpit (platform
+roles). The launcher also keeps a public-safe **signal digest** (verdict rollup —
+*Contrôle actif · N/M agents libérables*) and the reconciled **per-agent footer**.
+
+The surface list lives in `/espaces`, **symmetric to the Flotte agent directory**
+(`/agents`): Flotte is a list of governed **agents** (list → agent détail);
+`/espaces` is a list of business **surfaces** grouped by audience (list → surface),
+**never** a list of agents. Each surface shows its audience (external/internal), a
+"connexion requise" note when guarded (with a 1-click demo login in demo mode), and
+a **public-safe health** = the release verdict of its backing agent(s) (ADR 0009 —
+the failure category stays operator-only). support-client and onboarding still
+share the single *Espace client* surface; adding an agent never adds an entry.
+The card **informs and links**, while the layout RBAC remains the **authority**
+(routing ≠ authorization). The launcher and `/espaces` exist only so a reviewer can
+explore every surface without juggling accounts; a real user is role-routed at the
+locale root and never needs them.
 
 ### Not an agent list
 
