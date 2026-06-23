@@ -4687,6 +4687,14 @@
     }
   },
   "spaces": {
+    "filterFavorites": "Favorites",
+    "viewGrid": "Grid",
+    "viewList": "List",
+    "sortLabel": "Sort",
+    "sortAZ": "A → Z",
+    "sortZA": "Z → A",
+    "favorite": "Add to favorites",
+    "unfavorite": "Remove from favorites",
     "searchPlaceholder": "Search a surface…",
     "filterAll": "All",
     "filterExternal": "External",
