@@ -137,7 +137,7 @@ function DemoEnter({ surface, accent }: { surface: SurfaceView; accent: Accent }
       onClick={enter}
       disabled={pending}
       className={cn(
-        "flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none text-[var(--text-primary)] disabled:opacity-70 md:w-[188px]",
+        "flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none text-[var(--text-primary)] transition-[filter] hover:enabled:brightness-110 disabled:opacity-70 md:w-[188px]",
         ACCENT[accent].border,
         FOCUS,
       )}
@@ -153,6 +153,11 @@ function SurfaceCard({ surface, labels }: { surface: SurfaceView; labels: Direct
   const accent: Accent = surface.authRequired ? "amber" : "gold";
   const a = ACCENT[accent];
   const Icon = SURFACE_ICON[surface.key] ?? Boxes;
+  const hc = HEALTH[surface.healthTone];
+  const strip =
+    accent === "amber"
+      ? "linear-gradient(90deg, transparent, rgba(245,158,11,0.55), transparent)"
+      : "linear-gradient(90deg, transparent, rgba(214,182,106,0.55), transparent)";
   return (
     <article
       className={cn(
@@ -162,6 +167,12 @@ function SurfaceCard({ surface, labels }: { surface: SurfaceView; labels: Direct
       style={{ background: CARD_BG, boxShadow: a.shadow }}
     >
       <CardGlow />
+      {/* Accent strip — a quiet premium cue of the surface's audience. */}
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
+        style={{ background: strip }}
+        aria-hidden="true"
+      />
       {/* Emblem */}
       <span
         className={cn(
@@ -176,23 +187,10 @@ function SurfaceCard({ surface, labels }: { surface: SurfaceView; labels: Direct
 
       {/* Identity + description */}
       <div className="relative min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-[10px]">
-          <span className="text-[16px] font-semibold leading-none text-[var(--text-primary)]">
-            {surface.name}
-          </span>
-          <span
-            className="inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11px] text-[var(--text-secondary)]"
-            style={{ borderColor: "var(--border-subtle)" }}
-          >
-            <span
-              className="h-[6px] w-[6px] rounded-full"
-              style={{ background: HEALTH[surface.healthTone] }}
-              aria-hidden="true"
-            />
-            {surface.healthLabel}
-          </span>
-        </div>
-        <p className="mt-[9px] max-w-[460px] text-[12.5px] leading-[1.5] text-[var(--text-secondary)]">
+        <span className="block text-[16px] font-semibold leading-none text-[var(--text-primary)]">
+          {surface.name}
+        </span>
+        <p className="mt-[10px] max-w-[480px] text-[12.5px] leading-[1.5] text-[var(--text-secondary)]">
           {surface.desc}
         </p>
         {surface.authRequired ? (
@@ -208,15 +206,27 @@ function SurfaceCard({ surface, labels }: { surface: SurfaceView; labels: Direct
         ) : null}
       </div>
 
-      {/* Action — 1-click demo login on a guarded surface, else a plain link. */}
-      <div className="relative shrink-0">
+      {/* Status + action (right rail) — the public-safe verdict over the CTA.
+          1-click demo login on a guarded surface, else a plain link. */}
+      <div className="relative flex shrink-0 flex-col gap-[12px] md:items-end">
+        <span
+          className="inline-flex items-center gap-[6px] self-start rounded-full border px-[10px] py-[3px] text-[11px] font-medium md:self-end"
+          style={tone(hc, 12, 42)}
+        >
+          <span
+            className="h-[6px] w-[6px] rounded-full"
+            style={{ background: hc }}
+            aria-hidden="true"
+          />
+          {surface.healthLabel}
+        </span>
         {surface.demo ? (
           <DemoEnter surface={surface} accent={accent} />
         ) : (
           <Link
             href={surface.href}
             className={cn(
-              "flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none text-[var(--text-primary)] md:w-[160px]",
+              "flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none text-[var(--text-primary)] transition-[filter] hover:brightness-110 md:w-[170px]",
               a.border,
               FOCUS,
             )}
@@ -258,6 +268,12 @@ export function SpacesDirectory({
               >
                 {group.label}
               </h2>
+              <span
+                className="rounded-full border px-[7px] py-[1px] text-[10px] font-semibold tabular-nums"
+                style={{ ...tone(groupColor, 10, 38) }}
+              >
+                {group.surfaces.length}
+              </span>
               <span className="text-[12px] text-[var(--text-secondary)]">{group.desc}</span>
               <span
                 className="ml-[4px] h-px flex-1"
