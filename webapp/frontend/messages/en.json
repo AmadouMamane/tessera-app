@@ -4560,8 +4560,8 @@
   "landing": {
     "welcome": "Welcome to Tessera",
     "choose": "Choose your space to continue",
-    "demoBadge": "Demo",
-    "demoTitle": "Tessera demonstration",
+    "demoBadge": "Demonstration",
+    "demoTitle": "Choose your space",
     "demoSubtitle": "Reviewer shortcut: open either space. This is not the product’s front door — a real user enters by identity.",
     "fleetNote": "Fleet: 3 governed agents — support-client + onboarding (customer assistant) · recouvrement (internal).",
     "signal": {
@@ -4593,7 +4593,7 @@
     },
     "business": {
       "badge": "Business plane",
-      "title": "Products / Business spaces",
+      "title": "Business spaces",
       "desc": "Do the work: the external customer space and the internal collections console.",
       "reveal": "Explore the business spaces",
       "collapse": "Collapse"

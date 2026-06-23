@@ -4561,7 +4561,7 @@
     "welcome": "Willkommen bei Tessera",
     "choose": "Wählen Sie Ihren Bereich, um fortzufahren",
     "demoBadge": "Demonstration",
-    "demoTitle": "Tessera-Demonstration",
+    "demoTitle": "Wählen Sie Ihren Bereich",
     "demoSubtitle": "Prüfer-Shortcut: Öffnen Sie einen der beiden Bereiche. Dies ist nicht der Eingang des Produkts — ein echter Nutzer betritt es über seine Identität.",
     "fleetNote": "Flotte: 3 verwaltete Agenten — support-client + onboarding (Kundenassistent) · recouvrement (intern).",
     "signal": {
@@ -4593,7 +4593,7 @@
     },
     "business": {
       "badge": "Fachebene",
-      "title": "Produkte / Fachbereiche",
+      "title": "Fachbereiche",
       "desc": "Die Arbeit erledigen: der externe Kundenbereich und die interne Inkasso-Konsole.",
       "reveal": "Fachbereiche erkunden",
       "collapse": "Einklappen"

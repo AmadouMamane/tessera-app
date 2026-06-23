@@ -4561,7 +4561,7 @@
     "welcome": "Bienvenue sur Tessera",
     "choose": "Choisissez votre espace pour continuer",
     "demoBadge": "Démonstration",
-    "demoTitle": "Démonstration Tessera",
+    "demoTitle": "Choisissez votre espace",
     "demoSubtitle": "Raccourci d’évaluation : ouvrez l’un ou l’autre espace. Ce n’est pas la porte d’entrée du produit — un vrai utilisateur entre par son identité.",
     "fleetNote": "Flotte : 3 agents gouvernés — support-client + onboarding (assistant client) · recouvrement (interne).",
     "signal": {
@@ -4581,7 +4581,7 @@
       "perAgentLegend": "Taux contre le set propre de chaque agent — non comparable ; seul le socle (mêmes cas partout) l’est."
     },
     "demoLogin": {
-      "note": "Session de démonstration · compte seedé",
+      "note": "Session démo · compte seedé",
       "operator": "Entrer en démo (opérateur)",
       "collections": "Entrer en démo (collections)"
     },
@@ -4593,7 +4593,7 @@
     },
     "business": {
       "badge": "Plan métier",
-      "title": "Produits / Espaces métier",
+      "title": "Espaces métier",
       "desc": "Faire le travail : l’espace client externe et la console recouvrement interne.",
       "reveal": "Explorer les espaces métier",
       "collapse": "Réduire"

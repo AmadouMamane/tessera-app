@@ -191,7 +191,7 @@ export function LandingLauncher({
       />
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        <Header t={t} />
+        <Header />
         <main className="flex flex-1 flex-col items-center justify-center px-6 pt-2 pb-36">
           <section className="flex flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
@@ -460,12 +460,12 @@ function AgentVerdict({ t, agent, locale }: { t: T; agent: LauncherAgentSignal; 
   );
 }
 
-function Header({ t }: { t: T }) {
+function Header() {
   return (
     <header className="relative flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-6">
+      {/* The launcher IS the plane chooser — no PRODUIT/COCKPIT toggle here (it
+          would be redundant). The toggle stays in the cockpit for operators. */}
       <TesseraLogo className="h-[40px]" />
-
-      <SpaceToggle t={t} />
 
       <div className="flex items-center gap-3 text-[var(--text-secondary)]">
         <Search className="hidden h-[17px] w-[17px] stroke-[1.7] sm:block" aria-hidden="true" />
@@ -478,33 +478,6 @@ function Header({ t }: { t: T }) {
         <AuthControl />
       </div>
     </header>
-  );
-}
-
-function SpaceToggle({ t }: { t: T }) {
-  return (
-    <nav className="absolute left-1/2 top-1/2 flex h-[38px] w-[332px] -translate-x-1/2 -translate-y-1/2 items-center rounded-[11px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_76%,transparent)] p-0 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--text-primary)_4%,transparent),0_0_32px_rgba(0,0,0,0.18)]">
-      <Link
-        href="/produit"
-        className={cn(
-          "flex h-[36px] w-[164px] items-center justify-center gap-[8px] rounded-[10px] border border-[rgba(214,182,106,0.50)] bg-[linear-gradient(180deg,rgba(214,182,106,0.22),rgba(55,38,14,0.86))] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--gold)] shadow-[0_0_14px_rgba(214,182,106,0.10),inset_0_1px_0_rgba(255,255,255,0.07)]",
-          FOCUS,
-        )}
-      >
-        <UserRound className="h-[15px] w-[15px] fill-[color-mix(in_srgb,var(--gold-strong)_70%,transparent)] stroke-[var(--gold-strong)] stroke-[2]" />
-        {t("toggle.product")}
-      </Link>
-      <Link
-        href="/surveiller/vue-ensemble"
-        className={cn(
-          "flex h-[36px] flex-1 items-center justify-center gap-[8px] rounded-[10px] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]",
-          FOCUS,
-        )}
-      >
-        <ShieldCheck className="h-[15px] w-[15px] stroke-[var(--cyan)] stroke-[2]" />
-        {t("toggle.cockpit")}
-      </Link>
-    </nav>
   );
 }
 
