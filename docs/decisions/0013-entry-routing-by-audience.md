@@ -93,6 +93,17 @@ Adding an agent never adds an entry. Customer agents share the product
 audience *and* surface (like recouvrement's collections console) — a genuine
 plane/home, never a bare link.
 
+**Where the agent grid lives.** A rich agent directory — every agent, with search,
+audience filters + counters, grid/list, scaling 1→100+ — is the right pattern for
+the **Flotte** (`/agents`, control plane, operator-gated): listing all agents is
+correct there, and a click opens the agent's **governance workspace** (synthèse /
+evals / guardrails), **never a chat**. The same shape must **never** appear on the
+business plane: a customer picking an agent and chatting would break the supervisor
+(the server routes the agent — `ChatRequest` has no agent field, ADR 0008/0010) and
+the audience boundary (a customer would see Fraude, Recouvrement, Conformité…).
+So `/espaces` lists **surfaces** (Espace client = one supervisor-routed entry), the
+Flotte lists **agents**, and the agent picker→chat pattern is rejected outright.
+
 ## Consequences
 
 **Honest product shape.** Identity routes each role to its home; nobody traverses a
