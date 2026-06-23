@@ -50,3 +50,14 @@ Champs obligatoires : **justification · approbateur · périmètre · expiratio
 - **Marqueur Socle OK / ÉCHEC par catégorie** (aucun score de catégorie « vert » ne doit masquer une brèche).
 - **Cycle de vie explicite** : version **candidate** vs version **déployée** ; **environnement du run** (préprod d'évaluation) vs **contexte cockpit**.
 - **Breakdown des échecs critiques** au grain cas-distinct : *bloquants socle* / *bloquants hors socle* / *sous dérogation approuvée*.
+
+## 7. Invariants flotte (rollup multi-agents)
+
+Un rollup de flotte ne doit **jamais** présenter trois évaluations **indépendantes** comme un instantané unique cohérent. Chaque agent est un **package gouverné indépendamment** (ADR 0010) : son run est **décalé dans le temps**, scoré contre **sa propre version de catalogue** sur **son propre set domaine**.
+
+- **Portée par chiffre.** Un **verdict de release** et un **taux de réussite** appartiennent à **un agent**, jamais à la flotte. Le **seul** chiffre de flotte légitime est le **rollup de verdict** : le nombre d'agents libérables (gate au vert) sur ceux ayant un run. **Aucun « % » de flotte agrégé** (un taux mélangé ne mappe à aucun agent et le « sans-blocage » sur-vend la réussite).
+- **Comparabilité cross-agent = socle uniquement.** Le **socle** (mêmes cas pour chaque agent) est le **seul** comparatif inter-agents. Les **taux domaine** sont étiquetés **« contre son propre set »** — **jamais** un classement entre agents.
+- **Provenance obligatoire.** Chaque chiffre porte sa **date de run** + sa **version de catalogue** (« onboarding · 17/06 · cat v25 »). Pas de « dernière éval » unique de flotte qui masque la staggération.
+- **Verdict périmé.** Si un agent a été évalué contre une version de catalogue **supersédée** (`catalogue_version` du run ≠ version applicable courante, calculée depuis la **vraie** source : manifeste eval-set + catalogue de cas), marquer **« verdict périmé · re-éval requise »** — jamais un nombre inventé.
+- **Source vivante.** Lanceur = cockpit = rapports : tous lisent la **même source courante** (`eval/reports/` vivant). Le **fallback bundlé** (image prod) est **régénéré depuis le dernier run au build** (`pnpm sync:eval` / `prebuild`), jamais un snapshot figé.
+- **Frontière publique (ADR 0009).** Verdict + date + version + taux + socle = **public-safe**. La **catégorie d'échec** (PII, injection…) reste **operator-only** — le « pourquoi » vit dans le cockpit gardé.
