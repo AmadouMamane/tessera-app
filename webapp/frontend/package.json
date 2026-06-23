@@ -11,6 +11,8 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "next dev -p 3099",
+    "sync:eval": "node scripts/sync-eval-bundle.mjs",
+    "prebuild": "node scripts/sync-eval-bundle.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "biome check .",
