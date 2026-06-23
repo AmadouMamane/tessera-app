@@ -4672,6 +4672,26 @@
       "cockpit": "Cockpit"
     }
   },
+  "spaces": {
+    "title": "Business spaces",
+    "subtitle": "The directory of business surfaces — symmetric to the Fleet (list → surface). Demonstration: open either surface.",
+    "demoBadge": "Demonstration",
+    "groupExternal": "External",
+    "groupExternalDesc": "Surfaces open to customers.",
+    "groupInternal": "Internal",
+    "groupInternalDesc": "Internal consoles, restricted to business roles.",
+    "authRequired": "Sign-in required",
+    "open": "Open",
+    "demoLogin": "Enter demo (collections)",
+    "health": {
+      "released": "Green",
+      "blocked": "Blocked",
+      "unknown": "Not evaluated"
+    },
+    "healthLegend": "Health = the public release verdict of the agents serving the surface; the detail (failure category) lives in the guarded cockpit.",
+    "fleetLink": "View the Fleet (governed agents)",
+    "unavailable": "Spaces directory unavailable."
+  },
   "agentSynthese": {
     "title": "Agent overview",
     "subtitle": "Monitor and configure the Tessera AI assistant.",

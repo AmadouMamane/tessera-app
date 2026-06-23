@@ -4672,6 +4672,26 @@
       "cockpit": "Cockpit"
     }
   },
+  "spaces": {
+    "title": "Fachbereiche",
+    "subtitle": "Das Verzeichnis der Geschäftsoberflächen — symmetrisch zur Flotte (Liste → Oberfläche). Demonstration: öffnen Sie eine der Oberflächen.",
+    "demoBadge": "Demonstration",
+    "groupExternal": "Extern",
+    "groupExternalDesc": "Für Kunden offene Oberflächen.",
+    "groupInternal": "Intern",
+    "groupInternalDesc": "Interne Konsolen, Geschäftsrollen vorbehalten.",
+    "authRequired": "Anmeldung erforderlich",
+    "open": "Öffnen",
+    "demoLogin": "Demo öffnen (collections)",
+    "health": {
+      "released": "Grün",
+      "blocked": "Blockiert",
+      "unknown": "Nicht bewertet"
+    },
+    "healthLegend": "Status = öffentliches Release-Verdikt der Agenten, die die Oberfläche bedienen; das Detail (Fehlerkategorie) lebt im geschützten Cockpit.",
+    "fleetLink": "Flotte ansehen (gesteuerte Agenten)",
+    "unavailable": "Bereichsverzeichnis nicht verfügbar."
+  },
   "agentSynthese": {
     "title": "Agent-Übersicht",
     "subtitle": "Überwachen und konfigurieren Sie den Tessera-KI-Assistenten.",

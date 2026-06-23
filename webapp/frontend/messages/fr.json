@@ -4672,6 +4672,26 @@
       "cockpit": "Cockpit"
     }
   },
+  "spaces": {
+    "title": "Espaces métier",
+    "subtitle": "Le répertoire des surfaces métier — symétrique de la Flotte (liste → surface). Démonstration : ouvrez l’une ou l’autre surface.",
+    "demoBadge": "Démonstration",
+    "groupExternal": "Externe",
+    "groupExternalDesc": "Surfaces ouvertes aux clients.",
+    "groupInternal": "Interne",
+    "groupInternalDesc": "Consoles internes, réservées aux rôles métier.",
+    "authRequired": "Connexion requise",
+    "open": "Ouvrir",
+    "demoLogin": "Entrer en démo (collections)",
+    "health": {
+      "released": "Au vert",
+      "blocked": "Bloqué",
+      "unknown": "Non évalué"
+    },
+    "healthLegend": "Santé = verdict de release public des agents qui servent la surface ; le détail (catégorie d’échec) vit dans le cockpit gardé.",
+    "fleetLink": "Voir la Flotte (agents gouvernés)",
+    "unavailable": "Annuaire des espaces indisponible."
+  },
   "agentSynthese": {
     "title": "Synthèse de l'agent",
     "subtitle": "Surveillez et configurez l'assistant IA Tessera.",
