@@ -1,10 +1,8 @@
-import { ArrowRight, Bot } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { FleetExplorer } from "@/components/agent/fleet-explorer";
 import { NewAgentButton } from "@/components/agent/new-agent-button";
 import { redirect } from "@/i18n/navigation";
-import { Link } from "@/i18n/navigation";
-import { agentPath } from "@/lib/agent-context";
 import { FleetSchema } from "@/lib/api/schemas";
 import { currentRole, hasCockpitAccess, isOperator } from "@/lib/auth/session";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
@@ -15,31 +13,17 @@ interface PageProps {
 
 export const dynamic = "force-dynamic";
 
-const HEALTH: Record<string, { dot: string; label: string }> = {
-  good: { dot: "bg-emerald-400", label: "Sain" },
-  warn: { dot: "bg-amber-400", label: "À surveiller" },
-  crit: { dot: "bg-red-400", label: "Critique" },
-};
+const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
 
-// Release verdict tone — colour is tied to gate conformity (eval-gate-policy §6:
-// green only when the gate passes), never cosmetic.
-const RELEASE_TONE: Record<string, string> = {
-  good: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-  crit: "border-red-500/40 bg-red-500/10 text-red-300",
-  bad: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-  muted: "border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)]",
-};
-
-const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
-const fmtSecs = (ms: number | null) =>
-  ms === null ? "-" : `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
-
-async function loadFleet() {
+async function loadFleet(locale: string) {
   try {
-    const res = await fetch(`${backendUrl()}/observability/fleet`, {
-      cache: "no-store",
-      headers: backendHeaders({ Accept: "application/json" }),
-    });
+    const res = await fetch(
+      `${backendUrl()}/observability/fleet?lang=${encodeURIComponent(locale)}`,
+      {
+        cache: "no-store",
+        headers: backendHeaders({ Accept: "application/json" }),
+      },
+    );
     if (!res.ok) return null;
     return FleetSchema.parse(await res.json());
   } catch {
@@ -47,6 +31,10 @@ async function loadFleet() {
   }
 }
 
+// The Flotte — the rich agent directory. Listing every agent is correct HERE
+// (this is the cockpit / control plane); a click opens the agent's governance
+// workspace, never a chat. The business plane (/produit, /espaces) never shows an
+// agent picker — the supervisor routes the customer (ADR 0008/0010/0013).
 export default async function FleetPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
@@ -54,113 +42,47 @@ export default async function FleetPage({ params }: PageProps) {
   if (!hasCockpitAccess(role)) redirect({ href: "/produit", locale });
 
   const t = await getTranslations({ locale, namespace: "fleet" });
-  const data = await loadFleet();
+  const data = await loadFleet(locale);
   const agents = data?.agents ?? [];
   const org = data?.org;
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
-        {/* Org rollup — deduplicated (a shared conversation counts once). */}
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
-          <div className="flex flex-wrap items-center gap-6">
-            <div>
-              <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
-                {t("orgConversations")}
-              </p>
-              <p className="text-[1.3rem] font-semibold tabular-nums">
-                {org ? fmtInt(org.conversations) : "-"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("naiveSum")}</p>
-              <p className="text-[1.3rem] font-semibold tabular-nums text-[var(--tessera-text-muted)]">
-                {data ? fmtInt(data.naive_sum_conversations ?? 0) : "-"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("dedupSaved")}</p>
-              <p className="text-[1.3rem] font-semibold tabular-nums text-emerald-300">
-                {fmtInt(data?.dedup_saved ?? 0)}
-              </p>
-              <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">
-                {fmtInt(data?.shared_conversations ?? 0)} {t("shared")}
-              </p>
-            </div>
+      {/* Org rollup — deduplicated (a shared conversation counts once). */}
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
+        <div className="flex flex-wrap items-center gap-6">
+          <div>
+            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+              {t("orgConversations")}
+            </p>
+            <p className="text-[1.3rem] font-semibold tabular-nums">
+              {org ? fmtInt(org.conversations) : "-"}
+            </p>
           </div>
-          {isOperator(role) ? <NewAgentButton /> : null}
-        </section>
-
-        {/* Per-agent fleet table */}
-        <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
-          {agents.map((a) => {
-            const health = HEALTH[a.health] ?? { dot: "bg-amber-400", label: "—" };
-            return (
-              <Link
-                key={a.id}
-                href={agentPath(a.id, "synthese")}
-                className="group flex flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 transition-colors hover:border-[#7c5cf5]/50"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <Bot className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
-                    <span className="truncate font-semibold">{a.name}</span>
-                  </span>
-                  <span className="inline-flex shrink-0 items-center gap-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
-                    <span className={`h-2 w-2 rounded-full ${health.dot}`} /> {health.label}
-                  </span>
-                </div>
-                <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{a.owner}</p>
-                <dl className="grid grid-cols-2 gap-2 text-[0.72rem]">
-                  <Stat label={t("volume")} value={`${fmtInt(a.conversations)} conv.`} />
-                  <Stat label={t("latency")} value={fmtSecs(a.latency_ms)} />
-                  <Stat
-                    label={t("escalation")}
-                    value={`${a.escalation_rate.toFixed(1).replace(".", ",")} %`}
-                  />
-                  <Stat label={t("handoffs")} value={`${a.handoffs_in} / ${a.handoffs_out}`} />
-                </dl>
-                {/* État de release — per-agent eval-gate verdict (each agent = a governed package). */}
-                <div className="flex flex-col gap-1 border-t border-[var(--tessera-border)] pt-2">
-                  <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">
-                    {t("release")}
-                  </span>
-                  {a.release && a.release.available ? (
-                    <span className="flex items-center justify-between gap-2">
-                      <span
-                        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[0.62rem] font-medium ${
-                          RELEASE_TONE[a.release.verdict_tone] ?? RELEASE_TONE.muted
-                        }`}
-                      >
-                        {a.release.verdict_label}
-                      </span>
-                      <span className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
-                        {t("candidate")} {a.release.candidate_version}
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
-                      {t("releaseNotRun")}
-                    </span>
-                  )}
-                </div>
-                <span className="mt-1 inline-flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] group-hover:text-white">
-                  {t("open")} <ArrowRight className="h-3 w-3" />
-                </span>
-              </Link>
-            );
-          })}
+          <div>
+            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("naiveSum")}</p>
+            <p className="text-[1.3rem] font-semibold tabular-nums text-[var(--tessera-text-muted)]">
+              {data ? fmtInt(data.naive_sum_conversations ?? 0) : "-"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("dedupSaved")}</p>
+            <p className="text-[1.3rem] font-semibold tabular-nums text-emerald-300">
+              {fmtInt(data?.dedup_saved ?? 0)}
+            </p>
+            <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">
+              {fmtInt(data?.shared_conversations ?? 0)} {t("shared")}
+            </p>
+          </div>
         </div>
-        <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("releaseNote")}</p>
-        <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("judgedNote")}</p>
-    </div>
-  );
-}
+        {isOperator(role) ? <NewAgentButton /> : null}
+      </section>
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[0.6rem] text-[var(--tessera-text-muted)]">{label}</dt>
-      <dd className="font-medium tabular-nums text-[var(--tessera-text)]">{value}</dd>
+      {/* Rich agent directory — search · audience filters + counters · grid/list. */}
+      <FleetExplorer agents={agents} />
+
+      <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("releaseNote")}</p>
+      <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("judgedNote")}</p>
     </div>
   );
 }

@@ -1,0 +1,395 @@
+"use client";
+
+import { ArrowRight, Bot, LayoutGrid, List, Lock, Search, Star, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
+
+import { Link } from "@/i18n/navigation";
+import { agentPath } from "@/lib/agent-context";
+import type { Fleet } from "@/lib/api/schemas";
+import { cn } from "@/lib/cn";
+
+type FleetAgent = NonNullable<Fleet["agents"]>[number];
+type Filter = "all" | "external" | "internal" | "favorites" | "recent";
+type ViewMode = "grid" | "list";
+
+const FAV_KEY = "tessera.fleet.favorites";
+const RECENT_KEY = "tessera.fleet.recents";
+const VIEW_KEY = "tessera.fleet.view";
+
+const HEALTH_DOT: Record<string, string> = {
+  good: "bg-emerald-400",
+  warn: "bg-amber-400",
+  crit: "bg-red-400",
+};
+
+// Release verdict tone — colour tied to gate conformity (eval-gate-policy §6).
+const RELEASE_TONE: Record<string, string> = {
+  good: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+  crit: "border-red-500/40 bg-red-500/10 text-red-300",
+  bad: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+  muted:
+    "border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)]",
+};
+
+const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
+const fmtSecs = (ms: number | null) =>
+  ms === null ? "-" : `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
+
+const isExternal = (a: FleetAgent) => a.audience === "customer";
+
+function readList(key: string): string[] {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+// The rich agent directory (cockpit). Recycles the surface-picker mockup's CRAFT —
+// search, audience filters + real counters, grid/list, scale 1→100+ — but here
+// listing every agent is CORRECT: this is governance, and a click opens the
+// agent's WORKSPACE (synthèse), never a chat. The customer chat lives in /produit
+// behind the supervisor; there is no agent picker on the business plane (ADR 0013).
+export function FleetExplorer({ agents }: { agents: FleetAgent[] }) {
+  const t = useTranslations("fleet");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useState<ViewMode>("grid");
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [recents, setRecents] = useState<string[]>([]);
+
+  // Real, user-owned browser state — never fabricated.
+  useEffect(() => {
+    setFavorites(readList(FAV_KEY));
+    setRecents(readList(RECENT_KEY));
+    const v = localStorage.getItem(VIEW_KEY);
+    if (v === "grid" || v === "list") setView(v);
+  }, []);
+
+  const toggleFavorite = (id: string) => {
+    setFavorites((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      try {
+        localStorage.setItem(FAV_KEY, JSON.stringify(next));
+      } catch {
+        // ignore quota / disabled storage
+      }
+      return next;
+    });
+  };
+
+  const recordRecent = (id: string) => {
+    const next = [id, ...recents.filter((x) => x !== id)].slice(0, 20);
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  };
+
+  const setViewMode = (v: ViewMode) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // ignore
+    }
+  };
+
+  const counts = useMemo(() => {
+    const favSet = new Set(favorites);
+    const recSet = new Set(recents);
+    return {
+      all: agents.length,
+      external: agents.filter(isExternal).length,
+      internal: agents.filter((a) => !isExternal(a)).length,
+      favorites: agents.filter((a) => favSet.has(a.id)).length,
+      recent: agents.filter((a) => recSet.has(a.id)).length,
+    };
+  }, [agents, favorites, recents]);
+
+  const visible = useMemo(() => {
+    const favSet = new Set(favorites);
+    const recOrder = new Map(recents.map((id, i) => [id, i]));
+    let list = agents.filter((a) => {
+      if (filter === "external") return isExternal(a);
+      if (filter === "internal") return !isExternal(a);
+      if (filter === "favorites") return favSet.has(a.id);
+      if (filter === "recent") return recOrder.has(a.id);
+      return true;
+    });
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (a) =>
+          a.name.toLowerCase().includes(q) ||
+          a.owner.toLowerCase().includes(q) ||
+          a.id.toLowerCase().includes(q),
+      );
+    }
+    if (filter === "recent") {
+      list = [...list].sort((x, y) => (recOrder.get(x.id) ?? 0) - (recOrder.get(y.id) ?? 0));
+    }
+    return list;
+  }, [agents, filter, query, favorites, recents]);
+
+  const FILTERS: Array<{ key: Filter; label: string; count: number }> = [
+    { key: "all", label: t("filterAll"), count: counts.all },
+    { key: "external", label: t("filterExternal"), count: counts.external },
+    { key: "internal", label: t("filterInternal"), count: counts.internal },
+    { key: "favorites", label: t("filterFavorites"), count: counts.favorites },
+    { key: "recent", label: t("filterRecent"), count: counts.recent },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Toolbar — search · filters + counters · grid/list toggle. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="-translate-y-1/2 absolute top-1/2 left-2.5 h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="h-9 w-full rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] pr-3 pl-8 text-[0.78rem] text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)] focus:border-[#7c5cf5]/60"
+          />
+        </div>
+        <div className="inline-flex rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0.5">
+          {(["grid", "list"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setViewMode(v)}
+              aria-label={v === "grid" ? t("viewGrid") : t("viewList")}
+              aria-pressed={view === v}
+              className={cn(
+                "grid h-8 w-8 place-items-center rounded-md transition-colors",
+                view === v
+                  ? "bg-[var(--tessera-surface-2)] text-[var(--tessera-text)]"
+                  : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+              )}
+            >
+              {v === "grid" ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setFilter(f.key)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.72rem] font-medium transition-colors",
+              filter === f.key
+                ? "border-[#7c5cf5]/60 bg-[#7c5cf5]/12 text-[var(--tessera-text)]"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {f.label}
+            <span className="rounded-full bg-[var(--tessera-surface-2)] px-1.5 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+              {f.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 ? (
+        <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-6 text-center text-[0.78rem] text-[var(--tessera-text-muted)]">
+          {t("noMatch")}
+        </p>
+      ) : view === "grid" ? (
+        <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+          {visible.map((a) => (
+            <AgentCard
+              key={a.id}
+              agent={a}
+              external={isExternal(a)}
+              favorite={favorites.includes(a.id)}
+              onToggleFavorite={() => toggleFavorite(a.id)}
+              onOpen={() => recordRecent(a.id)}
+              t={t}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {visible.map((a) => (
+            <AgentRow
+              key={a.id}
+              agent={a}
+              external={isExternal(a)}
+              favorite={favorites.includes(a.id)}
+              onToggleFavorite={() => toggleFavorite(a.id)}
+              onOpen={() => recordRecent(a.id)}
+              t={t}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type T = ReturnType<typeof useTranslations<"fleet">>;
+
+function AudienceBadge({ external, t }: { external: boolean; t: T }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.05em]",
+        external
+          ? "border-sky-500/40 bg-sky-500/10 text-sky-300"
+          : "border-amber-500/40 bg-amber-500/10 text-amber-300",
+      )}
+    >
+      {external ? <Users className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
+      {external ? t("audienceExternal") : t("audienceInternal")}
+    </span>
+  );
+}
+
+function FavButton({ favorite, onToggle, t }: { favorite: boolean; onToggle: () => void; t: T }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={favorite ? t("unfavorite") : t("favorite")}
+      aria-pressed={favorite}
+      className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-[var(--tessera-text-muted)] transition-colors hover:text-amber-300"
+    >
+      <Star className={cn("h-3.5 w-3.5", favorite && "fill-amber-300 text-amber-300")} />
+    </button>
+  );
+}
+
+function ReleaseChip({ agent, t }: { agent: FleetAgent; t: T }) {
+  if (!agent.release || !agent.release.available) {
+    return (
+      <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("releaseNotRun")}</span>
+    );
+  }
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[0.62rem] font-medium",
+        RELEASE_TONE[agent.release.verdict_tone] ?? RELEASE_TONE.muted,
+      )}
+    >
+      {agent.release.verdict_label}
+    </span>
+  );
+}
+
+function AgentCard({
+  agent,
+  external,
+  favorite,
+  onToggleFavorite,
+  onOpen,
+  t,
+}: {
+  agent: FleetAgent;
+  external: boolean;
+  favorite: boolean;
+  onToggleFavorite: () => void;
+  onOpen: () => void;
+  t: T;
+}) {
+  return (
+    <div className="group flex flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 transition-colors hover:border-[#7c5cf5]/50">
+      <div className="flex items-start justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2">
+          <Bot className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+          <span className="truncate font-semibold">{agent.name}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1">
+          <span
+            className={cn("h-2 w-2 rounded-full", HEALTH_DOT[agent.health] ?? "bg-amber-400")}
+            title={agent.health}
+          />
+          <FavButton favorite={favorite} onToggle={onToggleFavorite} t={t} />
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <AudienceBadge external={external} t={t} />
+        <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">{agent.owner}</span>
+      </div>
+      <dl className="grid grid-cols-2 gap-2 text-[0.72rem]">
+        <Stat label={t("volume")} value={`${fmtInt(agent.conversations)} conv.`} />
+        <Stat label={t("latency")} value={fmtSecs(agent.latency_ms)} />
+        <Stat
+          label={t("escalation")}
+          value={`${agent.escalation_rate.toFixed(1).replace(".", ",")} %`}
+        />
+        <Stat label={t("handoffs")} value={`${agent.handoffs_in} / ${agent.handoffs_out}`} />
+      </dl>
+      <div className="flex items-center justify-between gap-2 border-[var(--tessera-border)] border-t pt-2">
+        <ReleaseChip agent={agent} t={t} />
+        <Link
+          href={agentPath(agent.id, "synthese")}
+          onClick={onOpen}
+          className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
+        >
+          {t("govern")} <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function AgentRow({
+  agent,
+  external,
+  favorite,
+  onToggleFavorite,
+  onOpen,
+  t,
+}: {
+  agent: FleetAgent;
+  external: boolean;
+  favorite: boolean;
+  onToggleFavorite: () => void;
+  onOpen: () => void;
+  t: T;
+}) {
+  return (
+    <div className="group flex items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-2.5 transition-colors hover:border-[#7c5cf5]/50">
+      <span
+        className={cn("h-2 w-2 shrink-0 rounded-full", HEALTH_DOT[agent.health] ?? "bg-amber-400")}
+      />
+      <Bot className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+      <span className="w-[160px] shrink-0 truncate font-semibold">{agent.name}</span>
+      <AudienceBadge external={external} t={t} />
+      <span className="hidden truncate text-[0.66rem] text-[var(--tessera-text-muted)] md:inline">
+        {agent.owner}
+      </span>
+      <span className="ml-auto hidden text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)] sm:inline">
+        {fmtInt(agent.conversations)} conv.
+      </span>
+      <ReleaseChip agent={agent} t={t} />
+      <FavButton favorite={favorite} onToggle={onToggleFavorite} t={t} />
+      <Link
+        href={agentPath(agent.id, "synthese")}
+        onClick={onOpen}
+        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
+      >
+        {t("govern")} <ArrowRight className="h-3 w-3" />
+      </Link>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[0.6rem] text-[var(--tessera-text-muted)]">{label}</dt>
+      <dd className="font-medium tabular-nums text-[var(--tessera-text)]">{value}</dd>
+    </div>
+  );
+}
