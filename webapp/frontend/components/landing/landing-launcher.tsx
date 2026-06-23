@@ -427,30 +427,30 @@ function AgentVerdict({ t, agent, locale }: { t: T; agent: LauncherAgentSignal; 
           </span>
         ) : null}
       </div>
-      <div className="flex items-center justify-between gap-[10px]">
-        <span
-          className="inline-flex items-center gap-[5px] text-[11.5px] font-semibold leading-none"
-          style={{ color }}
-        >
-          {released ? (
-            <CircleCheck className="h-[13px] w-[13px]" aria-hidden="true" />
-          ) : blocked ? (
-            <ShieldAlert className="h-[13px] w-[13px]" aria-hidden="true" />
-          ) : null}
-          {t(
-            released
-              ? "signal.agentReleasable"
-              : blocked
-                ? "signal.agentBlocked"
-                : "signal.agentUnknown",
-          )}
-        </span>
-        {pct != null ? (
-          <span className="text-[12px] font-medium leading-none text-[var(--text-secondary)]">
-            {t("signal.agentRate", { rate: pct })}
-          </span>
+      <span
+        className="inline-flex items-center gap-[5px] text-[11.5px] font-semibold leading-none"
+        style={{ color }}
+      >
+        {released ? (
+          <CircleCheck className="h-[13px] w-[13px]" aria-hidden="true" />
+        ) : blocked ? (
+          <ShieldAlert className="h-[13px] w-[13px]" aria-hidden="true" />
         ) : null}
-      </div>
+        {t(
+          released
+            ? "signal.agentReleasable"
+            : blocked
+              ? "signal.agentBlocked"
+              : "signal.agentUnknown",
+        )}
+      </span>
+      {/* Self-explanatory rate: what it measures (réussis), its direction, and
+          its verifiable fraction — never a bare "%". */}
+      {pct != null && agent.passed != null && agent.total != null ? (
+        <span className="text-[12px] font-medium leading-[1.3] text-[var(--text-secondary)]">
+          {t("signal.agentRate", { rate: pct, passed: agent.passed, total: agent.total })}
+        </span>
+      ) : null}
       {meta.length > 0 ? (
         <span className="text-[10.5px] leading-[1.3] text-[var(--text-secondary)]">
           {meta.join(" · ")}

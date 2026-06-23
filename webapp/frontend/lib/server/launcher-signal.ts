@@ -22,7 +22,10 @@ export interface LauncherAgentSignal {
   // Pass rate (0..1) EXACTLY as the cockpit/reports show it: summary passed/total
   // of THIS agent's own run, against its OWN domain set. NOT comparable across
   // agents (different sets, staggered runs) — labelled "contre son propre set".
+  // `passed`/`total` are surfaced too so every rate shows its verifiable fraction.
   passRate: number | null;
+  passed: number | null;
+  total: number | null;
   // Provenance so the staggered, independent nature is visible — never a single
   // hidden fleet snapshot. (ADR 0010.)
   runAt: string | null;
@@ -69,6 +72,8 @@ export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
       gatePassed: rel ? rel.passed : null,
       gateLabel: rel?.verdict_label ?? null,
       passRate,
+      passed: rel?.summary_passed ?? null,
+      total: rel?.summary_total ?? null,
       runAt: rel?.run_at ?? null,
       catalogueVersion: rel?.catalogue_version ?? null,
       verdictStale: rel?.verdict_stale ?? false,

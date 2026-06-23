@@ -4560,9 +4560,9 @@
       "agentReleasable": "Au vert",
       "agentBlocked": "Bloqué",
       "agentUnknown": "Non évalué",
-      "agentRate": "{rate} % · son set",
+      "agentRate": "{rate} % réussis ({passed}/{total}) · son set",
       "agentCat": "cat v{v}",
-      "agentSocle": "socle {passed}/{total}",
+      "agentSocle": "socle {passed}/{total} conformes",
       "agentStale": "Périmé · re-éval",
       "perAgentLegend": "Taux contre le set propre de chaque agent — non comparable ; seul le socle (mêmes cas partout) l’est."
     },

@@ -4560,9 +4560,9 @@
       "agentReleasable": "Grün",
       "agentBlocked": "Blockiert",
       "agentUnknown": "Nicht bewertet",
-      "agentRate": "{rate} % · eig. Set",
+      "agentRate": "{rate} % bestanden ({passed}/{total}) · eig. Set",
       "agentCat": "Kat. v{v}",
-      "agentSocle": "Basis {passed}/{total}",
+      "agentSocle": "Basis {passed}/{total} konform",
       "agentStale": "Veraltet · neu prüfen",
       "perAgentLegend": "Quote gegen das eigene Set jedes Agenten — nicht vergleichbar; nur die Basis (gleiche Fälle überall) ist es."
     },
