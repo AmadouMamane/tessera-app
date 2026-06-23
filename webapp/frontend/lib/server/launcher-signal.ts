@@ -27,6 +27,12 @@ export interface LauncherSignal {
   passedAgents: number;
   agentsWithRelease: number;
   gateVerdict: "pass" | "blocked" | "unknown";
+  // Aggregate, public-safe case pass rate (0..1): blocking eval failures over
+  // total executions across the fleet. It tells the honest nuance — most cases
+  // pass even while the release gate stays blocked on the security baseline. It
+  // is a rollup number (no per-case reasons), so it stays inside the ADR 0009
+  // showcase boundary. `null` when no agent has run an eval.
+  casesPassRate: number | null;
   lastEvalAt: string | null;
   agents: LauncherAgentSignal[];
 }
@@ -69,11 +75,27 @@ export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
   const gateVerdict: LauncherSignal["gateVerdict"] =
     withRelease.length === 0 ? "unknown" : passedAgents === withRelease.length ? "pass" : "blocked";
 
+  // Real aggregate from the fleet release rollup: total eval executions and the
+  // count that blocks the gate (socle baseline + tier-1). Pass rate is the share
+  // that did NOT block — never fabricated, never per-case.
+  let totalExecutions = 0;
+  let totalBlocking = 0;
+  for (const a of fleet.agents) {
+    if (!a.release) continue;
+    totalExecutions += a.release.executions;
+    totalBlocking += a.release.blocking_socle + a.release.blocking_t1;
+  }
+  const casesPassRate =
+    totalExecutions > 0
+      ? Math.max(0, Math.min(1, (totalExecutions - totalBlocking) / totalExecutions))
+      : null;
+
   return {
     agentsCount: agents.length,
     passedAgents,
     agentsWithRelease: withRelease.length,
     gateVerdict,
+    casesPassRate,
     lastEvalAt: await latestEvalAt(),
     agents,
   };

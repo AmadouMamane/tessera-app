@@ -4557,8 +4557,13 @@
       "gatePass": "Gate grün",
       "gateBlocked": "Gate blockiert",
       "gateUnknown": "Gate nicht verfügbar",
+      "controlActive": "Kontrolle aktiv",
+      "releasePass": "Release grün",
+      "releaseBlocked": "Release blockiert · Basis nicht konform",
+      "passRate": "{rate} % der Fälle grün",
       "greenRatio": "{passed}/{total} Agenten grün",
-      "lastEval": "Letzte Auswertung: {date}"
+      "lastEval": "Letzte Auswertung: {date}",
+      "gateContext": "Die Sicherheitsbasis hält die Release zurück: das ist die Garantie, kein Ausfall."
     },
     "demoLogin": {
       "note": "Demo-Sitzung · geseedetes Konto",

@@ -4557,8 +4557,13 @@
       "gatePass": "Gate au vert",
       "gateBlocked": "Gate bloqué",
       "gateUnknown": "Gate indisponible",
+      "controlActive": "Contrôle actif",
+      "releasePass": "Release au vert",
+      "releaseBlocked": "Release bloquée · socle non conforme",
+      "passRate": "{rate} % des cas au vert",
       "greenRatio": "{passed}/{total} agents au vert",
-      "lastEval": "Dernière éval : {date}"
+      "lastEval": "Dernière éval : {date}",
+      "gateContext": "Le socle de sécurité retient la release : c’est la garantie, pas une panne."
     },
     "demoLogin": {
       "note": "Session de démonstration · compte seedé",
