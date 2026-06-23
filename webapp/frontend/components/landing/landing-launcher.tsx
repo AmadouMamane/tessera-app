@@ -361,54 +361,63 @@ function SubSurface({
 }) {
   const a = ACCENT[accent];
   return (
-    <Link
-      href={href}
+    <div
       className={cn(
-        "group flex items-start gap-[14px] rounded-[14px] border bg-[color-mix(in_srgb,var(--bg-panel)_60%,transparent)] px-[16px] py-[14px] transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]",
+        "flex flex-col gap-[12px] rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] p-[16px]",
         a.border,
       )}
     >
-      <span
+      <div className="flex items-start gap-[12px]">
+        <span
+          className={cn(
+            "mt-[1px] grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] border",
+            a.border,
+            a.icon,
+          )}
+        >
+          <Icon className="h-[17px] w-[17px]" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-[8px]">
+            <span className="text-[14px] font-semibold text-[var(--text-primary)]">
+              {t(`${ns}.title`)}
+            </span>
+            <span
+              className={cn(
+                "rounded-full border px-[8px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.1em]",
+                a.border,
+                a.tone,
+              )}
+            >
+              {t(`${ns}.kind`)}
+            </span>
+            {authRequired ? (
+              <span
+                className={cn("inline-flex items-center gap-[4px] text-[10px] font-medium", a.soft)}
+              >
+                <Lock className="h-[10px] w-[10px]" />
+                {t(`${ns}.authNote`)}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-[5px] text-[12px] leading-[1.45] text-[var(--text-secondary)]">
+            {t(`${ns}.desc`)}
+          </p>
+        </div>
+      </div>
+      {/* CTA styled like the cockpit's "accéder au cockpit" button. */}
+      <Link
+        href={href}
         className={cn(
-          "mt-[2px] grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] border",
-          a.border,
-          a.icon,
+          "flex h-[42px] items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none tracking-[0.01em]",
+          a.button,
         )}
+        style={a.buttonStyle}
       >
-        <Icon className="h-[17px] w-[17px]" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-[8px]">
-          <span className="text-[14px] font-semibold text-[var(--text-primary)]">
-            {t(`${ns}.title`)}
-          </span>
-          <span
-            className={cn(
-              "rounded-full border px-[8px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.1em]",
-              a.border,
-              a.tone,
-            )}
-          >
-            {t(`${ns}.kind`)}
-          </span>
-        </span>
-        <span className="mt-[5px] block text-[12px] leading-[1.45] text-[var(--text-secondary)]">
-          {t(`${ns}.desc`)}
-        </span>
-        {authRequired ? (
-          <span
-            className={cn(
-              "mt-[8px] inline-flex items-center gap-[5px] text-[11px] font-medium",
-              a.soft,
-            )}
-          >
-            <Lock className="h-[11px] w-[11px]" />
-            {t(`${ns}.authNote`)}
-          </span>
-        ) : null}
-      </span>
-      <ArrowRight className="mt-[3px] h-[16px] w-[16px] shrink-0 text-[var(--text-secondary)] transition-transform group-hover:translate-x-[2px] group-hover:text-[var(--text-primary)]" />
-    </Link>
+        {t(`${ns}.cta`)}
+        <ArrowRight className="h-[16px] w-[16px] stroke-[1.8]" />
+      </Link>
+    </div>
   );
 }
 

@@ -4575,7 +4575,7 @@
       "kind": "Extern",
       "title": "Kundenbereich",
       "desc": "Der einzige Kundenassistent, vom Supervisor geroutet: Support (Saldo, Transaktionen, Karte) und Onboarding (Kontoeröffnung, KYC).",
-      "cta": "Zum Kundenbereich",
+      "cta": "Zum Kundenassistenten",
       "items": {
         "chat": {
           "title": "Chat",
@@ -4604,7 +4604,7 @@
       "kind": "Intern · collections",
       "title": "Inkasso-Konsole",
       "desc": "Das interne Fachwerkzeug des Inkasso-Sachbearbeiters: Sprechen Sie mit dem Inkasso-Agenten (Mahnungen, Rückstände, Tilgungspläne).",
-      "cta": "Inkasso-Konsole öffnen",
+      "cta": "Zum Inkasso-Assistenten",
       "authNote": "Anmeldung mit Rolle „collections“ erforderlich",
       "items": {
         "console": {

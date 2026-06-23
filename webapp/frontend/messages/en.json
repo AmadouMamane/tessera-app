@@ -4575,7 +4575,7 @@
       "kind": "External",
       "title": "Client space",
       "desc": "The single customer assistant, supervisor-routed: Support (balance, transactions, card) and Onboarding (account opening, KYC).",
-      "cta": "Enter the client space",
+      "cta": "Open the client assistant",
       "items": {
         "chat": {
           "title": "Chat",
@@ -4604,7 +4604,7 @@
       "kind": "Internal · collections",
       "title": "Collections console",
       "desc": "The collections officer’s internal business tool: talk to the recouvrement agent (dunning, arrears, repayment schedules).",
-      "cta": "Open the collections console",
+      "cta": "Open the collections assistant",
       "authNote": "“collections” role sign-in required",
       "items": {
         "console": {

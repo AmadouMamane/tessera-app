@@ -4575,7 +4575,7 @@
       "kind": "Externe",
       "title": "Espace client",
       "desc": "L’assistant client unique, routé par le superviseur : Support (solde, opérations, carte) et Onboarding (ouverture de compte, KYC).",
-      "cta": "Accéder à l’espace client",
+      "cta": "Accéder à l’assistant client",
       "items": {
         "chat": {
           "title": "Chat",
@@ -4604,7 +4604,7 @@
       "kind": "Interne · collections",
       "title": "Console recouvrement",
       "desc": "L’outil métier interne du chargé de recouvrement : échangez avec l’agent recouvrement (relances, impayés, échéanciers).",
-      "cta": "Ouvrir la console recouvrement",
+      "cta": "Accéder à l’assistant de recouvrement",
       "authNote": "Connexion rôle « collections » requise",
       "items": {
         "console": {
