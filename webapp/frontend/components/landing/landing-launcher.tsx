@@ -39,7 +39,7 @@ export interface DemoLogin {
 }
 
 type Accent = "gold" | "cyan" | "amber";
-type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
+export type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
 
 interface SpaceItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -47,7 +47,7 @@ interface SpaceItem {
   href: string;
 }
 
-const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
+export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--bg-app": "#020817",
   "--bg-deep": "#030B18",
   "--bg-radial": "rgba(20, 43, 77, 0.26)",
@@ -209,12 +209,12 @@ export function LandingLauncher({
             <SignalBand t={t} signal={signal} />
           </section>
 
-          {/* Two PLANES (ADR 0013), not three flat surfaces: the BUSINESS plane
-              (do the work — external customer + internal collections) and the
-              CONTROL plane (govern — the cockpit). The business card reveals its
-              two sub-surfaces in place. */}
+          {/* Two PLANES (ADR 0013): the launcher is a CHOOSER OF PLANES, not a
+              flat surface list. The business card links to the /espaces directory
+              (symmetric to the Flotte list→détail); the control card enters the
+              cockpit. Individual business surfaces live in /espaces, never inline. */}
           <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 gap-7 lg:grid-cols-2">
-            <BusinessPlaneCard t={t} demoCollections={demoLogin?.collections} />
+            <BusinessPlaneCard t={t} />
             <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} />
           </section>
 
@@ -565,10 +565,16 @@ function PlaneHeader({
   );
 }
 
-// Business plane (ADR 0013): external customer + internal collections — its two
-// sub-surfaces shown together, distinct from the cockpit. Equal height with the
-// control card (flex column + the sub-surfaces anchored to the bottom).
-function BusinessPlaneCard({ t, demoCollections }: { t: T; demoCollections?: DemoCred }) {
+// Business plane (ADR 0013): a PURE plan card. It no longer lists the surfaces
+// inline — it previews the two audience groups and links to the /espaces
+// directory (symmetric to the Flotte list→détail). The surfaces, their guards
+// and 1-click demo logins live in /espaces.
+const BUSINESS_PREVIEW = [
+  { icon: UserRound, ns: "client" as const },
+  { icon: HandCoins, ns: "recouvrement" as const },
+];
+
+function BusinessPlaneCard({ t }: { t: T }) {
   const a = ACCENT.gold;
   return (
     <section
@@ -587,116 +593,55 @@ function BusinessPlaneCard({ t, demoCollections }: { t: T; demoCollections?: Dem
           title={t("business.title")}
           desc={t("business.desc")}
         />
-        <div className="mt-[22px] flex flex-col gap-[12px]">
-          <SubSurface t={t} ns="client" accent="gold" href="/produit" icon={UserRound} />
-          <SubSurface
-            t={t}
-            ns="recouvrement"
-            accent="amber"
-            href="/recouvrement"
-            icon={HandCoins}
-            authRequired
-            demoCred={demoCollections}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// One revealed business sub-surface (external client / internal collections).
-function SubSurface({
-  t,
-  ns,
-  accent,
-  href,
-  icon: Icon,
-  authRequired = false,
-  demoCred,
-}: {
-  t: T;
-  ns: "client" | "recouvrement";
-  accent: Accent;
-  href: "/produit" | "/recouvrement";
-  icon: React.ComponentType<{ className?: string }>;
-  // Guarded sub-surface (recouvrement → collections role) shows a "sign-in
-  // required" note so a reviewer understands the gate. routing ≠ authorization:
-  // the layout guard decides; this only informs and links (ADR 0013).
-  authRequired?: boolean;
-  // Demo mode only: seeded collections credentials → a 1-click real login.
-  demoCred?: DemoCred;
-}) {
-  const a = ACCENT[accent];
-  return (
-    <div
-      className={cn(
-        "flex flex-col gap-[12px] rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] p-[16px]",
-        a.border,
-      )}
-    >
-      <div className="flex items-start gap-[12px]">
-        <span
-          className={cn(
-            "mt-[1px] grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] border",
-            a.border,
-            a.icon,
-          )}
-        >
-          <Icon className="h-[17px] w-[17px]" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-[8px]">
-            <span className="text-[14px] font-semibold text-[var(--text-primary)]">
-              {t(`${ns}.title`)}
-            </span>
-            <span
+        <ul className="mt-[20px] flex flex-col gap-[12px]">
+          {BUSINESS_PREVIEW.map((s) => (
+            <li
+              key={s.ns}
               className={cn(
-                "rounded-full border px-[8px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.1em]",
+                "flex items-center gap-[12px] rounded-[12px] border bg-[color-mix(in_srgb,var(--bg-panel)_45%,transparent)] px-[14px] py-[11px]",
                 a.border,
-                a.tone,
               )}
             >
-              {t(`${ns}.kind`)}
-            </span>
-            {authRequired ? (
               <span
-                className={cn("inline-flex items-center gap-[4px] text-[10px] font-medium", a.soft)}
+                className={cn(
+                  "grid h-[32px] w-[32px] shrink-0 place-items-center rounded-[9px] border",
+                  a.border,
+                  a.icon,
+                )}
               >
-                <Lock className="h-[10px] w-[10px]" />
-                {demoCred ? t("demoLogin.note") : t(`${ns}.authNote`)}
+                <s.icon className="h-[16px] w-[16px]" />
               </span>
-            ) : null}
-          </div>
-          <p className="mt-[5px] text-[12px] leading-[1.45] text-[var(--text-secondary)]">
-            {t(`${ns}.desc`)}
-          </p>
-        </div>
-      </div>
-      {/* CTA styled like the cockpit's button. In demo mode a guarded sub-surface
-          (recouvrement) gets a 1-click real seeded-account login; otherwise a plain
-          link (which hits the layout guard if unauthenticated — never a bypass). */}
-      {demoCred && href === "/recouvrement" ? (
-        <DemoEnterButton
-          label={t("demoLogin.collections")}
-          cred={demoCred}
-          target="/recouvrement"
-          accent={accent}
-        />
-      ) : (
+              <span className="flex min-w-0 flex-1 items-center justify-between gap-[8px]">
+                <span className="truncate text-[13px] font-semibold text-[var(--text-primary)]">
+                  {t(`${s.ns}.title`)}
+                </span>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full border px-[8px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.08em]",
+                    a.border,
+                    a.tone,
+                  )}
+                >
+                  {t(`${s.ns}.kind`)}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
         <Link
-          href={href}
+          href="/espaces"
           className={cn(
-            "flex h-[42px] items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none tracking-[0.01em]",
+            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
             a.button,
             FOCUS,
           )}
           style={a.buttonStyle}
         >
-          {t(`${ns}.cta`)}
-          <ArrowRight className="h-[16px] w-[16px] stroke-[1.8]" />
+          {t("business.reveal")}
+          <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
         </Link>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }
 
