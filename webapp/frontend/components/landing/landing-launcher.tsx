@@ -14,7 +14,7 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
 
 import { AuthControl } from "@/components/auth/auth-control";
@@ -22,6 +22,7 @@ import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
+import type { AgentHealth, LauncherSignal } from "@/lib/server/launcher-signal";
 
 type Accent = "gold" | "cyan" | "amber";
 type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
@@ -133,8 +134,16 @@ const ACCENT: Record<Accent, AccentStyle> = {
 
 type T = ReturnType<typeof useTranslations<"landing">>;
 
-export function LandingLauncher() {
+const HEALTH_COLOR: Record<AgentHealth, string> = {
+  good: "var(--success)",
+  warn: "var(--amber)",
+  crit: "#F87171",
+  unknown: "var(--text-secondary)",
+};
+
+export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
   const t = useTranslations("landing");
+  const locale = useLocale();
 
   return (
     <div
@@ -179,6 +188,7 @@ export function LandingLauncher() {
             <p className="mt-[10px] max-w-[560px] text-[15px] font-normal leading-[1.4] tracking-[0.01em] text-[var(--text-secondary)]">
               {t("demoSubtitle")}
             </p>
+            <SignalBand t={t} signal={signal} locale={locale} />
           </section>
 
           {/* Two PLANES (ADR 0013), not three flat surfaces: the BUSINESS plane
@@ -190,15 +200,87 @@ export function LandingLauncher() {
             <ControlPlaneCard t={t} />
           </section>
 
-          {/* Fleet note — showcase, NOT navigation (ADR 0008/0010). Names the
-              governed fleet so a visitor sees onboarding exists without a
-              dedicated entry: it is a supervisor-routed agent of the customer
-              assistant, not a surface of its own. */}
-          <p className="mt-9 max-w-[680px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
-            {t("fleetNote")}
-          </p>
+          {/* Fleet note — showcase, NOT navigation (ADR 0008/0010). When the real
+              signal is available, show a per-agent HEALTH dot + gate verdict (it
+              also surfaces onboarding's existence without a dedicated entry); else
+              the honest descriptive line. No fabricated data either way. */}
+          {signal ? (
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-x-[18px] gap-y-[9px] text-[12px] text-[var(--text-secondary)]">
+              {signal.agents.map((a) => (
+                <span key={a.name} className="inline-flex items-center gap-[7px]">
+                  <span
+                    className="h-[8px] w-[8px] rounded-full"
+                    style={{ background: HEALTH_COLOR[a.health] }}
+                  />
+                  <span className="font-medium text-[var(--text-primary)]">{a.name}</span>
+                  {a.gateLabel ? <span className="opacity-70">· {a.gateLabel}</span> : null}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-9 max-w-[680px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
+              {t("fleetNote")}
+            </p>
+          )}
         </main>
       </div>
+    </div>
+  );
+}
+
+// Real public-safe signal band (ADR 0009): aggregate fleet rollup only. Renders a
+// "live" pulse ONLY when real data is present; honest "indisponible" otherwise.
+function SignalBand({
+  t,
+  signal,
+  locale,
+}: { t: T; signal: LauncherSignal | null; locale: string }) {
+  const pill =
+    "inline-flex items-center gap-[7px] rounded-full border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_70%,transparent)] px-[12px] py-[6px] text-[12px] text-[var(--text-secondary)]";
+  if (!signal) {
+    return (
+      <div className={cn("mt-7", pill)}>
+        <span className="h-[7px] w-[7px] rounded-full bg-[var(--text-secondary)] opacity-50" />
+        {t("signal.unavailable")}
+      </div>
+    );
+  }
+  const gatePass = signal.gateVerdict === "pass";
+  const gateBlocked = signal.gateVerdict === "blocked";
+  return (
+    <div className="mt-7 flex flex-wrap items-center justify-center gap-[10px]">
+      <span className={pill}>
+        <span className="relative flex h-[7px] w-[7px]">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--success)] opacity-60" />
+          <span className="relative inline-flex h-[7px] w-[7px] rounded-full bg-[var(--success)]" />
+        </span>
+        {t("signal.live")}
+      </span>
+      <span className={pill}>{t("signal.agents", { count: signal.agentsCount })}</span>
+      <span
+        className={cn(pill, "font-semibold")}
+        style={{
+          color: gatePass ? "var(--success)" : gateBlocked ? "#F87171" : "var(--text-secondary)",
+        }}
+      >
+        {gatePass ? "✅" : gateBlocked ? "⛔" : "—"}{" "}
+        {t(
+          gatePass ? "signal.gatePass" : gateBlocked ? "signal.gateBlocked" : "signal.gateUnknown",
+        )}
+      </span>
+      {signal.agentsWithRelease > 0 ? (
+        <span className={pill}>
+          {t("signal.greenRatio", {
+            passed: signal.passedAgents,
+            total: signal.agentsWithRelease,
+          })}
+        </span>
+      ) : null}
+      {signal.lastEvalAt ? (
+        <span className={pill}>
+          {t("signal.lastEval", { date: new Date(signal.lastEvalAt).toLocaleDateString(locale) })}
+        </span>
+      ) : null}
     </div>
   );
 }

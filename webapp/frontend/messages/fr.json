@@ -4550,6 +4550,16 @@
     "demoTitle": "Démonstration Tessera",
     "demoSubtitle": "Raccourci d’évaluation : ouvrez l’un ou l’autre espace. Ce n’est pas la porte d’entrée du produit — un vrai utilisateur entre par son identité.",
     "fleetNote": "Flotte : 3 agents gouvernés — support-client + onboarding (assistant client) · recouvrement (interne).",
+    "signal": {
+      "live": "Live",
+      "unavailable": "Signal indisponible",
+      "agents": "{count} agents",
+      "gatePass": "Gate au vert",
+      "gateBlocked": "Gate bloqué",
+      "gateUnknown": "Gate indisponible",
+      "greenRatio": "{passed}/{total} agents au vert",
+      "lastEval": "Dernière éval : {date}"
+    },
     "brandTagline": "AI Control Plane",
     "user": {
       "initials": "TO",

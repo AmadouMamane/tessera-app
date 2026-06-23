@@ -4550,6 +4550,16 @@
     "demoTitle": "Tessera demonstration",
     "demoSubtitle": "Reviewer shortcut: open either space. This is not the product’s front door — a real user enters by identity.",
     "fleetNote": "Fleet: 3 governed agents — support-client + onboarding (customer assistant) · recouvrement (internal).",
+    "signal": {
+      "live": "Live",
+      "unavailable": "Signal unavailable",
+      "agents": "{count} agents",
+      "gatePass": "Gate green",
+      "gateBlocked": "Gate blocked",
+      "gateUnknown": "Gate unavailable",
+      "greenRatio": "{passed}/{total} agents green",
+      "lastEval": "Last eval: {date}"
+    },
     "brandTagline": "AI Control Plane",
     "user": {
       "initials": "TO",

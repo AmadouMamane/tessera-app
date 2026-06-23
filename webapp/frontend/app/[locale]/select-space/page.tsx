@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { LandingLauncher } from "@/components/landing/landing-launcher";
+import { loadLauncherSignal } from "@/lib/server/launcher-signal";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -23,5 +24,8 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function DemoLauncherPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  return <LandingLauncher />;
+  // Public-safe aggregate signal (ADR 0009): real fleet rollup + last eval, or
+  // null → the launcher shows an honest "indisponible" (never a fabricated number).
+  const signal = await loadLauncherSignal();
+  return <LandingLauncher signal={signal} />;
 }
