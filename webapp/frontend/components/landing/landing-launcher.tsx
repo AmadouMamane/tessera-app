@@ -235,7 +235,7 @@ function SpaceToggle({ t }: { t: T }) {
         {t("toggle.product")}
       </Link>
       <Link
-        href="/agents"
+        href="/surveiller/vue-ensemble"
         className="flex h-[36px] flex-1 items-center justify-center gap-[8px] rounded-[10px] text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]"
       >
         <ShieldCheck className="h-[15px] w-[15px] stroke-[var(--cyan)] stroke-[2]" />
@@ -462,7 +462,7 @@ function ControlPlaneCard({ t }: { t: T }) {
           ))}
         </ul>
         <Link
-          href="/agents"
+          href="/surveiller/vue-ensemble"
           className={cn(
             "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
             a.button,

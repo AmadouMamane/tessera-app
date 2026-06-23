@@ -9,9 +9,9 @@ import {
   spaceRedirectForRole,
 } from "@/lib/auth/roles";
 
-// List-first (list → detail): an operator lands on the fleet list, not a
-// presumed agent's synthèse.
-const COCKPIT_LANDING = "/agents";
+// The cockpit is the control plane: an operator lands on the cross-fleet
+// situational-awareness overview, not the fleet list or an agent's synthèse.
+const COCKPIT_LANDING = "/surveiller/vue-ensemble";
 const OPERATOR_ROLES = ["admin", "auditor", "superadmin"] as const;
 
 // ADR 0013 — entry routing by audience. `spaceRedirectForRole` only chooses the
