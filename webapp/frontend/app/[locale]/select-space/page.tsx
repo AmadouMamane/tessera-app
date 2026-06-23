@@ -1,6 +1,12 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { LandingLauncher } from "@/components/landing/landing-launcher";
+import {
+  type DemoCred,
+  type DemoLogin,
+  LandingLauncher,
+} from "@/components/landing/landing-launcher";
+import { demoCredentials } from "@/lib/auth/accounts";
+import { isDemoMode } from "@/lib/server/demo-mode";
 import { loadLauncherSignal } from "@/lib/server/launcher-signal";
 
 interface PageProps {
@@ -27,5 +33,19 @@ export default async function DemoLauncherPage({ params }: PageProps) {
   // Public-safe aggregate signal (ADR 0009): real fleet rollup + last eval, or
   // null → the launcher shows an honest "indisponible" (never a fabricated number).
   const signal = await loadLauncherSignal();
-  return <LandingLauncher signal={signal} />;
+
+  // 1-click seeded-account login on the guarded cards — DEMO MODE ONLY (off in
+  // prod by default). When off, demoLogin is null and the cards keep the
+  // "sign-in required" note; no seeded credentials are sent to the client.
+  let demoLogin: DemoLogin | null = null;
+  if (isDemoMode()) {
+    const creds = demoCredentials();
+    const pick = (role: string): DemoCred | undefined => {
+      const c = creds.find((x) => x.role === role);
+      return c ? { username: c.username, password: c.password } : undefined;
+    };
+    demoLogin = { operator: pick("admin") ?? pick("auditor"), collections: pick("collections") };
+  }
+
+  return <LandingLauncher signal={signal} demoLogin={demoLogin} />;
 }

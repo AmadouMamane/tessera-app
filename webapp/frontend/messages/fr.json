@@ -4560,6 +4560,11 @@
       "greenRatio": "{passed}/{total} agents au vert",
       "lastEval": "Dernière éval : {date}"
     },
+    "demoLogin": {
+      "note": "Session de démonstration · compte seedé",
+      "operator": "Entrer en démo (opérateur)",
+      "collections": "Entrer en démo (collections)"
+    },
     "brandTagline": "AI Control Plane",
     "user": {
       "initials": "TO",

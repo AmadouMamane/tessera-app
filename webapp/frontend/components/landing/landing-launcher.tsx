@@ -8,21 +8,33 @@ import {
   CircleHelp,
   HandCoins,
   Lock,
+  LogIn,
   Search,
   ShieldCheck,
   SlidersHorizontal,
   UserRound,
   UsersRound,
 } from "lucide-react";
+import { signIn } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
+import { useState } from "react";
 
 import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import type { AgentHealth, LauncherSignal } from "@/lib/server/launcher-signal";
+
+export interface DemoCred {
+  username: string;
+  password: string;
+}
+export interface DemoLogin {
+  operator?: DemoCred;
+  collections?: DemoCred;
+}
 
 type Accent = "gold" | "cyan" | "amber";
 type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
@@ -141,7 +153,13 @@ const HEALTH_COLOR: Record<AgentHealth, string> = {
   unknown: "var(--text-secondary)",
 };
 
-export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
+export function LandingLauncher({
+  signal,
+  demoLogin,
+}: {
+  signal: LauncherSignal | null;
+  demoLogin: DemoLogin | null;
+}) {
   const t = useTranslations("landing");
   const locale = useLocale();
 
@@ -196,8 +214,8 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
               CONTROL plane (govern — the cockpit). The business card reveals its
               two sub-surfaces in place. */}
           <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 gap-7 lg:grid-cols-2">
-            <BusinessPlaneCard t={t} />
-            <ControlPlaneCard t={t} />
+            <BusinessPlaneCard t={t} demoCollections={demoLogin?.collections} />
+            <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} />
           </section>
 
           {/* Fleet note — showcase, NOT navigation (ADR 0008/0010). When the real
@@ -225,6 +243,55 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
         </main>
       </div>
     </div>
+  );
+}
+
+// 1-click seeded-account login (demo mode only). It opens a REAL next-auth session
+// on the seeded Credentials account (ADR 0009) then navigates to the surface — it
+// satisfies the guard by logging in, never a bypass. Rendered only when the server
+// passed demo credentials (off in production).
+function DemoEnterButton({
+  label,
+  cred,
+  target,
+  accent,
+}: {
+  label: string;
+  cred: DemoCred;
+  target: "/recouvrement" | "/surveiller/vue-ensemble";
+  accent: Accent;
+}) {
+  const a = ACCENT[accent];
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  async function enter() {
+    setPending(true);
+    const res = await signIn("credentials", {
+      username: cred.username,
+      password: cred.password,
+      redirect: false,
+    });
+    if (res && !res.error) {
+      router.push(target);
+      router.refresh();
+    } else {
+      setPending(false);
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={enter}
+      disabled={pending}
+      className={cn(
+        "flex h-[46px] w-full items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em] disabled:opacity-70",
+        a.button,
+      )}
+      style={a.buttonStyle}
+    >
+      <LogIn className="h-[16px] w-[16px]" />
+      {label}
+    </button>
   );
 }
 
@@ -387,7 +454,7 @@ function PlaneHeader({
 // Business plane (ADR 0013): external customer + internal collections — its two
 // sub-surfaces shown together, distinct from the cockpit. Equal height with the
 // control card (flex column + the sub-surfaces anchored to the bottom).
-function BusinessPlaneCard({ t }: { t: T }) {
+function BusinessPlaneCard({ t, demoCollections }: { t: T; demoCollections?: DemoCred }) {
   const a = ACCENT.gold;
   return (
     <section
@@ -415,6 +482,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
             href="/recouvrement"
             icon={HandCoins}
             authRequired
+            demoCred={demoCollections}
           />
         </div>
       </div>
@@ -430,6 +498,7 @@ function SubSurface({
   href,
   icon: Icon,
   authRequired = false,
+  demoCred,
 }: {
   t: T;
   ns: "client" | "recouvrement";
@@ -440,6 +509,8 @@ function SubSurface({
   // required" note so a reviewer understands the gate. routing ≠ authorization:
   // the layout guard decides; this only informs and links (ADR 0013).
   authRequired?: boolean;
+  // Demo mode only: seeded collections credentials → a 1-click real login.
+  demoCred?: DemoCred;
 }) {
   const a = ACCENT[accent];
   return (
@@ -478,7 +549,7 @@ function SubSurface({
                 className={cn("inline-flex items-center gap-[4px] text-[10px] font-medium", a.soft)}
               >
                 <Lock className="h-[10px] w-[10px]" />
-                {t(`${ns}.authNote`)}
+                {demoCred ? t("demoLogin.note") : t(`${ns}.authNote`)}
               </span>
             ) : null}
           </div>
@@ -487,25 +558,36 @@ function SubSurface({
           </p>
         </div>
       </div>
-      {/* CTA styled like the cockpit's "accéder au cockpit" button. */}
-      <Link
-        href={href}
-        className={cn(
-          "flex h-[42px] items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none tracking-[0.01em]",
-          a.button,
-        )}
-        style={a.buttonStyle}
-      >
-        {t(`${ns}.cta`)}
-        <ArrowRight className="h-[16px] w-[16px] stroke-[1.8]" />
-      </Link>
+      {/* CTA styled like the cockpit's button. In demo mode a guarded sub-surface
+          (recouvrement) gets a 1-click real seeded-account login; otherwise a plain
+          link (which hits the layout guard if unauthenticated — never a bypass). */}
+      {demoCred && href === "/recouvrement" ? (
+        <DemoEnterButton
+          label={t("demoLogin.collections")}
+          cred={demoCred}
+          target="/recouvrement"
+          accent={accent}
+        />
+      ) : (
+        <Link
+          href={href}
+          className={cn(
+            "flex h-[42px] items-center justify-center gap-[9px] rounded-[12px] border text-[13px] font-semibold leading-none tracking-[0.01em]",
+            a.button,
+          )}
+          style={a.buttonStyle}
+        >
+          {t(`${ns}.cta`)}
+          <ArrowRight className="h-[16px] w-[16px] stroke-[1.8]" />
+        </Link>
+      )}
     </div>
   );
 }
 
 // Control plane (ADR 0013): the cockpit — govern the platform. Guarded to the
 // platform roles; the card surfaces the "sign-in required" note and links.
-function ControlPlaneCard({ t }: { t: T }) {
+function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }) {
   const a = ACCENT.cyan;
   return (
     <section
@@ -526,7 +608,7 @@ function ControlPlaneCard({ t }: { t: T }) {
           badge={t("control.badge")}
           title={t("control.title")}
           desc={t("control.desc")}
-          authNote={t("control.authNote")}
+          authNote={demoOperator ? t("demoLogin.note") : t("control.authNote")}
         />
         <ul className="mt-[20px] flex flex-col gap-[16px]">
           {OPERATOR_ITEMS.map((item) => (
@@ -552,17 +634,28 @@ function ControlPlaneCard({ t }: { t: T }) {
             </li>
           ))}
         </ul>
-        <Link
-          href="/surveiller/vue-ensemble"
-          className={cn(
-            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
-            a.button,
-          )}
-          style={a.buttonStyle}
-        >
-          {t("control.cta")}
-          <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
-        </Link>
+        {demoOperator ? (
+          <div className="mt-auto">
+            <DemoEnterButton
+              label={t("demoLogin.operator")}
+              cred={demoOperator}
+              target="/surveiller/vue-ensemble"
+              accent="cyan"
+            />
+          </div>
+        ) : (
+          <Link
+            href="/surveiller/vue-ensemble"
+            className={cn(
+              "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+              a.button,
+            )}
+            style={a.buttonStyle}
+          >
+            {t("control.cta")}
+            <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
+          </Link>
+        )}
       </div>
     </section>
   );
