@@ -1,16 +1,21 @@
 "use client";
 
 import {
+  AlertTriangle,
   ArrowRight,
   Bell,
   Boxes,
+  Calendar,
   CircleCheck,
   CircleHelp,
+  Headset,
   Lock,
   LogIn,
   Search,
-  ShieldAlert,
   ShieldCheck,
+  TrendingUp,
+  User,
+  Users,
 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
@@ -174,7 +179,7 @@ export function LandingLauncher({
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header />
         <main className="flex flex-1 flex-col items-center justify-center px-6 pt-2 pb-36">
-          <section className="flex flex-col items-center text-center">
+          <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
                 front door. Make the "démonstration" framing explicit and visible. */}
             <span className="mb-[14px] inline-flex items-center gap-[7px] rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] px-[12px] py-[5px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--gold-strong)]">
@@ -211,7 +216,7 @@ export function LandingLauncher({
               here — that lives behind the operator gate, in the cockpit. */}
           {signal ? (
             <div className="mt-9 flex flex-col items-center gap-[12px]">
-              <div className="flex flex-wrap items-stretch justify-center gap-[12px]">
+              <div className="flex flex-wrap items-stretch justify-center gap-[18px]">
                 {signal.agents.map((a) => (
                   <AgentVerdict key={a.name} t={t} agent={a} locale={locale} />
                 ))}
@@ -316,42 +321,50 @@ function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
       ? "#F87171"
       : "var(--amber)";
   return (
-    <div className="mt-7 flex max-w-[760px] flex-col items-center gap-[12px]">
-      <span className={neutral}>
-        <span className="relative flex h-[7px] w-[7px]" aria-hidden="true">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--success)] opacity-60" />
-          <span className="relative inline-flex h-[7px] w-[7px] rounded-full bg-[var(--success)]" />
-        </span>
-        {t("signal.live")}
-      </span>
-      {/* Lead with the value: control is active, and how many agents it currently
-          holds under review (the agent count is the honest fleet number here). */}
-      <div className="flex flex-wrap items-center justify-center gap-x-[8px] gap-y-[4px] text-[13px] leading-[1.3]">
+    <div className="mt-7 flex w-full max-w-[840px] flex-col items-center gap-[12px]">
+      {/* One bounded status band — three segments, one fact each: control is
+          active (the green dot is the live indicator), how many agents it holds
+          under review, and the only fleet-level verdict number (how many are
+          cleared for production). */}
+      <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-x sm:divide-y-0">
         <span
-          className="inline-flex items-center gap-[6px] font-semibold"
+          className="flex flex-1 items-center justify-center gap-[8px] px-[16px] py-[14px] text-center text-[13px] font-semibold leading-[1.3]"
           style={{ color: "var(--success)" }}
         >
-          <ShieldCheck className="h-[14px] w-[14px]" aria-hidden="true" />
+          <span
+            className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--success)]"
+            aria-hidden="true"
+          />
           {t("signal.controlActive")}
         </span>
-        <span className="text-[var(--text-secondary)]" aria-hidden="true">
-          ·
-        </span>
-        <span className="text-[var(--text-secondary)]">
+        <span className="flex flex-1 items-center justify-center gap-[8px] px-[16px] py-[14px] text-center text-[13px] leading-[1.3] text-[var(--text-secondary)]">
+          <Users className="h-[15px] w-[15px] shrink-0 stroke-[1.7]" aria-hidden="true" />
           {t("signal.agentsUnderReview", { count: signal.agentsCount })}
         </span>
+        {signal.agentsWithRelease > 0 ? (
+          <span
+            className="flex flex-1 items-center justify-center gap-[8px] px-[16px] py-[14px] text-center text-[13px] font-semibold leading-[1.3]"
+            style={{ color: rollupColor }}
+          >
+            {allReleasable ? (
+              <ShieldCheck className="h-[15px] w-[15px] shrink-0 stroke-[1.8]" aria-hidden="true" />
+            ) : (
+              <AlertTriangle
+                className="h-[15px] w-[15px] shrink-0 stroke-[1.8]"
+                aria-hidden="true"
+              />
+            )}
+            {t("signal.releasableRollup", {
+              passed: signal.passedAgents,
+              total: signal.agentsWithRelease,
+            })}
+          </span>
+        ) : null}
       </div>
-      {/* The only fleet-level verdict number: how many are cleared for production. */}
-      {signal.agentsWithRelease > 0 ? (
-        <span className="text-[13px] font-semibold leading-[1.3]" style={{ color: rollupColor }}>
-          {t("signal.releasableRollup", {
-            passed: signal.passedAgents,
-            total: signal.agentsWithRelease,
-          })}
-        </span>
-      ) : null}
+      {/* The socle line, under the band: why a "0" is not a failure of control. */}
       {!allReleasable && signal.agentsWithRelease > 0 ? (
-        <p className="max-w-[600px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
+        <p className="flex items-center gap-[7px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
+          <Lock className="h-[13px] w-[13px] shrink-0" aria-hidden="true" />
           {t("signal.gateContext")}
         </p>
       ) : null}
@@ -369,12 +382,25 @@ function fmtRunDate(runAt: string | null, locale: string): string | null {
   return Number.isNaN(dt.getTime()) ? null : dt.toLocaleDateString(locale);
 }
 
-// One per-agent verdict tile (public boundary, ADR 0009): release VERDICT + the
-// agent's own pass rate (against its OWN set — not comparable across agents) +
-// its run date and catalogue version (so the staggered, independent nature is
-// visible) + the SOCLE score (the only cross-agent comparator). A "verdict
-// périmé" chip when scored against a superseded catalogue. NEVER a failure
-// category — the "why" stays operator-only.
+// Per-agent glyph (public showcase): mapped on the display name — headset for the
+// customer support agent, person for onboarding, trend for collections. Falls
+// back to a shield so an unknown agent still renders.
+function AgentGlyph({ name }: { name: string }) {
+  const n = name.toLowerCase();
+  const cls = "h-[21px] w-[21px] stroke-[1.7]";
+  if (n.includes("support") || n.includes("client")) return <Headset className={cls} />;
+  if (n.includes("onboard")) return <User className={cls} />;
+  if (n.includes("recouvr") || n.includes("collect") || n.includes("inkasso"))
+    return <TrendingUp className={cls} />;
+  return <ShieldCheck className={cls} />;
+}
+
+// One per-agent verdict CARD (public boundary, ADR 0009): an identifying glyph +
+// name + release VERDICT pill, then the agent's own pass rate (against its OWN
+// set — not comparable across agents) + the SOCLE score (the only cross-agent
+// comparator), and a dated footer (so the staggered, independent runs are
+// visible). A "verdict périmé" chip when scored against a superseded catalogue.
+// NEVER a failure category — the "why" stays operator-only.
 function AgentVerdict({ t, agent, locale }: { t: T; agent: LauncherAgentSignal; locale: string }) {
   const released = agent.gatePassed === true;
   const blocked = agent.gatePassed === false;
@@ -387,62 +413,81 @@ function AgentVerdict({ t, agent, locale }: { t: T; agent: LauncherAgentSignal; 
     agent.soclePassed != null && agent.socleTotal != null
       ? t("signal.agentSecurity", { passed: agent.soclePassed, total: agent.socleTotal })
       : null;
+  const verdictLabel = released
+    ? t("signal.agentReleasable")
+    : blocked
+      ? t("signal.agentBlocked")
+      : t("signal.agentUnknown");
   return (
     <div
-      className="flex min-w-[188px] flex-col gap-[8px] rounded-[14px] border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[15px] py-[12px]"
+      className="flex w-[324px] flex-col rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_46%,transparent)] px-[20px] py-[18px]"
       style={{
         borderColor: agent.verdictStale
           ? "color-mix(in srgb, var(--amber) 50%, transparent)"
           : "var(--border-subtle)",
       }}
     >
-      <div className="flex items-center justify-between gap-[8px]">
-        <span className="text-[13px] font-semibold leading-none text-[var(--text-primary)]">
-          {agent.name}
+      {/* Header: identifying glyph + name + verdict pill. */}
+      <div className="flex items-start gap-[14px]">
+        <span
+          className="grid h-[46px] w-[46px] shrink-0 place-items-center rounded-full border text-[var(--gold-strong)]"
+          style={{ borderColor: "var(--border-gold)" }}
+          aria-hidden="true"
+        >
+          <AgentGlyph name={agent.name} />
         </span>
-        {agent.verdictStale ? (
-          <span
-            className="inline-flex items-center rounded-full border px-[6px] py-[2px] text-[9.5px] font-semibold uppercase leading-none tracking-[0.04em]"
-            style={{
-              color: "var(--amber)",
-              borderColor: "color-mix(in srgb, var(--amber) 45%, transparent)",
-            }}
-          >
-            {t("signal.agentStale")}
+        <div className="flex min-w-0 flex-col gap-[8px] pt-[2px]">
+          <span className="truncate text-[16px] font-semibold leading-none text-[var(--text-primary)]">
+            {agent.name}
+          </span>
+          <div className="flex flex-wrap items-center gap-[6px]">
+            <span
+              className="inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[12px] font-semibold leading-none"
+              style={{
+                color,
+                borderColor: `color-mix(in srgb, ${color} 45%, transparent)`,
+                background: `color-mix(in srgb, ${color} 12%, transparent)`,
+              }}
+            >
+              {released ? (
+                <CircleCheck className="h-[12px] w-[12px]" aria-hidden="true" />
+              ) : blocked ? (
+                <Lock className="h-[12px] w-[12px]" aria-hidden="true" />
+              ) : null}
+              {verdictLabel}
+            </span>
+            {agent.verdictStale ? (
+              <span
+                className="inline-flex items-center rounded-full border px-[6px] py-[2px] text-[9.5px] font-semibold uppercase leading-none tracking-[0.04em]"
+                style={{
+                  color: "var(--amber)",
+                  borderColor: "color-mix(in srgb, var(--amber) 45%, transparent)",
+                }}
+              >
+                {t("signal.agentStale")}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      {/* Metrics: self-explanatory rate (what it measures + verifiable fraction,
+          never a bare "%") then the shared security floor. */}
+      <div className="mt-[16px] flex flex-col gap-[4px]">
+        {pct != null && agent.passed != null && agent.total != null ? (
+          <span className="text-[13px] font-medium leading-[1.4] text-[var(--text-secondary)]">
+            {t("signal.agentRate", { rate: pct, passed: agent.passed, total: agent.total })}
           </span>
         ) : null}
-      </div>
-      <span
-        className="inline-flex items-center gap-[5px] text-[11.5px] font-semibold leading-none"
-        style={{ color }}
-      >
-        {released ? (
-          <CircleCheck className="h-[13px] w-[13px]" aria-hidden="true" />
-        ) : blocked ? (
-          <ShieldAlert className="h-[13px] w-[13px]" aria-hidden="true" />
+        {security ? (
+          <span className="text-[13px] leading-[1.4] text-[var(--text-secondary)]">{security}</span>
         ) : null}
-        {t(
-          released
-            ? "signal.agentReleasable"
-            : blocked
-              ? "signal.agentBlocked"
-              : "signal.agentUnknown",
-        )}
-      </span>
-      {/* Self-explanatory rate: what it measures (réussis), its direction, and
-          its verifiable fraction — never a bare "%". */}
-      {pct != null && agent.passed != null && agent.total != null ? (
-        <span className="text-[12px] font-medium leading-[1.3] text-[var(--text-secondary)]">
-          {t("signal.agentRate", { rate: pct, passed: agent.passed, total: agent.total })}
-        </span>
-      ) : null}
-      {security ? (
-        <span className="text-[11px] leading-[1.3] text-[var(--text-secondary)]">{security}</span>
-      ) : null}
+      </div>
+      {/* Dated footer — the staggered, independent run shows here. */}
       {date ? (
-        <span className="text-[10.5px] leading-[1.3] text-[var(--text-secondary)]">
+        <div className="mt-[14px] flex items-center gap-[8px] border-t border-[var(--border-subtle)] pt-[12px] text-[12px] leading-none text-[var(--text-secondary)]">
+          <Calendar className="h-[14px] w-[14px] shrink-0 stroke-[1.7]" aria-hidden="true" />
           {t("signal.agentEvaluatedOn", { date })}
-        </span>
+        </div>
       ) : null}
     </div>
   );
