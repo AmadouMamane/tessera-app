@@ -181,8 +181,11 @@ export function LandingLauncher({
               (symmetric to the Flotte list→détail); the control card enters the
               cockpit. Individual business surfaces live in /espaces, never inline. */}
           <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 gap-7 lg:grid-cols-2">
-            <BusinessPlaneCard t={t} />
+            {/* Cockpit FIRST = the thesis (control plane is the value; business
+                apps are deliberately thin). Primary card; the métier card is
+                secondary (outline CTA), so the hierarchy matches the order. */}
             <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} />
+            <BusinessPlaneCard t={t} />
           </section>
 
           {/* No per-agent breakdown here (ADR 0008/0010/0013): a front DOOR carries
@@ -473,14 +476,13 @@ function BusinessPlaneCard({ t }: { t: T }) {
             { label: t("recouvrement.title"), gated: true },
           ]}
         />
+        {/* Secondary CTA (outline) — the métier card is secondary to the cockpit. */}
         <Link
           href="/espaces"
           className={cn(
-            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
-            a.button,
+            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border border-[var(--border-subtle)] text-[14px] font-medium leading-none tracking-[0.01em] text-[var(--text-secondary)] transition-colors hover:border-[var(--border-gold)] hover:text-[var(--text-primary)]",
             FOCUS,
           )}
-          style={a.buttonStyle}
         >
           {t("business.reveal")}
           <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
