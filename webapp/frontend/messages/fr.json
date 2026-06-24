@@ -3575,7 +3575,7 @@
     "links": {
       "audit_journal": "Ouvrir journal d’audit",
       "export_siem": "Voir export SIEM",
-      "evidence_pack": "Générer evidence pack",
+      "evidence_pack": "Générer dossier de preuves",
       "release_control": "Voir release control"
     },
     "viewAll": {
