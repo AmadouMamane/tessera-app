@@ -2883,7 +2883,7 @@
       "owners": "Owner & erforderliche Rollen",
       "quickActions": "Schnellaktionen",
       "recentActivity": "Letzte Aktivitäten",
-      "backlogTrend": "Backlog-Entwicklung (7 T)",
+      "backlogTrend": "Rückstand-Entwicklung (7 T)",
       "balance": "Balance Befördern / Ablehnen / Prüfen (7 T)",
       "impact": "Erwartete Wirkung auf Pass-Rate"
     },
@@ -2907,8 +2907,8 @@
     },
     "source": {
       "live": "Live",
-      "replay": "Replay",
-      "shadow": "Shadow"
+      "replay": "Wiedergabe",
+      "shadow": "Schattenverkehr"
     },
     "risk": {
       "eleve": "Hoch",
@@ -2920,7 +2920,7 @@
       "pii": "PII",
       "conformite": "Compliance",
       "outils": "Tools",
-      "grounding": "Grounding"
+      "grounding": "Verankerung"
     },
     "wfStatus": {
       "termine": "Abgeschlossen",
@@ -2929,7 +2929,7 @@
     },
     "dist": {
       "hallucination": "Halluzination",
-      "grounding": "Grounding",
+      "grounding": "Verankerung",
       "conformite": "Compliance",
       "pii_securite": "PII / Sicherheit",
       "multilingue": "Mehrsprachig",
@@ -2982,7 +2982,7 @@
       "promote": "11 Turns befördern",
       "assign_review": "Compliance-Prüfung zuweisen",
       "freeze": "Sensibles Los einfrieren",
-      "create_replay": "Validierungs-Replay erstellen",
+      "create_replay": "Validierungs-Wiedergabe erstellen",
       "export": "Los in signiertes Dataset exportieren"
     },
     "actCtrl": {

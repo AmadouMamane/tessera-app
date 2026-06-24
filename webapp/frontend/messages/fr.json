@@ -2848,7 +2848,7 @@
     "actions": {
       "launchScoring": "Lancer scoring",
       "createLot": "Créer lot de curation",
-      "evidencePack": "Générer evidence pack"
+      "evidencePack": "Générer dossier de preuves"
     },
     "rail": {
       "realtime": "Données en temps réel"
@@ -2883,7 +2883,7 @@
       "owners": "Owners & rôles requis",
       "quickActions": "Actions rapides",
       "recentActivity": "Activités récentes",
-      "backlogTrend": "Évolution du backlog de curation (7 j)",
+      "backlogTrend": "Évolution de la file d'attente de curation (7 j)",
       "balance": "Balance promote / rejeter / revoir (7 j)",
       "impact": "Impact attendu sur pass-rate"
     },
@@ -2907,8 +2907,8 @@
     },
     "source": {
       "live": "Live",
-      "replay": "Replay",
-      "shadow": "Shadow"
+      "replay": "Rejeu",
+      "shadow": "Trafic fantôme"
     },
     "risk": {
       "eleve": "Élevé",
@@ -2920,7 +2920,7 @@
       "pii": "PII",
       "conformite": "Conformité",
       "outils": "Outils",
-      "grounding": "Grounding"
+      "grounding": "Ancrage"
     },
     "wfStatus": {
       "termine": "Terminé",
@@ -2929,7 +2929,7 @@
     },
     "dist": {
       "hallucination": "Hallucination",
-      "grounding": "Grounding",
+      "grounding": "Ancrage",
       "conformite": "Conformité",
       "pii_securite": "PII / Sécurité",
       "multilingue": "Multilingue",
@@ -2982,7 +2982,7 @@
       "promote": "Promouvoir 11 tours",
       "assign_review": "Assigner revue conformité",
       "freeze": "Geler lot sensible",
-      "create_replay": "Créer replay de validation",
+      "create_replay": "Créer rejeu de validation",
       "export": "Exporter lot vers dataset signé"
     },
     "actCtrl": {
@@ -2997,7 +2997,7 @@
     "quick": {
       "filterSensitivity": "Filtrer par sensibilité",
       "openCatalog": "Ouvrir catalogue de signaux",
-      "evidencePack": "Générer evidence pack"
+      "evidencePack": "Générer dossier de preuves"
     },
     "release": {
       "ready": "Prêt à publier",
@@ -3006,7 +3006,7 @@
     },
     "evidence": {
       "currentCohort": "Cohorte courante",
-      "openPack": "Ouvrir Evidence Pack"
+      "openPack": "Ouvrir Dossier de preuves"
     },
     "backlogLegend": {
       "total": "Total",
