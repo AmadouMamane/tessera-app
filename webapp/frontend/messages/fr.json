@@ -694,7 +694,7 @@
     "langfuse": "Ouvrir les sessions, traces et coûts dans Langfuse.",
     "scores": {
       "title": "Scores d'évaluation récents",
-      "metric": "faithfulness",
+      "metric": "fidélité",
       "metricCol": "Métrique",
       "score": "Score",
       "language": "Langue",
@@ -729,8 +729,8 @@
       "breaching": "Le budget d'erreur se consomme plus vite qu'il ne se reconstitue — la qualité régresse."
     },
     "shadow": {
-      "title": "Trafic fantôme (shadow)",
-      "run": "Lancer le shadow",
+      "title": "Trafic fantôme",
+      "run": "Lancer le trafic fantôme",
       "running": "Réplication…",
       "empty": "Choisissez un modèle candidat et lancez pour répliquer le trafic récent.",
       "noTraffic": "Aucun tour capturé à répliquer pour l'instant.",
@@ -831,7 +831,7 @@
     "erasure": {
       "title": "Surface d'effacement (GDPR Art. 17)",
       "conversations": "Conversations",
-      "bundles": "Bundles replay",
+      "bundles": "Bundles rejeu",
       "scores": "Scores d'éval",
       "note": "DELETE /memory purge aussi ces artefacts de télémétrie, pas seulement le store mémoire."
     },
@@ -854,7 +854,7 @@
       }
     },
     "playbooks": {
-      "title": "Playbooks d'incident",
+      "title": "Procédures d'incident",
       "clear": "Aucun incident actif — tout est clair.",
       "severity": {
         "critical": "critique",
@@ -903,12 +903,12 @@
       "minScore": "Score min"
     },
     "replay": {
-      "title": "Replay (régression depuis la prod)",
+      "title": "Rejeu (régression depuis la prod)",
       "model": "Modèle",
       "empty": "Aucun tour capturé — chatte pour en capturer.",
       "original": "original",
       "run": "Rejouer",
-      "running": "Replay…",
+      "running": "Rejeu…",
       "candidate": "candidat",
       "similarity": "similarité"
     },
@@ -943,7 +943,7 @@
       "run": "Robustesse",
       "baseline": "Référence",
       "similarity": "stabilité",
-      "minFaith": "faithfulness min"
+      "minFaith": "fidélité min"
     },
     "tools": {
       "title": "Validité des tool-calls",
@@ -991,14 +991,14 @@
       "empty": "Aucun tour capturé."
     },
     "redteam": {
-      "title": "Red-team continu (dérive jailbreak)",
+      "title": "Test d'intrusion continu (dérive contournement)",
       "run": "Lancer",
       "running": "Test…",
       "successRate": "Taux de réussite d'attaque",
       "blocked": "Bloqués",
       "bypassed": "Contournements",
       "drift": "Dérive (%)",
-      "empty": "Lancez le red-team pour mesurer le taux de réussite d'attaque."
+      "empty": "Lancez le test d'intrusion pour mesurer le taux de réussite d'attaque."
     },
     "toxicity": {
       "title": "Toxicité / sortie nuisible",
@@ -1171,7 +1171,7 @@
       "empty": "Aucune décision du guard."
     },
     "funnel": {
-      "title": "Funnel par langue",
+      "title": "Entonnoir par langue",
       "language": "Langue",
       "turns": "Tours",
       "sessions": "Sessions",
@@ -1234,7 +1234,7 @@
       "turns": "Tours",
       "repeated": "Entrées répétées",
       "clear": "Chaque question répétée a exécuté la même forme de trace.",
-      "note": "Une même entrée doit produire la même forme de nœuds (prérequis du replay).",
+      "note": "Une même entrée doit produire la même forme de nœuds (prérequis du rejeu).",
       "empty": "Aucun tour capturé."
     },
     "snapshot": {

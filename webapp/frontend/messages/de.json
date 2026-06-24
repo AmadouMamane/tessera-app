@@ -694,7 +694,7 @@
     "langfuse": "Sitzungen, Traces und Kosten in Langfuse öffnen.",
     "scores": {
       "title": "Aktuelle Online-Bewertungen",
-      "metric": "faithfulness",
+      "metric": "Treue",
       "metricCol": "Metrik",
       "score": "Score",
       "language": "Sprache",
@@ -729,8 +729,8 @@
       "breaching": "Das Fehlerbudget wird schneller verbraucht als es sich auffüllt — die Qualität verschlechtert sich."
     },
     "shadow": {
-      "title": "Shadow-/Spiegelverkehr",
-      "run": "Shadow starten",
+      "title": "Schattenverkehr-/Spiegelverkehr",
+      "run": "Schattenverkehr starten",
       "running": "Spiegelung…",
       "empty": "Kandidatenmodell wählen und starten, um aktuellen Verkehr zu spiegeln.",
       "noTraffic": "Noch keine erfassten Turns zum Spiegeln.",
@@ -831,7 +831,7 @@
     "erasure": {
       "title": "Löschfläche (DSGVO Art. 17)",
       "conversations": "Konversationen",
-      "bundles": "Replay-Bundles",
+      "bundles": "Wiedergabe-Bundles",
       "scores": "Eval-Scores",
       "note": "DELETE /memory löscht auch diese Telemetrie-Artefakte, nicht nur den Memory-Store."
     },
@@ -845,7 +845,7 @@
     },
     "roadmap": {
       "title": "Produkt-Roadmap (aus Telemetrie)",
-      "empty": "Keine Backlog-Einträge — Telemetrie ist sauber.",
+      "empty": "Keine Rückstand-Einträge — Telemetrie ist sauber.",
       "evidence": "Beob.",
       "severity": {
         "high": "hoch",
@@ -854,7 +854,7 @@
       }
     },
     "playbooks": {
-      "title": "Incident-Playbooks",
+      "title": "Incident-Verfahren",
       "clear": "Keine aktiven Vorfälle — alles in Ordnung.",
       "severity": {
         "critical": "kritisch",
@@ -903,7 +903,7 @@
       "minScore": "Min-Score"
     },
     "replay": {
-      "title": "Replay (Regression aus der Produktion)",
+      "title": "Wiedergabe (Regression aus der Produktion)",
       "model": "Modell",
       "empty": "Noch keine erfassten Turns — chatte, um welche zu erfassen.",
       "original": "original",
@@ -943,7 +943,7 @@
       "run": "Robustheit",
       "baseline": "Basis",
       "similarity": "Stabilität",
-      "minFaith": "min. Faithfulness"
+      "minFaith": "min. Treue"
     },
     "tools": {
       "title": "Tool-Call-Validität",
@@ -991,14 +991,14 @@
       "empty": "Keine erfassten Turns."
     },
     "redteam": {
-      "title": "Kontinuierliches Red-Teaming (Jailbreak-Drift)",
+      "title": "Kontinuierliches Red-Teaming (Umgehung-Abweichung)",
       "run": "Starten",
       "running": "Test…",
       "successRate": "Angriffserfolgsrate",
       "blocked": "Blockiert",
       "bypassed": "Umgehungen",
-      "drift": "Drift (%)",
-      "empty": "Starten Sie das Red-Team, um die Angriffserfolgsrate zu messen."
+      "drift": "Abweichung (%)",
+      "empty": "Starten Sie das Angriffstest, um die Angriffserfolgsrate zu messen."
     },
     "toxicity": {
       "title": "Toxizität / schädliche Ausgabe",
@@ -1171,7 +1171,7 @@
       "empty": "Keine Guard-Entscheidungen."
     },
     "funnel": {
-      "title": "Funnel pro Sprache",
+      "title": "Trichter pro Sprache",
       "language": "Sprache",
       "turns": "Turns",
       "sessions": "Sitzungen",
@@ -1184,7 +1184,7 @@
       "title": "Graph-Topologie-Version",
       "status": "Status",
       "pinned": "Entspricht Golden",
-      "drifted": "Topologie-Drift",
+      "drifted": "Topologie-Abweichung",
       "nodes": "Knoten",
       "edges": "Kanten",
       "note": "Der Live-Agentengraph entspricht dem fixierten Golden-Fingerprint."
@@ -1234,7 +1234,7 @@
       "turns": "Turns",
       "repeated": "Wiederholte Eingaben",
       "clear": "Jede wiederholte Frage lief mit derselben Trace-Form.",
-      "note": "Gleiche Eingabe sollte dieselbe Knoten-Form ergeben (Voraussetzung für Replay).",
+      "note": "Gleiche Eingabe sollte dieselbe Knoten-Form ergeben (Voraussetzung für Wiedergabe).",
       "empty": "Noch keine Turns erfasst."
     },
     "snapshot": {
