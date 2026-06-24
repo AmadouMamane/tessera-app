@@ -88,12 +88,14 @@ interface Leaf {
 }
 
 /** Per-section accent colour for the super-section header bar. */
-type Accent = "green" | "amber" | "sky";
+type Accent = "gold" | "amber" | "cyan";
 
+// Section accents harmonised with the launcher / /espaces premium palette
+// (navy + gold/cyan). AGENTS = gold, GOUVERNER = amber, PLATEFORME = cyan.
 const ACCENT: Record<Accent, string> = {
-  green: "border-[var(--tessera-green)]/70",
+  gold: "border-[var(--tessera-gold)]/70",
   amber: "border-amber-400/70",
-  sky: "border-sky-400/70",
+  cyan: "border-[var(--tessera-cyan)]/70",
 };
 
 interface Branch {
@@ -120,7 +122,7 @@ const AGENTS_SECTION: Branch = {
   icon: Bot,
   labelKey: "super.agents",
   pinned: true,
-  accent: "green",
+  accent: "gold",
   children: [
     { href: "/agents", icon: LayoutDashboard, labelKey: "item.flotte" },
     {
@@ -219,7 +221,7 @@ const TREE: ReadonlyArray<NavNode> = [
     icon: Boxes,
     labelKey: "super.plateforme",
     pinned: true,
-    accent: "sky",
+    accent: "cyan",
     children: [
       {
         key: "configurer",
@@ -552,7 +554,7 @@ function NavTreeNode({
     isSuper
       ? cn(
           "border-l-2 text-[0.7rem] uppercase tracking-[0.1em] text-white",
-          ACCENT[node.accent ?? "green"],
+          ACCENT[node.accent ?? "gold"],
         )
       : cn(
           "text-[0.66rem] uppercase tracking-wide",
@@ -626,7 +628,7 @@ function Badge({
           : tone === "warning"
             ? "bg-amber-500 text-white"
             : active
-              ? "bg-[var(--tessera-green-soft)] text-[#d6f0e3]"
+              ? "bg-[var(--tessera-gold-soft)] text-[var(--tessera-gold-text)]"
               : "bg-[var(--tessera-muted)] text-[var(--tessera-text-muted)]",
       )}
     >
@@ -661,7 +663,7 @@ function TesseraMark() {
   return (
     <svg
       aria-hidden="true"
-      className="h-9 w-9 shrink-0 text-[var(--tessera-green)]"
+      className="h-9 w-9 shrink-0 text-[var(--tessera-gold)]"
       viewBox="0 0 36 36"
       fill="none"
     >
@@ -684,7 +686,7 @@ function IdentityBlock() {
   return (
     <div className="border-t border-[var(--tessera-border)] px-2 py-3 md:px-3">
       <div className="flex items-center justify-center gap-3 md:justify-start">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-green-muted)] text-sm font-semibold text-[#d6f0e3]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-gold-muted)] text-sm font-semibold text-[var(--tessera-gold-text)]">
           AD
         </div>
         <div className="hidden min-w-0 md:block">

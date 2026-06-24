@@ -45,7 +45,7 @@
       "persona": "ML Engineer",
       "role": "Admin",
       "scope": "Prod · Crédit Aurore",
-      "localeRuntime": "FR · on-prem"
+      "localeRuntime": "FR · vor Ort"
     },
     "chat": "Chat",
     "eval": "Regressionsscore",
@@ -5003,7 +5003,7 @@
     "checking": "Integrität: wird geprüft…",
     "integrityOk": "Hash-Kette verifiziert ({n} Ereignisse)",
     "integrityBroken": "Integrität: Kette gebrochen — zu untersuchen",
-    "env": "on-prem · EU-Residenz · SOC 2",
+    "env": "Vor Ort · EU-Residenz · SOC 2",
     "note": "Status erst nach erfolgreicher Prüfung vergeben."
   },
   "signalHero": {

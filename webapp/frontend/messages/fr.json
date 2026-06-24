@@ -45,7 +45,7 @@
       "persona": "ML Engineer",
       "role": "Admin",
       "scope": "Prod · Crédit Aurore",
-      "localeRuntime": "FR · on-prem"
+      "localeRuntime": "FR · sur site"
     },
     "chat": "Conversation",
     "eval": "Score de non-régression",
@@ -5003,7 +5003,7 @@
     "checking": "Intégrité : vérification…",
     "integrityOk": "Intégrité hash-chaînée vérifiée ({n} événements)",
     "integrityBroken": "Intégrité : chaîne rompue — à investiguer",
-    "env": "on-prem · résidence UE · SOC 2",
+    "env": "Sur site · résidence UE · SOC 2",
     "note": "Statut attribué uniquement après vérification réussie."
   },
   "signalHero": {
