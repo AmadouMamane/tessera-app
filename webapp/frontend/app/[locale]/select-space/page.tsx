@@ -6,6 +6,7 @@ import {
   LandingLauncher,
 } from "@/components/landing/landing-launcher";
 import { demoCredentials } from "@/lib/auth/accounts";
+import { currentRole } from "@/lib/auth/session";
 import { isDemoMode } from "@/lib/server/demo-mode";
 import { loadLauncherSignal } from "@/lib/server/launcher-signal";
 
@@ -34,6 +35,11 @@ export default async function DemoLauncherPage({ params }: PageProps) {
   // null → the launcher shows an honest "indisponible" (never a fabricated number).
   const signal = await loadLauncherSignal();
 
+  // Current role drives GRACEFUL per-row entry on the cards (deep-link when the
+  // role may enter, else the auth page) — UX only; the layout guards stay the
+  // authority (ADR 0013). Null for an anonymous visitor.
+  const role = await currentRole();
+
   // 1-click seeded-account login on the guarded cards — DEMO MODE ONLY (off in
   // prod by default). When off, demoLogin is null and the cards keep the
   // "sign-in required" note; no seeded credentials are sent to the client.
@@ -47,5 +53,5 @@ export default async function DemoLauncherPage({ params }: PageProps) {
     demoLogin = { operator: pick("admin") ?? pick("auditor"), collections: pick("collections") };
   }
 
-  return <LandingLauncher signal={signal} demoLogin={demoLogin} />;
+  return <LandingLauncher signal={signal} demoLogin={demoLogin} role={role} />;
 }

@@ -4571,7 +4571,7 @@
       "live": "Live",
       "unavailable": "Signal nicht verfügbar",
       "controlActive": "Kontrolle aktiv",
-      "releasableRollup": "{passed} von {total} für die Produktion freigegeben",
+      "releasableRollup": "{passed, plural, =0 {# Agenten} one {# Agent} other {# Agenten}} von {total} für die Produktion bereit",
       "gateContext": "Die Sicherheitsbasis hält die Linie: kein Agent wird freigegeben, solange er einen kritischen Sicherheitsfall nicht besteht. Das ist ihre Funktion.",
       "agentReleasable": "Grün",
       "agentBlocked": "Blockiert",
@@ -4595,14 +4595,14 @@
       "role": "Plattform-Admin"
     },
     "business": {
-      "badge": "Fachebene",
+      "badge": "Geschäft",
       "title": "Fachbereiche",
       "desc": "Die Anwendungen, die die Arbeit erledigen.",
       "reveal": "Bereiche öffnen",
       "collapse": "Einklappen"
     },
     "control": {
-      "badge": "Kontrollebene",
+      "badge": "Kontrolle",
       "title": "Cockpit",
       "desc": "Der Leitstand für Ihre gesamte Agentenflotte.",
       "cta": "Cockpit öffnen",
@@ -4635,7 +4635,8 @@
           "title": "Einstellungen",
           "desc": "Verwalten Sie Profil und Präferenzen"
         }
-      }
+      },
+      "rowDesc": "Beratung, Alltagsvorgänge und Kontoeröffnung."
     },
     "recouvrement": {
       "badge": "Fachbereich",
@@ -4657,7 +4658,8 @@
           "title": "Protokollierte Gespräche",
           "desc": "Alles wird im Audit-Protokoll erfasst"
         }
-      }
+      },
+      "rowDesc": "Mahnungen, Rückstände und Tilgungspläne."
     },
     "operator": {
       "badge": "Cockpit",
@@ -4681,6 +4683,10 @@
         "platform": {
           "title": "Plattform",
           "desc": "Verwalten Sie Benutzer und Integrationen"
+        },
+        "proof": {
+          "title": "Nachweis",
+          "desc": "Nachweise, Audit und Rekonstruktion zu einem Datum"
         }
       }
     },

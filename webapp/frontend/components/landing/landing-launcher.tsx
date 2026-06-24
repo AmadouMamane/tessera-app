@@ -4,13 +4,19 @@ import {
   ArrowRight,
   Bell,
   Boxes,
+  ChevronRight,
   CircleCheck,
   CircleHelp,
+  FileCheck,
+  HandCoins,
   Lock,
   LogIn,
   Search,
   ShieldAlert,
   ShieldCheck,
+  SlidersHorizontal,
+  UserRound,
+  UsersRound,
 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
@@ -21,6 +27,8 @@ import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Link, useRouter } from "@/i18n/navigation";
+import type { Role } from "@/lib/auth/accounts";
+import { hasCockpitAccess, hasCollectionsAccess, hasProductAccess } from "@/lib/auth/roles";
 import { cn } from "@/lib/cn";
 import type { LauncherAgentSignal, LauncherSignal } from "@/lib/server/launcher-signal";
 
@@ -68,6 +76,55 @@ export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
 
 const CARD_BG =
   "linear-gradient(145deg, var(--panel) 0%, var(--panel-soft) 56%, rgba(2,8,23,0.94) 100%)";
+
+// A preview row inside a plane card (same gabarit on both sides — icon + label +
+// short desc + chevron). `access` decides GRACEFUL entry, never an RBAC rebound:
+// when the current role may enter, the row deep-links to its real target; when it
+// may not (e.g. an anonymous visitor and an internal/operator surface), it routes
+// to the locale login — a page that HANDLES the sign-in and then role-routes —
+// instead of bouncing silently to some other landing (ADR 0013). Routing here is
+// UX, not authorization: the plane's own layout guard stays the authority.
+interface PlaneRow {
+  icon: React.ComponentType<{ className?: string }>;
+  key: string;
+  target: string;
+  access: (role: Role | null) => boolean;
+}
+
+// Business plane — the two audience surfaces (count: 2). Honest asymmetry with the
+// 5-section cockpit below: we match the row TREATMENT, not the count.
+const BUSINESS_ROWS: PlaneRow[] = [
+  { icon: UserRound, key: "client", target: "/produit", access: hasProductAccess },
+  { icon: HandCoins, key: "recouvrement", target: "/recouvrement", access: hasCollectionsAccess },
+];
+
+// Control plane — the cockpit's five top-level sections (the breadth is the point).
+const COCKPIT_ROWS: PlaneRow[] = [
+  {
+    icon: EyeIcon,
+    key: "supervision",
+    target: "/surveiller/vue-ensemble",
+    access: hasCockpitAccess,
+  },
+  {
+    icon: ShieldCheck,
+    key: "management",
+    target: "/agir/incidents-playbooks",
+    access: hasCockpitAccess,
+  },
+  { icon: FileCheck, key: "proof", target: "/prouver/evidence-store", access: hasCockpitAccess },
+  {
+    icon: SlidersHorizontal,
+    key: "configuration",
+    target: "/configurer/signal-catalog",
+    access: hasCockpitAccess,
+  },
+  { icon: UsersRound, key: "platform", target: "/admin/utilisateurs", access: hasCockpitAccess },
+];
+
+// Where a guarded row sends a role that may not (yet) enter: a real auth page.
+const rowHref = (row: PlaneRow, role: Role | null): string =>
+  row.access(role) ? row.target : "/login";
 
 // Always-visible keyboard focus ring (a bright near-white ring reads on every
 // accent over the night-blue base) — WCAG 2.4.7 on this dark launcher.
@@ -137,9 +194,11 @@ type T = ReturnType<typeof useTranslations<"landing">>;
 export function LandingLauncher({
   signal,
   demoLogin,
+  role,
 }: {
   signal: LauncherSignal | null;
   demoLogin: DemoLogin | null;
+  role: Role | null;
 }) {
   const t = useTranslations("landing");
   const locale = useLocale();
@@ -200,8 +259,8 @@ export function LandingLauncher({
               (symmetric to the Flotte list→détail); the control card enters the
               cockpit. Individual business surfaces live in /espaces, never inline. */}
           <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 gap-7 lg:grid-cols-2">
-            <BusinessPlaneCard t={t} />
-            <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} />
+            <BusinessPlaneCard t={t} role={role} />
+            <ControlPlaneCard t={t} role={role} demoOperator={demoLogin?.operator} />
           </section>
 
           {/* Per-agent footer — showcase, NOT navigation (ADR 0008/0010). PUBLIC
@@ -526,23 +585,63 @@ function PlaneHeader({
   );
 }
 
-// "What you'll find" line — a non-clickable, accent-neutral contents strip,
-// IDENTICAL on both plane cards (twin doors). The two cards differ only by their
-// header + single primary CTA; the nav into each plane lives on the other side
-// of that door (the /espaces directory, the cockpit's own sidebar). Listing
-// deep-links here created asymmetry and role-dependent dead ends (ADR 0013).
-function ContainsLine({ items }: { items: string[] }) {
+// One preview row — same gabarit on both plane cards (icon + label + short desc +
+// affordance). The trailing affordance is a chevron when the current role may
+// enter (deep-link), or a lock when sign-in is required (the row then routes to
+// the auth page, never a silent RBAC rebound).
+function PreviewRow({
+  a,
+  icon: Icon,
+  title,
+  desc,
+  href,
+  accessible,
+}: {
+  a: AccentStyle;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  desc: string;
+  href: string;
+  accessible: boolean;
+}) {
   return (
-    <p className="mt-[18px] border-t border-[var(--border-subtle)] pt-[14px] text-[12.5px] leading-[1.5] text-[var(--text-secondary)]">
-      {items.join("  ·  ")}
-    </p>
+    <li>
+      <Link
+        href={href}
+        className={cn(
+          "group/row -mx-[8px] grid grid-cols-[20px_1fr_14px] items-center rounded-[8px] px-[8px] py-[6px] transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]",
+          FOCUS,
+        )}
+      >
+        <Icon className={cn("h-[18px] w-[18px] stroke-[1.6]", a.icon)} />
+        <span className="min-w-0 pl-[14px]">
+          <span className="block text-[13px] font-semibold leading-[1.2] text-[var(--text-primary)]">
+            {title}
+          </span>
+          <span className="mt-[3px] block truncate text-[11.5px] font-normal leading-[1.25] text-[var(--text-secondary)]">
+            {desc}
+          </span>
+        </span>
+        {accessible ? (
+          <ChevronRight
+            className="h-[15px] w-[15px] stroke-[1.6] text-[var(--text-secondary)] transition-transform group-hover/row:translate-x-[2px] group-hover/row:text-[var(--text-primary)]"
+            aria-hidden="true"
+          />
+        ) : (
+          <Lock
+            className="h-[13px] w-[13px] stroke-[1.6] text-[var(--text-secondary)]"
+            aria-hidden="true"
+          />
+        )}
+      </Link>
+    </li>
   );
 }
 
-// Business plane (ADR 0013): a PURE plan card — a door to the /espaces directory,
-// not an inline surface list. The surfaces, their guards and 1-click demo logins
-// live in /espaces.
-function BusinessPlaneCard({ t }: { t: T }) {
+// Business plane (ADR 0013): the two audience surfaces, each a preview row that
+// enters its surface (or the auth page if sign-in is required). The CTA leads to
+// the full /espaces directory.
+function BusinessPlaneCard({ t, role }: { t: T; role: Role | null }) {
   const a = ACCENT.gold;
   return (
     <section
@@ -561,7 +660,19 @@ function BusinessPlaneCard({ t }: { t: T }) {
           title={t("business.title")}
           desc={t("business.desc")}
         />
-        <ContainsLine items={[t("client.title"), t("recouvrement.title")]} />
+        <ul className="mt-[20px] flex flex-col gap-[10px]">
+          {BUSINESS_ROWS.map((row) => (
+            <PreviewRow
+              key={row.key}
+              a={a}
+              icon={row.icon}
+              title={t(`${row.key}.title`)}
+              desc={t(`${row.key}.rowDesc`)}
+              href={rowHref(row, role)}
+              accessible={row.access(role)}
+            />
+          ))}
+        </ul>
         <Link
           href="/espaces"
           className={cn(
@@ -579,9 +690,14 @@ function BusinessPlaneCard({ t }: { t: T }) {
   );
 }
 
-// Control plane (ADR 0013): the cockpit — govern the platform. Guarded to the
-// platform roles; the card surfaces the "sign-in required" note and links.
-function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }) {
+// Control plane (ADR 0013): the cockpit — five top-level sections previewed as
+// rows (the breadth is the point). Each row enters its section or, when sign-in is
+// required, the auth page — never a silent rebound. The CTA leads to the cockpit.
+function ControlPlaneCard({
+  t,
+  role,
+  demoOperator,
+}: { t: T; role: Role | null; demoOperator?: DemoCred }) {
   const a = ACCENT.cyan;
   return (
     <section
@@ -604,14 +720,19 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
           desc={t("control.desc")}
           authNote={demoOperator ? t("demoLogin.note") : t("control.authNote")}
         />
-        <ContainsLine
-          items={[
-            t("operator.items.supervision.title"),
-            t("operator.items.management.title"),
-            t("operator.items.configuration.title"),
-            t("operator.items.platform.title"),
-          ]}
-        />
+        <ul className="mt-[20px] flex flex-col gap-[10px]">
+          {COCKPIT_ROWS.map((row) => (
+            <PreviewRow
+              key={row.key}
+              a={a}
+              icon={row.icon}
+              title={t(`operator.items.${row.key}.title`)}
+              desc={t(`operator.items.${row.key}.desc`)}
+              href={rowHref(row, role)}
+              accessible={row.access(role)}
+            />
+          ))}
+        </ul>
         {demoOperator ? (
           <div className="mt-auto">
             <DemoEnterButton
@@ -700,5 +821,20 @@ function HexBadge({ children, className }: { children: ReactNode; className: str
       </svg>
       <span className="relative">{children}</span>
     </span>
+  );
+}
+
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} viewBox="0 0 28 28" fill="none">
+      <path
+        d="M2.5 14s4.2-6.5 11.5-6.5S25.5 14 25.5 14 21.3 20.5 14 20.5 2.5 14 2.5 14Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="14" cy="14" r="3.4" fill="currentColor" />
+    </svg>
   );
 }

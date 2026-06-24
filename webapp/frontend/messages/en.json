@@ -4571,7 +4571,7 @@
       "live": "Live",
       "unavailable": "Signal unavailable",
       "controlActive": "Active control",
-      "releasableRollup": "{passed} of {total} cleared for production",
+      "releasableRollup": "{passed, plural, =0 {# agents} one {# agent} other {# agents}} of {total} ready for production",
       "gateContext": "The security baseline holds the line: no agent ships while it fails a critical security case. That's its job.",
       "agentReleasable": "Green",
       "agentBlocked": "Blocked",
@@ -4595,14 +4595,14 @@
       "role": "Platform admin"
     },
     "business": {
-      "badge": "Business plane",
+      "badge": "Business",
       "title": "Business spaces",
       "desc": "The applications that do the work.",
       "reveal": "Open the spaces",
       "collapse": "Collapse"
     },
     "control": {
-      "badge": "Control plane",
+      "badge": "Control",
       "title": "Cockpit",
       "desc": "The control room for your entire agent fleet.",
       "cta": "Open the cockpit",
@@ -4635,7 +4635,8 @@
           "title": "Settings",
           "desc": "Manage your profile and preferences"
         }
-      }
+      },
+      "rowDesc": "Support, everyday operations and account opening."
     },
     "recouvrement": {
       "badge": "Business",
@@ -4657,7 +4658,8 @@
           "title": "Logged exchanges",
           "desc": "Everything is traced in the audit log"
         }
-      }
+      },
+      "rowDesc": "Dunning, arrears and repayment schedules."
     },
     "operator": {
       "badge": "Cockpit",
@@ -4681,6 +4683,10 @@
         "platform": {
           "title": "Platform",
           "desc": "Administer users and integrations"
+        },
+        "proof": {
+          "title": "Proof",
+          "desc": "Evidence, audit and reconstruction at a date"
         }
       }
     },
