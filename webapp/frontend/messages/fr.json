@@ -2257,7 +2257,7 @@
     "panel": {
       "mapping": "Cartographie réglementaire",
       "obligations": "Obligations à risque ({n})",
-      "evidence": "Evidence Pack conformité",
+      "evidence": "Dossier de preuves conformité",
       "controls": "Contrôles critiques ({n})",
       "missing": "Preuves manquantes",
       "incidents": "Incidents & exceptions"
@@ -2306,9 +2306,9 @@
       "criticalNc": "Non conformités critiques",
       "noNc": "Aucune non-conformité critique",
       "actions": "Actions recommandées ({n})",
-      "evidenceCta": "Générer evidence pack conformité",
+      "evidenceCta": "Générer dossier de preuves conformité",
       "quickActions": "Actions rapides",
-      "qaEvidence": "Générer evidence pack",
+      "qaEvidence": "Générer dossier de preuves",
       "qaRemediation": "Plan de remédiation",
       "qaReport": "Exporter rapport conformité",
       "qaRegistry": "Registre des traitements"
