@@ -2482,7 +2482,7 @@
       "actions": "Empfohlene Maßnahmen",
       "curate": "Zu kuratierende Fälle",
       "frozen": "Eingefrorene Releases",
-      "shadow": "Shadow-/Replay-Kandidaten",
+      "shadow": "Schattenverkehr-/Wiedergabe-Kandidaten",
       "coverage": "Eval-Set-Abdeckung",
       "debt": "Korpus-Schuld",
       "roi": "Geschätzter ROI"

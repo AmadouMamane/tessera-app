@@ -2482,7 +2482,7 @@
       "actions": "Actions recommandées",
       "curate": "Cas à curer",
       "frozen": "Releases gelées",
-      "shadow": "Candidats shadow / replay",
+      "shadow": "Candidats trafic fantôme / rejeu",
       "coverage": "Couverture eval set",
       "debt": "Dette corpus",
       "roi": "ROI estimé"
