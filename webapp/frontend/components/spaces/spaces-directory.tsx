@@ -30,12 +30,12 @@ export interface SurfaceView {
   href: string;
   name: string;
   desc: string;
+  // The ACCESS facet (ADR 0013 amended): a business surface advertises its
+  // ACCESS/availability — open to anyone, or sign-in required — NOT the backing
+  // agent's eval-gate release verdict (that is control-plane: Flotte / Vue
+  // d'ensemble). `authRequired` drives the access chip + CTA.
   authRequired: boolean;
   authNote: string;
-  // Public-safe health (ADR 0009): release verdict tone + label of the surface's
-  // backing agent(s) — never a per-failure category, never an agent list.
-  healthTone: "good" | "warn" | "crit" | "unknown";
-  healthLabel: string;
   demo: SurfaceDemo | null;
   // False when the CURRENT authenticated role cannot enter this surface (e.g. a
   // `collections` session and the customer product). The card is then shown inert
@@ -80,13 +80,6 @@ const ACCENT: Record<Audience, { border: string; icon: string; dot: string; icon
   },
 };
 
-const HEALTH: Record<SurfaceView["healthTone"], string> = {
-  good: "var(--success)",
-  warn: "var(--amber)",
-  crit: "#F87171",
-  unknown: "var(--text-secondary)",
-};
-
 const SURFACE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
   client: UserRound,
   recouvrement: HandCoins,
@@ -107,6 +100,9 @@ function readFavorites(): string[] {
 
 function FavStar({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
   return (
+    // A real <button> would nest an interactive inside the card's stretched action
+    // button (invalid HTML); a role=button span with keyboard handlers overlays it.
+    // biome-ignore lint/a11y/useSemanticElements: intentional overlay control, see above
     <span
       role="button"
       tabIndex={0}
@@ -149,7 +145,6 @@ function SurfaceCard({
   const [pending, setPending] = useState(false);
   const a = ACCENT[surface.audience];
   const Icon = SURFACE_ICON[surface.key] ?? Boxes;
-  const hc = HEALTH[surface.healthTone];
   const audienceLabel = surface.audience === "internal" ? t("groupInternal") : t("groupExternal");
   const demo = surface.demo;
   const actionLabel = demo ? demo.label : t("open");
@@ -209,17 +204,21 @@ function SurfaceCard({
           label={t(favorite ? "unfavorite" : "favorite")}
         />
       </span>
-      <span className="pointer-events-none absolute top-[14px] right-[14px] z-[2] flex items-center gap-[7px]">
-        {surface.authRequired ? (
-          <Lock className="h-[12px] w-[12px] text-[var(--text-secondary)]" aria-hidden="true" />
-        ) : null}
+      {/* ACCESS facet (ADR 0013 amended) — gated surfaces advertise "Connexion
+          requise"; open surfaces carry no chip (the "Ouvrir" CTA below says it). */}
+      {surface.authRequired ? (
         <span
-          className="h-[8px] w-[8px] rounded-full"
-          style={{ background: hc }}
-          title={surface.healthLabel}
-          aria-label={surface.healthLabel}
-        />
-      </span>
+          className="pointer-events-none absolute top-[12px] right-[12px] z-[2] inline-flex items-center gap-[5px] rounded-full border px-[8px] py-[3px] text-[10px] font-medium"
+          style={{
+            color: "var(--amber-soft)",
+            borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
+            background: "color-mix(in srgb, var(--amber-soft) 12%, transparent)",
+          }}
+        >
+          <Lock className="h-[10px] w-[10px]" aria-hidden="true" />
+          {t("authRequired")}
+        </span>
+      ) : null}
 
       {/* Visual content — clicks pass through to the stretched action. */}
       <span className="pointer-events-none relative flex flex-col items-center gap-[14px]">
@@ -253,7 +252,7 @@ function SurfaceCard({
           {t("roleLocked")}
         </span>
       ) : (
-        <span className="pointer-events-none absolute inset-x-0 bottom-[12px] text-[11px] font-medium text-[var(--text-secondary)] opacity-0 transition-opacity group-hover/card:opacity-100">
+        <span className="pointer-events-none absolute inset-x-0 bottom-[12px] text-[11px] font-medium text-[var(--text-secondary)] transition-colors group-hover/card:text-[var(--text-primary)]">
           {actionLabel} →
         </span>
       )}
@@ -271,7 +270,6 @@ function SurfaceRow({
   const [pending, setPending] = useState(false);
   const a = ACCENT[surface.audience];
   const Icon = SURFACE_ICON[surface.key] ?? Boxes;
-  const hc = HEALTH[surface.healthTone];
   const audienceLabel = surface.audience === "internal" ? t("groupInternal") : t("groupExternal");
   const demo = surface.demo;
 
@@ -343,29 +341,26 @@ function SurfaceRow({
             />
             {audienceLabel}
           </span>
-          {surface.authRequired ? (
-            <Lock className="h-[11px] w-[11px] text-[var(--text-secondary)]" aria-hidden="true" />
-          ) : null}
         </span>
         <span className="truncate text-[12px] leading-[1.4] text-[var(--text-secondary)]">
           {surface.desc}
         </span>
       </span>
-      <span
-        className="pointer-events-none hidden shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11px] font-medium md:inline-flex"
-        style={{
-          color: hc,
-          borderColor: `color-mix(in srgb, ${hc} 42%, transparent)`,
-          background: `color-mix(in srgb, ${hc} 12%, transparent)`,
-        }}
-      >
+      {/* ACCESS facet (ADR 0013 amended) — gated surfaces advertise "Connexion
+          requise"; open surfaces carry no chip (the "Ouvrir" action says it). */}
+      {surface.authRequired ? (
         <span
-          className="h-[6px] w-[6px] rounded-full"
-          style={{ background: hc }}
-          aria-hidden="true"
-        />
-        {surface.healthLabel}
-      </span>
+          className="pointer-events-none hidden shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11px] font-medium md:inline-flex"
+          style={{
+            color: "var(--amber-soft)",
+            borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
+            background: "color-mix(in srgb, var(--amber-soft) 12%, transparent)",
+          }}
+        >
+          <Lock className="h-[11px] w-[11px]" aria-hidden="true" />
+          {t("authRequired")}
+        </span>
+      ) : null}
       <span className="relative z-[2]">
         <FavStar
           on={favorite}

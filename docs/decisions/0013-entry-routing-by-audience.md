@@ -82,10 +82,9 @@ to nothing in the business plane. The two planes meet **only at the launcher**. 
 sole allowed cross-plane direction is the **operator→product** header toggle
 (operator-only, higher privilege); business→control is **never** offered — a
 `collections` user has no cockpit access, so such a link would be a dead end into
-the RBAC guard. Each surface shows its audience (external/internal), a "connexion
-requise" note when guarded (with a 1-click demo login in demo mode), and a
-**public-safe health** = the release verdict of its backing agent(s) (ADR 0009 —
-the failure category stays operator-only). support-client and onboarding still
+the RBAC guard. Each surface shows its audience (external/internal) and its
+**access facet**: open ("Ouvrir"), or sign-in required ("Connexion requise", with
+a 1-click demo login in demo mode). support-client and onboarding still
 share the single *Espace client* surface; adding an agent never adds an entry.
 The card **informs and links**, while the layout RBAC remains the **authority**
 (routing ≠ authorization). The launcher and `/espaces` exist only so a reviewer can
@@ -132,3 +131,19 @@ Role-routing chooses the **landing**; the per-surface RBAC remains the **authori
 
 **Out of scope.** The recouvrement console build (ADR 0010 Phase C); the cockpit's
 in-area navigation.
+
+## Amendment — surface health is access, not the eval-gate verdict
+
+The original text gave each `/espaces` surface a "public-safe health" equal to the
+**release verdict** of its backing agent(s) (a green/blocked dot). This was wrong on
+two counts: (1) the eval-gate verdict is a **control-plane** fact — its home is the
+Flotte (`/agents`) governance cards and the Vue d'ensemble per-agent breakdown, not a
+business door; (2) it was **misleading** — a surface can read "Bloqué" while being
+perfectly **usable in the demo** (the gate blocks *production release*, not the demo
+surface). Showing a control-plane verdict on a business surface is cross-plane leakage.
+
+A business surface now advertises only its **access facet**: *open* ("Ouvrir") or
+*sign-in required* ("Connexion requise", with the demo login CTA in demo mode), plus
+its audience (Externe/Interne) and description. `/espaces` no longer reads the fleet
+release data at all. The release verdict stays where it belongs: Flotte / Vue
+d'ensemble (one verdict, control-plane only).

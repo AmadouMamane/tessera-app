@@ -4731,6 +4731,7 @@
       "unknown": "Nicht bewertet"
     },
     "healthLegend": "Der Punkt zeigt, ob die Anwendung für die Produktion freigegeben ist. Das Detail sehen Sie im Cockpit.",
+    "accessLegend": "Jede Oberfläche zeigt ihren Zugang: offen oder Anmeldung erforderlich. Das Produktions-Verdikt (Eval-Gate) sehen Sie im Cockpit — Flotte und Vue d’ensemble.",
     "fleetLink": "Flotte ansehen (gesteuerte Agenten)",
     "unavailable": "Bereichsverzeichnis nicht verfügbar."
   },

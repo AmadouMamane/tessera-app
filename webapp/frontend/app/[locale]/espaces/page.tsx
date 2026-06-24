@@ -14,7 +14,6 @@ import { Link } from "@/i18n/navigation";
 import { demoCredentials } from "@/lib/auth/accounts";
 import { currentRole, hasCollectionsAccess, hasProductAccess } from "@/lib/auth/session";
 import { isDemoMode } from "@/lib/server/demo-mode";
-import { loadFleet } from "@/lib/server/fleet";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -28,15 +27,17 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: t("title") };
 }
 
-// Static directory of business surfaces (ADR 0008/0010/0013). Each surface maps
-// to the backing agent(s) that serve it — used ONLY to derive a public-safe
-// health dot, never to list agents.
+// Static directory of business surfaces (ADR 0008/0010/0013). A business surface
+// advertises its ACCESS (open vs sign-in required) and audience — NOT the backing
+// agent's eval-gate release verdict. That verdict is control-plane and lives in
+// the cockpit (Flotte / Vue d'ensemble); showing "Bloqué" here would be both
+// cross-plane and misleading (the surface IS usable in the demo). ADR 0013
+// amendment: public-safe surface health = access/availability, not the verdict.
 const SURFACES: Array<{
   key: "client" | "recouvrement";
   href: "/produit" | "/recouvrement";
   group: "external" | "internal";
   authRequired: boolean;
-  backing: string[];
   demoRole?: string;
 }> = [
   {
@@ -44,19 +45,15 @@ const SURFACES: Array<{
     href: "/produit",
     group: "external",
     authRequired: false,
-    backing: ["support-client", "onboarding"],
   },
   {
     key: "recouvrement",
     href: "/recouvrement",
     group: "internal",
     authRequired: true,
-    backing: ["recouvrement"],
     demoRole: "collections",
   },
 ];
-
-type HealthTone = SurfaceView["healthTone"];
 
 // ADR 0013 — a reviewer/operator directory, NOT the front door. It never
 // redirects: a real user is role-routed at the locale root (spaceRedirectForRole
@@ -68,8 +65,6 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
   const t = await getTranslations({ locale, namespace: "spaces" });
   const tl = await getTranslations({ locale, namespace: "landing" });
 
-  const fleet = await loadFleet();
-  const agents = fleet?.agents ?? [];
   const role = await currentRole();
 
   // Whether the CURRENT authenticated role may actually enter a surface. An
@@ -83,39 +78,22 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
     return s.key === "client" ? hasProductAccess(role) : hasCollectionsAccess(role);
   };
 
-  // Public-safe health (ADR 0009): the release VERDICT of the surface's backing
-  // agent(s) — green only if every one clears its gate; blocked if any is held.
-  // No failure category, no agent listing, no blended rate.
-  const health = (backing: string[]): { tone: HealthTone; label: string } => {
-    const rels = backing
-      .map((id) => agents.find((a) => a.id === id)?.release)
-      .filter((r): r is NonNullable<typeof r> => Boolean(r?.available));
-    if (rels.length === 0) return { tone: "unknown", label: t("health.unknown") };
-    if (rels.some((r) => r.passed === false)) return { tone: "crit", label: t("health.blocked") };
-    return { tone: "good", label: t("health.released") };
-  };
-
   const demoCred = (role: string): SurfaceDemo | null => {
     if (!isDemoMode()) return null;
     const c = demoCredentials().find((x) => x.role === role);
     return c ? { username: c.username, password: c.password, label: t("demoLogin") } : null;
   };
 
-  const toView = (s: (typeof SURFACES)[number]): SurfaceView => {
-    const h = health(s.backing);
-    return {
-      key: s.key,
-      href: s.href,
-      name: tl(`${s.key}.title`),
-      desc: tl(`${s.key}.desc`),
-      authRequired: s.authRequired,
-      authNote: s.authRequired ? tl(`${s.key}.authNote`) : "",
-      healthTone: h.tone,
-      healthLabel: h.label,
-      demo: s.demoRole ? demoCred(s.demoRole) : null,
-      accessible: accessibleForRole(s),
-    };
-  };
+  const toView = (s: (typeof SURFACES)[number]): SurfaceView => ({
+    key: s.key,
+    href: s.href,
+    name: tl(`${s.key}.title`),
+    desc: tl(`${s.key}.desc`),
+    authRequired: s.authRequired,
+    authNote: s.authRequired ? tl(`${s.key}.authNote`) : "",
+    demo: s.demoRole ? demoCred(s.demoRole) : null,
+    accessible: accessibleForRole(s),
+  });
 
   const groups: SurfaceGroup[] = (["external", "internal"] as const).map((key) => ({
     key,
@@ -176,16 +154,10 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
                 user link — the two planes meet only at the launcher. */}
           </section>
 
-          {fleet ? (
-            <SpacesDirectory groups={groups} />
-          ) : (
-            <p className="w-full max-w-[1040px] text-[13px] text-[var(--text-secondary)]">
-              {t("unavailable")}
-            </p>
-          )}
+          <SpacesDirectory groups={groups} />
 
           <p className="mt-10 w-full max-w-[1040px] text-[11px] leading-[1.5] text-[var(--text-secondary)]">
-            {t("healthLegend")}
+            {t("accessLegend")}
           </p>
         </main>
       </div>

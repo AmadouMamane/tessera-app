@@ -4731,6 +4731,7 @@
       "unknown": "Non évalué"
     },
     "healthLegend": "La pastille indique si l’application est validée pour la mise en production. Le détail se consulte dans le cockpit.",
+    "accessLegend": "Chaque surface indique son accès : ouverte, ou connexion requise. Le verdict de mise en production (eval-gate) se consulte dans le cockpit — Flotte et Vue d’ensemble.",
     "fleetLink": "Voir la Flotte (agents gouvernés)",
     "unavailable": "Annuaire des espaces indisponible."
   },

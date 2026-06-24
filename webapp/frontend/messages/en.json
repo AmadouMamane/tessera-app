@@ -4731,6 +4731,7 @@
       "unknown": "Not evaluated"
     },
     "healthLegend": "The dot shows whether the application is cleared for production. The detail lives in the cockpit.",
+    "accessLegend": "Each surface shows its access: open, or sign-in required. The production (eval-gate) verdict lives in the cockpit — Fleet and Overview.",
     "fleetLink": "View the Fleet (governed agents)",
     "unavailable": "Spaces directory unavailable."
   },
