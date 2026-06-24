@@ -1,6 +1,15 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, Boxes, Lock, LockOpen, ShieldCheck, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Ban,
+  Boxes,
+  Lock,
+  LockOpen,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
@@ -326,7 +335,7 @@ function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
       {/* The socle line, under the band: why a "0" is not a failure of control. */}
       {!allReleasable && signal.agentsWithRelease > 0 ? (
         <p className="flex items-center gap-[7px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
-          <Lock className="h-[13px] w-[13px] shrink-0" aria-hidden="true" />
+          <Ban className="h-[13px] w-[13px] shrink-0" aria-hidden="true" />
           {t("signal.gateContext")}
         </p>
       ) : null}
