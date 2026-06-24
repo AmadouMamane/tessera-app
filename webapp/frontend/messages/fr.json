@@ -3060,7 +3060,7 @@
       "createAutomation": "Créer une automation",
       "simulateRule": "Simuler une règle",
       "export": "Exporter",
-      "evidencePack": "Générer evidence pack"
+      "evidencePack": "Générer dossier de preuves"
     },
     "rail": {
       "realtime": "Données en temps réel"
