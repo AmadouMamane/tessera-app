@@ -181,7 +181,7 @@
       "timeTravel": "time-travel",
       "compareTo": "Comparer à",
       "previousWeek": "semaine précédente",
-      "baseline": "baseline",
+      "baseline": "référence",
       "now": "maintenant",
       "h24": "24 heures",
       "d7": "7 jours",
@@ -195,7 +195,7 @@
       "relitAtBadge": "État à l’instant relu",
       "noEventNear": "Aucun événement à proximité",
       "dataStart": "début données",
-      "vsBaseline": "vs baseline",
+      "vsBaseline": "vs référence",
       "legendScores": "Qualité",
       "legendGood": "bon (≥0,8)",
       "legendFair": "moyen",
@@ -277,7 +277,7 @@
       "release": "Release / changements",
       "blocked": "Bloquée",
       "clear": "OK",
-      "noBaseline": "Aucune baseline à comparer.",
+      "noBaseline": "Aucune référence à comparer.",
       "gates": {
         "quality": "Gate qualité",
         "security": "Security gate",
@@ -414,7 +414,7 @@
       "object": "Objet",
       "actor": "Acteur",
       "role": "Rôle",
-      "scope": "Scope",
+      "scope": "Portée",
       "target": "Outil",
       "outcome": "Verdict",
       "proof": "Preuve",
@@ -432,7 +432,7 @@
       "button": "Filtres",
       "eventType": "Type d'événement",
       "role": "Rôle",
-      "scope": "Scope",
+      "scope": "Portée",
       "target": "Outil",
       "outcome": "Verdict",
       "policyRule": "Règle"
@@ -469,7 +469,7 @@
       "eventId": "Event ID",
       "timestamp": "Horodatage",
       "actor": "Acteur",
-      "scope": "Scope",
+      "scope": "Portée",
       "action": "Action",
       "object": "Objet",
       "policy": "Justification",
@@ -831,7 +831,7 @@
     "erasure": {
       "title": "Surface d'effacement (GDPR Art. 17)",
       "conversations": "Conversations",
-      "bundles": "Bundles rejeu",
+      "bundles": "Lots rejeu",
       "scores": "Scores d'éval",
       "note": "DELETE /memory purge aussi ces artefacts de télémétrie, pas seulement le store mémoire."
     },
@@ -973,7 +973,7 @@
       "title": "Scan du corpus (injection indirecte)",
       "poisoned": "empoisonnés",
       "clean": "Aucune injection détectée dans les chunks récupérés.",
-      "chunk": "chunk"
+      "chunk": "fragment"
     },
     "stego": {
       "run": "Stégano",
@@ -1183,11 +1183,11 @@
     "topology": {
       "title": "Version de topologie du graphe",
       "status": "Statut",
-      "pinned": "Conforme au golden",
+      "pinned": "Conforme à la référence",
       "drifted": "Dérive de topologie",
       "nodes": "Nœuds",
       "edges": "Arêtes",
-      "note": "Le graphe de l'agent correspond au fingerprint golden épinglé."
+      "note": "Le graphe de l'agent correspond à l'empreinte de référence épinglée."
     },
     "toolLoops": {
       "title": "Boucles d'appels d'outils",
@@ -1238,11 +1238,11 @@
       "empty": "Aucun tour capturé."
     },
     "snapshot": {
-      "title": "Snapshot golden de trace",
+      "title": "Instantané de référence de trace",
       "drifted": "En dérive",
       "matching": "Conformes",
       "knownNodes": "Nœuds connus",
-      "clear": "Chaque trace correspond à la forme de nœuds golden.",
+      "clear": "Chaque trace correspond à la forme de nœuds de référence.",
       "empty": "Aucun tour capturé."
     },
     "handoffs": {
@@ -1475,7 +1475,7 @@
         "score": "Score",
         "run": "Dataset / run",
         "model": "Modèle",
-        "owner": "Owner",
+        "owner": "Responsable",
         "status": "Statut"
       },
       "sev": {
@@ -1515,7 +1515,7 @@
         "export": "Exporter sélection",
         "addDataset": "Ajouter au dataset",
         "createCase": "Créer case",
-        "assignOwner": "Assigner owner"
+        "assignOwner": "Assigner responsable"
       },
       "status": {
         "new": "Nouveau",
@@ -1541,7 +1541,7 @@
         "category": "Catégorie",
         "model": "Modèle",
         "lang": "Langue",
-        "owner": "Owner",
+        "owner": "Responsable",
         "status": "Statut",
         "prompt": "Prompt",
         "expected": "Réponse attendue",
@@ -1656,7 +1656,7 @@
       "secDiag": "B. Diagnostic de calibration",
       "secSegments": "C. Segments à risque & dérive",
       "secActions": "D. Actions recommandées",
-      "vsBaseline": "vs baseline",
+      "vsBaseline": "vs référence",
       "clemency": "Clémence",
       "casDisagree": "Cas en désaccord",
       "disagreeDist": "Répartition des désaccords",
@@ -2043,7 +2043,7 @@
       "fiche": "Fiche signal",
       "source": "Source",
       "collector": "Collector",
-      "scope": "Scope",
+      "scope": "Portée",
       "cases": "Cas liés",
       "release": "Release qualité",
       "gate_quality": "Gate qualité",
@@ -2051,7 +2051,7 @@
       "gate_compliance": "Compliance gate",
       "actions": "Actions prescriptives",
       "createCase": "Créer un case",
-      "assignOwner": "Assigner un owner",
+      "assignOwner": "Assigner un responsable",
       "dualControl": "Dual control · Admin+"
     }
   },
@@ -2600,7 +2600,7 @@
       "trigger": "Stade déclencheur",
       "domain": "Domaine",
       "status": "Statut",
-      "owner": "Owner",
+      "owner": "Responsable",
       "sla": "SLA",
       "playbook": "Procédure recommandé",
       "role": "Rôle requis"
@@ -2627,7 +2627,7 @@
       "journal": "Journal de réponse (extrait)",
       "automations": "Automations",
       "quickActions": "Actions rapides",
-      "owner": "Owner",
+      "owner": "Responsable",
       "role": "Rôle requis",
       "proofs": "Preuves générées",
       "elapsed": "Temps écoulé",
@@ -2652,7 +2652,7 @@
       "inactif": "Inactif"
     },
     "quick": {
-      "assignOwner": "Assigner owner",
+      "assignOwner": "Assigner responsable",
       "launchContainment": "Lancer containment",
       "freezeRelease": "Geler release",
       "createJira": "Créer ticket Jira",
@@ -2704,19 +2704,19 @@
       "requests": "Requêtes rejouées",
       "tokens": "Tokens rejoués",
       "cost": "Coût de rejeu",
-      "deviations": "Écarts critiques vs baseline",
+      "deviations": "Écarts critiques vs référence",
       "evals": "Évaluations rejouées",
       "proofs": "Preuves générées",
       "coverage": "Couverture trafic fantôme"
     },
     "panel": {
       "traffic": "Trafic rejouable par jour",
-      "devByType": "Écarts vs baseline par type",
+      "devByType": "Écarts vs référence par type",
       "severity": "Sévérité des écarts",
       "recentSessions": "Sessions récentes",
       "topDeviations": "Écarts — Top 10",
       "comparisons": "Comparaisons récentes",
-      "regressions": "Top régressions vs baseline",
+      "regressions": "Top régressions vs référence",
       "byService": "Répartition par service",
       "byModel": "Répartition par modèle",
       "evalsByCat": "Évaluations rejouées par catégorie",
@@ -2735,7 +2735,7 @@
       "status": "Statut",
       "origin": "Date d’origine",
       "type": "Type",
-      "baseline": "Baseline",
+      "baseline": "Référence",
       "severity": "Sévérité",
       "delta": "Δ Score",
       "comparison": "Comparaison",
@@ -2795,7 +2795,7 @@
     },
     "rail": {
       "realtime": "Données en temps réel",
-      "compareBaseline": "Comparer à une baseline",
+      "compareBaseline": "Comparer à une référence",
       "allServices": "Tous les services",
       "replayNow": "Relire maintenant",
       "shortcuts": "Raccourcis temporels",
@@ -2824,8 +2824,8 @@
     },
     "quick": {
       "replaySession": "Rejouer une session",
-      "compareBaseline": "Comparer à une baseline",
-      "createBaseline": "Créer une baseline",
+      "compareBaseline": "Comparer à une référence",
+      "createBaseline": "Créer une référence",
       "exportResults": "Exporter les résultats",
       "scheduleReplay": "Programmer un rejeu",
       "viewLog": "Voir le journal de rejeu"
@@ -3137,7 +3137,7 @@
     "env": {
       "prod": "Prod",
       "preprod": "Preprod",
-      "staging": "Staging",
+      "staging": "Préproduction",
       "dev": "Dev"
     },
     "jCol": {
@@ -3181,13 +3181,13 @@
       "modified": "Dernière modif",
       "author": "Auteur",
       "branch": "Branche Git",
-      "scope": "Scope par défaut",
+      "scope": "Portée par défaut",
       "history": "Voir l’historique des versions"
     },
     "gov": {
       "dualControl": "Dual contrôle activé",
       "rolesByMode": "Rôles requis par mode",
-      "defaultScope": "Scope par défaut",
+      "defaultScope": "Portée par défaut",
       "chain": "Chaîne d’audit intacte"
     },
     "quick": {
@@ -3463,10 +3463,10 @@
     "title": "Policies & garde-fous",
     "subtitle": "Gouvernance des politiques, garde-fous runtime, workflow d’approbation et historique des versions.",
     "actions": {
-      "createDraft": "Créer version draft",
+      "createDraft": "Créer version brouillon",
       "compareVersions": "Comparer versions",
       "diffYaml": "Diff YAML",
-      "rollback": "Rollback",
+      "rollback": "Retour arrière",
       "requestApproval": "Demander approbation"
     },
     "tabs": {
@@ -3485,14 +3485,14 @@
       "commit": "Commit",
       "author": "Auteur",
       "approver": "Approuvé par",
-      "scope": "Scope",
+      "scope": "Portée",
       "compareLabel": "Comparer {active} (active) → {compare}"
     },
     "vStatus": {
-      "draft": "Draft",
+      "draft": "Brouillon",
       "approved": "Approved",
       "active": "Active",
-      "canary": "Canary",
+      "canary": "Canari",
       "archived": "Archivé"
     },
     "kpi": {
@@ -3521,7 +3521,7 @@
       "name": "Nom",
       "type": "Type",
       "action": "Action",
-      "scope": "Scope",
+      "scope": "Portée",
       "version": "Version",
       "changedBy": "Last changed by",
       "approvedBy": "Approved by",
@@ -3541,7 +3541,7 @@
     },
     "pStatus": {
       "active": "Active",
-      "draft": "Draft",
+      "draft": "Brouillon",
       "archived": "Archivé"
     },
     "hCol": {
@@ -3561,15 +3561,15 @@
     },
     "impactCol": {
       "metric": "Métrique",
-      "baseline": "Baseline",
+      "baseline": "Référence",
       "candidate": "Candidate",
       "impact": "Impact"
     },
     "sensitive": {
-      "rollback": "Rollback vers {v}",
+      "rollback": "Retour arrière vers {v}",
       "force_activation": "Forcer activation {v}",
       "disable": "Désactiver politique",
-      "delete_draft": "Supprimer version draft",
+      "delete_draft": "Supprimer version brouillon",
       "reservedOps": "Réservé aux Ops Admin+"
     },
     "links": {
@@ -3950,9 +3950,9 @@
       "url": "URL",
       "version": "Version",
       "auth": "Authentification",
-      "timeout": "Timeout",
-      "retry": "Retry",
-      "rateLimit": "Rate limit",
+      "timeout": "Délai d'expiration",
+      "retry": "Relance",
+      "rateLimit": "Limite de débit",
       "pagination": "Pagination",
       "security": "Application du pare-feu",
       "method": "Méthode d’authentification",
@@ -3971,7 +3971,7 @@
     "env": {
       "prod": "Prod",
       "preprod": "Preprod",
-      "staging": "Staging",
+      "staging": "Préproduction",
       "dev": "Dev"
     },
     "footer": {

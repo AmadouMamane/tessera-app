@@ -181,7 +181,7 @@
       "timeTravel": "time-travel",
       "compareTo": "Vergleichen mit",
       "previousWeek": "Vorwoche",
-      "baseline": "Baseline",
+      "baseline": "Referenz",
       "now": "jetzt",
       "h24": "24 Stunden",
       "d7": "7 Tage",
@@ -195,7 +195,7 @@
       "relitAtBadge": "Zustand zum wiedergegebenen Moment",
       "noEventNear": "Kein Ereignis in der Nähe",
       "dataStart": "Datenbeginn",
-      "vsBaseline": "vs Baseline",
+      "vsBaseline": "vs Referenz",
       "legendScores": "Qualität",
       "legendGood": "gut (≥0,8)",
       "legendFair": "mittel",
@@ -277,7 +277,7 @@
       "release": "Release / Änderungen",
       "blocked": "Blockiert",
       "clear": "OK",
-      "noBaseline": "Keine Baseline zum Vergleich.",
+      "noBaseline": "Keine Referenz zum Vergleich.",
       "gates": {
         "quality": "Qualitäts-Gate",
         "security": "Security Gate",
@@ -414,7 +414,7 @@
       "object": "Objekt",
       "actor": "Akteur",
       "role": "Rolle",
-      "scope": "Scope",
+      "scope": "Geltungsbereich",
       "target": "Werkzeug",
       "outcome": "Verdikt",
       "proof": "Nachweis",
@@ -432,7 +432,7 @@
       "button": "Filter",
       "eventType": "Ereignistyp",
       "role": "Rolle",
-      "scope": "Scope",
+      "scope": "Geltungsbereich",
       "target": "Werkzeug",
       "outcome": "Verdikt",
       "policyRule": "Regel"
@@ -469,7 +469,7 @@
       "eventId": "Event ID",
       "timestamp": "Zeitstempel",
       "actor": "Akteur",
-      "scope": "Scope",
+      "scope": "Geltungsbereich",
       "action": "Aktion",
       "object": "Objekt",
       "policy": "Begründung",
@@ -831,7 +831,7 @@
     "erasure": {
       "title": "Löschfläche (DSGVO Art. 17)",
       "conversations": "Konversationen",
-      "bundles": "Wiedergabe-Bundles",
+      "bundles": "Wiedergabe-Pakete",
       "scores": "Eval-Scores",
       "note": "DELETE /memory löscht auch diese Telemetrie-Artefakte, nicht nur den Memory-Store."
     },
@@ -973,7 +973,7 @@
       "title": "Korpus-Scan (indirekte Injektion)",
       "poisoned": "vergiftet",
       "clean": "Keine Injektion in den abgerufenen Chunks gefunden.",
-      "chunk": "Chunk"
+      "chunk": "Fragment"
     },
     "stego": {
       "run": "Stegano",
@@ -1183,11 +1183,11 @@
     "topology": {
       "title": "Graph-Topologie-Version",
       "status": "Status",
-      "pinned": "Entspricht Golden",
+      "pinned": "Entspricht der Referenz",
       "drifted": "Topologie-Abweichung",
       "nodes": "Knoten",
       "edges": "Kanten",
-      "note": "Der Live-Agentengraph entspricht dem fixierten Golden-Fingerprint."
+      "note": "Der Live-Agentengraph entspricht dem fixierten Referenz-Fingerabdruck."
     },
     "toolLoops": {
       "title": "Tool-Aufruf-Schleifen",
@@ -1238,11 +1238,11 @@
       "empty": "Noch keine Turns erfasst."
     },
     "snapshot": {
-      "title": "Golden-Trace-Snapshot",
+      "title": "Referenz-Trace-Momentaufnahme",
       "drifted": "Abgewichen",
       "matching": "Übereinstimmend",
       "knownNodes": "Bekannte Knoten",
-      "clear": "Jede Trace entsprach der Golden-Knoten-Form.",
+      "clear": "Jede Trace entsprach der Referenz-Knoten-Form.",
       "empty": "Noch keine Turns erfasst."
     },
     "handoffs": {
@@ -1475,7 +1475,7 @@
         "score": "Score",
         "run": "Datensatz / Lauf",
         "model": "Modell",
-        "owner": "Owner",
+        "owner": "Verantwortlicher",
         "status": "Status"
       },
       "sev": {
@@ -1515,7 +1515,7 @@
         "export": "Auswahl exportieren",
         "addDataset": "Zum Datensatz",
         "createCase": "Case erstellen",
-        "assignOwner": "Owner zuweisen"
+        "assignOwner": "Verantwortlicher zuweisen"
       },
       "status": {
         "new": "Neu",
@@ -1541,7 +1541,7 @@
         "category": "Kategorie",
         "model": "Modell",
         "lang": "Sprache",
-        "owner": "Owner",
+        "owner": "Verantwortlicher",
         "status": "Status",
         "prompt": "Prompt",
         "expected": "Erwartete Antwort",
@@ -1656,7 +1656,7 @@
       "secDiag": "B. Kalibrierungs-Diagnose",
       "secSegments": "C. Risiko-Segmente & Abweichung",
       "secActions": "D. Empfohlene Maßnahmen",
-      "vsBaseline": "vs. Baseline",
+      "vsBaseline": "vs. Referenz",
       "clemency": "Milde",
       "casDisagree": "Fälle mit Uneinigkeit",
       "disagreeDist": "Verteilung der Uneinigkeiten",
@@ -2043,7 +2043,7 @@
       "fiche": "Signal-Steckbrief",
       "source": "Quelle",
       "collector": "Collector",
-      "scope": "Scope",
+      "scope": "Geltungsbereich",
       "cases": "Verknüpfte Cases",
       "release": "Release-Qualität",
       "gate_quality": "Qualitäts-Gate",
@@ -2051,7 +2051,7 @@
       "gate_compliance": "Compliance Gate",
       "actions": "Verordnete Aktionen",
       "createCase": "Case erstellen",
-      "assignOwner": "Owner zuweisen",
+      "assignOwner": "Verantwortlicher zuweisen",
       "dualControl": "Dual control · Admin+"
     }
   },
@@ -2600,7 +2600,7 @@
       "trigger": "Auslöser",
       "domain": "Domäne",
       "status": "Status",
-      "owner": "Owner",
+      "owner": "Verantwortlicher",
       "sla": "SLA",
       "playbook": "Empfohlenes Verfahren",
       "role": "Erforderliche Rolle"
@@ -2627,7 +2627,7 @@
       "journal": "Reaktionsprotokoll (Auszug)",
       "automations": "Automatisierungen",
       "quickActions": "Schnellaktionen",
-      "owner": "Owner",
+      "owner": "Verantwortlicher",
       "role": "Erforderliche Rolle",
       "proofs": "Erzeugte Nachweise",
       "elapsed": "Verstrichene Zeit",
@@ -2652,7 +2652,7 @@
       "inactif": "Inaktiv"
     },
     "quick": {
-      "assignOwner": "Owner zuweisen",
+      "assignOwner": "Verantwortlicher zuweisen",
       "launchContainment": "Containment starten",
       "freezeRelease": "Release einfrieren",
       "createJira": "Jira-Ticket erstellen",
@@ -2704,19 +2704,19 @@
       "requests": "Wiedergegebene Anfragen",
       "tokens": "Wiedergegebene Tokens",
       "cost": "Wiedergabe-Kosten",
-      "deviations": "Kritische Abweichungen vs. Baseline",
+      "deviations": "Kritische Abweichungen vs. Referenz",
       "evals": "Wiedergegebene Bewertungen",
       "proofs": "Erzeugte Nachweise",
       "coverage": "Schattenverkehr-Abdeckung"
     },
     "panel": {
       "traffic": "Wiedergebbarer Traffic pro Tag",
-      "devByType": "Abweichungen vs. Baseline nach Typ",
+      "devByType": "Abweichungen vs. Referenz nach Typ",
       "severity": "Schweregrad der Abweichungen",
       "recentSessions": "Aktuelle Sessions",
       "topDeviations": "Abweichungen — Top 10",
       "comparisons": "Aktuelle Vergleiche",
-      "regressions": "Top-Regressionen vs. Baseline",
+      "regressions": "Top-Regressionen vs. Referenz",
       "byService": "Verteilung nach Service",
       "byModel": "Verteilung nach Modell",
       "evalsByCat": "Wiedergegebene Bewertungen nach Kategorie",
@@ -2735,7 +2735,7 @@
       "status": "Status",
       "origin": "Ursprungsdatum",
       "type": "Typ",
-      "baseline": "Baseline",
+      "baseline": "Referenz",
       "severity": "Schweregrad",
       "delta": "Δ Score",
       "comparison": "Vergleich",
@@ -2795,7 +2795,7 @@
     },
     "rail": {
       "realtime": "Echtzeitdaten",
-      "compareBaseline": "Mit Baseline vergleichen",
+      "compareBaseline": "Mit Referenz vergleichen",
       "allServices": "Alle Services",
       "replayNow": "Jetzt wiedergeben",
       "shortcuts": "Zeit-Shortcuts",
@@ -2824,8 +2824,8 @@
     },
     "quick": {
       "replaySession": "Session wiedergeben",
-      "compareBaseline": "Mit Baseline vergleichen",
-      "createBaseline": "Baseline erstellen",
+      "compareBaseline": "Mit Referenz vergleichen",
+      "createBaseline": "Referenz erstellen",
       "exportResults": "Ergebnisse exportieren",
       "scheduleReplay": "Wiedergabe planen",
       "viewLog": "Wiedergabe-Protokoll anzeigen"
@@ -2837,7 +2837,7 @@
     "tabs": {
       "overview": "Übersicht",
       "curate": "Zu kuratieren",
-      "coverage": "Coverage & Gaps",
+      "coverage": "Abdeckung & Gaps",
       "promotions": "Beförderungen",
       "rejections": "Ablehnungen",
       "history": "Verlauf"
@@ -2856,7 +2856,7 @@
     "zone": {
       "actual": "A · Aktueller Stand",
       "diagnostic": "B · Kuratierungs-Diagnose",
-      "gaps": "C · Gaps & Coverage",
+      "gaps": "C · Gaps & Abdeckung",
       "governance": "D · Aktionen & Governance",
       "trends": "E · Wirkung & Trends"
     },
@@ -2865,8 +2865,8 @@
       "promotable": "Beförderbar",
       "manual_review": "Manuell zu prüfen",
       "rejected": "Abgelehnt",
-      "intent_coverage": "Intent-Coverage",
-      "lang_coverage": "Sprach-Coverage",
+      "intent_coverage": "Intent-Abdeckung",
+      "lang_coverage": "Sprach-Abdeckung",
       "duplicates": "Erkannte Duplikate",
       "failures": "Failures / PII geblockt"
     },
@@ -2876,11 +2876,11 @@
       "workflow": "Kuratierungs-Workflow",
       "release": "Aktuelles Release",
       "linkedEvidence": "Verknüpfte Sets / Evidence",
-      "coverage": "Coverage des Eval-Sets",
+      "coverage": "Abdeckung des Eval-Sets",
       "distribution": "Kandidaten-Verteilung",
       "qualitySignals": "Qualitätssignale der Kandidaten",
       "linkedDatasets": "Verknüpfte Datasets",
-      "owners": "Owner & erforderliche Rollen",
+      "owners": "Verantwortlicher & erforderliche Rollen",
       "quickActions": "Schnellaktionen",
       "recentActivity": "Letzte Aktivitäten",
       "backlogTrend": "Rückstand-Entwicklung (7 T)",
@@ -2893,7 +2893,7 @@
       "category": "Kategorie",
       "score": "Wert-Score",
       "risk": "Risiko",
-      "owner": "Owner"
+      "owner": "Verantwortlicher"
     },
     "whyCol": {
       "reason": "Hauptgrund",
@@ -2955,7 +2955,7 @@
       "labels": "Ausreichend Labels",
       "pii_sensitivity": "PII-Sensibilität",
       "cross_tenant": "Cross-Tenant-Leck",
-      "release_coverage": "Release-Coverage"
+      "release_coverage": "Release-Abdeckung"
     },
     "level": {
       "bon": "Gut",
@@ -3137,7 +3137,7 @@
     "env": {
       "prod": "Prod",
       "preprod": "Preprod",
-      "staging": "Staging",
+      "staging": "Vorproduktion",
       "dev": "Dev"
     },
     "jCol": {
@@ -3181,13 +3181,13 @@
       "modified": "Letzte Änderung",
       "author": "Autor",
       "branch": "Git-Branch",
-      "scope": "Standard-Scope",
+      "scope": "Standard-Geltungsbereich",
       "history": "Versionsverlauf anzeigen"
     },
     "gov": {
       "dualControl": "Dual-Control aktiv",
       "rolesByMode": "Rollen je Modus",
-      "defaultScope": "Standard-Scope",
+      "defaultScope": "Standard-Geltungsbereich",
       "chain": "Audit-Kette intakt"
     },
     "quick": {
@@ -3463,10 +3463,10 @@
     "title": "Policies & Leitplanken",
     "subtitle": "Policy-Governance, Runtime-Leitplanken, Freigabe-Workflow und Versionsverlauf.",
     "actions": {
-      "createDraft": "Draft-Version erstellen",
+      "createDraft": "Entwurf-Version erstellen",
       "compareVersions": "Versionen vergleichen",
       "diffYaml": "YAML-Diff",
-      "rollback": "Rollback",
+      "rollback": "Rückabwicklung",
       "requestApproval": "Freigabe anfordern"
     },
     "tabs": {
@@ -3485,11 +3485,11 @@
       "commit": "Commit",
       "author": "Autor",
       "approver": "Freigegeben von",
-      "scope": "Scope",
+      "scope": "Geltungsbereich",
       "compareLabel": "Vergleich {active} (aktiv) → {compare}"
     },
     "vStatus": {
-      "draft": "Draft",
+      "draft": "Entwurf",
       "approved": "Freigegeben",
       "active": "Aktiv",
       "canary": "Canary",
@@ -3521,7 +3521,7 @@
       "name": "Name",
       "type": "Typ",
       "action": "Aktion",
-      "scope": "Scope",
+      "scope": "Geltungsbereich",
       "version": "Version",
       "changedBy": "Zuletzt geändert von",
       "approvedBy": "Freigegeben von",
@@ -3541,7 +3541,7 @@
     },
     "pStatus": {
       "active": "Aktiv",
-      "draft": "Draft",
+      "draft": "Entwurf",
       "archived": "Archiviert"
     },
     "hCol": {
@@ -3561,15 +3561,15 @@
     },
     "impactCol": {
       "metric": "Metrik",
-      "baseline": "Baseline",
+      "baseline": "Referenz",
       "candidate": "Candidate",
       "impact": "Impact"
     },
     "sensitive": {
-      "rollback": "Rollback auf {v}",
+      "rollback": "Rückabwicklung auf {v}",
       "force_activation": "Aktivierung {v} erzwingen",
       "disable": "Policy deaktivieren",
-      "delete_draft": "Draft-Version löschen",
+      "delete_draft": "Entwurf-Version löschen",
       "reservedOps": "Nur für Ops Admin+"
     },
     "links": {
@@ -3884,7 +3884,7 @@
       "status": "Status",
       "type": "Typ",
       "environment": "Umgebung",
-      "owner": "Owner",
+      "owner": "Verantwortlicher",
       "showDisabled": "deaktivierte anzeigen",
       "button": "Filter",
       "all": "Alle"
@@ -3902,7 +3902,7 @@
       "type": "Typ",
       "status": "Status",
       "environment": "Umgebung",
-      "owner": "Owner",
+      "owner": "Verantwortlicher",
       "calls": "Aufrufe (24h)",
       "successRate": "Erfolgsrate",
       "responseTime": "Antwortzeit",
@@ -3937,7 +3937,7 @@
       "responseTime": "Antwortzeit",
       "successRate": "Erlaubt-Quote",
       "general": "Allgemeine Infos",
-      "owner": "Owner",
+      "owner": "Verantwortlicher",
       "environment": "Umgebung",
       "region": "Region",
       "criticality": "Kritikalität",
@@ -3950,9 +3950,9 @@
       "url": "URL",
       "version": "Version",
       "auth": "Authentifizierung",
-      "timeout": "Timeout",
-      "retry": "Retry",
-      "rateLimit": "Rate Limit",
+      "timeout": "Zeitüberschreitung",
+      "retry": "Wiederholung",
+      "rateLimit": "Ratenbegrenzung",
       "pagination": "Pagination",
       "security": "Firewall-Durchsetzung",
       "method": "Authentifizierungsmethode",
@@ -3971,7 +3971,7 @@
     "env": {
       "prod": "Prod",
       "preprod": "Preprod",
-      "staging": "Staging",
+      "staging": "Vorproduktion",
       "dev": "Dev"
     },
     "footer": {
