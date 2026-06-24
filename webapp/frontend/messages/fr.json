@@ -4884,7 +4884,7 @@
     "refPlaceholder": "ID de réponse, session, trace, incident...",
     "contextSource": "Source du contexte",
     "reconstruct": "Reconstituer",
-    "saveSnapshot": "Enregistrer ce instantané",
+    "saveSnapshot": "Enregistrer cet instantané",
     "downloadReport": "Télécharger le rapport",
     "loading": "Reconstruction en cours…",
     "unavailable": "Reconstruction indisponible.",
