@@ -2501,7 +2501,7 @@
       "gain": "Gain attendu",
       "effort": "Effort",
       "risk": "Risque",
-      "owner": "Owner",
+      "owner": "Responsable",
       "status": "Statut"
     },
     "level": {
@@ -3271,7 +3271,7 @@
     },
     "packCol": {
       "id": "Pack ID",
-      "scope": "Scope",
+      "scope": "Portée",
       "artifacts": "Artefacts",
       "signature": "Signature",
       "destinations": "Destinations",
@@ -3316,7 +3316,7 @@
       "caseId": "Case ID",
       "subject": "Sujet",
       "linked": "Preuves liées",
-      "owner": "Owner",
+      "owner": "Responsable",
       "status": "Statut"
     },
     "ccStatus": {
@@ -4884,7 +4884,7 @@
     "refPlaceholder": "ID de réponse, session, trace, incident...",
     "contextSource": "Source du contexte",
     "reconstruct": "Reconstituer",
-    "saveSnapshot": "Enregistrer ce snapshot",
+    "saveSnapshot": "Enregistrer ce instantané",
     "downloadReport": "Télécharger le rapport",
     "loading": "Reconstruction en cours…",
     "unavailable": "Reconstruction indisponible.",
@@ -4896,8 +4896,8 @@
     "updated": "Dernière maj",
     "status": "Statut",
     "saving": "Enregistrement…",
-    "saved": "Snapshot enregistré",
-    "noSnapshots": "Aucun snapshot enregistré.",
+    "saved": "Instantané enregistré",
+    "noSnapshots": "Aucun instantané enregistré.",
     "savedAt": "enregistré le",
     "reload": "Recharger",
     "searchPlaceholder": "Rechercher une source...",
