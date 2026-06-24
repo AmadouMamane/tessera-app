@@ -431,16 +431,23 @@ function PlaneHeader({
 // deep-links here created asymmetry and role-dependent dead ends (ADR 0013).
 // Each contained surface as its own STATIC label chip (no "·" string that reads
 // as one entity). Labels, not buttons — no hover, no click; the card's CTA stays
-// the only action. Identical style on both plane cards.
-function ContainsLine({ items }: { items: string[] }) {
+// the only action. When an item carries a `gated` flag, a static padlock
+// (open / closed) discloses its access PER chip — for a mixed-access plane where
+// a single pill would be false. Identical chip style on both plane cards.
+function ContainsLine({ items }: { items: { label: string; gated?: boolean }[] }) {
   return (
     <div className="mt-[18px] flex flex-wrap gap-[8px] border-t border-[var(--border-subtle)] pt-[14px]">
       {items.map((item) => (
         <span
-          key={item}
-          className="inline-flex items-center rounded-[8px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] px-[10px] py-[5px] text-[12px] font-medium leading-none text-[var(--text-secondary)]"
+          key={item.label}
+          className="inline-flex items-center gap-[6px] rounded-[8px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] px-[10px] py-[5px] text-[12px] font-medium leading-none text-[var(--text-secondary)]"
         >
-          {item}
+          {item.gated === undefined ? null : item.gated ? (
+            <Lock className="h-[12px] w-[12px] shrink-0 opacity-80" aria-hidden="true" />
+          ) : (
+            <LockOpen className="h-[12px] w-[12px] shrink-0 opacity-80" aria-hidden="true" />
+          )}
+          {item.label}
         </span>
       ))}
     </div>
@@ -468,10 +475,15 @@ function BusinessPlaneCard({ t }: { t: T }) {
           badge={t("business.badge")}
           title={t("business.title")}
           desc={t("business.desc")}
-          authNote={t("business.access")}
-          gated={false}
         />
-        <ContainsLine items={[t("client.title"), t("recouvrement.title")]} />
+        {/* Mixed-access plane → no single pill; the padlock is PER chip
+            (Espace client open, Console recouvrement gated/collections). */}
+        <ContainsLine
+          items={[
+            { label: t("client.title"), gated: false },
+            { label: t("recouvrement.title"), gated: true },
+          ]}
+        />
         <Link
           href="/espaces"
           className={cn(
@@ -516,10 +528,10 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
         />
         <ContainsLine
           items={[
-            t("operator.items.supervision.title"),
-            t("operator.items.management.title"),
-            t("operator.items.configuration.title"),
-            t("operator.items.platform.title"),
+            { label: t("operator.items.supervision.title") },
+            { label: t("operator.items.management.title") },
+            { label: t("operator.items.configuration.title") },
+            { label: t("operator.items.platform.title") },
           ]}
         />
         {demoOperator ? (
