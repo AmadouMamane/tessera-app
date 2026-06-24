@@ -42,6 +42,9 @@ interface ChatState {
   setStreaming: (streaming: boolean) => void;
   truncateFromMessage: (messageId: string) => void;
   removeLastExchange: () => void;
+  // Restore a saved conversation (client-side history) into the live store so the
+  // next turn continues that backend thread (the transcript is durable server-side).
+  hydrate: (conversationId: string | null, messages: ChatMessage[]) => void;
   reset: () => void;
 }
 
@@ -132,6 +135,9 @@ export const useChatStore = create<ChatState>()(
           if (lastUserIdx !== -1) msgs.splice(lastUserIdx, 1);
           return { messages: msgs };
         }),
+
+      hydrate: (conversationId, messages) =>
+        set({ conversationId, turnId: null, messages, isStreaming: false, lastError: null }),
 
       reset: () =>
         set({

@@ -4548,6 +4548,10 @@
     "body": "Diese Seite ist im Aufbau. Navigation, Routing und Zustände stehen; der Inhalt wird in Kürze angebunden."
   },
   "recouvrement": {
+    "newChat": "Neuer Chat",
+    "historyTitle": "Konversationen",
+    "historyEmpty": "Keine Konversation in diesem Browser gespeichert. Die Verläufe bleiben lokal in dieser Demo.",
+    "deleteChat": "Konversation löschen",
     "title": "Inkasso-Konsole",
     "subtitle": "Interne Fachkonsole — Inkasso-Agent",
     "badge": "Fachebene · intern",
