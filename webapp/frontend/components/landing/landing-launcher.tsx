@@ -162,7 +162,7 @@ export function LandingLauncher({
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header />
-        <main className="flex flex-1 flex-col items-center justify-start px-6 pt-12 pb-36">
+        <main className="flex flex-1 flex-col items-center justify-start px-6 pt-[110px] pb-36">
           <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
                 front door. Make the "démonstration" framing explicit and visible. */}
