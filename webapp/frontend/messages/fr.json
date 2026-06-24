@@ -4571,7 +4571,7 @@
       "live": "Live",
       "unavailable": "Signal indisponible",
       "controlActive": "Contrôle actif",
-      "releasableRollup": "{passed, plural, =0 {# agent} one {# agent} other {# agents}} sur {total} {passed, plural, =0 {prêt} one {prêt} other {prêts}} pour la production",
+      "releasableRollup": "{passed} sur {total} validé pour la mise en production",
       "gateContext": "Le socle de sécurité tient la ligne : aucun agent n’est libéré tant qu’il échoue à un cas de sécurité critique. C’est sa fonction.",
       "agentReleasable": "Au vert",
       "agentBlocked": "Bloqué",
@@ -4595,14 +4595,14 @@
       "role": "Admin plateforme"
     },
     "business": {
-      "badge": "Métier",
+      "badge": "Plan métier",
       "title": "Espaces métier",
       "desc": "Les applications qui font le travail.",
       "reveal": "Ouvrir les espaces",
       "collapse": "Réduire"
     },
     "control": {
-      "badge": "Contrôle",
+      "badge": "Plan de contrôle",
       "title": "Cockpit",
       "desc": "Le poste de pilotage de toute votre flotte d’agents.",
       "cta": "Ouvrir le cockpit",
@@ -4635,8 +4635,7 @@
           "title": "Paramètres",
           "desc": "Gérez votre profil et vos préférences"
         }
-      },
-      "rowDesc": "Assistance, opérations et ouverture de compte."
+      }
     },
     "recouvrement": {
       "badge": "Métier",
@@ -4658,8 +4657,7 @@
           "title": "Échanges journalisés",
           "desc": "Tout est tracé dans le journal d’audit"
         }
-      },
-      "rowDesc": "Relances, impayés et échéanciers."
+      }
     },
     "operator": {
       "badge": "Cockpit",
@@ -4683,10 +4681,6 @@
         "platform": {
           "title": "Plateforme",
           "desc": "Administrez les utilisateurs et les intégrations"
-        },
-        "proof": {
-          "title": "Preuve",
-          "desc": "Preuves, audit et reconstitution à une date"
         }
       }
     },
