@@ -1257,7 +1257,7 @@
   },
   "quality": {
     "title": "Qualité IA",
-    "subtitle": "Évaluations, régressions, hallucinations, grounding et amélioration des réponses.",
+    "subtitle": "Évaluations, régressions, hallucinations, ancrage et amélioration des réponses.",
     "sections": {
       "quality": "Fidélité & évaluation",
       "security": "Sécurité & garde",
@@ -1265,7 +1265,7 @@
       "reliability": "Fiabilité, outils & coût",
       "sessions": "Sessions & parcours",
       "memory": "Mémoire & RGPD",
-      "act": "Agir — replay, shadow, curation",
+      "act": "Agir — rejeu, trafic fantôme, curation",
       "platform": "Plateforme & corpus"
     },
     "tabs": {
@@ -1277,7 +1277,7 @@
       "judge": "Calibration juge"
     },
     "cta": {
-      "evidence": "Générer evidence pack qualité",
+      "evidence": "Générer dossier de preuves qualité",
       "runEval": "Lancer évaluation",
       "compareModels": "Comparer modèles",
       "openDataset": "Ouvrir dataset"
@@ -1292,8 +1292,8 @@
       "title": "Actions recommandées",
       "curate": "Ajouter cas échoués au regression-set",
       "freeze": "Geler les releases",
-      "playbook": "Ouvrir playbook hallucination",
-      "shadow": "Rejouer un shadow",
+      "playbook": "Ouvrir procédure hallucination",
+      "shadow": "Rejouer un trafic fantôme",
       "ticket": "Créer ticket conformité",
       "caption": "Actions sensibles en dual control (Admin + Operator)",
       "corpus": "Vérifier corpus & RAG",
@@ -1323,7 +1323,7 @@
       "linkRuns": "Voir tous les runs",
       "linkTraces": "Explorer les traces",
       "linkDataset": "Ouvrir le dataset actif",
-      "linkEvidence": "Générer evidence pack qualité",
+      "linkEvidence": "Générer dossier de preuves qualité",
       "blocked": "bloquée",
       "impact": "Impact",
       "openedAt": "Ouverte le",
@@ -1421,7 +1421,7 @@
         "na": "Indisponibles"
       },
       "action": {
-        "playbook": "Ouvrir playbook hallucination",
+        "playbook": "Ouvrir procédure hallucination",
         "recalibrate": "Recalibrer le juge",
         "corpus": "Vérifier corpus & RAG",
         "review": "Examiner le signal",
@@ -1449,7 +1449,7 @@
       "costAxis": "Coût/run",
       "qualityAxis": "Qualité",
       "runsBars": "Pass-rate des derniers runs",
-      "faithGrounding": "Faithfulness vs Grounding (7 j)",
+      "faithGrounding": "Fidélité vs Ancrage (7 j)",
       "good": "Bon",
       "mid": "Moyen",
       "low": "Faible",
@@ -1553,7 +1553,7 @@
         "addDataset": "Ajouter au dataset",
         "controlCase": "Créer / lier Control Case",
         "exportReport": "Exporter rapport",
-        "genEvidence": "Générer evidence pack qualité",
+        "genEvidence": "Générer dossier de preuves qualité",
         "release": "Release",
         "safety": "Rôle requis · niveau de sûreté élevé"
       }
@@ -1621,7 +1621,7 @@
       "report": "Générer rapport calibration",
       "export": "Exporter données calibration",
       "deltaCol": "Δ score",
-      "drift": "Drift du juge",
+      "drift": "Dérive du juge",
       "consensus": "Consensus multi-juge",
       "consensusJudges": "{n} juges",
       "fleiss": "Fleiss κ",
@@ -1647,7 +1647,7 @@
       "noData": "Aucune donnée",
       "riskSummary": "Résumé du risque de calibration",
       "riskKappa": "Désaccord juge↔humain",
-      "riskDrift": "Drift du juge",
+      "riskDrift": "Dérive du juge",
       "riskConsensus": "Désaccord multi-juges",
       "riskLow": "faible",
       "riskMod": "modéré",
@@ -1672,7 +1672,7 @@
       "qualityGates": "Gates qualité",
       "gateCalibration": "Calibration (κ)",
       "gateAgreement": "Accord humain",
-      "gateDrift": "Drift juge",
+      "gateDrift": "Dérive juge",
       "pass": "Pass",
       "watch": "À surveiller",
       "attnOverconfidence": "Sur-confiance au-dessus de 0,7",
@@ -1681,11 +1681,11 @@
       "topDisagree": "Top catégories en désaccord",
       "sensitiveActions": "Actions sensibles",
       "changeThresholds": "Changer les seuils du juge",
-      "evidencePack": "Générer evidence pack qualité",
+      "evidencePack": "Générer dossier de preuves qualité",
       "evidencePackHint": "Preuves complètes à insérer pour audit",
       "cat": {
-        "faithfulness": "Faithfulness",
-        "grounding": "Grounding",
+        "faithfulness": "Fidélité",
+        "grounding": "Ancrage",
         "pii": "PII / sécurité",
         "citations": "Citations / refs",
         "style": "Style / ton"
@@ -1706,7 +1706,7 @@
         "curateTitle": "Ajouter {n} désaccords au gold set",
         "curateDesc": "Augmente la couverture des cas limites.",
         "curateCta": "Ouvrir curation",
-        "shadowTitle": "Comparer avec shadow-judge",
+        "shadowTitle": "Comparer avec juge fantôme",
         "shadowDesc": "Vérifier stabilité et robustesse inter-juges.",
         "shadowCta": "Lancer la comparaison",
         "freezeTitle": "Geler la promotion du juge",
@@ -1715,7 +1715,7 @@
         "complianceTitle": "Ouvrir revue conformité",
         "complianceDesc": "Revoir impact policy & sécurité.",
         "complianceCta": "Ouvrir revue",
-        "evidenceTitle": "Générer evidence pack qualité",
+        "evidenceTitle": "Générer dossier de preuves qualité",
         "evidenceDesc": "Preuves complètes à insérer pour audit.",
         "evidenceCta": "Préparer le pack"
       }
@@ -1745,7 +1745,7 @@
         "catalogue": "Catalogue actif",
         "cases": "Cas évalués (7 j)",
         "casesSub": "catalogue {n} cas",
-        "drift": "Drift dataset",
+        "drift": "Dérive dataset",
         "driftNa": "n/d",
         "cost7d": "Coût d'éval. (7 j)",
         "costSub": "{n} runs facturés",
@@ -1807,7 +1807,7 @@
         "costQuality": "Coût vs qualité",
         "perfByModel": "Performance par modèle",
         "noData": "Aucune donnée",
-        "drift": "Drift par dataset (moy.)",
+        "drift": "Dérive par dataset (moy.)",
         "bandGood": "Bien ≥ 0,8",
         "bandMid": "Moyen 0,5–0,8",
         "bandLow": "Faible < 0,5",
@@ -1849,7 +1849,7 @@
         "cases": "Cas",
         "updated": "Dernière maj",
         "version": "Version",
-        "drift": "Drift",
+        "drift": "Dérive",
         "coverage": "Couverture",
         "owner": "Propriétaire",
         "status": "Statut",
@@ -1895,8 +1895,8 @@
         "latency": "Latence",
         "verdict": "Verdict",
         "score": "Score",
-        "faith": "Faithfulness",
-        "grounding": "Grounding",
+        "faith": "Fidélité",
+        "grounding": "Ancrage",
         "nonReg": "Non-régression",
         "hallu": "Hallu. critiques",
         "kappa": "Accord juge (κ)",
@@ -1912,8 +1912,8 @@
         "referent": "Modèle référent",
         "referentBadge": "Référent",
         "score": "Score qualité global",
-        "faithfulness": "Faithfulness",
-        "grounding": "Grounding / ancrage",
+        "faithfulness": "Fidélité",
+        "grounding": "Ancrage",
         "hallucination": "Hallucinations critiques",
         "kappa": "Accord juge (κ)",
         "kappaGlobal": "global (calibration)",
@@ -1929,26 +1929,26 @@
       },
       "charts": {
         "scoreByModel": "Score qualité par modèle",
-        "faithGrounding": "Faithfulness vs Grounding",
+        "faithGrounding": "Fidélité vs Ancrage",
         "costQuality": "Coût vs qualité",
         "nonReg": "Non-régression par modèle",
         "radar": "Radar qualité",
         "heatmap": "Pass-rate par catégorie",
         "recentRuns": "Pass-rate des derniers runs",
         "regressions": "Régressions par modèle",
-        "drift": "Drift & stabilité"
+        "drift": "Dérive & stabilité"
       },
       "noData": "Aucune donnée",
       "radar": {
         "score": "Score",
-        "faith": "Faithfulness",
-        "grounding": "Grounding",
+        "faith": "Fidélité",
+        "grounding": "Ancrage",
         "nonReg": "Non-régression",
         "antiHallu": "Anti-hallucination"
       },
       "drift": {
-        "faith": "Drift faithfulness",
-        "ground": "Drift grounding",
+        "faith": "Dérive fidélité",
+        "ground": "Dérive ancrage",
         "consistency": "Désaccord self-consistency",
         "stable": "stable",
         "low": "faible",
@@ -1979,8 +1979,8 @@
       }
     },
     "metrics": {
-      "faithfulness": "Faithfulness",
-      "grounding": "Grounding / ancrage",
+      "faithfulness": "Fidélité",
+      "grounding": "Ancrage",
       "hallucination": "Hallucinations critiques"
     },
     "release": {
