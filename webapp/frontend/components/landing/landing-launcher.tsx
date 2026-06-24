@@ -429,11 +429,21 @@ function PlaneHeader({
 // header + single primary CTA; the nav into each plane lives on the other side
 // of that door (the /espaces directory, the cockpit's own sidebar). Listing
 // deep-links here created asymmetry and role-dependent dead ends (ADR 0013).
+// Each contained surface as its own STATIC label chip (no "·" string that reads
+// as one entity). Labels, not buttons — no hover, no click; the card's CTA stays
+// the only action. Identical style on both plane cards.
 function ContainsLine({ items }: { items: string[] }) {
   return (
-    <p className="mt-[18px] border-t border-[var(--border-subtle)] pt-[14px] text-[12.5px] leading-[1.5] text-[var(--text-secondary)]">
-      {items.join("  ·  ")}
-    </p>
+    <div className="mt-[18px] flex flex-wrap gap-[8px] border-t border-[var(--border-subtle)] pt-[14px]">
+      {items.map((item) => (
+        <span
+          key={item}
+          className="inline-flex items-center rounded-[8px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] px-[10px] py-[5px] text-[12px] font-medium leading-none text-[var(--text-secondary)]"
+        >
+          {item}
+        </span>
+      ))}
+    </div>
   );
 }
 
