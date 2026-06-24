@@ -476,13 +476,14 @@ function BusinessPlaneCard({ t }: { t: T }) {
             { label: t("recouvrement.title"), gated: true },
           ]}
         />
-        {/* Secondary CTA (outline) — the métier card is secondary to the cockpit. */}
         <Link
           href="/espaces"
           className={cn(
-            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border border-[var(--border-subtle)] text-[14px] font-medium leading-none tracking-[0.01em] text-[var(--text-secondary)] transition-colors hover:border-[var(--border-gold)] hover:text-[var(--text-primary)]",
+            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+            a.button,
             FOCUS,
           )}
+          style={a.buttonStyle}
         >
           {t("business.reveal")}
           <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
