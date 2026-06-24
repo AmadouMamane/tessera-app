@@ -422,7 +422,13 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
       return true;
     })
     .filter((s) => !q || s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q))
-    .sort((x, y) => (sort === "az" ? x.name.localeCompare(y.name) : y.name.localeCompare(x.name)));
+    // External surfaces first (the customer-facing space leads — Espace client),
+    // then internal; the A→Z / Z→A sort is the secondary key within each audience.
+    .sort((x, y) => {
+      const rank = (s: FlatSurface) => (s.audience === "external" ? 0 : 1);
+      if (rank(x) !== rank(y)) return rank(x) - rank(y);
+      return sort === "az" ? x.name.localeCompare(y.name) : y.name.localeCompare(x.name);
+    });
 
   const FILTERS: Array<{ key: Filter; label: string; count: number }> = [
     { key: "all", label: t("filterAll"), count: counts.all },
