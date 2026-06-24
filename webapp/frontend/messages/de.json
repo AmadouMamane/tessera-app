@@ -4594,7 +4594,7 @@
       "agentEvaluatedOn": "Geprüft am {date}"
     },
     "demoLogin": {
-      "note": "Demo-Sitzung · Testkonto",
+      "note": "Demokonto",
       "operator": "Demo starten (Operator)",
       "collections": "Demo starten (Inkasso)"
     },
@@ -4606,6 +4606,7 @@
     },
     "business": {
       "badge": "Produkte",
+      "access": "Freier Zugang",
       "title": "Fachbereiche",
       "desc": "Die Anwendungen, die die Arbeit erledigen.",
       "reveal": "Bereiche öffnen",

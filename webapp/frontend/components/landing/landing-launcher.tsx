@@ -1,6 +1,15 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, Boxes, Lock, LogIn, ShieldCheck, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Boxes,
+  Lock,
+  LockOpen,
+  LogIn,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
@@ -369,6 +378,7 @@ function PlaneHeader({
   title,
   desc,
   authNote,
+  gated = true,
 }: {
   a: AccentStyle;
   icon: ReactNode;
@@ -376,6 +386,9 @@ function PlaneHeader({
   title: string;
   desc: string;
   authNote?: string;
+  /** Whether the plane is access-gated — drives the chip's padlock (closed vs
+   * open). The chip is the SAME component both sides; only icon + text change. */
+  gated?: boolean;
 }) {
   return (
     <div className="max-w-[440px]">
@@ -399,7 +412,11 @@ function PlaneHeader({
             a.soft,
           )}
         >
-          <Lock className="h-[12px] w-[12px]" />
+          {gated ? (
+            <Lock className="h-[12px] w-[12px]" />
+          ) : (
+            <LockOpen className="h-[12px] w-[12px]" />
+          )}
           {authNote}
         </span>
       ) : null}
@@ -441,6 +458,8 @@ function BusinessPlaneCard({ t }: { t: T }) {
           badge={t("business.badge")}
           title={t("business.title")}
           desc={t("business.desc")}
+          authNote={t("business.access")}
+          gated={false}
         />
         <ContainsLine items={[t("client.title"), t("recouvrement.title")]} />
         <Link

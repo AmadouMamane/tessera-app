@@ -4594,7 +4594,7 @@
       "agentEvaluatedOn": "Évalué le {date}"
     },
     "demoLogin": {
-      "note": "Session de démonstration · compte de test",
+      "note": "Compte de démonstration",
       "operator": "Entrer en démo (opérateur)",
       "collections": "Entrer en démo (recouvrement)"
     },
@@ -4606,6 +4606,7 @@
     },
     "business": {
       "badge": "Produits",
+      "access": "Accès libre",
       "title": "Espaces métier",
       "desc": "Les applications qui font le travail.",
       "reveal": "Ouvrir les espaces",

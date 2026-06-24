@@ -4594,7 +4594,7 @@
       "agentEvaluatedOn": "Evaluated on {date}"
     },
     "demoLogin": {
-      "note": "Demonstration session · test account",
+      "note": "Demo account",
       "operator": "Enter demo (operator)",
       "collections": "Enter demo (collections)"
     },
@@ -4606,6 +4606,7 @@
     },
     "business": {
       "badge": "Products",
+      "access": "Open access",
       "title": "Business spaces",
       "desc": "The applications that do the work.",
       "reveal": "Open the spaces",
