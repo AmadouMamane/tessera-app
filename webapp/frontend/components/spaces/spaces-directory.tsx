@@ -37,6 +37,11 @@ export interface SurfaceView {
   healthTone: "good" | "warn" | "crit" | "unknown";
   healthLabel: string;
   demo: SurfaceDemo | null;
+  // False when the CURRENT authenticated role cannot enter this surface (e.g. a
+  // `collections` session and the customer product). The card is then shown inert
+  // instead of a link that would bounce to the role's own landing (ADR 0013). For
+  // an anonymous session this is always true — the auth/demo affordance handles it.
+  accessible: boolean;
 }
 
 export interface SurfaceGroup {
@@ -166,17 +171,21 @@ function SurfaceCard({
   };
 
   const actionAria = `${surface.name} — ${actionLabel}`;
+  const locked = !surface.accessible;
   return (
     <div
+      aria-disabled={locked || undefined}
       className={cn(
-        "group/card relative flex min-h-[188px] flex-col items-center justify-center gap-[14px] overflow-hidden rounded-[20px] border px-[18px] py-[22px] text-center transition-[border-color,transform] hover:-translate-y-[2px]",
+        "group/card relative flex min-h-[188px] flex-col items-center justify-center gap-[14px] overflow-hidden rounded-[20px] border px-[18px] py-[22px] text-center transition-[border-color,transform]",
         a.border,
+        locked ? "cursor-not-allowed opacity-55" : "hover:-translate-y-[2px]",
         pending && "opacity-70",
       )}
       style={{ background: CARD_BG }}
     >
-      {/* Stretched action covers the whole card (no nested interactives). */}
-      {demo ? (
+      {/* Stretched action covers the whole card (no nested interactives). Inert
+          when the current role can't enter — no link that would bounce away. */}
+      {locked ? null : demo ? (
         <button
           type="button"
           onClick={enter}
@@ -238,9 +247,16 @@ function SurfaceCard({
           </span>
         </span>
       </span>
-      <span className="pointer-events-none absolute inset-x-0 bottom-[12px] text-[11px] font-medium text-[var(--text-secondary)] opacity-0 transition-opacity group-hover/card:opacity-100">
-        {actionLabel} →
-      </span>
+      {locked ? (
+        <span className="pointer-events-none absolute inset-x-0 bottom-[12px] flex items-center justify-center gap-[5px] text-[11px] font-medium text-[var(--text-secondary)]">
+          <Lock className="h-[11px] w-[11px]" aria-hidden="true" />
+          {t("roleLocked")}
+        </span>
+      ) : (
+        <span className="pointer-events-none absolute inset-x-0 bottom-[12px] text-[11px] font-medium text-[var(--text-secondary)] opacity-0 transition-opacity group-hover/card:opacity-100">
+          {actionLabel} →
+        </span>
+      )}
     </div>
   );
 }
@@ -277,15 +293,18 @@ function SurfaceRow({
 
   const actionLabel = demo ? demo.label : t("open");
   const actionAria = `${surface.name} — ${actionLabel}`;
+  const locked = !surface.accessible;
   return (
     <div
+      aria-disabled={locked || undefined}
       className={cn(
         "group/row relative flex w-full items-center gap-[16px] rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[14px] text-left transition-[border-color]",
         a.border,
+        locked && "cursor-not-allowed opacity-55",
         pending && "opacity-70",
       )}
     >
-      {demo ? (
+      {locked ? null : demo ? (
         <button
           type="button"
           onClick={enter}
@@ -354,10 +373,17 @@ function SurfaceRow({
           label={t(favorite ? "unfavorite" : "favorite")}
         />
       </span>
-      <span className="pointer-events-none flex shrink-0 items-center gap-[6px] text-[12px] font-semibold text-[var(--text-primary)]">
-        {actionLabel}
-        <ChevronRight className="h-[15px] w-[15px] text-[var(--text-secondary)] transition-transform group-hover/row:translate-x-[2px] group-hover/row:text-[var(--text-primary)]" />
-      </span>
+      {locked ? (
+        <span className="pointer-events-none flex shrink-0 items-center gap-[6px] text-[12px] font-medium text-[var(--text-secondary)]">
+          <Lock className="h-[12px] w-[12px]" aria-hidden="true" />
+          {t("roleLocked")}
+        </span>
+      ) : (
+        <span className="pointer-events-none flex shrink-0 items-center gap-[6px] text-[12px] font-semibold text-[var(--text-primary)]">
+          {actionLabel}
+          <ChevronRight className="h-[15px] w-[15px] text-[var(--text-secondary)] transition-transform group-hover/row:translate-x-[2px] group-hover/row:text-[var(--text-primary)]" />
+        </span>
+      )}
     </div>
   );
 }

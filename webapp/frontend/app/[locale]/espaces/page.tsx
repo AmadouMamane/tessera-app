@@ -12,6 +12,7 @@ import {
 } from "@/components/spaces/spaces-directory";
 import { Link } from "@/i18n/navigation";
 import { demoCredentials } from "@/lib/auth/accounts";
+import { currentRole, hasCollectionsAccess, hasProductAccess } from "@/lib/auth/session";
 import { isDemoMode } from "@/lib/server/demo-mode";
 import { loadFleet } from "@/lib/server/fleet";
 
@@ -69,6 +70,18 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
 
   const fleet = await loadFleet();
   const agents = fleet?.agents ?? [];
+  const role = await currentRole();
+
+  // Whether the CURRENT authenticated role may actually enter a surface. An
+  // anonymous session is always "accessible" — its Lock/auth note (and demo
+  // login) already tells the honest story. But an authenticated role the surface
+  // rejects (e.g. `collections` and the customer product) must NOT be shown an
+  // open link that the layout would bounce to its own landing (ADR 0013): the
+  // card is rendered inert with a "réservé à votre rôle" note instead.
+  const accessibleForRole = (s: (typeof SURFACES)[number]): boolean => {
+    if (role === null) return true;
+    return s.key === "client" ? hasProductAccess(role) : hasCollectionsAccess(role);
+  };
 
   // Public-safe health (ADR 0009): the release VERDICT of the surface's backing
   // agent(s) — green only if every one clears its gate; blocked if any is held.
@@ -100,6 +113,7 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
       healthTone: h.tone,
       healthLabel: h.label,
       demo: s.demoRole ? demoCred(s.demoRole) : null,
+      accessible: accessibleForRole(s),
     };
   };
 

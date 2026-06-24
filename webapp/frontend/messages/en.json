@@ -663,7 +663,8 @@
     "roles": {
       "admin": "Administrator",
       "auditor": "Auditor",
-      "superadmin": "Superadmin"
+      "superadmin": "Superadmin",
+      "collections": "Collections"
     },
     "locked": {
       "title": "Operator access required",
@@ -4638,11 +4639,11 @@
     },
     "recouvrement": {
       "badge": "Business",
-      "kind": "Internal · collections",
+      "kind": "Internal",
       "title": "Collections console",
       "desc": "The collections officer’s internal business tool: talk to the recouvrement agent (dunning, arrears, repayment schedules).",
       "cta": "Open the collections assistant",
-      "authNote": "“collections” role sign-in required",
+      "authNote": "Collections role sign-in required",
       "items": {
         "console": {
           "title": "Chat console",
@@ -4710,6 +4711,7 @@
     "groupInternalDesc": "Internal consoles, restricted to business roles.",
     "authRequired": "Sign-in required",
     "open": "Open",
+    "roleLocked": "Locked for your role",
     "demoLogin": "Enter demo (collections)",
     "health": {
       "released": "Green",

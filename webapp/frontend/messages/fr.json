@@ -663,7 +663,8 @@
     "roles": {
       "admin": "Administrateur",
       "auditor": "Auditeur",
-      "superadmin": "Super-admin"
+      "superadmin": "Super-admin",
+      "collections": "Recouvrement"
     },
     "locked": {
       "title": "Accès opérateur requis",
@@ -4585,7 +4586,7 @@
     "demoLogin": {
       "note": "Session démo · compte seedé",
       "operator": "Entrer en démo (opérateur)",
-      "collections": "Entrer en démo (collections)"
+      "collections": "Entrer en démo (recouvrement)"
     },
     "brandTagline": "AI Control Plane",
     "user": {
@@ -4638,11 +4639,11 @@
     },
     "recouvrement": {
       "badge": "Métier",
-      "kind": "Interne · collections",
+      "kind": "Interne",
       "title": "Console recouvrement",
       "desc": "L’outil métier interne du chargé de recouvrement : échangez avec l’agent recouvrement (relances, impayés, échéanciers).",
       "cta": "Accéder à l’assistant de recouvrement",
-      "authNote": "Connexion rôle « collections » requise",
+      "authNote": "Connexion rôle recouvrement requise",
       "items": {
         "console": {
           "title": "Console de chat",
@@ -4710,7 +4711,8 @@
     "groupInternalDesc": "Consoles internes, réservées aux rôles métier.",
     "authRequired": "Connexion requise",
     "open": "Ouvrir",
-    "demoLogin": "Entrer en démo (collections)",
+    "roleLocked": "Réservé à votre rôle",
+    "demoLogin": "Entrer en démo (recouvrement)",
     "health": {
       "released": "Au vert",
       "blocked": "Bloqué",

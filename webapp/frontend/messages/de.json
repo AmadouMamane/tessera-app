@@ -663,7 +663,8 @@
     "roles": {
       "admin": "Administrator",
       "auditor": "Auditor",
-      "superadmin": "Superadmin"
+      "superadmin": "Superadmin",
+      "collections": "Inkasso"
     },
     "locked": {
       "title": "Betreiberzugang erforderlich",
@@ -4585,7 +4586,7 @@
     "demoLogin": {
       "note": "Demo-Sitzung · geseedetes Konto",
       "operator": "Demo starten (Operator)",
-      "collections": "Demo starten (Collections)"
+      "collections": "Demo starten (Inkasso)"
     },
     "brandTagline": "AI Control Plane",
     "user": {
@@ -4638,11 +4639,11 @@
     },
     "recouvrement": {
       "badge": "Fachbereich",
-      "kind": "Intern · collections",
+      "kind": "Intern",
       "title": "Inkasso-Konsole",
       "desc": "Das interne Fachwerkzeug des Inkasso-Sachbearbeiters: Sprechen Sie mit dem Inkasso-Agenten (Mahnungen, Rückstände, Tilgungspläne).",
       "cta": "Zum Inkasso-Assistenten",
-      "authNote": "Anmeldung mit Rolle „collections“ erforderlich",
+      "authNote": "Anmeldung mit Inkasso-Rolle erforderlich",
       "items": {
         "console": {
           "title": "Chat-Konsole",
@@ -4710,7 +4711,8 @@
     "groupInternalDesc": "Interne Konsolen, Geschäftsrollen vorbehalten.",
     "authRequired": "Anmeldung erforderlich",
     "open": "Öffnen",
-    "demoLogin": "Demo öffnen (collections)",
+    "roleLocked": "Für Ihre Rolle gesperrt",
+    "demoLogin": "Demo öffnen (Inkasso)",
     "health": {
       "released": "Grün",
       "blocked": "Blockiert",
