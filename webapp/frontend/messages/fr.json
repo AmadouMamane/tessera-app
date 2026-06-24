@@ -4556,9 +4556,9 @@
     "badge": "Plan métier · interne",
     "roleLabel": "Rôle",
     "panelTitle": "Activité",
-    "panelEmpty": "Aucun back-office créances dans cette démo. Tessera ne dispose d’aucun référentiel de dossiers : aucun dossier, échéancier ou plan de paiement n’est fabriqué. Seuls existent les échanges réels avec l’agent (ci-contre) et leur journal d’audit horodaté.",
-    "contextTitle": "Contexte",
-    "context": "Vous échangez avec l’agent interne « recouvrement » via son vrai cœur de chat. Accès ouvert par une assertion opérateur signée et vérifiée côté serveur ; jamais via le widget client."
+    "activityEmpty": "Aucun échange pour l’instant.",
+    "activityExchange": "Échange",
+    "activityEscalation": "Escalade"
   },
   "landing": {
     "welcome": "Bienvenue sur Tessera",

@@ -4556,9 +4556,9 @@
     "badge": "Business plane · internal",
     "roleLabel": "Role",
     "panelTitle": "Activity",
-    "panelEmpty": "No collections back-office in this demo. Tessera has no case backend: no dossier, schedule or payment plan is fabricated. Only the real exchanges with the agent (left) and their timestamped audit log exist.",
-    "contextTitle": "Context",
-    "context": "You are talking to the internal “recouvrement” agent through its real chat core. Access is opened by a signed, server-verified operator assertion — never via the customer widget."
+    "activityEmpty": "No exchange yet.",
+    "activityExchange": "Exchange",
+    "activityEscalation": "Escalation"
   },
   "landing": {
     "welcome": "Welcome to Tessera",

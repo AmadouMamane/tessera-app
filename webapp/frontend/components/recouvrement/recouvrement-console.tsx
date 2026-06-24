@@ -1,17 +1,32 @@
 "use client";
 
-import { Info, PanelLeftClose, PanelLeftOpen, ShieldAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Activity,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ShieldAlert,
+  TicketCheck,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { ChatRoom } from "@/components/chat/chat-room";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { fetchAudit } from "@/lib/api/client";
+import type { AuditEntry } from "@/lib/api/schemas";
 import type { Role } from "@/lib/auth/accounts";
 import { cn } from "@/lib/cn";
 
 const COLLAPSE_KEY = "tessera.recouvrement.sidebarCollapsed";
+
+/** A recouvrement turn whose tool call opened a human-handoff ticket. */
+function isEscalation(e: AuditEntry): boolean {
+  return e.event_type === "tool" && /escalat|ticket/i.test(e.target);
+}
 
 /**
  * Recouvrement's dedicated business console (ADR 0010 Phase C). A standalone
@@ -24,7 +39,17 @@ const COLLAPSE_KEY = "tessera.recouvrement.sidebarCollapsed";
  */
 export function RecouvrementConsole({ role }: { role: Role | null }) {
   const t = useTranslations("recouvrement");
+  const locale = useLocale();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Real, durable activity of the recouvrement agent — its turns + human
+  // escalations from the hash-chained audit journal. No fabricated dossiers.
+  const activity = useQuery({
+    queryKey: ["recouvrement-activity"],
+    queryFn: ({ signal }) => fetchAudit({ agent: "recouvrement", limit: 8, signal }),
+    refetchInterval: 30_000,
+  });
+  const entries = activity.data?.entries ?? [];
 
   useEffect(() => {
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
@@ -67,18 +92,47 @@ export function RecouvrementConsole({ role }: { role: Role | null }) {
 
           <section className="rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
             <div className="flex items-center gap-2">
-              <Info className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+              <Activity className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
               <h2 className="font-semibold text-xs">{t("panelTitle")}</h2>
             </div>
-            <p className="mt-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text-muted)]">
-              {t("panelEmpty")}
-            </p>
-          </section>
-          <section className="rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)]/60 p-3">
-            <h2 className="font-semibold text-xs">{t("contextTitle")}</h2>
-            <p className="mt-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text-muted)]">
-              {t("context")}
-            </p>
+            {entries.length === 0 ? (
+              <p className="mt-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text-muted)]">
+                {t("activityEmpty")}
+              </p>
+            ) : (
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {entries.map((e) => {
+                  const esc = isEscalation(e);
+                  const Icon = esc ? TicketCheck : MessageSquare;
+                  return (
+                    <li
+                      key={`${e.occurred_at}:${e.target}:${e.hash ?? ""}`}
+                      className="flex items-start gap-2 text-[0.7rem]"
+                    >
+                      <Icon
+                        className={cn(
+                          "mt-0.5 h-3.5 w-3.5 shrink-0",
+                          esc ? "text-amber-500" : "text-[var(--tessera-text-muted)]",
+                        )}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[var(--tessera-text)]">
+                          {esc ? t("activityEscalation") : t("activityExchange")}
+                        </div>
+                        <time className="text-[0.62rem] text-[var(--tessera-text-muted)]">
+                          {new Date(e.occurred_at).toLocaleString(locale, {
+                            day: "2-digit",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </time>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
         </div>
       </aside>
