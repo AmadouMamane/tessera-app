@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
-import type { Fleet } from "@/lib/api/schemas";
 import { AGENT_SCOPE_ALL } from "@/lib/agent-scope";
+import type { Fleet } from "@/lib/api/schemas";
 
 const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
 const fmtPct = (n: number) => `${n.toFixed(1).replace(".", ",")} %`;
@@ -26,8 +26,10 @@ const RELEASE_TONE: Record<string, string> = {
  * is highlighted while the org total stays the deduplicated whole.
  *
  * Only **observable** KPIs that genuinely differ per agent are shown (volume,
- * escalation, latency, handoffs, release verdict). Judged quality stays shared
- * until per-agent eval — see the fleet note.
+ * escalation, latency, handoffs, release verdict) — this is the MONITORING
+ * facet (ADR 0013). The per-agent EVAL detail (pass rate n/N, security X/18, run
+ * date) is NOT repeated here; it lives one facet over, on the Flotte (/agents)
+ * governance cards. Same verdict everywhere — only the support detail differs.
  */
 export async function AgentBreakdown({
   fleet,
@@ -108,7 +110,10 @@ export async function AgentBreakdown({
               <td className="py-2 pr-3 text-right font-semibold tabular-nums text-[#b9a6ff]">
                 {fmtInt(fleet.org?.conversations ?? 0)}
               </td>
-              <td colSpan={4} className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]">
+              <td
+                colSpan={4}
+                className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+              >
                 {t("dedupExplain", {
                   naive: fmtInt(fleet.naive_sum_conversations ?? 0),
                   saved: fmtInt(fleet.dedup_saved ?? 0),
