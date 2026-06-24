@@ -72,11 +72,11 @@ const ACCENT: Record<Audience, { border: string; icon: string; dot: string; icon
       "linear-gradient(150deg, color-mix(in srgb, var(--gold-strong) 26%, transparent), color-mix(in srgb, var(--gold-strong) 6%, transparent))",
   },
   internal: {
-    border: "border-[var(--border-amber)]",
-    icon: "text-[var(--amber-soft)]",
-    dot: "var(--amber-soft)",
+    border: "border-[var(--border-cyan)]",
+    icon: "text-[var(--cyan)]",
+    dot: "var(--cyan)",
     iconBg:
-      "linear-gradient(150deg, color-mix(in srgb, var(--amber-soft) 26%, transparent), color-mix(in srgb, var(--amber-soft) 6%, transparent))",
+      "linear-gradient(150deg, color-mix(in srgb, var(--cyan) 26%, transparent), color-mix(in srgb, var(--cyan) 6%, transparent))",
   },
 };
 
