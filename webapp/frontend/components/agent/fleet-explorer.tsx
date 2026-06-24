@@ -1,7 +1,17 @@
 "use client";
 
-import { ArrowRight, Bot, LayoutGrid, List, Lock, Search, Star, Users } from "lucide-react";
-import { useTranslations } from "next-intl";
+import {
+  ArrowRight,
+  Bot,
+  Calendar,
+  LayoutGrid,
+  List,
+  Lock,
+  Search,
+  Star,
+  Users,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { Link } from "@/i18n/navigation";
@@ -32,9 +42,14 @@ const RELEASE_TONE: Record<string, string> = {
     "border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)]",
 };
 
-const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
-const fmtSecs = (ms: number | null) =>
-  ms === null ? "-" : `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
+// "20260618T083906Z" → localized date, or null if unparseable (never fabricated).
+function fmtRunDate(runAt: string | null | undefined, locale: string): string | null {
+  if (!runAt) return null;
+  const m = runAt.match(/^(\d{4})(\d{2})(\d{2})T/);
+  if (!m) return null;
+  const dt = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`);
+  return Number.isNaN(dt.getTime()) ? null : dt.toLocaleDateString(locale);
+}
 
 const isExternal = (a: FleetAgent) => a.audience === "customer";
 
@@ -55,6 +70,7 @@ function readList(key: string): string[] {
 // behind the supervisor; there is no agent picker on the business plane (ADR 0013).
 export function FleetExplorer({ agents }: { agents: FleetAgent[] }) {
   const t = useTranslations("fleet");
+  const locale = useLocale();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useState<ViewMode>("grid");
@@ -213,6 +229,7 @@ export function FleetExplorer({ agents }: { agents: FleetAgent[] }) {
               favorite={favorites.includes(a.id)}
               onToggleFavorite={() => toggleFavorite(a.id)}
               onOpen={() => recordRecent(a.id)}
+              locale={locale}
               t={t}
             />
           ))}
@@ -286,12 +303,34 @@ function ReleaseChip({ agent, t }: { agent: FleetAgent; t: T }) {
   );
 }
 
+function StaleChip({ t }: { t: T }) {
+  return (
+    <span className="inline-flex items-center rounded-md border border-amber-500/45 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.04em] text-amber-300">
+      {t("stale")}
+    </span>
+  );
+}
+
+// Pass rate (0..100) EXACTLY as the report/cockpit show it — summary passed/total
+// of THIS agent's own run. `null` when the summary is unavailable.
+function passPct(agent: FleetAgent): number | null {
+  const r = agent.release;
+  if (!r?.available || r.summary_passed == null || !r.summary_total) return null;
+  return Math.round((r.summary_passed / r.summary_total) * 100);
+}
+
+// Governance facet (ADR 0013): the card LEADS with the eval-gate verdict + the
+// agent's own pass rate (n/N) + the shared security floor (X/18) + the run date —
+// the same per-agent eval detail the launcher used to show, which lives HERE now.
+// Observable KPIs (volume, latency, escalation, handoffs) are NOT repeated: those
+// are the monitoring facet, on the Vue d'ensemble per-agent breakdown.
 function AgentCard({
   agent,
   external,
   favorite,
   onToggleFavorite,
   onOpen,
+  locale,
   t,
 }: {
   agent: FleetAgent;
@@ -299,8 +338,12 @@ function AgentCard({
   favorite: boolean;
   onToggleFavorite: () => void;
   onOpen: () => void;
+  locale: string;
   t: T;
 }) {
+  const r = agent.release;
+  const pct = passPct(agent);
+  const date = fmtRunDate(r?.run_at, locale);
   return (
     <div className="group flex flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 transition-colors hover:border-[#7c5cf5]/50">
       <div className="flex items-start justify-between gap-2">
@@ -320,17 +363,32 @@ function AgentCard({
         <AudienceBadge external={external} t={t} />
         <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">{agent.owner}</span>
       </div>
-      <dl className="grid grid-cols-2 gap-2 text-[0.72rem]">
-        <Stat label={t("volume")} value={`${fmtInt(agent.conversations)} conv.`} />
-        <Stat label={t("latency")} value={fmtSecs(agent.latency_ms)} />
-        <Stat
-          label={t("escalation")}
-          value={`${agent.escalation_rate.toFixed(1).replace(".", ",")} %`}
-        />
-        <Stat label={t("handoffs")} value={`${agent.handoffs_in} / ${agent.handoffs_out}`} />
-      </dl>
+      {/* Eval-gate verdict — leads the card. */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ReleaseChip agent={agent} t={t} />
+          {r?.verdict_stale ? <StaleChip t={t} /> : null}
+        </div>
+        {pct != null && r?.summary_passed != null && r.summary_total != null ? (
+          <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+            {t("evalRate", { rate: pct, passed: r.summary_passed, total: r.summary_total })}
+          </p>
+        ) : null}
+        {r?.socle_passed != null && r.socle_total != null ? (
+          <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+            {t("socleSecurity", { passed: r.socle_passed, total: r.socle_total })}
+          </p>
+        ) : null}
+      </div>
       <div className="flex items-center justify-between gap-2 border-[var(--tessera-border)] border-t pt-2">
-        <ReleaseChip agent={agent} t={t} />
+        {date ? (
+          <span className="inline-flex items-center gap-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+            <Calendar className="h-3 w-3 shrink-0" />
+            {t("evaluatedOn", { date })}
+          </span>
+        ) : (
+          <span />
+        )}
         <Link
           href={agentPath(agent.id, "synthese")}
           onClick={onOpen}
@@ -369,9 +427,20 @@ function AgentRow({
       <span className="hidden truncate text-[0.66rem] text-[var(--tessera-text-muted)] md:inline">
         {agent.owner}
       </span>
-      <span className="ml-auto hidden text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)] sm:inline">
-        {fmtInt(agent.conversations)} conv.
-      </span>
+      {(() => {
+        const r = agent.release;
+        const pct = passPct(agent);
+        return pct != null && r?.summary_passed != null && r.summary_total != null ? (
+          <span
+            className="ml-auto hidden text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)] sm:inline"
+            title={t("evalRate", { rate: pct, passed: r.summary_passed, total: r.summary_total })}
+          >
+            {r.summary_passed}/{r.summary_total}
+          </span>
+        ) : (
+          <span className="ml-auto" />
+        );
+      })()}
       <ReleaseChip agent={agent} t={t} />
       <FavButton favorite={favorite} onToggle={onToggleFavorite} t={t} />
       <Link
@@ -381,15 +450,6 @@ function AgentRow({
       >
         {t("govern")} <ArrowRight className="h-3 w-3" />
       </Link>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[0.6rem] text-[var(--tessera-text-muted)]">{label}</dt>
-      <dd className="font-medium tabular-nums text-[var(--tessera-text)]">{value}</dd>
     </div>
   );
 }

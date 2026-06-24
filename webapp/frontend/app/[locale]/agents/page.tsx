@@ -82,7 +82,6 @@ export default async function FleetPage({ params }: PageProps) {
       <FleetExplorer agents={agents} />
 
       <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("releaseNote")}</p>
-      <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("judgedNote")}</p>
     </div>
   );
 }
