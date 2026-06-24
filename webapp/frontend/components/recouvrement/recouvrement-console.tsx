@@ -11,61 +11,56 @@ import type { Role } from "@/lib/auth/accounts";
 
 /**
  * Recouvrement's dedicated business console (ADR 0010 Phase C). A standalone
- * re-skin around the REAL shared `<ChatRoom>` core (no fork, no debug console):
- * the chat is the live internal recouvrement agent, reached because the BFF
- * forwarded a signed operator assertion on the `recouvrement` → dedicated-ui
- * surface. A LEFT column carries the brand + HONEST-EMPTY business context
- * (Tessera has no collections-case backend, so it fabricates no dossiers /
- * échéanciers / payment plans), and the chat sits in a contained, centred card —
- * never edge-to-edge. No cockpit navigation (this is the business plane, ADR 0013).
+ * re-skin around the REAL shared `<ChatRoom>` core (no fork, no debug console),
+ * keeping the proportions/structure of the legacy `/chat` page: a left column
+ * (~218px) + a ~88px top bar + the chat in a centred, bounded `max-w-6xl` card
+ * (never edge-to-edge). The left column carries the brand + HONEST-EMPTY business
+ * context — never the cockpit navigation (this is the business plane, ADR 0013) —
+ * and Tessera has no collections-case backend, so it fabricates no dossiers /
+ * échéanciers / payment plans.
  */
 export function RecouvrementConsole({ role }: { role: Role | null }) {
   const t = useTranslations("recouvrement");
 
   return (
     <div className="flex h-screen bg-[var(--background)] text-[var(--foreground)]">
-      {/* Left column — brand + honest-empty business context (never the cockpit nav). */}
-      <aside className="hidden w-[300px] shrink-0 flex-col gap-4 overflow-y-auto border-[var(--border)] border-r bg-[var(--card)]/40 p-4 lg:flex">
-        <div className="flex items-center gap-3">
-          <TesseraLogo className="h-8" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <ShieldAlert className="h-4 w-4 shrink-0 text-amber-500" />
-              <h1 className="truncate font-semibold text-sm">{t("title")}</h1>
-            </div>
-            <span className="text-[0.62rem] uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              {t("badge")}
-            </span>
-          </div>
-        </div>
-
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/55 p-4">
+      {/* Left column — same proportion as the legacy /chat sidebar (≈218px). */}
+      <aside className="hidden w-[218px] shrink-0 flex-col gap-4 overflow-y-auto border-[var(--border)] border-r bg-[var(--card)]/40 px-3 py-4 md:flex">
+        <TesseraLogo className="h-8" />
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--card)]/55 p-3">
           <div className="flex items-center gap-2">
-            <Info className="h-4 w-4 text-[var(--muted-foreground)]" />
-            <h2 className="font-semibold text-sm">{t("panelTitle")}</h2>
+            <Info className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
+            <h2 className="font-semibold text-xs">{t("panelTitle")}</h2>
           </div>
-          <p className="mt-2 text-xs leading-relaxed text-[var(--muted-foreground)]">
+          <p className="mt-1.5 text-[0.7rem] leading-relaxed text-[var(--muted-foreground)]">
             {t("panelEmpty")}
           </p>
         </section>
-
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/40 p-4">
-          <h2 className="font-semibold text-sm">{t("contextTitle")}</h2>
-          <p className="mt-2 text-xs leading-relaxed text-[var(--muted-foreground)]">
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--card)]/40 p-3">
+          <h2 className="font-semibold text-xs">{t("contextTitle")}</h2>
+          <p className="mt-1.5 text-[0.7rem] leading-relaxed text-[var(--muted-foreground)]">
             {t("context")}
           </p>
         </section>
       </aside>
 
-      {/* Main — slim header + the chat as a contained, centred card. */}
+      {/* Main — ≈88px top bar + the chat as a centred, bounded card. */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center justify-between gap-3 border-[var(--border)] border-b px-4 py-2.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <ShieldAlert className="h-4 w-4 shrink-0 text-amber-500 lg:hidden" />
-            <p className="truncate text-xs text-[var(--muted-foreground)]">
-              {t("subtitle")}
-              {role ? ` · ${t("roleLabel")}: ${role}` : null}
-            </p>
+        <header className="flex min-h-[5.5rem] shrink-0 items-center justify-between gap-4 border-[var(--border)] border-b px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <ShieldAlert className="h-5 w-5 shrink-0 text-amber-500" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="truncate font-semibold text-sm">{t("title")}</h1>
+                <span className="hidden shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[0.62rem] font-medium uppercase tracking-wider text-amber-600 sm:inline dark:text-amber-400">
+                  {t("badge")}
+                </span>
+              </div>
+              <p className="truncate text-xs text-[var(--muted-foreground)]">
+                {t("subtitle")}
+                {role ? ` · ${t("roleLabel")}: ${role}` : null}
+              </p>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <LanguageSwitcher />
@@ -73,12 +68,12 @@ export function RecouvrementConsole({ role }: { role: Role | null }) {
           </div>
         </header>
 
-        <div className="flex min-h-0 flex-1 justify-center overflow-hidden p-4 sm:p-6">
-          {/* Contained chat card — bounded width, not the full screen. */}
-          <div className="flex h-full min-h-0 w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)]/30">
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-5 sm:px-6">
+          {/* Centred, bounded chat card (max-w-6xl) — like /chat, not full screen. */}
+          <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)]/30">
             <ChatRoom surface="recouvrement" />
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
