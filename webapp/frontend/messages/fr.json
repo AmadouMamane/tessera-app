@@ -159,7 +159,7 @@
     },
     "actions": {
       "exportReport": "Exporter rapport",
-      "generateEvidencePack": "Générer evidence pack"
+      "generateEvidencePack": "Générer le dossier de preuves"
     },
     "status": {
       "live": "Données en temps réel",
@@ -215,12 +215,12 @@
       "asOfEvidence": "Vue relue à {time}"
     },
     "kpi": {
-      "quality": "Score qualité (SLO)",
+      "quality": "Score qualité (objectif de service)",
       "qualityDelta": "burn-rate {burn}×",
       "failingControls": "Contrôles en échec",
       "failingDelta": "{n} hors objectif",
       "openRisks": "Risques ouverts",
-      "openRisksDelta": "{anomalies} anomalies · {playbooks} playbooks",
+      "openRisksDelta": "{anomalies} anomalies · {playbooks} procédures",
       "regression": "Régression release",
       "regressed": "Régression",
       "stable": "Stable",
@@ -245,7 +245,7 @@
       "impact": "Impact"
     },
     "signals": {
-      "faithfulness": "Faithfulness SLO",
+      "faithfulness": "Fidélité (objectif de service)",
       "toxicity": "Toxicité",
       "pii": "Fuite PII (sortie)",
       "refusal": "Calibration des refus",
@@ -267,14 +267,14 @@
       "security": "Sécurité / Guard"
     },
     "controlCases": {
-      "title": "Incidents à traiter (playbooks)",
+      "title": "Incidents à traiter (procédures)",
       "count": "{n} déclenchés",
-      "clear": "Aucun playbook déclenché — situation nominale."
+      "clear": "Aucune procédure déclenchée — situation nominale."
     },
     "rightColumn": {
       "incidents": "Incidents actifs ou récents",
       "noIncidents": "Aucun incident actif.",
-      "release": "Release / what-changed",
+      "release": "Release / changements",
       "blocked": "Bloquée",
       "clear": "OK",
       "noBaseline": "Aucune baseline à comparer.",
@@ -288,14 +288,14 @@
     },
     "quick": {
       "title": "Actions rapides",
-      "redteam": "Lancer red-team",
+      "redteam": "Lancer le test d'intrusion",
       "freezeReleases": "Geler les releases",
       "replay": "Ouvrir replay",
       "ticket": "Créer un ticket",
       "replayAt": "Rejouer à T",
-      "redteamRunning": "Red-team en cours…",
-      "redteamDone": "Red-team terminé.",
-      "redteamErr": "Échec du red-team.",
+      "redteamRunning": "Test d'intrusion en cours…",
+      "redteamDone": "Test d'intrusion terminé.",
+      "redteamErr": "Échec du test d'intrusion.",
       "frozen": "Releases gelées.",
       "unfrozen": "Releases dégelées.",
       "frozenBadge": "Gelées",
