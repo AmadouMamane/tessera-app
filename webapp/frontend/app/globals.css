@@ -119,17 +119,6 @@
   --tessera-green-soft: #003f30;
   --tessera-green-muted: #0c261f;
 
-  /* Premium chrome accents — harmonised with the launcher / /espaces (navy +
-   * gold/cyan). Used by the shell chrome (sidebar sections, brand, identity).
-   * Semantic green above stays for live/health status. */
-  --tessera-gold: #d7be8a;
-  --tessera-gold-strong: #f4c76a;
-  --tessera-gold-text: #efe2c0;
-  --tessera-gold-soft: rgba(215, 190, 138, 0.16);
-  --tessera-gold-muted: rgba(215, 190, 138, 0.1);
-  --tessera-cyan: #2dd4bf;
-  --tessera-cyan-soft: rgba(45, 212, 191, 0.16);
-
   --background: var(--tessera-bg);
   --foreground: var(--tessera-text);
   --card: var(--tessera-surface);
