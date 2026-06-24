@@ -4947,7 +4947,7 @@
     "releaseNotRun": "Éval non exécutée",
     "dedupExplain": "Somme naïve {naive} · {saved} dédoublonnées · {shared} conversations partagées (handoff = 1)",
     "empty": "Aucune donnée flotte disponible.",
-    "orgSignalsNote": "Filtre actif sur la vue par agent ci-dessus. Les signaux org ci-dessous (S4) ne sont pas encore ventilés par agent.",
+    "orgSignalsNote": "Filtre actif sur la vue par agent ci-dessus. Les signaux org ci-dessous ne sont pas encore ventilés par agent.",
     "usefulLinks": "Liens utiles",
     "linkRelease": "Gouvernance · Release Control",
     "linkAudit": "Preuve · Journal d'audit",

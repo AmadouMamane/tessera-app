@@ -4947,7 +4947,7 @@
     "releaseNotRun": "Eval nicht ausgeführt",
     "dedupExplain": "Naive Summe {naive} · {saved} dedupliziert · {shared} geteilte Konversationen (Übergabe = 1)",
     "empty": "Keine Flottendaten verfügbar.",
-    "orgSignalsNote": "Filter aktiv auf der Agentenansicht oben. Die Org-Signale unten (S4) sind noch nicht pro Agent aufgeschlüsselt.",
+    "orgSignalsNote": "Filter aktiv auf der Agentenansicht oben. Die Org-Signale unten sind noch nicht pro Agent aufgeschlüsselt.",
     "usefulLinks": "Nützliche Links",
     "linkRelease": "Governance · Release Control",
     "linkAudit": "Nachweis · Audit-Journal",
