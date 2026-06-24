@@ -23,6 +23,7 @@ commits (it never assumes autocommit).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from psycopg import sql
@@ -34,15 +35,35 @@ from tessera.retrieval.store import get_pool
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from datetime import datetime
     from uuid import UUID
 
 __all__ = [
+    "ConversationSummary",
     "append_messages",
     "delete_transcript",
     "ensure_transcript_schema",
     "last_agent_for",
+    "list_conversations",
     "load_transcript",
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class ConversationSummary:
+    """A row in an agent's conversation list (the console "Récents" + Historique).
+
+    ``title`` is the conversation's opening user message — empty when a
+    conversation has no user turn yet. Counts cover the persisted conversational
+    record (``user``/``assistant`` messages), keyed by ``conversation_id``.
+    """
+
+    conversation_id: str
+    title: str
+    started_at: datetime
+    last_at: datetime
+    message_count: int
+    turn_count: int
 
 
 _TABLE: Final[sql.Identifier] = sql.Identifier("conversation_messages")
@@ -146,6 +167,62 @@ async def load_transcript(
             content=str(row["content"]),
             timestamp=row["created_at"],
             name=row["name"],
+        )
+        for row in rows
+    ]
+
+
+async def list_conversations(
+    agent_id: str,
+    *,
+    limit: int = 30,
+) -> list[ConversationSummary]:
+    """Return ``agent_id``'s recent conversations, most-recently-active first.
+
+    Powers the business console's "Récents" list and the agent's cockpit
+    Historique. A conversation belongs to ``agent_id`` when its persisted messages
+    are stamped with it (per-turn attribution). ``title`` is the first user
+    message; the counts cover persisted ``user``/``assistant`` messages.
+
+    Args:
+        agent_id: The acting agent whose conversations to list.
+        limit: Maximum number of conversations to return.
+    """
+    query = sql.SQL(
+        """
+        SELECT
+            m.conversation_id,
+            MIN(m.created_at)                                       AS started_at,
+            MAX(m.created_at)                                       AS last_at,
+            COUNT(*) FILTER (WHERE m.role IN ('user', 'assistant')) AS message_count,
+            COUNT(DISTINCT m.turn_id)                               AS turn_count,
+            (
+                SELECT u.content FROM {table} u
+                WHERE u.conversation_id = m.conversation_id AND u.role = 'user'
+                ORDER BY u.id ASC
+                LIMIT 1
+            )                                                       AS title
+        FROM {table} m
+        WHERE m.agent_id = %s
+        GROUP BY m.conversation_id
+        ORDER BY last_at DESC
+        LIMIT %s;
+        """
+    ).format(table=_TABLE)
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(query, (agent_id, limit))
+        rows = await cur.fetchall()
+    return [
+        ConversationSummary(
+            conversation_id=str(row["conversation_id"]),
+            title=str(row["title"] or ""),
+            started_at=row["started_at"],
+            last_at=row["last_at"],
+            message_count=int(row["message_count"] or 0),
+            turn_count=int(row["turn_count"] or 0),
         )
         for row in rows
     ]

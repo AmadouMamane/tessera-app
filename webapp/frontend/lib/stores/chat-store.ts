@@ -34,6 +34,7 @@ interface ChatState {
   isStreaming: boolean;
   lastError: string | null;
   start: (conversationId: string, turnId: string) => void;
+  loadConversation: (conversationId: string, messages: ChatMessage[]) => void;
   appendUser: (content: string) => ChatMessage;
   startAssistant: (turnId: string) => void;
   appendToken: (token: string) => void;
@@ -60,6 +61,17 @@ export const useChatStore = create<ChatState>()(
 
       start: (conversationId, turnId) =>
         set({ conversationId, turnId, isStreaming: true, lastError: null }),
+
+      // Resume a "Récents" conversation: load its persisted transcript and keep
+      // its id so the next turn continues the SAME conversation server-side.
+      loadConversation: (conversationId, messages) =>
+        set({
+          conversationId,
+          turnId: null,
+          messages,
+          isStreaming: false,
+          lastError: null,
+        }),
 
       appendUser: (content) => {
         const message: ChatMessage = {

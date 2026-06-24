@@ -298,6 +298,7 @@ export function AgentHistorique() {
             onPage={setPage}
             onPerPage={setPerPage}
           />
+          <LiveConversations data={data} locale={locale} />
           <div className="grid gap-2.5 lg:grid-cols-2 xl:grid-cols-4">
             <TrendCard data={data} />
             <ByAgent data={data} />
@@ -312,6 +313,57 @@ export function AgentHistorique() {
         <Detail data={data} row={selectedRow} className="xl:col-span-4" />
       </div>
     </div>
+  );
+}
+
+// Real live conversations from the transcript (the operator's actual turns),
+// surfaced alongside the eval sessions. These are NOT scored runs, so they get
+// their own honest block (title, time, message/turn counts) rather than a
+// fabricated eval score.
+function LiveConversations({ data, locale }: { data: Data; locale: string }) {
+  const t = useTranslations("agentHistorique");
+  const convos = data.live_conversations ?? [];
+  return (
+    <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
+      <div className="flex items-center gap-2">
+        <MessagesSquare className="h-4 w-4 text-[var(--tessera-text-muted)]" />
+        <h3 className="font-semibold text-sm text-[var(--tessera-text)]">{t("live.title")}</h3>
+        <span className="ml-1 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+          {convos.length}
+        </span>
+      </div>
+      <p className="mt-0.5 text-xs text-[var(--tessera-text-muted)]">{t("live.subtitle")}</p>
+      {convos.length === 0 ? (
+        <p className="mt-2 text-xs text-[var(--tessera-text-muted)]">{t("live.empty")}</p>
+      ) : (
+        <ul className="mt-2 flex flex-col divide-y divide-[var(--tessera-border)]">
+          {convos.slice(0, 8).map((c) => (
+            <li key={c.conversation_id} className="flex items-center gap-3 py-2">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[0.82rem] text-[var(--tessera-text)]">
+                  {c.title || t("live.untitled")}
+                </div>
+                <div className="mt-0.5 flex items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
+                  <Clock className="h-3 w-3" />
+                  {new Date(c.last_at).toLocaleString(locale, {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </div>
+              <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+                {t("live.messages", { n: c.message_count })}
+              </span>
+              <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+                {t("live.turns", { n: c.turn_count })}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

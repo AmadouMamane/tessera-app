@@ -83,6 +83,10 @@ import {
   ConsoleFeedbackSchema,
   type ContradictionReport,
   ContradictionReportSchema,
+  type ConversationList,
+  ConversationListSchema,
+  type ConversationMessages,
+  ConversationMessagesSchema,
   type CorpusScanReport,
   CorpusScanReportSchema,
   type CostReport,
@@ -1325,18 +1329,43 @@ export async function fetchAgentPrompts(
 
 export async function fetchAgentEvaluations(
   agentId: string,
+  lang: string,
   signal?: AbortSignal,
 ): Promise<AgentEvaluations> {
-  const q = `?agent_id=${encodeURIComponent(agentId)}`;
+  const q = `?agent_id=${encodeURIComponent(agentId)}${lang ? `&lang=${encodeURIComponent(lang)}` : ""}`;
   return request(`/observability/agent-evaluations${q}`, { signal }, AgentEvaluationsSchema);
 }
 
 export async function fetchAgentHistorique(
   agentId: string,
+  lang: string,
   signal?: AbortSignal,
 ): Promise<AgentHistorique> {
-  const q = `?agent_id=${encodeURIComponent(agentId)}`;
+  const q = `?agent_id=${encodeURIComponent(agentId)}${lang ? `&lang=${encodeURIComponent(lang)}` : ""}`;
   return request(`/observability/agent-historique${q}`, { signal }, AgentHistoriqueSchema);
+}
+
+/** An agent's recent conversations (business console "Récents"). */
+export async function fetchConversations(
+  agentId: string,
+  limit = 30,
+  signal?: AbortSignal,
+): Promise<ConversationList> {
+  const q = `?agent_id=${encodeURIComponent(agentId)}&limit=${limit}`;
+  return request(`/observability/conversations${q}`, { signal }, ConversationListSchema);
+}
+
+/** The persisted messages of one conversation (to RESUME it in the console). */
+export async function fetchConversationMessages(
+  conversationId: string,
+  signal?: AbortSignal,
+): Promise<ConversationMessages> {
+  const q = `?conversation_id=${encodeURIComponent(conversationId)}`;
+  return request(
+    `/observability/conversation-messages${q}`,
+    { signal },
+    ConversationMessagesSchema,
+  );
 }
 
 /** Conversation session detail (turn-by-turn, per-turn agent attribution). */

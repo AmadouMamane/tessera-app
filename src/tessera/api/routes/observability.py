@@ -12,11 +12,13 @@ import re
 import sys
 from dataclasses import asdict
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
+from tessera.memory import transcript
 from tessera.observability import (
     ablation as ablation_mod,
     access as access_mod,
@@ -640,22 +642,96 @@ async def observability_improvement() -> dict[str, object]:
 @router.get("/observability/agent-historique")
 async def observability_agent_historique(
     agent_id: str = DEFAULT_AGENT_ID,
+    lang: str = "fr",
 ) -> dict[str, object]:
     """Agent Session History dashboard (reference image 30).
 
     Inner tab strip, KPI strip, filterable sessions table, chart row (trend,
     sessions by agent, score distribution, success gauge), watchlist, quick
     actions and a per-session detail panel. Deterministic fixture; degrades to
-    ``available: false``. ``agent_id`` scopes the in-page navigation links.
+    ``available: false``. ``agent_id`` scopes the in-page navigation links;
+    ``lang`` localizes the chrome (fr / de / en).
     """
     try:
-        return {
+        payload: dict[str, object] = {
             "available": True,
-            **agent_historique_mod.compute_agent_historique(agent_id),
+            **agent_historique_mod.compute_agent_historique(agent_id, lang),
         }
+        # Real live conversations from the transcript, surfaced ALONGSIDE the eval
+        # sessions (additive — the eval KPIs/charts stay untouched). These are the
+        # operator's actual turns, not scored runs, so they get their own honest
+        # block rather than fabricated eval scores.
+        payload["live_conversations"] = _serialize_conversations(
+            await transcript.list_conversations(agent_id, limit=50)
+        )
+        return payload
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_historique: failed: {exc}\n")
         return {"available": False}
+
+
+def _serialize_conversations(
+    conversations: list[transcript.ConversationSummary],
+) -> list[dict[str, object]]:
+    """Public-safe JSON for a conversation list (console Récents + Historique)."""
+    return [
+        {
+            "conversation_id": c.conversation_id,
+            "title": c.title,
+            "started_at": c.started_at.isoformat(),
+            "last_at": c.last_at.isoformat(),
+            "message_count": c.message_count,
+            "turn_count": c.turn_count,
+        }
+        for c in conversations
+    ]
+
+
+@router.get("/observability/conversations")
+async def observability_conversations(
+    agent_id: str = DEFAULT_AGENT_ID,
+    limit: int = 30,
+) -> dict[str, object]:
+    """Recent conversations handled by ``agent_id`` (most-recently-active first).
+
+    Powers the business console's "Récents" list. Degrades to an empty list
+    rather than breaking the console.
+    """
+    try:
+        bounded = max(1, min(limit, 100))
+        return {
+            "available": True,
+            "conversations": _serialize_conversations(
+                await transcript.list_conversations(agent_id, limit=bounded)
+            ),
+        }
+    except Exception as exc:  # never break the console
+        sys.stderr.write(f"tessera.observability.conversations: failed: {exc}\n")
+        return {"available": False, "conversations": []}
+
+
+@router.get("/observability/conversation-messages")
+async def observability_conversation_messages(conversation_id: str) -> dict[str, object]:
+    """The persisted user/assistant messages of one conversation, in order.
+
+    Used by the business console to RESUME a "Récents" conversation: it loads the
+    transcript back into the chat and continues the same ``conversation_id``.
+    Degrades to an empty list for an unknown / malformed id.
+    """
+    try:
+        messages = await transcript.load_transcript(UUID(conversation_id))
+        return {
+            "available": True,
+            "conversation_id": conversation_id,
+            "messages": [
+                {"role": m.role, "content": m.content}
+                for m in messages
+                if m.role in ("user", "assistant")
+            ],
+        }
+    except Exception as exc:  # never break the console
+        sys.stderr.write(f"tessera.observability.conversation_messages: failed: {exc}\n")
+        return {"available": False, "messages": []}
 
 
 @router.get("/observability/session-detail")

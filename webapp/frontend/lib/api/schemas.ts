@@ -4664,6 +4664,30 @@ export const AgentEvaluationsSchema = z.object({
 });
 export type AgentEvaluations = z.infer<typeof AgentEvaluationsSchema>;
 
+// One conversation in an agent's list (console "Récents" + cockpit Historique).
+export const ConversationSummarySchema = z.object({
+  conversation_id: z.string(),
+  title: z.string(),
+  started_at: z.string(),
+  last_at: z.string(),
+  message_count: z.number(),
+  turn_count: z.number(),
+});
+export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
+
+export const ConversationListSchema = z.object({
+  available: z.boolean(),
+  conversations: z.array(ConversationSummarySchema),
+});
+export type ConversationList = z.infer<typeof ConversationListSchema>;
+
+export const ConversationMessagesSchema = z.object({
+  available: z.boolean(),
+  conversation_id: z.string().optional(),
+  messages: z.array(z.object({ role: z.string(), content: z.string() })),
+});
+export type ConversationMessages = z.infer<typeof ConversationMessagesSchema>;
+
 export const AgentHistoriqueSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),
@@ -4805,6 +4829,9 @@ export const AgentHistoriqueSchema = z.object({
       items: z.array(z.object({ key: z.string(), label: z.string() })),
     })
     .optional(),
+  // Real live conversations from the transcript, surfaced alongside the eval
+  // sessions (additive). Absent on older payloads → optional.
+  live_conversations: z.array(ConversationSummarySchema).optional(),
 });
 export type AgentHistorique = z.infer<typeof AgentHistoriqueSchema>;
 

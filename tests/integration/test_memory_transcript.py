@@ -15,6 +15,7 @@ from tessera.agent.state import ConversationMessage
 from tessera.memory.transcript import (
     append_messages,
     ensure_transcript_schema,
+    list_conversations,
     load_transcript,
 )
 
@@ -94,3 +95,58 @@ class TestTranscriptRoundTrip:
 
     async def test_unknown_conversation_is_empty(self) -> None:
         assert await load_transcript(uuid.uuid4()) == []
+
+
+@pytest.mark.usefixtures("_schema")
+class TestListConversations:
+    async def test_lists_agent_conversations_with_title_and_counts(self) -> None:
+        agent = f"recouvrement-test-{uuid.uuid4().hex[:8]}"
+        conv = uuid.uuid4()
+        await append_messages(
+            conv,
+            uuid.uuid4(),
+            [
+                ConversationMessage(role="user", content="Mon impayé ?"),
+                ConversationMessage(role="assistant", content="Voici vos options."),
+            ],
+            agent_id=agent,
+        )
+        await append_messages(
+            conv,
+            uuid.uuid4(),
+            [
+                ConversationMessage(role="user", content="Et l'échéancier ?"),
+                ConversationMessage(role="assistant", content="Le voici."),
+            ],
+            agent_id=agent,
+        )
+        convos = await list_conversations(agent)
+        assert len(convos) == 1
+        summary = convos[0]
+        assert summary.conversation_id == str(conv)
+        # Title is the FIRST user message; counts cover the persisted record.
+        assert summary.title == "Mon impayé ?"
+        assert summary.message_count == 4
+        assert summary.turn_count == 2
+
+    async def test_scopes_to_agent_and_orders_recent_first(self) -> None:
+        agent = f"recouvrement-test-{uuid.uuid4().hex[:8]}"
+        other = f"other-test-{uuid.uuid4().hex[:8]}"
+        first = uuid.uuid4()
+        second = uuid.uuid4()
+        await append_messages(
+            first, uuid.uuid4(), [ConversationMessage(role="user", content="A")], agent_id=agent
+        )
+        await append_messages(
+            second, uuid.uuid4(), [ConversationMessage(role="user", content="B")], agent_id=agent
+        )
+        await append_messages(
+            uuid.uuid4(),
+            uuid.uuid4(),
+            [ConversationMessage(role="user", content="C")],
+            agent_id=other,
+        )
+        convos = await list_conversations(agent)
+        ids = [c.conversation_id for c in convos]
+        # Only this agent's conversations, most-recently-active first.
+        assert ids == [str(second), str(first)]

@@ -4562,7 +4562,13 @@
     "panelTitle": "Activity",
     "activityEmpty": "No exchange yet.",
     "activityExchange": "Exchange",
-    "activityEscalation": "Escalation"
+    "activityEscalation": "Escalation",
+    "newChat": "New chat",
+    "search": "Search chats",
+    "recents": "Recent",
+    "recentsEmpty": "No conversation yet.",
+    "searchEmpty": "No matching conversation.",
+    "untitled": "Untitled"
   },
   "landing": {
     "welcome": "Welcome to Tessera",
@@ -4871,7 +4877,15 @@
     "title": "Session history",
     "subtitle": "Analyse conversation sessions, their quality and their compliance.",
     "loading": "Loading history…",
-    "unavailable": "History unavailable."
+    "unavailable": "History unavailable.",
+    "live": {
+      "title": "Live conversations",
+      "subtitle": "Your real exchanges with the agent (transcript) — not evaluated.",
+      "empty": "No live conversation yet.",
+      "untitled": "Untitled",
+      "messages": "{n, plural, one {# message} other {# messages}}",
+      "turns": "{n, plural, one {# turn} other {# turns}}"
+    }
   },
   "agentAFaire": {
     "title": "To do",

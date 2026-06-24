@@ -4562,7 +4562,13 @@
     "panelTitle": "Aktivität",
     "activityEmpty": "Noch keine Interaktion.",
     "activityExchange": "Austausch",
-    "activityEscalation": "Eskalation"
+    "activityEscalation": "Eskalation",
+    "newChat": "Neuer Chat",
+    "search": "Chats durchsuchen",
+    "recents": "Letzte",
+    "recentsEmpty": "Noch keine Unterhaltung.",
+    "searchEmpty": "Keine passende Unterhaltung.",
+    "untitled": "Ohne Titel"
   },
   "landing": {
     "welcome": "Willkommen bei Tessera",
@@ -4871,7 +4877,15 @@
     "title": "Sitzungsverlauf",
     "subtitle": "Analysieren Sie Konversationssitzungen, ihre Qualität und Konformität.",
     "loading": "Verlauf wird geladen…",
-    "unavailable": "Verlauf nicht verfügbar."
+    "unavailable": "Verlauf nicht verfügbar.",
+    "live": {
+      "title": "Live-Unterhaltungen",
+      "subtitle": "Ihre echten Gespräche mit dem Agenten (Transcript) — nicht bewertet.",
+      "empty": "Noch keine Live-Unterhaltung.",
+      "untitled": "Ohne Titel",
+      "messages": "{n, plural, one {# Nachricht} other {# Nachrichten}}",
+      "turns": "{n, plural, one {# Runde} other {# Runden}}"
+    }
   },
   "agentAFaire": {
     "title": "Zu erledigen",

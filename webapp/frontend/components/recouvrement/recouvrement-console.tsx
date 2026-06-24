@@ -1,55 +1,62 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import {
-  Activity,
-  MessageSquare,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ShieldAlert,
-  TicketCheck,
-} from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PanelLeftClose, PanelLeftOpen, Search, ShieldAlert, SquarePen } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
 
 import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { ChatRoom } from "@/components/chat/chat-room";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
-import { fetchAudit } from "@/lib/api/client";
-import type { AuditEntry } from "@/lib/api/schemas";
+import { fetchConversationMessages, fetchConversations } from "@/lib/api/client";
 import type { Role } from "@/lib/auth/accounts";
 import { cn } from "@/lib/cn";
+import { type ChatMessage, useChatStore } from "@/lib/stores/chat-store";
 
 const COLLAPSE_KEY = "tessera.recouvrement.sidebarCollapsed";
+const AGENT_ID = "recouvrement";
+const RECENTS_KEY = ["recouvrement-conversations"] as const;
 
-/** A recouvrement turn whose tool call opened a human-handoff ticket. */
-function isEscalation(e: AuditEntry): boolean {
-  return e.event_type === "tool" && /escalat|ticket/i.test(e.target);
+function uid(): string {
+  return globalThis.crypto?.randomUUID() ?? Math.random().toString(36).slice(2);
 }
 
 /**
  * Recouvrement's dedicated business console (ADR 0010 Phase C). A standalone
  * re-skin around the REAL shared `<ChatRoom>` core (no fork, no debug console),
  * keeping the legacy `/chat` proportions: a left column + a ~88px top bar + the
- * chat in a centred, bounded `max-w-6xl` card. The left column wears the Tessera
- * COCKPIT skin (`--tessera-*`) and is RETRACTABLE (OpenAI-style toggle, persisted)
- * — but it carries the brand + HONEST-EMPTY business context, never the cockpit
- * navigation (business plane, ADR 0013). No fabricated dossiers / échéanciers.
+ * chat in a centred, bounded `max-w-6xl` card.
+ *
+ * The left column follows the product's conversation-sidebar normative
+ * (ChatGPT-style, business-plane skin): a "Nouveau chat" action, a search box
+ * and a REAL "Récents" list of the agent's past conversations read from the
+ * durable transcript. Selecting one resumes it (same `conversation_id`); a new
+ * turn appears in "Récents" (and in the cockpit Historique) as soon as it lands.
+ * Only real, backed affordances are shown — no ChatGPT-specific dead nav.
  */
 export function RecouvrementConsole({ role }: { role: Role | null }) {
   const t = useTranslations("recouvrement");
-  const locale = useLocale();
+  const qc = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
+  const [query, setQuery] = useState("");
 
-  // Real, durable activity of the recouvrement agent — its turns + human
-  // escalations from the hash-chained audit journal. No fabricated dossiers.
-  const activity = useQuery({
-    queryKey: ["recouvrement-activity"],
-    queryFn: ({ signal }) => fetchAudit({ agent: "recouvrement", limit: 8, signal }),
-    refetchInterval: 30_000,
+  const conversationId = useChatStore((s) => s.conversationId);
+  const reset = useChatStore((s) => s.reset);
+  const loadConversation = useChatStore((s) => s.loadConversation);
+
+  // Real, durable conversation list of the recouvrement agent (the transcript).
+  const recents = useQuery({
+    queryKey: RECENTS_KEY,
+    queryFn: ({ signal }) => fetchConversations(AGENT_ID, 30, signal),
+    refetchInterval: 15_000,
   });
-  const entries = activity.data?.entries ?? [];
+  const conversations = recents.data?.conversations ?? [];
+
+  // A fresh turn mints a conversation id → refresh "Récents" so it shows up.
+  useEffect(() => {
+    if (conversationId) qc.invalidateQueries({ queryKey: RECENTS_KEY });
+  }, [conversationId, qc]);
 
   useEffect(() => {
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
@@ -66,9 +73,32 @@ export function RecouvrementConsole({ role }: { role: Role | null }) {
       return next;
     });
 
+  const q = query.trim().toLowerCase();
+  const shown = useMemo(
+    () => (q ? conversations.filter((c) => c.title.toLowerCase().includes(q)) : conversations),
+    [conversations, q],
+  );
+
+  const openConversation = async (id: string) => {
+    if (id === conversationId) return;
+    const res = await fetchConversationMessages(id);
+    const msgs: ChatMessage[] = res.messages.map((m) => ({
+      id: uid(),
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content,
+      createdAt: Date.now(),
+    }));
+    loadConversation(id, msgs);
+  };
+
+  const newChat = () => {
+    reset();
+    setQuery("");
+  };
+
   return (
     <div className="flex h-screen bg-[var(--background)] text-[var(--foreground)]">
-      {/* Left column — Tessera cockpit skin, retractable (OpenAI-style). */}
+      {/* Left column — conversation sidebar (cockpit skin), retractable. */}
       <aside
         className={cn(
           "hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 ease-out md:flex",
@@ -77,9 +107,9 @@ export function RecouvrementConsole({ role }: { role: Role | null }) {
         style={{ background: "var(--tessera-bg-soft)", color: "var(--tessera-text)" }}
       >
         {/* Fixed inner width so content doesn't reflow as the panel animates. */}
-        <div className="flex w-[264px] min-w-[264px] flex-1 flex-col gap-3 overflow-y-auto p-3">
-          <div className="flex items-center justify-between">
-            <TesseraLogo className="h-8" />
+        <div className="flex w-[264px] min-w-[264px] flex-1 flex-col overflow-hidden p-2">
+          <div className="flex items-center justify-between px-1 py-1">
+            <TesseraLogo className="h-7" />
             <button
               type="button"
               onClick={toggleSidebar}
@@ -90,50 +120,57 @@ export function RecouvrementConsole({ role }: { role: Role | null }) {
             </button>
           </div>
 
-          <section className="rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-            <div className="flex items-center gap-2">
-              <Activity className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-              <h2 className="font-semibold text-xs">{t("panelTitle")}</h2>
-            </div>
-            {entries.length === 0 ? (
-              <p className="mt-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text-muted)]">
-                {t("activityEmpty")}
+          <button
+            type="button"
+            onClick={newChat}
+            className="mt-1 flex items-center gap-2 rounded-lg px-2 py-2 text-left font-medium text-[0.82rem] text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-surface)]"
+          >
+            <SquarePen className="h-4 w-4 text-[var(--tessera-text-muted)]" />
+            {t("newChat")}
+          </button>
+
+          <div className="relative mt-1">
+            <Search className="-translate-y-1/2 absolute top-1/2 left-2.5 h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("search")}
+              aria-label={t("search")}
+              className="h-9 w-full rounded-lg border border-transparent bg-[var(--tessera-surface)] pr-2 pl-8 text-[0.78rem] text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)] focus:border-[var(--tessera-border)]"
+            />
+          </div>
+
+          <div className="mt-3 px-2 text-[0.66rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+            {t("recents")}
+          </div>
+          <nav className="mt-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+            {shown.length === 0 ? (
+              <p className="py-1.5 pr-2 pl-3 text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+                {q ? t("searchEmpty") : t("recentsEmpty")}
               </p>
             ) : (
-              <ul className="mt-2 flex flex-col gap-1.5">
-                {entries.map((e) => {
-                  const esc = isEscalation(e);
-                  const Icon = esc ? TicketCheck : MessageSquare;
-                  return (
-                    <li
-                      key={`${e.occurred_at}:${e.target}:${e.hash ?? ""}`}
-                      className="flex items-start gap-2 text-[0.7rem]"
-                    >
-                      <Icon
-                        className={cn(
-                          "mt-0.5 h-3.5 w-3.5 shrink-0",
-                          esc ? "text-amber-500" : "text-[var(--tessera-text-muted)]",
-                        )}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[var(--tessera-text)]">
-                          {esc ? t("activityEscalation") : t("activityExchange")}
-                        </div>
-                        <time className="text-[0.62rem] text-[var(--tessera-text-muted)]">
-                          {new Date(e.occurred_at).toLocaleString(locale, {
-                            day: "2-digit",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </time>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              shown.map((c) => (
+                <button
+                  key={c.conversation_id}
+                  type="button"
+                  onClick={() => openConversation(c.conversation_id)}
+                  title={c.title || t("untitled")}
+                  className={cn(
+                    "truncate rounded-md py-1.5 pr-2 pl-3 text-left text-[0.78rem] transition-colors",
+                    c.conversation_id === conversationId
+                      ? "bg-[var(--tessera-surface)] text-[var(--tessera-text)]"
+                      : "text-[var(--tessera-text)]/85 hover:bg-[var(--tessera-surface)]",
+                  )}
+                >
+                  {c.title || t("untitled")}
+                </button>
+              ))
             )}
-          </section>
+          </nav>
+
+          <div className="mt-2 border-[var(--tessera-border)] border-t pt-2">
+            <AuthControl />
+          </div>
         </div>
       </aside>
 
@@ -168,7 +205,9 @@ export function RecouvrementConsole({ role }: { role: Role | null }) {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <LanguageSwitcher />
-            <AuthControl />
+            {/* AuthControl lives in the sidebar footer; surface it here too when
+                the sidebar is retracted so sign-out stays reachable. */}
+            {collapsed ? <AuthControl /> : null}
           </div>
         </header>
 
