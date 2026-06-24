@@ -2536,12 +2536,12 @@
     }
   },
   "incidents": {
-    "title": "Incidents & Playbooks",
-    "subtitle": "Incident-Reaktion, Playbook-Orchestrierung und gouvernierte Remediation.",
+    "title": "Incidents & Verfahren",
+    "subtitle": "Incident-Reaktion, Verfahren-Orchestrierung und gouvernierte Remediation.",
     "tabs": {
       "overview": "Übersicht",
       "incidents": "Vorfälle",
-      "playbooks": "Playbooks",
+      "playbooks": "Verfahren",
       "orchestration": "Orchestrierung",
       "actions": "Aktionen",
       "postmortems": "Post-Mortems",
@@ -2557,7 +2557,7 @@
     },
     "actions": {
       "createTicket": "Ticket erstellen",
-      "launchPlaybook": "Playbook starten",
+      "launchPlaybook": "Verfahren starten",
       "evidencePack": "Evidence-Pack erzeugen"
     },
     "zone": {
@@ -2571,7 +2571,7 @@
       "critical": "Kritisch",
       "mtta": "MTTA (Ø 7T)",
       "mttr": "MTTR (Ø 7T)",
-      "playbooks": "Aktive Playbooks",
+      "playbooks": "Aktive Verfahren",
       "autoresolve": "Auto-Lösung",
       "evidence": "Erzeugte Evidence-Packs",
       "sla_risk": "Incidents mit SLA-Risiko"
@@ -2581,7 +2581,7 @@
     },
     "triage": {
       "queue": "Priorisierte Incident-Warteschlange",
-      "catalog": "Katalog empfohlener Playbooks",
+      "catalog": "Katalog empfohlener Verfahren",
       "recent": "Aktuelle Incidents",
       "sla": "SLA & Eskalationen",
       "distribution": "Incident-Verteilung",
@@ -2602,7 +2602,7 @@
       "status": "Status",
       "owner": "Owner",
       "sla": "SLA",
-      "playbook": "Empfohlenes Playbook",
+      "playbook": "Empfohlenes Verfahren",
       "role": "Erforderliche Rolle"
     },
     "severity": {
@@ -2623,7 +2623,7 @@
       "conformite": "Compliance"
     },
     "exec": {
-      "running": "Laufendes Playbook",
+      "running": "Laufendes Verfahren",
       "journal": "Reaktionsprotokoll (Auszug)",
       "automations": "Automatisierungen",
       "quickActions": "Schnellaktionen",
@@ -2660,7 +2660,7 @@
     },
     "impact": {
       "mttr": "MTTA / MTTR über 7 Tage",
-      "resolution": "Lösungsrate pro Playbook (7T)",
+      "resolution": "Lösungsrate pro Verfahren (7T)",
       "byDomain": "Incidents pro Domäne (7T)",
       "postmortems": "Lessons learned — Aktuelle Post-mortems",
       "viewFull": "Vollständige Analyse anzeigen",
@@ -2671,7 +2671,7 @@
     "footer": {
       "critical": "{n} kritische Incidents",
       "atRisk": "{n} Incidents mit Risiko",
-      "playbooks": "{n} aktive Playbooks",
+      "playbooks": "{n} aktive Verfahren",
       "proofs": "{n} erzeugte Nachweise (7T)",
       "source": "Quelle der Wahrheit: {src}",
       "sync": "Letzte Sync: {ago}"

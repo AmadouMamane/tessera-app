@@ -2536,12 +2536,12 @@
     }
   },
   "incidents": {
-    "title": "Incidents & playbooks",
-    "subtitle": "Réponse aux incidents, orchestration des playbooks et remédiation gouvernée.",
+    "title": "Incidents & procédures",
+    "subtitle": "Réponse aux incidents, orchestration des procédures et remédiation gouvernée.",
     "tabs": {
       "overview": "Vue d’ensemble",
       "incidents": "Incidents",
-      "playbooks": "Playbooks",
+      "playbooks": "Procédures",
       "orchestration": "Orchestration",
       "actions": "Actions",
       "postmortems": "Post-mortems",
@@ -2557,8 +2557,8 @@
     },
     "actions": {
       "createTicket": "Créer ticket",
-      "launchPlaybook": "Lancer playbook",
-      "evidencePack": "Générer evidence pack"
+      "launchPlaybook": "Lancer procédure",
+      "evidencePack": "Générer dossier de preuves"
     },
     "zone": {
       "actual": "A · État actuel",
@@ -2571,7 +2571,7 @@
       "critical": "Critiques",
       "mtta": "MTTA (moy. 7j)",
       "mttr": "MTTR (moy. 7j)",
-      "playbooks": "Playbooks actifs",
+      "playbooks": "Procédures actifs",
       "autoresolve": "Auto-résolution",
       "evidence": "Evidence packs générés",
       "sla_risk": "Incidents avec SLA à risque"
@@ -2581,7 +2581,7 @@
     },
     "triage": {
       "queue": "File prioritaire des incidents",
-      "catalog": "Catalogue des playbooks recommandés",
+      "catalog": "Catalogue des procédures recommandés",
       "recent": "Incidents récents",
       "sla": "SLA & Escalades",
       "distribution": "Répartition des incidents",
@@ -2602,7 +2602,7 @@
       "status": "Statut",
       "owner": "Owner",
       "sla": "SLA",
-      "playbook": "Playbook recommandé",
+      "playbook": "Procédure recommandé",
       "role": "Rôle requis"
     },
     "severity": {
@@ -2623,7 +2623,7 @@
       "conformite": "Conformité"
     },
     "exec": {
-      "running": "Playbook en cours",
+      "running": "Procédure en cours",
       "journal": "Journal de réponse (extrait)",
       "automations": "Automations",
       "quickActions": "Actions rapides",
@@ -2656,11 +2656,11 @@
       "launchContainment": "Lancer containment",
       "freezeRelease": "Geler release",
       "createJira": "Créer ticket Jira",
-      "evidencePack": "Générer evidence pack"
+      "evidencePack": "Générer dossier de preuves"
     },
     "impact": {
       "mttr": "MTTA / MTTR sur 7 jours",
-      "resolution": "Taux de résolution par playbook (7j)",
+      "resolution": "Taux de résolution par procédure (7j)",
       "byDomain": "Incidents par domaine (7j)",
       "postmortems": "Leçons apprises — Post-mortems récents",
       "viewFull": "Voir l’analyse complète",
@@ -2671,7 +2671,7 @@
     "footer": {
       "critical": "{n} incidents critiques",
       "atRisk": "{n} incidents à risque",
-      "playbooks": "{n} playbooks actifs",
+      "playbooks": "{n} procédures actifs",
       "proofs": "{n} preuves générées (7j)",
       "source": "Source de vérité : {src}",
       "sync": "Dernière sync : {ago}"
