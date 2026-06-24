@@ -3,11 +3,16 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  AlertCircle,
+  AlertTriangle,
   ChevronRight,
   Database,
   Download,
   FileSearch,
+  FileText,
   GitBranch,
+  ListChecks,
+  type LucideIcon,
   MoreVertical,
   PlayCircle,
   Plus,
@@ -16,11 +21,12 @@ import {
   Timer,
   UserPlus,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
+import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
   TemporalRail,
@@ -63,16 +69,28 @@ const TABS = [
   "problemes",
   "rapports",
 ] as const;
+
+const TAB_ICONS: Record<(typeof TABS)[number], LucideIcon> = {
+  overview: Activity,
+  incidents: AlertTriangle,
+  playbooks: PlayCircle,
+  orchestration: GitBranch,
+  actions: ListChecks,
+  postmortems: FileSearch,
+  problemes: AlertCircle,
+  rapports: FileText,
+};
 type TabKey = (typeof TABS)[number];
 
 export function IncidentsOverview() {
   const t = useTranslations("incidents");
+  const locale = useLocale();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const { data } = useQuery({
-    queryKey: ["incidents-overview"],
-    queryFn: ({ signal }) => fetchIncidentsOverview(signal),
+    queryKey: ["incidents-overview", locale],
+    queryFn: ({ signal }) => fetchIncidentsOverview(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -167,23 +185,17 @@ function CommandBar({
 }: { t: T; activeTab: TabKey; onSelect: (tab: TabKey) => void }) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => onSelect(tab)}
-            className={cn(
-              "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
-              tab === activeTab
-                ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
-                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
-            )}
-          >
-            {t(`tabs.${tab}`)}
-          </button>
-        ))}
-      </div>
+      <TabStrip
+        accent="blue"
+        active={activeTab}
+        onChange={onSelect}
+        className="min-w-0 flex-1"
+        items={TABS.map((tab) => ({
+          key: tab,
+          label: t(`tabs.${tab}`),
+          icon: TAB_ICONS[tab],
+        }))}
+      />
       <div className="flex shrink-0 items-center gap-2">
         <Button
           size="sm"

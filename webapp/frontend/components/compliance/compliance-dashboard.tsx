@@ -2,19 +2,23 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   BookText,
   CalendarClock,
   FileCheck2,
   FileDown,
+  GitBranch,
+  LayoutDashboard,
   ListChecks,
   type LucideIcon,
   ScrollText,
   ShieldCheck,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
+import { TabStrip } from "@/components/cockpit/tab-strip";
 import {
   TemporalRail,
   useRailTimeline,
@@ -52,6 +56,17 @@ const TABS = [
   "registry",
 ] as const;
 type TabKey = (typeof TABS)[number];
+
+const TAB_ICONS: Record<TabKey, LucideIcon> = {
+  overview: LayoutDashboard,
+  mapping: GitBranch,
+  obligations: BookText,
+  evaluations: ListChecks,
+  incidents: AlertTriangle,
+  retention: CalendarClock,
+  evidence: FileCheck2,
+  registry: ScrollText,
+};
 
 function Sec({ children }: { children: ReactNode }) {
   return (
@@ -211,9 +226,10 @@ export function ComplianceDashboard() {
   const temporal = useTemporalState();
   const { historyMode } = temporal;
   const railTimeline = useRailTimeline();
+  const locale = useLocale();
   const q = useQuery({
-    queryKey: ["compliance"],
-    queryFn: ({ signal }) => fetchCompliance(signal),
+    queryKey: ["compliance", locale],
+    queryFn: ({ signal }) => fetchCompliance(locale, signal),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
@@ -237,22 +253,16 @@ export function ComplianceDashboard() {
   return (
     <div className="flex flex-col gap-2">
       {/* tab bar */}
-      <nav className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-[var(--tessera-border)]">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setActiveTab(t)}
-            className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[0.8rem] transition-colors ${
-              t === activeTab
-                ? "border-[var(--tessera-green)] font-medium text-[var(--tessera-text)]"
-                : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--tessera-text)]"
-            }`}
-          >
-            {tc(`tabs.${t}`)}
-          </button>
-        ))}
-      </nav>
+      <TabStrip
+        accent="green"
+        active={activeTab}
+        onChange={setActiveTab}
+        items={TABS.map((t) => ({
+          key: t,
+          label: tc(`tabs.${t}`),
+          icon: TAB_ICONS[t],
+        }))}
+      />
 
       {/* Shared temporal rail (Live / Replay as-of-T) */}
       <TemporalRail

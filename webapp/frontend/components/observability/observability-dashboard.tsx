@@ -11,16 +11,20 @@ import {
   GitCompareArrows,
   Landmark,
   ListChecks,
+  type LucideIcon,
   Play,
   Radio,
   Route,
   Scale,
   ShieldCheck,
   Siren,
+  Stethoscope,
+  TrendingUp,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { TabStrip } from "@/components/cockpit/tab-strip";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedBoard, FailedRail } from "@/components/observability/failed-board";
 import { FailureDistribution } from "@/components/observability/failed-cases";
@@ -125,6 +129,33 @@ const QUALITY_CATALOGUE = 200;
 
 const TAB_DEFS = ["overview", "signals", "runs", "failed", "models", "judge"] as const;
 type TabKey = (typeof TAB_DEFS)[number];
+
+/** A translucent banded section grouping one cockpit zone, matching the
+ * Sécurité & privacy page: a labelled band holding real sub-cards. The heading
+ * carries an icon + label (no "A./B." numbering — that read as a worksheet, not
+ * a dashboard). */
+function Zone({
+  label,
+  icon: Icon,
+  iconClassName = "text-[var(--tessera-green)]",
+  children,
+}: {
+  label: string;
+  icon: LucideIcon;
+  /** Per-zone accent so each band's icon reads as its own facet. */
+  iconClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="min-w-0 rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5">
+      <h2 className="mt-0.5 mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+        <Icon className={`h-3.5 w-3.5 shrink-0 ${iconClassName}`} />
+        {label}
+      </h2>
+      {children}
+    </section>
+  );
+}
 
 export function ObservabilityDashboard() {
   const t = useTranslations("observability");
@@ -457,8 +488,15 @@ export function ObservabilityDashboard() {
       {/* Sticky chrome: tab bar + business actions on one row (image normative),
           the shared compact temporal rail (Live/Replay) below. */}
       <div className="sticky top-0 z-30 -mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-16px_0_0_var(--tessera-bg)]">
-        <div className="flex min-w-0 items-center justify-between gap-3">
-          <TabBar active={tab} onChange={setTab} />
+        {/* Action toolbar (image normative: actions sit on the title row). The tab
+            bar keeps its own full-width row below so all six tabs stay visible. A
+            left-aligned coverage descriptor anchors the band so the buttons never
+            float unmoored. */}
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex min-w-0 items-center gap-1.5 text-[0.72rem] text-[var(--muted-foreground)]">
+            <Gauge className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
+            <span className="truncate">{tq("rail.signals", { n: QUALITY_SIGNALS })}</span>
+          </span>
           <div className="flex shrink-0 items-center gap-2">
             <Button
               size="sm"
@@ -492,6 +530,7 @@ export function ObservabilityDashboard() {
             </Button>
           </div>
         </div>
+        <TabBar active={tab} onChange={setTab} />
         <TemporalRail
           mode={temporal.mode}
           liveStatus={tq("temporal.liveData")}
@@ -515,7 +554,7 @@ export function ObservabilityDashboard() {
           nonRegression={releaseStatus.data?.non_regression_rate ?? null}
           nRegressions={releaseStatus.data?.n_regressions ?? null}
           kappa={calibration.data?.kappa ?? null}
-          failedCount={failedCases.data?.n ?? null}
+          evaluatedCount={runs.data?.catalogue_cases ?? null}
           loading={scoreSeries.isLoading}
         />
       ) : null}
@@ -524,23 +563,26 @@ export function ObservabilityDashboard() {
         <div className="flex min-w-0 flex-col gap-2">
           {tab === "overview" && (
             <>
-              {/* A · B · C · D as four side-by-side zones (image normative). The zones
-                  are deliberately different heights ⇒ items-start (no stretch). */}
-              <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.45fr)]">
-                {/* A. État actuel */}
-                <EtatActuel
-                  summary={signalSummary}
-                  release={releaseStatus.data}
-                  evolutionDelta={scoreSeries.data?.delta ?? null}
-                  scorePct={sloPct}
-                  series={scoreSeries.data}
-                />
+              {/* Each zone is a translucent band holding real sub-cards (like the
+                  Sécurité & privacy page). Row 1: A | B with B at 3fr so its three
+                  sub-cards get real width; row 2: C | D. */}
+              <div className="grid items-start gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
+                <Zone label={tq("sec.etat")} icon={Gauge} iconClassName="text-sky-400">
+                  <EtatActuel
+                    summary={signalSummary}
+                    release={releaseStatus.data}
+                    evolutionDelta={scoreSeries.data?.delta ?? null}
+                    scorePct={sloPct}
+                    series={scoreSeries.data}
+                  />
+                </Zone>
 
-                {/* B. Diagnostic racine — Répartition | Calibration | Cas prioritaires,
-                    then the "Qu'est-ce qui a changé / Causes probables" diagnostic. */}
-                <div className="flex min-w-0 flex-col gap-2">
-                  <SectionLabel>{tq("sec.diagnostic")}</SectionLabel>
-                  <div className="grid items-start gap-2 sm:grid-cols-3">
+                <Zone
+                  label={tq("sec.diagnostic")}
+                  icon={Stethoscope}
+                  iconClassName="text-amber-400"
+                >
+                  <div className="grid items-start gap-2 xl:grid-cols-3">
                     <FailureBars report={failedCases.data} loading={failedCases.isLoading} />
                     <JudgeMini data={calibration.data} loading={calibration.isLoading} />
                     <PriorityCases
@@ -549,30 +591,40 @@ export function ObservabilityDashboard() {
                       onOpen={setTab}
                     />
                   </div>
-                  <RootCauseDiagnostic
-                    whatChanged={whatChanged.data}
-                    regressions={releaseStatus.data?.regressions ?? []}
+                  <div className="mt-2">
+                    <RootCauseDiagnostic
+                      whatChanged={whatChanged.data}
+                      regressions={releaseStatus.data?.regressions ?? []}
+                    />
+                  </div>
+                </Zone>
+              </div>
+
+              <div className="grid items-start gap-2 md:grid-cols-2">
+                <Zone
+                  label={tq("sec.predictive")}
+                  icon={TrendingUp}
+                  iconClassName="text-violet-400"
+                >
+                  <PredictiveSignals
+                    series={scoreSeries.data}
+                    risk={regressionRisk.data}
+                    drift={judgeDrift.data}
+                    predictor={failurePredictor.data}
+                    intent={intent.data}
+                    localization={localization.data}
+                    loading={regressionRisk.isLoading}
                   />
-                </div>
+                </Zone>
 
-                {/* C. Signaux prédictifs */}
-                <PredictiveSignals
-                  series={scoreSeries.data}
-                  risk={regressionRisk.data}
-                  drift={judgeDrift.data}
-                  predictor={failurePredictor.data}
-                  intent={intent.data}
-                  localization={localization.data}
-                  loading={regressionRisk.isLoading}
-                />
-
-                {/* D. Actions recommandées */}
-                <RecommendedActions
-                  regressions={releaseStatus.data?.regressions ?? []}
-                  failed={failedCases.data}
-                  onOpen={setTab}
-                  onEvidence={downloadQualityEvidence}
-                />
+                <Zone label={tq("sec.actions")} icon={ListChecks} iconClassName="text-emerald-400">
+                  <RecommendedActions
+                    regressions={releaseStatus.data?.regressions ?? []}
+                    failed={failedCases.data}
+                    onOpen={setTab}
+                    onEvidence={downloadQualityEvidence}
+                  />
+                </Zone>
               </div>
             </>
           )}
@@ -723,16 +775,10 @@ export function ObservabilityDashboard() {
   );
 }
 
-/** Compact section heading (A. / B. / C. / D.) above each overview row. */
-function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
-      {children}
-    </h2>
-  );
-}
-
-/** Thin sticky status bar pinned to the bottom of the page (image normative). */
+/** Thin status bar that closes the page (image normative). It rides at the end
+ * of the content — not `sticky`, which left it floating mid-scroll and masking
+ * the rows behind it once the page grew past one viewport. `mt-auto` keeps it at
+ * the bottom when the content is short. */
 function StatusBar({ release }: { release: ReleaseStatus | undefined }) {
   const tq = useTranslations("quality");
   const dataset = release?.current ? `Llama · ${release.current.version}` : "—";
@@ -746,7 +792,7 @@ function StatusBar({ release }: { release: ReleaseStatus | undefined }) {
     { icon: ListChecks, label: tq("statusbar.signals", { n: QUALITY_SIGNALS }) },
   ];
   return (
-    <div className="sticky bottom-0 z-20 -mx-3 flex h-9 items-center gap-4 overflow-hidden border-t border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.7rem] text-[var(--tessera-text-muted)]">
+    <div className="mt-auto -mx-3 flex h-9 items-center gap-4 overflow-hidden border-t border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.7rem] text-[var(--tessera-text-muted)]">
       {items.map((it) => (
         <span key={it.label} className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
           <it.icon className={`h-3.5 w-3.5 shrink-0 ${it.tone ?? ""}`} />
@@ -773,27 +819,16 @@ const TAB_META: Record<TabKey, typeof Gauge> = {
 function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) => void }) {
   const tq = useTranslations("quality");
   return (
-    <nav className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-[var(--tessera-border)]">
-      {TAB_DEFS.map((key) => {
-        const Icon = TAB_META[key];
-        const on = key === active;
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onChange(key)}
-            className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[0.8rem] transition-colors ${
-              on
-                ? "border-[var(--tessera-green)] font-medium text-[var(--tessera-text)]"
-                : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {tq(`tabs.${key}`)}
-          </button>
-        );
-      })}
-    </nav>
+    <TabStrip
+      accent="green"
+      active={active}
+      onChange={onChange}
+      items={TAB_DEFS.map((key) => ({
+        key,
+        label: tq(`tabs.${key}`),
+        icon: TAB_META[key],
+      }))}
+    />
   );
 }
 
@@ -866,9 +901,13 @@ function RightRail({
               <p className="text-xs text-[var(--muted-foreground)]">{tq("rr.noProblems")}</p>
             ) : (
               problems.map((p) => (
-                <div key={p.case_id} className="flex items-center gap-1.5 text-[0.7rem]">
+                <div
+                  key={p.case_id}
+                  className="flex items-start gap-1.5 text-[0.7rem]"
+                  title={`${p.title} · ${p.severity}`}
+                >
                   <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${
                       p.severity === "critical"
                         ? "bg-red-500"
                         : p.severity === "high"
@@ -876,10 +915,7 @@ function RightRail({
                           : "bg-[var(--muted-foreground)]"
                     }`}
                   />
-                  <span className="min-w-0 flex-1 truncate">{p.title}</span>
-                  <span className="shrink-0 text-[0.6rem] text-[var(--muted-foreground)]">
-                    {p.severity}
-                  </span>
+                  <span className="line-clamp-2 min-w-0 flex-1 leading-snug">{p.title}</span>
                 </div>
               ))
             )}

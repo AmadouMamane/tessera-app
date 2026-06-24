@@ -387,6 +387,7 @@ export function FailedBoard({
   onSelect: (c: FailedRunCase) => void;
 }) {
   const tq = useTranslations("quality");
+  const tt = useTranslations("table");
   const catLabel = useCatLabel();
   const [sev, setSev] = useState("all");
   const [cat, setCat] = useState("all");
@@ -540,19 +541,24 @@ export function FailedBoard({
               {tq("failed.empty")}
             </p>
           ) : (
-            <table className="w-full text-left text-[0.7rem]">
+            <table className="w-full min-w-[940px] table-fixed text-left text-[0.7rem]">
               <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
                 <tr className="border-b border-[var(--border)]">
-                  <th className="w-6 py-1.5" />
-                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.id")}</th>
-                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.severity")}</th>
-                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.category")}</th>
-                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.prompt")}</th>
-                  <th className="py-1.5 pr-2 text-right font-medium">{tq("failed.cols.score")}</th>
-                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.run")}</th>
-                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.model")}</th>
-                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.owner")}</th>
-                  <th className="py-1.5 pr-2 font-medium">{tq("failed.cols.status")}</th>
+                  <th className="w-9 py-1.5 pl-4" />
+                  <th className="w-[8%] px-2 py-1.5 font-medium">{tq("failed.cols.id")}</th>
+                  <th className="w-[9%] px-2 py-1.5 font-medium">{tq("failed.cols.severity")}</th>
+                  <th className="w-[10%] px-2 py-1.5 font-medium">{tq("failed.cols.category")}</th>
+                  <th className="w-[22%] px-2 py-1.5 font-medium">{tq("failed.cols.prompt")}</th>
+                  <th className="w-[6%] px-2 py-1.5 text-right font-medium">
+                    {tq("failed.cols.score")}
+                  </th>
+                  <th className="w-[7%] px-2 py-1.5 font-medium">{tq("failed.cols.run")}</th>
+                  <th className="w-[10%] px-2 py-1.5 font-medium">{tq("failed.cols.model")}</th>
+                  <th className="w-[9%] px-2 py-1.5 font-medium">{tq("failed.cols.owner")}</th>
+                  <th className="w-[9%] px-2 py-1.5 font-medium">{tq("failed.cols.status")}</th>
+                  <th className="w-24 py-1.5 pr-4 pl-2 font-medium">
+                    <span className="sr-only">{tt("rowOpen")}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -563,11 +569,20 @@ export function FailedBoard({
                     <tr
                       key={k}
                       onClick={() => onSelect(c)}
-                      className={`cursor-pointer border-b border-[var(--border)]/50 transition-colors hover:bg-[var(--accent)]/40 ${
+                      // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onSelect(c);
+                        }
+                      }}
+                      className={`group cursor-pointer border-b border-[var(--border)]/50 outline-none transition-colors hover:bg-[var(--accent)]/40 focus-visible:bg-[var(--accent)]/40 ${
                         isSelected ? "bg-[var(--accent)]/60" : ""
                       }`}
                     >
-                      <td className="py-1.5">
+                      <td className="py-1.5 pl-4">
                         <input
                           type="checkbox"
                           checked={picked.has(k)}
@@ -576,27 +591,43 @@ export function FailedBoard({
                           aria-label={c.id}
                         />
                       </td>
-                      <td className="py-1.5 pr-2 font-mono text-[0.65rem] text-[var(--muted-foreground)]">
-                        {c.id}
+                      <td className="px-2 py-2 font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                        <span className="block truncate" title={c.id}>
+                          {c.id}
+                        </span>
                       </td>
-                      <td className="py-1.5 pr-2">
+                      <td className="px-2 py-2">
                         <Badge tone={SEV_TONE[c.severity] ?? "neutral"} className="text-[0.6rem]">
                           {tq(`failed.sev.${c.severity}`)}
                         </Badge>
                       </td>
-                      <td className="py-1.5 pr-2 whitespace-nowrap">{catLabel(c.category)}</td>
-                      <td className="max-w-[20rem] truncate py-1.5 pr-2 text-[var(--muted-foreground)]">
-                        {c.prompt}
+                      <td className="px-2 py-2">
+                        <span className="block truncate" title={catLabel(c.category)}>
+                          {catLabel(c.category)}
+                        </span>
                       </td>
-                      <td className="py-1.5 pr-2 text-right tabular-nums text-[var(--muted-foreground)]">
+                      <td className="px-2 py-2 text-[var(--muted-foreground)]">
+                        <span className="block truncate" title={c.prompt}>
+                          {c.prompt}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-right tabular-nums text-[var(--muted-foreground)]">
                         {DASH}
                       </td>
-                      <td className="py-1.5 pr-2 font-mono text-[0.62rem] text-[var(--muted-foreground)]">
+                      <td className="px-2 py-2 font-mono text-[0.62rem] text-[var(--muted-foreground)]">
                         {c.catalogue_version ? `v${c.catalogue_version.split("-")[0]}` : DASH}
                       </td>
-                      <td className="py-1.5 pr-2 whitespace-nowrap">{shortModel(c.model)}</td>
-                      <td className="py-1.5 pr-2 text-[var(--muted-foreground)]">{c.owner}</td>
-                      <td className="py-1.5 pr-2">
+                      <td className="px-2 py-2">
+                        <span className="block truncate" title={c.model}>
+                          {shortModel(c.model)}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-[var(--muted-foreground)]">
+                        <span className="block truncate" title={c.owner}>
+                          {c.owner}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2">
                         <span
                           className={`inline-flex items-center gap-1 text-[0.62rem] ${
                             c.status === "new"
@@ -610,6 +641,14 @@ export function FailedBoard({
                             }`}
                           />
                           {tq(`failed.status.${c.status}`)}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 pl-2">
+                        <span className="flex items-center justify-end gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#7ff0b6]">
+                          <span className="opacity-0 transition-opacity group-hover:opacity-100">
+                            {tt("rowOpen")}
+                          </span>
+                          <ChevronRight className="h-3.5 w-3.5" />
                         </span>
                       </td>
                     </tr>

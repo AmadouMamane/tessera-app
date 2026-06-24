@@ -3,6 +3,7 @@
 import {
   Activity,
   Boxes,
+  ChevronRight,
   Clock,
   Coins,
   Database,
@@ -294,6 +295,7 @@ export function RunsEvalTable({
   onSelect: (run: RunSummary) => void;
 }) {
   const tq = useTranslations("quality");
+  const tt = useTranslations("table");
   const runs = registry?.runs ?? [];
   return (
     <Card>
@@ -303,25 +305,36 @@ export function RunsEvalTable({
           {tq("runs.count", { n: registry?.n ?? 0 })}
         </Badge>
       </CardHeader>
-      <CardContent className="max-h-[268px] overflow-y-auto">
+      <CardContent className="max-h-[268px] overflow-auto">
         {runs.length === 0 ? (
           <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">
             {tq("runs.empty")}
           </p>
         ) : (
-          <table className="w-full text-left text-[0.7rem]">
+          <table className="w-full min-w-[760px] table-fixed text-left text-[0.7rem]">
             <thead className="sticky top-0 z-10 bg-[var(--card)] text-[0.62rem] uppercase tracking-wide text-[var(--muted-foreground)]">
               <tr className="border-b border-[var(--border)]">
-                <th className="py-1 pr-2 font-medium">{tq("runs.table.model")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.table.catalogue")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.table.lang")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.table.cases")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.table.passed")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.table.rate")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.table.delta")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.table.cost")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.table.duration")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.table.status")}</th>
+                <th className="w-[16%] py-1 pr-2 pl-5 font-medium">{tq("runs.table.model")}</th>
+                <th className="w-[9%] px-2 py-1 font-medium">{tq("runs.table.catalogue")}</th>
+                <th className="w-[6%] px-2 py-1 font-medium">{tq("runs.table.lang")}</th>
+                <th className="w-[7%] px-2 py-1 text-right font-medium">
+                  {tq("runs.table.cases")}
+                </th>
+                <th className="w-[7%] px-2 py-1 text-right font-medium">
+                  {tq("runs.table.passed")}
+                </th>
+                <th className="w-[8%] px-2 py-1 text-right font-medium">{tq("runs.table.rate")}</th>
+                <th className="w-[8%] px-2 py-1 text-right font-medium">
+                  {tq("runs.table.delta")}
+                </th>
+                <th className="w-[9%] px-2 py-1 text-right font-medium">{tq("runs.table.cost")}</th>
+                <th className="w-[9%] px-2 py-1 text-right font-medium">
+                  {tq("runs.table.duration")}
+                </th>
+                <th className="w-[10%] px-2 py-1 font-medium">{tq("runs.table.status")}</th>
+                <th className="w-24 py-1 pr-4 pl-2 font-medium">
+                  <span className="sr-only">{tt("rowOpen")}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -332,37 +345,58 @@ export function RunsEvalTable({
                   <tr
                     key={r.run_id}
                     onClick={() => onSelect(r)}
-                    className={`cursor-pointer border-b border-[var(--border)]/60 transition-colors hover:bg-[var(--accent)]/40 ${
+                    // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelect(r);
+                      }
+                    }}
+                    className={`group cursor-pointer border-b border-[var(--border)]/60 outline-none transition-colors hover:bg-[var(--accent)]/40 focus-visible:bg-[var(--accent)]/40 ${
                       selected ? "bg-[var(--accent)]/60" : ""
                     }`}
                   >
-                    <td className="py-1 pr-2 font-medium text-[var(--foreground)]">{r.model}</td>
-                    <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
+                    <td className="py-1.5 pr-2 pl-5 font-medium text-[var(--foreground)]">
+                      <span className="block truncate" title={r.model}>
+                        {r.model}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5 tabular-nums text-[var(--muted-foreground)]">
                       {r.catalogue_version ? `v${r.catalogue_version.split("-")[0]}` : DASH}
                     </td>
-                    <td className="py-1 pr-2 uppercase text-[var(--muted-foreground)]">
+                    <td className="px-2 py-1.5 uppercase text-[var(--muted-foreground)]">
                       {r.language && r.language !== "None" ? r.language : DASH}
                     </td>
-                    <td className="py-1 pr-2 text-right tabular-nums">{r.total}</td>
-                    <td className="py-1 pr-2 text-right tabular-nums">{r.passed}</td>
-                    <td className={`py-1 pr-2 text-right font-semibold tabular-nums ${rateTone}`}>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{r.total}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{r.passed}</td>
+                    <td className={`px-2 py-1.5 text-right font-semibold tabular-nums ${rateTone}`}>
                       {fmtPct(r.pass_rate)}
                     </td>
-                    <td className="py-1 pr-2 text-right">
+                    <td className="px-2 py-1.5 text-right">
                       <DeltaCell delta={deltaForRun(registry, r)} />
                     </td>
-                    <td className="py-1 pr-2 text-right tabular-nums text-[var(--muted-foreground)]">
+                    <td className="px-2 py-1.5 text-right tabular-nums text-[var(--muted-foreground)]">
                       {fmtEur(r.est_cost_eur)}
                     </td>
-                    <td className="py-1 pr-2 text-right tabular-nums text-[var(--muted-foreground)]">
+                    <td className="px-2 py-1.5 text-right tabular-nums text-[var(--muted-foreground)]">
                       {fmtDuration(r.mean_latency_ms)}
                     </td>
-                    <td className="py-1 pr-2">
+                    <td className="px-2 py-1.5">
                       <span className="inline-flex items-center gap-1">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         <span className="text-[0.65rem] text-[var(--muted-foreground)]">
                           {tq("runs.done")}
                         </span>
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-4 pl-2">
+                      <span className="flex items-center justify-end gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#7ff0b6]">
+                        <span className="opacity-0 transition-opacity group-hover:opacity-100">
+                          {tt("rowOpen")}
+                        </span>
+                        <ChevronRight className="h-3.5 w-3.5" />
                       </span>
                     </td>
                   </tr>
@@ -522,21 +556,29 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
             {tq("runs.qdatasets.empty")}
           </p>
         ) : (
-          <table className="w-full text-left text-[0.7rem]">
+          <table className="w-full min-w-[860px] table-fixed text-left text-[0.7rem]">
             <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
               <tr className="border-b border-[var(--border)]">
-                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.dataset")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.description")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.langs")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.qdatasets.cases")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.updated")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.version")}</th>
-                <th className="py-1 pr-2 text-right font-medium">{tq("runs.qdatasets.drift")}</th>
-                <th className="py-1 pr-2 text-right font-medium">
+                <th className="w-[13%] py-1 pr-2 pl-5 font-medium">
+                  {tq("runs.qdatasets.dataset")}
+                </th>
+                <th className="w-[22%] px-2 py-1 font-medium">
+                  {tq("runs.qdatasets.description")}
+                </th>
+                <th className="w-[8%] px-2 py-1 font-medium">{tq("runs.qdatasets.langs")}</th>
+                <th className="w-[7%] px-2 py-1 text-right font-medium">
+                  {tq("runs.qdatasets.cases")}
+                </th>
+                <th className="w-[9%] px-2 py-1 font-medium">{tq("runs.qdatasets.updated")}</th>
+                <th className="w-[8%] px-2 py-1 font-medium">{tq("runs.qdatasets.version")}</th>
+                <th className="w-[8%] px-2 py-1 text-right font-medium">
+                  {tq("runs.qdatasets.drift")}
+                </th>
+                <th className="w-[9%] px-2 py-1 text-right font-medium">
                   {tq("runs.qdatasets.coverage")}
                 </th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.owner")}</th>
-                <th className="py-1 pr-2 font-medium">{tq("runs.qdatasets.status")}</th>
+                <th className="w-[8%] px-2 py-1 font-medium">{tq("runs.qdatasets.owner")}</th>
+                <th className="w-[8%] px-2 py-1 font-medium">{tq("runs.qdatasets.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -544,30 +586,38 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
                 const status = statusBand(d.pass_rate);
                 return (
                   <tr key={d.key} className="border-b border-[var(--border)]/60">
-                    <td className="py-1 pr-2 font-medium text-[var(--foreground)]">
-                      {tq(`runs.theme.${d.key}`)}
+                    <td className="py-1.5 pr-2 pl-5 font-medium text-[var(--foreground)]">
+                      <span className="block truncate" title={tq(`runs.theme.${d.key}`)}>
+                        {tq(`runs.theme.${d.key}`)}
+                      </span>
                     </td>
-                    <td className="max-w-[15rem] truncate py-1 pr-2 text-[var(--muted-foreground)]">
-                      {tq(`runs.themeDesc.${d.key}`)}
+                    <td className="px-2 py-1.5 text-[var(--muted-foreground)]">
+                      <span className="block truncate" title={tq(`runs.themeDesc.${d.key}`)}>
+                        {tq(`runs.themeDesc.${d.key}`)}
+                      </span>
                     </td>
-                    <td className="py-1 pr-2 uppercase text-[var(--muted-foreground)]">
+                    <td className="px-2 py-1.5 uppercase text-[var(--muted-foreground)]">
                       {langBadges(d.languages)}
                     </td>
-                    <td className="py-1 pr-2 text-right tabular-nums">{d.cases}</td>
-                    <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
+                    <td className="px-2 py-1.5 text-right tabular-nums">{d.cases}</td>
+                    <td className="px-2 py-1.5 tabular-nums text-[var(--muted-foreground)]">
                       {fmtDay(d.updated_at)}
                     </td>
-                    <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
+                    <td className="px-2 py-1.5 tabular-nums text-[var(--muted-foreground)]">
                       {d.version ? `v${d.version.split("-")[0]}` : DASH}
                     </td>
-                    <td className="py-1 pr-2 text-right">
+                    <td className="px-2 py-1.5 text-right">
                       <DriftCell drift={d.drift} />
                     </td>
-                    <td className="py-1 pr-2 text-right">
+                    <td className="px-2 py-1.5 text-right">
                       <CoverageCell coverage={d.coverage} />
                     </td>
-                    <td className="py-1 pr-2 text-[var(--muted-foreground)]">{d.owner}</td>
-                    <td className="py-1 pr-2">
+                    <td className="px-2 py-1.5 text-[var(--muted-foreground)]">
+                      <span className="block truncate" title={d.owner}>
+                        {d.owner}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5">
                       <span className="inline-flex items-center gap-1">
                         <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status]}`} />
                         <span className="text-[0.65rem] text-[var(--muted-foreground)]">

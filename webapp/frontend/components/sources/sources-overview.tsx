@@ -41,6 +41,7 @@ import {
 } from "react";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
+import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -92,6 +93,17 @@ const VIEWS = [
   "lineage",
   "history",
 ] as const;
+const VIEW_ICONS: Record<(typeof VIEWS)[number], LucideIcon> = {
+  overview: Layers,
+  sources: Database,
+  memory: Brain,
+  indexation: Package,
+  quality: Sparkles,
+  access: Users,
+  retention: Clock,
+  lineage: GitBranch,
+  history: History,
+};
 const TABLE_VIEWS = new Set(["overview", "sources", "memory"]);
 const MAX_PAGE_BUTTONS = 5;
 const ROWS_PER_PAGE_OPTS = [10, 25, 50];
@@ -206,7 +218,17 @@ export function SourcesOverview() {
   return (
     <div className="flex min-w-0 flex-col gap-3 text-[var(--tessera-text)]">
       <CommandBar t={t} note={data.readonly_note} onExport={onExport} />
-      <TabStrip t={t} view={view} onView={setView} />
+      <TabStrip
+        accent="blue"
+        active={view}
+        onChange={setView}
+        data-testid="sources-tabs"
+        items={VIEWS.map((v) => ({
+          key: v,
+          label: t(`tabs.${v}`),
+          icon: VIEW_ICONS[v],
+        }))}
+      />
 
       {view === "overview" ? (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
@@ -291,32 +313,6 @@ function citeNum(r: Row): number {
 }
 
 // ── chrome ───────────────────────────────────────────────────────────────────
-
-function TabStrip({ t, view, onView }: { t: T; view: View; onView: (v: View) => void }) {
-  return (
-    <nav
-      data-testid="sources-tabs"
-      className="flex shrink-0 flex-wrap items-center gap-1 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-1.5"
-    >
-      {VIEWS.map((v) => (
-        <button
-          key={v}
-          type="button"
-          aria-current={v === view ? "page" : undefined}
-          onClick={() => onView(v)}
-          className={cn(
-            "rounded-md px-2.5 py-1.5 text-[0.7rem] font-medium transition-colors",
-            v === view
-              ? "bg-[#0d3561] text-[#d8eaff]"
-              : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
-          )}
-        >
-          {t(`tabs.${v}`)}
-        </button>
-      ))}
-    </nav>
-  );
-}
 
 function CommandBar({ t, note, onExport }: { t: T; note: string; onExport: () => void }) {
   return (
@@ -1656,14 +1652,24 @@ function DetailPanel({
             </span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("detail.close")}
-          className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {row.infra ? null : (
+            <Link
+              href={{ pathname: "/prouver/etat-a-date", query: { sources: row.id } }}
+              className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)] hover:border-[#2e72d2] hover:text-[var(--tessera-text)]"
+            >
+              <CalendarClock className="h-3.5 w-3.5" /> {t("detail.asof")}
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("detail.close")}
+            className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Ring kept tight on the left; the divider sits midway between the ring and

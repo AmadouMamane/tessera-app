@@ -543,7 +543,7 @@ export function QualityGauge({ summary }: { summary: ReturnType<typeof summarize
 /** Filterable, sortable catalogue of every quality signal (reference image 01). */
 /** Display order of the severity groups in the registry (crit first, image 01). */
 const GROUP_ORDER: SignalStatus[] = ["crit", "warn", "ok", "na"];
-const COLS = 10;
+const COLS = 11;
 
 /** "Registre des signaux qualité" — the full registry table grouped by severity,
  * with search + entity/status filter chips (reference image 01). */
@@ -557,6 +557,7 @@ export function SignalsTable({
   onSelect?: (row: SignalRow) => void;
 }) {
   const tq = useTranslations("quality");
+  const tt = useTranslations("table");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<SignalStatus | "all">("all");
   const [entity, setEntity] = useState<SignalEntity | "all">("all");
@@ -650,19 +651,40 @@ export function SignalsTable({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full min-w-[960px] table-fixed text-xs">
               <thead>
-                <tr className="border-[var(--border)] border-b text-left text-[0.7rem] text-[var(--muted-foreground)]">
-                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.id")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.signal")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.theme")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.entity")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.value")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.threshold")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.status")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.trend")}</th>
-                  <th className="py-1.5 pr-3 font-medium">{tq("signalsTable.cols.action")}</th>
-                  <th className="py-1.5 font-medium">{tq("signalsTable.cols.role")}</th>
+                <tr className="border-[var(--border)] border-b text-left text-[0.66rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+                  <th className="w-[7%] py-1.5 pr-2 pl-5 font-medium">
+                    {tq("signalsTable.cols.id")}
+                  </th>
+                  <th className="w-[20%] px-2 py-1.5 font-medium">
+                    {tq("signalsTable.cols.signal")}
+                  </th>
+                  <th className="w-[9%] px-2 py-1.5 font-medium">
+                    {tq("signalsTable.cols.theme")}
+                  </th>
+                  <th className="w-[9%] px-2 py-1.5 font-medium">
+                    {tq("signalsTable.cols.entity")}
+                  </th>
+                  <th className="w-[7%] px-2 py-1.5 font-medium">
+                    {tq("signalsTable.cols.value")}
+                  </th>
+                  <th className="w-[8%] px-2 py-1.5 font-medium">
+                    {tq("signalsTable.cols.threshold")}
+                  </th>
+                  <th className="w-[9%] px-2 py-1.5 font-medium">
+                    {tq("signalsTable.cols.status")}
+                  </th>
+                  <th className="w-[8%] px-2 py-1.5 font-medium">
+                    {tq("signalsTable.cols.trend")}
+                  </th>
+                  <th className="w-[9%] px-2 py-1.5 font-medium">
+                    {tq("signalsTable.cols.action")}
+                  </th>
+                  <th className="w-[8%] px-2 py-1.5 font-medium">{tq("signalsTable.cols.role")}</th>
+                  <th className="w-28 py-1.5 pr-4 pl-2 font-medium">
+                    <span className="sr-only">{tt("rowOpen")}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -699,48 +721,79 @@ export function SignalsTable({
                           <tr
                             key={r.key}
                             onClick={() => onSelect?.(r)}
-                            className={`cursor-pointer border-[var(--border)]/50 border-b transition-colors hover:bg-[var(--tessera-muted)] ${
+                            // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onSelect?.(r);
+                              }
+                            }}
+                            className={`group cursor-pointer border-[var(--border)]/50 border-b outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:bg-[var(--tessera-muted)] ${
                               selectedKey === r.key ? "bg-[var(--tessera-muted)]" : ""
                             }`}
                           >
-                            <td className="py-1.5 pr-3 font-mono text-[var(--muted-foreground)]">
-                              {r.id}
+                            <td className="py-2 pr-2 pl-5 font-mono text-[var(--muted-foreground)]">
+                              <span className="block truncate" title={r.id}>
+                                {r.id}
+                              </span>
                             </td>
-                            <td className="py-1.5 pr-3">
-                              <div className="flex flex-col">
-                                <span className="font-medium text-[var(--foreground)]">
+                            <td className="px-2 py-2">
+                              <div className="flex min-w-0 flex-col">
+                                <span
+                                  className="truncate font-medium text-[var(--foreground)]"
+                                  title={r.name}
+                                >
                                   {r.name}
                                 </span>
-                                <span className="font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                                <span
+                                  className="truncate font-mono text-[0.65rem] text-[var(--muted-foreground)]"
+                                  title={r.metric}
+                                >
                                   {r.metric}
                                 </span>
                               </div>
                             </td>
-                            <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
-                              {tq(`signalsTable.cat.${r.category}`)}
+                            <td className="px-2 py-2 text-[var(--muted-foreground)]">
+                              <span className="block truncate">
+                                {tq(`signalsTable.cat.${r.category}`)}
+                              </span>
                             </td>
-                            <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
-                              {tq(`signalsTable.entity.${r.entity}`)}
+                            <td className="px-2 py-2 text-[var(--muted-foreground)]">
+                              <span className="block truncate">
+                                {tq(`signalsTable.entity.${r.entity}`)}
+                              </span>
                             </td>
-                            <td className="py-1.5 pr-3 font-semibold tabular-nums">{r.score}</td>
-                            <td className="py-1.5 pr-3 tabular-nums text-[var(--muted-foreground)]">
+                            <td className="px-2 py-2 font-semibold tabular-nums">{r.score}</td>
+                            <td className="px-2 py-2 tabular-nums text-[var(--muted-foreground)]">
                               {r.threshold}
                             </td>
-                            <td className="py-1.5 pr-3">
+                            <td className="px-2 py-2">
                               <Badge tone={STATUS_TONE[r.status]}>
                                 {tq(`signalsTable.status.${r.status}`)}
                               </Badge>
                             </td>
-                            <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
+                            <td className="px-2 py-2 text-[var(--muted-foreground)]">
                               {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}
                             </td>
-                            <td className="py-1.5 pr-3 text-[var(--muted-foreground)]">
-                              {tq(`signalsTable.action.${r.action}`)}
+                            <td className="px-2 py-2 text-[var(--muted-foreground)]">
+                              <span className="block truncate">
+                                {tq(`signalsTable.action.${r.action}`)}
+                              </span>
                             </td>
-                            <td className="py-1.5">
+                            <td className="px-2 py-2">
                               <Badge tone={r.role === "admin" ? "warning" : "success"}>
                                 {r.role === "admin" ? "Admin+" : "Operator+"}
                               </Badge>
+                            </td>
+                            <td className="py-2 pr-4 pl-2">
+                              <span className="flex items-center justify-end gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#7ff0b6]">
+                                <span className="opacity-0 transition-opacity group-hover:opacity-100">
+                                  {tt("rowOpen")}
+                                </span>
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </span>
                             </td>
                           </tr>
                         ))}
