@@ -4574,13 +4574,13 @@
     "welcome": "Welcome to Tessera",
     "choose": "Choose your space to continue",
     "demoBadge": "Demonstration",
-    "demoTitle": "The product, and what governs it.",
+    "demoTitle": "Your AI agents, under control",
     "demoSubtitle": "Two planes: the applications that talk to your customers, and the cockpit that governs them. Open either one.",
     "fleetNote": "Three agents under review, behind the customer assistant and the collections console.",
     "signal": {
       "live": "Live",
       "unavailable": "Signal unavailable",
-      "controlActive": "Active control",
+      "controlActive": "Active supervision",
       "releasableRollup": "{passed} of {total} ready for production",
       "gateContext": "The security baseline blocks any production release while a critical case fails.",
       "agentReleasable": "Green",
@@ -4605,17 +4605,17 @@
       "role": "Platform admin"
     },
     "business": {
-      "badge": "Business plane",
+      "badge": "Products",
       "title": "Business spaces",
       "desc": "The applications that do the work.",
       "reveal": "Open the spaces",
       "collapse": "Collapse"
     },
     "control": {
-      "badge": "Control plane",
+      "badge": "Governance",
       "title": "Cockpit",
       "desc": "The control room for your entire agent fleet.",
-      "cta": "Open the cockpit",
+      "cta": "Enter the cockpit",
       "authNote": "Operator sign-in required"
     },
     "client": {

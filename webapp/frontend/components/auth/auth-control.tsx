@@ -60,7 +60,7 @@ export function AuthControl() {
         className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)]"
       >
         <LogIn className="h-3.5 w-3.5" />
-        {t("auditorMode")}
+        {t("signIn")}
       </Link>
     );
   }

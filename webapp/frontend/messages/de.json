@@ -4574,13 +4574,13 @@
     "welcome": "Willkommen bei Tessera",
     "choose": "Wählen Sie Ihren Bereich, um fortzufahren",
     "demoBadge": "Demonstration",
-    "demoTitle": "Das Produkt — und was es steuert.",
+    "demoTitle": "Ihre KI-Agenten, unter Kontrolle",
     "demoSubtitle": "Zwei Ebenen: die Anwendungen, die mit Ihren Kunden sprechen, und das Cockpit, das sie steuert. Öffnen Sie eine davon.",
     "fleetNote": "Drei Agenten unter Prüfung, hinter dem Kundenassistenten und der Inkasso-Konsole.",
     "signal": {
       "live": "Live",
       "unavailable": "Signal nicht verfügbar",
-      "controlActive": "Kontrolle aktiv",
+      "controlActive": "Aktive Überwachung",
       "releasableRollup": "{passed} von {total} produktionsbereit",
       "gateContext": "Die Sicherheitsbasis blockiert jede Produktivsetzung, solange ein kritischer Fall fehlschlägt.",
       "agentReleasable": "Grün",
@@ -4605,17 +4605,17 @@
       "role": "Plattform-Admin"
     },
     "business": {
-      "badge": "Fachebene",
+      "badge": "Produkte",
       "title": "Fachbereiche",
       "desc": "Die Anwendungen, die die Arbeit erledigen.",
       "reveal": "Bereiche öffnen",
       "collapse": "Einklappen"
     },
     "control": {
-      "badge": "Kontrollebene",
+      "badge": "Governance",
       "title": "Cockpit",
       "desc": "Der Leitstand für Ihre gesamte Agentenflotte.",
-      "cta": "Cockpit öffnen",
+      "cta": "Ins Cockpit",
       "authNote": "Betreiber-Anmeldung erforderlich"
     },
     "client": {

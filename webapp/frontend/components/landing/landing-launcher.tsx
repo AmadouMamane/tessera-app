@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  AlertTriangle,
-  ArrowRight,
-  Bell,
-  Boxes,
-  CircleHelp,
-  Lock,
-  LogIn,
-  Search,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, Boxes, Lock, LogIn, ShieldCheck, Users } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
@@ -20,6 +9,7 @@ import { useState } from "react";
 import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import type { LauncherSignal } from "@/lib/server/launcher-signal";
@@ -176,21 +166,13 @@ export function LandingLauncher({
           <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
                 front door. Make the "démonstration" framing explicit and visible. */}
-            <span className="mb-[14px] inline-flex items-center gap-[7px] rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] px-[12px] py-[5px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--gold-strong)]">
+            <span className="mb-[28px] inline-flex items-center gap-[7px] rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] px-[12px] py-[5px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--gold-strong)]">
               <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold-strong)]" />
               {t("demoBadge")}
             </span>
-            <h1 className="font-sans text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-[var(--text-primary)]">
+            <h1 className="font-sans text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-[var(--text-primary)]">
               {t("demoTitle")}
             </h1>
-            <p className="mt-[10px] max-w-[560px] text-[15px] font-normal leading-[1.4] tracking-[0.01em] text-[var(--text-secondary)]">
-              {t("demoSubtitle")}
-            </p>
-            {/* Honesty as one line of precision (ADR 0013) — not a defensive
-                disclaimer. The DEMO badge above already frames the visit. */}
-            <p className="mt-[8px] max-w-[520px] text-[12px] leading-[1.5] text-[color-mix(in_srgb,var(--text-secondary)_82%,transparent)]">
-              {t("demoHonesty")}
-            </p>
             <SignalBand t={t} signal={signal} />
           </section>
 
@@ -198,7 +180,7 @@ export function LandingLauncher({
               flat surface list. The business card links to the /espaces directory
               (symmetric to the Flotte list→détail); the control card enters the
               cockpit. Individual business surfaces live in /espaces, never inline. */}
-          <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 gap-7 lg:grid-cols-2">
+          <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 items-start gap-7 lg:grid-cols-2">
             <BusinessPlaneCard t={t} />
             <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} />
           </section>
@@ -356,13 +338,11 @@ function Header() {
           would be redundant). The toggle stays in the cockpit for operators. */}
       <TesseraLogo className="h-[40px]" />
 
-      <div className="flex items-center gap-3 text-[var(--text-secondary)]">
-        <Search className="hidden h-[17px] w-[17px] stroke-[1.7] sm:block" aria-hidden="true" />
-        <span className="relative hidden sm:inline-flex">
-          <Bell className="h-[17px] w-[17px] stroke-[1.7]" aria-hidden="true" />
-          <span className="absolute -right-[3px] -top-[4px] h-[7px] w-[7px] rounded-full bg-[var(--gold-strong)]" />
-        </span>
-        <CircleHelp className="hidden h-[17px] w-[17px] stroke-[1.7] sm:block" aria-hidden="true" />
+      {/* Launcher header variant: the global group ONLY (theme · language ·
+          account). No search / notifications / help — there is nothing to search
+          or be notified about on the plane chooser. */}
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
         <LanguageSwitcher />
         <AuthControl />
       </div>
@@ -448,7 +428,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
   return (
     <section
       className={cn(
-        "relative flex h-full min-h-[472px] flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
@@ -466,7 +446,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
         <Link
           href="/espaces"
           className={cn(
-            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+            "mt-[20px] flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
             a.button,
             FOCUS,
           )}
@@ -487,7 +467,7 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
   return (
     <section
       className={cn(
-        "relative flex h-full min-h-[472px] flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
@@ -514,9 +494,9 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
           ]}
         />
         {demoOperator ? (
-          <div className="mt-auto">
+          <div className="mt-[20px]">
             <DemoEnterButton
-              label={t("demoLogin.operator")}
+              label={t("control.cta")}
               cred={demoOperator}
               target="/surveiller/vue-ensemble"
               accent="cyan"
@@ -526,7 +506,7 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
           <Link
             href="/surveiller/vue-ensemble"
             className={cn(
-              "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+              "mt-[20px] flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
               a.button,
               FOCUS,
             )}
