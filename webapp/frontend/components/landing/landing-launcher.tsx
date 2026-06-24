@@ -166,7 +166,7 @@ export function LandingLauncher({
           <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
                 front door. Make the "démonstration" framing explicit and visible. */}
-            <span className="mb-[28px] inline-flex items-center gap-[7px] rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] px-[12px] py-[5px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--gold-strong)]">
+            <span className="mb-[36px] inline-flex items-center gap-[7px] rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] px-[12px] py-[5px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--gold-strong)]">
               <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold-strong)]" />
               {t("demoBadge")}
             </span>
@@ -280,7 +280,7 @@ function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
       ? "#F87171"
       : "var(--amber)";
   return (
-    <div className="mt-7 flex w-full max-w-[840px] flex-col items-center gap-[12px]">
+    <div className="mt-10 flex w-full max-w-[840px] flex-col items-center gap-[18px]">
       {/* One bounded status band — three segments, one fact each: control is
           active (the green dot is the live indicator), how many agents it holds
           under review, and the only fleet-level verdict number (how many are
