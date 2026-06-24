@@ -452,17 +452,6 @@ function ContainsLine({ items }: { items: { label: string; gated?: boolean }[] }
   );
 }
 
-// Cockpit preview: the cockpit is ONE space with SECTIONS (not distinct
-// destinations) — so a light, low-contrast "what you'll find" legend, NOT chips.
-// The differing preview shape signals the differing nature of the content.
-function SectionsLegend({ items }: { items: string[] }) {
-  return (
-    <p className="mt-[18px] border-t border-[var(--border-subtle)] pt-[14px] text-[12.5px] leading-[1.5] text-[color-mix(in_srgb,var(--text-secondary)_70%,transparent)]">
-      {items.join("  ·  ")}
-    </p>
-  );
-}
-
 // Business plane (ADR 0013): a PURE plan card — a door to the /espaces directory,
 // not an inline surface list. The surfaces, their guards and 1-click demo logins
 // live in /espaces.
@@ -533,16 +522,29 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
           badge={t("control.badge")}
           title={t("control.title")}
           desc={t("control.desc")}
-          authNote={demoOperator ? t("demoLogin.note") : t("control.authNote")}
         />
-        <SectionsLegend
-          items={[
-            t("operator.items.supervision.title"),
-            t("operator.items.management.title"),
-            t("operator.items.configuration.title"),
-            t("operator.items.platform.title"),
-          ]}
-        />
+        {/* Below the horizontal rule: the access pill, then the light section
+            legend; the bottom margin spaces the CTA away from the legend. */}
+        <div className="mt-[18px] mb-[22px] border-t border-[var(--border-subtle)] pt-[14px]">
+          <span
+            className={cn(
+              "inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[4px] text-[11px] font-medium",
+              a.border,
+              a.soft,
+            )}
+          >
+            <Lock className="h-[12px] w-[12px]" />
+            {demoOperator ? t("demoLogin.note") : t("control.authNote")}
+          </span>
+          <p className="mt-[12px] text-[12.5px] leading-[1.5] text-[color-mix(in_srgb,var(--text-secondary)_70%,transparent)]">
+            {[
+              t("operator.items.supervision.title"),
+              t("operator.items.management.title"),
+              t("operator.items.configuration.title"),
+              t("operator.items.platform.title"),
+            ].join("  ·  ")}
+          </p>
+        </div>
         {demoOperator ? (
           <div className="mt-auto">
             <DemoEnterButton
