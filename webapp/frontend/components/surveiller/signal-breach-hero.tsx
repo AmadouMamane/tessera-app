@@ -9,7 +9,7 @@ import { Link } from "@/i18n/navigation";
 import { fetchSLO } from "@/lib/api/client";
 
 const METRIC_LABEL: Record<string, string> = {
-  faithfulness: "Fidélité (faithfulness)",
+  faithfulness: "Fidélité",
   relevance: "Pertinence",
   availability: "Disponibilité",
   latency: "Latence",
