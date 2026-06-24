@@ -2181,8 +2181,8 @@
       "freezeDesc": "Réduire la surface des outils à haut risque.",
       "freezeCta": "Geler les outils",
       "playbookTitle": "Procédure incident prompt injection",
-      "playbookDesc": "Exécuter le procédure de remédiation.",
-      "playbookCta": "Exécuter le procédure",
+      "playbookDesc": "Exécuter la procédure de remédiation.",
+      "playbookCta": "Exécuter la procédure",
       "purgeTitle": "Purger mémoire GDPR",
       "purgeDesc": "Exécuter l'effacement ciblé des données.",
       "purgeCta": "Purger la mémoire"
