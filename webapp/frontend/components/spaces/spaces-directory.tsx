@@ -65,11 +65,14 @@ const CARD_BG =
 
 const ACCENT: Record<Audience, { border: string; icon: string; dot: string; iconBg: string }> = {
   external: {
-    border: "border-[var(--border-gold)]",
-    icon: "text-[var(--gold-strong)]",
-    dot: "var(--gold-strong)",
+    // Blue (not gold) so the customer-facing surface never reads in the warm
+    // gold/amber family shared by the "Démonstration" eyebrow and the access
+    // badge; stays distinct from the internal teal/cyan (Console recouvrement).
+    border: "border-[var(--border-blue)]",
+    icon: "text-[var(--blue-strong)]",
+    dot: "var(--blue-strong)",
     iconBg:
-      "linear-gradient(150deg, color-mix(in srgb, var(--gold-strong) 26%, transparent), color-mix(in srgb, var(--gold-strong) 6%, transparent))",
+      "linear-gradient(150deg, color-mix(in srgb, var(--blue) 26%, transparent), color-mix(in srgb, var(--blue) 6%, transparent))",
   },
   internal: {
     border: "border-[var(--border-cyan)]",
@@ -212,11 +215,9 @@ function SurfaceCard({
         <span
           className="pointer-events-none absolute top-[12px] right-[12px] z-[2] inline-flex items-center gap-[5px] rounded-full border px-[8px] py-[3px] text-[10px] font-medium"
           style={{
-            // Access STATE, not an audience accent — kept neutral slate so it
-            // never reads in the warm gold/amber family (Externe + Démonstration).
-            color: "var(--text-secondary)",
-            borderColor: "color-mix(in srgb, var(--text-primary) 20%, transparent)",
-            background: "color-mix(in srgb, var(--text-primary) 7%, transparent)",
+            color: "var(--amber-soft)",
+            borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
+            background: "color-mix(in srgb, var(--amber-soft) 12%, transparent)",
           }}
         >
           <Lock className="h-[10px] w-[10px]" aria-hidden="true" />
@@ -356,10 +357,9 @@ function SurfaceRow({
         <span
           className="pointer-events-none hidden shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11px] font-medium md:inline-flex"
           style={{
-            // Access STATE, not an audience accent — neutral slate (see grid card).
-            color: "var(--text-secondary)",
-            borderColor: "color-mix(in srgb, var(--text-primary) 20%, transparent)",
-            background: "color-mix(in srgb, var(--text-primary) 7%, transparent)",
+            color: "var(--amber-soft)",
+            borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
+            background: "color-mix(in srgb, var(--amber-soft) 12%, transparent)",
           }}
         >
           <Lock className="h-[11px] w-[11px]" aria-hidden="true" />
