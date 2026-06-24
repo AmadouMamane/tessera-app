@@ -2678,12 +2678,12 @@
     }
   },
   "replay": {
-    "title": "Replay & Shadow",
-    "subtitle": "Sessions exakt wiedergeben, mit Baselines vergleichen und Shadow-Traffic beobachten.",
+    "title": "Wiedergabe & Schattenverkehr",
+    "subtitle": "Sessions exakt wiedergeben, mit Baselines vergleichen und Schattenverkehr-Traffic beobachten.",
     "tabs": {
       "overview": "Übersicht",
       "sessions": "Wiedergegebene Sessions",
-      "shadow": "Shadow-Traffic",
+      "shadow": "Schattenverkehr-Traffic",
       "comparisons": "Vergleiche",
       "baselines": "Baselines",
       "diffs": "Diffs",
@@ -2703,11 +2703,11 @@
       "sessions": "Wiedergegebene Sessions",
       "requests": "Wiedergegebene Anfragen",
       "tokens": "Wiedergegebene Tokens",
-      "cost": "Replay-Kosten",
+      "cost": "Wiedergabe-Kosten",
       "deviations": "Kritische Abweichungen vs. Baseline",
       "evals": "Wiedergegebene Bewertungen",
       "proofs": "Erzeugte Nachweise",
-      "coverage": "Shadow-Coverage"
+      "coverage": "Schattenverkehr-Coverage"
     },
     "panel": {
       "traffic": "Wiedergebbarer Traffic pro Tag",
@@ -2789,8 +2789,8 @@
     },
     "exportBtn": {
       "results": "Ergebnisse exportieren",
-      "schedule": "Replay planen",
-      "log": "Replay-Protokoll anzeigen",
+      "schedule": "Wiedergabe planen",
+      "log": "Wiedergabe-Protokoll anzeigen",
       "all": "Exporte & Nachweise anzeigen"
     },
     "rail": {
@@ -2801,7 +2801,7 @@
       "shortcuts": "Zeit-Shortcuts",
       "now": "Jetzt (live)",
       "custom": "Benutzerdefiniert",
-      "activity": "Replay-Aktivität (live)",
+      "activity": "Wiedergabe-Aktivität (live)",
       "viewJournal": "Ganzes Protokoll anzeigen"
     },
     "viewAll": {
@@ -2827,8 +2827,8 @@
       "compareBaseline": "Mit Baseline vergleichen",
       "createBaseline": "Baseline erstellen",
       "exportResults": "Ergebnisse exportieren",
-      "scheduleReplay": "Replay planen",
-      "viewLog": "Replay-Protokoll anzeigen"
+      "scheduleReplay": "Wiedergabe planen",
+      "viewLog": "Wiedergabe-Protokoll anzeigen"
     }
   },
   "curation": {

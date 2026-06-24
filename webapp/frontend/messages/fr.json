@@ -2678,12 +2678,12 @@
     }
   },
   "replay": {
-    "title": "Replay & shadow",
+    "title": "Rejeu & trafic fantôme",
     "subtitle": "Rejouer précisément des sessions, comparer aux baselines et observer le trafic fantôme.",
     "tabs": {
       "overview": "Vue d’ensemble",
       "sessions": "Sessions rejouées",
-      "shadow": "Shadow traffic",
+      "shadow": "Trafic fantôme",
       "comparisons": "Comparaisons",
       "baselines": "Baselines",
       "diffs": "Diffs",
@@ -2703,11 +2703,11 @@
       "sessions": "Sessions rejouées",
       "requests": "Requêtes rejouées",
       "tokens": "Tokens rejoués",
-      "cost": "Coût de replay",
+      "cost": "Coût de rejeu",
       "deviations": "Écarts critiques vs baseline",
       "evals": "Évaluations rejouées",
       "proofs": "Preuves générées",
-      "coverage": "Shadow coverage"
+      "coverage": "Trafic fantôme coverage"
     },
     "panel": {
       "traffic": "Trafic rejouable par jour",
@@ -2789,8 +2789,8 @@
     },
     "exportBtn": {
       "results": "Exporter les résultats",
-      "schedule": "Programmer un replay",
-      "log": "Voir le journal de replay",
+      "schedule": "Programmer un rejeu",
+      "log": "Voir le journal de rejeu",
       "all": "Voir les exports & preuves"
     },
     "rail": {
@@ -2801,7 +2801,7 @@
       "shortcuts": "Raccourcis temporels",
       "now": "Maintenant (live)",
       "custom": "Personnalisé",
-      "activity": "Activité de replay (live)",
+      "activity": "Activité de rejeu (live)",
       "viewJournal": "Voir tout le journal"
     },
     "viewAll": {
@@ -2827,8 +2827,8 @@
       "compareBaseline": "Comparer à une baseline",
       "createBaseline": "Créer une baseline",
       "exportResults": "Exporter les résultats",
-      "scheduleReplay": "Programmer un replay",
-      "viewLog": "Voir le journal de replay"
+      "scheduleReplay": "Programmer un rejeu",
+      "viewLog": "Voir le journal de rejeu"
     }
   },
   "curation": {
