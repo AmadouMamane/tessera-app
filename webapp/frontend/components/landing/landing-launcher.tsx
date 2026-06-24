@@ -189,7 +189,7 @@ export function LandingLauncher({
               flat surface list. The business card links to the /espaces directory
               (symmetric to the Flotte list→détail); the control card enters the
               cockpit. Individual business surfaces live in /espaces, never inline. */}
-          <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 items-start gap-7 lg:grid-cols-2">
+          <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 gap-7 lg:grid-cols-2">
             <BusinessPlaneCard t={t} />
             <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} />
           </section>
@@ -442,15 +442,24 @@ function ContainsLine({ items }: { items: { label: string; gated?: boolean }[] }
           key={item.label}
           className="inline-flex items-center gap-[6px] rounded-[8px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] px-[10px] py-[5px] text-[12px] font-medium leading-none text-[var(--text-secondary)]"
         >
-          {item.gated === undefined ? null : item.gated ? (
+          {item.gated ? (
             <Lock className="h-[12px] w-[12px] shrink-0 opacity-80" aria-hidden="true" />
-          ) : (
-            <LockOpen className="h-[12px] w-[12px] shrink-0 opacity-80" aria-hidden="true" />
-          )}
+          ) : null}
           {item.label}
         </span>
       ))}
     </div>
+  );
+}
+
+// Cockpit preview: the cockpit is ONE space with SECTIONS (not distinct
+// destinations) — so a light, low-contrast "what you'll find" legend, NOT chips.
+// The differing preview shape signals the differing nature of the content.
+function SectionsLegend({ items }: { items: string[] }) {
+  return (
+    <p className="mt-[18px] border-t border-[var(--border-subtle)] pt-[14px] text-[12.5px] leading-[1.5] text-[color-mix(in_srgb,var(--text-secondary)_70%,transparent)]">
+      {items.join("  ·  ")}
+    </p>
   );
 }
 
@@ -462,7 +471,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
   return (
     <section
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
+        "relative flex h-full flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
@@ -487,7 +496,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
         <Link
           href="/espaces"
           className={cn(
-            "mt-[20px] flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
             a.button,
             FOCUS,
           )}
@@ -508,7 +517,7 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
   return (
     <section
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
+        "relative flex h-full flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
@@ -526,16 +535,16 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
           desc={t("control.desc")}
           authNote={demoOperator ? t("demoLogin.note") : t("control.authNote")}
         />
-        <ContainsLine
+        <SectionsLegend
           items={[
-            { label: t("operator.items.supervision.title") },
-            { label: t("operator.items.management.title") },
-            { label: t("operator.items.configuration.title") },
-            { label: t("operator.items.platform.title") },
+            t("operator.items.supervision.title"),
+            t("operator.items.management.title"),
+            t("operator.items.configuration.title"),
+            t("operator.items.platform.title"),
           ]}
         />
         {demoOperator ? (
-          <div className="mt-[20px]">
+          <div className="mt-auto">
             <DemoEnterButton
               label={t("control.cta")}
               cred={demoOperator}
@@ -547,7 +556,7 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
           <Link
             href="/surveiller/vue-ensemble"
             className={cn(
-              "mt-[20px] flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+              "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
               a.button,
               FOCUS,
             )}
