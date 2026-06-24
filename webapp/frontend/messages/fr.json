@@ -4565,7 +4565,7 @@
     "choose": "Choisissez votre espace pour continuer",
     "demoBadge": "Démonstration",
     "demoTitle": "Le produit, et ce qui le gouverne.",
-    "demoSubtitle": "Deux plans : les applications qui parlent à vos clients, et le cockpit qui décide ce qui part en production. Ouvrez l’un ou l’autre.",
+    "demoSubtitle": "Deux plans : les applications qui parlent à vos clients, et le cockpit qui les gouverne. Ouvrez l’un ou l’autre.",
     "fleetNote": "Trois agents sous revue, derrière l’assistant client et la console recouvrement.",
     "signal": {
       "live": "Live",
@@ -4604,7 +4604,7 @@
     "control": {
       "badge": "Plan de contrôle",
       "title": "Cockpit",
-      "desc": "Gouvernez chaque agent, de la qualité à la mise en production.",
+      "desc": "Le poste de pilotage de toute votre flotte d’agents.",
       "cta": "Ouvrir le cockpit",
       "authNote": "Connexion opérateur requise"
     },

@@ -4565,7 +4565,7 @@
     "choose": "Wählen Sie Ihren Bereich, um fortzufahren",
     "demoBadge": "Demonstration",
     "demoTitle": "Das Produkt — und was es steuert.",
-    "demoSubtitle": "Zwei Ebenen: die Anwendungen, die mit Ihren Kunden sprechen, und das Cockpit, das entscheidet, was in Produktion geht. Öffnen Sie eine davon.",
+    "demoSubtitle": "Zwei Ebenen: die Anwendungen, die mit Ihren Kunden sprechen, und das Cockpit, das sie steuert. Öffnen Sie eine davon.",
     "fleetNote": "Drei Agenten unter Prüfung, hinter dem Kundenassistenten und der Inkasso-Konsole.",
     "signal": {
       "live": "Live",
@@ -4604,7 +4604,7 @@
     "control": {
       "badge": "Kontrollebene",
       "title": "Cockpit",
-      "desc": "Steuern Sie jeden Agenten — von der Qualität bis zur Produktion.",
+      "desc": "Der Leitstand für Ihre gesamte Agentenflotte.",
       "cta": "Cockpit öffnen",
       "authNote": "Betreiber-Anmeldung erforderlich"
     },

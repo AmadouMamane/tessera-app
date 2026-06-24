@@ -4565,7 +4565,7 @@
     "choose": "Choose your space to continue",
     "demoBadge": "Demonstration",
     "demoTitle": "The product, and what governs it.",
-    "demoSubtitle": "Two planes: the applications that talk to your customers, and the cockpit that decides what ships to production. Open either one.",
+    "demoSubtitle": "Two planes: the applications that talk to your customers, and the cockpit that governs them. Open either one.",
     "fleetNote": "Three agents under review, behind the customer assistant and the collections console.",
     "signal": {
       "live": "Live",
@@ -4604,7 +4604,7 @@
     "control": {
       "badge": "Control plane",
       "title": "Cockpit",
-      "desc": "Govern every agent, from quality to production.",
+      "desc": "The control room for your entire agent fleet.",
       "cta": "Open the cockpit",
       "authNote": "Operator sign-in required"
     },
