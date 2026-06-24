@@ -2062,7 +2062,7 @@
     "period": "Zeitraum: 7 Tage",
     "dualControl": "Dual Control",
     "cta": {
-      "redteam": "Red-Team starten",
+      "redteam": "Angriffstest starten",
       "report": "Bericht exportieren"
     },
     "sec": {
@@ -2166,7 +2166,7 @@
       "noChanges": "Keine aktuelle Änderung",
       "attackLine": "Angriffsrate",
       "incidentLine": "Kritische Vorfälle",
-      "redteam": "Kontinuierliches Red-Team (7 T)",
+      "redteam": "Kontinuierliches Angriffstest (7 T)",
       "blocked": "geblockt",
       "bypasses": "Umgehungen",
       "blockRate": "Blockrate",
@@ -2174,15 +2174,15 @@
     },
     "overProvisioned": "Über-privilegiert",
     "act": {
-      "redteamTitle": "Red-Team-Fälle beheben",
+      "redteamTitle": "Angriffstest-Fälle beheben",
       "redteamDesc": "Angriffsset erweitern und erneut spielen.",
-      "redteamCta": "Red-Team starten",
+      "redteamCta": "Angriffstest starten",
       "freezeTitle": "Sensible Tools einfrieren",
       "freezeDesc": "Hochriskante Tool-Fläche reduzieren.",
       "freezeCta": "Tools einfrieren",
-      "playbookTitle": "Prompt-Injektion-Incident-Playbook",
-      "playbookDesc": "Remediations-Playbook ausführen.",
-      "playbookCta": "Playbook ausführen",
+      "playbookTitle": "Prompt-Injektion-Incident-Verfahren",
+      "playbookDesc": "Remediations-Verfahren ausführen.",
+      "playbookCta": "Verfahren ausführen",
       "purgeTitle": "GDPR-Speicher löschen",
       "purgeDesc": "Gezielte Datenlöschung ausführen.",
       "purgeCta": "Speicher löschen"
@@ -2211,7 +2211,7 @@
       "exportSiem": "An SIEM exportieren",
       "anomalies": "{n} Session-Anomalien erkannt",
       "quickActions": "Schnellaktionen",
-      "qaRedteam": "Red-Team starten",
+      "qaRedteam": "Angriffstest starten",
       "qaIncident": "Vorfall öffnen",
       "qaPurge": "GDPR-Speicher löschen",
       "qaTicket": "Compliance-Ticket erstellen"

@@ -2062,7 +2062,7 @@
     "period": "Période : 7 jours",
     "dualControl": "Dual control",
     "cta": {
-      "redteam": "Lancer red-team",
+      "redteam": "Lancer test d'intrusion",
       "report": "Exporter rapport"
     },
     "sec": {
@@ -2166,7 +2166,7 @@
       "noChanges": "Aucun changement récent",
       "attackLine": "Taux d'attaque",
       "incidentLine": "Incidents critiques",
-      "redteam": "Red-team continu (7 j)",
+      "redteam": "Test d'intrusion continu (7 j)",
       "blocked": "bloqués",
       "bypasses": "contournements",
       "blockRate": "Taux de blocage",
@@ -2174,15 +2174,15 @@
     },
     "overProvisioned": "Sur-privilégié",
     "act": {
-      "redteamTitle": "Corriger les tours red-team",
+      "redteamTitle": "Corriger les tours test d'intrusion",
       "redteamDesc": "Enrichir le jeu d'attaques et rejouer.",
-      "redteamCta": "Lancer red-team",
+      "redteamCta": "Lancer test d'intrusion",
       "freezeTitle": "Geler les outils sensibles",
       "freezeDesc": "Réduire la surface des outils à haut risque.",
       "freezeCta": "Geler les outils",
-      "playbookTitle": "Playbook incident prompt injection",
-      "playbookDesc": "Exécuter le playbook de remédiation.",
-      "playbookCta": "Exécuter le playbook",
+      "playbookTitle": "Procédure incident prompt injection",
+      "playbookDesc": "Exécuter le procédure de remédiation.",
+      "playbookCta": "Exécuter le procédure",
       "purgeTitle": "Purger mémoire GDPR",
       "purgeDesc": "Exécuter l'effacement ciblé des données.",
       "purgeCta": "Purger la mémoire"
@@ -2202,7 +2202,7 @@
       "incidents": "Incidents récents",
       "noIncidents": "Aucun incident récent",
       "privacyEvidence": "Privacy & evidence",
-      "evidenceCta": "Générer evidence pack sécurité",
+      "evidenceCta": "Générer dossier de preuves sécurité",
       "tools": "Outils",
       "tool": "Outil",
       "used": "Utilisé",
@@ -2211,7 +2211,7 @@
       "exportSiem": "Exporter vers SIEM",
       "anomalies": "{n} anomalies de session détectées",
       "quickActions": "Actions rapides",
-      "qaRedteam": "Lancer red-team",
+      "qaRedteam": "Lancer test d'intrusion",
       "qaIncident": "Ouvrir incident",
       "qaPurge": "Purger mémoire GDPR",
       "qaTicket": "Créer ticket conformité"
