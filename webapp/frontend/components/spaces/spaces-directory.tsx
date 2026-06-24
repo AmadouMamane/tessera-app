@@ -65,14 +65,14 @@ const CARD_BG =
 
 const ACCENT: Record<Audience, { border: string; icon: string; dot: string; iconBg: string }> = {
   external: {
-    // Blue (not gold) so the customer-facing surface never reads in the warm
+    // Rose (not gold) so the customer-facing surface never reads in the warm
     // gold/amber family shared by the "Démonstration" eyebrow and the access
     // badge; stays distinct from the internal teal/cyan (Console recouvrement).
-    border: "border-[var(--border-blue)]",
-    icon: "text-[var(--blue-strong)]",
-    dot: "var(--blue-strong)",
+    border: "border-[var(--border-rose)]",
+    icon: "text-[var(--rose-strong)]",
+    dot: "var(--rose-strong)",
     iconBg:
-      "linear-gradient(150deg, color-mix(in srgb, var(--blue) 26%, transparent), color-mix(in srgb, var(--blue) 6%, transparent))",
+      "linear-gradient(150deg, color-mix(in srgb, var(--rose) 28%, transparent), color-mix(in srgb, var(--rose) 7%, transparent))",
   },
   internal: {
     border: "border-[var(--border-cyan)]",
