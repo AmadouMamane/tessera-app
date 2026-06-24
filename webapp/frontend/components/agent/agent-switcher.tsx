@@ -1,8 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Bot, Check, ChevronDown, Network } from "lucide-react";
+import { Check, ChevronDown, Network } from "lucide-react";
 
+import { agentIcon } from "@/components/agent/agent-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +38,7 @@ export function AgentSwitcher() {
   // same page when switching agents.
   const match = pathname.match(/\/agents\/[^/]+\/(.+)$/);
   const page = match?.[1] ?? "synthese";
+  const CurrentIcon = agentIcon(agentId);
 
   return (
     <DropdownMenu>
@@ -45,25 +47,28 @@ export function AgentSwitcher() {
           type="button"
           className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] px-3 text-[0.78rem] font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
         >
-          <Bot className="h-4 w-4 text-[#b9a6ff]" />
+          <CurrentIcon className="h-4 w-4 text-[#b9a6ff]" />
           <span className="max-w-[12rem] truncate">{current?.name ?? agentId}</span>
           <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[15rem]">
-        {agents.map((a) => (
-          <DropdownMenuItem
-            key={a.id}
-            onSelect={() => router.push(agentPath(a.id, page))}
-            className="flex items-center justify-between gap-3"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <Bot className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
-              <span className="truncate">{a.name}</span>
-            </span>
-            {a.id === agentId ? <Check className="h-3.5 w-3.5 text-[#b9a6ff]" /> : null}
-          </DropdownMenuItem>
-        ))}
+        {agents.map((a) => {
+          const Icon = agentIcon(a.id);
+          return (
+            <DropdownMenuItem
+              key={a.id}
+              onSelect={() => router.push(agentPath(a.id, page))}
+              className="flex items-center justify-between gap-3"
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+                <span className="truncate">{a.name}</span>
+              </span>
+              {a.id === agentId ? <Check className="h-3.5 w-3.5 text-[#b9a6ff]" /> : null}
+            </DropdownMenuItem>
+          );
+        })}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/agents" className="flex items-center gap-2">

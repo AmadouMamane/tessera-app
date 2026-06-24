@@ -1,19 +1,10 @@
 "use client";
 
-import {
-  ArrowRight,
-  Bot,
-  Calendar,
-  LayoutGrid,
-  List,
-  Lock,
-  Search,
-  Star,
-  Users,
-} from "lucide-react";
+import { ArrowRight, Calendar, LayoutGrid, List, Lock, Search, Star, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
+import { agentIcon } from "@/components/agent/agent-icon";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import type { Fleet } from "@/lib/api/schemas";
@@ -344,11 +335,12 @@ function AgentCard({
   const r = agent.release;
   const pct = passPct(agent);
   const date = fmtRunDate(r?.run_at, locale);
+  const Icon = agentIcon(agent.id);
   return (
     <div className="group flex flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 transition-colors hover:border-[#7c5cf5]/50">
       <div className="flex items-start justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2">
-          <Bot className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+          <Icon className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
           <span className="truncate font-semibold">{agent.name}</span>
         </span>
         <span className="flex shrink-0 items-center gap-1">
@@ -416,12 +408,13 @@ function AgentRow({
   onOpen: () => void;
   t: T;
 }) {
+  const Icon = agentIcon(agent.id);
   return (
     <div className="group flex items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-2.5 transition-colors hover:border-[#7c5cf5]/50">
       <span
         className={cn("h-2 w-2 shrink-0 rounded-full", HEALTH_DOT[agent.health] ?? "bg-amber-400")}
       />
-      <Bot className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+      <Icon className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
       <span className="w-[160px] shrink-0 truncate font-semibold">{agent.name}</span>
       <AudienceBadge external={external} t={t} />
       <span className="hidden truncate text-[0.66rem] text-[var(--tessera-text-muted)] md:inline">

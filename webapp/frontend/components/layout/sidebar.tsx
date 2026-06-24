@@ -37,6 +37,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
+import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import { useShellChrome } from "./shell-chrome";
@@ -636,7 +637,6 @@ function Badge({
 }
 
 function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
-  const t = useTranslations("app");
   return (
     <div
       className={cn(
@@ -644,15 +644,7 @@ function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
         collapsed ? "justify-center px-2" : "justify-center px-3 md:justify-start md:px-5",
       )}
     >
-      <TesseraMark />
-      {collapsed ? null : (
-        <div className="hidden min-w-0 flex-col leading-tight md:flex">
-          <span className="font-sans text-xl font-semibold tracking-normal text-white">
-            {t("title")}
-          </span>
-          <span className="truncate text-xs text-[var(--tessera-text-muted)]">{t("subtitle")}</span>
-        </div>
-      )}
+      {collapsed ? <TesseraMark /> : <TesseraLogo className="h-9" />}
     </div>
   );
 }
@@ -661,7 +653,7 @@ function TesseraMark() {
   return (
     <svg
       aria-hidden="true"
-      className="h-9 w-9 shrink-0 text-[var(--tessera-green)]"
+      className="h-9 w-9 shrink-0 text-[var(--tessera-text)]"
       viewBox="0 0 36 36"
       fill="none"
     >
