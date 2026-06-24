@@ -26,14 +26,14 @@
     "compliance": "Compliance",
     "reliability": "Zuverlässigkeit & Kosten",
     "improvement": "Verbesserung",
-    "incidents": "Incidents & Playbooks",
-    "replay": "Replay, Shadow & Time Travel",
+    "incidents": "Incidents & Verfahren",
+    "replay": "Wiedergabe, Schattenverkehr & Zeitreise",
     "curation": "Eval-Set-Kuration",
     "release": "Release Control",
     "automations": "Automations",
     "audit": "Audit-Protokoll",
     "proofExporters": "Nachweise & Exporter",
-    "evidencePack": "Evidence Pack",
+    "evidencePack": "Beweismappe",
     "signalCatalog": "Signal Catalog",
     "policies": "Policies & Guardrails",
     "sourcesMemory": "Quellen & Gedächtnis",
@@ -82,7 +82,7 @@
       "console": "Konsole",
       "historique": "Verlauf",
       "aTraiter": "Zu bearbeiten",
-      "aFaire": "Backlog",
+      "aFaire": "Rückstand",
       "vueEnsemble": "Übersicht",
       "qualiteIa": "KI-Qualität",
       "securitePrivacy": "Sicherheit & Datenschutz",
@@ -90,8 +90,8 @@
       "fiabiliteCout": "Zuverlässigkeit & Kosten",
       "observabilite": "Observability",
       "amelioration": "Verbesserung",
-      "incidentsPlaybooks": "Incidents & Playbooks",
-      "replayShadow": "Replay & Shadow",
+      "incidentsPlaybooks": "Incidents & Verfahren",
+      "replayShadow": "Wiedergabe & Schattenverkehr",
       "curationEvalSet": "Eval-Set-Kuratierung",
       "releaseControl": "Release-Kontrolle",
       "automations": "Automatisierungen",
@@ -172,10 +172,10 @@
       "period": "Zeitraum",
       "sevenDays": "Letzte 7 Tage",
       "replayAtT": "Bei T abspielen",
-      "historyMode": "Modus: Verlauf / Replay",
+      "historyMode": "Modus: Verlauf / Wiedergabe",
       "backLive": "Zurück zu Live",
       "replay": "Abspielen",
-      "replayHint": "Der Replay-Modus spielt einen erfassten Produktions-Trace gegen das aktuelle Modell oder Prompt erneut ab.",
+      "replayHint": "Der Wiedergabe-Modus spielt einen erfassten Produktions-Trace gegen das aktuelle Modell oder Prompt erneut ab.",
       "lastUpdate": "Letzte Aktualisierung",
       "viewingAt": "Du betrachtest",
       "timeTravel": "time-travel",
@@ -202,7 +202,7 @@
       "legendBad": "niedrig (<0,5)",
       "legendGuard": "Guard-Filter",
       "backToNow": "Zurück zur Gegenwart",
-      "exitReplay": "Replay verlassen",
+      "exitReplay": "Wiedergabe verlassen",
       "play": "Abspielen",
       "pause": "Pause",
       "liveState": "Live-Zustand",
@@ -216,7 +216,7 @@
     },
     "kpi": {
       "quality": "Qualitäts-Score (Service-Ziel)",
-      "qualityDelta": "Burn-Rate {burn}×",
+      "qualityDelta": "Verbrauchsrate {burn}×",
       "failingControls": "Fehlerhafte Kontrollen",
       "failingDelta": "{n} außerhalb des Ziels",
       "openRisks": "Offene Risiken",
@@ -259,7 +259,7 @@
       "fail": "Fehler"
     },
     "impact": {
-      "rag": "RAG / Grounding",
+      "rag": "RAG / Verankerung",
       "safety": "Antwort-Sicherheit",
       "privacy": "Datenschutz / Speicher",
       "quality": "Antwort-Qualität",
@@ -279,7 +279,7 @@
       "clear": "OK",
       "noBaseline": "Keine Baseline zum Vergleich.",
       "gates": {
-        "quality": "Quality Gate",
+        "quality": "Qualitäts-Gate",
         "security": "Security Gate",
         "compliance": "Compliance Gate"
       },
@@ -290,7 +290,7 @@
       "title": "Schnellaktionen",
       "redteam": "Angriffstest starten",
       "freezeReleases": "Releases einfrieren",
-      "replay": "Replay öffnen",
+      "replay": "Wiedergabe öffnen",
       "ticket": "Ticket erstellen",
       "replayAt": "Bei T abspielen",
       "redteamRunning": "Angriffstest läuft…",
@@ -587,7 +587,7 @@
         "citation_fabrication": "Nur Zitate zulassen, die durch eine abgerufene Passage gestützt sind; jede nicht im Korpus vorhandene Referenz blockieren.",
         "tool_misuse": "Vor jeder destruktiven oder sensiblen Aktion eine Autorisierungsprüfung und eine menschliche Eskalation erzwingen.",
         "policy_violation": "Guard-Regeln (policy.yaml) verschärfen und Anti-Betrugs-Umgehungen explizit ablehnen.",
-        "regulatory_misstatement": "Regulatorische Antworten (DORA/DSGVO/BaFin/CNIL) an das zitierte Korpus binden; eher das RAG-Grounding als das Modell stärken.",
+        "regulatory_misstatement": "Regulatorische Antworten (DORA/DSGVO/BaFin/CNIL) an das zitierte Korpus binden; eher das RAG-Verankerung als das Modell stärken.",
         "language_mixing": "Die Antwortsprache an die der Anfrage binden (Prompt + Nachprüfung), um Sprachdrift zu vermeiden.",
         "escalation_failure": "Menschliche Eskalation für Fälle außerhalb des Geltungsbereichs oder ohne Authentifizierung verdrahten, statt direkt zu antworten.",
         "unknown": "Nicht kategorisierter Fall: Fehlergrund manuell analysieren und einer Katalogkategorie zuordnen."
@@ -1353,7 +1353,7 @@
       "sensitive": "Sensible Aktionen",
       "role": "Rolle",
       "safety": "Sicherheit",
-      "evidenceCaption": "Ein signiertes Bundle für den aktuellen Zeitraum.",
+      "evidenceCaption": "Ein signiertes Paket für den aktuellen Zeitraum.",
       "signals": "{n}/200 Qualitätssignale",
       "noFailing": "Keine fehlerhafte Kategorie",
       "live": "live"
@@ -2046,7 +2046,7 @@
       "scope": "Scope",
       "cases": "Verknüpfte Cases",
       "release": "Release-Qualität",
-      "gate_quality": "Quality Gate",
+      "gate_quality": "Qualitäts-Gate",
       "gate_security": "Security Gate",
       "gate_compliance": "Compliance Gate",
       "actions": "Verordnete Aktionen",
@@ -2148,7 +2148,7 @@
       "regression7d": "7-Tage-Wahrscheinlichkeit",
       "erasure": "GDPR-Löschung",
       "conversations": "Konversationen",
-      "bundles": "Gelöschte Bundles",
+      "bundles": "Gelöschte Pakete",
       "scores": "Verknüpfte Scores",
       "purgeCta": "Gezielte Löschung starten",
       "erasureSurface": "GDPR-Löschfläche",
@@ -2707,7 +2707,7 @@
       "deviations": "Kritische Abweichungen vs. Baseline",
       "evals": "Wiedergegebene Bewertungen",
       "proofs": "Erzeugte Nachweise",
-      "coverage": "Schattenverkehr-Coverage"
+      "coverage": "Schattenverkehr-Abdeckung"
     },
     "panel": {
       "traffic": "Wiedergebbarer Traffic pro Tag",
@@ -3245,7 +3245,7 @@
       "export_rate": "Export-Rate",
       "exporters": "Aktive Exporteure",
       "latency": "Ø Latenz",
-      "retention": "Aufbewahrungs-Coverage"
+      "retention": "Aufbewahrungs-Abdeckung"
     },
     "pipeline": {
       "collecte": "Erfassung",
@@ -3328,7 +3328,7 @@
       "proofType": "Nachweistyp",
       "retention": "Aufbewahrung",
       "obligation": "Pflicht",
-      "coverage": "Coverage",
+      "coverage": "Abdeckung",
       "expiry": "Ablauf"
     },
     "integrity": {
