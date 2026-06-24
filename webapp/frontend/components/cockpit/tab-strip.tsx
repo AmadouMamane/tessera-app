@@ -26,32 +26,32 @@ export type TabStripItem<K extends string> = {
   href?: string;
 };
 
+// Segmented control: each tab is its own bordered cell (clear separation between
+// columns), the active one a soft tinted segment — no gradient/glow, so it blends
+// into the page instead of grabbing the eye.
 const ACCENTS: Record<TabAccent, { active: string; activeIcon: string }> = {
   green: {
-    active:
-      "bg-gradient-to-b from-[#076a4d] to-[#04412f] text-[#d6f0e3] shadow-[0_1px_4px_-1px_rgba(13,148,94,0.28),0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.16)] ring-1 ring-inset ring-[#0c9a6f]/45",
-    activeIcon: "text-[#7ff0b6]",
+    active: "border-[#0c9a6f]/40 bg-[#0c9a6f]/15 text-[#9ff0c6]",
+    activeIcon: "text-[#5fe0a4]",
   },
   blue: {
-    active:
-      "bg-gradient-to-b from-[#0e5599] to-[#0a2f56] text-[#d8eaff] shadow-[0_1px_4px_-1px_rgba(46,114,210,0.30),0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.16)] ring-1 ring-inset ring-[#2e72d2]/45",
-    activeIcon: "text-[#87bfff]",
+    active: "border-[#2e72d2]/40 bg-[#2e72d2]/15 text-[#a9d0ff]",
+    activeIcon: "text-[#6fb0ff]",
   },
   violet: {
-    active:
-      "bg-gradient-to-b from-[#5b4bbd] to-[#33277e] text-[#e7e0ff] shadow-[0_1px_4px_-1px_rgba(124,92,245,0.30),0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.16)] ring-1 ring-inset ring-[#7c5cf5]/45",
-    activeIcon: "text-[#b9a6ff]",
+    active: "border-[#7c5cf5]/40 bg-[#7c5cf5]/15 text-[#cabbff]",
+    activeIcon: "text-[#a48dff]",
   },
 };
 
 const NAV_CLASS =
-  "flex flex-wrap items-center gap-1 rounded-xl border border-white/[0.06] bg-[var(--tessera-surface)]/50 px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md";
+  "flex flex-wrap items-center gap-1 rounded-xl border border-white/[0.05] bg-[var(--tessera-surface)]/40 px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
 
 const BTN_BASE =
-  "group relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[0.7rem] font-medium transition-all duration-200";
+  "group relative flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-[0.7rem] font-medium transition-colors duration-150";
 
 const INACTIVE =
-  "text-[var(--tessera-text-muted)] hover:bg-white/[0.05] hover:text-[var(--tessera-text)]";
+  "border-white/[0.06] bg-white/[0.02] text-[var(--tessera-text-muted)] hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-[var(--tessera-text)]";
 
 export function TabStrip<K extends string>({
   items,
