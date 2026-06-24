@@ -3343,7 +3343,7 @@
       "viewQueue": "Voir la file d’attente"
     },
     "quick": {
-      "createPack": "Créer evidence pack",
+      "createPack": "Créer dossier de preuves",
       "exportSiem": "Exporter vers SIEM",
       "downloadManifest": "Télécharger manifest",
       "manageExporters": "Gérer les exporteurs"
