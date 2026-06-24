@@ -419,7 +419,9 @@ export function FailedBoard({
   const safePage = Math.min(page, pageCount - 1);
   const rows = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
 
-  const rowKey = (c: FailedRunCase) => `${c.run_id}:${c.id}`;
+  // The same case id fails under several languages/models within one run, so
+  // run_id:id is not unique — include language + model to avoid duplicate keys.
+  const rowKey = (c: FailedRunCase) => `${c.run_id}:${c.id}:${c.language}:${c.model}`;
   const selectedKey = selected ? rowKey(selected) : null;
   const toggle = (c: FailedRunCase) => {
     const k = rowKey(c);
