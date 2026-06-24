@@ -3,10 +3,10 @@
 import {
   AlertTriangle,
   ArrowRight,
-  Ban,
   Boxes,
   Lock,
   LockOpen,
+  ShieldBan,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -335,7 +335,7 @@ function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
       {/* The socle line, under the band: why a "0" is not a failure of control. */}
       {!allReleasable && signal.agentsWithRelease > 0 ? (
         <p className="flex items-center gap-[7px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
-          <Ban className="h-[13px] w-[13px] shrink-0" aria-hidden="true" />
+          <ShieldBan className="h-[13px] w-[13px] shrink-0" aria-hidden="true" />
           {t("signal.gateContext")}
         </p>
       ) : null}
