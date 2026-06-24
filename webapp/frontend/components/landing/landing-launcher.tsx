@@ -4,18 +4,13 @@ import {
   ArrowRight,
   Bell,
   Boxes,
-  ChevronRight,
   CircleCheck,
   CircleHelp,
-  HandCoins,
   Lock,
   LogIn,
   Search,
   ShieldAlert,
   ShieldCheck,
-  SlidersHorizontal,
-  UserRound,
-  UsersRound,
 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
@@ -40,12 +35,6 @@ export interface DemoLogin {
 
 type Accent = "gold" | "cyan" | "amber";
 export type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
-
-interface SpaceItem {
-  icon: React.ComponentType<{ className?: string }>;
-  key: string;
-  href: string;
-}
 
 export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--bg-app": "#020817",
@@ -76,14 +65,6 @@ export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--shadow-cyan": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
   "--shadow-amber": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
 };
-
-// Cockpit (control plane) sub-areas — listed inside the governance card.
-const OPERATOR_ITEMS: SpaceItem[] = [
-  { icon: EyeIcon, key: "supervision", href: "/surveiller/vue-ensemble" },
-  { icon: ShieldCheck, key: "management", href: "/agir/incidents-playbooks" },
-  { icon: SlidersHorizontal, key: "configuration", href: "/configurer/signal-catalog" },
-  { icon: UsersRound, key: "platform", href: "/admin/utilisateurs" },
-];
 
 const CARD_BG =
   "linear-gradient(145deg, var(--panel) 0%, var(--panel-soft) 56%, rgba(2,8,23,0.94) 100%)";
@@ -545,15 +526,22 @@ function PlaneHeader({
   );
 }
 
-// Business plane (ADR 0013): a PURE plan card. It no longer lists the surfaces
-// inline — it previews the two audience groups and links to the /espaces
-// directory (symmetric to the Flotte list→détail). The surfaces, their guards
-// and 1-click demo logins live in /espaces.
-const BUSINESS_PREVIEW = [
-  { icon: UserRound, ns: "client" as const },
-  { icon: HandCoins, ns: "recouvrement" as const },
-];
+// "What you'll find" line — a non-clickable, accent-neutral contents strip,
+// IDENTICAL on both plane cards (twin doors). The two cards differ only by their
+// header + single primary CTA; the nav into each plane lives on the other side
+// of that door (the /espaces directory, the cockpit's own sidebar). Listing
+// deep-links here created asymmetry and role-dependent dead ends (ADR 0013).
+function ContainsLine({ items }: { items: string[] }) {
+  return (
+    <p className="mt-[18px] border-t border-[var(--border-subtle)] pt-[14px] text-[12.5px] leading-[1.5] text-[var(--text-secondary)]">
+      {items.join("  ·  ")}
+    </p>
+  );
+}
 
+// Business plane (ADR 0013): a PURE plan card — a door to the /espaces directory,
+// not an inline surface list. The surfaces, their guards and 1-click demo logins
+// live in /espaces.
 function BusinessPlaneCard({ t }: { t: T }) {
   const a = ACCENT.gold;
   return (
@@ -573,41 +561,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
           title={t("business.title")}
           desc={t("business.desc")}
         />
-        <ul className="mt-[20px] flex flex-col gap-[12px]">
-          {BUSINESS_PREVIEW.map((s) => (
-            <li
-              key={s.ns}
-              className={cn(
-                "flex items-center gap-[12px] rounded-[12px] border bg-[color-mix(in_srgb,var(--bg-panel)_45%,transparent)] px-[14px] py-[11px]",
-                a.border,
-              )}
-            >
-              <span
-                className={cn(
-                  "grid h-[32px] w-[32px] shrink-0 place-items-center rounded-[9px] border",
-                  a.border,
-                  a.icon,
-                )}
-              >
-                <s.icon className="h-[16px] w-[16px]" />
-              </span>
-              <span className="flex min-w-0 flex-1 items-center justify-between gap-[8px]">
-                <span className="truncate text-[13px] font-semibold text-[var(--text-primary)]">
-                  {t(`${s.ns}.title`)}
-                </span>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-full border px-[8px] py-[2px] text-[10px] font-semibold uppercase tracking-[0.08em]",
-                    a.border,
-                    a.tone,
-                  )}
-                >
-                  {t(`${s.ns}.kind`)}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
+        <ContainsLine items={[t("client.title"), t("recouvrement.title")]} />
         <Link
           href="/espaces"
           className={cn(
@@ -650,33 +604,14 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
           desc={t("control.desc")}
           authNote={demoOperator ? t("demoLogin.note") : t("control.authNote")}
         />
-        <ul className="mt-[20px] flex flex-col gap-[16px]">
-          {OPERATOR_ITEMS.map((item) => (
-            <li key={item.key}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "group/row -mx-[8px] grid grid-cols-[20px_1fr_14px] items-center rounded-[8px] px-[8px] py-[3px] transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]",
-                  FOCUS,
-                )}
-              >
-                <item.icon className={cn("h-[18px] w-[18px] stroke-[1.6]", a.icon)} />
-                <span className="min-w-0 pl-[14px]">
-                  <span className="block text-[13px] font-semibold leading-[1.2] text-[var(--text-primary)]">
-                    {t(`operator.items.${item.key}.title`)}
-                  </span>
-                  <span className="mt-[4px] block text-[11.5px] font-normal leading-[1.25] text-[var(--text-secondary)]">
-                    {t(`operator.items.${item.key}.desc`)}
-                  </span>
-                </span>
-                <ChevronRight
-                  className="h-[15px] w-[15px] stroke-[1.6] text-[var(--text-secondary)] transition-transform group-hover/row:translate-x-[2px] group-hover/row:text-[var(--text-primary)]"
-                  aria-hidden="true"
-                />
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ContainsLine
+          items={[
+            t("operator.items.supervision.title"),
+            t("operator.items.management.title"),
+            t("operator.items.configuration.title"),
+            t("operator.items.platform.title"),
+          ]}
+        />
         {demoOperator ? (
           <div className="mt-auto">
             <DemoEnterButton
@@ -765,20 +700,5 @@ function HexBadge({ children, className }: { children: ReactNode; className: str
       </svg>
       <span className="relative">{children}</span>
     </span>
-  );
-}
-
-function EyeIcon({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden="true" className={className} viewBox="0 0 28 28" fill="none">
-      <path
-        d="M2.5 14s4.2-6.5 11.5-6.5S25.5 14 25.5 14 21.3 20.5 14 20.5 2.5 14 2.5 14Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="14" cy="14" r="3.4" fill="currentColor" />
-    </svg>
   );
 }
