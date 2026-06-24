@@ -171,9 +171,11 @@ function SurfaceCard({
     <div
       aria-disabled={locked || undefined}
       className={cn(
-        "group/card relative flex min-h-[188px] flex-col items-center justify-center gap-[14px] overflow-hidden rounded-[20px] border px-[18px] py-[22px] text-center transition-[border-color,transform]",
+        // pt clears the top-right access chip / fav star; box-shadow (not transform)
+        // on hover so cards don't jitter as they pass under the cursor while scrolling.
+        "group/card relative flex min-h-[200px] flex-col items-center justify-center gap-[14px] overflow-hidden rounded-[20px] border px-[18px] pb-[22px] pt-[42px] text-center transition-[border-color,box-shadow]",
         a.border,
-        locked ? "cursor-not-allowed opacity-55" : "hover:-translate-y-[2px]",
+        locked ? "cursor-not-allowed opacity-55" : "hover:shadow-[0_12px_28px_rgba(0,0,0,0.34)]",
         pending && "opacity-70",
       )}
       style={{ background: CARD_BG }}
