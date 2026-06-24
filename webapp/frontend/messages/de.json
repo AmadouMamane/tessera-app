@@ -4555,9 +4555,9 @@
   "recouvrement": {
     "collapsePanel": "Panel einklappen",
     "expandPanel": "Panel öffnen",
-    "title": "Inkasso-Konsole",
-    "subtitle": "Interne Fachkonsole — Inkasso-Agent",
-    "badge": "Fachebene · intern",
+    "title": "Inkasso",
+    "subtitle": "Mahnungen · Zahlungsrückstände · Ratenpläne",
+    "badge": "Intern",
     "roleLabel": "Rolle",
     "panelTitle": "Aktivität",
     "activityEmpty": "Noch keine Interaktion.",

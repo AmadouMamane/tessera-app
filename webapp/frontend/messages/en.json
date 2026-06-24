@@ -4555,9 +4555,9 @@
   "recouvrement": {
     "collapsePanel": "Collapse panel",
     "expandPanel": "Open panel",
-    "title": "Collections console",
-    "subtitle": "Internal business console — recouvrement agent",
-    "badge": "Business plane · internal",
+    "title": "Collections",
+    "subtitle": "Reminders · arrears · payment plans",
+    "badge": "Internal",
     "roleLabel": "Role",
     "panelTitle": "Activity",
     "activityEmpty": "No exchange yet.",

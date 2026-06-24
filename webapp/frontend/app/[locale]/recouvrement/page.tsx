@@ -1,7 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { RecouvrementConsole } from "@/components/recouvrement/recouvrement-console";
-import { currentRole } from "@/lib/auth/session";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -20,11 +19,10 @@ export async function generateMetadata({ params }: PageProps) {
  * REAL chat core — it mounts the shared premium `<ChatRoom>` (not the debug
  * console) with the `recouvrement` surface hint, so a verified collections/operator
  * session talks to the real internal recouvrement agent. The layout gates entry to
- * the collections role; the role is passed through only for honest UI labelling.
+ * the collections role.
  */
 export default async function RecouvrementPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const role = await currentRole();
-  return <RecouvrementConsole role={role} />;
+  return <RecouvrementConsole />;
 }

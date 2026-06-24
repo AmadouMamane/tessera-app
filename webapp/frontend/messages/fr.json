@@ -4555,9 +4555,9 @@
   "recouvrement": {
     "collapsePanel": "Réduire le panneau",
     "expandPanel": "Ouvrir le panneau",
-    "title": "Console Recouvrement",
-    "subtitle": "Console métier interne — agent recouvrement",
-    "badge": "Plan métier · interne",
+    "title": "Recouvrement",
+    "subtitle": "Relances · impayés · échéanciers",
+    "badge": "Interne",
     "roleLabel": "Rôle",
     "panelTitle": "Activité",
     "activityEmpty": "Aucun échange pour l’instant.",
