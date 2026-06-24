@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  AlertTriangle,
-  ArrowRight,
-  Boxes,
-  Lock,
-  LockOpen,
-  LogIn,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, Boxes, Lock, LockOpen, ShieldCheck, Users } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
@@ -248,7 +239,7 @@ function DemoEnterButton({
       )}
       style={a.buttonStyle}
     >
-      <LogIn className="h-[16px] w-[16px]" />
+      <Lock className="h-[15px] w-[15px]" />
       {label}
     </button>
   );
@@ -523,20 +514,11 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
           title={t("control.title")}
           desc={t("control.desc")}
         />
-        {/* Below the horizontal rule: the access pill, then the light section
-            legend; the bottom margin spaces the CTA away from the legend. */}
+        {/* Below the horizontal rule: the light section legend. The access
+            signal is the padlock on the CTA (whole plane gated), not a pill —
+            the DÉMONSTRATION badge already carries the demo reality. */}
         <div className="mt-[18px] mb-[22px] border-t border-[var(--border-subtle)] pt-[14px]">
-          <span
-            className={cn(
-              "inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[4px] text-[11px] font-medium",
-              a.border,
-              a.soft,
-            )}
-          >
-            <Lock className="h-[12px] w-[12px]" />
-            {demoOperator ? t("demoLogin.note") : t("control.authNote")}
-          </span>
-          <p className="mt-[12px] text-[12.5px] leading-[1.5] text-[color-mix(in_srgb,var(--text-secondary)_70%,transparent)]">
+          <p className="text-[12.5px] leading-[1.5] text-[color-mix(in_srgb,var(--text-secondary)_70%,transparent)]">
             {[
               t("operator.items.supervision.title"),
               t("operator.items.management.title"),
@@ -564,6 +546,7 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
             )}
             style={a.buttonStyle}
           >
+            <Lock className="h-[15px] w-[15px]" />
             {t("control.cta")}
             <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
           </Link>
