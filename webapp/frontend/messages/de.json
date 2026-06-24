@@ -4712,6 +4712,7 @@
     "authRequired": "Anmeldung erforderlich",
     "open": "Öffnen",
     "roleLocked": "Für Ihre Rolle gesperrt",
+    "noMatch": "Keine passende Oberfläche",
     "demoLogin": "Demo öffnen (Inkasso)",
     "health": {
       "released": "Grün",

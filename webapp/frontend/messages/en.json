@@ -4712,6 +4712,7 @@
     "authRequired": "Sign-in required",
     "open": "Open",
     "roleLocked": "Locked for your role",
+    "noMatch": "No matching surface",
     "demoLogin": "Enter demo (collections)",
     "health": {
       "released": "Green",

@@ -4712,6 +4712,7 @@
     "authRequired": "Connexion requise",
     "open": "Ouvrir",
     "roleLocked": "Réservé à votre rôle",
+    "noMatch": "Aucune surface ne correspond",
     "demoLogin": "Entrer en démo (recouvrement)",
     "health": {
       "released": "Au vert",
