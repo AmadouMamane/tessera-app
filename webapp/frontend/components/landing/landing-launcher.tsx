@@ -5,20 +5,15 @@ import {
   ArrowRight,
   Bell,
   Boxes,
-  Calendar,
-  CircleCheck,
   CircleHelp,
-  Headset,
   Lock,
   LogIn,
   Search,
   ShieldCheck,
-  TrendingUp,
-  User,
   Users,
 } from "lucide-react";
 import { signIn } from "next-auth/react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
 import { useState } from "react";
 
@@ -27,7 +22,7 @@ import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
-import type { LauncherAgentSignal, LauncherSignal } from "@/lib/server/launcher-signal";
+import type { LauncherSignal } from "@/lib/server/launcher-signal";
 
 export interface DemoCred {
   username: string;
@@ -147,7 +142,6 @@ export function LandingLauncher({
   demoLogin: DemoLogin | null;
 }) {
   const t = useTranslations("landing");
-  const locale = useLocale();
 
   return (
     <div
@@ -209,27 +203,10 @@ export function LandingLauncher({
             <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} />
           </section>
 
-          {/* Per-agent footer — showcase, NOT navigation (ADR 0008/0010). PUBLIC
-              boundary (ADR 0009): each agent shows its release VERDICT + its own
-              STRICT pass rate (a real number that maps to exactly one agent).
-              WHICH case failed (the failure category, e.g. PII) is NEVER shown
-              here — that lives behind the operator gate, in the cockpit. */}
-          {signal ? (
-            <div className="mt-9 flex flex-col items-center gap-[12px]">
-              <div className="flex flex-wrap items-stretch justify-center gap-[18px]">
-                {signal.agents.map((a) => (
-                  <AgentVerdict key={a.name} t={t} agent={a} locale={locale} />
-                ))}
-              </div>
-              <p className="text-center text-[11px] leading-[1.4] text-[var(--text-secondary)]">
-                {t("signal.perAgentLegend")}
-              </p>
-            </div>
-          ) : (
-            <p className="mt-9 max-w-[680px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
-              {t("fleetNote")}
-            </p>
-          )}
+          {/* No per-agent breakdown here (ADR 0008/0010/0013): a front DOOR carries
+              only the fleet DIGEST (the rollup, in the hero band above). The
+              per-agent verdict + eval-gate detail lives one altitude down, on the
+              Flotte (/agents) governance facet — not duplicated on the launcher. */}
         </main>
       </div>
     </div>
@@ -367,127 +344,6 @@ function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
           <Lock className="h-[13px] w-[13px] shrink-0" aria-hidden="true" />
           {t("signal.gateContext")}
         </p>
-      ) : null}
-    </div>
-  );
-}
-
-// "20260618T083906Z" → localized date, or null if it can't be parsed (never a
-// fabricated date).
-function fmtRunDate(runAt: string | null, locale: string): string | null {
-  if (!runAt) return null;
-  const m = runAt.match(/^(\d{4})(\d{2})(\d{2})T/);
-  if (!m) return null;
-  const dt = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`);
-  return Number.isNaN(dt.getTime()) ? null : dt.toLocaleDateString(locale);
-}
-
-// Per-agent glyph (public showcase): mapped on the display name — headset for the
-// customer support agent, person for onboarding, trend for collections. Falls
-// back to a shield so an unknown agent still renders.
-function AgentGlyph({ name }: { name: string }) {
-  const n = name.toLowerCase();
-  const cls = "h-[21px] w-[21px] stroke-[1.7]";
-  if (n.includes("support") || n.includes("client")) return <Headset className={cls} />;
-  if (n.includes("onboard")) return <User className={cls} />;
-  if (n.includes("recouvr") || n.includes("collect") || n.includes("inkasso"))
-    return <TrendingUp className={cls} />;
-  return <ShieldCheck className={cls} />;
-}
-
-// One per-agent verdict CARD (public boundary, ADR 0009): an identifying glyph +
-// name + release VERDICT pill, then the agent's own pass rate (against its OWN
-// set — not comparable across agents) + the SOCLE score (the only cross-agent
-// comparator), and a dated footer (so the staggered, independent runs are
-// visible). A "verdict périmé" chip when scored against a superseded catalogue.
-// NEVER a failure category — the "why" stays operator-only.
-function AgentVerdict({ t, agent, locale }: { t: T; agent: LauncherAgentSignal; locale: string }) {
-  const released = agent.gatePassed === true;
-  const blocked = agent.gatePassed === false;
-  const color = released ? "var(--success)" : blocked ? "#F87171" : "var(--text-secondary)";
-  const pct = agent.passRate != null ? Math.round(agent.passRate * 100) : null;
-  const date = fmtRunDate(agent.runAt, locale);
-  // Façade carries business meaning only: the security floor (same cases for all)
-  // and when it was evaluated — no internal catalogue version, no "own set" tag.
-  const security =
-    agent.soclePassed != null && agent.socleTotal != null
-      ? t("signal.agentSecurity", { passed: agent.soclePassed, total: agent.socleTotal })
-      : null;
-  const verdictLabel = released
-    ? t("signal.agentReleasable")
-    : blocked
-      ? t("signal.agentBlocked")
-      : t("signal.agentUnknown");
-  return (
-    <div
-      className="flex w-[324px] flex-col rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_46%,transparent)] px-[20px] py-[18px]"
-      style={{
-        borderColor: agent.verdictStale
-          ? "color-mix(in srgb, var(--amber) 50%, transparent)"
-          : "var(--border-subtle)",
-      }}
-    >
-      {/* Header: identifying glyph + name + verdict pill. */}
-      <div className="flex items-start gap-[14px]">
-        <span
-          className="grid h-[46px] w-[46px] shrink-0 place-items-center rounded-full border text-[var(--gold-strong)]"
-          style={{ borderColor: "var(--border-gold)" }}
-          aria-hidden="true"
-        >
-          <AgentGlyph name={agent.name} />
-        </span>
-        <div className="flex min-w-0 flex-col gap-[8px] pt-[2px]">
-          <span className="truncate text-[16px] font-semibold leading-none text-[var(--text-primary)]">
-            {agent.name}
-          </span>
-          <div className="flex flex-wrap items-center gap-[6px]">
-            <span
-              className="inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[12px] font-semibold leading-none"
-              style={{
-                color,
-                borderColor: `color-mix(in srgb, ${color} 45%, transparent)`,
-                background: `color-mix(in srgb, ${color} 12%, transparent)`,
-              }}
-            >
-              {released ? (
-                <CircleCheck className="h-[12px] w-[12px]" aria-hidden="true" />
-              ) : blocked ? (
-                <Lock className="h-[12px] w-[12px]" aria-hidden="true" />
-              ) : null}
-              {verdictLabel}
-            </span>
-            {agent.verdictStale ? (
-              <span
-                className="inline-flex items-center rounded-full border px-[6px] py-[2px] text-[9.5px] font-semibold uppercase leading-none tracking-[0.04em]"
-                style={{
-                  color: "var(--amber)",
-                  borderColor: "color-mix(in srgb, var(--amber) 45%, transparent)",
-                }}
-              >
-                {t("signal.agentStale")}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </div>
-      {/* Metrics: self-explanatory rate (what it measures + verifiable fraction,
-          never a bare "%") then the shared security floor. */}
-      <div className="mt-[16px] flex flex-col gap-[4px]">
-        {pct != null && agent.passed != null && agent.total != null ? (
-          <span className="text-[13px] font-medium leading-[1.4] text-[var(--text-secondary)]">
-            {t("signal.agentRate", { rate: pct, passed: agent.passed, total: agent.total })}
-          </span>
-        ) : null}
-        {security ? (
-          <span className="text-[13px] leading-[1.4] text-[var(--text-secondary)]">{security}</span>
-        ) : null}
-      </div>
-      {/* Dated footer — the staggered, independent run shows here. */}
-      {date ? (
-        <div className="mt-[14px] flex items-center gap-[8px] border-t border-[var(--border-subtle)] pt-[12px] text-[12px] leading-none text-[var(--text-secondary)]">
-          <Calendar className="h-[14px] w-[14px] shrink-0 stroke-[1.7]" aria-hidden="true" />
-          {t("signal.agentEvaluatedOn", { date })}
-        </div>
       ) : null}
     </div>
   );
