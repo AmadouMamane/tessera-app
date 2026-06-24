@@ -212,9 +212,11 @@ function SurfaceCard({
         <span
           className="pointer-events-none absolute top-[12px] right-[12px] z-[2] inline-flex items-center gap-[5px] rounded-full border px-[8px] py-[3px] text-[10px] font-medium"
           style={{
-            color: "var(--amber-soft)",
-            borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
-            background: "color-mix(in srgb, var(--amber-soft) 12%, transparent)",
+            // Access STATE, not an audience accent — kept neutral slate so it
+            // never reads in the warm gold/amber family (Externe + Démonstration).
+            color: "var(--text-secondary)",
+            borderColor: "color-mix(in srgb, var(--text-primary) 20%, transparent)",
+            background: "color-mix(in srgb, var(--text-primary) 7%, transparent)",
           }}
         >
           <Lock className="h-[10px] w-[10px]" aria-hidden="true" />
@@ -354,9 +356,10 @@ function SurfaceRow({
         <span
           className="pointer-events-none hidden shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11px] font-medium md:inline-flex"
           style={{
-            color: "var(--amber-soft)",
-            borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
-            background: "color-mix(in srgb, var(--amber-soft) 12%, transparent)",
+            // Access STATE, not an audience accent — neutral slate (see grid card).
+            color: "var(--text-secondary)",
+            borderColor: "color-mix(in srgb, var(--text-primary) 20%, transparent)",
+            background: "color-mix(in srgb, var(--text-primary) 7%, transparent)",
           }}
         >
           <Lock className="h-[11px] w-[11px]" aria-hidden="true" />
