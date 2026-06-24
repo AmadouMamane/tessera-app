@@ -4472,7 +4472,7 @@
           "anonymous": "Anonyme Sitzung",
           "anonymousHint": "Melden Sie sich (Demo) an, um Kontofunktionen freizuschalten.",
           "demoActive": "Demo-Sitzung",
-          "demoHint": "Als Demo-Kunde angemeldet (demo-customer-001) — Kontofunktionen verfügbar. Geseedete Identität, ohne echte Authentifizierung.",
+          "demoHint": "Demonstrationssitzung als Kunde — Kontooperationen verfügbar.",
           "login": "Anmelden (Demo)",
           "logout": "Abmelden"
         }
@@ -4564,27 +4564,27 @@
     "welcome": "Willkommen bei Tessera",
     "choose": "Wählen Sie Ihren Bereich, um fortzufahren",
     "demoBadge": "Demonstration",
-    "demoTitle": "Wählen Sie Ihren Bereich",
-    "demoSubtitle": "Prüfer-Shortcut: Öffnen Sie einen der beiden Bereiche. Dies ist nicht der Eingang des Produkts — ein echter Nutzer betritt es über seine Identität.",
-    "fleetNote": "Flotte: 3 verwaltete Agenten — support-client + onboarding (Kundenassistent) · recouvrement (intern).",
+    "demoTitle": "Das Produkt — und was es steuert.",
+    "demoSubtitle": "Zwei Ebenen: die Anwendungen, die mit Ihren Kunden sprechen, und das Cockpit, das entscheidet, was in Produktion geht. Öffnen Sie eine davon.",
+    "fleetNote": "Drei Agenten unter Prüfung, hinter dem Kundenassistenten und der Inkasso-Konsole.",
     "signal": {
       "live": "Live",
       "unavailable": "Signal nicht verfügbar",
-      "agents": "{count} Agenten",
       "controlActive": "Kontrolle aktiv",
-      "releasableRollup": "{passed}/{total} Agenten freigebbar",
-      "gateContext": "Die Sicherheitsbasis hält die Release zurück: das ist die Garantie, kein Ausfall.",
+      "releasableRollup": "{passed} von {total} für die Produktion freigegeben",
+      "gateContext": "Die Sicherheitsbasis hält die Linie: kein Agent wird freigegeben, solange er einen kritischen Sicherheitsfall nicht besteht. Das ist ihre Funktion.",
       "agentReleasable": "Grün",
       "agentBlocked": "Blockiert",
       "agentUnknown": "Nicht bewertet",
-      "agentRate": "{rate} % bestanden ({passed}/{total}) · eig. Set",
-      "agentCat": "Kat. v{v}",
-      "agentSocle": "Basis {passed}/{total} konform",
+      "agentRate": "{rate} % Erfolg auf dem eigenen Prüfsatz ({passed}/{total})",
       "agentStale": "Veraltet · neu prüfen",
-      "perAgentLegend": "Quote gegen das eigene Set jedes Agenten — nicht vergleichbar; nur die Basis (gleiche Fälle überall) ist es."
+      "perAgentLegend": "Jede Quote bezieht sich auf den eigenen Prüfsatz des Agenten — nicht zwischen Agenten vergleichbar. Nur die Sicherheit (gleiche Fälle für alle) ist es.",
+      "agentsUnderReview": "{count} Agenten unter Prüfung",
+      "agentSecurity": "Sicherheit {passed}/{total} Fälle konform",
+      "agentEvaluatedOn": "Geprüft am {date}"
     },
     "demoLogin": {
-      "note": "Demo-Sitzung · geseedetes Konto",
+      "note": "Demo-Sitzung · Testkonto",
       "operator": "Demo starten (Operator)",
       "collections": "Demo starten (Inkasso)"
     },
@@ -4597,15 +4597,15 @@
     "business": {
       "badge": "Fachebene",
       "title": "Fachbereiche",
-      "desc": "Die Arbeit erledigen: der externe Kundenbereich und die interne Inkasso-Konsole.",
-      "reveal": "Fachbereiche erkunden",
+      "desc": "Die Anwendungen, die die Arbeit erledigen.",
+      "reveal": "Bereiche öffnen",
       "collapse": "Einklappen"
     },
     "control": {
       "badge": "Kontrollebene",
-      "title": "Cockpit · Governance",
-      "desc": "Die KI-Plattform steuern: Überwachung, Konfiguration, Audit und Administration.",
-      "cta": "Zum Cockpit",
+      "title": "Cockpit",
+      "desc": "Steuern Sie jeden Agenten — von der Qualität bis zur Produktion.",
+      "cta": "Cockpit öffnen",
       "authNote": "Betreiber-Anmeldung erforderlich"
     },
     "client": {
@@ -4671,7 +4671,7 @@
           "desc": "Überwachen Sie Qualität, Sicherheit und Leistung"
         },
         "management": {
-          "title": "Steuerung",
+          "title": "Aktion",
           "desc": "Handeln Sie bei Vorfällen und im Betrieb"
         },
         "configuration": {
@@ -4687,7 +4687,8 @@
     "toggle": {
       "product": "Produkt",
       "cockpit": "Cockpit"
-    }
+    },
+    "demoHonesty": "Demonstrationsbesuch — in Produktion betritt jeder über seine Identität."
   },
   "spaces": {
     "filterFavorites": "Favoriten",
@@ -4703,7 +4704,7 @@
     "filterExternal": "Extern",
     "filterInternal": "Intern",
     "title": "Fachbereiche",
-    "subtitle": "Das Verzeichnis der Geschäftsoberflächen. Demonstration: öffnen Sie eine der Oberflächen.",
+    "subtitle": "Die Anwendungen, die die Arbeit erledigen: der Kundenbereich und die Inkasso-Konsole.",
     "demoBadge": "Demonstration",
     "groupExternal": "Extern",
     "groupExternalDesc": "Für Kunden offene Oberflächen.",
@@ -4719,7 +4720,7 @@
       "blocked": "Blockiert",
       "unknown": "Nicht bewertet"
     },
-    "healthLegend": "Status = öffentliches Release-Verdikt der Agenten, die die Oberfläche bedienen; das Detail (Fehlerkategorie) lebt im geschützten Cockpit.",
+    "healthLegend": "Der Punkt zeigt, ob die Anwendung für die Produktion freigegeben ist. Das Detail sehen Sie im Cockpit.",
     "fleetLink": "Flotte ansehen (gesteuerte Agenten)",
     "unavailable": "Bereichsverzeichnis nicht verfügbar."
   },

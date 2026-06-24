@@ -4472,7 +4472,7 @@
           "anonymous": "Session anonyme",
           "anonymousHint": "Connectez-vous (démo) pour débloquer les opérations de compte.",
           "demoActive": "Session de démonstration",
-          "demoHint": "Connecté en client démo (demo-customer-001) — opérations de compte disponibles. Identité seedée, sans authentification réelle.",
+          "demoHint": "Session de démonstration en tant que client — opérations de compte disponibles.",
           "login": "Se connecter (démo)",
           "logout": "Se déconnecter"
         }
@@ -4564,27 +4564,27 @@
     "welcome": "Bienvenue sur Tessera",
     "choose": "Choisissez votre espace pour continuer",
     "demoBadge": "Démonstration",
-    "demoTitle": "Choisissez votre espace",
-    "demoSubtitle": "Raccourci d’évaluation : ouvrez l’un ou l’autre espace. Ce n’est pas la porte d’entrée du produit — un vrai utilisateur entre par son identité.",
-    "fleetNote": "Flotte : 3 agents gouvernés — support-client + onboarding (assistant client) · recouvrement (interne).",
+    "demoTitle": "Le produit, et ce qui le gouverne.",
+    "demoSubtitle": "Deux plans : les applications qui parlent à vos clients, et le cockpit qui décide ce qui part en production. Ouvrez l’un ou l’autre.",
+    "fleetNote": "Trois agents sous revue, derrière l’assistant client et la console recouvrement.",
     "signal": {
       "live": "Live",
       "unavailable": "Signal indisponible",
-      "agents": "{count} agents",
       "controlActive": "Contrôle actif",
-      "releasableRollup": "{passed}/{total} agents libérables",
-      "gateContext": "Le socle de sécurité retient la release : c’est la garantie, pas une panne.",
+      "releasableRollup": "{passed} sur {total} validé pour la mise en production",
+      "gateContext": "Le socle de sécurité tient la ligne : aucun agent n’est libéré tant qu’il échoue à un cas de sécurité critique. C’est sa fonction.",
       "agentReleasable": "Au vert",
       "agentBlocked": "Bloqué",
       "agentUnknown": "Non évalué",
-      "agentRate": "{rate} % réussis ({passed}/{total}) · son set",
-      "agentCat": "cat v{v}",
-      "agentSocle": "socle {passed}/{total} conformes",
+      "agentRate": "{rate} % de réussite sur son jeu d’évaluation ({passed}/{total})",
       "agentStale": "Périmé · re-éval",
-      "perAgentLegend": "Taux contre le set propre de chaque agent — non comparable ; seul le socle (mêmes cas partout) l’est."
+      "perAgentLegend": "Chaque taux porte sur le jeu propre de l’agent — non comparable d’un agent à l’autre. Seule la sécurité (mêmes cas pour tous) l’est.",
+      "agentsUnderReview": "{count} agents sous revue",
+      "agentSecurity": "sécurité {passed}/{total} cas conformes",
+      "agentEvaluatedOn": "Évalué le {date}"
     },
     "demoLogin": {
-      "note": "Session démo · compte seedé",
+      "note": "Session de démonstration · compte de test",
       "operator": "Entrer en démo (opérateur)",
       "collections": "Entrer en démo (recouvrement)"
     },
@@ -4597,15 +4597,15 @@
     "business": {
       "badge": "Plan métier",
       "title": "Espaces métier",
-      "desc": "Faire le travail : l’espace client externe et la console recouvrement interne.",
-      "reveal": "Explorer les espaces métier",
+      "desc": "Les applications qui font le travail.",
+      "reveal": "Ouvrir les espaces",
       "collapse": "Réduire"
     },
     "control": {
       "badge": "Plan de contrôle",
-      "title": "Cockpit · Gouvernance",
-      "desc": "Gouverner la plateforme IA : supervision, configuration, audit et administration.",
-      "cta": "Accéder au cockpit",
+      "title": "Cockpit",
+      "desc": "Gouvernez chaque agent, de la qualité à la mise en production.",
+      "cta": "Ouvrir le cockpit",
       "authNote": "Connexion opérateur requise"
     },
     "client": {
@@ -4671,7 +4671,7 @@
           "desc": "Surveillez la qualité, la sécurité et la performance"
         },
         "management": {
-          "title": "Gestion",
+          "title": "Action",
           "desc": "Agissez sur les incidents et les opérations"
         },
         "configuration": {
@@ -4687,7 +4687,8 @@
     "toggle": {
       "product": "Produit",
       "cockpit": "Cockpit"
-    }
+    },
+    "demoHonesty": "Visite de démonstration — en production, chacun entre par son identité."
   },
   "spaces": {
     "filterFavorites": "Favoris",
@@ -4703,7 +4704,7 @@
     "filterExternal": "Externes",
     "filterInternal": "Internes",
     "title": "Espaces métier",
-    "subtitle": "Le répertoire des surfaces métier. Démonstration : ouvrez l’une ou l’autre surface.",
+    "subtitle": "Les applications qui font le travail : l’espace client et la console recouvrement.",
     "demoBadge": "Démonstration",
     "groupExternal": "Externe",
     "groupExternalDesc": "Surfaces ouvertes aux clients.",
@@ -4719,7 +4720,7 @@
       "blocked": "Bloqué",
       "unknown": "Non évalué"
     },
-    "healthLegend": "Santé = verdict de release public des agents qui servent la surface ; le détail (catégorie d’échec) vit dans le cockpit gardé.",
+    "healthLegend": "La pastille indique si l’application est validée pour la mise en production. Le détail se consulte dans le cockpit.",
     "fleetLink": "Voir la Flotte (agents gouvernés)",
     "unavailable": "Annuaire des espaces indisponible."
   },

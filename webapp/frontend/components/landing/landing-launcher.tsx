@@ -206,6 +206,11 @@ export function LandingLauncher({
             <p className="mt-[10px] max-w-[560px] text-[15px] font-normal leading-[1.4] tracking-[0.01em] text-[var(--text-secondary)]">
               {t("demoSubtitle")}
             </p>
+            {/* Honesty as one line of precision (ADR 0013) — not a defensive
+                disclaimer. The DEMO badge above already frames the visit. */}
+            <p className="mt-[8px] max-w-[520px] text-[12px] leading-[1.5] text-[color-mix(in_srgb,var(--text-secondary)_82%,transparent)]">
+              {t("demoHonesty")}
+            </p>
             <SignalBand t={t} signal={signal} />
           </section>
 
@@ -331,37 +336,38 @@ function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
       : "var(--amber)";
   return (
     <div className="mt-7 flex max-w-[760px] flex-col items-center gap-[12px]">
-      <div className="flex flex-wrap items-center justify-center gap-[10px]">
-        <span className={neutral}>
-          <span className="relative flex h-[7px] w-[7px]" aria-hidden="true">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--success)] opacity-60" />
-            <span className="relative inline-flex h-[7px] w-[7px] rounded-full bg-[var(--success)]" />
-          </span>
-          {t("signal.live")}
+      <span className={neutral}>
+        <span className="relative flex h-[7px] w-[7px]" aria-hidden="true">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--success)] opacity-60" />
+          <span className="relative inline-flex h-[7px] w-[7px] rounded-full bg-[var(--success)]" />
         </span>
-        <span className={neutral}>{t("signal.agents", { count: signal.agentsCount })}</span>
+        {t("signal.live")}
+      </span>
+      {/* Lead with the value: control is active, and how many agents it currently
+          holds under review (the agent count is the honest fleet number here). */}
+      <div className="flex flex-wrap items-center justify-center gap-x-[8px] gap-y-[4px] text-[13px] leading-[1.3]">
+        <span
+          className="inline-flex items-center gap-[6px] font-semibold"
+          style={{ color: "var(--success)" }}
+        >
+          <ShieldCheck className="h-[14px] w-[14px]" aria-hidden="true" />
+          {t("signal.controlActive")}
+        </span>
+        <span className="text-[var(--text-secondary)]" aria-hidden="true">
+          ·
+        </span>
+        <span className="text-[var(--text-secondary)]">
+          {t("signal.agentsUnderReview", { count: signal.agentsCount })}
+        </span>
       </div>
-      {/* Verdict rollup headline: control is active (positive) AND the count of
-          releasable agents (the only honest fleet number). */}
+      {/* The only fleet-level verdict number: how many are cleared for production. */}
       {signal.agentsWithRelease > 0 ? (
-        <div className="flex flex-wrap items-center justify-center gap-x-[8px] gap-y-[4px] text-[13px] leading-[1.3]">
-          <span
-            className="inline-flex items-center gap-[6px] font-semibold"
-            style={{ color: "var(--success)" }}
-          >
-            <ShieldCheck className="h-[14px] w-[14px]" aria-hidden="true" />
-            {t("signal.controlActive")}
-          </span>
-          <span className="text-[var(--text-secondary)]" aria-hidden="true">
-            ·
-          </span>
-          <span className="font-semibold" style={{ color: rollupColor }}>
-            {t("signal.releasableRollup", {
-              passed: signal.passedAgents,
-              total: signal.agentsWithRelease,
-            })}
-          </span>
-        </div>
+        <span className="text-[13px] font-semibold leading-[1.3]" style={{ color: rollupColor }}>
+          {t("signal.releasableRollup", {
+            passed: signal.passedAgents,
+            total: signal.agentsWithRelease,
+          })}
+        </span>
       ) : null}
       {!allReleasable && signal.agentsWithRelease > 0 ? (
         <p className="max-w-[600px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
@@ -394,14 +400,12 @@ function AgentVerdict({ t, agent, locale }: { t: T; agent: LauncherAgentSignal; 
   const color = released ? "var(--success)" : blocked ? "#F87171" : "var(--text-secondary)";
   const pct = agent.passRate != null ? Math.round(agent.passRate * 100) : null;
   const date = fmtRunDate(agent.runAt, locale);
-  const cat = agent.catalogueVersion ? agent.catalogueVersion.split("-")[0] : null;
-  const meta = [
-    date,
-    cat ? t("signal.agentCat", { v: cat }) : null,
+  // Façade carries business meaning only: the security floor (same cases for all)
+  // and when it was evaluated — no internal catalogue version, no "own set" tag.
+  const security =
     agent.soclePassed != null && agent.socleTotal != null
-      ? t("signal.agentSocle", { passed: agent.soclePassed, total: agent.socleTotal })
-      : null,
-  ].filter(Boolean);
+      ? t("signal.agentSecurity", { passed: agent.soclePassed, total: agent.socleTotal })
+      : null;
   return (
     <div
       className="flex min-w-[188px] flex-col gap-[8px] rounded-[14px] border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[15px] py-[12px]"
@@ -451,9 +455,12 @@ function AgentVerdict({ t, agent, locale }: { t: T; agent: LauncherAgentSignal; 
           {t("signal.agentRate", { rate: pct, passed: agent.passed, total: agent.total })}
         </span>
       ) : null}
-      {meta.length > 0 ? (
+      {security ? (
+        <span className="text-[11px] leading-[1.3] text-[var(--text-secondary)]">{security}</span>
+      ) : null}
+      {date ? (
         <span className="text-[10.5px] leading-[1.3] text-[var(--text-secondary)]">
-          {meta.join(" · ")}
+          {t("signal.agentEvaluatedOn", { date })}
         </span>
       ) : null}
     </div>

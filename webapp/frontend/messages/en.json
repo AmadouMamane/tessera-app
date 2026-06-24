@@ -4472,7 +4472,7 @@
           "anonymous": "Anonymous session",
           "anonymousHint": "Sign in (demo) to unlock account operations.",
           "demoActive": "Demo session",
-          "demoHint": "Signed in as the demo customer (demo-customer-001) — account operations available. Seeded identity, no real authentication.",
+          "demoHint": "Demonstration session as a customer — account operations available.",
           "login": "Sign in (demo)",
           "logout": "Sign out"
         }
@@ -4564,27 +4564,27 @@
     "welcome": "Welcome to Tessera",
     "choose": "Choose your space to continue",
     "demoBadge": "Demonstration",
-    "demoTitle": "Choose your space",
-    "demoSubtitle": "Reviewer shortcut: open either space. This is not the product’s front door — a real user enters by identity.",
-    "fleetNote": "Fleet: 3 governed agents — support-client + onboarding (customer assistant) · recouvrement (internal).",
+    "demoTitle": "The product, and what governs it.",
+    "demoSubtitle": "Two planes: the applications that talk to your customers, and the cockpit that decides what ships to production. Open either one.",
+    "fleetNote": "Three agents under review, behind the customer assistant and the collections console.",
     "signal": {
       "live": "Live",
       "unavailable": "Signal unavailable",
-      "agents": "{count} agents",
       "controlActive": "Active control",
-      "releasableRollup": "{passed}/{total} agents releasable",
-      "gateContext": "The security baseline is holding the release: that's the guarantee, not a failure.",
+      "releasableRollup": "{passed} of {total} cleared for production",
+      "gateContext": "The security baseline holds the line: no agent ships while it fails a critical security case. That's its job.",
       "agentReleasable": "Green",
       "agentBlocked": "Blocked",
       "agentUnknown": "Not evaluated",
-      "agentRate": "{rate}% passed ({passed}/{total}) · own set",
-      "agentCat": "cat v{v}",
-      "agentSocle": "floor {passed}/{total} compliant",
+      "agentRate": "{rate}% pass rate on its own evaluation set ({passed}/{total})",
       "agentStale": "Stale · re-eval",
-      "perAgentLegend": "Rate is against each agent's own set — not comparable; only the floor (same cases everywhere) is."
+      "perAgentLegend": "Each rate is on the agent's own set — not comparable across agents. Only security (the same cases for all) is.",
+      "agentsUnderReview": "{count} agents under review",
+      "agentSecurity": "security {passed}/{total} cases compliant",
+      "agentEvaluatedOn": "Evaluated on {date}"
     },
     "demoLogin": {
-      "note": "Demo session · seeded account",
+      "note": "Demonstration session · test account",
       "operator": "Enter demo (operator)",
       "collections": "Enter demo (collections)"
     },
@@ -4597,15 +4597,15 @@
     "business": {
       "badge": "Business plane",
       "title": "Business spaces",
-      "desc": "Do the work: the external customer space and the internal collections console.",
-      "reveal": "Explore the business spaces",
+      "desc": "The applications that do the work.",
+      "reveal": "Open the spaces",
       "collapse": "Collapse"
     },
     "control": {
       "badge": "Control plane",
-      "title": "Cockpit · Governance",
-      "desc": "Govern the AI platform: supervision, configuration, audit and administration.",
-      "cta": "Enter the cockpit",
+      "title": "Cockpit",
+      "desc": "Govern every agent, from quality to production.",
+      "cta": "Open the cockpit",
       "authNote": "Operator sign-in required"
     },
     "client": {
@@ -4671,7 +4671,7 @@
           "desc": "Monitor quality, security and performance"
         },
         "management": {
-          "title": "Operations",
+          "title": "Action",
           "desc": "Act on incidents and operations"
         },
         "configuration": {
@@ -4687,7 +4687,8 @@
     "toggle": {
       "product": "Product",
       "cockpit": "Cockpit"
-    }
+    },
+    "demoHonesty": "Demonstration visit — in production, everyone enters by their identity."
   },
   "spaces": {
     "filterFavorites": "Favorites",
@@ -4703,7 +4704,7 @@
     "filterExternal": "External",
     "filterInternal": "Internal",
     "title": "Business spaces",
-    "subtitle": "The directory of business surfaces. Demonstration: open either surface.",
+    "subtitle": "The applications that do the work: the client space and the collections console.",
     "demoBadge": "Demonstration",
     "groupExternal": "External",
     "groupExternalDesc": "Surfaces open to customers.",
@@ -4719,7 +4720,7 @@
       "blocked": "Blocked",
       "unknown": "Not evaluated"
     },
-    "healthLegend": "Health = the public release verdict of the agents serving the surface; the detail (failure category) lives in the guarded cockpit.",
+    "healthLegend": "The dot shows whether the application is cleared for production. The detail lives in the cockpit.",
     "fleetLink": "View the Fleet (governed agents)",
     "unavailable": "Spaces directory unavailable."
   },
