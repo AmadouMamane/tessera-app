@@ -280,7 +280,7 @@ function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
       ? "#F87171"
       : "var(--amber)";
   return (
-    <div className="mt-10 flex w-full max-w-[840px] flex-col items-center gap-[18px]">
+    <div className="mt-8 flex w-full max-w-[840px] flex-col items-center gap-[18px]">
       {/* One bounded status band — three segments, one fact each: control is
           active (the green dot is the live indicator), how many agents it holds
           under review, and the only fleet-level verdict number (how many are
