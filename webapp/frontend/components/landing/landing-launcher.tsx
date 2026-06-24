@@ -427,7 +427,7 @@ function PlaneHeader({
 // a single pill would be false. Identical chip style on both plane cards.
 function ContainsLine({ items }: { items: { label: string; gated?: boolean }[] }) {
   return (
-    <div className="mt-[18px] mb-[28px] flex flex-wrap gap-[8px] border-t border-[var(--border-subtle)] pt-[14px]">
+    <div className="mt-[18px] mb-[84px] flex flex-wrap gap-[8px] border-t border-[var(--border-subtle)] pt-[14px]">
       {items.map((item) => (
         <span
           key={item.label}
