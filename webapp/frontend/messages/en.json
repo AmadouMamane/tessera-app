@@ -4548,6 +4548,8 @@
     "body": "This page is under construction. Navigation, routing and states are in place; content will be wired up shortly."
   },
   "recouvrement": {
+    "collapsePanel": "Collapse panel",
+    "expandPanel": "Open panel",
     "title": "Collections console",
     "subtitle": "Internal business console — recouvrement agent",
     "badge": "Business plane · internal",
