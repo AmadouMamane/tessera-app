@@ -4548,10 +4548,6 @@
     "body": "Cette page est en cours de construction. La navigation, le routage et les états sont en place ; le contenu sera branché prochainement."
   },
   "recouvrement": {
-    "newChat": "Nouveau chat",
-    "historyTitle": "Conversations",
-    "historyEmpty": "Aucune conversation enregistrée dans ce navigateur. Les échanges restent locaux à cette démo.",
-    "deleteChat": "Supprimer la conversation",
     "title": "Console Recouvrement",
     "subtitle": "Console métier interne — agent recouvrement",
     "badge": "Plan métier · interne",

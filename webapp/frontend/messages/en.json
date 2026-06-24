@@ -4548,10 +4548,6 @@
     "body": "This page is under construction. Navigation, routing and states are in place; content will be wired up shortly."
   },
   "recouvrement": {
-    "newChat": "New chat",
-    "historyTitle": "Conversations",
-    "historyEmpty": "No conversation saved in this browser. Chats stay local to this demo.",
-    "deleteChat": "Delete conversation",
     "title": "Collections console",
     "subtitle": "Internal business console — recouvrement agent",
     "badge": "Business plane · internal",
