@@ -4582,7 +4582,7 @@
       "unavailable": "Signal indisponible",
       "controlActive": "Supervision active",
       "releasableRollup": "{passed} sur {total} prêts pour la production",
-      "gateContext": "Le socle de sécurité bloque toute mise en production tant qu’un cas critique échoue.",
+      "gateContext": "Le socle de sécurité bloque toute mise en production si un seul cas critique échoue.",
       "agentReleasable": "Au vert",
       "agentBlocked": "Bloqué",
       "agentUnknown": "Non évalué",

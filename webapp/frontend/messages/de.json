@@ -4582,7 +4582,7 @@
       "unavailable": "Signal nicht verfügbar",
       "controlActive": "Aktive Überwachung",
       "releasableRollup": "{passed} von {total} produktionsbereit",
-      "gateContext": "Die Sicherheitsbasis blockiert jede Produktivsetzung, solange ein kritischer Fall fehlschlägt.",
+      "gateContext": "Die Sicherheitsbasis blockiert jede Produktivsetzung, wenn auch nur ein kritischer Fall fehlschlägt.",
       "agentReleasable": "Grün",
       "agentBlocked": "Blockiert",
       "agentUnknown": "Nicht bewertet",

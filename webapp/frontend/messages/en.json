@@ -4582,7 +4582,7 @@
       "unavailable": "Signal unavailable",
       "controlActive": "Active supervision",
       "releasableRollup": "{passed} of {total} ready for production",
-      "gateContext": "The security baseline blocks any production release while a critical case fails.",
+      "gateContext": "The security baseline blocks any production release if a single critical case fails.",
       "agentReleasable": "Green",
       "agentBlocked": "Blocked",
       "agentUnknown": "Not evaluated",
