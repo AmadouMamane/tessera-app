@@ -685,7 +685,8 @@
       "title": "Demo-Zugangsdaten",
       "hint": "Öffentliche Demo: Verwenden Sie eines dieser Konten, um alles zu sehen."
     },
-    "adminOnly": "Nur für Administratoren"
+    "adminOnly": "Nur für Administratoren",
+    "demoSession": "Demositzung"
   },
   "observability": {
     "title": "Beobachtbarkeit",

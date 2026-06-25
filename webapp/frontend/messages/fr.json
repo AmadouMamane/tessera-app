@@ -685,7 +685,8 @@
       "title": "Identifiants de démonstration",
       "hint": "Démo publique : utilisez l'un de ces comptes pour tout voir."
     },
-    "adminOnly": "Réservé à l’administrateur"
+    "adminOnly": "Réservé à l’administrateur",
+    "demoSession": "Session démonstration"
   },
   "observability": {
     "title": "Observabilité",

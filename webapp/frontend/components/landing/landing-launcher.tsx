@@ -15,10 +15,7 @@ import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
 import { useState } from "react";
 
-import { AuthControl } from "@/components/auth/auth-control";
-import { TesseraLogo } from "@/components/brand/tessera-logo";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { AppHeader } from "@/components/layout/app-header";
 import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import type { LauncherSignal } from "@/lib/server/launcher-signal";
@@ -173,7 +170,11 @@ export function LandingLauncher({
       />
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        <Header />
+        {/* Unified header (docs/design/header-normative.md) — launcher variant:
+            brand only at left, the global cluster (langue · thème · compte) at
+            right, no contextual cluster. The launcher IS the plane chooser, so
+            no PRODUIT/COCKPIT toggle and a labelled DEMO session (not a login). */}
+        <AppHeader plan="launcher" />
         <main className="flex flex-1 flex-col items-center justify-start px-6 pt-[110px] pb-36">
           <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
@@ -343,25 +344,6 @@ function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
         </p>
       ) : null}
     </div>
-  );
-}
-
-function Header() {
-  return (
-    <header className="relative flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-6">
-      {/* The launcher IS the plane chooser — no PRODUIT/COCKPIT toggle here (it
-          would be redundant). The toggle stays in the cockpit for operators. */}
-      <TesseraLogo className="h-[40px]" />
-
-      {/* Launcher header variant: the global group ONLY (theme · language ·
-          account). No search / notifications / help — there is nothing to search
-          or be notified about on the plane chooser. */}
-      <div className="flex items-center gap-2">
-        <ThemeToggle />
-        <LanguageSwitcher />
-        <AuthControl />
-      </div>
-    </header>
   );
 }
 

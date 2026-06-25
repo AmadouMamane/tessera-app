@@ -685,7 +685,8 @@
       "title": "Demo credentials",
       "hint": "Public demo: use one of these accounts to see everything."
     },
-    "adminOnly": "Administrator only"
+    "adminOnly": "Administrator only",
+    "demoSession": "Demo session"
   },
   "observability": {
     "title": "Observability",

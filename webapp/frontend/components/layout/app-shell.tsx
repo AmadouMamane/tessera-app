@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 
 import { AppFooter } from "./app-footer";
+import { AppHeader, type HeaderAction, type HeaderContextItem } from "./app-header";
 import { ShellChrome } from "./shell-chrome";
 import { ShellFrame } from "./shell-frame";
 import { Sidebar } from "./sidebar";
-import { Topbar, type TopbarAction, type TopbarContextItem } from "./topbar";
 
 interface AppShellProps {
   title: string;
@@ -16,8 +16,8 @@ interface AppShellProps {
    * the width — remove ad-hoc `contentWidth` from pages.
    */
   contentWidth?: "default" | "wide" | "full";
-  topbarContext?: TopbarContextItem[];
-  topbarActions?: TopbarAction[];
+  topbarContext?: HeaderContextItem[];
+  topbarActions?: HeaderAction[];
   /** Override the left rail (defaults to the cockpit sidebar). */
   sidebar?: ReactNode;
 }
@@ -35,7 +35,8 @@ export function AppShell({
       <ShellFrame
         sidebar={sidebar ?? <Sidebar />}
         topbar={
-          <Topbar
+          <AppHeader
+            plan="cockpit"
             title={title}
             description={description}
             contextItems={topbarContext}

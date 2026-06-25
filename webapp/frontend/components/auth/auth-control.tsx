@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LogIn, LogOut, UserCog } from "lucide-react";
+import { ChevronDown, FlaskConical, LogIn, LogOut, UserCog } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
@@ -24,11 +24,26 @@ function initials(name: string): string {
 }
 
 /**
- * Topbar auth affordance (ADR 0009): a sign-in link for visitors, or a compact
+ * Anonymous behaviour of {@link AuthControl}, per the header normative
+ * (`docs/design/header-normative.md` §4). The header REFLECTS; the RBAC GATES.
+ *
+ * - `optional` — product/espaces: optional auth that unlocks (anonymous →
+ *   customer). Anonymous shows "Se connecter".
+ * - `gated` — cockpit / collections console: the route is already RBAC-gated, an
+ *   anonymous visitor never reaches it, so NEVER show "Se connecter".
+ * - `demo` — launcher: a labelled demonstration session, not a real login.
+ *
+ * Signed-in behaviour is identical in every context: the user menu (who + sign
+ * out). The context only changes the anonymous fallback.
+ */
+export type AuthContext = "demo" | "optional" | "gated";
+
+/**
+ * Header auth affordance (ADR 0009): a sign-in link for visitors, or a compact
  * user menu (avatar + name + role + chevron). Account switch and sign-out live
  * inside the dropdown — never as a bare button in the header.
  */
-export function AuthControl() {
+export function AuthControl({ context = "optional" }: { context?: AuthContext }) {
   const { data: session, status } = useSession();
   const t = useTranslations("auth");
   const router = useRouter();
@@ -54,6 +69,21 @@ export function AuthControl() {
   }
 
   if (!role) {
+    // Gated surfaces (cockpit / collections console) are reached only with a
+    // role — an anonymous render here means the session is mid-resolve or the
+    // RBAC layout is about to bounce. Never invite a sign-in: stay silent.
+    if (context === "gated") return null;
+    // Launcher: a labelled DEMO session, not a real login (ADR 0013). No
+    // "Se connecter" CTA — the launcher is a demonstration, not a front door.
+    if (context === "demo") {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
+          <FlaskConical className="h-3.5 w-3.5" />
+          {t("demoSession")}
+        </span>
+      );
+    }
+    // Optional auth (product/espaces): sign-in unlocks the customer experience.
     return (
       <Link
         href="/login"

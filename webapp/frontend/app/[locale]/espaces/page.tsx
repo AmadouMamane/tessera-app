@@ -1,16 +1,13 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { AuthControl } from "@/components/auth/auth-control";
-import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { SPACE_SELECTOR_TOKENS } from "@/components/landing/landing-launcher";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { AppHeader } from "@/components/layout/app-header";
 import {
   SpacesDirectory,
   type SurfaceDemo,
   type SurfaceGroup,
   type SurfaceView,
 } from "@/components/spaces/spaces-directory";
-import { Link } from "@/i18n/navigation";
 import { demoCredentials } from "@/lib/auth/accounts";
 import { currentRole, hasCollectionsAccess, hasProductAccess } from "@/lib/auth/session";
 import { isDemoMode } from "@/lib/server/demo-mode";
@@ -127,15 +124,11 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
         }}
       />
       <div className="relative z-10 flex min-h-screen flex-col">
-        <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-6">
-          <Link href="/select-space" className="flex items-center gap-2">
-            <TesseraLogo className="h-[40px]" />
-          </Link>
-          <div className="flex items-center gap-3 text-[var(--text-secondary)]">
-            <LanguageSwitcher />
-            <AuthControl />
-          </div>
-        </header>
+        {/* Unified header (docs/design/header-normative.md) — business variant:
+            brand at left (links back to the launcher), the global cluster at
+            right. Auth is OPTIONAL here (anonymous → customer), so "Se connecter"
+            legitimately appears for a visitor (the only plan besides /produit). */}
+        <AppHeader plan="business" auth="optional" brandHref="/select-space" />
 
         <main className="flex flex-1 flex-col items-center px-6 pb-24 pt-12">
           <section className="mb-10 flex w-full max-w-[1040px] flex-col items-start gap-[10px]">

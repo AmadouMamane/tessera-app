@@ -14,9 +14,11 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { useEffect, useState, useTransition } from "react";
 
-import { AuthControl } from "@/components/auth/auth-control";
+import { type AuthContext, AuthControl } from "@/components/auth/auth-control";
+import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { DemoLauncherLink } from "@/components/layout/demo-launcher-link";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ModelBadge } from "@/components/layout/model-badge";
@@ -53,7 +55,20 @@ import {
 } from "@/lib/models";
 import { getTemporalContext } from "@/lib/temporal-context";
 
-export interface TopbarContextItem {
+/**
+ * The single application header (see `docs/design/header-normative.md`).
+ *
+ * ONE parameterized shell, THREE plan variants — never a per-page header and
+ * never one identical header everywhere. Three zones:
+ *   LEFT   — brand (one mark) OR title when the brand lives in a side rail.
+ *   CENTER — title + subtitle (absent on the launcher).
+ *   RIGHT  — `[ contextual ] ‖ [ global ]`, where the global cluster
+ *            (langue · thème · compte) is rendered in the SAME ORDER on every
+ *            surface. That fixed right-hand order is the load-bearing invariant.
+ */
+export type HeaderPlan = "launcher" | "cockpit" | "business";
+
+export interface HeaderContextItem {
   label: string;
   value: string;
   tone?: "default" | "success";
@@ -65,7 +80,7 @@ export interface TopbarContextItem {
   options?: { value: string; label: string }[];
 }
 
-export interface TopbarAction {
+export interface HeaderAction {
   label: string;
   icon: "download" | "evidence";
   variant: "outline" | "accent";
@@ -73,11 +88,38 @@ export interface TopbarAction {
   action?: "export" | "evidence";
 }
 
-interface TopbarProps {
-  title: string;
+interface AppHeaderProps {
+  plan: HeaderPlan;
+  /**
+   * Anonymous behaviour of the account control. Defaults per plan: launcher →
+   * `demo`, cockpit → `gated`, business → `optional`. Override `business` to
+   * `gated` for an already-gated business surface (e.g. the collections console)
+   * so it never shows a "sign in" prompt.
+   */
+  auth?: AuthContext;
+  /** CENTER title (cockpit + business). */
+  title?: string;
+  /** CENTER subtitle (cockpit). */
   description?: string;
-  contextItems?: TopbarContextItem[];
-  actions?: TopbarAction[];
+  /**
+   * LEFT override for business surfaces that carry their own side rail (so the
+   * brand is not repeated): renders this instead of the Tessera mark.
+   */
+  lead?: ReactNode;
+  /** Where the brand links (default `/select-space`). */
+  brandHref?: string;
+  /** Cockpit row 2 — page-scoped context controls. */
+  contextItems?: HeaderContextItem[];
+  /** Cockpit row 2 — page-scoped actions. */
+  actions?: HeaderAction[];
+  /** Chrome (border/bg) override for surfaces on a non-cockpit token set. */
+  chromeClassName?: string;
+}
+
+function defaultAuth(plan: HeaderPlan): AuthContext {
+  if (plan === "launcher") return "demo";
+  if (plan === "cockpit") return "gated";
+  return "optional";
 }
 
 function downloadJson(name: string, obj: unknown) {
@@ -135,77 +177,68 @@ async function runAction(kind: "export" | "evidence") {
   });
 }
 
-export function Topbar({ title, description, contextItems = [], actions = [] }: TopbarProps) {
-  const t = useTranslations("app");
-  const { setPaletteOpen } = useShellChrome();
-  const [pending, setPending] = useState<string | null>(null);
-  const hasOverviewHeader = contextItems.length > 0 || actions.length > 0;
+export function AppHeader({
+  plan,
+  auth,
+  title,
+  description,
+  lead,
+  brandHref = "/select-space",
+  contextItems = [],
+  actions = [],
+  chromeClassName,
+}: AppHeaderProps) {
+  const authContext = auth ?? defaultAuth(plan);
+  const cockpit = plan === "cockpit";
+  const hasRow2 = cockpit && (contextItems.length > 0 || actions.length > 0);
 
-  async function onAction(action: TopbarAction) {
-    if (!action.action) return;
-    setPending(action.label);
-    try {
-      await runAction(action.action);
-    } finally {
-      setPending(null);
-    }
-  }
+  // The cockpit carries its title at left (brand lives in the sidebar rail). The
+  // launcher and business surfaces show the brand at left — unless a business
+  // surface passes its own `lead` (it already has a side rail with the brand).
+  const left = cockpit ? (
+    <TitleBlock title={title} description={description} />
+  ) : lead ? (
+    <div className="flex min-w-0 items-center gap-3">{lead}</div>
+  ) : (
+    <BrandLead title={title} href={brandHref} />
+  );
+
+  const chrome =
+    chromeClassName ??
+    (cockpit
+      ? "border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)]"
+      : "border-b border-[var(--border-subtle)]");
 
   return (
-    <header className="relative border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)]">
-      {/* Row 1 — the single global topbar, rendered IDENTICALLY on every page
-          (AGENT / GOUVERNER / PLATEFORME): title + status · model · ⌘K · notifs ·
-          aide · langue · thème · compte. The ⌘K affordance always sits here, in
-          the same place — there is no per-section header variant. */}
-      <div className="flex min-h-[5.5rem] items-center justify-between gap-4 px-6 py-3">
-        <div className="min-w-0">
-          <h1 className="truncate font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
-            {title}
-          </h1>
-          <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">
-            {description ?? t("tagline")}
-          </p>
-        </div>
+    <header className={cn("relative", chrome)}>
+      {/* Row 1 — the single global header. The global cluster (langue · thème ·
+          compte) sits at the far right in the SAME order on every plan; the
+          contextual cluster (cockpit only) sits just before it. */}
+      <div
+        className={cn(
+          "flex items-center justify-between gap-4 px-6",
+          cockpit ? "min-h-[5.5rem] py-3" : "h-[88px]",
+        )}
+      >
+        <div className="min-w-0">{left}</div>
         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
-          <StatusBadge />
-          <ModelBadge />
-          <HeaderIconButton
-            icon={Search}
-            label="Rechercher (⌘K)"
-            className="hidden lg:inline-flex"
-            onClick={() => setPaletteOpen(true)}
-          />
-          <HeaderIconButton
-            icon={Bell}
-            label="Notifications"
-            badge="7"
-            className="hidden lg:inline-flex"
-          />
-          <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
-          {/* Discreet demo-launcher shortcut (ADR 0013) — a reviewer convenience
-              to explore both spaces, never the front door. */}
-          <DemoLauncherLink className="hidden xl:inline-flex" />
-          {/* Operator switcher (ADR 0013) — the cockpit is operator-only by
-              construction (the operator-rbac guard gates these routes), so this
-              "view the customer product" affordance is inherently operator-only.
-              The customer never sees the cockpit, so never sees this control. */}
-          <Link
-            href="/produit"
-            className="hidden h-9 items-center gap-2 rounded-full border border-[var(--tessera-border-strong)] bg-transparent px-3 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)] lg:inline-flex"
-          >
-            <SquareArrowOutUpRight className="h-4 w-4" />
-            {t("viewProduct")}
-          </Link>
+          {cockpit ? <CockpitTools /> : null}
+          {/* Global cluster — fixed order everywhere: langue · thème · compte. */}
           <LanguageSwitcher />
-          <ThemeToggle className="h-9 w-9 rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]" />
-          <AuthControl />
+          <ThemeToggle
+            className={
+              cockpit
+                ? "h-9 w-9 rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]"
+                : undefined
+            }
+          />
+          <AuthControl context={authContext} />
         </div>
       </div>
 
-      {/* Row 2 — page-scoped context + actions, ONLY when the page provides them.
-          It sits below the global chrome so the global cluster (incl. ⌘K) never
-          shifts position from one page to the next. */}
-      {hasOverviewHeader ? (
+      {/* Row 2 — cockpit page-scoped context + actions, below the global chrome
+          so the global cluster never shifts from one page to the next. */}
+      {hasRow2 ? (
         <div className="flex min-h-[3.25rem] flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-6 py-2">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             {contextItems.map((item) => (
@@ -213,33 +246,117 @@ export function Topbar({ title, description, contextItems = [], actions = [] }: 
             ))}
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            {actions.map((action) => {
-              const Icon = action.icon === "download" ? Download : PackageCheck;
-              return (
-                <Button
-                  key={action.label}
-                  type="button"
-                  variant={action.variant}
-                  size="sm"
-                  disabled={pending === action.label}
-                  onClick={() => onAction(action)}
-                  className={cn(
-                    "h-9 rounded-md px-3 text-xs shadow-none",
-                    action.variant === "outline" &&
-                      "border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]",
-                    action.variant === "accent" &&
-                      "border border-[#007a55] bg-[#005c42] text-[#d6f0e3] hover:bg-[#006d4e]",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {action.label}
-                </Button>
-              );
-            })}
+            {actions.map((action) => (
+              <ActionButton key={action.label} action={action} />
+            ))}
           </div>
         </div>
       ) : null}
     </header>
+  );
+}
+
+function TitleBlock({ title, description }: { title?: string; description?: string }) {
+  const t = useTranslations("app");
+  return (
+    <>
+      <h1 className="truncate font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
+        {title}
+      </h1>
+      <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">
+        {description ?? t("tagline")}
+      </p>
+    </>
+  );
+}
+
+function BrandLead({ title, href }: { title?: string; href: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-4">
+      <Link href={href} className="flex shrink-0 items-center gap-2">
+        <TesseraLogo className="h-[40px]" />
+      </Link>
+      {title ? (
+        <span className="truncate font-sans text-base font-semibold text-[var(--text-primary)]">
+          {title}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The cockpit-only contextual cluster (status · model · search · notifs · help ·
+ * explore spaces · view product). Isolated so the `useShellChrome` hook (and the
+ * cockpit-specific tokens) only run when the cockpit plan renders it.
+ */
+function CockpitTools() {
+  const t = useTranslations("app");
+  const { setPaletteOpen } = useShellChrome();
+  return (
+    <>
+      <StatusBadge />
+      <ModelBadge />
+      <HeaderIconButton
+        icon={Search}
+        label="Rechercher (⌘K)"
+        className="hidden lg:inline-flex"
+        onClick={() => setPaletteOpen(true)}
+      />
+      <HeaderIconButton
+        icon={Bell}
+        label="Notifications"
+        badge="7"
+        className="hidden lg:inline-flex"
+      />
+      <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
+      {/* Discreet demo-launcher shortcut (ADR 0013) — a reviewer convenience to
+          explore both spaces, never the front door. */}
+      <DemoLauncherLink className="hidden xl:inline-flex" />
+      {/* Operator switcher (ADR 0013) — the cockpit is operator-only by
+          construction (the operator-rbac guard gates these routes), so this
+          "view the customer product" affordance is inherently operator-only. */}
+      <Link
+        href="/produit"
+        className="hidden h-9 items-center gap-2 rounded-full border border-[var(--tessera-border-strong)] bg-transparent px-3 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)] lg:inline-flex"
+      >
+        <SquareArrowOutUpRight className="h-4 w-4" />
+        {t("viewProduct")}
+      </Link>
+    </>
+  );
+}
+
+function ActionButton({ action }: { action: HeaderAction }) {
+  const [pending, setPending] = useState(false);
+  const Icon = action.icon === "download" ? Download : PackageCheck;
+  async function onClick() {
+    if (!action.action) return;
+    setPending(true);
+    try {
+      await runAction(action.action);
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <Button
+      type="button"
+      variant={action.variant}
+      size="sm"
+      disabled={pending}
+      onClick={onClick}
+      className={cn(
+        "h-9 rounded-md px-3 text-xs shadow-none",
+        action.variant === "outline" &&
+          "border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]",
+        action.variant === "accent" &&
+          "border border-[#007a55] bg-[#005c42] text-[#d6f0e3] hover:bg-[#006d4e]",
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {action.label}
+    </Button>
   );
 }
 
@@ -253,8 +370,8 @@ function ControlBox({
 }: {
   label: string;
   value: string;
-  leading?: TopbarContextItem["leading"];
-  tone?: TopbarContextItem["tone"];
+  leading?: HeaderContextItem["leading"];
+  tone?: HeaderContextItem["tone"];
   interactive?: boolean;
 }) {
   const LeadingIcon = getLeadingIcon(leading);
@@ -282,14 +399,14 @@ function ControlBox({
   );
 }
 
-function ContextControl({ item }: { item: TopbarContextItem }) {
+function ContextControl({ item }: { item: HeaderContextItem }) {
   if (item.control === "locale") return <LocaleControl item={item} />;
   if (item.control === "model") return <ModelControl item={item} />;
   if (item.control === "select") return <SelectControl item={item} />;
   return <StaticControl item={item} />;
 }
 
-function StaticControl({ item }: { item: TopbarContextItem }) {
+function StaticControl({ item }: { item: HeaderContextItem }) {
   const TrailingIcon = item.trailing === "calendar" ? CalendarDays : ChevronDown;
   const LeadingIcon = getLeadingIcon(item.leading);
   return (
@@ -311,7 +428,7 @@ function StaticControl({ item }: { item: TopbarContextItem }) {
   );
 }
 
-function LocaleControl({ item }: { item: TopbarContextItem }) {
+function LocaleControl({ item }: { item: HeaderContextItem }) {
   const locale = useLocale() as Locale;
   const router = useRouter();
   const pathname = usePathname();
@@ -351,7 +468,7 @@ function LocaleControl({ item }: { item: TopbarContextItem }) {
   );
 }
 
-function ModelControl({ item }: { item: TopbarContextItem }) {
+function ModelControl({ item }: { item: HeaderContextItem }) {
   const [modelId, setModelId] = useState(DEFAULT_CHAT_MODEL);
   useEffect(() => {
     setModelId(getStoredModel());
@@ -386,7 +503,7 @@ function ModelControl({ item }: { item: TopbarContextItem }) {
   );
 }
 
-function SelectControl({ item }: { item: TopbarContextItem }) {
+function SelectControl({ item }: { item: HeaderContextItem }) {
   const options = item.options ?? [];
   const [value, setValue] = useState(item.value);
   const current = options.find((o) => o.value === value)?.label ?? value;
@@ -449,7 +566,7 @@ function HeaderIconButton({
   );
 }
 
-function getLeadingIcon(kind?: TopbarContextItem["leading"]): LucideIcon | null {
+function getLeadingIcon(kind?: HeaderContextItem["leading"]): LucideIcon | null {
   if (kind === "history") return RotateCcw;
   if (kind === "globe") return Globe2;
   return null;

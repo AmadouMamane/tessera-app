@@ -5,9 +5,8 @@ import { PanelLeftClose, PanelLeftOpen, Search, ShieldAlert, SquarePen } from "l
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
-import { AuthControl } from "@/components/auth/auth-control";
 import { ChatRoom } from "@/components/chat/chat-room";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { AppHeader } from "@/components/layout/app-header";
 import { RecouvrementLogo } from "@/components/recouvrement/recouvrement-logo";
 import { fetchConversationMessages, fetchConversations } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
@@ -206,16 +205,22 @@ export function RecouvrementConsole() {
 
       {/* Right column — page header (right of the vertical rule) + the chat. */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex min-h-[5.5rem] shrink-0 items-center justify-between gap-4 border-[var(--border)] border-b px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <ShieldAlert className="h-5 w-5 shrink-0 text-amber-500" />
-            <p className="truncate text-sm text-[var(--tessera-text)]">{t("subtitle")}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <LanguageSwitcher />
-            <AuthControl />
-          </div>
-        </header>
+        {/* Unified header (docs/design/header-normative.md) — business variant,
+            GATED: the brand lives in this console's own left rail, so the header
+            shows the console subtitle as its `lead` (no second brand). Auth is
+            `gated` (collections RBAC), so the account control shows WHO + sign
+            out and NEVER "Se connecter". */}
+        <AppHeader
+          plan="business"
+          auth="gated"
+          chromeClassName="border-[var(--border)] border-b"
+          lead={
+            <>
+              <ShieldAlert className="h-5 w-5 shrink-0 text-amber-500" />
+              <p className="truncate text-sm text-[var(--tessera-text)]">{t("subtitle")}</p>
+            </>
+          }
+        />
 
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-5 sm:px-6">
           {/* Centred, bounded chat card (max-w-6xl) — like /chat, not full screen. */}
