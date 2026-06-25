@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
@@ -65,6 +66,37 @@ class VectorHit:
 
 _pool: AsyncConnectionPool | None = None
 
+# Fixed key serialising per-env schema creation across concurrently-opened
+# pool connections (see :func:`_isolate_environment`). Arbitrary constant; only
+# its stability matters, so all bootstrappers contend on the same lock.
+_SCHEMA_BOOTSTRAP_LOCK = 0x7E55E2A04154  # "TESSERA ISA" leet, fits in a signed bigint
+
+
+async def _isolate_environment(conn: AsyncConnection[Any]) -> None:
+    """Pin every pooled connection to this environment's schema (ADR 0014).
+
+    Creates ``<schema>`` if missing and sets ``search_path`` to ``<schema>,
+    public`` so every durable write (transcript, eval, memory, lineage, …) lands
+    in the environment's namespace while pgvector's ``vector`` type and other
+    shared objects still resolve from ``public``. For production the schema is
+    ``public`` itself, making this a no-op that leaves the deployed stack exactly
+    as it was. Runs on each new connection; ``CREATE SCHEMA IF NOT EXISTS`` is
+    idempotent and cheap.
+    """
+    schema = get_settings().pg_schema
+    async with conn.cursor() as cur:
+        # ``CREATE SCHEMA IF NOT EXISTS`` still races to a duplicate-key error when
+        # the pool opens several connections at once; a transaction-scoped advisory
+        # lock serialises the bootstrap so the IF NOT EXISTS guard actually holds.
+        await cur.execute("SELECT pg_advisory_xact_lock(%s)", (_SCHEMA_BOOTSTRAP_LOCK,))
+        await cur.execute(
+            sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(schema))
+        )
+        await cur.execute(
+            sql.SQL("SET search_path TO {}, public").format(sql.Identifier(schema))
+        )
+    await conn.commit()
+
 
 def get_pool() -> AsyncConnectionPool:
     """Return the lazily-initialised process-wide async pool."""
@@ -75,6 +107,7 @@ def get_pool() -> AsyncConnectionPool:
             conninfo=str(settings.postgres.dsn),
             min_size=settings.postgres.pool_min_size,
             max_size=settings.postgres.pool_max_size,
+            configure=_isolate_environment,
             open=False,
         )
     return _pool

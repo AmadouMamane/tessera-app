@@ -415,6 +415,22 @@ class Settings(BaseSettings):
         """Return True when running with production-grade safety expectations."""
         return self.environment is Environment.PRODUCTION
 
+    @property
+    def pg_schema(self) -> str:
+        """Postgres schema that isolates this environment's durable state (ADR 0014).
+
+        Production keeps the historical ``public`` schema so the deployed stack is
+        never migrated; every other environment gets its own ``tessera_<env>``
+        schema. This is the *spatial* sibling of the temporal ``as-of T``
+        dimension (ADR 0011): a local dev process and a deployed-style process can
+        then run against one Postgres without touching each other's transcript,
+        eval, or memory state. Read once here so the pool and any migration share
+        a single definition.
+        """
+        if self.environment is Environment.PRODUCTION:
+            return "public"
+        return f"tessera_{self.environment.value}"
+
     def is_on_prem(self) -> bool:
         """True on the self-hosted path (no managed platform underneath)."""
         return self.deployment_mode is DeploymentMode.ON_PREM
