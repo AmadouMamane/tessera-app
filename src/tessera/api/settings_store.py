@@ -19,10 +19,20 @@ from psycopg.rows import dict_row
 
 from tessera.retrieval.store import get_pool
 
-__all__ = ["get_synthesis_admin", "set_synthesis_admin"]
+__all__ = ["ensure_settings_schema", "get_synthesis_admin", "set_synthesis_admin"]
 
 _TABLE: Final[sql.Identifier] = sql.Identifier("app_settings")
 _SYNTHESIS_ADMIN_KEY: Final[str] = "synthesis_visible_to_admin"
+
+
+async def ensure_settings_schema() -> None:
+    """Materialise the settings table in the active env schema (ADR 0014).
+
+    Called at startup so ``app_settings`` exists in ``tessera_<env>`` from boot
+    instead of being created lazily on first flag read — otherwise a read would
+    fall through ``search_path`` to ``public.app_settings`` and break isolation.
+    """
+    await _ensure_schema()
 
 
 async def _ensure_schema() -> None:

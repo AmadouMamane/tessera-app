@@ -37,12 +37,14 @@ from tessera.api.routes import (
 )
 from tessera.api.security import SecurityHeadersMiddleware, require_bearer
 from tessera.api.session import validate_session_signing_key
+from tessera.api.settings_store import ensure_settings_schema
 from tessera.memory.governance import ensure_consent_schema
 from tessera.memory.persistent import ensure_longterm_schema
 from tessera.memory.summary import ensure_summary_schema
 from tessera.memory.transcript import ensure_transcript_schema
 from tessera.observability import logging as obs_logging, metrics, traces
-from tessera.retrieval.store import get_pool
+from tessera.retrieval.citations import ensure_citation_schema
+from tessera.retrieval.store import ensure_schema, get_pool
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -60,10 +62,15 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     pool = get_pool()
     try:
         await pool.open()
+        # Materialise every durable table in the active env schema at boot so a
+        # read never falls through search_path to public (ADR 0014 invariant).
+        await ensure_schema()  # documents (pgvector)
         await ensure_transcript_schema()  # ADR 0007, Mechanism A
         await ensure_summary_schema()  # ADR 0007, Tier 1
         await ensure_longterm_schema()  # ADR 0007, Tier 2
         await ensure_consent_schema()  # ADR 0007, governance
+        await ensure_citation_schema()  # retrieval citation counters
+        await ensure_settings_schema()  # persisted runtime flags
         yield
     finally:
         await pool.close()
@@ -124,7 +131,11 @@ def build_app() -> FastAPI:
     app.include_router(memory.router, dependencies=[Depends(require_bearer)])
     app.include_router(settings_routes.router, dependencies=[Depends(require_bearer)])
 
-    FastAPIInstrumentor.instrument_app(app)
+    # Drop the per-message ASGI "http send"/"http receive" child spans: the SSE
+    # chat stream emits one send per token, which would bury the real
+    # invoke_agent / retrieve / execute_tool spans under hundreds of noise spans
+    # in Phoenix. The server request span (POST /chat) is kept as the trace root.
+    FastAPIInstrumentor.instrument_app(app, exclude_spans=["send", "receive"])
     return app
 
 
