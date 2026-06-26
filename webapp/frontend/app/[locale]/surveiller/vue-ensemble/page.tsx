@@ -32,19 +32,10 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
     <AppShell
       title={t("title")}
       description={t("subtitle")}
+      // View filters only (Période). Environnement + Modèle are deployment
+      // CONTEXT (read-only badges in the header), and Langue is global — none are
+      // page filters, so they no longer live here.
       topbarContext={[
-        {
-          label: t("context.environment"),
-          value: "prod",
-          tone: "success",
-          leading: "status",
-          control: "select",
-          options: [
-            { value: "prod", label: "Prod" },
-            { value: "staging", label: "Staging" },
-            { value: "dev", label: "Dev" },
-          ],
-        },
         {
           label: t("context.lifecycle"),
           value: "d7",
@@ -56,9 +47,9 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
             { value: "d30", label: t("context.lifecycle30d") },
           ],
         },
-        { label: t("context.model"), value: "Llama 3.2 3B", control: "model" },
-        { label: t("context.language"), value: "FR", leading: "globe", control: "locale" },
       ]}
+      // The agent filter sits in the SAME bar as Période (the view filters).
+      topbarFilters={<AgentScopeFilter />}
       topbarActions={[
         {
           label: t("actions.exportReport"),
@@ -77,11 +68,6 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
       {/* P2 — lead with the named breached signal (real SLO) + remediation. */}
       <div className="mb-3">
         <SignalBreachHero />
-      </div>
-      {/* GOUVERNER global agent filter — distinct from the AGENT switcher. */}
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <AgentScopeFilter />
-        <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{ts("hint")}</span>
       </div>
       <div className="mb-3">
         <AgentBreakdown fleet={fleet} scope={scope} locale={locale} />

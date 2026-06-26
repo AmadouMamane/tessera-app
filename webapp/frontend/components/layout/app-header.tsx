@@ -1,7 +1,9 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
+  Boxes,
   CalendarDays,
   ChevronDown,
   CircleHelp,
@@ -10,7 +12,8 @@ import {
   PackageCheck,
   RotateCcw,
   Search,
-  SquareArrowOutUpRight,
+  ServerCog,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -19,7 +22,6 @@ import { useEffect, useState, useTransition } from "react";
 
 import { type AuthContext, AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
-import { DemoLauncherLink } from "@/components/layout/demo-launcher-link";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ModelBadge } from "@/components/layout/model-badge";
 import { useShellChrome } from "@/components/layout/shell-chrome";
@@ -29,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -40,6 +43,7 @@ import {
   fetchAuditIntegrity,
   fetchCost,
   fetchDisclosure,
+  fetchHealth,
   fetchPiiLeak,
   fetchSLO,
   fetchToxicity,
@@ -108,8 +112,10 @@ interface AppHeaderProps {
   lead?: ReactNode;
   /** Where the brand links (default `/select-space`). */
   brandHref?: string;
-  /** Cockpit row 2 — page-scoped context controls. */
+  /** Cockpit row 2 — page-scoped context controls (view filters: e.g. Période). */
   contextItems?: HeaderContextItem[];
+  /** Cockpit row 2 — extra view filters rendered as-is (e.g. the agent filter). */
+  filters?: ReactNode;
   /** Cockpit row 2 — page-scoped actions. */
   actions?: HeaderAction[];
   /** Chrome (border/bg) override for surfaces on a non-cockpit token set. */
@@ -185,12 +191,13 @@ export function AppHeader({
   lead,
   brandHref = "/select-space",
   contextItems = [],
+  filters,
   actions = [],
   chromeClassName,
 }: AppHeaderProps) {
   const authContext = auth ?? defaultAuth(plan);
   const cockpit = plan === "cockpit";
-  const hasRow2 = cockpit && (contextItems.length > 0 || actions.length > 0);
+  const hasRow2 = cockpit && (contextItems.length > 0 || Boolean(filters) || actions.length > 0);
 
   // The cockpit carries its title at left (brand lives in the sidebar rail). The
   // launcher and business surfaces show the brand at left — unless a business
@@ -223,7 +230,9 @@ export function AppHeader({
         <div className="min-w-0">{left}</div>
         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
           {cockpit ? <CockpitTools /> : null}
-          {/* Global cluster — fixed order everywhere: langue · thème · compte. */}
+          {/* Global utilities — langue · thème. On the cockpit the account/identity
+              lives ONCE, in the sidebar (Linear/Notion pattern), so it is NOT
+              repeated here; the launcher/business surfaces keep it in the header. */}
           <LanguageSwitcher />
           <ThemeToggle
             className={
@@ -232,7 +241,7 @@ export function AppHeader({
                 : undefined
             }
           />
-          <AuthControl context={authContext} />
+          {cockpit ? null : <AuthControl context={authContext} />}
         </div>
       </div>
 
@@ -244,6 +253,7 @@ export function AppHeader({
             {contextItems.map((item) => (
               <ContextControl key={item.label} item={item} />
             ))}
+            {filters}
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             {actions.map((action) => (
@@ -286,17 +296,29 @@ function BrandLead({ title, href }: { title?: string; href: string }) {
 }
 
 /**
- * The cockpit-only contextual cluster (status · model · search · notifs · help ·
- * explore spaces · view product). Isolated so the `useShellChrome` hook (and the
- * cockpit-specific tokens) only run when the cockpit plan renders it.
+ * The cockpit-only contextual cluster, grouped BY NATURE:
+ *   1. Deployment context — read-only badges (env · model · status · locality).
+ *      Mono-env by construction, so the env is a badge, never a dropdown.
+ *   2. Cross-plane — ONE point (operator → business), not two buttons.
+ *   3. Global utilities — search · notifs · help (langue · thème follow in the
+ *      header's global cluster).
+ * Isolated so the `useShellChrome` hook only runs when the cockpit renders it.
  */
 function CockpitTools() {
-  const t = useTranslations("app");
   const { setPaletteOpen } = useShellChrome();
   return (
     <>
-      <StatusBadge />
-      <ModelBadge />
+      {/* 1 — deployment context (read-only, one cluster): env · model · locality
+          · status. Mono-env → env is a badge, never a re-scoping dropdown. */}
+      <div className="hidden items-center gap-2 lg:flex">
+        <EnvBadge />
+        <ModelBadge />
+        <LocalityBadge />
+        <StatusBadge />
+      </div>
+      {/* 2 — cross-plane: one point to the business surfaces. */}
+      <BusinessMenu />
+      {/* 3 — global utilities. */}
       <HeaderIconButton
         icon={Search}
         label="Rechercher (⌘K)"
@@ -310,20 +332,84 @@ function CockpitTools() {
         className="hidden lg:inline-flex"
       />
       <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
-      {/* Discreet demo-launcher shortcut (ADR 0013) — a reviewer convenience to
-          explore both spaces, never the front door. */}
-      <DemoLauncherLink className="hidden xl:inline-flex" />
-      {/* Operator switcher (ADR 0013) — the cockpit is operator-only by
-          construction (the operator-rbac guard gates these routes), so this
-          "view the customer product" affordance is inherently operator-only. */}
-      <Link
-        href="/produit"
-        className="hidden h-9 items-center gap-2 rounded-full border border-[var(--tessera-border-strong)] bg-transparent px-3 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)] lg:inline-flex"
-      >
-        <SquareArrowOutUpRight className="h-4 w-4" />
-        {t("viewProduct")}
-      </Link>
     </>
+  );
+}
+
+const CONTEXT_PILL =
+  "inline-flex items-center gap-1.5 rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] px-2.5 py-1 text-[0.65rem] font-medium text-[var(--tessera-text)]";
+
+const ENV_LABEL: Record<string, string> = {
+  production: "Prod",
+  staging: "Staging",
+  ci: "CI",
+  local: "Local",
+};
+
+/**
+ * Deployment environment — read-only (mono-env, fixed by the process; never a
+ * re-scoping dropdown — that would be an isolation breach). Reads the REAL env
+ * the backend reports; with no env data it renders nothing (honest-empty).
+ */
+function EnvBadge() {
+  const t = useTranslations("app");
+  const { data } = useQuery({
+    queryKey: ["health-badge"],
+    queryFn: ({ signal }) => fetchHealth(signal),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const env = data?.environment;
+  if (!env) return null;
+  const label = ENV_LABEL[env] ?? env.charAt(0).toUpperCase() + env.slice(1);
+  return (
+    <span className={CONTEXT_PILL} title={`${t("environment")} · ${label}`}>
+      <ServerCog className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" aria-hidden />
+      {label}
+    </span>
+  );
+}
+
+/** Deployment locality — read-only (on-prem, EU residency). */
+function LocalityBadge() {
+  const t = useTranslations("app");
+  return (
+    <span className={CONTEXT_PILL}>
+      <ShieldCheck className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" aria-hidden />
+      {t("locality")}
+    </span>
+  );
+}
+
+/**
+ * Cross-plane access — ONE point (operator → business). "Voir le produit" and
+ * "Explorer les espaces" are the same intent, so they live behind a single menu
+ * (ADR 0013: the cockpit is operator-only, so this is inherently operator-only).
+ */
+function BusinessMenu() {
+  const t = useTranslations("app");
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("business")}
+          title={t("business")}
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--tessera-border-strong)] bg-transparent px-3 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
+        >
+          <Boxes className="h-4 w-4" />
+          <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[12rem]">
+        <DropdownMenuItem asChild>
+          <Link href="/produit">{t("viewProduct")}</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/espaces">{t("exploreSpaces")}</Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

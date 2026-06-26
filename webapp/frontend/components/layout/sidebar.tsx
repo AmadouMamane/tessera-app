@@ -37,6 +37,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
+import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
@@ -671,25 +672,13 @@ function TesseraMark() {
   );
 }
 
+// The single identity home (Linear/Notion pattern): the cockpit account lives ONCE
+// here, at the bottom of the sidebar — the header no longer repeats it. Real
+// session control (role label + sign-out), not a static persona.
 function IdentityBlock() {
-  const t = useTranslations("nav.identity");
   return (
     <div className="border-t border-[var(--tessera-border)] px-2 py-3 md:px-3">
-      <div className="flex items-center justify-center gap-3 md:justify-start">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-green-muted)] text-sm font-semibold text-[#d6f0e3]">
-          AD
-        </div>
-        <div className="hidden min-w-0 md:block">
-          <p className="truncate text-sm font-semibold text-white">{t("person")}</p>
-          <p className="truncate text-xs text-[var(--tessera-text-muted)]">
-            {t("persona")} · {t("role")}
-          </p>
-        </div>
-      </div>
-      <div className="mt-2 hidden gap-0.5 text-xs text-[var(--tessera-text-muted)] md:grid">
-        <p className="truncate">{t("scope")}</p>
-        <p className="truncate">{t("localeRuntime")}</p>
-      </div>
+      <AuthControl context="gated" />
     </div>
   );
 }

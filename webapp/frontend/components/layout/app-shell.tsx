@@ -17,6 +17,8 @@ interface AppShellProps {
    */
   contentWidth?: "default" | "wide" | "full";
   topbarContext?: HeaderContextItem[];
+  /** Extra view filters in the header's filter bar (e.g. the agent filter). */
+  topbarFilters?: ReactNode;
   topbarActions?: HeaderAction[];
   /** Override the left rail (defaults to the cockpit sidebar). */
   sidebar?: ReactNode;
@@ -27,6 +29,7 @@ export function AppShell({
   description,
   children,
   topbarContext,
+  topbarFilters,
   topbarActions,
   sidebar,
 }: AppShellProps) {
@@ -40,6 +43,7 @@ export function AppShell({
             title={title}
             description={description}
             contextItems={topbarContext}
+            filters={topbarFilters}
             actions={topbarActions}
           />
         }

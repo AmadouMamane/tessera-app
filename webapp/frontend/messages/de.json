@@ -7,7 +7,11 @@
     "operational": "Betriebsbereit",
     "viewProduct": "Produkt ansehen",
     "demoExplore": "Demo · Bereiche erkunden",
-    "disclaimer": "Crédit Aurore — Demo, nicht für den Produktiveinsatz. Fiktive Daten."
+    "disclaimer": "Crédit Aurore — Demo, nicht für den Produktiveinsatz. Fiktive Daten.",
+    "environment": "Umgebung",
+    "locality": "Vor Ort · EU",
+    "business": "Fachbereiche",
+    "exploreSpaces": "Bereiche erkunden"
   },
   "nav": {
     "groups": {

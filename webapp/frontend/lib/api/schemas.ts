@@ -347,6 +347,9 @@ export type AuditOverview = z.infer<typeof AuditOverviewSchema>;
 export const HealthResponseSchema = z.object({
   status: z.string(),
   version: z.string(),
+  // Real deployment environment (mono-env). Optional → an older payload renders
+  // an honest-empty env badge rather than a fabricated value.
+  environment: z.string().optional(),
 });
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 

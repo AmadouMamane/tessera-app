@@ -7,7 +7,11 @@
     "operational": "Operational",
     "viewProduct": "View product",
     "demoExplore": "Demo · explore the spaces",
-    "disclaimer": "Crédit Aurore — demo, not for production use. Fictitious data."
+    "disclaimer": "Crédit Aurore — demo, not for production use. Fictitious data.",
+    "environment": "Environment",
+    "locality": "On-prem · EU",
+    "business": "Business spaces",
+    "exploreSpaces": "Explore the spaces"
   },
   "nav": {
     "groups": {

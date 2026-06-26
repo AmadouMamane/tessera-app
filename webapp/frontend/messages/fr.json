@@ -7,7 +7,11 @@
     "operational": "Opérationnel",
     "viewProduct": "Voir le produit",
     "demoExplore": "Démonstration · explorer les espaces",
-    "disclaimer": "Crédit Aurore — démo non destinée à la production. Données fictives."
+    "disclaimer": "Crédit Aurore — démo non destinée à la production. Données fictives.",
+    "environment": "Environnement",
+    "locality": "Sur site · UE",
+    "business": "Espaces métier",
+    "exploreSpaces": "Explorer les espaces"
   },
   "nav": {
     "groups": {

@@ -46,12 +46,15 @@ class HealthResponse(BaseModel):
 
     status: str
     version: str
+    # The deployment environment the process believes it is in (mono-env, fixed by
+    # process). Read-only context for the header badge — never a re-scoping control.
+    environment: str
 
 
 @router.get("/healthz", response_model=HealthResponse)
 async def liveness() -> HealthResponse:
     """Liveness probe — returns 200 as soon as the process is up."""
-    return HealthResponse(status="ok", version=__version__)
+    return HealthResponse(status="ok", version=__version__, environment=get_settings().environment)
 
 
 @router.get("/readyz", response_model=HealthResponse)
@@ -63,10 +66,11 @@ async def readiness(response: Response) -> HealthResponse:
     LLM backend is unreachable, which is what flips the Docker healthcheck (and
     any orchestrator) to unhealthy instead of serving silent escalations.
     """
+    env = get_settings().environment
     if not await _llm_reachable():
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return HealthResponse(status="llm_unreachable", version=__version__)
-    return HealthResponse(status="ready", version=__version__)
+        return HealthResponse(status="llm_unreachable", version=__version__, environment=env)
+    return HealthResponse(status="ready", version=__version__, environment=env)
 
 
 @router.get("/budget", response_class=Response, status_code=status.HTTP_200_OK)
