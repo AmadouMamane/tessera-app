@@ -659,12 +659,12 @@
     "signIn": "Anmelden",
     "signOut": "Abmelden",
     "auditorMode": "Auditor-Modus",
-    "signedInAs": "Angemeldet: {name}",
+    "signedInAs": "Angemeldet · {role}",
     "roles": {
       "admin": "Administrator",
       "auditor": "Auditor",
-      "superadmin": "Superadmin",
-      "collections": "Inkasso"
+      "superadmin": "Super-Administrator",
+      "collections": "Inkasso-Sachbearbeiter"
     },
     "locked": {
       "title": "Betreiberzugang erforderlich",

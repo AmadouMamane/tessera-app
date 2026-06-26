@@ -659,12 +659,12 @@
     "signIn": "Connexion",
     "signOut": "Déconnexion",
     "auditorMode": "Mode auditeur",
-    "signedInAs": "Connecté : {name}",
+    "signedInAs": "Connecté · {role}",
     "roles": {
       "admin": "Administrateur",
       "auditor": "Auditeur",
-      "superadmin": "Super-admin",
-      "collections": "Recouvrement"
+      "superadmin": "Super-administrateur",
+      "collections": "Chargé de recouvrement"
     },
     "locked": {
       "title": "Accès opérateur requis",

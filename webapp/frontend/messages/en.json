@@ -659,12 +659,12 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "auditorMode": "Auditor mode",
-    "signedInAs": "Signed in: {name}",
+    "signedInAs": "Signed in · {role}",
     "roles": {
       "admin": "Administrator",
       "auditor": "Auditor",
-      "superadmin": "Superadmin",
-      "collections": "Collections"
+      "superadmin": "Super-admin",
+      "collections": "Collections officer"
     },
     "locked": {
       "title": "Operator access required",

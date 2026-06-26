@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, FlaskConical, LogIn, LogOut, UserCog } from "lucide-react";
+import { ChevronDown, FlaskConical, LogIn, LogOut } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
@@ -59,9 +59,8 @@ export function AuthControl({ context = "optional" }: { context?: AuthContext })
         className="flex items-center gap-2 rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] py-1 pl-1 pr-2"
       >
         <span className="h-7 w-7 shrink-0 animate-pulse rounded-full bg-[var(--tessera-muted)]" />
-        <span className="hidden min-w-0 flex-col gap-1 sm:flex">
-          <span className="h-3 w-16 animate-pulse rounded bg-[var(--tessera-muted)]" />
-          <span className="h-2.5 w-10 animate-pulse rounded bg-[var(--tessera-muted)]" />
+        <span className="hidden min-w-0 sm:flex">
+          <span className="h-3 w-28 animate-pulse rounded bg-[var(--tessera-muted)]" />
         </span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
       </div>
@@ -95,7 +94,9 @@ export function AuthControl({ context = "optional" }: { context?: AuthContext })
     );
   }
 
-  const name = session?.user?.name ?? "Amadou D.";
+  // The role's BUSINESS label is the façade identity (ADR 0009/0013): the raw
+  // username is the internal slug (`collections`, `admin`, …) and must never be
+  // shown. Phase 1 has no person directory, so the role IS the displayed identity.
   const roleLabel = t(`roles.${role}`);
 
   async function onSignOut() {
@@ -111,11 +112,10 @@ export function AuthControl({ context = "optional" }: { context?: AuthContext })
           className="flex items-center gap-2 rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] py-1 pl-1 pr-2 text-left transition-colors hover:bg-[var(--tessera-muted)]"
         >
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-green-soft)] text-[0.7rem] font-semibold text-[var(--tessera-green)]">
-            {initials(name)}
+            {initials(roleLabel)}
           </span>
-          <span className="hidden min-w-0 flex-col leading-tight sm:flex">
-            <span className="truncate text-xs font-medium text-[var(--tessera-text)]">{name}</span>
-            <span className="truncate text-[0.65rem] text-[var(--tessera-text-muted)]">
+          <span className="hidden min-w-0 sm:flex">
+            <span className="truncate text-xs font-medium text-[var(--tessera-text)]">
               {roleLabel}
             </span>
           </span>
@@ -123,14 +123,8 @@ export function AuthControl({ context = "optional" }: { context?: AuthContext })
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[12rem]">
-        <DropdownMenuLabel>{t("signedInAs", { name })}</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("signedInAs", { role: roleLabel })}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/login" className="flex items-center gap-2">
-            <UserCog className="h-4 w-4" />
-            {t("auditorMode")}
-          </Link>
-        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void onSignOut()} className="flex items-center gap-2">
           <LogOut className="h-4 w-4" />
           {t("signOut")}
