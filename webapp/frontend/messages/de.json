@@ -159,7 +159,8 @@
       "language": "Sprache",
       "lifecycle24h": "24 Stunden",
       "lifecycle30d": "30 Tage",
-      "agentSupport": "Kundensupport"
+      "agentSupport": "Kundensupport",
+      "lifecycle90d": "90 Tage"
     },
     "actions": {
       "exportReport": "Bericht exportieren",
@@ -337,6 +338,11 @@
       "systemsOk": "Alle Systeme betriebsbereit",
       "systemsDegraded": "Systeme eingeschränkt",
       "viewHealth": "Health-Komponenten ansehen"
+    },
+    "window": {
+      "goToDate": "Zu einem Datum",
+      "prevMonth": "Voriger Monat",
+      "nextMonth": "Nächster Monat"
     }
   },
   "chat": {

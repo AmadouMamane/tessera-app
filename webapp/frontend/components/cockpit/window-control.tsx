@@ -30,22 +30,22 @@ export function endOfLocalDay(value: string): Date | null {
   return new Date(year, month - 1, day, 23, 59, 59, 999);
 }
 
-function dateInputValue(date: Date): string {
+export function dateInputValue(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-function startOfLocalMonth(date: Date): Date {
+export function startOfLocalMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-function addLocalMonths(date: Date, amount: number): Date {
+export function addLocalMonths(date: Date, amount: number): Date {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
 
-function calendarMonthDays(month: Date): Date[] {
+export function calendarMonthDays(month: Date): Date[] {
   const first = startOfLocalMonth(month);
   const mondayOffset = (first.getDay() + 6) % 7;
   const start = new Date(first);
@@ -56,7 +56,7 @@ function calendarMonthDays(month: Date): Date[] {
   );
 }
 
-function isSameLocalDate(left: Date, right: Date): boolean {
+export function isSameLocalDate(left: Date, right: Date): boolean {
   return (
     left.getFullYear() === right.getFullYear() &&
     left.getMonth() === right.getMonth() &&

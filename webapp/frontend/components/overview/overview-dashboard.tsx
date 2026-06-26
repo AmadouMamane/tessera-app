@@ -84,25 +84,40 @@ export function OverviewDashboard() {
   const [selectedAt, setSelectedAt] = useState<number | null>(null);
   const [committedAt, setCommittedAt] = useState<number | null>(null);
   // The visible window is SHARED STATE owned by the top toolbar control (the
-  // single window owner). The dashboard and the rail READ it — neither owns it.
+  // single window owner): the DURATION (period) + the absolute END (anchorEnd,
+  // null = now). The dashboard and the rail READ it — neither owns it.
   const periodKey = useWindowStore((s) => s.period);
+  const anchorEnd = useWindowStore((s) => s.anchorEnd);
+  const setAnchorEnd = useWindowStore((s) => s.setAnchorEnd);
+  // When the window ends at a past date, the page is inherently historical.
+  const anchoredPast = anchorEnd != null;
+  const windowEndMs = anchorEnd != null ? Date.parse(anchorEnd) : undefined;
   useEffect(() => {
     const id = window.setTimeout(() => setCommittedAt(selectedAt), 250);
     return () => window.clearTimeout(id);
   }, [selectedAt]);
-  // ISO instant fed to the as-of-T-capable queries (slo/trend/scores). null in
-  // live mode → the backend reads the live buffer; set → it recomputes ≤ T.
+  // The rail is in replay whenever we scrub OR the window is anchored in the past.
+  const effectiveMode: "live" | "replay" = anchoredPast ? "replay" : mode;
+  // ISO instant fed to the as-of-T-capable queries (slo/trend/scores). A scrubbed
+  // instant wins; otherwise the window END (anchorEnd) when anchored; else null
+  // (live → the backend reads the live buffer).
   const asOf =
-    mode === "replay" && committedAt != null ? new Date(committedAt).toISOString() : null;
+    effectiveMode === "replay" && committedAt != null
+      ? new Date(committedAt).toISOString()
+      : anchorEnd;
   const historyMode = asOf != null;
   // Mirror the temporal context so the topbar's evidence pack / report export is
   // scoped to (period, asOf), not just "now" (ADR 0011 §3/§5).
   useEffect(() => {
     setTemporalContext({ asOf, period: periodKey });
   }, [asOf, periodKey]);
-  // Returning to live clears the focused instant so every block re-reads "now".
+  // Returning to live clears both the focused instant AND the past anchor so
+  // every block re-reads "now".
   function changeMode(next: "live" | "replay") {
-    if (next === "live") setSelectedAt(null);
+    if (next === "live") {
+      setSelectedAt(null);
+      setAnchorEnd(null);
+    }
     setMode(next);
   }
 
@@ -299,13 +314,14 @@ export function OverviewDashboard() {
           (clipped by main's overflow) so nothing shows through. */}
       <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pb-3 pt-3 shadow-[0_-16px_0_0_var(--tessera-bg)]">
         <TemporalRail
-          mode={mode}
+          mode={effectiveMode}
           liveStatus={liveStatus}
           timeline={timeline.data}
           sloTarget={slo.data?.threshold}
           selectedAt={selectedAt}
           onSelectedAtChange={setSelectedAt}
           periodKey={periodKey}
+          windowEnd={windowEndMs}
           onModeChange={changeMode}
         />
       </div>

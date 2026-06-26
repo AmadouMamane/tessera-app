@@ -57,7 +57,6 @@ import {
   getStoredModel,
   setStoredModel,
 } from "@/lib/models";
-import { useWindowStore } from "@/lib/stores/window-store";
 import { getTemporalContext } from "@/lib/temporal-context";
 
 /**
@@ -79,11 +78,8 @@ export interface HeaderContextItem {
   tone?: "default" | "success";
   leading?: "status" | "history" | "globe";
   trailing?: "chevron" | "calendar";
-  /**
-   * Makes the control interactive: a real locale/model switch, a generic select,
-   * or `window` — the shared temporal window (single owner, read by the rail).
-   */
-  control?: "locale" | "model" | "select" | "window";
+  /** Makes the control interactive: a real locale/model switch, or a generic select. */
+  control?: "locale" | "model" | "select";
   /** Options for `control: "select"`. */
   options?: { value: string; label: string }[];
 }
@@ -492,39 +488,8 @@ function ControlBox({
 function ContextControl({ item }: { item: HeaderContextItem }) {
   if (item.control === "locale") return <LocaleControl item={item} />;
   if (item.control === "model") return <ModelControl item={item} />;
-  if (item.control === "window") return <WindowControl item={item} />;
   if (item.control === "select") return <SelectControl item={item} />;
   return <StaticControl item={item} />;
-}
-
-/**
- * The shared temporal window — the SINGLE owner of the period. Writes the window
- * store; the rail and the KPIs read it. This is the only window control on the
- * page (the rail no longer carries its own period selector).
- */
-function WindowControl({ item }: { item: HeaderContextItem }) {
-  const period = useWindowStore((s) => s.period);
-  const setPeriod = useWindowStore((s) => s.setPeriod);
-  const options = item.options ?? [];
-  const current = options.find((o) => o.value === period)?.label ?? item.value;
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button">
-          <ControlBox label={item.label} value={current} leading={item.leading} interactive />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="center" className="min-w-[11rem]">
-        <DropdownMenuRadioGroup value={period} onValueChange={setPeriod}>
-          {options.map((o) => (
-            <DropdownMenuRadioItem key={o.value} value={o.value}>
-              {o.label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
 }
 
 function StaticControl({ item }: { item: HeaderContextItem }) {

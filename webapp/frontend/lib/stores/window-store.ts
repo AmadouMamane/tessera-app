@@ -12,12 +12,22 @@
 import { create } from "zustand";
 
 interface WindowState {
-  /** Active window key: "h24" | "d7" | "d30". */
+  /** Window DURATION (preset): "h24" | "d7" | "d30" | "d90". */
   period: string;
   setPeriod: (period: string) => void;
+  /**
+   * Absolute window END as an ISO instant (end of the chosen day), or null = now
+   * (live). The duration spans backwards from here. Set by the toolbar calendar
+   * ("Aller à une date") so the window can move over a long production history;
+   * the rail reads it. null keeps the page live.
+   */
+  anchorEnd: string | null;
+  setAnchorEnd: (anchorEnd: string | null) => void;
 }
 
 export const useWindowStore = create<WindowState>((set) => ({
   period: "d7",
   setPeriod: (period) => set({ period }),
+  anchorEnd: null,
+  setAnchorEnd: (anchorEnd) => set({ anchorEnd }),
 }));
