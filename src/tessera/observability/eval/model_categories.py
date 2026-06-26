@@ -16,6 +16,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+from tessera.observability.eval.report_paths import report_files_for
+
 __all__ = ["ModelCategoryRates", "default_reports_dir", "load_model_category_rates"]
 
 
@@ -40,11 +42,11 @@ def load_model_category_rates(reports_dir: Path | None = None) -> dict[str, Mode
     The run selected per model matches ``compare_models`` (max case count, ties
     broken by recency), so the heatmap aligns with the comparison table.
     """
-    directory = reports_dir or default_reports_dir()
     # Pick the most complete recent run per model.
     best: dict[str, tuple[tuple[int, str], list[dict[str, object]], str]] = {}
-    if directory.exists():
-        for path in directory.glob("*.json"):
+    files = report_files_for(reports_dir)
+    if files:
+        for path in files:
             if path.name.startswith("_"):
                 continue
             try:

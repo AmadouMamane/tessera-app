@@ -29,6 +29,10 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
         str(Path("src/tessera/guard/policy.yaml").resolve()),
     )
     monkeypatch.setenv("TESSERA_GUARD__AUDIT_SINK", "stdout")
+    # Eval reports are partitioned per env (ADR 0014, layer 3); the real archive
+    # is a local-dev artifact under eval/reports/local. Pin the resolver at it so
+    # the report-backed assertions read real data regardless of the test env.
+    monkeypatch.setenv("TESSERA_REPORTS_DIR", str(Path("eval/reports/local").resolve()))
     monkeypatch.setenv(
         "TESSERA_POSTGRES__DSN",
         "postgresql://tessera:tessera@localhost:5432/tessera_test",

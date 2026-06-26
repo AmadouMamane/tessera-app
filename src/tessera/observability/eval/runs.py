@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from tessera.observability.eval.report_paths import report_files_for
+
 __all__ = [
     "ModelStat",
     "RunRegistry",
@@ -139,10 +141,10 @@ def load_runs(directory: Path | None = None) -> RunRegistry:
         A :class:`RunRegistry`. An absent or unreadable directory yields an empty
         registry rather than raising.
     """
-    reports_dir = directory or default_reports_dir()
     runs: list[RunSummary] = []
-    if reports_dir.exists():
-        for path in reports_dir.glob("*.json"):
+    files = report_files_for(directory)
+    if files:
+        for path in files:
             try:
                 obj = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):

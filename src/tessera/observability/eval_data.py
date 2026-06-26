@@ -18,7 +18,8 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
-from pathlib import Path
+
+from tessera.observability.eval.report_paths import iter_report_files, reports_write_dir
 
 __all__ = [
     "CategoryStat",
@@ -28,8 +29,6 @@ __all__ = [
     "load_agent_run_history",
     "load_eval_snapshot",
 ]
-
-_REPORTS_DIR = Path(__file__).resolve().parents[3] / "eval" / "reports"
 # The brief is explicit: source quality numbers from the smallest model only.
 SMALLEST_MODEL = "llama3.2:3b"
 
@@ -202,7 +201,7 @@ def load_agent_run_history(agent_id: str, limit: int = 24) -> tuple[RunHistoryEn
     per-agent report (archives + the per-agent latest) under ``eval/reports``.
     """
     by_run: dict[str, RunHistoryEntry] = {}
-    for path in _REPORTS_DIR.glob("*.json"):
+    for path in iter_report_files():
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -270,7 +269,7 @@ def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
     """
     best: dict[str, object] | None = None
     best_rank: tuple[int, str] = (0, "")
-    for path in _REPORTS_DIR.glob("*.json"):
+    for path in iter_report_files():
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -291,7 +290,7 @@ def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
 
     if best is None or best_rank[0] == 0:
         scope = f"agent {agent_id!r}" if agent_id else "catalogue"
-        msg = f"no usable {SMALLEST_MODEL} {scope} report under {_REPORTS_DIR}"
+        msg = f"no usable {SMALLEST_MODEL} {scope} report under {reports_write_dir()}"
         raise FileNotFoundError(msg)
 
     raw_results = best.get("results")

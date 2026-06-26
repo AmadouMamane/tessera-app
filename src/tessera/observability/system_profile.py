@@ -22,12 +22,56 @@ from pathlib import Path
 
 import tessera
 from tessera.guard.audit import verify_audit_chain
+from tessera.observability.eval.report_paths import iter_report_files
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
 
 __all__ = ["compute_system_profile"]
 
 # Tessera ships prompts in the three supported languages (FR/DE/EN).
 _REQUIRED_LANGS = 3
+
+# Localized free-text (fr, de, en). Proper nouns (FastAPI, LangGraph, PostgreSQL,
+# package versions, deployment-mode names) stay verbatim.
+_TR: dict[str, tuple[str, str, str]] = {
+    "st_operational": ("Opérationnel", "Betriebsbereit", "Operational"),
+    "st_watch": (
+        "{n} vérification(s) à surveiller",
+        "{n} Pruefung(en) zu beobachten",
+        "{n} check(s) to watch",
+    ),
+    "sub_health": ("Vérifications de santé", "Gesundheitspruefungen", "Health checks"),
+    "sub_interp": ("Interpréteur", "Interpreter", "Interpreter"),
+    "sub_deploy": ("Mode de déploiement", "Deployment-Modus", "Deployment mode"),
+    "sub_llm": ("Profil LLM", "LLM-Profil", "LLM profile"),
+    "sub_vcpu": ("vCPU disponibles", "verfuegbare vCPU", "available vCPU"),
+    "sub_memory": ("Mémoire totale", "Gesamtspeicher", "Total memory"),
+    "sub_apiproc": ("Processus API", "API-Prozess", "API process"),
+    "started": ("Démarré {d}", "Gestartet {d}", "Started {d}"),
+    "u_day": ("j", "T", "d"),
+    "edition_ref": ("Référence (Apache-2.0)", "Referenz (Apache-2.0)", "Reference (Apache-2.0)"),
+    "default_lang": (
+        "{lang} (langue par défaut)",
+        "{lang} (Standardsprache)",
+        "{lang} (default language)",
+    ),
+    "topo_retrieval": ("Récupération", "Abruf", "Retrieval"),
+    "topo_guard": ("Garde-fou", "Guardrail", "Guardrail"),
+    "topo_corpus_detail": ("JSON réglementaire", "JSON Regulierung", "Regulatory JSON"),
+    "chain_ok": ("Vérifiée", "Verifiziert", "Verified"),
+    "chain_broken": ("Rupture détectée", "Bruch erkannt", "Break detected"),
+    "svc_retrieval": ("Récupération (psycopg)", "Abruf (psycopg)", "Retrieval (psycopg)"),
+    "svc_guard": (
+        "Garde-fou (mcp-firewall)",
+        "Guardrail (mcp-firewall)",
+        "Guardrail (mcp-firewall)",
+    ),
+    "svc_local_llm": ("LLM local (Ollama)", "Lokales LLM (Ollama)", "Local LLM (Ollama)"),
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
 
 # Process start time (module import) — a real, monotonic-enough uptime base.
 _START = datetime.now(UTC)
@@ -42,13 +86,14 @@ def _dep(name: str) -> str:
         return "-"
 
 
-def _uptime(now: datetime) -> str:
+def _uptime(now: datetime, lang: str = "fr") -> str:
     secs = int((now - _START).total_seconds())
     days, rem = divmod(secs, 86_400)
     hours, rem = divmod(rem, 3600)
     mins = rem // 60
+    day_u = _t("u_day", lang)
     if days:
-        return f"{days} j {hours} h {mins} min"
+        return f"{days} {day_u} {hours} h {mins} min"
     if hours:
         return f"{hours} h {mins} min"
     return f"{mins} min"
@@ -89,7 +134,6 @@ def _health(audit_file: Path) -> list[dict[str, str]]:
     prompts = _PKG_ROOT / "agent" / "prompts"
     corpus = _PKG_ROOT / "corpus" / "data"
     policy = _PKG_ROOT / "guard" / "policy.yaml"
-    eval_reports = _PKG_ROOT.parent.parent / "eval" / "reports"
 
     chain_ok = True
     try:
@@ -107,13 +151,16 @@ def _health(audit_file: Path) -> list[dict[str, str]]:
         {"key": "audit_log", "status": ok(audit_file.is_file())},
         {"key": "audit_chain", "status": ok(chain_ok)},
         {"key": "firewall", "status": ok(_dep("mcp-firewall") != "-")},
-        {"key": "eval_reports", "status": ok(_file_count(eval_reports, "*.json") > 0)},
+        {"key": "eval_reports", "status": ok(len(iter_report_files()) > 0)},
         {"key": "embeddings", "status": "ok"},
     ]
 
 
-def compute_system_profile() -> dict[str, object]:
+def compute_system_profile(lang: str = "fr") -> dict[str, object]:
     """Return the full System profile overview, built from the real runtime.
+
+    Args:
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
 
     Returns:
         A JSON-serialisable mapping with the posture KPIs, architecture metadata,
@@ -121,6 +168,7 @@ def compute_system_profile() -> dict[str, object]:
         the runtime/audit facts, real health checks, the services & versions
         tables and the license panel.
     """
+    lang = _norm_lang(lang)
     now = datetime.now(UTC)
     settings = get_settings()
     py = platform.python_version()
@@ -131,17 +179,25 @@ def compute_system_profile() -> dict[str, object]:
 
     health_checks = _health(settings.guard.audit_file)
     degraded = sum(1 for h in health_checks if h["status"] != "ok")
-    status_value = "Opérationnel" if degraded == 0 else f"{degraded} vérification(s) à surveiller"
+    status_value = (
+        _t("st_operational", lang) if degraded == 0 else _t("st_watch", lang).format(n=degraded)
+    )
 
     kpis = [
         {
             "key": "status",
             "kind": "status",
             "value": status_value,
-            "sub": "Vérifications de santé",
+            "sub": _t("sub_health", lang),
             "series": [],
         },
-        {"key": "python", "kind": "metric", "value": py, "sub": "Interpréteur", "series": []},
+        {
+            "key": "python",
+            "kind": "metric",
+            "value": py,
+            "sub": _t("sub_interp", lang),
+            "series": [],
+        },
         {
             "key": "platform",
             "kind": "metric",
@@ -153,44 +209,52 @@ def compute_system_profile() -> dict[str, object]:
             "key": "mode",
             "kind": "metric",
             "value": deployment,
-            "sub": "Mode de déploiement",
+            "sub": _t("sub_deploy", lang),
             "series": [],
         },
-        {"key": "profile", "kind": "metric", "value": profile, "sub": "Profil LLM", "series": []},
+        {
+            "key": "profile",
+            "kind": "metric",
+            "value": profile,
+            "sub": _t("sub_llm", lang),
+            "series": [],
+        },
         {
             "key": "cpus",
             "kind": "metric",
             "value": str(_cpu_count()),
-            "sub": "vCPU disponibles",
+            "sub": _t("sub_vcpu", lang),
             "series": [],
         },
         {
             "key": "memory",
             "kind": "metric",
             "value": _total_memory(),
-            "sub": "Mémoire totale",
+            "sub": _t("sub_memory", lang),
             "series": [],
         },
         {
             "key": "uptime",
             "kind": "time",
-            "value": _uptime(now),
-            "sub": "Processus API",
-            "extra": _START.strftime("Démarré %d/%m %H:%M"),
+            "value": _uptime(now, lang),
+            "sub": _t("sub_apiproc", lang),
+            "extra": _t("started", lang).format(d=_START.strftime("%d/%m %H:%M")),
             "series": [],
         },
     ]
 
     tessera_ver = _dep("tessera")
     architecture = {
-        "edition": "Référence (Apache-2.0)",
+        "edition": _t("edition_ref", lang),
         "version": f"Tessera v{tessera_ver} - Python {py}",
         "deployment": deployment,
         "region": str(settings.environment),
         "cluster": hostname,
         "deployed_at": _START.strftime("%d/%m/%Y %H:%M"),
-        "uptime": _uptime(now),
-        "next_maintenance": str(settings.default_language).upper() + " (langue par défaut)",
+        "uptime": _uptime(now, lang),
+        "next_maintenance": _t("default_lang", lang).format(
+            lang=str(settings.default_language).upper()
+        ),
     }
 
     topology = {
@@ -200,13 +264,13 @@ def compute_system_profile() -> dict[str, object]:
         ],
         "planes": [
             {"key": "agent", "label": "Agent LangGraph", "nodes": 1},
-            {"key": "retrieval", "label": "Récupération", "nodes": 1},
-            {"key": "guard", "label": "Garde-fou", "nodes": 1},
+            {"key": "retrieval", "label": _t("topo_retrieval", lang), "nodes": 1},
+            {"key": "guard", "label": _t("topo_guard", lang), "nodes": 1},
         ],
         "stores": [
             {"key": "postgres", "label": "PostgreSQL", "detail": f"pgvector {_dep('pgvector')}"},
             {"key": "prompts", "label": "Prompts", "detail": "YAML FR/DE/EN"},
-            {"key": "corpus", "label": "Corpus", "detail": "JSON réglementaire"},
+            {"key": "corpus", "label": "Corpus", "detail": _t("topo_corpus_detail", lang)},
         ],
     }
 
@@ -249,9 +313,9 @@ def compute_system_profile() -> dict[str, object]:
             audit_lines = sum(1 for _ in fp)
     chain_label = next((h["status"] for h in health_checks if h["key"] == "audit_chain"), "warn")
     runtime = {
-        "uptime": _uptime(now),
+        "uptime": _uptime(now, lang),
         "audit_lines": f"{audit_lines:,}".replace(",", " "),
-        "audit_chain": "Vérifiée" if chain_label == "ok" else "Rupture détectée",
+        "audit_chain": _t("chain_ok", lang) if chain_label == "ok" else _t("chain_broken", lang),
         "started": _START.strftime("%d/%m/%Y %H:%M"),
     }
 
@@ -264,18 +328,23 @@ def compute_system_profile() -> dict[str, object]:
             "instances": "-",
         },
         {
-            "name": "Récupération (psycopg)",
+            "name": _t("svc_retrieval", lang),
             "status": "ok",
             "version": _dep("psycopg"),
             "instances": "-",
         },
         {
-            "name": "Garde-fou (mcp-firewall)",
+            "name": _t("svc_guard", lang),
             "status": "ok" if _dep("mcp-firewall") != "-" else "warn",
             "version": _dep("mcp-firewall"),
             "instances": "-",
         },
-        {"name": "LLM local (Ollama)", "status": "ok", "version": _dep("ollama"), "instances": "-"},
+        {
+            "name": _t("svc_local_llm", lang),
+            "status": "ok",
+            "version": _dep("ollama"),
+            "instances": "-",
+        },
     ]
 
     versions = [
@@ -289,7 +358,7 @@ def compute_system_profile() -> dict[str, object]:
 
     licenses = {
         "edition": "Apache-2.0",
-        "seats": "Référence (Apache-2.0)",
+        "seats": _t("edition_ref", lang),
         "expiry": "FR / DE / EN",
         "quota_calls": profile,
         "quota_storage": str(settings.environment),

@@ -25,13 +25,18 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import Field, HttpUrl, PostgresDsn, SecretStr, field_validator
+from pydantic import Field, HttpUrl, PostgresDsn, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolve bundled defaults relative to the installed package, not the process
 # working directory: the backend may be launched from anywhere (uvicorn, tests,
 # Cloud Run) and must still find the policy shipped at src/tessera/guard/.
 _PACKAGE_ROOT = Path(__file__).resolve().parent
+
+# The historical, environment-agnostic local-state root. When `guard.audit_file`
+# is still this default, the Settings validator relocates it under the per-env
+# state dir (ADR 0014, layer 3) so audit/lineage/agent-config isolate by path.
+_DEFAULT_AUDIT_FILE = Path("/tmp/tessera/audit.log")  # noqa: S108  default local sink
 
 __all__ = [
     "DeploymentMode",
@@ -430,6 +435,32 @@ class Settings(BaseSettings):
         if self.environment is Environment.PRODUCTION:
             return "public"
         return f"tessera_{self.environment.value}"
+
+    @property
+    def state_dir(self) -> Path:
+        """Per-env root for file-based local state (ADR 0014, layer 3).
+
+        Isolates the audit log, ingestion lineage, agent-config store and budget
+        cache by *path*, the way :attr:`pg_schema` isolates Postgres by schema —
+        ``/tmp/tessera/<env>/`` — so two environments never share an audit chain
+        or a budget counter. File-based state is cross-env precisely because it
+        is not under the connection ``search_path``; isolating by path is the
+        same doctrine, not an ``environment`` column.
+        """
+        return Path("/tmp/tessera") / self.environment.value  # noqa: S108
+
+    @model_validator(mode="after")
+    def _scope_state_paths_to_env(self) -> Settings:
+        """Relocate still-default file-state paths to their per-env location.
+
+        Only the untouched default is moved; an explicitly-set
+        ``TESSERA_GUARD__AUDIT_FILE`` is respected as-is. Ingestion lineage and
+        the agent-config store derive from ``guard.audit_file.parent``, so
+        rewriting the audit file relocates them together.
+        """
+        if self.guard.audit_file == _DEFAULT_AUDIT_FILE:
+            self.guard.audit_file = self.state_dir / _DEFAULT_AUDIT_FILE.name
+        return self
 
     def is_on_prem(self) -> bool:
         """True on the self-hosted path (no managed platform underneath)."""

@@ -16,6 +16,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from tessera.observability.eval.report_paths import resolve_report_file
+
 __all__ = ["ModelJudge", "ModelJudgeReport", "default_cache_path", "load_model_judge"]
 
 
@@ -50,7 +52,7 @@ def _opt_float(value: object) -> float | None:
 
 def load_model_judge(path: Path | None = None) -> ModelJudgeReport:
     """Load the per-model judge cache, or an empty report when it is absent."""
-    cache = path or default_cache_path()
+    cache = path or resolve_report_file("_model_judge.json")
     if not cache.exists():
         return ModelJudgeReport(judge_model=None, context_basis=None, models={})
     try:

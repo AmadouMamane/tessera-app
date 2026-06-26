@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from pathlib import Path
 
 from tessera.observability.eval.judge import (
     FAITHFULNESS,
@@ -34,21 +33,19 @@ from tessera.observability.eval.judge import (
     HALLUCINATION,
     LLMJudge,
 )
+from tessera.observability.eval.report_paths import iter_report_files, reports_write_dir
 from tessera.settings import get_settings
 
 _METRICS: tuple[str, ...] = (FAITHFULNESS, GROUNDING, HALLUCINATION)
 _CONCURRENCY = 5
-_CACHE = Path(__file__).resolve().parents[1] / "eval" / "reports" / "_model_judge.json"
-
-
-def _reports_dir() -> Path:
-    return Path(__file__).resolve().parents[1] / "eval" / "reports"
+# Per-env cache (ADR 0014, layer 3): write to eval/reports/<env>/ exclusively.
+_CACHE = reports_write_dir() / "_model_judge.json"
 
 
 def _select_runs() -> dict[str, dict[str, object]]:
     """The most-complete recent run per model (matches compare_models selection)."""
     best: dict[str, tuple[tuple[int, str], dict[str, object]]] = {}
-    for path in _reports_dir().glob("*.json"):
+    for path in iter_report_files():
         if path.name.startswith("_"):
             continue
         try:
@@ -138,6 +135,7 @@ async def main() -> None:
         # The real judge model comes from a verdict; fall back to the configured one.
         judge_model = seen_model[0] if seen_model else get_settings().observability.judge_model
         # Persist after each model so the run is resumable.
+        _CACHE.parent.mkdir(parents=True, exist_ok=True)
         _CACHE.write_text(
             json.dumps(
                 {

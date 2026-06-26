@@ -28,11 +28,13 @@ from tessera.agent import compile_graph
 from tessera.agent.registry import get_agent
 from tessera.agent.state import new_state
 from tessera.llm.budget import get_budget_tracker
+from tessera.observability.eval.report_paths import reports_write_dir
 from tessera.observability.eval_gate_view import structural_gate
 from tessera.settings import LanguageCode, LLMProfile, get_settings
 
 FAILURES_DIR = Path(__file__).parent / "failures"
 SCHEMA_PATH = FAILURES_DIR / "_schema.json"
+# Writes go to eval/reports/<env>/ exclusively (ADR 0014, layer 3).
 REPORTS_DIR = Path(__file__).parent / "reports"
 
 
@@ -251,8 +253,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--report",
         type=Path,
-        default=REPORTS_DIR / "latest.json",
-        help="Where to write the JSON scorecard (default: eval/reports/latest.json).",
+        default=reports_write_dir() / "latest.json",
+        help="Where to write the JSON scorecard (default: eval/reports/<env>/latest.json).",
     )
     return parser.parse_args(argv)
 
@@ -289,13 +291,14 @@ def _persist_report(args: argparse.Namespace, payload: str, run_ts: str, lang_su
     symlink would clobber whatever archive it pointed at); drop any symlink first.
     """
     agent_suffix = f"_{args.agent}" if args.agent else ""
+    args.report.parent.mkdir(parents=True, exist_ok=True)  # eval/reports/<env>/
     archive = args.report.parent / f"{run_ts}{agent_suffix}{lang_suffix}.json"
     archive.write_text(payload, encoding="utf-8")
     latest_name = f"latest_{args.agent}.json" if args.agent else "latest.json"
     targets = [args.report.parent / latest_name]
     # An explicit --report is honoured; the implicit default never clobbers the
     # global latest.json on an agent run (it has its own per-agent latest).
-    if not (args.agent and args.report == REPORTS_DIR / "latest.json"):
+    if not (args.agent and args.report == reports_write_dir() / "latest.json"):
         targets.append(args.report)
     for target in targets:
         if target.is_symlink():

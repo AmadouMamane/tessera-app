@@ -20,6 +20,8 @@ from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
+from tessera.settings import get_settings
+
 __all__ = [
     "BudgetSnapshot",
     "BudgetTracker",
@@ -206,4 +208,8 @@ def get_budget_tracker() -> BudgetTracker:
     file (the agent's prod budget).
     """
     env_path = os.environ.get("TESSERA_BUDGET_FILE")
-    return BudgetTracker(persist_path=Path(env_path) if env_path else _BUDGET_FILE)
+    if env_path:
+        return BudgetTracker(persist_path=Path(env_path))
+    # Per-env path (ADR 0014, layer 3): /tmp/tessera/<env>/budget.json, so a dev
+    # run never increments the prod budget counter.
+    return BudgetTracker(persist_path=get_settings().state_dir / _BUDGET_FILE.name)

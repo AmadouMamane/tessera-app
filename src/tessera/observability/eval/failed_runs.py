@@ -28,6 +28,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from tessera.observability.eval.report_paths import report_files_for
+
 __all__ = [
     "FailedRunCase",
     "FailedRunsReport",
@@ -201,12 +203,13 @@ class _Run:
     results: list[dict[str, object]]
 
 
-def _load_runs(reports_dir: Path) -> list[_Run]:
+def _load_runs(reports_dir: Path | None) -> list[_Run]:
     """Read every report with a results list, newest last."""
     runs: list[_Run] = []
-    if not reports_dir.exists():
+    files = report_files_for(reports_dir)
+    if not files:
         return runs
-    for path in reports_dir.glob("*.json"):
+    for path in files:
         try:
             obj = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -314,7 +317,7 @@ def load_failed_runs(
         than raising; per-case ``status`` falls back to ``recurrent`` only when a
         comparable previous run exists, otherwise ``new``.
     """
-    runs = _load_runs(reports_dir or default_reports_dir())
+    runs = _load_runs(reports_dir)
     catalogue = _load_catalogue(failures_dir or default_failures_dir())
     full = [r for r in runs if _is_full(r)]
 
