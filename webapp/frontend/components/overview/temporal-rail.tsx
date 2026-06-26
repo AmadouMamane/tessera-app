@@ -77,15 +77,19 @@ export function TemporalRail({
   selectedAt: number | null;
   onSelectedAtChange: Dispatch<SetStateAction<number | null>>;
   periodKey: string;
-  onPeriodChange: (period: string) => void;
+  /**
+   * When provided, the rail OWNS the window: it renders the period selector (the
+   * single owner on that page). When OMITTED, the window is owned externally by
+   * the page's top toolbar control (CONTRAT RAIL) — the rail then reads
+   * `periodKey` as input and shows no period selector, so it can never duplicate.
+   */
+  onPeriodChange?: (period: string) => void;
   onModeChange: (mode: "live" | "replay") => void;
 }) {
   const t = useTranslations("overview.time");
   const [compare, setCompare] = useState("target");
-  // T being viewed and the period live at page level now; these are the rail's
-  // write handles into them.
+  // T being viewed lives at page level; this is the rail's write handle into it.
   const setSelectedAt = onSelectedAtChange;
-  const setPeriodKey = onPeriodChange;
   const [playing, setPlaying] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -174,11 +178,17 @@ export function TemporalRail({
           <span className="h-2 w-2 rounded-full bg-[var(--tessera-green)] shadow-[0_0_10px_rgba(0,200,120,0.85)]" />
           {t("realtime")}
         </span>
-        <span className="h-5 w-px bg-[var(--tessera-border)]" />
-        <span className="text-sm text-[var(--tessera-text-muted)]">
-          {t("period")} :{" "}
-          <span className="font-semibold text-[var(--tessera-text)]">{t(periodKey)}</span>
-        </span>
+        {/* Period shown here only when the rail OWNS the window; when an external
+            top control owns it, the period lives there (no duplication). */}
+        {onPeriodChange ? (
+          <>
+            <span className="h-5 w-px bg-[var(--tessera-border)]" />
+            <span className="text-sm text-[var(--tessera-text-muted)]">
+              {t("period")} :{" "}
+              <span className="font-semibold text-[var(--tessera-text)]">{t(periodKey)}</span>
+            </span>
+          </>
+        ) : null}
         {last ? (
           <span className="hidden text-xs text-[var(--tessera-text-muted)] md:inline">
             {t("lastUpdate")} {last.toLocaleTimeString()}
@@ -210,24 +220,28 @@ export function TemporalRail({
       {/* Auto-sized controls (no wrap); only the "viewing-at" value is fixed-width
           so dragging the scrubber never reflows this row. */}
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 text-xs text-[var(--muted-foreground)]">
-          <Clock3 className="h-3.5 w-3.5 shrink-0 text-gold-400" />
-          {t("period")}
-          <select
-            value={periodKey}
-            onChange={(e) => {
-              setPeriodKey(e.target.value);
-              setSelectedAt(null);
-            }}
-            className="cursor-pointer rounded bg-transparent font-semibold text-[var(--foreground)] outline-none"
-          >
-            {PERIODS.map((p) => (
-              <option key={p.key} value={p.key} className="bg-[var(--card)]">
-                {t(p.key)}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* Period selector ONLY when the rail owns the window; otherwise the top
+            toolbar control is the single owner (CONTRAT RAIL). */}
+        {onPeriodChange ? (
+          <label className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 text-xs text-[var(--muted-foreground)]">
+            <Clock3 className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+            {t("period")}
+            <select
+              value={periodKey}
+              onChange={(e) => {
+                onPeriodChange(e.target.value);
+                setSelectedAt(null);
+              }}
+              className="cursor-pointer rounded bg-transparent font-semibold text-[var(--foreground)] outline-none"
+            >
+              {PERIODS.map((p) => (
+                <option key={p.key} value={p.key} className="bg-[var(--card)]">
+                  {t(p.key)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <span
           className={cn(
             "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs",
@@ -395,10 +409,9 @@ export function TemporalRail({
           <span className="absolute left-1/2 top-[-1px] h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-gold-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]" />
         </div>
         {selectedAt == null ? (
-          <span
-            className="pointer-events-none absolute top-7 -translate-x-1/2 whitespace-nowrap text-[0.65rem] font-medium text-gold-400"
-            style={{ left: "96%" }}
-          >
+          // Pinned flush to the right edge (not centred at 96%) so it never
+          // overlaps the rightmost event/data-start label.
+          <span className="pointer-events-none absolute top-7 right-0 whitespace-nowrap text-[0.65rem] font-medium text-gold-400">
             {t("now")}
           </span>
         ) : null}

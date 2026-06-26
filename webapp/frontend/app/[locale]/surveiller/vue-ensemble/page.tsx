@@ -32,15 +32,16 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
     <AppShell
       title={t("title")}
       description={t("subtitle")}
-      // View filters only (Période). Environnement + Modèle are deployment
-      // CONTEXT (read-only badges in the header), and Langue is global — none are
-      // page filters, so they no longer live here.
+      // View filters only. Période is the SINGLE temporal-window owner (shared
+      // store) — the rail reads it, it has no period selector of its own.
+      // Environnement + Modèle are deployment CONTEXT (header badges) and Langue
+      // is global — none are page filters, so they no longer live here.
       topbarContext={[
         {
           label: t("context.lifecycle"),
           value: "d7",
           leading: "history",
-          control: "select",
+          control: "window",
           options: [
             { value: "h24", label: t("context.lifecycle24h") },
             { value: "d7", label: t("context.lifecycleValue") },

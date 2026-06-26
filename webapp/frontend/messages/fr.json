@@ -151,7 +151,7 @@
     "subtitle": "Control · état, risques, actions et preuves",
     "context": {
       "environment": "Environnement",
-      "lifecycle": "Cycle de vie",
+      "lifecycle": "Période",
       "lifecycleValue": "7 derniers jours",
       "agent": "Agent",
       "agentValue": "Assistant Bancaire",
@@ -181,7 +181,7 @@
       "replay": "Rejouer",
       "replayHint": "Le mode rejeu rejouera une trace de production capturée contre le modèle ou le prompt courant.",
       "lastUpdate": "Dernière mise à jour",
-      "viewingAt": "Tu regardes",
+      "viewingAt": "Vue :",
       "timeTravel": "time-travel",
       "compareTo": "Comparer à",
       "previousWeek": "semaine précédente",

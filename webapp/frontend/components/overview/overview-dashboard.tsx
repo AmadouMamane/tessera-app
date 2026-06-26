@@ -67,6 +67,7 @@ import {
   toneBg,
   toneText,
 } from "@/lib/overview";
+import { useWindowStore } from "@/lib/stores/window-store";
 import { setTemporalContext } from "@/lib/temporal-context";
 
 const POLL_MS = 15_000;
@@ -82,9 +83,9 @@ export function OverviewDashboard() {
   // settle, not one per pixel (the backend is rate-limited).
   const [selectedAt, setSelectedAt] = useState<number | null>(null);
   const [committedAt, setCommittedAt] = useState<number | null>(null);
-  // The visible window; lifted from the rail so the shared temporal context
-  // (and thus the topbar evidence pack) knows the active period.
-  const [periodKey, setPeriodKey] = useState("d7");
+  // The visible window is SHARED STATE owned by the top toolbar control (the
+  // single window owner). The dashboard and the rail READ it — neither owns it.
+  const periodKey = useWindowStore((s) => s.period);
   useEffect(() => {
     const id = window.setTimeout(() => setCommittedAt(selectedAt), 250);
     return () => window.clearTimeout(id);
@@ -305,7 +306,6 @@ export function OverviewDashboard() {
           selectedAt={selectedAt}
           onSelectedAtChange={setSelectedAt}
           periodKey={periodKey}
-          onPeriodChange={setPeriodKey}
           onModeChange={changeMode}
         />
       </div>

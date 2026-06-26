@@ -151,7 +151,7 @@
     "subtitle": "Control · Zustand, Risiken, Aktionen und Nachweise",
     "context": {
       "environment": "Umgebung",
-      "lifecycle": "Lebenszyklus",
+      "lifecycle": "Zeitraum",
       "lifecycleValue": "Letzte 7 Tage",
       "agent": "Agent",
       "agentValue": "Banking Assistant",
@@ -181,7 +181,7 @@
       "replay": "Abspielen",
       "replayHint": "Der Wiedergabe-Modus spielt einen erfassten Produktions-Trace gegen das aktuelle Modell oder Prompt erneut ab.",
       "lastUpdate": "Letzte Aktualisierung",
-      "viewingAt": "Du betrachtest",
+      "viewingAt": "Ansicht:",
       "timeTravel": "time-travel",
       "compareTo": "Vergleichen mit",
       "previousWeek": "Vorwoche",

@@ -151,7 +151,7 @@
     "subtitle": "Control · state, risks, actions and evidence",
     "context": {
       "environment": "Environment",
-      "lifecycle": "Lifecycle",
+      "lifecycle": "Period",
       "lifecycleValue": "Last 7 days",
       "agent": "Agent",
       "agentValue": "Banking Assistant",
@@ -181,7 +181,7 @@
       "replay": "Replay",
       "replayHint": "Replay mode re-runs a captured production trace against the current model or prompt.",
       "lastUpdate": "Last update",
-      "viewingAt": "Viewing",
+      "viewingAt": "Viewing:",
       "timeTravel": "time-travel",
       "compareTo": "Compare to",
       "previousWeek": "previous week",
