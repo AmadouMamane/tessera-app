@@ -1,8 +1,8 @@
 # 0014 — Environment isolation (prod / staging / dev as one knob that isolates)
 
-- Status: **accepted** (2026-06-26) — layers 1 (Postgres schema) and 2 (per-env
-  compose) implemented and verified; layers 3–5 (tagged records → UI → Cloud Run)
-  to follow. Per-layer commits, nothing pushed.
+- Status: **accepted** (2026-06-26) — layers 1 (Postgres schema), 2 (per-env
+  compose) and 3 (file-state by path) implemented and verified; layers 4–5 (UI
+  badge → Cloud Run) to follow. Per-layer commits, nothing pushed.
 - Date: 2026-06-25
 - Deciders: Tessera maintainers
 - Branch: `feature/redesign`
@@ -123,7 +123,19 @@ or memory state. Pick any durable record → its env is unambiguous.
    export off, as today) — config, not a merged stack. Note: the app's OTLP
    export currently defaults to **off**, so dev did not leak traces into prod's
    collector even before this layer.
-3. **Tagged data** — `environment` stamped on the cross-env durable records.
+3. **File-state by path** — **done.** The Postgres tables already isolate by
+   schema (layer 1), so they are **not** re-tagged with an `environment` column
+   (that would be a second source of truth, schema↔column). The genuinely
+   cross-env state is *file-based* — outside the connection `search_path` — and
+   isolates the same way, by **path**. Reports: a `report_paths` resolver writes
+   to `eval/reports/<env>/` exclusively and reads `<env>/` with a read-only flat
+   archive bridge (never another env's subfolder); every reader and the writer
+   are env-aware. The `/tmp/tessera/*` family follows `Settings.state_dir =
+   /tmp/tessera/<env>` (a validator relocates the default `guard.audit_file`, so
+   lineage, the agent-config store and the as-of-T bundles/scores follow; budget
+   is made env-aware too), giving each env its own **verifiable audit hash
+   chain**. UI scope is the schema/path selection (`search_path`), never a
+   `WHERE environment=` filter.
 4. **UI (last)** — the header badge/switcher reads the real dimension; an env
    with no data is honest-empty. Owned by the header workstream; this ADR only
    guarantees the dimension it reads is real.
