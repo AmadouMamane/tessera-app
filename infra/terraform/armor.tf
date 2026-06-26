@@ -28,7 +28,7 @@ variable "edge_domain" {
 
 resource "google_compute_security_policy" "edge" {
   count = var.enable_edge_armor ? 1 : 0
-  name  = "${var.service_name}-${var.environment}-edge"
+  name  = "${var.service_name}-${local.env}-edge"
 
   # Throttle abusive IPs (volumetric protection; app layer handles per-identity).
   rule {
@@ -75,7 +75,7 @@ resource "google_compute_security_policy" "edge" {
 
 resource "google_compute_region_network_endpoint_group" "agent" {
   count                 = var.enable_edge_armor ? 1 : 0
-  name                  = "${var.service_name}-${var.environment}-neg"
+  name                  = "${var.service_name}-${local.env}-neg"
   region                = var.region
   network_endpoint_type = "SERVERLESS"
   cloud_run {
@@ -85,7 +85,7 @@ resource "google_compute_region_network_endpoint_group" "agent" {
 
 resource "google_compute_backend_service" "agent" {
   count                 = var.enable_edge_armor ? 1 : 0
-  name                  = "${var.service_name}-${var.environment}-be"
+  name                  = "${var.service_name}-${local.env}-be"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   protocol              = "HTTPS"
   security_policy       = google_compute_security_policy.edge[0].id
@@ -96,13 +96,13 @@ resource "google_compute_backend_service" "agent" {
 
 resource "google_compute_url_map" "agent" {
   count           = var.enable_edge_armor ? 1 : 0
-  name            = "${var.service_name}-${var.environment}-um"
+  name            = "${var.service_name}-${local.env}-um"
   default_service = google_compute_backend_service.agent[0].id
 }
 
 resource "google_compute_managed_ssl_certificate" "agent" {
   count = var.enable_edge_armor ? 1 : 0
-  name  = "${var.service_name}-${var.environment}-cert"
+  name  = "${var.service_name}-${local.env}-cert"
   managed {
     domains = [var.edge_domain]
   }
@@ -110,14 +110,14 @@ resource "google_compute_managed_ssl_certificate" "agent" {
 
 resource "google_compute_target_https_proxy" "agent" {
   count            = var.enable_edge_armor ? 1 : 0
-  name             = "${var.service_name}-${var.environment}-https"
+  name             = "${var.service_name}-${local.env}-https"
   url_map          = google_compute_url_map.agent[0].id
   ssl_certificates = [google_compute_managed_ssl_certificate.agent[0].id]
 }
 
 resource "google_compute_global_forwarding_rule" "agent" {
   count                 = var.enable_edge_armor ? 1 : 0
-  name                  = "${var.service_name}-${var.environment}-fr"
+  name                  = "${var.service_name}-${local.env}-fr"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   port_range            = "443"
   target                = google_compute_target_https_proxy.agent[0].id

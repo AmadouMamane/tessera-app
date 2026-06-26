@@ -16,9 +16,15 @@ variable "region" {
 }
 
 variable "environment" {
-  description = "Deployment environment label (e.g. production, staging)."
+  description = "Deployment environment label (e.g. production, staging). Usually left to the Terraform workspace; see local.env in main.tf."
   type        = string
   default     = "production"
+}
+
+variable "name_suffix" {
+  description = "Suffix appended to globally-named resources (Cloud Run services, SQL instance, secrets) so multiple environments can share ONE GCP project without colliding. Leave empty when each env has its own project (the recommended topology)."
+  type        = string
+  default     = ""
 }
 
 variable "service_name" {

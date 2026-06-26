@@ -1,0 +1,32 @@
+# Production environment overrides (ADR 0014, layer 5).
+#
+# Copy to production.tfvars (gitignored) and fill in the project id, then:
+#
+#   terraform workspace select production || terraform workspace new production
+#   terraform init -backend-config="bucket=<tf-state-bucket>" \
+#                  -backend-config="prefix=tessera"
+#   terraform apply -var-file=envs/production.tfvars
+#
+# State lives under `env:/production/tessera` in the GCS backend, isolated from
+# staging. One GCP project per env keeps resource names flat and collision-free.
+
+project_id  = "tessera-production" # the production GCP project
+region      = "europe-west1"
+environment = "production"         # also set by the workspace; kept explicit here
+
+# Production sizing: a warm floor and headroom.
+postgres_tier           = "db-custom-2-7680"
+cloud_run_min_instances = 1
+cloud_run_max_instances = 10
+min_instances           = 1
+max_instances           = 10
+cpu                     = "2"
+memory                  = "2Gi"
+
+log_retention_days = 90
+
+# Public demo surface; tighten if the deployment is not meant to be open.
+allowed_invokers = ["allUsers"]
+
+image          = "europe-west1-docker.pkg.dev/tessera-production/tessera/agent:latest"
+frontend_image = "europe-west1-docker.pkg.dev/tessera-production/tessera/frontend:latest"

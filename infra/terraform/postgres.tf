@@ -6,12 +6,12 @@
 # the extension can be loaded at the database level.
 
 resource "google_sql_database_instance" "tessera" {
-  name             = "${var.service_name}-pg"
+  name             = local.sql_instance
   database_version = var.postgres_version
   region           = var.region
 
   # Prevent accidental deletion in production.
-  deletion_protection = var.environment == "production" ? true : false
+  deletion_protection = local.env == "production" ? true : false
 
   settings {
     tier              = var.postgres_tier

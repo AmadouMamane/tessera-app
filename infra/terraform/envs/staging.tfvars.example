@@ -1,0 +1,33 @@
+# Staging environment overrides (ADR 0014, layer 5).
+#
+# Copy to staging.tfvars (gitignored) and fill in the project id, then:
+#
+#   terraform workspace select staging || terraform workspace new staging
+#   terraform init -backend-config="bucket=<tf-state-bucket>" \
+#                  -backend-config="prefix=tessera"
+#   terraform apply -var-file=envs/staging.tfvars
+#
+# State is isolated automatically: the GCS backend stores each workspace under
+# `env:/staging/tessera`, so staging and production never share state. The
+# recommended topology is one GCP project per env, so resource names stay flat
+# (name_suffix empty) and cannot collide across environments.
+
+project_id  = "tessera-staging"   # the staging GCP project (distinct from prod)
+region      = "europe-west1"
+environment = "staging"           # also set by the workspace; kept explicit here
+
+# Lean sizing for a non-production env.
+postgres_tier           = "db-g1-small"
+cloud_run_min_instances = 0
+cloud_run_max_instances = 2
+min_instances           = 0
+max_instances           = 2
+cpu                     = "1"
+memory                  = "1Gi"
+
+# Staging is not a public demo: lock invocation to a known principal.
+allowed_invokers = ["allUsers"] # tighten to ["user:you@example.com"] for a private staging
+
+# Images are pushed by CI per env (Artifact Registry path).
+image          = "europe-west1-docker.pkg.dev/tessera-staging/tessera/agent:latest"
+frontend_image = "europe-west1-docker.pkg.dev/tessera-staging/tessera/frontend:latest"

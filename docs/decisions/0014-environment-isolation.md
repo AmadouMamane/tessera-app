@@ -1,8 +1,9 @@
 # 0014 — Environment isolation (prod / staging / dev as one knob that isolates)
 
 - Status: **accepted** (2026-06-26) — layers 1 (Postgres schema), 2 (per-env
-  compose) and 3 (file-state by path) implemented and verified; layers 4–5 (UI
-  badge → Cloud Run) to follow. Per-layer commits, nothing pushed.
+  compose), 3 (file-state by path) and 5 (Cloud Run via Terraform workspaces)
+  implemented; layer 4 (UI badge) owned by the header workstream. Per-layer
+  commits, nothing pushed. Layer 5 is scaffolding (not applied — no GCP creds).
 - Date: 2026-06-25
 - Deciders: Tessera maintainers
 - Branch: `feature/redesign`
@@ -139,8 +140,15 @@ or memory state. Pick any durable record → its env is unambiguous.
 4. **UI (last)** — the header badge/switcher reads the real dimension; an env
    with no data is honest-empty. Owned by the header workstream; this ADR only
    guarantees the dimension it reads is real.
-5. **Deployed (out of this lot)** — staging/prod on Cloud Run via per-env
-   Terraform workspaces.
+5. **Deployed** — **done.** The deployment environment *is* the Terraform
+   workspace: `local.env = terraform.workspace` (fallback `var.environment` on
+   `default` for pre-workspace state) drives the `environment` label,
+   `TESSERA_ENVIRONMENT` on the Cloud Run revision (so the deployed container
+   isolates by schema/path exactly like local), `deletion_protection`, and
+   env-keyed naming. GCS state auto-isolates per workspace (`env:/<ws>/`).
+   Recommended topology = one GCP project per env (`envs/<env>.tfvars`), so
+   names stay flat; `name_suffix` covers a shared project. Not applied here (no
+   GCP creds / no `terraform` CLI in this environment) — scaffolding + runbook.
 
 ## Consequences
 

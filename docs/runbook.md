@@ -37,17 +37,40 @@ web**.
 
 ### 1. Provision infrastructure
 
+The deployment **environment is the Terraform workspace** (ADR 0014, layer 5):
+one workspace per env isolates state automatically (the GCS backend stores each
+under `env:/<workspace>/<prefix>`), and `local.env` (= the workspace) drives the
+`environment` label, `TESSERA_ENVIRONMENT` on the Cloud Run revision, and
+env-keyed naming. The recommended topology is **one GCP project per env**, set
+via `envs/<env>.tfvars`, so resource names stay flat and never collide; to share
+a single project across envs, set `name_suffix` instead.
+
 ```bash
 cd infra/terraform
-terraform init
-terraform plan
-terraform apply
+
+# Pick the environment (creates it the first time).
+terraform workspace select staging || terraform workspace new staging
+
+# State is per-workspace; the prefix is constant.
+terraform init -backend-config="bucket=<tf-state-bucket>" \
+               -backend-config="prefix=tessera"
+
+# Copy envs/staging.tfvars.example → staging.tfvars (gitignored), fill the
+# project id, then plan/apply against it.
+terraform plan  -var-file=envs/staging.tfvars
+terraform apply -var-file=envs/staging.tfvars
 ```
+
+Switch envs by selecting the workspace and its tfvars: `terraform workspace
+select production && terraform apply -var-file=envs/production.tfvars`. The
+`default` workspace falls back to `var.environment` so any pre-workspace state
+keeps working unchanged.
 
 This creates the Cloud Run service, the Cloud SQL Postgres instance (pgvector
 enabled via the `cloudsql.enable_pgvector` flag), the Secret Manager secrets,
 the log bucket retention, the audit log sink to a dedicated GCS bucket, the
-log-based metrics, the monitoring dashboard, and the alert policies.
+log-based metrics, the monitoring dashboard, and the alert policies — all scoped
+to the selected environment.
 
 ### 2. Populate secrets
 

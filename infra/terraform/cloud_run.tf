@@ -6,7 +6,7 @@
 # and restrict allowed_invokers accordingly.
 
 resource "google_cloud_run_v2_service" "agent" {
-  name     = var.service_name
+  name     = local.agent_service
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
@@ -68,7 +68,7 @@ resource "google_cloud_run_v2_service" "agent" {
 
       env {
         name  = "TESSERA_ENVIRONMENT"
-        value = var.environment
+        value = local.env
       }
       env {
         name  = "TESSERA_LLM_PROFILE"

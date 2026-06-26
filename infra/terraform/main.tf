@@ -45,8 +45,23 @@ locals {
     "bigquery.googleapis.com",
   ]
 
+  # Environment isolation (ADR 0014, layer 5): the deployment environment IS the
+  # Terraform workspace, so `terraform workspace select staging|production` is the
+  # single knob that isolates state (GCS auto-prefixes per workspace) and labels.
+  # The `default` workspace falls back to var.environment so pre-workspace state
+  # keeps working. This is the deployed sibling of TESSERA_ENVIRONMENT (schema /
+  # path isolation on the local side).
+  env = terraform.workspace == "default" ? var.environment : terraform.workspace
+
+  # Recommended topology = one GCP project per env (set via env tfvars), so
+  # resource names need no suffix. For a shared project, set var.name_suffix to
+  # keep names distinct across workspaces.
+  agent_service    = "${var.service_name}${var.name_suffix}"
+  frontend_service = "${var.frontend_service_name}${var.name_suffix}"
+  sql_instance     = "${var.service_name}-pg${var.name_suffix}"
+
   common_labels = {
-    environment = var.environment
+    environment = local.env
     app         = "tessera"
   }
 }
@@ -59,7 +74,7 @@ resource "google_project_service" "apis" {
 
 # Service account that the Cloud Run revision runs as.
 resource "google_service_account" "agent" {
-  account_id   = "${var.service_name}-runtime"
+  account_id   = "${local.agent_service}-runtime"
   display_name = "Tessera agent runtime"
   description  = "Service account used by the Cloud Run revision."
 }

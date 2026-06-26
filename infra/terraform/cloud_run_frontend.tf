@@ -11,7 +11,7 @@
 # Dedicated runtime SA for the front-end, least-privilege: it only needs to
 # read the bearer token from Secret Manager.
 resource "google_service_account" "frontend" {
-  account_id   = "${var.frontend_service_name}-runtime"
+  account_id   = "${local.frontend_service}-runtime"
   display_name = "Tessera frontend runtime"
   description  = "Service account used by the Next.js Cloud Run revision."
 }
@@ -25,7 +25,7 @@ resource "google_secret_manager_secret_iam_member" "frontend_bearer_access" {
 }
 
 resource "google_cloud_run_v2_service" "frontend" {
-  name     = var.frontend_service_name
+  name     = local.frontend_service
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
 

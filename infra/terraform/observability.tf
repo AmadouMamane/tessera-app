@@ -99,7 +99,7 @@ resource "google_logging_metric" "http_5xx" {
 
 resource "google_monitoring_dashboard" "tessera" {
   dashboard_json = jsonencode({
-    displayName = "Tessera — ${var.environment}"
+    displayName = "Tessera — ${local.env}"
     labels      = local.common_labels
     mosaicLayout = {
       columns = 12

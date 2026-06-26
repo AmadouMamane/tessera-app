@@ -17,7 +17,7 @@ locals {
 
 resource "google_secret_manager_secret" "managed" {
   for_each  = local.managed_secrets
-  secret_id = "${var.service_name}-${each.key}"
+  secret_id = "${local.agent_service}-${each.key}"
 
   labels = merge(local.common_labels, {
     managed = "terraform"

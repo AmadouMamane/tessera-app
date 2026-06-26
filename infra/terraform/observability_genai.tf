@@ -307,7 +307,7 @@ resource "google_bigquery_table" "v_low_score_turns" {
 
 resource "google_monitoring_dashboard" "genai_quality" {
   dashboard_json = jsonencode({
-    displayName = "Tessera — GenAI quality (${var.environment})"
+    displayName = "Tessera — GenAI quality (${local.env})"
     labels      = local.common_labels
     mosaicLayout = {
       columns = 12
