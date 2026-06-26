@@ -1,17 +1,33 @@
 # Local-only stack for the README quickstart.
 # Production uses Cloud Run + Cloud SQL — see infra/terraform/.
+#
+# Environment isolation (ADR 0014, layer 2): every identity below derives from
+# ${TESSERA_ENV} so two environments compose up *simultaneously* without
+# colliding. The top-level project name makes each env its own compose project —
+# its own network and volume namespace — the same mechanism that already
+# isolates the prod-refinement stack from dev. Defaults reproduce the historical
+# `local` stack, so a bare `docker compose up` is unchanged.
+#
+#   TESSERA_ENV=staging TESSERA_PG_PORT=5433 TESSERA_AGENT_PORT=8100 \
+#   TESSERA_FRONTEND_PORT=3091 docker compose --profile full up
+#
+# Telemetry stacks are deliberately NOT defined here: dev uses
+# docker-compose.obs.claude.yml (collector on :4418), prod-refinement ships its
+# own. The agent points at the right one via TESSERA_OTEL_COLLECTOR_ENDPOINT
+# (empty default = export off, as today).
+name: tessera-${TESSERA_ENV:-local}
 
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: tessera-postgres
+    container_name: tessera-${TESSERA_ENV:-local}-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: tessera
       POSTGRES_PASSWORD: tessera
       POSTGRES_DB: tessera
     ports:
-      - "5432:5432"
+      - "${TESSERA_PG_PORT:-5432}:5432"
     volumes:
       - tessera_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -42,15 +58,20 @@ services:
       context: .
       dockerfile: infra/docker/Dockerfile.agent
     image: tessera-agent:local
+    container_name: tessera-${TESSERA_ENV:-local}-agent
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      TESSERA_ENVIRONMENT: local
+      TESSERA_ENVIRONMENT: ${TESSERA_ENV:-local}
       TESSERA_LLM_PROFILE: on_prem
       TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@postgres:5432/tessera
       TESSERA_OBSERVABILITY__LOG_FORMAT: console
       TESSERA_OBSERVABILITY__METRICS_ENABLED: "false"
+      # Per-env telemetry: empty = export off (today's default). Point dev at the
+      # claude obs stack (http://host.docker.internal:4418); prod-refinement sets
+      # its own. The telemetry stacks themselves stay in their own compose files.
+      TESSERA_OBSERVABILITY__OTEL_COLLECTOR_ENDPOINT: "${TESSERA_OTEL_COLLECTOR_ENDPOINT:-}"
       TESSERA_OLLAMA__HOST: "http://host.docker.internal:11434"
       # Close /docs and /openapi.json: this agent is reachable via a public
       # tunnel, and the schema would otherwise expose the full route surface.
@@ -71,7 +92,7 @@ services:
         required: false
     ports:
       # Host 8099 (local convenience, avoids conflicts) -> container's default 8080.
-      - "8099:8080"
+      - "${TESSERA_AGENT_PORT:-8099}:8080"
     volumes:
       # Persist the file audit log (/tmp/tessera/audit.log) and the budget
       # tracker (/tmp/tessera/budget.json) across container recreation, so the
@@ -84,6 +105,7 @@ services:
       context: .
       dockerfile: infra/docker/Dockerfile.frontend
     image: tessera-frontend:local
+    container_name: tessera-${TESSERA_ENV:-local}-frontend
     depends_on:
       agent:
         condition: service_healthy
@@ -100,7 +122,7 @@ services:
     ports:
       # Host 3090 avoids clashing with the bare `next dev` server on 3099 (kept
       # for non-container local testing behind the Cloudflare quick tunnel).
-      - "3090:3000"
+      - "${TESSERA_FRONTEND_PORT:-3090}:3000"
     profiles: ["full"]
 
 volumes:

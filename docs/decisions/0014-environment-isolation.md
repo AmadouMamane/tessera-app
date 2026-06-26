@@ -1,7 +1,8 @@
 # 0014 — Environment isolation (prod / staging / dev as one knob that isolates)
 
-- Status: **proposed** (2026-06-25) — model and audit decided; isolation layers
-  to land per-layer (config → compose → tagged data → UI), nothing pushed.
+- Status: **accepted** (2026-06-26) — layers 1 (Postgres schema) and 2 (per-env
+  compose) implemented and verified; layers 3–5 (tagged records → UI → Cloud Run)
+  to follow. Per-layer commits, nothing pushed.
 - Date: 2026-06-25
 - Deciders: Tessera maintainers
 - Branch: `feature/redesign`
@@ -98,11 +99,30 @@ or memory state. Pick any durable record → its env is unambiguous.
 ### Layering (each its own commit; UI last; nothing pushed)
 
 0. **This ADR** — model + audit (done).
-1. **Config plumbing** — `Settings` exposes env-derived `pg_schema` and
-   `reports_dir`; pool sets `search_path`; readers honor `reports_dir` with
-   flat-dir fallback. Default preserves current behavior for `production`, so the
-   live `:8099` stack and `:8392` dev are not disturbed.
-2. **Compose isolation** — env-keyed names/ports/volumes; dev + prod up together.
+1. **Config plumbing** — **done.** `Settings.pg_schema` (production → `public`,
+   else `tessera_<env>`); the pool `configure` callback sets `search_path TO
+   <schema>, public` per connection, serialised by a transaction advisory lock so
+   concurrent pool opens don't race `CREATE SCHEMA`. Every durable store routes
+   through `get_pool()`, so all isolate at once. Default keeps `production` on
+   `public`, so the live `:8099`/`:8392` data is untouched. Verified e2e: a dev
+   chat turn lands in `tessera_local.conversation_messages`, `public` unchanged.
+   (`reports_dir` per-env subtree is still TODO — secondary collision.)
+2. **Compose isolation** — **done.** `docker-compose.yml` derives every identity
+   from `${TESSERA_ENV}`: top-level `name: tessera-${TESSERA_ENV:-local}` makes
+   each env its own compose project (own network + volume namespace), plus
+   env-keyed `container_name` and `${TESSERA_PG_PORT|AGENT_PORT|FRONTEND_PORT}`
+   host ports. Defaults reproduce the historical `local` stack. Verified: a
+   `staging` postgres (5433, project `tessera-staging`, own volume) ran alongside
+   the live `tessera-postgres` (5432) with zero collision, then torn down.
+
+   **Telemetry is intentionally out of this file.** Dev exports to the claude obs
+   stack (`docker-compose.obs.claude.yml`, collector on host `:4418`); the
+   prod-refinement stack ships its **own** collector (`:4317/:4318`) in its own
+   compose project. They are already isolated by project name. The agent selects
+   one via `TESSERA_OBSERVABILITY__OTEL_COLLECTOR_ENDPOINT` (empty default =
+   export off, as today) — config, not a merged stack. Note: the app's OTLP
+   export currently defaults to **off**, so dev did not leak traces into prod's
+   collector even before this layer.
 3. **Tagged data** — `environment` stamped on the cross-env durable records.
 4. **UI (last)** — the header badge/switcher reads the real dimension; an env
    with no data is honest-empty. Owned by the header workstream; this ADR only

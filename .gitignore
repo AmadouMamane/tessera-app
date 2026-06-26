@@ -22,6 +22,10 @@ htmlcov/
 .env.local
 .env.*.local
 *.env
+# Per-env compose files (ADR 0014, layer 2) — may hold ports/endpoints/secrets.
+.env.dev
+.env.staging
+.env.production
 
 # Node
 node_modules/
