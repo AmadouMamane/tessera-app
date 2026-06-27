@@ -67,7 +67,6 @@ export function TemporalRail({
   onSelectedAtChange,
   periodKey,
   onPeriodChange,
-  windowEnd,
   onModeChange,
 }: {
   mode: "live" | "replay";
@@ -85,11 +84,6 @@ export function TemporalRail({
    * `periodKey` as input and shows no period selector, so it can never duplicate.
    */
   onPeriodChange?: (period: string) => void;
-  /**
-   * Absolute window END (ms) when the page anchors the window to a past date.
-   * Defaults to the timeline's end (≈ now). The rail reads it; it never sets it.
-   */
-  windowEnd?: number;
   onModeChange: (mode: "live" | "replay") => void;
 }) {
   const t = useTranslations("overview.time");
@@ -102,9 +96,7 @@ export function TemporalRail({
   // The visible axis spans the chosen period, ending "now" — so 24h / 7d / 30d
   // each render a distinct scale. Real data may begin later than the window
   // start (we only have ~38h of history), marked by `dataStart`.
-  // Window end: an externally anchored past date when given, else the timeline's
-  // end (≈ now). The axis spans `period` backwards from here.
-  const end = windowEnd ?? (timeline ? new Date(timeline.window_end).getTime() : Date.now());
+  const end = timeline ? new Date(timeline.window_end).getTime() : Date.now();
   const periodMs = PERIODS.find((p) => p.key === periodKey)?.ms ?? 7 * 24 * 3600_000;
   const rawStart = timeline ? new Date(timeline.window_start).getTime() : end - periodMs;
   const viewStart = end - periodMs;

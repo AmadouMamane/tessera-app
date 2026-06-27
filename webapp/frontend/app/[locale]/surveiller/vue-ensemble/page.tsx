@@ -1,9 +1,9 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AgentBreakdown } from "@/components/agent/agent-breakdown";
+import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { AppShell } from "@/components/layout/app-shell";
 import { OverviewDashboard } from "@/components/overview/overview-dashboard";
-import { OverviewWindowBar } from "@/components/overview/overview-window-bar";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
 import { loadFleet } from "@/lib/server/fleet";
@@ -32,10 +32,25 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
     <AppShell
       title={t("title")}
       description={t("subtitle")}
-      // The view filters (window + agent) live in a single bar at the top of the
-      // content (`OverviewWindowBar`), not in the header chrome: the window needs
-      // the rich WindowControl (presets + "Aller à une date" calendar), and it is
-      // the single owner the rail reads.
+      // View filters only. Période is the SINGLE temporal-window owner (shared
+      // store) — the rail reads it, it has no period selector of its own.
+      // Environnement + Modèle are deployment CONTEXT (header badges) and Langue
+      // is global — none are page filters, so they no longer live here.
+      topbarContext={[
+        {
+          label: t("context.lifecycle"),
+          value: "d7",
+          leading: "history",
+          control: "window",
+          options: [
+            { value: "h24", label: t("context.lifecycle24h") },
+            { value: "d7", label: t("context.lifecycleValue") },
+            { value: "d30", label: t("context.lifecycle30d") },
+          ],
+        },
+      ]}
+      // The agent filter sits in the SAME bar as Période (the view filters).
+      topbarFilters={<AgentScopeFilter />}
       topbarActions={[
         {
           label: t("actions.exportReport"),
@@ -51,8 +66,6 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
         },
       ]}
     >
-      {/* Single window owner (duration + "Aller à une date") + agent filter. */}
-      <OverviewWindowBar />
       {/* P2 — lead with the named breached signal (real SLO) + remediation. */}
       <div className="mb-3">
         <SignalBreachHero />
