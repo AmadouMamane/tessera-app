@@ -254,6 +254,22 @@ def _scores_for(at: str | None) -> list[dict[str, object]]:
     return persisted_scores(at) if at else recent_scores()
 
 
+def _data_availability_start(
+    scores: list[dict[str, object]],
+    audit_entries: list[dict[str, object]],
+) -> str | None:
+    """Earliest instant the cockpit holds real as-of-T data, or None if it holds none.
+
+    The bound is the lexicographic minimum over the two durable as-of-T sources —
+    eval score ``scored_at`` and guard audit ``occurred_at`` — ignoring blanks. ISO
+    8601 sorts lexicographically, matching the timeline's ordering convention.
+    """
+    stamps = [str(s.get("scored_at", "")) for s in scores]
+    stamps += [str(e.get("occurred_at", "")) for e in audit_entries]
+    stamps = [s for s in stamps if s]
+    return min(stamps) if stamps else None
+
+
 @router.get("/observability/scores")
 async def observability_scores(at: str | None = None) -> dict[str, object]:
     """Online-eval scores — live (newest last), or as of instant ``at`` (ISO)."""
@@ -363,6 +379,31 @@ async def observability_timeline(at: str | None = None) -> dict[str, object]:
         "n_events": len(events),
         "events": events[-60:],
         "as_of": at,
+    }
+
+
+@router.get("/observability/data-range")
+async def observability_data_range() -> dict[str, object]:
+    """Earliest → latest instant for which the cockpit holds real as-of-T data.
+
+    This bounds the time-rail "Aller à une date" calendar honestly: picking a
+    window end before ``start`` would land on an empty window — no persisted signal
+    exists that far back. The range is derived from the *same durable sources* the
+    as-of-T reads recompute from — the full eval score log (``persisted_scores``,
+    not the bounded live ring) and the tamper-evident guard audit log — so it never
+    promises data the cockpit cannot actually show. ``start`` is null when no data
+    exists yet. Timestamps are ISO 8601; ``start`` is the lexicographic minimum,
+    matching the timeline's ordering convention.
+    """
+    from datetime import UTC, datetime
+
+    scores = persisted_scores(None)
+    audit_entries = _read_audit_entries()
+    start = _data_availability_start(scores, audit_entries)
+    return {
+        "start": start,
+        "end": datetime.now(UTC).isoformat(),
+        "n": len(scores) + len(audit_entries),
     }
 
 

@@ -15,9 +15,20 @@ interface WindowState {
   /** Active window key: "h24" | "d7" | "d30". */
   period: string;
   setPeriod: (period: string) => void;
+  /**
+   * Absolute window END as an ISO instant (end of the chosen day), or null = now
+   * (live). The period spans backwards from here. Set from the SR-01 signal
+   * scrubber's "Aller à une date" calendar so the window can travel over a long
+   * production history; the rail reads it back to anchor its axis. null keeps the
+   * page live.
+   */
+  anchorEnd: string | null;
+  setAnchorEnd: (anchorEnd: string | null) => void;
 }
 
 export const useWindowStore = create<WindowState>((set) => ({
   period: "d7",
   setPeriod: (period) => set({ period }),
+  anchorEnd: null,
+  setAnchorEnd: (anchorEnd) => set({ anchorEnd }),
 }));

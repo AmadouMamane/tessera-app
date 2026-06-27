@@ -192,7 +192,7 @@ function AgentRail({
                 temporal.changeMode("live");
                 return;
               }
-              temporal.changeMode("replay");
+              temporal.changeMode("history");
               temporal.setSelectedAt(new Date(v).getTime());
             }}
             aria-label="Voir à date"
@@ -221,7 +221,7 @@ function AgentRail({
         </span>
         <button
           type="button"
-          onClick={() => temporal.changeMode(live ? "replay" : "live")}
+          onClick={() => temporal.changeMode(live ? "history" : "live")}
           className={cn(
             "flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs",
             live

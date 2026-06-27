@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   ArrowLeftRight,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -19,18 +20,27 @@ import {
   type Dispatch,
   type ReactNode,
   type SetStateAction,
+  useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
 
+import { CalendarPopover } from "@/components/cockpit/calendar-popover";
+import { endOfLocalDay } from "@/components/cockpit/window-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { fetchTimeline } from "@/lib/api/client";
+import { fetchDataRange, fetchTimeline } from "@/lib/api/client";
 import type { TimelineReport } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { type OverviewTone, dotBg } from "@/lib/overview";
 import { setTemporalContext } from "@/lib/temporal-context";
+import {
+  type TemporalUrlState,
+  readTemporalUrl,
+  useTemporalUrlPopstate,
+  writeTemporalUrl,
+} from "@/lib/temporal-url";
 
 function railPos(at: string, start: number, span: number): number {
   const v = new Date(at).getTime();
@@ -52,11 +62,34 @@ export function fmtStamp(ms: number): string {
   });
 }
 
+// Date-only (no time), for the scrubber's window-bound labels.
+function fmtDay(ms: number): string {
+  return new Date(ms).toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  });
+}
+
 const PERIODS: { key: string; ms: number }[] = [
   { key: "h24", ms: 24 * 3600_000 },
   { key: "d7", ms: 7 * 24 * 3600_000 },
   { key: "d30", ms: 30 * 24 * 3600_000 },
 ];
+
+/**
+ * SR-01 · Signal Scrubber Rail (registre des rails temporels §4) — the temporal
+ * backbone of SURVEILLER. Substrat S4 (signal series), composant C4.
+ *
+ * Contract (registre §5): `Rail({ code: "SR-01", scope, time: { mode }, source: S4 })`.
+ * Modes are Live · Historique · Comparé (baseline) · À une date — all **signal**
+ * navigation. It NEVER replays an execution: re-running a turn/trace is XT-01,
+ * which lives on AGENT/Console and AGIR only (registre §3 «Replay = AGIR»). The
+ * active mode is always displayed and derives from the URL (deep-link), never from
+ * a hidden local state; the window DURATION is the shared global window, read here,
+ * never duplicated (registre §8). The rail code is internal — never shown in the UI.
+ */
+export const SR_01_CODE = "SR-01" as const;
 
 export function TemporalRail({
   mode,
@@ -67,9 +100,11 @@ export function TemporalRail({
   onSelectedAtChange,
   periodKey,
   onPeriodChange,
+  windowEnd,
+  onPickDate,
   onModeChange,
 }: {
-  mode: "live" | "replay";
+  mode: "live" | "history";
   liveStatus: string;
   timeline?: TimelineReport;
   sloTarget?: number;
@@ -84,7 +119,19 @@ export function TemporalRail({
    * `periodKey` as input and shows no period selector, so it can never duplicate.
    */
   onPeriodChange?: (period: string) => void;
-  onModeChange: (mode: "live" | "replay") => void;
+  /**
+   * Absolute window END (ms) when the page anchors the window to a past date.
+   * Defaults to the timeline's end (≈ now). The rail reads it; it never sets it
+   * directly — it asks via `onPickDate`.
+   */
+  windowEnd?: number;
+  /**
+   * When provided, the rail renders the "Aller à une date" calendar (history mode):
+   * picking a day emits its end-of-day ISO instant, or null when the day is
+   * today/future (= back to live). The page moves the window END accordingly.
+   */
+  onPickDate?: (anchorEnd: string | null) => void;
+  onModeChange: (mode: "live" | "history") => void;
 }) {
   const t = useTranslations("overview.time");
   const [compare, setCompare] = useState("target");
@@ -92,11 +139,33 @@ export function TemporalRail({
   const setSelectedAt = onSelectedAtChange;
   const [playing, setPlaying] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
+  // Honest lower bound for the calendar: days before the earliest real data are
+  // disabled (picking them would land on an empty window). Only fetched/used when
+  // the calendar is wired (onPickDate).
+  const dataRange = useDataRange();
+  const minPickDate =
+    onPickDate && dataRange.data?.start ? new Date(dataRange.data.start) : undefined;
 
   // The visible axis spans the chosen period, ending "now" — so 24h / 7d / 30d
   // each render a distinct scale. Real data may begin later than the window
   // start (we only have ~38h of history), marked by `dataStart`.
-  const end = timeline ? new Date(timeline.window_end).getTime() : Date.now();
+  // Window end: an externally anchored past date when given, else the timeline's
+  // end (≈ now). The axis spans `periodKey` backwards from here.
+  const end = windowEnd ?? (timeline ? new Date(timeline.window_end).getTime() : Date.now());
+  // When the window ends on a past date, the right edge is NOT "now" but that
+  // anchored day — so the cassette's ▶| and the panel link read "le plus récent"
+  // (this window's latest point), not "maintenant" (which only "Revenir au direct"
+  // reaches). The axis end label then shows the actual date, not "maintenant".
+  const anchored = windowEnd != null;
+  // Active mode, ALWAYS displayed (registre §1/§5) and derived from the position —
+  // never hidden, never an implicit history switch: "À une date" when the window
+  // is anchored, "Historique" while scrubbing, else "Live". A baseline comparison
+  // adds "Comparé" so the framing in force is legible at a glance.
+  const modeLabel = anchored
+    ? t("modeAtDate")
+    : selectedAt != null
+      ? t("modeHistory")
+      : t("modeLive");
   const periodMs = PERIODS.find((p) => p.key === periodKey)?.ms ?? 7 * 24 * 3600_000;
   const rawStart = timeline ? new Date(timeline.window_start).getTime() : end - periodMs;
   const viewStart = end - periodMs;
@@ -152,7 +221,7 @@ export function TemporalRail({
 
   // Playback: sweep T across the window; reaching the end returns to live.
   useEffect(() => {
-    if (!playing || mode !== "replay") return;
+    if (!playing || mode !== "history") return;
     const id = window.setInterval(() => {
       setSelectedAt((cur) => {
         const from = cur ?? dataStart;
@@ -202,7 +271,7 @@ export function TemporalRail({
           variant="outline"
           size="sm"
           className="h-8 border-[#9a5f18] bg-transparent px-4 text-[#f0a23a] hover:bg-[#3e260c]/35"
-          onClick={() => onModeChange("replay")}
+          onClick={() => onModeChange("history")}
         >
           <History className="h-4 w-4" />
           {t("replayAtT")}
@@ -211,8 +280,10 @@ export function TemporalRail({
     );
   }
 
-  // Expanded time-travel rail: period · viewing-at-T · compare-to-baseline ·
-  // playback, then an interactive scrubber over the real lineage timeline (#201).
+  // Expanded time-travel rail, grouped by nature: position (viewing-at-T) · lens
+  // (compare-to-baseline) · transport (fine scrub/playback + the coarse "go to a
+  // date" jump, kept together) · exit, then an interactive scrubber over the real
+  // lineage timeline (#201).
   const handlePos = railPos(new Date(currentT).toISOString(), viewStart, span);
 
   return (
@@ -220,6 +291,15 @@ export function TemporalRail({
       {/* Auto-sized controls (no wrap); only the "viewing-at" value is fixed-width
           so dragging the scrubber never reflows this row. */}
       <div className="flex flex-wrap items-center gap-2">
+        {/* Active mode — always shown (registre §1/§5), so the page never sits in
+            history without a visible indicator. */}
+        <span className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs font-semibold text-gold-200">
+          <History className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+          {modeLabel}
+          {compare !== "none" ? (
+            <span className="font-medium text-gold-300/80">· {t("modeCompared")}</span>
+          ) : null}
+        </span>
         {/* Period selector ONLY when the rail owns the window; otherwise the top
             toolbar control is the single owner (CONTRAT RAIL). */}
         {onPeriodChange ? (
@@ -318,7 +398,7 @@ export function TemporalRail({
             <ChevronRight className="h-4 w-4" />
           </PlaybackButton>
           <PlaybackButton
-            label={t("now")}
+            label={anchored ? t("latest") : t("now")}
             onClick={() => {
               setPlaying(false);
               setSelectedAt(null);
@@ -327,6 +407,17 @@ export function TemporalRail({
             <SkipForward className="h-3.5 w-3.5" />
           </PlaybackButton>
         </span>
+        {/* "Aller à une date" sits next to the transport: it's the COARSE jump
+            (moves the window END to an absolute past day, today/future = live),
+            sibling to the cassette's fine scrub and to its "now" absolute jump.
+            Use it to reach the right week, then scrub/play within. Only when wired. */}
+        {onPickDate ? (
+          <GoToDateButton
+            selectedDate={new Date(currentT)}
+            onPick={onPickDate}
+            minDate={minPickDate}
+          />
+        ) : null}
         <Button
           type="button"
           variant="outline"
@@ -412,9 +503,17 @@ export function TemporalRail({
           // Pinned flush to the right edge (not centred at 96%) so it never
           // overlaps the rightmost event/data-start label.
           <span className="pointer-events-none absolute top-7 right-0 whitespace-nowrap text-[0.65rem] font-medium text-gold-400">
-            {t("now")}
+            {anchored ? t("latest") : t("now")}
           </span>
         ) : null}
+      </div>
+
+      {/* Window bounds — the visible span's start → end. Restores the range
+          readout we lost when the calendar moved out of the top toolbar bar: the
+          right edge reads "maintenant" when live, the anchored date otherwise. */}
+      <div className="mt-1 flex justify-between text-[0.6rem] tabular-nums text-[var(--muted-foreground)]">
+        <span>{fmtDay(viewStart)}</span>
+        <span>{anchored ? fmtDay(end) : t("now")}</span>
       </div>
 
       {/* Legend — what the scrubber ticks mean. */}
@@ -487,11 +586,83 @@ export function TemporalRail({
               setSelectedAt(null);
             }}
           >
-            {t("backToNow")} →
+            {anchored ? t("latest") : t("backToNow")} →
           </button>
         ) : null}
       </div>
     </section>
+  );
+}
+
+/**
+ * The "Aller à une date" calendar, folded into the SR-01 signal scrubber. It owns only its
+ * own popover (open/close + outside-click); the shared `CalendarPopover` renders
+ * the grid. Picking a day emits its end-of-day instant — or null when the day is
+ * today/future, which the page reads as "back to live".
+ */
+function GoToDateButton({
+  selectedDate,
+  onPick,
+  minDate,
+}: {
+  selectedDate: Date;
+  onPick: (anchorEnd: string | null) => void;
+  /** Earliest day with real data; earlier days render disabled. */
+  minDate?: Date;
+}) {
+  const t = useTranslations("overview.time");
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsidePointer(event: MouseEvent) {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-expanded={open}
+        className="h-9 gap-2"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <CalendarDays className="h-4 w-4" />
+        {t("goToDate")}
+      </Button>
+      {open ? (
+        <CalendarPopover
+          selectedDate={selectedDate}
+          // Honest bounds: future days are meaningless for a window END
+          // (today/future = live), and days before the earliest real data would
+          // land on an empty window — both render disabled.
+          minDate={minDate}
+          maxDate={new Date()}
+          onPick={(value) => {
+            const eod = endOfLocalDay(value);
+            if (!eod) return;
+            // A day at/after today means "now" → clear the anchor (live window).
+            onPick(eod.getTime() >= Date.now() ? null : eod.toISOString());
+            setOpen(false);
+          }}
+          labels={{ prevMonth: t("prevMonth"), nextMonth: t("nextMonth") }}
+          className="absolute right-0 top-[calc(100%+0.5rem)] z-50"
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -597,35 +768,87 @@ function RailEvent({
  * request per settle, not one per pixel (the backend is rate-limited). null = live.
  */
 export function useTemporalState() {
-  const [mode, setMode] = useState<"live" | "replay">("live");
-  const [selectedAt, setSelectedAt] = useState<number | null>(null);
-  const [committedAt, setCommittedAt] = useState<number | null>(null);
+  // Initial temporal state is the URL, not a private default (registre §1/§5): a
+  // shared SR-01 link reopens on the same instant/window, and the mode shown
+  // always matches the address bar. Period (the window duration) stays the shared
+  // global window, not a URL param (registre §8 — one window owner).
+  const url0 = readTemporalUrl();
+  const url0At = url0.asof ? Date.parse(url0.asof) : null;
+  const [mode, setMode] = useState<"live" | "history">(url0.asof || url0.win ? "history" : "live");
+  const [selectedAt, setSelectedAt] = useState<number | null>(url0At);
+  const [committedAt, setCommittedAt] = useState<number | null>(url0At);
   const [periodKey, setPeriodKey] = useState("d7");
+  // Absolute window END (ISO, end of the picked day), or null = now (live). Set by
+  // the rail's "Aller à une date" calendar so any temporal page can move its window
+  // over a long history — not just the overview (which keeps its own toolbar-shared
+  // anchor in the window store). The duration (periodKey) spans backwards from here.
+  const [anchorEnd, setAnchorEnd] = useState<string | null>(url0.win);
   useEffect(() => {
     const id = window.setTimeout(() => setCommittedAt(selectedAt), 250);
     return () => window.clearTimeout(id);
   }, [selectedAt]);
-  // ISO instant fed to the as-of-T-capable queries. null in live mode → the
-  // backend reads the live buffer; set → it recomputes ≤ T.
+  // Anchoring the window in the past is inherently historical → replay.
+  const anchoredPast = anchorEnd != null;
+  const effectiveMode: "live" | "history" = anchoredPast ? "history" : mode;
+  const windowEnd = anchorEnd != null ? Date.parse(anchorEnd) : undefined;
+  // ISO instant fed to the as-of-T-capable queries: a scrubbed instant wins, else
+  // the window END when anchored, else null (live → backend reads the live buffer).
   const asOf =
-    mode === "replay" && committedAt != null ? new Date(committedAt).toISOString() : null;
+    effectiveMode === "history" && committedAt != null
+      ? new Date(committedAt).toISOString()
+      : anchorEnd;
   const historyMode = asOf != null;
   // Mirror the temporal context so the topbar evidence pack is scoped to (period, asOf).
   useEffect(() => {
     setTemporalContext({ asOf, period: periodKey });
   }, [asOf, periodKey]);
-  function changeMode(next: "live" | "replay") {
-    if (next === "live") setSelectedAt(null);
+  // The URL is the source of truth: mirror the committed instant + anchor into it
+  // (deep-link), and follow back/forward so the state never drifts from the bar.
+  useEffect(() => {
+    writeTemporalUrl({
+      asof: committedAt != null ? new Date(committedAt).toISOString() : null,
+      win: anchorEnd,
+    });
+  }, [committedAt, anchorEnd]);
+  useTemporalUrlPopstate(
+    useCallback((s: TemporalUrlState) => {
+      const at = s.asof ? Date.parse(s.asof) : null;
+      setSelectedAt(at);
+      setCommittedAt(at);
+      setAnchorEnd(s.win);
+      setMode(s.asof || s.win ? "history" : "live");
+    }, []),
+  );
+  // Returning to live clears both the focused instant AND the past anchor.
+  function changeMode(next: "live" | "history") {
+    if (next === "live") {
+      setSelectedAt(null);
+      setAnchorEnd(null);
+    }
     setMode(next);
   }
+  // "Aller à une date": move the window END to the picked day and land the cursor
+  // there (replay), or clear the anchor for today/future (live).
+  function pickDate(nextAnchorEnd: string | null) {
+    setAnchorEnd(nextAnchorEnd);
+    if (nextAnchorEnd == null) {
+      setSelectedAt(null);
+      setMode("live");
+    } else {
+      setSelectedAt(Date.parse(nextAnchorEnd));
+      setMode("history");
+    }
+  }
   return {
-    mode,
+    mode: effectiveMode,
     changeMode,
     selectedAt,
     setSelectedAt,
     committedAt,
     periodKey,
     setPeriodKey,
+    windowEnd,
+    pickDate,
     asOf,
     historyMode,
   };
@@ -643,6 +866,20 @@ export function useRailTimeline() {
     // The timeline is an append-only history that barely moves; keep it fresh
     // across navigation between the temporal pages instead of refetching on every
     // mount, and slow the background poll right down.
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+}
+
+/**
+ * Honest data-availability bounds for the "Aller à une date" calendar — the
+ * earliest instant the cockpit holds real as-of-T data, so days before it render
+ * disabled (picking them would land on an empty window). Shared across the rail.
+ */
+export function useDataRange() {
+  return useQuery({
+    queryKey: ["data-range"],
+    queryFn: ({ signal }) => fetchDataRange(signal),
     staleTime: 60_000,
     refetchInterval: 60_000,
   });

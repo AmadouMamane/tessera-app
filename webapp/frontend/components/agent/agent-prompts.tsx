@@ -144,7 +144,7 @@ export function AgentPrompts() {
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"
-          onClick={() => temporal.changeMode("replay")}
+          onClick={() => temporal.changeMode("history")}
           className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
         >
           <CalendarClock className="h-4 w-4" /> {a?.asof}
@@ -167,6 +167,8 @@ export function AgentPrompts() {
         onSelectedAtChange={temporal.setSelectedAt}
         periodKey={temporal.periodKey}
         onPeriodChange={temporal.setPeriodKey}
+        windowEnd={temporal.windowEnd}
+        onPickDate={temporal.pickDate}
         onModeChange={temporal.changeMode}
       />
 

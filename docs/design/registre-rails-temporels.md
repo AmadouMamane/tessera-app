@@ -1,6 +1,8 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.2 (2026-06-15)
+> Section destinée à `docs/design/ui-contract.md` · v1.3 (2026-06-27)
+>
+> v1.3 — SR-01 passe à **Implémenté** (scrubber de signaux SURVEILLER) ; le rail de la Vue d'ensemble, jadis mal nommé « XT-01 » et porteur d'un « rejeu », est réaligné sur SR-01 (modes Live/Historique/Comparé/À une date, zéro replay d'exécution, deep-link URL). XT-01 reste « À faire » sur son home Console/AGIR.
 
 ## 1. Principe
 
@@ -45,7 +47,11 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 | **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | À faire |
 | **WF-01** | Workflow Case Rail | Cycle de traitement humain | `AGENT / À traiter`, `À faire` | S3 | C2 + état | À faire |
 | **XT-01** | Execution Trace Rail | Trace technique d'une exécution | `AGENT / Console`, `AGIR / Replay` | S2 | C3 | À faire |
-| **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (toutes) | S4 | C4 | Proposé |
+| **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (toutes) | S4 | C4 | Implémenté |
+
+> **SR-01 (état au 2026-06-27)** — implémenté comme `components/overview/temporal-rail.tsx`, rendu par les pages SURVEILLER (Vue d'ensemble, Qualité IA, Conformité, Sécurité & privacy). Modes **Live · Historique · Comparé (baseline) · À une date** — navigation de **signaux** uniquement (S4/C4). **Aucun replay d'exécution** : ce composant ne rejoue jamais un tour/trace (déplacement d'un curseur T sur les signaux persistés, lus as-of-T). Mode actif **toujours affiché** ; état dérivé de l'**URL** (deep-link `?asof=&win=`), pas d'un état local ; fenêtre (Période) lue depuis le **window-store partagé**, non dupliquée (§8). Le code de rail (`SR-01`) reste interne — **jamais affiché** (§ glossaire). Auparavant mal nommé « XT-01 » sur la Vue d'ensemble : corrigé.
+
+> **XT-01 reste « À faire »** — son seul home est `AGENT / Console` et `AGIR / Replay` (trace d'exécution S2/C3, replay d'exécution). Il **n'est plus** sur la Vue d'ensemble. Le waterfall de trace de la Console (`TraceColumn`) en est l'amorce ; le rail XT-01 normatif complet (scrub de spans + replay) reste à spécifier/implémenter.
 
 ## 5. Contrat de composant (commun)
 

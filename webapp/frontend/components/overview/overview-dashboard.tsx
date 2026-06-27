@@ -11,7 +11,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { TemporalRail, fmtStamp } from "@/components/overview/temporal-rail";
@@ -69,41 +69,105 @@ import {
 } from "@/lib/overview";
 import { useWindowStore } from "@/lib/stores/window-store";
 import { setTemporalContext } from "@/lib/temporal-context";
+import {
+  type TemporalUrlState,
+  readTemporalUrl,
+  useTemporalUrlPopstate,
+  writeTemporalUrl,
+} from "@/lib/temporal-url";
 
 const POLL_MS = 15_000;
 const POLL_FAST_MS = 10_000;
 
 export function OverviewDashboard() {
   const t = useTranslations("overview");
-  const [mode, setMode] = useState<"live" | "replay">("live");
+  // SR-01 deep-link (registre §1/§5): the temporal navigation state is the URL,
+  // not a private default — a shared link reopens on the same instant/window and
+  // the visible mode always matches the address bar. The window DURATION (period)
+  // stays the shared global window (registre §8 — one owner), so it is not a URL
+  // param here.
+  const url0 = useMemo(() => readTemporalUrl(), []);
+  const url0At = url0.asof ? Date.parse(url0.asof) : null;
+  const [mode, setMode] = useState<"live" | "history">(url0.asof || url0.win ? "history" : "live");
   // T being viewed, lifted out of the rail so the whole page reads "à T" (ADR
   // 0011). null = live (now); a number is a paused instant on the rail. The
   // cursor (`selectedAt`) moves continuously for a smooth UI; the value fed to
   // the backend (`committedAt`) is debounced so dragging fires one request per
   // settle, not one per pixel (the backend is rate-limited).
-  const [selectedAt, setSelectedAt] = useState<number | null>(null);
-  const [committedAt, setCommittedAt] = useState<number | null>(null);
-  // The visible window is SHARED STATE owned by the top toolbar control (the
-  // single window owner). The dashboard and the rail READ it — neither owns it.
+  const [selectedAt, setSelectedAt] = useState<number | null>(url0At);
+  const [committedAt, setCommittedAt] = useState<number | null>(url0At);
+  // The visible window is SHARED STATE: the DURATION (period) owned by the top
+  // toolbar control, plus the absolute END (anchorEnd, null = now) set from the
+  // rail's "Aller à une date" calendar. The dashboard and the rail READ it.
   const periodKey = useWindowStore((s) => s.period);
+  const anchorEnd = useWindowStore((s) => s.anchorEnd);
+  const setAnchorEnd = useWindowStore((s) => s.setAnchorEnd);
+  // Restore the anchored window from the URL once on mount (the store is global).
+  useEffect(() => {
+    if (url0.win) setAnchorEnd(url0.win);
+  }, [url0.win, setAnchorEnd]);
+  // When the window ends at a past date, the page is inherently historical.
+  const anchoredPast = anchorEnd != null;
+  const windowEndMs = anchorEnd != null ? Date.parse(anchorEnd) : undefined;
   useEffect(() => {
     const id = window.setTimeout(() => setCommittedAt(selectedAt), 250);
     return () => window.clearTimeout(id);
   }, [selectedAt]);
-  // ISO instant fed to the as-of-T-capable queries (slo/trend/scores). null in
-  // live mode → the backend reads the live buffer; set → it recomputes ≤ T.
+  // History mode whenever we scrub OR the window is anchored in the past.
+  const effectiveMode: "live" | "history" = anchoredPast ? "history" : mode;
+  // ISO instant fed to the as-of-T-capable queries (slo/trend/scores). A scrubbed
+  // instant wins; otherwise the window END (anchorEnd) when anchored; else null
+  // (live → the backend reads the live buffer; set → it recomputes ≤ T).
   const asOf =
-    mode === "replay" && committedAt != null ? new Date(committedAt).toISOString() : null;
+    effectiveMode === "history" && committedAt != null
+      ? new Date(committedAt).toISOString()
+      : anchorEnd;
   const historyMode = asOf != null;
   // Mirror the temporal context so the topbar's evidence pack / report export is
   // scoped to (period, asOf), not just "now" (ADR 0011 §3/§5).
   useEffect(() => {
     setTemporalContext({ asOf, period: periodKey });
   }, [asOf, periodKey]);
-  // Returning to live clears the focused instant so every block re-reads "now".
-  function changeMode(next: "live" | "replay") {
-    if (next === "live") setSelectedAt(null);
+  // The URL is the source of truth: mirror the committed instant + anchor into it
+  // (deep-link), and follow back/forward so the state never drifts from the bar.
+  useEffect(() => {
+    writeTemporalUrl({
+      asof: committedAt != null ? new Date(committedAt).toISOString() : null,
+      win: anchorEnd,
+    });
+  }, [committedAt, anchorEnd]);
+  useTemporalUrlPopstate(
+    useCallback(
+      (s: TemporalUrlState) => {
+        const at = s.asof ? Date.parse(s.asof) : null;
+        setSelectedAt(at);
+        setCommittedAt(at);
+        setAnchorEnd(s.win);
+        setMode(s.asof || s.win ? "history" : "live");
+      },
+      [setAnchorEnd],
+    ),
+  );
+  // Returning to live clears both the focused instant AND the past anchor so
+  // every block re-reads "now".
+  function changeMode(next: "live" | "history") {
+    if (next === "live") {
+      setSelectedAt(null);
+      setAnchorEnd(null);
+    }
     setMode(next);
+  }
+  // "Aller à une date" from the rail: move the window END to the picked day and
+  // land the cursor there (history), or clear the anchor for today/future (live).
+  function pickDate(nextAnchorEnd: string | null) {
+    setAnchorEnd(nextAnchorEnd);
+    if (nextAnchorEnd == null) {
+      setSelectedAt(null);
+      setMode("live");
+    } else {
+      setSelectedAt(Date.parse(nextAnchorEnd));
+      setMode("history");
+    }
   }
 
   // --- Liveness ------------------------------------------------------------
@@ -299,13 +363,15 @@ export function OverviewDashboard() {
           (clipped by main's overflow) so nothing shows through. */}
       <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pb-3 pt-3 shadow-[0_-16px_0_0_var(--tessera-bg)]">
         <TemporalRail
-          mode={mode}
+          mode={effectiveMode}
           liveStatus={liveStatus}
           timeline={timeline.data}
           sloTarget={slo.data?.threshold}
           selectedAt={selectedAt}
           onSelectedAtChange={setSelectedAt}
           periodKey={periodKey}
+          windowEnd={windowEndMs}
+          onPickDate={pickDate}
           onModeChange={changeMode}
         />
       </div>
@@ -445,7 +511,7 @@ export function OverviewDashboard() {
             historyMode={historyMode}
           />
           <QuickActionsCard
-            onReplayAt={() => setMode("replay")}
+            onReplayAt={() => setMode("history")}
             historyMode={historyMode}
             onBackToLive={() => changeMode("live")}
           />

@@ -478,6 +478,14 @@ export const TimelineReportSchema = z.object({
 });
 export type TimelineReport = z.infer<typeof TimelineReportSchema>;
 
+/** Honest bounds for the time-rail calendar: earliest real data → now. */
+export const DataRangeSchema = z.object({
+  start: z.string().nullable(),
+  end: z.string(),
+  n: z.number().int(),
+});
+export type DataRange = z.infer<typeof DataRangeSchema>;
+
 export const CalibrationPointSchema = z.object({
   question: z.string(),
   human_label: z.string(),

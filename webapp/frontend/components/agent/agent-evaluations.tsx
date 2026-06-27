@@ -206,7 +206,7 @@ export function AgentEvaluations() {
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"
-          onClick={() => temporal.changeMode("replay")}
+          onClick={() => temporal.changeMode("history")}
           className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
         >
           <CalendarClock className="h-4 w-4" /> {a?.asof}
@@ -228,7 +228,7 @@ export function AgentEvaluations() {
       {/* Cycle de vie + active snapshot, side by side (dense, normative order). */}
       <div className="grid gap-2.5 xl:grid-cols-2">
         <LifecycleBar data={data} />
-        <Snapshot data={data} onAsof={() => temporal.changeMode("replay")} />
+        <Snapshot data={data} onAsof={() => temporal.changeMode("history")} />
       </div>
 
       {/* Scores right under the verdict — informative, never the verdict. */}

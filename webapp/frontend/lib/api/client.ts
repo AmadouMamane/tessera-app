@@ -99,6 +99,8 @@ import {
   CrossTenantReportSchema,
   type CurationOverview,
   CurationOverviewSchema,
+  type DataRange,
+  DataRangeSchema,
   type DisclosureReport,
   DisclosureReportSchema,
   type EnsembleReport,
@@ -418,6 +420,11 @@ export async function fetchEvalScores(
 /** Temporal lineage timeline — dated events for the cockpit time rail (#201). */
 export async function fetchTimeline(signal?: AbortSignal, at?: string): Promise<TimelineReport> {
   return request(withAsOf("/observability/timeline", at), { signal }, TimelineReportSchema);
+}
+
+/** Honest data-availability bounds for the time-rail "Aller à une date" calendar. */
+export async function fetchDataRange(signal?: AbortSignal): Promise<DataRange> {
+  return request("/observability/data-range", { signal }, DataRangeSchema);
 }
 
 /**
