@@ -271,7 +271,12 @@
       "periodState": "Over the period",
       "selectedEvent": "Selected event",
       "selectedInstant": "Selected instant",
-      "changeInstant": "Change the instant"
+      "changeInstant": "Change the instant",
+      "railMicroLive": "Signals observed over the active period",
+      "railMicroAsof": "Signals observed at the chosen instant",
+      "railMicroAsofEmpty": "Select a date and time to display the signals.",
+      "railMicroHistory": "Signal evolution over the selected period",
+      "asofTooltip": "This view shows the signals as they were at the chosen instant."
     },
     "kpi": {
       "quality": "Quality score (SLO)",

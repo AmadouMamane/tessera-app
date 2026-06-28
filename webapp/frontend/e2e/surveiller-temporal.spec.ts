@@ -28,7 +28,8 @@ function bar(page: Page) {
 async function open(page: Page, query: string) {
   await page.goto(`${PAGE}${query}`);
   await expect(bar(page)).toBeVisible();
-  await expect(page.getByText("Fenêtre d’observation").first()).toBeVisible();
+  // The expanded panel is mounted (the rail scrubber legend is a stable marker).
+  await expect(bar(page).getByText("Qualité :").first()).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -119,14 +120,29 @@ test("page export actions sit in the header, no cheap divider, outside the tempo
     (el) => getComputedStyle(el.closest("div") as HTMLElement).borderTopWidth,
   );
   expect(borderTop).toBe("0px");
+  // The header itself has no full-width bottom border (§1): structure comes from a
+  // short premium accent under the title block instead.
+  const headerBorderBottom = await page.evaluate(() => {
+    const h = document.querySelector("header");
+    return h ? getComputedStyle(h).borderBottomWidth : "no-header";
+  });
+  expect(headerBorderBottom).toBe("0px");
 });
 
-test("À un instant with a date: present-actions banner, PROUVER link, one return", async ({
-  page,
-}) => {
+test("À un instant with a date: calm rail header, PROUVER link, one return", async ({ page }) => {
   await open(page, `?lecture=asOf&asof=${encodeURIComponent(ASOF)}&compare=now&expanded=1`);
   await expect(bar(page).getByText("À un instant").first()).toBeVisible();
-  await expect(page.getByText("Les actions restent appliquées au présent.").first()).toBeVisible();
+  // The rail header is calm: short title + ONE micro-line, no eyebrow, no badge,
+  // no long banner, no ambiguous "actions appliquées au présent".
+  await expect(bar(page).getByText("Signaux observés à l’instant choisi").first()).toBeVisible();
+  await expect(bar(page).getByText("Fenêtre d’observation")).toHaveCount(0);
+  await expect(page.getByText("actions appliquées au présent")).toHaveCount(0);
+  await expect(page.getByText("Vous consultez l’état")).toHaveCount(0);
+  // The explanation lives in a hover tooltip, never a permanent line.
+  await expect(
+    page.getByRole("button", { name: /Cette vue montre les signaux tels qu/ }).first(),
+  ).toBeVisible();
+  await expect(bar(page).getByText("Cette vue montre les signaux tels qu’ils")).toHaveCount(0);
   // PROUVER in caps, matching the nav plane.
   await expect(page.getByText("Ouvrir dans PROUVER · État à date")).toBeVisible();
   await expect(page.getByText("Revenir au direct")).toHaveCount(1);

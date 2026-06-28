@@ -271,7 +271,12 @@
       "periodState": "Sur la période",
       "selectedEvent": "Événement sélectionné",
       "selectedInstant": "Instant sélectionné",
-      "changeInstant": "Modifier l’instant"
+      "changeInstant": "Modifier l’instant",
+      "railMicroLive": "Signaux observés sur la période active",
+      "railMicroAsof": "Signaux observés à l’instant choisi",
+      "railMicroAsofEmpty": "Sélectionnez une date et une heure pour afficher les signaux.",
+      "railMicroHistory": "Évolution des signaux sur la période sélectionnée",
+      "asofTooltip": "Cette vue montre les signaux tels qu’ils étaient à l’instant choisi."
     },
     "kpi": {
       "quality": "Score qualité (objectif de service)",

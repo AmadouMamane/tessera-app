@@ -154,11 +154,12 @@ export function AppHeader({
     <BrandLead title={title} href={brandHref} />
   );
 
+  // Cockpit: NO full-width bottom border (it read as a cheap separator passing
+  // under the page actions). Structure comes from a short premium accent under the
+  // title block (TitleBlock) instead; a filter row keeps its own top divider.
   const chrome =
     chromeClassName ??
-    (cockpit
-      ? "border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)]"
-      : "border-b border-[var(--border-subtle)]");
+    (cockpit ? "bg-[var(--tessera-bg)]" : "border-b border-[var(--border-subtle)]");
 
   return (
     <header className={cn("relative", chrome)}>
@@ -231,6 +232,10 @@ function TitleBlock({ title, description }: { title?: string; description?: stri
       <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">
         {description ?? t("tagline")}
       </p>
+      {/* Short premium accent under the title block ONLY — structures the page
+          header without a full-width line (it never reaches the actions on the
+          right). Navy→cyan fade at low opacity. */}
+      <div className="mt-2 h-px w-full max-w-[260px] bg-[linear-gradient(90deg,rgba(96,128,196,0.5),rgba(86,178,204,0.28)_45%,transparent)]" />
     </>
   );
 }

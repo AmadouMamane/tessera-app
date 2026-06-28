@@ -271,7 +271,12 @@
       "periodState": "Im Zeitraum",
       "selectedEvent": "Ausgewähltes Ereignis",
       "selectedInstant": "Ausgewählter Zeitpunkt",
-      "changeInstant": "Zeitpunkt ändern"
+      "changeInstant": "Zeitpunkt ändern",
+      "railMicroLive": "Beobachtete Signale im aktiven Zeitraum",
+      "railMicroAsof": "Signale zum gewählten Zeitpunkt",
+      "railMicroAsofEmpty": "Wählen Sie Datum und Uhrzeit, um die Signale anzuzeigen.",
+      "railMicroHistory": "Entwicklung der Signale über den gewählten Zeitraum",
+      "asofTooltip": "Diese Ansicht zeigt die Signale, wie sie zum gewählten Zeitpunkt waren."
     },
     "kpi": {
       "quality": "Qualitäts-Score (Service-Ziel)",
