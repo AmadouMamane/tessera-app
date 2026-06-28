@@ -137,7 +137,11 @@ export function AppHeader({
 }: AppHeaderProps) {
   const authContext = auth ?? defaultAuth(plan);
   const cockpit = plan === "cockpit";
-  const hasRow2 = cockpit && (contextItems.length > 0 || Boolean(filters) || actions.length > 0);
+  // A "filter row" (view filters / context controls) earns the divider; a row that
+  // carries ONLY page actions (e.g. export / evidence) must NOT — a full-width line
+  // there reads as a cheap separator gluing the actions to the page content below.
+  const hasFilterRow = contextItems.length > 0 || Boolean(filters);
+  const hasRow2 = cockpit && (hasFilterRow || actions.length > 0);
 
   // The cockpit carries its title at left (brand lives in the sidebar rail). The
   // launcher and business surfaces show the brand at left — unless a business
@@ -188,13 +192,24 @@ export function AppHeader({
       {/* Row 2 — cockpit page-scoped context + actions, below the global chrome
           so the global cluster never shifts from one page to the next. */}
       {hasRow2 ? (
-        <div className="flex min-h-[3.25rem] flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-6 py-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            {contextItems.map((item) => (
-              <ContextControl key={item.label} item={item} />
-            ))}
-            {filters}
-          </div>
+        <div
+          className={cn(
+            "flex flex-wrap items-center justify-between gap-3 px-6",
+            // Filter row → divider + comfortable height. Actions-only → no divider,
+            // tighter, so the buttons float cleanly at the right of the page header.
+            hasFilterRow
+              ? "min-h-[3.25rem] border-t border-[var(--tessera-border)] py-2"
+              : "justify-end pb-2.5 pt-0",
+          )}
+        >
+          {hasFilterRow ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              {contextItems.map((item) => (
+                <ContextControl key={item.label} item={item} />
+              ))}
+              {filters}
+            </div>
+          ) : null}
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             {actions.map((action) => (
               <ActionButton key={action.label} action={action} />

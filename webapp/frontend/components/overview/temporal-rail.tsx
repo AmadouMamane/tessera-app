@@ -738,6 +738,8 @@ export function GoToDateButton({
   onPick,
   minDate,
   label,
+  renderTrigger,
+  popoverClassName,
 }: {
   selectedDate: Date;
   onPick: (anchorEnd: string | null) => void;
@@ -745,10 +747,20 @@ export function GoToDateButton({
   minDate?: Date;
   /** Trigger label override (e.g. "Aller à un instant" in À-un-instant reading). */
   label?: string;
+  /**
+   * Custom trigger — when provided, replaces the default outline button entirely
+   * (same popover/calendar/bounds). Lets the "État au" command-bar chip BE the
+   * single point-in-time picker, so there is no duplicate "Aller à un instant"
+   * button elsewhere.
+   */
+  renderTrigger?: (state: { open: boolean; toggle: () => void }) => ReactNode;
+  /** Popover anchor override (defaults to left-aligned under the trigger). */
+  popoverClassName?: string;
 }) {
   const t = useTranslations("overview.time");
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const toggle = () => setOpen((o) => !o);
 
   useEffect(() => {
     if (!open) return;
@@ -768,17 +780,21 @@ export function GoToDateButton({
 
   return (
     <div ref={ref} className="relative shrink-0">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        aria-expanded={open}
-        className="h-9 gap-2"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <CalendarDays className="h-4 w-4" />
-        {label ?? t("goToDate")}
-      </Button>
+      {renderTrigger ? (
+        renderTrigger({ open, toggle })
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-expanded={open}
+          className="h-9 gap-2"
+          onClick={toggle}
+        >
+          <CalendarDays className="h-4 w-4" />
+          {label ?? t("goToDate")}
+        </Button>
+      )}
       {open ? (
         <CalendarPopover
           selectedDate={selectedDate}
@@ -798,7 +814,7 @@ export function GoToDateButton({
           // Left-aligned: the button sits at the LEFT of the command-bar panel, so
           // right-0 made the 292px calendar extend left under the sidebar (clipping
           // the month header). left-0 keeps it inside the content area.
-          className="absolute left-0 top-[calc(100%+0.5rem)] z-50"
+          className={popoverClassName ?? "absolute left-0 top-[calc(100%+0.5rem)] z-50"}
         />
       ) : null}
     </div>

@@ -74,8 +74,9 @@ test("À un instant without a date: honest empty state, no score, no PROUVER", a
   await expect(bar(page).getByText("vs référence")).toHaveCount(0);
   await expect(page.getByText("Ouvrir dans PROUVER · État à date")).toHaveCount(0);
   await expect(page.getByText("Revenir au direct")).toHaveCount(0);
-  // No instant yet → "Aller à un instant" (never the stale "Modifier l'instant").
-  await expect(page.getByText("Aller à un instant").first()).toBeVisible();
+  // The "État au" chip IS the single picker — no duplicate bottom button.
+  await expect(page.getByRole("button", { name: /État au/ }).first()).toBeVisible();
+  await expect(page.getByText("Aller à un instant")).toHaveCount(0);
   await expect(page.getByText("Modifier l’instant")).toHaveCount(0);
 });
 
@@ -83,8 +84,41 @@ test("À un instant without a date: 'Comparer à' is disabled, never a phantom d
   page,
 }) => {
   await open(page, "?lecture=asOf&expanded=1");
-  // No interactive "Comparer à" select while awaiting an instant.
+  // No interactive "Comparer à" select while awaiting an instant; the disabled chip
+  // reads "Maintenant" (the natural comparison), never "Aucun".
   await expect(bar(page).locator("select")).toHaveCount(0);
+  await expect(
+    bar(page)
+      .getByText(/Comparer à[\s\S]{0,20}Maintenant/)
+      .first(),
+  ).toBeVisible();
+});
+
+test("the 'État au' chip is the single clickable point-in-time picker", async ({ page }) => {
+  await open(page, "?lecture=asOf&expanded=1");
+  // Clicking the chip opens the calendar (full pick→URL flow is render-verified
+  // separately, since enabled days depend on the data range).
+  await page
+    .getByRole("button", { name: /État au/ })
+    .first()
+    .click();
+  await expect(page.getByRole("button", { name: "Mois précédent" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mois suivant" })).toBeVisible();
+});
+
+test("page export actions sit in the header, no cheap divider, outside the temporal bar", async ({
+  page,
+}) => {
+  await open(page, "?expanded=1");
+  const exportBtn = page.getByRole("button", { name: "Exporter rapport" });
+  await expect(exportBtn).toBeVisible();
+  // Not inside the SR-01 command bar (registre §2).
+  await expect(bar(page).getByText("Exporter rapport")).toHaveCount(0);
+  // The actions row carries no full-width top border (the old cheap separator).
+  const borderTop = await exportBtn.evaluate(
+    (el) => getComputedStyle(el.closest("div") as HTMLElement).borderTopWidth,
+  );
+  expect(borderTop).toBe("0px");
 });
 
 test("À un instant with a date: present-actions banner, PROUVER link, one return", async ({
@@ -103,8 +137,9 @@ test("À un instant with a date: present-actions banner, PROUVER link, one retur
       .getByText(/Comparer à[\s\S]{0,40}Maintenant/)
       .first(),
   ).toBeVisible();
-  // The date control reads "Modifier l'instant" once an instant is set.
-  await expect(page.getByText("Modifier l’instant").first()).toBeVisible();
+  // Date selection lives ONLY in the "État au" chip — no bottom duplicate button.
+  await expect(page.getByRole("button", { name: /État au/ }).first()).toBeVisible();
+  await expect(page.getByText("Modifier l’instant")).toHaveCount(0);
   await expect(page.getByText("Aller à un instant")).toHaveCount(0);
   // The selected instant is labelled on the timeline (case-insensitive: uppercased
   // via CSS) so it is obvious which marker is the active T.

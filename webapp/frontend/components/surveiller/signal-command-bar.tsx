@@ -310,23 +310,33 @@ export function SignalCommandBar({
         {/* Lecture — Maintenant / À un instant / Historique, with per-mode
             definitions IN the menu (not a permanent line), differentiated by icon. */}
         <LectureMenu reading={reading} onChange={(v) => temporal.setReading(v)} t={t} />
-        {/* Période (Maintenant / Historique) OR "État au : T" (À un instant). The
-            chip is a DISPLAY that opens the panel where the single date picker lives —
-            no inline calendar button (it overflowed onto the agent filter). */}
+        {/* "État au" (À un instant) — the SINGLE point-in-time picker: the chip IS
+            the trigger, opening the calendar directly (no duplicate bottom button).
+            Otherwise the Période selector (Maintenant / Historique). */}
         {reading === "asof" ? (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            title={t("goToDate")}
-            className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs text-gold-200 transition-colors hover:bg-gold-500/20"
-          >
-            <CalendarClock className="h-3.5 w-3.5 shrink-0 text-gold-400" />
-            {t("asofAt")}
-            <b className="font-semibold tabular-nums text-[var(--tessera-text)]">
-              {asOfText ?? t("pickDatePrompt")}
-            </b>
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-400/70" />
-          </button>
+          <GoToDateButton
+            selectedDate={asOfMs ? new Date(asOfMs) : new Date()}
+            onPick={temporal.pickDate}
+            minDate={minPickDate}
+            renderTrigger={({ open, toggle }) => (
+              <button
+                type="button"
+                onClick={toggle}
+                aria-haspopup="dialog"
+                aria-expanded={open}
+                aria-label={`${t("asofAt")} ${asOfText ?? t("pickDatePrompt")}`}
+                title={asOfText ? t("changeInstant") : t("goToInstant")}
+                className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs text-gold-200 transition-colors hover:bg-gold-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50"
+              >
+                <CalendarClock className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+                {t("asofAt")}
+                <b className="font-semibold tabular-nums text-[var(--tessera-text)]">
+                  {asOfText ?? t("pickDatePrompt")}
+                </b>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-400/70" />
+              </button>
+            )}
+          />
         ) : (
           <SelectChip
             icon={Clock3}
@@ -346,7 +356,7 @@ export function SignalCommandBar({
           <DisabledChip
             icon={ArrowLeftRight}
             label={t("compareTo")}
-            value="—"
+            value={t("cmpNow")}
             title={t("reasonSelectInstant")}
           />
         ) : (
@@ -468,28 +478,13 @@ export function SignalCommandBar({
                 onCompareChange={setCompare}
                 viewLabel={viewLabel}
               />
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {/* "Aller à un instant" (À un instant) / "Aller à une date"
-                    (Historique) — the coarse jump that anchors the window. The
-                    single "Revenir au direct" lives in the bar's micro-line above
-                    (registre §11), so it is NOT repeated here. */}
-                <GoToDateButton
-                  selectedDate={asOfMs ? new Date(asOfMs) : new Date()}
-                  onPick={temporal.pickDate}
-                  minDate={minPickDate}
-                  // "À un instant": choose one when none is set, MODIFY it once a date
-                  // is selected (a stale "Aller à un instant" reads wrong then).
-                  label={
-                    reading === "asof"
-                      ? hasInstant
-                        ? t("changeInstant")
-                        : t("goToInstant")
-                      : undefined
-                  }
-                />
-                {/* Transition to PROUVER · État à date — only with an instant chosen
-                    (a point-in-time reconstruction, not a replay). */}
-                {temporal.asOf ? (
+              {/* The rail focuses on visualisation + markers + the PROUVER link.
+                  Date selection lives ONLY in the "État au" chip above — no
+                  duplicate bottom picker (one entry per action). Transition to
+                  PROUVER · État à date shows only with an instant chosen (a
+                  point-in-time reconstruction, not a replay). */}
+              {temporal.asOf ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Link
                     href={`/prouver/etat-a-date?asof=${encodeURIComponent(temporal.asOf)}`}
                     className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] px-3 text-xs font-medium text-blue-300 hover:bg-[var(--tessera-muted)]"
@@ -497,8 +492,8 @@ export function SignalCommandBar({
                     <CalendarClock className="h-4 w-4" />
                     {t("openInProofs")}
                   </Link>
-                ) : null}
-              </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
