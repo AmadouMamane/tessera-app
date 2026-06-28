@@ -271,7 +271,7 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           hides scrolled content. -mx-4 bleeds the bg over the side padding; the
           upward bg box-shadow fills the strip left by the main's top padding
           (clipped by main's overflow) so nothing shows through. */}
-      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pb-3 pt-3 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pb-2 pt-2 shadow-[0_-16px_0_0_var(--tessera-bg)]">
         <SignalCommandBar
           temporal={temporal}
           timeline={timeline.data}

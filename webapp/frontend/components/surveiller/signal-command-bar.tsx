@@ -105,9 +105,9 @@ export function SignalCommandBar({
     : t("nowLive");
 
   return (
-    <section className="rounded-2xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)]/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-sm">
+    <section className="rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       {/* Collapsed command row — the single temporal focus. */}
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         {/* Lecture — Live / As-of / Historique, differentiated by ICON. */}
         <SelectChip
           icon={ReadingIcon}

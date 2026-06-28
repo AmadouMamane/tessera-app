@@ -40,7 +40,7 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
           content — breached signal + per-agent breakdown — follows it (rendered as
           children, right under the bar). */}
       <OverviewDashboard>
-        <div className="mt-3 mb-3">
+        <div className="mb-3">
           <SignalBreachHero />
         </div>
         <div className="mb-3">
