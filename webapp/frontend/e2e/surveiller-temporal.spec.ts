@@ -72,9 +72,11 @@ test("À un instant without a date: honest empty state, no score, no PROUVER", a
   await expect(bar(page).getByText("État live")).toHaveCount(0);
   await expect(bar(page).getByText("État à l’instant")).toHaveCount(0);
   await expect(bar(page).getByText("vs référence")).toHaveCount(0);
-  await expect(page.getByText("Ouvrir dans Prouver · État à date")).toHaveCount(0);
+  await expect(page.getByText("Ouvrir dans PROUVER · État à date")).toHaveCount(0);
   await expect(page.getByText("Revenir au direct")).toHaveCount(0);
+  // No instant yet → "Aller à un instant" (never the stale "Modifier l'instant").
   await expect(page.getByText("Aller à un instant").first()).toBeVisible();
+  await expect(page.getByText("Modifier l’instant")).toHaveCount(0);
 });
 
 test("À un instant without a date: 'Comparer à' is disabled, never a phantom default", async ({
@@ -91,9 +93,26 @@ test("À un instant with a date: present-actions banner, PROUVER link, one retur
   await open(page, `?lecture=asOf&asof=${encodeURIComponent(ASOF)}&compare=now&expanded=1`);
   await expect(bar(page).getByText("À un instant").first()).toBeVisible();
   await expect(page.getByText("Les actions restent appliquées au présent.").first()).toBeVisible();
-  await expect(page.getByText("Ouvrir dans Prouver · État à date")).toBeVisible();
+  // PROUVER in caps, matching the nav plane.
+  await expect(page.getByText("Ouvrir dans PROUVER · État à date")).toBeVisible();
   await expect(page.getByText("Revenir au direct")).toHaveCount(1);
   await expect(page.getByText("Revenir au présent")).toHaveCount(0);
+  // "Comparer à" defaults to "Maintenant" with an instant, never "Aucun".
+  await expect(
+    bar(page)
+      .getByText(/Comparer à[\s\S]{0,40}Maintenant/)
+      .first(),
+  ).toBeVisible();
+  // The date control reads "Modifier l'instant" once an instant is set.
+  await expect(page.getByText("Modifier l’instant").first()).toBeVisible();
+  await expect(page.getByText("Aller à un instant")).toHaveCount(0);
+  // The selected instant is labelled on the timeline (case-insensitive: uppercased
+  // via CSS) so it is obvious which marker is the active T.
+  await expect(
+    bar(page)
+      .getByText(/instant sélectionné/i)
+      .first(),
+  ).toBeVisible();
 });
 
 test("Historique: period framing, never a live snapshot, no player", async ({ page }) => {

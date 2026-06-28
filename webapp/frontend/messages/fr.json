@@ -219,7 +219,7 @@
       "descHistorique": "Évolution sur une période",
       "asofAt": "État au :",
       "asofBanner": "Vous consultez l'état au {time}. Les actions restent appliquées au présent.",
-      "openInProofs": "Ouvrir dans Prouver · État à date",
+      "openInProofs": "Ouvrir dans PROUVER · État à date",
       "agentsObserved": "{n} agents observés",
       "lastUpdate": "Dernière mise à jour",
       "viewingAt": "Vue :",
@@ -269,7 +269,9 @@
       "observationWindow": "Fenêtre d’observation",
       "goToInstant": "Aller à un instant",
       "periodState": "Sur la période",
-      "selectedEvent": "Événement sélectionné"
+      "selectedEvent": "Événement sélectionné",
+      "selectedInstant": "Instant sélectionné",
+      "changeInstant": "Modifier l’instant"
     },
     "kpi": {
       "quality": "Score qualité (objectif de service)",

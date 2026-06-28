@@ -11,6 +11,7 @@ import {
   Clock3,
   Crosshair,
   History,
+  RotateCcw,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -75,8 +76,11 @@ function compareEnabled(reading: Reading, value: string, avail: { target: boolea
 function defaultCompare(reading: Reading, avail: { target: boolean; now: boolean }) {
   const pref = reading === "live" ? "target" : reading === "asof" ? "now" : "previous_period";
   if (compareEnabled(reading, pref, avail)) return pref;
+  // "À un instant": the whole point of the view is the state at T vs now, so
+  // "Maintenant" stays the natural default EVEN when it is not currently computable —
+  // it is then shown disabled with a reason, never silently downgraded to "Aucun".
+  if (reading === "asof") return "now";
   if (avail.target) return "target";
-  if (reading === "asof" && avail.now) return "now";
   return "none";
 }
 
@@ -382,17 +386,20 @@ export function SignalCommandBar({
             </span>
           </span>
         ))}
-        {/* The SINGLE "Revenir au direct" (registre §11) — here in the bar, never
-            duplicated in the rail. Absent in Maintenant, and absent in "À un instant"
-            until a day is picked (nothing to return from yet). */}
+        {/* The SINGLE "Revenir au direct" (registre §11) — a discreet secondary
+            BUTTON (not a link), here in the bar, never duplicated in the rail.
+            Absent in Maintenant, and absent in "À un instant" until a day is picked. */}
         {reading === "historique" || (reading === "asof" && hasInstant) ? (
-          <button
+          <Button
             type="button"
-            className="ml-auto whitespace-nowrap font-medium text-blue-300 hover:underline"
+            variant="outline"
+            size="sm"
+            className="ml-auto h-7 gap-1.5 px-2.5 text-xs"
             onClick={() => temporal.setReading("live")}
           >
-            {t("exitReplay")} →
-          </button>
+            <RotateCcw className="h-3.5 w-3.5" />
+            {t("exitReplay")}
+          </Button>
         ) : null}
       </div>
 
@@ -470,7 +477,15 @@ export function SignalCommandBar({
                   selectedDate={asOfMs ? new Date(asOfMs) : new Date()}
                   onPick={temporal.pickDate}
                   minDate={minPickDate}
-                  label={reading === "asof" ? t("goToInstant") : undefined}
+                  // "À un instant": choose one when none is set, MODIFY it once a date
+                  // is selected (a stale "Aller à un instant" reads wrong then).
+                  label={
+                    reading === "asof"
+                      ? hasInstant
+                        ? t("changeInstant")
+                        : t("goToInstant")
+                      : undefined
+                  }
                 />
                 {/* Transition to PROUVER · État à date — only with an instant chosen
                     (a point-in-time reconstruction, not a replay). */}

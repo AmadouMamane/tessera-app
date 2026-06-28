@@ -219,7 +219,7 @@
       "descHistorique": "Evolution over a period",
       "asofAt": "State at:",
       "asofBanner": "You are viewing the state at {time}. Actions still apply to the present.",
-      "openInProofs": "Open in Prove · State at date",
+      "openInProofs": "Open in PROVE · State at date",
       "agentsObserved": "{n} agents observed",
       "lastUpdate": "Last update",
       "viewingAt": "Viewing:",
@@ -269,7 +269,9 @@
       "observationWindow": "Observation window",
       "goToInstant": "Go to a point in time",
       "periodState": "Over the period",
-      "selectedEvent": "Selected event"
+      "selectedEvent": "Selected event",
+      "selectedInstant": "Selected instant",
+      "changeInstant": "Change the instant"
     },
     "kpi": {
       "quality": "Quality score (SLO)",

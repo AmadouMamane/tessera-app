@@ -219,7 +219,7 @@
       "descHistorique": "Entwicklung über einen Zeitraum",
       "asofAt": "Zustand am:",
       "asofBanner": "Sie sehen den Zustand am {time}. Aktionen wirken weiterhin auf die Gegenwart.",
-      "openInProofs": "In Nachweisen öffnen · Zustand zum Datum",
+      "openInProofs": "In NACHWEISEN öffnen · Zustand zum Datum",
       "agentsObserved": "{n} Agenten beobachtet",
       "lastUpdate": "Letzte Aktualisierung",
       "viewingAt": "Ansicht:",
@@ -269,7 +269,9 @@
       "observationWindow": "Beobachtungsfenster",
       "goToInstant": "Zu einem Zeitpunkt springen",
       "periodState": "Im Zeitraum",
-      "selectedEvent": "Ausgewähltes Ereignis"
+      "selectedEvent": "Ausgewähltes Ereignis",
+      "selectedInstant": "Ausgewählter Zeitpunkt",
+      "changeInstant": "Zeitpunkt ändern"
     },
     "kpi": {
       "quality": "Qualitäts-Score (Service-Ziel)",

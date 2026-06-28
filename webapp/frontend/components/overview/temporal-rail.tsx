@@ -590,6 +590,28 @@ export function TemporalRail({
           <span className="absolute left-1/2 top-1.5 h-3 w-px -translate-x-1/2 bg-gold-400" />
           <span className="absolute left-1/2 top-[-1px] h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-gold-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]" />
         </div>
+        {/* The active instant T, labelled AT the playhead so it is immediately
+            obvious which marker is selected (not just a bare tick on the right).
+            Edge-aware: anchored right when T sits in the last third so the pill
+            never overflows the track. */}
+        {selectedAt != null ? (
+          <span
+            title={t("selectedInstant")}
+            className="pointer-events-none absolute top-7 z-10 flex flex-col whitespace-nowrap leading-tight"
+            style={
+              handlePos > 65
+                ? { right: `${100 - handlePos}%` }
+                : { left: `${handlePos}%`, transform: "translateX(-50%)" }
+            }
+          >
+            <span className="text-[0.55rem] font-medium uppercase tracking-wide text-gold-400/80">
+              {t("selectedInstant")}
+            </span>
+            <span className="tabular-nums text-[0.62rem] font-semibold text-gold-300">
+              {fmtInstant(currentT)}
+            </span>
+          </span>
+        ) : null}
         {selectedAt == null && !awaitingInstant ? (
           // Pinned flush to the right edge (not centred at 96%) so it never
           // overlaps the rightmost event/data-start label. Hidden while awaiting an
