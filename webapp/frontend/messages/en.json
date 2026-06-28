@@ -262,7 +262,13 @@
       "baselineNow": "present",
       "atT": "as of T",
       "liveSignal": "live",
-      "asOfEvidence": "View as of {time}"
+      "asOfEvidence": "View as of {time}",
+      "reasonSelectInstant": "Select a point in time to compare",
+      "eventPrev": "Previous event",
+      "eventNext": "Next event",
+      "observationWindow": "Observation window",
+      "goToInstant": "Go to a point in time",
+      "periodState": "Over the period"
     },
     "kpi": {
       "quality": "Quality score (SLO)",
@@ -5004,7 +5010,7 @@
     "scopeClear": "All sources"
   },
   "agentScope": {
-    "label": "Agent filter:",
+    "label": "Agents:",
     "all": "All agents",
     "hint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher.",
     "breakdownTitle": "Per-agent view",

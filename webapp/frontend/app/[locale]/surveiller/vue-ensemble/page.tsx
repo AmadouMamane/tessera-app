@@ -24,6 +24,8 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
   const t = await getTranslations({ locale, namespace: "overview" });
   const ts = await getTranslations({ locale, namespace: "agentScope" });
 
+  const ta = await getTranslations({ locale, namespace: "overview.actions" });
+
   const scope = readAgentScope(await searchParams);
   const fleet = await loadFleet();
 
@@ -31,10 +33,19 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
     <AppShell
       title={t("title")}
       description={t("subtitle")}
-      // Période, le filtre Agent et les exports vivent désormais dans le
-      // SignalCommandBar (SR-01) en tête de page — un seul foyer temporel, pas de
-      // doublon dans le header (registre §8). Le header ne garde que le contexte
-      // de déploiement (read-only) + chrome global.
+      // Période et le filtre Agent vivent dans le SignalCommandBar (SR-01) en tête
+      // de page — un seul foyer temporel (registre §8). Les actions de SORTIE
+      // (Exporter rapport / Générer le dossier de preuves) sont des actions de PAGE,
+      // alignées avec le header, distinctes du foyer temporel (registre §2).
+      topbarActions={[
+        { label: ta("exportReport"), icon: "download", variant: "outline", action: "export" },
+        {
+          label: ta("generateEvidencePack"),
+          icon: "evidence",
+          variant: "accent",
+          action: "evidence",
+        },
+      ]}
     >
       {/* The temporal command bar (SR-01) is the FIRST line of the page; the lead
           content — breached signal + per-agent breakdown — follows it (rendered as

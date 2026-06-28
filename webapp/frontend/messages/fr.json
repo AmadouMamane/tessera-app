@@ -262,7 +262,13 @@
       "baselineNow": "présent",
       "atT": "à T",
       "liveSignal": "live",
-      "asOfEvidence": "Vue relue à {time}"
+      "asOfEvidence": "Vue relue à {time}",
+      "reasonSelectInstant": "Sélectionnez un instant pour comparer",
+      "eventPrev": "Événement précédent",
+      "eventNext": "Événement suivant",
+      "observationWindow": "Fenêtre d’observation",
+      "goToInstant": "Aller à un instant",
+      "periodState": "Sur la période"
     },
     "kpi": {
       "quality": "Score qualité (objectif de service)",
@@ -5004,7 +5010,7 @@
     "scopeClear": "Toutes les sources"
   },
   "agentScope": {
-    "label": "Filtre agent :",
+    "label": "Agents :",
     "all": "Tous les agents",
     "hint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT.",
     "breakdownTitle": "Vue par agent",

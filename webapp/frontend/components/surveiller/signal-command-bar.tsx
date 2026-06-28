@@ -10,10 +10,7 @@ import {
   ChevronUp,
   Clock3,
   Crosshair,
-  Download,
-  FileCheck2,
   History,
-  RotateCcw,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -38,7 +35,6 @@ import { AGENT_SCOPE_PARAM, isScopedToAgent, parseAgentScope } from "@/lib/agent
 import { fetchFleet } from "@/lib/api/client";
 import type { TimelineReport } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
-import { exportSnapshot } from "@/lib/evidence-export";
 
 type Temporal = ReturnType<typeof useTemporalState>;
 type Reading = Temporal["reading"];
@@ -157,7 +153,6 @@ export function SignalCommandBar({
   liveStatus: string;
 }) {
   const t = useTranslations("overview.time");
-  const ta = useTranslations("overview.actions");
   // Reading, panel-open and the comparison lens all live in the shared temporal
   // state (URL-backed source of truth) — not private to the bar.
   const { reading, compare, setCompare, expanded, setExpanded } = temporal;
@@ -171,15 +166,21 @@ export function SignalCommandBar({
 
   const targetAvail = sloTarget != null;
   const nowAvail = hasPresentScore;
+  // "À un instant" needs a chosen day before any comparison is meaningful — there
+  // is no instant to compare against the present yet (registre §12). Until then the
+  // "Comparer à" control is shown disabled with a reason, never a phantom default.
+  const hasInstant = reading === "asof" ? temporal.asOf != null : true;
   const compareOptions = buildCompareOptions(reading, { target: targetAvail, now: nowAvail }, t);
   // Keep the active comparison honest: if it is hidden for this reading or not
   // computable, fall back to the reading's default (never a phantom comparison).
+  // Skipped while awaiting an instant (the control is disabled, value irrelevant).
   useEffect(() => {
+    if (reading === "asof" && !hasInstant) return;
     const visible = COMPARE_ORDER[reading].includes(compare);
     if (!visible || !compareEnabled(reading, compare, { target: targetAvail, now: nowAvail })) {
       setCompare(defaultCompare(reading, { target: targetAvail, now: nowAvail }));
     }
-  }, [reading, targetAvail, nowAvail, compare, setCompare]);
+  }, [reading, hasInstant, targetAvail, nowAvail, compare, setCompare]);
 
   const fleet = useQuery({
     queryKey: ["fleet-scope-filter"],
@@ -334,48 +335,39 @@ export function SignalCommandBar({
         {/* Agents — global scope filter (URL-driven, self-contained chip). */}
         <AgentScopeFilter />
         {/* Comparer à — same level as Lecture/Période/Agents, in ALL readings; only
-            computable references are selectable, the rest are disabled with a reason. */}
-        <SelectChip
-          icon={ArrowLeftRight}
-          label={t("compareTo")}
-          value={compare}
-          onChange={setCompare}
-          options={compareOptions}
-        />
-        {/* Déplier / Replier. */}
+            computable references are selectable, the rest are disabled with a reason.
+            "À un instant" before a day is picked: nothing to compare yet, so the
+            control is disabled with a reason — never a phantom default (registre §12). */}
+        {reading === "asof" && !hasInstant ? (
+          <DisabledChip
+            icon={ArrowLeftRight}
+            label={t("compareTo")}
+            value="—"
+            title={t("reasonSelectInstant")}
+          />
+        ) : (
+          <SelectChip
+            icon={ArrowLeftRight}
+            label={t("compareTo")}
+            value={compare}
+            onChange={setCompare}
+            options={compareOptions}
+          />
+        )}
+        {/* Déplier / Replier — pushed to the right; the page-level Export / Preuves
+            actions now live in the page header (registre §2), not in this temporal
+            focus, so the bar holds ONLY temporal controls. */}
         <Button
           type="button"
           variant="outline"
           size="sm"
           aria-expanded={expanded}
-          className="h-9 gap-1.5"
+          className="ml-auto h-9 gap-1.5"
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           {expanded ? t("collapse") : t("expand")}
         </Button>
-        {/* Export — scoped to the current (période, asOf). */}
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 gap-2"
-            onClick={() => exportSnapshot("export")}
-          >
-            <Download className="h-4 w-4" />
-            {ta("exportReport")}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 gap-2"
-            onClick={() => exportSnapshot("evidence")}
-          >
-            <FileCheck2 className="h-4 w-4" />
-            {ta("generateEvidencePack")}
-          </Button>
-        </div>
       </div>
 
       {/* Contextual micro-line — describes ONLY the active reading (no permanent
@@ -390,7 +382,10 @@ export function SignalCommandBar({
             </span>
           </span>
         ))}
-        {reading !== "live" ? (
+        {/* The SINGLE "Revenir au direct" (registre §11) — here in the bar, never
+            duplicated in the rail. Absent in Maintenant, and absent in "À un instant"
+            until a day is picked (nothing to return from yet). */}
+        {reading === "historique" || (reading === "asof" && hasInstant) ? (
           <button
             type="button"
             className="ml-auto whitespace-nowrap font-medium text-blue-300 hover:underline"
@@ -419,12 +414,41 @@ export function SignalCommandBar({
               mismatch. Gating on `expanded` keeps the grid-rows reveal AND a clean SSR. */}
           {expanded ? (
             <div className="border-t border-[var(--tessera-border)]/60 px-3 pb-3 pt-2">
-              <h3 className="mb-1 font-sans text-sm font-semibold text-[var(--tessera-text)]">
-                {t("navTitle")}
-              </h3>
+              {/* Contextual header (registre §3) — NOT the old technical title
+                  "Navigation temporelle des signaux", and no permanent line listing
+                  every mode (those live in the Lecture menu). A discreet eyebrow for
+                  accessibility, then the reading badge + the short title of the
+                  active state; "À un instant" with a date adds the present-actions
+                  banner. */}
+              <header className="mb-2" aria-label={t("observationWindow")}>
+                <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                  {t("observationWindow")}
+                </p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                  <span className="flex shrink-0 items-center gap-1.5 rounded-md border border-gold-500/40 bg-gold-500/10 px-2 py-0.5 text-[0.7rem] font-semibold text-gold-200">
+                    <ReadingIcon className="h-3 w-3 text-gold-400" />
+                    {t(
+                      reading === "live"
+                        ? "modeLive"
+                        : reading === "asof"
+                          ? "modeAsof"
+                          : "modeHistory",
+                    )}
+                  </span>
+                  <h3 className="min-w-0 truncate font-sans text-sm font-semibold text-[var(--tessera-text)]">
+                    {reading === "live" ? t("realtime") : viewLabel}
+                  </h3>
+                </div>
+                {reading === "asof" && asOfText ? (
+                  <p className="mt-1 text-[0.7rem] text-[var(--tessera-text-muted)]">
+                    {t("asofBanner", { time: asOfText })}
+                  </p>
+                ) : null}
+              </header>
               <TemporalRail
                 embedded
                 mode={temporal.mode}
+                reading={reading}
                 liveStatus={liveStatus}
                 timeline={timeline}
                 sloTarget={sloTarget}
@@ -438,23 +462,18 @@ export function SignalCommandBar({
                 viewLabel={viewLabel}
               />
               <div className="mt-2 flex flex-wrap items-center gap-2">
+                {/* "Aller à un instant" (À un instant) / "Aller à une date"
+                    (Historique) — the coarse jump that anchors the window. The
+                    single "Revenir au direct" lives in the bar's micro-line above
+                    (registre §11), so it is NOT repeated here. */}
                 <GoToDateButton
                   selectedDate={asOfMs ? new Date(asOfMs) : new Date()}
                   onPick={temporal.pickDate}
                   minDate={minPickDate}
+                  label={reading === "asof" ? t("goToInstant") : undefined}
                 />
-                {reading !== "live" ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-9 gap-2"
-                    onClick={() => temporal.setReading("live")}
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    {t("exitReplay")}
-                  </Button>
-                ) : null}
+                {/* Transition to PROUVER · État à date — only with an instant chosen
+                    (a point-in-time reconstruction, not a replay). */}
                 {temporal.asOf ? (
                   <Link
                     href={`/prouver/etat-a-date?asof=${encodeURIComponent(temporal.asOf)}`}
@@ -593,6 +612,34 @@ function SelectChip({
         ))}
       </select>
     </label>
+  );
+}
+
+/**
+ * A non-interactive chip mirroring SelectChip's shape, for a control that is
+ * disabled with an honest reason (e.g. "Comparer à" before an instant is chosen).
+ * The reason is exposed via the title so the value stays a plain "—".
+ */
+function DisabledChip({
+  icon: Icon,
+  label,
+  value,
+  title,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  title: string;
+}) {
+  return (
+    <span
+      title={title}
+      className="flex h-9 shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] opacity-60"
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+      {label}
+      <span className="font-semibold text-[var(--tessera-text-muted)]">{value}</span>
+    </span>
   );
 }
 

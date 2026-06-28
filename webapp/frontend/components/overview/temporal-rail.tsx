@@ -9,11 +9,7 @@ import {
   Clock3,
   Flag,
   History,
-  Pause,
-  PlayCircle,
   RotateCcw,
-  SkipBack,
-  SkipForward,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
@@ -94,6 +90,7 @@ export const SR_01_CODE = "SR-01" as const;
 
 export function TemporalRail({
   mode,
+  reading,
   liveStatus,
   timeline,
   sloTarget,
@@ -110,6 +107,13 @@ export function TemporalRail({
   viewLabel,
 }: {
   mode: "live" | "history";
+  /**
+   * The human reading (registre §4): "asof" needs an instant before any state can
+   * be reconstructed, so the rail must know it to render the honest empty state
+   * ("Instant non sélectionné") instead of a live/score panel. Optional — the
+   * standalone rail (other SURVEILLER pages) omits it and keeps the two-valued mode.
+   */
+  reading?: Reading;
   liveStatus: string;
   timeline?: TimelineReport;
   sloTarget?: number;
@@ -160,7 +164,6 @@ export function TemporalRail({
   const setCompare = onCompareChange ?? setCompareLocal;
   // T being viewed lives at page level; this is the rail's write handle into it.
   const setSelectedAt = onSelectedAtChange;
-  const [playing, setPlaying] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   // Honest lower bound for the calendar: days before the earliest real data are
   // disabled (picking them would land on an empty window). Only fetched/used when
@@ -246,21 +249,29 @@ export function TemporalRail({
       return !best || d < best.d ? { ev, d } : best;
     }, null)?.ev ?? null;
 
-  // Playback: sweep T across the window; reaching the end returns to live.
-  useEffect(() => {
-    if (!playing || mode !== "history") return;
-    const id = window.setInterval(() => {
-      setSelectedAt((cur) => {
-        const from = cur ?? dataStart;
-        const nextT = from + span / 90;
-        return nextT >= end ? null : nextT;
-      });
-    }, 60);
-    return () => window.clearInterval(id);
-  }, [playing, mode, dataStart, span, end, setSelectedAt]);
-  useEffect(() => {
-    if (selectedAt == null && playing) setPlaying(false);
-  }, [selectedAt, playing]);
+  // "À un instant" before a day is picked: signals can't be reconstructed yet, so
+  // the rail shows an honest empty state (no score, no computed state, no PROUVER
+  // link, no live framing) — only the prompt to choose an instant. Derived, never
+  // a hidden flag. When `reading` is omitted (standalone rail) this stays false.
+  const awaitingInstant = reading === "asof" && selectedAt == null && !anchored;
+  // A genuine LIVE snapshot (green "État live") only when the present is what's on
+  // screen: no instant scrubbed AND the reading is Maintenant. Historique without a
+  // scrub reads the current end-of-period state under a neutral label (registre §9).
+  const liveSnapshot = selectedAt == null && mode === "live";
+
+  // Event-level navigation (signals, not a video player): jump the cursor to the
+  // real event immediately before / after the focused instant. This replaces the
+  // cassette transport — SR-01 navigates signals, it never replays an execution.
+  const eventTimes = events
+    .map((e) => new Date(e.at).getTime())
+    .filter((v) => Number.isFinite(v))
+    .sort((a, b) => a - b);
+  const prevEventT = eventTimes.filter((v) => v < currentT - 1000).pop() ?? null;
+  const nextEventT = eventTimes.find((v) => v > currentT + 1000) ?? null;
+  function seekToEvent(at: number | null) {
+    if (at == null) return;
+    setSelectedAt(at >= end - 1000 ? null : at);
+  }
 
   // Compact Live rail (default): real-time badge, period, last update, Relire à T.
   // Skipped when embedded in the command bar (which renders only the panel body).
@@ -359,20 +370,25 @@ export function TemporalRail({
             </select>
           </label>
         ) : null}
-        <span
-          className={cn(
-            "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs",
-            selectedAt == null
-              ? "border-[var(--border)] bg-[var(--muted)]/30 text-[var(--muted-foreground)]"
-              : "border-gold-500/50 bg-gold-500/10 text-gold-200",
-          )}
-        >
-          <Flag className="h-3.5 w-3.5 shrink-0 text-gold-400" />
-          {t("viewingAt")}
-          <b className="font-semibold tabular-nums text-[var(--foreground)]">
-            {viewLabel ?? (selectedAt == null ? t("nowLive") : fmtStamp(currentT))}
-          </b>
-        </span>
+        {/* "Vue :" badge — only on the standalone rail; embedded, the command bar's
+            contextual header carries the reading + short title, so repeating it here
+            would duplicate "Lecture"/"Vue" (registre §14). */}
+        {embedded ? null : (
+          <span
+            className={cn(
+              "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs",
+              selectedAt == null
+                ? "border-[var(--border)] bg-[var(--muted)]/30 text-[var(--muted-foreground)]"
+                : "border-gold-500/50 bg-gold-500/10 text-gold-200",
+            )}
+          >
+            <Flag className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+            {t("viewingAt")}
+            <b className="font-semibold tabular-nums text-[var(--foreground)]">
+              {viewLabel ?? (selectedAt == null ? t("nowLive") : fmtStamp(currentT))}
+            </b>
+          </span>
+        )}
         {embedded ? null : (
           <label className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 text-xs text-[var(--muted-foreground)]">
             <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-gold-400" />
@@ -394,62 +410,29 @@ export function TemporalRail({
             </select>
           </label>
         )}
-        <span className="ml-auto flex h-9 shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-2 text-[var(--muted-foreground)]">
-          <PlaybackButton
-            label={t("first")}
-            onClick={() => {
-              setPlaying(false);
-              setSelectedAt(viewStart);
-            }}
-          >
-            <SkipBack className="h-3.5 w-3.5" />
-          </PlaybackButton>
-          <PlaybackButton
-            label={t("prev")}
-            onClick={() => {
-              setPlaying(false);
-              step(-1);
-            }}
+        {/* Event navigation — jump to the previous / next real signal event. This
+            is signal navigation, NOT a video player: no start/play/end transport
+            (that read as execution replay, which belongs to XT-01 / AGIR). Markers
+            on the track stay clickable for direct seeks. */}
+        <span className="ml-auto flex h-9 shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-1 text-[var(--muted-foreground)]">
+          <EventNavButton
+            label={t("eventPrev")}
+            disabled={prevEventT == null}
+            onClick={() => seekToEvent(prevEventT)}
           >
             <ChevronLeft className="h-4 w-4" />
-          </PlaybackButton>
-          <PlaybackButton
-            label={playing ? t("pause") : t("play")}
-            active={playing}
-            onClick={() => {
-              if (selectedAt == null) setSelectedAt(dataStart);
-              setPlaying((p) => !p);
-            }}
-          >
-            {playing ? (
-              <Pause className="h-4 w-4 text-gold-400" />
-            ) : (
-              <PlayCircle className="h-4 w-4 text-gold-400" />
-            )}
-          </PlaybackButton>
-          <PlaybackButton
-            label={t("next")}
-            onClick={() => {
-              setPlaying(false);
-              step(1);
-            }}
+          </EventNavButton>
+          <EventNavButton
+            label={t("eventNext")}
+            disabled={nextEventT == null}
+            onClick={() => seekToEvent(nextEventT)}
           >
             <ChevronRight className="h-4 w-4" />
-          </PlaybackButton>
-          <PlaybackButton
-            label={anchored ? t("latest") : t("now")}
-            onClick={() => {
-              setPlaying(false);
-              setSelectedAt(null);
-            }}
-          >
-            <SkipForward className="h-3.5 w-3.5" />
-          </PlaybackButton>
+          </EventNavButton>
         </span>
-        {/* "Aller à une date" sits next to the transport: it's the COARSE jump
-            (moves the window END to an absolute past day, today/future = live),
-            sibling to the cassette's fine scrub and to its "now" absolute jump.
-            Use it to reach the right week, then scrub/play within. Only when wired. */}
+        {/* "Aller à une date" — the COARSE jump (moves the window END to an absolute
+            past day, today/future = live). Only on the standalone rail when wired;
+            embedded, the command bar renders it below the panel. */}
         {!embedded && onPickDate ? (
           <GoToDateButton
             selectedDate={new Date(currentT)}
@@ -463,10 +446,7 @@ export function TemporalRail({
             variant="outline"
             size="sm"
             className="h-9"
-            onClick={() => {
-              setPlaying(false);
-              onModeChange("live");
-            }}
+            onClick={() => onModeChange("live")}
           >
             <RotateCcw className="h-4 w-4" />
             {t("exitReplay")}
@@ -486,7 +466,6 @@ export function TemporalRail({
         aria-valuetext={selectedAt == null ? t("nowLive") : new Date(currentT).toLocaleString()}
         className="relative mt-6 h-14 cursor-pointer select-none"
         onPointerDown={(e) => {
-          setPlaying(false);
           trackRef.current?.setPointerCapture(e.pointerId);
           seekToClientX(e.clientX);
         }}
@@ -510,12 +489,11 @@ export function TemporalRail({
             variant="baseline"
           />
         ) : null}
-        {/* event markers (click to seek): quality scores are labelled, guard
-            noise stays a faint tick with a tooltip. */}
+        {/* event markers (click to seek): NO inline labels — they overlapped when
+            events clustered (registre §15). Every event is a coloured tick with a
+            full tooltip on hover; the default-visible labels stay just "début
+            données" / the focused instant (playhead) / "maintenant". */}
         {events.map((ev, i) => {
-          // Only annotate lineage changes (deploy / judge) — scores and guard
-          // noise stay as coloured ticks so labels never overlap.
-          const annotated = ev.kind === "model_change" || ev.kind === "judge_change";
           // Guard denials carry no useful detail (target is always "user_input").
           const detail = ev.kind === "guard_denial" ? "" : ev.detail;
           return (
@@ -523,7 +501,7 @@ export function TemporalRail({
               key={`${ev.at}-${ev.kind}-${i}`}
               pos={railPos(ev.at, viewStart, span)}
               tone={ev.tone as OverviewTone}
-              label={annotated ? ev.label : ""}
+              label=""
               dim={ev.kind === "guard_denial"}
               title={`${fmtStamp(new Date(ev.at).getTime())} · ${ev.label}${detail ? ` · ${detail}` : ""}`}
               onSeek={() => setSelectedAt(new Date(ev.at).getTime())}
@@ -540,9 +518,10 @@ export function TemporalRail({
           <span className="absolute left-1/2 top-1.5 h-3 w-px -translate-x-1/2 bg-gold-400" />
           <span className="absolute left-1/2 top-[-1px] h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-gold-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]" />
         </div>
-        {selectedAt == null ? (
+        {selectedAt == null && !awaitingInstant ? (
           // Pinned flush to the right edge (not centred at 96%) so it never
-          // overlaps the rightmost event/data-start label.
+          // overlaps the rightmost event/data-start label. Hidden while awaiting an
+          // instant: there's no "now" framing until a point in time is chosen.
           <span className="pointer-events-none absolute top-7 right-0 whitespace-nowrap text-[0.65rem] font-medium text-gold-400">
             {anchored ? t("latest") : t("now")}
           </span>
@@ -578,59 +557,73 @@ export function TemporalRail({
         </span>
       </div>
 
-      {/* Detail panel — always shown in replay: "live state" at the present,
-          "state at the replayed instant" when paused. Reflects the focused
-          event so stepping prev/next gives clear feedback even when ticks cluster. */}
-      <div
-        className={cn(
-          "mt-2 flex items-center gap-3 rounded-md border px-3 py-2 text-xs",
-          selectedAt == null
-            ? "border-emerald-500/30 bg-emerald-500/5"
-            : "border-gold-500/30 bg-gold-500/5",
-        )}
-      >
-        <Badge tone={selectedAt == null ? "success" : "gold"} className="shrink-0">
-          {selectedAt == null ? t("liveState") : t("relitAtBadge")}
-        </Badge>
-        {/* The focused-event label takes the flexible middle and truncates, so a
-            varying count (e.g. "Garde — 22 refus") never shifts the badge/button
-            on the right. */}
-        {nearest ? (
-          <span className="flex min-w-0 flex-1 items-center gap-2 text-[var(--muted-foreground)]">
-            <span
-              className={cn("h-2 w-2 shrink-0 rounded-full", dotBg[nearest.tone as OverviewTone])}
-            />
-            <span className="truncate">
-              {nearest.label}
-              {nearest.detail && nearest.kind !== "guard_denial" ? (
-                <span className="opacity-70"> · {nearest.detail}</span>
-              ) : null}
-            </span>
-          </span>
-        ) : (
-          <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
-            {t("noEventNear")}
-          </span>
-        )}
-        {baselineDelta != null && baseline != null ? (
-          <Badge tone={baselineDelta >= 0 ? "success" : "danger"} className="shrink-0 tabular-nums">
-            {baselineDelta >= 0 ? "+" : ""}
-            {baselineDelta.toFixed(2)} {t("vsBaseline")} {baseline.toFixed(2)}
-          </Badge>
-        ) : null}
-        {selectedAt != null ? (
-          <button
-            type="button"
-            className="shrink-0 whitespace-nowrap text-blue-300 hover:underline"
-            onClick={() => {
-              setPlaying(false);
-              setSelectedAt(null);
-            }}
+      {/* Detail panel. "À un instant" before a day is picked shows an HONEST empty
+          state — no score, no computed state, no live framing (registre §6); only
+          the prompt to choose an instant. Otherwise: "live state" at the present,
+          "state at the chosen instant" when scrubbing, reflecting the focused event.
+          The single "Revenir au direct" lives in the command bar (registre §11), so
+          this panel no longer carries its own back-to-now link. */}
+      {awaitingInstant ? (
+        <div className="mt-2 flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--muted)]/20 px-3 py-2 text-xs text-[var(--muted-foreground)]">
+          <Flag className="h-3.5 w-3.5 shrink-0 text-gold-400/70" />
+          <span className="min-w-0 truncate">{t("microPickInstant")}</span>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "mt-2 flex items-center gap-3 rounded-md border px-3 py-2 text-xs",
+            selectedAt != null
+              ? "border-gold-500/30 bg-gold-500/5"
+              : liveSnapshot
+                ? "border-emerald-500/30 bg-emerald-500/5"
+                : "border-[var(--border)] bg-[var(--muted)]/20",
+          )}
+        >
+          {/* "État live" only in Maintenant (registre §8/§9) — never in Historique,
+              where the unscrubbed panel reads the current end-of-period state under a
+              neutral "Sur la période" label. A chosen instant always reads "État à
+              l'instant". */}
+          <Badge
+            tone={selectedAt != null ? "gold" : liveSnapshot ? "success" : "neutral"}
+            className="shrink-0"
           >
-            {anchored ? t("latest") : t("backToNow")} →
-          </button>
-        ) : null}
-      </div>
+            {selectedAt != null
+              ? t("relitAtBadge")
+              : liveSnapshot
+                ? t("liveState")
+                : t("periodState")}
+          </Badge>
+          {/* The focused-event label takes the flexible middle and truncates, so a
+              varying count (e.g. "Garde — 22 refus") never shifts the badge on the
+              right. */}
+          {nearest ? (
+            <span className="flex min-w-0 flex-1 items-center gap-2 text-[var(--muted-foreground)]">
+              <span
+                className={cn("h-2 w-2 shrink-0 rounded-full", dotBg[nearest.tone as OverviewTone])}
+              />
+              <span className="truncate">
+                {nearest.label}
+                {nearest.detail && nearest.kind !== "guard_denial" ? (
+                  <span className="opacity-70"> · {nearest.detail}</span>
+                ) : null}
+              </span>
+            </span>
+          ) : (
+            <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
+              {t("noEventNear")}
+            </span>
+          )}
+          {baselineDelta != null && baseline != null ? (
+            <Badge
+              tone={baselineDelta >= 0 ? "success" : "danger"}
+              className="shrink-0 tabular-nums"
+            >
+              {baselineDelta >= 0 ? "+" : ""}
+              {baselineDelta.toFixed(2)} {t("vsBaseline")} {baseline.toFixed(2)}
+            </Badge>
+          ) : null}
+        </div>
+      )}
     </section>
   );
 }
@@ -645,11 +638,14 @@ export function GoToDateButton({
   selectedDate,
   onPick,
   minDate,
+  label,
 }: {
   selectedDate: Date;
   onPick: (anchorEnd: string | null) => void;
   /** Earliest day with real data; earlier days render disabled. */
   minDate?: Date;
+  /** Trigger label override (e.g. "Aller à un instant" in À-un-instant reading). */
+  label?: string;
 }) {
   const t = useTranslations("overview.time");
   const ref = useRef<HTMLDivElement>(null);
@@ -682,7 +678,7 @@ export function GoToDateButton({
         onClick={() => setOpen((o) => !o)}
       >
         <CalendarDays className="h-4 w-4" />
-        {t("goToDate")}
+        {label ?? t("goToDate")}
       </Button>
       {open ? (
         <CalendarPopover
@@ -710,28 +706,26 @@ export function GoToDateButton({
   );
 }
 
-function PlaybackButton({
+/** A single event-navigation button (previous / next signal event). */
+function EventNavButton({
   label,
   onClick,
-  active,
+  disabled,
   children,
 }: {
   label: string;
   onClick: () => void;
-  active?: boolean;
+  disabled?: boolean;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
-      aria-pressed={active}
       title={label}
+      disabled={disabled}
       onClick={onClick}
-      className={cn(
-        "flex h-7 w-7 items-center justify-center rounded text-[var(--foreground)] transition-all hover:bg-[var(--muted)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50",
-        active && "bg-gold-500/20 text-gold-300",
-      )}
+      className="flex h-7 w-7 items-center justify-center rounded text-[var(--foreground)] transition-all hover:bg-[var(--muted)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
     >
       {children}
     </button>
