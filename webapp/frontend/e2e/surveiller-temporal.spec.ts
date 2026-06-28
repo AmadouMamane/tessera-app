@@ -120,13 +120,13 @@ test("page export actions sit in the header, no cheap divider, outside the tempo
     (el) => getComputedStyle(el.closest("div") as HTMLElement).borderTopWidth,
   );
   expect(borderTop).toBe("0px");
-  // The header itself has no full-width bottom border (§1): structure comes from a
-  // short premium accent under the title block instead.
+  // The header keeps its single full-width bottom line (the continuous rule that
+  // runs across to the logo) — it's the actions ROW that must carry no extra divider.
   const headerBorderBottom = await page.evaluate(() => {
     const h = document.querySelector("header");
     return h ? getComputedStyle(h).borderBottomWidth : "no-header";
   });
-  expect(headerBorderBottom).toBe("0px");
+  expect(headerBorderBottom).not.toBe("0px");
 });
 
 test("À un instant with a date: calm rail header, PROUVER link, one return", async ({ page }) => {
