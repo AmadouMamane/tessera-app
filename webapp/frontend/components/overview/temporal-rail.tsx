@@ -9,7 +9,11 @@ import {
   Clock3,
   Flag,
   History,
+  Pause,
+  PlayCircle,
   RotateCcw,
+  SkipBack,
+  SkipForward,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
@@ -55,6 +59,20 @@ export function fmtStamp(ms: number): string {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+    hour12: false,
+  });
+}
+
+// Minute-precision instant (full year), for the selected-event "État au {T}"
+// badge — a focused instant must always carry a clear, readable date/time
+// (registre §4: never a metric without a clear instant).
+function fmtInstant(ms: number): string {
+  return new Date(ms).toLocaleString(undefined, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: false,
   });
 }
@@ -105,6 +123,7 @@ export function TemporalRail({
   compare: compareProp,
   onCompareChange,
   viewLabel,
+  transport = "signal",
 }: {
   mode: "live" | "history";
   /**
@@ -157,8 +176,21 @@ export function TemporalRail({
    * the badge never duplicates "Lecture" nor shows a single instant in Historique.
    */
   viewLabel?: string;
+  /**
+   * Which transport the rail renders (registre des rails temporels):
+   * - "signal" (default, **SR-01** / SURVEILLER + monitoring) — event-level
+   *   navigation only (Événement précédent/suivant); NO video-player cassette,
+   *   no replay — it scrubs persisted signals as-of-T.
+   * - "execution" (**XT-01** home: AGIR / Replay) — the legitimate replay cassette
+   *   (début · précédent · play/pause · suivant · fin) over the run's steps. This
+   *   stays OFF every SURVEILLER surface; only AGIR/Replay opts in.
+   */
+  transport?: "signal" | "execution";
 }) {
   const t = useTranslations("overview.time");
+  // Playback state — only ever used by the execution (XT-01) transport; the signal
+  // transport never plays (registre §replay = AGIR only).
+  const [playing, setPlaying] = useState(false);
   const [compareLocal, setCompareLocal] = useState("target");
   const compare = compareProp ?? compareLocal;
   const setCompare = onCompareChange ?? setCompareLocal;
@@ -272,6 +304,23 @@ export function TemporalRail({
     if (at == null) return;
     setSelectedAt(at >= end - 1000 ? null : at);
   }
+
+  // Execution-transport playback (XT-01 only): sweep T across the run; reaching the
+  // end stops at the latest. The signal transport never plays — this is inert there.
+  useEffect(() => {
+    if (transport !== "execution" || !playing || mode !== "history") return;
+    const id = window.setInterval(() => {
+      setSelectedAt((cur) => {
+        const from = cur ?? dataStart;
+        const nextT = from + span / 90;
+        return nextT >= end ? null : nextT;
+      });
+    }, 60);
+    return () => window.clearInterval(id);
+  }, [transport, playing, mode, dataStart, span, end, setSelectedAt]);
+  useEffect(() => {
+    if (selectedAt == null && playing) setPlaying(false);
+  }, [selectedAt, playing]);
 
   // Compact Live rail (default): real-time badge, period, last update, Relire à T.
   // Skipped when embedded in the command bar (which renders only the panel body).
@@ -410,26 +459,45 @@ export function TemporalRail({
             </select>
           </label>
         )}
-        {/* Event navigation — jump to the previous / next real signal event. This
-            is signal navigation, NOT a video player: no start/play/end transport
-            (that read as execution replay, which belongs to XT-01 / AGIR). Markers
-            on the track stay clickable for direct seeks. */}
-        <span className="ml-auto flex h-9 shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-1 text-[var(--muted-foreground)]">
-          <EventNavButton
-            label={t("eventPrev")}
-            disabled={prevEventT == null}
-            onClick={() => seekToEvent(prevEventT)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </EventNavButton>
-          <EventNavButton
-            label={t("eventNext")}
-            disabled={nextEventT == null}
-            onClick={() => seekToEvent(nextEventT)}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </EventNavButton>
-        </span>
+        {/* Transport — two DISTINCT registres, never mixed:
+            · "signal" (SR-01 / SURVEILLER) → event navigation only (no player).
+            · "execution" (XT-01 / AGIR·Replay) → the legitimate replay cassette. */}
+        {transport === "execution" ? (
+          <ExecutionReplayControls
+            t={t}
+            playing={playing}
+            anchored={anchored}
+            atStart={selectedAt == null}
+            onFirst={() => {
+              setPlaying(false);
+              setSelectedAt(viewStart);
+            }}
+            onPrev={() => {
+              setPlaying(false);
+              step(-1);
+            }}
+            onPlayPause={() => {
+              if (selectedAt == null) setSelectedAt(dataStart);
+              setPlaying((p) => !p);
+            }}
+            onNext={() => {
+              setPlaying(false);
+              step(1);
+            }}
+            onLatest={() => {
+              setPlaying(false);
+              setSelectedAt(null);
+            }}
+          />
+        ) : (
+          <SignalEventNavigation
+            t={t}
+            prevDisabled={prevEventT == null}
+            nextDisabled={nextEventT == null}
+            onPrev={() => seekToEvent(prevEventT)}
+            onNext={() => seekToEvent(nextEventT)}
+          />
+        )}
         {/* "Aller à une date" — the COARSE jump (moves the window END to an absolute
             past day, today/future = live). Only on the standalone rail when wired;
             embedded, the command bar renders it below the panel. */}
@@ -446,7 +514,10 @@ export function TemporalRail({
             variant="outline"
             size="sm"
             className="h-9"
-            onClick={() => onModeChange("live")}
+            onClick={() => {
+              setPlaying(false);
+              onModeChange("live");
+            }}
           >
             <RotateCcw className="h-4 w-4" />
             {t("exitReplay")}
@@ -466,6 +537,7 @@ export function TemporalRail({
         aria-valuetext={selectedAt == null ? t("nowLive") : new Date(currentT).toLocaleString()}
         className="relative mt-6 h-14 cursor-pointer select-none"
         onPointerDown={(e) => {
+          setPlaying(false);
           trackRef.current?.setPointerCapture(e.pointerId);
           seekToClientX(e.clientX);
         }}
@@ -579,29 +651,34 @@ export function TemporalRail({
                 : "border-[var(--border)] bg-[var(--muted)]/20",
           )}
         >
-          {/* "État live" only in Maintenant (registre §8/§9) — never in Historique,
-              where the unscrubbed panel reads the current end-of-period state under a
-              neutral "Sur la période" label. A chosen instant always reads "État à
-              l'instant". */}
+          {/* A chosen instant ALWAYS carries its date/time (registre §2/§4): the
+              badge reads "État au {timestamp}", never a bare "État à l'instant" — so
+              "Garde — 22 refus" is never shown without a clear instant. "État live"
+              only in Maintenant (§8/§9); Historique unscrubbed reads the current
+              end-of-period state under the neutral "Sur la période" label. */}
           <Badge
             tone={selectedAt != null ? "gold" : liveSnapshot ? "success" : "neutral"}
-            className="shrink-0"
+            className="shrink-0 tabular-nums"
           >
             {selectedAt != null
-              ? t("relitAtBadge")
+              ? t("microStateAt", { time: fmtInstant(currentT) })
               : liveSnapshot
                 ? t("liveState")
                 : t("periodState")}
           </Badge>
           {/* The focused-event label takes the flexible middle and truncates, so a
               varying count (e.g. "Garde — 22 refus") never shifts the badge on the
-              right. */}
+              right. A scrubbed instant prefixes "Événement sélectionné ·" so the line
+              reads "État au {T} · Événement sélectionné · Garde — 22 refus". */}
           {nearest ? (
             <span className="flex min-w-0 flex-1 items-center gap-2 text-[var(--muted-foreground)]">
               <span
                 className={cn("h-2 w-2 shrink-0 rounded-full", dotBg[nearest.tone as OverviewTone])}
               />
               <span className="truncate">
+                {selectedAt != null ? (
+                  <span className="opacity-70">{t("selectedEvent")} · </span>
+                ) : null}
                 {nearest.label}
                 {nearest.detail && nearest.kind !== "guard_denial" ? (
                   <span className="opacity-70"> · {nearest.detail}</span>
@@ -706,6 +783,98 @@ export function GoToDateButton({
   );
 }
 
+type Translate = ReturnType<typeof useTranslations>;
+
+/**
+ * SR-01 transport — signal **event** navigation (no player). Two buttons that jump
+ * the cursor to the previous / next real signal event; never a video-player
+ * cassette (that is execution replay, XT-01). Used on every SURVEILLER + monitoring
+ * surface.
+ */
+function SignalEventNavigation({
+  t,
+  prevDisabled,
+  nextDisabled,
+  onPrev,
+  onNext,
+}: {
+  t: Translate;
+  prevDisabled: boolean;
+  nextDisabled: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <span className="ml-auto flex h-9 shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-1 text-[var(--muted-foreground)]">
+      <EventNavButton label={t("eventPrev")} disabled={prevDisabled} onClick={onPrev}>
+        <ChevronLeft className="h-4 w-4" />
+      </EventNavButton>
+      <EventNavButton label={t("eventNext")} disabled={nextDisabled} onClick={onNext}>
+        <ChevronRight className="h-4 w-4" />
+      </EventNavButton>
+    </span>
+  );
+}
+
+/**
+ * XT-01 transport — the legitimate execution-replay cassette (début · précédent ·
+ * play/pause · suivant · fin). Distinct from SR-01's event navigation and rendered
+ * ONLY by the execution transport (AGIR / Replay), never on a SURVEILLER surface.
+ */
+function ExecutionReplayControls({
+  t,
+  playing,
+  anchored,
+  atStart,
+  onFirst,
+  onPrev,
+  onPlayPause,
+  onNext,
+  onLatest,
+}: {
+  t: Translate;
+  playing: boolean;
+  anchored: boolean;
+  atStart: boolean;
+  onFirst: () => void;
+  onPrev: () => void;
+  onPlayPause: () => void;
+  onNext: () => void;
+  onLatest: () => void;
+}) {
+  return (
+    <span className="ml-auto flex h-9 shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-2 text-[var(--muted-foreground)]">
+      <TransportButton label={t("first")} onClick={onFirst}>
+        <SkipBack className="h-3.5 w-3.5" />
+      </TransportButton>
+      <TransportButton label={t("prev")} onClick={onPrev}>
+        <ChevronLeft className="h-4 w-4" />
+      </TransportButton>
+      <TransportButton
+        label={playing ? t("pause") : t("play")}
+        active={playing}
+        onClick={onPlayPause}
+      >
+        {playing ? (
+          <Pause className="h-4 w-4 text-gold-400" />
+        ) : (
+          <PlayCircle className="h-4 w-4 text-gold-400" />
+        )}
+      </TransportButton>
+      <TransportButton label={t("next")} onClick={onNext}>
+        <ChevronRight className="h-4 w-4" />
+      </TransportButton>
+      <TransportButton
+        label={anchored ? t("latest") : t("now")}
+        disabled={atStart}
+        onClick={onLatest}
+      >
+        <SkipForward className="h-3.5 w-3.5" />
+      </TransportButton>
+    </span>
+  );
+}
+
 /** A single event-navigation button (previous / next signal event). */
 function EventNavButton({
   label,
@@ -726,6 +895,38 @@ function EventNavButton({
       disabled={disabled}
       onClick={onClick}
       className="flex h-7 w-7 items-center justify-center rounded text-[var(--foreground)] transition-all hover:bg-[var(--muted)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+    >
+      {children}
+    </button>
+  );
+}
+
+/** A single replay-cassette transport button (XT-01). */
+function TransportButton({
+  label,
+  onClick,
+  active,
+  disabled,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={active}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "flex h-7 w-7 items-center justify-center rounded text-[var(--foreground)] transition-all hover:bg-[var(--muted)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent",
+        active && "bg-gold-500/20 text-gold-300",
+      )}
     >
       {children}
     </button>

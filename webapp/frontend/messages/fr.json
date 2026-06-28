@@ -268,7 +268,8 @@
       "eventNext": "Événement suivant",
       "observationWindow": "Fenêtre d’observation",
       "goToInstant": "Aller à un instant",
-      "periodState": "Sur la période"
+      "periodState": "Sur la période",
+      "selectedEvent": "Événement sélectionné"
     },
     "kpi": {
       "quality": "Score qualité (objectif de service)",

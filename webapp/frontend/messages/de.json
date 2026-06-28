@@ -268,7 +268,8 @@
       "eventNext": "Nächstes Ereignis",
       "observationWindow": "Beobachtungsfenster",
       "goToInstant": "Zu einem Zeitpunkt springen",
-      "periodState": "Im Zeitraum"
+      "periodState": "Im Zeitraum",
+      "selectedEvent": "Ausgewähltes Ereignis"
     },
     "kpi": {
       "quality": "Qualitäts-Score (Service-Ziel)",

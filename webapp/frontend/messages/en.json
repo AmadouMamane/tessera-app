@@ -268,7 +268,8 @@
       "eventNext": "Next event",
       "observationWindow": "Observation window",
       "goToInstant": "Go to a point in time",
-      "periodState": "Over the period"
+      "periodState": "Over the period",
+      "selectedEvent": "Selected event"
     },
     "kpi": {
       "quality": "Quality score (SLO)",

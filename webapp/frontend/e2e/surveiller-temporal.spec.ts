@@ -122,3 +122,38 @@ test("no 'As-of' façade label anywhere in the bar", async ({ page }) => {
   await open(page, `?lecture=asOf&asof=${encodeURIComponent(ASOF)}&expanded=1`);
   await expect(bar(page).getByText(/As-of/i)).toHaveCount(0);
 });
+
+test("selecting an event via the arrows shows its full timestamp", async ({ page }) => {
+  await open(page, "?lecture=history&expanded=1");
+  // A selected instant must carry its date/time: never a bare "État à l'instant".
+  await page.locator('[aria-label="Événement précédent"]').first().click();
+  // Badge reads "État au {date} {HH:MM}" (locale-independent time check) — never a
+  // metric without a clear instant (registre §2/§4).
+  await expect(
+    bar(page)
+      .getByText(/État au .*\d{2}:\d{2}/)
+      .first(),
+  ).toBeVisible();
+  await expect(bar(page).getByText("Événement sélectionné").first()).toBeVisible();
+  await expect(bar(page).getByText("État à l’instant")).toHaveCount(0);
+  // Selecting an event must NOT silently switch the reading to a replay: Lecture
+  // stays Historique.
+  await expect(bar(page).getByText("Historique").first()).toBeVisible();
+});
+
+test("the replay cassette stays on XT-01 (AGIR/Replay), not on SURVEILLER", async ({ page }) => {
+  // SURVEILLER (SR-01): event navigation, never a video-player cassette.
+  await open(page, "?lecture=history&expanded=1");
+  await expect(page.locator('[aria-label="Événement suivant"]').first()).toBeVisible();
+  await expect(page.locator('[aria-label="Début"]')).toHaveCount(0);
+  await expect(page.locator('[aria-label="Le plus récent"]')).toHaveCount(0);
+
+  // AGIR / Replay (XT-01): the legitimate cassette is present.
+  await page.goto("/fr/agir/replay-shadow");
+  const voir = page.getByRole("button", { name: /Voir l.historique/ }).first();
+  if (await voir.count()) await voir.click();
+  await expect(page.locator('[aria-label="Début"]').first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('[aria-label="Suivant"]').first()).toBeVisible();
+  // …and the signal event-nav is NOT used there.
+  await expect(page.locator('[aria-label="Événement suivant"]')).toHaveCount(0);
+});

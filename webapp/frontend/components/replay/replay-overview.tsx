@@ -77,7 +77,11 @@ export function ReplayOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} />
+      {/* AGIR / Replay is XT-01's home (registre): the rail keeps the legitimate
+          execution-replay cassette (début · précédent · play/pause · suivant · fin).
+          SURVEILLER surfaces stay on the default "signal" event navigation. */}
       <TemporalRail
+        transport="execution"
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}
         timeline={railTimeline.data}
