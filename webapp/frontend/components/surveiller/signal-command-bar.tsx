@@ -299,7 +299,13 @@ export function SignalCommandBar({
   }
 
   return (
-    <section className="rounded-2xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    // SR-01 is a temporal CONTROL INSTRUMENT, not business content — so it gets its
+    // own "control strip" surface, deliberately distinct from the KPI/cards below: a
+    // cooler translucent technical-glass gradient, a subtly luminous cyan-tinted
+    // border (brighter than the cards'), and an inner highlight + soft drop shadow.
+    // No status colour as a background (registre: the framing must read as neutral
+    // instrument). Champagne stays reserved for the selected instant inside.
+    <section className="rounded-2xl border border-[rgba(95,190,230,0.18)] bg-[linear-gradient(180deg,rgba(12,36,56,0.82),rgba(5,20,34,0.92))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_50px_rgba(0,0,0,0.20)] backdrop-blur-sm">
       {/* Collapsed command row — the single temporal focus. */}
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         {/* Lecture — Maintenant / À un instant / Historique, with per-mode
@@ -385,7 +391,7 @@ export function SignalCommandBar({
           above), and repeating the SAME reading glyph here stacked two identical
           icons vertically and read as a second control. The line is a state
           summary, so its bold first segment carries the meaning. */}
-      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[var(--tessera-border)]/60 px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-cyan-400/10 px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
         {microSegments.map((seg, i) => (
           <span key={seg.key} className="flex items-center gap-1.5">
             {i > 0 ? <span aria-hidden>·</span> : null}
@@ -428,7 +434,7 @@ export function SignalCommandBar({
               Date/locale formatting during SSR while collapsed -> a hydration
               mismatch. Gating on `expanded` keeps the grid-rows reveal AND a clean SSR. */}
           {expanded ? (
-            <div className="border-t border-[var(--tessera-border)]/60 px-3 pb-3 pt-2">
+            <div className="border-t border-cyan-400/10 px-3 pb-3 pt-2">
               {/* No descriptive rail header: the reading lives in the command-bar
                   Lecture chip and the synthetic state in the micro-line above, so the
                   rail goes STRAIGHT to the visualisation (timeline · legend · the
