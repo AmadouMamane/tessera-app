@@ -241,6 +241,7 @@
       "relitAtBadge": "Zustand zum Zeitpunkt",
       "noEventNear": "Kein Ereignis in der Nähe",
       "dataStart": "Datenbeginn",
+      "dataStartTooltip": "Erste verfügbare Daten im gewählten Bereich",
       "vsBaseline": "vs Referenz",
       "legendScores": "Qualität",
       "legendGood": "gut (≥0,8)",

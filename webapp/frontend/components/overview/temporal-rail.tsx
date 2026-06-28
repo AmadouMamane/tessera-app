@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Database,
   Flag,
   History,
   Milestone,
@@ -635,15 +636,15 @@ export function TemporalRail({
             </span>
           </>
         ) : null}
-        {/* "real data begins here" marker — where the timeline data starts, NOT a
-            comparison baseline (that's a value shown in the detail-panel delta, so
-            it has no fixed point on the axis). */}
+        {/* Data-availability marker — where real data BEGINS, NOT a period bound
+            (those are the discreet dates at the axis ends) and NOT a comparison
+            baseline. Styled distinctly (hollow ring + data glyph + tooltip). */}
         {showDataStart ? (
           <RailMarker
             pos={dataStartPos ?? 0}
             label={t("dataStart")}
+            title={t("dataStartTooltip")}
             hideLabel={hideDataStartLabel}
-            variant="baseline"
           />
         ) : null}
         {/* event markers (click to seek): NO inline labels — they overlapped when
@@ -1081,31 +1082,51 @@ function TransportButton({
   );
 }
 
+/**
+ * Data-availability marker on the axis — marks where real data BEGINS for the
+ * current scope. Deliberately distinct from the period bounds (thin ticks + faint
+ * dates at the axis ENDS) and the event ticks (filled colour): a hollow slate ring
+ * with a connector to a small data-glyph label, plus an explanatory tooltip. It is
+ * secondary to the champagne selected-instant marker, never a window bound.
+ */
 function RailMarker({
   pos,
   label,
-  variant,
+  title,
   hideLabel,
 }: {
   pos: number;
   label: string;
-  variant: "baseline";
-  /** Drop the label (keep the dot) when the focused instant would collide with it. */
+  /** Tooltip clarifying this marks data availability, not a period bound. */
+  title: string;
+  /** Drop the label (keep the ring) when the focused instant would collide with it. */
   hideLabel?: boolean;
 }) {
   return (
     <>
-      <div
-        className="pointer-events-none absolute top-1.5 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-slate-400 shadow-[0_0_0_4px_rgba(130,140,153,0.15)]"
-        style={{ left: `${pos}%`, opacity: variant === "baseline" ? 1 : 0.8 }}
+      {/* hollow ring sitting ON the axis — reads as a boundary of availability, not
+          a filled event nor a thin period tick. cursor-help + title = the tooltip. */}
+      <span
+        title={title}
+        className="absolute top-1 z-10 h-3 w-3 -translate-x-1/2 cursor-help rounded-full border border-slate-300/70 bg-[var(--tessera-bg)] shadow-[0_0_0_3px_rgba(130,140,153,0.12)]"
+        style={{ left: `${pos}%` }}
       />
       {hideLabel ? null : (
-        <span
-          className="pointer-events-none absolute top-7 -translate-x-1/2 whitespace-nowrap text-[0.65rem] text-[var(--muted-foreground)]"
-          style={{ left: `${pos}%` }}
-        >
-          {label}
-        </span>
+        <>
+          {/* connector — keeps the label attached to its tick on the axis. */}
+          <span
+            className="pointer-events-none absolute top-4 h-2.5 w-px -translate-x-1/2 bg-slate-400/35"
+            style={{ left: `${pos}%` }}
+          />
+          <span
+            title={title}
+            className="absolute top-[1.7rem] flex -translate-x-1/2 cursor-help items-center gap-1 whitespace-nowrap text-[0.6rem] font-medium text-slate-300/90"
+            style={{ left: `${pos}%` }}
+          >
+            <Database className="h-2.5 w-2.5 text-slate-400" aria-hidden />
+            {label}
+          </span>
+        </>
       )}
     </>
   );
