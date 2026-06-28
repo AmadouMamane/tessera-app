@@ -54,6 +54,18 @@ const PERIOD_MS: Record<string, number> = {
   d30: 30 * 24 * 3600_000,
 };
 
+// Command-bar chip surfaces. The deep rail would swallow plain controls, so chips
+// are raised just enough to read as active controls — a cool, faintly cyan-tinted
+// glass (the temporal-structure hue), NOT the cards' neutral surface, with a clear
+// hover and no heavy outline. The PRIMARY reading control (Lecture) and the chosen
+// instant (État au) wear a discreet champagne instead — never a status colour.
+const CHIP_BASE =
+  "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(95,190,230,0.35)]";
+const CHIP_NEUTRAL =
+  "border-[rgba(95,190,230,0.16)] bg-[rgba(120,190,235,0.05)] text-[var(--tessera-text-muted)] hover:bg-[rgba(120,190,235,0.10)] hover:border-[rgba(95,190,230,0.28)]";
+const CHIP_ACTIVE =
+  "border-gold-500/45 bg-gold-500/[0.10] text-gold-200 hover:bg-gold-500/[0.16] focus-visible:ring-gold-500/50";
+
 // "Comparer à" — visible options per reading (registre §5). Order is defaults-first;
 // the omitted ones are hidden because they make no sense for that reading ("now" vs
 // now, or a previous-period frame on a single instant). Internal values stay stable.
@@ -301,11 +313,12 @@ export function SignalCommandBar({
   return (
     // SR-01 is a temporal CONTROL INSTRUMENT, not business content — so it gets its
     // own "control strip" surface, deliberately distinct from the KPI/cards below: a
-    // cooler translucent technical-glass gradient, a subtly luminous cyan-tinted
-    // border (brighter than the cards'), and an inner highlight + soft drop shadow.
-    // No status colour as a background (registre: the framing must read as neutral
-    // instrument). Champagne stays reserved for the selected instant inside.
-    <section className="rounded-2xl border border-[rgba(95,190,230,0.18)] bg-[linear-gradient(180deg,rgba(12,36,56,0.82),rgba(5,20,34,0.92))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_50px_rgba(0,0,0,0.20)] backdrop-blur-sm">
+    // cooler technical-glass gradient (deeper than the cards), a fine luminous
+    // cyan-tinted border, and an inner top highlight + a faint cyan bottom edge +
+    // soft drop shadow that give it just-enough internal depth to read as an
+    // instrument. No status colour as a background (the framing must stay neutral);
+    // champagne is reserved for the selected instant on the axis below.
+    <section className="rounded-2xl border border-[rgba(95,190,230,0.20)] bg-[linear-gradient(180deg,rgba(10,38,58,0.86),rgba(4,20,34,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),inset_0_-1px_0_rgba(95,190,230,0.045),0_18px_48px_rgba(0,0,0,0.20)] backdrop-blur-sm">
       {/* Collapsed command row — the single temporal focus. */}
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         {/* Lecture — Maintenant / À un instant / Historique, with per-mode
@@ -327,7 +340,7 @@ export function SignalCommandBar({
                 aria-expanded={open}
                 aria-label={`${t("asofAt")} ${asOfText ?? t("pickDatePrompt")}`}
                 title={asOfText ? t("changeInstant") : t("goToInstant")}
-                className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs text-gold-200 transition-colors hover:bg-gold-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50"
+                className={cn(CHIP_BASE, CHIP_ACTIVE)}
               >
                 <CalendarClock className="h-3.5 w-3.5 shrink-0 text-gold-400" />
                 {t("asofAt")}
@@ -372,17 +385,15 @@ export function SignalCommandBar({
         {/* Déplier / Replier — pushed to the right; the page-level Export / Preuves
             actions now live in the page header (registre §2), not in this temporal
             focus, so the bar holds ONLY temporal controls. */}
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="sm"
           aria-expanded={expanded}
-          className="ml-auto h-9 gap-1.5"
+          className={cn("ml-auto", CHIP_BASE, CHIP_NEUTRAL)}
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           {expanded ? t("collapse") : t("expand")}
-        </Button>
+        </button>
       </div>
 
       {/* Contextual micro-line — describes ONLY the active reading (no permanent
@@ -517,10 +528,7 @@ function LectureMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs text-gold-200 transition-colors hover:bg-gold-500/20"
-        >
+        <button type="button" className={cn(CHIP_BASE, CHIP_ACTIVE)}>
           <CurrentIcon className="h-3.5 w-3.5 shrink-0 text-gold-400" />
           {t("reading")}
           <span className="font-semibold text-[var(--tessera-text)]">
@@ -573,14 +581,7 @@ function SelectChip({
   accent?: boolean;
 }) {
   return (
-    <label
-      className={cn(
-        "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs",
-        accent
-          ? "border-gold-500/50 bg-gold-500/10 text-gold-200"
-          : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
-      )}
-    >
+    <label className={cn(CHIP_BASE, "cursor-pointer", accent ? CHIP_ACTIVE : CHIP_NEUTRAL)}>
       <Icon className="h-3.5 w-3.5 shrink-0 text-gold-400" />
       {label}
       <select
@@ -620,10 +621,7 @@ function DisabledChip({
   title: string;
 }) {
   return (
-    <span
-      title={title}
-      className="flex h-9 shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] opacity-60"
-    >
+    <span title={title} className={cn(CHIP_BASE, CHIP_NEUTRAL, "cursor-not-allowed opacity-55")}>
       <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
       {label}
       <span className="font-semibold text-[var(--tessera-text-muted)]">{value}</span>

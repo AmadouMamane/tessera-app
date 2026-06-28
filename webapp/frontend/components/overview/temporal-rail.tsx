@@ -415,6 +415,11 @@ export function TemporalRail({
     : null;
   const hideDataStartLabel =
     headActive && dataStartPos != null && Math.abs(handlePos - dataStartPos) < 12;
+  // SR-01 (signal) gets the temporal-instrument signature — a cool cyan axis and a
+  // champagne-haloed selected instant. The execution transport (XT-01 replay)
+  // keeps its existing neutral look untouched, so this stays gated on `isSignal`.
+  const isSignal = transport === "signal";
+  const instantActive = isSignal && selectedAt != null && previewAt == null;
 
   // SR-01 event navigation (signal transport only) — a labelled "Événements"
   // capsule, NOT a player. Defined once and placed by context: anchored under the
@@ -613,7 +618,17 @@ export function TemporalRail({
           if (e.key === "ArrowLeft") step(-1);
         }}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-2.5 h-0.5 rounded-full bg-[linear-gradient(90deg,#363d48,#454e5d)]" />
+        {/* The active temporal axis — for SR-01 (signal) a cool cyan thread with a
+            faint glow, so it reads as the page's time axis, not a card border. The
+            execution transport keeps the neutral rail. */}
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-x-0 top-2.5 rounded-full",
+            isSignal
+              ? "h-px bg-[linear-gradient(90deg,rgba(95,190,230,0.16),rgba(160,220,255,0.42),rgba(95,190,230,0.16))] shadow-[0_0_18px_rgba(95,190,230,0.10),inset_0_1px_0_rgba(255,255,255,0.08)]"
+              : "h-0.5 bg-[linear-gradient(90deg,#363d48,#454e5d)]",
+          )}
+        />
         {/* Window-bound ticks + labels — anchored to the axis ends so the window's
             extent reads as the axis itself (registre §4), not as labels floating
             beneath it. Each is a discreet tick crossing the line with its date
@@ -675,6 +690,11 @@ export function TemporalRail({
             opacity: previewAt != null || selectedAt != null ? 1 : 0.6,
           }}
         >
+          {/* Champagne tick on the axis — the single most legible point once an
+              instant is committed (a glowing halo, not while previewing). */}
+          {instantActive ? (
+            <span className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full bg-[#e6c982] shadow-[0_0_0_3px_rgba(230,201,130,0.12),0_0_18px_rgba(230,201,130,0.22)]" />
+          ) : null}
           {/* stem centred vertically on the timeline track (10–14px → centre 12px) */}
           <span className="absolute left-1/2 top-1.5 h-3 w-px -translate-x-1/2 bg-gold-400" />
           <span className="absolute left-1/2 top-[-1px] h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-gold-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]" />
@@ -710,10 +730,20 @@ export function TemporalRail({
                 : { left: `${handlePos}%`, transform: "translateX(-50%)" }
             }
           >
-            <span className="text-[0.55rem] font-medium uppercase tracking-wide text-gold-400/80">
+            <span
+              className={cn(
+                "text-[0.55rem] font-medium uppercase tracking-wide text-gold-400/80",
+                isSignal && "[text-shadow:0_0_12px_rgba(230,201,130,0.18)]",
+              )}
+            >
               {t("selectedInstant")}
             </span>
-            <span className="tabular-nums text-[0.62rem] font-semibold text-gold-300">
+            <span
+              className={cn(
+                "tabular-nums text-[0.62rem] font-semibold text-gold-300",
+                isSignal && "[text-shadow:0_0_14px_rgba(230,201,130,0.20)]",
+              )}
+            >
               {fmtInstant(currentT)}
             </span>
           </span>
