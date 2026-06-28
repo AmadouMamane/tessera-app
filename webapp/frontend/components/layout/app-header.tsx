@@ -38,17 +38,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { LOCALE_LABELS, type Locale, routing } from "@/i18n/routing";
-import {
-  fetchAIAct,
-  fetchAuditIntegrity,
-  fetchCost,
-  fetchDisclosure,
-  fetchHealth,
-  fetchPiiLeak,
-  fetchSLO,
-  fetchToxicity,
-} from "@/lib/api/client";
+import { fetchHealth } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
+import { exportSnapshot } from "@/lib/evidence-export";
 import {
   CHAT_MODELS,
   CHAT_MODEL_EVENT,
@@ -58,7 +50,6 @@ import {
   setStoredModel,
 } from "@/lib/models";
 import { useWindowStore } from "@/lib/stores/window-store";
-import { getTemporalContext } from "@/lib/temporal-context";
 
 /**
  * The single application header (see `docs/design/header-normative.md`).
@@ -130,61 +121,6 @@ function defaultAuth(plan: HeaderPlan): AuthContext {
   if (plan === "launcher") return "demo";
   if (plan === "cockpit") return "gated";
   return "optional";
-}
-
-function downloadJson(name: string, obj: unknown) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/**
- * Snapshot the cockpit signals and download them as a report / evidence pack.
- *
- * Scoped to the cockpit's current temporal context `(period, asOf)` (ADR 0011
- * §3/§5): in history mode the pack reflects the state as of T, not just "now".
- * Audit integrity and the disclosure text are structural/static, so they stay
- * live and are labelled as such.
- */
-async function runAction(kind: "export" | "evidence") {
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const { asOf, period } = getTemporalContext();
-  const at = asOf ?? undefined;
-  const scope = { generated_at: new Date().toISOString(), as_of: asOf, period };
-  const settle = async <T,>(p: Promise<T>) => p.catch(() => null);
-  if (kind === "evidence") {
-    const [audit, aiAct, disclosure, pii] = await Promise.all([
-      settle(fetchAuditIntegrity()),
-      settle(fetchAIAct(undefined, at)),
-      settle(fetchDisclosure()),
-      settle(fetchPiiLeak(undefined, at)),
-    ]);
-    downloadJson(`tessera-evidence-pack-${stamp}.json`, {
-      ...scope,
-      kind: "evidence_pack",
-      audit_integrity: audit, // structural hash-chain check — always live
-      ai_act: aiAct,
-      disclosure,
-      pii_leak: pii,
-    });
-    return;
-  }
-  const [slo, cost, toxicity] = await Promise.all([
-    settle(fetchSLO(undefined, at)),
-    settle(fetchCost(undefined, at)),
-    settle(fetchToxicity(undefined, at)),
-  ]);
-  downloadJson(`tessera-report-${stamp}.json`, {
-    ...scope,
-    kind: "overview_report",
-    slo,
-    cost,
-    toxicity,
-  });
 }
 
 export function AppHeader({
@@ -424,7 +360,7 @@ function ActionButton({ action }: { action: HeaderAction }) {
     if (!action.action) return;
     setPending(true);
     try {
-      await runAction(action.action);
+      await exportSnapshot(action.action);
     } finally {
       setPending(false);
     }

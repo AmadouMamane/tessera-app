@@ -1,7 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AgentBreakdown } from "@/components/agent/agent-breakdown";
-import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { AppShell } from "@/components/layout/app-shell";
 import { OverviewDashboard } from "@/components/overview/overview-dashboard";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
@@ -32,39 +31,10 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
     <AppShell
       title={t("title")}
       description={t("subtitle")}
-      // View filters only. Période is the SINGLE temporal-window owner (shared
-      // store) — the rail reads it, it has no period selector of its own.
-      // Environnement + Modèle are deployment CONTEXT (header badges) and Langue
-      // is global — none are page filters, so they no longer live here.
-      topbarContext={[
-        {
-          label: t("context.lifecycle"),
-          value: "d7",
-          leading: "history",
-          control: "window",
-          options: [
-            { value: "h24", label: t("context.lifecycle24h") },
-            { value: "d7", label: t("context.lifecycleValue") },
-            { value: "d30", label: t("context.lifecycle30d") },
-          ],
-        },
-      ]}
-      // The agent filter sits in the SAME bar as Période (the view filters).
-      topbarFilters={<AgentScopeFilter />}
-      topbarActions={[
-        {
-          label: t("actions.exportReport"),
-          icon: "download",
-          variant: "outline",
-          action: "export",
-        },
-        {
-          label: t("actions.generateEvidencePack"),
-          icon: "evidence",
-          variant: "accent",
-          action: "evidence",
-        },
-      ]}
+      // Période, le filtre Agent et les exports vivent désormais dans le
+      // SignalCommandBar (SR-01) en tête de page — un seul foyer temporel, pas de
+      // doublon dans le header (registre §8). Le header ne garde que le contexte
+      // de déploiement (read-only) + chrome global.
     >
       {/* P2 — lead with the named breached signal (real SLO) + remediation. */}
       <div className="mb-3">

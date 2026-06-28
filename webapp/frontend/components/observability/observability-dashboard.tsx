@@ -66,11 +66,8 @@ import {
   ThemeDistribution,
   buildSignalRows,
 } from "@/components/observability/signals-table";
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
+import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
+import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -531,16 +528,11 @@ export function ObservabilityDashboard() {
           </div>
         </div>
         <TabBar active={tab} onChange={setTab} />
-        <TemporalRail
-          mode={temporal.mode}
-          liveStatus={tq("temporal.liveData")}
+        <SignalCommandBar
+          temporal={temporal}
           timeline={railTimeline.data}
           sloTarget={slo.data?.target}
-          selectedAt={temporal.selectedAt}
-          onSelectedAtChange={temporal.setSelectedAt}
-          periodKey={temporal.periodKey}
-          onPeriodChange={temporal.setPeriodKey}
-          onModeChange={temporal.changeMode}
+          liveStatus={tq("temporal.liveData")}
         />
       </div>
 

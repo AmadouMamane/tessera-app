@@ -14,11 +14,8 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
+import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
+import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -626,15 +623,10 @@ export function SecurityDashboard() {
       </div>
 
       {/* Shared temporal rail (Live / Replay as-of-T) */}
-      <TemporalRail
-        mode={temporal.mode}
-        liveStatus={ts("status.realtime")}
+      <SignalCommandBar
+        temporal={temporal}
         timeline={railTimeline.data}
-        selectedAt={temporal.selectedAt}
-        onSelectedAtChange={temporal.setSelectedAt}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        onModeChange={temporal.changeMode}
+        liveStatus={ts("status.realtime")}
       />
 
       <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">

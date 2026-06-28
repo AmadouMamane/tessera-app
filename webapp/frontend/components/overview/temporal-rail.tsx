@@ -34,6 +34,7 @@ import { fetchDataRange, fetchTimeline } from "@/lib/api/client";
 import type { TimelineReport } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { type OverviewTone, dotBg } from "@/lib/overview";
+import { useWindowStore } from "@/lib/stores/window-store";
 import { setTemporalContext } from "@/lib/temporal-context";
 import {
   type TemporalUrlState,
@@ -103,6 +104,9 @@ export function TemporalRail({
   windowEnd,
   onPickDate,
   onModeChange,
+  embedded = false,
+  compare: compareProp,
+  onCompareChange,
 }: {
   mode: "live" | "history";
   liveStatus: string;
@@ -132,9 +136,21 @@ export function TemporalRail({
    */
   onPickDate?: (anchorEnd: string | null) => void;
   onModeChange: (mode: "live" | "history") => void;
+  /**
+   * When embedded inside the SignalCommandBar, the rail renders ONLY the scrubber
+   * panel (timeline · legend · detail · playback) — the labeled controls (mode /
+   * période / comparer / aller-à-une-date / exit) live in the command bar, so they
+   * are never duplicated. Default false = the standalone full rail.
+   */
+  embedded?: boolean;
+  /** Controlled baseline ("target"|"now"|"none"); when set the command bar owns it. */
+  compare?: string;
+  onCompareChange?: (value: string) => void;
 }) {
   const t = useTranslations("overview.time");
-  const [compare, setCompare] = useState("target");
+  const [compareLocal, setCompareLocal] = useState("target");
+  const compare = compareProp ?? compareLocal;
+  const setCompare = onCompareChange ?? setCompareLocal;
   // T being viewed lives at page level; this is the rail's write handle into it.
   const setSelectedAt = onSelectedAtChange;
   const [playing, setPlaying] = useState(false);
@@ -236,7 +252,8 @@ export function TemporalRail({
   }, [selectedAt, playing]);
 
   // Compact Live rail (default): real-time badge, period, last update, Relire à T.
-  if (mode === "live") {
+  // Skipped when embedded in the command bar (which renders only the panel body).
+  if (mode === "live" && !embedded) {
     const last = timeline ? new Date(timeline.window_end) : null;
     return (
       <section className="flex min-h-[42px] flex-wrap items-center gap-3 border-y border-[var(--tessera-border)] bg-transparent px-1 py-2">
@@ -287,22 +304,31 @@ export function TemporalRail({
   const handlePos = railPos(new Date(currentT).toISOString(), viewStart, span);
 
   return (
-    <section className="rounded-md border border-[#9a5f18]/60 bg-[var(--tessera-surface)] p-4 shadow-[var(--shadow-card)]">
+    <section
+      className={cn(
+        embedded
+          ? "pt-1"
+          : "rounded-md border border-[#9a5f18]/60 bg-[var(--tessera-surface)] p-4 shadow-[var(--shadow-card)]",
+      )}
+    >
       {/* Auto-sized controls (no wrap); only the "viewing-at" value is fixed-width
-          so dragging the scrubber never reflows this row. */}
+          so dragging the scrubber never reflows this row. Embedded: the labeled
+          controls live in the command bar, so only viewing-at + playback show. */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Active mode — always shown (registre §1/§5), so the page never sits in
             history without a visible indicator. */}
-        <span className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs font-semibold text-gold-200">
-          <History className="h-3.5 w-3.5 shrink-0 text-gold-400" />
-          {modeLabel}
-          {compare !== "none" ? (
-            <span className="font-medium text-gold-300/80">· {t("modeCompared")}</span>
-          ) : null}
-        </span>
+        {embedded ? null : (
+          <span className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs font-semibold text-gold-200">
+            <History className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+            {modeLabel}
+            {compare !== "none" ? (
+              <span className="font-medium text-gold-300/80">· {t("modeCompared")}</span>
+            ) : null}
+          </span>
+        )}
         {/* Period selector ONLY when the rail owns the window; otherwise the top
             toolbar control is the single owner (CONTRAT RAIL). */}
-        {onPeriodChange ? (
+        {!embedded && onPeriodChange ? (
           <label className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 text-xs text-[var(--muted-foreground)]">
             <Clock3 className="h-3.5 w-3.5 shrink-0 text-gold-400" />
             {t("period")}
@@ -336,25 +362,27 @@ export function TemporalRail({
             {selectedAt == null ? t("nowLive") : fmtStamp(currentT)}
           </b>
         </span>
-        <label className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 text-xs text-[var(--muted-foreground)]">
-          <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-gold-400" />
-          {t("compareTo")}
-          <select
-            value={compare}
-            onChange={(e) => setCompare(e.target.value)}
-            className="cursor-pointer rounded bg-transparent font-semibold text-[var(--foreground)] outline-none"
-          >
-            <option value="target" className="bg-[var(--card)]">
-              {t("baselineTarget")}
-            </option>
-            <option value="now" className="bg-[var(--card)]">
-              {t("baselineNow")}
-            </option>
-            <option value="none" className="bg-[var(--card)]">
-              {t("noBaseline")}
-            </option>
-          </select>
-        </label>
+        {embedded ? null : (
+          <label className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 text-xs text-[var(--muted-foreground)]">
+            <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+            {t("compareTo")}
+            <select
+              value={compare}
+              onChange={(e) => setCompare(e.target.value)}
+              className="cursor-pointer rounded bg-transparent font-semibold text-[var(--foreground)] outline-none"
+            >
+              <option value="target" className="bg-[var(--card)]">
+                {t("baselineTarget")}
+              </option>
+              <option value="now" className="bg-[var(--card)]">
+                {t("baselineNow")}
+              </option>
+              <option value="none" className="bg-[var(--card)]">
+                {t("noBaseline")}
+              </option>
+            </select>
+          </label>
+        )}
         <span className="ml-auto flex h-9 shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-2 text-[var(--muted-foreground)]">
           <PlaybackButton
             label={t("first")}
@@ -411,26 +439,28 @@ export function TemporalRail({
             (moves the window END to an absolute past day, today/future = live),
             sibling to the cassette's fine scrub and to its "now" absolute jump.
             Use it to reach the right week, then scrub/play within. Only when wired. */}
-        {onPickDate ? (
+        {!embedded && onPickDate ? (
           <GoToDateButton
             selectedDate={new Date(currentT)}
             onPick={onPickDate}
             minDate={minPickDate}
           />
         ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9"
-          onClick={() => {
-            setPlaying(false);
-            onModeChange("live");
-          }}
-        >
-          <RotateCcw className="h-4 w-4" />
-          {t("exitReplay")}
-        </Button>
+        {embedded ? null : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9"
+            onClick={() => {
+              setPlaying(false);
+              onModeChange("live");
+            }}
+          >
+            <RotateCcw className="h-4 w-4" />
+            {t("exitReplay")}
+          </Button>
+        )}
       </div>
 
       {/* Interactive scrubber — click or drag to pick T; markers are real events. */}
@@ -600,7 +630,7 @@ export function TemporalRail({
  * the grid. Picking a day emits its end-of-day instant — or null when the day is
  * today/future, which the page reads as "back to live".
  */
-function GoToDateButton({
+export function GoToDateButton({
   selectedDate,
   onPick,
   minDate,
@@ -767,86 +797,112 @@ function RailEvent({
  * value fed to the backend (committedAt) is debounced so dragging fires one
  * request per settle, not one per pixel (the backend is rate-limited). null = live.
  */
+/** SR-01 reading mode (registre §4): how the page reads the signal series. */
+export type Reading = "live" | "asof" | "historique";
+
 export function useTemporalState() {
-  // Initial temporal state is the URL, not a private default (registre §1/§5): a
-  // shared SR-01 link reopens on the same instant/window, and the mode shown
-  // always matches the address bar. Period (the window duration) stays the shared
-  // global window, not a URL param (registre §8 — one window owner).
+  // The WINDOW (duration + absolute end) is the shared GLOBAL window (registre §8,
+  // one owner) — read here so it follows the user across every SURVEILLER page.
+  const periodKey = useWindowStore((s) => s.period);
+  const setPeriodKey = useWindowStore((s) => s.setPeriod);
+  const anchorEnd = useWindowStore((s) => s.anchorEnd);
+  const setAnchorEnd = useWindowStore((s) => s.setAnchorEnd);
+  // The temporal NAVIGATION (mode + instant T) is the URL, not a private default
+  // (registre §1/§5): a shared link reopens on the same reading, and the mode shown
+  // always matches the address bar.
   const url0 = readTemporalUrl();
   const url0At = url0.asof ? Date.parse(url0.asof) : null;
-  const [mode, setMode] = useState<"live" | "history">(url0.asof || url0.win ? "history" : "live");
+  const [reading, setReadingState] = useState<Reading>(
+    url0.win ? "asof" : url0.asof ? "historique" : "live",
+  );
   const [selectedAt, setSelectedAt] = useState<number | null>(url0At);
   const [committedAt, setCommittedAt] = useState<number | null>(url0At);
-  const [periodKey, setPeriodKey] = useState("d7");
-  // Absolute window END (ISO, end of the picked day), or null = now (live). Set by
-  // the rail's "Aller à une date" calendar so any temporal page can move its window
-  // over a long history — not just the overview (which keeps its own toolbar-shared
-  // anchor in the window store). The duration (periodKey) spans backwards from here.
-  const [anchorEnd, setAnchorEnd] = useState<string | null>(url0.win);
+  // Restore the anchored window from the URL once on mount (the store is global).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only restore.
+  useEffect(() => {
+    if (url0.win) setAnchorEnd(url0.win);
+  }, []);
   useEffect(() => {
     const id = window.setTimeout(() => setCommittedAt(selectedAt), 250);
     return () => window.clearTimeout(id);
   }, [selectedAt]);
-  // Anchoring the window in the past is inherently historical → replay.
-  const anchoredPast = anchorEnd != null;
-  const effectiveMode: "live" | "history" = anchoredPast ? "history" : mode;
   const windowEnd = anchorEnd != null ? Date.parse(anchorEnd) : undefined;
-  // ISO instant fed to the as-of-T-capable queries: a scrubbed instant wins, else
-  // the window END when anchored, else null (live → backend reads the live buffer).
+  // Legacy two-valued mode kept for the scrubber panel: live vs everything else.
+  const mode: "live" | "history" = reading === "live" ? "live" : "history";
+  // ISO instant fed to the as-of-T-capable queries: As-of reads the anchored day;
+  // Historique reads the scrubbed instant; Live reads the live buffer (null).
   const asOf =
-    effectiveMode === "history" && committedAt != null
-      ? new Date(committedAt).toISOString()
-      : anchorEnd;
+    reading === "asof"
+      ? anchorEnd
+      : reading === "historique" && committedAt != null
+        ? new Date(committedAt).toISOString()
+        : null;
   const historyMode = asOf != null;
-  // Mirror the temporal context so the topbar evidence pack is scoped to (period, asOf).
+  // Mirror the temporal context so the evidence pack/report is scoped to (period, asOf).
   useEffect(() => {
     setTemporalContext({ asOf, period: periodKey });
   }, [asOf, periodKey]);
-  // The URL is the source of truth: mirror the committed instant + anchor into it
-  // (deep-link), and follow back/forward so the state never drifts from the bar.
+  // The URL is the source of truth: mirror the committed instant + anchor into it.
   useEffect(() => {
     writeTemporalUrl({
-      asof: committedAt != null ? new Date(committedAt).toISOString() : null,
-      win: anchorEnd,
+      asof:
+        reading === "historique" && committedAt != null
+          ? new Date(committedAt).toISOString()
+          : null,
+      win: reading === "asof" ? anchorEnd : null,
     });
-  }, [committedAt, anchorEnd]);
+  }, [reading, committedAt, anchorEnd]);
   useTemporalUrlPopstate(
-    useCallback((s: TemporalUrlState) => {
-      const at = s.asof ? Date.parse(s.asof) : null;
-      setSelectedAt(at);
-      setCommittedAt(at);
-      setAnchorEnd(s.win);
-      setMode(s.asof || s.win ? "history" : "live");
-    }, []),
+    useCallback(
+      (s: TemporalUrlState) => {
+        const at = s.asof ? Date.parse(s.asof) : null;
+        setSelectedAt(at);
+        setCommittedAt(at);
+        setAnchorEnd(s.win);
+        setReadingState(s.win ? "asof" : s.asof ? "historique" : "live");
+      },
+      [setAnchorEnd],
+    ),
   );
-  // Returning to live clears both the focused instant AND the past anchor.
-  function changeMode(next: "live" | "history") {
+  // Switch the reading mode (the "Lecture" control), clearing what no longer applies.
+  function setReading(next: Reading) {
+    setReadingState(next);
     if (next === "live") {
       setSelectedAt(null);
+      setCommittedAt(null);
       setAnchorEnd(null);
+    } else if (next === "historique") {
+      setAnchorEnd(null); // scrub from now over the period
     }
-    setMode(next);
+    // "asof" keeps the anchor; the user picks the day via "Aller à une date".
   }
-  // "Aller à une date": move the window END to the picked day and land the cursor
-  // there (replay), or clear the anchor for today/future (live).
+  // "Aller à une date" (As-of): move the window END to the picked day, or clear it
+  // (today/future) → back to live.
   function pickDate(nextAnchorEnd: string | null) {
     setAnchorEnd(nextAnchorEnd);
     if (nextAnchorEnd == null) {
       setSelectedAt(null);
-      setMode("live");
+      setReadingState("live");
     } else {
       setSelectedAt(Date.parse(nextAnchorEnd));
-      setMode("history");
+      setReadingState("asof");
     }
   }
+  // Back-compat with the scrubber panel's live/history toggle.
+  function changeMode(next: "live" | "history") {
+    setReading(next === "live" ? "live" : "historique");
+  }
   return {
-    mode: effectiveMode,
+    mode,
+    reading,
+    setReading,
     changeMode,
     selectedAt,
     setSelectedAt,
     committedAt,
     periodKey,
     setPeriodKey,
+    anchorEnd,
     windowEnd,
     pickDate,
     asOf,

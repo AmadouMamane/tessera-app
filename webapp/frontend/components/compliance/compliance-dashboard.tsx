@@ -19,11 +19,8 @@ import { type ReactNode, useState } from "react";
 
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { TabStrip } from "@/components/cockpit/tab-strip";
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
+import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
+import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -264,16 +261,11 @@ export function ComplianceDashboard() {
         }))}
       />
 
-      {/* Shared temporal rail (Live / Replay as-of-T) */}
-      <TemporalRail
-        mode={temporal.mode}
-        liveStatus={tc("status.realtime")}
+      {/* SR-01 — the unified signal command bar (Live · As-of · Historique). */}
+      <SignalCommandBar
+        temporal={temporal}
         timeline={railTimeline.data}
-        selectedAt={temporal.selectedAt}
-        onSelectedAtChange={temporal.setSelectedAt}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        onModeChange={temporal.changeMode}
+        liveStatus={tc("status.realtime")}
       />
 
       {activeTab !== "overview" && d.tabs?.[activeTab] ? (
