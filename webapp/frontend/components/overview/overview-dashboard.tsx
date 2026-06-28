@@ -276,6 +276,7 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           temporal={temporal}
           timeline={timeline.data}
           sloTarget={slo.data?.threshold}
+          hasPresentScore={Boolean(sloReady)}
           liveStatus={liveStatus}
         />
       </div>

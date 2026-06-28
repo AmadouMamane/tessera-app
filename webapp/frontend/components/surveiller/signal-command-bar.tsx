@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowLeftRight,
   CalendarClock,
+  Check,
   ChevronDown,
   ChevronUp,
   Clock3,
@@ -15,7 +16,8 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ComponentType, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { type ComponentType, type ReactNode, Suspense, useEffect, useRef, useState } from "react";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import {
@@ -24,9 +26,15 @@ import {
   useDataRange,
   type useTemporalState,
 } from "@/components/overview/temporal-rail";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Link } from "@/i18n/navigation";
+import { AGENT_SCOPE_PARAM, isScopedToAgent, parseAgentScope } from "@/lib/agent-scope";
 import { fetchFleet } from "@/lib/api/client";
 import type { TimelineReport } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -34,6 +42,7 @@ import { exportSnapshot } from "@/lib/evidence-export";
 
 type Temporal = ReturnType<typeof useTemporalState>;
 type Reading = Temporal["reading"];
+type Translate = ReturnType<typeof useTranslations>;
 
 const READING_ICON: Record<Reading, ComponentType<{ className?: string }>> = {
   live: Activity,
@@ -41,59 +50,159 @@ const READING_ICON: Record<Reading, ComponentType<{ className?: string }>> = {
   historique: History,
 };
 const PERIODS = ["h24", "d7", "d30"] as const;
+const PERIOD_MS: Record<string, number> = {
+  h24: 24 * 3600_000,
+  d7: 7 * 24 * 3600_000,
+  d30: 30 * 24 * 3600_000,
+};
+
+// "Comparer à" — visible options per reading (registre §5). Order is defaults-first;
+// the omitted ones are hidden because they make no sense for that reading ("now" vs
+// now, or a previous-period frame on a single instant). Internal values stay stable.
+const COMPARE_ORDER: Record<Reading, string[]> = {
+  live: ["target", "previous_period", "baseline", "previous_release", "none"],
+  asof: ["now", "target", "baseline", "previous_release", "none"],
+  historique: ["previous_period", "target", "baseline", "previous_release", "none"],
+};
+
+/** Whether a comparison reference is REALLY computable in the current reading/scope. */
+function compareEnabled(reading: Reading, value: string, avail: { target: boolean; now: boolean }) {
+  if (value === "none") return true;
+  if (value === "target") return avail.target;
+  if (value === "now") return reading === "asof" && avail.now;
+  // previous_period / baseline / previous_release have no real data source here →
+  // never computable (real-or-honest-empty; shown disabled with a reason, never faked).
+  return false;
+}
+
+/** The reading's preferred default, falling back to the first computable reference. */
+function defaultCompare(reading: Reading, avail: { target: boolean; now: boolean }) {
+  const pref = reading === "live" ? "target" : reading === "asof" ? "now" : "previous_period";
+  if (compareEnabled(reading, pref, avail)) return pref;
+  if (avail.target) return "target";
+  if (reading === "asof" && avail.now) return "now";
+  return "none";
+}
+
+function compareLabel(value: string, t: Translate): string {
+  switch (value) {
+    case "target":
+      return t("cmpTarget");
+    case "previous_period":
+      return t("cmpPrevPeriod");
+    case "baseline":
+      return t("cmpBaseline");
+    case "previous_release":
+      return t("cmpPrevRelease");
+    case "now":
+      return t("cmpNow");
+    default:
+      return t("cmpNone");
+  }
+}
+
+function compareReason(value: string, t: Translate): string {
+  switch (value) {
+    case "target":
+      return t("reasonNoTarget");
+    case "now":
+      return t("reasonNotComparable");
+    case "previous_period":
+      return t("reasonNoPrevPeriod");
+    case "baseline":
+      return t("reasonNoBaseline");
+    case "previous_release":
+      return t("reasonNoPrevRelease");
+    default:
+      return "";
+  }
+}
+
+/** Build the "Comparer à" options: computable ones plain, the rest disabled + reason. */
+function buildCompareOptions(
+  reading: Reading,
+  avail: { target: boolean; now: boolean },
+  t: Translate,
+): { value: string; label: string; disabled?: boolean }[] {
+  return COMPARE_ORDER[reading].map((value) => {
+    if (compareEnabled(reading, value, avail)) return { value, label: compareLabel(value, t) };
+    return {
+      value,
+      label: `${compareLabel(value, t)} — ${compareReason(value, t)}`,
+      disabled: true,
+    };
+  });
+}
 
 /**
  * SR-01 · Signal Scrubber, rendered as ONE premium command bar — the single
  * temporal focus for every SURVEILLER page (registre §4/§8). Collapsed by default
- * (reading · période · agents · comparer + export + a real micro-status line);
- * "Déplier" reveals the scrubber panel. It READS the global shared window and never
- * replays an execution (signals only). The rail code stays internal — the bar shows
- * the human title "Navigation temporelle des signaux".
+ * (Lecture · Période/État au · Agents · Comparer à + export + a contextual micro-
+ * status line); "Déplier" reveals the scrubber panel. It READS the global shared
+ * window and never replays an execution (signals only). The reading labels are
+ * human — Maintenant / À un instant / Historique — never the internal "asOf".
  */
 export function SignalCommandBar({
   temporal,
   timeline,
   sloTarget,
+  hasPresentScore = false,
   liveStatus,
 }: {
   temporal: Temporal;
   timeline?: TimelineReport;
   sloTarget?: number;
+  /** True when a present quality score exists, so the "Maintenant" baseline is real. */
+  hasPresentScore?: boolean;
   liveStatus: string;
 }) {
   const t = useTranslations("overview.time");
   const ta = useTranslations("overview.actions");
-  const [expanded, setExpanded] = useState(false);
-  const [compare, setCompare] = useState("target");
-  // Real micro-status: a live clock + the count of observed agents (no hardcode).
-  const [clock, setClock] = useState("");
+  // Reading, panel-open and the comparison lens all live in the shared temporal
+  // state (URL-backed source of truth) — not private to the bar.
+  const { reading, compare, setCompare, expanded, setExpanded } = temporal;
+  // The panel clips with overflow-hidden while it animates (height transition),
+  // then switches to overflow-visible once open so the "Aller à une date" calendar
+  // popover is NOT clipped. Reset to clipped the moment it starts collapsing.
+  const [panelOverflow, setPanelOverflow] = useState(false);
   useEffect(() => {
-    const tick = () =>
-      setClock(
-        new Date().toLocaleTimeString(undefined, {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        }),
-      );
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, []);
+    if (!expanded) setPanelOverflow(false);
+  }, [expanded]);
+
+  const targetAvail = sloTarget != null;
+  const nowAvail = hasPresentScore;
+  const compareOptions = buildCompareOptions(reading, { target: targetAvail, now: nowAvail }, t);
+  // Keep the active comparison honest: if it is hidden for this reading or not
+  // computable, fall back to the reading's default (never a phantom comparison).
+  useEffect(() => {
+    const visible = COMPARE_ORDER[reading].includes(compare);
+    if (!visible || !compareEnabled(reading, compare, { target: targetAvail, now: nowAvail })) {
+      setCompare(defaultCompare(reading, { target: targetAvail, now: nowAvail }));
+    }
+  }, [reading, targetAvail, nowAvail, compare, setCompare]);
+
   const fleet = useQuery({
     queryKey: ["fleet-scope-filter"],
     queryFn: ({ signal }) => fetchFleet(signal),
     staleTime: 60_000,
   });
-  const nAgents = fleet.data?.agents?.length ?? 0;
+  const fleetCount = fleet.data?.agents?.length ?? 0;
   const dataRange = useDataRange();
   const minPickDate = dataRange.data?.start ? new Date(dataRange.data.start) : undefined;
 
-  const reading = temporal.reading;
   const ReadingIcon = READING_ICON[reading];
+  // Switching to À un instant / Historique auto-opens the scrubber (registre §4);
+  // returning to Maintenant leaves the panel as the user left it (no forced close).
+  const prevReading = useRef(reading);
+  useEffect(() => {
+    if (prevReading.current === "live" && reading !== "live") setExpanded(true);
+    prevReading.current = reading;
+  }, [reading, setExpanded]);
+
   const asOfMs = temporal.windowEnd ?? temporal.committedAt ?? null;
-  const asOfLabel = temporal.asOf
+  // The chosen instant T, formatted (date + time) — used by the chip, the micro-line
+  // and the Vue badge. Empty in "À un instant" before a date is picked.
+  const asOfText = temporal.asOf
     ? new Date(temporal.asOf).toLocaleString(undefined, {
         day: "2-digit",
         month: "2-digit",
@@ -102,37 +211,117 @@ export function SignalCommandBar({
         minute: "2-digit",
         hour12: false,
       })
-    : t("nowLive");
+    : null;
+
+  // Real "last update" for the live micro-line: the most recent data instant
+  // (timeline window end), not a wall clock. null on SSR / before data → omitted.
+  const lastUpdate =
+    reading === "live" && timeline?.window_end
+      ? new Date(timeline.window_end).toLocaleTimeString(undefined, {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        })
+      : null;
+
+  // History window bounds (real, derived from the timeline end + period). null on
+  // SSR / before data (so no Date.now() in render → no hydration mismatch).
+  const histEndMs = timeline?.window_end ? new Date(timeline.window_end).getTime() : null;
+  const histStartMs =
+    histEndMs != null ? histEndMs - (PERIOD_MS[temporal.periodKey] ?? 7 * 24 * 3600_000) : null;
+  const fromText = histStartMs != null ? fmtDay(histStartMs) : null;
+  const toText = histEndMs != null ? fmtDay(histEndMs) : null;
+
+  // Mode-specific "Vue" badge — never duplicates "Lecture", never a single instant
+  // in Historique (registre §D).
+  const viewLabel =
+    reading === "live"
+      ? t("vueNow")
+      : reading === "asof"
+        ? asOfText
+          ? t("microStateAt", { time: asOfText })
+          : t("vueNoInstant")
+        : fromText && toText
+          ? t("vuePeriod", { from: fromText, to: toText })
+          : t("modeHistory");
+
+  // Contextual micro-line — describes ONLY the active state (registre §3).
+  const agents = (
+    <Suspense
+      key="agents"
+      fallback={<span className="tabular-nums">{t("agentsObserved", { n: fleetCount })}</span>}
+    >
+      <ObservedAgentsLabel fleetCount={fleetCount} />
+    </Suspense>
+  );
+  let microSegments: { key: string; node: ReactNode }[];
+  if (reading === "live") {
+    microSegments = [
+      { key: "data", node: <span>{t("realtime")}</span> },
+      ...(lastUpdate
+        ? [
+            {
+              key: "upd",
+              node: (
+                <span className="tabular-nums">{t("microLastUpdate", { time: lastUpdate })}</span>
+              ),
+            },
+          ]
+        : []),
+      { key: "agents", node: agents },
+    ];
+  } else if (reading === "asof") {
+    microSegments = asOfText
+      ? [
+          { key: "state", node: <span>{t("microStateAt", { time: asOfText })}</span> },
+          { key: "agents", node: agents },
+          { key: "present", node: <span>{t("microActionsPresent")}</span> },
+        ]
+      : [{ key: "pick", node: <span>{t("microPickInstant")}</span> }];
+  } else {
+    microSegments = [
+      {
+        key: "period",
+        node:
+          fromText && toText ? (
+            <span>{t("microPeriodFromTo", { from: fromText, to: toText })}</span>
+          ) : (
+            <span>{t("modeHistory")}</span>
+          ),
+      },
+      { key: "agents", node: agents },
+      {
+        key: "compare",
+        node: <span>{t("microComparison", { compare: compareLabel(compare, t) })}</span>,
+      },
+    ];
+  }
 
   return (
-    <section className="rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <section className="rounded-2xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       {/* Collapsed command row — the single temporal focus. */}
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-        {/* Lecture — Live / As-of / Historique, differentiated by ICON. */}
-        <SelectChip
-          icon={ReadingIcon}
-          label={t("reading")}
-          value={reading}
-          onChange={(v) => temporal.setReading(v as Reading)}
-          options={[
-            { value: "live", label: t("modeLive") },
-            { value: "asof", label: t("modeAsof") },
-            { value: "historique", label: t("modeHistory") },
-          ]}
-          accent
-        />
-        {/* Période (Live / Historique) OR "État au : T" (As-of). */}
+        {/* Lecture — Maintenant / À un instant / Historique, with per-mode
+            definitions IN the menu (not a permanent line), differentiated by icon. */}
+        <LectureMenu reading={reading} onChange={(v) => temporal.setReading(v)} t={t} />
+        {/* Période (Maintenant / Historique) OR "État au : T" (À un instant). The
+            chip is a DISPLAY that opens the panel where the single date picker lives —
+            no inline calendar button (it overflowed onto the agent filter). */}
         {reading === "asof" ? (
-          <span className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs text-gold-200">
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            title={t("goToDate")}
+            className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs text-gold-200 transition-colors hover:bg-gold-500/20"
+          >
             <CalendarClock className="h-3.5 w-3.5 shrink-0 text-gold-400" />
             {t("asofAt")}
-            <b className="font-semibold tabular-nums text-[var(--tessera-text)]">{asOfLabel}</b>
-            <GoToDateButton
-              selectedDate={asOfMs ? new Date(asOfMs) : new Date()}
-              onPick={temporal.pickDate}
-              minDate={minPickDate}
-            />
-          </span>
+            <b className="font-semibold tabular-nums text-[var(--tessera-text)]">
+              {asOfText ?? t("pickDatePrompt")}
+            </b>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-400/70" />
+          </button>
         ) : (
           <SelectChip
             icon={Clock3}
@@ -144,20 +333,15 @@ export function SignalCommandBar({
         )}
         {/* Agents — global scope filter (URL-driven, self-contained chip). */}
         <AgentScopeFilter />
-        {/* Comparer à — the baseline lens (meaningful when reading the past). */}
-        {reading !== "live" ? (
-          <SelectChip
-            icon={ArrowLeftRight}
-            label={t("compareTo")}
-            value={compare}
-            onChange={setCompare}
-            options={[
-              { value: "target", label: t("baselineTarget") },
-              { value: "now", label: t("baselineNow") },
-              { value: "none", label: t("noBaseline") },
-            ]}
-          />
-        ) : null}
+        {/* Comparer à — same level as Lecture/Période/Agents, in ALL readings; only
+            computable references are selectable, the rest are disabled with a reason. */}
+        <SelectChip
+          icon={ArrowLeftRight}
+          label={t("compareTo")}
+          value={compare}
+          onChange={setCompare}
+          options={compareOptions}
+        />
         {/* Déplier / Replier. */}
         <Button
           type="button"
@@ -165,7 +349,7 @@ export function SignalCommandBar({
           size="sm"
           aria-expanded={expanded}
           className="h-9 gap-1.5"
-          onClick={() => setExpanded((e) => !e)}
+          onClick={() => setExpanded(!expanded)}
         >
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           {expanded ? t("collapse") : t("expand")}
@@ -194,97 +378,174 @@ export function SignalCommandBar({
         </div>
       </div>
 
-      {/* Micro-status line — replaces the old full-width rule; real clock + agents. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--tessera-border)]/60 px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
-        <span className="flex items-center gap-1.5">
-          <ReadingIcon className="h-3 w-3 text-gold-400" />
-          <span className="font-medium text-[var(--tessera-text)]">
-            {reading === "live"
-              ? t("descLive")
-              : reading === "asof"
-                ? t("descAsof")
-                : t("descHistorique")}
+      {/* Contextual micro-line — describes ONLY the active reading (no permanent
+          documentation of all modes; those live in the Lecture menu). */}
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[var(--tessera-border)]/60 px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+        <ReadingIcon className="h-3 w-3 shrink-0 text-gold-400" />
+        {microSegments.map((seg, i) => (
+          <span key={seg.key} className="flex items-center gap-1.5">
+            {i > 0 ? <span aria-hidden>·</span> : null}
+            <span className={i === 0 ? "font-medium text-[var(--tessera-text)]" : undefined}>
+              {seg.node}
+            </span>
           </span>
-        </span>
-        <span aria-hidden>·</span>
-        <span className="tabular-nums">{clock}</span>
-        <span aria-hidden>·</span>
-        <span className="tabular-nums">{t("agentsObserved", { n: nAgents })}</span>
-        {reading === "asof" && temporal.asOf ? (
-          <span className="ml-auto flex items-center gap-2">
-            <Badge tone="gold" className="shrink-0">
-              {t("modeAsof")}
-            </Badge>
-            <span>{t("asofBanner", { time: asOfLabel })}</span>
-            <button
-              type="button"
-              className="whitespace-nowrap font-medium text-blue-300 hover:underline"
-              onClick={() => temporal.setReading("live")}
-            >
-              {t("exitReplay")} →
-            </button>
-          </span>
+        ))}
+        {reading !== "live" ? (
+          <button
+            type="button"
+            className="ml-auto whitespace-nowrap font-medium text-blue-300 hover:underline"
+            onClick={() => temporal.setReading("live")}
+          >
+            {t("exitReplay")} →
+          </button>
         ) : null}
       </div>
 
-      {/* Expanded — human title, mode legend, the scrubber panel, and the only
-          place the as-of jump-to-proofs lives (signals, never an execution replay). */}
-      {expanded ? (
-        <div className="border-t border-[var(--tessera-border)]/60 px-3 pb-3 pt-2">
-          <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="font-sans text-sm font-semibold text-[var(--tessera-text)]">
-              {t("navTitle")}
-            </h3>
-            <p className="text-[0.68rem] text-[var(--tessera-text-muted)]">
-              {t("modeLive")} — {t("descLive")} · {t("modeAsof")} — {t("descAsof")} ·{" "}
-              {t("modeHistory")} — {t("descHistorique")}
-            </p>
-          </div>
-          <TemporalRail
-            embedded
-            mode={temporal.mode}
-            liveStatus={liveStatus}
-            timeline={timeline}
-            sloTarget={sloTarget}
-            selectedAt={temporal.selectedAt}
-            onSelectedAtChange={temporal.setSelectedAt}
-            periodKey={temporal.periodKey}
-            windowEnd={temporal.windowEnd}
-            onModeChange={temporal.changeMode}
-            compare={compare}
-            onCompareChange={setCompare}
-          />
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <GoToDateButton
-              selectedDate={asOfMs ? new Date(asOfMs) : new Date()}
-              onPick={temporal.pickDate}
-              minDate={minPickDate}
-            />
-            {reading !== "live" ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9 gap-2"
-                onClick={() => temporal.setReading("live")}
-              >
-                <RotateCcw className="h-4 w-4" />
-                {t("exitReplay")}
-              </Button>
-            ) : null}
-            {temporal.asOf ? (
-              <Link
-                href={`/prouver/etat-a-date?asof=${encodeURIComponent(temporal.asOf)}`}
-                className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] px-3 text-xs font-medium text-blue-300 hover:bg-[var(--tessera-muted)]"
-              >
-                <CalendarClock className="h-4 w-4" />
-                {t("openInProofs")}
-              </Link>
-            ) : null}
-          </div>
+      {/* Expanded — human title, the scrubber panel, and the only place the as-of
+          jump-to-proofs lives (signals, never an execution replay). Animated
+          open/close (grid-rows 0fr->1fr) so the KPI cards below never jump. */}
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out",
+          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+        onTransitionEnd={(e) => {
+          if (e.propertyName === "grid-template-rows") setPanelOverflow(expanded);
+        }}
+      >
+        <div className={cn(panelOverflow ? "overflow-visible" : "overflow-hidden")}>
+          {/* Mount the panel only when open: an always-mounted rail re-ran its
+              Date/locale formatting during SSR while collapsed -> a hydration
+              mismatch. Gating on `expanded` keeps the grid-rows reveal AND a clean SSR. */}
+          {expanded ? (
+            <div className="border-t border-[var(--tessera-border)]/60 px-3 pb-3 pt-2">
+              <h3 className="mb-1 font-sans text-sm font-semibold text-[var(--tessera-text)]">
+                {t("navTitle")}
+              </h3>
+              <TemporalRail
+                embedded
+                mode={temporal.mode}
+                liveStatus={liveStatus}
+                timeline={timeline}
+                sloTarget={sloTarget}
+                selectedAt={temporal.selectedAt}
+                onSelectedAtChange={temporal.setSelectedAt}
+                periodKey={temporal.periodKey}
+                windowEnd={temporal.windowEnd}
+                onModeChange={temporal.changeMode}
+                compare={compare}
+                onCompareChange={setCompare}
+                viewLabel={viewLabel}
+              />
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <GoToDateButton
+                  selectedDate={asOfMs ? new Date(asOfMs) : new Date()}
+                  onPick={temporal.pickDate}
+                  minDate={minPickDate}
+                />
+                {reading !== "live" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-2"
+                    onClick={() => temporal.setReading("live")}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    {t("exitReplay")}
+                  </Button>
+                ) : null}
+                {temporal.asOf ? (
+                  <Link
+                    href={`/prouver/etat-a-date?asof=${encodeURIComponent(temporal.asOf)}`}
+                    className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] px-3 text-xs font-medium text-blue-300 hover:bg-[var(--tessera-muted)]"
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    {t("openInProofs")}
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </div>
     </section>
+  );
+}
+
+/** Date-only formatter for the history window bounds (stable width via tabular-nums). */
+function fmtDay(ms: number): string {
+  return new Date(ms).toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  });
+}
+
+/**
+ * Lecture control — a premium dropdown that carries the per-reading DEFINITIONS
+ * (so they no longer need a permanent explanatory line in the rail). Human labels
+ * only: Maintenant / À un instant / Historique; never "As-of".
+ */
+function LectureMenu({
+  reading,
+  onChange,
+  t,
+}: {
+  reading: Reading;
+  onChange: (value: Reading) => void;
+  t: Translate;
+}) {
+  const items: { value: Reading; labelKey: string; descKey: string }[] = [
+    { value: "live", labelKey: "modeLive", descKey: "readingDescLive" },
+    { value: "asof", labelKey: "modeAsof", descKey: "readingDescAsof" },
+    { value: "historique", labelKey: "modeHistory", descKey: "readingDescHistory" },
+  ];
+  const labelKeyFor: Record<Reading, string> = {
+    live: "modeLive",
+    asof: "modeAsof",
+    historique: "modeHistory",
+  };
+  const CurrentIcon = READING_ICON[reading];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs text-gold-200 transition-colors hover:bg-gold-500/20"
+        >
+          <CurrentIcon className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+          {t("reading")}
+          <span className="font-semibold text-[var(--tessera-text)]">
+            {t(labelKeyFor[reading])}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-400/70" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[20rem]">
+        {items.map((r) => {
+          const Icon = READING_ICON[r.value];
+          return (
+            <DropdownMenuItem
+              key={r.value}
+              onSelect={() => onChange(r.value)}
+              className="flex items-start gap-2.5 py-2"
+            >
+              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gold-400" />
+              <span className="flex min-w-0 flex-col">
+                <span className="flex items-center gap-2 text-sm font-medium text-[var(--tessera-text)]">
+                  {t(r.labelKey)}
+                  {r.value === reading ? <Check className="h-3.5 w-3.5 text-gold-400" /> : null}
+                </span>
+                <span className="text-[0.7rem] text-[var(--tessera-text-muted)]">
+                  {t(r.descKey)}
+                </span>
+              </span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -301,7 +562,7 @@ function SelectChip({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?: boolean }[];
   accent?: boolean;
 }) {
   return (
@@ -321,11 +582,30 @@ function SelectChip({
         className="cursor-pointer rounded bg-transparent font-semibold text-[var(--tessera-text)] outline-none"
       >
         {options.map((o) => (
-          <option key={o.value} value={o.value} className="bg-[var(--tessera-bg)]">
+          <option
+            key={o.value}
+            value={o.value}
+            disabled={o.disabled}
+            className="bg-[var(--tessera-bg)]"
+          >
             {o.label}
           </option>
         ))}
       </select>
     </label>
   );
+}
+
+/**
+ * Observed-agent count, reconciled with the active `?agent=` scope (1 when scoped
+ * to a single agent, the fleet size otherwise) — registre §2. Lives in its own
+ * Suspense boundary because it reads the URL via useSearchParams (build-safe, the
+ * same pattern as AgentScopeFilter), so the bar never triggers a CSR bailout.
+ */
+function ObservedAgentsLabel({ fleetCount }: { fleetCount: number }) {
+  const t = useTranslations("overview.time");
+  const searchParams = useSearchParams();
+  const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
+  const n = isScopedToAgent(scope) ? 1 : fleetCount;
+  return <span className="tabular-nums">{t("agentsObserved", { n })}</span>;
 }

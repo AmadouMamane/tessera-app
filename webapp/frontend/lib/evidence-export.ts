@@ -8,6 +8,7 @@
  * integrity and the disclosure text are structural/static, so they stay live.
  */
 
+import { AGENT_SCOPE_ALL, AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import {
   fetchAIAct,
   fetchAuditIntegrity,
@@ -18,6 +19,12 @@ import {
   fetchToxicity,
 } from "@/lib/api/client";
 import { getTemporalContext } from "@/lib/temporal-context";
+
+/** The active global agent scope (`?agent=`), or "all" off-browser / unset. */
+function activeAgentScope(): string {
+  if (typeof window === "undefined") return AGENT_SCOPE_ALL;
+  return parseAgentScope(new URLSearchParams(window.location.search).get(AGENT_SCOPE_PARAM));
+}
 
 function downloadJson(name: string, obj: unknown): void {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
@@ -34,7 +41,20 @@ export async function exportSnapshot(kind: "export" | "evidence"): Promise<void>
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const { asOf, period } = getTemporalContext();
   const at = asOf ?? undefined;
-  const scope = { generated_at: new Date().toISOString(), as_of: asOf, period };
+  const agentScope = activeAgentScope();
+  // Record the active agent filter so a reader knows what the pack covers. The
+  // cockpit's aggregate signals are org-wide (the backend does not partition them
+  // per agent), so a per-agent filter does NOT narrow the figures below — say so
+  // honestly rather than implying a per-agent coverage that does not exist.
+  const scope = {
+    generated_at: new Date().toISOString(),
+    as_of: asOf,
+    period,
+    agent_scope: agentScope,
+    ...(agentScope !== AGENT_SCOPE_ALL
+      ? { agent_scope_note: "Signals are org-wide; not yet partitioned per agent." }
+      : {}),
+  };
   const settle = async <T>(p: Promise<T>) => p.catch(() => null);
   if (kind === "evidence") {
     const [audit, aiAct, disclosure, pii] = await Promise.all([

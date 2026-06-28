@@ -107,6 +107,7 @@ export function TemporalRail({
   embedded = false,
   compare: compareProp,
   onCompareChange,
+  viewLabel,
 }: {
   mode: "live" | "history";
   liveStatus: string;
@@ -146,6 +147,12 @@ export function TemporalRail({
   /** Controlled baseline ("target"|"now"|"none"); when set the command bar owns it. */
   compare?: string;
   onCompareChange?: (value: string) => void;
+  /**
+   * Mode-specific "Vue" badge text computed by the command bar (Maintenant / État
+   * au {T} / Période {from} → {to}). When provided it overrides the raw instant so
+   * the badge never duplicates "Lecture" nor shows a single instant in Historique.
+   */
+  viewLabel?: string;
 }) {
   const t = useTranslations("overview.time");
   const [compareLocal, setCompareLocal] = useState("target");
@@ -207,8 +214,12 @@ export function TemporalRail({
   const presentScore = scorePoints.length
     ? scorePoints.reduce((best, p) => (Math.abs(p.at - end) < Math.abs(best.at - end) ? p : best)).v
     : null;
+  // Real-or-honest-empty: each baseline resolves to a value only when its source
+  // is actually computable (the SLO target, or a present score). No hardcoded
+  // fallback (the old `?? 0.8` fabricated a target when none was known) — an
+  // uncomputable baseline is null, so the delta badge is simply hidden.
   const baseline =
-    compare === "none" ? null : compare === "now" ? presentScore : (sloTarget ?? 0.8); // "target"
+    compare === "none" ? null : compare === "now" ? presentScore : (sloTarget ?? null); // "target"
   // Score nearest the focused instant (present included), for the vs-baseline delta.
   const nearestScore = scorePoints.reduce<{ v: number; d: number } | null>((best, p) => {
     const d = Math.abs(p.at - currentT);
@@ -359,7 +370,7 @@ export function TemporalRail({
           <Flag className="h-3.5 w-3.5 shrink-0 text-gold-400" />
           {t("viewingAt")}
           <b className="font-semibold tabular-nums text-[var(--foreground)]">
-            {selectedAt == null ? t("nowLive") : fmtStamp(currentT)}
+            {viewLabel ?? (selectedAt == null ? t("nowLive") : fmtStamp(currentT))}
           </b>
         </span>
         {embedded ? null : (
@@ -689,7 +700,10 @@ export function GoToDateButton({
             setOpen(false);
           }}
           labels={{ prevMonth: t("prevMonth"), nextMonth: t("nextMonth") }}
-          className="absolute right-0 top-[calc(100%+0.5rem)] z-50"
+          // Left-aligned: the button sits at the LEFT of the command-bar panel, so
+          // right-0 made the 292px calendar extend left under the sidebar (clipping
+          // the month header). left-0 keeps it inside the content area.
+          className="absolute left-0 top-[calc(100%+0.5rem)] z-50"
         />
       ) : null}
     </div>
@@ -801,26 +815,40 @@ function RailEvent({
 export type Reading = "live" | "asof" | "historique";
 
 export function useTemporalState() {
-  // The WINDOW (duration + absolute end) is the shared GLOBAL window (registre §8,
-  // one owner) — read here so it follows the user across every SURVEILLER page.
+  // The WINDOW (duration + absolute end) and the comparison lens are the shared
+  // GLOBAL window dimensions (registre §5/§8, one owner) — read here so they follow
+  // the user across every SURVEILLER page AND mirror into the URL below.
   const periodKey = useWindowStore((s) => s.period);
   const setPeriodKey = useWindowStore((s) => s.setPeriod);
   const anchorEnd = useWindowStore((s) => s.anchorEnd);
   const setAnchorEnd = useWindowStore((s) => s.setAnchorEnd);
-  // The temporal NAVIGATION (mode + instant T) is the URL, not a private default
-  // (registre §1/§5): a shared link reopens on the same reading, and the mode shown
-  // always matches the address bar.
-  const url0 = readTemporalUrl();
-  const url0At = url0.asof ? Date.parse(url0.asof) : null;
-  const [reading, setReadingState] = useState<Reading>(
-    url0.win ? "asof" : url0.asof ? "historique" : "live",
-  );
-  const [selectedAt, setSelectedAt] = useState<number | null>(url0At);
-  const [committedAt, setCommittedAt] = useState<number | null>(url0At);
-  // Restore the anchored window from the URL once on mount (the store is global).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only restore.
+  const compare = useWindowStore((s) => s.compare);
+  const setCompare = useWindowStore((s) => s.setCompare);
+  // The temporal NAVIGATION (reading + instant T + period + compare + expanded) is
+  // the URL — the reproducible source of truth (registre §1/§5): a shared link
+  // reopens on the exact same view, and the reading always matches the address bar.
+  // Start at the live default on BOTH the server and the first client render, then
+  // hydrate the whole temporal state from the URL in a mount-only effect. Reading
+  // the URL during render (useState init) would diverge server (no window → live)
+  // from client (params) → a hydration mismatch; deferring it to an effect is
+  // SSR-safe at the cost of a one-frame live flash on a deep-link.
+  const [reading, setReadingState] = useState<Reading>("live");
+  const [selectedAt, setSelectedAt] = useState<number | null>(null);
+  const [committedAt, setCommittedAt] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<boolean>(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only hydrate.
   useEffect(() => {
-    if (url0.win) setAnchorEnd(url0.win);
+    const u = readTemporalUrl();
+    if (u.period) setPeriodKey(u.period);
+    if (u.compare) setCompare(u.compare);
+    const instant = u.reading === "asof" ? u.asof : u.at;
+    const at = instant ? Date.parse(instant) : null;
+    setSelectedAt(at);
+    setCommittedAt(at);
+    if (u.reading === "asof" && u.asof) setAnchorEnd(u.asof);
+    else if (u.reading === "historique" && u.to) setAnchorEnd(u.to);
+    setReadingState(u.reading);
+    setExpanded(u.expanded);
   }, []);
   useEffect(() => {
     const id = window.setTimeout(() => setCommittedAt(selectedAt), 250);
@@ -842,29 +870,45 @@ export function useTemporalState() {
   useEffect(() => {
     setTemporalContext({ asOf, period: periodKey });
   }, [asOf, periodKey]);
-  // The URL is the source of truth: mirror the committed instant + anchor into it.
+  // The URL is the source of truth: mirror the WHOLE reproducible state into it.
+  // Skip the very first run (the URL already reflects the initial state) so we
+  // never strip the params we just read before the store-restore commits.
+  const didMount = useRef(false);
   useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
     writeTemporalUrl({
-      asof:
+      reading,
+      period: periodKey,
+      asof: reading === "asof" ? anchorEnd : null,
+      at:
         reading === "historique" && committedAt != null
           ? new Date(committedAt).toISOString()
           : null,
-      win: reading === "asof" ? anchorEnd : null,
+      to: reading === "historique" ? anchorEnd : null,
+      compare,
+      expanded,
     });
-  }, [reading, committedAt, anchorEnd]);
+  }, [reading, periodKey, anchorEnd, committedAt, compare, expanded]);
   useTemporalUrlPopstate(
     useCallback(
       (s: TemporalUrlState) => {
-        const at = s.asof ? Date.parse(s.asof) : null;
+        const instant = s.reading === "asof" ? s.asof : s.at;
+        const at = instant ? Date.parse(instant) : null;
         setSelectedAt(at);
         setCommittedAt(at);
-        setAnchorEnd(s.win);
-        setReadingState(s.win ? "asof" : s.asof ? "historique" : "live");
+        setAnchorEnd(s.reading === "asof" ? s.asof : s.reading === "historique" ? s.to : null);
+        setReadingState(s.reading);
+        setPeriodKey(s.period ?? "d7");
+        setCompare(s.compare ?? "target");
+        setExpanded(s.expanded);
       },
-      [setAnchorEnd],
+      [setAnchorEnd, setPeriodKey, setCompare],
     ),
   );
-  // Switch the reading mode (the "Lecture" control), clearing what no longer applies.
+  // Switch the reading (the "Lecture" control), clearing what no longer applies.
   function setReading(next: Reading) {
     setReadingState(next);
     if (next === "live") {
@@ -907,6 +951,10 @@ export function useTemporalState() {
     pickDate,
     asOf,
     historyMode,
+    compare,
+    setCompare,
+    expanded,
+    setExpanded,
   };
 }
 

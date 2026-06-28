@@ -24,6 +24,15 @@ interface WindowState {
    */
   anchorEnd: string | null;
   setAnchorEnd: (anchorEnd: string | null) => void;
+  /**
+   * Baseline lens for reading the past — "target" (the SLO objective), "now" (the
+   * present value), or "none". It is a temporal-window dimension (registre §5), so
+   * it lives here with the period, NOT as a private rail state: every SURVEILLER
+   * page reads the SAME "Comparer à". Only baselines that are actually computable
+   * are offered by the bar; an uncomputable one falls back to "none".
+   */
+  compare: string;
+  setCompare: (compare: string) => void;
 }
 
 export const useWindowStore = create<WindowState>((set) => ({
@@ -31,4 +40,6 @@ export const useWindowStore = create<WindowState>((set) => ({
   setPeriod: (period) => set({ period }),
   anchorEnd: null,
   setAnchorEnd: (anchorEnd) => set({ anchorEnd }),
+  compare: "target",
+  setCompare: (compare) => set({ compare }),
 }));
