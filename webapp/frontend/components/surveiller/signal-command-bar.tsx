@@ -195,7 +195,6 @@ export function SignalCommandBar({
   const dataRange = useDataRange();
   const minPickDate = dataRange.data?.start ? new Date(dataRange.data.start) : undefined;
 
-  const ReadingIcon = READING_ICON[reading];
   // Switching to À un instant / Historique auto-opens the scrubber (registre §4);
   // returning to Maintenant leaves the panel as the user left it (no forced close).
   const prevReading = useRef(reading);
@@ -386,9 +385,12 @@ export function SignalCommandBar({
       </div>
 
       {/* Contextual micro-line — describes ONLY the active reading (no permanent
-          documentation of all modes; those live in the Lecture menu). */}
+          documentation of all modes; those live in the Lecture menu). It carries
+          NO icon: the leading status icon is the Lecture control's job (one row
+          above), and repeating the SAME reading glyph here stacked two identical
+          icons vertically and read as a second control. The line is a state
+          summary, so its bold first segment carries the meaning. */}
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[var(--tessera-border)]/60 px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
-        <ReadingIcon className="h-3 w-3 shrink-0 text-gold-400" />
         {microSegments.map((seg, i) => (
           <span key={seg.key} className="flex items-center gap-1.5">
             {i > 0 ? <span aria-hidden>·</span> : null}
