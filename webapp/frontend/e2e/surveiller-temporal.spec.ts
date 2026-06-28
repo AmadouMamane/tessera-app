@@ -279,3 +279,21 @@ test("the replay cassette stays on XT-01 (AGIR/Replay), not on SURVEILLER", asyn
   // …and the signal event-nav is NOT used there.
   await expect(page.locator('[aria-label="Événement suivant"]')).toHaveCount(0);
 });
+
+test("timeline bounds are anchored to the axis, not floating in a row below", async ({ page }) => {
+  await open(page, "?expanded=1");
+  const slider = bar(page).locator('[role="slider"]').first();
+  await expect(slider).toBeVisible();
+  const sb = await slider.boundingBox();
+  if (!sb) throw new Error("scrubber not found");
+  // The window-end bound "maintenant" lives ONCE, inside the scrubber track and
+  // close to the axis at its top — not duplicated in a separate row well below it.
+  const maint = slider.getByText("maintenant", { exact: true });
+  await expect(maint).toHaveCount(1);
+  const mb = await maint.boundingBox();
+  if (!mb) throw new Error("end bound not found");
+  // Inside the track, in its upper portion (the axis sits near the track top), so
+  // the label reads as a border of the line — never a label lost far beneath it.
+  expect(mb.y).toBeGreaterThanOrEqual(sb.y - 1);
+  expect(mb.y - sb.y).toBeLessThan(40);
+});

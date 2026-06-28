@@ -196,10 +196,13 @@ export function AppHeader({
       {hasRow2 ? (
         <div
           className={cn(
-            "flex flex-wrap items-center justify-between gap-3 px-6 py-2.5",
+            "flex flex-wrap items-center justify-between gap-3 px-6",
             // Sits BELOW row 1's rule — no border of its own (no double line, no
-            // cheap separator under the actions).
-            hasFilterRow ? "min-h-[3.25rem]" : "justify-end",
+            // cheap separator under the actions). A filter row gets normal breathing
+            // room; an actions-ONLY row hugs the rule (a slim shelf, pt-2 pb-1) so
+            // the page actions read as part of the header instead of floating in the
+            // empty band above the temporal bar.
+            hasFilterRow ? "min-h-[3.25rem] py-2.5" : "justify-end pt-2 pb-1",
           )}
         >
           {hasFilterRow ? (

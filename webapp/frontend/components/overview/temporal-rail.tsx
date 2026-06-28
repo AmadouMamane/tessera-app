@@ -296,11 +296,6 @@ export function TemporalRail({
       return !best || d < best.d ? { ev, d } : best;
     }, null)?.ev ?? null;
 
-  // "À un instant" before a day is picked: signals can't be reconstructed yet, so
-  // the rail shows an honest empty state (no score, no computed state, no PROUVER
-  // link, no live framing) — only the prompt to choose an instant. Derived, never
-  // a hidden flag. When `reading` is omitted (standalone rail) this stays false.
-  const awaitingInstant = reading === "asof" && selectedAt == null && !anchored;
   // A genuine LIVE snapshot (green "État live") only when the present is what's on
   // screen: no instant scrubbed AND the reading is Maintenant. Historique without a
   // scrub reads the current end-of-period state under a neutral label (registre §9).
@@ -390,6 +385,30 @@ export function TemporalRail({
   // The playhead follows the PREVIEW while dragging, else the active instant.
   const displayAt = previewAt ?? currentT;
   const handlePos = railPos(new Date(displayAt).toISOString(), viewStart, span);
+  // Real data may begin after the window start; when so, a "début données" marker
+  // sits where it starts. Computed once so the window-bound labels can also stay
+  // clear of it and the playhead.
+  const showDataStart = !!timeline && dataStart > viewStart + span * 0.01;
+  // "À un instant" before a day is picked: the rail shows an honest empty state
+  // (no live "now" framing) — so the right window bound stays unlabelled until an
+  // instant is chosen. Derived; false on the standalone rail (no `reading`).
+  const awaitingInstant = reading === "asof" && selectedAt == null && !anchored;
+  // The focused instant outranks the window bounds: when its label would sit on
+  // top of a bound (playhead pinned to an edge) we drop that bound so the instant
+  // never collides with "début période" / "maintenant" (registre §5).
+  const headActive = previewAt != null || selectedAt != null;
+  const hideStartBound = headActive && handlePos < 14;
+  // Hide "maintenant" when the focused-instant label would sit on it, OR while
+  // awaiting an instant (no live framing yet).
+  const hideEndBound = (headActive && handlePos > 86) || awaitingInstant;
+  // The "début données" label shares the playhead's label row, so when the focused
+  // instant lands on top of the data-start marker we drop that (secondary) label —
+  // the gold instant label wins (registre §5: priority to the selected instant).
+  const dataStartPos = showDataStart
+    ? railPos(new Date(dataStart).toISOString(), viewStart, span)
+    : null;
+  const hideDataStartLabel =
+    headActive && dataStartPos != null && Math.abs(handlePos - dataStartPos) < 12;
 
   return (
     <section
@@ -576,14 +595,36 @@ export function TemporalRail({
         }}
       >
         <div className="pointer-events-none absolute inset-x-0 top-2.5 h-0.5 rounded-full bg-[linear-gradient(90deg,#363d48,#454e5d)]" />
-        {/* "real data begins here" marker — this is where the timeline data
-            starts, NOT the comparison baseline. The baseline (target / present)
-            is a value, shown in the detail-panel delta, so it has no fixed point
-            on the time axis; pinning a "baseline" dot here was misleading. */}
-        {timeline && dataStart > viewStart + span * 0.01 ? (
+        {/* Window-bound ticks + labels — anchored to the axis ends so the window's
+            extent reads as the axis itself (registre §4), not as labels floating
+            beneath it. Each is a discreet tick crossing the line with its date
+            just under it; faint, so the focused instant always stays dominant.
+            The right end is "maintenant" when live / the anchored date otherwise,
+            and is shown ONLY here — no second floating bounds row below the axis. */}
+        {!hideStartBound ? (
+          <>
+            <span className="pointer-events-none absolute left-0 top-1.5 h-2.5 w-px bg-[var(--tessera-border-strong)]" />
+            <span className="pointer-events-none absolute left-0 top-5 whitespace-nowrap text-[0.6rem] tabular-nums text-[var(--muted-foreground)] opacity-70">
+              {fmtDay(viewStart)}
+            </span>
+          </>
+        ) : null}
+        {!hideEndBound ? (
+          <>
+            <span className="pointer-events-none absolute right-0 top-1.5 h-2.5 w-px bg-[var(--tessera-border-strong)]" />
+            <span className="pointer-events-none absolute right-0 top-5 whitespace-nowrap text-[0.6rem] tabular-nums text-[var(--muted-foreground)] opacity-70">
+              {anchored ? fmtDay(end) : t("now")}
+            </span>
+          </>
+        ) : null}
+        {/* "real data begins here" marker — where the timeline data starts, NOT a
+            comparison baseline (that's a value shown in the detail-panel delta, so
+            it has no fixed point on the axis). */}
+        {showDataStart ? (
           <RailMarker
-            pos={railPos(new Date(dataStart).toISOString(), viewStart, span)}
+            pos={dataStartPos ?? 0}
             label={t("dataStart")}
+            hideLabel={hideDataStartLabel}
             variant="baseline"
           />
         ) : null}
@@ -658,22 +699,6 @@ export function TemporalRail({
             </span>
           </span>
         ) : null}
-        {selectedAt == null && previewAt == null && !awaitingInstant ? (
-          // Pinned flush to the right edge (not centred at 96%) so it never
-          // overlaps the rightmost event/data-start label. Hidden while awaiting an
-          // instant: there's no "now" framing until a point in time is chosen.
-          <span className="pointer-events-none absolute top-7 right-0 whitespace-nowrap text-[0.65rem] font-medium text-gold-400">
-            {anchored ? t("latest") : t("now")}
-          </span>
-        ) : null}
-      </div>
-
-      {/* Window bounds — the visible span's start → end. Restores the range
-          readout we lost when the calendar moved out of the top toolbar bar: the
-          right edge reads "maintenant" when live, the anchored date otherwise. */}
-      <div className="mt-1 flex justify-between text-[0.6rem] tabular-nums text-[var(--muted-foreground)]">
-        <span>{fmtDay(viewStart)}</span>
-        <span>{anchored ? fmtDay(end) : t("now")}</span>
       </div>
 
       {/* Legend — what the scrubber ticks mean. */}
@@ -1016,10 +1041,13 @@ function RailMarker({
   pos,
   label,
   variant,
+  hideLabel,
 }: {
   pos: number;
   label: string;
   variant: "baseline";
+  /** Drop the label (keep the dot) when the focused instant would collide with it. */
+  hideLabel?: boolean;
 }) {
   return (
     <>
@@ -1027,12 +1055,14 @@ function RailMarker({
         className="pointer-events-none absolute top-1.5 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-slate-400 shadow-[0_0_0_4px_rgba(130,140,153,0.15)]"
         style={{ left: `${pos}%`, opacity: variant === "baseline" ? 1 : 0.8 }}
       />
-      <span
-        className="pointer-events-none absolute top-7 -translate-x-1/2 whitespace-nowrap text-[0.65rem] text-[var(--muted-foreground)]"
-        style={{ left: `${pos}%` }}
-      >
-        {label}
-      </span>
+      {hideLabel ? null : (
+        <span
+          className="pointer-events-none absolute top-7 -translate-x-1/2 whitespace-nowrap text-[0.65rem] text-[var(--muted-foreground)]"
+          style={{ left: `${pos}%` }}
+        >
+          {label}
+        </span>
+      )}
     </>
   );
 }
