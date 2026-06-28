@@ -264,8 +264,12 @@ export function TemporalRail({
   // is actually computable (the SLO target, or a present score). No hardcoded
   // fallback (the old `?? 0.8` fabricated a target when none was known) — an
   // uncomputable baseline is null, so the delta badge is simply hidden.
+  // Only the two references with a real source on this surface resolve to a value;
+  // the rest (none / previous_period / baseline / previous_release) have no
+  // computable baseline here, so they show NO delta — never a fake vs-target number
+  // dressed up under another label (matches the bar's disabled-with-reason chip).
   const baseline =
-    compare === "none" ? null : compare === "now" ? presentScore : (sloTarget ?? null); // "target"
+    compare === "target" ? (sloTarget ?? null) : compare === "now" ? presentScore : null;
   // Score nearest the focused instant (present included), for the vs-baseline delta.
   const nearestScore = scorePoints.reduce<{ v: number; d: number } | null>((best, p) => {
     const d = Math.abs(p.at - currentT);
@@ -1118,6 +1122,17 @@ function RailEvent({
 /** SR-01 reading mode (registre §4): how the page reads the signal series. */
 export type Reading = "live" | "asof" | "historique";
 
+/**
+ * The natural comparison default for each reading (registre §12). Switching the
+ * reading applies it, so the comparison is never a silent "Aucun" nor a foreign
+ * lens carried across: Maintenant → objectif cible, À un instant → Maintenant,
+ * Historique → période précédente. A default that is not currently computable is
+ * shown disabled-with-reason by the bar — it is never downgraded to "Aucun".
+ */
+export function readingDefaultCompare(reading: Reading): string {
+  return reading === "live" ? "target" : reading === "asof" ? "now" : "previous_period";
+}
+
 export function useTemporalState() {
   // The WINDOW (duration + absolute end) and the comparison lens are the shared
   // GLOBAL window dimensions (registre §5/§8, one owner) — read here so they follow
@@ -1144,7 +1159,9 @@ export function useTemporalState() {
   useEffect(() => {
     const u = readTemporalUrl();
     if (u.period) setPeriodKey(u.period);
-    if (u.compare) setCompare(u.compare);
+    // Honour an explicit deep-link comparison; otherwise apply the reading's
+    // default (never leak a foreign/stale "Aucun" from the shared store).
+    setCompare(u.compare ?? readingDefaultCompare(u.reading));
     const instant = u.reading === "asof" ? u.asof : u.at;
     const at = instant ? Date.parse(instant) : null;
     setSelectedAt(at);
@@ -1161,13 +1178,30 @@ export function useTemporalState() {
   const windowEnd = anchorEnd != null ? Date.parse(anchorEnd) : undefined;
   // Legacy two-valued mode kept for the scrubber panel: live vs everything else.
   const mode: "live" | "history" = reading === "live" ? "live" : "history";
-  // ISO instant fed to the as-of-T-capable queries: As-of reads the anchored day;
-  // Historique reads the scrubbed instant; Live reads the live buffer (null).
+  // ISO instant fed to the as-of-T-capable QUERIES — debounced via committedAt so a
+  // scrub fires one request per settle, never one per move. À un instant reads the
+  // scrubbed instant within the anchored window (falling back to the window end
+  // before the first scrub); Historique reads the scrubbed instant; Live = null.
   const asOf =
     reading === "asof"
-      ? anchorEnd
+      ? committedAt != null
+        ? new Date(committedAt).toISOString()
+        : anchorEnd
       : reading === "historique" && committedAt != null
         ? new Date(committedAt).toISOString()
+        : null;
+  // The single ACTIVE instant the user is viewing — for DISPLAY and the URL. Read
+  // from the IMMEDIATE cursor (selectedAt), not the debounced query value, so the
+  // bar's "État au", the micro-line, the timeline and the URL never show two
+  // different active instants (registre §4). Falls back to the anchored window end
+  // in À un instant before the first scrub; null in Live / unscrubbed Historique.
+  const activeAt =
+    reading === "asof"
+      ? selectedAt != null
+        ? new Date(selectedAt).toISOString()
+        : anchorEnd
+      : reading === "historique" && selectedAt != null
+        ? new Date(selectedAt).toISOString()
         : null;
   const historyMode = asOf != null;
   // Mirror the temporal context so the evidence pack/report is scoped to (period, asOf).
@@ -1186,16 +1220,15 @@ export function useTemporalState() {
     writeTemporalUrl({
       reading,
       period: periodKey,
-      asof: reading === "asof" ? anchorEnd : null,
-      at:
-        reading === "historique" && committedAt != null
-          ? new Date(committedAt).toISOString()
-          : null,
+      // The active instant (immediate), so a shared link reopens on the exact
+      // instant the bar/timeline show — never the debounced query value.
+      asof: reading === "asof" ? activeAt : null,
+      at: reading === "historique" ? activeAt : null,
       to: reading === "historique" ? anchorEnd : null,
       compare,
       expanded,
     });
-  }, [reading, periodKey, anchorEnd, committedAt, compare, expanded]);
+  }, [reading, periodKey, anchorEnd, activeAt, compare, expanded]);
   useTemporalUrlPopstate(
     useCallback(
       (s: TemporalUrlState) => {
@@ -1206,7 +1239,7 @@ export function useTemporalState() {
         setAnchorEnd(s.reading === "asof" ? s.asof : s.reading === "historique" ? s.to : null);
         setReadingState(s.reading);
         setPeriodKey(s.period ?? "d7");
-        setCompare(s.compare ?? "target");
+        setCompare(s.compare ?? readingDefaultCompare(s.reading));
         setExpanded(s.expanded);
       },
       [setAnchorEnd, setPeriodKey, setCompare],
@@ -1215,6 +1248,9 @@ export function useTemporalState() {
   // Switch the reading (the "Lecture" control), clearing what no longer applies.
   function setReading(next: Reading) {
     setReadingState(next);
+    // Each reading carries its own comparison default (registre §12) — a user
+    // switch never keeps a foreign lens nor silently falls to "Aucun".
+    setCompare(readingDefaultCompare(next));
     if (next === "live") {
       setSelectedAt(null);
       setCommittedAt(null);
@@ -1254,6 +1290,7 @@ export function useTemporalState() {
     windowEnd,
     pickDate,
     asOf,
+    activeAt,
     historyMode,
     compare,
     setCompare,

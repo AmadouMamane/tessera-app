@@ -220,7 +220,7 @@
       "asofAt": "Zustand am:",
       "asofBanner": "Sie sehen den Zustand am {time}. Aktionen wirken weiterhin auf die Gegenwart.",
       "openInProofs": "In NACHWEISEN öffnen · Zustand zum Datum",
-      "agentsObserved": "{n} Agenten beobachtet",
+      "agentsObserved": "{n, plural, =0 {Kein Agent beobachtet} one {# Agent beobachtet} other {# Agenten beobachtet}}",
       "lastUpdate": "Letzte Aktualisierung",
       "viewingAt": "Ansicht:",
       "timeTravel": "time-travel",

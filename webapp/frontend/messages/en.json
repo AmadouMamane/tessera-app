@@ -220,7 +220,7 @@
       "asofAt": "State at:",
       "asofBanner": "You are viewing the state at {time}. Actions still apply to the present.",
       "openInProofs": "Open in PROVE · State at date",
-      "agentsObserved": "{n} agents observed",
+      "agentsObserved": "{n, plural, =0 {No agent observed} one {# agent observed} other {# agents observed}}",
       "lastUpdate": "Last update",
       "viewingAt": "Viewing:",
       "timeTravel": "time-travel",

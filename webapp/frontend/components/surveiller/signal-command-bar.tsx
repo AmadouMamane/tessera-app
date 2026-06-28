@@ -21,6 +21,7 @@ import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import {
   GoToDateButton,
   TemporalRail,
+  readingDefaultCompare,
   useDataRange,
   type useTemporalState,
 } from "@/components/overview/temporal-rail";
@@ -70,18 +71,6 @@ function compareEnabled(reading: Reading, value: string, avail: { target: boolea
   // previous_period / baseline / previous_release have no real data source here →
   // never computable (real-or-honest-empty; shown disabled with a reason, never faked).
   return false;
-}
-
-/** The reading's preferred default, falling back to the first computable reference. */
-function defaultCompare(reading: Reading, avail: { target: boolean; now: boolean }) {
-  const pref = reading === "live" ? "target" : reading === "asof" ? "now" : "previous_period";
-  if (compareEnabled(reading, pref, avail)) return pref;
-  // "À un instant": the whole point of the view is the state at T vs now, so
-  // "Maintenant" stays the natural default EVEN when it is not currently computable —
-  // it is then shown disabled with a reason, never silently downgraded to "Aucun".
-  if (reading === "asof") return "now";
-  if (avail.target) return "target";
-  return "none";
 }
 
 function compareLabel(value: string, t: Translate): string {
@@ -173,18 +162,21 @@ export function SignalCommandBar({
   // "À un instant" needs a chosen day before any comparison is meaningful — there
   // is no instant to compare against the present yet (registre §12). Until then the
   // "Comparer à" control is shown disabled with a reason, never a phantom default.
-  const hasInstant = reading === "asof" ? temporal.asOf != null : true;
+  const hasInstant = reading === "asof" ? temporal.activeAt != null : true;
   const compareOptions = buildCompareOptions(reading, { target: targetAvail, now: nowAvail }, t);
-  // Keep the active comparison honest: if it is hidden for this reading or not
-  // computable, fall back to the reading's default (never a phantom comparison).
-  // Skipped while awaiting an instant (the control is disabled, value irrelevant).
+  // Keep the comparison honest across readings: reset only a FOREIGN lens (one not
+  // offered for this reading) to the reading's default. A visible-but-not-computable
+  // default (e.g. Maintenant without a present score, Période précédente) is KEPT and
+  // shown disabled-with-reason — never downgraded to "Aucun" (registre §12). User
+  // reading switches set the default in the temporal hook (readingDefaultCompare);
+  // this only guards stale/foreign values (popstate, cross-page store). Skipped while
+  // awaiting an instant (the control is disabled, value irrelevant).
   useEffect(() => {
     if (reading === "asof" && !hasInstant) return;
-    const visible = COMPARE_ORDER[reading].includes(compare);
-    if (!visible || !compareEnabled(reading, compare, { target: targetAvail, now: nowAvail })) {
-      setCompare(defaultCompare(reading, { target: targetAvail, now: nowAvail }));
+    if (!COMPARE_ORDER[reading].includes(compare)) {
+      setCompare(readingDefaultCompare(reading));
     }
-  }, [reading, hasInstant, targetAvail, nowAvail, compare, setCompare]);
+  }, [reading, hasInstant, compare, setCompare]);
 
   const fleet = useQuery({
     queryKey: ["fleet-scope-filter"],
@@ -203,11 +195,14 @@ export function SignalCommandBar({
     prevReading.current = reading;
   }, [reading, setExpanded]);
 
-  const asOfMs = temporal.windowEnd ?? temporal.committedAt ?? null;
+  // The ACTIVE instant (immediate, not the debounced query value) drives every
+  // visible field — chip · micro-line · Vue badge · calendar — so the bar can never
+  // show a different instant than the timeline/detail (registre §4: one active T).
+  const asOfMs = temporal.activeAt ? new Date(temporal.activeAt).getTime() : null;
   // The chosen instant T, formatted (date + time) — used by the chip, the micro-line
   // and the Vue badge. Empty in "À un instant" before a date is picked.
-  const asOfText = temporal.asOf
-    ? new Date(temporal.asOf).toLocaleString(undefined, {
+  const asOfText = temporal.activeAt
+    ? new Date(temporal.activeAt).toLocaleString(undefined, {
         day: "2-digit",
         month: "2-digit",
         year: "2-digit",
@@ -460,10 +455,10 @@ export function SignalCommandBar({
                   duplicate bottom picker (one entry per action). Transition to
                   PROUVER · État à date shows only with an instant chosen (a
                   point-in-time reconstruction, not a replay). */}
-              {temporal.asOf ? (
+              {temporal.activeAt ? (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Link
-                    href={`/prouver/etat-a-date?asof=${encodeURIComponent(temporal.asOf)}`}
+                    href={`/prouver/etat-a-date?asof=${encodeURIComponent(temporal.activeAt)}`}
                     className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] px-3 text-xs font-medium text-blue-300 hover:bg-[var(--tessera-muted)]"
                   >
                     <CalendarClock className="h-4 w-4" />
