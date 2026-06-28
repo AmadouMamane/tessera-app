@@ -351,3 +351,17 @@ test("the observed-agent count is singular/plural correct (1 agent observé, nev
   await expect(bar(page).getByText("1 agent observé").first()).toBeVisible();
   await expect(bar(page).getByText("1 agents observés")).toHaveCount(0);
 });
+
+test("SR-01 event navigation is a labelled 'Événements' control, never a player", async ({
+  page,
+}) => {
+  await open(page, "?expanded=1");
+  // A clear "Événements" label + the two event arrows (tooltips), not arrows alone.
+  await expect(bar(page).getByText("Événements").first()).toBeVisible();
+  await expect(bar(page).locator('[aria-label="Événement précédent"]').first()).toBeVisible();
+  await expect(bar(page).locator('[aria-label="Événement suivant"]').first()).toBeVisible();
+  // None of the execution-cassette controls leak onto SR-01 (XT-01 only).
+  for (const lbl of ["Pause", "Début", "Le plus récent"]) {
+    await expect(bar(page).locator(`[aria-label="${lbl}"]`)).toHaveCount(0);
+  }
+});

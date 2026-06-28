@@ -266,6 +266,8 @@
       "reasonSelectInstant": "Wählen Sie einen Zeitpunkt zum Vergleichen aus",
       "eventPrev": "Vorheriges Ereignis",
       "eventNext": "Nächstes Ereignis",
+      "eventsBrowse": "Ereignisse",
+      "noEventsInWindow": "Kein Ereignis in diesem Fenster",
       "observationWindow": "Beobachtungsfenster",
       "goToInstant": "Zu einem Zeitpunkt springen",
       "periodState": "Im Zeitraum",

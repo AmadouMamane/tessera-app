@@ -9,6 +9,7 @@ import {
   Clock3,
   Flag,
   History,
+  Milestone,
   Pause,
   PlayCircle,
   RotateCcw,
@@ -414,6 +415,22 @@ export function TemporalRail({
   const hideDataStartLabel =
     headActive && dataStartPos != null && Math.abs(handlePos - dataStartPos) < 12;
 
+  // SR-01 event navigation (signal transport only) — a labelled "Événements"
+  // capsule, NOT a player. Defined once and placed by context: anchored under the
+  // axis (in the legend row) when embedded in the command bar, otherwise inline
+  // with the labeled controls on the standalone rail. Never rendered for the
+  // execution transport (XT-01 keeps its cassette).
+  const signalNav = (
+    <SignalEventNavigation
+      t={t}
+      prevDisabled={prevEventT == null}
+      nextDisabled={nextEventT == null}
+      noEvents={events.length === 0}
+      onPrev={() => seekToEvent(prevEventT)}
+      onNext={() => seekToEvent(nextEventT)}
+    />
+  );
+
   return (
     <section
       className={cn(
@@ -529,14 +546,11 @@ export function TemporalRail({
               setSelectedAt(null);
             }}
           />
-        ) : (
-          <SignalEventNavigation
-            t={t}
-            prevDisabled={prevEventT == null}
-            nextDisabled={nextEventT == null}
-            onPrev={() => seekToEvent(prevEventT)}
-            onNext={() => seekToEvent(nextEventT)}
-          />
+        ) : embedded ? null : (
+          // Embedded (SR-01 command bar): the nav is anchored under the axis in the
+          // legend row, so it is NOT rendered here (the row would otherwise hold a
+          // single lone capsule floating top-right). Standalone rail keeps it inline.
+          signalNav
         )}
         {/* "Aller à une date" — the COARSE jump (moves the window END to an absolute
             past day, today/future = live). Only on the standalone rail when wired;
@@ -724,6 +738,10 @@ export function TemporalRail({
           <span className="h-2.5 w-px bg-red-400 opacity-40" />
           {t("legendGuard")}
         </span>
+        {/* Event navigation anchored here (embedded) — directly under the axis,
+            paired with the legend, so it reads as a timeline control, not a lone
+            floating capsule above the rail. */}
+        {embedded ? signalNav : null}
       </div>
 
       {/* Detail panel = the SELECTED-event detail only. Embedded (SR-01 command
@@ -894,26 +912,48 @@ export function GoToDateButton({
 type Translate = ReturnType<typeof useTranslations>;
 
 /**
- * SR-01 transport — signal **event** navigation (no player). Two buttons that jump
- * the cursor to the previous / next real signal event; never a video-player
- * cassette (that is execution replay, XT-01). Used on every SURVEILLER + monitoring
- * surface.
+ * SR-01 transport — signal **event** navigation (no player). A labelled
+ * "Événements" capsule with previous / next arrows that jump the cursor to the
+ * adjacent real signal event; never a video-player cassette (that is execution
+ * replay, XT-01). The explicit label + the arrows-only shape make the function
+ * unmistakable (browse events ≠ replay). Used on every SURVEILLER surface.
  */
 function SignalEventNavigation({
   t,
   prevDisabled,
   nextDisabled,
+  noEvents,
   onPrev,
   onNext,
 }: {
   t: Translate;
   prevDisabled: boolean;
   nextDisabled: boolean;
+  /** No navigable event in the window → a disabled, labelled capsule + reason. */
+  noEvents: boolean;
   onPrev: () => void;
   onNext: () => void;
 }) {
+  // Empty window: an honest disabled capsule with the reason in a tooltip — never a
+  // dead pair of arrows that could read as a broken player.
+  if (noEvents) {
+    return (
+      <span
+        title={t("noEventsInWindow")}
+        className="ml-auto flex h-8 shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)]/40 px-3 text-[0.7rem] font-medium text-[var(--tessera-text-muted)] opacity-60"
+      >
+        <Milestone className="h-3.5 w-3.5" />
+        {t("eventsBrowse")}
+      </span>
+    );
+  }
   return (
-    <span className="ml-auto flex h-9 shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-1 text-[var(--muted-foreground)]">
+    <span className="ml-auto flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/20 bg-cyan-400/[0.04] py-1 pl-3 pr-1 text-[0.7rem] text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <span className="flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
+        <Milestone className="h-3.5 w-3.5 text-cyan-300/70" />
+        {t("eventsBrowse")}
+      </span>
+      <span className="mx-1 h-3.5 w-px bg-cyan-400/15" />
       <EventNavButton label={t("eventPrev")} disabled={prevDisabled} onClick={onPrev}>
         <ChevronLeft className="h-4 w-4" />
       </EventNavButton>

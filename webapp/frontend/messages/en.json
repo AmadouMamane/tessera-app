@@ -266,6 +266,8 @@
       "reasonSelectInstant": "Select a point in time to compare",
       "eventPrev": "Previous event",
       "eventNext": "Next event",
+      "eventsBrowse": "Events",
+      "noEventsInWindow": "No event in this window",
       "observationWindow": "Observation window",
       "goToInstant": "Go to a point in time",
       "periodState": "Over the period",
