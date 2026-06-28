@@ -388,8 +388,13 @@ export async function fetchAuditOverview(
   );
 }
 
-export async function fetchAuditIntegrity(signal?: AbortSignal): Promise<AuditIntegrity> {
-  return request("/audit/integrity", { signal }, AuditIntegritySchema);
+export async function fetchAuditIntegrity(
+  signal?: AbortSignal,
+  at?: string,
+): Promise<AuditIntegrity> {
+  // The chain length honours T (append-only count up to the instant); the chain
+  // verification stays a structural live check (handled server-side).
+  return request(withAsOf("/audit/integrity", at), { signal }, AuditIntegritySchema);
 }
 
 export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {

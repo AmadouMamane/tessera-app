@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -173,3 +174,29 @@ def test_read_entries_cache_invalidates_when_audit_file_changes(tmp_path: Path) 
 
     assert refreshed is not first
     assert [entry.target for entry in refreshed] == ["memory.read", "memory.write"]
+
+
+def test_audit_integrity_length_honours_as_of(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """The chain length is the append-only count up to T (verification stays live)."""
+    path = tmp_path / "audit.jsonl"
+    rows = [
+        {"occurred_at": "2026-06-14T10:00:00+00:00", "target": "a", "outcome": "allowed"},
+        {"occurred_at": "2026-06-14T11:00:00+00:00", "target": "b", "outcome": "allowed"},
+        {"occurred_at": "2026-06-15T09:00:00+00:00", "target": "c", "outcome": "allowed"},
+    ]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    audit._ENTRIES_CACHE = None
+    audit._INTEGRITY_CACHE = None
+    monkeypatch.setattr(audit, "_resolve_audit_path", lambda: path)
+
+    # As-of after the first two entries → only those two are counted (not the later one).
+    asof2 = asyncio.run(audit.audit_integrity(at="2026-06-14T12:00:00+00:00"))
+    assert asof2.length == 2
+    # As-of after all three → all counted.
+    asof3 = asyncio.run(audit.audit_integrity(at="2026-06-16T00:00:00+00:00"))
+    assert asof3.length == 3
+    # As-of before any data → zero, never the live total.
+    asof0 = asyncio.run(audit.audit_integrity(at="2026-06-01T00:00:00+00:00"))
+    assert asof0.length == 0
+    # The verification flag is preserved from the structural (live) chain check.
+    assert isinstance(asof2.verified, bool)

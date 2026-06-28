@@ -3,6 +3,7 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  Clock,
   Coins,
   GitBranch,
   Info,
@@ -174,8 +175,9 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
   });
 
   // --- Cost / compliance / audit ------------------------------------------
-  // audit integrity is a structural hash-chain check (a "now" property) and is
-  // bearer-gated, so it stays live.
+  // The audit COUNT honours T (append-only log → entries up to the instant); the
+  // chain VERIFICATION stays a structural "now" check (server-side), so the card
+  // reads "à T" like every other point-in-time signal instead of a lone "live".
   const cost = useQuery({
     queryKey: ["ov-cost", asOf],
     queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined),
@@ -189,9 +191,10 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
     placeholderData: keepPreviousData,
   });
   const audit = useQuery({
-    queryKey: ["ov-audit"],
-    queryFn: ({ signal }) => fetchAuditIntegrity(signal),
-    refetchInterval: POLL_MS,
+    queryKey: ["ov-audit", asOf],
+    queryFn: ({ signal }) => fetchAuditIntegrity(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : POLL_MS,
+    placeholderData: keepPreviousData,
   });
   const funnel = useQuery({
     queryKey: ["ov-funnel", asOf],
@@ -307,7 +310,7 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           trend={trend.data?.buckets.map((b) => b.mean)}
           trendEmptyLabel={t("kpi.noTrend")}
           loading={slo.isLoading && !slo.data}
-          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
+          tag={historyMode ? "atT" : undefined}
         />
         <KpiCard
           label={t("kpi.failingControls")}
@@ -322,7 +325,7 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           }
           icon={ShieldAlert}
           loading={controls.length === 0 && slo.isLoading}
-          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
+          tag={historyMode ? "atT" : undefined}
         />
         <KpiCard
           label={t("kpi.openRisks")}
@@ -334,7 +337,7 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           tone={openRisks === 0 ? "success" : openRisks > 3 ? "danger" : "warning"}
           icon={TriangleAlert}
           loading={anomalies.isLoading && playbooks.isLoading}
-          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
+          tag={historyMode ? "atT" : undefined}
         />
         <KpiCard
           label={t("kpi.regression")}
@@ -359,7 +362,7 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           }
           icon={GitBranch}
           loading={whatChanged.isLoading}
-          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
+          tag={historyMode ? "atT" : undefined}
         />
         <KpiCard
           label={t("kpi.cost")}
@@ -370,7 +373,7 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           tone={cost.data && cost.data.n_anomalies > 0 ? "warning" : "info"}
           icon={Coins}
           loading={cost.isLoading}
-          tag={historyMode ? { label: t("time.atT"), kind: "atT" } : undefined}
+          tag={historyMode ? "atT" : undefined}
         />
         <KpiCard
           label={t("kpi.audit")}
@@ -379,7 +382,7 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           tone={audit.data ? (audit.data.verified ? "success" : "danger") : "neutral"}
           icon={ShieldCheck}
           loading={audit.isLoading}
-          tag={historyMode ? { label: t("time.liveSignal"), kind: "live" } : undefined}
+          tag={historyMode ? "atT" : undefined}
         />
       </section>
 
@@ -622,21 +625,32 @@ function buildControls(
 // KPI cards
 // ---------------------------------------------------------------------------
 
-/** A small "à T" / "live" provenance chip shown on blocks in history mode. */
-type TimeTag = { label: string; kind: "atT" | "live" };
+/** Provenance of a block in history mode: reconstructed AT the instant, or a live
+ * signal that does not vary with the chosen instant. */
+type TimeTagKind = "atT" | "live";
 
-function TimeTagChip({ tag, className }: { tag: TimeTag; className?: string }) {
+/**
+ * One self-describing provenance chip per card/section (never per-cell — that
+ * over-stamped the same fact on every row). The label is explicit ("À cet instant"
+ * — not the cryptic "à T") and carries a clock glyph + a tooltip explaining what
+ * the reading is anchored to.
+ */
+function TimeTagChip({ kind, className }: { kind: TimeTagKind; className?: string }) {
+  const t = useTranslations("overview.time");
+  const isAtT = kind === "atT";
   return (
     <span
+      title={isAtT ? t("atTTooltip") : t("liveTooltip")}
       className={cn(
-        "rounded px-1.5 py-0.5 text-[0.58rem] font-medium uppercase leading-none tracking-wide",
-        tag.kind === "atT"
+        "inline-flex cursor-help items-center gap-1 rounded px-1.5 py-0.5 text-[0.58rem] font-medium uppercase leading-none tracking-wide",
+        isAtT
           ? "border border-gold-500/40 bg-gold-500/10 text-gold-300"
           : "border border-[var(--border)] bg-[var(--muted)]/40 text-[var(--muted-foreground)]",
         className,
       )}
     >
-      {tag.label}
+      {isAtT ? <Clock className="h-2.5 w-2.5" aria-hidden /> : null}
+      {isAtT ? t("atTLabel") : t("liveSignal")}
     </span>
   );
 }
@@ -666,7 +680,7 @@ function KpiCard({
   trend?: number[];
   trendEmptyLabel?: string;
   loading?: boolean;
-  tag?: TimeTag;
+  tag?: TimeTagKind;
 }) {
   return (
     <Card className="group relative overflow-hidden rounded-lg">
@@ -676,7 +690,7 @@ function KpiCard({
           <div>
             <p className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
               {label}
-              {tag ? <TimeTagChip tag={tag} /> : null}
+              {tag ? <TimeTagChip kind={tag} /> : null}
             </p>
             {loading ? (
               <Skeleton className="mt-2 h-7 w-16" />
@@ -731,7 +745,7 @@ function CriticalControlsTable({
       <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
-          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+          {historyMode ? <TimeTagChip kind="atT" /> : null}
         </CardTitle>
         <span className="text-xs text-[var(--muted-foreground)]">
           {t("count", { n: controls.length })}
@@ -775,19 +789,18 @@ function CriticalControlsTable({
                         {c.noData ? "—" : tst(c.state.key)}
                       </span>
                     </td>
-                    <td className="py-2 pr-4 tabular-nums">
-                      <span className="inline-flex items-center gap-1.5">
-                        {c.value}
-                        {historyMode && !c.noData ? (
-                          <TimeTagChip
-                            tag={
-                              c.asOfCapable
-                                ? { label: tt("atT"), kind: "atT" }
-                                : { label: tt("liveSignal"), kind: "live" }
-                            }
-                          />
-                        ) : null}
-                      </span>
+                    {/* No per-cell time badge — the section already carries ONE "À
+                        cet instant" chip, so repeating it on every row was pure
+                        over-stamping. A row whose source can't be reconstructed
+                        historically (a live current-policy probe) keeps an honest
+                        tooltip instead of a second visible badge. */}
+                    <td
+                      className="py-2 pr-4 tabular-nums"
+                      title={
+                        historyMode && !c.noData && !c.asOfCapable ? tt("liveTooltip") : undefined
+                      }
+                    >
+                      {c.value}
                     </td>
                     <td className="py-2 pr-4 text-[var(--muted-foreground)]">{c.target}</td>
                     <td className="w-24 py-2 pr-4">
@@ -836,13 +849,12 @@ function ControlCasesSection({
   historyMode,
 }: { playbooks?: PlaybookReport; loading: boolean; historyMode: boolean }) {
   const t = useTranslations("overview.controlCases");
-  const tt = useTranslations("overview.time");
   return (
     <Card className="rounded-lg">
       <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
-          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+          {historyMode ? <TimeTagChip kind="atT" /> : null}
         </CardTitle>
         <span className="text-xs text-[var(--muted-foreground)]">
           {t("count", { n: playbooks?.n_triggered ?? 0 })}
@@ -898,7 +910,6 @@ function IncidentsCard({
   historyMode: boolean;
 }) {
   const t = useTranslations("overview.rightColumn");
-  const tt = useTranslations("overview.time");
   const items: { label: string; tone: OverviewTone; meta: string }[] = [];
   for (const p of playbooks?.playbooks ?? []) {
     items.push({
@@ -921,7 +932,7 @@ function IncidentsCard({
       <CardHeader className="flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("incidents")}
-          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+          {historyMode ? <TimeTagChip kind="atT" /> : null}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex min-h-[4.5rem] flex-col gap-2">
@@ -964,7 +975,6 @@ function ReleaseCard({
   historyMode: boolean;
 }) {
   const t = useTranslations("overview.rightColumn");
-  const tt = useTranslations("overview.time");
 
   const qualityPass = slo ? !slo.breaching : undefined;
   const securityPass =
@@ -988,7 +998,7 @@ function ReleaseCard({
         <div>
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("release")}
-            {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+            {historyMode ? <TimeTagChip kind="atT" /> : null}
           </CardTitle>
           {whatChanged?.available &&
           whatChanged.score_before != null &&
@@ -1126,14 +1136,13 @@ function RecentActivitiesCard({
   historyMode: boolean;
 }) {
   const t = useTranslations("overview.rightColumn");
-  const tt = useTranslations("overview.time");
   const rows = scores ? [...scores].reverse().slice(0, 6) : [];
   return (
     <Card className="rounded-lg">
       <CardHeader className="flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("activities")}
-          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+          {historyMode ? <TimeTagChip kind="atT" /> : null}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex min-h-[9.5rem] flex-col gap-2">
@@ -1181,7 +1190,6 @@ function AnalyticsSection({
 }) {
   const t = useTranslations("overview.analytics");
   const ts = useTranslations("overview.signals");
-  const tt = useTranslations("overview.time");
   const directionTone: OverviewTone =
     trend?.direction === "improving"
       ? "success"
@@ -1195,7 +1203,7 @@ function AnalyticsSection({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("scores")}
-            {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+            {historyMode ? <TimeTagChip kind="atT" /> : null}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1224,7 +1232,7 @@ function AnalyticsSection({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("distribution")}
-            {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+            {historyMode ? <TimeTagChip kind="atT" /> : null}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex min-h-[7.5rem] flex-col gap-2 text-xs">
@@ -1259,7 +1267,7 @@ function AnalyticsSection({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("impact")}
-            {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+            {historyMode ? <TimeTagChip kind="atT" /> : null}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex min-h-[7.5rem] flex-col gap-2">
@@ -1310,13 +1318,12 @@ function GovernanceSection({
   historyMode: boolean;
 }) {
   const t = useTranslations("overview.governance");
-  const tt = useTranslations("overview.time");
   return (
     <Card className="rounded-lg">
       <CardHeader className="flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
-          {historyMode ? <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} /> : null}
+          {historyMode ? <TimeTagChip kind="atT" /> : null}
         </CardTitle>
         <Badge tone="neutral">{t("subtitle")}</Badge>
       </CardHeader>
@@ -1383,7 +1390,7 @@ function TrustFooter({
     <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-[var(--border)] bg-[var(--card)]/70 px-4 py-3 text-[0.8rem] text-[var(--muted-foreground)] shadow-[var(--shadow-card)]">
       {asOf != null ? (
         <span className="flex items-center gap-2">
-          <TimeTagChip tag={{ label: tt("atT"), kind: "atT" }} />
+          <TimeTagChip kind="atT" />
           <span className="tabular-nums">{tt("asOfEvidence", { time: fmtStamp(asOf) })}</span>
         </span>
       ) : null}

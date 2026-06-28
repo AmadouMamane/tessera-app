@@ -733,6 +733,20 @@ async def audit_overview(
 
 
 @router.get("/audit/integrity", response_model=AuditIntegrity)
-async def audit_integrity() -> AuditIntegrity:
-    """Verify the audit log's tamper-evident hash chain."""
-    return _audit_integrity(_resolve_audit_path())
+async def audit_integrity(at: str | None = None) -> AuditIntegrity:
+    """Verify the audit log's tamper-evident hash chain.
+
+    The chain *verification* is a structural property of the whole log, so it always
+    reflects the current state (you cannot meaningfully tamper-check "the log as it
+    was at T"). The chain *length*, however, honours an as-of instant ``at`` when
+    given: the append-only log's count at T is well-defined (entries recorded up to
+    and including T), so the cockpit's audit-count signal reads "à T" like every
+    other point-in-time signal instead of being pinned to the live total.
+    """
+    path = _resolve_audit_path()
+    integrity = _audit_integrity(path)
+    until = _parse_datetime(at)
+    if until is None:
+        return integrity
+    length = sum(1 for entry in _read_entries(path) if _within(entry, None, until))
+    return integrity.model_copy(update={"length": length})
