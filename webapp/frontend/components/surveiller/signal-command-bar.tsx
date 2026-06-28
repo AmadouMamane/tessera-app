@@ -11,7 +11,6 @@ import {
   Clock3,
   Crosshair,
   History,
-  Info,
   RotateCcw,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -433,38 +432,11 @@ export function SignalCommandBar({
               mismatch. Gating on `expanded` keeps the grid-rows reveal AND a clean SSR. */}
           {expanded ? (
             <div className="border-t border-[var(--tessera-border)]/60 px-3 pb-3 pt-2">
-              {/* Calm contextual header (registre §3) — the OBSERVED state only.
-                  The reading (Maintenant / À un instant / Historique) already lives
-                  in the command-bar Lecture chip, so it is NOT repeated here as an
-                  eyebrow ("Fenêtre d'observation") nor a badge. Just the short title
-                  + one micro-line; the "what this shows" explanation lives in a hover
-                  tooltip (À un instant), never a permanent banner. */}
-              <header className="mb-2">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="min-w-0 truncate font-sans text-sm font-semibold text-[var(--tessera-text)]">
-                    {reading === "live" ? t("realtime") : viewLabel}
-                  </h3>
-                  {reading === "asof" ? (
-                    <button
-                      type="button"
-                      title={t("asofTooltip")}
-                      aria-label={t("asofTooltip")}
-                      className="inline-flex shrink-0 cursor-help rounded text-[var(--tessera-text-muted)] transition-colors hover:text-gold-300 focus-visible:text-gold-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/40"
-                    >
-                      <Info className="h-3.5 w-3.5" />
-                    </button>
-                  ) : null}
-                </div>
-                <p className="mt-0.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
-                  {reading === "live"
-                    ? t("railMicroLive")
-                    : reading === "historique"
-                      ? t("railMicroHistory")
-                      : asOfText
-                        ? t("railMicroAsof")
-                        : t("railMicroAsofEmpty")}
-                </p>
-              </header>
+              {/* No descriptive rail header: the reading lives in the command-bar
+                  Lecture chip and the synthetic state in the micro-line above, so the
+                  rail goes STRAIGHT to the visualisation (timeline · legend · the
+                  selected-event detail when one is picked) — never repeating
+                  "Données en temps réel" / "Signaux observés sur la période active". */}
               <TemporalRail
                 embedded
                 mode={temporal.mode}

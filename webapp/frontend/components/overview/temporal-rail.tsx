@@ -651,18 +651,13 @@ export function TemporalRail({
         </span>
       </div>
 
-      {/* Detail panel. "À un instant" before a day is picked shows an HONEST empty
-          state — no score, no computed state, no live framing (registre §6); only
-          the prompt to choose an instant. Otherwise: "live state" at the present,
-          "state at the chosen instant" when scrubbing, reflecting the focused event.
-          The single "Revenir au direct" lives in the command bar (registre §11), so
-          this panel no longer carries its own back-to-now link. */}
-      {awaitingInstant ? (
-        <div className="mt-2 flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--muted)]/20 px-3 py-2 text-xs text-[var(--muted-foreground)]">
-          <Flag className="h-3.5 w-3.5 shrink-0 text-gold-400/70" />
-          <span className="min-w-0 truncate">{t("microPickInstant")}</span>
-        </div>
-      ) : (
+      {/* Detail panel = the SELECTED-event detail only. Embedded (SR-01 command
+          bar), when nothing is selected the synthetic state already lives in the
+          micro-line, so the panel is hidden — no redundant "État live" / "Sur la
+          période" / "choose an instant" line. A chosen instant shows "État au {T} ·
+          Événement sélectionné · …". The standalone rail (no command bar) keeps the
+          state line so it is never information-less. */}
+      {embedded && selectedAt == null ? null : (
         <div
           className={cn(
             "mt-2 flex items-center gap-3 rounded-md border px-3 py-2 text-xs",

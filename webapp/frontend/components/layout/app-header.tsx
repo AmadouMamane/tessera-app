@@ -154,11 +154,13 @@ export function AppHeader({
     <BrandLead title={title} href={brandHref} />
   );
 
+  // Cockpit: the structural rule lives on ROW 1 (the title/chrome row, 5.5rem tall
+  // like the sidebar's logo block) — so it runs CONTINUOUS with the line under the
+  // logo, and the page actions (row 2) sit BELOW it. No border on the header itself
+  // (that put the line under the actions).
   const chrome =
     chromeClassName ??
-    (cockpit
-      ? "border-b border-[var(--tessera-border)] bg-[var(--tessera-bg)]"
-      : "border-b border-[var(--border-subtle)]");
+    (cockpit ? "bg-[var(--tessera-bg)]" : "border-b border-[var(--border-subtle)]");
 
   return (
     <header className={cn("relative", chrome)}>
@@ -168,7 +170,7 @@ export function AppHeader({
       <div
         className={cn(
           "flex items-center justify-between gap-4 px-6",
-          cockpit ? "min-h-[5.5rem] py-3" : "h-[88px]",
+          cockpit ? "min-h-[5.5rem] border-b border-[var(--tessera-border)] py-3" : "h-[88px]",
         )}
       >
         <div className="min-w-0">{left}</div>
@@ -194,12 +196,10 @@ export function AppHeader({
       {hasRow2 ? (
         <div
           className={cn(
-            "flex flex-wrap items-center justify-between gap-3 px-6",
-            // Filter row → divider + comfortable height. Actions-only → no divider,
-            // tighter, so the buttons float cleanly at the right of the page header.
-            hasFilterRow
-              ? "min-h-[3.25rem] border-t border-[var(--tessera-border)] py-2"
-              : "justify-end pb-2.5 pt-0",
+            "flex flex-wrap items-center justify-between gap-3 px-6 py-2.5",
+            // Sits BELOW row 1's rule — no border of its own (no double line, no
+            // cheap separator under the actions).
+            hasFilterRow ? "min-h-[3.25rem]" : "justify-end",
           )}
         >
           {hasFilterRow ? (

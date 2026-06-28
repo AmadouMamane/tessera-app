@@ -66,10 +66,15 @@ test("Maintenant: real-time header, no return button, no player transport", asyn
 
 test("À un instant without a date: honest empty state, no score, no PROUVER", async ({ page }) => {
   await open(page, "?lecture=asOf&expanded=1");
-  await expect(bar(page).getByText("Instant non sélectionné").first()).toBeVisible();
+  // The state lives in the micro-line; the rail has no redundant title and no
+  // detail panel while nothing is selected.
   await expect(
     page.getByText("Choisissez un instant pour reconstituer les signaux observés.").first(),
   ).toBeVisible();
+  await expect(
+    bar(page).getByText("Sélectionnez une date et une heure pour afficher les signaux."),
+  ).toHaveCount(0);
+  await expect(bar(page).getByText("Fenêtre d’observation")).toHaveCount(0);
   await expect(bar(page).getByText("État live")).toHaveCount(0);
   await expect(bar(page).getByText("État à l’instant")).toHaveCount(0);
   await expect(bar(page).getByText("vs référence")).toHaveCount(0);
@@ -107,42 +112,47 @@ test("the 'État au' chip is the single clickable point-in-time picker", async (
   await expect(page.getByRole("button", { name: "Mois suivant" })).toBeVisible();
 });
 
-test("page export actions sit in the header, no cheap divider, outside the temporal bar", async ({
+test("the header rule sits on row 1 (continuous with the logo), above the actions", async ({
   page,
 }) => {
   await open(page, "?expanded=1");
-  const exportBtn = page.getByRole("button", { name: "Exporter rapport" });
-  await expect(exportBtn).toBeVisible();
+  await expect(page.getByRole("button", { name: "Exporter rapport" })).toBeVisible();
   // Not inside the SR-01 command bar (registre §2).
   await expect(bar(page).getByText("Exporter rapport")).toHaveCount(0);
-  // The actions row carries no full-width top border (the old cheap separator).
-  const borderTop = await exportBtn.evaluate(
-    (el) => getComputedStyle(el.closest("div") as HTMLElement).borderTopWidth,
-  );
-  expect(borderTop).toBe("0px");
-  // The header keeps its single full-width bottom line (the continuous rule that
-  // runs across to the logo) — it's the actions ROW that must carry no extra divider.
-  const headerBorderBottom = await page.evaluate(() => {
+  const geom = await page.evaluate(() => {
     const h = document.querySelector("header");
-    return h ? getComputedStyle(h).borderBottomWidth : "no-header";
+    const row1 = h?.firstElementChild as HTMLElement | null;
+    const btn = [...document.querySelectorAll("button")].find(
+      (b) => b.textContent?.trim() === "Exporter rapport",
+    );
+    return {
+      headerBorder: h ? getComputedStyle(h).borderBottomWidth : "?",
+      row1Border: row1 ? getComputedStyle(row1).borderBottomWidth : "?",
+      row1Bottom: row1?.getBoundingClientRect().bottom ?? 0,
+      btnTop: btn?.getBoundingClientRect().top ?? 0,
+    };
   });
-  expect(headerBorderBottom).not.toBe("0px");
+  // No line under the whole header; the single rule lives on row 1 (continuous with
+  // the under-logo divider), and the export actions sit BELOW it.
+  expect(geom.headerBorder).toBe("0px");
+  expect(geom.row1Border).not.toBe("0px");
+  expect(geom.btnTop).toBeGreaterThanOrEqual(geom.row1Bottom - 1);
 });
 
-test("À un instant with a date: calm rail header, PROUVER link, one return", async ({ page }) => {
+test("À un instant with a date: no rail title, selected-event detail, PROUVER, one return", async ({
+  page,
+}) => {
   await open(page, `?lecture=asOf&asof=${encodeURIComponent(ASOF)}&compare=now&expanded=1`);
   await expect(bar(page).getByText("À un instant").first()).toBeVisible();
-  // The rail header is calm: short title + ONE micro-line, no eyebrow, no badge,
-  // no long banner, no ambiguous "actions appliquées au présent".
-  await expect(bar(page).getByText("Signaux observés à l’instant choisi").first()).toBeVisible();
+  // No descriptive rail header at all — no eyebrow, no badge, no micro-text, no
+  // banner, no ambiguous "actions appliquées au présent" (zero repetition with the
+  // command bar + micro-line).
+  await expect(bar(page).getByText("Signaux observés à l’instant choisi")).toHaveCount(0);
   await expect(bar(page).getByText("Fenêtre d’observation")).toHaveCount(0);
   await expect(page.getByText("actions appliquées au présent")).toHaveCount(0);
   await expect(page.getByText("Vous consultez l’état")).toHaveCount(0);
-  // The explanation lives in a hover tooltip, never a permanent line.
-  await expect(
-    page.getByRole("button", { name: /Cette vue montre les signaux tels qu/ }).first(),
-  ).toBeVisible();
-  await expect(bar(page).getByText("Cette vue montre les signaux tels qu’ils")).toHaveCount(0);
+  // The rail shows the SELECTED-event detail.
+  await expect(bar(page).getByText("Événement sélectionné").first()).toBeVisible();
   // PROUVER in caps, matching the nav plane.
   await expect(page.getByText("Ouvrir dans PROUVER · État à date")).toBeVisible();
   await expect(page.getByText("Revenir au direct")).toHaveCount(1);
@@ -169,8 +179,12 @@ test("À un instant with a date: calm rail header, PROUVER link, one return", as
 test("Historique: period framing, never a live snapshot, no player", async ({ page }) => {
   await open(page, "?lecture=history&expanded=1");
   await expect(bar(page).getByText("Historique").first()).toBeVisible();
+  // No "État live" framing, and no descriptive rail title (the period lives in the
+  // micro-line; the rail detail only appears once an event is selected).
   await expect(bar(page).getByText("État live")).toHaveCount(0);
-  await expect(bar(page).getByText("Sur la période").first()).toBeVisible();
+  await expect(
+    bar(page).getByText("Évolution des signaux sur la période sélectionnée"),
+  ).toHaveCount(0);
   await expect(page.getByText("Revenir au présent")).toHaveCount(0);
   await expect(page.locator('[aria-label="Le plus récent"]')).toHaveCount(0);
 });
