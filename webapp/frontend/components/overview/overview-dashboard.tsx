@@ -11,7 +11,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { fmtStamp, useTemporalState } from "@/components/overview/temporal-rail";
@@ -72,7 +72,7 @@ import {
 const POLL_MS = 15_000;
 const POLL_FAST_MS = 10_000;
 
-export function OverviewDashboard() {
+export function OverviewDashboard({ children }: { children?: ReactNode }) {
   const t = useTranslations("overview");
   // SR-01 temporal state — the single shared hook (global window + URL deep-link +
   // Live/As-of/Historique reading). The SignalCommandBar owns the controls; the
@@ -279,6 +279,10 @@ export function OverviewDashboard() {
           liveStatus={liveStatus}
         />
       </div>
+
+      {/* Lead content (breach hero · agent breakdown) sits below the temporal bar,
+          which is the first line of the page. */}
+      {children}
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <KpiCard

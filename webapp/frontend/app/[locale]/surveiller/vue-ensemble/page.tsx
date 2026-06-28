@@ -36,15 +36,20 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
       // doublon dans le header (registre §8). Le header ne garde que le contexte
       // de déploiement (read-only) + chrome global.
     >
-      {/* P2 — lead with the named breached signal (real SLO) + remediation. */}
-      <div className="mb-3">
-        <SignalBreachHero />
-      </div>
-      <div className="mb-3">
-        <AgentBreakdown fleet={fleet} scope={scope} locale={locale} />
-      </div>
-      <p className="mb-3 text-[0.62rem] text-[var(--tessera-text-muted)]">{ts("orgSignalsNote")}</p>
-      <OverviewDashboard />
+      {/* The temporal command bar (SR-01) is the FIRST line of the page; the lead
+          content — breached signal + per-agent breakdown — follows it (rendered as
+          children, right under the bar). */}
+      <OverviewDashboard>
+        <div className="mt-3 mb-3">
+          <SignalBreachHero />
+        </div>
+        <div className="mb-3">
+          <AgentBreakdown fleet={fleet} scope={scope} locale={locale} />
+        </div>
+        <p className="mb-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
+          {ts("orgSignalsNote")}
+        </p>
+      </OverviewDashboard>
     </AppShell>
   );
 }
