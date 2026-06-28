@@ -276,7 +276,8 @@
       "railMicroAsof": "Signale zum gewählten Zeitpunkt",
       "railMicroAsofEmpty": "Wählen Sie Datum und Uhrzeit, um die Signale anzuzeigen.",
       "railMicroHistory": "Entwicklung der Signale über den gewählten Zeitraum",
-      "asofTooltip": "Diese Ansicht zeigt die Signale, wie sie zum gewählten Zeitpunkt waren."
+      "asofTooltip": "Diese Ansicht zeigt die Signale, wie sie zum gewählten Zeitpunkt waren.",
+      "previewLabel": "Vorschau"
     },
     "kpi": {
       "quality": "Qualitäts-Score (Service-Ziel)",

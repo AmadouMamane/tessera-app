@@ -276,7 +276,8 @@
       "railMicroAsof": "Signals observed at the chosen instant",
       "railMicroAsofEmpty": "Select a date and time to display the signals.",
       "railMicroHistory": "Signal evolution over the selected period",
-      "asofTooltip": "This view shows the signals as they were at the chosen instant."
+      "asofTooltip": "This view shows the signals as they were at the chosen instant.",
+      "previewLabel": "Preview"
     },
     "kpi": {
       "quality": "Quality score (SLO)",

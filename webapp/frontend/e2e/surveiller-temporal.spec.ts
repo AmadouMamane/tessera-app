@@ -207,6 +207,44 @@ test("no 'As-of' façade label anywhere in the bar", async ({ page }) => {
   await expect(bar(page).getByText(/As-of/i)).toHaveCount(0);
 });
 
+test("dragging the scrubber previews ('Aperçu') without committing; release commits", async ({
+  page,
+}) => {
+  await open(page, "?lecture=history&expanded=1");
+  const slider = bar(page).locator('[role="slider"]').first();
+  const box = await slider.boundingBox();
+  if (!box) throw new Error("scrubber not found");
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + box.width * 0.45, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.55, y, { steps: 6 });
+  await page.waitForTimeout(250);
+  // HELD drag = PREVIEW only: "Aperçu", never "Instant sélectionné", and the URL /
+  // micro-line stay on the committed state (no `at=`, still "Période du …").
+  await expect(
+    bar(page)
+      .getByText(/Aperçu/i)
+      .first(),
+  ).toBeVisible();
+  await expect(bar(page).getByText(/Instant sélectionné/i)).toHaveCount(0);
+  expect(page.url()).not.toContain("at=");
+  await expect(
+    bar(page)
+      .getByText(/Période du/)
+      .first(),
+  ).toBeVisible();
+  // Release COMMITS → active instant ("Instant sélectionné" + URL `at=`).
+  await page.mouse.up();
+  await expect(
+    bar(page)
+      .getByText(/Instant sélectionné/i)
+      .first(),
+  ).toBeVisible();
+  await expect(bar(page).getByText(/Aperçu/i)).toHaveCount(0);
+  // The URL `at=` is written after the committed-instant debounce settles.
+  await expect.poll(() => page.url(), { timeout: 5000 }).toContain("at=");
+});
+
 test("selecting an event via the arrows shows its full timestamp", async ({ page }) => {
   await open(page, "?lecture=history&expanded=1");
   // A selected instant must carry its date/time: never a bare "État à l'instant".

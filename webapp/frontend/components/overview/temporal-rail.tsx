@@ -197,6 +197,17 @@ export function TemporalRail({
   // T being viewed lives at page level; this is the rail's write handle into it.
   const setSelectedAt = onSelectedAtChange;
   const trackRef = useRef<HTMLDivElement>(null);
+  // PREVIEW vs ACTIVE instant. While hovering/dragging the scrubber the cursor is a
+  // PREVIEW ("Aperçu au {T}") — local only: it never touches selectedAt, so the
+  // command bar, micro-line, URL and PROUVER link stay on the committed (active)
+  // instant. On release the preview is committed to selectedAt ("État au {T}"). A
+  // ref mirrors it so the pointer-up handler reads the latest drag position.
+  const [previewAt, setPreviewAt] = useState<number | null>(null);
+  const previewRef = useRef<number | null>(null);
+  const setPreview = useCallback((at: number | null) => {
+    previewRef.current = at;
+    setPreviewAt(at);
+  }, []);
   // Honest lower bound for the calendar: days before the earliest real data are
   // disabled (picking them would land on an empty window). Only fetched/used when
   // the calendar is wired (onPickDate).
@@ -262,12 +273,16 @@ export function TemporalRail({
   }, null);
   const baselineDelta = baseline != null && nearestScore != null ? nearestScore.v - baseline : null;
 
-  function seekToClientX(clientX: number) {
+  function instantFromClientX(clientX: number): number {
     const el = trackRef.current;
-    if (!el) return;
+    if (!el) return end;
     const rect = el.getBoundingClientRect();
     const frac = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    const at = viewStart + frac * span;
+    return viewStart + frac * span;
+  }
+  // Commit an instant as the ACTIVE one (propagates to selectedAt → command bar /
+  // micro-line / URL / PROUVER). At/after the right edge means "back to live" (null).
+  function commitInstant(at: number) {
     setSelectedAt(at >= end - 1000 ? null : at);
   }
   function step(dir: -1 | 1) {
@@ -372,7 +387,9 @@ export function TemporalRail({
   // (compare-to-baseline) · transport (fine scrub/playback + the coarse "go to a
   // date" jump, kept together) · exit, then an interactive scrubber over the real
   // lineage timeline (#201).
-  const handlePos = railPos(new Date(currentT).toISOString(), viewStart, span);
+  // The playhead follows the PREVIEW while dragging, else the active instant.
+  const displayAt = previewAt ?? currentT;
+  const handlePos = railPos(new Date(displayAt).toISOString(), viewStart, span);
 
   return (
     <section
@@ -539,11 +556,20 @@ export function TemporalRail({
         onPointerDown={(e) => {
           setPlaying(false);
           trackRef.current?.setPointerCapture(e.pointerId);
-          seekToClientX(e.clientX);
+          // Start a PREVIEW (not committed yet) — drag refines it.
+          setPreview(instantFromClientX(e.clientX));
         }}
         onPointerMove={(e) => {
-          if (e.buttons === 1) seekToClientX(e.clientX);
+          if (e.buttons === 1) setPreview(instantFromClientX(e.clientX));
         }}
+        onPointerUp={(e) => {
+          trackRef.current?.releasePointerCapture?.(e.pointerId);
+          // Release COMMITS the preview as the active instant.
+          const at = previewRef.current;
+          setPreview(null);
+          if (at != null) commitInstant(at);
+        }}
+        onPointerCancel={() => setPreview(null)}
         onKeyDown={(e) => {
           if (e.key === "ArrowRight") step(1);
           if (e.key === "ArrowLeft") step(-1);
@@ -584,17 +610,37 @@ export function TemporalRail({
             The single time readout lives in the "Tu regardes" box. */}
         <div
           className="pointer-events-none absolute top-0 -translate-x-1/2 transition-opacity"
-          style={{ left: `${handlePos}%`, opacity: selectedAt == null ? 0.6 : 1 }}
+          style={{
+            left: `${handlePos}%`,
+            opacity: previewAt != null || selectedAt != null ? 1 : 0.6,
+          }}
         >
           {/* stem centred vertically on the timeline track (10–14px → centre 12px) */}
           <span className="absolute left-1/2 top-1.5 h-3 w-px -translate-x-1/2 bg-gold-400" />
           <span className="absolute left-1/2 top-[-1px] h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-gold-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]" />
         </div>
-        {/* The active instant T, labelled AT the playhead so it is immediately
-            obvious which marker is selected (not just a bare tick on the right).
-            Edge-aware: anchored right when T sits in the last third so the pill
-            never overflows the track. */}
-        {selectedAt != null ? (
+        {/* Playhead label, AT the playhead and edge-aware (anchored right in the
+            last third so the pill never overflows). PREVIEW while hovering/dragging
+            ("Aperçu au {T}", muted) — never "Instant sélectionné"; the committed
+            ACTIVE instant otherwise ("Instant sélectionné · {T}", gold). Only one
+            of the two ever shows, so two timestamps are never active at once. */}
+        {previewAt != null ? (
+          <span
+            className="pointer-events-none absolute top-7 z-10 flex flex-col whitespace-nowrap leading-tight"
+            style={
+              handlePos > 65
+                ? { right: `${100 - handlePos}%` }
+                : { left: `${handlePos}%`, transform: "translateX(-50%)" }
+            }
+          >
+            <span className="text-[0.55rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {t("previewLabel")}
+            </span>
+            <span className="tabular-nums text-[0.62rem] font-semibold text-gold-200/80">
+              {fmtInstant(previewAt)}
+            </span>
+          </span>
+        ) : selectedAt != null ? (
           <span
             title={t("selectedInstant")}
             className="pointer-events-none absolute top-7 z-10 flex flex-col whitespace-nowrap leading-tight"
@@ -612,7 +658,7 @@ export function TemporalRail({
             </span>
           </span>
         ) : null}
-        {selectedAt == null && !awaitingInstant ? (
+        {selectedAt == null && previewAt == null && !awaitingInstant ? (
           // Pinned flush to the right edge (not centred at 96%) so it never
           // overlaps the rightmost event/data-start label. Hidden while awaiting an
           // instant: there's no "now" framing until a point in time is chosen.
