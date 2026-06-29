@@ -36,9 +36,10 @@ test.beforeEach(async ({ page }) => {
   await login(page);
 });
 
-test("page header carries the export actions, the bar does not", async ({ page }) => {
+test("the page carries the export actions (above the rail), the bar does not", async ({ page }) => {
   await open(page, "?expanded=1");
-  // Export / evidence live in the page header (registre §2) — not in the temporal bar.
+  // Export / evidence are page actions rendered just above the rail (registre §2) —
+  // not inside the temporal bar.
   await expect(page.getByRole("button", { name: "Exporter rapport" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Générer le dossier de preuves" })).toBeVisible();
   await expect(bar(page).getByText("Exporter rapport")).toHaveCount(0);
