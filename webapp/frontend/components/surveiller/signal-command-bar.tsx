@@ -322,13 +322,14 @@ export function SignalCommandBar({
 
   return (
     // SR-01 is a temporal CONTROL INSTRUMENT, not business content — so it gets its
-    // own "control strip" surface, deliberately distinct from the KPI/cards below: a
-    // cooler technical-glass gradient (deeper than the cards), a fine luminous
-    // cyan-tinted border, and an inner top highlight + a faint cyan bottom edge +
-    // soft drop shadow that give it just-enough internal depth to read as an
-    // instrument. No status colour as a background (the framing must stay neutral);
-    // champagne is reserved for the selected instant on the axis below.
-    <section className="rounded-2xl border border-[rgba(95,190,230,0.20)] bg-[linear-gradient(180deg,rgba(10,38,58,0.86),rgba(4,20,34,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),inset_0_-1px_0_rgba(95,190,230,0.045),0_18px_48px_rgba(0,0,0,0.20)] backdrop-blur-sm">
+    // own "black-glass" surface: a graphite-blue glass that sits DARKER than the
+    // opaque navy cards (#06182a) yet never pure black. It is faintly translucent
+    // (backdrop-blur lets the page tone bleed through, so it reads as glass, not a
+    // flat panel nor a debug console), with a subtle vertical gradient, a very
+    // discreet cyan hairline border, a light inner top highlight and a soft recessed
+    // inner shadow for depth. No status colour as a background (the framing stays
+    // neutral); champagne is reserved for the selected instant on the axis below.
+    <section className="rounded-2xl border border-[rgba(110,190,225,0.14)] bg-[linear-gradient(180deg,rgba(12,19,28,0.72),rgba(6,11,18,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_-1px_0_rgba(95,190,230,0.05),inset_0_2px_16px_rgba(0,0,0,0.30),0_18px_44px_rgba(0,0,0,0.22)] backdrop-blur-sm">
       {/* Collapsed command row — the single temporal focus. */}
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         {/* Lecture — Maintenant / À un instant / Historique, with per-mode
