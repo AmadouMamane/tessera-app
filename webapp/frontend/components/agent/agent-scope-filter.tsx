@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { AGENT_SCOPE_ALL, AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchFleet } from "@/lib/api/client";
+import { cn } from "@/lib/cn";
 
 /**
  * Global agent-scope filter for GOUVERNER / PLATEFORME surfaces.
@@ -27,15 +28,15 @@ import { fetchFleet } from "@/lib/api/client";
  * deduplicated org view). Styled with a Filter icon + an explicit "Filtre" label
  * so an operator never confuses it with the AGENT switcher.
  */
-export function AgentScopeFilter() {
+export function AgentScopeFilter({ contentClassName }: { contentClassName?: string } = {}) {
   return (
     <Suspense fallback={<Skeleton className="h-8 w-[11rem] rounded-md" />}>
-      <AgentScopeFilterInner />
+      <AgentScopeFilterInner contentClassName={contentClassName} />
     </Suspense>
   );
 }
 
-function AgentScopeFilterInner() {
+function AgentScopeFilterInner({ contentClassName }: { contentClassName?: string }) {
   const t = useTranslations("agentScope");
   const pathname = usePathname();
   const router = useRouter();
@@ -74,7 +75,7 @@ function AgentScopeFilterInner() {
           <ChevronDown className="h-3 w-3 text-[var(--tessera-text-muted)]" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-[14rem]">
+      <DropdownMenuContent align="start" className={cn("min-w-[14rem]", contentClassName)}>
         <DropdownMenuItem
           onSelect={() => select(AGENT_SCOPE_ALL)}
           className="flex items-center justify-between gap-3"

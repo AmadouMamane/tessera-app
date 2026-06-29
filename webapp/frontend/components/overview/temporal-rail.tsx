@@ -940,7 +940,10 @@ export function GoToDateButton({
           // Left-aligned: the button sits at the LEFT of the command-bar panel, so
           // right-0 made the 292px calendar extend left under the sidebar (clipping
           // the month header). left-0 keeps it inside the content area.
-          className={popoverClassName ?? "absolute left-0 top-[calc(100%+0.5rem)] z-50"}
+          className={cn(
+            "sr01-menu",
+            popoverClassName ?? "absolute left-0 top-[calc(100%+0.5rem)] z-50",
+          )}
         />
       ) : null}
     </div>

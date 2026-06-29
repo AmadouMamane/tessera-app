@@ -381,7 +381,7 @@ export function SignalCommandBar({
           />
         )}
         {/* Agents — global scope filter (URL-driven, self-contained chip). */}
-        <AgentScopeFilter />
+        <AgentScopeFilter contentClassName="sr01-menu" />
         {/* Comparer à — same level as Lecture/Période/Agents, in ALL readings; only
             computable references are selectable, the rest are disabled with a reason.
             "À un instant" before a day is picked: nothing to compare yet, so the
@@ -558,7 +558,7 @@ function LectureMenu({
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-600/70 dark:text-gold-400/70" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-[20rem]">
+      <DropdownMenuContent align="start" className="sr01-menu min-w-[20rem]">
         {items.map((r) => {
           const Icon = READING_ICON[r.value];
           return (
@@ -587,7 +587,12 @@ function LectureMenu({
   );
 }
 
-/** A compact labeled select styled to match the command bar. */
+/**
+ * A compact labeled chooser styled to match the command bar. Rendered as a
+ * DropdownMenu (not a native `<select>`) so its OPEN panel wears the rail's
+ * harmonized `sr01-menu` surface (a native select's dropdown is OS-drawn and can't
+ * be themed). The value logic is unchanged — selecting an item calls `onChange`.
+ */
 function SelectChip({
   icon: Icon,
   label,
@@ -610,32 +615,44 @@ function SelectChip({
    */
   noteTitle?: string;
 }) {
+  const selected = options.find((o) => o.value === value);
   return (
-    <label className={cn(CHIP_BASE, "cursor-pointer", accent ? CHIP_ACTIVE : CHIP_NEUTRAL)}>
-      <Icon className="h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
-      {label}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="cursor-pointer rounded bg-transparent font-semibold text-[var(--tessera-text)] outline-none"
-      >
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(CHIP_BASE, "cursor-pointer", accent ? CHIP_ACTIVE : CHIP_NEUTRAL)}
+        >
+          <Icon className="h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
+          {label}
+          <span className="font-semibold text-[var(--tessera-text)]">
+            {selected?.label ?? value}
+          </span>
+          {noteTitle ? (
+            <span title={noteTitle} aria-label={noteTitle} className="flex shrink-0 cursor-help">
+              <Info className="h-3.5 w-3.5 text-amber-400/70" aria-hidden />
+            </span>
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-600/70 dark:text-gold-400/70" />
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="sr01-menu min-w-[12rem]">
         {options.map((o) => (
-          <option
+          <DropdownMenuItem
             key={o.value}
-            value={o.value}
             disabled={o.disabled}
-            className="bg-[var(--tessera-bg)]"
+            onSelect={() => onChange(o.value)}
+            className="flex items-center justify-between gap-3 text-[var(--tessera-text)]"
           >
             {o.label}
-          </option>
+            {o.value === value ? (
+              <Check className="h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
+            ) : null}
+          </DropdownMenuItem>
         ))}
-      </select>
-      {noteTitle ? (
-        <span title={noteTitle} aria-label={noteTitle} className="flex shrink-0 cursor-help">
-          <Info className="h-3.5 w-3.5 text-amber-400/70" aria-hidden />
-        </span>
-      ) : null}
-    </label>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

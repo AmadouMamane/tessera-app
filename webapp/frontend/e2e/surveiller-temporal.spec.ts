@@ -315,11 +315,7 @@ test("À un instant: clicking an event commits ONE active instant (bar = timelin
     .getByRole("button", { name: /État au/ })
     .first()
     .innerText();
-  const tl = await bar(page)
-    .getByText("Instant sélectionné")
-    .first()
-    .locator("..")
-    .innerText();
+  const tl = await bar(page).getByText("Instant sélectionné").first().locator("..").innerText();
   const barTime = chip.match(/(\d{2}:\d{2})/)?.[1];
   const tlTime = tl.match(/(\d{2}:\d{2})/)?.[1];
   expect(barTime).toBeTruthy();
@@ -335,19 +331,31 @@ test("À un instant: clicking an event commits ONE active instant (bar = timelin
 test("Comparer à defaults per reading — Maintenant (À un instant) / Période précédente (Historique), never a silent Aucun", async ({
   page,
 }) => {
-  // À un instant with an instant → default "Maintenant" (now), not "Aucun".
+  // À un instant with an instant → default "Maintenant" (now), not "Aucun". Comparer à
+  // is a dropdown chip now (not a native <select>), so assert its trigger label.
   await open(page, `?lecture=asOf&asof=${encodeURIComponent(ASOF)}&expanded=1`);
-  await expect(bar(page).locator("select").last()).toHaveValue("now");
+  await expect(
+    bar(page)
+      .getByRole("button", { name: /Comparer à/ })
+      .first(),
+  ).toContainText("Maintenant");
   // Historique → default "Période précédente" (shown disabled-with-reason), not "Aucun".
   await open(page, "?lecture=history&expanded=1");
-  await expect(bar(page).locator("select").last()).toHaveValue("previous_period");
+  await expect(
+    bar(page)
+      .getByRole("button", { name: /Comparer à/ })
+      .first(),
+  ).toContainText("Période précédente");
 });
 
 test("the observed-agent count is singular/plural correct (1 agent observé, never '1 agents')", async ({
   page,
 }) => {
   // Scope to a single agent → exactly "1 agent observé".
-  await open(page, `?agent=support-client&lecture=asOf&asof=${encodeURIComponent(ASOF)}&expanded=1`);
+  await open(
+    page,
+    `?agent=support-client&lecture=asOf&asof=${encodeURIComponent(ASOF)}&expanded=1`,
+  );
   await expect(bar(page).getByText("1 agent observé").first()).toBeVisible();
   await expect(bar(page).getByText("1 agents observés")).toHaveCount(0);
 });
