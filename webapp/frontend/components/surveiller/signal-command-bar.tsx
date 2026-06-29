@@ -61,7 +61,7 @@ const PERIOD_MS: Record<string, number> = {
 // hover and no heavy outline. The PRIMARY reading control (Lecture) and the chosen
 // instant (État au) wear a discreet champagne instead — never a status colour.
 const CHIP_BASE =
-  "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(95,190,230,0.35)]";
+  "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs shadow-[inset_0_1px_0_rgba(150,225,255,0.05)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(95,190,230,0.35)]";
 const CHIP_NEUTRAL =
   "border-[rgba(95,190,230,0.18)] bg-[rgba(120,190,235,0.05)] text-[var(--tessera-text-muted)] hover:bg-[rgba(120,190,235,0.12)] hover:border-[rgba(95,190,230,0.34)]";
 const CHIP_ACTIVE =
