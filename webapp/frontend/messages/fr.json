@@ -143,6 +143,7 @@
       "label": "Thème",
       "light": "Clair",
       "dark": "Sombre",
+      "deepNight": "Nuit profonde",
       "system": "Système"
     }
   },

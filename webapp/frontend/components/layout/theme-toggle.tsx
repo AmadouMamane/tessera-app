@@ -1,6 +1,6 @@
 "use client";
 
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Monitor, Moon, MoonStar, Sun } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -34,7 +34,13 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   useEffect(() => setMounted(true), []);
 
   const Icon =
-    !mounted || resolvedTheme === "light" ? Sun : resolvedTheme === "dark" ? Moon : Monitor;
+    !mounted || resolvedTheme === "light"
+      ? Sun
+      : resolvedTheme === "deep-night"
+        ? MoonStar
+        : resolvedTheme === "dark"
+          ? Moon
+          : Monitor;
 
   return (
     <DropdownMenu>
@@ -57,6 +63,10 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         <DropdownMenuItem onSelect={() => withTransition(() => setTheme("dark"))}>
           <Moon className="mr-2 h-4 w-4" />
           {t("dark")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => withTransition(() => setTheme("deep-night"))}>
+          <MoonStar className="mr-2 h-4 w-4" />
+          {t("deepNight")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => withTransition(() => setTheme("system"))}>
           <Monitor className="mr-2 h-4 w-4" />

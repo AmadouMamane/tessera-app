@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, Cpu, Lock, Monitor, Moon, Sun } from "lucide-react";
+import { Check, Cpu, Lock, Monitor, Moon, MoonStar, Sun } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
@@ -225,6 +225,11 @@ export function SettingsView() {
               options={[
                 { value: "light", label: tTheme("light"), icon: <Sun className="h-4 w-4" /> },
                 { value: "dark", label: tTheme("dark"), icon: <Moon className="h-4 w-4" /> },
+                {
+                  value: "deep-night",
+                  label: tTheme("deepNight"),
+                  icon: <MoonStar className="h-4 w-4" />,
+                },
                 { value: "system", label: tTheme("system"), icon: <Monitor className="h-4 w-4" /> },
               ]}
             />
