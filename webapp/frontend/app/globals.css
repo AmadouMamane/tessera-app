@@ -92,9 +92,13 @@
   --radius-2xl: 1.25rem;
 
   /* -- Shadows (banking sober, never bouncy) ------------------------------- */
-  --shadow-card: 0 1px 2px 0 oklch(0.1 0.03 255 / 0.06), 0 4px 12px -2px oklch(0.1 0.03 255 / 0.08);
-  --shadow-card-elevated: 0 2px 4px 0 oklch(0.1 0.03 255 / 0.08), 0 12px 32px -4px
-    oklch(0.1 0.03 255 / 0.12);
+  /* Flat surfaces (cards/panels) lean on TONE + border, not shadow — only a faint
+   * top liseré (inset highlight) for a premium edge, plus a whisper of depth. */
+  --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.03), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  /* True raised surfaces (popovers/dropdowns/menus) get a real soft, low-opacity
+   * shadow + a stronger top liseré, so they read as lifted above the page. */
+  --shadow-card-elevated: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 2px 6px -2px
+    rgba(0, 0, 0, 0.4), 0 10px 28px -6px rgba(0, 0, 0, 0.55);
   --shadow-card-glow: 0 0 0 1px oklch(0.62 0.18 262 / 0.08), 0 2px 4px -1px
     oklch(0.05 0.03 255 / 0.1), 0 16px 48px -8px oklch(0.05 0.03 255 / 0.3);
   --shadow-focus: 0 0 0 3px oklch(0.62 0.18 262 / 0.4);
@@ -105,13 +109,24 @@
 
 /* shadcn/ui semantic aliases — referenced by component variants. */
 :root {
-  --tessera-bg: #03101f;
-  --tessera-bg-soft: #03101f;
-  --tessera-surface: #06182a;
-  --tessera-surface-elevated: #082036;
-  --tessera-muted: #071b2e;
-  --tessera-border: #173249;
-  --tessera-border-strong: #21425b;
+  /* -- Dark elevation scale (navy-tinted, never #000) ----------------------- *
+   * Depth comes from TIERS, not from "more black": each step is a clear notch
+   * lighter than the last, with a pointe-de-bleu (B > G > R), so page < card <
+   * section < raised never flatten together. Separation = tone + a subtle border
+   * + a soft shadow only on true raised surfaces (popovers/menus). Worldclass dark
+   * (Linear/Vercel/Stripe) — desaturated navy, not neutral grey, not pure black.
+   *   bg        tier 0  page / shell / header / footer    (darkest)
+   *   bg-soft   tier 0+ sidebar rail (a hair above page)
+   *   surface   tier 1  cards · rail base · panels · badges
+   *   muted     tier 2  hover · internal sections (surface-2)
+   *   elevated  tier 3  popovers · dropdowns · active nav  (raised) */
+  --tessera-bg: #0a0e16;
+  --tessera-bg-soft: #0c1019;
+  --tessera-surface: #0f1420;
+  --tessera-surface-elevated: #1b2336;
+  --tessera-muted: #141b2a;
+  --tessera-border: rgba(255, 255, 255, 0.07);
+  --tessera-border-strong: rgba(255, 255, 255, 0.12);
   --tessera-text: #e1e3e3;
   --tessera-text-muted: #9a9fa1;
   --tessera-text-subtle: #595f65;
@@ -123,7 +138,7 @@
   --foreground: var(--tessera-text);
   --card: var(--tessera-surface);
   --card-foreground: var(--tessera-text);
-  --popover: var(--tessera-surface);
+  --popover: var(--tessera-surface-elevated);
   --popover-foreground: var(--tessera-text);
   --primary: var(--tessera-green);
   --primary-foreground: oklch(1 0 0);
@@ -136,7 +151,7 @@
   --destructive: var(--color-danger-500);
   --destructive-foreground: var(--color-danger-50);
   --border: var(--tessera-border);
-  --input: var(--tessera-border);
+  --input: var(--tessera-border-strong);
   --ring: var(--tessera-green);
 }
 
@@ -145,7 +160,7 @@
   --foreground: var(--tessera-text);
   --card: var(--tessera-surface);
   --card-foreground: var(--tessera-text);
-  --popover: var(--tessera-surface);
+  --popover: var(--tessera-surface-elevated);
   --popover-foreground: var(--tessera-text);
   --primary: var(--tessera-green);
   --primary-foreground: oklch(1 0 0);
@@ -158,7 +173,7 @@
   --destructive: #ef4444;
   --destructive-foreground: #fdeaea;
   --border: var(--tessera-border);
-  --input: var(--tessera-border);
+  --input: var(--tessera-border-strong);
   --ring: var(--tessera-green);
 }
 
@@ -214,13 +229,15 @@
   ::-webkit-scrollbar-track {
     background: transparent;
   }
+  /* The border tokens are now white-alpha (too faint as a fill), so the thumb uses
+     a fixed subtle navy that stays visible against the page. */
   ::-webkit-scrollbar-thumb {
-    background: var(--tessera-border-strong);
+    background: #232c3e;
     border-radius: 999px;
     border: 2px solid var(--background);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #2a3d4a;
+    background: #2e3a4f;
   }
 }
 
