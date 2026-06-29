@@ -334,7 +334,9 @@ export function SignalCommandBar({
     //    page, beneath the header — an instrument, not a card and not a console.
     // backdrop-blur lets the page tone bleed through (glass). No status colour in the
     // fill; champagne stays reserved for the selected instant on the axis below.
-    <section className="sr01-strip rounded-2xl backdrop-blur-md">
+    <section
+      className={cn("sr01-strip rounded-2xl backdrop-blur-md", expanded && "sr01-strip-expanded")}
+    >
       {/* Collapsed command row — the single temporal focus. The `sr01-command-row`
           class lifts it into a faintly raised control deck (cool top-light over the
           lacquer, rounded to the strip's top corners). */}
