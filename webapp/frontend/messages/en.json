@@ -250,7 +250,7 @@
       "legendBad": "low (<0.5)",
       "legendGuard": "guard filters",
       "backToNow": "Back to now",
-      "exitReplay": "Back to live",
+      "exitReplay": "Back to now",
       "goToDate": "Go to a date",
       "latest": "Latest",
       "prevMonth": "Previous month",

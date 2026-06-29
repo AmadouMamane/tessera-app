@@ -287,13 +287,20 @@ export function TemporalRail({
     return viewStart + frac * span;
   }
   // Commit an instant as the ACTIVE one (propagates to selectedAt → command bar /
-  // micro-line / URL / PROUVER). At/after the right edge means "back to live" (null).
-  function commitInstant(at: number) {
-    setSelectedAt(at >= end - 1000 ? null : at);
+  // micro-line / URL / PROUVER), and KEEP the active mode honest (registre §1/§3:
+  // mode == content). In Live the playhead stays at "maintenant"; the moment a PAST
+  // instant is committed (drag, click, keyboard, event-jump) the reading flips to
+  // Historique — Live + "État au {passé}" is forbidden. At/after the right edge means
+  // "back to live" (null), which never promotes, so returning to the present stays
+  // Live. Every scrub/seek path routes through here, so there is a single rule.
+  function applyInstant(at: number | null) {
+    const norm = at != null && at >= end - 1000 ? null : at;
+    if (norm != null && mode === "live") onModeChange("history");
+    setSelectedAt(norm);
   }
   function step(dir: -1 | 1) {
     const nextT = Math.min(end, Math.max(viewStart, currentT + dir * stepUnit));
-    setSelectedAt(nextT >= end - 1000 ? null : nextT);
+    applyInstant(nextT);
   }
   // Event nearest the focused instant (present included), for the detail panel.
   const nearest =
@@ -318,7 +325,7 @@ export function TemporalRail({
   const nextEventT = eventTimes.find((v) => v > currentT + 1000) ?? null;
   function seekToEvent(at: number | null) {
     if (at == null) return;
-    setSelectedAt(at >= end - 1000 ? null : at);
+    applyInstant(at);
   }
 
   // Execution-transport playback (XT-01 only): sweep T across the run; reaching the
@@ -610,7 +617,7 @@ export function TemporalRail({
           // Release COMMITS the preview as the active instant.
           const at = previewRef.current;
           setPreview(null);
-          if (at != null) commitInstant(at);
+          if (at != null) applyInstant(at);
         }}
         onPointerCancel={() => setPreview(null)}
         onKeyDown={(e) => {
@@ -682,7 +689,7 @@ export function TemporalRail({
               label=""
               dim={ev.kind === "guard_denial"}
               title={`${fmtStamp(new Date(ev.at).getTime())} · ${ev.label}${detail ? ` · ${detail}` : ""}`}
-              onSeek={() => setSelectedAt(new Date(ev.at).getTime())}
+              onSeek={() => applyInstant(new Date(ev.at).getTime())}
             />
           );
         })}

@@ -2,7 +2,7 @@ import { type Page, expect, test } from "@playwright/test";
 
 // SR-01 · the SURVEILLER temporal command bar (Vue d'ensemble). Covers the four
 // human readings (Maintenant / À un instant sans & avec date / Historique), the
-// honest empty state, the single "Revenir au direct", the removal of the video-
+// honest empty state, the single "Revenir à maintenant", the removal of the video-
 // player transport, and the URL deep-link contract. The reading is deep-linked
 // (?lecture=…&expanded=1) so each state renders deterministically; the as-of date
 // is set via the URL and drives only UI state (badges/banner), independent of data.
@@ -56,13 +56,50 @@ test("no technical title and no permanent pedagogical line", async ({ page }) =>
 test("Maintenant: real-time header, no return button, no player transport", async ({ page }) => {
   await open(page, "?expanded=1");
   await expect(bar(page).getByText("Données en temps réel").first()).toBeVisible();
-  await expect(page.getByText("Revenir au direct")).toHaveCount(0);
+  await expect(page.getByText("Revenir à maintenant")).toHaveCount(0);
   await expect(page.getByText("Revenir au présent")).toHaveCount(0);
+  // The live concept wears ONE word everywhere ("Maintenant"): the old second
+  // wording ("…au direct") is gone, so the mode and its return button never disagree.
+  await expect(page.getByText(/au direct/i)).toHaveCount(0);
   // The video-player cassette is gone (start / play / latest); only event nav remains.
   await expect(page.locator('[aria-label="Début"]')).toHaveCount(0);
   await expect(page.locator('[aria-label="Le plus récent"]')).toHaveCount(0);
   await expect(page.locator('[aria-label="Événement précédent"]').first()).toBeVisible();
   await expect(page.locator('[aria-label="Événement suivant"]').first()).toBeVisible();
+});
+
+test("Live: scrubbing to a past instant flips the reading to Historique (mode == content)", async ({
+  page,
+}) => {
+  // Start in Maintenant (live), panel open.
+  await open(page, "?expanded=1");
+  await expect(
+    bar(page)
+      .getByRole("button", { name: /Lecture/ })
+      .first(),
+  ).toContainText("Maintenant");
+  // In Live nothing is scrubbed, so there is NO "État au [instant]" detail strip.
+  await expect(bar(page).getByText(/État au /)).toHaveCount(0);
+  // Click a PAST instant on the scrubber (left of the right edge = into the window).
+  const slider = bar(page).locator('[role="slider"]').first();
+  const box = await slider.boundingBox();
+  if (!box) throw new Error("scrubber not found");
+  await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
+  // The reading MUST promote to Historique — Live + "État au [passé]" is forbidden
+  // (registre §1/§3: the active mode always matches the content on screen).
+  await expect(
+    bar(page)
+      .getByRole("button", { name: /Lecture/ })
+      .first(),
+  ).toContainText("Historique");
+  // …and the now-visible instant detail lives under Historique, never under Live.
+  await expect(
+    bar(page)
+      .getByText(/État au /)
+      .first(),
+  ).toBeVisible();
+  // The single live label appears as the return button (one word for live).
+  await expect(page.getByText("Revenir à maintenant").first()).toBeVisible();
 });
 
 test("À un instant without a date: honest empty state, no score, no PROUVER", async ({ page }) => {
@@ -80,7 +117,7 @@ test("À un instant without a date: honest empty state, no score, no PROUVER", a
   await expect(bar(page).getByText("État à l’instant")).toHaveCount(0);
   await expect(bar(page).getByText("vs référence")).toHaveCount(0);
   await expect(page.getByText("Ouvrir dans PROUVER · État à date")).toHaveCount(0);
-  await expect(page.getByText("Revenir au direct")).toHaveCount(0);
+  await expect(page.getByText("Revenir à maintenant")).toHaveCount(0);
   // The "État au" chip IS the single picker — no duplicate bottom button.
   await expect(page.getByRole("button", { name: /État au/ }).first()).toBeVisible();
   await expect(page.getByText("Aller à un instant")).toHaveCount(0);
@@ -156,7 +193,7 @@ test("À un instant with a date: no rail title, selected-event detail, PROUVER, 
   await expect(bar(page).getByText("Événement sélectionné").first()).toBeVisible();
   // PROUVER in caps, matching the nav plane.
   await expect(page.getByText("Ouvrir dans PROUVER · État à date")).toBeVisible();
-  await expect(page.getByText("Revenir au direct")).toHaveCount(1);
+  await expect(page.getByText("Revenir à maintenant")).toHaveCount(1);
   await expect(page.getByText("Revenir au présent")).toHaveCount(0);
   // "Comparer à" defaults to "Maintenant" with an instant, never "Aucun".
   await expect(
