@@ -276,23 +276,18 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
   const sloReady = slo.data && slo.data.n > 0 ? slo.data : undefined;
 
   return (
-    // Pull the dashboard up a touch under the page header so the temporal bar sits
-    // close to the page actions (Exporter / Preuves) — they read as one header zone
-    // instead of two bands separated by an empty gap. Small enough (< the main's
-    // pt-5) that the sticky bar never rises above the header.
-    <div className="-mt-2 flex w-full flex-col gap-4 pb-8">
-      {/* Page actions (Exporter rapport · Générer le dossier de preuves) — brought
-          down from the cockpit header to sit at page level, just ABOVE the rail. The
-          mb clears the sticky rail wrapper's upward bg shadow (0 -24px), which would
-          otherwise paint over the buttons' bottom edge. */}
-      <PageEvidenceActions className="mb-1.5" />
-      {/* The command bar pins flush under the page topbar and stays there while the
-          cockpit scrolls behind it. The wrapper is a full-bleed OPAQUE band so
-          nothing shows through or beside it: -mx-4 sm:-mx-6 covers the main's side
-          padding (px-4/sm:px-6), and the upward bg box-shadow (≥ the main's pt-5 =
-          20px) fills the strip between the header and the pinned bar — the gap was
-          the source of the bleed. */}
-      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pt-1 pb-2 shadow-[0_-20px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
+    // No top pull-up: the page actions row is vertically CENTERED in the band between
+    // the header rule and the rail — ≈ equal space above (the main's pt-5) and below
+    // (the gap to the rail).
+    <div className="flex w-full flex-col gap-4 pb-8">
+      {/* Page actions (Exporter rapport · Générer le dossier de preuves) — at page
+          level, centered in the band between the header and the rail. */}
+      <PageEvidenceActions />
+      {/* The command bar pins under the page topbar and stays there while the cockpit
+          scrolls behind it. A full-bleed OPAQUE band (-mx-4 sm:-mx-6 + the page bg) so
+          scrolling content never shows beside it. No shadow around the rail: the
+          main's own pt-5 background covers the strip above the pinned bar. */}
+      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pt-1 pb-2 sm:-mx-6 sm:px-6">
         <SignalCommandBar
           temporal={temporal}
           timeline={timeline.data}
