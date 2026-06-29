@@ -61,11 +61,11 @@ const PERIOD_MS: Record<string, number> = {
 // hover and no heavy outline. The PRIMARY reading control (Lecture) and the chosen
 // instant (État au) wear a discreet champagne instead — never a status colour.
 const CHIP_BASE =
-  "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(95,190,230,0.35)]";
+  "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(95,190,230,0.35)]";
 const CHIP_NEUTRAL =
-  "border-[rgba(95,190,230,0.16)] bg-[rgba(120,190,235,0.05)] text-[var(--tessera-text-muted)] hover:bg-[rgba(120,190,235,0.10)] hover:border-[rgba(95,190,230,0.28)]";
+  "border-[rgba(95,190,230,0.18)] bg-[rgba(120,190,235,0.05)] text-[var(--tessera-text-muted)] hover:bg-[rgba(120,190,235,0.12)] hover:border-[rgba(95,190,230,0.34)]";
 const CHIP_ACTIVE =
-  "border-gold-500/45 bg-gold-500/[0.10] text-gold-700 hover:bg-gold-500/[0.16] focus-visible:ring-gold-500/50 dark:text-gold-200";
+  "border-gold-500/45 bg-gold-500/[0.12] text-gold-700 hover:bg-gold-500/[0.18] focus-visible:ring-gold-500/50 dark:text-gold-200";
 
 // "Comparer à" — visible options per reading (registre §5). Order is defaults-first;
 // the omitted ones are hidden because they make no sense for that reading ("now" vs
@@ -335,8 +335,10 @@ export function SignalCommandBar({
     // backdrop-blur lets the page tone bleed through (glass). No status colour in the
     // fill; champagne stays reserved for the selected instant on the axis below.
     <section className="sr01-strip rounded-2xl backdrop-blur-md">
-      {/* Collapsed command row — the single temporal focus. */}
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+      {/* Collapsed command row — the single temporal focus. The `sr01-command-row`
+          class lifts it into a faintly raised control deck (cool top-light over the
+          lacquer, rounded to the strip's top corners). */}
+      <div className="sr01-command-row flex flex-wrap items-center gap-2 px-3 py-2">
         {/* Lecture — Maintenant / À un instant / Historique, with per-mode
             definitions IN the menu (not a permanent line), differentiated by icon. */}
         <LectureMenu reading={reading} onChange={(v) => temporal.setReading(v)} t={t} />
@@ -462,7 +464,7 @@ export function SignalCommandBar({
               Date/locale formatting during SSR while collapsed -> a hydration
               mismatch. Gating on `expanded` keeps the grid-rows reveal AND a clean SSR. */}
           {expanded ? (
-            <div className="border-t border-cyan-400/10 px-3 pb-3 pt-2">
+            <div className="border-t border-cyan-400/15 px-3 pb-3 pt-2">
               {/* No descriptive rail header: the reading lives in the command-bar
                   Lecture chip and the synthetic state in the micro-line above, so the
                   rail goes STRAIGHT to the visualisation (timeline · legend · the

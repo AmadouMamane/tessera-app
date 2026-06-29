@@ -625,7 +625,7 @@ export function TemporalRail({
         {isSignal ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-2.5 h-10 -translate-y-1/2 bg-[radial-gradient(52%_140%_at_50%_50%,rgba(96,176,228,0.10),transparent_72%)] [mask-image:linear-gradient(90deg,transparent,#000_16%,#000_84%,transparent)]"
+            className="pointer-events-none absolute inset-x-0 top-2.5 h-10 -translate-y-1/2 bg-[radial-gradient(56%_150%_at_50%_50%,rgba(96,182,232,0.14),transparent_72%)] [mask-image:linear-gradient(90deg,transparent,#000_16%,#000_84%,transparent)]"
           />
         ) : null}
         {/* The active temporal axis — for SR-01 (signal) a fine, luminous cyan thread
@@ -636,7 +636,7 @@ export function TemporalRail({
           className={cn(
             "pointer-events-none absolute inset-x-0 top-2.5 rounded-full",
             isSignal
-              ? "h-px bg-[linear-gradient(90deg,rgba(95,190,230,0.10),rgba(178,226,255,0.55),rgba(95,190,230,0.10))] shadow-[0_0_22px_rgba(95,190,230,0.14),0_1px_0_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.12)]"
+              ? "h-px bg-[linear-gradient(90deg,rgba(86,168,224,0.05),rgba(96,178,230,0.30)_22%,rgba(186,230,255,0.72)_50%,rgba(96,178,230,0.30)_78%,rgba(86,168,224,0.05))] shadow-[0_0_22px_rgba(96,194,242,0.20),0_0_1px_rgba(255,255,255,0.34),0_1px_0_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.16)]"
               : "h-0.5 bg-[linear-gradient(90deg,#363d48,#454e5d)]",
           )}
         />
@@ -671,6 +671,7 @@ export function TemporalRail({
             label={t("dataStart")}
             title={t("dataStartTooltip")}
             hideLabel={hideDataStartLabel}
+            signal={isSignal}
           />
         ) : null}
         {/* event markers (click to seek): NO inline labels — they overlapped when
@@ -704,7 +705,7 @@ export function TemporalRail({
           {/* Champagne tick on the axis — the single most legible point once an
               instant is committed (a glowing halo, not while previewing). */}
           {instantActive ? (
-            <span className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fbe6bf,#e6c982_70%)] shadow-[0_0_0_1px_rgba(255,238,196,0.55),0_0_0_4px_rgba(230,201,130,0.14),0_0_20px_rgba(230,201,130,0.32)]" />
+            <span className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fdecca,#e4c178_72%)] shadow-[0_0_0_1px_rgba(255,242,206,0.62),0_0_0_4px_rgba(232,199,126,0.16),0_0_16px_rgba(232,199,126,0.38),0_0_34px_rgba(232,199,126,0.14)]" />
           ) : null}
           {/* stem centred vertically on the timeline track (10–14px → centre 12px) */}
           <span className="absolute left-1/2 top-1.5 h-3 w-px -translate-x-1/2 bg-gold-400" />
@@ -744,15 +745,17 @@ export function TemporalRail({
             <span
               className={cn(
                 "text-[0.55rem] font-medium uppercase tracking-wide text-gold-400/80",
-                isSignal && "[text-shadow:0_0_12px_rgba(230,201,130,0.18)]",
+                isSignal && "[text-shadow:0_0_12px_rgba(232,201,130,0.24)]",
               )}
             >
               {t("selectedInstant")}
             </span>
             <span
               className={cn(
-                "tabular-nums text-[0.62rem] font-semibold text-gold-300",
-                isSignal && "[text-shadow:0_0_14px_rgba(230,201,130,0.20)]",
+                "tabular-nums text-[0.62rem] font-semibold",
+                isSignal
+                  ? "text-gold-200 [text-shadow:0_0_16px_rgba(232,201,130,0.26)]"
+                  : "text-gold-300",
               )}
             >
               {fmtInstant(currentT)}
@@ -1135,6 +1138,7 @@ function RailMarker({
   label,
   title,
   hideLabel,
+  signal,
 }: {
   pos: number;
   label: string;
@@ -1142,6 +1146,12 @@ function RailMarker({
   title: string;
   /** Drop the label (keep the ring) when the focused instant would collide with it. */
   hideLabel?: boolean;
+  /**
+   * SR-01 (signal) gives the marker a cool cyan-slate tint so it belongs to the
+   * temporal axis, while staying a clearly SECONDARY, desaturated marker beside the
+   * champagne selected instant. The execution transport keeps the neutral slate.
+   */
+  signal?: boolean;
 }) {
   return (
     <>
@@ -1149,22 +1159,39 @@ function RailMarker({
           a filled event nor a thin period tick. cursor-help + title = the tooltip. */}
       <span
         title={title}
-        className="absolute top-1 z-10 h-3 w-3 -translate-x-1/2 cursor-help rounded-full border border-slate-300/70 bg-[var(--tessera-bg)] shadow-[0_0_0_3px_rgba(130,140,153,0.12)]"
+        className={cn(
+          "absolute top-1 z-10 h-3 w-3 -translate-x-1/2 cursor-help rounded-full bg-[var(--tessera-bg)]",
+          signal
+            ? "border border-[rgba(150,196,222,0.55)] shadow-[0_0_0_3px_rgba(120,164,190,0.12)]"
+            : "border border-slate-300/70 shadow-[0_0_0_3px_rgba(130,140,153,0.12)]",
+        )}
         style={{ left: `${pos}%` }}
       />
       {hideLabel ? null : (
         <>
           {/* connector — keeps the label attached to its tick on the axis. */}
           <span
-            className="pointer-events-none absolute top-4 h-2.5 w-px -translate-x-1/2 bg-slate-400/35"
+            className={cn(
+              "pointer-events-none absolute top-4 h-2.5 w-px -translate-x-1/2",
+              signal ? "bg-[rgba(150,196,222,0.32)]" : "bg-slate-400/35",
+            )}
             style={{ left: `${pos}%` }}
           />
           <span
             title={title}
-            className="absolute top-[1.7rem] flex -translate-x-1/2 cursor-help items-center gap-1 whitespace-nowrap text-[0.6rem] font-medium text-slate-300/90"
+            className={cn(
+              "absolute top-[1.7rem] flex -translate-x-1/2 cursor-help items-center gap-1 whitespace-nowrap text-[0.6rem] font-medium",
+              signal ? "text-[rgba(178,202,218,0.85)]" : "text-slate-300/90",
+            )}
             style={{ left: `${pos}%` }}
           >
-            <Database className="h-2.5 w-2.5 text-slate-400" aria-hidden />
+            <Database
+              className={cn(
+                "h-2.5 w-2.5",
+                signal ? "text-[rgba(150,188,210,0.9)]" : "text-slate-400",
+              )}
+              aria-hidden
+            />
             {label}
           </span>
         </>
