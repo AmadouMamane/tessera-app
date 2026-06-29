@@ -986,12 +986,12 @@ function SignalEventNavigation({
     );
   }
   return (
-    <span className="ml-auto flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/30 bg-cyan-400/[0.08] py-1 pl-3 pr-1 text-[0.7rem] text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(170,228,255,0.09)]">
-      <span className="flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
-        <Milestone className="h-3.5 w-3.5 text-cyan-300/70" />
+    <span className="ml-auto flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/15 bg-cyan-400/[0.04] py-1 pl-3 pr-1 text-[0.7rem] text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(170,228,255,0.04)]">
+      <span className="flex items-center gap-1.5 text-[var(--tessera-text-muted)]">
+        <Milestone className="h-3.5 w-3.5 text-cyan-300/55" />
         {t("eventsBrowse")}
       </span>
-      <span className="mx-1 h-3.5 w-px bg-cyan-400/15" />
+      <span className="mx-1 h-3.5 w-px bg-cyan-400/10" />
       <EventNavButton label={t("eventPrev")} disabled={prevDisabled} onClick={onPrev}>
         <ChevronLeft className="h-4 w-4" />
       </EventNavButton>
