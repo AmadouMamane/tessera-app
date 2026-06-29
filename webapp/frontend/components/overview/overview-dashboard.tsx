@@ -281,13 +281,19 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
     // (the gap to the rail).
     <div className="flex w-full flex-col gap-4 pb-8">
       {/* Page actions (Exporter rapport · Générer le dossier de preuves) — at page
-          level, centered in the band between the header and the rail. */}
-      <PageEvidenceActions />
+          level, centered in the band between the header and the rail. The small mb
+          clears the sticky wrapper's upward fill band below (so it never paints over
+          the buttons' bottom edge while unscrolled). */}
+      <PageEvidenceActions className="mb-1.5" />
       {/* The command bar pins under the page topbar and stays there while the cockpit
-          scrolls behind it. A full-bleed OPAQUE band (-mx-4 sm:-mx-6 + the page bg) so
-          scrolling content never shows beside it. No shadow around the rail: the
-          main's own pt-5 background covers the strip above the pinned bar. */}
-      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pt-1 pb-2 sm:-mx-6 sm:px-6">
+          scrolls behind it. Two opaque covers, so scrolling content never shows
+          through or above the pinned bar:
+           · -mx-4 sm:-mx-6 + the page bg → a full-bleed band covering the sides;
+           · shadow-[0_-20px_…] → a same-colour (NOT a visible elevation shadow) fill
+             that paints the 20px gap ABOVE the bar — the `main`'s own pt-5 padding,
+             through which the fleet rows bled once the elevation pass removed it.
+          The rail stays visually FLAT (the band is the page bg, 0 blur/spread up). */}
+      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pt-1 pb-2 shadow-[0_-20px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
         <SignalCommandBar
           temporal={temporal}
           timeline={timeline.data}
