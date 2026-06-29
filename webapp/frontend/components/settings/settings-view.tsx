@@ -227,7 +227,7 @@ export function SettingsView() {
                 { value: "dark", label: tTheme("dark"), icon: <Moon className="h-4 w-4" /> },
                 {
                   value: "deep-night",
-                  label: tTheme("deepNight"),
+                  label: tTheme("slate"),
                   icon: <MoonStar className="h-4 w-4" />,
                 },
                 { value: "system", label: tTheme("system"), icon: <Monitor className="h-4 w-4" /> },

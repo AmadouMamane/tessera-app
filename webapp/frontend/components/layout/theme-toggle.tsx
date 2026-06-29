@@ -66,7 +66,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => withTransition(() => setTheme("deep-night"))}>
           <MoonStar className="mr-2 h-4 w-4" />
-          {t("deepNight")}
+          {t("slate")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => withTransition(() => setTheme("system"))}>
           <Monitor className="mr-2 h-4 w-4" />

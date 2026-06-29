@@ -142,8 +142,8 @@
     "theme": {
       "label": "Theme",
       "light": "Light",
-      "dark": "Dark",
-      "deepNight": "Deep night",
+      "dark": "Midnight blue",
+      "slate": "Slate",
       "system": "System"
     }
   },

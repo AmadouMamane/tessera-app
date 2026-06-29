@@ -142,8 +142,8 @@
     "theme": {
       "label": "Thème",
       "light": "Clair",
-      "dark": "Sombre",
-      "deepNight": "Nuit profonde",
+      "dark": "Bleu nuit",
+      "slate": "Ardoise",
       "system": "Système"
     }
   },
