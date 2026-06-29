@@ -244,33 +244,29 @@
  * "Clair": a light frosted-blue glass with a soft lift. Text uses the normal theme
  * tokens (light → ink, dark → light), so contrast follows the surface. */
 .sr01-strip {
-  border: 1px solid rgba(110, 205, 246, 0.34);
+  border: 1px solid rgba(110, 205, 246, 0.24);
   /* PREMIUM POLISHED BLACK, made BRILLIANT by cool specular light — never a white
-     wash nor a diffuse timeline halo. A black body (blacker than the navy cards) lit
-     by: a crisp cyan top glint, a thin SATURATED-cyan gloss reflection at the crown,
-     bright cyan edge liserés, and a faint outer cyan AURA so the instrument reads
-     "powered / lit" on the navy page. The luminous axis + champagne instant carry the
-     rest of the light. Never flat #000. */
-  background: linear-gradient(
-      180deg,
-      rgba(95, 205, 250, 0.11),
-      rgba(80, 190, 245, 0.03) 15%,
-      transparent 30%
-    ),
+     wash nor a diffuse timeline halo. INVERTED descent: the CROWN is the DARKEST and
+     the light gathers toward the BASE (a cool reflection + a bright cyan bottom liseré
+     + a glow rising from the foot), so the top is never the lighter part. Brilliance
+     also from the cyan border/inner-stroke, a faint outer AURA, and the luminous
+     axis/instant. Body stays blacker than the navy cards; never flat #000. */
+  background: linear-gradient(180deg, transparent 50%, rgba(60, 165, 225, 0.07) 100%),
     linear-gradient(
       180deg,
-      rgba(10, 15, 24, 0.99) 0%,
-      rgba(5, 9, 15, 0.992) 55%,
-      rgba(2, 4, 8, 0.995) 100%
+      rgba(2, 4, 8, 0.995) 0%,
+      rgba(5, 9, 15, 0.992) 50%,
+      rgba(11, 17, 28, 0.99) 100%
     );
   box-shadow:
-    inset 0 1px 0 rgba(180, 232, 255, 0.18),
-    inset 0 0 0 1px rgba(110, 200, 242, 0.08),
-    inset 0 -1px 0 rgba(45, 130, 185, 0.08),
-    inset 0 9px 32px rgba(0, 0, 0, 0.52),
+    inset 0 -1px 0 rgba(120, 205, 245, 0.11),
+    inset 0 1px 0 rgba(120, 195, 235, 0.045),
+    inset 0 0 0 1px rgba(110, 200, 242, 0.07),
+    inset 0 -14px 32px -12px rgba(45, 140, 195, 0.08),
+    inset 0 8px 26px rgba(0, 0, 0, 0.5),
     0 24px 56px -16px rgba(0, 0, 0, 0.72),
     0 0 26px -2px rgba(50, 155, 210, 0.13),
-    0 0 0 1px rgba(45, 135, 190, 0.11);
+    0 0 0 1px rgba(45, 135, 190, 0.1);
 }
 .light .sr01-strip {
   border-color: rgba(120, 160, 210, 0.5);
