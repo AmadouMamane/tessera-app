@@ -386,6 +386,24 @@ test("Comparer à defaults per reading — Maintenant (À un instant) / Période
   ).toContainText("Période précédente");
 });
 
+test("À un instant: the footer marks the live Systèmes 'live' but badges projected metrics (honest separation)", async ({
+  page,
+}) => {
+  // Deep-link straight into À un instant (the reading drives the footer chip, so this
+  // is data-volume independent).
+  await page.goto(`${PAGE}?lecture=asOf&asof=${encodeURIComponent(ASOF)}&expanded=1`);
+  const footer = page.locator("footer").first();
+  await expect(footer).toBeVisible();
+  // The footer's reading chip applies to the genuinely AS-OF-projected metrics
+  // (confidence from the controls, audit entry count).
+  await expect(footer.getByText("À cet instant").first()).toBeVisible({ timeout: 15_000 });
+  await expect(footer.getByText(/Confiance des signaux/).first()).toBeVisible();
+  // Process health has NO as-of-T substrate (rail-data-provenance §5): it is marked
+  // "live" so the reading chip never implies it was reconstructed at the past instant.
+  await expect(footer.getByText(/systèmes opérationnels|Systèmes dégradés/).first()).toBeVisible();
+  await expect(footer.getByText("live").first()).toBeVisible();
+});
+
 test("the observed-agent count is singular/plural correct (1 agent observé, never '1 agents')", async ({
   page,
 }) => {

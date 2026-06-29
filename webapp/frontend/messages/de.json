@@ -406,6 +406,7 @@
       "confidence": "Signalvertrauen",
       "systemsOk": "Alle Systeme betriebsbereit",
       "systemsDegraded": "Systeme eingeschränkt",
+      "auditAsOfTip": "Anzahl der Einträge zum gewählten Zeitpunkt; Integrität der Kette wird im Jetzt geprüft.",
       "viewHealth": "Health-Komponenten ansehen"
     }
   },

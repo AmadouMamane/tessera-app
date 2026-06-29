@@ -406,6 +406,7 @@
       "confidence": "Confiance des signaux",
       "systemsOk": "Tous les systèmes opérationnels",
       "systemsDegraded": "Systèmes dégradés",
+      "auditAsOfTip": "Nombre d’entrées à l’instant choisi ; intégrité de la chaîne vérifiée au présent.",
       "viewHealth": "Voir les composants santé"
     }
   },

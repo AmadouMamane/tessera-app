@@ -1468,7 +1468,11 @@ function TrustFooter({
           style={{ width: `${confidence ?? 0}%` }}
         />
       </span>
-      <span className="flex items-center gap-2">
+      {/* The audit COUNT projects as-of-T (entries ≤ T), but the chain INTEGRITY is a
+          structural "now" check over the whole log (registre §9 / rail-data-provenance
+          §5). Under a mode chip, a tooltip says so — the badge never implies the
+          integrity was reconstructed at a past instant. */}
+      <span className="flex items-center gap-2" title={provTag ? t("auditAsOfTip") : undefined}>
         <span
           className={cn("h-2 w-2 rounded-full", dotBg[verified === false ? "danger" : "success"])}
         />
@@ -1478,9 +1482,14 @@ function TrustFooter({
             ? t("auditIntact", { n: auditLength ?? 0 })
             : t("auditUnknown")}
       </span>
+      {/* Process liveness has NO as-of-T substrate (rail-data-provenance §5): it is a
+          present-tense now-check, never reconstructed at T. So under a mode chip it
+          carries an explicit "live" marker — the footer's reading chip never implies
+          the systems were "operational at that past instant". */}
       <span className="flex items-center gap-2">
         <span className={cn("h-2 w-2 rounded-full", dotBg[systemsOk ? "success" : "warning"])} />
         {systemsOk ? t("systemsOk") : t("systemsDegraded")}
+        {provTag ? <TimeTagChip kind="live" /> : null}
       </span>
       <button type="button" className="ml-auto text-blue-300 hover:underline">
         {t("viewHealth")} →

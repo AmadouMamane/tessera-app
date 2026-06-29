@@ -406,6 +406,7 @@
       "confidence": "Signal confidence",
       "systemsOk": "All systems operational",
       "systemsDegraded": "Systems degraded",
+      "auditAsOfTip": "Entry count as of the chosen instant; chain integrity verified in the present.",
       "viewHealth": "View health components"
     }
   },
