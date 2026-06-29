@@ -316,7 +316,35 @@
       "current": "Current",
       "target": "Target",
       "trend": "Trend",
-      "impact": "Impact"
+      "impact": "Impact",
+      "action": "Action",
+      "investigate": "Investigate",
+      "liveProbe": "live probe · uncatalogued"
+    },
+    "cases": {
+      "title": "Control cases to handle",
+      "viewAll": "View all ({n})",
+      "empty": "No cases in queue",
+      "tab": {
+        "all": "All",
+        "urgent": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      }
+    },
+    "governed": {
+      "title": "Governed activity",
+      "count": "{n, plural, one {# event} other {# events}}",
+      "empty": "No governed action in the window",
+      "routing": "Routing → {agent}",
+      "handoff": "Hand-over {from} → {to}",
+      "proposed": "Agent proposed · {agent}",
+      "released": "Agent released · {agent}",
+      "blocked": "Release blocked · {agent}",
+      "deployModel": "Model deployed · {version}",
+      "deployPrompt": "Prompt deployed · {version}",
+      "deployPolicy": "Policy deployed · {version}"
     },
     "signals": {
       "faithfulness": "Faithfulness SLO",

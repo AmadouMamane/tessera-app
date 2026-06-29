@@ -404,6 +404,24 @@ test("À un instant: the footer marks the live Systèmes 'live' but badges proje
   await expect(footer.getByText("live").first()).toBeVisible();
 });
 
+test("the overview surfaces the three real-data enrichments (controls action · cases triage · governed activity)", async ({
+  page,
+}) => {
+  await page.goto(PAGE);
+  // #1 — the Contrôles critiques table gained an "Action" drill-down column.
+  await expect(page.getByText("Contrôles critiques").first()).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page
+      .getByRole("columnheader", { name: "Action" })
+      .first()
+      .or(page.getByText("Investiguer").first()),
+  ).toBeVisible();
+  // #3 — the real operator queue triage panel (severity tabs).
+  await expect(page.getByText("Cas de contrôle à traiter").first()).toBeVisible();
+  // #2 — the governed-activity feed (real S1 governance events).
+  await expect(page.getByText("Activité gouvernée").first()).toBeVisible();
+});
+
 test("the observed-agent count is singular/plural correct (1 agent observé, never '1 agents')", async ({
   page,
 }) => {

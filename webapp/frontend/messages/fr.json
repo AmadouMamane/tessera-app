@@ -316,7 +316,35 @@
       "current": "Valeur actuelle",
       "target": "Objectif",
       "trend": "Tendance",
-      "impact": "Impact"
+      "impact": "Impact",
+      "action": "Action",
+      "investigate": "Investiguer",
+      "liveProbe": "sonde live · hors catalogue"
+    },
+    "cases": {
+      "title": "Cas de contrôle à traiter",
+      "viewAll": "Voir tout ({n})",
+      "empty": "Aucun cas en file",
+      "tab": {
+        "all": "Tous",
+        "urgent": "Critiques",
+        "high": "Élevés",
+        "medium": "Moyens",
+        "low": "Bas"
+      }
+    },
+    "governed": {
+      "title": "Activité gouvernée",
+      "count": "{n, plural, one {# événement} other {# événements}}",
+      "empty": "Aucune action gouvernée sur la fenêtre",
+      "routing": "Routage → {agent}",
+      "handoff": "Transfert {from} → {to}",
+      "proposed": "Agent proposé · {agent}",
+      "released": "Agent mis en ligne · {agent}",
+      "blocked": "Mise en ligne bloquée · {agent}",
+      "deployModel": "Modèle déployé · {version}",
+      "deployPrompt": "Prompt déployé · {version}",
+      "deployPolicy": "Politique déployée · {version}"
     },
     "signals": {
       "faithfulness": "Fidélité (objectif de service)",

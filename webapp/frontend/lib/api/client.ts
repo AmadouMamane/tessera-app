@@ -83,6 +83,8 @@ import {
   ConsoleFeedbackSchema,
   type ContradictionReport,
   ContradictionReportSchema,
+  type ControlSignals,
+  ControlSignalsSchema,
   type ConversationList,
   ConversationListSchema,
   type ConversationMessages,
@@ -123,6 +125,8 @@ import {
   FreshnessReportSchema,
   type FunnelReport,
   FunnelReportSchema,
+  type GovernanceFeed,
+  GovernanceFeedSchema,
   type GraphTopology,
   GraphTopologySchema,
   type GuardExplainReport,
@@ -806,6 +810,25 @@ export async function fetchParametersOverview(signal?: AbortSignal): Promise<Par
 
 export async function fetchInboxOverview(signal?: AbortSignal): Promise<InboxOverview> {
   return request("/observability/inbox", { signal }, InboxOverviewSchema);
+}
+
+/** The operator control-cases queue for the overview triage panel (live backlog). */
+export async function fetchOverviewCases(signal?: AbortSignal): Promise<InboxOverview> {
+  return request("/observability/inbox", { signal }, InboxOverviewSchema);
+}
+
+/** Map each overview control to its real catalogue signal + drill-down route. */
+export async function fetchControlSignals(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<ControlSignals> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/control-signals${q}`, { signal }, ControlSignalsSchema);
+}
+
+/** Governed-activity feed: real S1 governance events + lineage deploys, live or as of T. */
+export async function fetchGovernance(signal?: AbortSignal, at?: string): Promise<GovernanceFeed> {
+  return request(withAsOf("/observability/governance", at), { signal }, GovernanceFeedSchema);
 }
 
 /** Persist a status/assignee change for one queue item; returns the fresh payload. */

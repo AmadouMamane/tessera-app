@@ -3,16 +3,23 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  ArrowRightLeft,
   CalendarRange,
+  ChevronRight,
   Clock,
   Coins,
   GitBranch,
+  Inbox,
   Info,
+  Lightbulb,
+  Rocket,
+  Route,
   ShieldAlert,
   ShieldCheck,
   TriangleAlert,
+  UploadCloud,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useMemo, useState } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -22,17 +29,20 @@ import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import {
   fetchAIAct,
   fetchAnomalies,
   fetchAuditIntegrity,
   fetchConformance,
+  fetchControlSignals,
   fetchCost,
   fetchEvalScores,
   fetchFirewallEfficacy,
   fetchFunnel,
+  fetchGovernance,
   fetchHealth,
+  fetchOverviewCases,
   fetchPiiLeak,
   fetchPlaybooks,
   fetchReadiness,
@@ -49,7 +59,11 @@ import {
 import type {
   AnomalyReport,
   ConformanceReport,
+  ControlSignal,
   FirewallEfficacy,
+  GovernanceEvent,
+  GovernanceFeed,
+  InboxOverview,
   PIILeakSummary,
   PlaybookReport,
   RefusalReport,
@@ -77,6 +91,7 @@ const POLL_FAST_MS = 10_000;
 
 export function OverviewDashboard({ children }: { children?: ReactNode }) {
   const t = useTranslations("overview");
+  const locale = useLocale();
   // SR-01 temporal state — the single shared hook (global window + URL deep-link +
   // Live/As-of/Historique reading). The SignalCommandBar owns the controls; the
   // page reads asOf/historyMode to scope its queries (ADR 0011).
@@ -222,6 +237,30 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
   const timeline = useQuery({
     queryKey: ["ov-timeline"],
     queryFn: ({ signal }) => fetchTimeline(signal),
+    refetchInterval: POLL_MS,
+  });
+
+  // --- Enrichments (real data) --------------------------------------------
+  // Control → catalogue-signal resolver: static reference metadata (the mapping
+  // does not vary with T), so it is cached hard and carries no temporal chip.
+  const controlSignals = useQuery({
+    queryKey: ["ov-control-signals", locale],
+    queryFn: ({ signal }) => fetchControlSignals(locale, signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  // Governed-activity feed — real S1 governance events, projected as-of-T like the
+  // rest of the page (so it earns the provenance chip honestly).
+  const governance = useQuery({
+    queryKey: ["ov-governance", asOf],
+    queryFn: ({ signal }) => fetchGovernance(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : 20_000,
+    placeholderData: keepPreviousData,
+  });
+  // Operator control-cases queue — a LIVE operational backlog (no as-of substrate),
+  // so it is never scoped to T; in a temporal reading it wears an honest live marker.
+  const inbox = useQuery({
+    queryKey: ["ov-inbox"],
+    queryFn: ({ signal }) => fetchOverviewCases(signal),
     refetchInterval: POLL_MS,
   });
 
@@ -405,13 +444,24 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
         <div className="flex min-w-0 flex-col gap-4">
           <CriticalControlsTable
             controls={controls}
+            signals={controlSignals.data?.controls}
             loading={slo.isLoading && controls.length === 0}
             historyMode={historyMode}
+            provTag={provenanceTag}
+          />
+          <ControlCasesTriage
+            inbox={inbox.data}
+            loading={inbox.isLoading}
             provTag={provenanceTag}
           />
           <ControlCasesSection
             playbooks={playbooks.data}
             loading={playbooks.isLoading}
+            provTag={provenanceTag}
+          />
+          <GovernedActivityCard
+            feed={governance.data}
+            loading={governance.isLoading}
             provTag={provenanceTag}
           />
           <AnalyticsSection
@@ -770,11 +820,14 @@ function KpiCard({
 
 function CriticalControlsTable({
   controls,
+  signals,
   loading,
   historyMode,
   provTag,
 }: {
   controls: ControlRow[];
+  /** Real catalogue-signal resolution per control id (id/name/route), or undefined. */
+  signals?: ControlSignal[];
   loading: boolean;
   historyMode: boolean;
   provTag: TimeTagKind | null;
@@ -784,6 +837,7 @@ function CriticalControlsTable({
   const tst = useTranslations("overview.states");
   const ti = useTranslations("overview.impact");
   const tt = useTranslations("overview.time");
+  const signalById = useMemo(() => new Map((signals ?? []).map((s) => [s.id, s])), [signals]);
 
   return (
     <Card className="overflow-hidden rounded-lg">
@@ -818,52 +872,341 @@ function CriticalControlsTable({
                   <th className="py-2 pr-4 font-medium">{t("target")}</th>
                   <th className="py-2 pr-4 font-medium">{t("trend")}</th>
                   <th className="py-2 pr-4 font-medium">{t("impact")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("action")}</th>
                 </tr>
               </thead>
               <tbody>
-                {controls.map((c) => (
-                  <tr key={c.id} className="border-b border-[var(--border)]/50">
-                    <td className="px-4 py-2 font-medium">{ts(c.id)}</td>
-                    <td className="py-2 pr-4">
-                      <span
-                        className={cn(
-                          "inline-flex rounded-full border px-2 py-0.5 text-xs",
-                          toneBg[c.state.tone],
-                        )}
-                      >
-                        {c.noData ? "—" : tst(c.state.key)}
-                      </span>
-                    </td>
-                    {/* No per-cell time badge — the section already carries ONE "À
+                {controls.map((c) => {
+                  const sig = signalById.get(c.id);
+                  return (
+                    <tr key={c.id} className="border-b border-[var(--border)]/50">
+                      <td className="px-4 py-2">
+                        {/* Real signal identity (normative): the human label + its REAL
+                          catalogue id/technical name; the two live policy probes
+                          (toxicity, refusal) are honestly marked "hors catalogue". */}
+                        <div className="font-medium">{ts(c.id)}</div>
+                        {sig?.catalogued && sig.signal_name ? (
+                          <div className="font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                            {sig.signal_id} · {sig.signal_name}
+                          </div>
+                        ) : sig ? (
+                          <div
+                            className="text-[0.6rem] text-[var(--muted-foreground)]"
+                            title={tt("liveTooltip")}
+                          >
+                            {t("liveProbe")}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <span
+                          className={cn(
+                            "inline-flex rounded-full border px-2 py-0.5 text-xs",
+                            toneBg[c.state.tone],
+                          )}
+                        >
+                          {c.noData ? "—" : tst(c.state.key)}
+                        </span>
+                      </td>
+                      {/* No per-cell time badge — the section already carries ONE "À
                         cet instant" chip, so repeating it on every row was pure
                         over-stamping. A row whose source can't be reconstructed
                         historically (a live current-policy probe) keeps an honest
                         tooltip instead of a second visible badge. */}
-                    <td
-                      className="py-2 pr-4 tabular-nums"
-                      title={
-                        historyMode && !c.noData && !c.asOfCapable ? tt("liveTooltip") : undefined
-                      }
-                    >
-                      {c.value}
-                    </td>
-                    <td className="py-2 pr-4 text-[var(--muted-foreground)]">{c.target}</td>
-                    <td className="w-24 py-2 pr-4">
-                      {/* permanent axis on every row → constant cell height; a
+                      <td
+                        className="py-2 pr-4 tabular-nums"
+                        title={
+                          historyMode && !c.noData && !c.asOfCapable ? tt("liveTooltip") : undefined
+                        }
+                      >
+                        {c.value}
+                      </td>
+                      <td className="py-2 pr-4 text-[var(--muted-foreground)]">{c.target}</td>
+                      <td className="w-24 py-2 pr-4">
+                        {/* permanent axis on every row → constant cell height; a
                           curve only where there's a real trend to draw */}
-                      <MetricSparkline
-                        values={c.trend && c.trend.length > 1 ? c.trend : []}
-                        tone={c.trend && c.trend.length > 1 ? c.state.tone : "neutral"}
-                        className="h-6"
-                        height={26}
-                      />
-                    </td>
-                    <td className="py-2 pr-4 text-[var(--muted-foreground)]">{ti(c.impactKey)}</td>
-                  </tr>
-                ))}
+                        <MetricSparkline
+                          values={c.trend && c.trend.length > 1 ? c.trend : []}
+                          tone={c.trend && c.trend.length > 1 ? c.state.tone : "neutral"}
+                          className="h-6"
+                          height={26}
+                        />
+                      </td>
+                      <td className="py-2 pr-4 text-[var(--muted-foreground)]">
+                        {ti(c.impactKey)}
+                      </td>
+                      {/* Drill-down to the control's REAL investigation surface — the
+                        normative "Action recommandée / Case" intent, as honest
+                        navigation (every control has a real SURVEILLER route). */}
+                      <td className="py-2 pr-4">
+                        {sig ? (
+                          <Link
+                            href={sig.route}
+                            title={t("investigate")}
+                            className="inline-flex items-center gap-0.5 whitespace-nowrap text-xs text-blue-300 hover:underline"
+                          >
+                            {t("investigate")}
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </Link>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Control-cases triage (real operator queue) — enrichment #3
+// ---------------------------------------------------------------------------
+
+const CASE_PRIORITY_TONE: Record<string, OverviewTone> = {
+  urgent: "danger",
+  high: "warning",
+  medium: "gold",
+  low: "neutral",
+};
+const CASE_SLA_TONE: Record<string, OverviewTone> = {
+  crit: "danger",
+  warn: "warning",
+  ok: "success",
+};
+const CASE_TABS = ["all", "urgent", "high", "medium", "low"] as const;
+const CASE_RANK: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+/**
+ * A compact severity-tabbed triage of the REAL operator queue
+ * (``/observability/inbox``) — the normative "Control Cases à traiter". It is a LIVE
+ * operational backlog (no as-of-T substrate), so under a mode chip it wears an honest
+ * "live" marker; the full queue lives on /à-traiter.
+ */
+function ControlCasesTriage({
+  inbox,
+  loading,
+  provTag,
+}: {
+  inbox?: InboxOverview;
+  loading: boolean;
+  provTag: TimeTagKind | null;
+}) {
+  const t = useTranslations("overview.cases");
+  const [tab, setTab] = useState<(typeof CASE_TABS)[number]>("all");
+  const items = inbox?.items ?? [];
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: items.length, urgent: 0, high: 0, medium: 0, low: 0 };
+    for (const it of items) c[it.priority] = (c[it.priority] ?? 0) + 1;
+    return c;
+  }, [items]);
+  const shown = useMemo(() => {
+    const filtered = tab === "all" ? items : items.filter((i) => i.priority === tab);
+    return [...filtered]
+      .sort((a, b) => (CASE_RANK[a.priority] ?? 9) - (CASE_RANK[b.priority] ?? 9))
+      .slice(0, 4);
+  }, [items, tab]);
+
+  return (
+    <Card className="rounded-lg">
+      <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {t("title")}
+          {provTag ? <TimeTagChip kind="live" /> : null}
+        </CardTitle>
+        <Link
+          href="/a-traiter"
+          className="flex items-center gap-1 text-xs text-blue-300 hover:underline"
+        >
+          <Inbox className="h-3.5 w-3.5" />
+          {t("viewAll", { n: inbox?.total_items ?? items.length })}
+        </Link>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          {CASE_TABS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setTab(k)}
+              className={cn(
+                "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                tab === k
+                  ? "border-blue-400/50 bg-blue-500/15 text-blue-200"
+                  : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--muted)]/40",
+              )}
+            >
+              {t(`tab.${k}`)} <span className="tabular-nums">{counts[k] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+        {loading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : shown.length === 0 ? (
+          <p className="py-6 text-center text-sm text-emerald-400">{t("empty")}</p>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {shown.map((it) => (
+              <li
+                key={it.id}
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--muted)]/20 px-3 py-2 text-xs"
+              >
+                <span
+                  className={cn(
+                    "h-2 w-2 shrink-0 rounded-full",
+                    dotBg[CASE_PRIORITY_TONE[it.priority] ?? "neutral"],
+                  )}
+                />
+                <span className="min-w-0">
+                  <span className="block truncate font-medium text-[var(--foreground)]">
+                    {it.title}
+                  </span>
+                  <span className="block truncate text-[var(--muted-foreground)]">
+                    {it.source} · {it.assignee}
+                  </span>
+                </span>
+                <Badge className={cn("shrink-0", toneBg[CASE_SLA_TONE[it.sla_tone] ?? "neutral"])}>
+                  {it.sla}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Governed-activity feed (real S1 governance events) — enrichment #2
+// ---------------------------------------------------------------------------
+
+const GOV_ICON: Record<GovernanceEvent["kind"], typeof Activity> = {
+  routing: Route,
+  handoff: ArrowRightLeft,
+  proposed: Lightbulb,
+  released: Rocket,
+  blocked: ShieldAlert,
+  deploy_model: UploadCloud,
+  deploy_prompt: UploadCloud,
+  deploy_policy: UploadCloud,
+};
+const GOV_TONE: Record<GovernanceEvent["kind"], OverviewTone> = {
+  routing: "info",
+  handoff: "gold",
+  proposed: "info",
+  released: "success",
+  blocked: "danger",
+  deploy_model: "info",
+  deploy_prompt: "info",
+  deploy_policy: "info",
+};
+
+/** Short DD/MM HH:MM stamp for a governance event (tabular, locale-formatted). */
+function fmtGovTime(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleString(undefined, {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+}
+
+function governanceLabel(ev: GovernanceEvent, t: ReturnType<typeof useTranslations>): string {
+  switch (ev.kind) {
+    case "handoff":
+      return t("handoff", { from: ev.from_agent ?? "?", to: ev.to_agent ?? ev.agent_id ?? "?" });
+    case "routing":
+      return t("routing", { agent: ev.agent_id ?? "?" });
+    case "proposed":
+      return t("proposed", { agent: ev.detail || ev.agent_id || "?" });
+    case "released":
+      return t("released", { agent: ev.agent_id ?? "?" });
+    case "blocked":
+      return t("blocked", { agent: ev.agent_id ?? "?" });
+    case "deploy_model":
+      return t("deployModel", { version: ev.detail });
+    case "deploy_prompt":
+      return t("deployPrompt", { version: ev.detail });
+    case "deploy_policy":
+      return t("deployPolicy", { version: ev.detail });
+    default:
+      return ev.detail;
+  }
+}
+
+/**
+ * Governed-activity feed (normatives 02/03) — real, append-only S1 governance
+ * events (agent routing / hand-overs / proposals / releases) + lineage deploys,
+ * newest-first. Projects as-of-T (carries the page's provenance chip honestly).
+ * Only real events appear — sparse categories show an honest empty state.
+ */
+function GovernedActivityCard({
+  feed,
+  loading,
+  provTag,
+}: {
+  feed?: GovernanceFeed;
+  loading: boolean;
+  provTag: TimeTagKind | null;
+}) {
+  const t = useTranslations("overview.governed");
+  const events = feed?.events ?? [];
+  return (
+    <Card className="rounded-lg">
+      <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {t("title")}
+          {provTag ? <TimeTagChip kind={provTag} /> : null}
+        </CardTitle>
+        <span className="text-xs text-[var(--muted-foreground)]">
+          {t("count", { n: feed?.total ?? 0 })}
+        </span>
+      </CardHeader>
+      <CardContent className="flex min-h-[4.5rem] flex-col gap-1.5">
+        {loading ? (
+          <Skeleton className="h-20 w-full" />
+        ) : events.length === 0 ? (
+          <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">{t("empty")}</p>
+        ) : (
+          events.map((ev, i) => {
+            const Icon = GOV_ICON[ev.kind] ?? Activity;
+            const tone = GOV_TONE[ev.kind] ?? "neutral";
+            return (
+              <div
+                key={`${ev.occurred_at}-${ev.kind}-${i}`}
+                className="grid grid-cols-[auto_1fr] items-center gap-2 text-xs"
+              >
+                <span
+                  className={cn(
+                    "flex h-6 w-6 items-center justify-center rounded-md border",
+                    toneBg[tone],
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-[var(--foreground)]">
+                    {governanceLabel(ev, t)}
+                    {ev.count > 1 ? (
+                      <span className="text-[var(--muted-foreground)]"> · ×{ev.count}</span>
+                    ) : null}
+                  </span>
+                  <span className="block truncate font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                    {fmtGovTime(ev.occurred_at)} · {ev.actor}
+                    {ev.evidence ? ` · ${ev.evidence}` : ""}
+                  </span>
+                </span>
+              </div>
+            );
+          })
         )}
       </CardContent>
     </Card>

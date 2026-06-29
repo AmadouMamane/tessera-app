@@ -44,6 +44,7 @@ from tessera.observability import (
     console_feedback as console_feedback_mod,
     context_overflow as context_overflow_mod,
     contradiction as contradiction_mod,
+    control_signals as control_signals_mod,
     corpus_freshness as corpus_freshness_mod,
     corpus_injection as corpus_injection_mod,
     cost_anomaly as cost_anomaly_mod,
@@ -61,6 +62,7 @@ from tessera.observability import (
     firewall_efficacy as firewall_mod,
     fleet as fleet_mod,
     funnel as funnel_mod,
+    governance_feed as governance_feed_mod,
     graph_topology as graph_topology_mod,
     guard_explain as guard_explain_mod,
     guard_retraction as guard_retraction_mod,
@@ -1327,6 +1329,46 @@ async def observability_inbox() -> dict[str, object]:
         return {"available": True, **inbox_mod.compute_inbox_overview()}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.inbox: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/control-signals")
+async def observability_control_signals(lang: str = "fr") -> dict[str, object]:
+    """Resolve the overview controls to their real catalogue signal + drill-down.
+
+    Grounds each "Contrôles critiques" row in the LIVE signal catalogue (signal id /
+    technical name / category) and a real SURVEILLER investigation route — the
+    normative "Action recommandée / Case" intent. The two live policy probes
+    (toxicity, refusal) are honestly reported as non-catalogued. Static reference
+    metadata (no as-of-T): the mapping does not vary with the temporal instant.
+    Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **control_signals_mod.compute_control_signals(lang)}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.control_signals: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/governance")
+async def observability_governance(
+    at: str | None = None, limit: int = 8, agent: str = "all"
+) -> dict[str, object]:
+    """Governed-activity feed — real S1 governance events + lineage deploys (≤ T).
+
+    Surfaces genuine governance actions (agent routing/hand-overs/proposals/release
+    decisions from the hash-chained S1 journal, and model/prompt/policy version
+    deploys from the bundle lineage), newest-first. Honours as-of-T (``?at=``) so it
+    stays consistent with the rail's provenance contract; ``?agent=`` scopes the S1
+    events. Only real events are returned — sparse categories simply do not appear
+    (honest empty state). Degrades to ``available: false`` on failure.
+    """
+    try:
+        bounded = max(1, min(limit, 30))
+        feed = governance_feed_mod.compute_governance_feed(at, limit=bounded, agent=agent)
+        return {"available": True, **asdict(feed)}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.governance: failed: {exc}\n")
         return {"available": False}
 
 

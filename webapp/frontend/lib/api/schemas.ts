@@ -3316,6 +3316,63 @@ export const InboxOverviewSchema = z.object({
 });
 export type InboxOverview = z.infer<typeof InboxOverviewSchema>;
 
+// ---------------------------------------------------------------------------
+// Overview — control → catalogue-signal resolver (actionable Contrôles critiques)
+// ---------------------------------------------------------------------------
+
+export const ControlSignalSchema = z.object({
+  id: z.string(),
+  /** Real catalogue signal id (SIG-xxx) — null for a non-catalogued live probe. */
+  signal_id: z.string().nullable(),
+  signal_name: z.string().nullable(),
+  category: z.string().nullable(),
+  /** Real SURVEILLER drill-down route (always present). */
+  route: z.string(),
+  catalogued: z.boolean(),
+  /** Why it is not catalogued (live policy/calibration probe), else null. */
+  reason: z.string().nullable(),
+});
+export const ControlSignalsSchema = z.object({
+  available: z.boolean(),
+  controls: z.array(ControlSignalSchema),
+});
+export type ControlSignal = z.infer<typeof ControlSignalSchema>;
+export type ControlSignals = z.infer<typeof ControlSignalsSchema>;
+
+// ---------------------------------------------------------------------------
+// Overview — governed-activity feed (real S1 governance events + lineage deploys)
+// ---------------------------------------------------------------------------
+
+export const GovernanceEventSchema = z.object({
+  occurred_at: z.string(),
+  kind: z.enum([
+    "routing",
+    "handoff",
+    "proposed",
+    "released",
+    "blocked",
+    "deploy_model",
+    "deploy_prompt",
+    "deploy_policy",
+  ]),
+  actor: z.string(),
+  agent_id: z.string().nullable(),
+  from_agent: z.string().nullable(),
+  to_agent: z.string().nullable(),
+  detail: z.string(),
+  count: z.number().int(),
+  evidence: z.string().nullable(),
+});
+export const GovernanceFeedSchema = z.object({
+  available: z.boolean(),
+  events: z.array(GovernanceEventSchema),
+  total: z.number().int(),
+  by_kind: z.record(z.string(), z.number().int()),
+  as_of: z.string().nullable(),
+});
+export type GovernanceEvent = z.infer<typeof GovernanceEventSchema>;
+export type GovernanceFeed = z.infer<typeof GovernanceFeedSchema>;
+
 const AsMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   time: z.string(),
