@@ -629,7 +629,7 @@ export function TemporalRail({
           className={cn(
             "pointer-events-none absolute inset-x-0 top-2.5 rounded-full",
             isSignal
-              ? "h-px bg-[linear-gradient(90deg,rgba(86,168,224,0.06),rgba(104,196,242,0.40)_22%,rgba(198,238,255,0.84)_50%,rgba(104,196,242,0.40)_78%,rgba(86,168,224,0.06))] shadow-[0_0_15px_rgba(110,205,248,0.34),0_0_1px_rgba(255,255,255,0.36),0_1px_0_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.18)]"
+              ? "h-px bg-[linear-gradient(90deg,rgba(96,194,242,0.06),rgba(96,194,242,0.40)_22%,rgba(170,222,250,0.82)_50%,rgba(96,194,242,0.40)_78%,rgba(96,194,242,0.06))] shadow-[0_0_15px_rgba(96,194,242,0.34),0_0_1px_rgba(255,255,255,0.36),0_1px_0_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.18)]"
               : "h-0.5 bg-[linear-gradient(90deg,#363d48,#454e5d)]",
           )}
         />
@@ -986,12 +986,12 @@ function SignalEventNavigation({
     );
   }
   return (
-    <span className="ml-auto flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/30 bg-cyan-400/[0.08] py-1 pl-3 pr-1 text-[0.7rem] text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(170,228,255,0.09)]">
+    <span className="ml-auto flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(96,194,242,0.3)] bg-[rgba(96,194,242,0.08)] py-1 pl-3 pr-1 text-[0.7rem] text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(160,220,250,0.09)]">
       <span className="flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
-        <Milestone className="h-3.5 w-3.5 text-cyan-300/70" />
+        <Milestone className="h-3.5 w-3.5 text-[rgba(130,205,246,0.8)]" />
         {t("eventsBrowse")}
       </span>
-      <span className="mx-1 h-3.5 w-px bg-cyan-400/15" />
+      <span className="mx-1 h-3.5 w-px bg-[rgba(96,194,242,0.15)]" />
       <EventNavButton label={t("eventPrev")} disabled={prevDisabled} onClick={onPrev}>
         <ChevronLeft className="h-4 w-4" />
       </EventNavButton>
@@ -1155,7 +1155,7 @@ function RailMarker({
         className={cn(
           "absolute top-1 z-10 h-3 w-3 -translate-x-1/2 cursor-help rounded-full bg-[var(--tessera-bg)]",
           signal
-            ? "border border-[rgba(150,196,222,0.55)] shadow-[0_0_0_3px_rgba(120,164,190,0.12)]"
+            ? "border border-[rgba(124,188,220,0.55)] shadow-[0_0_0_3px_rgba(96,160,200,0.14)]"
             : "border border-slate-300/70 shadow-[0_0_0_3px_rgba(130,140,153,0.12)]",
         )}
         style={{ left: `${pos}%` }}
@@ -1166,7 +1166,7 @@ function RailMarker({
           <span
             className={cn(
               "pointer-events-none absolute top-4 h-2.5 w-px -translate-x-1/2",
-              signal ? "bg-[rgba(150,196,222,0.32)]" : "bg-slate-400/35",
+              signal ? "bg-[rgba(124,188,220,0.32)]" : "bg-slate-400/35",
             )}
             style={{ left: `${pos}%` }}
           />
@@ -1174,14 +1174,14 @@ function RailMarker({
             title={title}
             className={cn(
               "absolute top-[1.7rem] flex -translate-x-1/2 cursor-help items-center gap-1 whitespace-nowrap text-[0.6rem] font-medium",
-              signal ? "text-[rgba(178,202,218,0.85)]" : "text-slate-300/90",
+              signal ? "text-[rgba(150,200,228,0.85)]" : "text-slate-300/90",
             )}
             style={{ left: `${pos}%` }}
           >
             <Database
               className={cn(
                 "h-2.5 w-2.5",
-                signal ? "text-[rgba(150,188,210,0.9)]" : "text-slate-400",
+                signal ? "text-[rgba(124,188,220,0.9)]" : "text-slate-400",
               )}
               aria-hidden
             />

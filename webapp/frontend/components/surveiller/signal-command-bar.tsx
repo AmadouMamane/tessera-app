@@ -61,9 +61,9 @@ const PERIOD_MS: Record<string, number> = {
 // hover and no heavy outline. The PRIMARY reading control (Lecture) and the chosen
 // instant (État au) wear a discreet champagne instead — never a status colour.
 const CHIP_BASE =
-  "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs shadow-[inset_0_1px_0_rgba(170,228,255,0.09)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(95,190,230,0.35)]";
+  "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs shadow-[inset_0_1px_0_rgba(160,220,250,0.09)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(96,194,242,0.35)]";
 const CHIP_NEUTRAL =
-  "border-[rgba(100,198,238,0.26)] bg-[rgba(120,190,235,0.05)] text-[var(--tessera-text-muted)] hover:bg-[rgba(120,190,235,0.12)] hover:border-[rgba(100,198,238,0.4)]";
+  "border-[rgba(96,194,242,0.26)] bg-[rgba(96,194,242,0.05)] text-[var(--tessera-text-muted)] hover:bg-[rgba(96,194,242,0.12)] hover:border-[rgba(96,194,242,0.4)]";
 const CHIP_ACTIVE =
   "border-gold-500/45 bg-gold-500/[0.12] text-gold-700 hover:bg-gold-500/[0.18] focus-visible:ring-gold-500/50 dark:text-gold-200";
 
@@ -423,7 +423,7 @@ export function SignalCommandBar({
           above), and repeating the SAME reading glyph here stacked two identical
           icons vertically and read as a second control. The line is a state
           summary, so its bold first segment carries the meaning. */}
-      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-cyan-400/10 px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
         {microSegments.map((seg, i) => (
           <span key={seg.key} className="flex items-center gap-1.5">
             {i > 0 ? <span aria-hidden>·</span> : null}
@@ -466,7 +466,7 @@ export function SignalCommandBar({
               Date/locale formatting during SSR while collapsed -> a hydration
               mismatch. Gating on `expanded` keeps the grid-rows reveal AND a clean SSR. */}
           {expanded ? (
-            <div className="border-t border-cyan-400/15 px-3 pb-3 pt-2">
+            <div className="border-t border-[rgba(96,194,242,0.15)] px-3 pb-3 pt-2">
               {/* No descriptive rail header: the reading lives in the command-bar
                   Lecture chip and the synthetic state in the micro-line above, so the
                   rail goes STRAIGHT to the visualisation (timeline · legend · the
