@@ -11,6 +11,7 @@ import {
   Clock3,
   Crosshair,
   History,
+  Info,
   RotateCcw,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -119,20 +120,23 @@ function compareReason(value: string, t: Translate): string {
   }
 }
 
-/** Build the "Comparer à" options: computable ones plain, the rest disabled + reason. */
+/**
+ * Build the "Comparer à" options. Labels stay SHORT ("Période précédente") in every
+ * state — the disabled reason is NOT baked into the label, so the closed chip never
+ * stretches to the full-width "Période précédente — Non disponible …". The reason is
+ * surfaced discreetly elsewhere (a small indicator + tooltip on the chip when the
+ * selected reference is not computable).
+ */
 function buildCompareOptions(
   reading: Reading,
   avail: { target: boolean; now: boolean },
   t: Translate,
 ): { value: string; label: string; disabled?: boolean }[] {
-  return COMPARE_ORDER[reading].map((value) => {
-    if (compareEnabled(reading, value, avail)) return { value, label: compareLabel(value, t) };
-    return {
-      value,
-      label: `${compareLabel(value, t)} — ${compareReason(value, t)}`,
-      disabled: true,
-    };
-  });
+  return COMPARE_ORDER[reading].map((value) => ({
+    value,
+    label: compareLabel(value, t),
+    disabled: !compareEnabled(reading, value, avail),
+  }));
 }
 
 /**
@@ -176,6 +180,12 @@ export function SignalCommandBar({
   // "Comparer à" control is shown disabled with a reason, never a phantom default.
   const hasInstant = reading === "asof" ? temporal.activeAt != null : true;
   const compareOptions = buildCompareOptions(reading, { target: targetAvail, now: nowAvail }, t);
+  // When the active reference is selectable-but-not-computable here (e.g. "Période
+  // précédente" in Historique), the chip keeps the SHORT label and surfaces the
+  // reason discreetly — a small indicator + tooltip — instead of widening to the
+  // full "Période précédente — Non disponible — période antérieure incomplète".
+  const selectedCompare = compareOptions.find((o) => o.value === compare);
+  const compareNote = selectedCompare?.disabled ? compareReason(compare, t) : undefined;
   // Keep the comparison honest across readings: reset only a FOREIGN lens (one not
   // offered for this reading) to the reading's default. A visible-but-not-computable
   // default (e.g. Maintenant without a present score, Période précédente) is KEPT and
@@ -380,6 +390,7 @@ export function SignalCommandBar({
             value={compare}
             onChange={setCompare}
             options={compareOptions}
+            noteTitle={compareNote}
           />
         )}
         {/* Déplier / Replier — pushed to the right; the page-level Export / Preuves
@@ -572,6 +583,7 @@ function SelectChip({
   onChange,
   options,
   accent,
+  noteTitle,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
@@ -579,6 +591,12 @@ function SelectChip({
   onChange: (value: string) => void;
   options: { value: string; label: string; disabled?: boolean }[];
   accent?: boolean;
+  /**
+   * Discreet "not available" reason for the CURRENT value (e.g. "Période précédente"
+   * is shown but not computable here). Rendered as a small info glyph with the reason
+   * in its tooltip — so the chip stays narrow and the long reason never widens it.
+   */
+  noteTitle?: string;
 }) {
   return (
     <label className={cn(CHIP_BASE, "cursor-pointer", accent ? CHIP_ACTIVE : CHIP_NEUTRAL)}>
@@ -600,6 +618,11 @@ function SelectChip({
           </option>
         ))}
       </select>
+      {noteTitle ? (
+        <span title={noteTitle} aria-label={noteTitle} className="flex shrink-0 cursor-help">
+          <Info className="h-3.5 w-3.5 text-amber-400/70" aria-hidden />
+        </span>
+      ) : null}
     </label>
   );
 }

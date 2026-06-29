@@ -265,6 +265,8 @@
       "liveSignal": "live",
       "atTLabel": "Zu diesem Zeitpunkt",
       "atTTooltip": "Zustand zum gewählten Zeitpunkt rekonstruiert",
+      "periodTagLabel": "Im Zeitraum",
+      "periodTagTooltip": "Zustand des beobachteten Zeitraums — kein bestimmter Zeitpunkt",
       "liveTooltip": "Aktuelles Signal — unabhängig vom gewählten Zeitpunkt (jetzt gemessen)",
       "asOfEvidence": "Ansicht zum Stand {time}",
       "reasonSelectInstant": "Wählen Sie einen Zeitpunkt zum Vergleichen aus",

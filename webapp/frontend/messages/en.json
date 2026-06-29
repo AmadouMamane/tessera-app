@@ -265,6 +265,8 @@
       "liveSignal": "live",
       "atTLabel": "At this instant",
       "atTTooltip": "State reconstructed at the selected instant",
+      "periodTagLabel": "Over the period",
+      "periodTagTooltip": "State across the observed period — not a single instant",
       "liveTooltip": "Current signal — independent of the chosen instant (measured now)",
       "asOfEvidence": "View as of {time}",
       "reasonSelectInstant": "Select a point in time to compare",
