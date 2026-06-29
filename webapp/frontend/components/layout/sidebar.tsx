@@ -469,7 +469,7 @@ function RailNode({
         className={cn(
           "group relative flex h-10 items-center justify-center rounded-md transition-colors motion-reduce:transition-none",
           active
-            ? "bg-[var(--tessera-surface-elevated)] text-white"
+            ? "bg-[var(--tessera-surface-elevated)] text-[var(--tessera-text)]"
             : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
         )}
       >
@@ -524,7 +524,7 @@ function NavTreeNode({
             className={cn(
               "group flex min-h-9 items-center gap-2 rounded-md py-2 pr-2 text-sm font-medium transition-colors",
               active
-                ? "bg-[var(--tessera-surface-elevated)] text-white"
+                ? "bg-[var(--tessera-surface-elevated)] text-[var(--tessera-text)]"
                 : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
             )}
           >

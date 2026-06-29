@@ -16,7 +16,7 @@ export function TesseraLogo({ className }: { className?: string }) {
       height={72}
       priority
       unoptimized
-      className={cn("w-auto object-contain", className)}
+      className={cn("brand-logo w-auto object-contain", className)}
     />
   );
 }

@@ -190,7 +190,7 @@ export function CommandPalette() {
                   className={cn(
                     "flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors motion-reduce:transition-none",
                     i === selected
-                      ? "bg-[var(--tessera-surface-elevated)] text-white"
+                      ? "bg-[var(--tessera-surface-elevated)] text-[var(--tessera-text)]"
                       : "text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]",
                   )}
                 >

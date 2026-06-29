@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, Cpu, Lock, Monitor, Moon, MoonStar, Sun } from "lucide-react";
+import { Check, Cpu, Lock } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 
+import { ThemeSwatch } from "@/components/layout/theme-swatch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePathname, useRouter } from "@/i18n/navigation";
@@ -223,14 +224,18 @@ export function SettingsView() {
               value={mounted ? (theme ?? "system") : "system"}
               onChange={setTheme}
               options={[
-                { value: "light", label: tTheme("light"), icon: <Sun className="h-4 w-4" /> },
-                { value: "dark", label: tTheme("dark"), icon: <Moon className="h-4 w-4" /> },
+                { value: "light", label: tTheme("light"), icon: <ThemeSwatch theme="light" /> },
+                { value: "dark", label: tTheme("dark"), icon: <ThemeSwatch theme="dark" /> },
                 {
                   value: "deep-night",
                   label: tTheme("slate"),
-                  icon: <MoonStar className="h-4 w-4" />,
+                  icon: <ThemeSwatch theme="deep-night" />,
                 },
-                { value: "system", label: tTheme("system"), icon: <Monitor className="h-4 w-4" /> },
+                {
+                  value: "system",
+                  label: tTheme("system"),
+                  icon: <ThemeSwatch theme="system" />,
+                },
               ]}
             />
           </Row>
