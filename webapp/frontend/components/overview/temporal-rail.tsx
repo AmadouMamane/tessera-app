@@ -629,7 +629,7 @@ export function TemporalRail({
           className={cn(
             "pointer-events-none absolute inset-x-0 top-2.5 rounded-full",
             isSignal
-              ? "h-px bg-[linear-gradient(90deg,rgba(86,168,224,0.05),rgba(96,178,230,0.32)_22%,rgba(188,232,255,0.74)_50%,rgba(96,178,230,0.32)_78%,rgba(86,168,224,0.05))] shadow-[0_0_10px_rgba(96,194,242,0.18),0_0_1px_rgba(255,255,255,0.34),0_1px_0_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.16)]"
+              ? "h-px bg-[linear-gradient(90deg,rgba(86,168,224,0.06),rgba(104,196,242,0.40)_22%,rgba(198,238,255,0.84)_50%,rgba(104,196,242,0.40)_78%,rgba(86,168,224,0.06))] shadow-[0_0_15px_rgba(110,205,248,0.34),0_0_1px_rgba(255,255,255,0.36),0_1px_0_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.18)]"
               : "h-0.5 bg-[linear-gradient(90deg,#363d48,#454e5d)]",
           )}
         />
@@ -698,7 +698,7 @@ export function TemporalRail({
           {/* Champagne tick on the axis — the single most legible point once an
               instant is committed (a glowing halo, not while previewing). */}
           {instantActive ? (
-            <span className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fdecca,#e4c178_72%)] shadow-[0_0_0_1px_rgba(255,240,205,0.6),0_0_0_3px_rgba(231,199,127,0.14),0_0_16px_rgba(231,199,127,0.28)]" />
+            <span className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fdecca,#e4c178_72%)] shadow-[0_0_0_1px_rgba(255,242,208,0.66),0_0_0_3px_rgba(231,199,127,0.16),0_0_18px_rgba(233,201,128,0.36)]" />
           ) : null}
           {/* stem centred vertically on the timeline track (10–14px → centre 12px) */}
           <span className="absolute left-1/2 top-1.5 h-3 w-px -translate-x-1/2 bg-gold-400" />
@@ -986,7 +986,7 @@ function SignalEventNavigation({
     );
   }
   return (
-    <span className="ml-auto flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/25 bg-cyan-400/[0.06] py-1 pl-3 pr-1 text-[0.7rem] text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(150,225,255,0.06)]">
+    <span className="ml-auto flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/30 bg-cyan-400/[0.08] py-1 pl-3 pr-1 text-[0.7rem] text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(170,228,255,0.09)]">
       <span className="flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
         <Milestone className="h-3.5 w-3.5 text-cyan-300/70" />
         {t("eventsBrowse")}
