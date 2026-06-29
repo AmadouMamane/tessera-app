@@ -244,25 +244,27 @@
  * "Clair": a light frosted-blue glass with a soft lift. Text uses the normal theme
  * tokens (light → ink, dark → light), so contrast follows the surface. */
 .sr01-strip {
-  border: 1px solid rgba(95, 190, 230, 0.22);
-  /* "blue-black polished metal / dark glass instrument": NO white gloss. The shine
-     comes from cyan liserés + a halo on the timeline + depth — never a lightened
-     panel. A faint cyan halo pooled around the CENTRE (the timeline, not the top),
-     over a deep blue-black body that runs DARKER than the cards yet never flat-black. */
-  background: radial-gradient(115% 78% at 50% 50%, rgba(46, 146, 196, 0.11), transparent 52%),
+  border: 1px solid rgba(95, 190, 230, 0.24);
+  /* PREMIUM POLISHED BLACK — deliberately set apart from the navy business cards.
+     The body is a near-black (much blacker / less blue than the cards' #06182a), with
+     NO diffuse halo and NO white gloss. The "brilliant" is specular: crisp cyan edge
+     liserés, a thin cool top reflection, a deep recessed inner shadow and a strong
+     float off the page — plus the luminous axis/instant carrying the light. Never a
+     flat #000 (a faint cool vertical descent keeps it polished, not dead). */
+  background: linear-gradient(180deg, rgba(125, 205, 245, 0.045), transparent 13%),
     linear-gradient(
       180deg,
-      rgba(6, 19, 33, 0.985) 0%,
-      rgba(4, 13, 25, 0.99) 52%,
-      rgba(2, 9, 18, 0.99) 100%
+      rgba(9, 13, 20, 0.99) 0%,
+      rgba(5, 8, 13, 0.992) 52%,
+      rgba(2, 4, 8, 0.995) 100%
     );
   box-shadow:
-    inset 0 1px 0 rgba(130, 220, 255, 0.05),
-    inset 0 0 0 1px rgba(95, 185, 235, 0.05),
+    inset 0 1px 0 rgba(140, 222, 255, 0.06),
+    inset 0 0 0 1px rgba(95, 185, 235, 0.045),
     inset 0 -1px 0 rgba(40, 120, 170, 0.05),
-    inset 0 7px 28px rgba(0, 0, 0, 0.34),
-    0 22px 50px -16px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(30, 120, 170, 0.07);
+    inset 0 8px 30px rgba(0, 0, 0, 0.5),
+    0 24px 54px -16px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(30, 110, 160, 0.06);
 }
 .light .sr01-strip {
   border-color: rgba(120, 160, 210, 0.5);
@@ -276,14 +278,12 @@
 }
 
 /* The command zone (Lecture · Période/État au · Agents · Comparer à · Replier).
- * Just a WHISPER of cool blue at the very top — deliberately faint so the top of
- * the rail never reads as a lightened/white band; the shine is carried by the cyan
- * top liseré and the depth, not by lightening this zone. Rounds the strip's top
- * corners; no border of its own (the hairline below the micro-line separates it). */
+ * NO lightening of its own — the rail stays uniformly black; the only top shine is
+ * the strip's thin cyan liseré. Just rounds the strip's top corners; the hairline
+ * below the micro-line separates it from the timeline. */
 .sr01-command-row {
   border-top-left-radius: inherit;
   border-top-right-radius: inherit;
-  background: linear-gradient(180deg, rgba(90, 175, 230, 0.04), transparent 78%);
 }
 
 @layer base {

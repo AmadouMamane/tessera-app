@@ -618,16 +618,9 @@ export function TemporalRail({
           if (e.key === "ArrowLeft") step(-1);
         }}
       >
-        {/* Localised glow pooled UNDER the axis (signal only) — a soft cool halo
-            centred on the timeline, masked to fade at the left/right edges so it
-            stays a discreet pool of light around the axis, never a global wash that
-            would dull the markers. Reinforces the "precious instrument" reading. */}
-        {isSignal ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-2.5 h-10 -translate-y-1/2 bg-[radial-gradient(56%_150%_at_50%_50%,rgba(96,182,232,0.14),transparent_72%)] [mask-image:linear-gradient(90deg,transparent,#000_16%,#000_84%,transparent)]"
-          />
-        ) : null}
+        {/* No diffuse glow/halo under the axis (removed on purpose): a premium-black
+            instrument keeps its shine on the crisp axis line itself + the champagne
+            instant, never a pool of light around the timeline. */}
         {/* The active temporal axis — for SR-01 (signal) a fine, luminous cyan thread
             (bright core, faint glow + a crisp dark underline so it lifts off the
             glow) so it reads as the page's precious time axis, not a card border. The
@@ -636,7 +629,7 @@ export function TemporalRail({
           className={cn(
             "pointer-events-none absolute inset-x-0 top-2.5 rounded-full",
             isSignal
-              ? "h-px bg-[linear-gradient(90deg,rgba(86,168,224,0.05),rgba(96,178,230,0.32)_22%,rgba(188,232,255,0.74)_50%,rgba(96,178,230,0.32)_78%,rgba(86,168,224,0.05))] shadow-[0_0_22px_rgba(96,194,242,0.24),0_0_1px_rgba(255,255,255,0.34),0_1px_0_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.16)]"
+              ? "h-px bg-[linear-gradient(90deg,rgba(86,168,224,0.05),rgba(96,178,230,0.32)_22%,rgba(188,232,255,0.74)_50%,rgba(96,178,230,0.32)_78%,rgba(86,168,224,0.05))] shadow-[0_0_10px_rgba(96,194,242,0.18),0_0_1px_rgba(255,255,255,0.34),0_1px_0_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.16)]"
               : "h-0.5 bg-[linear-gradient(90deg,#363d48,#454e5d)]",
           )}
         />
