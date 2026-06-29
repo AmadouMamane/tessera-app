@@ -65,7 +65,7 @@ const CHIP_BASE =
 const CHIP_NEUTRAL =
   "border-[rgba(95,190,230,0.16)] bg-[rgba(120,190,235,0.05)] text-[var(--tessera-text-muted)] hover:bg-[rgba(120,190,235,0.10)] hover:border-[rgba(95,190,230,0.28)]";
 const CHIP_ACTIVE =
-  "border-gold-500/45 bg-gold-500/[0.10] text-gold-200 hover:bg-gold-500/[0.16] focus-visible:ring-gold-500/50";
+  "border-gold-500/45 bg-gold-500/[0.10] text-gold-700 hover:bg-gold-500/[0.16] focus-visible:ring-gold-500/50 dark:text-gold-200";
 
 // "Comparer à" — visible options per reading (registre §5). Order is defaults-first;
 // the omitted ones are hidden because they make no sense for that reading ("now" vs
@@ -334,7 +334,7 @@ export function SignalCommandBar({
     //    page, beneath the header — an instrument, not a card and not a console.
     // backdrop-blur lets the page tone bleed through (glass). No status colour in the
     // fill; champagne stays reserved for the selected instant on the axis below.
-    <section className="rounded-2xl border border-[rgba(125,165,225,0.16)] bg-[radial-gradient(135%_90%_at_50%_-20%,rgba(74,116,190,0.13),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(12,20,36,0.84)_8%,rgba(7,12,22,0.9)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_0_0_1px_rgba(130,170,230,0.05),inset_0_-1px_0_rgba(95,190,230,0.06),inset_0_3px_24px_rgba(0,0,0,0.32),0_22px_48px_-14px_rgba(0,0,0,0.55)] backdrop-blur-md">
+    <section className="sr01-strip rounded-2xl backdrop-blur-md">
       {/* Collapsed command row — the single temporal focus. */}
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         {/* Lecture — Maintenant / À un instant / Historique, with per-mode
@@ -358,12 +358,12 @@ export function SignalCommandBar({
                 title={asOfText ? t("changeInstant") : t("goToInstant")}
                 className={cn(CHIP_BASE, CHIP_ACTIVE)}
               >
-                <CalendarClock className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+                <CalendarClock className="h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
                 {t("asofAt")}
                 <b className="font-semibold tabular-nums text-[var(--tessera-text)]">
                   {asOfText ?? t("pickDatePrompt")}
                 </b>
-                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-400/70" />
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-600/70 dark:text-gold-400/70" />
               </button>
             )}
           />
@@ -546,12 +546,12 @@ function LectureMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" className={cn(CHIP_BASE, CHIP_ACTIVE)}>
-          <CurrentIcon className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+          <CurrentIcon className="h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
           {t("reading")}
           <span className="font-semibold text-[var(--tessera-text)]">
             {t(labelKeyFor[reading])}
           </span>
-          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-400/70" />
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-600/70 dark:text-gold-400/70" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[20rem]">
@@ -563,11 +563,13 @@ function LectureMenu({
               onSelect={() => onChange(r.value)}
               className="flex items-start gap-2.5 py-2"
             >
-              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gold-400" />
+              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gold-600 dark:text-gold-400" />
               <span className="flex min-w-0 flex-col">
                 <span className="flex items-center gap-2 text-sm font-medium text-[var(--tessera-text)]">
                   {t(r.labelKey)}
-                  {r.value === reading ? <Check className="h-3.5 w-3.5 text-gold-400" /> : null}
+                  {r.value === reading ? (
+                    <Check className="h-3.5 w-3.5 text-gold-600 dark:text-gold-400" />
+                  ) : null}
                 </span>
                 <span className="text-[0.7rem] text-[var(--tessera-text-muted)]">
                   {t(r.descKey)}
@@ -606,7 +608,7 @@ function SelectChip({
 }) {
   return (
     <label className={cn(CHIP_BASE, "cursor-pointer", accent ? CHIP_ACTIVE : CHIP_NEUTRAL)}>
-      <Icon className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+      <Icon className="h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
       {label}
       <select
         value={value}

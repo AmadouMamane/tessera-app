@@ -227,20 +227,47 @@
     rgba(15, 23, 42, 0.08);
 }
 
-/* The brand lockup PNG is a light wordmark for dark backgrounds; on the light theme
- * darken it so the "TESSERA" text stays legible on a pale surface. */
-.light .brand-logo {
-  filter: brightness(0.45) saturate(1.2) contrast(1.05);
+/* Brand lockup: a light wordmark for the dark themes, a dark wordmark for "Clair".
+ * Show one, hide the other via the theme class (server-safe, no hydration flash). */
+.brand-logo-light {
+  display: none;
+}
+.light .brand-logo-dark {
+  display: none;
+}
+.light .brand-logo-light {
+  display: inline-block;
 }
 
-/* The SR-01 control strip keeps its dark lacquered surface in EVERY theme (it is a
- * temporal instrument, not a card), so under .light its text must stay light —
- * otherwise the flipped ink tokens would render dark-on-dark. Scope the light text
- * tokens back inside the strip; --foreground/--muted-foreground resolve through them. */
+/* SR-01 control strip — the temporal instrument surface, theme-aware so it never
+ * sits as a dark slab on a light page. Dark themes: a deep navy lacquered glass.
+ * "Clair": a light frosted-blue glass with a soft lift. Text uses the normal theme
+ * tokens (light → ink, dark → light), so contrast follows the surface. */
+.sr01-strip {
+  border: 1px solid rgba(125, 165, 225, 0.16);
+  background: radial-gradient(135% 90% at 50% -20%, rgba(74, 116, 190, 0.13), transparent 55%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(12, 20, 36, 0.84) 8%,
+      rgba(7, 12, 22, 0.9) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 0 0 1px rgba(130, 170, 230, 0.05),
+    inset 0 -1px 0 rgba(95, 190, 230, 0.06),
+    inset 0 3px 24px rgba(0, 0, 0, 0.32),
+    0 22px 48px -14px rgba(0, 0, 0, 0.55);
+}
 .light .sr01-strip {
-  --tessera-text: #eaf0f6;
-  --tessera-text-muted: #9fb2c6;
-  --tessera-text-subtle: #6f8295;
+  border-color: rgba(120, 160, 210, 0.5);
+  background: radial-gradient(135% 90% at 50% -20%, rgba(120, 165, 225, 0.14), transparent 55%),
+    linear-gradient(180deg, #ffffff, #eef3fb 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 0 0 1px rgba(120, 160, 210, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 12px 30px -12px rgba(15, 23, 42, 0.2);
 }
 
 @layer base {
