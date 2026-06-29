@@ -73,6 +73,7 @@ from tessera.observability import (
     integrations as integrations_mod,
     journey as journey_mod,
     knowledge as knowledge_mod,
+    langfuse_obs as langfuse_obs_mod,
     language_routing as language_routing_mod,
     least_privilege as least_privilege_mod,
     locale_format as locale_format_mod,
@@ -1369,6 +1370,28 @@ async def observability_governance(
         return {"available": True, **asdict(feed)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.governance: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/traces-obs")
+async def observability_traces_obs(at: str | None = None) -> dict[str, object]:
+    """Real trace observability read from the running Langfuse stack (best tool).
+
+    The OTel instrumentation fans every span to Langfuse; this reads the REAL trace
+    volume + latency back through its public API and hands the operator deep-links to
+    each tool for the job it is best at (Langfuse = trace explorer, Grafana =
+    dashboards, Phoenix = retrieval). Honours as-of-T via Langfuse ``toTimestamp`` so
+    it projects like the rest of the page; degrades to ``available: false`` when the
+    stack is unreachable — never a fabricated number.
+    """
+    import asyncio
+
+    try:
+        # The Langfuse read is a blocking HTTP call — run it off the event loop.
+        result = await asyncio.to_thread(langfuse_obs_mod.compute_traces_observability, at)
+        return asdict(result)
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.traces_obs: failed: {exc}\n")
         return {"available": False}
 
 

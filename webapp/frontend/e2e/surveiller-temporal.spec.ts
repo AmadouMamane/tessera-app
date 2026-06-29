@@ -418,8 +418,13 @@ test("the overview surfaces the three real-data enrichments (controls action · 
   ).toBeVisible();
   // #3 — the real operator queue triage panel (severity tabs).
   await expect(page.getByText("Cas de contrôle à traiter").first()).toBeVisible();
-  // #2 — the governed-activity feed (real S1 governance events).
+  // #2 — the governed-activity feed (real S1 governance events), distinct from the
+  // roadmap card, which is now disambiguated as "Actions recommandées".
   await expect(page.getByText("Activité gouvernée").first()).toBeVisible();
+  await expect(page.getByText("Actions recommandées").first()).toBeVisible();
+  await expect(page.getByText("Actions gouvernées")).toHaveCount(0);
+  // #4 — the Langfuse-backed trace observability panel (real obs stack).
+  await expect(page.getByText("Observabilité · traces").first()).toBeVisible();
 });
 
 test("the observed-agent count is singular/plural correct (1 agent observé, never '1 agents')", async ({

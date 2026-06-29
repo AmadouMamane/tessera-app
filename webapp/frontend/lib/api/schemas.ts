@@ -3373,6 +3373,32 @@ export const GovernanceFeedSchema = z.object({
 export type GovernanceEvent = z.infer<typeof GovernanceEventSchema>;
 export type GovernanceFeed = z.infer<typeof GovernanceFeedSchema>;
 
+// ---------------------------------------------------------------------------
+// Overview — trace observability read back from the Langfuse stack (real)
+// ---------------------------------------------------------------------------
+
+export const TracesObsSchema = z.object({
+  available: z.boolean(),
+  total: z.number().int(),
+  latency_p50_s: z.number().nullable(),
+  latency_p95_s: z.number().nullable(),
+  top_ops: z.array(z.object({ name: z.string(), count: z.number().int() })),
+  recent: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      timestamp: z.string(),
+      latency_s: z.number().nullable(),
+      url: z.string(),
+    }),
+  ),
+  langfuse_url: z.string(),
+  grafana_url: z.string(),
+  phoenix_url: z.string(),
+  as_of: z.string().nullable(),
+});
+export type TracesObs = z.infer<typeof TracesObsSchema>;
+
 const AsMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   time: z.string(),

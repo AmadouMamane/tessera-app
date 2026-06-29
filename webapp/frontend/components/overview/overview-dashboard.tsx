@@ -8,10 +8,13 @@ import {
   ChevronRight,
   Clock,
   Coins,
+  ExternalLink,
+  Gauge,
   GitBranch,
   Inbox,
   Info,
   Lightbulb,
+  Network,
   Rocket,
   Route,
   ShieldAlert,
@@ -52,6 +55,7 @@ import {
   fetchTimeline,
   fetchToolValidity,
   fetchToxicity,
+  fetchTracesObs,
   fetchTrend,
   fetchWhatChanged,
   runRedteam,
@@ -70,6 +74,7 @@ import type {
   SLOReport,
   ToolValidity,
   ToxicityReport,
+  TracesObs,
   TrendReport,
 } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -263,6 +268,14 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
     queryFn: ({ signal }) => fetchOverviewCases(signal),
     refetchInterval: POLL_MS,
   });
+  // Trace observability read back from the running Langfuse stack (the OTel traces);
+  // projects as-of-T via Langfuse toTimestamp, so it earns the provenance chip.
+  const tracesObs = useQuery({
+    queryKey: ["ov-traces-obs", asOf],
+    queryFn: ({ signal }) => fetchTracesObs(signal, asOf ?? undefined),
+    refetchInterval: historyMode ? false : 30_000,
+    placeholderData: keepPreviousData,
+  });
 
   const liveStatus = useMemo(() => {
     if (health.isError || readiness.isError) return t("status.degraded");
@@ -361,8 +374,6 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           }
           tone={sloReady ? rateTone(sloReady.good_rate) : "neutral"}
           icon={Activity}
-          trend={trend.data?.buckets.map((b) => b.mean)}
-          trendEmptyLabel={t("kpi.noTrend")}
           loading={slo.isLoading && !slo.data}
           tag={provenanceTag ?? undefined}
         />
@@ -500,6 +511,11 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           <RecentActivitiesCard
             scores={scores.data?.scores}
             loading={scores.isLoading}
+            provTag={provenanceTag}
+          />
+          <ObservabilityTracesCard
+            data={tracesObs.data}
+            loading={tracesObs.isLoading}
             provTag={provenanceTag}
           />
         </aside>
@@ -1170,7 +1186,7 @@ function GovernedActivityCard({
           {t("count", { n: feed?.total ?? 0 })}
         </span>
       </CardHeader>
-      <CardContent className="flex min-h-[4.5rem] flex-col gap-1.5">
+      <CardContent className="flex flex-col gap-1.5">
         {loading ? (
           <Skeleton className="h-20 w-full" />
         ) : events.length === 0 ? (
@@ -1207,6 +1223,113 @@ function GovernedActivityCard({
               </div>
             );
           })
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Trace observability — real Langfuse data (best tool for the job)
+// ---------------------------------------------------------------------------
+
+/** Latency seconds → a compact "N ms" / "N.N s" label. */
+function fmtLatency(s: number | null): string {
+  if (s == null) return "—";
+  return s < 1 ? `${Math.round(s * 1000)} ms` : `${s.toFixed(2)} s`;
+}
+
+function TraceLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1 text-[0.7rem] text-blue-300 transition-colors hover:bg-[var(--muted)]/40"
+    >
+      <ExternalLink className="h-3 w-3" />
+      {label}
+    </a>
+  );
+}
+
+/**
+ * Real trace observability read back from the running **Langfuse** stack (the OTel
+ * traces Tessera already emits) — the right tool for trace inspection. Shows the live
+ * trace volume + p50/p95 latency + top operations, projects as-of-T (Langfuse
+ * toTimestamp), and deep-links the operator to each tool for its job (Langfuse =
+ * trace explorer, Grafana = dashboards, Phoenix = retrieval). Honest empty state when
+ * the stack is unreachable.
+ */
+function ObservabilityTracesCard({
+  data,
+  loading,
+  provTag,
+}: {
+  data?: TracesObs;
+  loading: boolean;
+  provTag: TimeTagKind | null;
+}) {
+  const t = useTranslations("overview.traces");
+  return (
+    <Card className="rounded-lg">
+      <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Network className="h-4 w-4 text-blue-300" />
+          {t("title")}
+          {provTag ? <TimeTagChip kind={provTag} /> : null}
+        </CardTitle>
+        <span className="text-[0.7rem] text-[var(--muted-foreground)]">Langfuse</span>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {loading && !data ? (
+          <Skeleton className="h-20 w-full" />
+        ) : !data?.available ? (
+          <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">
+            {t("unavailable")}
+          </p>
+        ) : (
+          <>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs text-[var(--muted-foreground)]">{t("traces")}</p>
+                <p className="font-serif text-2xl font-semibold tabular-nums">
+                  {data.total.toLocaleString()}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 text-right">
+                <Gauge className="h-4 w-4 text-[var(--muted-foreground)]" />
+                <div>
+                  <p className="text-[0.6rem] uppercase text-[var(--muted-foreground)]">p50</p>
+                  <p className="font-mono text-sm tabular-nums">{fmtLatency(data.latency_p50_s)}</p>
+                </div>
+                <div>
+                  <p className="text-[0.6rem] uppercase text-[var(--muted-foreground)]">p95</p>
+                  <p className="font-mono text-sm tabular-nums">{fmtLatency(data.latency_p95_s)}</p>
+                </div>
+              </div>
+            </div>
+            {data.top_ops.length > 0 ? (
+              <ul className="flex flex-col gap-1">
+                {data.top_ops.slice(0, 4).map((o) => (
+                  <li
+                    key={o.name}
+                    className="grid grid-cols-[1fr_auto] items-center gap-2 text-[0.68rem]"
+                  >
+                    <span className="truncate font-mono text-[var(--muted-foreground)]">
+                      {o.name}
+                    </span>
+                    <span className="tabular-nums text-[var(--muted-foreground)]">{o.count}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <TraceLink href={data.langfuse_url} label="Langfuse" />
+              <TraceLink href={data.grafana_url} label="Grafana" />
+              <TraceLink href={data.phoenix_url} label="Phoenix" />
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
@@ -1252,20 +1375,23 @@ function ControlCasesSection({
           {t("count", { n: playbooks?.n_triggered ?? 0 })}
         </span>
       </CardHeader>
-      <CardContent className="grid min-h-[4.5rem] gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {/* Flex-wrap (not a fixed 3-col grid): cards grow to fill the row, so a single
+          triggered playbook spans the full width instead of leaving two empty cells. */}
+      <CardContent className="flex flex-wrap gap-3">
         {loading ? (
-          <Skeleton className="h-28 w-full sm:col-span-2 xl:col-span-3" />
+          <Skeleton className="h-28 w-full" />
         ) : !playbooks || playbooks.n_triggered === 0 ? (
-          <p className="py-6 text-center text-sm text-emerald-400 sm:col-span-2 xl:col-span-3">
-            {t("clear")}
-          </p>
+          <p className="w-full py-6 text-center text-sm text-emerald-400">{t("clear")}</p>
         ) : (
           playbooks.playbooks.map((p) => {
             const tone = playbookTone[p.severity] ?? "neutral";
             return (
               <article
                 key={p.incident}
-                className={cn("rounded-lg border bg-[var(--muted)]/20 p-3", caseBorder[tone])}
+                className={cn(
+                  "min-w-[15rem] flex-1 rounded-lg border bg-[var(--muted)]/20 p-3",
+                  caseBorder[tone],
+                )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-sans text-sm font-semibold">{p.incident}</h3>
@@ -1327,7 +1453,7 @@ function IncidentsCard({
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex min-h-[4.5rem] flex-col gap-2">
+      <CardContent className="flex flex-col gap-2">
         {loading ? (
           <Skeleton className="h-16 w-full" />
         ) : items.length === 0 ? (
@@ -1537,7 +1663,7 @@ function RecentActivitiesCard({
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex min-h-[9.5rem] flex-col gap-2">
+      <CardContent className="flex flex-col gap-2">
         {loading ? (
           <Skeleton className="h-16 w-full" />
         ) : rows.length === 0 ? (
@@ -1627,7 +1753,7 @@ function AnalyticsSection({
             {provTag ? <TimeTagChip kind={provTag} /> : null}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex min-h-[7.5rem] flex-col gap-2 text-xs">
+        <CardContent className="flex flex-col gap-2 text-xs">
           {funnel && funnel.languages.length > 0 ? (
             funnel.languages.map((lang) => {
               const share = funnel.n_turns ? lang.n_turns / funnel.n_turns : 0;
@@ -1662,7 +1788,7 @@ function AnalyticsSection({
             {provTag ? <TimeTagChip kind={provTag} /> : null}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex min-h-[7.5rem] flex-col gap-2">
+        <CardContent className="flex flex-col gap-2">
           {controls.length > 0 ? (
             [...controls]
               .sort((a, b) => b.severity - a.severity)
@@ -1719,7 +1845,7 @@ function GovernanceSection({
         </CardTitle>
         <Badge tone="neutral">{t("subtitle")}</Badge>
       </CardHeader>
-      <CardContent className="grid min-h-[4.5rem] gap-2 sm:grid-cols-2">
+      <CardContent className="grid gap-2 sm:grid-cols-2">
         {loading ? (
           <Skeleton className="h-20 w-full sm:col-span-2" />
         ) : !roadmap || roadmap.n_items === 0 ? (

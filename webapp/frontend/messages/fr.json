@@ -346,6 +346,11 @@
       "deployPrompt": "Prompt déployé · {version}",
       "deployPolicy": "Politique déployée · {version}"
     },
+    "traces": {
+      "title": "Observabilité · traces",
+      "traces": "Traces",
+      "unavailable": "Stack d’observabilité injoignable"
+    },
     "signals": {
       "faithfulness": "Fidélité (objectif de service)",
       "toxicity": "Toxicité",
@@ -418,7 +423,7 @@
       }
     },
     "governance": {
-      "title": "Actions gouvernées (roadmap)",
+      "title": "Actions recommandées (feuille de route)",
       "subtitle": "Sévérité · signal",
       "empty": "Aucune action recommandée."
     },

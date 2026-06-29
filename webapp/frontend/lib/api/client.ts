@@ -270,6 +270,8 @@ import {
   ToolValiditySchema,
   type ToxicityReport,
   ToxicityReportSchema,
+  type TracesObs,
+  TracesObsSchema,
   type Trajectory,
   TrajectorySchema,
   type TrendReport,
@@ -829,6 +831,11 @@ export async function fetchControlSignals(
 /** Governed-activity feed: real S1 governance events + lineage deploys, live or as of T. */
 export async function fetchGovernance(signal?: AbortSignal, at?: string): Promise<GovernanceFeed> {
   return request(withAsOf("/observability/governance", at), { signal }, GovernanceFeedSchema);
+}
+
+/** Real trace observability read back from the Langfuse stack, live or as of T. */
+export async function fetchTracesObs(signal?: AbortSignal, at?: string): Promise<TracesObs> {
+  return request(withAsOf("/observability/traces-obs", at), { signal }, TracesObsSchema);
 }
 
 /** Persist a status/assignee change for one queue item; returns the fresh payload. */

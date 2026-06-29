@@ -346,6 +346,11 @@
       "deployPrompt": "Prompt ausgerollt · {version}",
       "deployPolicy": "Richtlinie ausgerollt · {version}"
     },
+    "traces": {
+      "title": "Observability · Traces",
+      "traces": "Traces",
+      "unavailable": "Observability-Stack nicht erreichbar"
+    },
     "signals": {
       "faithfulness": "Treue (Service-Ziel)",
       "toxicity": "Toxizität",
@@ -418,7 +423,7 @@
       }
     },
     "governance": {
-      "title": "Gesteuerte Aktionen (Roadmap)",
+      "title": "Empfohlene Maßnahmen (Roadmap)",
       "subtitle": "Schweregrad · Signal",
       "empty": "Keine empfohlene Aktion."
     },

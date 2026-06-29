@@ -346,6 +346,11 @@
       "deployPrompt": "Prompt deployed · {version}",
       "deployPolicy": "Policy deployed · {version}"
     },
+    "traces": {
+      "title": "Observability · traces",
+      "traces": "Traces",
+      "unavailable": "Observability stack unreachable"
+    },
     "signals": {
       "faithfulness": "Faithfulness SLO",
       "toxicity": "Toxicity",
@@ -418,7 +423,7 @@
       }
     },
     "governance": {
-      "title": "Governed actions (roadmap)",
+      "title": "Recommended actions (roadmap)",
       "subtitle": "Severity · signal",
       "empty": "No recommended action."
     },
