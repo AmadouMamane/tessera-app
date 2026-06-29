@@ -322,14 +322,19 @@ export function SignalCommandBar({
 
   return (
     // SR-01 is a temporal CONTROL INSTRUMENT, not business content — so it gets its
-    // own "black-glass" surface: a graphite-blue glass that sits DARKER than the
-    // opaque navy cards (#06182a) yet never pure black. It is faintly translucent
-    // (backdrop-blur lets the page tone bleed through, so it reads as glass, not a
-    // flat panel nor a debug console), with a subtle vertical gradient, a very
-    // discreet cyan hairline border, a light inner top highlight and a soft recessed
-    // inner shadow for depth. No status colour as a background (the framing stays
-    // neutral); champagne is reserved for the selected instant on the axis below.
-    <section className="rounded-2xl border border-[rgba(110,190,225,0.14)] bg-[linear-gradient(180deg,rgba(12,19,28,0.72),rgba(6,11,18,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_-1px_0_rgba(95,190,230,0.05),inset_0_2px_16px_rgba(0,0,0,0.30),0_18px_44px_rgba(0,0,0,0.22)] backdrop-blur-sm">
+    // own "lacquered glass-cockpit" surface, a clear cut above the standard navy
+    // cards (#06182a) without ever going flat-black:
+    //  · a DEEP navy-indigo base, layered (radial top sheen + vertical lacquer
+    //    gradient) so the fill is never a uniform flat block — it reads as material;
+    //  · a faint cool-indigo glow pooled at the top-centre (localised, not global)
+    //    + a hairline white sheen at the very top edge = a discreet premium gloss;
+    //  · a subtle outer indigo hairline AND a very light inner border (inset ring)
+    //    for a contained, structured panel;
+    //  · a soft recessed inner shadow + a deep elevation shadow so it sits ABOVE the
+    //    page, beneath the header — an instrument, not a card and not a console.
+    // backdrop-blur lets the page tone bleed through (glass). No status colour in the
+    // fill; champagne stays reserved for the selected instant on the axis below.
+    <section className="rounded-2xl border border-[rgba(125,165,225,0.16)] bg-[radial-gradient(135%_90%_at_50%_-20%,rgba(74,116,190,0.13),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(12,20,36,0.84)_8%,rgba(7,12,22,0.9)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_0_0_1px_rgba(130,170,230,0.05),inset_0_-1px_0_rgba(95,190,230,0.06),inset_0_3px_24px_rgba(0,0,0,0.32),0_22px_48px_-14px_rgba(0,0,0,0.55)] backdrop-blur-md">
       {/* Collapsed command row — the single temporal focus. */}
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         {/* Lecture — Maintenant / À un instant / Historique, with per-mode

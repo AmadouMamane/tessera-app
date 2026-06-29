@@ -618,14 +618,25 @@ export function TemporalRail({
           if (e.key === "ArrowLeft") step(-1);
         }}
       >
-        {/* The active temporal axis — for SR-01 (signal) a cool cyan thread with a
-            faint glow, so it reads as the page's time axis, not a card border. The
+        {/* Localised glow pooled UNDER the axis (signal only) — a soft cool halo
+            centred on the timeline, masked to fade at the left/right edges so it
+            stays a discreet pool of light around the axis, never a global wash that
+            would dull the markers. Reinforces the "precious instrument" reading. */}
+        {isSignal ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-2.5 h-10 -translate-y-1/2 bg-[radial-gradient(52%_140%_at_50%_50%,rgba(96,176,228,0.10),transparent_72%)] [mask-image:linear-gradient(90deg,transparent,#000_16%,#000_84%,transparent)]"
+          />
+        ) : null}
+        {/* The active temporal axis — for SR-01 (signal) a fine, luminous cyan thread
+            (bright core, faint glow + a crisp dark underline so it lifts off the
+            glow) so it reads as the page's precious time axis, not a card border. The
             execution transport keeps the neutral rail. */}
         <div
           className={cn(
             "pointer-events-none absolute inset-x-0 top-2.5 rounded-full",
             isSignal
-              ? "h-px bg-[linear-gradient(90deg,rgba(95,190,230,0.16),rgba(160,220,255,0.42),rgba(95,190,230,0.16))] shadow-[0_0_18px_rgba(95,190,230,0.10),inset_0_1px_0_rgba(255,255,255,0.08)]"
+              ? "h-px bg-[linear-gradient(90deg,rgba(95,190,230,0.10),rgba(178,226,255,0.55),rgba(95,190,230,0.10))] shadow-[0_0_22px_rgba(95,190,230,0.14),0_1px_0_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.12)]"
               : "h-0.5 bg-[linear-gradient(90deg,#363d48,#454e5d)]",
           )}
         />
@@ -693,7 +704,7 @@ export function TemporalRail({
           {/* Champagne tick on the axis — the single most legible point once an
               instant is committed (a glowing halo, not while previewing). */}
           {instantActive ? (
-            <span className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full bg-[#e6c982] shadow-[0_0_0_3px_rgba(230,201,130,0.12),0_0_18px_rgba(230,201,130,0.22)]" />
+            <span className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fbe6bf,#e6c982_70%)] shadow-[0_0_0_1px_rgba(255,238,196,0.55),0_0_0_4px_rgba(230,201,130,0.14),0_0_20px_rgba(230,201,130,0.32)]" />
           ) : null}
           {/* stem centred vertically on the timeline track (10–14px → centre 12px) */}
           <span className="absolute left-1/2 top-1.5 h-3 w-px -translate-x-1/2 bg-gold-400" />
