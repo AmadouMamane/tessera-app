@@ -6365,6 +6365,28 @@
     "footer": {
       "total": "{n} Konnektoren",
       "source": "Quelle: {src}"
+    },
+    "explain": {
+      "total": {
+        "what": "Anzahl der im Plattformkatalog deklarierten Konnektoren.",
+        "how": "Zählung des deklarierten Konnektorsatzes.",
+        "source": "Deterministische Konnektoren-Referenz (Plattformkonfiguration)."
+      },
+      "active": {
+        "what": "Aktive Konnektoren auf dem aktuellen Ausführungspfad (Frontier / vor Ort).",
+        "how": "Abgeleitet vom aktiven Ausführungsmodus.",
+        "source": "Realer Runtime-Modus + Konnektorkatalog."
+      },
+      "standby": {
+        "what": "Konnektoren im Standby auf dem aktuellen Ausführungspfad.",
+        "how": "Deklarierte Konnektoren, die auf diesem Pfad nicht aktiv sind.",
+        "source": "Realer Runtime-Modus + Konnektorkatalog."
+      },
+      "mode": {
+        "what": "Aktiver Ausführungspfad: Cloud (Frontier) oder Vor Ort (On-Prem).",
+        "how": "Aus dem realen Ausführungsmodus gelesen.",
+        "source": "settings.environment / Runtime."
+      }
     }
   },
   "users": {
@@ -6423,6 +6445,28 @@
     "footer": {
       "total": "{n} Konten",
       "source": "Quelle: {src}"
+    },
+    "explain": {
+      "total": {
+        "what": "Anzahl der bereitgestellten Betreiberkonten (Admin, Auditor und Superadmin, falls konfiguriert).",
+        "how": "Zählung der vom System tatsächlich durchgesetzten Konten.",
+        "source": "Seed-Konten (ADR 0009), Spiegel von lib/auth/accounts.ts."
+      },
+      "active": {
+        "what": "Derzeit aktive Betreiberkonten.",
+        "how": "Konten mit Status „aktiv“.",
+        "source": "Seed-Konten (ADR 0009)."
+      },
+      "roles": {
+        "what": "Anzahl der definierten unterschiedlichen RBAC-Rollen.",
+        "how": "Zählung der Rollen im Fähigkeitskatalog (ROLE_CAPS).",
+        "source": "Org-weite RBAC-Fähigkeiten (Phase 1)."
+      },
+      "mfa": {
+        "what": "Aktive Konten mit Zwei-Faktor-Authentifizierung.",
+        "how": "Aktive Konten mit MFA ÷ aktive Konten.",
+        "source": "Seed-Konten (ADR 0009)."
+      }
     }
   },
   "models": {

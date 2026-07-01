@@ -6365,6 +6365,28 @@
     "footer": {
       "total": "{n} connecteurs",
       "source": "Source : {src}"
+    },
+    "explain": {
+      "total": {
+        "what": "Nombre de connecteurs déclarés dans le catalogue de la plateforme.",
+        "how": "Décompte du jeu de connecteurs déclaré.",
+        "source": "Référence déterministe des connecteurs (config plateforme)."
+      },
+      "active": {
+        "what": "Connecteurs actifs sur le chemin d'exécution courant (frontier / sur site).",
+        "how": "Dérivé du mode d'exécution actif.",
+        "source": "Mode runtime réel + catalogue connecteurs."
+      },
+      "standby": {
+        "what": "Connecteurs en veille sur le chemin d'exécution courant.",
+        "how": "Connecteurs déclarés non actifs sur ce chemin.",
+        "source": "Mode runtime réel + catalogue connecteurs."
+      },
+      "mode": {
+        "what": "Chemin d'exécution actif : Cloud (frontier) ou Sur site (on-prem).",
+        "how": "Lu depuis le mode d'exécution réel.",
+        "source": "settings.environment / runtime."
+      }
     }
   },
   "users": {
@@ -6423,6 +6445,28 @@
     "footer": {
       "total": "{n} comptes",
       "source": "Source : {src}"
+    },
+    "explain": {
+      "total": {
+        "what": "Nombre de comptes opérateurs provisionnés (admin, auditeur, et superadmin si configuré).",
+        "how": "Décompte des comptes réellement appliqués par le système.",
+        "source": "Comptes seedés (ADR 0009), miroir de lib/auth/accounts.ts."
+      },
+      "active": {
+        "what": "Comptes opérateurs actuellement actifs.",
+        "how": "Comptes dont le statut est « actif ».",
+        "source": "Comptes seedés (ADR 0009)."
+      },
+      "roles": {
+        "what": "Nombre de rôles RBAC distincts définis.",
+        "how": "Décompte des rôles du catalogue de capacités (ROLE_CAPS).",
+        "source": "Capacités RBAC, org-wide (Phase 1)."
+      },
+      "mfa": {
+        "what": "Comptes actifs couverts par l'authentification à deux facteurs.",
+        "how": "Comptes actifs avec MFA ÷ comptes actifs.",
+        "source": "Comptes seedés (ADR 0009)."
+      }
     }
   },
   "models": {

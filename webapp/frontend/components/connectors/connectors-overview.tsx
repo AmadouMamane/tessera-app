@@ -21,6 +21,7 @@ import {
   useState,
 } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { fetchConnectors } from "@/lib/api/client";
 import type { ConnectorsOverview as Data } from "@/lib/api/schemas";
@@ -56,6 +57,21 @@ const COLS: { key: string; sort?: SortKey; w: string }[] = [
 ];
 const ROWS_PER_PAGE_OPTS = [10, 25, 50];
 const ACCENT = "#87bfff";
+
+/** ⓘ for a connectors KPI, reading connectors.explain.<k>.{what,how,source?} (null if none). */
+function ExplainInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("connectors.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te.has(`${k}.how`) ? te(`${k}.how`) : undefined}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+      className="ml-auto"
+    />
+  );
+}
 
 export function ConnectorsOverview() {
   const t = useTranslations("connectors");
@@ -105,8 +121,9 @@ export function ConnectorsOverview() {
             key={k.key}
             className="flex h-[92px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
           >
-            <p className="truncate text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
-              {t(`kpi.${k.key}`)}
+            <p className="flex items-center gap-1 truncate text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
+              <span className="truncate">{t(`kpi.${k.key}`)}</span>
+              <ExplainInfo k={k.key} title={t(`kpi.${k.key}`)} />
             </p>
             <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{k.value}</p>
             <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">

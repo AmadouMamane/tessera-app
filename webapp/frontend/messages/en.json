@@ -6365,6 +6365,28 @@
     "footer": {
       "total": "{n} connectors",
       "source": "Source: {src}"
+    },
+    "explain": {
+      "total": {
+        "what": "Number of connectors declared in the platform catalogue.",
+        "how": "Count of the declared connector set.",
+        "source": "Deterministic connector reference (platform config)."
+      },
+      "active": {
+        "what": "Connectors active on the current execution path (frontier / on-prem).",
+        "how": "Derived from the active execution mode.",
+        "source": "Real runtime mode + connector catalogue."
+      },
+      "standby": {
+        "what": "Connectors on standby on the current execution path.",
+        "how": "Declared connectors not active on this path.",
+        "source": "Real runtime mode + connector catalogue."
+      },
+      "mode": {
+        "what": "Active execution path: Cloud (frontier) or On-prem.",
+        "how": "Read from the real execution mode.",
+        "source": "settings.environment / runtime."
+      }
     }
   },
   "users": {
@@ -6423,6 +6445,28 @@
     "footer": {
       "total": "{n} accounts",
       "source": "Source: {src}"
+    },
+    "explain": {
+      "total": {
+        "what": "Number of provisioned operator accounts (admin, auditor, and superadmin when configured).",
+        "how": "Count of the accounts the system actually enforces.",
+        "source": "Seeded accounts (ADR 0009), mirror of lib/auth/accounts.ts."
+      },
+      "active": {
+        "what": "Operator accounts currently active.",
+        "how": "Accounts whose status is 'active'.",
+        "source": "Seeded accounts (ADR 0009)."
+      },
+      "roles": {
+        "what": "Number of distinct RBAC roles defined.",
+        "how": "Count of roles in the capability catalogue (ROLE_CAPS).",
+        "source": "Org-wide RBAC capabilities (Phase 1)."
+      },
+      "mfa": {
+        "what": "Active accounts covered by two-factor authentication.",
+        "how": "Active accounts with MFA ÷ active accounts.",
+        "source": "Seeded accounts (ADR 0009)."
+      }
     }
   },
   "models": {
