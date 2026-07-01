@@ -954,6 +954,7 @@ function CriticalControlsTable({
   const tst = useTranslations("overview.states");
   const ti = useTranslations("overview.impact");
   const tt = useTranslations("overview.time");
+  const tci = useTranslations("overview.controlInfo");
   const signalById = useMemo(() => new Map((signals ?? []).map((s) => [s.id, s])), [signals]);
 
   return (
@@ -1013,6 +1014,17 @@ function CriticalControlsTable({
                           (toxicity, refusal) are honestly marked "hors catalogue". */}
                         <div className="flex items-center gap-1.5 font-medium">
                           {ts(c.id)}
+                          {/* Per-control "what/how/source" explainer, same affordance as the
+                            KPI cards — reads its plain-language definition from the registry-
+                            aligned controlInfo namespace (honest: matches the real computation). */}
+                          {tci.has(`${c.id}.what`) ? (
+                            <MetricInfo
+                              title={ts(c.id)}
+                              what={tci(`${c.id}.what`)}
+                              how={tci.has(`${c.id}.how`) ? tci(`${c.id}.how`) : undefined}
+                              source={tci.has(`${c.id}.source`) ? tci(`${c.id}.source`) : undefined}
+                            />
+                          ) : null}
                           {/* A shared-policy probe does not vary by agent: under an
                             agent scope it carries an honest "org-wide" badge rather
                             than pretending to be that agent's own number. */}
@@ -1025,17 +1037,19 @@ function CriticalControlsTable({
                             </span>
                           ) : null}
                           {/* A temporal instant is selected but this signal declares no `time`
-                            dimension (a live current-policy probe): make the "instant ignored"
-                            disclosure VISIBLE, not hover-only — the value shown is the LIVE
-                            result, not a measurement at the chosen instant. Driven by the
-                            registry (`signalSupports`), so it can never drift from the declaration. */}
+                            dimension: it is a probe of the CURRENTLY-DEPLOYED guard policy
+                            (fixed test corpus → policy.yaml), deterministic and unchanged until
+                            the policy is redeployed — NOT a real-time stream, and NOT the policy
+                            as it stood at the chosen past instant. So the honest, plain-language
+                            badge is "current policy", driven by the registry (`signalSupports`)
+                            so it can never drift from the declaration. */}
                           {historyMode && !c.noData && !signalSupports(c.id, "time") ? (
                             <span
-                              title={tt("liveTooltip")}
+                              title={t("currentPolicyHint")}
                               className="inline-flex cursor-help items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-amber-300/90"
                             >
                               <Activity className="h-2.5 w-2.5" />
-                              {t("instantIgnored")}
+                              {t("currentPolicy")}
                             </span>
                           ) : null}
                         </div>

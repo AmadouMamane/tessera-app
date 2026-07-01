@@ -378,8 +378,9 @@
       "action": "Aktion",
       "investigate": "Untersuchen",
       "liveProbe": "Live-Sonde · nicht im Katalog",
-      "instantIgnored": "Zeitpunkt ignoriert",
-      "viewAll": "Alle Signale"
+      "viewAll": "Alle Signale",
+      "currentPolicy": "Aktuelle Richtlinie",
+      "currentPolicyHint": "Kalibrierung der aktuell geltenden Schutzrichtlinie. Bei jeder Anzeige neu berechnet, aber unverändert bis zur erneuten Bereitstellung der Richtlinie — daher nicht auf den gewählten Zeitpunkt zurückgerechnet."
     },
     "cases": {
       "title": "Zu bearbeitende Kontrollfälle",
@@ -505,6 +506,43 @@
       "systemsDegraded": "Systeme eingeschränkt",
       "auditAsOfTip": "Anzahl der Einträge zum gewählten Zeitpunkt; Integrität der Kette wird im Jetzt geprüft.",
       "viewHealth": "Health-Komponenten ansehen"
+    },
+    "controlInfo": {
+      "faithfulness": {
+        "what": "Anteil der Antworten, die den zitierten Dokumenten treu sind, ohne erfundene Informationen.",
+        "how": "Konformitätsrate = Durchläufe mit Treue-Score ≥ Schwellenwert ÷ bewertete Durchläufe.",
+        "source": "Dauerhaftes Protokoll der Online-Bewertungsscores."
+      },
+      "toxicity": {
+        "what": "Anteil der Antworten mit toxischer oder unangemessener Sprache.",
+        "how": "Als toxisch erkannte Antworten ÷ erfasste Durchläufe gesamt.",
+        "source": "Erfasste Durchlauf-Bundles (Frage + Antwort)."
+      },
+      "pii": {
+        "what": "Anteil der Antworten, die personenbezogene Daten preisgeben (IBAN, E-Mail usw.).",
+        "how": "Antworten mit erkanntem Leck ÷ erfasste Durchläufe gesamt.",
+        "source": "Erfasste Durchlauf-Bundles."
+      },
+      "refusal": {
+        "what": "Genauigkeit der Ablehnungen der Schutzvorrichtung: zu streng (legitime blockiert) oder zu locker (verbotene durchgelassen).",
+        "how": "Schlechtere der beiden Raten — Über-Ablehnung (legitime blockiert) und Unter-Ablehnung (verbotene akzeptiert) — auf einem festen Testkorpus gegen die geltende Richtlinie.",
+        "source": "Korpus eval/calibration + Schutzrichtlinie (policy.yaml)."
+      },
+      "conformance": {
+        "what": "Anteil der Tool-Aufrufe, die der Schutzrichtlinie entsprechen.",
+        "how": "Konforme Aufrufe ÷ gesamt, berechnet aus dem Audit-Protokoll.",
+        "source": "Manipulationssicheres Audit-Protokoll (hash-verkettet)."
+      },
+      "tools": {
+        "what": "Anteil gültiger Tool-Aufrufe (korrekte Argumente und Berechtigungen).",
+        "how": "Gültige Aufrufe ÷ alle Tool-Aufrufe.",
+        "source": "Manipulationssicheres Audit-Protokoll."
+      },
+      "firewall": {
+        "what": "Wirksamkeit der Firewall beim Blockieren von Prompt-Injektionen (Recall).",
+        "how": "Richtig Positive ÷ (richtig Positive + falsch Negative), auf einem Injektionskorpus gegen die geltende Richtlinie.",
+        "source": "Korpus eval/calibration (Injektionen) + Richtlinie (policy.yaml)."
+      }
     }
   },
   "chat": {

@@ -378,8 +378,9 @@
       "action": "Action",
       "investigate": "Investigate",
       "liveProbe": "live probe · uncatalogued",
-      "instantIgnored": "Instant ignored",
-      "viewAll": "View all signals"
+      "viewAll": "View all signals",
+      "currentPolicy": "Current policy",
+      "currentPolicyHint": "Calibration of the currently-deployed guard policy. Recomputed on each view but unchanged until the policy is redeployed — so it is not reconstructed at the chosen instant."
     },
     "cases": {
       "title": "Control cases to handle",
@@ -505,6 +506,43 @@
       "systemsDegraded": "Systems degraded",
       "auditAsOfTip": "Entry count as of the chosen instant; chain integrity verified in the present.",
       "viewHealth": "View health components"
+    },
+    "controlInfo": {
+      "faithfulness": {
+        "what": "Share of answers faithful to the cited documents, with no invented information.",
+        "how": "Conformance rate = turns whose faithfulness score ≥ threshold ÷ evaluated turns.",
+        "source": "Durable online-evaluation score log."
+      },
+      "toxicity": {
+        "what": "Share of the agent's answers containing toxic or inappropriate language.",
+        "how": "Answers detected toxic ÷ total captured turns.",
+        "source": "Captured turn bundles (question + answer)."
+      },
+      "pii": {
+        "what": "Share of answers leaking personal data (IBAN, email, etc.).",
+        "how": "Answers with a detected leak ÷ total captured turns.",
+        "source": "Captured turn bundles."
+      },
+      "refusal": {
+        "what": "Accuracy of the guard's refusals: too strict (legitimate blocked) or too lax (forbidden allowed through).",
+        "how": "Worse of the two rates — over-refusal (legitimate blocked) and under-refusal (forbidden accepted) — over a fixed test corpus run against the policy in force.",
+        "source": "eval/calibration corpus + guard policy (policy.yaml)."
+      },
+      "conformance": {
+        "what": "Share of tool calls conforming to the guard policy.",
+        "how": "Conformant calls ÷ total, computed over the audit log.",
+        "source": "Tamper-evident audit log (hash-chained)."
+      },
+      "tools": {
+        "what": "Share of valid tool calls (correct arguments and permissions).",
+        "how": "Valid calls ÷ total tool calls.",
+        "source": "Tamper-evident audit log."
+      },
+      "firewall": {
+        "what": "Firewall effectiveness at blocking prompt injections (recall).",
+        "how": "True positives ÷ (true positives + false negatives), over an injection corpus run against the policy in force.",
+        "source": "eval/calibration corpus (injections) + policy (policy.yaml)."
+      }
     }
   },
   "chat": {

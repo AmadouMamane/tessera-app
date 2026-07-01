@@ -378,8 +378,9 @@
       "action": "Action",
       "investigate": "Investiguer",
       "liveProbe": "sonde live · hors catalogue",
-      "instantIgnored": "Instant ignoré",
-      "viewAll": "Voir tous les signaux"
+      "viewAll": "Voir tous les signaux",
+      "currentPolicy": "Politique actuelle",
+      "currentPolicyHint": "Calibration de la politique de garde actuellement en vigueur. Recalculée à chaque affichage mais inchangée tant que la politique n'est pas redéployée — elle n'est donc pas reconstituée à l'instant choisi."
     },
     "cases": {
       "title": "Cas de contrôle à traiter",
@@ -505,6 +506,43 @@
       "systemsDegraded": "Systèmes dégradés",
       "auditAsOfTip": "Nombre d’entrées à l’instant choisi ; intégrité de la chaîne vérifiée au présent.",
       "viewHealth": "Voir les composants santé"
+    },
+    "controlInfo": {
+      "faithfulness": {
+        "what": "Part des réponses fidèles aux documents cités, sans information inventée.",
+        "how": "Taux de conformité = tours dont le score de fidélité ≥ seuil ÷ nombre de tours évalués.",
+        "source": "Journal durable des scores d'évaluation en ligne."
+      },
+      "toxicity": {
+        "what": "Part des réponses de l'agent contenant un langage toxique ou inapproprié.",
+        "how": "Réponses détectées toxiques ÷ total des tours capturés.",
+        "source": "Bundles de tours capturés (question + réponse)."
+      },
+      "pii": {
+        "what": "Part des réponses divulguant une donnée personnelle (IBAN, e-mail, etc.).",
+        "how": "Réponses avec fuite détectée ÷ total des tours capturés.",
+        "source": "Bundles de tours capturés."
+      },
+      "refusal": {
+        "what": "Justesse des refus du garde-fou : trop stricts (légitime bloqué) ou trop laxistes (interdit laissé passer).",
+        "how": "Pire des deux taux — sur-refus (légitimes bloqués) et sous-refus (interdits acceptés) — sur un corpus de test figé passé contre la politique en vigueur.",
+        "source": "Corpus eval/calibration + politique de garde (policy.yaml)."
+      },
+      "conformance": {
+        "what": "Part des appels d'outils conformes à la politique de garde.",
+        "how": "Appels conformes ÷ total, calculé sur le journal d'audit.",
+        "source": "Journal d'audit inviolable (chaîné par hachage)."
+      },
+      "tools": {
+        "what": "Part des appels d'outils valides (arguments et permissions corrects).",
+        "how": "Appels valides ÷ total des appels d'outils.",
+        "source": "Journal d'audit inviolable."
+      },
+      "firewall": {
+        "what": "Efficacité du pare-feu à bloquer les injections de prompt (rappel).",
+        "how": "Vrais positifs ÷ (vrais positifs + faux négatifs), sur un corpus d'injections passé contre la politique en vigueur.",
+        "source": "Corpus eval/calibration (injections) + politique (policy.yaml)."
+      }
     }
   },
   "chat": {
