@@ -21,13 +21,38 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | B | Complete stamping (EVAL_SCORE / GUARD_DECISIONS labels + span attrs + Langfuse scores) + Prometheus recording rules + "data available since" cutoff | ✅ done | `828016f` | agent_id+model on EVAL_SCORE; agent_id on GUARD_DECISIONS (now wired); turn-span stamping; 5 recording rules loaded; /availability honest per-dimension cutoff |
 | C | Read adapters (langfuse / prometheus / ledger) behind read(scope); aggregates→Prom, detail→Langfuse; shadow-run + parity per signal; contract tests; spine creds via Secret Manager | ✅ done | `f6723f5` | real Prom/Langfuse query clients + `SpineStoresReader` (Langfuse detail + local ledger carve-out); `TESSERA_SPINE_SOURCE` = jsonl(default)\|spine\|shadow; `ShadowReader` records `tessera_spine_shadow_divergence_total`; unreachable→`SpineUnavailableError` (honest-empty); 23 unit + 7 live contract tests. Perf p95: cold 2.8ms / warm 1.4ms / 2 upstream reads |
 | D | Retire convenience jsonl (scores/bundles) after all signals flipped + baked; keep audit/S1 ledgers; erasure reaches spine + cache | ✅ done | `dfff8d8` | GDPR erasure now reaches the spine: `delete_conversation` (Langfuse batch trace delete) + unconditional snapshot-cache eviction; `purge_telemetry` folds spine count + `spine_reached` into the footprint (unreachable→deferred, never faked). Prometheus needs no per-series delete (no `conversation_id` label). **jsonl kept** as system of record — the ADR gates retirement on parity, not yet met (Phase C); the flip mechanism is in place. Verified live: DELETE→204, reaches Langfuse, deletes nothing real |
-| E | Four cards (traces / inbox / release / audit) + fixtures flagged synthetic / derived from spine | ⬜ pending | — | |
+| E | Four cards (traces / inbox / release / audit) + fixtures flagged synthetic / derived from spine | ✅ done | `9553c1b` | Inbox **ventilated** — `OperatorItem.agent_id` from each agent's own eval run (fabrication-proof: no run → no items), `?agent=` filter, `inbox {AGENT,TIME}` in both registries (verified live: 78 items across 3 agents, `?agent=recouvrement`→7). Fixtures (incidents/curation/automations/replay_shadow) flagged by a registry-driven `<SyntheticNotice>`. Traces/Release/Audit verified already-honest (audit integrity is a real `verify_audit_chain`, not a TODO) → no rebuild. Registry mirror reconciled (faithfulness/pii/tools declared backend-side) |
 | F | Add language + model dimensions to Scope UI (no route sweep) — prove agent × time × language cube | ⬜ pending | — | |
 
 Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed) · ⛔ blocked (see notes).
 
 ## Log (newest first)
 
+- **Phase E ✅ — `9553c1b`** (twice-green + pushed). Resolved the four cards raised in the ADR
+  (§Per-signal resolution) honestly — **rebuilt only what wasn't already honest**. (1) **Inbox
+  (Control Cases) ventilated**: each backlog item is now a case an agent's *own* eval run failed
+  → real per-agent attribution (`OperatorItem.agent_id`, sourced by iterating the fleet and
+  reading each agent's own snapshot; `load_eval_snapshot(aid)` raises rather than falling back,
+  so an agent with no run of its own contributes nothing — fabrication is impossible). The shared
+  queue carries every agent's items, each labelled, and `?agent=` filters it; `inbox {AGENT,TIME}`
+  registered in both capability tables. Verified live on :8392: 78 items across
+  onboarding/recouvrement/support-client, `?agent=recouvrement` → 7 (all attributed). (2)
+  **Fixtures flagged**: a shared, registry-driven `<SyntheticNotice signalId>` banner names
+  incidents/curation/automations/replay_shadow as deterministic demonstration data on each card,
+  reading the *same* `isSynthetic()` flag as the registry so the label can never drift. (3)
+  **Traces / Release / Audit — verified already honest, kept as-is** (an explorer pass confirmed:
+  Traces read live Langfuse {AGENT,TIME}; Release already splits per-agent verdicts from the org
+  summary; **Audit's chain integrity is a real computed hash-chain invariant** —
+  `guard.audit.verify_audit_chain`, count ventilated / integrity org-wide — so the ADR's "write
+  the invariant, not a TODO" was *already* satisfied; rebuilding would have been make-work). (4)
+  **Registry mirror reconciled**: the overview control-row aliases (faithfulness ⊂ scores, pii ≡
+  pii_leak, tools ≡ tool_validity) are now declared backend-side too, so the frontend mirrors the
+  single-source-of-truth exactly. Gate twice-green: ruff + ruff-format + mypy strict (161) + 5
+  new/updated operator-item unit tests + 915 backend passed + tsc + biome (13 files) + vitest +
+  perf budgets met (cold p95 **3.4 ms**, warm **1.8 ms**). The frontend badge + inbox column are
+  type/lint/unit-covered (the dev server was down, so not live-rendered — the inbox *data* is
+  proven via the live API). The 3 pre-existing integration failures are unchanged. **Next: Phase
+  F.**
 - **Phase D ✅ — `dfff8d8`** (twice-green + pushed). Made GDPR right-to-erasure (Art. 17) reach
   the spine, not just the local file (§Migration D, §Open questions #180). `LangfuseAdapter`
   gains `trace_ids_for_conversation` (session lookup) + `delete_conversation` (batch
