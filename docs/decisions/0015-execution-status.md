@@ -17,7 +17,7 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 
 | Phase | Scope (short) | Status | Commit | Notes |
 |---|---|---|---|---|
-| A | Scope object + registry + capabilities + snapshot endpoint + cache/single-flight (reads current stores) | ⬜ pending | — | kills the silent-ignore bug class; fast read model in place before any source swap |
+| A | Scope object + registry + capabilities + snapshot endpoint + cache/single-flight (reads current stores) | ✅ done | `697106f` | kills the silent-ignore bug class; fast read model in place before any source swap. Perf p95: cold 25ms / warm 2ms / 2 upstream reads for 9 signals |
 | B | Complete stamping (EVAL_SCORE / GUARD_DECISIONS labels + span attrs + Langfuse scores) + Prometheus recording rules + "data available since" cutoff | ⬜ pending | — | |
 | C | Read adapters (langfuse / prometheus / ledger) behind read(scope); aggregates→Prom, detail→Langfuse; shadow-run + parity per signal; contract tests; spine creds via Secret Manager | ⬜ pending | — | |
 | D | Retire convenience jsonl (scores/bundles) after all signals flipped + baked; keep audit/S1 ledgers; erasure reaches spine + cache | ⬜ pending | — | |
@@ -28,6 +28,21 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **Phase A ✅ — `697106f`** (twice-green + pushed). Introduced the spine foundations:
+  `Scope` value object, capability-declared signal registry (honoured/ignored report → the
+  silent-ignore bug class is now unrepresentable), the `SpineReader` adapter seam with an
+  in-memory fake, and a batched cached `GET /observability/snapshot` (single-flight +
+  immutable-past cache, RBAC via `require_bearer`, self-instrumented). Frontend `lib/scope.ts`
+  + `lib/signal-registry.ts`; the overview org-wide badge is registry-driven, not hand-placed.
+  Perf budget met and gated by `scripts/perf-probe.mjs`: cold p95 **25 ms** (< 300), warm p95
+  **2 ms** (< 150), **2** upstream reads for 9 signals (≤ 4). Parity asserted (snapshot signal ==
+  route handler). Gate twice-green: ruff + ruff-format (baseline 32, none mine) + mypy strict
+  (235 files) + 859 unit + 36 new spine unit + tsc + biome (my files) + 29 vitest. Ledger-backed
+  signals (conformance / tool-validity / governance / audit-integrity) are declared + registered
+  + requestable but stay off the default hot path until Phase C's shared ledger adapter (the
+  dev ledger is 25 MB; a per-scope full read + O(n) chain verify would blow the compute budget).
+  Langfuse/Prometheus adapter files deferred to Phase C (built real there, not empty stubs).
+  **Next: Phase B.**
 - _(seed)_ ADR 0015 written and pushed (Context → Decision → Architecture → Migration →
   Performance → Testing/migration/security → Execution protocol). Phase 1 per-agent wiring
   (transitional base) is live on the branch. **Next: Phase A.**
