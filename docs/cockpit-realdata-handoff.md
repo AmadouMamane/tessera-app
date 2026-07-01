@@ -1,0 +1,99 @@
+# Cockpit "make everything real" — handoff plan
+
+**Mandate (user, night of 2026-07-01):** wire **every** "données de démonstration"
+(fixture) page to **real data, everywhere**, and finish the **untouched pages / sub-tabs**
+(explicitly called out: Qualité IA sub-tabs, Sécurité, Fiabilité). *« Il faut absolument
+tout faire. »* User reviews tomorrow. This file is the durable roadmap — a fresh session
+reads it first and executes systematically.
+
+## Method (MANDATORY — read before touching anything)
+
+1. **Read `docs/functional-page-playbook.md` first.** The recipe: real data source → backend
+   build → durable mutation endpoint → wired frontend → real sparklines → probe for derived
+   metrics → e2e verify. **Never call a deterministic fixture "real."** Always separate
+   "displayed values are real" from "interactions are wired," and say which holds.
+2. **Honesty rule (ADR 0015).** If no real source exists yet for a signal, **flag it synthetic**
+   (add to the registry + render `<SyntheticNotice signalId=…>`), do **not** fabricate. Registry
+   = `src/tessera/observability/spine/capabilities.py` (`_cap(id, …, synthetic=True)`) mirrored in
+   `webapp/frontend/lib/signal-registry.ts`. The banner component is
+   `webapp/frontend/components/cockpit/synthetic-notice.tsx` (keys off `isSynthetic(id)`).
+3. **ⓘ explainers:** reuse `components/cockpit/metric-info.tsx` (`MetricInfo{title,what,how,source}`)
+   via a local `ExplainInfo({k,title})` helper reading `<page>.explain.<k>.{what,how,source}`.
+   Content MUST be grounded in the real backend computation (verify before writing).
+4. **Gate twice-green** before each commit: backend `ruff` + `ruff format --check` (baseline = 32
+   pre-existing unformatted files, none mine) + `mypy` strict + `pytest`; frontend
+   `./node_modules/.bin/tsc --noEmit` + `biome check <my files>` + `vitest run`. Perf probe
+   (`node scripts/perf-probe.mjs`) if the snapshot read model is touched.
+5. **Verify live** on `:3097` (Next dev) → `:8392` (backend). Playwright headless via
+   `node_modules/playwright-core` (see scratchpad scripts from the legibility pass for the pattern).
+6. **Commits: targeted paths only, NEVER `git add -A`** (codex shares the working tree). Push to
+   `origin/feature/redesign` (the cadence this session established; the remote already has all of
+   it). Isolate `messages/*.json` edits with the surgical Python approach
+   (`json.load(..., object_pairs_hook=OrderedDict)`, add keys, `json.dump(indent=2, ensure_ascii=False)`)
+   — this keeps the diff to added keys and avoids codex-WIP collisions.
+7. **Pre-existing failures to ignore** (fail identically on pristine HEAD, NOT regressions):
+   `test_firewall_adapter::…account_balance_allowed_for_known_customer`,
+   `test_memory_persistent::…consent_gate_blocks_write`, `…erase_subject_is_total`.
+
+### Launch commands
+- Backend: `PYTHONPATH=src:. TESSERA_ENVIRONMENT=local .venv/bin/uvicorn tessera.api.main:build_app --factory --host 127.0.0.1 --port 8392` (background, `dangerouslyDisableSandbox=true` — sandbox blocks the bind). Health: `curl :8392/healthz`.
+- Front: `./node_modules/.bin/next dev -p 3097` from `webapp/frontend` (background, sandbox off).
+  Note: `package.json` `dev` script is `-p 3099`; the user works on **3097**.
+
+## Inventory A — BACKEND FIXTURE modules (make real, or keep honestly flagged)
+
+Every module below is a deterministic fixture today (hardcoded constants / literal KPIs). For
+each: the real-data path and whether that real source already exists in the repo.
+
+| module | route | real-data path | notes |
+|---|---|---|---|
+| `policies.py` | `configurer/politiques` | real `policy.yaml` + guard decisions + guardrail catalogue | **already flagged synthetic (`c5d8077`)**. To make real: read the live policy set + guard-decision counts. |
+| `incidents.py` | `agir/incidents-playbooks` | **guard-deny clusters + low-score turns** (audit ledger + score store) — ADR 0015 explicitly suggests this | flagged synthetic (Phase E). Real path EXISTS. |
+| `curation.py` | `agir/curation-eval-set` | `eval.sets` + `load_eval_snapshot` failed cases + corpus lineage | flagged synthetic. Real path EXISTS (eval reports + `operator_items` already derive real backlog). |
+| `automations.py` | `agir/automations` | needs a real automations/rules store (candidates: `governance_feed.py`, `guard_retraction.py`) | flagged synthetic. Real path is **THIN** — may stay flagged until a real store exists. |
+| `replay_shadow.py` | `agir/replay-shadow` | `replay.py` `recent_bundles` (REAL) + `lineage.py` | flagged synthetic. **Partial** real path (bundles are real; deviation/shadow metrics need building). |
+| `proofs.py` | `prouver/evidence-store` | audit ledger + evidence store (`etat_a_date.py`, `audit.py`, `prouver/audit-logs` are REAL) | fixture; real path EXISTS. |
+| `parameters.py` | `configurer/parametres` | `get_settings()` + real policies + integrations + model catalogue | fixture; real path EXISTS (mostly real on neighbouring pages). |
+| `assistant.py` | Assistant page (Chat/Console) | transcript (`transcript.load_transcript`) + reporter debug + eval scores. **Console debug already made real** (see memory `Console debug surfacing`). | fixture overview; real path EXISTS. |
+| `tail_sampling.py` | Observabilité sub-tab (?) | real tail-based trace sampling (Phoenix / spine decisions) | fixture; real path = **infra work**. |
+| `connectors.py` | `configurer/connecteurs` | **MIXED** — total/active/standby/mode already REAL; detail rows are reference | partial; ⓘ already added (`23167c8`). |
+
+## Inventory B — FRONTEND sub-tab reality (from the mapper)
+
+**Already REAL — do NOT rebuild** (corrects the initial perception):
+- **Qualité IA** (`surveiller/qualite-ia`) — all 6 sub-tabs REAL (Vue d'ensemble / Signaux / Runs /
+  Cas échoués / Modèles / Juge), each on live fetchers (`fetchSLO`, `fetchScoreSeries`, `fetchRuns`,
+  `fetchFailedRuns`, `fetchModelComparison`, `fetchJudgeDrift`, …).
+- **Sécurité & privacy** (`surveiller/securite-privacy`) — single page, all 6 zones A–F REAL.
+- **Conformité** (`surveiller/conformite`) — all 8 tabs REAL (`fetchCompliance` + `CatalogTabView`,
+  TabStrip functional).
+- **Agent sub-pages** (`agents/[id]/…`) — all 8 REAL (synthese/console/evaluations/historique/
+  garde-fous/prompts/configurations/connaissances), each on `/observability/agent-*`.
+
+**The genuine frontend gap — DEAD / COSMETIC TAB BARS** (tabs render but don't switch; the page is
+one always-rendered content blob, no `useState(activeTab)`):
+- **Fiabilité & coût** (`components/reliability/reliability-dashboard.tsx`, tab bar ~line 440) — 7
+  tabs (Vue d'ensemble / Fiabilité / Coût / Performance / Quotas / Incidents / Capacité) all dead.
+- **Amélioration** (`components/improvement/improvement-dashboard.tsx`, tab bar ~line 229) — 5 tabs
+  (Vue d'ensemble / Plan / Curation / Expériences / Dépôt) all dead.
+  → Work: add `activeTab` state + conditional per-tab views, each reading a real endpoint (both
+  pages already fetch real overview data — reorganise it into real per-tab views + fill the tabs
+  that have no data yet, e.g. from `reliability.py` / `improvement.py`, which ARE real modules).
+
+## Suggested execution order (highest value first)
+
+1. **Fiabilité & coût + Amélioration dead tabs** — user-named, real modules already behind them;
+   wire `activeTab` + real per-tab views (playbook step "interactions wired").
+2. **Backend fixtures with an existing real path** (Inventory A): proofs, parameters, assistant,
+   curation, incidents, replay_shadow — wire to their real sources.
+3. **Backend fixtures with a thin/infra path**: automations, tail_sampling — build the real store
+   OR keep flagged synthetic with the honest banner (do NOT fabricate).
+4. **policies** — currently flagged synthetic; optionally make real from `policy.yaml` + guard.
+5. Qualité IA / Sécurité / Conformité / Agent pages — **already real, leave them.**
+
+## Progress log (this session, pushed to origin/feature/redesign)
+
+- Legibility pass complete: `6b01a19` `8d69c4c` `23167c8` `67c9f0b` `9bb783d` `c5d8077` `4f97ce8`
+  (per-control ⓘ, "Politique actuelle" honest badge, users/connectors ⓘ, security fabrication fix +
+  improvement i18n, composite-card ⓘ, **policies flagged synthetic**, automations mode i18n).
+- ADR 0015 (runtime telemetry spine) Phases A–F complete earlier this session.
