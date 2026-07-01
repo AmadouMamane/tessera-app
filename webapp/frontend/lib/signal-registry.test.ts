@@ -10,7 +10,7 @@ describe("isOrgWide", () => {
   });
 
   it("is false for per-agent signals", () => {
-    for (const id of ["slo", "toxicity", "pii_leak", "conformance", "traces"]) {
+    for (const id of ["slo", "toxicity", "pii_leak", "conformance", "traces", "inbox"]) {
       expect(isOrgWide(id)).toBe(false);
     }
   });

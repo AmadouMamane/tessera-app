@@ -57,6 +57,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   governance: cap(AGENT_TIME),
   audit_count: cap(AGENT_TIME),
   traces: cap(AGENT_TIME),
+  // Control-case inbox: each item is a case an agent's own eval run failed → ventilable.
+  inbox: cap(AGENT_TIME),
   // Org-wide by construction: fixed-corpus probes of the shared policy, and the audit
   // hash chain (a whole-fleet crypto invariant). No AGENT dimension → badged org-wide.
   refusal: cap(ORG),

@@ -18,6 +18,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
   TemporalRail,
@@ -95,6 +96,7 @@ export function ReplayOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} />
+      <SyntheticNotice signalId="replay_shadow" />
       {/* AGIR / Replay is XT-01's home (registre): the rail keeps the legitimate
           execution-replay cassette (début · précédent · play/pause · suivant · fin).
           SURVEILLER surfaces stay on the default "signal" event navigation. */}

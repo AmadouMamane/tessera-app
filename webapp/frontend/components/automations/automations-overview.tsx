@@ -22,6 +22,7 @@ import type { ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
   TemporalRail,
@@ -75,6 +76,7 @@ export function AutomationsOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} />
+      <SyntheticNotice signalId="automations" />
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}

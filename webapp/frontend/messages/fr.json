@@ -3935,7 +3935,9 @@
         }
       }
     },
-    "drill": { "chain": "Voir le journal d'audit" },
+    "drill": {
+      "chain": "Voir le journal d'audit"
+    },
     "title": "Preuves & exporteurs",
     "subtitle": "Assembler, signer, vérifier et exporter les artefacts de preuve de l’IA.",
     "tabs": {
@@ -4564,7 +4566,9 @@
         "how": "Comptes sans activité récente."
       }
     },
-    "drill": { "audit": "Voir le journal d'audit" },
+    "drill": {
+      "audit": "Voir le journal d'audit"
+    },
     "title": "Rôles & accès",
     "subtitle": "Gérez les identités, les rôles, les permissions et les accès à l’ensemble de la plateforme.",
     "actions": {
@@ -5030,7 +5034,9 @@
         "how": "Paramètres groupés par état de cycle de vie."
       }
     },
-    "drill": { "audit": "Voir le journal d'audit" },
+    "drill": {
+      "audit": "Voir le journal d'audit"
+    },
     "title": "Paramètres",
     "subtitle": "Configurez le comportement, les politiques et les préférences de la plateforme Tessera.",
     "actions": {
@@ -5198,6 +5204,7 @@
       "search": "Rechercher dans la liste…",
       "priority": "Priorité",
       "type": "Type",
+      "agent": "Agent",
       "status": "Statut",
       "assignee": "Assigné à",
       "active": "Filtres actifs",
@@ -6454,5 +6461,9 @@
     "prev": "Page précédente",
     "next": "Page suivante",
     "perPage": "Lignes par page"
+  },
+  "synthetic": {
+    "title": "Données de démonstration",
+    "detail": "jeu de référence déterministe, non issu du trafic réel"
   }
 }

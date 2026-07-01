@@ -97,6 +97,7 @@ export function InboxOverview() {
   const [fPriority, setFPriority] = useState(ALL);
   const [fStatus, setFStatus] = useState(ALL);
   const [fType, setFType] = useState(ALL);
+  const [fAgent, setFAgent] = useState(ALL);
   const [selected, setSelected] = useState<string | null>(null);
   const mutate = useMutation({
     mutationFn: mutateInboxItem,
@@ -111,9 +112,10 @@ export function InboxOverview() {
         (q === "" || it.title.toLowerCase().includes(q) || it.id.toLowerCase().includes(q)) &&
         (fPriority === ALL || it.priority === fPriority) &&
         (fStatus === ALL || it.status === fStatus) &&
-        (fType === ALL || it.type === fType),
+        (fType === ALL || it.type === fType) &&
+        (fAgent === ALL || it.agent_id === fAgent),
     );
-  }, [items, search, fPriority, fStatus, fType]);
+  }, [items, search, fPriority, fStatus, fType, fAgent]);
 
   const detail = selected ? (items.find((it) => it.id === selected) ?? null) : null;
 
@@ -149,6 +151,8 @@ export function InboxOverview() {
         setFStatus={setFStatus}
         fType={fType}
         setFType={setFType}
+        fAgent={fAgent}
+        setFAgent={setFAgent}
         count={filtered.length}
       />
 
@@ -299,6 +303,8 @@ function FilterStrip({
   setFStatus,
   fType,
   setFType,
+  fAgent,
+  setFAgent,
   count,
 }: {
   t: T;
@@ -311,6 +317,8 @@ function FilterStrip({
   setFStatus: (v: string) => void;
   fType: string;
   setFType: (v: string) => void;
+  fAgent: string;
+  setFAgent: (v: string) => void;
   count: number;
 }) {
   const priorityOpts = ["urgent", "high", "medium", "low"].map((v) => ({
@@ -325,6 +333,10 @@ function FilterStrip({
     value: v,
     label: t(`type.${v}`),
   }));
+  // Ventilation control: the distinct agents whose own eval runs seeded this queue.
+  const agentOpts = [...new Map(data.items.map((i) => [i.agent_id, i.agent])).entries()]
+    .filter(([id]) => id)
+    .map(([value, label]) => ({ value, label: label || value }));
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <div className="relative min-w-[200px] flex-1">
@@ -356,6 +368,14 @@ function FilterStrip({
         options={statusOpts}
         onChange={setFStatus}
       />
+      {agentOpts.length > 1 ? (
+        <FilterSelect
+          label={t("filters.agent")}
+          value={fAgent}
+          options={agentOpts}
+          onChange={setFAgent}
+        />
+      ) : null}
       <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)]">
         <Layers className="h-3.5 w-3.5" /> {count} / {data.total_items}
       </span>
@@ -482,9 +502,11 @@ function TaskTable({
                   <td className="px-2 py-2 text-[var(--tessera-text)]">
                     <span className="block truncate" title={it.title}>
                       {it.title}
-                      <span className="ml-1.5 font-mono text-[0.56rem] text-[var(--tessera-text-muted)]">
-                        {it.id}
-                      </span>
+                      {it.agent ? (
+                        <span className="ml-1.5 rounded bg-[var(--tessera-muted)] px-1 py-px text-[0.52rem] text-[var(--tessera-text-muted)]">
+                          {it.agent}
+                        </span>
+                      ) : null}
                     </span>
                   </td>
                   <td className="px-2 py-2 text-[var(--tessera-text-muted)]">
@@ -699,6 +721,7 @@ function InboxDrawer({
 
   const fields: [string, ReactNode][] = [
     [t("col.type"), t(`type.${item.type}`)],
+    ...(item.agent ? ([[t("filters.agent"), item.agent]] as [string, ReactNode][]) : []),
     [t("col.source"), item.source],
     [t("col.assignee"), item.assignee],
     [

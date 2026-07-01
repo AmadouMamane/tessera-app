@@ -118,6 +118,16 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # Langfuse-backed trace summary — per-agent via metadata (wired into the snapshot in
     # Phase C; declared now so its filter/badge render from the registry today).
     _cap("traces", {AGENT, TIME}),
+    # Control-case inbox — each item is a case an agent's OWN eval run failed, so the shared
+    # triage queue ventilates by agent (ADR 0015 §Migration E). Real per-agent attribution.
+    _cap("inbox", {AGENT, TIME}),
+    # Overview "critical controls" row aliases — sub-metrics of real per-agent signals
+    # (faithfulness ⊂ scores, pii ≡ pii_leak, tools ≡ tool_validity). Declared here so the
+    # backend stays the single source of truth the frontend registry mirrors exactly, and so
+    # every displayed control declares its capability (no undeclared, silently-defaulted row).
+    _cap("faithfulness", {AGENT, TIME}),
+    _cap("pii", {AGENT, TIME}),
+    _cap("tools", {AGENT, TIME}),
     # Deterministic fixtures — no real per-agent substrate. Flagged synthetic so they can
     # never be silently ventilated (project rule: never call a deterministic fixture real).
     _cap("incidents", frozenset(), synthetic=True),

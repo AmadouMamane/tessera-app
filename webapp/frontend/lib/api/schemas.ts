@@ -3290,9 +3290,13 @@ export const InboxOverviewSchema = z.object({
   generated_at: z.string(),
   rail: z.object({ period: z.string(), sla: z.string(), updated: z.string(), compare: z.string() }),
   kpis: z.array(IbKpiSchema),
+  agent: z.string().optional(),
   items: z.array(
     z.object({
       id: z.string(),
+      /** The agent whose own eval run produced this case (real per-agent attribution). */
+      agent_id: z.string().default(""),
+      agent: z.string().default(""),
       priority: z.enum(["urgent", "high", "medium", "low"]),
       type: z.string(),
       title: z.string(),

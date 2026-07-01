@@ -40,6 +40,7 @@ _TR: dict[str, tuple[str, str, str]] = {
 def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
 
+
 _TYPE_COLOR = {
     "conversation": "#60a5fa",
     "incident": "#f87171",
@@ -97,15 +98,30 @@ def _kpi(
     }
 
 
-def compute_inbox_overview(now: datetime | None = None, lang: str = "fr") -> dict[str, object]:
+def _agent_names() -> dict[str, str]:
+    """`{agent_id: display name}` from the registry, for labelling ventilated items."""
+    try:
+        from tessera.agent.registry import list_agents
+
+        return {a.id: a.name for a in list_agents()}
+    except Exception:  # never break the queue over a label lookup
+        return {}
+
+
+def compute_inbox_overview(
+    now: datetime | None = None, lang: str = "fr", agent_id: str | None = None
+) -> dict[str, object]:
     """Return the full Inbox / A traiter overview payload from real items.
 
     ``now`` is the reference instant for all SLA/age computations; it defaults
-    to the current time and is injectable so tests are deterministic.
+    to the current time and is injectable so tests are deterministic. ``agent_id``
+    ventilates the shared queue to one agent's own failed cases (ADR 0015 §Migration E);
+    ``None`` aggregates the whole fleet, each item still carrying its source agent.
     """
     lang = _norm_lang(lang)
     now = now or datetime.now(UTC)
-    items = load_items()
+    items = load_items(agent_id)
+    agent_names = _agent_names()
     open_items = [i for i in items if i.status != "done"]
     done_items = [i for i in items if i.status == "done"]
 
@@ -145,6 +161,8 @@ def compute_inbox_overview(now: datetime | None = None, lang: str = "fr") -> dic
     payload_items = [
         {
             "id": i.item_id,
+            "agent_id": i.agent_id,
+            "agent": agent_names.get(i.agent_id, i.agent_id),
             "priority": _PRIORITY_KEY.get(i.priority, "medium"),
             "type": _TYPE_BUCKET.get(i.category, "other"),
             "title": i.title,

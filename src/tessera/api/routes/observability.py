@@ -1415,14 +1415,17 @@ async def observability_assistant(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/inbox")
-async def observability_inbox(lang: str = "fr") -> dict[str, object]:
+async def observability_inbox(lang: str = "fr", agent: str = "all") -> dict[str, object]:
     """Inbox / À traiter overview (page #24).
 
     Composes the queue posture, the task queue, the by-type distribution and the
-    SLA buckets. Degrades to ``available: false`` on failure.
+    SLA buckets. ``agent`` ventilates the shared queue to one agent's own failed
+    cases (ADR 0015 §Migration E); ``all`` aggregates the fleet. Degrades to
+    ``available: false`` on failure.
     """
     try:
-        return {"available": True, **inbox_mod.compute_inbox_overview(lang=lang)}
+        payload = inbox_mod.compute_inbox_overview(lang=lang, agent_id=_agent_or_none(agent))
+        return {"available": True, "agent": _agent_or_none(agent) or "all", **payload}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.inbox: failed: {exc}\n")
         return {"available": False}

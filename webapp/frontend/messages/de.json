@@ -3935,7 +3935,9 @@
         }
       }
     },
-    "drill": { "chain": "Audit-Journal öffnen" },
+    "drill": {
+      "chain": "Audit-Journal öffnen"
+    },
     "title": "Nachweise & Exporteure",
     "subtitle": "KI-Nachweisartefakte zusammenstellen, signieren, prüfen und exportieren.",
     "tabs": {
@@ -4564,7 +4566,9 @@
         "how": "Konten ohne kürzliche Aktivität."
       }
     },
-    "drill": { "audit": "Audit-Journal öffnen" },
+    "drill": {
+      "audit": "Audit-Journal öffnen"
+    },
     "title": "Rollen & Zugriff",
     "subtitle": "Verwalten Sie Identitäten, Rollen, Berechtigungen und Zugriffe der gesamten Plattform.",
     "actions": {
@@ -5030,7 +5034,9 @@
         "how": "Parameter nach Lebenszyklus-Status gruppiert."
       }
     },
-    "drill": { "audit": "Audit-Journal öffnen" },
+    "drill": {
+      "audit": "Audit-Journal öffnen"
+    },
     "title": "Einstellungen",
     "subtitle": "Konfigurieren Sie Verhalten, Richtlinien und Präferenzen der Tessera-Plattform.",
     "actions": {
@@ -5198,6 +5204,7 @@
       "search": "In Liste suchen…",
       "priority": "Priorität",
       "type": "Typ",
+      "agent": "Agent",
       "status": "Status",
       "assignee": "Zugewiesen an",
       "active": "Aktive Filter",
@@ -6454,5 +6461,9 @@
     "prev": "Vorherige Seite",
     "next": "Nächste Seite",
     "perPage": "Zeilen pro Seite"
+  },
+  "synthetic": {
+    "title": "Demonstrationsdaten",
+    "detail": "deterministischer Referenzdatensatz, nicht aus echtem Verkehr"
   }
 }

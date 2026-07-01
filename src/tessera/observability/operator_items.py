@@ -75,9 +75,14 @@ _VALID_STATUS = {"todo", "progress", "done"}
 
 @dataclass(frozen=True, slots=True)
 class OperatorItem:
-    """One real backlog item derived from a failed evaluation case."""
+    """One real backlog item derived from a failed evaluation case.
+
+    ``agent_id`` is the agent whose *own* eval run produced the failure — real per-agent
+    attribution (ADR 0015 §Migration E, "ventilate the inbox"), not a fabricated split.
+    """
 
     item_id: str
+    agent_id: str
     case_id: str
     category: str
     type_label: str
@@ -163,32 +168,56 @@ def _parse_dt(value: str) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
-def load_items() -> list[OperatorItem]:
-    """Derive the real backlog from failed eval cases, merged with durable state."""
-    snap = load_eval_snapshot()
+def _agent_targets(agent_id: str | None) -> list[str]:
+    """Which agents to source the backlog from: one, or the whole registered fleet."""
+    from tessera.agent.registry import list_agents
+
+    if agent_id:
+        return [agent_id]
+    return [a.id for a in list_agents()]
+
+
+def load_items(agent_id: str | None = None) -> list[OperatorItem]:
+    """Derive the real backlog from failed eval cases, **per-agent attributed**.
+
+    Each item is a case that *this agent's own eval run* failed — real attribution, so the
+    shared triage queue can be ventilated by agent (ADR 0015 §Migration E). With ``agent_id``
+    set, only that agent's items are returned; ``None`` aggregates the whole fleet. An agent
+    with no eval run of its own contributes nothing (honest — never a fabricated split).
+    """
     state = _load_state()
     items: list[OperatorItem] = []
-    for s in snap.sessions:
-        if s.passed:
+    for aid in _agent_targets(agent_id):
+        try:
+            snap = load_eval_snapshot(aid)
+        except FileNotFoundError:
+            continue  # no run for this agent → no items (never fabricate an attribution)
+        # load_eval_snapshot(aid) matches only aid's own report (it raises otherwise), so
+        # every case here is genuinely this agent's failure — assert the invariant cheaply.
+        if snap.agent_id != aid:
             continue
-        item_id = f"{s.case_id}.{s.language}"
-        st = state.get(item_id, {})
-        items.append(
-            OperatorItem(
-                item_id=item_id,
-                case_id=s.case_id,
-                category=s.category,
-                type_label=CATEGORY_LABELS.get(s.category, s.category),
-                title=s.title,
-                language=s.language,
-                source=_SOURCE.get(s.category, "Assistant"),
-                priority=_PRIORITY.get(s.category, "mod"),
-                created_at=_parse_dt(s.started_at),
-                needs_escalation=s.needs_escalation,
-                status=st.get("status", _DEFAULT_STATUS),
-                assignee=st.get("assignee", ""),
+        for s in snap.sessions:
+            if s.passed:
+                continue
+            item_id = f"{aid}.{s.case_id}.{s.language}"
+            st = state.get(item_id, {})
+            items.append(
+                OperatorItem(
+                    item_id=item_id,
+                    agent_id=aid,
+                    case_id=s.case_id,
+                    category=s.category,
+                    type_label=CATEGORY_LABELS.get(s.category, s.category),
+                    title=s.title,
+                    language=s.language,
+                    source=_SOURCE.get(s.category, "Assistant"),
+                    priority=_PRIORITY.get(s.category, "mod"),
+                    created_at=_parse_dt(s.started_at),
+                    needs_escalation=s.needs_escalation,
+                    status=st.get("status", _DEFAULT_STATUS),
+                    assignee=st.get("assignee", ""),
+                )
             )
-        )
     # Most urgent first: crit < high < mod < low, then oldest first.
     order = {"crit": 0, "high": 1, "mod": 2, "low": 3}
     items.sort(key=lambda i: (order.get(i.priority, 9), i.created_at))
@@ -196,5 +225,5 @@ def load_items() -> list[OperatorItem]:
 
 
 def available_item_ids() -> set[str]:
-    """The set of known item ids (for endpoint validation)."""
+    """The set of known item ids across the whole fleet (for endpoint validation)."""
     return {i.item_id for i in load_items()}

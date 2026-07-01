@@ -41,8 +41,9 @@ def _session(
 
 
 class _Snap:
-    def __init__(self, sessions: list[SessionRow]) -> None:
+    def __init__(self, sessions: list[SessionRow], agent_id: str = "support-client") -> None:
         self.sessions = tuple(sessions)
+        self.agent_id = agent_id
 
 
 def test_load_items_keeps_only_failures_and_maps_fields(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -53,20 +54,62 @@ def test_load_items_keeps_only_failures_and_maps_fields(monkeypatch: pytest.Monk
             _session("03", "tool_misuse", passed=False),
         ]
     )
-    monkeypatch.setattr(oi, "load_eval_snapshot", lambda: snap)
+    # One-agent fleet; the snapshot loader is called with that agent id.
+    monkeypatch.setattr(oi, "_agent_targets", lambda _agent_id=None: ["support-client"])
+    monkeypatch.setattr(oi, "load_eval_snapshot", lambda _aid: snap)
     monkeypatch.setattr(oi, "_load_state", dict)
     items = oi.load_items()
     assert [i.case_id for i in items] == ["01", "03"]  # only failures
     pii = next(i for i in items if i.case_id == "01")
+    assert pii.agent_id == "support-client"  # real per-agent attribution
+    assert pii.item_id == "support-client.01.fr"  # id namespaced by agent
     assert pii.priority == "crit"  # pii_leak -> crit
     assert pii.source == "Confidentialite"
     assert pii.status == "todo"  # default when no override
 
 
+def test_load_items_ventilates_by_agent(monkeypatch: pytest.MonkeyPatch) -> None:
+    snaps = {
+        "support-client": _Snap([_session("01", "pii_leak", passed=False)], "support-client"),
+        "recouvrement": _Snap([_session("07", "tool_misuse", passed=False)], "recouvrement"),
+    }
+    monkeypatch.setattr(
+        oi,
+        "_agent_targets",
+        lambda agent_id=None: ([agent_id] if agent_id else ["support-client", "recouvrement"]),
+    )
+    monkeypatch.setattr(oi, "load_eval_snapshot", lambda aid: snaps[aid])
+    monkeypatch.setattr(oi, "_load_state", dict)
+    # The whole-fleet queue carries both agents' failures, each attributed.
+    everyone = oi.load_items()
+    assert {i.agent_id for i in everyone} == {"support-client", "recouvrement"}
+    # Filtering to one agent returns only that agent's items — the ventilation.
+    only_reco = oi.load_items("recouvrement")
+    assert [i.agent_id for i in only_reco] == ["recouvrement"]
+    assert only_reco[0].case_id == "07"
+
+
+def test_load_items_skips_agents_without_a_real_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _loader(aid: str) -> _Snap:
+        if aid == "ghost":
+            raise FileNotFoundError("no run for ghost")
+        return _Snap([_session("01", "pii_leak", passed=False)], aid)
+
+    monkeypatch.setattr(oi, "_agent_targets", lambda _agent_id=None: ["support-client", "ghost"])
+    monkeypatch.setattr(oi, "load_eval_snapshot", _loader)
+    monkeypatch.setattr(oi, "_load_state", dict)
+    items = oi.load_items()
+    # 'ghost' has no run → contributes nothing (never a fabricated attribution).
+    assert {i.agent_id for i in items} == {"support-client"}
+
+
 def test_load_items_merges_durable_state(monkeypatch: pytest.MonkeyPatch) -> None:
     snap = _Snap([_session("01", "pii_leak", passed=False)])
-    monkeypatch.setattr(oi, "load_eval_snapshot", lambda: snap)
-    monkeypatch.setattr(oi, "_load_state", lambda: {"01.fr": {"status": "done", "assignee": "Moi"}})
+    monkeypatch.setattr(oi, "_agent_targets", lambda _agent_id=None: ["support-client"])
+    monkeypatch.setattr(oi, "load_eval_snapshot", lambda _aid: snap)
+    monkeypatch.setattr(
+        oi, "_load_state", lambda: {"support-client.01.fr": {"status": "done", "assignee": "Moi"}}
+    )
     item = oi.load_items()[0]
     assert item.status == "done"
     assert item.assignee == "Moi"
@@ -75,6 +118,7 @@ def test_load_items_merges_durable_state(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_sla_tone_reflects_remaining_time() -> None:
     crit_overdue = oi.OperatorItem(
         item_id="x",
+        agent_id="support-client",
         case_id="x",
         category="pii_leak",
         type_label="",
@@ -91,6 +135,7 @@ def test_sla_tone_reflects_remaining_time() -> None:
     assert crit_overdue.sla_tone(NOW) == "crit"
     fresh_low = oi.OperatorItem(
         item_id="y",
+        agent_id="support-client",
         case_id="y",
         category="overconfidence",
         type_label="",
@@ -106,6 +151,7 @@ def test_sla_tone_reflects_remaining_time() -> None:
     assert fresh_low.sla_tone(NOW) == "ok"
     done = oi.OperatorItem(
         item_id="z",
+        agent_id="support-client",
         case_id="z",
         category="pii_leak",
         type_label="",
@@ -124,6 +170,7 @@ def test_sla_tone_reflects_remaining_time() -> None:
 def _item(case_id: str, priority: str, status: str, *, hours_ago: float) -> oi.OperatorItem:
     return oi.OperatorItem(
         item_id=f"{case_id}.fr",
+        agent_id="support-client",
         case_id=case_id,
         category="pii_leak",
         type_label="t",
@@ -145,7 +192,7 @@ def test_inbox_aggregates_real_items(monkeypatch: pytest.MonkeyPatch) -> None:
         _item("c", "mod", "progress", hours_ago=1),  # assigned to Moi
         _item("d", "crit", "done", hours_ago=5),  # resolved
     ]
-    monkeypatch.setattr(inbox, "load_items", lambda: items)
+    monkeypatch.setattr(inbox, "load_items", lambda *_a, **_k: items)
     payload = inbox.compute_inbox_overview(now=NOW)
     kpis = {k["key"]: k["value"] for k in payload["kpis"]}
     assert kpis["total"] == "3"  # 3 open
@@ -167,7 +214,7 @@ def test_a_faire_aggregates_and_exposes_details(monkeypatch: pytest.MonkeyPatch)
         _item("b", "mod", "progress", hours_ago=1),  # in progress, assigned Moi
         _item("c", "crit", "done", hours_ago=5),  # resolved
     ]
-    monkeypatch.setattr(agent_a_faire, "load_items", lambda: items)
+    monkeypatch.setattr(agent_a_faire, "load_items", lambda *_a, **_k: items)
     payload = agent_a_faire.compute_agent_a_faire(now=NOW)
     kpis = {k["key"]: k["value"] for k in payload["kpis"]}
     assert kpis["total"] == "2"  # 2 open (a, b)

@@ -28,6 +28,7 @@ import { type ReactNode, useState } from "react";
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
@@ -109,6 +110,7 @@ export function IncidentsOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} />
+      <SyntheticNotice signalId="incidents" />
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}

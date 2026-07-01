@@ -912,9 +912,13 @@ export async function fetchParametersOverview(
 export async function fetchInboxOverview(
   lang: string,
   signal?: AbortSignal,
+  agent?: string,
 ): Promise<InboxOverview> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
-  return request(`/observability/inbox${q}`, { signal }, InboxOverviewSchema);
+  const params = new URLSearchParams();
+  if (lang) params.set("lang", lang);
+  if (agent && agent !== "all") params.set("agent", agent);
+  const q = params.toString();
+  return request(`/observability/inbox${q ? `?${q}` : ""}`, { signal }, InboxOverviewSchema);
 }
 
 /** The operator control-cases queue for the overview triage panel (live backlog). */

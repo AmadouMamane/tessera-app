@@ -3935,7 +3935,9 @@
         }
       }
     },
-    "drill": { "chain": "Open the audit log" },
+    "drill": {
+      "chain": "Open the audit log"
+    },
     "title": "Proofs & exporters",
     "subtitle": "Assemble, sign, verify and export the AI proof artifacts.",
     "tabs": {
@@ -4564,7 +4566,9 @@
         "how": "Accounts with no recent activity."
       }
     },
-    "drill": { "audit": "Open the audit log" },
+    "drill": {
+      "audit": "Open the audit log"
+    },
     "title": "Roles & access",
     "subtitle": "Manage identities, roles, permissions and access across the whole platform.",
     "actions": {
@@ -5030,7 +5034,9 @@
         "how": "Parameters grouped by lifecycle state."
       }
     },
-    "drill": { "audit": "Open the audit log" },
+    "drill": {
+      "audit": "Open the audit log"
+    },
     "title": "Settings",
     "subtitle": "Configure the behaviour, policies and preferences of the Tessera platform.",
     "actions": {
@@ -5198,6 +5204,7 @@
       "search": "Search the list…",
       "priority": "Priority",
       "type": "Type",
+      "agent": "Agent",
       "status": "Status",
       "assignee": "Assigned to",
       "active": "Active filters",
@@ -6454,5 +6461,9 @@
     "prev": "Previous page",
     "next": "Next page",
     "perPage": "Rows per page"
+  },
+  "synthetic": {
+    "title": "Demonstration data",
+    "detail": "a deterministic reference fixture, not from real traffic"
   }
 }
