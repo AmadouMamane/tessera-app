@@ -241,6 +241,79 @@ Add `language` + `model` to the `Scope` UI. Because signals *declare* dimensions
 field on `Scope` + registry entries — **no route sweep**. Prove the cube agent × time ×
 language end to end.
 
+## Performance budget & caching (first-class — designed and built from Phase A)
+
+The current cockpit is fast for exactly one reason: it reads in-process files. Moving to
+the spine replaces the per-page fan-out with network + query round-trips — **Qualité IA
+fires 37 `useQuery`, Vue d'ensemble 24, Sécurité 16**, each re-fired on every poll (5–30 s),
+every agent switch, and every temporal scrub. Done naïvely that regresses the UI from
+"instant" to seconds. **Performance is therefore a first-class requirement of this ADR, not
+a follow-up: the caching and batching below ship in Phase A, before any source swap.** The
+risk is **data-load latency, not React render** (rendering is unchanged).
+
+Framed positively: today's 37 separate HTTP calls that each re-parse whole jsonl files on
+every poll are themselves wasteful. Done right, the spine is **as fast or faster** — the
+migration is the moment to fix the fan-out, not just a risk to absorb.
+
+### Budget (the contract — measured, and a gate on each phase)
+
+| Interaction | Target (p95) | How it is met |
+|---|---|---|
+| Cold dashboard TTI (all KPIs populated) | **< 500 ms** | one batched snapshot query; Prometheus aggregates |
+| Warm reload / poll refresh | **< 150 ms** | served from cache (stale-while-revalidate) |
+| Agent switch (scope change) | **< 200 ms** | cache hit for warm scopes; ≤ 1 upstream query |
+| Temporal scrub step | **< 100 ms perceived** | debounce + `keepPreviousData` + immutable past-instant cache |
+| Backend snapshot compute (1 scope, all signals) | **< 300 ms** | shared spine reads, no per-signal fan-out |
+| Upstream spine queries **per snapshot** | **≤ 1 PromQL + ≤ 1 Langfuse** | not 24–37; Langfuse only for trace-detail signals |
+| Concurrent viewers of one scope | **1 upstream query / TTL** | request coalescing (single-flight) |
+
+A snapshot that misses budget **fails the phase gate**. The endpoint instruments its own p95
+latency + cache-hit-rate as Prometheus metrics — we dogfood the spine.
+
+### Mandatory patterns (in order of leverage)
+
+1. **Read-model split — aggregates on Prometheus, detail on Langfuse.** Every dashboard
+   *number* (SLO, rate, quantile, cost, count, trend) comes from **Prometheus** — a
+   pre-aggregated TSDB built for range + label queries. **Langfuse is queried only for detail**
+   (opening a trace, the Traces card, drill-downs), never to compute an aggregate on the hot
+   path. *Rule: the hot path never pulls raw traces to sum a number.*
+2. **Batched snapshot endpoint (the anti-fan-out).** `GET /observability/snapshot?scope=…`
+   returns **all** signals for a scope in one backend pass that shares the underlying reads
+   (one multi-metric PromQL query; at most one Langfuse query for the trace-summary card). The
+   frontend fires **one** React-Query; each card `select`s its slice, so cards still render
+   independently with **one** network round-trip. Collapses 37 → 1 — the single biggest lever.
+3. **Read-through cache with single-flight + stale-while-revalidate.** Server-side cache keyed
+   by `(scope, time-bucket)`, TTL = poll cadence (~10 s live). Concurrent requests for the same
+   key **coalesce onto one** in-flight upstream query; the cached value is served instantly and
+   revalidated in the background, so a poll never blocks on the network.
+4. **Immutable past instants (the temporal super-power).** An as-of-T read of a *past* instant
+   can never change → **cache it forever**. Scrubbing back to any visited instant is a cache
+   hit (~0 ms). With scrub debounce (~200 ms after drag stops) and `keepPreviousData` (already
+   used), temporal navigation stays smooth even on a cold instant.
+5. **Pre-aggregation (recording rules) + bounded, adaptive ranges.** Per-agent aggregates (SLO
+   over 5m/1h, cost, error rate) are **Prometheus recording rules** computed at scrape time →
+   O(1) reads, not heavy on-read PromQL. The as-of-T window has a max default range, and the
+   PromQL `step` scales with the window (coarser step for wider windows) so a query never
+   returns 10k points to draw a 200 px sparkline.
+6. **Langfuse cardinality discipline.** `agent_id` / `language` / `model` land as **indexed**
+   trace metadata/tags so filters are index scans, not full scans; trace-detail queries are
+   always `limit`- and time-bounded — never "fetch all, then aggregate".
+7. **Honest degradation is also a latency guard.** Each signal has an upstream **timeout**
+   (~800 ms); on a slow/unreachable spine the snapshot returns that signal `unavailable`
+   (honest empty) rather than blocking the page. The dashboard paints what is ready and badges
+   the rest — never held hostage by one slow query.
+
+### Folded into the phases (so it is built from day one, not bolted on)
+
+- **Phase A** ships the **snapshot endpoint + `(scope, time-bucket)` cache key + single-flight**,
+  initially reading the *current* stores. Batching and caching therefore exist **before** any
+  source swap; Phase C only changes what the adapter reads underneath — the fast read model is
+  already in place and gated by the budget table.
+- **Phase B** adds the **Prometheus recording rules** for per-agent aggregates alongside the
+  metric-label completion.
+- **Phase C** adapters honor the cache + single-flight and enforce the aggregates-on-Prometheus
+  / detail-on-Langfuse split; the budget table gates the phase.
+
 ## Consequences
 
 **Positive.** One source of truth (the runtime spine); dimensions are declarative and
@@ -251,8 +324,10 @@ cannot masquerade as real; honesty markers are data-driven, not hand-maintained;
 **Negative / costs.** The cockpit gains a **hard runtime dependency** on the obs stack
 (Langfuse/Prometheus must be up); we lose offline simplicity (mitigated by honest-empty
 degradation, not fabrication). Query latency shifts from in-process reads to Langfuse API /
-PromQL — needs caching + range discipline. Coupling to the Langfuse query API. Multi-day,
-multi-signal migration; must land phased with green gates each step.
+PromQL — **addressed by design** in §Performance (batched snapshot + read-through cache +
+Prometheus-for-aggregates), which is built from Phase A and gated by a budget, not deferred.
+Coupling to the Langfuse query API. Multi-day, multi-signal migration; must land phased with
+green gates each step.
 
 **Neutral.** The tamper-evident ledgers (`audit.log`, S1 journal) are unchanged — correctly.
 
@@ -269,11 +344,16 @@ multi-signal migration; must land phased with green gates each step.
 
 ## Open questions / risks
 
-- **Langfuse query performance** for high-cardinality metadata filters + time windows;
-  needs a caching layer and sane default ranges.
+_Performance is no longer an open question — it is decided in §Performance (budget +
+mandatory patterns, built from Phase A). What remains open:_
+
 - **Score model in Langfuse**: confirm per-trace scores support the metadata filters we need
-  (agent_id, language) at the volume we run.
-- **GDPR erasure across the spine** (ADR 0007, #180): deletion must reach Langfuse + drop
-  the corresponding metric series, not just a local file — design the erasure path in Phase D.
-- **Prometheus retention** vs the as-of-T (ADR 0011) horizon: PromQL range must cover the
-  cockpit's history window, or long-horizon reads fall back to Langfuse.
+  (agent_id, language) at our volume, and that indexed-tag filtering meets the budget.
+- **GDPR erasure across the spine** (ADR 0007, #180): deletion must reach Langfuse + drop the
+  corresponding metric series (and evict the read-through cache), not just a local file —
+  design the erasure path in Phase D.
+- **Prometheus retention vs the as-of-T horizon** (ADR 0011): scrape retention must cover the
+  cockpit's history window; beyond it, long-horizon reads fall back to Langfuse (slower path,
+  outside the hot budget — acceptable for deep history, flagged in the UI).
+- **Recording-rule cardinality**: per-agent × per-language × per-model recording rules must
+  stay within a sane series budget; cap the pre-aggregated dimension combinations.
