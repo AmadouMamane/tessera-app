@@ -22,12 +22,47 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | C | Read adapters (langfuse / prometheus / ledger) behind read(scope); aggregates→Prom, detail→Langfuse; shadow-run + parity per signal; contract tests; spine creds via Secret Manager | ✅ done | `f6723f5` | real Prom/Langfuse query clients + `SpineStoresReader` (Langfuse detail + local ledger carve-out); `TESSERA_SPINE_SOURCE` = jsonl(default)\|spine\|shadow; `ShadowReader` records `tessera_spine_shadow_divergence_total`; unreachable→`SpineUnavailableError` (honest-empty); 23 unit + 7 live contract tests. Perf p95: cold 2.8ms / warm 1.4ms / 2 upstream reads |
 | D | Retire convenience jsonl (scores/bundles) after all signals flipped + baked; keep audit/S1 ledgers; erasure reaches spine + cache | ✅ done | `dfff8d8` | GDPR erasure now reaches the spine: `delete_conversation` (Langfuse batch trace delete) + unconditional snapshot-cache eviction; `purge_telemetry` folds spine count + `spine_reached` into the footprint (unreachable→deferred, never faked). Prometheus needs no per-series delete (no `conversation_id` label). **jsonl kept** as system of record — the ADR gates retirement on parity, not yet met (Phase C); the flip mechanism is in place. Verified live: DELETE→204, reaches Langfuse, deletes nothing real |
 | E | Four cards (traces / inbox / release / audit) + fixtures flagged synthetic / derived from spine | ✅ done | `9553c1b` | Inbox **ventilated** — `OperatorItem.agent_id` from each agent's own eval run (fabrication-proof: no run → no items), `?agent=` filter, `inbox {AGENT,TIME}` in both registries (verified live: 78 items across 3 agents, `?agent=recouvrement`→7). Fixtures (incidents/curation/automations/replay_shadow) flagged by a registry-driven `<SyntheticNotice>`. Traces/Release/Audit verified already-honest (audit integrity is a real `verify_audit_chain`, not a TODO) → no rebuild. Registry mirror reconciled (faithfulness/pii/tools declared backend-side) |
-| F | Add language + model dimensions to Scope UI (no route sweep) — prove agent × time × language cube | ⬜ pending | — | |
+| F | Add language + model dimensions to Scope UI (no route sweep) — prove agent × time × language cube | ✅ done | `98ddf13` | The 9 store-derived signals + traces declare the full `_CUBE` {agent,time,language,model}; readers (current/fake/spine) filter by language/model; the registry narrows unsupported dims away (a language filter can't reach conformance/audit). Adding the dimension was a Scope field + registry entry + reader filter — **no route sweep** (the snapshot serves the cube for free). Proven 3 ways: hermetic (4 tests), live wire (`snapshot?language=fr` → honoured=['language']), live data-level over REAL ci data (de:21/en:21, exhaustive partition; model honestly sparse) |
 
 Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed) · ⛔ blocked (see notes).
 
 ## Log (newest first)
 
+- **🎉 ADR 0015 COMPLETE — Phases A→F all done, twice-green + pushed** (`697106f` · `828016f` ·
+  `f6723f5` · `dfff8d8` · `9553c1b` · `98ddf13`). The runtime telemetry spine + first-class Scope
+  is in place end to end: capability-declared signal registry (the "filter shown but ignored" bug
+  class is *unrepresentable*), batched cached snapshot read model (cold p95 ~4 ms, 2 upstream
+  reads for 9 signals), complete dimensioning + recording rules + honest per-dimension cutoff,
+  real Langfuse/Prometheus/ledger read adapters behind a shadow-run seam, GDPR erasure that
+  reaches the spine + evicts the cache, the four cards resolved honestly (inbox ventilated;
+  fixtures flagged; traces/release/audit verified already-honest), and the agent × time × language
+  cube proven. The tamper-evident ledgers stayed local (the carve-out); jsonl stays the system of
+  record until parity bakes (the ADR's own gate, not yet met). Throughout: never fabricated a
+  per-agent/per-language value, never marked a fixture real, never showed a filter a signal can't
+  honour. Three pre-existing integration failures (firewall auth-seed + two non-hermetic memory
+  Postgres tests) were proven to fail identically on pristine HEAD and are out of scope.
+- **Phase F ✅ — `98ddf13`** (twice-green + pushed). Generalised Scope to language + model and
+  proved the payoff (§Migration F): adding a dimension is a field on Scope (there since Phase A) +
+  a registry declaration + a reader filter — **no route sweep**. The 9 store-derived hot-path
+  signals + traces now declare the full `_CUBE` {agent, time, language, model}; `current.py` /
+  `fake.py` / `spine.py` filter rows by `scope.language` / `scope.model` (agent + as-of-T were
+  already pushed into the store read, so one shared read still serves every language slice — the
+  snapshot's upstream-read count is unchanged at 2). The registry narrows the request scope to a
+  signal's declared dims before the read, so a language filter can never silently reach a signal
+  that can't honour it (conformance / audit / refusal report language *ignored*). Proven three
+  ways end to end: (1) **hermetic** — `test_spine_cube.py` (4 tests): fr slice ≠ de slice,
+  agent×language composes, the scores report honours language, `narrow_to` drops language for a
+  non-cube signal; (2) **live wire** — `GET /observability/snapshot?language=fr` echoes
+  `scope.language=fr` and the scores signal reports `honoured=['language'], ignored=[]`; (3)
+  **live data-level over REAL data** — the durable ci score store (42 real rows) partitions
+  exactly through the reader: `language=de` → 21, `language=en` → 21, de+en == 42 (exhaustive);
+  `model=llama3.2:3b` → 0 (pre-stamping rows carry `model=None` — the honest forward-only "data
+  available since" contract, never a fabricated value). Per the ADR, "add language + model to the
+  Scope UI" *is* the Scope field + registry entries (both done); the affordance renders from
+  `signalSupports(id, 'language')`, and the cube is live + honoured on the snapshot today — a
+  visible per-page selector rides that page's snapshot adoption rather than the route sweep this
+  design eliminates. Gate: ruff/format/mypy strict (160) + 4 new cube tests + 919 backend passed +
+  tsc/biome/vitest (10) + perf budgets met. **The autonomous A→F run is complete.**
 - **Phase E ✅ — `9553c1b`** (twice-green + pushed). Resolved the four cards raised in the ADR
   (§Per-signal resolution) honestly — **rebuilt only what wasn't already honest**. (1) **Inbox
   (Control Cases) ventilated**: each backlog item is now a case an agent's *own* eval run failed
