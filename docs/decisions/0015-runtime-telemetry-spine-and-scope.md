@@ -131,6 +131,14 @@ Every cockpit signal is a **derivation over turns**, parameterised by `Scope`:
 | Governance (routing/handoff/proposed/release/deploy) | S1 journal → **keep (ledger)** | S1 journal (hash-chained, `agent_id`) | Ledger adapter, filtered |
 | Fixtures (incidents/curation/automations/replay-shadow) | deterministic fixture | derive from spine where a real fact exists; else `synthetic:true` | registry marks `synthetic` |
 
+**The cockpit reads exactly two backends — Prometheus + Langfuse (+ the local ledgers).**
+The rest of the stack is peripheral and needs **nothing**: **OTel** is the *write* path (the
+app emits spans via `OTLPSpanExporter` to a local endpoint — Phase B only adds attributes, no
+auth); **Phoenix** (`PHOENIX_URL`, default `localhost:16006`) and **Grafana** (`GRAFANA_URL`,
+default `localhost:13000`) are **deep-link destinations only** — the cockpit never queries them
+(it reads Prometheus directly, not through Grafana), they are self-hosted with no auth the
+cockpit uses, and they may be **down without affecting the cockpit** (just dead link buttons).
+
 ### The `Scope` value object
 
 - Backend: `src/tessera/observability/spine/scope.py` — `Scope(at, agent_id, language,
