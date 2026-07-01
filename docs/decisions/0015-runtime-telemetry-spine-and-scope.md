@@ -314,6 +314,90 @@ latency + cache-hit-rate as Prometheus metrics — we dogfood the spine.
 - **Phase C** adapters honor the cache + single-flight and enforce the aggregates-on-Prometheus
   / detail-on-Langfuse split; the budget table gates the phase.
 
+## Testing, migration safety & security (first-class — designed from Phase A)
+
+Performance is not the only cross-cutting requirement a runtime-connected cockpit needs
+before it swaps a live source. Testing, data migration, safe rollback and security are peers
+of §Performance and are **decided here, not deferred**.
+
+### 1. Testing strategy — keep the 823 tests offline and green
+
+- **Adapter seam.** The `read(scope)` adapters (`langfuse.py` / `prometheus.py` / `ledger.py`)
+  sit behind one interface. Tests inject an **in-memory fake adapter** seeded with canned facts,
+  so unit tests stay **offline, deterministic and fast** — no Langfuse/Prometheus required. The
+  existing jsonl fixtures become the fake adapter's seed data during migration, so the current
+  823 tests carry over unchanged.
+- **What unit tests cover.** `Scope` parsing/serialisation, the registry's dimension
+  intersection + `honoured/ignored` report, `synthetic` flagging, and the snapshot endpoint's
+  shape (golden test). The registry-driven UI is tested by asserting badges/filters render from
+  the capability descriptors (not hand-placed).
+- **Contract tests (integration tier).** A throwaway spine (a `docker-compose` test profile
+  with ephemeral Langfuse + Prometheus) verifies the adapters actually speak Langfuse queries /
+  PromQL correctly. Tagged `pytest.mark.integration`, gated separately like today's integration
+  suite — never in the fast loop.
+- **Frontend.** MSW (or fixtures) for the single snapshot endpoint; assert cards `select` their
+  slice and render org-wide/synthetic badges from the registry.
+
+### 2. Historical backfill — honest per-dimension "data available since"
+
+Stamping is forward-only (spans carry `agent_id` from now; §Migration B). History therefore
+needs an explicit stance, never fabrication:
+
+- **Langfuse traces**: backfill `agent_id` (+ language/model) onto existing traces via the
+  update API by joining `trace → conversation_id → transcript responder` — the exact mirror of
+  `scripts/backfill_agent_attribution.py`. Where the join resolves, history becomes per-agent;
+  where it does not, the trace stays org-only.
+- **Prometheus**: a TSDB **cannot** be cleanly backfilled with new historical labels → per-agent
+  metric series start at the label-completion deploy. Older per-agent aggregates come from the
+  Langfuse trace backfill, or are honestly org-only before the cutoff.
+- **The contract**: each dimension exposes a **"data available since" boundary** (extends ADR
+  0011's `data-range`), and an as-of-T read before that boundary reads org-wide (or empty),
+  clearly marked in the UI — the cockpit never pretends a dimension existed before it was stamped.
+
+### 3. Migration safety — per-signal source flag + shadow, so every step is reversible
+
+- **`source` per signal** in the registry: `jsonl | spine | shadow`. A signal is flipped
+  spine→jsonl **instantly via config/env, no deploy**, if a spine read is wrong or slow.
+- **Shadow mode** (dark launch): run *both* sources for a signal, **serve jsonl**, and log the
+  divergence. A signal graduates to `spine` only after it holds **parity** over a bake period.
+  This is how a live signal migrates without a user-visible regression.
+- **Global kill-switch**: "spine off" → every signal falls back to jsonl / honest-empty for
+  incident response. jsonl is retired (§Migration D) only once **all** signals have flipped and
+  held parity — the transitional dual-run is the safety net, not a smell.
+
+### 4. Security & privacy
+
+- **Authz.** The snapshot endpoint enforces the **same RBAC as today's routes (ADR 0009)**:
+  scope is a *filter*, never a privilege escalation — an operator sees only what their role
+  allows, and choosing an agent scope can never widen access.
+- **Credentials.** Langfuse API keys + Prometheus auth live in **Secret Manager / env, never in
+  the repo** (CLAUDE.md). Only the FastAPI backend talks to Langfuse/Prometheus; **the browser
+  never holds a spine key** — it calls the snapshot endpoint only.
+- **PII.** Langfuse traces hold conversation content (PII). The snapshot returns **aggregates,
+  not raw payloads**; trace drill-down is authz-gated **and** audit-logged; GDPR erasure reaches
+  Langfuse + evicts the read-through cache (§Open questions, §Migration D).
+
+### 5. Prometheus ↔ Langfuse consistency
+
+- They can disagree — Prometheus counts every scrape; Langfuse may **sample** traces. Rule: a
+  **canonical source per fact** — aggregates are canonical on **Prometheus**, trace detail is
+  canonical on **Langfuse**; the two are never mixed for the *same* number.
+- Where a card shows a Prometheus aggregate next to a linked Langfuse detail list, the expected
+  skew (sampling) is documented and the UI reconciles by using the same time window; a periodic
+  **consistency probe** compares a known aggregate from both and alerts on drift beyond a
+  threshold — we dogfood the reconciliation.
+
+### Folded into the phases
+
+- **Phase A**: adapter seam + fake adapter (tests stay green); registry `source` flag +
+  shadow-mode scaffolding; snapshot-endpoint RBAC.
+- **Phase B**: record the stamping cutoff → per-dimension "available since"; the Langfuse trace
+  backfill script.
+- **Phase C**: shadow-run each signal, flip on parity; contract tests vs the ephemeral spine;
+  wire spine credentials via Secret Manager.
+- **Phase D**: erasure reaches spine + cache; retire jsonl only after all signals flipped and
+  the bake period passed.
+
 ## Consequences
 
 **Positive.** One source of truth (the runtime spine); dimensions are declarative and
@@ -344,8 +428,9 @@ green gates each step.
 
 ## Open questions / risks
 
-_Performance is no longer an open question — it is decided in §Performance (budget +
-mandatory patterns, built from Phase A). What remains open:_
+_Performance, testing, migration safety and security are no longer open — they are decided
+in §Performance and §Testing, migration safety & security (built from Phase A). What remains
+open is implementation detail:_
 
 - **Score model in Langfuse**: confirm per-trace scores support the metadata filters we need
   (agent_id, language) at our volume, and that indexed-tag filtering meets the budget.
