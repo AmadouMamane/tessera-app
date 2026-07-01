@@ -95,6 +95,33 @@ class LangfuseAdapter:
         rows = _rows(self._get("/api/public/traces", params))
         return [r for r in rows if _matches_agent(r.get("metadata"), scope.agent_id)]
 
+    def trace_ids_for_conversation(self, conversation_id: str) -> list[str]:
+        """Every Langfuse trace id whose ``sessionId`` is this conversation (erasure lookup).
+
+        The turn root span sets ``sessionId = conversation_id`` (Phase C mapping), so a session
+        filter recovers exactly the subject's traces — the PII-bearing rows GDPR erasure targets.
+        """
+        if not conversation_id:
+            return []
+        rows = _rows(
+            self._get("/api/public/traces", {"sessionId": conversation_id, "limit": "100"})
+        )
+        return [str(row["id"]) for row in rows if row.get("id")]
+
+    def delete_conversation(self, conversation_id: str) -> int:
+        """Delete every Langfuse trace (and its scores) for a conversation; return the count.
+
+        The subject's turns live in Langfuse traces (input/output/metadata), so a right-to-erasure
+        request (GDPR Art. 17, ADR 0015 §Migration D) must reach here, not only the local file.
+        Returns 0 when the subject has no traces (nothing to erase); an unreachable Langfuse
+        raises :class:`SpineUnavailableError` so the caller can record it and retry.
+        """
+        trace_ids = self.trace_ids_for_conversation(conversation_id)
+        if not trace_ids:
+            return 0
+        self._delete("/api/public/traces", {"traceIds": trace_ids})
+        return len(trace_ids)
+
     def _get(self, path: str, params: dict[str, str]) -> dict[str, object]:
         url = f"{self._config.host}{path}?{urllib.parse.urlencode(params)}"
         token = base64.b64encode(
@@ -110,6 +137,24 @@ class LangfuseAdapter:
             msg = f"langfuse unreachable at {self._config.host}: {exc}"
             raise SpineUnavailableError(msg) from exc
         return payload if isinstance(payload, dict) else {}
+
+    def _delete(self, path: str, body: dict[str, object]) -> None:
+        url = f"{self._config.host}{path}"
+        token = base64.b64encode(
+            f"{self._config.public_key}:{self._config.secret_key}".encode()
+        ).decode()
+        request = urllib.request.Request(  # noqa: S310 — self-hosted spine
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            method="DELETE",
+            headers={"Authorization": f"Basic {token}", "Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self._timeout_s):  # noqa: S310
+                return
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+            msg = f"langfuse delete failed at {self._config.host}: {exc}"
+            raise SpineUnavailableError(msg) from exc
 
 
 def _clamp(limit: int) -> int:

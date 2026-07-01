@@ -80,6 +80,16 @@ class TestLangfuseContract:
         rows = LangfuseAdapter(timeout_s=6.0).traces(Scope(agent_id="support-client"), limit=5)
         assert isinstance(rows, list)
 
+    def test_erasure_lookup_is_well_formed_and_deletes_nothing_real(self) -> None:
+        _require_langfuse()
+        # A synthetic conversation id that cannot exist: the session lookup must return an empty
+        # list and delete_conversation must be a no-op (0) — proving the erasure path speaks the
+        # live API without ever deleting a real subject's traces in the contract suite.
+        adapter = LangfuseAdapter(timeout_s=6.0)
+        synthetic = "contract-erasure-probe-does-not-exist-0000"
+        assert adapter.trace_ids_for_conversation(synthetic) == []
+        assert adapter.delete_conversation(synthetic) == 0
+
 
 class TestSpineReaderContract:
     def test_audit_entries_read_local_ledger(self) -> None:

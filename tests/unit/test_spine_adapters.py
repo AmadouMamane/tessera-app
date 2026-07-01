@@ -65,6 +65,36 @@ class TestLangfuseHelpers:
         assert config.public_key
 
 
+class TestLangfuseDeletion:
+    """The GDPR erasure primitive (ADR 0015 §Migration D), offline via stubbed HTTP."""
+
+    def test_delete_conversation_deletes_found_traces(self) -> None:
+        adapter = LangfuseAdapter()
+        deleted: list[dict[str, object]] = []
+        # Stub the two HTTP legs: session lookup returns two traces; delete records the body.
+        adapter._get = lambda _path, _params: {  # type: ignore[method-assign]
+            "data": [{"id": "t1"}, {"id": "t2"}]
+        }
+        adapter._delete = lambda _path, body: deleted.append(body)  # type: ignore[method-assign]
+        assert adapter.delete_conversation("conv-1") == 2
+        assert deleted == [{"traceIds": ["t1", "t2"]}]
+
+    def test_delete_conversation_no_traces_is_noop(self) -> None:
+        adapter = LangfuseAdapter()
+        called: list[str] = []
+        adapter._get = lambda _path, _params: {"data": []}  # type: ignore[method-assign]
+        adapter._delete = lambda _path, _body: called.append("delete")  # type: ignore[method-assign]
+        assert adapter.delete_conversation("absent") == 0
+        assert called == []  # nothing to erase → the DELETE leg never fires
+
+    def test_delete_conversation_empty_id_is_noop(self) -> None:
+        adapter = LangfuseAdapter()
+        called: list[str] = []
+        adapter._get = lambda _path, _params: called.append("get") or {}  # type: ignore[method-assign]
+        assert adapter.delete_conversation("") == 0
+        assert called == []  # an empty subject id never even queries
+
+
 class TestSpineReaderMapping:
     def test_scores_map_from_langfuse(self) -> None:
         reader = SpineStoresReader(
