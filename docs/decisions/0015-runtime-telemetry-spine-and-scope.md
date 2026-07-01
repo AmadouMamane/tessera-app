@@ -370,9 +370,14 @@ needs an explicit stance, never fabrication:
 - **Authz.** The snapshot endpoint enforces the **same RBAC as today's routes (ADR 0009)**:
   scope is a *filter*, never a privilege escalation — an operator sees only what their role
   allows, and choosing an agent scope can never widen access.
-- **Credentials.** Langfuse API keys + Prometheus auth live in **Secret Manager / env, never in
-  the repo** (CLAUDE.md). Only the FastAPI backend talks to Langfuse/Prometheus; **the browser
-  never holds a spine key** — it calls the snapshot endpoint only.
+- **Credentials — none are external.** The stack is **self-hosted**: Prometheus has **no auth**
+  (a localhost scrape target), and Langfuse uses **fixed local project keys** already present as
+  env defaults (`LANGFUSE_HOST=localhost:3900`, `LANGFUSE_PUBLIC_KEY=pk-lf-claude-public`, …) that
+  **already work today** — the current Traces card queries Langfuse `/api/public/traces` with them.
+  So the local/dev spine needs **zero credentials to obtain**. In the deployed profile (ADR 0014)
+  those same keys resolve from **Secret Manager**, never the repo (CLAUDE.md). Only the FastAPI
+  backend talks to the spine; **the browser never holds a spine key** — it calls the snapshot
+  endpoint only.
 - **PII.** Langfuse traces hold conversation content (PII). The snapshot returns **aggregates,
   not raw payloads**; trace drill-down is authz-gated **and** audit-logged; GDPR erasure reaches
   Langfuse + evicts the read-through cache (§Open questions, §Migration D).
@@ -425,9 +430,11 @@ reserved for genuine blockers, never for routine progression.
 Halt and write a clear status report **only** when:
 - a phase cannot reach a **green gate after 3 repair attempts** → do **not** commit/push a broken
   phase; report the failing check;
-- a **genuine external blocker** it cannot self-provide is hit — a missing credential (Langfuse
-  API key, Prometheus auth), an unrunnable service, or a decision needing business/human input →
-  state **exactly** what is needed to proceed;
+- a **genuine external blocker** it cannot self-provide is hit — e.g. the local obs stack
+  (Langfuse `:3900` / Prometheus `:19090`) is not running and cannot be started, or a decision
+  needs business/human input. **Credentials are not a blocker**: the local spine is self-hosted
+  with fixed local keys already in the env (Prometheus needs none). → state **exactly** what is
+  needed to proceed;
 - honesty would be violated — **never** weaken a test, fabricate data, or mark a fixture real to
   force green (§Decision, project rule).
 
