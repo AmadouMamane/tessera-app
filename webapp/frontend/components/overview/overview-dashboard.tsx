@@ -94,6 +94,7 @@ import {
   toneBg,
   toneText,
 } from "@/lib/overview";
+import { isOrgWide } from "@/lib/signal-registry";
 
 const POLL_MS = 15_000;
 const POLL_FAST_MS = 10_000;
@@ -924,10 +925,11 @@ function KpiCard({
 // Critical controls table
 // ---------------------------------------------------------------------------
 
-/** Controls whose source is the shared guard policy, not a per-agent substrate:
- * a fixed-corpus probe of the CURRENT policy is identical for every agent, so under
- * an agent scope it is honestly marked org-wide rather than re-read per agent. */
-const ORG_WIDE_CONTROL_IDS = new Set(["refusal", "firewall"]);
+// Which controls are org-wide (a fixed-corpus probe of the shared policy, identical for
+// every agent) is no longer hand-listed here: it is *declared* in the signal registry
+// (`lib/signal-registry` → `isOrgWide`), the single source of honesty truth mirrored from
+// the backend `capabilities.py`. The badge below reads that declaration, so the org-wide
+// marker can never drift from what a signal can actually be sliced by (ADR 0015).
 
 function CriticalControlsTable({
   controls,
@@ -1014,7 +1016,7 @@ function CriticalControlsTable({
                           {/* A shared-policy probe does not vary by agent: under an
                             agent scope it carries an honest "org-wide" badge rather
                             than pretending to be that agent's own number. */}
-                          {agentScoped && ORG_WIDE_CONTROL_IDS.has(c.id) ? (
+                          {agentScoped && isOrgWide(c.id) ? (
                             <span
                               title={tas("orgWideHint")}
                               className="inline-flex cursor-help items-center rounded border border-[var(--border)] bg-[var(--muted)]/40 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-[var(--muted-foreground)]"

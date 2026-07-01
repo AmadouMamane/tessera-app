@@ -14,10 +14,11 @@ from dataclasses import asdict
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
+from tessera.api.security import require_bearer
 from tessera.memory import transcript
 from tessera.observability import (
     ablation as ablation_mod,
@@ -126,6 +127,8 @@ from tessera.observability.eval.ensemble import evaluate_ensemble
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.scores import persisted_scores, recent_scores
 from tessera.observability.eval.sycophancy import detect_sycophancy
+from tessera.observability.spine.scope import Scope
+from tessera.observability.spine.snapshot import compute_snapshot
 
 router = APIRouter(tags=["observability"])
 
@@ -292,6 +295,29 @@ async def observability_scores(at: str | None = None, agent: str = "all") -> dic
     ``agent`` scopes the scores to one agent's turns (``all`` = org view).
     """
     return {"scores": _scores_for(at, _agent_or_none(agent)), "as_of": at, "agent": agent}
+
+
+@router.get("/observability/snapshot", dependencies=[Depends(require_bearer)])
+async def observability_snapshot(
+    at: str | None = None,
+    agent: str = "all",
+    language: str | None = None,
+    model: str | None = None,
+    signals: str | None = None,
+) -> dict[str, object]:
+    """Batched, cached snapshot of every scope-varying signal in one pass (ADR 0015).
+
+    Collapses the ~24-37 per-page fetches into a single round-trip: all hot-path signals
+    for one :class:`Scope`, computed over shared store reads and served through a
+    read-through cache with single-flight. Each signal carries a ``report`` of which
+    dimensions it honoured / ignored, so the UI badges org-wide / synthetic / unavailable
+    from data — the filter-shown-but-ignored state is unrepresentable. ``?signals=`` selects
+    a comma-separated subset. Scope is a *filter*, never a privilege escalation: RBAC is the
+    same ``require_bearer`` posture as the other read surfaces (no-op without a token).
+    """
+    scope = Scope.from_query({"at": at, "agent": agent, "language": language, "model": model})
+    ids = tuple(part.strip() for part in signals.split(",") if part.strip()) if signals else None
+    return await compute_snapshot(scope, ids)
 
 
 @router.get("/observability/timeline")
