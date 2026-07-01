@@ -19,7 +19,7 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 |---|---|---|---|---|
 | A | Scope object + registry + capabilities + snapshot endpoint + cache/single-flight (reads current stores) | ✅ done | `697106f` | kills the silent-ignore bug class; fast read model in place before any source swap. Perf p95: cold 25ms / warm 2ms / 2 upstream reads for 9 signals |
 | B | Complete stamping (EVAL_SCORE / GUARD_DECISIONS labels + span attrs + Langfuse scores) + Prometheus recording rules + "data available since" cutoff | ✅ done | `828016f` | agent_id+model on EVAL_SCORE; agent_id on GUARD_DECISIONS (now wired); turn-span stamping; 5 recording rules loaded; /availability honest per-dimension cutoff |
-| C | Read adapters (langfuse / prometheus / ledger) behind read(scope); aggregates→Prom, detail→Langfuse; shadow-run + parity per signal; contract tests; spine creds via Secret Manager | ⬜ pending | — | |
+| C | Read adapters (langfuse / prometheus / ledger) behind read(scope); aggregates→Prom, detail→Langfuse; shadow-run + parity per signal; contract tests; spine creds via Secret Manager | ✅ done | `f6723f5` | real Prom/Langfuse query clients + `SpineStoresReader` (Langfuse detail + local ledger carve-out); `TESSERA_SPINE_SOURCE` = jsonl(default)\|spine\|shadow; `ShadowReader` records `tessera_spine_shadow_divergence_total`; unreachable→`SpineUnavailableError` (honest-empty); 23 unit + 7 live contract tests. Perf p95: cold 2.8ms / warm 1.4ms / 2 upstream reads |
 | D | Retire convenience jsonl (scores/bundles) after all signals flipped + baked; keep audit/S1 ledgers; erasure reaches spine + cache | ⬜ pending | — | |
 | E | Four cards (traces / inbox / release / audit) + fixtures flagged synthetic / derived from spine | ⬜ pending | — | |
 | F | Add language + model dimensions to Scope UI (no route sweep) — prove agent × time × language cube | ⬜ pending | — | |
@@ -28,6 +28,25 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **Phase C ✅ — `f6723f5`** (twice-green + pushed). Built the read seam over the live spine
+  (§Migration C) as **real** query clients, not stubs: `prometheus.py` (PromQL instant/range +
+  `Scope.to_labels()` selector — every dashboard *number*) and `langfuse.py` (per-agent scores
+  and traces by `metadata.agent_id` + as-of-T `toTimestamp` window — LLM *detail*), with the
+  tamper-evident **ledger read locally** (the carve-out — never leaves the process). Source is a
+  factory on `TESSERA_SPINE_SOURCE`: **jsonl** (default, unchanged), **spine** (the flip), or
+  **shadow** (`ShadowReader` serves jsonl, compares the spine, records
+  `tessera_spine_shadow_divergence_total{fact,result}` — a signal graduates jsonl→spine only
+  after parity holds). An unreachable spine raises `SpineUnavailableError` → honest-empty, never
+  a fabricated zero. **Honest state**: the spine has no dimensioned *history* yet (0 Langfuse
+  scores; pre-stamping traces carry `agent_id=None`), so the row-level spine reads are served
+  **only in shadow** and are never presented as the real per-agent view — exactly the
+  ADR-sanctioned pre-parity posture. Gate twice-green: ruff + ruff-format (baseline 32, none
+  mine) + mypy strict (160 obs files) + 23 new spine unit + 9 stamping + 7 live contract
+  (Prom/Langfuse reachable) + perf budgets met (cold p95 **2.8 ms**, warm **1.4 ms**, 2 upstream
+  reads for 9 signals). Frontend untouched (backend-only diff). **Pre-existing** integration
+  failures (firewall auth-seed; two non-hermetic memory Postgres tests) fail *identically on
+  pristine HEAD* — proven by stashing this diff and re-running — so they are out of Phase C
+  scope, not a regression. **Next: Phase D.**
 - **Phase B ✅ — `828016f`** (twice-green + pushed). Completed the dimensioning so Phase C's
   adapters can read per-agent facts: **EVAL_SCORE** gains `agent_id` + `model` labels (model
   threaded through `evaluate_turn`); **GUARD_DECISIONS_TOTAL** gains `agent_id` and is now
