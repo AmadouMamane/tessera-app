@@ -12,10 +12,18 @@ reads it first and executes systematically.
    build → durable mutation endpoint → wired frontend → real sparklines → probe for derived
    metrics → e2e verify. **Never call a deterministic fixture "real."** Always separate
    "displayed values are real" from "interactions are wired," and say which holds.
-2. **Honesty rule (ADR 0015).** If no real source exists yet for a signal, **flag it synthetic**
-   (add to the registry + render `<SyntheticNotice signalId=…>`), do **not** fabricate. Registry
-   = `src/tessera/observability/spine/capabilities.py` (`_cap(id, …, synthetic=True)`) mirrored in
-   `webapp/frontend/lib/signal-registry.ts`. The banner component is
+2. **Directive (user amendment): if no real source exists → CREATE the source.** The goal is real
+   data *everywhere*; flagging synthetic is NOT the escape hatch. "Create the source" = build a
+   genuine backing store + a real computation over real artifacts + a wired (and, where it mutates,
+   durable) endpoint — following the functional-page-playbook. This is legitimate engineering, and
+   is **categorically different from fabricating** (hardcoding fake numbers and presenting them as
+   real, which stays forbidden). Examples: an automations page needs a real rule/execution store →
+   build one (persist rule runs, read them back); tail-sampling needs real keep/drop decisions over
+   real traces → implement the policy against the spine.
+   **`synthetic` is a LAST-RESORT stopgap only** when the source genuinely cannot exist yet this
+   session (e.g. it needs infra that isn't available) — and even then it is temporary, left with a
+   TODO to build the source. Registry = `src/tessera/observability/spine/capabilities.py`
+   (`_cap(id, …, synthetic=True)`) mirrored in `webapp/frontend/lib/signal-registry.ts`; banner =
    `webapp/frontend/components/cockpit/synthetic-notice.tsx` (keys off `isSynthetic(id)`).
 3. **ⓘ explainers:** reuse `components/cockpit/metric-info.tsx` (`MetricInfo{title,what,how,source}`)
    via a local `ExplainInfo({k,title})` helper reading `<page>.explain.<k>.{what,how,source}`.
@@ -50,12 +58,12 @@ each: the real-data path and whether that real source already exists in the repo
 | `policies.py` | `configurer/politiques` | real `policy.yaml` + guard decisions + guardrail catalogue | **already flagged synthetic (`c5d8077`)**. To make real: read the live policy set + guard-decision counts. |
 | `incidents.py` | `agir/incidents-playbooks` | **guard-deny clusters + low-score turns** (audit ledger + score store) — ADR 0015 explicitly suggests this | flagged synthetic (Phase E). Real path EXISTS. |
 | `curation.py` | `agir/curation-eval-set` | `eval.sets` + `load_eval_snapshot` failed cases + corpus lineage | flagged synthetic. Real path EXISTS (eval reports + `operator_items` already derive real backlog). |
-| `automations.py` | `agir/automations` | needs a real automations/rules store (candidates: `governance_feed.py`, `guard_retraction.py`) | flagged synthetic. Real path is **THIN** — may stay flagged until a real store exists. |
+| `automations.py` | `agir/automations` | **CREATE a real automations/rules store** (persist rule definitions + real execution records; read them back). Reuse patterns from `operator_items.py` (durable JSON store) / `governance_feed.py` / `guard_retraction.py`. | flagged synthetic today → **build the source** (user directive). |
 | `replay_shadow.py` | `agir/replay-shadow` | `replay.py` `recent_bundles` (REAL) + `lineage.py` | flagged synthetic. **Partial** real path (bundles are real; deviation/shadow metrics need building). |
 | `proofs.py` | `prouver/evidence-store` | audit ledger + evidence store (`etat_a_date.py`, `audit.py`, `prouver/audit-logs` are REAL) | fixture; real path EXISTS. |
 | `parameters.py` | `configurer/parametres` | `get_settings()` + real policies + integrations + model catalogue | fixture; real path EXISTS (mostly real on neighbouring pages). |
 | `assistant.py` | Assistant page (Chat/Console) | transcript (`transcript.load_transcript`) + reporter debug + eval scores. **Console debug already made real** (see memory `Console debug surfacing`). | fixture overview; real path EXISTS. |
-| `tail_sampling.py` | Observabilité sub-tab (?) | real tail-based trace sampling (Phoenix / spine decisions) | fixture; real path = **infra work**. |
+| `tail_sampling.py` | Observabilité sub-tab (?) | **CREATE real tail-based sampling**: record actual keep/drop decisions per finished turn (slow / low-faithfulness / error → keep) into a durable store; read the real kept/sampled tallies. Spine/Phoenix span outcomes are the input. | fixture → **build the source** (user directive; more infra, but do it). |
 | `connectors.py` | `configurer/connecteurs` | **MIXED** — total/active/standby/mode already REAL; detail rows are reference | partial; ⓘ already added (`23167c8`). |
 
 ## Inventory B — FRONTEND sub-tab reality (from the mapper)
@@ -86,9 +94,11 @@ one always-rendered content blob, no `useState(activeTab)`):
    wire `activeTab` + real per-tab views (playbook step "interactions wired").
 2. **Backend fixtures with an existing real path** (Inventory A): proofs, parameters, assistant,
    curation, incidents, replay_shadow — wire to their real sources.
-3. **Backend fixtures with a thin/infra path**: automations, tail_sampling — build the real store
-   OR keep flagged synthetic with the honest banner (do NOT fabricate).
-4. **policies** — currently flagged synthetic; optionally make real from `policy.yaml` + guard.
+3. **Backend fixtures with a thin/infra path**: automations, tail_sampling — **CREATE the real
+   source** (durable store + real computation), per the user directive. Synthetic flag is only a
+   temporary stopgap with a TODO if the source truly can't be built this session.
+4. **policies** — currently flagged synthetic; **make it real** from `policy.yaml` + guard decisions
+   + guardrail catalogue (the source exists).
 5. Qualité IA / Sécurité / Conformité / Agent pages — **already real, leave them.**
 
 ## Progress log (this session, pushed to origin/feature/redesign)
