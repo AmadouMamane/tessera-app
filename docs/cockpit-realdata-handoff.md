@@ -107,3 +107,63 @@ one always-rendered content blob, no `useState(activeTab)`):
   (per-control ⓘ, "Politique actuelle" honest badge, users/connectors ⓘ, security fabrication fix +
   improvement i18n, composite-card ⓘ, **policies flagged synthetic**, automations mode i18n).
 - ADR 0015 (runtime telemetry spine) Phases A–F complete earlier this session.
+
+## Session 2 — resumed after /clear (LOCAL commits, NOT pushed)
+
+Three real deliverables. **Commits are local on `feature/redesign`, unpushed** (the
+strong "NE JAMAIS POUSSER" signal across memory + the sweep note's "re-confirm push
+intent if unsure" → held for user review; earlier this-session push cadence not assumed).
+
+- **Fiabilité & coût dead 7-tab bar → real** (`e189335`). The tab bar was static
+  `<span>`s over one always-rendered 4-zone blob (no `activeTab`). Now `role=tablist`
+  buttons drive `activeTab`; each of the 7 tabs is a curated real view (`role=tabpanel`)
+  over the same live `compute_reliability` report. `e2e/fiabilite-cout.spec.ts` (3 tests).
+- **Amélioration dead 5-tab bar → real** (`bb4d9a9`). Same dead-`<span>` pattern; now real
+  tab switching + the dead rail controls wired (`Préparer le plan` → jumps to the Plan tab;
+  the 3 static "sensitive action" rows → real `Link`s). `improvement.cta` i18n +
+  `e2e/amelioration.spec.ts` (4 tests).
+- **Paramètres overview → real** (`45b5c09`). Was an **unflagged** fixture (fabricated 238
+  params / 54 policies / 42 integrations + invented per-row authors, no synthetic banner).
+  Rewired to live state, **same payload shape** (frontend untouched): KPIs from the compiled
+  guard policy + model catalogue + configured integration endpoints; `config_version` from the
+  real policy version + `settings.environment` + policy.yaml mtime; `recent_params` carry the
+  actual settings values; compliance/usage from real settings. `tests/unit/test_parameters.py`
+  proves derivation. Verified live on `:8392`.
+
+### SHARPENED FINDING — the fixtures are subsystem-scale (corrects Inventory A's optimism)
+
+Reading incidents / policies / automations / curation / proofs in full established a
+consistent, load-bearing truth: **each depicts a full enterprise subsystem that does NOT
+exist in this demo.** The demo backend has: `policy.yaml`, a hash-chained audit log, eval
+reports, the transcript, the pgvector corpus, replay bundles, and the score store. The
+cockpit UI, by contrast, renders incident-management (MTTA/MTTR, running-playbook step
+timelines, postmortem RCAs), policy-versioning + approval workflow (version timelines,
+YAML diffs between versions, approvers, impact simulators), a curation pipeline (collect →
+dedup → PII-mask → dual-control → promote), an automation engine (rule executions, approval
+queue, savings), and evidence-export/SIEM (exporters, destinations, retention). **~half of
+each page is derivable from real signals; the other half implies a subsystem.** "Making them
+fully real" = *building those subsystems* (a multi-day feature each), not a fixture-wiring pass.
+
+Two corollaries for whoever continues this:
+1. **Shape-preserving backend real-ification only works where every frontend LABEL stays
+   true under a real value.** Paramètres worked because its labels ("Policies", "Models",
+   "Rate limit") are true of real counts. Where the i18n label encodes a fixture concept
+   (config-state "drafts/deprecated", "approval history", "export destinations"), you MUST
+   edit the frontend i18n in lockstep — that's a full Round, not a value swap.
+2. **Honesty state (verified in `signal-registry.ts`):** incidents, curation, automations,
+   replay_shadow, policies are **already flagged synthetic** (they show demonstration
+   banners — honest). The unflagged fixtures that presented fabricated numbers as real were
+   **parameters (now REAL), proofs, assistant**. `tail_sampling` already derives from real
+   replay bundles (`analyze_sampling(recent_bundles())`) — verify + surface, don't rebuild.
+
+### Recommended next steps (scoped, highest-integrity first)
+
+1. **proofs** (unflagged) — make the derivable core real like Paramètres: `verify_audit_chain`
+   (genuinely real + on-theme), artifact counts = real audit entries + eval scores + replay
+   bundles; relabel/flag the exporter/destinations/retention chrome (needs a SIEM subsystem).
+2. **assistant** (unflagged) — it is a canned *localized sample* conversation, not fabricated
+   aggregates. Either swap in a real recent transcript exchange (single-language, real
+   latency/tokens/sources) or label it explicitly a "sample" (decide the localization tradeoff).
+3. **The flagged subsystem pages** — per page, decide BUILD vs keep-flagged. The cleanest real
+   build is **curation**: a durable curation-decision store (promote/review/reject) over the
+   real failed-eval-case candidates (mirror `operator_items` exactly). Each is one Round.
