@@ -25,6 +25,7 @@ __all__ = [
     "EVAL_SCORE",
     "GUARD_DECISIONS_TOTAL",
     "SPINE_CACHE_HIT_RATIO",
+    "SPINE_SHADOW_DIVERGENCE",
     "SPINE_SNAPSHOT_LATENCY",
     "SPINE_SNAPSHOT_UPSTREAM_READS",
     "configure",
@@ -92,6 +93,14 @@ SPINE_SNAPSHOT_UPSTREAM_READS = Histogram(
 SPINE_CACHE_HIT_RATIO = Gauge(
     "tessera_spine_cache_hit_ratio",
     "Running cache-hit ratio of the snapshot endpoint (served-from-cache / total).",
+    registry=registry,
+)
+
+SPINE_SHADOW_DIVERGENCE = Counter(
+    "tessera_spine_shadow_divergence_total",
+    "Shadow-run reconciliation outcomes per fact type — jsonl (served) vs spine (compared). "
+    "A signal graduates jsonl->spine only after parity holds (ADR 0015 §Migration C).",
+    labelnames=("fact", "result"),
     registry=registry,
 )
 
