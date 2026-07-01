@@ -131,13 +131,31 @@ Every cockpit signal is a **derivation over turns**, parameterised by `Scope`:
 | Governance (routing/handoff/proposed/release/deploy) | S1 journal → **keep (ledger)** | S1 journal (hash-chained, `agent_id`) | Ledger adapter, filtered |
 | Fixtures (incidents/curation/automations/replay-shadow) | deterministic fixture | derive from spine where a real fact exists; else `synthetic:true` | registry marks `synthetic` |
 
-**The cockpit reads exactly two backends — Prometheus + Langfuse (+ the local ledgers).**
-The rest of the stack is peripheral and needs **nothing**: **OTel** is the *write* path (the
-app emits spans via `OTLPSpanExporter` to a local endpoint — Phase B only adds attributes, no
-auth); **Phoenix** (`PHOENIX_URL`, default `localhost:16006`) and **Grafana** (`GRAFANA_URL`,
-default `localhost:13000`) are **deep-link destinations only** — the cockpit never queries them
-(it reads Prometheus directly, not through Grafana), they are self-hosted with no auth the
-cockpit uses, and they may be **down without affecting the cockpit** (just dead link buttons).
+### Right tool for the job — the capability matrix
+
+The stack is already built this way: an **OTel Collector** (`tessera-claude-collector`) routes
+spans to **Phoenix** (marked *canonical*) + **Langfuse** (*2nd export*); Prometheus scrapes
+metrics; Grafana boards them. The world-class design **uses each tool for the concern it owns** —
+and, per §5, gives each fact **one** canonical owner (never reads the same number from two tools).
+
+| Concern | Owner tool | Cockpit relationship |
+|---|---|---|
+| Instrumentation & routing (write path) | **OTel Collector** | the app emits once; the collector fans out to Phoenix + Langfuse. Phase B stamps the dimension set here — no auth. |
+| Numeric aggregates: SLO, rate, quantile, cost-agg, counts | **Prometheus** | cockpit **reads** (PromQL + recording rules); the alert source. |
+| Ops / SRE dashboards + alerting UI + on-call | **Grafana** | operator surface; each SLO signal **contextually deep-links** to its board; alerts fire here. |
+| LLM detail: eval scores, token+cost per call, prompt/model lineage, conversation trace | **Langfuse** | cockpit reads scores/detail; deep-link a conversation's trace. |
+| RAG / retrieval: grounding, citations, embedding drift, reranking, span-level eval | **Phoenix** (canonical traces) | retrieval signals **deep-link here** for debugging — Phoenix is the RAG analysis surface Tessera's retrieval signals belong in. |
+| Tamper-evident compliance ledger | local hash-chained `audit.log` / S1 | cockpit reads, filtered. |
+
+Discipline (keeps "use every tool" world-class, not creep): **one canonical owner per concern**,
+matched to a *real* Tessera signal — the hot *aggregate* path is Prometheus; *LLM detail* is
+Langfuse; *retrieval debug* routes to Phoenix; *ops/alerting* is Grafana; *instrumentation* is the
+OTel Collector; *compliance* is the local ledger. Every drill-down link is **contextual** (a
+retrieval signal → the relevant Phoenix view; a conversation → its Langfuse trace; an SLO → its
+Grafana board), never a generic button. **No credential is needed** anywhere: all self-hosted,
+Prometheus has no auth, Langfuse uses fixed local keys, Phoenix/Grafana are OTel-native/self-hosted.
+The cockpit's *core numbers* live on Prometheus, so **Phoenix or Grafana being down never breaks
+the cockpit** — only their drill-down links go dark.
 
 ### The `Scope` value object
 
@@ -433,16 +451,31 @@ reserved for genuine blockers, never for routine progression.
 4. **Record state, then auto-advance.** Update the execution status file (below) with the phase,
    result and commit sha, and **immediately start the next phase** — no pause, no ask.
 
+### Pre-flight — the run brings its own dependencies up (never asks the operator)
+
+Before Phase A, and re-checked whenever a read fails on connectivity, the run **starts the obs
+stack itself**:
+
+- `make obs-up-core` (OTel Collector + Phoenix + Prometheus + Grafana — light) for phases that need
+  only metrics/traces; `make obs-up` (adds Langfuse v3 + ClickHouse + MinIO + Redis — memory-hungry)
+  **only** when a Langfuse-specific signal (eval scores / cost-per-call / conversation trace) is
+  being built.
+- Wait for health (Prometheus `:19090`, Phoenix `:16006`, Langfuse `:3900` when needed) before
+  reading; restart an unhealthy service once before treating it as a problem.
+- The **only** dependency the run cannot self-provide is **Docker itself**: if the Docker daemon is
+  unavailable it halts and says so. The stack and the local keys, it provisions itself — the
+  operator is never asked to start anything.
+
 ### Stop conditions (the only times it halts instead of advancing)
 
 Halt and write a clear status report **only** when:
 - a phase cannot reach a **green gate after 3 repair attempts** → do **not** commit/push a broken
   phase; report the failing check;
-- a **genuine external blocker** it cannot self-provide is hit — e.g. the local obs stack
-  (Langfuse `:3900` / Prometheus `:19090`) is not running and cannot be started, or a decision
-  needs business/human input. **Credentials are not a blocker**: the local spine is self-hosted
-  with fixed local keys already in the env (Prometheus needs none). → state **exactly** what is
-  needed to proceed;
+- a **genuine external blocker** it cannot self-provide is hit — **the Docker daemon is
+  unavailable** (the run starts the obs stack itself, see Pre-flight, but cannot install Docker),
+  or a decision needs business/human input. **Neither credentials nor a stopped stack is a
+  blocker** — the run self-provisions both (local keys already in the env; `make obs-up[-core]`).
+  → state **exactly** what is needed to proceed;
 - honesty would be violated — **never** weaken a test, fabricate data, or mark a fixture real to
   force green (§Decision, project rule).
 
