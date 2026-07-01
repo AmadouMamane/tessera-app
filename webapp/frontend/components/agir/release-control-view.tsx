@@ -73,7 +73,12 @@ export async function ReleaseControlView({
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <Kpi label={t("total")} value={summary?.total ?? agents.length} icon="branch" />
+          <Kpi
+            label={t("total")}
+            value={summary?.total ?? agents.length}
+            icon="branch"
+            info={info("total")}
+          />
           <Kpi
             label={t("passing")}
             value={summary?.passing ?? 0}

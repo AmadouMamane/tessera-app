@@ -2795,6 +2795,11 @@
       "requests": {
         "what": "Das Volumen der im Fenster bearbeiteten Anfragen.",
         "how": "Anzahl der gezählten Turns/Aufrufe."
+      },
+      "latency": {
+        "what": "Antwortlatenz nach Perzentilen: p50 / p95 / p99 = die Dauer, unter der 50 %, 95 % bzw. 99 % der Durchläufe liegen.",
+        "how": "Perzentile berechnet über die beobachteten Durchlaufdauern im Zeitraum.",
+        "source": "Gemessene Durchlaufdauern (Observability)."
       }
     },
     "panel": {
@@ -2949,8 +2954,9 @@
         "how": "Varianten, bereit zum Vergleich ohne Auswirkung auf Nutzer."
       },
       "coverage": {
-        "what": "Der Anteil der vom Eval-Set abgedeckten Schlüsselverhalten.",
-        "how": "Abgedeckte ÷ erwartete Fälle; Ziel ≥ 80 %."
+        "what": "Bewertungsabdeckung des Agenten, mit Korpus-Schuld (Alter) und Anzahl der zu kuratierenden Fälle.",
+        "how": "Abdeckung = Anteil der vom Bewertungssatz abgedeckten Fälle; Schuld = Alter des ältesten Korpuselements (Tage); zu kuratieren = ausstehende Fälle.",
+        "source": "Bewertungssatz + Korpus-Aktualität."
       },
       "debt": {
         "what": "Das Alter des Korpus: wie lange er nicht aufgefrischt wurde.",
@@ -6095,6 +6101,11 @@
         "what": "Die Zahl der aktiven Ausnahmen: akzeptierte Abweichungen, die bis zur Behebung nicht blockieren.",
         "how": "Gültige Waivers auf fehlgeschlagenen Fällen.",
         "source": "Ausnahmeregister (Waiver-Store)."
+      },
+      "total": {
+        "what": "Anzahl der gouvernierten Agenten, die vom Freigabe-Control verfolgt werden.",
+        "how": "Zählung der Agenten aus dem Flottenregister.",
+        "source": "Agentenregister + Gate-Verdikt je Agent."
       }
     },
     "title": "Release Control",

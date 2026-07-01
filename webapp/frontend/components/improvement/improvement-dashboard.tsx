@@ -45,14 +45,35 @@ const CAUSE_COLOR = ["#60a5fa", "#34d399", "#fbbf24", "#f472b6", "#a78bfa"];
 
 const TABS = ["overview", "plan", "curation", "experiments", "release"] as const;
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+function Panel({
+  title,
+  children,
+  info,
+}: { title: string; children: ReactNode; info?: ReactNode }) {
   return (
     <Card className="min-w-0">
       <CardHeader className="pb-2">
-        <CardTitle className="text-[0.78rem] font-medium">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-1 text-[0.78rem] font-medium">
+          <span>{title}</span>
+          {info}
+        </CardTitle>
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
+  );
+}
+
+/** ⓘ for an improvement panel/metric, reading improvement.explain.<k> (null if undocumented). */
+function ExplainInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("improvement.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te.has(`${k}.how`) ? te(`${k}.how`) : undefined}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
   );
 }
 
@@ -315,7 +336,10 @@ export function ImprovementDashboard() {
                 <Donut slices={causeSlices} />
               )}
             </Panel>
-            <Panel title={ti("panel.coverage")}>
+            <Panel
+              title={ti("panel.coverage")}
+              info={<ExplainInfo k="coverage" title={ti("panel.coverage")} />}
+            >
               <div className="flex items-end gap-2">
                 <span
                   className={`text-2xl font-semibold tabular-nums ${(d.eval_coverage ?? 0) >= 0.8 ? GOOD : WARN}`}

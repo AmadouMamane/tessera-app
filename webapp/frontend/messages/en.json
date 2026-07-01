@@ -2795,6 +2795,11 @@
       "requests": {
         "what": "The volume of requests handled over the window.",
         "how": "Number of counted turns/calls."
+      },
+      "latency": {
+        "what": "Response latency by percentile: p50 / p95 / p99 = the duration below which 50%, 95%, and 99% of turns fall, respectively.",
+        "how": "Percentiles computed over observed turn durations in the period.",
+        "source": "Measured turn durations (observability)."
       }
     },
     "panel": {
@@ -2949,8 +2954,9 @@
         "how": "Variants ready to compare without impacting users."
       },
       "coverage": {
-        "what": "The share of key behaviours covered by the eval set.",
-        "how": "Covered ÷ expected cases; aim ≥ 80%."
+        "what": "The agent's evaluation coverage, with corpus debt (age) and the number of cases to curate.",
+        "how": "Coverage = share of cases covered by the eval set; debt = age of the oldest corpus item (days); to-curate = pending cases.",
+        "source": "Eval set + corpus freshness."
       },
       "debt": {
         "what": "The corpus's age: how long since it was last refreshed.",
@@ -6095,6 +6101,11 @@
         "what": "The number of active waivers: accepted exceptions that don't block, pending a fix.",
         "how": "In-force waivers placed on failing cases.",
         "source": "Waiver register (waiver store)."
+      },
+      "total": {
+        "what": "Number of governed agents tracked by release control.",
+        "how": "Count of agents from the fleet registry.",
+        "source": "Agent registry + per-agent gate verdict."
       }
     },
     "title": "Release Control",

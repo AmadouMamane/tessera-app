@@ -2795,6 +2795,11 @@
       "requests": {
         "what": "Le volume de requêtes traitées sur la fenêtre.",
         "how": "Nombre de tours/appels comptabilisés."
+      },
+      "latency": {
+        "what": "Latence de réponse par centiles : p50 / p95 / p99 = la durée sous laquelle tombent respectivement 50 %, 95 % et 99 % des tours.",
+        "how": "Centiles calculés sur les durées de tour observées sur la période.",
+        "source": "Durées de tour mesurées (observabilité)."
       }
     },
     "panel": {
@@ -2949,8 +2954,9 @@
         "how": "Variantes prêtes à être comparées sans impacter les utilisateurs."
       },
       "coverage": {
-        "what": "La part des comportements clés couverts par le jeu d'évaluation.",
-        "how": "Cas couverts ÷ cas attendus ; viser ≥ 80 %."
+        "what": "Couverture d'évaluation de l'agent, avec la dette de corpus (ancienneté) et le nombre de cas à curer.",
+        "how": "Couverture = part des cas couverts par le jeu d'évaluation ; dette = âge du plus ancien élément du corpus (jours) ; à curer = cas en attente d'ajout.",
+        "source": "Jeu d'évaluation + fraîcheur du corpus."
       },
       "debt": {
         "what": "L'ancienneté du corpus : depuis combien de temps il n'a pas été rafraîchi.",
@@ -6095,6 +6101,11 @@
         "what": "Le nombre de dérogations actives : exceptions acceptées qui ne bloquent pas, le temps d'un correctif.",
         "how": "Waivers en cours de validité posés sur des cas en échec.",
         "source": "Registre des dérogations (waiver store)."
+      },
+      "total": {
+        "what": "Nombre d'agents gouvernés suivis par le contrôle de mise en production.",
+        "how": "Décompte des agents du registre de la flotte.",
+        "source": "Registre des agents + verdict de gate par agent."
       }
     },
     "title": "Release Control",

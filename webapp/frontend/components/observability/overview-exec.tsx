@@ -344,7 +344,10 @@ export function EtatActuel({
   return (
     <Card>
       <CardContent className="flex flex-col gap-2 pt-3 text-xs">
-        <Row label={tq("exec.etat.globalQuality")}>
+        <Row
+          label={tq("exec.etat.globalQuality")}
+          info={<KpiInfo title={tq("exec.etat.globalQuality")} k="scoreGlobal" />}
+        >
           <span className={`tabular-nums font-semibold ${scoreTone}`}>
             {scorePct == null ? "—" : `${scorePct}/100`}
           </span>
@@ -409,10 +412,17 @@ export function EtatActuel({
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+  info,
+}: { label: string; children: React.ReactNode; info?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-[var(--muted-foreground)]">{label}</span>
+      <span className="flex items-center gap-1 text-[var(--muted-foreground)]">
+        {label}
+        {info}
+      </span>
       {children}
     </div>
   );

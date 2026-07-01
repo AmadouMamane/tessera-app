@@ -122,11 +122,19 @@ function SparkEmpty({ label }: { label: string }) {
   );
 }
 
-function Panel({ title, children, note }: { title: string; children: ReactNode; note?: string }) {
+function Panel({
+  title,
+  children,
+  note,
+  info,
+}: { title: string; children: ReactNode; note?: string; info?: ReactNode }) {
   return (
     <Card className="flex h-full min-w-0 flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="text-[0.78rem] font-medium">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-1 text-[0.78rem] font-medium">
+          <span>{title}</span>
+          {info}
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex-1">
         {children}
@@ -394,6 +402,7 @@ const POLL = 30_000;
 
 export function ReliabilityDashboard() {
   const tr = useTranslations("reliability");
+  const te = useTranslations("reliability.explain");
   const locale = useLocale();
   const [period, setPeriod] = useState<Period>({ days: 14, anchor: null });
   const q = useQuery({
@@ -556,7 +565,20 @@ export function ReliabilityDashboard() {
                   <Donut slices={errSlices} />
                 )}
               </Panel>
-              <Panel title={tr("panel.latency")} note={tr("panel.latencyNote")}>
+              <Panel
+                title={tr("panel.latency")}
+                note={tr("panel.latencyNote")}
+                info={
+                  te.has("latency.what") ? (
+                    <MetricInfo
+                      title={tr("panel.latency")}
+                      what={te("latency.what")}
+                      how={te.has("latency.how") ? te("latency.how") : undefined}
+                      source={te.has("latency.source") ? te("latency.source") : undefined}
+                    />
+                  ) : null
+                }
+              >
                 <div className="flex flex-col gap-2">
                   <LatStat label={tr("leg.p50")} value={ms(d.latency_p50_ms ?? null)} tone={GOOD} />
                   <LatStat label={tr("leg.p95")} value={ms(d.latency_p95_ms ?? null)} tone={WARN} />
