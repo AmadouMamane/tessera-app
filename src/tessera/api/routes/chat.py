@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Annotated, Literal, cast
 
 from fastapi import APIRouter, Body
 from langgraph.checkpoint.memory import MemorySaver
+from opentelemetry import trace
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.requests import (
     Request,  # noqa: TCH002  runtime-needed: FastAPI resolves the handler annotation
@@ -48,7 +49,7 @@ from tessera.llm.budget import estimate_turn_cost
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
-from tessera.observability import instrument, replay
+from tessera.observability import instrument, replay, semconv
 from tessera.observability.eval import online as online_eval
 from tessera.observability.lineage import build_lineage
 from tessera.observability.metrics import AGENT_TURN_DURATION, AGENT_TURNS_TOTAL
@@ -107,6 +108,7 @@ async def _run_online_eval(
             language=language.value,
             conversation_id=str(conversation_id),
             agent_id=agent_id,
+            model=model,
             flagged=True,  # the dashboard demo scores every grounded turn
         )
         # Capture the turn for regression-from-production replay (idea #1) with
@@ -703,6 +705,18 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
     decision = route_turn(prev_agent, request.message, surface=surface, auth_state=auth_state)
     agent_id = decision.agent_id
     current_agent_id.set(agent_id)
+    # Stamp the full dimension set on the turn's root span so the trace is queryable per
+    # {agent, language, model, conversation, turn, environment} — the substrate the spine
+    # reads (Langfuse metadata filter, per-dimension aggregates) — ADR 0015 §Migration B.
+    semconv.stamp_turn_dimensions(
+        trace.get_current_span(),
+        agent_id=agent_id,
+        language=language.value,
+        model=request.model,
+        conversation_id=str(conversation_id),
+        turn_id=str(turn_id),
+        environment=get_settings().environment.value,
+    )
     # Audit EVERY routing decision (stay or switch) with its reason, so routing is
     # opposable end to end — you can prove why a turn went to a given agent from
     # the start, not just that it switched.

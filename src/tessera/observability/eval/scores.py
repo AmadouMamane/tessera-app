@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from opentelemetry import trace
 
+from tessera.observability import langfuse_scores
 from tessera.observability.logging import get_logger
 from tessera.observability.metrics import EVAL_SCORE
 
@@ -167,8 +168,9 @@ def emit_score(
     conversation_id: str | None = None,
     sampled: bool = False,
     agent_id: str | None = None,
+    model: str | None = None,
 ) -> None:
-    """Emit one eval score to logs, metrics, and the active span.
+    """Emit one eval score to logs, metrics, the active span, and Langfuse.
 
     Args:
         verdict: The judge's verdict for one metric.
@@ -178,6 +180,9 @@ def emit_score(
         agent_id: The agent that produced the turn, if known — attributes the
             score so per-agent SLO / trend / funnel read the agent's own quality
             (the ``agent_id`` Prometheus label has the matching dimension).
+        model: The agent's serving model for the turn (NOT the judge model) — the
+            ``model`` dimension (ADR 0015 §Migration B), so quality can be sliced by
+            the model that produced the answer.
     """
     span = trace.get_current_span()
     span_context = span.get_span_context()
@@ -194,10 +199,17 @@ def emit_score(
         trace_id=trace_id,
         sampled=sampled,
     )
-    EVAL_SCORE.labels(metric=verdict.metric, language=language).observe(verdict.score)
+    EVAL_SCORE.labels(
+        metric=verdict.metric,
+        language=language,
+        agent_id=agent_id or "none",
+        model=model or "unknown",
+    ).observe(verdict.score)
     span.set_attribute(f"tessera.eval.{verdict.metric}", verdict.score)
     if agent_id:
         span.set_attribute("tessera.agent_id", agent_id)
+    if model:
+        span.set_attribute("tessera.model", model)
 
     row: dict[str, object] = {
         "scored_at": datetime.now(UTC).isoformat(),
@@ -209,6 +221,20 @@ def emit_score(
         "trace_id": trace_id,
         "sampled": sampled,
         "agent_id": agent_id,
+        "model": model,
     }
     _RECENT.append(row)
     _persist(row)  # durable event log for as-of-T reads (ADR 0011)
+
+    # Best-effort: mirror the verdict as a Langfuse score on the turn's trace, so eval
+    # scores are queryable per-trace in Langfuse (ADR 0015 §Migration B). Never blocks or
+    # raises into the turn — a slow/absent spine degrades silently, never fabricates.
+    langfuse_scores.emit_langfuse_score(
+        trace_id=trace_id,
+        name=verdict.metric,
+        value=verdict.score,
+        agent_id=agent_id,
+        language=language,
+        model=model,
+        comment=verdict.judge_model,
+    )

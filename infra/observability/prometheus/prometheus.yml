@@ -10,6 +10,11 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# Per-agent recording rules (ADR 0015 §Migration B) — pre-aggregated per-agent SLO / rate /
+# quantile so the cockpit hot path reads O(1) aggregates, not heavy on-read PromQL.
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
 scrape_configs:
   - job_name: tessera-agent
     static_configs:

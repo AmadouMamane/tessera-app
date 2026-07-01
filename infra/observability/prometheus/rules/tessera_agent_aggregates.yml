@@ -1,0 +1,42 @@
+# Per-agent recording rules (ADR 0015 §Migration B / §Performance 5).
+#
+# The cockpit hot path reads *aggregates*, not raw series: pre-aggregating per-agent SLO /
+# rate / quantile at scrape time makes a per-agent read O(1) instead of a heavy on-read
+# PromQL scan. These rules aggregate the dimensioned metrics completed in Phase B
+# (agent_id added to EVAL_SCORE and GUARD_DECISIONS_TOTAL; turns/duration already carry it).
+#
+# Cardinality discipline (ADR 0015 open question): aggregate by agent_id (+ metric / outcome
+# where meaningful) only — the pre-aggregated combinations stay within a sane series budget.
+groups:
+  - name: tessera_agent_aggregates
+    interval: 15s
+    rules:
+      # Per-agent mean online-eval score, by metric, over 5m — the per-agent SLO input.
+      - record: tessera:eval_score:mean5m
+        expr: |
+          sum by (agent_id, metric) (rate(tessera_eval_score_sum[5m]))
+          /
+          sum by (agent_id, metric) (rate(tessera_eval_score_count[5m]))
+
+      # Per-agent mean online-eval score over 1h — the longer SLO horizon.
+      - record: tessera:eval_score:mean1h
+        expr: |
+          sum by (agent_id, metric) (rate(tessera_eval_score_sum[1h]))
+          /
+          sum by (agent_id, metric) (rate(tessera_eval_score_count[1h]))
+
+      # Per-agent turn rate, by outcome, over 5m.
+      - record: tessera:agent_turns:rate5m
+        expr: sum by (agent_id, outcome) (rate(tessera_agent_turns_total[5m]))
+
+      # Per-agent guard-denial rate over 5m (per-agent security posture).
+      - record: tessera:guard_denials:rate5m
+        expr: sum by (agent_id) (rate(tessera_guard_decisions_total{decision="denied"}[5m]))
+
+      # Per-agent p95 turn latency over 5m.
+      - record: tessera:turn_duration:p95_5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (agent_id, le) (rate(tessera_agent_turn_duration_seconds_bucket[5m]))
+          )

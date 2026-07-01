@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from opentelemetry.trace import Span
 
 __all__ = [
+    "DEPLOYMENT_ENVIRONMENT",
     "GEN_AI_AGENT_NAME",
     "GEN_AI_CONVERSATION_ID",
     "GEN_AI_OPERATION_NAME",
@@ -40,6 +41,7 @@ __all__ = [
     "GEN_AI_USAGE_INPUT_TOKENS",
     "GEN_AI_USAGE_OUTPUT_TOKENS",
     "OPENINFERENCE_SPAN_KIND",
+    "TESSERA_AGENT_ID",
     "TESSERA_DATA_RESIDENCY",
     "TESSERA_GUARD_DECISION",
     "TESSERA_GUARD_RULE",
@@ -49,12 +51,14 @@ __all__ = [
     "TESSERA_RETRIEVAL_CORPUS",
     "TESSERA_RETRIEVAL_HIT_COUNT",
     "TESSERA_RETRIEVAL_TOP_SCORE",
+    "TESSERA_TURN_ID",
     "GenAIOperation",
     "add_content_event",
     "agent_span_name",
     "retrieval_span_name",
     "set_gen_ai_request",
     "set_gen_ai_usage",
+    "stamp_turn_dimensions",
     "tool_span_name",
 ]
 
@@ -72,6 +76,9 @@ GEN_AI_CONVERSATION_ID: Final = "gen_ai.conversation.id"
 
 # ── tessera.* domain attribute keys ──────────────────────────────────────────
 TESSERA_LANGUAGE: Final = "tessera.language"
+TESSERA_AGENT_ID: Final = "tessera.agent_id"
+TESSERA_TURN_ID: Final = "tessera.turn_id"
+DEPLOYMENT_ENVIRONMENT: Final = "deployment.environment"
 TESSERA_PROFILE: Final = "tessera.profile"
 TESSERA_DATA_RESIDENCY: Final = "tessera.data_residency"
 TESSERA_GUARD_DECISION: Final = "tessera.guard.decision"
@@ -146,6 +153,42 @@ def tool_span_name(tool_name: str) -> str:
         The conventional span name.
     """
     return f"{GenAIOperation.EXECUTE_TOOL} {tool_name}"
+
+
+def stamp_turn_dimensions(
+    span: Span,
+    *,
+    agent_id: str,
+    language: str,
+    model: str | None,
+    conversation_id: str,
+    turn_id: str,
+    environment: str,
+) -> None:
+    """Stamp the full dimension set on a turn's root span (ADR 0015 §Migration B).
+
+    Every fact-emitting path should carry the same dimensions; stamping them on the turn's
+    root span makes the turn's trace queryable per {agent, language, model, conversation,
+    turn, environment} — the substrate the spine reads (Langfuse ``metadata.agent_id``
+    filter, per-dimension aggregates) and the cockpit slices by. Child spans nest under
+    this one, so the trace as a whole is attributed.
+
+    Args:
+        span: The turn's root/active span.
+        agent_id: The responding agent for the turn.
+        language: The conversation language code (``fr``/``de``/``en``).
+        model: The agent's serving model, when known.
+        conversation_id: The conversation id (stable across turns).
+        turn_id: The per-turn id.
+        environment: The deployment environment (ADR 0014).
+    """
+    span.set_attribute(TESSERA_AGENT_ID, agent_id)
+    span.set_attribute(TESSERA_LANGUAGE, language)
+    span.set_attribute(GEN_AI_CONVERSATION_ID, conversation_id)
+    span.set_attribute(TESSERA_TURN_ID, turn_id)
+    span.set_attribute(DEPLOYMENT_ENVIRONMENT, environment)
+    if model:
+        span.set_attribute(GEN_AI_REQUEST_MODEL, model)
 
 
 def set_gen_ai_request(

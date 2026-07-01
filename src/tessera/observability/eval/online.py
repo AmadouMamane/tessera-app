@@ -73,6 +73,7 @@ async def evaluate_turn(
     flagged: bool = False,
     conversation_id: str | None = None,
     agent_id: str | None = None,
+    model: str | None = None,
     judge: Judge | None = None,
     sample_rate: float | None = None,
     roll: float | None = None,
@@ -100,6 +101,7 @@ async def evaluate_turn(
         conversation_id=conversation_id,
         sampled=not must_judge,
         agent_id=agent_id,
+        model=model,
     )
 
     # Extra quality metrics on the same turn (best-effort; never fail the turn).
@@ -117,6 +119,7 @@ async def evaluate_turn(
             conversation_id=conversation_id,
             sampled=not must_judge,
             agent_id=agent_id,
+            model=model,
         )
 
     disagreement = (not guard_denied and verdict.score < _LOW_SCORE) or (

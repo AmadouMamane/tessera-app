@@ -52,8 +52,8 @@ AGENT_TURN_DURATION = Histogram(
 
 GUARD_DECISIONS_TOTAL = Counter(
     "tessera_guard_decisions_total",
-    "Number of guard decisions emitted, partitioned by tool and verdict.",
-    labelnames=("target", "decision"),
+    "Number of guard decisions emitted, partitioned by tool, verdict and agent (ADR 0015).",
+    labelnames=("target", "decision", "agent_id"),
     registry=registry,
 )
 
@@ -65,8 +65,9 @@ BUDGET_GAUGE = Gauge(
 
 EVAL_SCORE = Histogram(
     "tessera_eval_score",
-    "Online evaluation scores, partitioned by metric and language (ADR 0010 #5).",
-    labelnames=("metric", "language"),
+    "Online evaluation scores, partitioned by metric, language, agent and model "
+    "(ADR 0010 #5; agent_id + model added ADR 0015 §Migration B).",
+    labelnames=("metric", "language", "agent_id", "model"),
     buckets=(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0),
     registry=registry,
 )

@@ -34,6 +34,7 @@ from tessera.guard.decisions import (
 )
 from tessera.observability import semconv
 from tessera.observability.instrument import tool_span
+from tessera.observability.metrics import GUARD_DECISIONS_TOTAL
 from tessera.settings import LanguageCode, get_settings
 
 if TYPE_CHECKING:
@@ -44,6 +45,20 @@ if TYPE_CHECKING:
     from tessera.agent.state import GuardDecisionRecord
 
 __all__ = ["GuardedResult", "InputCheckResult", "check_user_input", "guarded_invoke"]
+
+
+def _record_guard_decision(target: str, decision: str) -> None:
+    """Count one guard decision, partitioned by tool, verdict and agent (ADR 0015 §B).
+
+    The ``agent_id`` label makes ``GUARD_DECISIONS_TOTAL`` sliceable per agent (its
+    Phase-1 gap). The acting agent is resolved lazily from the turn contextvar to avoid
+    the adapter -> agent import cycle.
+    """
+    from tessera.agent.identity import resolve_agent_id
+
+    GUARD_DECISIONS_TOTAL.labels(
+        target=target, decision=decision, agent_id=resolve_agent_id() or "none"
+    ).inc()
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,6 +248,7 @@ def check_user_input(
                 sink=settings.guard.audit_sink,
                 outcome="denied",
             )
+            _record_guard_decision("user_input", "denied")
             return InputCheckResult(
                 allowed=False,
                 sanitised_text=text,
@@ -323,6 +339,7 @@ async def guarded_invoke(
                 sink=settings.guard.audit_sink,
                 outcome="denied",
             )
+            _record_guard_decision(tool_name, "denied")
             return GuardedResult(
                 allowed=False,
                 result=None,
@@ -345,6 +362,7 @@ async def guarded_invoke(
                 outcome="error",
                 error=str(exc),
             )
+            _record_guard_decision(tool_name, "error")
             if settings.guard.fail_closed:
                 return GuardedResult(
                     allowed=True,
@@ -362,6 +380,7 @@ async def guarded_invoke(
             sink=settings.guard.audit_sink,
             outcome="allowed",
         )
+        _record_guard_decision(tool_name, "allowed")
         return GuardedResult(
             allowed=True,
             result=result,

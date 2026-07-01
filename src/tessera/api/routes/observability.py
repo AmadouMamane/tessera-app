@@ -127,6 +127,7 @@ from tessera.observability.eval.ensemble import evaluate_ensemble
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.scores import persisted_scores, recent_scores
 from tessera.observability.eval.sycophancy import detect_sycophancy
+from tessera.observability.spine.availability import dimension_availability
 from tessera.observability.spine.scope import Scope
 from tessera.observability.spine.snapshot import compute_snapshot
 
@@ -448,6 +449,24 @@ async def observability_data_range() -> dict[str, object]:
         "start": start,
         "end": datetime.now(UTC).isoformat(),
         "n": len(scores) + len(audit_entries),
+    }
+
+
+@router.get("/observability/availability")
+async def observability_availability() -> dict[str, object]:
+    """Per-dimension "data available since" boundaries (ADR 0015 §Testing 2).
+
+    Generalises ``/observability/data-range`` to every :class:`Scope` dimension. Because
+    stamping is forward-only, a dimension exists in the durable stores only from the instant
+    the code started stamping it; each boundary is the earliest row that actually carries
+    the dimension (``None`` when it has no data yet). An as-of-T read before a dimension's
+    boundary is honestly org-wide — the cockpit never pretends a dimension existed earlier.
+    """
+    from datetime import UTC, datetime
+
+    return {
+        "since": dimension_availability(),
+        "now": datetime.now(UTC).isoformat(),
     }
 
 

@@ -191,8 +191,10 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle" # POST /-/reload to hot-reload recording rules (ADR 0015)
     volumes:
       - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/observability/prometheus/rules:/etc/prometheus/rules:ro
       - claude_prometheus:/prometheus
     extra_hosts:
       - "host.docker.internal:host-gateway"
