@@ -378,6 +378,7 @@
       "action": "Aktion",
       "investigate": "Untersuchen",
       "liveProbe": "Live-Sonde · nicht im Katalog",
+      "instantIgnored": "Zeitpunkt ignoriert",
       "viewAll": "Alle Signale"
     },
     "cases": {

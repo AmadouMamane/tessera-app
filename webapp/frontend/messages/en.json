@@ -378,6 +378,7 @@
       "action": "Action",
       "investigate": "Investigate",
       "liveProbe": "live probe · uncatalogued",
+      "instantIgnored": "Instant ignored",
       "viewAll": "View all signals"
     },
     "cases": {

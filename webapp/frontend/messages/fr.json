@@ -378,6 +378,7 @@
       "action": "Action",
       "investigate": "Investiguer",
       "liveProbe": "sonde live · hors catalogue",
+      "instantIgnored": "Instant ignoré",
       "viewAll": "Voir tous les signaux"
     },
     "cases": {

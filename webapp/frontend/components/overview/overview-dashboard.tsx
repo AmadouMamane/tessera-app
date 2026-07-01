@@ -94,7 +94,7 @@ import {
   toneBg,
   toneText,
 } from "@/lib/overview";
-import { isOrgWide } from "@/lib/signal-registry";
+import { isOrgWide, signalSupports } from "@/lib/signal-registry";
 
 const POLL_MS = 15_000;
 const POLL_FAST_MS = 10_000;
@@ -1022,6 +1022,20 @@ function CriticalControlsTable({
                               className="inline-flex cursor-help items-center rounded border border-[var(--border)] bg-[var(--muted)]/40 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-[var(--muted-foreground)]"
                             >
                               {tas("orgWide")}
+                            </span>
+                          ) : null}
+                          {/* A temporal instant is selected but this signal declares no `time`
+                            dimension (a live current-policy probe): make the "instant ignored"
+                            disclosure VISIBLE, not hover-only — the value shown is the LIVE
+                            result, not a measurement at the chosen instant. Driven by the
+                            registry (`signalSupports`), so it can never drift from the declaration. */}
+                          {historyMode && !c.noData && !signalSupports(c.id, "time") ? (
+                            <span
+                              title={tt("liveTooltip")}
+                              className="inline-flex cursor-help items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-amber-300/90"
+                            >
+                              <Activity className="h-2.5 w-2.5" />
+                              {t("instantIgnored")}
                             </span>
                           ) : null}
                         </div>
