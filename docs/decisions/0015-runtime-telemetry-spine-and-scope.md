@@ -398,6 +398,55 @@ needs an explicit stance, never fabrication:
 - **Phase D**: erasure reaches spine + cache; retire jsonl only after all signals flipped and
   the bake period passed.
 
+## Execution protocol (autonomous — run Phases A→F without human gates)
+
+This ADR is implemented **autonomously**: the executing agent advances from one phase to the
+next **without waiting for human validation**, self-verifying at each step. Human involvement is
+reserved for genuine blockers, never for routine progression.
+
+### The loop (per phase)
+
+1. **Implement** the phase per §Migration + its §Performance and §Testing requirements.
+2. **Verify — multiple times.** Run the **full gate** — `ruff check` + `ruff format --check` +
+   `mypy` (strict) + `tsc --noEmit` + `biome check` + `pytest -m "not integration"` — **plus the
+   phase-specific verification** (the Performance budget probe on a snapshot; a capture / curl
+   proving the render; the contract test for a new adapter). Require it **green twice
+   consecutively** — a second clean run catches flakiness / non-determinism — before proceeding.
+3. **Commit + push (targeted).** Commit the phase with a Conventional-Commits message, staging
+   **only that phase's files by path** — **never `git add -A`** (the working tree is shared with a
+   concurrent workstream; a blanket add sweeps in unrelated WIP). If a file shows changes outside
+   the phase's scope, surface it — do not silently blend workstreams. Push to
+   `origin/feature/redesign`.
+4. **Record state, then auto-advance.** Update the execution status file (below) with the phase,
+   result and commit sha, and **immediately start the next phase** — no pause, no ask.
+
+### Stop conditions (the only times it halts instead of advancing)
+
+Halt and write a clear status report **only** when:
+- a phase cannot reach a **green gate after 3 repair attempts** → do **not** commit/push a broken
+  phase; report the failing check;
+- a **genuine external blocker** it cannot self-provide is hit — a missing credential (Langfuse
+  API key, Prometheus auth), an unrunnable service, or a decision needing business/human input →
+  state **exactly** what is needed to proceed;
+- honesty would be violated — **never** weaken a test, fabricate data, or mark a fixture real to
+  force green (§Decision, project rule).
+
+Otherwise it runs **A → B → C → D → E → F to completion**.
+
+### Resumability (survives context compaction and a fresh session)
+
+A→F spans context windows. The protocol is **resumable**: the current phase + last green commit
+are tracked in **`docs/decisions/0015-execution-status.md`** (seeded now, updated each phase). A
+resuming session reads that file + this ADR and continues the **next** phase — no re-work, no lost
+progress. That file is the single source of truth for "where are we".
+
+### Non-negotiables during the run
+- The gate is **hard**: a phase is not "done" until it is **twice-green**.
+- **Secrets never enter the repo** (spine creds via env / Secret Manager).
+- **Shadow before flip** (§Testing #3): a live signal switches jsonl→spine only after it holds
+  parity — so an autonomous flip can never regress the UI.
+- **Targeted staging only** — never `git add -A`.
+
 ## Consequences
 
 **Positive.** One source of truth (the runtime spine); dimensions are declarative and
