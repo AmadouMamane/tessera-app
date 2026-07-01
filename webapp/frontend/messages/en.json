@@ -3018,6 +3018,15 @@
     "gateState": {
       "pass": "Pass",
       "watch": "Watch"
+    },
+    "cta": {
+      "curationLabel": "Open the evaluation set",
+      "curationDesc": "Curate failing cases and cover the missing intents.",
+      "experimentsLabel": "Open replay & shadow traffic",
+      "experimentsDesc": "Replay the candidates in shadow before any production rollout.",
+      "releaseLabel": "Open release control",
+      "releaseDesc": "Check the quality / coverage / corpus gates, then publish.",
+      "experimentsNote": "Shadow-traffic / replay candidates are the datasets whose drift exceeds the threshold: replay them in shadow before publishing."
     }
   },
   "incidents": {

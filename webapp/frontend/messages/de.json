@@ -3018,6 +3018,15 @@
     "gateState": {
       "pass": "Bestanden",
       "watch": "Beobachten"
+    },
+    "cta": {
+      "curationLabel": "Evaluationsset öffnen",
+      "curationDesc": "Fehlgeschlagene Fälle kuratieren und fehlende Intents abdecken.",
+      "experimentsLabel": "Replay & Schattenverkehr öffnen",
+      "experimentsDesc": "Kandidaten im Schattenbetrieb wiederholen, bevor sie in Produktion gehen.",
+      "releaseLabel": "Release-Kontrolle öffnen",
+      "releaseDesc": "Qualitäts-/Abdeckungs-/Korpus-Gates prüfen, dann freigeben.",
+      "experimentsNote": "Schattenverkehr-/Replay-Kandidaten sind die Datensätze, deren Drift den Schwellwert überschreitet: im Schattenbetrieb wiederholen, bevor freigegeben wird."
     }
   },
   "incidents": {

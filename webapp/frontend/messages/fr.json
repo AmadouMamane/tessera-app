@@ -3018,6 +3018,15 @@
     "gateState": {
       "pass": "Réussi",
       "watch": "À surveiller"
+    },
+    "cta": {
+      "curationLabel": "Ouvrir le jeu d'évaluation",
+      "curationDesc": "Curer les cas en échec et couvrir les intents manquants.",
+      "experimentsLabel": "Ouvrir le rejeu & trafic fantôme",
+      "experimentsDesc": "Rejouer les candidats en shadow avant toute mise en production.",
+      "releaseLabel": "Ouvrir le contrôle de release",
+      "releaseDesc": "Vérifier les gates qualité / couverture / corpus, puis publier.",
+      "experimentsNote": "Les candidats trafic fantôme / rejeu sont les jeux dont la dérive dépasse le seuil : rejouez-les en shadow avant de publier."
     }
   },
   "incidents": {
