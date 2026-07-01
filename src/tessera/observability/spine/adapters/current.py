@@ -30,14 +30,31 @@ class CurrentStoresReader:
     """
 
     def scores(self, scope: Scope) -> list[dict[str, object]]:
-        """Eval score rows for the scope (durable log as-of-T, else the live ring)."""
-        if scope.at:
-            return persisted_scores(scope.at, scope.agent_id)
-        return recent_scores(scope.agent_id)
+        """Eval score rows for the scope (durable log as-of-T, else the live ring).
+
+        ``agent`` + as-of-T are pushed into the store read; ``language`` / ``model`` are
+        applied here (the rows carry both), so the same store read serves every language
+        slice of the agent x time x language cube (ADR 0015 §Migration F).
+        """
+        rows = (
+            persisted_scores(scope.at, scope.agent_id)
+            if scope.at
+            else recent_scores(scope.agent_id)
+        )
+        if scope.language is not None:
+            rows = [r for r in rows if r.get("language") == scope.language]
+        if scope.model is not None:
+            rows = [r for r in rows if r.get("model") == scope.model]
+        return rows
 
     def bundles(self, scope: Scope) -> list[ReplayBundle]:
-        """Captured turn bundles for the scope (as-of-T + agent filtered)."""
-        return replay_mod.recent_bundles(scope.at, scope.agent_id)
+        """Captured turn bundles for the scope (as-of-T + agent, then language / model)."""
+        rows = replay_mod.recent_bundles(scope.at, scope.agent_id)
+        if scope.language is not None:
+            rows = [b for b in rows if b.language == scope.language]
+        if scope.model is not None:
+            rows = [b for b in rows if b.original_model == scope.model]
+        return rows
 
     def audit_entries(self, scope: Scope) -> list[dict[str, object]]:  # noqa: ARG002
         """The whole guard audit ledger (scope filter is applied downstream by signals)."""

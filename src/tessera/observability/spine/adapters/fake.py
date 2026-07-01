@@ -34,17 +34,25 @@ class FakeSpineReader:
         self._audit = list(audit_entries or [])
 
     def scores(self, scope: Scope) -> list[dict[str, object]]:
-        """Seeded score rows, filtered by the scope's as-of-T + agent, like the real store."""
+        """Seeded score rows, filtered by as-of-T + agent + language/model, like the store."""
         rows = [r for r in self._scores if occurred_before(r.get("scored_at"), scope.at)]
         if scope.agent_id is not None:
             rows = [r for r in rows if r.get("agent_id") == scope.agent_id]
+        if scope.language is not None:
+            rows = [r for r in rows if r.get("language") == scope.language]
+        if scope.model is not None:
+            rows = [r for r in rows if r.get("model") == scope.model]
         return rows
 
     def bundles(self, scope: Scope) -> list[ReplayBundle]:
-        """Seeded bundles, filtered by the scope's as-of-T + agent, like the real store."""
+        """Seeded bundles, filtered by as-of-T + agent + language/model, like the store."""
         items = [b for b in self._bundles if occurred_before(b.captured_at, scope.at)]
         if scope.agent_id is not None:
             items = [b for b in items if b.agent_id == scope.agent_id]
+        if scope.language is not None:
+            items = [b for b in items if b.language == scope.language]
+        if scope.model is not None:
+            items = [b for b in items if b.original_model == scope.model]
         return items
 
     def audit_entries(self, scope: Scope) -> list[dict[str, object]]:  # noqa: ARG002

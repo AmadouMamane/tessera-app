@@ -56,6 +56,21 @@ describe("signalSupports", () => {
     expect(signalSupports("refusal", "agent")).toBe(false);
     expect(signalSupports("does-not-exist", "agent")).toBe(false);
   });
+
+  // Phase F cube: store-derived turn signals slice by language + model; ledger/org signals
+  // do not — so a language filter affordance renders only where it can be honoured.
+  it("declares language + model on the store-derived cube signals", () => {
+    for (const id of ["scores", "slo", "trend", "funnel", "toxicity", "pii_leak", "traces"]) {
+      expect(signalSupports(id, "language")).toBe(true);
+      expect(signalSupports(id, "model")).toBe(true);
+    }
+  });
+
+  it("does not offer language on ledger/org signals", () => {
+    for (const id of ["conformance", "audit_count", "refusal", "audit_integrity"]) {
+      expect(signalSupports(id, "language")).toBe(false);
+    }
+  });
 });
 
 describe("capabilityFor", () => {

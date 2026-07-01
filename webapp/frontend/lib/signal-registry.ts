@@ -28,6 +28,9 @@ export interface SignalCapability {
 }
 
 const AGENT_TIME: Dimension[] = ["agent", "time"];
+// The full cube: a store-derived turn signal slices by agent, time, language and model,
+// because its score rows / captured bundles carry all four (ADR 0015 §Migration F).
+const CUBE: Dimension[] = ["agent", "time", "language", "model"];
 const ORG: Dimension[] = [];
 
 function cap(
@@ -42,21 +45,21 @@ function cap(
 }
 
 export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
-  // Store-derived, per-agent + as-of-T (the batched snapshot hot path).
-  scores: cap(AGENT_TIME),
-  slo: cap(AGENT_TIME),
-  trend: cap(AGENT_TIME),
-  funnel: cap(AGENT_TIME),
-  toxicity: cap(AGENT_TIME),
-  pii_leak: cap(AGENT_TIME),
-  cost: cap(AGENT_TIME),
-  anomalies: cap(AGENT_TIME),
-  what_changed: cap(AGENT_TIME),
+  // Store-derived, full cube (agent + time + language + model) — the snapshot hot path.
+  scores: cap(CUBE),
+  slo: cap(CUBE),
+  trend: cap(CUBE),
+  funnel: cap(CUBE),
+  toxicity: cap(CUBE),
+  pii_leak: cap(CUBE),
+  cost: cap(CUBE),
+  anomalies: cap(CUBE),
+  what_changed: cap(CUBE),
   conformance: cap(AGENT_TIME),
   tool_validity: cap(AGENT_TIME),
   governance: cap(AGENT_TIME),
   audit_count: cap(AGENT_TIME),
-  traces: cap(AGENT_TIME),
+  traces: cap(CUBE),
   // Control-case inbox: each item is a case an agent's own eval run failed → ventilable.
   inbox: cap(AGENT_TIME),
   // Org-wide by construction: fixed-corpus probes of the shared policy, and the audit

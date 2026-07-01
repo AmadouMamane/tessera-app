@@ -77,18 +77,24 @@ def _cap(
     )
 
 
+# The full dimensioning of a store-derived turn signal: sliceable by agent, time, language and
+# model, because the score rows / captured bundles carry all four (ADR 0015 §Migration F — the
+# cube). Declaring the dimension is a field here, not a route sweep; the read narrows the request
+# scope to exactly these, so an unsupported slice can never be silently applied.
+_CUBE = {AGENT, TIME, LANGUAGE, MODEL}
+
 # --- The declaration table (the honesty contract, mirrored by lib/signal-registry.ts) ---
 _DECLARATIONS: tuple[SignalCapability, ...] = (
-    # Store-derived, per-agent + as-of-T — the batched snapshot hot path.
-    _cap("scores", {AGENT, TIME}, in_snapshot=True),
-    _cap("slo", {AGENT, TIME}, in_snapshot=True),
-    _cap("trend", {AGENT, TIME}, in_snapshot=True),
-    _cap("funnel", {AGENT, TIME}, in_snapshot=True),
-    _cap("toxicity", {AGENT, TIME}, in_snapshot=True),
-    _cap("pii_leak", {AGENT, TIME}, in_snapshot=True),
-    _cap("cost", {AGENT, TIME}, in_snapshot=True),
-    _cap("anomalies", {AGENT, TIME}, in_snapshot=True),
-    _cap("what_changed", {AGENT, TIME}, in_snapshot=True),
+    # Store-derived, per-agent + as-of-T + language + model — the batched snapshot hot path.
+    _cap("scores", _CUBE, in_snapshot=True),
+    _cap("slo", _CUBE, in_snapshot=True),
+    _cap("trend", _CUBE, in_snapshot=True),
+    _cap("funnel", _CUBE, in_snapshot=True),
+    _cap("toxicity", _CUBE, in_snapshot=True),
+    _cap("pii_leak", _CUBE, in_snapshot=True),
+    _cap("cost", _CUBE, in_snapshot=True),
+    _cap("anomalies", _CUBE, in_snapshot=True),
+    _cap("what_changed", _CUBE, in_snapshot=True),
     # Ledger-backed, per-agent + as-of-T. Declared + registered now (so their badges and
     # ``?signals=`` reads work), but they read the tamper-evident ledger — a large
     # hash-chained file — so they stay off the default hot path until Phase C gives them a
@@ -115,9 +121,9 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("regression_risk", frozenset()),
     _cap("ai_act", frozenset()),
     _cap("control_signals", frozenset()),
-    # Langfuse-backed trace summary — per-agent via metadata (wired into the snapshot in
-    # Phase C; declared now so its filter/badge render from the registry today).
-    _cap("traces", {AGENT, TIME}),
+    # Langfuse-backed trace summary — a trace's metadata carries agent, language and model,
+    # so it slices on the full cube via a metadata filter (ADR 0015 §Migration F).
+    _cap("traces", _CUBE),
     # Control-case inbox — each item is a case an agent's OWN eval run failed, so the shared
     # triage queue ventilates by agent (ADR 0015 §Migration E). Real per-agent attribution.
     _cap("inbox", {AGENT, TIME}),

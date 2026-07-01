@@ -55,7 +55,11 @@ class SpineStoresReader:
         return self._prometheus
 
     def scores(self, scope: Scope) -> list[dict[str, object]]:
-        """Eval score rows from Langfuse scores, shaped like the jsonl store's rows."""
+        """Eval score rows from Langfuse scores, shaped like the jsonl store's rows.
+
+        Langfuse filters by agent + time; ``language`` / ``model`` are applied here over the
+        mapped rows so the agent x time x language cube reads identically to the jsonl path.
+        """
         rows: list[dict[str, object]] = []
         for row in self._langfuse.scores_by_metadata(scope):
             metadata = _meta(row)
@@ -71,6 +75,10 @@ class SpineStoresReader:
                     "judge_model": _opt_str(row.get("comment")),
                 }
             )
+        if scope.language is not None:
+            rows = [r for r in rows if r.get("language") == scope.language]
+        if scope.model is not None:
+            rows = [r for r in rows if r.get("model") == scope.model]
         return rows
 
     def bundles(self, scope: Scope) -> list[ReplayBundle]:
@@ -99,6 +107,10 @@ class SpineStoresReader:
                     agent_id=_opt_str(metadata.get("agent_id")),
                 )
             )
+        if scope.language is not None:
+            bundles = [b for b in bundles if b.language == scope.language]
+        if scope.model is not None:
+            bundles = [b for b in bundles if b.original_model == scope.model]
         return bundles
 
     def audit_entries(self, scope: Scope) -> list[dict[str, object]]:  # noqa: ARG002
