@@ -2819,7 +2819,8 @@
       "topServices": "Top-Services nach Kosten ({n})",
       "actions": "Empfohlene Maßnahmen ({n})",
       "providerBreakdown": "Verteilung nach Anbieter ({n})",
-      "budgetForecast": "Budget & Prognose"
+      "budgetForecast": "Budget & Prognose",
+      "volumePerDay": "Volumen pro Tag"
     },
     "col": {
       "model": "Modell",

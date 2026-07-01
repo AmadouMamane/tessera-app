@@ -2819,7 +2819,8 @@
       "topServices": "Top services by cost ({n})",
       "actions": "Recommended actions ({n})",
       "providerBreakdown": "Breakdown by provider ({n})",
-      "budgetForecast": "Budget & forecast"
+      "budgetForecast": "Budget & forecast",
+      "volumePerDay": "Volume per day"
     },
     "col": {
       "model": "Model",
