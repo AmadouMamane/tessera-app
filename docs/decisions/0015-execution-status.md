@@ -6,8 +6,11 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 
 - **Protocol**: implement → full gate **twice green** + phase verification → commit + push
   (targeted staging, never `git add -A`) → update this file → auto-advance. No human gate.
-- **Halt only** on: 3 failed repair attempts, a genuine external blocker (missing cred/infra),
-  or an honesty conflict. Otherwise run A→F to completion.
+- **Halt only** on: 3 failed repair attempts, the **Docker daemon unavailable** (the run starts the
+  obs stack itself via `make obs-up-core`/`obs-up`), or an honesty conflict. Otherwise A→F to end.
+- **Stop it anytime**: create the file **`docs/decisions/0015-STOP`** — the run finishes its current
+  safe step, records state, and exits cleanly (never a half-committed phase).
+- **Watch it**: this Log (below, newest first) + `git log origin/feature/redesign`.
 - **Branch**: `feature/redesign` · **remote**: `origin/feature/redesign`.
 
 ## Phase ledger

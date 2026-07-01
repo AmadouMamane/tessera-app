@@ -329,6 +329,22 @@ latency + cache-hit-rate as Prometheus metrics — we dogfood the spine.
    (honest empty) rather than blocking the page. The dashboard paints what is ready and badges
    the rest — never held hostage by one slow query.
 
+### Measurement harness (the budget is enforced, not hoped)
+
+A budget is a **gate**, so it is **measured** every phase — never asserted:
+
+- **`scripts/perf-probe.mjs`** (Playwright): loads a dashboard at a fixed scope and measures
+  **cold TTI** (time until every KPI card holds a real value, not a skeleton) and **scrub latency**
+  (time from an `asOf` change to repaint); exits non-zero if p95 exceeds the budget.
+- **Backend snapshot p95**: the probe fires ~50 `GET /observability/snapshot?scope=…`, records
+  p50/p95 (asserts ≤ 300 ms), and asserts the **≤ 1 PromQL + ≤ 1 Langfuse** upstream-call budget
+  (counted via the endpoint's own instrumentation).
+- **Cache hit-rate + self-latency**: the snapshot endpoint exports `spine_snapshot_latency_seconds`
+  and `spine_cache_hit_ratio` to Prometheus; the probe reads them back — we dogfood the spine.
+- The probe runs **inside the twice-green gate from Phase A** (against the current stores first),
+  so the fast read model is proven before any source swap; a perf regression **fails the phase**,
+  not the operator's eyes.
+
 ### Folded into the phases (so it is built from day one, not bolted on)
 
 - **Phase A** ships the **snapshot endpoint + `(scope, time-bucket)` cache key + single-flight**,
@@ -495,6 +511,27 @@ progress. That file is the single source of truth for "where are we".
   parity — so an autonomous flip can never regress the UI.
 - **Targeted staging only** — never `git add -A`.
 
+### Monitoring, notification & kill-switch
+
+An unattended run that commits and pushes must be **observable and stoppable**:
+- **Progress = the status file.** After every phase (and on halt) the run prepends a one-line entry
+  to `0015-execution-status.md` (phase, result, commit sha, p95). The operator watches that file and
+  `git log origin/feature/redesign` to see progress in real time.
+- **Notification.** The run emits a visible summary line per phase / halt (and, where the harness
+  supports it, a push notification), so the operator is pinged at each milestone without watching.
+- **Kill-switch.** Before each phase the run checks for a sentinel file **`docs/decisions/0015-STOP`**;
+  if present it finishes the current safe step, records state, and **exits cleanly** (never a
+  half-committed phase). The operator halts the run by **creating that file** — no need to interrupt
+  a process.
+
+### Precondition — the run is the sole writer
+
+Launch only when the working tree is **clean** (any parallel workstream committed / idle): the run
+assumes it is the sole writer. It edits shared files (e.g. `observability.py`); if it detects
+**third-party changes** to a file it is about to commit, it stages **only its own hunks**, and if it
+cannot cleanly separate them it **halts and reports** rather than blending workstreams. Coordinate:
+let a parallel editor land its commit first.
+
 ## Consequences
 
 **Positive.** One source of truth (the runtime spine); dimensions are declarative and
@@ -539,3 +576,11 @@ open is implementation detail:_
   outside the hot budget — acceptable for deep history, flagged in the UI).
 - **Recording-rule cardinality**: per-agent × per-language × per-model recording rules must
   stay within a sane series budget; cap the pre-aggregated dimension combinations.
+- **Phoenix attribute backfill**: if Phoenix cannot back-write `agent_id` onto existing spans,
+  per-agent *retrieval* history starts at the stamping cutoff (org-only before) — same
+  "data available since" contract as Prometheus (§Testing 2).
+- **Cost is an estimate today** (derived from token counts). Wiring real per-call cost (Langfuse)
+  is a follow-on; until then the signal is labelled **estimated**, never presented as measured.
+- **Alerting pipeline** (Prometheus recording rules → Alertmanager / Grafana alerts on budget
+  burn) is **adjacent** to this ADR's read model — named as Prometheus/Grafana's job in the
+  capability matrix, designed as a follow-on, not in the A→F scope.
