@@ -447,7 +447,7 @@ function AutomationsRail({ t, data }: { t: T; data: Data }) {
               {g.roles.map((r) => (
                 <li key={r.mode} className="flex items-start gap-2">
                   <Badge className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
-                    {r.mode}
+                    {t(`mode.${r.mode}`)}
                   </Badge>
                   <span className="min-w-0 flex-1 text-[0.66rem] text-[var(--tessera-text)]">
                     {r.scope}
