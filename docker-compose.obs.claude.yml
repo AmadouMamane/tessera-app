@@ -209,7 +209,9 @@ services:
         condition: service_started
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: claude-demo-pw
+      # No hardcoded credential in the repo: overridable via env, benign default for
+      # the local demo. Set GF_ADMIN_PASSWORD in your shell for a real password.
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:-changeme}
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_USERS_DEFAULT_THEME: dark
