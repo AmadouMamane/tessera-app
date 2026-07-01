@@ -33,8 +33,10 @@ test("overview tab is selected by default and shows the KPI strip", async ({ pag
   );
   await expect(panel(page).getByText("Disponibilité").first()).toBeVisible();
   await expect(panel(page).getByText("Budget & prévisions")).toBeVisible();
-  // The cost-by-model table belongs to another tab — it must not render here.
-  await expect(panel(page).getByText(/Coût par modèle/)).toHaveCount(0);
+  // Vue d'ensemble is comprehensive (normative 08): the cost-by-model table
+  // renders here too. Tab switching is proven by the focused tabs dropping
+  // content (see the cost/capacity tests), not by the overview hiding it.
+  await expect(panel(page).getByText(/Coût par modèle/)).toBeVisible();
 });
 
 test("clicking Coûts switches to the real cost view", async ({ page }) => {

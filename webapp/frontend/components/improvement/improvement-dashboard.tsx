@@ -384,6 +384,10 @@ export function ImprovementDashboard() {
   const topProblemsCard = <TopProblemsCard topProblems={topProblems} />;
 
   const tabBody: Record<(typeof TABS)[number], ReactNode> = {
+    // Vue d'ensemble = the comprehensive dashboard (normative 09): the KPI strip,
+    // the priorities table (A), the diagnostics (B) and the release/top-problems
+    // cards, all at once. The other tabs are focused subsets. Sections the backend
+    // has no real source for (change log, corpus gaps, burndown) are omitted.
     overview: (
       <>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
@@ -398,6 +402,7 @@ export function ImprovementDashboard() {
             kpi.roi,
           ]}
         </div>
+        {panelOpportunities}
         <div className="grid items-start gap-2 lg:grid-cols-2">
           {panelCauses}
           {panelCoverage}

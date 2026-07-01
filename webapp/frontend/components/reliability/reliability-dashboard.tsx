@@ -776,6 +776,10 @@ export function ReliabilityDashboard() {
   // Each tab is a curated real view over the same windowed report. Only the active
   // tab renders; panels/KPIs above are shared element objects, safe to reuse here.
   const tabBody: Record<(typeof TABS)[number], ReactNode> = {
+    // Vue d'ensemble = the comprehensive dashboard (normative 08): the full KPI
+    // strip + every real panel at once. The other tabs are focused subsets. Panels
+    // the backend has no real data for (cache hit-rate, quota TPM/RPM) are omitted,
+    // never fabricated.
     overview: (
       <>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
@@ -790,9 +794,23 @@ export function ReliabilityDashboard() {
             kpi.requests,
           ]}
         </div>
-        <div className="grid gap-2 lg:grid-cols-2">
+        <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
           {panelAvailErrors}
+          {panelErrors}
+          {panelLatency}
+          {panelCostPerDay}
+        </div>
+        <div className="grid gap-2 lg:grid-cols-2">
+          {panelCostByModel}
+          {panelServicesCost}
+          {panelIncidents}
+          {panelActions}
+        </div>
+        <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+          {panelServices}
+          {panelProviders}
           {panelBudget}
+          {panelQualityTrend}
         </div>
       </>
     ),
