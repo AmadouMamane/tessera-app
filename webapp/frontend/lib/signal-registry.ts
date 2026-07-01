@@ -81,6 +81,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   curation: cap(ORG, { synthetic: true }),
   automations: cap(ORG, { synthetic: true }),
   replay_shadow: cap(ORG, { synthetic: true }),
+  // Policies & guardrails overview is a full demonstration fixture (hardcoded) today.
+  policies: cap(ORG, { synthetic: true }),
   // UI control-row aliases (the overview "critical controls" table uses these ids).
   faithfulness: cap(AGENT_TIME),
   pii: cap(AGENT_TIME),

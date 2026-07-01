@@ -140,6 +140,10 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("curation", frozenset(), synthetic=True),
     _cap("automations", frozenset(), synthetic=True),
     _cap("replay_shadow", frozenset(), synthetic=True),
+    # The Policies & guardrails overview is a full demonstration fixture today (hardcoded
+    # version timeline / KPIs / active policies), so it is flagged synthetic — the page
+    # carries a visible "demonstration data" notice rather than reading as live governance.
+    _cap("policies", frozenset(), synthetic=True),
 )
 
 CAPABILITIES: dict[str, SignalCapability] = {c.id: c for c in _DECLARATIONS}

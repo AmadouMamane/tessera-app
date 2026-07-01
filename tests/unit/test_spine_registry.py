@@ -22,7 +22,7 @@ from tessera.observability.spine.scope import Dimension, Scope
 
 class TestCapabilities:
     def test_fixtures_are_flagged_synthetic(self) -> None:
-        for signal_id in ("incidents", "curation", "automations", "replay_shadow"):
+        for signal_id in ("incidents", "curation", "automations", "replay_shadow", "policies"):
             assert capability_for(signal_id).synthetic is True
 
     def test_fixed_corpus_probes_are_org_wide(self) -> None:

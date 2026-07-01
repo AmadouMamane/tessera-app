@@ -38,7 +38,7 @@ describe("isOrgWide", () => {
 
 describe("isSynthetic", () => {
   it("flags the deterministic fixtures", () => {
-    for (const id of ["incidents", "curation", "automations", "replay_shadow"]) {
+    for (const id of ["incidents", "curation", "automations", "replay_shadow", "policies"]) {
       expect(isSynthetic(id)).toBe(true);
     }
   });
