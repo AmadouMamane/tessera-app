@@ -1190,16 +1190,30 @@ function SecurityRail({
             <CardTitle className="text-sm">{ts("rail.siem")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
-            {incidents.slice(0, 3).map((c, i) => (
+            {incidents.slice(0, 3).map((c) => (
               <div
                 key={c.case_id}
                 className="flex items-center justify-between gap-2 text-[0.7rem]"
               >
-                <span className="font-mono text-[var(--tessera-green)]">{`CASE-02${(i + 1).toString().padStart(2, "0")}`}</span>
+                {/* Real case id + real severity (was a fabricated "CASE-02xx" id and a
+                  hardcoded "High" badge — honest data only: never invent an id/severity). */}
+                <span className="shrink-0 font-mono text-[var(--tessera-green)]">{c.case_id}</span>
                 <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
                   {c.title}
                 </span>
-                <Badge tone="danger">High</Badge>
+                <Badge
+                  tone={
+                    c.severity === "critical"
+                      ? "danger"
+                      : c.severity === "high"
+                        ? "warning"
+                        : "neutral"
+                  }
+                >
+                  {ts(
+                    `state.${c.severity === "critical" ? "crit" : c.severity === "high" ? "high" : "warn"}`,
+                  )}
+                </Badge>
               </div>
             ))}
             <Button size="sm" variant="outline" className="mt-1 h-7 justify-center text-[0.7rem]">

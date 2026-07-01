@@ -430,7 +430,7 @@ function ImprovementRail({
                   <span className="flex items-center gap-2">
                     <span className="tabular-nums">{g.value}</span>
                     <Badge tone={g.passed ? "success" : "warning"}>
-                      {g.passed ? "Pass" : "Watch"}
+                      {g.passed ? ti("gateState.pass") : ti("gateState.watch")}
                     </Badge>
                   </span>
                 </div>

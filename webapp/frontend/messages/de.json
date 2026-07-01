@@ -3007,6 +3007,10 @@
       "current": "Aktuelles Release",
       "inProd": "In Produktion",
       "planCta": "Aktionsplan vorbereiten"
+    },
+    "gateState": {
+      "pass": "Bestanden",
+      "watch": "Beobachten"
     }
   },
   "incidents": {
