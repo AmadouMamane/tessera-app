@@ -18,7 +18,7 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | Phase | Scope (short) | Status | Commit | Notes |
 |---|---|---|---|---|
 | A | Scope object + registry + capabilities + snapshot endpoint + cache/single-flight (reads current stores) | ✅ done | `697106f` | kills the silent-ignore bug class; fast read model in place before any source swap. Perf p95: cold 25ms / warm 2ms / 2 upstream reads for 9 signals |
-| B | Complete stamping (EVAL_SCORE / GUARD_DECISIONS labels + span attrs + Langfuse scores) + Prometheus recording rules + "data available since" cutoff | ⬜ pending | — | |
+| B | Complete stamping (EVAL_SCORE / GUARD_DECISIONS labels + span attrs + Langfuse scores) + Prometheus recording rules + "data available since" cutoff | ✅ done | `828016f` | agent_id+model on EVAL_SCORE; agent_id on GUARD_DECISIONS (now wired); turn-span stamping; 5 recording rules loaded; /availability honest per-dimension cutoff |
 | C | Read adapters (langfuse / prometheus / ledger) behind read(scope); aggregates→Prom, detail→Langfuse; shadow-run + parity per signal; contract tests; spine creds via Secret Manager | ⬜ pending | — | |
 | D | Retire convenience jsonl (scores/bundles) after all signals flipped + baked; keep audit/S1 ledgers; erasure reaches spine + cache | ⬜ pending | — | |
 | E | Four cards (traces / inbox / release / audit) + fixtures flagged synthetic / derived from spine | ⬜ pending | — | |
@@ -28,6 +28,20 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **Phase B ✅ — `828016f`** (twice-green + pushed). Completed the dimensioning so Phase C's
+  adapters can read per-agent facts: **EVAL_SCORE** gains `agent_id` + `model` labels (model
+  threaded through `evaluate_turn`); **GUARD_DECISIONS_TOTAL** gains `agent_id` and is now
+  *actually wired* (a helper increments it at the 4 guard-decision sites — it was defined but
+  never emitted); `semconv.stamp_turn_dimensions()` stamps {agent, language, model,
+  conversation, turn, environment} on the turn root span (the Langfuse per-agent substrate);
+  best-effort Langfuse **score mirroring** (`langfuse_scores.py`, daemon thread, no-op without
+  a trace, never blocks the turn); **Prometheus recording rules** (`infra/.../rules/`, 5 rules,
+  validated by promtool + loaded via rule_files + `--web.enable-lifecycle`); per-dimension
+  **"data available since"** (`spine/availability.py` + `/observability/availability`) — honest
+  forward-only (agent since 06-25 vs data since 06-24); `scripts/backfill_langfuse_traces.py`.
+  Gate twice-green: ruff + ruff-format (baseline 32) + mypy strict (237) + 868 unit (9 new) +
+  tsc + biome + 29 vitest + promtool (5 rules) + rules loaded + /availability verified. **Next:
+  Phase C.**
 - **Phase A ✅ — `697106f`** (twice-green + pushed). Introduced the spine foundations:
   `Scope` value object, capability-declared signal registry (honoured/ignored report → the
   silent-ignore bug class is now unrepresentable), the `SpineReader` adapter seam with an
