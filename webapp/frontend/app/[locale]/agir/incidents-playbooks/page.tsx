@@ -20,14 +20,17 @@ export async function generateMetadata({ params }: IncidentsPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchIncidents(queryClient: QueryClient) {
+async function prefetchIncidents(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["incidents-overview"],
+    queryKey: ["incidents-overview", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/incidents`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/incidents?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend incidents returned ${response.status}`);
       return IncidentsOverviewSchema.parse(await response.json());
     },
@@ -38,11 +41,11 @@ export default async function IncidentsPage({ params, searchParams }: IncidentsP
   const { locale } = await params;
   setRequestLocale(locale);
   const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet();
+  const fleet = await loadFleet(locale);
   const t = await getTranslations({ locale, namespace: "incidents" });
   const queryClient = new QueryClient();
   try {
-    await prefetchIncidents(queryClient);
+    await prefetchIncidents(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }
@@ -50,7 +53,7 @@ export default async function IncidentsPage({ params, searchParams }: IncidentsP
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} />
+        <GovScopeSection fleet={fleet} scope={scope} locale={locale} perAgent={false} />
       </div>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <IncidentsOverview />

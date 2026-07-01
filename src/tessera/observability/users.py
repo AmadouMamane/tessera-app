@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.rbac import ROLE_CAPS
 
 __all__ = ["compute_users"]
@@ -22,6 +23,42 @@ _ROLE_BADGE = {
     "admin": "blue",
     "auditor": "slate",
 }
+
+# Localized free-text (fr, de, en). Usernames/emails/dates stay stable; only human
+# prose (role labels, team names, descriptive display names, KPI subs) translates.
+_TR: dict[str, tuple[str, str, str]] = {
+    "sub_total": ("comptes opérateurs", "Betreiberkonten", "operator accounts"),
+    "sub_active": ("comptes actifs", "aktive Konten", "active accounts"),
+    "sub_roles": ("rôles appliqués", "angewendete Rollen", "enforced roles"),
+    "sub_mfa": ("MFA activée", "MFA aktiviert", "MFA enabled"),
+    "f_source": (
+        "Comptes amorcés (ADR 0009) / RBAC org-wide",
+        "Vorbereitete Konten (ADR 0009) / RBAC org-weit",
+        "Seeded accounts (ADR 0009) / org-wide RBAC",
+    ),
+    "role_admin": ("Administrateur", "Administrator", "Administrator"),
+    "role_auditor": ("Auditeur (lecture)", "Auditor (Lesezugriff)", "Auditor (read)"),
+    "role_superadmin": ("Super-admin", "Super-Admin", "Super-admin"),
+    "team_conformite": ("Conformité", "Compliance", "Compliance"),
+    "team_plateforme": ("Plateforme", "Plattform", "Platform"),
+    "disp_auditor": ("Compte auditeur", "Auditor-Konto", "Auditor account"),
+    "disp_superadmin": (
+        "Super-administrateur",
+        "Super-Administrator",
+        "Super-administrator",
+    ),
+}
+_TEAM_KEY = {"Conformité": "team_conformite", "Plateforme": "team_plateforme"}
+_DISPLAY_KEY = {"auditor": "disp_auditor", "superadmin": "disp_superadmin"}
+_ROLE_LABEL_KEY = {
+    "admin": "role_admin",
+    "auditor": "role_auditor",
+    "superadmin": "role_superadmin",
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
 
 # Mirror of the seeded operator accounts (accounts.ts). The superadmin exists
 # only when a password is configured; on the demo it is typically absent, so we
@@ -66,14 +103,18 @@ def _kpi(key: str, value: str, sub: str, series: list[float]) -> dict[str, objec
     return {"key": key, "value": value, "sub": sub, "series": series}
 
 
-def compute_users() -> dict[str, object]:
+def compute_users(lang: str = "fr") -> dict[str, object]:
     """Return the users overview built from the real seeded accounts + RBAC caps.
+
+    Args:
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
 
     Returns:
         A JSON-serialisable mapping with posture KPIs, the user table (each row a
         real enforced account), the per-user capability detail, and the role
         distribution.
     """
+    lang = _norm_lang(lang)
     now = datetime.now(UTC)
 
     users: list[dict[str, object]] = []
@@ -81,10 +122,15 @@ def compute_users() -> dict[str, object]:
         role = str(acc["role"])
         caps_entry = ROLE_CAPS.get(role, {})
         caps_val = caps_entry.get("caps", [])
-        role_label = caps_entry.get("label", role)
+        role_label = _t(_ROLE_LABEL_KEY[role], lang) if role in _ROLE_LABEL_KEY else str(role)
+        team = str(acc["team"])
+        team_key = _TEAM_KEY.get(team)
+        disp_key = _DISPLAY_KEY.get(str(acc["username"]))
         users.append(
             {
                 **acc,
+                "display": _t(disp_key, lang) if disp_key else acc["display"],
+                "team": _t(team_key, lang) if team_key else team,
                 "role_label": role_label,
                 "caps": list(caps_val) if isinstance(caps_val, list) else [],
                 "scope": "org",  # honest: roles are org-wide in Phase 1
@@ -98,10 +144,10 @@ def compute_users() -> dict[str, object]:
         by_role[str(u["role"])] = by_role.get(str(u["role"]), 0) + 1
 
     kpis = [
-        _kpi("total", str(len(users)), "comptes opérateurs", [3, 3, 3, 3, 3, 3, 3]),
-        _kpi("active", str(active), "comptes actifs", [active] * 7),
-        _kpi("roles", str(len(ROLE_CAPS)), "rôles appliqués", [3, 3, 3, 3, 3, 3, 3]),
-        _kpi("mfa", f"{active}/{active}", "MFA activée", [active] * 7),
+        _kpi("total", str(len(users)), _t("sub_total", lang), [3, 3, 3, 3, 3, 3, 3]),
+        _kpi("active", str(active), _t("sub_active", lang), [active] * 7),
+        _kpi("roles", str(len(ROLE_CAPS)), _t("sub_roles", lang), [3, 3, 3, 3, 3, 3, 3]),
+        _kpi("mfa", f"{active}/{active}", _t("sub_mfa", lang), [active] * 7),
     ]
 
     total = len(users) or 1
@@ -123,6 +169,6 @@ def compute_users() -> dict[str, object]:
         "distribution": distribution,
         "footer": {
             "total": len(users),
-            "source": "Comptes amorcés (ADR 0009) · RBAC org-wide",
+            "source": _t("f_source", lang),
         },
     }

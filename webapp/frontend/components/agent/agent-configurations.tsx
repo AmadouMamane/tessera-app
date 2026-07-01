@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Download } from "lucide-react";
 import type { Route } from "next";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Link } from "@/i18n/navigation";
@@ -46,12 +46,13 @@ interface Ctx {
 
 export function AgentConfigurations() {
   const t = useTranslations("agentConfigurations");
+  const locale = useLocale();
   const qc = useQueryClient();
   const agentId = useAgentId();
-  const queryKey = ["agent-configurations", agentId];
+  const queryKey = ["agent-configurations", agentId, locale];
   const { data } = useQuery({
     queryKey,
-    queryFn: ({ signal }) => fetchAgentConfigurations(agentId, signal),
+    queryFn: ({ signal }) => fetchAgentConfigurations(agentId, locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -59,7 +60,7 @@ export function AgentConfigurations() {
   const [draft, setDraft] = useState<Draft>({});
   const [error, setError] = useState(false);
   const save = useMutation({
-    mutationFn: (changes: Draft) => saveAgentConfigurations(agentId, changes),
+    mutationFn: (changes: Draft) => saveAgentConfigurations(agentId, changes, locale),
     onSuccess: (fresh) => {
       setError(false);
       setDraft({});
@@ -69,7 +70,7 @@ export function AgentConfigurations() {
   });
   // Archive is a standalone durable toggle (it must not clobber pending edits).
   const archiveMut = useMutation({
-    mutationFn: (changes: Draft) => saveAgentConfigurations(agentId, changes),
+    mutationFn: (changes: Draft) => saveAgentConfigurations(agentId, changes, locale),
     onSuccess: (fresh) => qc.setQueryData(queryKey, fresh),
   });
 
@@ -346,8 +347,11 @@ const READONLY_BOX =
   "relative flex items-center rounded-md border border-dashed border-[var(--tessera-border)]/70 bg-[rgba(5,20,35,0.4)] px-3 text-[0.78rem] text-[var(--tessera-text-muted)]";
 
 function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
+  const locale = useLocale();
   const editable = field.editable && field.key;
   const current = editable ? String(ctx.draft[field.key as string] ?? field.value) : field.value;
+  const onLabel = locale === "de" ? "Aktiviert" : locale === "en" ? "Enabled" : "Activé";
+  const offLabel = locale === "de" ? "Deaktiviert" : locale === "en" ? "Disabled" : "Désactivée";
 
   let control: ReactNode;
   if (editable && field.kind === "textarea") {
@@ -379,13 +383,16 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
       </span>
     );
   } else if (editable && field.kind === "toggle") {
-    const on = (ctx.draft[field.key as string] ?? field.value === "Activé") === true;
+    // `field.on` is the locale-independent state; `field.value` is the localized
+    // display label (so it can't be string-compared).
+    const baseOn = field.on ?? false;
+    const on = (ctx.draft[field.key as string] ?? baseOn) === true;
     control = (
       <span className={cn(EDIT_BOX, "h-7 justify-between")}>
-        <span className="text-[var(--tessera-text-muted)]">{on ? "Activé" : "Désactivée"}</span>
+        <span className="text-[var(--tessera-text-muted)]">{on ? onLabel : offLabel}</span>
         <Toggle
           on={on}
-          onToggle={() => ctx.setField(field.key as string, field.value === "Activé", !on)}
+          onToggle={() => ctx.setField(field.key as string, baseOn, !on)}
           label={field.label}
         />
       </span>

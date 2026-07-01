@@ -33,7 +33,7 @@ function RateBar({ rate }: { rate: number }) {
       <span className={`tabular-nums ${tone === "danger" ? "text-red-500" : ""}`}>
         {Math.round(rate * 100)}%
       </span>
-      <span className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-[var(--tessera-border)] sm:block">
+      <span className="hidden h-[4px] w-16 overflow-hidden rounded-full bg-[var(--tessera-border)] sm:block">
         <span className={`block h-full ${color}`} style={{ width: `${rate * 100}%` }} />
       </span>
     </div>

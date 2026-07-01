@@ -16,12 +16,15 @@ import { backendHeaders, backendUrl } from "./backend";
  * Returns `null` on any failure so callers render an honest empty state rather
  * than a fabricated one — never a fixture.
  */
-export async function loadFleet(): Promise<Fleet | null> {
+export async function loadFleet(locale = "fr"): Promise<Fleet | null> {
   try {
-    const res = await fetch(`${backendUrl()}/observability/fleet`, {
-      cache: "no-store",
-      headers: backendHeaders({ Accept: "application/json" }),
-    });
+    const res = await fetch(
+      `${backendUrl()}/observability/fleet?lang=${encodeURIComponent(locale)}`,
+      {
+        cache: "no-store",
+        headers: backendHeaders({ Accept: "application/json" }),
+      },
+    );
     if (!res.ok) return null;
     return FleetSchema.parse(await res.json());
   } catch {
@@ -33,10 +36,15 @@ export async function loadFleet(): Promise<Fleet | null> {
  * Server-side Release Control loader (AGIR), scoped by the global agent filter.
  * Returns `null` on failure so the page renders an honest empty state.
  */
-export async function loadReleaseControl(scope: string): Promise<ReleaseControl | null> {
+export async function loadReleaseControl(
+  scope: string,
+  locale = "fr",
+): Promise<ReleaseControl | null> {
   try {
     const res = await fetch(
-      `${backendUrl()}/observability/release-control?agent=${encodeURIComponent(scope)}`,
+      `${backendUrl()}/observability/release-control?agent=${encodeURIComponent(
+        scope,
+      )}&lang=${encodeURIComponent(locale)}`,
       { cache: "no-store", headers: backendHeaders({ Accept: "application/json" }) },
     );
     if (!res.ok) return null;

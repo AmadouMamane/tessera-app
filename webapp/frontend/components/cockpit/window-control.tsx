@@ -1,9 +1,10 @@
 "use client";
 
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { useFormatter, useLocale } from "next-intl";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays } from "lucide-react";
+import { useFormatter } from "next-intl";
+import { useEffect, useRef, useState } from "react";
 
+import { CalendarPopover } from "@/components/cockpit/calendar-popover";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
@@ -28,40 +29,6 @@ export function endOfLocalDay(value: string): Date | null {
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) return null;
   return new Date(year, month - 1, day, 23, 59, 59, 999);
-}
-
-function dateInputValue(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function startOfLocalMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function addLocalMonths(date: Date, amount: number): Date {
-  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
-}
-
-function calendarMonthDays(month: Date): Date[] {
-  const first = startOfLocalMonth(month);
-  const mondayOffset = (first.getDay() + 6) % 7;
-  const start = new Date(first);
-  start.setDate(first.getDate() - mondayOffset);
-  return Array.from(
-    { length: 42 },
-    (_, index) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + index),
-  );
-}
-
-function isSameLocalDate(left: Date, right: Date): boolean {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
 }
 
 /** A single segmented-preset option (e.g. ``{ value: "7d", label: "7 jours" }``). */
@@ -104,31 +71,8 @@ export function WindowControl({
   labels: WindowControlLabels;
 }) {
   const formatter = useFormatter();
-  const locale = useLocale();
   const pickerRef = useRef<HTMLDivElement>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(() => startOfLocalMonth(selectedDate));
-  const monthDays = useMemo(() => calendarMonthDays(calendarMonth), [calendarMonth]);
-  const monthFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }),
-    [locale],
-  );
-  const dayFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { dateStyle: "full" }),
-    [locale],
-  );
-  const weekdayLabels = useMemo(() => {
-    const monday = new Date(2026, 5, 1);
-    const weekdayFormatter = new Intl.DateTimeFormat(locale, { weekday: "narrow" });
-    return Array.from({ length: 7 }, (_, index) => {
-      const day = new Date(2026, 5, monday.getDate() + index);
-      return { key: dateInputValue(day), label: weekdayFormatter.format(day) };
-    });
-  }, [locale]);
-
-  useEffect(() => {
-    if (pickerOpen) setCalendarMonth(startOfLocalMonth(selectedDate));
-  }, [pickerOpen, selectedDate]);
 
   useEffect(() => {
     if (!pickerOpen) return;
@@ -202,60 +146,15 @@ export function WindowControl({
           {labels.refresh}
         </Button>
         {pickerOpen ? (
-          <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[292px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[var(--tessera-text)] shadow-[0_20px_60px_rgba(0,0,0,0.38)]">
-            <div className="mb-3 flex items-center justify-between border-b border-[var(--tessera-border)] pb-2">
-              <button
-                type="button"
-                aria-label={labels.prevMonth}
-                onClick={() => setCalendarMonth((month) => addLocalMonths(month, -1))}
-                className="grid h-8 w-8 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <p className="text-sm font-semibold capitalize">
-                {monthFormatter.format(calendarMonth)}
-              </p>
-              <button
-                type="button"
-                aria-label={labels.nextMonth}
-                onClick={() => setCalendarMonth((month) => addLocalMonths(month, 1))}
-                className="grid h-8 w-8 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-[0.68rem] font-medium uppercase text-[var(--tessera-text-muted)]">
-              {weekdayLabels.map((day) => (
-                <span key={day.key}>{day.label}</span>
-              ))}
-            </div>
-            <div className="mt-2 grid grid-cols-7 gap-1">
-              {monthDays.map((day) => {
-                const inMonth = day.getMonth() === calendarMonth.getMonth();
-                const selected = isSameLocalDate(day, selectedDate);
-                return (
-                  <button
-                    key={dateInputValue(day)}
-                    type="button"
-                    aria-label={dayFormatter.format(day)}
-                    onClick={() => {
-                      onDate(dateInputValue(day));
-                      setPickerOpen(false);
-                    }}
-                    className={cn(
-                      "h-8 rounded-md text-xs font-medium transition-colors",
-                      selected
-                        ? "bg-[#123e6a] text-[#d8eaff] ring-1 ring-[#2e72d2]"
-                        : "text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]",
-                      !inMonth && "text-[var(--tessera-text-muted)] opacity-45",
-                    )}
-                  >
-                    {day.getDate()}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <CalendarPopover
+            selectedDate={selectedDate}
+            onPick={(value) => {
+              onDate(value);
+              setPickerOpen(false);
+            }}
+            labels={{ prevMonth: labels.prevMonth, nextMonth: labels.nextMonth }}
+            className="absolute right-0 top-[calc(100%+0.5rem)] z-50"
+          />
         ) : null}
       </div>
     </section>

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowUpRight,
   Boxes,
   FlaskConical,
   Layers,
@@ -13,12 +14,15 @@ import {
   Target,
   TrendingUp,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import type { Route } from "next";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "@/i18n/navigation";
 import { fetchImprovement } from "@/lib/api/client";
 import type { Opportunity } from "@/lib/api/schemas";
 
@@ -57,16 +61,62 @@ function Kpi({
   label,
   value,
   tone,
-}: { icon: LucideIcon; label: string; value: string; tone?: string }) {
+  infoKey,
+  href,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  tone?: string;
+  infoKey?: string;
+  /** Real source this tile drills into — makes the whole tile a link (↗). */
+  href?: Route;
+}) {
+  const te = useTranslations("improvement.explain");
+  const ti = useTranslations("improvement");
   return (
-    <Card className="flex flex-col gap-0.5 p-3">
-      <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+    <Card
+      className={`group relative flex flex-col gap-0.5 p-3 ${
+        href ? "transition-colors hover:border-[var(--tessera-green)]/40" : ""
+      }`}
+    >
+      {/* Whole-tile drill-down: an overlay <Link> sibling so the inner ⓘ never
+          triggers navigation (content is pointer-transparent, ⓘ re-enabled). */}
+      {href ? (
+        <Link
+          href={href}
+          aria-label={ti("openSource", { label })}
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tessera-green)]/40"
+        />
+      ) : null}
+      <div
+        className={`flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] ${
+          href ? "pointer-events-none relative z-20" : ""
+        }`}
+      >
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
+        {infoKey ? (
+          <span className={href ? "pointer-events-auto ml-auto" : "ml-auto"}>
+            <MetricInfo
+              title={label}
+              what={te(`${infoKey}.what`)}
+              how={te(`${infoKey}.how`)}
+              source={te.has(`${infoKey}.source`) ? te(`${infoKey}.source`) : undefined}
+            />
+          </span>
+        ) : null}
       </div>
-      <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
+      <div
+        className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"} ${
+          href ? "pointer-events-none relative z-20" : ""
+        }`}
+      >
         {value}
       </div>
+      {href ? (
+        <ArrowUpRight className="pointer-events-none absolute right-1.5 bottom-1.5 z-20 h-3 w-3 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-70" />
+      ) : null}
     </Card>
   );
 }
@@ -128,9 +178,10 @@ const POLL = 30_000;
 
 export function ImprovementDashboard() {
   const ti = useTranslations("improvement");
+  const locale = useLocale();
   const q = useQuery({
-    queryKey: ["improvement"],
-    queryFn: ({ signal }) => fetchImprovement(signal),
+    queryKey: ["improvement", locale],
+    queryFn: ({ signal }) => fetchImprovement(locale, signal),
     refetchInterval: POLL,
   });
   const d = q.data;
@@ -170,31 +221,63 @@ export function ImprovementDashboard() {
         <Kpi
           icon={TrendingUp}
           label={ti("kpi.gain")}
+          infoKey="gain"
+          href="/surveiller/qualite-ia"
           value={`+${d.potential_gain_pts ?? 0} pts`}
           tone={GOOD}
         />
-        <Kpi icon={Sparkles} label={ti("kpi.actions")} value={`${d.n_active_actions ?? 0}`} />
-        <Kpi icon={Layers} label={ti("kpi.curate")} value={`${d.n_to_curate ?? 0}`} tone={WARN} />
+        <Kpi
+          icon={Sparkles}
+          label={ti("kpi.actions")}
+          infoKey="actions"
+          value={`${d.n_active_actions ?? 0}`}
+        />
+        <Kpi
+          icon={Layers}
+          label={ti("kpi.curate")}
+          infoKey="curate"
+          href="/agir/curation-eval-set"
+          value={`${d.n_to_curate ?? 0}`}
+          tone={WARN}
+        />
         <Kpi
           icon={Snowflake}
           label={ti("kpi.frozen")}
+          infoKey="frozen"
+          href="/agir/release-control"
           value={`${d.n_frozen_releases ?? 0}`}
           tone={(d.n_frozen_releases ?? 0) > 0 ? BAD : GOOD}
         />
-        <Kpi icon={FlaskConical} label={ti("kpi.shadow")} value={`${d.n_shadow_candidates ?? 0}`} />
+        <Kpi
+          icon={FlaskConical}
+          label={ti("kpi.shadow")}
+          infoKey="shadow"
+          href="/agir/replay-shadow"
+          value={`${d.n_shadow_candidates ?? 0}`}
+        />
         <Kpi
           icon={Target}
           label={ti("kpi.coverage")}
+          infoKey="coverage"
+          href="/agir/curation-eval-set"
           value={`${Math.round((d.eval_coverage ?? 0) * 100)}%`}
           tone={(d.eval_coverage ?? 0) >= 0.8 ? GOOD : WARN}
         />
         <Kpi
           icon={Boxes}
           label={ti("kpi.debt")}
+          infoKey="debt"
+          href="/configurer/sources-memoire"
           value={`${d.corpus_debt_days ?? 0} j`}
           tone={(d.corpus_debt_days ?? 0) > 90 ? WARN : GOOD}
         />
-        <Kpi icon={TrendingUp} label={ti("kpi.roi")} value={`+${d.roi_pct ?? 0}%`} tone={GOOD} />
+        <Kpi
+          icon={TrendingUp}
+          label={ti("kpi.roi")}
+          infoKey="roi"
+          value={`+${d.roi_pct ?? 0}%`}
+          tone={GOOD}
+        />
       </div>
 
       <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -243,7 +326,7 @@ export function ImprovementDashboard() {
                   {ti("panel.coverageSub")}
                 </span>
               </div>
-              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--tessera-muted)]/50">
+              <div className="mt-2 h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
                 <div
                   className="h-full rounded-full bg-[var(--tessera-green)]"
                   style={{ width: `${(d.eval_coverage ?? 0) * 100}%` }}

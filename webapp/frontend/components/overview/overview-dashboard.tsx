@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ArrowRightLeft,
+  ArrowUpRight,
   CalendarRange,
   ChevronRight,
   Clock,
@@ -23,8 +24,10 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { type ReactNode, useMemo, useState } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { PageEvidenceActions } from "@/components/overview/page-evidence-actions";
 import { fmtStamp, useTemporalState } from "@/components/overview/temporal-rail";
@@ -33,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useRouter } from "@/i18n/navigation";
+import { AGENT_SCOPE_PARAM, isScopedToAgent, parseAgentScope } from "@/lib/agent-scope";
 import {
   fetchAIAct,
   fetchAnomalies,
@@ -94,9 +98,27 @@ import {
 const POLL_MS = 15_000;
 const POLL_FAST_MS = 10_000;
 
-export function OverviewDashboard({ children }: { children?: ReactNode }) {
+export function OverviewDashboard({
+  children,
+  lead,
+}: {
+  children?: ReactNode;
+  /** Rendered ABOVE the temporal rail (e.g. the SLO breach alert), so the rail sits
+   * directly beneath the alert. The rest (per-agent breakdown) stays in `children`. */
+  lead?: ReactNode;
+}) {
   const t = useTranslations("overview");
   const locale = useLocale();
+  // Global agent scope (?agent=) — the same filter the GOUVERNER/PLATEFORME surfaces
+  // carry (lib/agent-scope). It descends into the score-/bundle-/audit-backed queries
+  // so the whole dashboard reads ONE agent's own signals, not just the "Vue par agent"
+  // table. `scope` is "all" (org view) or a concrete agent id; it rides every scoped
+  // query's key so React Query re-fetches when the operator switches agent. Signals
+  // with no per-agent substrate (the shared-policy probes refusal/firewall, the global
+  // SR-01 rail) stay org-wide and are marked as such — never faked per agent.
+  const searchParams = useSearchParams();
+  const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
+  const agentScoped = isScopedToAgent(scope);
   // SR-01 temporal state — the single shared hook (global window + URL deep-link +
   // Live/As-of/Historique reading). The SignalCommandBar owns the controls; the
   // page reads asOf/historyMode to scope its queries (ADR 0011).
@@ -127,20 +149,20 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
   // them to "—" on every step (a fresh key has no cache). keepPreviousData holds
   // the last value while the new T resolves, so the cockpit reads smoothly.
   const slo = useQuery({
-    queryKey: ["ov-slo", asOf],
-    queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined),
+    queryKey: ["ov-slo", asOf, scope],
+    queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
   const trend = useQuery({
-    queryKey: ["ov-trend", asOf],
-    queryFn: ({ signal }) => fetchTrend(signal, asOf ?? undefined),
+    queryKey: ["ov-trend", asOf, scope],
+    queryFn: ({ signal }) => fetchTrend(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
   const whatChanged = useQuery({
-    queryKey: ["ov-what-changed", asOf],
-    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined),
+    queryKey: ["ov-what-changed", asOf, scope],
+    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : 20_000,
     placeholderData: keepPreviousData,
   });
@@ -149,14 +171,14 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
   // refusal + firewall measure a FIXED corpus through the guard "now" — a
   // property of the current policy, identical at any T — so they stay live.
   const toxicity = useQuery({
-    queryKey: ["ov-toxicity", asOf],
-    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined),
+    queryKey: ["ov-toxicity", asOf, scope],
+    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
   const piiLeak = useQuery({
-    queryKey: ["ov-pii", asOf],
-    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined),
+    queryKey: ["ov-pii", asOf, scope],
+    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
@@ -166,14 +188,14 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
     staleTime: Number.POSITIVE_INFINITY,
   });
   const conformance = useQuery({
-    queryKey: ["ov-conformance", asOf],
-    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined),
+    queryKey: ["ov-conformance", asOf, scope],
+    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
   const tools = useQuery({
-    queryKey: ["ov-tools", asOf],
-    queryFn: ({ signal }) => fetchToolValidity(signal, asOf ?? undefined),
+    queryKey: ["ov-tools", asOf, scope],
+    queryFn: ({ signal }) => fetchToolValidity(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
@@ -185,20 +207,20 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
 
   // --- Incidents / risk ----------------------------------------------------
   const anomalies = useQuery({
-    queryKey: ["ov-anomalies", asOf],
-    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined),
+    queryKey: ["ov-anomalies", asOf, scope],
+    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : 20_000,
     placeholderData: keepPreviousData,
   });
   const playbooks = useQuery({
-    queryKey: ["ov-playbooks", asOf],
-    queryFn: ({ signal }) => fetchPlaybooks(signal, asOf ?? undefined),
+    queryKey: ["ov-playbooks", asOf, scope],
+    queryFn: ({ signal }) => fetchPlaybooks(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
   const roadmap = useQuery({
-    queryKey: ["ov-roadmap", asOf],
-    queryFn: ({ signal }) => fetchRoadmap(signal, asOf ?? undefined),
+    queryKey: ["ov-roadmap", asOf, scope],
+    queryFn: ({ signal }) => fetchRoadmap(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : 20_000,
     placeholderData: keepPreviousData,
   });
@@ -208,8 +230,8 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
   // chain VERIFICATION stays a structural "now" check (server-side), so the card
   // reads "à T" like every other point-in-time signal instead of a lone "live".
   const cost = useQuery({
-    queryKey: ["ov-cost", asOf],
-    queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined),
+    queryKey: ["ov-cost", asOf, scope],
+    queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
@@ -226,14 +248,14 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
     placeholderData: keepPreviousData,
   });
   const funnel = useQuery({
-    queryKey: ["ov-funnel", asOf],
-    queryFn: ({ signal }) => fetchFunnel(signal, asOf ?? undefined),
+    queryKey: ["ov-funnel", asOf, scope],
+    queryFn: ({ signal }) => fetchFunnel(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
   const scores = useQuery({
-    queryKey: ["ov-scores", asOf],
-    queryFn: ({ signal }) => fetchEvalScores(signal, asOf ?? undefined),
+    queryKey: ["ov-scores", asOf, scope],
+    queryFn: ({ signal }) => fetchEvalScores(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
@@ -256,8 +278,8 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
   // Governed-activity feed — real S1 governance events, projected as-of-T like the
   // rest of the page (so it earns the provenance chip honestly).
   const governance = useQuery({
-    queryKey: ["ov-governance", asOf],
-    queryFn: ({ signal }) => fetchGovernance(signal, asOf ?? undefined),
+    queryKey: ["ov-governance", asOf, scope],
+    queryFn: ({ signal }) => fetchGovernance(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : 20_000,
     placeholderData: keepPreviousData,
   });
@@ -337,13 +359,17 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
           clears the sticky wrapper's upward fill band below (so it never paints over
           the buttons' bottom edge while unscrolled). */}
       <PageEvidenceActions className="mb-1.5" />
-      {/* The command bar pins under the page topbar and stays there while the cockpit
-          scrolls behind it. Two opaque covers, so scrolling content never shows
-          through or above the pinned bar:
+
+      {/* The page leads with the SLO breach ALERT; the temporal rail sits directly
+          beneath it (user feedback) — not first, not buried. */}
+      {lead}
+
+      {/* The command bar pins under the page topbar; it sits just under the alert and
+          sticks to the top once you scroll past it. Two opaque covers, so the content
+          scrolling behind never shows through or above the pinned bar:
            · -mx-4 sm:-mx-6 + the page bg → a full-bleed band covering the sides;
            · shadow-[0_-20px_…] → a same-colour (NOT a visible elevation shadow) fill
-             that paints the 20px gap ABOVE the bar — the `main`'s own pt-5 padding,
-             through which the fleet rows bled once the elevation pass removed it.
+             that paints the 20px gap ABOVE the bar.
           The rail stays visually FLAT (the band is the page bg, 0 blur/spread up). */}
       <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pt-1 pb-2 shadow-[0_-20px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
         <SignalCommandBar
@@ -355,13 +381,14 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
         />
       </div>
 
-      {/* Lead content (breach hero · agent breakdown) sits below the temporal bar,
-          which is the first line of the page. */}
+      {/* Below the rail: the per-agent breakdown + the rest of the lead content. */}
       {children}
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <KpiCard
           label={t("kpi.quality")}
+          infoKey="quality"
+          href="/surveiller/qualite-ia"
           value={sloReady ? score100(sloReady.good_rate) : "—"}
           delta={
             sloReady
@@ -379,6 +406,8 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
         />
         <KpiCard
           label={t("kpi.failingControls")}
+          infoKey="failingControls"
+          href="/surveiller/qualite-ia"
           value={signalsLive ? `${failing.length}/${signalsLive}` : "—"}
           delta={t("kpi.failingDelta", { n: failing.length })}
           tone={
@@ -394,6 +423,8 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
         />
         <KpiCard
           label={t("kpi.openRisks")}
+          infoKey="openRisks"
+          href="/agir/incidents-playbooks"
           value={anomalies.data || playbooks.data ? String(openRisks) : "—"}
           delta={t("kpi.openRisksDelta", {
             anomalies: anomalies.data?.n_anomalous ?? 0,
@@ -406,6 +437,8 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
         />
         <KpiCard
           label={t("kpi.regression")}
+          infoKey="regression"
+          href="/agir/release-control"
           value={
             whatChanged.data?.available
               ? whatChanged.data.regressed
@@ -431,6 +464,8 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
         />
         <KpiCard
           label={t("kpi.cost")}
+          infoKey="cost"
+          href="/surveiller/fiabilite-cout"
           value={cost.data ? `${cost.data.estimated_cost_eur.toFixed(2)} €` : "—"}
           delta={
             cost.data ? t("kpi.costDelta", { tokens: cost.data.total_tokens.toLocaleString() }) : ""
@@ -442,6 +477,8 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
         />
         <KpiCard
           label={t("kpi.audit")}
+          infoKey="audit"
+          href="/prouver/audit-logs"
           value={audit.data ? String(audit.data.length) : "—"}
           delta={audit.data ? (audit.data.verified ? t("kpi.auditOk") : t("kpi.auditBroken")) : ""}
           tone={audit.data ? (audit.data.verified ? "success" : "danger") : "neutral"}
@@ -459,6 +496,7 @@ export function OverviewDashboard({ children }: { children?: ReactNode }) {
             loading={slo.isLoading && controls.length === 0}
             historyMode={historyMode}
             provTag={provenanceTag}
+            agentScoped={agentScoped}
           />
           <ControlCasesTriage
             inbox={inbox.data}
@@ -766,6 +804,19 @@ function signedPts(fraction: number): string {
   return `${pts >= 0 ? "+" : ""}${pts}`;
 }
 
+/** A ⓘ for a section title, reading its explanation from overview.explain.<k>. */
+function SectionInfo({ title, explainKey }: { title: string; explainKey: string }) {
+  const te = useTranslations("overview.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${explainKey}.what`)}
+      how={te(`${explainKey}.how`)}
+      source={te.has(`${explainKey}.source`) ? te(`${explainKey}.source`) : undefined}
+    />
+  );
+}
+
 function KpiCard({
   label,
   value,
@@ -776,6 +827,8 @@ function KpiCard({
   trendEmptyLabel,
   loading,
   tag,
+  infoKey,
+  href,
 }: {
   label: string;
   value: string;
@@ -786,15 +839,47 @@ function KpiCard({
   trendEmptyLabel?: string;
   loading?: boolean;
   tag?: TimeTagKind;
+  /** Key under overview.explain — renders a ⓘ "what is this / how computed". */
+  infoKey?: string;
+  /** Real source this counter drills into — makes the whole card a link. */
+  href?: string;
 }) {
+  const te = useTranslations("overview.explain");
+  const tk = useTranslations("overview.kpi");
   return (
-    <Card className="group relative overflow-hidden rounded-lg">
+    <Card
+      className={cn(
+        "group relative h-full overflow-hidden rounded-lg",
+        href && "transition-colors hover:border-blue-400/40",
+      )}
+    >
       <div className={cn("absolute inset-x-0 top-0 h-0.5", dotBg[tone])} />
-      <CardContent className="p-4">
+      {/* Whole-card drill-down to the real source. The clickable layer is an overlay
+          <Link> that is a SIBLING of the content (never an ancestor), so the ⓘ
+          popover trigger inside can't trigger navigation; the content is
+          pointer-transparent except the ⓘ, which re-enables its own clicks. */}
+      {href ? (
+        <Link
+          href={href}
+          aria-label={tk("openSource", { label })}
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40"
+        />
+      ) : null}
+      <CardContent className={cn("p-4", href && "pointer-events-none relative z-20")}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
               {label}
+              {infoKey ? (
+                <span className={href ? "pointer-events-auto" : undefined}>
+                  <MetricInfo
+                    title={label}
+                    what={te(`${infoKey}.what`)}
+                    how={te(`${infoKey}.how`)}
+                    source={te.has(`${infoKey}.source`) ? te(`${infoKey}.source`) : undefined}
+                  />
+                </span>
+              ) : null}
               {tag ? <TimeTagChip kind={tag} /> : null}
             </p>
             {loading ? (
@@ -826,6 +911,11 @@ function KpiCard({
           </div>
         ) : null}
       </CardContent>
+      {/* Persistent-but-discreet drill affordance: a faint corner arrow that
+          brightens on hover, signalling the whole card opens its real source. */}
+      {href ? (
+        <ArrowUpRight className="pointer-events-none absolute bottom-2.5 right-2.5 z-20 h-3.5 w-3.5 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-80" />
+      ) : null}
     </Card>
   );
 }
@@ -834,12 +924,18 @@ function KpiCard({
 // Critical controls table
 // ---------------------------------------------------------------------------
 
+/** Controls whose source is the shared guard policy, not a per-agent substrate:
+ * a fixed-corpus probe of the CURRENT policy is identical for every agent, so under
+ * an agent scope it is honestly marked org-wide rather than re-read per agent. */
+const ORG_WIDE_CONTROL_IDS = new Set(["refusal", "firewall"]);
+
 function CriticalControlsTable({
   controls,
   signals,
   loading,
   historyMode,
   provTag,
+  agentScoped,
 }: {
   controls: ControlRow[];
   /** Real catalogue-signal resolution per control id (id/name/route), or undefined. */
@@ -847,8 +943,11 @@ function CriticalControlsTable({
   loading: boolean;
   historyMode: boolean;
   provTag: TimeTagKind | null;
+  /** True when a single agent is selected — org-wide rows then wear an honest badge. */
+  agentScoped: boolean;
 }) {
   const t = useTranslations("overview.criticalControls");
+  const tas = useTranslations("agentScope");
   const ts = useTranslations("overview.signals");
   const tst = useTranslations("overview.states");
   const ti = useTranslations("overview.impact");
@@ -860,11 +959,21 @@ function CriticalControlsTable({
       <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
+          <SectionInfo title={t("title")} explainKey="criticalControls" />
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
-        <span className="text-xs text-[var(--muted-foreground)]">
-          {t("count", { n: controls.length })}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[var(--muted-foreground)]">
+            {t("count", { n: controls.length })}
+          </span>
+          <Link
+            href="/surveiller/qualite-ia"
+            className="flex items-center gap-1 whitespace-nowrap text-xs text-blue-300 hover:underline"
+          >
+            {t("viewAll")}
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         {loading ? (
@@ -900,7 +1009,20 @@ function CriticalControlsTable({
                         {/* Real signal identity (normative): the human label + its REAL
                           catalogue id/technical name; the two live policy probes
                           (toxicity, refusal) are honestly marked "hors catalogue". */}
-                        <div className="font-medium">{ts(c.id)}</div>
+                        <div className="flex items-center gap-1.5 font-medium">
+                          {ts(c.id)}
+                          {/* A shared-policy probe does not vary by agent: under an
+                            agent scope it carries an honest "org-wide" badge rather
+                            than pretending to be that agent's own number. */}
+                          {agentScoped && ORG_WIDE_CONTROL_IDS.has(c.id) ? (
+                            <span
+                              title={tas("orgWideHint")}
+                              className="inline-flex cursor-help items-center rounded border border-[var(--border)] bg-[var(--muted)]/40 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-[var(--muted-foreground)]"
+                            >
+                              {tas("orgWide")}
+                            </span>
+                          ) : null}
+                        </div>
                         {sig?.catalogued && sig.signal_name ? (
                           <div className="font-mono text-[0.6rem] text-[var(--muted-foreground)]">
                             {sig.signal_id} · {sig.signal_name}
@@ -1031,6 +1153,7 @@ function ControlCasesTriage({
       <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
+          <SectionInfo title={t("title")} explainKey="cases" />
           {provTag ? <TimeTagChip kind="live" /> : null}
         </CardTitle>
         <Link
@@ -1066,27 +1189,32 @@ function ControlCasesTriage({
         ) : (
           <ul className="flex flex-col gap-1.5">
             {shown.map((it) => (
-              <li
-                key={it.id}
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--muted)]/20 px-3 py-2 text-xs"
-              >
-                <span
-                  className={cn(
-                    "h-2 w-2 shrink-0 rounded-full",
-                    dotBg[CASE_PRIORITY_TONE[it.priority] ?? "neutral"],
-                  )}
-                />
-                <span className="min-w-0">
-                  <span className="block truncate font-medium text-[var(--foreground)]">
-                    {it.title}
+              <li key={it.id}>
+                <Link
+                  href="/a-traiter"
+                  title={t("openCase")}
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--muted)]/20 px-3 py-2 text-xs transition-colors hover:border-blue-400/40 hover:bg-blue-500/5"
+                >
+                  <span
+                    className={cn(
+                      "h-2 w-2 shrink-0 rounded-full",
+                      dotBg[CASE_PRIORITY_TONE[it.priority] ?? "neutral"],
+                    )}
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-[var(--foreground)]">
+                      {it.title}
+                    </span>
+                    <span className="block truncate text-[var(--muted-foreground)]">
+                      {it.source} · {it.assignee}
+                    </span>
                   </span>
-                  <span className="block truncate text-[var(--muted-foreground)]">
-                    {it.source} · {it.assignee}
-                  </span>
-                </span>
-                <Badge className={cn("shrink-0", toneBg[CASE_SLA_TONE[it.sla_tone] ?? "neutral"])}>
-                  {it.sla}
-                </Badge>
+                  <Badge
+                    className={cn("shrink-0", toneBg[CASE_SLA_TONE[it.sla_tone] ?? "neutral"])}
+                  >
+                    {it.sla}
+                  </Badge>
+                </Link>
               </li>
             ))}
           </ul>
@@ -1180,49 +1308,63 @@ function GovernedActivityCard({
       <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
+          <SectionInfo title={t("title")} explainKey="governed" />
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
-        <span className="text-xs text-[var(--muted-foreground)]">
-          {t("count", { n: feed?.total ?? 0 })}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[var(--muted-foreground)]">
+            {t("count", { n: feed?.total ?? 0 })}
+          </span>
+          <Link
+            href="/prouver/audit-logs"
+            className="flex items-center gap-1 whitespace-nowrap text-xs text-blue-300 hover:underline"
+          >
+            {t("viewAll")}
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-1.5">
+      <CardContent>
         {loading ? (
           <Skeleton className="h-20 w-full" />
         ) : events.length === 0 ? (
           <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">{t("empty")}</p>
         ) : (
-          events.map((ev, i) => {
-            const Icon = GOV_ICON[ev.kind] ?? Activity;
-            const tone = GOV_TONE[ev.kind] ?? "neutral";
-            return (
-              <div
-                key={`${ev.occurred_at}-${ev.kind}-${i}`}
-                className="grid grid-cols-[auto_1fr] items-center gap-2 text-xs"
-              >
-                <span
-                  className={cn(
-                    "flex h-6 w-6 items-center justify-center rounded-md border",
-                    toneBg[tone],
-                  )}
+          // Two columns from md up: the labels are short, so a single column wasted
+          // the right ~60% of the card. The grid fills the width and halves the height.
+          <div className="grid gap-x-5 gap-y-2 md:grid-cols-2">
+            {events.map((ev, i) => {
+              const Icon = GOV_ICON[ev.kind] ?? Activity;
+              const tone = GOV_TONE[ev.kind] ?? "neutral";
+              return (
+                <div
+                  key={`${ev.occurred_at}-${ev.kind}-${i}`}
+                  className="grid grid-cols-[auto_1fr] items-center gap-2 text-xs"
                 >
-                  <Icon className="h-3.5 w-3.5" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-[var(--foreground)]">
-                    {governanceLabel(ev, t)}
-                    {ev.count > 1 ? (
-                      <span className="text-[var(--muted-foreground)]"> · ×{ev.count}</span>
-                    ) : null}
+                  <span
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded-md border",
+                      toneBg[tone],
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
                   </span>
-                  <span className="block truncate font-mono text-[0.6rem] text-[var(--muted-foreground)]">
-                    {fmtGovTime(ev.occurred_at)} · {ev.actor}
-                    {ev.evidence ? ` · ${ev.evidence}` : ""}
+                  <span className="min-w-0">
+                    <span className="block truncate text-[var(--foreground)]">
+                      {governanceLabel(ev, t)}
+                      {ev.count > 1 ? (
+                        <span className="text-[var(--muted-foreground)]"> · ×{ev.count}</span>
+                      ) : null}
+                    </span>
+                    <span className="block truncate font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                      {fmtGovTime(ev.occurred_at)} · {ev.actor}
+                      {ev.evidence ? ` · ${ev.evidence}` : ""}
+                    </span>
                   </span>
-                </span>
-              </div>
-            );
-          })
+                </div>
+              );
+            })}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -1277,6 +1419,7 @@ function ObservabilityTracesCard({
         <CardTitle className="flex items-center gap-2 text-sm">
           <Network className="h-4 w-4 text-blue-300" />
           {t("title")}
+          <SectionInfo title={t("title")} explainKey="traces" />
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
         <span className="text-[0.7rem] text-[var(--muted-foreground)]">Langfuse</span>
@@ -1369,27 +1512,39 @@ function ControlCasesSection({
       <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
+          <SectionInfo title={t("title")} explainKey="controlCases" />
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
-        <span className="text-xs text-[var(--muted-foreground)]">
-          {t("count", { n: playbooks?.n_triggered ?? 0 })}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[var(--muted-foreground)]">
+            {t("count", { n: playbooks?.n_triggered ?? 0 })}
+          </span>
+          <Link
+            href="/agir/incidents-playbooks"
+            className="flex items-center gap-1 whitespace-nowrap text-xs text-blue-300 hover:underline"
+          >
+            {t("viewAll")}
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </CardHeader>
-      {/* Flex-wrap (not a fixed 3-col grid): cards grow to fill the row, so a single
-          triggered playbook spans the full width instead of leaving two empty cells. */}
-      <CardContent className="flex flex-wrap gap-3">
+      {/* A capped 2-up grid (not flex-1): a single triggered procedure stays a
+          right-sized card instead of stretching into a half-empty full-width banner,
+          and several incidents tile two-per-row. Each card opens its real incident. */}
+      <CardContent className="grid gap-3 sm:grid-cols-2">
         {loading ? (
-          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full sm:col-span-2" />
         ) : !playbooks || playbooks.n_triggered === 0 ? (
-          <p className="w-full py-6 text-center text-sm text-emerald-400">{t("clear")}</p>
+          <p className="py-6 text-center text-sm text-emerald-400 sm:col-span-2">{t("clear")}</p>
         ) : (
           playbooks.playbooks.map((p) => {
             const tone = playbookTone[p.severity] ?? "neutral";
             return (
-              <article
+              <Link
                 key={p.incident}
+                href="/agir/incidents-playbooks"
                 className={cn(
-                  "min-w-[15rem] flex-1 rounded-lg border bg-[var(--muted)]/20 p-3",
+                  "block rounded-lg border bg-[var(--muted)]/20 p-3 transition-colors hover:bg-[var(--muted)]/40",
                   caseBorder[tone],
                 )}
               >
@@ -1403,7 +1558,7 @@ function ControlCasesSection({
                     <li key={s}>{s}</li>
                   ))}
                 </ol>
-              </article>
+              </Link>
             );
           })
         )}
@@ -1452,6 +1607,13 @@ function IncidentsCard({
           {t("incidents")}
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
+        <Link
+          href="/agir/incidents-playbooks"
+          className="flex items-center gap-1 whitespace-nowrap text-xs text-blue-300 hover:underline"
+        >
+          {t("viewIncidents")}
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {loading ? (
@@ -1763,7 +1925,7 @@ function AnalyticsSection({
                   className="grid grid-cols-[44px_1fr_auto] items-center gap-2"
                 >
                   <span className="uppercase text-[var(--muted-foreground)]">{lang.language}</span>
-                  <span className="h-1.5 overflow-hidden rounded-full bg-[var(--muted)]">
+                  <span className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
                     <span
                       className={cn("block h-full rounded-full", dotBg[rateTone(lang.mean_score)])}
                       style={{ width: `${share * 100}%` }}
@@ -1798,7 +1960,7 @@ function AnalyticsSection({
                   className="grid grid-cols-[120px_1fr_44px] items-center gap-2 text-xs"
                 >
                   <span className="truncate text-[var(--muted-foreground)]">{ts(c.id)}</span>
-                  <span className="h-1.5 overflow-hidden rounded-full bg-[var(--muted)]">
+                  <span className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
                     <span
                       className={cn("block h-full rounded-full", dotBg[c.state.tone])}
                       style={{ width: `${Math.min(c.severity * 100, 100)}%` }}
@@ -1931,7 +2093,7 @@ function TrustFooter({
         </b>
         <Info className="h-3 w-3 opacity-60" />
       </span>
-      <span className="h-1.5 w-32 overflow-hidden rounded-full bg-[var(--muted)]">
+      <span className="h-[4px] w-32 overflow-hidden rounded-full bg-[var(--tessera-border)]">
         <span
           className={cn("block h-full rounded-full", dotBg[confTone])}
           style={{ width: `${confidence ?? 0}%` }}

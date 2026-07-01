@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+
 __all__ = ["compute_proofs_overview"]
 
 _ART_COLOR = {
@@ -25,6 +27,57 @@ _ART_COLOR = {
     "snapshots": "#f472b6",
     "reports": "#64748b",
 }
+
+# Localized free-text (fr, de, en). IDs, hashes, dates, names, deployment scopes
+# (Prod / Credit Aurore / FR), format codes (JSONL/PDF) and obligation codes
+# (DORA/BaFin/RGPD) stay verbatim; only human prose is translated.
+_TR: dict[str, tuple[str, str, str]] = {
+    "alert_degraded": ("1 destination dégradée", "1 Ziel degradiert", "1 destination degraded"),
+    "alert_noloss": ("0 perte de données", "0 Datenverlust", "0 data loss"),
+    "u_years": ("{n} ans", "{n} Jahre", "{n} yrs"),
+    "u_days": ("{n} j", "{n} T", "{n} d"),
+    "dest_s3": ("S3 · Archive souveraine", "S3 · Souveraenes Archiv", "S3 · Sovereign archive"),
+    "dest_dataroom": (
+        "Data room conformité",
+        "Compliance-Datenraum",
+        "Compliance data room",
+    ),
+    "dest_grc": ("GRC / Conformité", "GRC / Compliance", "GRC / Compliance"),
+    "dest_partner": ("API partenaire", "Partner-API", "Partner API"),
+    "subj_pii": ("Fuite PII & mémoire", "PII- & Speicherleck", "PII & memory leak"),
+    "subj_hallu": (
+        "Hallucination systématique",
+        "Systematische Halluzination",
+        "Systematic hallucination",
+    ),
+    "subj_art50": ("Conformité Art. 50", "Konformitaet Art. 50", "Art. 50 compliance"),
+    "pt_audit": ("Logs d'audit", "Audit-Logs", "Audit logs"),
+    "pt_packs": ("Evidence packs", "Evidence-Packs", "Evidence packs"),
+    "pt_reports": ("Rapports", "Berichte", "Reports"),
+    "actor_system": ("Système", "System", "System"),
+    "ej_sig_verified": (
+        "Signature PK-…041 vérifiée",
+        "Signatur PK-…041 verifiziert",
+        "Signature PK-…041 verified",
+    ),
+    "footer_chain": (
+        "Chaîne de preuve intacte",
+        "Beweiskette intakt",
+        "Proof chain intact",
+    ),
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
+
+
+def _years(n: int, lang: str) -> str:
+    return _TR["u_years"][_LANG_IDX.get(lang, 0)].format(n=n)
+
+
+def _days(n: int, lang: str) -> str:
+    return _TR["u_days"][_LANG_IDX.get(lang, 0)].format(n=n)
 
 
 def _kpi(
@@ -39,8 +92,11 @@ def _kpi(
     }
 
 
-def compute_proofs_overview() -> dict[str, object]:
+def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Proofs & exporter overview payload.
+
+    Args:
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
 
     Returns:
         A JSON-serialisable mapping with the proof posture KPIs, the assembly
@@ -49,6 +105,7 @@ def compute_proofs_overview() -> dict[str, object]:
         verification, the control-case proofs, the retention obligations and
         the export journal.
     """
+    lang = _norm_lang(lang)
     now = datetime.now(UTC)
 
     kpis = [
@@ -61,8 +118,8 @@ def compute_proofs_overview() -> dict[str, object]:
     ]
 
     alerts = [
-        {"level": "warn", "label": "1 destination dégradée"},
-        {"level": "ok", "label": "0 perte de données"},
+        {"level": "warn", "label": _t("alert_degraded", lang)},
+        {"level": "ok", "label": _t("alert_noloss", lang)},
     ]
 
     pipeline = [
@@ -125,7 +182,7 @@ def compute_proofs_overview() -> dict[str, object]:
             "artifacts": "158",
             "signature": "ok",
             "destinations": "6 / 6",
-            "by": "Système",
+            "by": _t("actor_system", lang),
             "time": "18:47",
             "status": "attente",
         },
@@ -135,7 +192,7 @@ def compute_proofs_overview() -> dict[str, object]:
             "artifacts": "154",
             "signature": "ok",
             "destinations": "5 / 6",
-            "by": "System",
+            "by": _t("actor_system", lang),
             "time": "16:03",
             "status": "echec",
         },
@@ -157,39 +214,39 @@ def compute_proofs_overview() -> dict[str, object]:
             "status": "ok",
             "last_push": "11:54",
             "queue": "0",
-            "retention": "365 j",
+            "retention": _days(365, lang),
         },
         {
-            "destination": "S3 · Archive souveraine",
+            "destination": _t("dest_s3", lang),
             "format": "JSONL",
             "status": "ok",
             "last_push": "10:36",
             "queue": "0",
-            "retention": "10 ans",
+            "retention": _years(10, lang),
         },
         {
-            "destination": "Data room conformité",
+            "destination": _t("dest_dataroom", lang),
             "format": "PDF · CSV",
             "status": "ok",
             "last_push": "10:36",
             "queue": "0",
-            "retention": "5 ans",
+            "retention": _years(5, lang),
         },
         {
-            "destination": "GRC / Conformité",
+            "destination": _t("dest_grc", lang),
             "format": "ZIP · sig",
             "status": "ok",
             "last_push": "10:21",
             "queue": "0",
-            "retention": "7 ans",
+            "retention": _years(7, lang),
         },
         {
-            "destination": "API partenaire",
+            "destination": _t("dest_partner", lang),
             "format": "JSON",
             "status": "degraded",
             "last_push": "10:21",
             "queue": "1",
-            "retention": "180 j",
+            "retention": _days(180, lang),
         },
     ]
 
@@ -203,21 +260,21 @@ def compute_proofs_overview() -> dict[str, object]:
     control_case_proofs = [
         {
             "case_id": "CC-012",
-            "subject": "Fuite PII & mémoire",
+            "subject": _t("subj_pii", lang),
             "linked": 8,
             "owner": "A. Privacy",
             "status": "ok",
         },
         {
             "case_id": "CC-007",
-            "subject": "Hallucination systématique",
+            "subject": _t("subj_hallu", lang),
             "linked": 5,
             "owner": "M. Engineer",
             "status": "ok",
         },
         {
             "case_id": "CC-004",
-            "subject": "Conformité Art. 50",
+            "subject": _t("subj_art50", lang),
             "linked": 4,
             "owner": "A. Compliance",
             "status": "pending",
@@ -226,25 +283,25 @@ def compute_proofs_overview() -> dict[str, object]:
 
     retention = [
         {
-            "destination": "S3 · Archive souveraine",
-            "proof_type": "Logs d'audit",
-            "retention": "10 ans",
+            "destination": _t("dest_s3", lang),
+            "proof_type": _t("pt_audit", lang),
+            "retention": _years(10, lang),
             "obligation": "DORA",
             "coverage": 100,
             "expiry": "—",
         },
         {
-            "destination": "GRC / Conformité",
-            "proof_type": "Evidence packs",
-            "retention": "7 ans",
+            "destination": _t("dest_grc", lang),
+            "proof_type": _t("pt_packs", lang),
+            "retention": _years(7, lang),
             "obligation": "BaFin",
             "coverage": 100,
             "expiry": "04/2033",
         },
         {
-            "destination": "Data room conformité",
-            "proof_type": "Rapports",
-            "retention": "5 ans",
+            "destination": _t("dest_dataroom", lang),
+            "proof_type": _t("pt_reports", lang),
+            "retention": _years(5, lang),
             "obligation": "RGPD",
             "coverage": 96,
             "expiry": "06/2031",
@@ -254,9 +311,13 @@ def compute_proofs_overview() -> dict[str, object]:
     export_journal = [
         {"time": "11:54:18", "label": "Pack PK-…042 → SIEM / SOC", "status": "ok"},
         {"time": "11:53:40", "label": "Pack PK-…042 → S3 archive", "status": "ok"},
-        {"time": "11:52:05", "label": "Pack PK-…041 → API partenaire", "status": "degraded"},
-        {"time": "11:48:31", "label": "Pack PK-…041 → GRC / Conformité", "status": "ok"},
-        {"time": "11:42:12", "label": "Signature PK-…041 vérifiée", "status": "ok"},
+        {
+            "time": "11:52:05",
+            "label": f"Pack PK-…041 → {_t('dest_partner', lang)}",
+            "status": "degraded",
+        },
+        {"time": "11:48:31", "label": f"Pack PK-…041 → {_t('dest_grc', lang)}", "status": "ok"},
+        {"time": "11:42:12", "label": _t("ej_sig_verified", lang), "status": "ok"},
     ]
 
     queue = {"pending_signature": 2, "pending_export": 3, "verifications": 1}
@@ -279,5 +340,5 @@ def compute_proofs_overview() -> dict[str, object]:
         "retention": retention,
         "export_journal": export_journal,
         "queue": queue,
-        "footer": {"chain": "Chaîne de preuve intacte", "source": "YAML · Git"},
+        "footer": {"chain": _t("footer_chain", lang), "source": "YAML · Git"},
     }

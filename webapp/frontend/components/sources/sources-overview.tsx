@@ -41,6 +41,7 @@ import {
 } from "react";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
@@ -340,11 +341,26 @@ function CommandBar({ t, note, onExport }: { t: T; note: string; onExport: () =>
   );
 }
 
+/** ⓘ for a sources metric/section — renders only when sources.explain.<k> exists. */
+function ExplainInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("sources.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te.has(`${k}.how`) ? te(`${k}.how`) : undefined}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 function CompactKpi({ kpi }: { kpi: Data["kpis"][number] }) {
   return (
     <div className="flex h-[88px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
-      <p className="truncate text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
-        {kpi.label}
+      <p className="flex items-center gap-1 text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{kpi.label}</span>
+        <ExplainInfo k={kpi.key} title={kpi.label} />
       </p>
       <p className="mt-0.5 text-[1.25rem] font-semibold leading-none text-white">{kpi.value}</p>
       <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
@@ -862,7 +878,10 @@ function IndexationView({ t, data }: { t: T; data: Data }) {
   const max = Math.max(...corpus.map((s) => s.volume_num), 1);
   return (
     <div className="grid gap-3 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <Panel title={t("view.embeddings")}>
+      <Panel
+        title={t("view.embeddings")}
+        info={<ExplainInfo k="embeddings" title={t("view.embeddings")} />}
+      >
         <dl className="flex flex-col gap-1.5 text-[0.7rem]">
           {facts.map(([k, v]) => (
             <KV key={k} label={k} value={v} />
@@ -901,7 +920,7 @@ function AccessView({
   onSelect: (id: string) => void;
 }) {
   return (
-    <Panel title={t("view.access")}>
+    <Panel title={t("view.access")} info={<ExplainInfo k="access" title={t("view.access")} />}>
       <p className="mb-2 text-[0.64rem] text-[var(--tessera-text-muted)]">{t("view.accessNote")}</p>
       <ul className="flex flex-col divide-y divide-[var(--tessera-border)]/60">
         {data.sources.map((s) => {
@@ -913,6 +932,7 @@ function AccessView({
               onKeyDown={(e) => rowKeyActivate(e, () => onSelect(s.id))}
               tabIndex={0}
               // biome-ignore lint/a11y/useSemanticElements: a list row opens the detail drawer; keyboard + role provided.
+              // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: same — the row is an interactive drawer trigger with keyboard support.
               role="button"
               aria-label={s.name}
               className={cn(
@@ -962,7 +982,10 @@ function RetentionView({
   onSelect: (id: string) => void;
 }) {
   return (
-    <Panel title={t("view.retention")}>
+    <Panel
+      title={t("view.retention")}
+      info={<ExplainInfo k="retention" title={t("view.retention")} />}
+    >
       <table className="w-full border-collapse text-left text-[0.7rem]">
         <thead>
           <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
@@ -1021,7 +1044,7 @@ function LineageView({ t, data }: { t: T; data: Data }) {
     }
   }
   return (
-    <Panel title={t("view.lineage")}>
+    <Panel title={t("view.lineage")} info={<ExplainInfo k="lineage" title={t("view.lineage")} />}>
       <p className="mb-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
         {t("view.lineageNote")}
       </p>
@@ -1053,7 +1076,10 @@ function HistoryView({ t, data }: { t: T; data: Data }) {
   const corpus = data.sources.filter((s) => s.growth.length === 0);
   return (
     <div className="flex flex-col gap-3">
-      <Panel title={t("view.memoryGrowth")}>
+      <Panel
+        title={t("view.memoryGrowth")}
+        info={<ExplainInfo k="memoryGrowth" title={t("view.memoryGrowth")} />}
+      >
         <p className="mb-2 inline-flex items-center gap-1.5 text-[0.64rem] text-amber-300/90">
           <AlertTriangle className="h-3.5 w-3.5" /> {t("view.historyNote")}
         </p>
@@ -1269,7 +1295,10 @@ function ByCitation({ t, data }: { t: T; data: Data }) {
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 6);
   return (
-    <Panel title={t("view.citationBySource")}>
+    <Panel
+      title={t("view.citationBySource")}
+      info={<ExplainInfo k="citationBySource" title={t("view.citationBySource")} />}
+    >
       <ul className="flex flex-col gap-2">
         {rows.map((r) => (
           <li key={r.name} className="flex flex-col gap-1 text-[0.66rem]">
@@ -1530,7 +1559,7 @@ function QualityTable({
                       <span className="text-[var(--tessera-text-muted)]">{t("quality.na")}</span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="h-1.5 w-14 overflow-hidden rounded-full bg-[var(--tessera-border)]">
+                        <span className="h-[4px] w-14 overflow-hidden rounded-full bg-[var(--tessera-border)]">
                           <span
                             className="block h-full rounded-full bg-[#5b8def]"
                             style={{ width: `${Math.min(100, s.citation_pct)}%` }}
@@ -1929,11 +1958,16 @@ function ScoreRing({ value }: { value: string }) {
   );
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+function Panel({
+  title,
+  info,
+  children,
+}: { title: string; info?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <h3 className="mb-2 text-[0.72rem] font-semibold uppercase leading-tight tracking-wide text-[var(--tessera-text-muted)]">
-        {title}
+      <h3 className="mb-2 flex items-center gap-1 text-[0.72rem] font-semibold uppercase leading-tight tracking-wide text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{title}</span>
+        {info}
       </h3>
       <div className="min-h-0 flex-1">{children}</div>
     </div>

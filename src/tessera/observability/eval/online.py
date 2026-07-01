@@ -72,6 +72,7 @@ async def evaluate_turn(
     guard_denied: bool = False,
     flagged: bool = False,
     conversation_id: str | None = None,
+    agent_id: str | None = None,
     judge: Judge | None = None,
     sample_rate: float | None = None,
     roll: float | None = None,
@@ -94,7 +95,11 @@ async def evaluate_turn(
         metric=FAITHFULNESS, question=question, answer=answer, context=context
     )
     scores.emit_score(
-        verdict, language=language, conversation_id=conversation_id, sampled=not must_judge
+        verdict,
+        language=language,
+        conversation_id=conversation_id,
+        sampled=not must_judge,
+        agent_id=agent_id,
     )
 
     # Extra quality metrics on the same turn (best-effort; never fail the turn).
@@ -107,7 +112,11 @@ async def evaluate_turn(
             _log.warning("online.extra_metric_failed", metric=metric, error=str(exc))
             continue
         scores.emit_score(
-            extra, language=language, conversation_id=conversation_id, sampled=not must_judge
+            extra,
+            language=language,
+            conversation_id=conversation_id,
+            sampled=not must_judge,
+            agent_id=agent_id,
         )
 
     disagreement = (not guard_denied and verdict.score < _LOW_SCORE) or (

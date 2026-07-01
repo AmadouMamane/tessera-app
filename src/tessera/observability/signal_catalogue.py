@@ -1,222 +1,385 @@
-"""Signal catalogue cockpit overview (page #16).
+"""Signal catalogue cockpit overview (configurer/signal-catalog).
 
-Composes the "Signal catalogue" overview: the catalogue posture (total / active /
-in-evaluation / deprecated / disabled signals and the severity split), the
-filterable signal table, and the detail panel for the selected signal (its
-definition, thresholds, 30-day distribution and trend, and usage).
+The catalogue of the AI quality/safety **signals** Tessera actually monitors,
+derived from real artifacts — never a fixture:
 
-The dataset is a deterministic reference fixture (the catalogue ships as a
-governance artifact in this build); values are stable across calls so the page
-never "dances".
+  * the failure-catalogue eval run (``observability.eval_data.load_eval_snapshot``)
+    — every monitored category (hallucination, pii_leak, prompt_injection, …) is
+    a signal whose live "quality" is its real pass rate, with real passed/total/
+    failed counts, per-language distribution and run timestamp;
+  * the shared guard policy (``guard.decisions.load_policy``) — the deny/PII/tool
+    composition that enforces the safety signals, surfaced in the KPIs and in the
+    detail of each guard-enforced signal.
+
+Read-only by design: a signal is a derived governance fact (eval + policy), not a
+UI-authored record, so there is no mutation endpoint (like Prompts). The page's
+functional axis is real search / filter / sort / pagination / detail. Free-text is
+localized fr/de/en (French keeps accents, German transliterates ae/oe/ue/ss, per
+the sibling guardrail-catalogue convention); enum keys (status/severity/category/
+source) and signal name slugs stay stable so the frontend localizes its own chrome.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+from tessera.guard.decisions import load_policy
+from tessera.observability.eval_data import load_eval_snapshot
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+
+if TYPE_CHECKING:
+    from tessera.guard.decisions import Policy
+    from tessera.observability.eval_data import EvalSnapshot
 
 __all__ = ["compute_signal_catalogue"]
+
+# Eval category -> (taxonomy, severity, source, name slug, owner).
+# Severity reflects business impact (not the current score); source marks whether
+# the guard enforces it (Guard) or it is purely an eval-measured quality (Eval).
+_TAXO: dict[str, tuple[str, str, str, str, str]] = {
+    "pii_leak": ("securite", "critical", "Guard", "pii_leak_rate", "Privacy Team"),
+    "prompt_injection": (
+        "securite",
+        "critical",
+        "Guard",
+        "prompt_injection_bypass",
+        "Security Team",
+    ),
+    "hallucination": ("qualite", "high", "Eval", "hallucination_rate", "AI Quality Team"),
+    "citation_fabrication": (
+        "qualite",
+        "high",
+        "Eval",
+        "citation_fabrication_rate",
+        "AI Quality Team",
+    ),
+    "tool_misuse": ("securite", "high", "Guard", "tool_misuse_rate", "Security Team"),
+    "policy_violation": ("conformite", "high", "Guard", "policy_violation_rate", "Compliance"),
+    "regulatory_misstatement": (
+        "conformite",
+        "high",
+        "Eval",
+        "regulatory_error_rate",
+        "Compliance",
+    ),
+    "overconfidence": ("qualite", "medium", "Eval", "overconfidence_rate", "AI Quality Team"),
+    "language_mixing": ("qualite", "medium", "Eval", "language_routing_error", "AI Quality Team"),
+    "escalation_failure": ("qualite", "medium", "Eval", "escalation_failure_rate", "Safety Team"),
+}
+
+# Per-category descriptions (fr accents / de ae-oe-ue-ss / en plain).
+_DESC: dict[str, tuple[str, str, str]] = {
+    "pii_leak": (
+        "Fuite de données personnelles dans les sorties du modèle.",
+        "Abfluss personenbezogener Daten in den Modellausgaben.",
+        "Leak of personal data in the model's outputs.",
+    ),
+    "prompt_injection": (
+        "Contournement du pare-feu par injection de prompt.",
+        "Umgehung der Firewall durch Prompt-Injection.",
+        "Firewall bypass via prompt injection.",
+    ),
+    "hallucination": (
+        "Réponses non étayées par le corpus récupéré (hallucination factuelle).",
+        "Antworten ohne Beleg im abgerufenen Korpus (faktische Halluzination).",
+        "Answers unsupported by the retrieved corpus (factual hallucination).",
+    ),
+    "citation_fabrication": (
+        "Citations ou références fabriquées dans la réponse.",
+        "Erfundene Zitate oder Referenzen in der Antwort.",
+        "Fabricated citations or references in the answer.",
+    ),
+    "tool_misuse": (
+        "Mauvais usage ou appel non autorisé d'un outil.",
+        "Missbrauch oder unbefugter Aufruf eines Tools.",
+        "Misuse or unauthorized call of a tool.",
+    ),
+    "policy_violation": (
+        "Violation d'une politique interne encadrée par la garde.",
+        "Verstoss gegen eine durch die Guard geregelte interne Richtlinie.",
+        "Violation of an internal policy enforced by the guard.",
+    ),
+    "regulatory_misstatement": (
+        "Affirmation réglementaire erronée (DORA / RGPD / BaFin).",
+        "Falsche regulatorische Aussage (DORA / DSGVO / BaFin).",
+        "Incorrect regulatory statement (DORA / GDPR / BaFin).",
+    ),
+    "overconfidence": (
+        "Sur-confiance : action affirmée sans vérification suffisante.",
+        "Uebermaessiges Selbstvertrauen: Handlung ohne ausreichende Pruefung.",
+        "Overconfidence: asserted action without sufficient verification.",
+    ),
+    "language_mixing": (
+        "Mélange de langues ou mauvais routage de la langue de réponse.",
+        "Sprachvermischung oder falsches Routing der Antwortsprache.",
+        "Language mixing or wrong response-language routing.",
+    ),
+    "escalation_failure": (
+        "Échec d'escalade vers un opérateur humain quand requis.",
+        "Fehlende Eskalation an einen menschlichen Operator bei Bedarf.",
+        "Failed escalation to a human operator when required.",
+    ),
+}
+
+# Localized labels + fixed values (fr, de, en).
+_TR: dict[str, tuple[str, str, str]] = {
+    "l_source": ("Source", "Quelle", "Source"),
+    "l_type": ("Type", "Typ", "Type"),
+    "l_unit": ("Unité", "Einheit", "Unit"),
+    "l_direction": ("Direction", "Richtung", "Direction"),
+    "l_frequency": ("Fréquence", "Frequenz", "Frequency"),
+    "l_environment": ("Environnement", "Umgebung", "Environment"),
+    "l_pass_rate": ("Taux de réussite", "Erfolgsrate", "Pass rate"),
+    "l_cases_passed": ("Cas réussis", "Bestandene Faelle", "Passed cases"),
+    "l_cases_failed": ("Cas en échec", "Fehlgeschlagene Faelle", "Failed cases"),
+    "l_model": ("Modèle d'éval", "Eval-Modell", "Eval model"),
+    "l_last_run": ("Dernier run", "Letzter Lauf", "Last run"),
+    "l_deny": ("Motifs de blocage", "Blockiermuster", "Deny patterns"),
+    "l_pii": ("Motifs PII", "PII-Muster", "PII patterns"),
+    "l_guarded_tools": ("Outils encadrés", "Eingeschraenkte Tools", "Guarded tools"),
+    "l_policy_version": ("Version policy", "Policy-Version", "Policy version"),
+    "v_pass_rate": ("Taux de réussite", "Erfolgsrate", "Pass rate"),
+    "v_higher_better": ("Plus haut est mieux", "Hoeher ist besser", "Higher is better"),
+    "v_per_run": ("Par run d'évaluation", "Pro Evaluierungslauf", "Per evaluation run"),
+    "v_all_env": ("Tous (fr / de / en)", "Alle (fr / de / en)", "All (fr / de / en)"),
+    "v_passed": ("Réussis", "Bestanden", "Passed"),
+    "v_failed": ("Échecs", "Fehler", "Failed"),
+    "sub_categories": (
+        "catégories surveillées",
+        "ueberwachte Kategorien",
+        "monitored categories",
+    ),
+    "sub_share": ("{pct}% du total", "{pct}% des Gesamt", "{pct}% of total"),
+    "u_cases": ("{n} cas", "{n} Faelle", "{n} cases"),
+    "u_langs": ("{n} langues", "{n} Sprachen", "{n} languages"),
+    "rt_now": ("à l'instant", "gerade eben", "just now"),
+    "rt_days": ("il y a {n} j", "vor {n} T", "{n}d ago"),
+    "rt_hours": ("il y a {n} h", "vor {n} Std", "{n}h ago"),
+    "rt_min": ("il y a {n} min", "vor {n} Min", "{n}m ago"),
+}
+
+# Order signals worst-impact first, then by category for a stable catalogue.
+_SEV_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+_LANG_LABEL = {"fr": "FR", "de": "DE", "en": "EN"}
+_MIN_CASES_ACTIVE = 8  # under-sampled categories show as "in evaluation", honestly.
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
+
+
+def _desc(category: str, lang: str) -> str:
+    return _DESC[category][_LANG_IDX.get(lang, 0)]
 
 
 def _kpi(key: str, value: str, sub: str, series: list[int]) -> dict[str, object]:
     return {"key": key, "value": value, "sub": sub, "series": series}
 
 
-def compute_signal_catalogue() -> dict[str, object]:
-    """Return the full Signal catalogue overview payload.
+def _aware(dt: datetime | None) -> datetime | None:
+    """Attach UTC to a naive datetime so it can be compared to an aware now."""
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
 
-    Returns:
-        A JSON-serialisable mapping with the catalogue posture KPIs, the signal
-        table and the selected-signal detail (definition, thresholds, 30-day
-        distribution and trend, usage).
-    """
-    now = datetime.now(UTC)
 
-    kpis = [
-        _kpi("total", "312", "+12 ce mois", [288, 292, 297, 301, 305, 309, 312]),
-        _kpi("active", "278", "89% du total", [250, 256, 261, 266, 270, 274, 278]),
-        _kpi("evaluation", "14", "4% du total", [10, 11, 12, 12, 13, 13, 14]),
-        _kpi("deprecated", "10", "3% du total", [12, 12, 11, 11, 10, 10, 10]),
-        _kpi("disabled", "10", "3% du total", [8, 8, 9, 9, 10, 10, 10]),
-        _kpi("critical", "38", "12% du total", [32, 33, 34, 35, 36, 37, 38]),
-        _kpi("high", "86", "28% du total", [78, 80, 81, 83, 84, 85, 86]),
-        _kpi("medium", "124", "40% du total", [116, 118, 120, 121, 122, 123, 124]),
-        _kpi("low", "64", "20% du total", [60, 61, 61, 62, 63, 63, 64]),
-    ]
+def _relative(then: datetime | None, now: datetime, lang: str) -> str:
+    """Honest localized relative-time label from a run timestamp to now."""
+    then = _aware(then)
+    if then is None:
+        return "-"
+    secs = int((now - then).total_seconds())
+    if secs < 0:
+        return _t("rt_now", lang)
+    minutes, hours, days = secs // 60, secs // 3600, secs // 86400
+    if days >= 1:
+        return _t("rt_days", lang).format(n=days)
+    if hours >= 1:
+        return _t("rt_hours", lang).format(n=hours)
+    if minutes >= 1:
+        return _t("rt_min", lang).format(n=minutes)
+    return _t("rt_now", lang)
 
-    signals = [
-        {
-            "id": "SIG-001",
-            "name": "hallucination_rate",
-            "category": "qualite",
-            "description": "Taux d'hallucination détecté sur les réponses RAG",
-            "source": "Observabilité",
-            "severity": "critical",
-            "status": "active",
-            "quality": 92,
-            "last_activity": "il y a 4 min",
-            "owner": "AI Quality Team",
-            "modified": "11/06/2026",
-        },
-        {
-            "id": "SIG-014",
-            "name": "pii_leak_rate",
-            "category": "securite",
-            "description": "Fuite de PII dans les sorties du modèle",
-            "source": "Guard",
-            "severity": "critical",
-            "status": "active",
-            "quality": 99,
-            "last_activity": "il y a 2 min",
-            "owner": "Privacy Team",
-            "modified": "11/06/2026",
-        },
-        {
-            "id": "SIG-022",
-            "name": "prompt_injection_bypass",
-            "category": "securite",
-            "description": "Contournement du firewall par injection de prompt",
-            "source": "Guard",
-            "severity": "high",
-            "status": "active",
-            "quality": 88,
-            "last_activity": "il y a 11 min",
-            "owner": "Security Team",
-            "modified": "10/06/2026",
-        },
-        {
-            "id": "SIG-031",
-            "name": "grounding_score",
-            "category": "qualite",
-            "description": "Ancrage des réponses dans le corpus récupéré",
-            "source": "Eval",
-            "severity": "high",
-            "status": "active",
-            "quality": 90,
-            "last_activity": "il y a 6 min",
-            "owner": "AI Quality Team",
-            "modified": "10/06/2026",
-        },
-        {
-            "id": "SIG-045",
-            "name": "toxicity_rate",
-            "category": "securite",
-            "description": "Toxicité détectée dans les réponses",
-            "source": "Guard",
-            "severity": "medium",
-            "status": "active",
-            "quality": 97,
-            "last_activity": "il y a 18 min",
-            "owner": "Safety Team",
-            "modified": "09/06/2026",
-        },
-        {
-            "id": "SIG-058",
-            "name": "disclosure_art50",
-            "category": "conformite",
-            "description": "Présence de la divulgation IA (Art. 50)",
-            "source": "Eval",
-            "severity": "medium",
-            "status": "active",
-            "quality": 95,
-            "last_activity": "il y a 22 min",
-            "owner": "Compliance",
-            "modified": "08/06/2026",
-        },
-        {
-            "id": "SIG-067",
-            "name": "token_cost_per_turn",
-            "category": "cout",
-            "description": "Coût en tokens par tour de conversation",
-            "source": "Observabilité",
-            "severity": "low",
-            "status": "active",
-            "quality": 99,
-            "last_activity": "il y a 1 min",
-            "owner": "FinOps",
-            "modified": "08/06/2026",
-        },
-        {
-            "id": "SIG-079",
-            "name": "memory_ttl_breach",
-            "category": "memoire",
-            "description": "Dépassement du TTL de la mémoire conversationnelle",
-            "source": "Observabilité",
-            "severity": "medium",
-            "status": "evaluation",
-            "quality": 84,
-            "last_activity": "il y a 33 min",
-            "owner": "Privacy Team",
-            "modified": "07/06/2026",
-        },
-        {
-            "id": "SIG-088",
-            "name": "language_routing_error",
-            "category": "qualite",
-            "description": "Erreur de routage de la langue de réponse",
-            "source": "Eval",
-            "severity": "medium",
-            "status": "active",
-            "quality": 91,
-            "last_activity": "il y a 9 min",
-            "owner": "AI Quality Team",
-            "modified": "07/06/2026",
-        },
-        {
-            "id": "SIG-093",
-            "name": "cross_tenant_leak",
-            "category": "securite",
-            "description": "Fuite de données entre tenants",
-            "source": "Guard",
-            "severity": "critical",
-            "status": "active",
-            "quality": 100,
-            "last_activity": "il y a 14 min",
-            "owner": "Security Team",
-            "modified": "06/06/2026",
-        },
-    ]
 
-    selected = {
-        "id": "SIG-001",
-        "name": "hallucination_rate",
-        "category": "qualite",
-        "status": "active",
-        "description": (
-            "Taux d'hallucination détecté sur les réponses RAG, comparé aux sources de vérité."
-        ),
-        "source": "Observabilité",
-        "type": "Score",
-        "unit": "%",
-        "direction": "Plus bas est mieux",
-        "frequency": "24h / temps réel",
-        "environment": "Tous",
-        "tags": ["tous les modèles", "qualité", "hallucination", "llm"],
-        "created": "01/04/2026",
-        "modified": "11/06/2026 08:12",
-        "severity": "critical",
-        "threshold_critical": "> 5%",
-        "threshold_alert": "> 3%",
-        "model": "Llama 3.2 3B",
-        "last_activity": "AG-501",
-        "quality": 92,
-        "distribution": [
-            {"label": "0-1%", "count": 62, "color": "#34d399"},
-            {"label": "1-3%", "count": 48, "color": "#34d399"},
-            {"label": "3-5%", "count": 26, "color": "#fbbf24"},
-            {"label": "5-8%", "count": 14, "color": "#fbbf24"},
-            {"label": ">8%", "count": 6, "color": "#f87171"},
+def _pct(passed: int, total: int) -> int:
+    return round(passed / total * 100) if total else 0
+
+
+def _per_language(snapshot: EvalSnapshot, category: str) -> list[dict[str, object]]:
+    """Real per-language case counts (passed/total) for one category."""
+    out: list[dict[str, object]] = []
+    for code, label in _LANG_LABEL.items():
+        cases = [s for s in snapshot.sessions if s.category == category and s.language == code]
+        if not cases:
+            continue
+        passed = sum(1 for s in cases if s.passed)
+        out.append(
+            {
+                "label": label,
+                "count": len(cases),
+                "passed": passed,
+                "color": "#34d399" if passed == len(cases) else "#fbbf24",
+            }
+        )
+    return out
+
+
+def _signal(
+    snapshot: EvalSnapshot,
+    policy: Policy,
+    category: str,
+    index: int,
+    now: datetime,
+    lang: str,
+) -> dict[str, object]:
+    taxo, severity, source, slug, owner = _TAXO[category]
+    stat = snapshot.category(category)
+    total = stat.total if stat else 0
+    passed = stat.passed if stat else 0
+    failed = total - passed
+    quality = _pct(passed, total)
+    status = "active" if total >= _MIN_CASES_ACTIVE else "evaluation"
+    run_dt = snapshot.run_datetime()
+    modified = run_dt.strftime("%d/%m/%Y") if run_dt else "-"
+    per_lang = _per_language(snapshot, category)
+    desc = _desc(category, lang)
+
+    # Guard-enforced signals show the real policy composition that backs them.
+    guard_rows: list[dict[str, str]] = []
+    if source == "Guard":
+        guard_rows = [
+            {"label": _t("l_deny", lang), "value": str(len(policy.prompt_injection_deny))},
+            {"label": _t("l_pii", lang), "value": str(len(policy.pii_patterns))},
+            {"label": _t("l_guarded_tools", lang), "value": str(len(policy.tools))},
+            {"label": _t("l_policy_version", lang), "value": f"v{policy.version}"},
+        ]
+
+    detail = {
+        "id": f"SIG-{index:03d}",
+        "name": slug,
+        "category": taxo,
+        "status": status,
+        "severity": severity,
+        "description": desc,
+        "definition": [
+            {"label": _t("l_source", lang), "value": source},
+            {"label": _t("l_type", lang), "value": _t("v_pass_rate", lang)},
+            {"label": _t("l_unit", lang), "value": "%"},
+            {"label": _t("l_direction", lang), "value": _t("v_higher_better", lang)},
+            {"label": _t("l_frequency", lang), "value": _t("v_per_run", lang)},
+            {"label": _t("l_environment", lang), "value": _t("v_all_env", lang)},
         ],
-        "trend": [4.8, 4.5, 4.2, 4.4, 3.9, 3.6, 3.4],
-        "usage": {"logged_by": "12 playbooks", "monitors": "8 datasets"},
+        "performance": [
+            {"label": _t("l_pass_rate", lang), "value": f"{quality}%"},
+            {"label": _t("l_cases_passed", lang), "value": f"{passed} / {total}"},
+            {"label": _t("l_cases_failed", lang), "value": str(failed)},
+            {"label": _t("l_model", lang), "value": snapshot.model},
+            {"label": _t("l_last_run", lang), "value": modified},
+        ],
+        "guard": guard_rows,
+        "distribution": per_lang,
+        "outcome": [
+            {"label": _t("v_passed", lang), "count": passed, "color": "#34d399"},
+            {"label": _t("v_failed", lang), "count": failed, "color": "#f87171"},
+        ],
+        "tags": [taxo, severity, source.lower()],
+        "usage": {
+            "logged_by": _t("u_cases", lang).format(n=total),
+            "monitors": _t("u_langs", lang).format(n=len(per_lang)),
+        },
     }
 
     return {
+        "id": f"SIG-{index:03d}",
+        "name": slug,
+        "category": taxo,
+        "description": desc,
+        "source": source,
+        "severity": severity,
+        "status": status,
+        "quality": quality,
+        "last_activity": _relative(run_dt, now, lang),
+        "owner": owner,
+        "modified": modified,
+        "detail": detail,
+    }
+
+
+def _assemble(
+    snapshot: EvalSnapshot, policy: Policy, now: datetime, lang: str
+) -> dict[str, object]:
+    """Pure assembler: build the catalogue payload from real eval + policy inputs."""
+    lang = _norm_lang(lang)
+    present = [c for c in _TAXO if snapshot.category(c) is not None]
+    present.sort(key=lambda c: (_SEV_RANK[_TAXO[c][1]], _TAXO[c][0], c))
+    signals = [
+        _signal(snapshot, policy, category, idx, now, lang)
+        for idx, category in enumerate(present, start=1)
+    ]
+    total = len(signals)
+
+    by_status = {"active": 0, "evaluation": 0, "deprecated": 0, "disabled": 0}
+    by_sev = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for s in signals:
+        by_status[str(s["status"])] += 1
+        by_sev[str(s["severity"])] += 1
+    # A real distribution (the spread of signal quality) — not a faked time-series.
+    quality_spread = sorted(
+        _pct(stat.passed, stat.total) for c in present if (stat := snapshot.category(c)) is not None
+    ) or [0]
+
+    def share(n: int) -> str:
+        return _t("sub_share", lang).format(pct=round(n / total * 100)) if total else "-"
+
+    kpis = [
+        _kpi("total", str(total), _t("sub_categories", lang), quality_spread),
+        _kpi("active", str(by_status["active"]), share(by_status["active"]), quality_spread),
+        _kpi(
+            "evaluation",
+            str(by_status["evaluation"]),
+            share(by_status["evaluation"]),
+            quality_spread,
+        ),
+        _kpi("deprecated", str(by_status["deprecated"]), share(by_status["deprecated"]), [0]),
+        _kpi("disabled", str(by_status["disabled"]), share(by_status["disabled"]), [0]),
+        _kpi("critical", str(by_sev["critical"]), share(by_sev["critical"]), quality_spread),
+        _kpi("high", str(by_sev["high"]), share(by_sev["high"]), quality_spread),
+        _kpi("medium", str(by_sev["medium"]), share(by_sev["medium"]), quality_spread),
+        _kpi("low", str(by_sev["low"]), share(by_sev["low"]), [0]),
+    ]
+
+    sources = sorted({str(s["source"]) for s in signals})
+    categories = sorted({str(s["category"]) for s in signals})
+    run_dt = snapshot.run_datetime()
+    return {
         "generated_at": now.isoformat(),
-        "total_signals": 312,
+        "total_signals": total,
         "page_size": 10,
         "kpis": kpis,
         "signals": signals,
-        "selected": selected,
-        "categories": ["qualite", "securite", "conformite", "observabilite", "cout", "memoire"],
-        "footer": {"total": 312, "source": "YAML · Git"},
+        "categories": categories,
+        "sources": sources,
+        "footer": {
+            "total": total,
+            "source": f"Eval ({snapshot.model}) + guard/policy.yaml",
+        },
+        "run_at": run_dt.strftime("%d/%m/%Y") if run_dt else "-",
     }
+
+
+def compute_signal_catalogue(lang: str = "fr") -> dict[str, object]:
+    """Return the full Signal catalogue overview payload from real sources.
+
+    Args:
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
+
+    Returns:
+        A JSON-serialisable mapping with the catalogue posture KPIs, the signal
+        table (one row per monitored eval category, each carrying its real detail)
+        and the catalogue provenance — all derived from the live eval run and the
+        shared guard policy.
+    """
+    snapshot = load_eval_snapshot(None)
+    policy = load_policy()
+    return _assemble(snapshot, policy, datetime.now(UTC), lang)

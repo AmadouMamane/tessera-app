@@ -252,9 +252,21 @@ def _load_failure_items() -> list[failure_clustering_mod.FailureItem]:
     return items
 
 
-def _scores_for(at: str | None) -> list[dict[str, object]]:
-    """Scores to read: the live ring buffer, or the durable log as-of T (ADR 0011)."""
-    return persisted_scores(at) if at else recent_scores()
+def _agent_or_none(agent: str) -> str | None:
+    """Map the global ``?agent=`` filter to a backend scope.
+
+    ``"all"`` (or empty) is the deduplicated org view → ``None`` (no filter); any
+    other value is a concrete agent id. Mirrors ``lib/agent-scope`` on the front.
+    """
+    return None if not agent or agent == "all" else agent
+
+
+def _scores_for(at: str | None, agent_id: str | None = None) -> list[dict[str, object]]:
+    """Scores to read: the live ring buffer, or the durable log as-of T (ADR 0011).
+
+    Scoped to ``agent_id`` when set (per-agent SLO / trend / funnel / scores).
+    """
+    return persisted_scores(at, agent_id) if at else recent_scores(agent_id)
 
 
 def _data_availability_start(
@@ -274,9 +286,12 @@ def _data_availability_start(
 
 
 @router.get("/observability/scores")
-async def observability_scores(at: str | None = None) -> dict[str, object]:
-    """Online-eval scores — live (newest last), or as of instant ``at`` (ISO)."""
-    return {"scores": _scores_for(at), "as_of": at}
+async def observability_scores(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Online-eval scores — live (newest last), or as of instant ``at`` (ISO).
+
+    ``agent`` scopes the scores to one agent's turns (``all`` = org view).
+    """
+    return {"scores": _scores_for(at, _agent_or_none(agent)), "as_of": at, "agent": agent}
 
 
 @router.get("/observability/timeline")
@@ -411,18 +426,20 @@ async def observability_data_range() -> dict[str, object]:
 
 
 @router.get("/observability/slo")
-async def observability_slo(at: str | None = None) -> dict[str, object]:
+async def observability_slo(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Quality SLO + error-budget burn-rate over the faithfulness scores.
 
     Live by default; with ``?at=`` the SLO is recomputed over the durable score
-    log as of instant T (as-of-T read, ADR 0011).
+    log as of instant T (as-of-T read, ADR 0011). ``agent`` scopes the SLO to one
+    agent's own scored turns (``all`` = org view); an agent with no scored turns
+    yet reads honestly empty (``n=0``).
     """
     faithfulness = [
         float(s["score"])  # type: ignore[arg-type]
-        for s in _scores_for(at)
+        for s in _scores_for(at, _agent_or_none(agent))
         if s.get("metric") == "faithfulness"
     ]
-    return {**asdict(slo_mod.compute_slo(faithfulness)), "as_of": at}
+    return {**asdict(slo_mod.compute_slo(faithfulness)), "as_of": at, "agent": agent}
 
 
 @router.post("/observability/shadow")
@@ -457,14 +474,15 @@ async def observability_reproducibility() -> dict[str, object]:
 
 
 @router.get("/observability/trend")
-async def observability_trend(at: str | None = None) -> dict[str, object]:
+async def observability_trend(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Long-horizon faithfulness trend over the score series (#150).
 
     Live by default; with ``?at=`` the trend is recomputed over the durable
-    score log as of instant T (as-of-T read, ADR 0011).
+    score log as of instant T (as-of-T read, ADR 0011). ``agent`` scopes the
+    trend to one agent's scored turns (``all`` = org view).
     """
     points: list[tuple[str, float]] = []
-    for s in _scores_for(at):
+    for s in _scores_for(at, _agent_or_none(agent)):
         if s.get("metric") != "faithfulness":
             continue
         scored_at = s.get("scored_at")
@@ -474,7 +492,7 @@ async def observability_trend(at: str | None = None) -> dict[str, object]:
                 float(s["score"]),  # type: ignore[arg-type]
             )
         )
-    return {**asdict(trends_mod.analyze_trend(points)), "as_of": at}
+    return {**asdict(trends_mod.analyze_trend(points)), "as_of": at, "agent": agent}
 
 
 @router.get("/observability/score-series")
@@ -483,12 +501,14 @@ async def observability_score_series(
     metric: str = "faithfulness",
     days: int = 7,
     buckets: int = 7,
+    agent: str = "all",
 ) -> dict[str, object]:
     """Calendar-time score series + period-over-period delta for the evolution chart.
 
     Buckets the durable score log into equal time slices over the last ``days``,
     ending now or — with ``?at=`` — at instant T (as-of-T read, ADR 0011). Empty
     buckets carry ``mean=null`` so the chart shows a gap, never a fabricated zero.
+    ``agent`` scopes the series to one agent's scored turns (``all`` = org view).
     """
     import contextlib
     from datetime import UTC, datetime
@@ -500,9 +520,13 @@ async def observability_score_series(
         with contextlib.suppress(ValueError):
             end = datetime.fromisoformat(at)
     series = compute_score_series(
-        persisted_scores(at), metric=metric, end=end, days=days, n_buckets=buckets
+        persisted_scores(at, _agent_or_none(agent)),
+        metric=metric,
+        end=end,
+        days=days,
+        n_buckets=buckets,
     )
-    return {**asdict(series), "as_of": at}
+    return {**asdict(series), "as_of": at, "agent": agent}
 
 
 @router.get("/observability/judge-drift")
@@ -653,23 +677,24 @@ async def observability_calibration() -> dict[str, object]:
 
 
 @router.get("/observability/compliance")
-async def observability_compliance() -> dict[str, object]:
+async def observability_compliance(lang: str = "fr") -> dict[str, object]:
     """Regulatory compliance posture derived from the real runtime signals (#07).
 
     Maps the live AI-Act, conformance, citation, disclosure, PII, refusal,
     erasure and firewall signals onto per-framework controls (RGPD, EU AI Act,
-    DORA, ISO 27001, SOC 2, internal policies). Degrades to ``available: false``
-    if assembly fails so the dashboard never errors.
+    DORA, ISO 27001, SOC 2, internal policies). ``lang`` localizes the labels and
+    the per-tab catalogues. Degrades to ``available: false`` if assembly fails so
+    the dashboard never errors.
     """
     try:
-        return {"available": True, **asdict(compliance_mod.compute_compliance())}
+        return {"available": True, **asdict(compliance_mod.compute_compliance(lang))}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.compliance: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/improvement")
-async def observability_improvement() -> dict[str, object]:
+async def observability_improvement(lang: str = "fr") -> dict[str, object]:
     """Continuous-improvement posture mined from the telemetry roadmap (#09).
 
     Turns the real roadmap backlog (low-faithfulness turns, unknown intents,
@@ -677,7 +702,7 @@ async def observability_improvement() -> dict[str, object]:
     improvement opportunities. Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **asdict(improvement_mod.compute_improvement())}
+        return {"available": True, **asdict(improvement_mod.compute_improvement(lang))}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
         return {"available": False}
@@ -796,10 +821,13 @@ async def observability_session_detail(
 
 
 @router.get("/observability/fleet")
-async def observability_fleet() -> dict[str, object]:
-    """Fleet rollup: per-agent observable KPIs + deduplicated org totals."""
+async def observability_fleet(lang: str = "fr") -> dict[str, object]:
+    """Fleet rollup: per-agent observable KPIs + deduplicated org totals.
+
+    ``lang`` localizes the per-agent release verdict label.
+    """
     try:
-        return {"available": True, **await fleet_mod.compute_fleet()}
+        return {"available": True, **await fleet_mod.compute_fleet(lang)}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.fleet: failed: {exc}\n")
         return {"available": False}
@@ -847,18 +875,22 @@ async def observability_rbac_matrix(agent: str = "all") -> dict[str, object]:
 
 @router.get("/observability/catalogue-consumers")
 async def observability_catalogue_consumers(
-    kind: str, agent: str = "all"
+    kind: str, agent: str = "all", lang: str = "fr"
 ) -> dict[str, object]:
     """CONFIGURER "used-by": which agents consume each catalogue item of ``kind``.
 
     The inverse of the AGENT instance binding — each shared definition shows its
     consumer agents + their release verdict, so a change's re-gate blast radius is
-    explicit. Global, filterable by agent. Degrades to ``available: false``.
+    explicit. Global, filterable by agent. ``lang`` localizes the verdict label.
+    Degrades to ``available: false``.
     """
     from tessera.observability import catalogue_consumers as cc_mod
 
     try:
-        return {"available": True, **cc_mod.catalogue_consumers(kind, agent_scope=agent)}
+        return {
+            "available": True,
+            **cc_mod.catalogue_consumers(kind, agent_scope=agent, lang=lang),
+        }
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:  # never break the page
@@ -903,7 +935,7 @@ async def observability_guardrail_catalogue(
 
 
 @router.get("/observability/release-control")
-async def observability_release_control(agent: str = "all") -> dict[str, object]:
+async def observability_release_control(agent: str = "all", lang: str = "fr") -> dict[str, object]:
     """Release Control (AGIR): per-agent release pipeline + eval-gate verdict.
 
     Global, filterable by agent (``?agent=all|<id>``) — distinct from the AGENT
@@ -913,7 +945,7 @@ async def observability_release_control(agent: str = "all") -> dict[str, object]
     from tessera.observability import release_control as rc_mod
 
     try:
-        return {"available": True, **rc_mod.compute_release_control(agent)}
+        return {"available": True, **rc_mod.compute_release_control(agent, lang)}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.release_control: failed: {exc}\n")
         return {"available": False}
@@ -922,6 +954,7 @@ async def observability_release_control(agent: str = "all") -> dict[str, object]
 @router.get("/observability/agent-lifecycle")
 async def observability_agent_lifecycle(
     agent_id: str = DEFAULT_AGENT_ID,
+    lang: str = "fr",
 ) -> dict[str, object]:
     """Governed lifecycle of an agent: state, gated release decision, S1 history.
 
@@ -931,7 +964,7 @@ async def observability_agent_lifecycle(
     from tessera.observability import agent_lifecycle as lifecycle_mod
 
     try:
-        return {"available": True, **lifecycle_mod.compute_agent_lifecycle(agent_id)}
+        return {"available": True, **lifecycle_mod.compute_agent_lifecycle(agent_id, lang)}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.agent_lifecycle: failed: {exc}\n")
         return {"available": False}
@@ -963,6 +996,7 @@ async def observability_agents_release(body: _AgentReleaseBody) -> dict[str, obj
 @router.get("/observability/agent-evaluations")
 async def observability_agent_evaluations(
     agent_id: str = DEFAULT_AGENT_ID,
+    lang: str = "fr",
 ) -> dict[str, object]:
     """Agent Evaluations ("Evaluations") dashboard (reference image 29).
 
@@ -978,7 +1012,7 @@ async def observability_agent_evaluations(
     try:
         return {
             "available": True,
-            **agent_evaluations_mod.compute_agent_evaluations(agent_id),
+            **agent_evaluations_mod.compute_agent_evaluations(agent_id, lang),
         }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_evaluations: failed: {exc}\n")
@@ -1090,16 +1124,17 @@ async def observability_agent_garde_fous_mutate(
 
 
 @router.get("/observability/agent-a-faire")
-async def observability_agent_a_faire() -> dict[str, object]:
+async def observability_agent_a_faire(lang: str = "fr") -> dict[str, object]:
     """Agent "A faire" personal action queue (reference image 23).
 
     Backed by the real operator backlog (failed eval cases with durable
     status/assignee): temporal rail + event timeline, KPI strip, saved-views
     filter rail, task table, per-item detail band and the right column.
-    Degrades to ``available: false`` on failure.
+    ``lang`` localizes the chrome (fr / de / en). Degrades to
+    ``available: false`` on failure.
     """
     try:
-        return {"available": True, **agent_a_faire_mod.compute_agent_a_faire()}
+        return {"available": True, **agent_a_faire_mod.compute_agent_a_faire(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_a_faire: failed: {exc}\n")
         return {"available": False}
@@ -1143,18 +1178,20 @@ async def observability_agent_connaissances_mutate(
 @router.get("/observability/agent-configurations")
 async def observability_agent_configurations(
     agent_id: str = DEFAULT_AGENT_ID,
+    lang: str = "fr",
 ) -> dict[str, object]:
     """Agent Configurations dashboard (reference image 26).
 
     Composes the active settings, guard policy, prompt bundles, tools and
     corpus-backed sources into the operator configuration form. Degrades to
     ``available: false`` so the dashboard keeps rendering if a local source is
-    temporarily unreadable. ``agent_id`` scopes the in-page navigation links.
+    temporarily unreadable. ``agent_id`` scopes the in-page navigation links;
+    ``lang`` localizes the chrome and the editable option values.
     """
     try:
         return {
             "available": True,
-            **agent_configurations_mod.compute_agent_configurations(agent_id),
+            **agent_configurations_mod.compute_agent_configurations(agent_id, lang),
         }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_configurations: failed: {exc}\n")
@@ -1165,25 +1202,30 @@ class _AgentConfigBody(BaseModel):
     """A set of agent-profile overrides to persist (only known keys are kept)."""
 
     changes: dict[str, object]
+    lang: str = "fr"
 
 
 @router.post("/observability/agent-configurations/config")
 async def observability_agent_configurations_save(
     body: _AgentConfigBody, agent_id: str = DEFAULT_AGENT_ID
 ) -> dict[str, object]:
-    """Persist editable agent-profile overrides and return the fresh payload."""
+    """Persist editable agent-profile overrides and return the fresh payload.
+
+    Incoming option values may be localized; ``set_agent_config`` re-canonicalizes
+    them to French before persisting, so the durable store stays locale-stable.
+    """
     unknown = set(body.changes) - agent_configurations_mod.available_config_keys()
     if unknown:
         raise HTTPException(status_code=422, detail=f"unknown keys: {sorted(unknown)}")
     agent_configurations_mod.set_agent_config(body.changes, agent_id)
     return {
         "available": True,
-        **agent_configurations_mod.compute_agent_configurations(agent_id),
+        **agent_configurations_mod.compute_agent_configurations(agent_id, body.lang),
     }
 
 
 @router.get("/observability/agent-console")
-async def observability_agent_console() -> dict[str, object]:
+async def observability_agent_console(lang: str = "fr") -> dict[str, object]:
     """Agent Console (Debug) surface (reference image agent-console-normative).
 
     Status sub-bar, live transcript, service-level KPIs and a tabbed inspector
@@ -1192,7 +1234,7 @@ async def observability_agent_console() -> dict[str, object]:
     trace. Deterministic fixture; degrades to ``available: false``.
     """
     try:
-        return {"available": True, **agent_console_mod.compute_agent_console()}
+        return {"available": True, **agent_console_mod.compute_agent_console(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_console: failed: {exc}\n")
         return {"available": False}
@@ -1255,17 +1297,20 @@ async def observability_agent_synthese(
 
 
 @router.get("/observability/etat-a-date")
-async def observability_etat_a_date(as_of: str | None = None) -> dict[str, object]:
+async def observability_etat_a_date(
+    as_of: str | None = None, sources: str | None = None, lang: str = "fr"
+) -> dict[str, object]:
     """Point-in-time reconstruction ("Etat a date", prouver/etat-a-date).
 
     Reconstructs, as of instant ``as_of`` (ISO; absent means live), the knowledge
     sources accessible to the agent, the guard decisions/blocks logged by then,
-    the rules that had fired, and the policies in force. Sourced from pgvector
-    ``documents`` + the guard audit log + the guard policy; degrades to
-    ``available: false``.
+    the rules that had fired, and the policies in force. ``sources`` is an optional
+    comma-separated per-source scope (corpus-category keys); ``lang`` localizes the
+    labels. Sourced from pgvector ``documents`` + the guard audit log + the guard
+    policy; degrades to ``available: false``.
     """
     try:
-        return await etat_a_date_mod.build_etat_a_date(as_of)
+        return await etat_a_date_mod.build_etat_a_date(as_of, sources, lang)
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.etat_a_date: failed: {exc}\n")
         return {"available": False}
@@ -1276,6 +1321,8 @@ class _EtatSnapshotBody(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     as_of: str | None = None
+    sources: str | None = None
+    lang: str = "fr"
 
 
 @router.post("/observability/etat-a-date/snapshot")
@@ -1283,51 +1330,54 @@ async def observability_etat_a_date_snapshot(body: _EtatSnapshotBody) -> dict[st
     """Persist a snapshot of the reconstruction at ``body.as_of``.
 
     Saves to the durable snapshot store and returns the refreshed payload with
-    the new snapshot at the head of the list.
+    the new snapshot at the head of the list, shaped by the optional per-source
+    ``body.sources`` scope and localized by ``body.lang``.
     """
-    return await etat_a_date_mod.save_etat_snapshot(body.as_of)
+    return await etat_a_date_mod.save_etat_snapshot(body.as_of, body.sources, body.lang)
 
 
 @router.get("/observability/incidents")
-async def observability_incidents() -> dict[str, object]:
+async def observability_incidents(lang: str = "fr") -> dict[str, object]:
     """Incidents & playbooks overview (page #10).
 
     Composes the current incident posture, the triage queue with recommended
     playbooks, the running playbook timeline, the automation rules and the
-    7-day impact charts into one payload. Degrades to ``available: false``.
+    7-day impact charts into one payload. ``lang`` localizes the chrome and the
+    per-tab operational catalogues. Degrades to ``available: false``.
     """
     try:
-        return {"available": True, **incidents_mod.compute_incidents_overview()}
+        return {"available": True, **incidents_mod.compute_incidents_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/assistant")
-async def observability_assistant() -> dict[str, object]:
+async def observability_assistant(lang: str = "fr") -> dict[str, object]:
     """Assistant overview (Chat and Console sub-tabs).
 
     Composes the session header, the grounded conversation, the session context,
     the cited sources, the tools called, the guardrails triggered, the response
     quality scores, the execution trace, the follow-up suggestions and the
-    console rail KPIs into one payload. Degrades to ``available: false``.
+    console rail KPIs into one payload. ``lang`` localizes the grounded
+    conversation. Degrades to ``available: false``.
     """
     try:
-        return {"available": True, **assistant_mod.compute_assistant_overview()}
+        return {"available": True, **assistant_mod.compute_assistant_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.assistant: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/inbox")
-async def observability_inbox() -> dict[str, object]:
+async def observability_inbox(lang: str = "fr") -> dict[str, object]:
     """Inbox / À traiter overview (page #24).
 
     Composes the queue posture, the task queue, the by-type distribution and the
     SLA buckets. Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **inbox_mod.compute_inbox_overview()}
+        return {"available": True, **inbox_mod.compute_inbox_overview(lang=lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.inbox: failed: {exc}\n")
         return {"available": False}
@@ -1401,6 +1451,7 @@ class _ItemStateBody(BaseModel):
     item_id: str
     status: str | None = None
     assignee: str | None = None
+    lang: str = "fr"
 
 
 @router.post("/observability/inbox/item-state")
@@ -1411,7 +1462,7 @@ async def observability_inbox_mutate(body: _ItemStateBody) -> dict[str, object]:
     if body.item_id not in operator_items_mod.available_item_ids():
         raise HTTPException(status_code=404, detail="unknown item")
     operator_items_mod.set_item_state(body.item_id, status=body.status, assignee=body.assignee)
-    return {"available": True, **inbox_mod.compute_inbox_overview()}
+    return {"available": True, **inbox_mod.compute_inbox_overview(lang=body.lang)}
 
 
 @router.post("/observability/agent-a-faire/item-state")
@@ -1422,11 +1473,11 @@ async def observability_agent_a_faire_mutate(body: _ItemStateBody) -> dict[str, 
     if body.item_id not in operator_items_mod.available_item_ids():
         raise HTTPException(status_code=404, detail="unknown item")
     operator_items_mod.set_item_state(body.item_id, status=body.status, assignee=body.assignee)
-    return {"available": True, **agent_a_faire_mod.compute_agent_a_faire()}
+    return {"available": True, **agent_a_faire_mod.compute_agent_a_faire(body.lang)}
 
 
 @router.get("/observability/parameters")
-async def observability_parameters() -> dict[str, object]:
+async def observability_parameters(lang: str = "fr") -> dict[str, object]:
     """Settings / parameters overview (page #21).
 
     Composes the active config version, posture KPIs, quick-config categories,
@@ -1434,14 +1485,14 @@ async def observability_parameters() -> dict[str, object]:
     Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **parameters_mod.compute_parameters_overview()}
+        return {"available": True, **parameters_mod.compute_parameters_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.parameters: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/system-profile")
-async def observability_system_profile() -> dict[str, object]:
+async def observability_system_profile(lang: str = "fr") -> dict[str, object]:
     """System profile overview (page #20).
 
     Composes the operational posture, architecture, topology, resource
@@ -1449,14 +1500,14 @@ async def observability_system_profile() -> dict[str, object]:
     Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **system_profile_mod.compute_system_profile()}
+        return {"available": True, **system_profile_mod.compute_system_profile(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.system_profile: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/integrations")
-async def observability_integrations() -> dict[str, object]:
+async def observability_integrations(lang: str = "fr") -> dict[str, object]:
     """Integrations overview (page #19).
 
     Composes the integration posture, the catalogue table, the
@@ -1464,21 +1515,21 @@ async def observability_integrations() -> dict[str, object]:
     ``available: false`` on failure.
     """
     try:
-        return {"available": True, **integrations_mod.compute_integrations_overview()}
+        return {"available": True, **integrations_mod.compute_integrations_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.integrations: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/access")
-async def observability_access() -> dict[str, object]:
+async def observability_access(lang: str = "fr") -> dict[str, object]:
     """Roles & access overview (page #18).
 
     Composes the access posture, the role table, the selected-role detail and
     the governance panels. Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **access_mod.compute_access_overview()}
+        return {"available": True, **access_mod.compute_access_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.access: failed: {exc}\n")
         return {"available": False}
@@ -1501,7 +1552,7 @@ async def observability_sources(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/policies")
-async def observability_policies() -> dict[str, object]:
+async def observability_policies(lang: str = "fr") -> dict[str, object]:
     """Policies & guardrails overview (page #16-policies).
 
     Composes the version timeline, posture KPIs, critical active policies,
@@ -1509,28 +1560,30 @@ async def observability_policies() -> dict[str, object]:
     sensitive actions. Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **policies_mod.compute_policies_overview()}
+        return {"available": True, **policies_mod.compute_policies_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.policies: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/signal-catalogue")
-async def observability_signal_catalogue() -> dict[str, object]:
+async def observability_signal_catalogue(lang: str = "fr") -> dict[str, object]:
     """Signal catalogue overview (page #16).
 
-    Composes the catalogue posture, the filterable signal table and the
-    selected-signal detail. Degrades to ``available: false`` on failure.
+    Composes the catalogue posture and the filterable signal table from the real
+    eval run + guard policy; each row carries its own detail (client-side
+    selection). Free-text is localized fr/de/en. Degrades to ``available: false``
+    on failure.
     """
     try:
-        return {"available": True, **signal_catalogue_mod.compute_signal_catalogue()}
+        return {"available": True, **signal_catalogue_mod.compute_signal_catalogue(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.signal_catalogue: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/proofs")
-async def observability_proofs() -> dict[str, object]:
+async def observability_proofs(lang: str = "fr") -> dict[str, object]:
     """Proofs & exporter overview (page #15).
 
     Composes the proof posture, assembly pipeline, current evidence pack,
@@ -1539,30 +1592,31 @@ async def observability_proofs() -> dict[str, object]:
     Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **proofs_mod.compute_proofs_overview()}
+        return {"available": True, **proofs_mod.compute_proofs_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.proofs: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/automations")
-async def observability_automations() -> dict[str, object]:
+async def observability_automations(lang: str = "fr") -> dict[str, object]:
     """Automations overview (page #13).
 
     Composes the automation posture, rule catalogue, execution pipeline, type /
     environment breakdowns, execution journal, pending approvals, most-used
-    guardrails, performance / savings trends and governance context. Degrades to
-    ``available: false`` on failure.
+    guardrails, performance / savings trends and governance context. ``lang``
+    localizes the free-text fixture fields. Degrades to ``available: false`` on
+    failure.
     """
     try:
-        return {"available": True, **automations_mod.compute_automations_overview()}
+        return {"available": True, **automations_mod.compute_automations_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.automations: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/curation")
-async def observability_curation() -> dict[str, object]:
+async def observability_curation(lang: str = "fr") -> dict[str, object]:
     """Curation eval-set overview (page #12).
 
     Composes the backlog posture, priority curation lots, workflow stages,
@@ -1571,14 +1625,14 @@ async def observability_curation() -> dict[str, object]:
     ``available: false`` on failure.
     """
     try:
-        return {"available": True, **curation_mod.compute_curation_overview()}
+        return {"available": True, **curation_mod.compute_curation_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.curation: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/replay-shadow")
-async def observability_replay_shadow() -> dict[str, object]:
+async def observability_replay_shadow(lang: str = "fr") -> dict[str, object]:
     """Replay & shadow overview (page #11).
 
     Composes the replay posture, traffic and deviation series, recent / top
@@ -1586,24 +1640,27 @@ async def observability_replay_shadow() -> dict[str, object]:
     evals and the live activity feed. Degrades to ``available: false``.
     """
     try:
-        return {"available": True, **replay_shadow_mod.compute_replay_shadow_overview()}
+        return {"available": True, **replay_shadow_mod.compute_replay_shadow_overview(lang)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.replay_shadow: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/reliability")
-async def observability_reliability(days: int = 14, anchor: str | None = None) -> dict[str, object]:
+async def observability_reliability(
+    days: int = 14, anchor: str | None = None, lang: str = "fr"
+) -> dict[str, object]:
     """Operational reliability & cost posture from the real signals (#08).
 
     Token cost, tool success, span overhead, per-language quality and per-model
     run stats are measured; latency is estimated from the token distribution at a
     documented local throughput. The period rail narrows the window via ``days``
-    (length) and ``anchor`` (upper-bound day/instant). Degrades to
-    ``available: false`` on failure.
+    (length) and ``anchor`` (upper-bound day/instant). ``lang`` localizes the
+    recommended-actions and incident free-text. Degrades to ``available: false``
+    on failure.
     """
     try:
-        report = reliability_mod.compute_reliability(days=days, anchor=anchor)
+        report = reliability_mod.compute_reliability(days=days, anchor=anchor, lang=lang)
         return {"available": True, "days": days, "anchor": anchor, **asdict(report)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.reliability: failed: {exc}\n")
@@ -1772,20 +1829,22 @@ async def observability_corpus_freshness() -> dict[str, object]:
 
 
 @router.get("/observability/roadmap")
-async def observability_roadmap(at: str | None = None) -> dict[str, object]:
+async def observability_roadmap(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Mine telemetry signals into a ranked product backlog (#124), live or as of T.
 
     Score- and bundle-derived inputs honour T; corpus freshness is a property of
-    the ingested data today, so it stays live.
+    the ingested data today, so it stays live. ``agent`` scopes the score/bundle
+    inputs to one agent (``all`` = org view); corpus freshness stays org.
     """
     from importlib import resources
     from pathlib import Path
 
+    ag = _agent_or_none(agent)
     low_threshold = 0.80
     n_turns = 0
     n_low = 0
     languages_low: dict[str, int] = {}
-    for score in _scores_for(at):
+    for score in _scores_for(at, ag):
         if score.get("metric") != "faithfulness":
             continue
         n_turns += 1
@@ -1795,7 +1854,7 @@ async def observability_roadmap(at: str | None = None) -> dict[str, object]:
             key = lang if isinstance(lang, str) else "unknown"
             languages_low[key] = languages_low.get(key, 0) + 1
 
-    questions = [b.question for b in replay_mod.recent_bundles(at)]
+    questions = [b.question for b in replay_mod.recent_bundles(at, ag)]
     intents = routing_intent_mod.aggregate_intents(questions)
 
     data_dir = Path(str(resources.files("tessera.corpus.data")))
@@ -2194,16 +2253,19 @@ async def observability_localization() -> dict[str, object]:
 
 
 @router.get("/observability/playbooks")
-async def observability_playbooks(at: str | None = None) -> dict[str, object]:
+async def observability_playbooks(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Incident playbooks triggered by the live (or as-of-T) signals (#115).
 
     Bundle- and score-derived inputs honour T; the jailbreak rate is the latest
     red-team snapshot (a periodic probe, not a per-turn event), so it stays live.
+    ``agent`` scopes the bundle/score inputs to one agent (``all`` = org view);
+    the shared red-team probe stays org.
     """
-    bundles = replay_mod.recent_bundles(at)
+    ag = _agent_or_none(agent)
+    bundles = replay_mod.recent_bundles(at, ag)
     faithfulness = [
         float(s["score"])  # type: ignore[arg-type]
-        for s in _scores_for(at)
+        for s in _scores_for(at, ag)
         if s.get("metric") == "faithfulness"
     ]
     bar = 0.80
@@ -2234,9 +2296,15 @@ async def observability_cross_tenant() -> dict[str, object]:
 
 
 @router.get("/observability/toxicity")
-async def observability_toxicity(at: str | None = None) -> dict[str, object]:
-    """Toxicity / harmful-output rate over captured answers (#60), live or as of T."""
-    turns = [(b.question, b.original_answer) for b in replay_mod.recent_bundles(at)]
+async def observability_toxicity(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Toxicity / harmful-output rate over captured answers (#60), live or as of T.
+
+    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    """
+    turns = [
+        (b.question, b.original_answer)
+        for b in replay_mod.recent_bundles(at, _agent_or_none(agent))
+    ]
     return asdict(toxicity_mod.scan_toxicity(turns))
 
 
@@ -2297,9 +2365,12 @@ async def observability_refusal() -> dict[str, object]:
 
 
 @router.get("/observability/conformance")
-async def observability_conformance(at: str | None = None) -> dict[str, object]:
-    """Schema/format conformance of tool-call arguments from the audit trail, live or as of T."""
-    return asdict(conformance_mod.compute_conformance(at=at))
+async def observability_conformance(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Schema/format conformance of tool-call arguments from the audit trail, live or as of T.
+
+    ``agent`` scopes to one agent's tool calls (``all`` = org view).
+    """
+    return asdict(conformance_mod.compute_conformance(at=at, agent_id=_agent_or_none(agent)))
 
 
 @router.get("/observability/context-overflow")
@@ -2313,11 +2384,14 @@ async def observability_context_overflow() -> dict[str, object]:
 
 
 @router.get("/observability/cost")
-async def observability_cost(at: str | None = None) -> dict[str, object]:
-    """Token-cost distribution and token-burn anomalies over captured turns, live or as of T."""
+async def observability_cost(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Token-cost distribution and token-burn anomalies over captured turns, live or as of T.
+
+    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    """
     turns = [
         (b.question, f"{b.question}\n{b.context}\n{b.original_answer}")
-        for b in replay_mod.recent_bundles(at)
+        for b in replay_mod.recent_bundles(at, _agent_or_none(agent))
     ]
     return asdict(cost_anomaly_mod.analyze_costs(turns))
 
@@ -2369,9 +2443,14 @@ async def observability_tool_loops() -> dict[str, object]:
 
 
 @router.get("/observability/tool-validity")
-async def observability_tool_validity(at: str | None = None) -> dict[str, object]:
-    """Validity of tool calls (allowed vs denied, argument failures), live or as of T."""
-    return asdict(tool_validity_mod.compute_tool_validity(at=at))
+async def observability_tool_validity(
+    at: str | None = None, agent: str = "all"
+) -> dict[str, object]:
+    """Validity of tool calls (allowed vs denied, argument failures), live or as of T.
+
+    ``agent`` scopes to one agent's tool calls (``all`` = org view).
+    """
+    return asdict(tool_validity_mod.compute_tool_validity(at=at, agent_id=_agent_or_none(agent)))
 
 
 @router.get("/observability/routing")
@@ -2403,28 +2482,42 @@ async def observability_locale_format() -> dict[str, object]:
 
 
 @router.get("/observability/pii-leak")
-async def observability_pii_leak(at: str | None = None) -> dict[str, object]:
-    """Output PII-leak rate: PII in answers absent from their grounding, live or as of T."""
+async def observability_pii_leak(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Output PII-leak rate: PII in answers absent from their grounding, live or as of T.
+
+    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    """
     turns = [
-        (b.original_answer, f"{b.question}\n{b.context}") for b in replay_mod.recent_bundles(at)
+        (b.original_answer, f"{b.question}\n{b.context}")
+        for b in replay_mod.recent_bundles(at, _agent_or_none(agent))
     ]
     return asdict(pii_leak_mod.aggregate_leaks(turns))
 
 
 @router.get("/observability/anomalies")
-async def observability_anomalies(at: str | None = None) -> dict[str, object]:
-    """Detect long/looping/repetitive sessions among captured turns, live or as of T."""
+async def observability_anomalies(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Detect long/looping/repetitive sessions among captured turns, live or as of T.
+
+    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    """
     by_conversation: dict[str, list[str]] = {}
-    for bundle in replay_mod.recent_bundles(at):
+    for bundle in replay_mod.recent_bundles(at, _agent_or_none(agent)):
         key = bundle.conversation_id or "<none>"
         by_conversation.setdefault(key, []).append(bundle.question)
     return asdict(anomalies_mod.detect_anomalies(by_conversation))
 
 
 @router.get("/observability/what-changed")
-async def observability_what_changed(at: str | None = None) -> dict[str, object]:
-    """Attribute a score change to the lineage diff of the last two turns, live or as of T."""
-    with_lineage = [b for b in replay_mod.recent_bundles(at) if b.lineage is not None]
+async def observability_what_changed(
+    at: str | None = None, agent: str = "all"
+) -> dict[str, object]:
+    """Attribute a score change to the lineage diff of the last two turns, live or as of T.
+
+    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    """
+    with_lineage = [
+        b for b in replay_mod.recent_bundles(at, _agent_or_none(agent)) if b.lineage is not None
+    ]
     if len(with_lineage) < 2:  # noqa: PLR2004 — need two turns to diff
         return {"available": False}
     prev, curr = with_lineage[-2], with_lineage[-1]
@@ -2440,10 +2533,13 @@ async def observability_what_changed(at: str | None = None) -> dict[str, object]
 
 
 @router.get("/observability/funnel")
-async def observability_funnel(at: str | None = None) -> dict[str, object]:
-    """Per-language conversation funnel from scored turns, live or as of T."""
+async def observability_funnel(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Per-language conversation funnel from scored turns, live or as of T.
+
+    ``agent`` scopes the funnel to one agent's scored turns (``all`` = org view).
+    """
     turns: list[tuple[str, str | None, float]] = []
-    for score in _scores_for(at):
+    for score in _scores_for(at, _agent_or_none(agent)):
         lang = score.get("language")
         conv = score.get("conversation_id")
         raw = score.get("score", 0.0)
@@ -2458,10 +2554,13 @@ async def observability_funnel(at: str | None = None) -> dict[str, object]:
 
 
 @router.get("/observability/sessions")
-async def observability_sessions() -> dict[str, object]:
-    """Session-level goal-completion analytics from scored turns."""
+async def observability_sessions(agent: str = "all") -> dict[str, object]:
+    """Session-level goal-completion analytics from scored turns.
+
+    ``agent`` scopes to one agent's scored turns (``all`` = org view).
+    """
     turns: list[tuple[str | None, float]] = []
-    for score in recent_scores():
+    for score in recent_scores(_agent_or_none(agent)):
         conv = score.get("conversation_id")
         raw = score.get("score", 0.0)
         turns.append((conv if isinstance(conv, str) else None, float(raw)))  # type: ignore[arg-type]
@@ -2553,20 +2652,20 @@ async def observability_client_documents(locale: str = "fr") -> dict[str, object
 
 
 @router.get("/observability/client/requests")
-async def observability_client_requests() -> dict[str, object]:
+async def observability_client_requests(lang: str = "fr") -> dict[str, object]:
     """Customer support requests (escalation tickets)."""
     try:
-        return {"available": True, **client_space_mod.compute_requests()}
+        return {"available": True, **client_space_mod.compute_requests(lang)}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.client_space.requests: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/client/alerts")
-async def observability_client_alerts() -> dict[str, object]:
+async def observability_client_alerts(lang: str = "fr") -> dict[str, object]:
     """Account alerts with the durable read-state applied."""
     try:
-        return {"available": True, **client_space_mod.compute_alerts()}
+        return {"available": True, **client_space_mod.compute_alerts(lang)}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.client_space.alerts: failed: {exc}\n")
         return {"available": False}
@@ -2577,19 +2676,23 @@ class _AlertReadBody(BaseModel):
 
     alert_id: str
     read: bool = True
+    lang: str = "fr"
 
 
 @router.post("/observability/client/alerts/read")
 async def observability_client_alerts_read(body: _AlertReadBody) -> dict[str, object]:
     """Persist an alert's read state and return the fresh alerts payload."""
-    return {"available": True, **client_space_mod.mark_alert_read(body.alert_id, read=body.read)}
+    return {
+        "available": True,
+        **client_space_mod.mark_alert_read(body.alert_id, read=body.read, lang=body.lang),
+    }
 
 
 @router.get("/observability/client/settings")
-async def observability_client_settings() -> dict[str, object]:
+async def observability_client_settings(lang: str = "fr") -> dict[str, object]:
     """Customer preferences (notifications, privacy/consent, security)."""
     try:
-        return {"available": True, **client_space_mod.compute_settings()}
+        return {"available": True, **client_space_mod.compute_settings(lang)}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.client_space.settings: failed: {exc}\n")
         return {"available": False}
@@ -2600,29 +2703,33 @@ class _SettingBody(BaseModel):
 
     key: str
     value: object
+    lang: str = "fr"
 
 
 @router.post("/observability/client/settings")
 async def observability_client_settings_save(body: _SettingBody) -> dict[str, object]:
     """Persist one preference and return the full settings payload."""
-    return {"available": True, **client_space_mod.update_setting(body.key, body.value)}
+    return {
+        "available": True,
+        **client_space_mod.update_setting(body.key, body.value, body.lang),
+    }
 
 
 @router.get("/observability/connectors")
-async def observability_connectors() -> dict[str, object]:
+async def observability_connectors(lang: str = "fr") -> dict[str, object]:
     """Connectors overview for the real Tessera stack (configurer/connecteurs)."""
     try:
-        return {"available": True, **connectors_mod.compute_connectors()}
+        return {"available": True, **connectors_mod.compute_connectors(lang)}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.connectors: failed: {exc}\n")
         return {"available": False}
 
 
 @router.get("/observability/users")
-async def observability_users() -> dict[str, object]:
+async def observability_users(lang: str = "fr") -> dict[str, object]:
     """Users overview from the real seeded operator accounts (admin/utilisateurs)."""
     try:
-        return {"available": True, **users_mod.compute_users()}
+        return {"available": True, **users_mod.compute_users(lang)}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.users: failed: {exc}\n")
         return {"available": False}

@@ -13,8 +13,10 @@
 #   docker compose -f docker-compose.obs.claude.yml up -d
 #   Point the agent at the Collector: TESSERA_OBSERVABILITY__OTEL_COLLECTOR_ENDPOINT=http://localhost:4418
 # Backends:
-#   Phoenix (canonical)  http://localhost:16006
-#   Langfuse (2nd export) http://localhost:3900   (login: claude@tessera.local / claude-demo-pw)
+#   Phoenix (canonical)   http://localhost:16006
+#   Langfuse (2nd export) http://localhost:3900    (login: claude@tessera.local / claude-demo-pw)
+#   Prometheus (ops)      http://localhost:19090
+#   Grafana (SLO boards)  http://localhost:13000   (login: admin / claude-demo-pw)
 
 name: tessera-claude
 
@@ -178,10 +180,53 @@ services:
       retries: 10
     networks: [tessera-claude-obs]
 
+  # ── Ops metrics — Prometheus + Grafana (SLO dashboards) ─────────────────────
+  # Prometheus scrapes the agent's own /metrics exporter (tessera_* business
+  # metrics) on the host via host.docker.internal:9090, plus the Collector's
+  # internal telemetry. Grafana renders the pre-provisioned ops dashboard.
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: tessera-claude-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - claude_prometheus:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "19090:9090"
+    networks: [tessera-claude-obs]
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: tessera-claude-grafana
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_started
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: claude-demo-pw
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_DEFAULT_THEME: dark
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - claude_grafana:/var/lib/grafana
+    ports:
+      - "13000:3000"
+    networks: [tessera-claude-obs]
+
 volumes:
   claude_langfuse_pg:
   claude_clickhouse:
   claude_minio:
+  claude_prometheus:
+  claude_grafana:
 
 networks:
   tessera-claude-obs:

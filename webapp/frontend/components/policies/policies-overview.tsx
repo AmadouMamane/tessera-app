@@ -12,7 +12,7 @@ import {
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -61,9 +61,10 @@ type Data = PoliciesData;
 
 export function PoliciesOverview() {
   const t = useTranslations("policies");
+  const locale = useLocale();
   const { data } = useQuery({
-    queryKey: ["policies-overview"],
-    queryFn: ({ signal }) => fetchPoliciesOverview(signal),
+    queryKey: ["policies-overview", locale],
+    queryFn: ({ signal }) => fetchPoliciesOverview(locale, signal),
     staleTime: 60_000,
   });
 

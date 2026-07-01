@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  ChevronLeft,
+  ChevronRight,
   ChevronsUpDown,
   Download,
   Plug,
@@ -11,9 +13,17 @@ import {
   SortDesc,
   X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { type ReactNode, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -44,9 +54,11 @@ type SortKey = "name" | "type" | "status" | "calls";
 
 export function IntegrationsOverview() {
   const t = useTranslations("integrations");
+  const tt = useTranslations("table");
+  const locale = useLocale();
   const { data } = useQuery({
-    queryKey: ["integrations-overview"],
-    queryFn: ({ signal }) => fetchIntegrationsOverview(signal),
+    queryKey: ["integrations-overview", locale],
+    queryFn: ({ signal }) => fetchIntegrationsOverview(locale, signal),
     staleTime: 60_000,
   });
 
@@ -121,12 +133,17 @@ export function IntegrationsOverview() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <CommandBar t={t} onExport={onExport} />
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
         {data.kpis.map((kpi) => (
-          <CompactKpi key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} />
+          <CompactKpi
+            key={kpi.key}
+            kpi={kpi}
+            label={t(`kpi.${kpi.key}`)}
+            info={<KpiInfo k={kpi.key} title={t(`kpi.${kpi.key}`)} />}
+          />
         ))}
       </div>
 
@@ -141,33 +158,34 @@ export function IntegrationsOverview() {
         total={data.integrations.length}
       />
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <IntegrationTable
-            t={t}
-            rows={rows}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            sortKey={sortKey}
-            sortDir={sortDir}
-            onSort={onSort}
-          />
-          <div className="grid gap-3 xl:grid-cols-3">
-            <ByType t={t} data={data} />
-            <ByEnv t={t} data={data} />
-            <Top t={t} data={data} />
-          </div>
-        </div>
-        <DetailPanel
+      <IntegrationTable
+        t={t}
+        tt={tt}
+        rows={rows}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={onSort}
+      />
+
+      <div className="grid min-w-0 items-start gap-3 xl:grid-cols-3">
+        <ByType t={t} data={data} />
+        <ByEnv t={t} data={data} />
+        <Top t={t} data={data} />
+      </div>
+
+      <Footer t={t} data={data} />
+
+      {selected ? (
+        <IntegrationsDrawer
           t={t}
           detail={selected}
           tab={tab}
           onTab={setTab}
           onClose={() => setSelectedId(null)}
         />
-      </div>
-
-      <Footer t={t} data={data} />
+      ) : null}
     </div>
   );
 }
@@ -200,11 +218,29 @@ function CommandBar({ t, onExport }: { t: T; onExport: () => void }) {
   );
 }
 
-function CompactKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }) {
+/** ⓘ for an integrations KPI, reading integrations.explain.<k>.{what,how,source?}. */
+function KpiInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("integrations.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
+function CompactKpi({
+  kpi,
+  label,
+  info,
+}: { kpi: Data["kpis"][number]; label: string; info?: ReactNode }) {
   return (
     <div className="flex h-[92px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
-      <p className="truncate text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
-        {label}
+      <p className="flex items-center gap-1 text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
       </p>
       <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{kpi.value}</p>
       <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
@@ -272,20 +308,22 @@ function FilterStrip({
 
 // ── table ────────────────────────────────────────────────────────────────────
 
-const COLS: { key: string; sort?: SortKey }[] = [
-  { key: "name", sort: "name" },
-  { key: "type", sort: "type" },
-  { key: "status", sort: "status" },
-  { key: "environment" },
-  { key: "owner" },
-  { key: "calls", sort: "calls" },
-  { key: "successRate" },
-  { key: "responseTime" },
-  { key: "lastSync" },
+const COLS: { key: string; sort?: SortKey; w: string }[] = [
+  { key: "name", sort: "name", w: "20%" },
+  { key: "type", sort: "type", w: "9%" },
+  { key: "status", sort: "status", w: "11%" },
+  { key: "environment", w: "10%" },
+  { key: "owner", w: "13%" },
+  { key: "calls", sort: "calls", w: "8%" },
+  { key: "successRate", w: "9%" },
+  { key: "responseTime", w: "10%" },
+  { key: "lastSync", w: "10%" },
 ];
+const ROWS_PER_PAGE_OPTS = [10, 25, 50];
 
 function IntegrationTable({
   t,
+  tt,
   rows,
   selectedId,
   onSelect,
@@ -294,6 +332,7 @@ function IntegrationTable({
   onSort,
 }: {
   t: T;
+  tt: ReturnType<typeof useTranslations<"table">>;
   rows: Row[];
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -301,17 +340,30 @@ function IntegrationTable({
   sortDir: "asc" | "desc";
   onSort: (key: SortKey) => void;
 }) {
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset to page 1 on filter/sort/size change
+  useEffect(() => setPage(1), [total, perPage, sortKey, sortDir]);
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * perPage;
+  const pageRows = rows.slice(start, start + perPage);
   return (
     <div
       data-testid="integrations-table"
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+        <table className="w-full min-w-[900px] table-fixed border-collapse text-left text-[0.72rem]">
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {COLS.map((c) => (
-                <th key={c.key} className="whitespace-nowrap px-2 py-1.5 font-medium">
+              {COLS.map((c, idx) => (
+                <th
+                  key={c.key}
+                  style={{ width: c.w }}
+                  className={cn("py-1.5 font-medium", idx === 0 ? "pl-5 pr-2" : "px-2")}
+                >
                   {c.sort ? (
                     <button
                       type="button"
@@ -323,7 +375,7 @@ function IntegrationTable({
                             : "descending"
                           : "none"
                       }
-                      className="inline-flex items-center gap-1 hover:text-[var(--tessera-text)]"
+                      className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-[var(--tessera-text)]"
                     >
                       {t(`col.${c.key}`)}
                       {sortKey === c.sort ? (
@@ -341,10 +393,11 @@ function IntegrationTable({
                   )}
                 </th>
               ))}
+              <th className="w-28 px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
-            {rows.map((i) => {
+            {pageRows.map((i) => {
               const active = i.id === selectedId;
               return (
                 <tr
@@ -361,17 +414,21 @@ function IntegrationTable({
                   role="button"
                   aria-label={i.name}
                   className={cn(
-                    "cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
+                    "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors last:border-0 hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
                   )}
                 >
-                  <td className="px-2 py-1.5">
-                    <span className="inline-flex items-center gap-1.5 text-[var(--tessera-text)]">
-                      <Plug className="h-3 w-3 text-[#87bfff]" /> {i.name}
+                  <td className="py-1.5 pl-5 pr-2">
+                    <span
+                      className="flex items-center gap-1.5 text-[var(--tessera-text)]"
+                      title={i.name}
+                    >
+                      <Plug className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <span className="truncate">{i.name}</span>
                     </span>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    {t(`type.${i.type}`)}
+                    <span className="block truncate">{t(`type.${i.type}`)}</span>
                   </td>
                   <td className="px-2 py-1.5">
                     <span className={cn("inline-flex items-center gap-1", STATUS[i.status].text)}>
@@ -379,8 +436,14 @@ function IntegrationTable({
                       {t(`status.${i.status}`)}
                     </span>
                   </td>
-                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{i.environment}</td>
-                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{i.owner}</td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{i.environment}</span>
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate" title={i.owner}>
+                      {i.owner}
+                    </span>
+                  </td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text)]">{i.calls}</td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
                     {i.success_rate}
@@ -388,16 +451,24 @@ function IntegrationTable({
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
                     {i.response_time}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                    {i.last_sync}
+                  <td className="px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{i.last_sync}</span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span className="flex items-center justify-end gap-1 whitespace-nowrap">
+                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                        {tt("rowOpen")}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                    </span>
                   </td>
                 </tr>
               );
             })}
-            {rows.length === 0 ? (
+            {total === 0 ? (
               <tr>
                 <td
-                  colSpan={COLS.length}
+                  colSpan={COLS.length + 1}
                   className="px-2 py-6 text-center text-[0.7rem] text-[var(--tessera-text-muted)]"
                 >
                   {t("empty.rows")}
@@ -407,9 +478,111 @@ function IntegrationTable({
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between border-t border-[var(--tessera-border)] px-3 py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-        <span>{t("footer.shown", { n: rows.length })}</span>
+      <TablePagination
+        tt={tt}
+        page={safePage}
+        totalPages={totalPages}
+        start={total === 0 ? 0 : start + 1}
+        end={Math.min(start + perPage, total)}
+        total={total}
+        perPage={perPage}
+        onPage={setPage}
+        onPerPage={setPerPage}
+        accent="#87bfff"
+      />
+    </div>
+  );
+}
+
+// Shared connaissances-style pagination footer (reused across cockpit tables).
+function pageWindow(page: number, totalPages: number): number[] {
+  const span = Math.min(5, totalPages);
+  let first = Math.max(1, page - Math.floor(span / 2));
+  first = Math.min(first, Math.max(1, totalPages - span + 1));
+  return Array.from({ length: span }, (_, i) => first + i);
+}
+
+function TablePagination({
+  tt,
+  page,
+  totalPages,
+  start,
+  end,
+  total,
+  perPage,
+  onPage,
+  onPerPage,
+  accent,
+}: {
+  tt: ReturnType<typeof useTranslations<"table">>;
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  total: number;
+  perPage: number;
+  onPage: (p: number) => void;
+  onPerPage: (n: number) => void;
+  accent: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <span className="tabular-nums" aria-live="polite">
+        {tt("summary", { start, end, total })}
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={page <= 1}
+          aria-label={tt("prev")}
+          onClick={() => onPage(Math.max(1, page - 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        {pageWindow(page, totalPages).map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-current={n === page ? "page" : undefined}
+            onClick={() => onPage(n)}
+            style={
+              n === page ? { borderColor: `${accent}99`, background: `${accent}26` } : undefined
+            }
+            className={cn(
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              n === page
+                ? "font-medium text-white"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {n}
+          </button>
+        ))}
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          aria-label={tt("next")}
+          onClick={() => onPage(Math.min(totalPages, page + 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
       </div>
+      <label className="flex items-center gap-2">
+        <span>{tt("perPage")}</span>
+        <select
+          value={perPage}
+          onChange={(e) => onPerPage(Number(e.target.value))}
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+        >
+          {ROWS_PER_PAGE_OPTS.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
     </div>
   );
 }
@@ -475,7 +648,7 @@ function Top({ t, data }: { t: T; data: Data }) {
 
 // ── detail panel ─────────────────────────────────────────────────────────────
 
-function DetailPanel({
+function IntegrationsDrawer({
   t,
   detail,
   tab,
@@ -483,152 +656,214 @@ function DetailPanel({
   onClose,
 }: {
   t: T;
-  detail: Detail | null;
+  detail: Detail;
   tab: DetailTab;
   onTab: (tab: DetailTab) => void;
   onClose: () => void;
 }) {
-  if (!detail) {
-    return (
-      <aside
-        data-testid="integration-detail"
-        className="flex min-w-0 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-6 text-center xl:sticky xl:top-0 xl:h-fit xl:min-h-[200px]"
-      >
-        <Plug className="h-5 w-5 text-[var(--tessera-text-muted)]" />
-        <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("detail.selectHint")}</p>
-      </aside>
-    );
-  }
+  const [rect, setRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [shown, setShown] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    return () => opener?.focus?.();
+  }, []);
+  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
+    if (event.key !== "Tab" || !dialogRef.current) return;
+    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+    const first = f[0];
+    const last = f[f.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  useEffect(() => {
+    const measure = () => {
+      const m = document.querySelector("main");
+      if (!m) return;
+      const mr = m.getBoundingClientRect();
+      const c = document.querySelector("[data-shell-content]") ?? m;
+      const cr = c.getBoundingClientRect();
+      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  useEffect(() => {
+    setShown(true);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
   return (
-    <aside
-      data-testid="integration-detail"
-      className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit"
+    <div
+      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
+      style={rect ?? { inset: 0 }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">{detail.name}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-              {detail.id}
-            </span>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 text-[0.62rem]",
-                STATUS[detail.status].text,
-              )}
-            >
-              <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[detail.status].dot)} />{" "}
-              {t(`status.${detail.status}`)}
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("detail.close")}
-          className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+      <dialog
+        ref={dialogRef}
+        open
+        aria-modal="true"
+        aria-label={detail.name}
+        onKeyDown={onTrapKey}
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+        className={cn(
+          "static m-0 block h-full w-full max-w-[440px] bg-transparent p-0 transition-transform duration-200 ease-out",
+          shown ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        <aside
+          data-testid="integration-detail"
+          className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
         >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
-        {DETAIL_TABS.map((dt) => (
-          <button
-            key={dt}
-            type="button"
-            onClick={() => onTab(dt)}
-            className={cn(
-              "rounded px-2 py-1 text-[0.62rem] font-medium",
-              dt === tab
-                ? "bg-[#0d3561] text-[#d8eaff]"
-                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
-            )}
-          >
-            {t(`detailTabs.${dt}`)}
-          </button>
-        ))}
-      </div>
-
-      {tab === "overview" ? (
-        <>
-          <Section title={t("detail.connectivity")}>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <Stat label={t("detail.responseTime")} value={detail.response_time} />
-              <Stat
-                label={t("detail.successRate")}
-                value={detail.success_rate}
-                tone="text-emerald-300"
-              />
-              <Stat label={t("detail.lastSync")} value={detail.last_sync} small />
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{detail.name}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                  {detail.id}
+                </span>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[0.62rem]",
+                    STATUS[detail.status].text,
+                  )}
+                >
+                  <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[detail.status].dot)} />{" "}
+                  {t(`status.${detail.status}`)}
+                </span>
+              </div>
             </div>
-          </Section>
-          <Section title={t("detail.general")}>
-            <p className="mb-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text)]">
-              {detail.description}
-            </p>
-            <dl className="flex flex-col gap-1 text-[0.66rem]">
-              <KV label={t("detail.owner")} value={detail.owner} />
-              <KV label={t("detail.environment")} value={detail.environment} />
-              <KV label={t("detail.region")} value={detail.region} />
-              <div className="flex items-center justify-between gap-2">
-                <dt className="text-[var(--tessera-text-muted)]">{t("detail.criticality")}</dt>
-                <dd>
-                  <Badge className={CRIT_BADGE[detail.criticality]}>
-                    {t(`criticality.${detail.criticality}`)}
-                  </Badge>
-                </dd>
-              </div>
-            </dl>
-          </Section>
-        </>
-      ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("detail.close")}
+              className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-      {tab === "policy" ? (
-        <Section title={t("detail.config")}>
-          <dl className="flex flex-col gap-1 text-[0.64rem]">
-            {detail.config_rows.map((r) => (
-              <KV key={r.label} label={r.label} value={r.value} mono />
-            ))}
-          </dl>
-        </Section>
-      ) : null}
-
-      {tab === "security" ? (
-        <Section title={t("detail.security")}>
-          <dl className="flex flex-col gap-1 text-[0.64rem]">
-            {detail.security_rows.map((r) => (
-              <KV key={r.label} label={r.label} value={r.value} mono />
-            ))}
-          </dl>
-        </Section>
-      ) : null}
-
-      {tab === "usage" ? (
-        <Section title={t("detail.usage")}>
-          <div className="grid grid-cols-3 gap-2">
-            {(
-              [
-                ["read", detail.usage.read],
-                ["write", detail.usage.write],
-                ["cost", detail.usage.cost],
-              ] as const
-            ).map(([k, m]) => (
-              <div
-                key={k}
-                className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2"
+          <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
+            {DETAIL_TABS.map((dt) => (
+              <button
+                key={dt}
+                type="button"
+                onClick={() => onTab(dt)}
+                className={cn(
+                  "rounded px-2 py-1 text-[0.62rem] font-medium",
+                  dt === tab
+                    ? "bg-[#0d3561] text-[#d8eaff]"
+                    : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
+                )}
               >
-                <p className="truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
-                  {t(`detail.${k}`)}
-                </p>
-                <p className="text-[0.82rem] font-semibold text-white">{m.value}</p>
-                <p className="text-[0.56rem] text-[var(--tessera-text-muted)]">{m.delta}</p>
-              </div>
+                {t(`detailTabs.${dt}`)}
+              </button>
             ))}
           </div>
-        </Section>
-      ) : null}
-    </aside>
+
+          {tab === "overview" ? (
+            <>
+              <Section title={t("detail.connectivity")}>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <Stat label={t("detail.responseTime")} value={detail.response_time} />
+                  <Stat
+                    label={t("detail.successRate")}
+                    value={detail.success_rate}
+                    tone="text-emerald-300"
+                  />
+                  <Stat label={t("detail.lastSync")} value={detail.last_sync} small />
+                </div>
+              </Section>
+              <Section title={t("detail.general")}>
+                <p className="mb-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text)]">
+                  {detail.description}
+                </p>
+                <dl className="flex flex-col gap-1 text-[0.66rem]">
+                  <KV label={t("detail.owner")} value={detail.owner} />
+                  <KV label={t("detail.environment")} value={detail.environment} />
+                  <KV label={t("detail.region")} value={detail.region} />
+                  <div className="flex items-center justify-between gap-2">
+                    <dt className="text-[var(--tessera-text-muted)]">{t("detail.criticality")}</dt>
+                    <dd>
+                      <Badge className={CRIT_BADGE[detail.criticality]}>
+                        {t(`criticality.${detail.criticality}`)}
+                      </Badge>
+                    </dd>
+                  </div>
+                </dl>
+              </Section>
+            </>
+          ) : null}
+
+          {tab === "policy" ? (
+            <Section title={t("detail.config")}>
+              <dl className="flex flex-col gap-1 text-[0.64rem]">
+                {detail.config_rows.map((r) => (
+                  <KV key={r.label} label={r.label} value={r.value} mono />
+                ))}
+              </dl>
+            </Section>
+          ) : null}
+
+          {tab === "security" ? (
+            <Section title={t("detail.security")}>
+              <dl className="flex flex-col gap-1 text-[0.64rem]">
+                {detail.security_rows.map((r) => (
+                  <KV key={r.label} label={r.label} value={r.value} mono />
+                ))}
+              </dl>
+            </Section>
+          ) : null}
+
+          {tab === "usage" ? (
+            <Section title={t("detail.usage")}>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    ["read", detail.usage.read],
+                    ["write", detail.usage.write],
+                    ["cost", detail.usage.cost],
+                  ] as const
+                ).map(([k, m]) => (
+                  <div
+                    key={k}
+                    className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2"
+                  >
+                    <p className="truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
+                      {t(`detail.${k}`)}
+                    </p>
+                    <p className="text-[0.82rem] font-semibold text-white">{m.value}</p>
+                    <p className="text-[0.56rem] text-[var(--tessera-text-muted)]">{m.delta}</p>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          ) : null}
+        </aside>
+      </dialog>
+    </div>
   );
 }
 

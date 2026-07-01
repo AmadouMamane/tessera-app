@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  ChevronLeft,
+  ChevronRight,
   ChevronsUpDown,
   Download,
   Lock,
@@ -12,9 +14,17 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { type ReactNode, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -40,11 +50,26 @@ type Data = AccessData;
 type Role = Data["roles"][number];
 type SortKey = "name" | "type" | "users" | "permissions" | "modified";
 
+/** ⓘ for a roles/access KPI or section, reading roles.explain.<k>.{what,how,source?}. */
+function ExplainInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("roles.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 export function AccessOverview() {
   const t = useTranslations("roles");
+  const tt = useTranslations("table");
+  const locale = useLocale();
   const { data } = useQuery({
-    queryKey: ["access-overview"],
-    queryFn: ({ signal }) => fetchAccessOverview(signal),
+    queryKey: ["access-overview", locale],
+    queryFn: ({ signal }) => fetchAccessOverview(locale, signal),
     staleTime: 60_000,
   });
 
@@ -113,12 +138,17 @@ export function AccessOverview() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <CommandBar t={t} onExport={onExport} />
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
         {data.kpis.map((kpi) => (
-          <CompactKpi key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} />
+          <CompactKpi
+            key={kpi.key}
+            kpi={kpi}
+            label={t(`kpi.${kpi.key}`)}
+            info={<ExplainInfo k={kpi.key} title={t(`kpi.${kpi.key}`)} />}
+          />
         ))}
       </div>
 
@@ -132,37 +162,38 @@ export function AccessOverview() {
         total={data.roles.length}
       />
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <RoleTable
-            t={t}
-            rows={rows}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            sortKey={sortKey}
-            sortDir={sortDir}
-            onSort={onSort}
-          />
-          <div className="grid gap-3 xl:grid-cols-3">
-            <TopRoles t={t} data={data} />
-            <ByResource t={t} data={data} />
-            <Pending t={t} data={data} />
-          </div>
-          <div className="grid gap-3 xl:grid-cols-2">
-            <SodViolations t={t} data={data} />
-            <Inactive t={t} data={data} />
-          </div>
-        </div>
-        <DetailPanel
+      <RoleTable
+        t={t}
+        tt={tt}
+        rows={rows}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={onSort}
+      />
+
+      <div className="grid min-w-0 items-start gap-3 xl:grid-cols-3">
+        <TopRoles t={t} data={data} />
+        <ByResource t={t} data={data} />
+        <Pending t={t} data={data} />
+      </div>
+      <div className="grid min-w-0 items-start gap-3 xl:grid-cols-2">
+        <SodViolations t={t} data={data} />
+        <Inactive t={t} data={data} />
+      </div>
+
+      <Footer t={t} data={data} />
+
+      {selected ? (
+        <RoleDrawer
           t={t}
           role={selected}
           tab={tab}
           onTab={setTab}
           onClose={() => setSelectedId(null)}
         />
-      </div>
-
-      <Footer t={t} data={data} />
+      ) : null}
     </div>
   );
 }
@@ -195,11 +226,16 @@ function CommandBar({ t, onExport }: { t: T; onExport: () => void }) {
   );
 }
 
-function CompactKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }) {
+function CompactKpi({
+  kpi,
+  label,
+  info,
+}: { kpi: Data["kpis"][number]; label: string; info?: ReactNode }) {
   return (
     <div className="flex h-[92px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
-      <p className="truncate text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
-        {label}
+      <p className="flex items-center gap-1 text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
       </p>
       <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{kpi.value}</p>
       <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
@@ -262,21 +298,23 @@ function FilterStrip({
 
 // ── table ────────────────────────────────────────────────────────────────────
 
-const COLS: { key: string; sort?: SortKey }[] = [
-  { key: "name", sort: "name" },
-  { key: "type", sort: "type" },
-  { key: "description" },
-  { key: "users", sort: "users" },
-  { key: "groups" },
-  { key: "permissions", sort: "permissions" },
-  { key: "scope" },
-  { key: "environment" },
-  { key: "modified", sort: "modified" },
-  { key: "status" },
+const COLS: { key: string; sort?: SortKey; w: string }[] = [
+  { key: "name", sort: "name", w: "16%" },
+  { key: "type", sort: "type", w: "9%" },
+  { key: "description", w: "19%" },
+  { key: "users", sort: "users", w: "6%" },
+  { key: "groups", w: "6%" },
+  { key: "permissions", sort: "permissions", w: "8%" },
+  { key: "scope", w: "10%" },
+  { key: "environment", w: "10%" },
+  { key: "modified", sort: "modified", w: "9%" },
+  { key: "status", w: "7%" },
 ];
+const ROWS_PER_PAGE_OPTS = [10, 25, 50];
 
 function RoleTable({
   t,
+  tt,
   rows,
   selectedId,
   onSelect,
@@ -285,6 +323,7 @@ function RoleTable({
   onSort,
 }: {
   t: T;
+  tt: ReturnType<typeof useTranslations<"table">>;
   rows: Role[];
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -292,17 +331,30 @@ function RoleTable({
   sortDir: "asc" | "desc";
   onSort: (key: SortKey) => void;
 }) {
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset to page 1 on filter/sort/size change
+  useEffect(() => setPage(1), [total, perPage, sortKey, sortDir]);
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * perPage;
+  const pageRows = rows.slice(start, start + perPage);
   return (
     <div
       data-testid="roles-table"
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+        <table className="w-full min-w-[920px] table-fixed border-collapse text-left text-[0.72rem]">
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {COLS.map((c) => (
-                <th key={c.key} className="whitespace-nowrap px-2 py-1.5 font-medium">
+              {COLS.map((c, idx) => (
+                <th
+                  key={c.key}
+                  style={{ width: c.w }}
+                  className={cn("py-1.5 font-medium", idx === 0 ? "pl-5 pr-2" : "px-2")}
+                >
                   {c.sort ? (
                     <button
                       type="button"
@@ -314,7 +366,7 @@ function RoleTable({
                             : "descending"
                           : "none"
                       }
-                      className="inline-flex items-center gap-1 hover:text-[var(--tessera-text)]"
+                      className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-[var(--tessera-text)]"
                     >
                       {t(`col.${c.key}`)}
                       {sortKey === c.sort ? (
@@ -332,10 +384,11 @@ function RoleTable({
                   )}
                 </th>
               ))}
+              <th className="w-28 px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {pageRows.map((r) => {
               const active = r.id === selectedId;
               return (
                 <tr
@@ -352,16 +405,22 @@ function RoleTable({
                   role="button"
                   aria-label={r.name}
                   className={cn(
-                    "cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
+                    "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors last:border-0 hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
                   )}
                 >
-                  <td className="px-2 py-1.5 font-medium text-[var(--tessera-text)]">{r.name}</td>
+                  <td className="py-1.5 pl-5 pr-2 font-medium text-[var(--tessera-text)]">
+                    <span className="block truncate" title={r.name}>
+                      {r.name}
+                    </span>
+                  </td>
                   <td className="px-2 py-1.5">
                     <Badge className={TYPE_BADGE[r.type]}>{t(`type.${r.type}`)}</Badge>
                   </td>
-                  <td className="max-w-[220px] truncate px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    {r.description}
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate" title={r.description}>
+                      {r.description}
+                    </span>
                   </td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text)]">{r.users}</td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
@@ -370,10 +429,16 @@ function RoleTable({
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
                     {r.permissions}
                   </td>
-                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{r.scope}</td>
-                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{r.environment}</td>
-                  <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                    {r.modified}
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate" title={r.scope}>
+                      {r.scope}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{r.environment}</span>
+                  </td>
+                  <td className="px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{r.modified}</span>
                   </td>
                   <td className="px-2 py-1.5">
                     <span className={cn("inline-flex items-center gap-1", STATUS_TEXT[r.status])}>
@@ -386,13 +451,21 @@ function RoleTable({
                       {t(`status.${r.status}`)}
                     </span>
                   </td>
+                  <td className="px-2 py-1.5">
+                    <span className="flex items-center justify-end gap-1 whitespace-nowrap">
+                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                        {tt("rowOpen")}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                    </span>
+                  </td>
                 </tr>
               );
             })}
-            {rows.length === 0 ? (
+            {total === 0 ? (
               <tr>
                 <td
-                  colSpan={COLS.length}
+                  colSpan={COLS.length + 1}
                   className="px-2 py-6 text-center text-[0.7rem] text-[var(--tessera-text-muted)]"
                 >
                   {t("empty.roles")}
@@ -402,24 +475,123 @@ function RoleTable({
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between border-t border-[var(--tessera-border)] px-3 py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-        <span>{t("footer.shown", { n: rows.length })}</span>
-      </div>
+      <TablePagination
+        tt={tt}
+        page={safePage}
+        totalPages={totalPages}
+        start={total === 0 ? 0 : start + 1}
+        end={Math.min(start + perPage, total)}
+        total={total}
+        perPage={perPage}
+        onPage={setPage}
+        onPerPage={setPerPage}
+      />
     </div>
   );
 }
 
 // ── bottom panels ────────────────────────────────────────────────────────────
 
+// Shared connaissances-style pagination footer.
+function pageWindow(page: number, totalPages: number): number[] {
+  const span = Math.min(5, totalPages);
+  let first = Math.max(1, page - Math.floor(span / 2));
+  first = Math.min(first, Math.max(1, totalPages - span + 1));
+  return Array.from({ length: span }, (_, i) => first + i);
+}
+
+function TablePagination({
+  tt,
+  page,
+  totalPages,
+  start,
+  end,
+  total,
+  perPage,
+  onPage,
+  onPerPage,
+}: {
+  tt: ReturnType<typeof useTranslations<"table">>;
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  total: number;
+  perPage: number;
+  onPage: (p: number) => void;
+  onPerPage: (n: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <span className="tabular-nums" aria-live="polite">
+        {tt("summary", { start, end, total })}
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={page <= 1}
+          aria-label={tt("prev")}
+          onClick={() => onPage(Math.max(1, page - 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        {pageWindow(page, totalPages).map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-current={n === page ? "page" : undefined}
+            onClick={() => onPage(n)}
+            className={cn(
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              n === page
+                ? "border-[#87bfff]/60 bg-[#87bfff]/15 font-medium text-white"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {n}
+          </button>
+        ))}
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          aria-label={tt("next")}
+          onClick={() => onPage(Math.min(totalPages, page + 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <label className="flex items-center gap-2">
+        <span>{tt("perPage")}</span>
+        <select
+          value={perPage}
+          onChange={(e) => onPerPage(Number(e.target.value))}
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+        >
+          {ROWS_PER_PAGE_OPTS.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 function TopRoles({ t, data }: { t: T; data: Data }) {
   const max = Math.max(...data.top_roles.map((r) => r.value), 1);
   return (
-    <Panel title={t("zone.topRoles")}>
+    <Panel
+      title={t("zone.topRoles")}
+      info={<ExplainInfo k="topRoles" title={t("zone.topRoles")} />}
+    >
       <ul className="flex flex-col gap-2">
         {data.top_roles.map((r) => (
           <li key={r.name} className="flex items-center gap-2 text-[0.66rem]">
             <span className="w-24 shrink-0 truncate text-[var(--tessera-text)]">{r.name}</span>
-            <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
+            <div className="h-[4px] overflow-hidden flex-1 rounded-full bg-[var(--tessera-border)]">
               <div
                 className="h-full rounded-full bg-[#2e72d2]"
                 style={{ width: `${(r.value / max) * 100}%` }}
@@ -438,14 +610,17 @@ function TopRoles({ t, data }: { t: T; data: Data }) {
 function ByResource({ t, data }: { t: T; data: Data }) {
   const max = Math.max(...data.access_by_resource.map((r) => r.count), 1);
   return (
-    <Panel title={t("zone.byResource")}>
+    <Panel
+      title={t("zone.byResource")}
+      info={<ExplainInfo k="byResource" title={t("zone.byResource")} />}
+    >
       <ul className="flex flex-col gap-2">
         {data.access_by_resource.map((r) => (
           <li key={r.key} className="flex items-center gap-2 text-[0.66rem]">
             <span className="w-28 shrink-0 truncate text-[var(--tessera-text)]">
               {t(`resource.${r.key}`)}
             </span>
-            <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
+            <div className="h-[4px] overflow-hidden flex-1 rounded-full bg-[var(--tessera-border)]">
               <div
                 className="h-full rounded-full"
                 style={{ width: `${(r.count / max) * 100}%`, background: r.color }}
@@ -471,7 +646,11 @@ function EmptyHint({ children }: { children: ReactNode }) {
 
 function Pending({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("zone.pending")}>
+    <Panel
+      title={t("zone.pending")}
+      info={<ExplainInfo k="pending" title={t("zone.pending")} />}
+      action={<AuditLink label={t("drill.audit")} />}
+    >
       {data.pending_requests.length === 0 ? (
         <EmptyHint>{t("empty.pending")}</EmptyHint>
       ) : (
@@ -493,7 +672,11 @@ function Pending({ t, data }: { t: T; data: Data }) {
 
 function SodViolations({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("zone.sod")}>
+    <Panel
+      title={t("zone.sod")}
+      info={<ExplainInfo k="sod" title={t("zone.sod")} />}
+      action={<AuditLink label={t("drill.audit")} />}
+    >
       {data.sod_violations.length === 0 ? (
         <EmptyHint>{t("empty.sod")}</EmptyHint>
       ) : (
@@ -515,7 +698,10 @@ function SodViolations({ t, data }: { t: T; data: Data }) {
 
 function Inactive({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("zone.inactive")}>
+    <Panel
+      title={t("zone.inactive")}
+      info={<ExplainInfo k="inactive" title={t("zone.inactive")} />}
+    >
       {data.inactive_accounts.length === 0 ? (
         <EmptyHint>{t("empty.inactive")}</EmptyHint>
       ) : (
@@ -537,7 +723,7 @@ function Inactive({ t, data }: { t: T; data: Data }) {
 
 // ── detail panel ─────────────────────────────────────────────────────────────
 
-function DetailPanel({
+function RoleDrawer({
   t,
   role,
   tab,
@@ -545,22 +731,60 @@ function DetailPanel({
   onClose,
 }: {
   t: T;
-  role: Role | null;
+  role: Role;
   tab: DetailTab;
   onTab: (tab: DetailTab) => void;
   onClose: () => void;
 }) {
-  if (!role) {
-    return (
-      <aside
-        data-testid="role-detail"
-        className="flex min-w-0 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-6 text-center xl:sticky xl:top-0 xl:h-fit xl:min-h-[200px]"
-      >
-        <Lock className="h-5 w-5 text-[var(--tessera-text-muted)]" />
-        <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("detail.selectHint")}</p>
-      </aside>
-    );
-  }
+  const [rect, setRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [shown, setShown] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    return () => opener?.focus?.();
+  }, []);
+  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
+    if (event.key !== "Tab" || !dialogRef.current) return;
+    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+    const first = f[0];
+    const last = f[f.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  useEffect(() => {
+    const measure = () => {
+      const m = document.querySelector("main");
+      if (!m) return;
+      const mr = m.getBoundingClientRect();
+      const c = document.querySelector("[data-shell-content]") ?? m;
+      const cr = c.getBoundingClientRect();
+      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  useEffect(() => {
+    setShown(true);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
   const meta: [string, string][] = [
     [t("detail.scope"), role.scope],
     [t("detail.owner"), role.owner],
@@ -568,150 +792,174 @@ function DetailPanel({
     [t("detail.environment"), role.environment],
   ];
   return (
-    <aside
-      data-testid="role-detail"
-      className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit"
+    <div
+      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
+      style={rect ?? { inset: 0 }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">{role.name}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-              {role.id}
-            </span>
-            <Badge className={TYPE_BADGE[role.type]}>{t(`type.${role.type}`)}</Badge>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 text-[0.62rem]",
-                STATUS_TEXT[role.status],
-              )}
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{" "}
-              {t(`status.${role.status}`)}
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("detail.close")}
-          className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+      <dialog
+        ref={dialogRef}
+        open
+        aria-modal="true"
+        aria-label={role.name}
+        onKeyDown={onTrapKey}
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+        className={cn(
+          "static m-0 block h-full w-full max-w-[440px] bg-transparent p-0 transition-transform duration-200 ease-out",
+          shown ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        <aside
+          data-testid="role-detail"
+          className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
         >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
-        {DETAIL_TABS.map((dt) => (
-          <button
-            key={dt}
-            type="button"
-            onClick={() => onTab(dt)}
-            className={cn(
-              "rounded px-2 py-1 text-[0.62rem] font-medium",
-              dt === tab
-                ? "bg-[#0d3561] text-[#d8eaff]"
-                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
-            )}
-          >
-            {t(`detailTabs.${dt}`)}
-          </button>
-        ))}
-      </div>
-
-      {tab === "overview" ? (
-        <>
-          <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
-            {role.description}
-          </p>
-          <dl className="flex flex-col gap-1 text-[0.66rem]">
-            {meta.map(([k, v]) => (
-              <KV key={k} label={k} value={v} />
-            ))}
-          </dl>
-          <div className="grid grid-cols-2 gap-3 border-t border-[var(--tessera-border)] pt-2">
-            <Distribution
-              title={t("detail.permDist")}
-              items={role.permission_dist}
-              labelOf={(k) => t(`perm.${k}`)}
-            />
-            <Distribution
-              title={t("detail.accessScope")}
-              items={role.access_scope}
-              labelOf={(k) => t(`resource.${k}`)}
-            />
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{role.name}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                  {role.id}
+                </span>
+                <Badge className={TYPE_BADGE[role.type]}>{t(`type.${role.type}`)}</Badge>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[0.62rem]",
+                    STATUS_TEXT[role.status],
+                  )}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{" "}
+                  {t(`status.${role.status}`)}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("detail.close")}
+              className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        </>
-      ) : null}
 
-      {tab === "permissions" ? (
-        <div>
-          <p className="mb-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
-            {t("detail.capabilities")} ({role.caps.length})
-          </p>
-          <ul className="flex flex-wrap gap-1.5">
-            {role.caps.map((c) => (
-              <li
-                key={c}
-                className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text)]"
+          <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
+            {DETAIL_TABS.map((dt) => (
+              <button
+                key={dt}
+                type="button"
+                onClick={() => onTab(dt)}
+                className={cn(
+                  "rounded px-2 py-1 text-[0.62rem] font-medium",
+                  dt === tab
+                    ? "bg-[#0d3561] text-[#d8eaff]"
+                    : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
+                )}
               >
-                {t(`cap.${c}`)}
-              </li>
+                {t(`detailTabs.${dt}`)}
+              </button>
             ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {tab === "users" ? (
-        <div>
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <p className="text-[0.66rem] font-semibold text-[var(--tessera-text)]">
-              {t("detail.members")} ({role.members.length})
-            </p>
-            <Link href={USERS_HREF} className="text-[0.62rem] text-[#87bfff] hover:text-white">
-              {t("detail.viewAll")} →
-            </Link>
           </div>
-          {role.members.length === 0 ? (
-            <EmptyHint>{t("empty.members")}</EmptyHint>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {role.members.map((m) => (
-                <li key={m.name} className="flex items-center gap-2 text-[0.66rem]">
-                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--tessera-green-soft)] text-[0.56rem] font-semibold text-[var(--tessera-green)]">
-                    {m.name.charAt(0).toUpperCase()}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[var(--tessera-text)]">{m.name}</p>
-                    <p className="truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
-                      {m.team}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "shrink-0",
-                      m.status === "active" ? "text-emerald-300" : "text-amber-300",
-                    )}
+
+          {tab === "overview" ? (
+            <>
+              <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
+                {role.description}
+              </p>
+              <dl className="flex flex-col gap-1 text-[0.66rem]">
+                {meta.map(([k, v]) => (
+                  <KV key={k} label={k} value={v} />
+                ))}
+              </dl>
+              <div className="grid grid-cols-2 gap-3 border-t border-[var(--tessera-border)] pt-2">
+                <Distribution
+                  title={t("detail.permDist")}
+                  items={role.permission_dist}
+                  labelOf={(k) => t(`perm.${k}`)}
+                />
+                <Distribution
+                  title={t("detail.accessScope")}
+                  items={role.access_scope}
+                  labelOf={(k) => t(`resource.${k}`)}
+                />
+              </div>
+            </>
+          ) : null}
+
+          {tab === "permissions" ? (
+            <div>
+              <p className="mb-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+                {t("detail.capabilities")} ({role.caps.length})
+              </p>
+              <ul className="flex flex-wrap gap-1.5">
+                {role.caps.map((c) => (
+                  <li
+                    key={c}
+                    className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text)]"
                   >
-                    {t(`memberStatus.${m.status}`)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : null}
+                    {t(`cap.${c}`)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
-      {tab === "groups" ? <EmptyHint>{t("empty.groups")}</EmptyHint> : null}
+          {tab === "users" ? (
+            <div>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <p className="text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+                  {t("detail.members")} ({role.members.length})
+                </p>
+                <Link href={USERS_HREF} className="text-[0.62rem] text-[#87bfff] hover:text-white">
+                  {t("detail.viewAll")} →
+                </Link>
+              </div>
+              {role.members.length === 0 ? (
+                <EmptyHint>{t("empty.members")}</EmptyHint>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {role.members.map((m) => (
+                    <li key={m.name} className="flex items-center gap-2 text-[0.66rem]">
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--tessera-green-soft)] text-[0.56rem] font-semibold text-[var(--tessera-green)]">
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[var(--tessera-text)]">{m.name}</p>
+                        <p className="truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
+                          {m.team}
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          "shrink-0",
+                          m.status === "active" ? "text-emerald-300" : "text-amber-300",
+                        )}
+                      >
+                        {t(`memberStatus.${m.status}`)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
 
-      {tab === "history" ? (
-        <dl className="flex flex-col gap-1 text-[0.66rem]">
-          <KV label={t("detail.lastModified")} value={role.modified} />
-          <KV label={t("detail.owner")} value={role.owner} />
-          <KV label={t("detail.source")} value={t("readonlyNote")} />
-        </dl>
-      ) : null}
-    </aside>
+          {tab === "groups" ? <EmptyHint>{t("empty.groups")}</EmptyHint> : null}
+
+          {tab === "history" ? (
+            <dl className="flex flex-col gap-1 text-[0.66rem]">
+              <KV label={t("detail.lastModified")} value={role.modified} />
+              <KV label={t("detail.owner")} value={role.owner} />
+              <KV label={t("detail.source")} value={t("readonlyNote")} />
+            </dl>
+          ) : null}
+        </aside>
+      </dialog>
+    </div>
   );
 }
 
@@ -748,9 +996,17 @@ function Distribution({
 
 function Panel({
   title,
+  info,
+  action,
   children,
   className,
-}: { title: string; children: ReactNode; className?: string }) {
+}: {
+  title: string;
+  info?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div
       className={cn(
@@ -758,11 +1014,28 @@ function Panel({
         className,
       )}
     >
-      <h3 className="mb-2 truncate text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
-        {title}
-      </h3>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="flex min-w-0 items-center gap-1 text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+          <span className="min-w-0 truncate">{title}</span>
+          {info}
+        </h3>
+        {action}
+      </div>
       <div className="min-h-0 flex-1">{children}</div>
     </div>
+  );
+}
+
+/** Small "see → audit" drill used in a roles/access panel header. */
+function AuditLink({ label }: { label: string }) {
+  return (
+    <Link
+      href="/prouver/audit-logs"
+      className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+    >
+      {label}
+      <ChevronRight className="h-3 w-3" />
+    </Link>
   );
 }
 

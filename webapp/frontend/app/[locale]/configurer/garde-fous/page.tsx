@@ -1,4 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { GuardrailCatalogue } from "@/components/configurer/guardrail-catalogue";
@@ -21,11 +22,13 @@ export default async function PlatformGuardrailsPage({ params }: PageProps) {
   const t = await getTranslations({ locale, namespace: "usedBy" });
   return (
     <AppShell title={tn("item.platformGuardrails")} description={t("guardrailsSubtitle")}>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <AgentScopeFilter />
-        <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>
-      </div>
-      <GuardrailCatalogue />
+      <Suspense fallback={null}>
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <AgentScopeFilter />
+          <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>
+        </div>
+        <GuardrailCatalogue />
+      </Suspense>
     </AppShell>
   );
 }

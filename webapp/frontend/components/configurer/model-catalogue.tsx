@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchModelCatalogue } from "@/lib/api/client";
@@ -25,6 +26,21 @@ const STATUS_DOT: Record<string, string> = {
   active: "bg-emerald-400",
   available: "bg-[var(--tessera-text-muted)]",
 };
+
+/** ⓘ for a model-catalogue KPI, reading models.explain.<k>.{what,how,source?}.
+ * Guarded: an unmapped KPI key simply renders no ⓘ. */
+function KpiInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("models.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
 
 export function ModelCatalogue() {
   const t = useTranslations("models");
@@ -68,8 +84,9 @@ export function ModelCatalogue() {
               key={kpi.key}
               className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
             >
-              <p className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-                {kpi.label}
+              <p className="flex items-center gap-1 text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                <span className="min-w-0 truncate">{kpi.label}</span>
+                <KpiInfo k={kpi.key} title={kpi.label} />
               </p>
               <p className="mt-1 truncate font-mono text-[0.82rem] font-semibold text-white">
                 {kpi.value}

@@ -16,14 +16,17 @@ export async function generateMetadata({ params }: ProofsPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchProofs(queryClient: QueryClient) {
+async function prefetchProofs(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["proofs-overview"],
+    queryKey: ["proofs-overview", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/proofs`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/proofs?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend proofs returned ${response.status}`);
       return ProofsOverviewSchema.parse(await response.json());
     },
@@ -36,7 +39,7 @@ export default async function ProofsPage({ params }: ProofsPageProps) {
   const t = await getTranslations({ locale, namespace: "proofs" });
   const queryClient = new QueryClient();
   try {
-    await prefetchProofs(queryClient);
+    await prefetchProofs(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

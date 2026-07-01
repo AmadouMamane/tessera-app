@@ -1,5 +1,6 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { EtatADate } from "@/components/proofs/etat-a-date";
@@ -16,14 +17,17 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: t("title") };
 }
 
-async function prefetch(queryClient: QueryClient) {
+async function prefetch(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["etat-a-date", null],
+    queryKey: ["etat-a-date", null, null, locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/etat-a-date`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/etat-a-date?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend etat-a-date returned ${response.status}`);
       return EtatADateSchema.parse(await response.json());
     },
@@ -36,7 +40,7 @@ export default async function EtatADatePage({ params }: PageProps) {
   const t = await getTranslations({ locale, namespace: "etatADate" });
   const queryClient = new QueryClient();
   try {
-    await prefetch(queryClient);
+    await prefetch(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }
@@ -44,7 +48,9 @@ export default async function EtatADatePage({ params }: PageProps) {
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <EtatADate />
+        <Suspense fallback={null}>
+          <EtatADate />
+        </Suspense>
       </HydrationBoundary>
     </AppShell>
   );

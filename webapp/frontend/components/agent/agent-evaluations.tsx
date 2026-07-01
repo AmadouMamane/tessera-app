@@ -22,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import type { Route } from "next";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -39,6 +39,12 @@ import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSubtabs } from "./agent-subtabs";
 
 type RowT = NonNullable<Data["table"]>["rows"][number];
+
+// Inline locale pick for the handful of strings this component computes itself
+// (the backend payload is already localized; these are the client-side bits).
+function pick(locale: string, fr: string, de: string, en: string): string {
+  return locale === "de" ? de : locale === "en" ? en : fr;
+}
 
 const KPI_ICONS: LucideIcon[] = [Sparkles, Target, ShieldCheck, BarChart3, Layers, Target];
 const TYPE_TONE: Record<string, string> = {
@@ -135,13 +141,14 @@ function compareRows(a: RowT, b: RowT, col: number, dir: "asc" | "desc"): number
 
 export function AgentEvaluations() {
   const t = useTranslations("agentEvaluations");
+  const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const [subtab, setSubtab] = useState("");
   const agentId = useAgentId();
   const { data } = useQuery({
-    queryKey: ["agent-evaluations", agentId],
-    queryFn: ({ signal }) => fetchAgentEvaluations(agentId, signal),
+    queryKey: ["agent-evaluations", agentId, locale],
+    queryFn: ({ signal }) => fetchAgentEvaluations(agentId, locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -238,8 +245,22 @@ export function AgentEvaluations() {
         ))}
       </div>
       <p className="-mt-1 text-[10px] text-[var(--tessera-text-muted)]">
-        Scores <span className="font-medium">informatifs</span> — ils ne déterminent pas le verdict
-        du gate (cœur non dérogeable + socle ; cf. eval-gate-policy §6).
+        {locale === "de" ? (
+          <>
+            <span className="font-medium">Informative</span> Scores — sie bestimmen nicht das
+            Gate-Urteil (nicht ausnehmbarer Kern + Sockel; vgl. eval-gate-policy §6).
+          </>
+        ) : locale === "en" ? (
+          <>
+            <span className="font-medium">Informative</span> scores — they do not determine the gate
+            verdict (non-waivable core + socle; cf. eval-gate-policy §6).
+          </>
+        ) : (
+          <>
+            Scores <span className="font-medium">informatifs</span> — ils ne déterminent pas le
+            verdict du gate (cœur non dérogeable + socle ; cf. eval-gate-policy §6).
+          </>
+        )}
       </p>
 
       <GatePolicySection data={data} />
@@ -252,6 +273,8 @@ export function AgentEvaluations() {
         onSelectedAtChange={temporal.setSelectedAt}
         periodKey={temporal.periodKey}
         onPeriodChange={temporal.setPeriodKey}
+        windowEnd={temporal.windowEnd}
+        onPickDate={temporal.pickDate}
         onModeChange={temporal.changeMode}
       />
 
@@ -311,6 +334,7 @@ function pct(value: number | null | undefined): string {
 }
 
 function ReleaseControl() {
+  const locale = useLocale();
   const agentId = useAgentId();
   const [state, setState] = useState<"idle" | "pending" | "done">("idle");
   const [result, setResult] = useState<{ allowed: boolean; reason: string } | null>(null);
@@ -321,7 +345,15 @@ function ReleaseControl() {
       const r = await requestAgentRelease(agentId);
       setResult({ allowed: r.allowed, reason: r.reason });
     } catch {
-      setResult({ allowed: false, reason: "échec de la demande de mise en prod." });
+      setResult({
+        allowed: false,
+        reason: pick(
+          locale,
+          "échec de la demande de mise en prod.",
+          "Produktionsfreigabe-Anfrage fehlgeschlagen.",
+          "production release request failed.",
+        ),
+      });
     } finally {
       setState("done");
     }
@@ -335,11 +367,19 @@ function ReleaseControl() {
         disabled={state === "pending"}
         className="self-start rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80 disabled:opacity-50"
       >
-        Promouvoir en prod (gated)
+        {pick(
+          locale,
+          "Promouvoir en prod (gated)",
+          "In Produktion freigeben (gated)",
+          "Promote to prod (gated)",
+        )}
       </button>
       {result ? (
         <span className="text-[10px] opacity-90">
-          {result.allowed ? "✓ Promu (live)" : "✗ Bloqué"} — {result.reason}
+          {result.allowed
+            ? pick(locale, "✓ Promu (live)", "✓ Freigegeben (live)", "✓ Promoted (live)")
+            : pick(locale, "✗ Bloqué", "✗ Blockiert", "✗ Blocked")}{" "}
+          — {result.reason}
         </span>
       ) : null}
     </div>
@@ -358,21 +398,34 @@ function fmtRunStamp(stamp: string): string {
 }
 
 function LifecycleBar({ data }: { data: Data }) {
+  const locale = useLocale();
   const gate = data.gate;
   const meta = data.meta;
   const candidate = gate?.candidate ?? "";
   const cells: { label: string; value: string; tone?: "muted" }[] = [
-    { label: "Candidat (run-id)", value: candidate || "—" },
+    { label: pick(locale, "Candidat (run-id)", "Kandidat (Run-ID)", "Candidate (run-id)"), value: candidate || "—" },
     // No deployed-release pointer exists yet → honest empty, not a fabricated REL.
-    { label: "Version déployée", value: "Aucune release déployée", tone: "muted" },
-    { label: "Cible", value: "Production" },
-    { label: "Env du run", value: "Préprod d'évaluation" },
-    { label: "Modèle évalué", value: meta?.model ?? "—" },
-    { label: "Période du run", value: candidate ? fmtRunStamp(candidate) : "—" },
+    {
+      label: pick(locale, "Version déployée", "Bereitgestellte Version", "Deployed version"),
+      value: pick(locale, "Aucune release déployée", "Keine Release bereitgestellt", "No release deployed"),
+      tone: "muted",
+    },
+    { label: pick(locale, "Cible", "Ziel", "Target"), value: "Production" },
+    {
+      label: pick(locale, "Env du run", "Lauf-Umgebung", "Run env"),
+      value: pick(locale, "Préprod d'évaluation", "Evaluierungs-Preprod", "Evaluation preprod"),
+    },
+    { label: pick(locale, "Modèle évalué", "Evaluiertes Modell", "Evaluated model"), value: meta?.model ?? "—" },
+    {
+      label: pick(locale, "Période du run", "Lauf-Zeitraum", "Run period"),
+      value: candidate ? fmtRunStamp(candidate) : "—",
+    },
   ];
   return (
     <section className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
-      <span className="text-[10px] uppercase tracking-wide text-[#b9a6ff]">Cycle de vie</span>
+      <span className="text-[10px] uppercase tracking-wide text-[#b9a6ff]">
+        {pick(locale, "Cycle de vie", "Lebenszyklus", "Lifecycle")}
+      </span>
       {cells.map((c) => (
         <div key={c.label} className="flex flex-col gap-0.5">
           <span className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
@@ -394,17 +447,24 @@ function LifecycleBar({ data }: { data: Data }) {
 /** P3 — cross-links making the control plane navigable: definition (CONFIGURER),
  *  governance (AGIR Release Control), linked data (applied garde-fous, knowledge). */
 function LiensUtiles() {
+  const locale = useLocale();
   const agentId = useAgentId();
   const items: { href: Route; label: string }[] = [
-    { href: ("/agir/release-control?agent=" + agentId) as Route, label: "Gouvernance · Release Control" },
-    { href: "/configurer/parametres" as Route, label: "Définition · jeu d'éval (CONFIGURER)" },
-    { href: agentPath(agentId, "garde-fous") as Route, label: "Garde-fous appliqués" },
-    { href: agentPath(agentId, "connaissances") as Route, label: "Connaissances liées" },
+    {
+      href: ("/agir/release-control?agent=" + agentId) as Route,
+      label: pick(locale, "Gouvernance · Release Control", "Governance · Release Control", "Governance · Release Control"),
+    },
+    {
+      href: "/configurer/parametres" as Route,
+      label: pick(locale, "Définition · jeu d'éval (CONFIGURER)", "Definition · Eval-Set (KONFIGURIEREN)", "Definition · eval set (CONFIGURE)"),
+    },
+    { href: agentPath(agentId, "garde-fous") as Route, label: pick(locale, "Garde-fous appliqués", "Angewandte Schutzregeln", "Applied guardrails") },
+    { href: agentPath(agentId, "connaissances") as Route, label: pick(locale, "Connaissances liées", "Verknuepftes Wissen", "Linked knowledge") },
   ];
   return (
     <section className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
       <span className="text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-        Liens utiles
+        {pick(locale, "Liens utiles", "Nuetzliche Links", "Useful links")}
       </span>
       {items.map((it) => (
         <Link
@@ -422,6 +482,7 @@ function LiensUtiles() {
 /** Release-gate verdict as the page headline (policy §6: the verdict — not the
  *  aggregate score — is the title). Full-width banner, colour tied to conformity. */
 function VerdictBanner({ data }: { data: Data }) {
+  const locale = useLocale();
   const agentId = useAgentId();
   const gate = data.gate;
   if (!gate) return null;
@@ -457,7 +518,7 @@ function VerdictBanner({ data }: { data: Data }) {
           )}
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              Verdict du gate de release
+              {pick(locale, "Verdict du gate de release", "Release-Gate-Urteil", "Release gate verdict")}
             </p>
             <p className={`text-[1.15rem] font-semibold leading-tight ${labelColor}`}>
               {gate.label}
@@ -467,14 +528,16 @@ function VerdictBanner({ data }: { data: Data }) {
             ) : null}
             {blocked && socleFails.length > 0 ? (
               <p className="mt-1 text-[11px] text-[#ff9bb0]">
-                <span className="text-[var(--tessera-text-muted)]">Cœur non dérogeable en échec : </span>
+                <span className="text-[var(--tessera-text-muted)]">
+                  {pick(locale, "Cœur non dérogeable en échec : ", "Nicht ausnehmbarer Kern fehlgeschlagen: ", "Non-waivable core failed: ")}
+                </span>
                 <span className="font-mono font-medium">{socleFails.join(", ")}</span>
                 {" — "}
                 <Link
                   href={"/agir/release-control?agent=" + agentId as Route}
                   className="underline underline-offset-2 hover:text-white"
                 >
-                  remédier dans Release Control →
+                  {pick(locale, "remédier dans Release Control →", "in Release Control beheben →", "remediate in Release Control →")}
                 </Link>
               </p>
             ) : null}
@@ -483,8 +546,9 @@ function VerdictBanner({ data }: { data: Data }) {
         <div className="flex flex-col items-end gap-1">
           {gate.grains ? (
             <span className="text-[10px] text-[var(--tessera-text-muted)]">
-              {gate.grains.executions} exéc. · {gate.grains.distinct_cases} cas ·{" "}
-              {gate.grains.socle_cases} socle
+              {gate.grains.executions} {pick(locale, "exéc.", "Ausf.", "exec.")} ·{" "}
+              {gate.grains.distinct_cases} {pick(locale, "cas", "Faelle", "cases")} ·{" "}
+              {gate.grains.socle_cases} {pick(locale, "socle", "Sockel", "core")}
             </span>
           ) : null}
           <ReleaseControl />
@@ -492,39 +556,45 @@ function VerdictBanner({ data }: { data: Data }) {
       </div>
       <div className="grid gap-2 text-[11px] sm:grid-cols-3">
         <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
-          <span className="text-[var(--tessera-text-muted)]">Socle dur (T0, zéro tolérance)</span>
+          <span className="text-[var(--tessera-text-muted)]">
+            {pick(locale, "Socle dur (T0, zéro tolérance)", "Harter Sockel (T0, null Toleranz)", "Hard core (T0, zero tolerance)")}
+          </span>
           <p
             className={`mt-0.5 font-medium ${gate.socle?.ok ? "text-[#7fe3b3]" : "text-[#ff9bb0]"}`}
           >
             {gate.socle
               ? gate.socle.ok
-                ? `Conforme — ${gate.socle.passed}/${gate.socle.total}`
-                : `ÉCHEC — ${gate.socle.passed}/${gate.socle.total} réussis`
+                ? `${pick(locale, "Conforme", "Konform", "Compliant")} — ${gate.socle.passed}/${gate.socle.total}`
+                : `${pick(locale, "ÉCHEC", "FEHLER", "FAILURE")} — ${gate.socle.passed}/${gate.socle.total} ${pick(locale, "réussis", "bestanden", "passed")}`
               : gate.failed_critical.length > 0
-                ? "Échec"
-                : "Conforme"}
+                ? pick(locale, "Échec", "Fehler", "Failure")
+                : pick(locale, "Conforme", "Konform", "Compliant")}
           </p>
         </div>
         <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
-          <span className="text-[var(--tessera-text-muted)]">Gate domaine (T2)</span>
+          <span className="text-[var(--tessera-text-muted)]">
+            {pick(locale, "Gate domaine (T2)", "Domaenen-Gate (T2)", "Domain gate (T2)")}
+          </span>
           <p
             className={`mt-0.5 font-medium ${gate.domain?.ok ? "text-[#7fe3b3]" : "text-[#ffce8a]"}`}
           >
             {gate.domain ? `${gate.domain.passed}/${gate.domain.total}` : `${gate.standard_passed}/${gate.standard_total}`}
             {typeof gate.min_pass_rate === "number"
-              ? ` (seuil ${Math.round(gate.min_pass_rate * 100)}%)`
+              ? ` (${pick(locale, "seuil", "Schwelle", "threshold")} ${Math.round(gate.min_pass_rate * 100)}%)`
               : ""}
           </p>
         </div>
         <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
-          <span className="text-[var(--tessera-text-muted)]">Critiques (cas × langue)</span>
+          <span className="text-[var(--tessera-text-muted)]">
+            {pick(locale, "Critiques (cas × langue)", "Kritische (Fall × Sprache)", "Critical (case × language)")}
+          </span>
           <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
             {bg
-              ? `${bg.blocking_socle + bg.blocking_t1} bloquants · ${bg.waived_active} dérogé${bg.waived_active > 1 ? "s" : ""}`
+              ? `${bg.blocking_socle + bg.blocking_t1} ${pick(locale, "bloquants", "blockierend", "blocking")} · ${bg.waived_active} ${pick(locale, "dérogé", "ausgenommen", "waived")}${bg.waived_active > 1 && locale === "fr" ? "s" : ""}`
               : bd
-                ? `${bd.critical_blocking} bloquants · ${bd.waived} dérogé`
+                ? `${bd.critical_blocking} ${pick(locale, "bloquants", "blockierend", "blocking")} · ${bd.waived} ${pick(locale, "dérogé", "ausgenommen", "waived")}`
                 : "—"}
-            {bg && bg.non_executed_critical > 0 ? ` · ${bg.non_executed_critical} non exéc.` : ""}
+            {bg && bg.non_executed_critical > 0 ? ` · ${bg.non_executed_critical} ${pick(locale, "non exéc.", "nicht ausgef.", "not exec.")}` : ""}
           </p>
         </div>
       </div>
@@ -542,20 +612,57 @@ function ActionsRequises({
   gate: NonNullable<Data["gate"]>;
   socleFails: number;
 }) {
+  const locale = useLocale();
   const bg = gate.breakdown_grain;
   const actions: string[] = [];
   if (gate.socle ? !gate.socle.ok : socleFails > 0)
-    actions.push("Corriger les cas du socle (T0) — cœur non dérogeable");
+    actions.push(
+      pick(
+        locale,
+        "Corriger les cas du socle (T0) — cœur non dérogeable",
+        "Sockel-Faelle (T0) beheben — nicht ausnehmbarer Kern",
+        "Fix the core (T0) cases — non-waivable core",
+      ),
+    );
   if (bg && bg.blocking_t1 > 0)
-    actions.push(`Corriger ou déroger ${bg.blocking_t1} cas critique(s) T1`);
+    actions.push(
+      pick(
+        locale,
+        `Corriger ou déroger ${bg.blocking_t1} cas critique(s) T1`,
+        `${bg.blocking_t1} kritische(n) T1-Fall/Faelle beheben oder ausnehmen`,
+        `Fix or waive ${bg.blocking_t1} critical T1 case(s)`,
+      ),
+    );
   if (bg && bg.non_executed_critical > 0)
-    actions.push(`Rejouer ${bg.non_executed_critical} cas critique(s) non exécuté(s)`);
-  if (gate.domain && !gate.domain.ok) actions.push("Remonter le taux du domaine (T2) au seuil");
-  actions.push("Obtenir un gate PASSE avant toute promotion en prod");
+    actions.push(
+      pick(
+        locale,
+        `Rejouer ${bg.non_executed_critical} cas critique(s) non exécuté(s)`,
+        `${bg.non_executed_critical} nicht ausgefuehrte(n) kritische(n) Fall/Faelle erneut ausfuehren`,
+        `Replay ${bg.non_executed_critical} non-executed critical case(s)`,
+      ),
+    );
+  if (gate.domain && !gate.domain.ok)
+    actions.push(
+      pick(
+        locale,
+        "Remonter le taux du domaine (T2) au seuil",
+        "Domaenen-Rate (T2) auf die Schwelle anheben",
+        "Raise the domain (T2) rate to the threshold",
+      ),
+    );
+  actions.push(
+    pick(
+      locale,
+      "Obtenir un gate PASSE avant toute promotion en prod",
+      "Ein PASS-Gate vor jeder Produktionsfreigabe erreichen",
+      "Reach a PASS gate before any production promotion",
+    ),
+  );
   return (
     <div className="rounded-md border border-[#e0566f]/40 bg-black/20 px-2.5 py-2 text-[11px]">
       <p className="mb-1 text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-        Actions requises
+        {pick(locale, "Actions requises", "Erforderliche Aktionen", "Required actions")}
       </p>
       <ul className="flex flex-col gap-0.5">
         {actions.map((a) => (
@@ -585,6 +692,7 @@ const STATUS_PILL: Record<string, string> = {
  *  per-category socle markers, the critical-cases table (case × langue) and the
  *  governed-waiver registry. Every count reconciles with the verdict banner. */
 function GatePolicySection({ data }: { data: Data }) {
+  const locale = useLocale();
   const gate = data.gate;
   if (!gate || !gate.venn || !gate.tiers) return null;
   const v = gate.venn;
@@ -599,7 +707,7 @@ function GatePolicySection({ data }: { data: Data }) {
         <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-7">
           <div className="flex items-center justify-between">
             <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              Appartenance structurelle (Venn) — somme = exécutions
+              {pick(locale, "Appartenance structurelle (Venn) — somme = exécutions", "Strukturelle Zugehoerigkeit (Venn) — Summe = Ausfuehrungen", "Structural membership (Venn) — sum = executions")}
             </span>
             <span
               className={cn(
@@ -613,20 +721,20 @@ function GatePolicySection({ data }: { data: Data }) {
           {/* Nested: Critiques contains Socle; dérogations ⊂ T1, jamais socle */}
           <div className="rounded-md border border-[#e0566f]/40 bg-[#e0566f]/[0.06] p-2">
             <div className="mb-1 flex items-center justify-between text-[10px] text-[#ff9bb0]">
-              <span>Critiques (T0 ∪ T1)</span>
+              <span>{pick(locale, "Critiques (T0 ∪ T1)", "Kritische (T0 ∪ T1)", "Critical (T0 ∪ T1)")}</span>
               <span className="tabular-nums">{v.critiques}</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className={cn("rounded border px-2 py-1.5", VENN_TONE.crit)}>
-                <p className="text-[10px] opacity-80">Socle (T0) · non-dérogeable</p>
+                <p className="text-[10px] opacity-80">{pick(locale, "Socle (T0) · non-dérogeable", "Sockel (T0) · nicht ausnehmbar", "Core (T0) · non-waivable")}</p>
                 <p className="text-sm font-semibold tabular-nums">{v.socle}</p>
               </div>
               <div className={cn("rounded border px-2 py-1.5", VENN_TONE.warn)}>
-                <p className="text-[10px] opacity-80">Critique (T1) · dérogeable</p>
+                <p className="text-[10px] opacity-80">{pick(locale, "Critique (T1) · dérogeable", "Kritisch (T1) · ausnehmbar", "Critical (T1) · waivable")}</p>
                 <p className="text-sm font-semibold tabular-nums">
                   {v.t1}
                   <span className="ml-1 text-[10px] font-normal opacity-80">
-                    dont {v.deroges} dérogé{v.deroges > 1 ? "s" : ""}
+                    {pick(locale, "dont", "davon", "incl.")} {v.deroges} {pick(locale, "dérogé", "ausgenommen", "waived")}{v.deroges > 1 && locale === "fr" ? "s" : ""}
                   </span>
                 </p>
               </div>
@@ -634,23 +742,23 @@ function GatePolicySection({ data }: { data: Data }) {
           </div>
           <div className={cn("rounded border px-2 py-1.5", VENN_TONE.muted)}>
             <div className="flex items-center justify-between">
-              <span className="text-[10px]">Domaine (T2) · gradé</span>
+              <span className="text-[10px]">{pick(locale, "Domaine (T2) · gradé", "Domaene (T2) · gradiert", "Domain (T2) · graded")}</span>
               <span className="text-sm font-semibold tabular-nums">{v.domaine}</span>
             </div>
           </div>
           <p className="text-[10px] text-[var(--tessera-text-muted)]">
-            Socle ∩ dérogations = ∅ — une dérogation n&apos;est jamais effective sur le socle.
+            {pick(locale, "Socle ∩ dérogations = ∅ — une dérogation n'est jamais effective sur le socle.", "Sockel ∩ Ausnahmen = ∅ — eine Ausnahme ist nie auf dem Sockel wirksam.", "Core ∩ waivers = ∅ — a waiver is never effective on the core.")}
           </p>
         </section>
 
         {/* Socle OK / ÉCHEC per category — no green score may mask a breach */}
         <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-5">
           <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            Socle par catégorie
+            {pick(locale, "Socle par catégorie", "Sockel nach Kategorie", "Core by category")}
           </span>
           {socleCats.length === 0 ? (
             <span className="text-[11px] text-[var(--tessera-text-muted)]">
-              Aucune catégorie socle.
+              {pick(locale, "Aucune catégorie socle.", "Keine Sockel-Kategorie.", "No core category.")}
             </span>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -666,7 +774,7 @@ function GatePolicySection({ data }: { data: Data }) {
                       c.ok ? STATUS_PILL.good : STATUS_PILL.crit,
                     )}
                   >
-                    {c.ok ? "Socle OK" : "Socle ÉCHEC"} · {c.passed}/{c.total}
+                    {c.ok ? pick(locale, "Socle OK", "Sockel OK", "Core OK") : pick(locale, "Socle ÉCHEC", "Sockel FEHLER", "Core FAIL")} · {c.passed}/{c.total}
                   </span>
                 </div>
               ))}
@@ -680,7 +788,12 @@ function GatePolicySection({ data }: { data: Data }) {
                   className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5"
                 >
                   <p className="text-[9px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-                    {t.tier} · {t.tier === "T2" ? "gradé" : t.waivable ? "dérogeable" : "non-dérog."}
+                    {t.tier} ·{" "}
+                    {t.tier === "T2"
+                      ? pick(locale, "gradé", "gradiert", "graded")
+                      : t.waivable
+                        ? pick(locale, "dérogeable", "ausnehmbar", "waivable")
+                        : pick(locale, "non-dérog.", "nicht ausn.", "non-waiv.")}
                   </p>
                   <p className="text-sm font-semibold tabular-nums text-[var(--tessera-text)]">
                     {t.count}
@@ -700,22 +813,22 @@ function GatePolicySection({ data }: { data: Data }) {
               <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 {cc.title}
               </span>
-              <span className="text-[10px] text-[var(--tessera-text-muted)]">{cc.total} cas</span>
+              <span className="text-[10px] text-[var(--tessera-text-muted)]">{cc.total} {pick(locale, "cas", "Faelle", "cases")}</span>
             </div>
             {cc.rows.length === 0 ? (
               <span className="text-[11px] text-emerald-300">
-                Aucun cas critique non concluant.
+                {pick(locale, "Aucun cas critique non concluant.", "Kein nicht schluessiger kritischer Fall.", "No inconclusive critical case.")}
               </span>
             ) : (
               <div className="max-h-[19rem] overflow-auto">
                 <table className="w-full text-left text-[11px]">
                   <thead className="sticky top-0 bg-[var(--tessera-surface)] text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
                     <tr>
-                      <th className="py-1 pr-2 font-medium">Cas</th>
+                      <th className="py-1 pr-2 font-medium">{pick(locale, "Cas", "Fall", "Case")}</th>
                       <th className="py-1 pr-2 font-medium">Tier</th>
-                      <th className="py-1 pr-2 font-medium">Lg</th>
-                      <th className="py-1 pr-2 font-medium">Statut gate</th>
-                      <th className="py-1 font-medium">Socle</th>
+                      <th className="py-1 pr-2 font-medium">{pick(locale, "Lg", "Spr", "Lng")}</th>
+                      <th className="py-1 pr-2 font-medium">{pick(locale, "Statut gate", "Gate-Status", "Gate status")}</th>
+                      <th className="py-1 font-medium">{pick(locale, "Socle", "Sockel", "Core")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -749,7 +862,7 @@ function GatePolicySection({ data }: { data: Data }) {
                           </span>
                         </td>
                         <td className="py-1 text-[var(--tessera-text-muted)]">
-                          {r.socle ? "Socle" : "—"}
+                          {r.socle ? pick(locale, "Socle", "Sockel", "Core") : "—"}
                         </td>
                       </tr>
                     ))}
@@ -771,17 +884,20 @@ function GatePolicySection({ data }: { data: Data }) {
                   "rounded px-1.5 py-0.5 text-[10px]",
                   wv.chain_verified ? "text-emerald-300" : "text-red-300",
                 )}
-                title="Intégrité de la chaîne de hash"
+                title={pick(locale, "Intégrité de la chaîne de hash", "Integritaet der Hash-Kette", "Hash-chain integrity")}
               >
-                {wv.chain_verified ? "chaîne ✓" : "chaîne ✗"} · {wv.active} active
-                {wv.active > 1 ? "s" : ""}/{wv.total}
+                {wv.chain_verified
+                  ? pick(locale, "chaîne ✓", "Kette ✓", "chain ✓")
+                  : pick(locale, "chaîne ✗", "Kette ✗", "chain ✗")}{" "}
+                · {wv.active} {pick(locale, "active", "aktiv", "active")}
+                {wv.active > 1 && locale === "fr" ? "s" : ""}/{wv.total}
               </span>
             </div>
             <p className="text-[10px] text-[var(--tessera-text-muted)]">{wv.subtitle}</p>
             <div className="flex max-h-[19rem] flex-col gap-1.5 overflow-auto">
               {wv.items.length === 0 ? (
                 <span className="text-[11px] text-[var(--tessera-text-muted)]">
-                  Aucune dérogation.
+                  {pick(locale, "Aucune dérogation.", "Keine Ausnahme.", "No waiver.")}
                 </span>
               ) : (
                 wv.items.map((it) => (
@@ -813,14 +929,14 @@ function GatePolicySection({ data }: { data: Data }) {
                       {it.justification}
                     </p>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] text-[var(--tessera-text-muted)]">
-                      <span>Demande : {it.requester}</span>
-                      <span>Appro. : {it.approver}</span>
-                      <span>Échéance : {it.expires_at}</span>
+                      <span>{pick(locale, "Demande", "Antrag", "Request")} : {it.requester}</span>
+                      <span>{pick(locale, "Appro.", "Genehm.", "Appr.")} : {it.approver}</span>
+                      <span>{pick(locale, "Échéance", "Frist", "Due")} : {it.expires_at}</span>
                       {it.incident_ref ? <span>{it.incident_ref}</span> : null}
                     </div>
                     {it.controls.length > 0 ? (
                       <p className="mt-0.5 text-[9px] text-[var(--tessera-text-muted)]">
-                        Contrôles : {it.controls.join(" · ")}
+                        {pick(locale, "Contrôles", "Kontrollen", "Controls")} : {it.controls.join(" · ")}
                       </p>
                     ) : null}
                   </div>
@@ -835,6 +951,7 @@ function GatePolicySection({ data }: { data: Data }) {
 }
 
 function GateJudgeRail({ data }: { data: Data }) {
+  const locale = useLocale();
   const judge = data.judge;
   const runs = data.runs;
   if (!judge && !runs) return null;
@@ -845,18 +962,18 @@ function GateJudgeRail({ data }: { data: Data }) {
       <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-6">
         <div className="flex items-center justify-between">
           <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            Métriques jugées
+            {pick(locale, "Métriques jugées", "Bewertete Metriken", "Judged metrics")}
           </span>
           <span className="text-[10px] text-[var(--tessera-text-muted)]">
-            {judge?.available ? (judge.judge_model ?? "") : "indisponible"}
+            {judge?.available ? (judge.judge_model ?? "") : pick(locale, "indisponible", "nicht verfuegbar", "unavailable")}
           </span>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {(
             [
-              ["Fidélité", judge?.faithfulness],
-              ["Ancrage", judge?.grounding],
-              ["Anti-halluc.", judge?.hallucination],
+              [pick(locale, "Fidélité", "Treue", "Fidelity"), judge?.faithfulness],
+              [pick(locale, "Ancrage", "Grounding", "Grounding"), judge?.grounding],
+              [pick(locale, "Anti-halluc.", "Anti-Halluz.", "Anti-halluc."), judge?.hallucination],
             ] as const
           ).map(([label, value]) => (
             <div key={label} className="flex flex-col">
@@ -872,16 +989,16 @@ function GateJudgeRail({ data }: { data: Data }) {
       {/* ER-01 rail: per-agent run history */}
       <section className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-6">
         <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          {runs?.title ?? "Historique des runs"}
+          {runs?.title ?? pick(locale, "Historique des runs", "Lauf-Verlauf", "Run history")}
         </span>
         <div className="flex flex-wrap gap-1.5">
           {(runs?.items ?? []).length === 0 ? (
-            <span className="text-[11px] text-[var(--tessera-text-muted)]">Aucun run.</span>
+            <span className="text-[11px] text-[var(--tessera-text-muted)]">{pick(locale, "Aucun run.", "Kein Lauf.", "No run.")}</span>
           ) : (
             (runs?.items ?? []).map((r) => (
               <div
                 key={r.run_at}
-                title={`${r.label} — ${r.score}/10 — ${r.gate_passed ? "validé" : "bloqué"}`}
+                title={`${r.label} — ${r.score}/10 — ${r.gate_passed ? pick(locale, "validé", "bestanden", "passed") : pick(locale, "bloqué", "blockiert", "blocked")}`}
                 className="flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-1"
               >
                 <span
@@ -1113,8 +1230,11 @@ type FiltersProps = {
 };
 
 function Filters(p: FiltersProps) {
+  const locale = useLocale();
   const f = p.data.filters;
   if (!f) return null;
+  const all = pick(locale, "Tous", "Alle", "All");
+  const allF = pick(locale, "Toutes", "Alle", "All");
   const opt = (
     items: { key: string; label: string }[],
     allLabel: string,
@@ -1137,21 +1257,21 @@ function Filters(p: FiltersProps) {
         />
       </div>
       <FilterDropdown
-        label="Type"
+        label={pick(locale, "Type", "Typ", "Type")}
         value={p.typeKey}
-        options={opt(f.options.type, "Tous")}
+        options={opt(f.options.type, all)}
         onSelect={p.setTypeKey}
       />
       <FilterDropdown
-        label="Qualité"
+        label={pick(locale, "Qualité", "Qualitaet", "Quality")}
         value={p.qualityKey}
-        options={opt(f.options.quality, "Toutes")}
+        options={opt(f.options.quality, allF)}
         onSelect={p.setQualityKey}
       />
       <FilterDropdown
-        label="Hallucinations"
+        label={pick(locale, "Hallucinations", "Halluzinationen", "Hallucinations")}
         value={p.hallucKey}
-        options={opt(f.options.halluc, "Toutes")}
+        options={opt(f.options.halluc, allF)}
         onSelect={p.setHallucKey}
       />
       {anyActive ? (
@@ -1160,7 +1280,7 @@ function Filters(p: FiltersProps) {
           onClick={p.onReset}
           className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
         >
-          <X className="h-3.5 w-3.5" /> Réinitialiser
+          <X className="h-3.5 w-3.5" /> {pick(locale, "Réinitialiser", "Zuruecksetzen", "Reset")}
         </button>
       ) : null}
     </div>
@@ -1410,12 +1530,13 @@ function PageArrow({
   disabled: boolean;
   onClick: () => void;
 }) {
+  const locale = useLocale();
   const Icon = dir === "prev" ? ChevronLeft : ChevronRight;
   return (
     <button
       type="button"
       disabled={disabled}
-      aria-label={dir === "prev" ? "Page précédente" : "Page suivante"}
+      aria-label={dir === "prev" ? pick(locale, "Page précédente", "Vorherige Seite", "Previous page") : pick(locale, "Page suivante", "Naechste Seite", "Next page")}
       onClick={onClick}
       className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] enabled:hover:text-[var(--tessera-text)] disabled:opacity-40"
     >
@@ -1566,6 +1687,7 @@ function Detail({
   row: RowT | null;
   className?: string;
 }) {
+  const locale = useLocale();
   const agentId = useAgentId();
   const labels = data.detail_labels;
   const meta = data.meta;
@@ -1573,38 +1695,46 @@ function Detail({
   const [tab, setTab] = useState(tabs[0] ?? "Résumé");
   if (!labels || !meta || !row) return null;
 
-  const description = `Sondes de la catégorie '${row.name}' du catalogue d'échecs, exécutées sur le plus petit modèle (${meta.model}). Sur ce run, ${row.passed} cas sur ${row.total} passent.`;
+  const description = pick(
+    locale,
+    `Sondes de la catégorie '${row.name}' du catalogue d'échecs, exécutées sur le plus petit modèle (${meta.model}). Sur ce run, ${row.passed} cas sur ${row.total} passent.`,
+    `Sonden der Kategorie '${row.name}' aus dem Fehlerkatalog, ausgefuehrt auf dem kleinsten Modell (${meta.model}). In diesem Lauf bestehen ${row.passed} von ${row.total} Faellen.`,
+    `Probes of the '${row.name}' category from the failure catalogue, run on the smallest model (${meta.model}). In this run, ${row.passed} of ${row.total} cases pass.`,
+  );
   const fields: { label: string; value: string; tone?: string }[] = [
-    { label: "Type", value: row.type },
-    { label: "Catégorie", value: row.category_key },
-    { label: "Version catalogue", value: meta.catalogue_version },
-    { label: "Statut", value: row.status, tone: row.status_tone },
-    { label: "Dernière exécution", value: row.last_run },
-    { label: "Modèle évalué", value: meta.model },
-    { label: "Cas", value: String(row.total) },
-    { label: "Langues", value: meta.languages },
-    { label: "Propriétaire", value: row.owner },
+    { label: pick(locale, "Type", "Typ", "Type"), value: row.type },
+    { label: pick(locale, "Catégorie", "Kategorie", "Category"), value: row.category_key },
+    { label: pick(locale, "Version catalogue", "Katalogversion", "Catalogue version"), value: meta.catalogue_version },
+    { label: pick(locale, "Statut", "Status", "Status"), value: row.status, tone: row.status_tone },
+    { label: pick(locale, "Dernière exécution", "Letzte Ausfuehrung", "Last run"), value: row.last_run },
+    { label: pick(locale, "Modèle évalué", "Evaluiertes Modell", "Evaluated model"), value: meta.model },
+    { label: pick(locale, "Cas", "Faelle", "Cases"), value: String(row.total) },
+    { label: pick(locale, "Langues", "Sprachen", "Languages"), value: meta.languages },
+    { label: pick(locale, "Propriétaire", "Eigentuemer", "Owner"), value: row.owner },
   ];
   const results: { label: string; value: string }[] = [
-    { label: "Score", value: `${row.score} / 10` },
-    { label: "Taux de réussite", value: row.success },
-    { label: "Cas réussis", value: `${row.passed} / ${row.total}` },
-    { label: "Cas échoués", value: `${row.failed} / ${row.total}` },
-    { label: "Score global du run (informatif)", value: `${meta.score10} / 10` },
-    { label: "Escalades requises", value: String(meta.escalations) },
-    { label: "Invocations d'outils", value: String(meta.tool_invocations) },
+    { label: pick(locale, "Score", "Score", "Score"), value: `${row.score} / 10` },
+    { label: pick(locale, "Taux de réussite", "Erfolgsrate", "Pass rate"), value: row.success },
+    { label: pick(locale, "Cas réussis", "Bestandene Faelle", "Passed cases"), value: `${row.passed} / ${row.total}` },
+    { label: pick(locale, "Cas échoués", "Fehlgeschlagene Faelle", "Failed cases"), value: `${row.failed} / ${row.total}` },
+    { label: pick(locale, "Score global du run (informatif)", "Gesamtscore des Laufs (informativ)", "Global run score (informative)"), value: `${meta.score10} / 10` },
+    { label: pick(locale, "Escalades requises", "Erforderliche Eskalationen", "Required escalations"), value: String(meta.escalations) },
+    { label: pick(locale, "Invocations d'outils", "Tool-Aufrufe", "Tool invocations"), value: String(meta.tool_invocations) },
   ];
   const config: { label: string; value: string }[] = [
-    { label: "Modèle", value: meta.model },
-    { label: "Version catalogue", value: meta.catalogue_version },
-    { label: "Type", value: row.type },
-    { label: "Qualité", value: row.quality_label },
-    { label: "Langues", value: meta.languages },
+    { label: pick(locale, "Modèle", "Modell", "Model"), value: meta.model },
+    { label: pick(locale, "Version catalogue", "Katalogversion", "Catalogue version"), value: meta.catalogue_version },
+    { label: pick(locale, "Type", "Typ", "Type"), value: row.type },
+    { label: pick(locale, "Qualité", "Qualitaet", "Quality"), value: row.quality_label },
+    { label: pick(locale, "Langues", "Sprachen", "Languages"), value: meta.languages },
   ];
   const activity: { label: string; time: string }[] = [
-    { label: "Jeu exécuté", time: row.last_run },
+    { label: pick(locale, "Jeu exécuté", "Set ausgefuehrt", "Set run"), time: row.last_run },
     {
-      label: row.pass_rate >= 0.7 ? "Évaluation réussie" : "Évaluation sous le seuil",
+      label:
+        row.pass_rate >= 0.7
+          ? pick(locale, "Évaluation réussie", "Evaluierung bestanden", "Evaluation passed")
+          : pick(locale, "Évaluation sous le seuil", "Evaluierung unter Schwelle", "Evaluation below threshold"),
       time: row.last_run,
     },
   ];

@@ -441,7 +441,7 @@ function Repartition({ data, className }: { data: Data; className?: string }) {
               <span className="min-w-0 truncate text-[var(--tessera-text)]">{it.label}</span>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">{it.pct}%</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+            <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
               <div
                 className={cn("h-full rounded-full", BAR_TONE[it.tone] ?? "bg-slate-500")}
                 style={{ width: `${it.pct}%` }}
@@ -543,7 +543,8 @@ function Activity({ data, className }: { data: Data; className?: string }) {
             <span
               className={cn(
                 "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.55rem] font-medium",
-                BADGE_STYLE[r.badge] ?? "border-[var(--tessera-border)] text-[var(--tessera-text-muted)]",
+                BADGE_STYLE[r.badge] ??
+                  "border-[var(--tessera-border)] text-[var(--tessera-text-muted)]",
               )}
             >
               {r.badge}

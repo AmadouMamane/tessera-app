@@ -1,4 +1,9 @@
 {
+  "metricInfo": {
+    "about": "About {name}",
+    "calcul": "Calculation",
+    "source": "Source"
+  },
   "app": {
     "title": "Tessera",
     "subtitle": "AI Control Plane",
@@ -305,7 +310,60 @@
       "auditBroken": "chain broken",
       "vsBaseline": "{delta} vs target",
       "noDataAtT": "No data as of T",
-      "noTrend": "no data"
+      "noTrend": "no data",
+      "openSource": "Open source: {label}"
+    },
+    "explain": {
+      "quality": {
+        "what": "The share of answers judged compliant by continuous evaluation: faithfulness to sources, no hallucination, rule adherence.",
+        "how": "Compliant answers ÷ evaluated answers over the period, scaled to 100. The target is the service threshold (SLO).",
+        "source": "Continuous evaluation log (one score per turn)."
+      },
+      "failingControls": {
+        "what": "The number of controls outside their target, out of the controls actually measured over the period.",
+        "how": "A control is \"failing\" when its value crosses its threshold (e.g. faithfulness < 95%, PII leak > 0.5%). Shown as off-target ÷ measured.",
+        "source": "The \"Critical controls\" table below."
+      },
+      "openRisks": {
+        "what": "Risk situations still open: detected anomalous sessions plus triggered incident procedures.",
+        "how": "Anomalies (behavioural session analysis) + triggered playbooks, summed."
+      },
+      "regression": {
+        "what": "Whether the latest version comparison shows a quality drop versus the baseline.",
+        "how": "Current-version score minus baseline; \"Regression\" when the gap is negative beyond noise."
+      },
+      "cost": {
+        "what": "Estimated LLM cost over the period: tokens consumed times the model's rate.",
+        "how": "Sum of tokens per turn × rate per model. The badge flags anomalous spikes.",
+        "source": "Per-turn token counters."
+      },
+      "audit": {
+        "what": "The number of entries in the tamper-evident audit log, and the state of its chain.",
+        "how": "Each sensitive action appends a hash-chained entry; \"chain verified\" = no link altered or missing.",
+        "source": "S1 audit log (hash-chained)."
+      },
+      "criticalControls": {
+        "what": "The quality, security and compliance controls tracked continuously, with value, target and trend.",
+        "how": "Each row is a signal; the state compares the current value to its threshold."
+      },
+      "cases": {
+        "what": "The queue of control cases for an operator to handle, sorted by priority and deadline (SLA).",
+        "how": "Open cases from controls and reports; the tabs filter by priority.",
+        "source": "Operator queue (To-handle page)."
+      },
+      "controlCases": {
+        "what": "The incident procedures (playbooks) currently triggered and their first steps.",
+        "how": "A playbook triggers when its signal crosses the defined threshold."
+      },
+      "governed": {
+        "what": "The stream of governed decisions: agent routing, hand-off, proposal, deployment.",
+        "how": "Append-only governance-log events, newest first — each one provable.",
+        "source": "S1 audit log (governance events)."
+      },
+      "traces": {
+        "what": "The volume of execution traces and the observed p50/p95 latencies.",
+        "how": "Read from the Langfuse stack (OpenTelemetry traces the agent emits)."
+      }
     },
     "criticalControls": {
       "title": "Critical controls",
@@ -319,11 +377,13 @@
       "impact": "Impact",
       "action": "Action",
       "investigate": "Investigate",
-      "liveProbe": "live probe · uncatalogued"
+      "liveProbe": "live probe · uncatalogued",
+      "viewAll": "View all signals"
     },
     "cases": {
       "title": "Control cases to handle",
       "viewAll": "View all ({n})",
+      "openCase": "Open the case in the queue",
       "empty": "No cases in queue",
       "tab": {
         "all": "All",
@@ -344,7 +404,8 @@
       "blocked": "Release blocked · {agent}",
       "deployModel": "Model deployed · {version}",
       "deployPrompt": "Prompt deployed · {version}",
-      "deployPolicy": "Policy deployed · {version}"
+      "deployPolicy": "Policy deployed · {version}",
+      "viewAll": "Audit log"
     },
     "traces": {
       "title": "Observability · traces",
@@ -376,7 +437,8 @@
     "controlCases": {
       "title": "Incidents to handle (playbooks)",
       "count": "{n} triggered",
-      "clear": "No playbook triggered — nominal."
+      "clear": "No playbook triggered — nominal.",
+      "viewAll": "Open in Incidents"
     },
     "rightColumn": {
       "incidents": "Active or recent incidents",
@@ -391,7 +453,8 @@
         "compliance": "Compliance gate"
       },
       "activities": "Recent scores",
-      "noActivity": "No recent score."
+      "noActivity": "No recent score.",
+      "viewIncidents": "View all"
     },
     "quick": {
       "title": "Quick actions",
@@ -513,6 +576,34 @@
       "chainHint": "No deviation",
       "chainBrokenHint": "Deviation detected"
     },
+    "explain": {
+      "signed_events": {
+        "what": "The total number of events recorded in the audit log, each signed.",
+        "how": "Every sensitive action appends a hash-chained entry over the window.",
+        "source": "S1 audit log (hash-chained)."
+      },
+      "sensitive_actions": {
+        "what": "The high-stakes actions: tool calls and memory accesses (reading/writing data).",
+        "how": "Tool- or memory-type entries, counted over the window."
+      },
+      "guard_refusals": {
+        "what": "The number of decisions where the guard refused an action.",
+        "how": "Guard entries whose outcome is \"denied\"."
+      },
+      "proof_events": {
+        "what": "Events carrying a verifiable proof (reusable hash fingerprint).",
+        "how": "Entries with a referenceable proof fingerprint."
+      },
+      "chain_integrity": {
+        "what": "The state of the audit chain: verified (no link altered) or broken.",
+        "how": "End-to-end hash-chain re-verification; \"broken\" on any deviation.",
+        "source": "Chain verification (verify_audit_chain)."
+      },
+      "unique_actors": {
+        "what": "The number of distinct actors (model, service, human, system) that acted.",
+        "how": "Count of distinct actors over the window."
+      }
+    },
     "delta": {
       "none": "—"
     },
@@ -550,6 +641,7 @@
       "guard": "Decisions",
       "tool": "Tools",
       "memory": "Memory",
+      "governance": "Governance",
       "other": "Other"
     },
     "roles": {
@@ -716,6 +808,29 @@
     }
   },
   "health": {
+    "openSource": "Open source: {label}",
+    "explain": {
+      "backend": {
+        "what": "The health of the backend service (the agent API): reachable and operational.",
+        "how": "Liveness probe /healthz; 'ok' = the service responds.",
+        "source": "/healthz."
+      },
+      "readiness": {
+        "what": "Readiness: the service is ready to serve traffic (dependencies loaded).",
+        "how": "/readyz probe: DB, models and corpus ready; 'down' if a dependency is missing.",
+        "source": "/readyz."
+      },
+      "budget": {
+        "what": "The estimated cumulative LLM cost (input/output tokens × model rate) — admin-only.",
+        "how": "Sum of tokens × rate per model.",
+        "source": "Budget counters (tokens)."
+      },
+      "version": {
+        "what": "The deployed version of the agent backend.",
+        "how": "Version reported by the service at startup.",
+        "source": "/healthz."
+      }
+    },
     "title": "Service health",
     "description": "Real-time indicators for the backend, the Postgres pool, and the LLM budget.",
     "cards": {
@@ -1392,11 +1507,89 @@
       "openDataset": "Open dataset"
     },
     "sec": {
-      "etat": "A. Current state",
-      "diagnostic": "B. Root cause",
-      "predictive": "C. Predictive signals",
-      "actions": "D. Recommended actions"
+      "etat": "Current state",
+      "diagnostic": "Root cause",
+      "predictive": "Predictive signals",
+      "actions": "Recommended actions"
     },
+    "explain": {
+      "etat": {
+        "what": "Quality state right now: global score, controls failing or on alert, current release impact, and the period-over-period evolution.",
+        "how": "Aggregates the faithfulness SLO, the count of off-target signals, and the latest release diff.",
+        "source": "Continuous evaluation + release reports."
+      },
+      "diagnostic": {
+        "what": "Why quality drifts: failures by type, judge calibration, priority cases, and root cause.",
+        "how": "Documented failure catalogue + clustering of failed cases + version diff."
+      },
+      "predictive": {
+        "what": "Early-warning signals of a regression: regression risk, judge drift, failure predictor, intent, and localization.",
+        "how": "Risk models over the score series and metric drift."
+      },
+      "actions": {
+        "what": "Concrete actions to take, derived from open regressions and real failed cases.",
+        "how": "One recommendation is generated per open regression or case cluster."
+      },
+      "scoreGlobal": {
+        "what": "The global quality score out of 100: share of answers judged compliant (faithfulness SLO).",
+        "how": "Compliant answers ÷ evaluated answers, scaled to 100.",
+        "source": "Continuous evaluation log."
+      },
+      "nonRegression": {
+        "what": "Non-regression rate: share of cases that did not degrade versus the baseline version.",
+        "how": "Stable-or-improved cases ÷ compared cases.",
+        "source": "Release reports."
+      },
+      "regressionsOpen": {
+        "what": "The number of regressions still open versus the baseline.",
+        "how": "Cases whose score dropped beyond noise and not yet resolved.",
+        "source": "Release reports."
+      },
+      "judgeKappa": {
+        "what": "Agreement (Cohen's kappa) between the LLM judge and the human reference annotations.",
+        "how": "Kappa over a gold set; above 0.6 = substantial agreement.",
+        "source": "Judge calibration (gold set)."
+      },
+      "casEval": {
+        "what": "The number of catalogue cases evaluated in the latest non-regression run.",
+        "how": "Cases executed by the evaluation harness.",
+        "source": "Run archive."
+      },
+      "faithfulness": {
+        "what": "Faithfulness: the answer stays true to the cited sources, without extrapolation.",
+        "how": "Mean judge score on faithfulness; the delta compares to the start of the period.",
+        "source": "Score series (one score per turn)."
+      },
+      "grounding": {
+        "what": "Grounding: the answer rests on passages that were actually retrieved.",
+        "how": "Mean grounding score; delta over the period.",
+        "source": "Score series."
+      },
+      "hallucination": {
+        "what": "Hallucination: claims not supported by the sources.",
+        "how": "Mean score on the metric; a higher score is better (measured absence of hallucination).",
+        "source": "Score series."
+      },
+      "faithGrounding": {
+        "what": "The faithfulness × grounding scatter: each point is a turn; top-right = both faithful and grounded.",
+        "how": "Per-turn (faithfulness, grounding) pairs; colour summarises the mean of the two."
+      },
+      "failureDistribution": {
+        "what": "The distribution of failed cases by failure type (injection, PII leak, hallucination…).",
+        "how": "Count of failed cases grouped by category, top 5.",
+        "source": "Documented failure catalogue."
+      },
+      "judgeCalibration": {
+        "what": "How reliable the LLM judge is: agreement with humans, verbosity bias, and sample size.",
+        "how": "Kappa + agreement over a gold set; correlation to answer length.",
+        "source": "Judge calibration (gold set)."
+      },
+      "priorityCases": {
+        "what": "The most severe failed cases to handle first, sorted by severity.",
+        "how": "Failure-catalogue cases ordered critical → low."
+      }
+    },
+    "seeDetail": "View details",
     "reco": {
       "title": "Recommended actions",
       "curate": "Add failed cases to regression set",
@@ -2107,7 +2300,7 @@
         "nonRegression": "Non-regression rate",
         "regressionsOpen": "Open regressions",
         "judgeKappa": "Judge agreement κ",
-        "casEval": "Cases evaluated (7d)",
+        "casEval": "Cases evaluated",
         "casFailed": "Failed cases"
       },
       "etat": {
@@ -2193,6 +2386,36 @@
       "guard": "Guard efficacy",
       "recall": "recall",
       "vs7d": "vs 7d"
+    },
+    "explain": {
+      "attackRate": {
+        "what": "The share of attacks (prompt injections) that get past the guard.",
+        "how": "Successful attacks ÷ attempted attacks on the adversarial corpus. Lower is better.",
+        "source": "Firewall probe on the adversarial corpus."
+      },
+      "blocked": {
+        "what": "The number of prompt injections detected and blocked by the guard.",
+        "how": "Count of attempts the firewall refused over the period."
+      },
+      "piiLeak": {
+        "what": "The share of answers containing a personal detail that should not have been emitted.",
+        "how": "Answers with a PII leak ÷ evaluated answers. Target ≤ 0.5%.",
+        "source": "PII analysis of answers."
+      },
+      "leastPriv": {
+        "what": "The gap between tools actually used and those granted to the agent (least privilege).",
+        "how": "Tools used ÷ tools granted; a wide gap signals superfluous permissions."
+      },
+      "sensitiveMemory": {
+        "what": "The number of sensitive memory entries near their expiry (TTL).",
+        "how": "Entries whose TTL is about to lapse — to purge or renew.",
+        "source": "Memory inventory (governance)."
+      },
+      "guard": {
+        "what": "The guard's overall efficacy: its F1 (precision/recall balance) against attacks.",
+        "how": "F1 = harmonic mean of precision/recall; recall = detected ÷ actual attacks.",
+        "source": "Firewall probe (fixed adversarial corpus)."
+      }
     },
     "col": {
       "signal": "Signal",
@@ -2363,6 +2586,37 @@
       "pts": "pts",
       "vsPrev": "vs prev."
     },
+    "explain": {
+      "score": {
+        "what": "The agent's overall compliance level, derived continuously from runtime signals.",
+        "how": "Weighted aggregation of conformant / partial / non-conformant controls across the tracked frameworks.",
+        "source": "Runtime signals mapped to frameworks (DORA, GDPR, AI Act…)."
+      },
+      "obligations": {
+        "what": "The number of regulatory obligations covered by at least one control.",
+        "how": "Obligations with a mapped control, out of all tracked frameworks."
+      },
+      "conformant": {
+        "what": "The number of controls whose runtime evidence satisfies the obligation.",
+        "how": "Controls evaluated \"conformant\" over the period."
+      },
+      "partial": {
+        "what": "Partially satisfied controls — incomplete evidence or near the threshold.",
+        "how": "Controls evaluated \"partial\" (neither conformant nor failing)."
+      },
+      "nonConformant": {
+        "what": "Failing controls: the obligation is not satisfied.",
+        "how": "Controls evaluated \"non-conformant\" — to remediate first."
+      },
+      "residual": {
+        "what": "Risks remaining despite the controls in place, under watch.",
+        "how": "Identified, unclosed risks, weighted by severity."
+      },
+      "deadlines": {
+        "what": "The near regulatory deadlines that require action.",
+        "how": "Obligations or remediations whose due date is approaching."
+      }
+    },
     "panel": {
       "mapping": "Regulatory mapping",
       "obligations": "Obligations at risk ({n})",
@@ -2466,6 +2720,43 @@
       "tokens": "tokens",
       "pts": "pts",
       "vsPrev": "vs prev."
+    },
+    "explain": {
+      "availability": {
+        "what": "The share of time the service answered correctly (operational availability).",
+        "how": "1 − (errored requests ÷ total requests) over the window."
+      },
+      "errorRate": {
+        "what": "The share of requests that ended in error (tool denied, failure, timeout…).",
+        "how": "Errored ÷ total requests over the window. Lower is better."
+      },
+      "p50": {
+        "what": "Median latency: half of requests answer faster.",
+        "how": "50th percentile of end-to-end response time over the window.",
+        "source": "Execution traces."
+      },
+      "p95": {
+        "what": "Tail latency: 95% of requests answer below this — reveals spikes.",
+        "how": "95th percentile of end-to-end response time.",
+        "source": "Execution traces."
+      },
+      "toolSuccess": {
+        "what": "The share of tool calls that succeed (no denial or argument error).",
+        "how": "Successful ÷ total tool calls."
+      },
+      "totalCost": {
+        "what": "Total LLM cost over the window: tokens consumed × model rate.",
+        "how": "Sum of tokens per request × rate per model.",
+        "source": "Token counters."
+      },
+      "costPerReq": {
+        "what": "Average LLM cost per request.",
+        "how": "Total cost ÷ number of requests over the window."
+      },
+      "requests": {
+        "what": "The volume of requests handled over the window.",
+        "how": "Number of counted turns/calls."
+      }
     },
     "panel": {
       "errors": "Error breakdown ({n})",
@@ -2575,6 +2866,7 @@
     "noData": "no data"
   },
   "improvement": {
+    "openSource": "Open source: {label}",
     "title": "Improvement",
     "subtitle": "Prioritise, run and measure quality remediations for your AI agents.",
     "loading": "Loading improvement posture…",
@@ -2595,6 +2887,40 @@
       "coverage": "Eval-set coverage",
       "debt": "Corpus debt",
       "roi": "Estimated ROI"
+    },
+    "explain": {
+      "gain": {
+        "what": "The quality gain achievable if the priority improvements are applied.",
+        "how": "Sum of the estimated gains (in points) of the open opportunities."
+      },
+      "actions": {
+        "what": "The number of active improvement actions recommended by the analysis.",
+        "how": "Opportunities in an active status (to start / in progress)."
+      },
+      "curate": {
+        "what": "The number of cases awaiting curation to enrich the eval set.",
+        "how": "Flagged cases (low score, failure) not yet curated."
+      },
+      "frozen": {
+        "what": "The number of frozen deployments (quality gate not passed).",
+        "how": "Releases blocked by a guard or an exhausted error budget."
+      },
+      "shadow": {
+        "what": "Candidates to test in shadow traffic or by replay before production.",
+        "how": "Variants ready to compare without impacting users."
+      },
+      "coverage": {
+        "what": "The share of key behaviours covered by the eval set.",
+        "how": "Covered ÷ expected cases; aim ≥ 80%."
+      },
+      "debt": {
+        "what": "The corpus's age: how long since it was last refreshed.",
+        "how": "Days since the last significant ingestion or update."
+      },
+      "roi": {
+        "what": "The estimated return on investment of the improvements versus their cost.",
+        "how": "Expected gain relative to estimated effort."
+      }
     },
     "panel": {
       "opportunities": "Priority opportunities",
@@ -2645,6 +2971,53 @@
     }
   },
   "incidents": {
+    "explain": {
+      "open": {
+        "what": "The number of incidents currently open (unresolved).",
+        "how": "Incidents in open or in-progress status over the window.",
+        "source": "Incident register."
+      },
+      "critical": {
+        "what": "The number of critical-severity incidents still in progress.",
+        "how": "Open incidents whose severity is 'critical'."
+      },
+      "mtta": {
+        "what": "Mean time to acknowledge (MTTA): from trigger to acknowledgement, averaged over 7 days.",
+        "how": "Mean (acknowledged − triggered) over the last 7 days' incidents.",
+        "source": "Incident log (timestamps)."
+      },
+      "mttr": {
+        "what": "Mean time to resolve (MTTR): from trigger to closure, averaged over 7 days.",
+        "how": "Mean (closed − triggered) over the last 7 days' incidents.",
+        "source": "Incident log (timestamps)."
+      },
+      "playbooks": {
+        "what": "The number of incident procedures (playbooks) currently running.",
+        "how": "Playbooks in 'running' state."
+      },
+      "autoresolve": {
+        "what": "The share of incidents resolved automatically, with no human intervention.",
+        "how": "Auto-resolved incidents ÷ total incidents over the period."
+      },
+      "evidence": {
+        "what": "The number of evidence packs generated from incidents.",
+        "how": "Evidence packs produced over the window.",
+        "source": "Evidence store."
+      },
+      "sla_risk": {
+        "what": "The number of incidents at risk of breaching their service deadline (SLA).",
+        "how": "Incidents whose time remaining before the SLA deadline is low."
+      },
+      "queue": {
+        "what": "The incident triage queue, ordered by priority (severity crossed with SLA deadline).",
+        "how": "Open incidents sorted by severity then remaining SLA time.",
+        "source": "Incident register."
+      },
+      "sla": {
+        "what": "SLA escalations: incidents whose service deadline is approaching, with time remaining.",
+        "how": "Time remaining before SLA breach, per incident."
+      }
+    },
     "title": "Incidents & playbooks",
     "subtitle": "Incident response, playbook orchestration and governed remediation.",
     "tabs": {
@@ -2787,6 +3160,85 @@
     }
   },
   "replay": {
+    "explain": {
+      "zone": {
+        "actual": {
+          "what": "The current state of replay / shadow traffic: volumes, deviations and coverage over the period.",
+          "how": "Summary of replay KPIs aggregated over the observation window."
+        },
+        "diagnostic": {
+          "what": "Where divergences between replay and the baseline come from, broken down by type, severity and sessions.",
+          "how": "Deviations classified by type and severity over replayed traffic."
+        },
+        "comparisons": {
+          "what": "Detailed comparisons: top deviations, recent comparisons and regressions vs the baseline.",
+          "how": "Compares each replay to its baseline and ranks divergences."
+        },
+        "distribution": {
+          "what": "The distribution of replayed traffic (by service, by model) and the associated proofs/exports.",
+          "how": "Breakdown of replayed requests and proof status."
+        }
+      },
+      "kpi": {
+        "sessions": {
+          "what": "The number of replayed (or shadow) sessions over the period.",
+          "how": "Distinct sessions run through the replay engine."
+        },
+        "requests": {
+          "what": "The number of replayed requests over the period.",
+          "how": "Total requests sent to replay / shadow."
+        },
+        "tokens": {
+          "what": "The number of tokens consumed by replay.",
+          "how": "Sum of input + output tokens of replayed traffic."
+        },
+        "cost": {
+          "what": "The estimated cost of replay (tokens × model rate).",
+          "how": "Replayed tokens × rate per model.",
+          "source": "Replay token counters."
+        },
+        "deviations": {
+          "what": "The number of deviations detected between replay and the baseline.",
+          "how": "Replay answers diverging from the baseline beyond the threshold.",
+          "source": "Replay vs baseline comparison."
+        },
+        "evals": {
+          "what": "The number of evaluations replayed on shadow traffic.",
+          "how": "Eval cases run on replayed answers."
+        },
+        "proofs": {
+          "what": "The number of proofs generated from replay.",
+          "how": "Proof artifacts produced by replayed sessions."
+        },
+        "coverage": {
+          "what": "Replay coverage: share of baseline traffic actually replayed.",
+          "how": "Replayed traffic ÷ eligible baseline traffic."
+        }
+      },
+      "panel": {
+        "devByType": {
+          "what": "The breakdown of deviations by type (content, format, tool, refusal…) versus the baseline.",
+          "how": "Deviations grouped by divergence category."
+        },
+        "severity": {
+          "what": "The breakdown of deviations by severity (critical → low).",
+          "how": "Deviations weighted by severity."
+        },
+        "byService": {
+          "what": "The breakdown of replayed traffic by calling service.",
+          "how": "Replayed requests grouped by service."
+        },
+        "byModel": {
+          "what": "The breakdown of replayed traffic by model.",
+          "how": "Replayed requests grouped by model."
+        },
+        "regressions": {
+          "what": "The services whose quality regresses the most versus the baseline.",
+          "how": "Top services by negative score gap vs baseline.",
+          "source": "Replay vs baseline comparison."
+        }
+      }
+    },
     "title": "Replay & shadow",
     "subtitle": "Replay sessions precisely, compare against baselines and observe shadow traffic.",
     "tabs": {
@@ -2941,6 +3393,81 @@
     }
   },
   "curation": {
+    "explain": {
+      "zone": {
+        "actual": {
+          "what": "The current curation state: candidates, promotable, to-review and rejected over the period.",
+          "how": "Summary of curation KPIs aggregated over the observation window."
+        },
+        "diagnostic": {
+          "what": "Why cases enter curation: priority lots and the reasons retained tours were kept.",
+          "how": "Lots scored by risk + most frequent inclusion reasons."
+        },
+        "gaps": {
+          "what": "Eval-set coverage gaps (by intent, by language) and the candidate distribution.",
+          "how": "Cross-coverage heatmap + candidate breakdown."
+        },
+        "governance": {
+          "what": "Governed curation actions (freeze, create replay, export) and recent activity.",
+          "how": "Available lot actions + recent operations log."
+        },
+        "trends": {
+          "what": "Trends: curation backlog, set balance and the impact of curation on quality.",
+          "how": "Time series of backlog, balance and impact."
+        }
+      },
+      "kpi": {
+        "candidates": {
+          "what": "The number of cases candidate for curation (awaiting review).",
+          "how": "Incoming cases not yet triaged over the period."
+        },
+        "promotable": {
+          "what": "The number of cases ready to be promoted into the eval set.",
+          "how": "Validated candidates (score ≥ threshold, no duplicate)."
+        },
+        "manual_review": {
+          "what": "The number of cases needing human review.",
+          "how": "Ambiguous candidates flagged for manual review."
+        },
+        "rejected": {
+          "what": "The number of rejected cases (out of scope or low value).",
+          "how": "Candidates discarded over the period."
+        },
+        "intent_coverage": {
+          "what": "How well business intents are covered by the eval set.",
+          "how": "Covered intents ÷ target intents.",
+          "source": "Intent → eval-case map."
+        },
+        "lang_coverage": {
+          "what": "Language coverage (FR/DE/EN) of the eval set.",
+          "how": "Covered languages ÷ target languages, weighted by cases."
+        },
+        "duplicates": {
+          "what": "The number of duplicates detected among candidates.",
+          "how": "Near-identical candidates grouped by similarity."
+        },
+        "failures": {
+          "what": "The number of cases sourced from real agent failures.",
+          "how": "Candidates originating from failed tours.",
+          "source": "Failed-case catalogue."
+        }
+      },
+      "panel": {
+        "priorityLots": {
+          "what": "The priority candidate lots to curate, ranked by risk and score.",
+          "how": "Risk = severity × learning value; lots ordered high → low.",
+          "source": "Curation queue."
+        },
+        "coverage": {
+          "what": "Eval-set coverage by category and language: where cases are missing.",
+          "how": "Heatmap of present/missing cases per axis."
+        },
+        "distribution": {
+          "what": "The distribution of candidates by type/source.",
+          "how": "Candidates grouped by origin category."
+        }
+      }
+    },
     "title": "Eval-set curation",
     "subtitle": "Select, enrich, promote and govern the turns that feed the evaluation sets.",
     "tabs": {
@@ -3152,6 +3679,50 @@
     }
   },
   "automations": {
+    "explain": {
+      "active": {
+        "what": "The number of automations currently active (enabled).",
+        "how": "Automations in the enabled state in the catalogue."
+      },
+      "executions": {
+        "what": "The number of automation executions over the period.",
+        "how": "Total executions triggered over the window."
+      },
+      "success_rate": {
+        "what": "The share of executions that completed successfully.",
+        "how": "Successful executions ÷ total executions."
+      },
+      "approvals": {
+        "what": "The number of human approvals pending before execution.",
+        "how": "Automation steps requiring manual validation."
+      },
+      "blocked": {
+        "what": "The number of executions blocked by a guardrail or condition.",
+        "how": "Executions halted before completion by a control rule."
+      },
+      "sensitive": {
+        "what": "The number of automations touching sensitive operations (data, payments, access).",
+        "how": "Automations flagged 'sensitive' in the catalogue."
+      },
+      "mttr": {
+        "what": "The mean time to remediate a failed automation.",
+        "how": "Average time between failure and successful retry."
+      },
+      "zone": {
+        "pipeline": {
+          "what": "The 24h automation execution pipeline: from trigger to completion, stage by stage.",
+          "how": "Executions grouped by pipeline stage."
+        },
+        "distribution": {
+          "what": "The breakdown of automations by type (notification, remediation, enrichment…).",
+          "how": "Automations grouped by category."
+        },
+        "env": {
+          "what": "The breakdown of executions by environment (prod, staging, dev).",
+          "how": "Executions grouped by target environment."
+        }
+      }
+    },
     "title": "Automations",
     "subtitle": "Orchestrate the rules, triggers and automatic actions of your AI system while keeping human control, traceability and guardrails.",
     "tabs": {
@@ -3317,6 +3888,54 @@
     }
   },
   "proofs": {
+    "explain": {
+      "kpi": {
+        "packs": {
+          "what": "The number of evidence packs generated over the period.",
+          "how": "Count of packs created by the proof pipeline."
+        },
+        "artifacts": {
+          "what": "The number of cryptographically signed artifacts bundled in the packs.",
+          "how": "Sum of sealed artifacts (hash + signature)."
+        },
+        "export_rate": {
+          "what": "The share of evidence exports completed successfully.",
+          "how": "Successful exports ÷ attempted exports over the period."
+        },
+        "exporters": {
+          "what": "The number of exporters (destinations) currently active and healthy.",
+          "how": "Exporters in 'ok' state out of the configured total."
+        },
+        "latency": {
+          "what": "The mean time to generate then export a pack.",
+          "how": "Average pipeline → destination time over the period."
+        },
+        "retention": {
+          "what": "How well retention obligations are covered by retained evidence.",
+          "how": "Covered obligations ÷ applicable obligations."
+        }
+      },
+      "zone": {
+        "pipeline": {
+          "what": "The proof pipeline: from capture to signing, then export to destinations.",
+          "how": "Each stage is instrumented; a block at one stage halts the pack."
+        },
+        "crypto": {
+          "what": "Cryptographic verification: hash chain and signatures attesting evidence integrity.",
+          "how": "Re-verifies the hash chain and the artifact signatures.",
+          "source": "S1 audit log (hash-chained)."
+        },
+        "exporters": {
+          "what": "The exporters and destinations that receive evidence packs (S3, SIEM, vault…).",
+          "how": "State, format and queue per configured destination."
+        },
+        "retention": {
+          "what": "Retention periods and the regulatory obligations covered by the evidence.",
+          "how": "Maps each obligation to its evidence and its due date."
+        }
+      }
+    },
+    "drill": { "chain": "Open the audit log" },
     "title": "Proofs & exporters",
     "subtitle": "Assemble, sign, verify and export the AI proof artifacts.",
     "tabs": {
@@ -3561,7 +4180,14 @@
       "loggedBy": "Logged by {n}",
       "monitors": "Monitors {n}",
       "viewSignal": "View signal",
-      "viewEvals": "View linked evaluations"
+      "viewEvals": "View linked evaluations",
+      "secDefinition": "Definition",
+      "secPerformance": "Real performance",
+      "secGuard": "Guard composition",
+      "byLanguage": "Cases per language",
+      "outcomeTitle": "Pass / Fail",
+      "secTags": "Tags",
+      "secUsage": "Usage"
     },
     "footer": {
       "total": "{n} signals",
@@ -3697,6 +4323,69 @@
     }
   },
   "sources": {
+    "explain": {
+      "sources": {
+        "what": "The number of connected knowledge sources (product corpus, regulations, memory…).",
+        "how": "Distinct sources inventoried and indexed."
+      },
+      "corpus": {
+        "what": "The number of indexed corpora (vectorised document sets).",
+        "how": "Corpora present in the vector index."
+      },
+      "chunks": {
+        "what": "The total number of indexed fragments (chunks), ready for retrieval.",
+        "how": "Sum of fragments across all sources.",
+        "source": "pgvector index."
+      },
+      "documents": {
+        "what": "The total number of documents ingested into the corpus.",
+        "how": "Distinct ingested documents."
+      },
+      "languages": {
+        "what": "The number of languages covered by the sources (FR/DE/EN).",
+        "how": "Distinct languages detected in the corpus."
+      },
+      "memory": {
+        "what": "The number of long-term memory entries (facts persisted across sessions).",
+        "how": "Long-term memory rows.",
+        "source": "Memory table (pgvector)."
+      },
+      "transcript": {
+        "what": "The number of conversation turns archived in the durable transcript.",
+        "how": "Conversation transcript rows.",
+        "source": "Durable transcript."
+      },
+      "conversations": {
+        "what": "The number of distinct archived conversations.",
+        "how": "Distinct conversations in the transcript."
+      },
+      "embeddings": {
+        "what": "The active embedding model and the vectorisation coverage per source.",
+        "how": "Vectorised fragments ÷ total fragments, per source."
+      },
+      "access": {
+        "what": "Who can read each source (roles, scope) and the access restrictions.",
+        "how": "Access control per source and per role."
+      },
+      "retention": {
+        "what": "Retention periods and source classification (sensitivity, legal basis).",
+        "how": "Retention policy applied per classification."
+      },
+      "lineage": {
+        "what": "Data lineage: where each source comes from, its ingestion version and freshness.",
+        "how": "The ingestion run is authoritative (not Git); timestamp of the last ingestion.",
+        "source": "Corpus lineage."
+      },
+      "memoryGrowth": {
+        "what": "The growth of memory and corpus over time.",
+        "how": "Time series of memory/corpus volume."
+      },
+      "citationBySource": {
+        "what": "The share of real citations attributed to each source in answers.",
+        "how": "Citations per source ÷ total citations.",
+        "source": "Retrieval spans."
+      }
+    },
     "title": "Sources & memory",
     "subtitle": "The agent's real data substrate: pgvector corpus and memory.",
     "activitySubject": "subject",
@@ -3827,6 +4516,55 @@
     }
   },
   "roles": {
+    "explain": {
+      "accounts": {
+        "what": "The number of managed accounts (human and service accounts).",
+        "how": "Distinct accounts in the identity registry."
+      },
+      "roles": {
+        "what": "The number of defined roles — reusable permission sets assigned to accounts.",
+        "how": "Distinct roles in the access catalogue."
+      },
+      "capabilities": {
+        "what": "The number of capabilities: the atomic permissions that roles group together.",
+        "how": "Distinct permissions referenced by roles."
+      },
+      "agents": {
+        "what": "The number of agents covered by at least one access role.",
+        "how": "Distinct agents bound to a role."
+      },
+      "active": {
+        "what": "The number of active accounts (recently signed in, not disabled).",
+        "how": "Accounts in the active state over the period."
+      },
+      "mfa": {
+        "what": "The share of accounts protected by multi-factor authentication (MFA).",
+        "how": "Accounts with MFA enabled ÷ total accounts."
+      },
+      "topRoles": {
+        "what": "The most-assigned roles, ranked by number of attached accounts.",
+        "how": "Roles sorted by descending user count."
+      },
+      "byResource": {
+        "what": "The breakdown of permissions by resource (data, tools, configuration).",
+        "how": "Permissions grouped by target resource."
+      },
+      "pending": {
+        "what": "Pending access reviews: assignments to approve or recertify.",
+        "how": "Access requests and recertifications not yet handled.",
+        "source": "Audit log (access reviews)."
+      },
+      "sod": {
+        "what": "Separation-of-duties (SoD) violations: incompatible right combinations held by a single account.",
+        "how": "Conflicting role pairs held simultaneously.",
+        "source": "Separation-of-duties policy."
+      },
+      "inactive": {
+        "what": "Inactive accounts (no sign-in over the period) — disablement candidates.",
+        "how": "Accounts with no recent activity."
+      }
+    },
+    "drill": { "audit": "Open the audit log" },
     "title": "Roles & access",
     "subtitle": "Manage identities, roles, permissions and access across the whole platform.",
     "actions": {
@@ -3979,6 +4717,36 @@
     }
   },
   "integrations": {
+    "explain": {
+      "tools": {
+        "what": "The total number of tools (functions) the agent can call — its integration surface.",
+        "how": "Tools declared in the registry, all statuses combined."
+      },
+      "allowed": {
+        "what": "The number of tools allowed by the guardrail policy, with no confirmation required.",
+        "how": "Tools whose policy rule is 'allow' without confirmation.",
+        "source": "Guard policy (policy.yaml)."
+      },
+      "confirmation": {
+        "what": "The number of tools allowed but gated by human confirmation before execution.",
+        "how": "Tools whose rule requires confirmation.",
+        "source": "Guard policy (policy.yaml)."
+      },
+      "calls": {
+        "what": "The total number of tool calls over the period.",
+        "how": "Sum of tool invocations over the window.",
+        "source": "Tool-call audit log."
+      },
+      "blocked": {
+        "what": "The number of tool calls denied by the guardrails (deny policy).",
+        "how": "Invocations blocked before execution by a 'deny' rule.",
+        "source": "Guard audit log."
+      },
+      "idle": {
+        "what": "The number of tools available but never called over the period (removal candidates).",
+        "how": "Tools with zero calls over the window."
+      }
+    },
     "title": "Integrations",
     "subtitle": "Connect, configure and monitor the external systems and services integrated with Tessera.",
     "actions": {
@@ -4094,6 +4862,21 @@
     }
   },
   "systemProfile": {
+    "explain": {
+      "status": {
+        "what": "The aggregated system health: green if every subsystem (API, DB, models, corpus) responds.",
+        "how": "Aggregation of each subsystem's health probes.",
+        "source": "/healthz and /readyz probes."
+      },
+      "mode": {
+        "what": "The deployment run mode (production, staging or development).",
+        "how": "Read from the environment configuration at startup."
+      },
+      "profile": {
+        "what": "The active LLM profile: frontier (Vertex AI) or on-premises (Llama 3.3 70B via Ollama).",
+        "how": "Selected profile that routes model calls."
+      }
+    },
     "title": "System profile",
     "subtitle": "Complete technical view of the Tessera environment and its operational state.",
     "actions": {
@@ -4216,6 +4999,38 @@
     }
   },
   "parameters": {
+    "explain": {
+      "configured": {
+        "what": "The number of parameters actually configured (given a defined value).",
+        "how": "Parameters whose value has been set, across all domains."
+      },
+      "policies": {
+        "what": "The number of active configuration policies.",
+        "how": "Policies in the active state in the configuration."
+      },
+      "security_rules": {
+        "what": "The number of configured security rules (access, guardrails, encryption).",
+        "how": "Rules contained in the active security policies."
+      },
+      "integrations": {
+        "what": "The number of external integrations connected and operational.",
+        "how": "Connectors in the 'connected' state."
+      },
+      "models": {
+        "what": "The number of AI models available in the catalogue (chat, embeddings).",
+        "how": "Models declared in the model registry."
+      },
+      "changes": {
+        "what": "The number of configuration changes over the last 30 days — all audited.",
+        "how": "Parameter changes logged over the 30-day window.",
+        "source": "Audit log."
+      },
+      "configState": {
+        "what": "The breakdown of parameters by lifecycle state: active, inactive, draft, deprecated.",
+        "how": "Parameters grouped by lifecycle state."
+      }
+    },
+    "drill": { "audit": "Open the audit log" },
     "title": "Settings",
     "subtitle": "Configure the behaviour, policies and preferences of the Tessera platform.",
     "actions": {
@@ -4342,6 +5157,40 @@
       "avg_time": "Average time",
       "resolution_rate": "Resolution rate"
     },
+    "explain": {
+      "total": {
+        "what": "The total number of open control cases to handle, across all levels.",
+        "how": "Currently unresolved cases in the operator queue."
+      },
+      "urgent": {
+        "what": "Urgent-priority cases, to handle first.",
+        "how": "Open cases with priority \"urgent\"."
+      },
+      "sla_2h": {
+        "what": "Cases whose handling deadline (SLA) expires in under 2 hours.",
+        "how": "Open cases with an SLA deadline within 2h."
+      },
+      "overdue": {
+        "what": "Cases whose deadline (SLA) is already past.",
+        "how": "Open cases with a lapsed SLA deadline — to catch up."
+      },
+      "assigned": {
+        "what": "The cases assigned to you.",
+        "how": "Open cases whose owner is the current user."
+      },
+      "resolved": {
+        "what": "Cases resolved today.",
+        "how": "Cases moved to \"resolved\" since midnight."
+      },
+      "avg_time": {
+        "what": "The average time to resolve a case.",
+        "how": "Mean (open → resolved) over recently closed cases."
+      },
+      "resolution_rate": {
+        "what": "The share of received cases that end up resolved.",
+        "how": "Resolved ÷ received cases over the period."
+      }
+    },
     "delta": {
       "vsHier": "vs yesterday"
     },
@@ -4407,7 +5256,16 @@
     "footer": {
       "total": "{n} items",
       "source": "{src}"
-    }
+    },
+    "rowOpen": "View detail",
+    "close": "Close",
+    "page": {
+      "prev": "Previous page",
+      "next": "Next page",
+      "perPage": "Rows per page",
+      "summary": "Showing {start} - {end} of {total}"
+    },
+    "empty": "No items"
   },
   "assistant": {
     "title": "Assistant",
@@ -4528,6 +5386,22 @@
     }
   },
   "fleet": {
+    "explain": {
+      "orgConversations": {
+        "what": "The total number of fleet conversations, deduplicated: a conversation shared across agents (hand-off) is counted only once.",
+        "how": "Distinct conversations at the org level, shared conversations counted once.",
+        "source": "Fleet — deduplicated org rollup."
+      },
+      "naiveSum": {
+        "what": "The naive sum of per-agent conversations: adds each agent's total without deduplicating, so it over-counts shared conversations.",
+        "how": "Sum of each agent's conversations, before deduplication."
+      },
+      "dedupSaved": {
+        "what": "The gap avoided by deduplication: the conversations double-counted in the naive sum. The 'shared' line shows how many passed through at least two agents (hand-off).",
+        "how": "Naive sum − deduplicated org total; 'shared' = conversations handled by ≥ 2 agents.",
+        "source": "Fleet — deduplication."
+      }
+    },
     "searchPlaceholder": "Search an agent…",
     "filterAll": "All",
     "filterExternal": "External",
@@ -5002,9 +5876,56 @@
     "title": "To do",
     "subtitle": "Your pending tasks, reviews and approvals.",
     "loading": "Loading tasks…",
-    "unavailable": "Tasks unavailable."
+    "unavailable": "Tasks unavailable.",
+    "rowOpen": "View detail",
+    "close": "Close",
+    "page": {
+      "prev": "Previous page",
+      "next": "Next page",
+      "perPage": "Rows per page",
+      "summary": "Showing {start} - {end} of {total}"
+    },
+    "empty": "No items"
   },
   "etatADate": {
+    "explain": {
+      "reconstructed": {
+        "what": "The state reconstructed at instant T: the configuration and data as they were at the chosen date, replayed from the logs.",
+        "how": "Rebuilt from the append-only logs (audit, lineage, snapshots) up to T.",
+        "source": "Sealed snapshot + S1 logs."
+      },
+      "original": {
+        "what": "The original state: the answer or decision as emitted at the time, before any reconstruction.",
+        "how": "Read from the original piece (transcript / audit) at instant T."
+      },
+      "govCard": {
+        "what": "The governance configuration (guardrails, prompt / model, release) active at instant T.",
+        "how": "Effective version at T, read from lineage and the audit log."
+      },
+      "chronology": {
+        "what": "The chronology of governed events up to T: deployments, hand-offs, decisions.",
+        "how": "Append-only events ordered, bounded at instant T."
+      },
+      "integrity": {
+        "what": "The integrity proof of the reconstruction: source coverage, last sync, and verified audit chain.",
+        "how": "Verifies the hash chain and source coverage at T.",
+        "source": "S1 audit log (hash-chained)."
+      },
+      "auditPieces": {
+        "what": "The provable audit pieces backing the state at T — each piece is openable.",
+        "how": "Audit-log entries tied to the reconstructed instant.",
+        "source": "S1 audit log."
+      },
+      "handoffs": {
+        "what": "The agent hand-offs that occurred up to T: who handled what, and why.",
+        "how": "Hand-off events ordered, bounded at instant T."
+      },
+      "snapshots": {
+        "what": "The saved snapshots: sealed reconstructions, replayable identically.",
+        "how": "Persisted snapshots; a click reloads the state at their instant.",
+        "source": "Snapshot store."
+      }
+    },
     "title": "State as of date",
     "subtitle": "Reconstruct an agent's state at a given date.",
     "agent": "Agent",
@@ -5077,13 +5998,55 @@
     "releaseNotRun": "Eval not run",
     "dedupExplain": "Naive sum {naive} · {saved} deduplicated · {shared} shared conversations (handoff = 1)",
     "empty": "No fleet data available.",
-    "orgSignalsNote": "Filter active on the per-agent view above. The org signals below are not yet broken down per agent.",
+    "orgSignalsNote": "Agent filter active: the cards below read this agent's signals. The shared-policy probes (firewall, refusal), the audit chain, the traces and the time rail stay org-wide.",
+    "orgWide": "Org-wide",
+    "orgWideHint": "Shared-policy probe — identical across agents, not per-agent.",
+    "orgPostureNote": "Per-agent breakdown above. This view stays org-wide — its indicators aggregate the whole fleet, not the selected agent.",
     "usefulLinks": "Useful links",
     "linkRelease": "Governance · Release Control",
     "linkAudit": "Proof · Audit log",
     "linkSignals": "Definition · Signal catalogue"
   },
   "releaseControl": {
+    "viewFleet": "View all agents",
+    "viewAgent": "View agent",
+    "explain": {
+      "passing": {
+        "what": "The number of agents whose eval gate is green — therefore releasable to production.",
+        "how": "Distinct agents whose gate verdict is conformant (floor set + critical cases OK, no uncovered blocking case).",
+        "source": "Per-agent release pipeline (eval-gate)."
+      },
+      "blocked": {
+        "what": "The number of agents blocked by the eval gate: a floor-set case or a critical case fails.",
+        "how": "Agents with blocking_socle > 0 or blocking_t1 > 0, with no active waiver.",
+        "source": "Per-agent release pipeline (eval-gate)."
+      },
+      "notRun": {
+        "what": "The number of agents with no evaluation run yet: no verdict is available.",
+        "how": "Agents whose latest evaluation run is missing.",
+        "source": "Evaluation run archive."
+      },
+      "socle": {
+        "what": "The floor set (socle): the common case set EVERY agent must pass (cross-agent floor), distinct from its own set.",
+        "how": "OK/fail status of the floor subset in the agent's latest run.",
+        "source": "Eval-gate policy (§7 floor set)."
+      },
+      "blockingSocle": {
+        "what": "The number of failing floor-set cases that block release.",
+        "how": "Non-conformant floor cases not covered by an active waiver.",
+        "source": "Agent evaluation run."
+      },
+      "blockingT1": {
+        "what": "The number of failing critical (priority-1) cases that block release.",
+        "how": "Non-conformant priority-1 cases with no active waiver.",
+        "source": "Agent evaluation run."
+      },
+      "waived": {
+        "what": "The number of active waivers: accepted exceptions that don't block, pending a fix.",
+        "how": "In-force waivers placed on failing cases.",
+        "source": "Waiver register (waiver store)."
+      }
+    },
     "title": "Release Control",
     "subtitle": "Per-agent release pipeline — eval-gate verdict, versioned governed package.",
     "total": "Agents",
@@ -5141,6 +6104,11 @@
     "breached": "SLO breached · {metric} — {rate} < threshold {threshold}",
     "ok": "SLO met · {metric} — {rate} ≥ threshold {threshold}",
     "burn": "Burn ×{x} · {bad}/{n} bad in window",
+    "breachedShort": "{metric} — {rate} < threshold {threshold}",
+    "okShort": "{metric} — {rate} ≥ threshold {threshold}",
+    "burnRate": "Burn ×{x}",
+    "burnBad": "{bad}/{n} bad in window",
+    "stopPulse": "Acknowledge",
     "remediate": "Remediate in Incidents"
   },
   "shell": {
@@ -5412,13 +6380,79 @@
     }
   },
   "models": {
+    "explain": {
+      "models": {
+        "what": "The number of models registered in the catalogue (chat, embeddings, judges).",
+        "how": "Distinct models declared in the model registry."
+      },
+      "chat": {
+        "what": "The chat model currently active (the one answering customers).",
+        "how": "The 'chat'-role model flagged active in the catalogue.",
+        "source": "Model registry."
+      },
+      "embed": {
+        "what": "The active embedding model (vectorises the corpus for retrieval).",
+        "how": "The 'embedding'-role model flagged active.",
+        "source": "Model registry."
+      },
+      "profile": {
+        "what": "The active deployment profile: frontier (Vertex AI) or on-premises (Llama 3.3 70B via Ollama).",
+        "how": "Selected profile that routes LLM calls."
+      },
+      "tokens": {
+        "what": "The number of tokens consumed over the period (input + output).",
+        "how": "Sum of input and output tokens over the window.",
+        "source": "Budget counters (tokens)."
+      },
+      "cost": {
+        "what": "The estimated LLM cost over the period (tokens × model rate).",
+        "how": "Sum of tokens × rate per model.",
+        "source": "Budget counters (cost)."
+      }
+    },
     "loading": "Loading model catalogue...",
     "empty": "No models in the catalogue.",
     "close": "Close"
   },
   "guardrailCatalogue": {
+    "explain": {
+      "blocks": {
+        "what": "The number of active guardrail blocks in the policy (each block groups rules).",
+        "how": "Distinct policy blocks loaded."
+      },
+      "deny": {
+        "what": "The number of deny rules: patterns or actions explicitly blocked.",
+        "how": "'deny'-type rules in the active policy."
+      },
+      "pii": {
+        "what": "The number of personal-data protection rules (PII detection and masking).",
+        "how": "Rules targeting PII in the policy."
+      },
+      "tools": {
+        "what": "The number of tools governed by the guardrails (allowed, confirm or denied).",
+        "how": "Tools referenced in the tool rules."
+      },
+      "version": {
+        "what": "The version of the guardrail policy currently deployed.",
+        "how": "Policy version loaded at startup.",
+        "source": "Guard policy YAML."
+      },
+      "decisions": {
+        "what": "The number of guardrail decisions logged in the audit chain.",
+        "how": "Length of the guard's audit chain.",
+        "source": "S1 audit log (hash-chained)."
+      }
+    },
     "loading": "Loading guardrail catalogue...",
     "empty": "No guardrail profiles.",
     "close": "Close"
+  },
+  "table": {
+    "rowOpen": "View detail",
+    "empty": "No items",
+    "summary": "Showing {start} - {end} of {total}",
+    "prev": "Previous page",
+    "next": "Next page",
+    "perPage": "Rows per page"
   }
 }

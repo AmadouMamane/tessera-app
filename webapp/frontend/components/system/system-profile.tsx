@@ -9,9 +9,10 @@ import {
   Server,
   TriangleAlert,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -24,11 +25,27 @@ const AUDIT_HREF = "/prouver/audit-logs";
 type T = ReturnType<typeof useTranslations<"systemProfile">>;
 type Data = SystemData;
 
+/** ⓘ for a system KPI, reading systemProfile.explain.<k>; renders nothing where the
+ * label is self-evident (no explain entry). */
+function KpiInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("systemProfile.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 export function SystemProfile() {
   const t = useTranslations("systemProfile");
+  const locale = useLocale();
   const { data, refetch, isFetching } = useQuery({
-    queryKey: ["system-profile"],
-    queryFn: ({ signal }) => fetchSystemProfile(signal),
+    queryKey: ["system-profile", locale],
+    queryFn: ({ signal }) => fetchSystemProfile(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -57,7 +74,12 @@ export function SystemProfile() {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
         {data.kpis.map((kpi) => (
-          <SystemKpi key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} />
+          <SystemKpi
+            key={kpi.key}
+            kpi={kpi}
+            label={t(`kpi.${kpi.key}`)}
+            info={<KpiInfo k={kpi.key} title={t(`kpi.${kpi.key}`)} />}
+          />
         ))}
       </div>
 
@@ -121,11 +143,16 @@ function CommandBar({
   );
 }
 
-function SystemKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }) {
+function SystemKpi({
+  kpi,
+  label,
+  info,
+}: { kpi: Data["kpis"][number]; label: string; info?: ReactNode }) {
   return (
     <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.66rem] font-medium text-[var(--tessera-text-muted)]">
-        {label}
+      <p className="flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
       </p>
       {kpi.kind === "status" ? (
         <div className="mt-1 flex items-center gap-1.5">

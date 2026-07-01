@@ -21,12 +21,12 @@ export default async function ReliabilityPage({ params, searchParams }: Reliabil
   const { locale } = await params;
   setRequestLocale(locale);
   const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet();
+  const fleet = await loadFleet(locale);
   const t = await getTranslations({ locale, namespace: "reliability" });
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} signalHero />
+        <GovScopeSection fleet={fleet} scope={scope} locale={locale} signalHero perAgent={false} />
       </div>
       <ReliabilityDashboard />
     </AppShell>

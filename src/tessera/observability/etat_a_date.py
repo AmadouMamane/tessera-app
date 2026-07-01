@@ -17,7 +17,9 @@ audit log, which is why the reconstruction's headline numbers (decisions, blocks
 rules fired, chain length, last activity) really do change as T moves. Anything
 without a real time axis is reported as a fixed fact, never an invented timeline.
 
-The page is FR-only (it has no ``lang`` parameter); free-text is verbatim French.
+The page is trilingual (FR / DE / EN): ``build_etat_a_date`` takes a ``lang`` and
+every operator-facing label resolves through ``_loc``. Durable snapshot records
+are kept verbatim as written at save time (they are historical artefacts).
 """
 
 from __future__ import annotations
@@ -56,8 +58,23 @@ _MAX_TIMELINE = 8
 _MAX_SNAPSHOTS = 20
 _ANSWER_PREVIEW = 320
 
-_TYPE_LABEL: dict[str, str] = {"reg": "Réglementation", "prod": "Produit"}
+_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+
+def _loc(lang: str, fr: str, de: str, en: str) -> str:
+    """Pick the locale variant of an inline string (fr / de / en)."""
+    return (fr, de, en)[_LANG_IDX.get(lang, 0)]
+
+
+_TYPE_LABEL: dict[str, tuple[str, str, str]] = {
+    "reg": ("Réglementation", "Regulierung", "Regulation"),
+    "prod": ("Produit", "Produkt", "Product"),
+}
 _TYPE_TONE: dict[str, str] = {"reg": "violet", "prod": "blue"}
+
+
+def _type_label(tone_key: str, lang: str) -> str:
+    return _TYPE_LABEL[tone_key][_LANG_IDX.get(lang, 0)]
 
 
 @dataclass(slots=True)
@@ -319,6 +336,30 @@ def _snapshot_id(at: datetime | None) -> str:
     return at.astimezone(_PARIS).strftime("SNAP-%Y-%m-%d-%H%M")
 
 
+def _normalize_scope(sources: str | Sequence[str] | None) -> set[str] | None:
+    """Parse the ``sources`` filter into a set of valid corpus-category keys.
+
+    Accepts a comma-separated string (the ``?sources=`` query) or a sequence.
+    Keeps only keys present in :data:`_SOURCE_META`; returns ``None`` when nothing
+    valid is given, so an unscoped (all-sources) reconstruction is the default.
+    """
+    if sources is None:
+        return None
+    raw = sources.split(",") if isinstance(sources, str) else list(sources)
+    keys = {s.strip() for s in raw if s.strip() in _SOURCE_META}
+    return keys or None
+
+
+def _scope_meta(keys: set[str], lang: str) -> dict[str, object]:
+    """Describe the active per-source scope for the UI chip (localized labels)."""
+    pairs = sorted(((k, _source_name(k, lang)) for k in keys), key=lambda p: p[1])
+    return {
+        "keys": [k for k, _ in pairs],
+        "labels": [label for _, label in pairs],
+        "count": len(pairs),
+    }
+
+
 def _short_uuid(value: object) -> str:
     return str(value).split("-")[0].upper() if value else "-"
 
@@ -348,57 +389,153 @@ def _changed(when: datetime | None, at: datetime | None, after: str, before: str
 
 
 def _guardrails_card(
-    policy: Policy, audit: _AuditAsOf, ctx: _Context, at: datetime | None
+    policy: Policy, audit: _AuditAsOf, ctx: _Context, at: datetime | None, lang: str
 ) -> dict[str, object]:
     after = ctx.audit_total - audit.decisions  # real decisions logged after T
     rules_active = len(policy.prompt_injection_deny) + len(policy.pii_patterns) + len(policy.tools)
     diff = [
-        _d("changed", f"{_fmt_int(after)} décisions du guard journalisées après T")
+        _d(
+            "changed",
+            _loc(
+                lang,
+                f"{_fmt_int(after)} décisions du guard journalisées après T",
+                f"{_fmt_int(after)} Guard-Entscheidungen nach T protokolliert",
+                f"{_fmt_int(after)} guard decisions logged after T",
+            ),
+        )
         if after > 0
-        else _d("unchanged", "Aucune décision du guard après T"),
+        else _d(
+            "unchanged",
+            _loc(
+                lang,
+                "Aucune décision du guard après T",
+                "Keine Guard-Entscheidung nach T",
+                "No guard decision after T",
+            ),
+        ),
         _changed(
-            ctx.policy_mtime, at, "Politique modifiée après T", "Politique inchangée depuis T"
+            ctx.policy_mtime,
+            at,
+            _loc(
+                lang,
+                "Politique modifiée après T",
+                "Richtlinie nach T geaendert",
+                "Policy changed after T",
+            ),
+            _loc(
+                lang,
+                "Politique inchangée depuis T",
+                "Richtlinie seit T unveraendert",
+                "Policy unchanged since T",
+            ),
         ),
     ]
     return _card(
         [
-            ("Bundle de politiques", f"Guardrails Banking v{policy.version}"),
-            ("Règles actives", str(rules_active)),
-            ("Motifs d'injection", str(len(policy.prompt_injection_deny))),
-            ("Motifs PII surveillés", str(len(policy.pii_patterns))),
-            ("Dernier changement avant T", _fmt(ctx.policy_mtime)),
+            (
+                _loc(lang, "Bundle de politiques", "Richtlinienbuendel", "Policy bundle"),
+                f"Guardrails Banking v{policy.version}",
+            ),
+            (_loc(lang, "Règles actives", "Aktive Regeln", "Active rules"), str(rules_active)),
+            (
+                _loc(lang, "Motifs d'injection", "Injection-Muster", "Injection patterns"),
+                str(len(policy.prompt_injection_deny)),
+            ),
+            (
+                _loc(
+                    lang,
+                    "Motifs PII surveillés",
+                    "Ueberwachte PII-Muster",
+                    "Monitored PII patterns",
+                ),
+                str(len(policy.pii_patterns)),
+            ),
+            (
+                _loc(
+                    lang,
+                    "Dernier changement avant T",
+                    "Letzte Aenderung vor T",
+                    "Last change before T",
+                ),
+                _fmt(ctx.policy_mtime),
+            ),
         ],
         diff,
-        "Voir le détail des règles",
+        _loc(lang, "Voir le détail des règles", "Regeldetails anzeigen", "View rule details"),
         f"/agents/{DEFAULT_AGENT_ID}/garde-fous",
     )
 
 
-def _prompt_model_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
+def _prompt_model_card(ctx: _Context, at: datetime | None, lang: str) -> dict[str, object]:
     diff = [
         _changed(
-            ctx.prompt_mtime, at, "System prompt modifié après T", "System prompt inchangé depuis T"
+            ctx.prompt_mtime,
+            at,
+            _loc(
+                lang,
+                "System prompt modifié après T",
+                "System-Prompt nach T geaendert",
+                "System prompt changed after T",
+            ),
+            _loc(
+                lang,
+                "System prompt inchangé depuis T",
+                "System-Prompt seit T unveraendert",
+                "System prompt unchanged since T",
+            ),
         ),
-        _d("unchanged", "Modèle inchangé"),
+        _d("unchanged", _loc(lang, "Modèle inchangé", "Modell unveraendert", "Model unchanged")),
     ]
     return _card(
         [
-            ("Modèle (figé)", ctx.model),
-            ("Runtime", "Ollama on-prem"),
-            ("Profil d'exécution", ctx.profile),
-            ("Version du system prompt", f"maj {_fmt(ctx.prompt_mtime)}"),
-            ("Température", f"{ctx.temperature:.2f}".replace(".", ",")),
+            (_loc(lang, "Modèle (figé)", "Modell (eingefroren)", "Model (frozen)"), ctx.model),
+            (_loc(lang, "Runtime", "Runtime", "Runtime"), "Ollama on-prem"),
+            (
+                _loc(lang, "Profil d'exécution", "Ausfuehrungsprofil", "Execution profile"),
+                ctx.profile,
+            ),
+            (
+                _loc(
+                    lang,
+                    "Version du system prompt",
+                    "System-Prompt-Version",
+                    "System prompt version",
+                ),
+                _loc(
+                    lang,
+                    f"maj {_fmt(ctx.prompt_mtime)}",
+                    f"akt. {_fmt(ctx.prompt_mtime)}",
+                    f"upd. {_fmt(ctx.prompt_mtime)}",
+                ),
+            ),
+            (
+                _loc(lang, "Température", "Temperatur", "Temperature"),
+                f"{ctx.temperature:.2f}".replace(".", ","),
+            ),
         ],
         diff,
-        "Voir le contenu du prompt",
+        _loc(lang, "Voir le contenu du prompt", "Prompt-Inhalt anzeigen", "View prompt content"),
         f"/agents/{DEFAULT_AGENT_ID}/prompts",
     )
 
 
-def _release_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
+def _release_card(ctx: _Context, at: datetime | None, lang: str) -> dict[str, object]:
     diff = [
         _changed(
-            ctx.run_dt, at, "Nouvelle évaluation exécutée après T", "Aucune évaluation après T"
+            ctx.run_dt,
+            at,
+            _loc(
+                lang,
+                "Nouvelle évaluation exécutée après T",
+                "Neue Evaluierung nach T ausgefuehrt",
+                "New evaluation run after T",
+            ),
+            _loc(
+                lang,
+                "Aucune évaluation après T",
+                "Keine Evaluierung nach T",
+                "No evaluation after T",
+            ),
         ),
     ]
     run_dt = _aware(ctx.run_dt)
@@ -406,19 +543,26 @@ def _release_card(ctx: _Context, at: datetime | None) -> dict[str, object]:
     up_to_date = run_dt is not None and (at_dt is None or run_dt > at_dt)
     return _card(
         [
-            ("Jeu d'évaluation", ctx.catalogue),
-            ("Date d'exécution", _fmt(ctx.run_dt)),
-            ("Environnement", "Local / on-prem"),
-            ("Modèle évalué", ctx.model),
-            ("Statut vs actuel", "À jour" if up_to_date else "Historique"),
+            (_loc(lang, "Jeu d'évaluation", "Evaluierungsset", "Evaluation set"), ctx.catalogue),
+            (_loc(lang, "Date d'exécution", "Ausfuehrungsdatum", "Run date"), _fmt(ctx.run_dt)),
+            (_loc(lang, "Environnement", "Umgebung", "Environment"), "Local / on-prem"),
+            (_loc(lang, "Modèle évalué", "Evaluiertes Modell", "Evaluated model"), ctx.model),
+            (
+                _loc(lang, "Statut vs actuel", "Status vs. aktuell", "Status vs current"),
+                _loc(lang, "À jour", "Aktuell", "Up to date")
+                if up_to_date
+                else _loc(lang, "Historique", "Historisch", "Historical"),
+            ),
         ],
         diff,
-        "Voir le détail de la release",
+        _loc(
+            lang, "Voir le détail de la release", "Release-Details anzeigen", "View release details"
+        ),
         f"/agents/{DEFAULT_AGENT_ID}/evaluations",
     )
 
 
-def _table(states: dict[str, _CatState]) -> list[dict[str, object]]:
+def _table(states: dict[str, _CatState], lang: str) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for cat, st in sorted(states.items(), key=lambda kv: -kv[1].chunks_at_t):
         accessible = st.chunks_at_t > 0
@@ -426,36 +570,79 @@ def _table(states: dict[str, _CatState]) -> list[dict[str, object]]:
         rows.append(
             {
                 "key": cat,
-                "source": _source_name(cat, "fr"),
-                "type": _TYPE_LABEL[tone_key],
+                "source": _source_name(cat, lang),
+                "type": _type_label(tone_key, lang),
                 "type_key": tone_key,
                 "type_tone": _TYPE_TONE[tone_key],
                 "langs": "/".join(sorted(st.langs)) if st.langs else "-",
                 "chunks": st.chunks_at_t,
                 "total_chunks": st.chunks_total,
-                "version": f"ingéré {_fmt(st.first_ins)}" if st.first_ins else "-",
+                "version": _loc(
+                    lang,
+                    f"ingéré {_fmt(st.first_ins)}",
+                    f"indexiert {_fmt(st.first_ins)}",
+                    f"ingested {_fmt(st.first_ins)}",
+                )
+                if st.first_ins
+                else "-",
                 "accessible_until": _fmt(st.last_ins_at_t),
                 "updated": _fmt(st.last_ins_at_t),
                 "first_seen": _fmt(st.first_ins),
                 "status": "accessible" if accessible else "pending",
-                "status_label": "Accessible" if accessible else "Pas encore indexée",
+                "status_label": _loc(lang, "Accessible", "Zugaenglich", "Accessible")
+                if accessible
+                else _loc(lang, "Pas encore indexée", "Noch nicht indexiert", "Not yet indexed"),
             }
         )
     return rows
 
 
 def _timeline(
-    states: dict[str, _CatState], audit: _AuditAsOf, at: datetime | None
+    states: dict[str, _CatState], audit: _AuditAsOf, at: datetime | None, lang: str
 ) -> list[dict[str, object]]:
     events: list[tuple[datetime, str, str]] = []
     # Per-source first ingest events at or before T.
     for cat, st in states.items():
         if st.first_ins is not None and (at is None or st.first_ins <= at):
-            events.append((st.first_ins, f"Source indexée : {_source_name(cat, 'fr')}", "ok"))
+            name = _source_name(cat, lang)
+            events.append(
+                (
+                    st.first_ins,
+                    _loc(
+                        lang,
+                        f"Source indexée : {name}",
+                        f"Quelle indexiert: {name}",
+                        f"Source indexed: {name}",
+                    ),
+                    "ok",
+                )
+            )
     if audit.first_at is not None:
-        events.append((audit.first_at, "Première décision du guard journalisée", "info"))
+        events.append(
+            (
+                audit.first_at,
+                _loc(
+                    lang,
+                    "Première décision du guard journalisée",
+                    "Erste Guard-Entscheidung protokolliert",
+                    "First guard decision logged",
+                ),
+                "info",
+            )
+        )
     if audit.last_at is not None and audit.last_at != audit.first_at:
-        events.append((audit.last_at, "Dernière activité du guard avant T", "info"))
+        events.append(
+            (
+                audit.last_at,
+                _loc(
+                    lang,
+                    "Dernière activité du guard avant T",
+                    "Letzte Guard-Aktivitaet vor T",
+                    "Last guard activity before T",
+                ),
+                "info",
+            )
+        )
     events.sort(key=lambda e: e[0], reverse=True)
     return [
         {"time": _fmt(dt), "label": label, "kind": kind}
@@ -463,9 +650,9 @@ def _timeline(
     ]
 
 
-def _snapshot_section(snapshots: list[dict[str, Any]]) -> dict[str, object]:
+def _snapshot_section(snapshots: list[dict[str, Any]], lang: str) -> dict[str, object]:
     return {
-        "title": "Snapshots enregistrés",
+        "title": _loc(lang, "Snapshots enregistrés", "Gespeicherte Snapshots", "Saved snapshots"),
         "rows": [
             {
                 "id": str(s.get("id", "")),
@@ -505,11 +692,21 @@ def _assemble(
     snapshots: list[dict[str, Any]] | None = None,
     now: datetime | None = None,
     handoffs: list[dict[str, Any]] | None = None,
+    scope: set[str] | None = None,
+    lang: str = "fr",
 ) -> dict[str, object]:
-    """Assemble the reconstruction payload. Pure and I/O-free for unit testing."""
+    """Assemble the reconstruction payload. Pure and I/O-free for unit testing.
+
+    When ``scope`` is a set of corpus-category keys, the knowledge dimension
+    (sources table, coverage, fragment counts, source-ingest timeline events) is
+    restricted to those sources; the agent-wide governance cards (guardrails,
+    prompt/model, release, audit) stay global since they are not per-source.
+    """
     now = now or datetime.now(UTC)
     at = _parse_at(as_of)
     states = _scan_documents(rows, at)
+    if scope is not None:
+        states = {cat: st for cat, st in states.items() if cat in scope}
     chunks_at_t = sum(st.chunks_at_t for st in states.values())
     chunks_total = sum(st.chunks_total for st in states.values())
     last_sync = max(
@@ -519,81 +716,211 @@ def _assemble(
     coverage = round(_PCT * chunks_at_t / chunks_total) if chunks_total else 0
     active = sum(1 for s in states.values() if s.chunks_at_t > 0)
 
+    live = _loc(lang, "live", "live", "live")
+    verified_label = _loc(lang, "Intégrité vérifiée", "Integritaet geprueft", "Integrity verified")
     return {
         "available": True,
         "meta": {
             "as_of": at.isoformat() if at else None,
-            "as_of_label": _fmt(at) if at else "Maintenant (live)",
+            "as_of_label": _fmt(at)
+            if at
+            else _loc(lang, "Maintenant (live)", "Jetzt (live)", "Now (live)"),
             "ref_code": _ref_code(at),
             "tenant": "Crédit Aurore",
-            "agent": "Support client",
-            "context_source": "Reponse",
+            "agent": _loc(lang, "Support client", "Kundensupport", "Customer support"),
+            "context_source": _loc(lang, "Réponse", "Antwort", "Answer"),
             "timezone": "Europe/Paris",
-            "banner": (
+            "scope": _scope_meta(scope, lang) if scope else None,
+            "banner": _loc(
+                lang,
                 "Reconstitué (accessibilité) n'est pas rejoué (sortie du modèle). Cette vue "
                 "reconstitue l'état accessible et applicable à T ; elle ne rejoue pas la réponse "
-                "exacte. Pour rejouer une exécution, utiliser AGIR - Replay."
+                "exacte. Pour rejouer une exécution, utiliser AGIR - Replay.",
+                "Rekonstruiert (Zugaenglichkeit) ist nicht Wiederholt (Modellausgabe). Diese "
+                "Ansicht rekonstruiert den zu T zugaenglichen und anwendbaren Zustand; sie "
+                "wiederholt nicht die exakte Antwort. Zum Wiederholen einer Ausfuehrung AGIR - "
+                "Replay verwenden.",
+                "Reconstructed (accessibility) is not Replayed (model output). This view "
+                "reconstructs the state accessible and applicable at T; it does not replay the "
+                "exact answer. To replay an execution, use AGIR - Replay.",
             ),
         },
         "reconstructed": {
-            "title": "État reconstitué à T",
+            "title": _loc(
+                lang,
+                "État reconstitué à T",
+                "Zustand rekonstruiert zu T",
+                "State reconstructed at T",
+            ),
             "snapshot_id": _snapshot_id(at),
             "verified": True,
-            "verified_label": "Intégrité vérifiée",
-            "built_label": f"Reconstitué le {_fmt(now)} par Tessera Ops",
+            "verified_label": verified_label,
+            "built_label": _loc(
+                lang,
+                f"Reconstitué le {_fmt(now)} par Tessera Ops",
+                f"Rekonstruiert am {_fmt(now)} von Tessera Ops",
+                f"Reconstructed on {_fmt(now)} by Tessera Ops",
+            ),
         },
         "original": {
-            "title": "Réponse d'origine",
-            "cta": "Ouvrir la trace",
+            "title": _loc(lang, "Réponse d'origine", "Urspruengliche Antwort", "Original answer"),
+            "cta": _loc(lang, "Ouvrir la trace", "Trace oeffnen", "Open the trace"),
             "cta_href": "/prouver/audit-logs",
             **_original_card(original, at),
         },
         "guardrails": {
-            "title": "Garde-fous actifs à T",
-            **_guardrails_card(policy, audit, ctx, at),
+            "title": _loc(
+                lang, "Garde-fous actifs à T", "Aktive Schutzregeln zu T", "Active guardrails at T"
+            ),
+            **_guardrails_card(policy, audit, ctx, at, lang),
         },
-        "prompt_model": {"title": "Prompt & modèle à T", **_prompt_model_card(ctx, at)},
-        "release": {"title": "Release à T", **_release_card(ctx, at)},
+        "prompt_model": {
+            "title": _loc(
+                lang, "Prompt & modèle à T", "Prompt & Modell zu T", "Prompt & model at T"
+            ),
+            **_prompt_model_card(ctx, at, lang),
+        },
+        "release": {
+            "title": _loc(lang, "Release à T", "Release zu T", "Release at T"),
+            **_release_card(ctx, at, lang),
+        },
         "timeline": {
-            "title": f"Chronologie à l'instant T ({_fmt(at) if at else 'live'})",
-            "rows": _timeline(states, audit, at),
-            "cta": "Voir la chronologie complète",
+            "title": _loc(
+                lang,
+                f"Chronologie à l'instant T ({_fmt(at) if at else live})",
+                f"Chronologie zum Zeitpunkt T ({_fmt(at) if at else live})",
+                f"Timeline at instant T ({_fmt(at) if at else live})",
+            ),
+            "rows": _timeline(states, audit, at, lang),
+            "cta": _loc(
+                lang,
+                "Voir la chronologie complète",
+                "Vollstaendige Chronologie anzeigen",
+                "View full timeline",
+            ),
             "cta_href": "/prouver/audit-logs",
         },
         "integrity": {
-            "title": "Intégrité de la reconstruction",
+            "title": _loc(
+                lang,
+                "Intégrité de la reconstruction",
+                "Integritaet der Rekonstruktion",
+                "Reconstruction integrity",
+            ),
             "snapshot_id": _snapshot_id(at),
             "coverage": f"{coverage} %",
-            "test_query": f"{active}/{len(states)} sources",
+            "test_query": _loc(
+                lang,
+                f"{active}/{len(states)} sources",
+                f"{active}/{len(states)} Quellen",
+                f"{active}/{len(states)} sources",
+            ),
             "last_sync": _fmt(last_sync),
             "verified": True,
-            "verified_label": "Intégrité vérifiée",
-            "chain_label": f"{_fmt_int(audit.decisions)} décisions journalisées jusqu'à T",
+            "verified_label": verified_label,
+            "chain_label": _loc(
+                lang,
+                f"{_fmt_int(audit.decisions)} décisions journalisées jusqu'à T",
+                f"{_fmt_int(audit.decisions)} Entscheidungen bis T protokolliert",
+                f"{_fmt_int(audit.decisions)} decisions logged up to T",
+            ),
         },
-        "table": {"title": "Sources accessibles à l'instant T", "rows": _table(states)},
+        "table": {
+            "title": _loc(
+                lang,
+                "Sources accessibles à l'instant T",
+                "Zu T zugaengliche Quellen",
+                "Sources accessible at instant T",
+            ),
+            "rows": _table(states, lang),
+        },
         "handoffs": {
-            "title": "Passations agent→agent à l'instant T",
-            "subtitle": "Routage opposable : qui tenait la conversation, reconstitué à T.",
+            "title": _loc(
+                lang,
+                "Passations agent→agent à l'instant T",
+                "Agent→Agent-Uebergaben zu T",
+                "Agent→agent handoffs at instant T",
+            ),
+            "subtitle": _loc(
+                lang,
+                "Routage opposable : qui tenait la conversation, reconstitué à T.",
+                "Opponierbares Routing: wer die Konversation fuehrte, rekonstruiert zu T.",
+                "Opposable routing: who held the conversation, reconstructed at T.",
+            ),
             "rows": handoffs or [],
         },
         "audit_pieces": {
-            "title": "Preuves d'audit disponibles",
+            "title": _loc(
+                lang,
+                "Preuves d'audit disponibles",
+                "Verfuegbare Audit-Nachweise",
+                "Available audit evidence",
+            ),
             "rows": [
-                {"label": "Journal d'événements à date T", "href": "/prouver/audit-logs"},
-                {"label": "Evidence pack qualité", "href": "/prouver/evidence-store"},
-                {"label": "Sources & mémoire", "href": f"/agents/{DEFAULT_AGENT_ID}/connaissances"},
+                {
+                    "label": _loc(
+                        lang,
+                        "Journal d'événements à date T",
+                        "Ereignisprotokoll zum Datum T",
+                        "Event log as of T",
+                    ),
+                    "href": "/prouver/audit-logs",
+                },
+                {
+                    "label": _loc(
+                        lang,
+                        "Evidence pack qualité",
+                        "Qualitaets-Evidence-Pack",
+                        "Quality evidence pack",
+                    ),
+                    "href": "/prouver/evidence-store",
+                },
+                {
+                    "label": _loc(
+                        lang, "Sources & mémoire", "Quellen & Speicher", "Sources & memory"
+                    ),
+                    "href": f"/agents/{DEFAULT_AGENT_ID}/connaissances",
+                },
             ],
         },
         "summary": {
-            "title": "Synthèse de l'état reconstitué",
+            "title": _loc(
+                lang,
+                "Synthèse de l'état reconstitué",
+                "Zusammenfassung des rekonstruierten Zustands",
+                "Reconstructed-state summary",
+            ),
             "cards": [
-                {"label": "Sources accessibles", "value": f"{active} / {len(states)}"},
-                {"label": "Fragments accessibles", "value": _fmt_int(chunks_at_t)},
-                {"label": "Couverture de l'index", "value": f"{coverage} %"},
-                {"label": "Décisions du guard", "value": _fmt_int(audit.decisions)},
+                {
+                    "label": _loc(
+                        lang, "Sources accessibles", "Zugaengliche Quellen", "Accessible sources"
+                    ),
+                    "value": f"{active} / {len(states)}",
+                },
+                {
+                    "label": _loc(
+                        lang,
+                        "Fragments accessibles",
+                        "Zugaengliche Fragmente",
+                        "Accessible fragments",
+                    ),
+                    "value": _fmt_int(chunks_at_t),
+                },
+                {
+                    "label": _loc(
+                        lang, "Couverture de l'index", "Index-Abdeckung", "Index coverage"
+                    ),
+                    "value": f"{coverage} %",
+                },
+                {
+                    "label": _loc(
+                        lang, "Décisions du guard", "Guard-Entscheidungen", "Guard decisions"
+                    ),
+                    "value": _fmt_int(audit.decisions),
+                },
             ],
         },
-        "snapshots": _snapshot_section(snapshots or []),
+        "snapshots": _snapshot_section(snapshots or [], lang),
     }
 
 
@@ -618,14 +945,21 @@ def _build_context() -> _Context:
     )
 
 
-async def build_etat_a_date(as_of: str | None = None) -> dict[str, object]:
+async def build_etat_a_date(
+    as_of: str | None = None, sources: str | None = None, lang: str = "fr"
+) -> dict[str, object]:
     """Reconstruct the agent's accessible state + governing context as of ``as_of``.
 
     Args:
         as_of: ISO instant T (``None`` means live/now). Knowledge, audit and the
             anchored original response are restricted to events at or before T.
+        sources: optional comma-separated corpus-category keys (the ``?sources=``
+            per-source scope). When given, the knowledge dimension is restricted to
+            those sources; everything agent-wide stays global.
+        lang: UI language (fr / de / en) for the reconstruction's labels.
     """
     at = _parse_at(as_of)
+    scope = _normalize_scope(sources)
     rows = await _fetch_documents()
     original = await _fetch_original(at)
     audit = _scan_audit(get_settings().guard.audit_file, at)
@@ -633,7 +967,16 @@ async def build_etat_a_date(as_of: str | None = None) -> dict[str, object]:
     policy = load_policy()
     ctx = _build_context()
     return _assemble(
-        rows, audit, policy, ctx, original, as_of, _load_snapshots(), handoffs=handoffs
+        rows,
+        audit,
+        policy,
+        ctx,
+        original,
+        as_of,
+        _load_snapshots(),
+        handoffs=handoffs,
+        scope=scope,
+        lang=lang,
     )
 
 
@@ -659,13 +1002,18 @@ def _snapshot_record(
     }
 
 
-async def save_etat_snapshot(as_of: str | None = None) -> dict[str, object]:
+async def save_etat_snapshot(
+    as_of: str | None = None, sources: str | None = None, lang: str = "fr"
+) -> dict[str, object]:
     """Persist a snapshot of the reconstruction at ``as_of``.
 
-    Returns the refreshed payload, with the newly-saved snapshot at the head of
-    the durable snapshot list.
+    The saved snapshot record is the full (unscoped) opposable state at T; the
+    ``sources`` scope only shapes the refreshed payload returned to the caller so
+    the UI stays consistent with the source filter it is viewing. ``lang``
+    localizes that refreshed payload (the durable record stays verbatim).
     """
     at = _parse_at(as_of)
+    scope = _normalize_scope(sources)
     rows = await _fetch_documents()
     original = await _fetch_original(at)
     audit = _scan_audit(get_settings().guard.audit_file, at)
@@ -676,5 +1024,14 @@ async def save_etat_snapshot(as_of: str | None = None) -> dict[str, object]:
     snapshots.insert(0, _snapshot_record(rows, audit, as_of, datetime.now(UTC)))
     _save_snapshots(snapshots)
     return _assemble(
-        rows, audit, policy, ctx, original, as_of, snapshots, handoffs=handoffs
+        rows,
+        audit,
+        policy,
+        ctx,
+        original,
+        as_of,
+        snapshots,
+        handoffs=handoffs,
+        scope=scope,
+        lang=lang,
     )

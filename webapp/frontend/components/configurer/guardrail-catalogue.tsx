@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchGuardrailCatalogue } from "@/lib/api/client";
@@ -21,6 +22,19 @@ const VERDICT_DOT: Record<string, string> = {
   bad: "bg-amber-400",
   muted: "bg-[var(--tessera-text-muted)]",
 };
+
+/** ⓘ for a guardrail KPI, reading guardrailCatalogue.explain.<k>.{what,how,source?}. */
+function KpiInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("guardrailCatalogue.explain");
+  return te.has(`${k}.what`) ? (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  ) : null;
+}
 
 export function GuardrailCatalogue() {
   const t = useTranslations("guardrailCatalogue");
@@ -64,9 +78,12 @@ export function GuardrailCatalogue() {
               key={kpi.key}
               className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
             >
-              <p className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-                {kpi.label}
-              </p>
+              <div className="flex items-center gap-1">
+                <p className="min-w-0 truncate text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                  {kpi.label}
+                </p>
+                <KpiInfo k={kpi.key} title={kpi.label} />
+              </div>
               <p className="mt-1 truncate font-mono text-[0.82rem] font-semibold text-white">
                 {kpi.value}
               </p>

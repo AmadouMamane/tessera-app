@@ -1,0 +1,11 @@
+# Auto-provisioned Prometheus datasource for the Claude-Powered Grafana (ADR 0010).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: tessera-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true

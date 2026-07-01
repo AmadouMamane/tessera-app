@@ -27,6 +27,52 @@ from tessera.observability import (
 )
 from tessera.observability.eval.datasets import load_quality_datasets
 from tessera.observability.eval.scores import recent_scores
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+
+# Localized free-text (fr, de, en) for the mined cause/action labels.
+_TR: dict[str, tuple[str, str, str]] = {
+    "c_multilingual_quality": (
+        "Qualité multilingue",
+        "Mehrsprachige Qualitaet",
+        "Multilingual quality",
+    ),
+    "c_hallu": ("Risque hallucination", "Halluzinationsrisiko", "Hallucination risk"),
+    "c_intent": ("Intent non couvert", "Nicht abgedeckter Intent", "Uncovered intent"),
+    "c_corpus_debt": ("Dette corpus", "Korpus-Schuld", "Corpus debt"),
+    "c_lang_gap": ("Écart multilingue", "Mehrsprachige Luecke", "Multilingual gap"),
+    "c_data_missing": ("Données manquantes", "Fehlende Daten", "Missing data"),
+    "a_fix_quality": ("Corriger la qualité {x}", "Qualitaet {x} korrigieren", "Fix {x} quality"),
+    "a_curate": (
+        "Curer {n} tours vers l'eval set",
+        "{n} Tours ins Eval-Set kuratieren",
+        "Curate {n} turns into the eval set",
+    ),
+    "a_cover_intents": (
+        "Couvrir {n} intents non routés",
+        "{n} nicht geroutete Intents abdecken",
+        "Cover {n} unrouted intents",
+    ),
+    "a_refresh_corpus": (
+        "Rafraîchir le corpus réglementaire",
+        "Regulierungskorpus aktualisieren",
+        "Refresh the regulatory corpus",
+    ),
+    "a_fill_lang": (
+        "Combler l'écart multilingue",
+        "Mehrsprachige Luecke schliessen",
+        "Close the multilingual gap",
+    ),
+    "a_fill_data": (
+        "Compléter les données manquantes",
+        "Fehlende Daten ergaenzen",
+        "Complete the missing data",
+    ),
+    "a_treat_signal": ("Traiter le signal {s}", "Signal {s} behandeln", "Handle signal {s}"),
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
 
 __all__ = [
     "Candidate",
@@ -110,32 +156,33 @@ class ImprovementReport:
     current_version: str = ""
 
 
-def _cause_label(signal: str) -> str:
+def _cause_label(signal: str, lang: str) -> str:
     if signal.startswith("low_quality_"):
-        return "Qualité multilingue"
+        return _t("c_multilingual_quality", lang)
     return {
-        "low_faithfulness": "Risque hallucination",
-        "unknown_intent": "Intent non couvert",
-        "stale_corpus": "Dette corpus",
-        "language_gap": "Écart multilingue",
-        "coverage_gap": "Données manquantes",
+        "low_faithfulness": _t("c_hallu", lang),
+        "unknown_intent": _t("c_intent", lang),
+        "stale_corpus": _t("c_corpus_debt", lang),
+        "language_gap": _t("c_lang_gap", lang),
+        "coverage_gap": _t("c_data_missing", lang),
     }.get(signal, signal.replace("_", " ").capitalize())
 
 
-def _action_label(signal: str, evidence: int) -> str:
+def _action_label(signal: str, evidence: int, lang: str) -> str:
     if signal.startswith("low_quality_"):
-        return f"Corriger la qualité {signal.rsplit('_', 1)[-1].upper()}"
+        return _t("a_fix_quality", lang).format(x=signal.rsplit("_", 1)[-1].upper())
     return {
-        "low_faithfulness": f"Curer {evidence} tours vers l'eval set",
-        "unknown_intent": f"Couvrir {evidence} intents non routés",
-        "stale_corpus": "Rafraîchir le corpus réglementaire",
-        "language_gap": "Combler l'écart multilingue",
-        "coverage_gap": "Compléter les données manquantes",
-    }.get(signal, f"Traiter le signal {signal}")
+        "low_faithfulness": _t("a_curate", lang).format(n=evidence),
+        "unknown_intent": _t("a_cover_intents", lang).format(n=evidence),
+        "stale_corpus": _t("a_refresh_corpus", lang),
+        "language_gap": _t("a_fill_lang", lang),
+        "coverage_gap": _t("a_fill_data", lang),
+    }.get(signal, _t("a_treat_signal", lang).format(s=signal))
 
 
-def compute_improvement() -> ImprovementReport:
+def compute_improvement(lang: str = "fr") -> ImprovementReport:
     """Assemble the continuous-improvement posture from the real telemetry."""
+    lang = _norm_lang(lang)
     scores = recent_scores()
     n_turns = 0
     n_low = 0
@@ -146,8 +193,8 @@ def compute_improvement() -> ImprovementReport:
         n_turns += 1
         if float(s.get("score", 1.0)) < _LOW_FAITHFULNESS:  # type: ignore[arg-type]
             n_low += 1
-            lang = s.get("language")
-            key = lang if isinstance(lang, str) else "unknown"
+            lang_val = s.get("language")
+            key = lang_val if isinstance(lang_val, str) else "unknown"
             languages_low[key] = languages_low.get(key, 0) + 1
 
     questions = [b.question for b in replay_mod.recent_bundles()]
@@ -177,8 +224,8 @@ def compute_improvement() -> ImprovementReport:
         opportunities.append(
             Opportunity(
                 rank=i + 1,
-                action=_action_label(item.signal, item.evidence),
-                cause=_cause_label(item.signal),
+                action=_action_label(item.signal, item.evidence, lang),
+                cause=_cause_label(item.signal, lang),
                 gain_pts=gain,
                 effort=effort,
                 risk=risk,
@@ -242,9 +289,9 @@ def compute_improvement() -> ImprovementReport:
     )
 
 
-def _safe_compute() -> ImprovementReport | None:
+def _safe_compute(lang: str = "fr") -> ImprovementReport | None:
     try:
-        return compute_improvement()
+        return compute_improvement(lang)
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
         return None

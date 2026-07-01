@@ -1,4 +1,9 @@
 {
+  "metricInfo": {
+    "about": "Über {name}",
+    "calcul": "Berechnung",
+    "source": "Quelle"
+  },
   "app": {
     "title": "Tessera",
     "subtitle": "AI Control Plane",
@@ -305,7 +310,60 @@
       "auditBroken": "Kette unterbrochen",
       "vsBaseline": "{delta} vs Ziel",
       "noDataAtT": "Keine Daten zu T",
-      "noTrend": "keine Daten"
+      "noTrend": "keine Daten",
+      "openSource": "Quelle öffnen: {label}"
+    },
+    "explain": {
+      "quality": {
+        "what": "Der Anteil der von der laufenden Bewertung als konform eingestuften Antworten: Quellentreue, keine Halluzination, Einhaltung der Regeln.",
+        "how": "Konforme Antworten ÷ bewertete Antworten im Zeitraum, auf 100 normiert. Das Ziel ist die Service-Schwelle (SLO).",
+        "source": "Laufendes Bewertungsprotokoll (ein Score pro Turn)."
+      },
+      "failingControls": {
+        "what": "Die Zahl der Kontrollen außerhalb ihres Ziels, bezogen auf die tatsächlich im Zeitraum gemessenen Kontrollen.",
+        "how": "Eine Kontrolle ist „fehlerhaft“, wenn ihr Wert die Schwelle überschreitet (z. B. Treue < 95 %, PII-Leck > 0,5 %). Angezeigt: außerhalb ÷ gemessen.",
+        "source": "Die Tabelle „Kritische Kontrollen“ unten."
+      },
+      "openRisks": {
+        "what": "Die noch offenen Risikosituationen: erkannte anomale Sitzungen plus ausgelöste Incident-Verfahren.",
+        "how": "Anomalien (Verhaltensanalyse der Sitzungen) + ausgelöste Playbooks, summiert."
+      },
+      "regression": {
+        "what": "Zeigt, ob der letzte Versionsvergleich einen Qualitätsrückgang gegenüber der Referenz ergibt.",
+        "how": "Score der aktuellen Version minus Referenz; „Regression“, wenn die Differenz über dem Rauschen negativ ist."
+      },
+      "cost": {
+        "what": "Die geschätzten LLM-Kosten im Zeitraum: verbrauchte Tokens multipliziert mit dem Modelltarif.",
+        "how": "Summe der Tokens pro Turn × Tarif pro Modell. Das Abzeichen markiert anomale Spitzen.",
+        "source": "Token-Zähler pro Turn."
+      },
+      "audit": {
+        "what": "Die Zahl der Einträge im fälschungssicheren Audit-Protokoll und der Zustand seiner Kette.",
+        "how": "Jede sensible Aktion fügt einen per Hash verketteten Eintrag hinzu; „Kette verifiziert“ = kein Glied verändert oder fehlend.",
+        "source": "S1-Audit-Protokoll (hash-verkettet)."
+      },
+      "criticalControls": {
+        "what": "Die laufend überwachten Qualitäts-, Sicherheits- und Konformitätskontrollen mit Wert, Ziel und Trend.",
+        "how": "Jede Zeile ist ein Signal; der Zustand vergleicht den aktuellen Wert mit seiner Schwelle."
+      },
+      "cases": {
+        "what": "Die Warteschlange der von einem Operator zu bearbeitenden Kontrollfälle, sortiert nach Priorität und Frist (SLA).",
+        "how": "Offene Fälle aus Kontrollen und Meldungen; die Reiter filtern nach Priorität.",
+        "source": "Operator-Warteschlange (Seite „Zu bearbeiten“)."
+      },
+      "controlCases": {
+        "what": "Die aktuell ausgelösten Incident-Verfahren (Playbooks) und ihre ersten Schritte.",
+        "how": "Ein Playbook wird ausgelöst, wenn sein Signal die definierte Schwelle überschreitet."
+      },
+      "governed": {
+        "what": "Der Strom der gesteuerten Entscheidungen: Agent-Routing, Übergabe (Hand-off), Vorschlag, Inbetriebnahme.",
+        "how": "Append-only-Ereignisse des Governance-Protokolls, neueste zuerst — jedes belegbar.",
+        "source": "S1-Audit-Protokoll (Governance-Ereignisse)."
+      },
+      "traces": {
+        "what": "Das Volumen der Ausführungs-Traces und die beobachteten p50/p95-Latenzen.",
+        "how": "Aus dem Langfuse-Stack gelesen (vom Agenten gesendete OpenTelemetry-Traces)."
+      }
     },
     "criticalControls": {
       "title": "Kritische Kontrollen",
@@ -319,11 +377,13 @@
       "impact": "Auswirkung",
       "action": "Aktion",
       "investigate": "Untersuchen",
-      "liveProbe": "Live-Sonde · nicht im Katalog"
+      "liveProbe": "Live-Sonde · nicht im Katalog",
+      "viewAll": "Alle Signale"
     },
     "cases": {
       "title": "Zu bearbeitende Kontrollfälle",
       "viewAll": "Alle anzeigen ({n})",
+      "openCase": "Fall in der Warteschlange öffnen",
       "empty": "Keine Fälle in der Warteschlange",
       "tab": {
         "all": "Alle",
@@ -344,7 +404,8 @@
       "blocked": "Live-Schaltung blockiert · {agent}",
       "deployModel": "Modell ausgerollt · {version}",
       "deployPrompt": "Prompt ausgerollt · {version}",
-      "deployPolicy": "Richtlinie ausgerollt · {version}"
+      "deployPolicy": "Richtlinie ausgerollt · {version}",
+      "viewAll": "Audit-Journal"
     },
     "traces": {
       "title": "Observability · Traces",
@@ -376,7 +437,8 @@
     "controlCases": {
       "title": "Zu bearbeitende Vorfälle (Verfahren)",
       "count": "{n} ausgelöst",
-      "clear": "Kein Verfahren ausgelöst — nominal."
+      "clear": "Kein Verfahren ausgelöst — nominal.",
+      "viewAll": "In Incidents öffnen"
     },
     "rightColumn": {
       "incidents": "Aktive oder jüngste Vorfälle",
@@ -391,7 +453,8 @@
         "compliance": "Compliance Gate"
       },
       "activities": "Aktuelle Scores",
-      "noActivity": "Keine aktuellen Scores."
+      "noActivity": "Keine aktuellen Scores.",
+      "viewIncidents": "Alle anzeigen"
     },
     "quick": {
       "title": "Schnellaktionen",
@@ -513,6 +576,34 @@
       "chainHint": "Keine Abweichung",
       "chainBrokenHint": "Abweichung erkannt"
     },
+    "explain": {
+      "signed_events": {
+        "what": "Die Gesamtzahl der im Audit-Protokoll erfassten Ereignisse, jedes signiert.",
+        "how": "Jede sensible Aktion fügt im Fenster einen per Hash verketteten Eintrag hinzu.",
+        "source": "S1-Audit-Protokoll (hash-verkettet)."
+      },
+      "sensitive_actions": {
+        "what": "Die kritischen Aktionen: Werkzeugaufrufe und Speicherzugriffe (Lesen/Schreiben von Daten).",
+        "how": "Einträge vom Typ Werkzeug oder Speicher, im Fenster gezählt."
+      },
+      "guard_refusals": {
+        "what": "Die Zahl der Entscheidungen, bei denen der Guard eine Aktion abgelehnt hat.",
+        "how": "Guard-Einträge mit Ergebnis „abgelehnt“."
+      },
+      "proof_events": {
+        "what": "Ereignisse mit einem überprüfbaren Nachweis (wiederverwendbarer Hash).",
+        "how": "Einträge mit referenzierbarem Nachweis-Fingerabdruck."
+      },
+      "chain_integrity": {
+        "what": "Der Zustand der Audit-Kette: verifiziert (kein Glied verändert) oder gebrochen.",
+        "how": "Erneute Hash-Verkettungsprüfung Ende-zu-Ende; „gebrochen“ bei jeder Abweichung.",
+        "source": "Kettenprüfung (verify_audit_chain)."
+      },
+      "unique_actors": {
+        "what": "Die Zahl der unterschiedlichen Akteure (Modell, Dienst, Mensch, System), die gehandelt haben.",
+        "how": "Zählung unterschiedlicher Akteure im Fenster."
+      }
+    },
     "delta": {
       "none": "—"
     },
@@ -550,6 +641,7 @@
       "guard": "Entscheidungen",
       "tool": "Werkzeuge",
       "memory": "Speicher",
+      "governance": "Governance",
       "other": "Andere"
     },
     "roles": {
@@ -716,6 +808,29 @@
     }
   },
   "health": {
+    "openSource": "Quelle öffnen: {label}",
+    "explain": {
+      "backend": {
+        "what": "Der Gesundheitszustand des Backend-Dienstes (die Agenten-API): erreichbar und betriebsbereit.",
+        "how": "Liveness-Probe /healthz; „ok“ = der Dienst antwortet.",
+        "source": "/healthz."
+      },
+      "readiness": {
+        "what": "Bereitschaft: der Dienst ist bereit, Verkehr zu bedienen (Abhängigkeiten geladen).",
+        "how": "/readyz-Probe: DB, Modelle und Korpus bereit; „down“, wenn eine Abhängigkeit fehlt.",
+        "source": "/readyz."
+      },
+      "budget": {
+        "what": "Die geschätzten kumulierten LLM-Kosten (Eingabe-/Ausgabe-Tokens × Modelltarif) — nur für Administratoren.",
+        "how": "Summe der Tokens × Tarif pro Modell.",
+        "source": "Budget-Zähler (Tokens)."
+      },
+      "version": {
+        "what": "Die bereitgestellte Version des Agenten-Backends.",
+        "how": "Vom Dienst beim Start gemeldete Version.",
+        "source": "/healthz."
+      }
+    },
     "title": "Servicestatus",
     "description": "Echtzeit-Indikatoren für Backend, Postgres-Pool und LLM-Budget.",
     "cards": {
@@ -1392,11 +1507,89 @@
       "openDataset": "Dataset öffnen"
     },
     "sec": {
-      "etat": "A. Aktueller Zustand",
-      "diagnostic": "B. Ursachenanalyse",
-      "predictive": "C. Prädiktive Signale",
-      "actions": "D. Empfohlene Aktionen"
+      "etat": "Aktueller Zustand",
+      "diagnostic": "Ursachenanalyse",
+      "predictive": "Prädiktive Signale",
+      "actions": "Empfohlene Aktionen"
     },
+    "explain": {
+      "etat": {
+        "what": "Der Qualitätszustand jetzt: Gesamtscore, fehlerhafte oder alarmierte Kontrollen, Auswirkung der aktuellen Release und Entwicklung über den Zeitraum.",
+        "how": "Aggregiert das Treue-SLO, die Zahl der Signale außerhalb des Ziels und den Diff der letzten Release.",
+        "source": "Laufende Bewertung + Release-Berichte."
+      },
+      "diagnostic": {
+        "what": "Warum die Qualität abweicht: Fehlerverteilung nach Typ, Judge-Kalibrierung, prioritäre Fälle und Grundursache.",
+        "how": "Katalog dokumentierter Fehler + Clustering der fehlgeschlagenen Fälle + Versions-Diff."
+      },
+      "predictive": {
+        "what": "Frühwarnsignale für eine Regression: Regressionsrisiko, Judge-Drift, Fehlerprädiktor, Absicht und Lokalisierung.",
+        "how": "Risikomodelle über die Score-Serien und die Metrik-Drift."
+      },
+      "actions": {
+        "what": "Konkrete Maßnahmen, abgeleitet aus offenen Regressionen und realen fehlgeschlagenen Fällen.",
+        "how": "Pro offener Regression oder Fall-Cluster wird eine Empfehlung erzeugt."
+      },
+      "scoreGlobal": {
+        "what": "Der globale Qualitätsscore von 100: Anteil der als konform bewerteten Antworten (Treue-SLO).",
+        "how": "Konforme Antworten ÷ bewertete Antworten, auf 100 normiert.",
+        "source": "Laufendes Bewertungsprotokoll."
+      },
+      "nonRegression": {
+        "what": "Nicht-Regressionsrate: Anteil der Fälle, die sich gegenüber der Referenzversion nicht verschlechtert haben.",
+        "how": "Stabile oder verbesserte Fälle ÷ verglichene Fälle.",
+        "source": "Release-Berichte."
+      },
+      "regressionsOpen": {
+        "what": "Die Zahl der noch offenen Regressionen gegenüber der Referenz.",
+        "how": "Fälle, deren Score über das Rauschen hinaus gefallen und noch nicht behoben ist.",
+        "source": "Release-Berichte."
+      },
+      "judgeKappa": {
+        "what": "Übereinstimmung (Cohens Kappa) zwischen dem LLM-Judge und den menschlichen Referenz-Annotationen.",
+        "how": "Kappa über ein Gold-Set; über 0,6 = substanzielle Übereinstimmung.",
+        "source": "Judge-Kalibrierung (Gold-Set)."
+      },
+      "casEval": {
+        "what": "Die Zahl der im letzten Nicht-Regressions-Run bewerteten Katalogfälle.",
+        "how": "Vom Bewertungs-Harness ausgeführte Fälle.",
+        "source": "Run-Archiv."
+      },
+      "faithfulness": {
+        "what": "Treue: Die Antwort bleibt den zitierten Quellen treu, ohne Extrapolation.",
+        "how": "Mittlerer Judge-Score für Treue; das Delta vergleicht mit dem Periodenbeginn.",
+        "source": "Score-Serien (ein Score pro Turn)."
+      },
+      "grounding": {
+        "what": "Verankerung: Die Antwort stützt sich auf tatsächlich abgerufene Passagen.",
+        "how": "Mittlerer Verankerungs-Score; Delta über den Zeitraum.",
+        "source": "Score-Serien."
+      },
+      "hallucination": {
+        "what": "Halluzination: Aussagen, die nicht durch die Quellen gestützt sind.",
+        "how": "Mittlerer Score der Metrik; ein höherer Score ist besser (gemessene Abwesenheit von Halluzination).",
+        "source": "Score-Serien."
+      },
+      "faithGrounding": {
+        "what": "Das Streudiagramm Treue × Verankerung: jeder Punkt ist ein Turn; oben rechts = treu und verankert zugleich.",
+        "how": "Paare (Treue, Verankerung) pro Turn; die Farbe fasst den Mittelwert beider zusammen."
+      },
+      "failureDistribution": {
+        "what": "Die Verteilung der fehlgeschlagenen Fälle nach Fehlertyp (Injection, PII-Leck, Halluzination…).",
+        "how": "Zählung der fehlgeschlagenen Fälle gruppiert nach Kategorie, Top 5.",
+        "source": "Katalog dokumentierter Fehler."
+      },
+      "judgeCalibration": {
+        "what": "Wie zuverlässig der LLM-Judge ist: Übereinstimmung mit Menschen, Verbositäts-Bias und Stichprobengröße.",
+        "how": "Kappa + Übereinstimmung über ein Gold-Set; Korrelation zur Antwortlänge.",
+        "source": "Judge-Kalibrierung (Gold-Set)."
+      },
+      "priorityCases": {
+        "what": "Die schwerwiegendsten fehlgeschlagenen Fälle, die zuerst zu bearbeiten sind, nach Schweregrad sortiert.",
+        "how": "Fälle aus dem Fehlerkatalog, geordnet kritisch → niedrig."
+      }
+    },
+    "seeDetail": "Details anzeigen",
     "reco": {
       "title": "Empfohlene Aktionen",
       "curate": "Fehlerfälle zum Regression-Set",
@@ -2107,7 +2300,7 @@
         "nonRegression": "Nicht-Regressionsrate",
         "regressionsOpen": "Offene Regressionen",
         "judgeKappa": "Judge-Übereinstimmung κ",
-        "casEval": "Bewertete Fälle (7T)",
+        "casEval": "Bewertete Fälle",
         "casFailed": "Fehlerfälle"
       },
       "etat": {
@@ -2193,6 +2386,36 @@
       "guard": "Guard-Wirksamkeit",
       "recall": "Recall",
       "vs7d": "vs. 7 T"
+    },
+    "explain": {
+      "attackRate": {
+        "what": "Der Anteil der Angriffe (Prompt-Injektionen), die den Guard umgehen.",
+        "how": "Erfolgreiche Angriffe ÷ versuchte Angriffe auf dem Angriffskorpus. Niedriger = besser.",
+        "source": "Firewall-Sonde auf Angriffskorpus."
+      },
+      "blocked": {
+        "what": "Die Zahl der vom Guard erkannten und blockierten Prompt-Injektionen.",
+        "how": "Anzahl der von der Firewall im Zeitraum abgewiesenen Versuche."
+      },
+      "piiLeak": {
+        "what": "Der Anteil der Antworten mit einer personenbezogenen Angabe, die nicht hätte erscheinen dürfen.",
+        "how": "Antworten mit PII-Leck ÷ bewertete Antworten. Ziel ≤ 0,5 %.",
+        "source": "PII-Analyse der Antworten."
+      },
+      "leastPriv": {
+        "what": "Die Lücke zwischen tatsächlich genutzten und dem Agenten gewährten Werkzeugen (least privilege).",
+        "how": "Genutzte ÷ gewährte Werkzeuge; eine große Lücke deutet auf überflüssige Rechte hin."
+      },
+      "sensitiveMemory": {
+        "what": "Die Zahl sensibler Speichereinträge nahe ihrem Ablauf (TTL).",
+        "how": "Einträge, deren TTL bald abläuft — zu löschen oder zu erneuern.",
+        "source": "Speicher-Inventar (Governance)."
+      },
+      "guard": {
+        "what": "Die Gesamtwirksamkeit des Guards: sein F1 (Balance Präzision/Recall) gegen Angriffe.",
+        "how": "F1 = harmonisches Mittel aus Präzision/Recall; Recall = erkannte ÷ tatsächliche Angriffe.",
+        "source": "Firewall-Sonde (fester Angriffskorpus)."
+      }
     },
     "col": {
       "signal": "Signal",
@@ -2363,6 +2586,37 @@
       "pts": "Pkt.",
       "vsPrev": "vs Vorper."
     },
+    "explain": {
+      "score": {
+        "what": "Das Gesamtkonformitätsniveau des Agenten, laufend aus Runtime-Signalen abgeleitet.",
+        "how": "Gewichtete Aggregation konformer / teilweiser / nicht konformer Kontrollen über die Rahmenwerke.",
+        "source": "Runtime-Signale, den Rahmenwerken zugeordnet (DORA, DSGVO, AI Act…)."
+      },
+      "obligations": {
+        "what": "Die Zahl der regulatorischen Pflichten, die durch mindestens eine Kontrolle abgedeckt sind.",
+        "how": "Pflichten mit zugeordneter Kontrolle, bezogen auf alle verfolgten Rahmenwerke."
+      },
+      "conformant": {
+        "what": "Die Zahl der Kontrollen, deren Runtime-Nachweis die Pflicht erfüllt.",
+        "how": "Im Zeitraum als „konform“ bewertete Kontrollen."
+      },
+      "partial": {
+        "what": "Teilweise erfüllte Kontrollen — unvollständiger Nachweis oder nahe der Schwelle.",
+        "how": "Als „teilweise“ bewertete Kontrollen (weder konform noch fehlerhaft)."
+      },
+      "nonConformant": {
+        "what": "Fehlerhafte Kontrollen: die Pflicht ist nicht erfüllt.",
+        "how": "Als „nicht konform“ bewertete Kontrollen — vorrangig zu beheben."
+      },
+      "residual": {
+        "what": "Risiken, die trotz vorhandener Kontrollen bestehen bleiben, unter Beobachtung.",
+        "how": "Identifizierte, nicht geschlossene Risiken, nach Schweregrad gewichtet."
+      },
+      "deadlines": {
+        "what": "Die nahen regulatorischen Fristen, die eine Handlung erfordern.",
+        "how": "Pflichten oder Behebungen, deren Frist näher rückt."
+      }
+    },
     "panel": {
       "mapping": "Regulatorische Kartierung",
       "obligations": "Pflichten mit Risiko ({n})",
@@ -2466,6 +2720,43 @@
       "tokens": "Tokens",
       "pts": "Pkt.",
       "vsPrev": "vs Vorper."
+    },
+    "explain": {
+      "availability": {
+        "what": "Der Zeitanteil, in dem der Dienst korrekt geantwortet hat (operative Verfügbarkeit).",
+        "how": "1 − (fehlerhafte Anfragen ÷ Gesamtanfragen) über das Fenster."
+      },
+      "errorRate": {
+        "what": "Der Anteil der mit Fehler beendeten Anfragen (Werkzeug abgelehnt, Fehler, Timeout…).",
+        "how": "Fehlerhafte ÷ gesamte Anfragen über das Fenster. Niedriger = besser."
+      },
+      "p50": {
+        "what": "Die mediane Latenz: die Hälfte der Anfragen antwortet schneller.",
+        "how": "50. Perzentil der Ende-zu-Ende-Antwortzeit über das Fenster.",
+        "source": "Ausführungs-Traces."
+      },
+      "p95": {
+        "what": "Die Tail-Latenz: 95 % der Anfragen antworten darunter — zeigt Spitzen.",
+        "how": "95. Perzentil der Ende-zu-Ende-Antwortzeit.",
+        "source": "Ausführungs-Traces."
+      },
+      "toolSuccess": {
+        "what": "Der Anteil der Werkzeugaufrufe, die erfolgreich sind (ohne Ablehnung/Argumentfehler).",
+        "how": "Erfolgreiche ÷ gesamte Werkzeugaufrufe."
+      },
+      "totalCost": {
+        "what": "Die gesamten LLM-Kosten über das Fenster: verbrauchte Tokens × Modelltarif.",
+        "how": "Summe der Tokens pro Anfrage × Tarif pro Modell.",
+        "source": "Token-Zähler."
+      },
+      "costPerReq": {
+        "what": "Die durchschnittlichen LLM-Kosten pro Anfrage.",
+        "how": "Gesamtkosten ÷ Anzahl der Anfragen über das Fenster."
+      },
+      "requests": {
+        "what": "Das Volumen der im Fenster bearbeiteten Anfragen.",
+        "how": "Anzahl der gezählten Turns/Aufrufe."
+      }
     },
     "panel": {
       "errors": "Fehlerverteilung ({n})",
@@ -2575,6 +2866,7 @@
     "noData": "keine Daten"
   },
   "improvement": {
+    "openSource": "Quelle öffnen: {label}",
     "title": "Verbesserung",
     "subtitle": "Priorisieren, ausführen und messen Sie Qualitäts-Remediationen Ihrer KI-Agenten.",
     "loading": "Verbesserungs-Haltung wird geladen…",
@@ -2595,6 +2887,40 @@
       "coverage": "Eval-Set-Abdeckung",
       "debt": "Korpus-Schuld",
       "roi": "Geschätzter ROI"
+    },
+    "explain": {
+      "gain": {
+        "what": "Der erreichbare Qualitätsgewinn, wenn die priorisierten Verbesserungen umgesetzt werden.",
+        "how": "Summe der geschätzten Gewinne (in Punkten) der offenen Chancen."
+      },
+      "actions": {
+        "what": "Die Zahl der von der Analyse empfohlenen aktiven Verbesserungsmaßnahmen.",
+        "how": "Chancen im aktiven Status (zu starten / in Arbeit)."
+      },
+      "curate": {
+        "what": "Die Zahl der Fälle, die auf Kuratierung warten, um das Eval-Set anzureichern.",
+        "how": "Gemeldete Fälle (niedriger Score, Fehlschlag), noch nicht kuratiert."
+      },
+      "frozen": {
+        "what": "Die Zahl eingefrorener Inbetriebnahmen (Qualitäts-Gate nicht bestanden).",
+        "how": "Durch einen Guard oder ein erschöpftes Fehlerbudget blockierte Releases."
+      },
+      "shadow": {
+        "what": "Kandidaten, die vor Produktion im Schattenverkehr oder per Replay zu testen sind.",
+        "how": "Varianten, bereit zum Vergleich ohne Auswirkung auf Nutzer."
+      },
+      "coverage": {
+        "what": "Der Anteil der vom Eval-Set abgedeckten Schlüsselverhalten.",
+        "how": "Abgedeckte ÷ erwartete Fälle; Ziel ≥ 80 %."
+      },
+      "debt": {
+        "what": "Das Alter des Korpus: wie lange er nicht aufgefrischt wurde.",
+        "how": "Tage seit der letzten signifikanten Ingestion oder Aktualisierung."
+      },
+      "roi": {
+        "what": "Der geschätzte Return on Investment der Verbesserungen im Verhältnis zu ihren Kosten.",
+        "how": "Erwarteter Gewinn bezogen auf den geschätzten Aufwand."
+      }
     },
     "panel": {
       "opportunities": "Prioritäre Chancen",
@@ -2645,6 +2971,53 @@
     }
   },
   "incidents": {
+    "explain": {
+      "open": {
+        "what": "Die Zahl der aktuell offenen (ungelösten) Vorfälle.",
+        "how": "Vorfälle im Status offen oder in Bearbeitung über das Fenster.",
+        "source": "Vorfallregister."
+      },
+      "critical": {
+        "what": "Die Zahl der noch laufenden Vorfälle mit kritischem Schweregrad.",
+        "how": "Offene Vorfälle mit Schweregrad „kritisch“."
+      },
+      "mtta": {
+        "what": "Mittlere Zeit bis zur Annahme (MTTA): von der Auslösung bis zur Bestätigung, über 7 Tage gemittelt.",
+        "how": "Mittelwert (bestätigt − ausgelöst) über die Vorfälle der letzten 7 Tage.",
+        "source": "Vorfallprotokoll (Zeitstempel)."
+      },
+      "mttr": {
+        "what": "Mittlere Zeit bis zur Lösung (MTTR): von der Auslösung bis zum Abschluss, über 7 Tage gemittelt.",
+        "how": "Mittelwert (geschlossen − ausgelöst) über die Vorfälle der letzten 7 Tage.",
+        "source": "Vorfallprotokoll (Zeitstempel)."
+      },
+      "playbooks": {
+        "what": "Die Zahl der aktuell laufenden Vorfallverfahren (Playbooks).",
+        "how": "Playbooks im Zustand „läuft“."
+      },
+      "autoresolve": {
+        "what": "Der Anteil automatisch, ohne menschliches Eingreifen gelöster Vorfälle.",
+        "how": "Automatisch gelöste Vorfälle ÷ Gesamtvorfälle im Zeitraum."
+      },
+      "evidence": {
+        "what": "Die Zahl der aus Vorfällen erzeugten Evidence-Packs.",
+        "how": "Im Fenster erzeugte Evidence-Packs.",
+        "source": "Beweisspeicher."
+      },
+      "sla_risk": {
+        "what": "Die Zahl der Vorfälle mit Risiko, ihre Service-Frist (SLA) zu überschreiten.",
+        "how": "Vorfälle mit geringer verbleibender Zeit bis zur SLA-Frist."
+      },
+      "queue": {
+        "what": "Die Triage-Warteschlange der Vorfälle, geordnet nach Priorität (Schweregrad × SLA-Frist).",
+        "how": "Offene Vorfälle sortiert nach Schweregrad, dann nach verbleibender SLA-Zeit.",
+        "source": "Vorfallregister."
+      },
+      "sla": {
+        "what": "SLA-Eskalationen: Vorfälle, deren Service-Frist näher rückt, mit verbleibender Zeit.",
+        "how": "Verbleibende Zeit bis zur SLA-Überschreitung, je Vorfall."
+      }
+    },
     "title": "Incidents & Verfahren",
     "subtitle": "Incident-Reaktion, Verfahren-Orchestrierung und gouvernierte Remediation.",
     "tabs": {
@@ -2787,6 +3160,85 @@
     }
   },
   "replay": {
+    "explain": {
+      "zone": {
+        "actual": {
+          "what": "Der aktuelle Zustand von Replay / Schattenverkehr: Volumina, Abweichungen und Abdeckung im Zeitraum.",
+          "how": "Zusammenfassung der Replay-KPIs, aggregiert über das Beobachtungsfenster."
+        },
+        "diagnostic": {
+          "what": "Woher die Divergenzen zwischen Replay und Referenz stammen, aufgeschlüsselt nach Typ, Schweregrad und Sitzungen.",
+          "how": "Abweichungen nach Typ und Schweregrad über den wiedergespielten Verkehr klassifiziert."
+        },
+        "comparisons": {
+          "what": "Detaillierte Vergleiche: Top-Abweichungen, jüngste Vergleiche und Regressionen vs. Referenz.",
+          "how": "Vergleicht jedes Replay mit seiner Baseline und reiht Divergenzen."
+        },
+        "distribution": {
+          "what": "Die Verteilung des wiedergespielten Verkehrs (nach Dienst, nach Modell) und die zugehörigen Beweise/Exporte.",
+          "how": "Aufschlüsselung der wiedergespielten Anfragen und Beweisstatus."
+        }
+      },
+      "kpi": {
+        "sessions": {
+          "what": "Die Zahl der wiedergespielten (oder Schatten-) Sitzungen im Zeitraum.",
+          "how": "Eindeutige Sitzungen durch die Replay-Engine."
+        },
+        "requests": {
+          "what": "Die Zahl der wiedergespielten Anfragen im Zeitraum.",
+          "how": "Gesamtzahl der an Replay / Shadow gesendeten Anfragen."
+        },
+        "tokens": {
+          "what": "Die Zahl der von Replay verbrauchten Tokens.",
+          "how": "Summe der Eingabe- + Ausgabe-Tokens des wiedergespielten Verkehrs."
+        },
+        "cost": {
+          "what": "Die geschätzten Replay-Kosten (Tokens × Modelltarif).",
+          "how": "Wiedergespielte Tokens × Tarif pro Modell.",
+          "source": "Replay-Token-Zähler."
+        },
+        "deviations": {
+          "what": "Die Zahl der zwischen Replay und Referenz erkannten Abweichungen.",
+          "how": "Replay-Antworten, die über die Schwelle hinaus von der Baseline abweichen.",
+          "source": "Replay-vs-Referenz-Vergleich."
+        },
+        "evals": {
+          "what": "Die Zahl der auf Schattenverkehr wiedergespielten Bewertungen.",
+          "how": "Auf wiedergespielten Antworten ausgeführte Eval-Fälle."
+        },
+        "proofs": {
+          "what": "Die Zahl der aus Replay erzeugten Beweise.",
+          "how": "Von wiedergespielten Sitzungen erzeugte Beweis-Artefakte."
+        },
+        "coverage": {
+          "what": "Replay-Abdeckung: Anteil des tatsächlich wiedergespielten Referenzverkehrs.",
+          "how": "Wiedergespielter Verkehr ÷ förderfähiger Referenzverkehr."
+        }
+      },
+      "panel": {
+        "devByType": {
+          "what": "Die Aufschlüsselung der Abweichungen nach Typ (Inhalt, Format, Tool, Verweigerung…) gegenüber der Referenz.",
+          "how": "Abweichungen nach Divergenzkategorie gruppiert."
+        },
+        "severity": {
+          "what": "Die Aufschlüsselung der Abweichungen nach Schweregrad (kritisch → niedrig).",
+          "how": "Abweichungen nach Schweregrad gewichtet."
+        },
+        "byService": {
+          "what": "Die Aufschlüsselung des wiedergespielten Verkehrs nach aufrufendem Dienst.",
+          "how": "Wiedergespielte Anfragen nach Dienst gruppiert."
+        },
+        "byModel": {
+          "what": "Die Aufschlüsselung des wiedergespielten Verkehrs nach Modell.",
+          "how": "Wiedergespielte Anfragen nach Modell gruppiert."
+        },
+        "regressions": {
+          "what": "Die Dienste, deren Qualität am stärksten gegenüber der Referenz zurückgeht.",
+          "how": "Top-Dienste nach negativer Score-Differenz vs. Baseline.",
+          "source": "Replay-vs-Referenz-Vergleich."
+        }
+      }
+    },
     "title": "Wiedergabe & Schattenverkehr",
     "subtitle": "Sessions exakt wiedergeben, mit Baselines vergleichen und Schattenverkehr-Traffic beobachten.",
     "tabs": {
@@ -2941,6 +3393,81 @@
     }
   },
   "curation": {
+    "explain": {
+      "zone": {
+        "actual": {
+          "what": "Der aktuelle Kurationszustand: Kandidaten, beförderbar, zu prüfen und abgelehnt im Zeitraum.",
+          "how": "Zusammenfassung der Kurations-KPIs über das Beobachtungsfenster."
+        },
+        "diagnostic": {
+          "what": "Warum Fälle in die Kuration gelangen: prioritäre Lose und die Gründe der beibehaltenen Tours.",
+          "how": "Nach Risiko bewertete Lose + häufigste Aufnahmegründe."
+        },
+        "gaps": {
+          "what": "Abdeckungslücken des Eval-Sets (nach Absicht, nach Sprache) und die Kandidatenverteilung.",
+          "how": "Kreuz-Abdeckungs-Heatmap + Kandidaten-Aufschlüsselung."
+        },
+        "governance": {
+          "what": "Gesteuerte Kurationsaktionen (einfrieren, Replay erstellen, exportieren) und jüngste Aktivität.",
+          "how": "Verfügbare Los-Aktionen + Protokoll der jüngsten Operationen."
+        },
+        "trends": {
+          "what": "Trends: Kurations-Backlog, Set-Gleichgewicht und Wirkung der Kuration auf die Qualität.",
+          "how": "Zeitreihen von Backlog, Gleichgewicht und Wirkung."
+        }
+      },
+      "kpi": {
+        "candidates": {
+          "what": "Die Zahl der Kurationskandidaten (warten auf Prüfung).",
+          "how": "Eingehende, noch nicht sortierte Fälle im Zeitraum."
+        },
+        "promotable": {
+          "what": "Die Zahl der Fälle, die ins Eval-Set befördert werden können.",
+          "how": "Validierte Kandidaten (Score ≥ Schwelle, kein Duplikat)."
+        },
+        "manual_review": {
+          "what": "Die Zahl der Fälle, die eine menschliche Prüfung erfordern.",
+          "how": "Mehrdeutige Kandidaten zur manuellen Prüfung markiert."
+        },
+        "rejected": {
+          "what": "Die Zahl der abgelehnten Fälle (außerhalb des Rahmens oder geringwertig).",
+          "how": "Im Zeitraum verworfene Kandidaten."
+        },
+        "intent_coverage": {
+          "what": "Wie gut Geschäftsabsichten vom Eval-Set abgedeckt sind.",
+          "how": "Abgedeckte Absichten ÷ Zielabsichten.",
+          "source": "Absicht → Eval-Fall-Zuordnung."
+        },
+        "lang_coverage": {
+          "what": "Die Sprachabdeckung (FR/DE/EN) des Eval-Sets.",
+          "how": "Abgedeckte Sprachen ÷ Zielsprachen, fallgewichtet."
+        },
+        "duplicates": {
+          "what": "Die Zahl der unter den Kandidaten erkannten Duplikate.",
+          "how": "Nahezu identische Kandidaten nach Ähnlichkeit gruppiert."
+        },
+        "failures": {
+          "what": "Die Zahl der aus realen Agent-Fehlern stammenden Fälle.",
+          "how": "Kandidaten aus fehlgeschlagenen Tours.",
+          "source": "Katalog fehlgeschlagener Fälle."
+        }
+      },
+      "panel": {
+        "priorityLots": {
+          "what": "Die prioritären Kandidaten-Lose zur Kuration, nach Risiko und Score gereiht.",
+          "how": "Risiko = Schweregrad × Lernwert; Lose hoch → niedrig geordnet.",
+          "source": "Kurations-Warteschlange."
+        },
+        "coverage": {
+          "what": "Eval-Set-Abdeckung nach Kategorie und Sprache: wo Fälle fehlen.",
+          "how": "Heatmap vorhandener/fehlender Fälle je Achse."
+        },
+        "distribution": {
+          "what": "Die Verteilung der Kandidaten nach Typ/Quelle.",
+          "how": "Kandidaten nach Herkunftskategorie gruppiert."
+        }
+      }
+    },
     "title": "Eval-Set-Kuratierung",
     "subtitle": "Turns auswählen, anreichern, befördern und governen, die die Evaluierungssätze speisen.",
     "tabs": {
@@ -3152,6 +3679,50 @@
     }
   },
   "automations": {
+    "explain": {
+      "active": {
+        "what": "Die Zahl der aktuell aktiven (aktivierten) Automationen.",
+        "how": "Automationen im aktivierten Zustand im Katalog."
+      },
+      "executions": {
+        "what": "Die Zahl der Automationsausführungen im Zeitraum.",
+        "how": "Gesamtzahl der ausgelösten Ausführungen im Fenster."
+      },
+      "success_rate": {
+        "what": "Der Anteil der erfolgreich abgeschlossenen Ausführungen.",
+        "how": "Erfolgreiche Ausführungen ÷ Gesamtausführungen."
+      },
+      "approvals": {
+        "what": "Die Zahl der vor der Ausführung ausstehenden menschlichen Freigaben.",
+        "how": "Automationsschritte, die manuelle Validierung erfordern."
+      },
+      "blocked": {
+        "what": "Die Zahl der durch einen Guardrail oder eine Bedingung blockierten Ausführungen.",
+        "how": "Vor Abschluss durch eine Kontrollregel gestoppte Ausführungen."
+      },
+      "sensitive": {
+        "what": "Die Zahl der Automationen, die sensible Operationen berühren (Daten, Zahlungen, Zugriff).",
+        "how": "Im Katalog als „sensibel“ markierte Automationen."
+      },
+      "mttr": {
+        "what": "Die mittlere Zeit zur Behebung einer fehlgeschlagenen Automation.",
+        "how": "Durchschnittliche Zeit zwischen Fehler und erfolgreicher Wiederholung."
+      },
+      "zone": {
+        "pipeline": {
+          "what": "Die 24-Stunden-Ausführungspipeline der Automationen: von der Auslösung bis zum Abschluss, Stufe für Stufe.",
+          "how": "Ausführungen nach Pipeline-Stufe gruppiert."
+        },
+        "distribution": {
+          "what": "Die Aufschlüsselung der Automationen nach Typ (Benachrichtigung, Remediation, Anreicherung…).",
+          "how": "Automationen nach Kategorie gruppiert."
+        },
+        "env": {
+          "what": "Die Aufschlüsselung der Ausführungen nach Umgebung (Prod, Staging, Dev).",
+          "how": "Ausführungen nach Zielumgebung gruppiert."
+        }
+      }
+    },
     "title": "Automatisierungen",
     "subtitle": "Regeln, Trigger und automatische Aktionen Ihres KI-Systems orchestrieren — mit menschlicher Kontrolle, Nachvollziehbarkeit und Leitplanken.",
     "tabs": {
@@ -3317,6 +3888,54 @@
     }
   },
   "proofs": {
+    "explain": {
+      "kpi": {
+        "packs": {
+          "what": "Die Zahl der im Zeitraum erzeugten Evidence-Packs.",
+          "how": "Anzahl der vom Beweis-Pipeline erstellten Packs."
+        },
+        "artifacts": {
+          "what": "Die Zahl der kryptografisch signierten Artefakte in den Packs.",
+          "how": "Summe der versiegelten Artefakte (Hash + Signatur)."
+        },
+        "export_rate": {
+          "what": "Der Anteil der erfolgreich abgeschlossenen Beweis-Exporte.",
+          "how": "Erfolgreiche Exporte ÷ versuchte Exporte im Zeitraum."
+        },
+        "exporters": {
+          "what": "Die Zahl der aktuell aktiven und gesunden Exporter (Ziele).",
+          "how": "Exporter im Zustand „ok“ von der konfigurierten Gesamtzahl."
+        },
+        "latency": {
+          "what": "Die mittlere Zeit, um ein Pack zu erzeugen und zu exportieren.",
+          "how": "Durchschnitt Pipeline → Ziel im Zeitraum."
+        },
+        "retention": {
+          "what": "Wie gut Aufbewahrungspflichten durch aufbewahrte Beweise abgedeckt sind.",
+          "how": "Abgedeckte Pflichten ÷ anwendbare Pflichten."
+        }
+      },
+      "zone": {
+        "pipeline": {
+          "what": "Die Beweis-Pipeline: von der Erfassung über die Signatur bis zum Export an die Ziele.",
+          "how": "Jede Stufe ist instrumentiert; eine Blockade stoppt das Pack."
+        },
+        "crypto": {
+          "what": "Kryptografische Prüfung: Hash-Kette und Signaturen, die die Integrität der Beweise belegen.",
+          "how": "Prüft die Hash-Kette und die Artefakt-Signaturen erneut.",
+          "source": "S1-Audit-Protokoll (hash-verkettet)."
+        },
+        "exporters": {
+          "what": "Die Exporter und Ziele, die Evidence-Packs empfangen (S3, SIEM, Tresor…).",
+          "how": "Zustand, Format und Warteschlange je konfiguriertem Ziel."
+        },
+        "retention": {
+          "what": "Aufbewahrungsfristen und die durch die Beweise abgedeckten regulatorischen Pflichten.",
+          "how": "Ordnet jede Pflicht ihrem Beweis und ihrer Frist zu."
+        }
+      }
+    },
+    "drill": { "chain": "Audit-Journal öffnen" },
     "title": "Nachweise & Exporteure",
     "subtitle": "KI-Nachweisartefakte zusammenstellen, signieren, prüfen und exportieren.",
     "tabs": {
@@ -3561,7 +4180,14 @@
       "loggedBy": "Geloggt von {n}",
       "monitors": "Überwacht {n}",
       "viewSignal": "Signal anzeigen",
-      "viewEvals": "Verknüpfte Bewertungen anzeigen"
+      "viewEvals": "Verknüpfte Bewertungen anzeigen",
+      "secDefinition": "Definition",
+      "secPerformance": "Reale Leistung",
+      "secGuard": "Guard-Zusammensetzung",
+      "byLanguage": "Faelle pro Sprache",
+      "outcomeTitle": "Erfolg / Fehler",
+      "secTags": "Tags",
+      "secUsage": "Nutzung"
     },
     "footer": {
       "total": "{n} Signale",
@@ -3697,6 +4323,69 @@
     }
   },
   "sources": {
+    "explain": {
+      "sources": {
+        "what": "Die Zahl der angebundenen Wissensquellen (Produktkorpus, Vorschriften, Speicher…).",
+        "how": "Eindeutige inventarisierte und indexierte Quellen."
+      },
+      "corpus": {
+        "what": "Die Zahl der indexierten Korpora (vektorisierte Dokumentensätze).",
+        "how": "Im Vektorindex vorhandene Korpora."
+      },
+      "chunks": {
+        "what": "Die Gesamtzahl der indexierten Fragmente (Chunks), bereit für den Abruf.",
+        "how": "Summe der Fragmente über alle Quellen.",
+        "source": "pgvector-Index."
+      },
+      "documents": {
+        "what": "Die Gesamtzahl der in den Korpus aufgenommenen Dokumente.",
+        "how": "Eindeutige aufgenommene Dokumente."
+      },
+      "languages": {
+        "what": "Die Zahl der von den Quellen abgedeckten Sprachen (FR/DE/EN).",
+        "how": "Eindeutige im Korpus erkannte Sprachen."
+      },
+      "memory": {
+        "what": "Die Zahl der Langzeitspeicher-Einträge (sitzungsübergreifend persistierte Fakten).",
+        "how": "Zeilen des Langzeitspeichers.",
+        "source": "Speicher-Tabelle (pgvector)."
+      },
+      "transcript": {
+        "what": "Die Zahl der im dauerhaften Transkript archivierten Gesprächszüge.",
+        "how": "Zeilen des Gesprächstranskripts.",
+        "source": "Dauerhaftes Transkript."
+      },
+      "conversations": {
+        "what": "Die Zahl der eindeutigen archivierten Gespräche.",
+        "how": "Eindeutige Gespräche im Transkript."
+      },
+      "embeddings": {
+        "what": "Das aktive Embedding-Modell und die Vektorisierungsabdeckung je Quelle.",
+        "how": "Vektorisierte Fragmente ÷ Gesamtfragmente, je Quelle."
+      },
+      "access": {
+        "what": "Wer jede Quelle lesen darf (Rollen, Geltungsbereich) und die Zugriffsbeschränkungen.",
+        "how": "Zugriffskontrolle je Quelle und je Rolle."
+      },
+      "retention": {
+        "what": "Aufbewahrungsfristen und Klassifizierung der Quellen (Sensibilität, Rechtsgrundlage).",
+        "how": "Aufbewahrungsrichtlinie je Klassifizierung angewandt."
+      },
+      "lineage": {
+        "what": "Datenherkunft: woher jede Quelle stammt, ihre Ingest-Version und Aktualität.",
+        "how": "Der Ingest-Lauf ist maßgeblich (nicht Git); Zeitstempel der letzten Ingestion.",
+        "source": "Korpus-Herkunft."
+      },
+      "memoryGrowth": {
+        "what": "Das Wachstum von Speicher und Korpus im Zeitverlauf.",
+        "how": "Zeitreihen des Speicher-/Korpusvolumens."
+      },
+      "citationBySource": {
+        "what": "Der Anteil der realen Zitate, die jeder Quelle in Antworten zugeordnet sind.",
+        "how": "Zitate je Quelle ÷ Gesamtzitate.",
+        "source": "Retrieval-Spans."
+      }
+    },
     "title": "Quellen & Speicher",
     "subtitle": "Das reale Datensubstrat des Agenten: pgvector-Korpus und Speicher.",
     "activitySubject": "Subjekt",
@@ -3827,6 +4516,55 @@
     }
   },
   "roles": {
+    "explain": {
+      "accounts": {
+        "what": "Die Zahl der verwalteten Konten (menschliche und Dienstkonten).",
+        "how": "Eindeutige Konten im Identitätsregister."
+      },
+      "roles": {
+        "what": "Die Zahl der definierten Rollen — wiederverwendbare Berechtigungssätze, die Konten zugewiesen werden.",
+        "how": "Eindeutige Rollen im Zugriffskatalog."
+      },
+      "capabilities": {
+        "what": "Die Zahl der Fähigkeiten: die atomaren Berechtigungen, die Rollen bündeln.",
+        "how": "Von Rollen referenzierte eindeutige Berechtigungen."
+      },
+      "agents": {
+        "what": "Die Zahl der durch mindestens eine Zugriffsrolle abgedeckten Agenten.",
+        "how": "Eindeutige an eine Rolle gebundene Agenten."
+      },
+      "active": {
+        "what": "Die Zahl der aktiven Konten (kürzlich angemeldet, nicht deaktiviert).",
+        "how": "Konten im aktiven Zustand im Zeitraum."
+      },
+      "mfa": {
+        "what": "Der Anteil der durch Multi-Faktor-Authentifizierung (MFA) geschützten Konten.",
+        "how": "Konten mit aktivierter MFA ÷ Gesamtkonten."
+      },
+      "topRoles": {
+        "what": "Die am häufigsten zugewiesenen Rollen, nach Zahl der zugeordneten Konten geordnet.",
+        "how": "Rollen nach absteigender Nutzerzahl sortiert."
+      },
+      "byResource": {
+        "what": "Die Aufschlüsselung der Berechtigungen nach Ressource (Daten, Tools, Konfiguration).",
+        "how": "Berechtigungen nach Zielressource gruppiert."
+      },
+      "pending": {
+        "what": "Ausstehende Zugriffsprüfungen: zu genehmigende oder neu zu zertifizierende Zuweisungen.",
+        "how": "Noch nicht bearbeitete Zugriffsanträge und Rezertifizierungen.",
+        "source": "Audit-Protokoll (Zugriffsprüfungen)."
+      },
+      "sod": {
+        "what": "Verstöße gegen die Funktionstrennung (SoD): unvereinbare Rechtekombinationen in einem einzigen Konto.",
+        "how": "Gleichzeitig gehaltene, im Konflikt stehende Rollenpaare.",
+        "source": "Funktionstrennungs-Richtlinie."
+      },
+      "inactive": {
+        "what": "Inaktive Konten (keine Anmeldung im Zeitraum) — Deaktivierungskandidaten.",
+        "how": "Konten ohne kürzliche Aktivität."
+      }
+    },
+    "drill": { "audit": "Audit-Journal öffnen" },
     "title": "Rollen & Zugriff",
     "subtitle": "Verwalten Sie Identitäten, Rollen, Berechtigungen und Zugriffe der gesamten Plattform.",
     "actions": {
@@ -3979,6 +4717,36 @@
     }
   },
   "integrations": {
+    "explain": {
+      "tools": {
+        "what": "Die Gesamtzahl der Tools (Funktionen), die der Agent aufrufen kann — seine Integrationsfläche.",
+        "how": "Im Register deklarierte Tools, alle Status zusammen."
+      },
+      "allowed": {
+        "what": "Die Zahl der von der Guardrail-Richtlinie erlaubten Tools, ohne erforderliche Bestätigung.",
+        "how": "Tools, deren Richtlinienregel „allow“ ohne Bestätigung ist.",
+        "source": "Guard-Richtlinie (policy.yaml)."
+      },
+      "confirmation": {
+        "what": "Die Zahl der erlaubten Tools, die jedoch vor der Ausführung eine menschliche Bestätigung erfordern.",
+        "how": "Tools, deren Regel eine Bestätigung verlangt.",
+        "source": "Guard-Richtlinie (policy.yaml)."
+      },
+      "calls": {
+        "what": "Die Gesamtzahl der Tool-Aufrufe im Zeitraum.",
+        "how": "Summe der Tool-Aufrufe über das Fenster.",
+        "source": "Audit-Protokoll der Tool-Aufrufe."
+      },
+      "blocked": {
+        "what": "Die Zahl der von den Guardrails abgelehnten Tool-Aufrufe (Deny-Richtlinie).",
+        "how": "Vor der Ausführung durch eine „deny“-Regel blockierte Aufrufe.",
+        "source": "Guard-Audit-Protokoll."
+      },
+      "idle": {
+        "what": "Die Zahl der verfügbaren, aber im Zeitraum nie aufgerufenen Tools (Entfernungskandidaten).",
+        "how": "Tools mit null Aufrufen über das Fenster."
+      }
+    },
     "title": "Integrationen",
     "subtitle": "Verbinden, konfigurieren und überwachen Sie die in Tessera integrierten externen Systeme und Dienste.",
     "actions": {
@@ -4094,6 +4862,21 @@
     }
   },
   "systemProfile": {
+    "explain": {
+      "status": {
+        "what": "Der aggregierte Systemzustand: grün, wenn jedes Subsystem (API, DB, Modelle, Korpus) antwortet.",
+        "how": "Aggregation der Health-Proben jedes Subsystems.",
+        "source": "/healthz- und /readyz-Proben."
+      },
+      "mode": {
+        "what": "Der Ausführungsmodus des Deployments (Produktion, Staging oder Entwicklung).",
+        "how": "Beim Start aus der Umgebungskonfiguration gelesen."
+      },
+      "profile": {
+        "what": "Das aktive LLM-Profil: Frontier (Vertex AI) oder On-Premises (Llama 3.3 70B über Ollama).",
+        "how": "Ausgewähltes Profil, das die Modellaufrufe leitet."
+      }
+    },
     "title": "Systemprofil",
     "subtitle": "Vollständige technische Sicht auf die Tessera-Umgebung und ihren Betriebszustand.",
     "actions": {
@@ -4216,6 +4999,38 @@
     }
   },
   "parameters": {
+    "explain": {
+      "configured": {
+        "what": "Die Zahl der tatsächlich konfigurierten Parameter (mit gesetztem Wert).",
+        "how": "Parameter mit gesetztem Wert über alle Bereiche hinweg."
+      },
+      "policies": {
+        "what": "Die Zahl der aktiven Konfigurationsrichtlinien.",
+        "how": "Richtlinien im aktiven Zustand in der Konfiguration."
+      },
+      "security_rules": {
+        "what": "Die Zahl der konfigurierten Sicherheitsregeln (Zugriff, Guardrails, Verschlüsselung).",
+        "how": "Regeln in den aktiven Sicherheitsrichtlinien."
+      },
+      "integrations": {
+        "what": "Die Zahl der angebundenen und betriebsbereiten externen Integrationen.",
+        "how": "Konnektoren im Zustand „verbunden“."
+      },
+      "models": {
+        "what": "Die Zahl der im Katalog verfügbaren KI-Modelle (Chat, Embeddings).",
+        "how": "Im Modellregister deklarierte Modelle."
+      },
+      "changes": {
+        "what": "Die Zahl der Konfigurationsänderungen der letzten 30 Tage — alle auditiert.",
+        "how": "Über das 30-Tage-Fenster protokollierte Parameteränderungen.",
+        "source": "Audit-Protokoll."
+      },
+      "configState": {
+        "what": "Die Aufschlüsselung der Parameter nach Lebenszyklus-Status: aktiv, inaktiv, Entwurf, veraltet.",
+        "how": "Parameter nach Lebenszyklus-Status gruppiert."
+      }
+    },
+    "drill": { "audit": "Audit-Journal öffnen" },
     "title": "Einstellungen",
     "subtitle": "Konfigurieren Sie Verhalten, Richtlinien und Präferenzen der Tessera-Plattform.",
     "actions": {
@@ -4342,6 +5157,40 @@
       "avg_time": "Ø Zeit",
       "resolution_rate": "Lösungsrate"
     },
+    "explain": {
+      "total": {
+        "what": "Die Gesamtzahl der offenen, zu bearbeitenden Kontrollfälle über alle Stufen.",
+        "how": "Aktuell ungelöste Fälle in der Operator-Warteschlange."
+      },
+      "urgent": {
+        "what": "Die Fälle mit Priorität „dringend“, zuerst zu bearbeiten.",
+        "how": "Offene Fälle mit Priorität „dringend“."
+      },
+      "sla_2h": {
+        "what": "Fälle, deren Bearbeitungsfrist (SLA) in weniger als 2 Stunden abläuft.",
+        "how": "Offene Fälle mit SLA-Frist in unter 2 h."
+      },
+      "overdue": {
+        "what": "Fälle, deren Frist (SLA) bereits überschritten ist.",
+        "how": "Offene Fälle mit abgelaufener SLA-Frist — aufzuholen."
+      },
+      "assigned": {
+        "what": "Die Ihnen zugewiesenen Fälle.",
+        "how": "Offene Fälle, deren Verantwortlicher der aktuelle Nutzer ist."
+      },
+      "resolved": {
+        "what": "Die heute gelösten Fälle.",
+        "how": "Seit Mitternacht auf „gelöst“ gesetzte Fälle."
+      },
+      "avg_time": {
+        "what": "Die durchschnittliche Lösungszeit eines Falls.",
+        "how": "Mittel (Eröffnung → Lösung) über kürzlich geschlossene Fälle."
+      },
+      "resolution_rate": {
+        "what": "Der Anteil der eingegangenen Fälle, die gelöst werden.",
+        "how": "Gelöste ÷ eingegangene Fälle über den Zeitraum."
+      }
+    },
     "delta": {
       "vsHier": "vs. gestern"
     },
@@ -4407,7 +5256,16 @@
     "footer": {
       "total": "{n} Elemente",
       "source": "{src}"
-    }
+    },
+    "rowOpen": "Details ansehen",
+    "close": "Schließen",
+    "page": {
+      "prev": "Vorherige Seite",
+      "next": "Nächste Seite",
+      "perPage": "Zeilen pro Seite",
+      "summary": "{start} - {end} von {total}"
+    },
+    "empty": "Keine Einträge"
   },
   "assistant": {
     "title": "Assistent",
@@ -4528,6 +5386,22 @@
     }
   },
   "fleet": {
+    "explain": {
+      "orgConversations": {
+        "what": "Die Gesamtzahl der Flotten-Konversationen, dedupliziert: eine zwischen Agenten geteilte Konversation (Hand-off) wird nur einmal gezählt.",
+        "how": "Eindeutige Konversationen auf Organisationsebene, geteilte Konversationen einmal gezählt.",
+        "source": "Flotte — deduplizierter Org-Rollup."
+      },
+      "naiveSum": {
+        "what": "Die naive Summe der Konversationen pro Agent: addiert die Summe jedes Agenten ohne Deduplizierung und zählt geteilte Konversationen daher mehrfach.",
+        "how": "Summe der Konversationen jedes Agenten, vor der Deduplizierung."
+      },
+      "dedupSaved": {
+        "what": "Die durch Deduplizierung vermiedene Differenz: die in der naiven Summe doppelt gezählten Konversationen. Die Zeile „geteilt“ zeigt, wie viele durch mindestens zwei Agenten liefen (Hand-off).",
+        "how": "Naive Summe − deduplizierter Org-Gesamtwert; „geteilt“ = von ≥ 2 Agenten bearbeitete Konversationen.",
+        "source": "Flotte — Deduplizierung."
+      }
+    },
     "searchPlaceholder": "Agent suchen…",
     "filterAll": "Alle",
     "filterExternal": "Extern",
@@ -5002,9 +5876,56 @@
     "title": "Zu erledigen",
     "subtitle": "Ihre offenen Aufgaben, Prüfungen und Freigaben.",
     "loading": "Aufgaben werden geladen…",
-    "unavailable": "Aufgaben nicht verfügbar."
+    "unavailable": "Aufgaben nicht verfügbar.",
+    "rowOpen": "Details ansehen",
+    "close": "Schließen",
+    "page": {
+      "prev": "Vorherige Seite",
+      "next": "Nächste Seite",
+      "perPage": "Zeilen pro Seite",
+      "summary": "{start} - {end} von {total}"
+    },
+    "empty": "Keine Einträge"
   },
   "etatADate": {
+    "explain": {
+      "reconstructed": {
+        "what": "Der zum Zeitpunkt T rekonstruierte Zustand: Konfiguration und Daten, wie sie zum gewählten Datum waren, aus den Protokollen wiedergespielt.",
+        "how": "Aus den Append-only-Protokollen (Audit, Herkunft, Snapshots) bis T rekonstruiert.",
+        "source": "Versiegelter Snapshot + S1-Protokolle."
+      },
+      "original": {
+        "what": "Der ursprüngliche Zustand: die Antwort oder Entscheidung, wie sie damals ausgegeben wurde, vor jeder Rekonstruktion.",
+        "how": "Aus dem Originalbeleg (Transkript / Audit) zum Zeitpunkt T gelesen."
+      },
+      "govCard": {
+        "what": "Die zum Zeitpunkt T aktive Governance-Konfiguration (Guardrails, Prompt / Modell, Release).",
+        "how": "Zum Zeitpunkt T wirksame Version, aus Herkunft und Audit-Protokoll gelesen."
+      },
+      "chronology": {
+        "what": "Die Chronologie der gesteuerten Ereignisse bis T: Deployments, Übergaben, Entscheidungen.",
+        "how": "Append-only-Ereignisse geordnet, auf den Zeitpunkt T begrenzt."
+      },
+      "integrity": {
+        "what": "Der Integritätsnachweis der Rekonstruktion: Quellenabdeckung, letzte Synchronisierung und verifizierte Audit-Kette.",
+        "how": "Prüft die Hash-Kette und die Quellenabdeckung zum Zeitpunkt T.",
+        "source": "S1-Audit-Protokoll (hash-verkettet)."
+      },
+      "auditPieces": {
+        "what": "Die belegbaren Audit-Stücke, die den Zustand zu T stützen — jedes Stück ist öffenbar.",
+        "how": "Audit-Protokolleinträge, die mit dem rekonstruierten Zeitpunkt verbunden sind.",
+        "source": "S1-Audit-Protokoll."
+      },
+      "handoffs": {
+        "what": "Die bis T erfolgten Agent-Übergaben: wer was bearbeitet hat und warum.",
+        "how": "Übergabe-Ereignisse geordnet, auf den Zeitpunkt T begrenzt."
+      },
+      "snapshots": {
+        "what": "Die gespeicherten Snapshots: versiegelte, identisch wiederspielbare Rekonstruktionen.",
+        "how": "Persistierte Snapshots; ein Klick lädt den Zustand zu ihrem Zeitpunkt neu.",
+        "source": "Snapshot-Speicher."
+      }
+    },
     "title": "Stand zum Datum",
     "subtitle": "Rekonstruieren Sie den Zustand eines Agenten zu einem Datum.",
     "agent": "Agent",
@@ -5077,13 +5998,55 @@
     "releaseNotRun": "Eval nicht ausgeführt",
     "dedupExplain": "Naive Summe {naive} · {saved} dedupliziert · {shared} geteilte Konversationen (Übergabe = 1)",
     "empty": "Keine Flottendaten verfügbar.",
-    "orgSignalsNote": "Filter aktiv auf der Agentenansicht oben. Die Org-Signale unten sind noch nicht pro Agent aufgeschlüsselt.",
+    "orgSignalsNote": "Agentenfilter aktiv: die Karten unten lesen die Signale dieses Agenten. Die Probes der gemeinsamen Policy (Firewall, Verweigerung), die Audit-Kette, die Traces und die Zeitleiste bleiben organisationsweit.",
+    "orgWide": "Org-weit",
+    "orgWideHint": "Probe der gemeinsamen Policy — für alle Agenten gleich, nicht aufschlüsselbar.",
+    "orgPostureNote": "Agentenansicht oben. Diese Ansicht bleibt organisationsweit — ihre Kennzahlen aggregieren die gesamte Flotte, nicht den gewählten Agenten.",
     "usefulLinks": "Nützliche Links",
     "linkRelease": "Governance · Release Control",
     "linkAudit": "Nachweis · Audit-Journal",
     "linkSignals": "Definition · Signalkatalog"
   },
   "releaseControl": {
+    "viewFleet": "Alle Agenten anzeigen",
+    "viewAgent": "Agent anzeigen",
+    "explain": {
+      "passing": {
+        "what": "Die Zahl der Agenten, deren Bewertungs-Gate grün ist — also produktiv freigebbar.",
+        "how": "Eindeutige Agenten mit konformem Gate-Verdikt (Sockel + kritische Fälle OK, kein ungedeckter blockierender Fall).",
+        "source": "Release-Pipeline pro Agent (Eval-Gate)."
+      },
+      "blocked": {
+        "what": "Die Zahl der durch das Bewertungs-Gate blockierten Agenten: ein Sockel- oder kritischer Fall schlägt fehl.",
+        "how": "Agenten mit blocking_socle > 0 oder blocking_t1 > 0, ohne aktive Ausnahme.",
+        "source": "Release-Pipeline pro Agent (Eval-Gate)."
+      },
+      "notRun": {
+        "what": "Die Zahl der Agenten ohne ausgeführte Bewertung: noch kein Verdikt verfügbar.",
+        "how": "Agenten, deren letzter Bewertungslauf fehlt.",
+        "source": "Archiv der Bewertungsläufe."
+      },
+      "socle": {
+        "what": "Der Sockel: das gemeinsame Fallset, das JEDER Agent bestehen muss (Cross-Agent-Untergrenze), getrennt vom eigenen Set.",
+        "how": "OK/Fehler-Status der Sockel-Teilmenge im letzten Lauf des Agenten.",
+        "source": "Eval-Gate-Richtlinie (§7 Sockel)."
+      },
+      "blockingSocle": {
+        "what": "Die Zahl der fehlgeschlagenen Sockel-Fälle, die die Freigabe blockieren.",
+        "how": "Nicht konforme Sockel-Fälle ohne aktive Ausnahme.",
+        "source": "Bewertungslauf des Agenten."
+      },
+      "blockingT1": {
+        "what": "Die Zahl der fehlgeschlagenen kritischen (Priorität 1) Fälle, die die Freigabe blockieren.",
+        "how": "Nicht konforme Priorität-1-Fälle ohne aktive Ausnahme.",
+        "source": "Bewertungslauf des Agenten."
+      },
+      "waived": {
+        "what": "Die Zahl der aktiven Ausnahmen: akzeptierte Abweichungen, die bis zur Behebung nicht blockieren.",
+        "how": "Gültige Waivers auf fehlgeschlagenen Fällen.",
+        "source": "Ausnahmeregister (Waiver-Store)."
+      }
+    },
     "title": "Release Control",
     "subtitle": "Release-Pipeline pro Agent — Eval-Gate-Verdikt, versioniertes verwaltetes Paket.",
     "total": "Agenten",
@@ -5141,6 +6104,11 @@
     "breached": "SLO verletzt · {metric} — {rate} < Schwelle {threshold}",
     "ok": "SLO eingehalten · {metric} — {rate} ≥ Schwelle {threshold}",
     "burn": "Burn ×{x} · {bad}/{n} schlecht im Fenster",
+    "breachedShort": "{metric} — {rate} < Schwelle {threshold}",
+    "okShort": "{metric} — {rate} ≥ Schwelle {threshold}",
+    "burnRate": "Burn ×{x}",
+    "burnBad": "{bad}/{n} schlecht im Fenster",
+    "stopPulse": "Bestätigen",
     "remediate": "In Vorfällen beheben"
   },
   "shell": {
@@ -5412,13 +6380,79 @@
     }
   },
   "models": {
+    "explain": {
+      "models": {
+        "what": "Die Zahl der im Katalog registrierten Modelle (Chat, Embeddings, Judges).",
+        "how": "Eindeutige im Modellregister deklarierte Modelle."
+      },
+      "chat": {
+        "what": "Das aktuell aktive Chat-Modell (das den Kunden antwortet).",
+        "how": "Das als aktiv markierte Modell der Rolle „Chat“ im Katalog.",
+        "source": "Modellregister."
+      },
+      "embed": {
+        "what": "Das aktive Embedding-Modell (vektorisiert den Korpus für den Abruf).",
+        "how": "Das als aktiv markierte Modell der Rolle „Embedding“.",
+        "source": "Modellregister."
+      },
+      "profile": {
+        "what": "Das aktive Bereitstellungsprofil: Frontier (Vertex AI) oder On-Premises (Llama 3.3 70B über Ollama).",
+        "how": "Ausgewähltes Profil, das die LLM-Aufrufe leitet."
+      },
+      "tokens": {
+        "what": "Die Zahl der im Zeitraum verbrauchten Tokens (Eingabe + Ausgabe).",
+        "how": "Summe der Eingabe- und Ausgabe-Tokens über das Fenster.",
+        "source": "Budget-Zähler (Tokens)."
+      },
+      "cost": {
+        "what": "Die geschätzten LLM-Kosten im Zeitraum (Tokens × Modelltarif).",
+        "how": "Summe der Tokens × Tarif pro Modell.",
+        "source": "Budget-Zähler (Kosten)."
+      }
+    },
     "loading": "Modellkatalog wird geladen...",
     "empty": "Keine Modelle im Katalog.",
     "close": "Schließen"
   },
   "guardrailCatalogue": {
+    "explain": {
+      "blocks": {
+        "what": "Die Zahl der aktiven Guardrail-Blöcke in der Richtlinie (jeder Block bündelt Regeln).",
+        "how": "Eindeutige geladene Richtlinienblöcke."
+      },
+      "deny": {
+        "what": "Die Zahl der Deny-Regeln: explizit blockierte Muster oder Aktionen.",
+        "how": "Regeln vom Typ „deny“ in der aktiven Richtlinie."
+      },
+      "pii": {
+        "what": "Die Zahl der Regeln zum Schutz personenbezogener Daten (PII-Erkennung und -Maskierung).",
+        "how": "Regeln, die auf PII abzielen."
+      },
+      "tools": {
+        "what": "Die Zahl der von den Guardrails kontrollierten Tools (erlaubt, bestätigen oder verweigert).",
+        "how": "In den Tool-Regeln referenzierte Tools."
+      },
+      "version": {
+        "what": "Die Version der aktuell bereitgestellten Guardrail-Richtlinie.",
+        "how": "Beim Start geladene Richtlinienversion.",
+        "source": "Guard-Richtlinie (YAML)."
+      },
+      "decisions": {
+        "what": "Die Zahl der in der Audit-Kette protokollierten Guardrail-Entscheidungen.",
+        "how": "Länge der Audit-Kette des Guards.",
+        "source": "S1-Audit-Protokoll (hash-verkettet)."
+      }
+    },
     "loading": "Guardrail-Katalog wird geladen...",
     "empty": "Keine Guardrail-Profile.",
     "close": "Schließen"
+  },
+  "table": {
+    "rowOpen": "Details ansehen",
+    "empty": "Keine Einträge",
+    "summary": "{start} - {end} von {total}",
+    "prev": "Vorherige Seite",
+    "next": "Nächste Seite",
+    "perPage": "Zeilen pro Seite"
   }
 }

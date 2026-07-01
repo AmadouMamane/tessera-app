@@ -24,7 +24,7 @@ export default async function ReleaseControlPage({ params, searchParams }: PageP
   const ts = await getTranslations({ locale, namespace: "agentScope" });
 
   const scope = readAgentScope(await searchParams);
-  const data = await loadReleaseControl(scope);
+  const data = await loadReleaseControl(scope, locale);
 
   return (
     <AppShell title={t("title")} description={t("subtitle")}>

@@ -14,9 +14,12 @@ Each tool is crossed with two real sources:
     of ``tool.<name>.allow`` decisions, denials and last invocation.
 
 The implementations are honest demo stubs (the docstrings say so), so the
-"environment" reads **Démo** and there is no fabricated latency/cost. Read-only by
+"environment" reads **Demo** and there is no fabricated latency/cost. Read-only by
 design (tools + policy are code/PR-owned), like Prompts: the functional axis is
 wired search / filter / sort / row-select / nav + export, not a fake mutation.
+
+Free-text is localized fr/de/en (French keeps accents, German transliterates
+ae/oe/ue/ss); enum keys (category/status/criticality) stay stable.
 """
 
 from __future__ import annotations
@@ -27,6 +30,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from tessera.guard.decisions import Policy, ToolPolicy, load_policy
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -39,56 +43,134 @@ _MINUTE = 60.0
 _HOUR = 3600.0
 _DAY = 86_400.0
 
-# Real tool metadata: the banking system each integrates with, a category (the
-# filter/donut axis) and a one-line description. Names mirror the modules in
-# tessera/agent/tools/. ASCII-only source (accents in literals are fine).
+# Real tool metadata: id + category (the filter/donut axis) and schema names.
+# Names mirror the modules in tessera/agent/tools/. Localized name/system/desc
+# live in _TOOL_TR keyed by id.
 _TOOLS: list[dict[str, str]] = [
     {
         "id": "account_balance",
-        "name": "Solde de compte",
-        "system": "Core banking",
         "category": "lecture",
         "request": "AccountBalanceRequest",
         "response": "AccountBalance",
-        "description": "Solde disponible du compte (lecture core-banking).",
     },
     {
         "id": "transaction_search",
-        "name": "Recherche de transactions",
-        "system": "Registre des transactions",
         "category": "lecture",
         "request": "TransactionSearchRequest",
         "response": "TransactionSearchResult",
-        "description": "Recherche dans l'historique des transactions du client.",
     },
     {
         "id": "loan_simulate",
-        "name": "Simulation de crédit",
-        "system": "Moteur de crédit",
         "category": "simulation",
         "request": "LoanSimulationRequest",
         "response": "LoanSimulation",
-        "description": "Simulation d'un crédit : mensualités, TAEG, coût total.",
     },
     {
         "id": "card_block",
-        "name": "Blocage de carte",
-        "system": "Gestion des cartes",
         "category": "action",
         "request": "CardBlockRequest",
         "response": "CardBlock",
-        "description": "Opposition / blocage d'une carte - action sensible, confirmée.",
     },
     {
         "id": "ticket_escalate",
-        "name": "Escalade ticket",
-        "system": "Ticketing / CRM",
         "category": "escalade",
         "request": "TicketRequest",
         "response": "Ticket",
-        "description": "Escalade vers un agent humain (création de ticket).",
     },
 ]
+
+# Localized tool name / target system / description (fr, de, en).
+_TOOL_TR: dict[str, dict[str, tuple[str, str, str]]] = {
+    "account_balance": {
+        "name": ("Solde de compte", "Kontostand", "Account balance"),
+        "system": ("Core banking", "Core Banking", "Core banking"),
+        "desc": (
+            "Solde disponible du compte (lecture core-banking).",
+            "Verfuegbarer Kontostand (Core-Banking-Lesezugriff).",
+            "Available account balance (core-banking read).",
+        ),
+    },
+    "transaction_search": {
+        "name": ("Recherche de transactions", "Transaktionssuche", "Transaction search"),
+        "system": ("Registre des transactions", "Transaktionsregister", "Transaction ledger"),
+        "desc": (
+            "Recherche dans l'historique des transactions du client.",
+            "Suche im Transaktionsverlauf des Kunden.",
+            "Search the customer's transaction history.",
+        ),
+    },
+    "loan_simulate": {
+        "name": ("Simulation de crédit", "Kreditsimulation", "Loan simulation"),
+        "system": ("Moteur de crédit", "Kredit-Engine", "Loan engine"),
+        "desc": (
+            "Simulation d'un crédit : mensualités, TAEG, coût total.",
+            "Kreditsimulation: Raten, effektiver Jahreszins, Gesamtkosten.",
+            "Loan simulation: instalments, APR, total cost.",
+        ),
+    },
+    "card_block": {
+        "name": ("Blocage de carte", "Kartensperre", "Card block"),
+        "system": ("Gestion des cartes", "Kartenverwaltung", "Card management"),
+        "desc": (
+            "Opposition / blocage d'une carte - action sensible, confirmée.",
+            "Sperrung einer Karte - sensible Aktion, bestaetigt.",
+            "Block a card - sensitive action, confirmed.",
+        ),
+    },
+    "ticket_escalate": {
+        "name": ("Escalade ticket", "Ticket-Eskalation", "Ticket escalation"),
+        "system": ("Ticketing / CRM", "Ticketing / CRM", "Ticketing / CRM"),
+        "desc": (
+            "Escalade vers un agent humain (création de ticket).",
+            "Eskalation an einen menschlichen Agenten (Ticketerstellung).",
+            "Escalation to a human agent (ticket creation).",
+        ),
+    },
+}
+
+# Shared localized labels + fixed values (fr, de, en).
+_TR: dict[str, tuple[str, str, str]] = {
+    "env_demo": ("Démo", "Demo", "Demo"),
+    "env_demo_full": (
+        "Démo (implémentation simulée)",
+        "Demo (simulierte Implementierung)",
+        "Demo (simulated implementation)",
+    ),
+    "rt_now": ("à l'instant", "gerade eben", "just now"),
+    "rt_min": ("il y a {n} min", "vor {n} Min", "{n} min ago"),
+    "rt_hours": ("il y a {n} h", "vor {n} Std", "{n}h ago"),
+    "cl_target": ("Système cible", "Zielsystem", "Target system"),
+    "cl_in": ("Schéma d'entrée", "Eingabeschema", "Input schema"),
+    "cl_out": ("Schéma de sortie", "Ausgabeschema", "Output schema"),
+    "cl_allowed": ("Autorisé", "Erlaubt", "Allowed"),
+    "cl_confirm": ("Confirmation requise", "Bestaetigung erforderlich", "Confirmation required"),
+    "cl_maxcalls": ("Appels max / tour", "Max. Aufrufe / Runde", "Max calls / turn"),
+    "cl_args": ("Arguments contrôlés", "Gepruefte Argumente", "Checked arguments"),
+    "v_yes": ("Oui", "Ja", "Yes"),
+    "v_no": ("Non", "Nein", "No"),
+    "sl_fw": ("Pare-feu", "Firewall", "Firewall"),
+    "sl_rule": ("Règle de politique", "Policy-Regel", "Policy rule"),
+    "sl_argval": ("Validation des arguments", "Argumentvalidierung", "Argument validation"),
+    "sl_onviol": ("Sur violation", "Bei Verstoss", "On violation"),
+    "sl_denied": ("Refus journalisés", "Protokollierte Ablehnungen", "Logged denials"),
+    "sv_deny_logged": ("Refus + journalisé", "Ablehnung + protokolliert", "Denied + logged"),
+    "ud_24h": ("{n} sur 24h", "{n} in 24h", "{n} over 24h"),
+    "ud_denials": ("refus journalisés", "protokollierte Ablehnungen", "logged denials"),
+    "ud_perturn": ("par tour", "pro Runde", "per turn"),
+    "ks_tools": ("outils de l'agent", "Agent-Tools", "agent tools"),
+    "ks_allowed": ("autorisés par la politique", "durch die Policy erlaubt", "allowed by policy"),
+    "ks_confirm": ("confirmation requise", "Bestaetigung erforderlich", "confirmation required"),
+    "ks_calls": ("appels journalisés", "protokollierte Aufrufe", "logged calls"),
+    "ks_blocked": ("refus journalisés", "protokollierte Ablehnungen", "logged denials"),
+    "ks_idle": ("jamais sollicités", "nie aufgerufen", "never called"),
+    "f_source": (
+        "agent/tools + policy.yaml + journal d'audit",
+        "agent/tools + policy.yaml + Audit-Log",
+        "agent/tools + policy.yaml + audit log",
+    ),
+    "owner_tool": ("Agent Tessera", "Agent Tessera", "Agent Tessera"),
+    "owner_row": ("Agent", "Agent", "Agent"),
+}
 
 _CATEGORY_COLOR = {
     "lecture": "#60a5fa",
@@ -96,6 +178,14 @@ _CATEGORY_COLOR = {
     "action": "#f87171",
     "escalade": "#fbbf24",
 }
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
+
+
+def _tool_t(tool_id: str, field_key: str, lang: str) -> str:
+    return _TOOL_TR[tool_id][field_key][_LANG_IDX.get(lang, 0)]
 
 
 @dataclass
@@ -175,16 +265,16 @@ def _fmt_int(value: int) -> str:
     return f"{value:,}".replace(",", " ")
 
 
-def _rel(when: datetime | None, now: datetime) -> str:
+def _rel(when: datetime | None, now: datetime, lang: str) -> str:
     if when is None:
         return "-"
     secs = (now - when).total_seconds()
     if secs < _MINUTE:
-        return "à l'instant"
+        return _t("rt_now", lang)
     if secs < _HOUR:
-        return f"il y a {int(secs // _MINUTE)} min"
+        return _t("rt_min", lang).format(n=int(secs // _MINUTE))
     if secs < _DAY:
-        return f"il y a {int(secs // _HOUR)} h"
+        return _t("rt_hours", lang).format(n=int(secs // _HOUR))
     return when.strftime("%d/%m/%Y %H:%M")
 
 
@@ -208,54 +298,61 @@ def _criticality(tp: ToolPolicy, category: str) -> str:
 
 
 def _detail(
-    meta: dict[str, str], tp: ToolPolicy, stat: _ToolStat, now: datetime
+    meta: dict[str, str], tp: ToolPolicy, stat: _ToolStat, now: datetime, lang: str
 ) -> dict[str, object]:
     allowed = stat.decisions - stat.denials
     rate = f"{round(allowed / stat.decisions * 100)}%" if stat.decisions else "-"
+    tid = meta["id"]
     return {
-        "id": meta["id"],
-        "name": meta["name"],
+        "id": tid,
+        "name": _tool_t(tid, "name", lang),
         "status": _status(tp, stat),
         "response_time": "-",  # demo stubs: not instrumented
         "success_rate": rate,
-        "last_sync": _rel(stat.last, now),
-        "description": meta["description"],
-        "owner": "Agent Tessera",
-        "environment": "Démo (implémentation simulée)",
+        "last_sync": _rel(stat.last, now, lang),
+        "description": _tool_t(tid, "desc", lang),
+        "owner": _t("owner_tool", lang),
+        "environment": _t("env_demo_full", lang),
         "region": "local",
         "criticality": _criticality(tp, meta["category"]),
         # Usage = real audit counts (relabelled read/write/cost slots).
         "usage": {
-            "read": {"value": _fmt_int(stat.decisions), "delta": f"{stat.c24} sur 24h"},
-            "write": {"value": _fmt_int(stat.denials), "delta": "refus journalisés"},
-            "cost": {"value": str(tp.max_calls_per_turn), "delta": "par tour"},
+            "read": {
+                "value": _fmt_int(stat.decisions),
+                "delta": _t("ud_24h", lang).format(n=stat.c24),
+            },
+            "write": {"value": _fmt_int(stat.denials), "delta": _t("ud_denials", lang)},
+            "cost": {"value": str(tp.max_calls_per_turn), "delta": _t("ud_perturn", lang)},
         },
         # Config = the real guard contract.
         "config_rows": [
-            {"label": "Système cible", "value": meta["system"]},
-            {"label": "Schéma d'entrée", "value": meta["request"]},
-            {"label": "Schéma de sortie", "value": meta["response"]},
-            {"label": "Autorisé", "value": "Oui" if tp.allow else "Non"},
+            {"label": _t("cl_target", lang), "value": _tool_t(tid, "system", lang)},
+            {"label": _t("cl_in", lang), "value": meta["request"]},
+            {"label": _t("cl_out", lang), "value": meta["response"]},
+            {"label": _t("cl_allowed", lang), "value": _t("v_yes" if tp.allow else "v_no", lang)},
             {
-                "label": "Confirmation requise",
-                "value": "Oui" if tp.requires_confirmation else "Non",
+                "label": _t("cl_confirm", lang),
+                "value": _t("v_yes" if tp.requires_confirmation else "v_no", lang),
             },
-            {"label": "Appels max / tour", "value": str(tp.max_calls_per_turn)},
-            {"label": "Arguments contrôlés", "value": str(len(tp.arguments))},
+            {"label": _t("cl_maxcalls", lang), "value": str(tp.max_calls_per_turn)},
+            {"label": _t("cl_args", lang), "value": str(len(tp.arguments))},
         ],
         # Security = how the firewall enforces it.
         "security_rows": [
-            {"label": "Pare-feu", "value": "mcp-firewall"},
-            {"label": "Règle de politique", "value": f"tool.{meta['id']}.allow"},
-            {"label": "Validation des arguments", "value": "Pydantic strict (extra=forbid)"},
-            {"label": "Sur violation", "value": "Refus + journalisé"},
-            {"label": "Refus journalisés", "value": _fmt_int(stat.denials)},
+            {"label": _t("sl_fw", lang), "value": "mcp-firewall"},
+            {"label": _t("sl_rule", lang), "value": f"tool.{tid}.allow"},
+            {"label": _t("sl_argval", lang), "value": "Pydantic strict (extra=forbid)"},
+            {"label": _t("sl_onviol", lang), "value": _t("sv_deny_logged", lang)},
+            {"label": _t("sl_denied", lang), "value": _fmt_int(stat.denials)},
         ],
     }
 
 
-def compute_integrations_overview() -> dict[str, object]:
+def compute_integrations_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Integrations overview, built from the real agent tools.
+
+    Args:
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
 
     Returns:
         A JSON-serialisable mapping with posture KPIs (tools, allowed, gated by
@@ -263,6 +360,7 @@ def compute_integrations_overview() -> dict[str, object]:
         the selected-tool detail (guard contract + real audit usage) and the
         category / per-tool call distributions.
     """
+    lang = _norm_lang(lang)
     now = datetime.now(UTC)
     settings = get_settings()
     policy: Policy = load_policy()
@@ -276,18 +374,18 @@ def compute_integrations_overview() -> dict[str, object]:
         rows.append(
             {
                 "id": meta["id"],
-                "name": meta["name"],
+                "name": _tool_t(meta["id"], "name", lang),
                 "type": meta["category"],
                 "status": _status(tp, stat),
-                "environment": "Démo",
-                "owner": "Agent",
+                "environment": _t("env_demo", lang),
+                "owner": _t("owner_row", lang),
                 "calls": _fmt_int(stat.decisions),
                 "success_rate": (
                     f"{round(allowed / stat.decisions * 100)}%" if stat.decisions else "-"
                 ),
                 "response_time": "-",
-                "last_sync": _rel(stat.last, now),
-                "detail": _detail(meta, tp, stat, now),
+                "last_sync": _rel(stat.last, now, lang),
+                "detail": _detail(meta, tp, stat, now, lang),
             }
         )
 
@@ -300,12 +398,12 @@ def compute_integrations_overview() -> dict[str, object]:
     maxcalls_per_tool = [policy.tool(m["id"]).max_calls_per_turn for m in _TOOLS]
 
     kpis = [
-        _kpi("tools", str(len(_TOOLS)), "outils de l'agent", maxcalls_per_tool),
-        _kpi("allowed", str(allowed_tools), "autorises par la politique", maxcalls_per_tool),
-        _kpi("confirmation", str(confirm_tools), "confirmation requise", maxcalls_per_tool),
-        _kpi("calls", _fmt_int(total_calls), "appels journalises", calls_per_tool),
-        _kpi("blocked", _fmt_int(total_denials), "refus journalises", calls_per_tool),
-        _kpi("idle", str(idle_tools), "jamais sollicites", calls_per_tool),
+        _kpi("tools", str(len(_TOOLS)), _t("ks_tools", lang), maxcalls_per_tool),
+        _kpi("allowed", str(allowed_tools), _t("ks_allowed", lang), maxcalls_per_tool),
+        _kpi("confirmation", str(confirm_tools), _t("ks_confirm", lang), maxcalls_per_tool),
+        _kpi("calls", _fmt_int(total_calls), _t("ks_calls", lang), calls_per_tool),
+        _kpi("blocked", _fmt_int(total_denials), _t("ks_blocked", lang), calls_per_tool),
+        _kpi("idle", str(idle_tools), _t("ks_idle", lang), calls_per_tool),
     ]
 
     # Category distribution (donut).
@@ -326,7 +424,7 @@ def compute_integrations_overview() -> dict[str, object]:
     by_env = [
         {
             "key": m["id"],
-            "label": m["name"],
+            "label": _tool_t(m["id"], "name", lang),
             "value": _fmt_int(scan.stat(m["id"]).decisions),
             "pct": round(scan.stat(m["id"]).decisions / total_calls * 100) if total_calls else 0,
             "color": _CATEGORY_COLOR.get(m["category"], "#64748b"),
@@ -336,7 +434,7 @@ def compute_integrations_overview() -> dict[str, object]:
 
     top_integrations = [
         {
-            "name": m["name"],
+            "name": _tool_t(m["id"], "name", lang),
             "value": scan.stat(m["id"]).decisions,
             "label": _fmt_int(scan.stat(m["id"]).decisions),
         }
@@ -354,5 +452,5 @@ def compute_integrations_overview() -> dict[str, object]:
         "by_type_total": len(_TOOLS),
         "by_env": by_env,
         "top_integrations": top_integrations,
-        "footer": {"total": len(_TOOLS), "source": "agent/tools + policy.yaml + journal d'audit"},
+        "footer": {"total": len(_TOOLS), "source": _t("f_source", lang)},
     }

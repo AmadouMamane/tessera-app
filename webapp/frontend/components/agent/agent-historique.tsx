@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import type { Route } from "next";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Link } from "@/i18n/navigation";
@@ -136,11 +136,12 @@ function compareRows(a: RowT, b: RowT, col: number, dir: "asc" | "desc"): number
 
 export function AgentHistorique() {
   const t = useTranslations("agentHistorique");
+  const locale = useLocale();
   const agentId = useAgentId();
   const [subtab, setSubtab] = useState("");
   const { data } = useQuery({
-    queryKey: ["agent-historique", agentId],
-    queryFn: ({ signal }) => fetchAgentHistorique(agentId, signal),
+    queryKey: ["agent-historique", agentId, locale],
+    queryFn: ({ signal }) => fetchAgentHistorique(agentId, locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -935,7 +936,7 @@ function ByAgent({ data }: { data: Data }) {
                 {it.value} <span className="text-[0.58rem]">({it.share})</span>
               </span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+            <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
               <div className="h-full rounded-full bg-[#8b7cf0]" style={{ width: `${it.pct}%` }} />
             </div>
           </li>

@@ -1,9 +1,25 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronsUpDown, Plug, Search, X } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { type ReactNode, useMemo, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  Plug,
+  Search,
+  SortAsc,
+  SortDesc,
+  X,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { fetchConnectors } from "@/lib/api/client";
@@ -11,6 +27,7 @@ import type { ConnectorsOverview as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 type T = ReturnType<typeof useTranslations<"connectors">>;
+type TT = ReturnType<typeof useTranslations<"table">>;
 type Cx = NonNullable<Data["connectors"]>[number];
 
 const STATUS: Record<string, { dot: string; text: string }> = {
@@ -29,11 +46,24 @@ const CAT_BADGE: Record<string, string> = {
 };
 type SortKey = "name" | "category" | "status" | "environment";
 
+const COLS: { key: string; sort?: SortKey; w: string }[] = [
+  { key: "name", sort: "name", w: "24%" },
+  { key: "category", sort: "category", w: "13%" },
+  { key: "status", sort: "status", w: "12%" },
+  { key: "environment", sort: "environment", w: "13%" },
+  { key: "latency", w: "11%" },
+  { key: "lastCheck", w: "14%" },
+];
+const ROWS_PER_PAGE_OPTS = [10, 25, 50];
+const ACCENT = "#87bfff";
+
 export function ConnectorsOverview() {
   const t = useTranslations("connectors");
+  const tt = useTranslations("table");
+  const locale = useLocale();
   const { data } = useQuery({
-    queryKey: ["connectors"],
-    queryFn: ({ signal }) => fetchConnectors(signal),
+    queryKey: ["connectors", locale],
+    queryFn: ({ signal }) => fetchConnectors(locale, signal),
     staleTime: 60_000,
   });
 
@@ -66,7 +96,7 @@ export function ConnectorsOverview() {
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <p className="text-sm text-[var(--tessera-text-muted)]">{t("subtitle")}</p>
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
@@ -87,20 +117,30 @@ export function ConnectorsOverview() {
         ))}
       </div>
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <FilterStrip
-            t={t}
-            query={query}
-            onQuery={setQuery}
-            category={category}
-            onCategory={setCategory}
-            status={status}
-            onStatus={setStatus}
-            categories={categories}
-          />
-          <Table t={t} rows={rows} sort={sort} onSort={toggleSort} onOpen={setOpen} />
-        </div>
+      <FilterStrip
+        t={t}
+        query={query}
+        onQuery={setQuery}
+        category={category}
+        onCategory={setCategory}
+        status={status}
+        onStatus={setStatus}
+        categories={categories}
+        count={rows.length}
+        total={connectors.length}
+      />
+
+      <ConnectorsTable
+        t={t}
+        tt={tt}
+        rows={rows}
+        sort={sort}
+        onSort={toggleSort}
+        selected={open}
+        onOpen={setOpen}
+      />
+
+      <div className="grid min-w-0 items-start gap-3">
         <Distribution t={t} data={data} />
       </div>
 
@@ -125,6 +165,8 @@ function FilterStrip({
   status,
   onStatus,
   categories,
+  count,
+  total,
 }: {
   t: T;
   query: string;
@@ -134,147 +176,329 @@ function FilterStrip({
   status: string;
   onStatus: (v: string) => void;
   categories: string[];
+  count: number;
+  total: number;
 }) {
   return (
-    <section className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
+    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <div className="relative min-w-[200px] flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--tessera-text-muted)]" />
         <input
           type="search"
           value={query}
           onChange={(e) => onQuery(e.target.value)}
+          aria-label={t("search")}
           placeholder={t("search")}
-          className="h-9 w-full rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-9 pr-3 text-xs text-[var(--tessera-text)] outline-none focus:border-[var(--tessera-green)]"
+          className="h-9 w-full rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-9 pr-3 text-xs text-[var(--tessera-text)] outline-none focus:border-[#2e72d2]"
         />
       </div>
-      <select
-        value={category}
-        onChange={(e) => onCategory(e.target.value)}
-        className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] outline-none focus:border-[var(--tessera-green)]"
-      >
-        <option value="all">{t("allCategories")}</option>
-        {categories.map((c) => (
-          <option key={c} value={c}>
-            {t(`category.${c}`)}
-          </option>
-        ))}
-      </select>
-      <select
-        value={status}
-        onChange={(e) => onStatus(e.target.value)}
-        className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] outline-none focus:border-[var(--tessera-green)]"
-      >
-        <option value="all">{t("allStatuses")}</option>
-        {(["active", "standby", "degraded", "error"] as const).map((s) => (
-          <option key={s} value={s}>
-            {t(`status.${s}`)}
-          </option>
-        ))}
-      </select>
+      <label className="relative shrink-0">
+        <span className="sr-only">{t("allCategories")}</span>
+        <select
+          value={category}
+          onChange={(e) => onCategory(e.target.value)}
+          className="h-9 cursor-pointer appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-3 pr-8 text-xs text-[var(--tessera-text)] outline-none hover:border-[#2e72d2] focus:border-[#2e72d2]"
+        >
+          <option value="all">{t("allCategories")}</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {t(`category.${c}`)}
+            </option>
+          ))}
+        </select>
+        <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#87bfff]" />
+      </label>
+      <label className="relative shrink-0">
+        <span className="sr-only">{t("allStatuses")}</span>
+        <select
+          value={status}
+          onChange={(e) => onStatus(e.target.value)}
+          className="h-9 cursor-pointer appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-3 pr-8 text-xs text-[var(--tessera-text)] outline-none hover:border-[#2e72d2] focus:border-[#2e72d2]"
+        >
+          <option value="all">{t("allStatuses")}</option>
+          {(["active", "standby", "degraded", "error"] as const).map((s) => (
+            <option key={s} value={s}>
+              {t(`status.${s}`)}
+            </option>
+          ))}
+        </select>
+        <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#87bfff]" />
+      </label>
+      <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+        {count}/{total}
+      </span>
     </section>
   );
 }
 
-function Table({
+// ── table ────────────────────────────────────────────────────────────────────
+
+function ConnectorsTable({
   t,
+  tt,
   rows,
   sort,
   onSort,
+  selected,
   onOpen,
 }: {
   t: T;
+  tt: TT;
   rows: Cx[];
   sort: { key: SortKey; dir: 1 | -1 };
   onSort: (k: SortKey) => void;
+  selected: Cx | null;
   onOpen: (c: Cx) => void;
 }) {
-  const cols: { key: SortKey; sortable: true }[] = [
-    { key: "name", sortable: true },
-    { key: "category", sortable: true },
-    { key: "status", sortable: true },
-    { key: "environment", sortable: true },
-  ];
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset to page 1 on filter/sort/size change
+  useEffect(() => setPage(1), [total, perPage, sort.key, sort.dir]);
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * perPage;
+  const pageRows = rows.slice(start, start + perPage);
   return (
-    <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+    <div
+      data-testid="connectors-table"
+      className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
+    >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.74rem]">
+        <table className="w-full min-w-[820px] table-fixed border-collapse text-left text-[0.72rem]">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {cols.map((c) => (
-                <th key={c.key} className="px-3 py-2 font-medium">
-                  <button
-                    type="button"
-                    onClick={() => onSort(c.key)}
-                    aria-sort={
-                      sort.key === c.key ? (sort.dir === 1 ? "ascending" : "descending") : "none"
-                    }
-                    className="inline-flex items-center gap-1 hover:text-[var(--tessera-text)]"
-                  >
-                    {t(`col.${c.key}`)}
-                    <ChevronsUpDown
-                      className={cn(
-                        "h-3 w-3",
-                        sort.key === c.key ? "text-[var(--tessera-green)]" : "opacity-40",
+            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {COLS.map((c, idx) => (
+                <th
+                  key={c.key}
+                  style={{ width: c.w }}
+                  className={cn("py-1.5 font-medium", idx === 0 ? "pl-5 pr-2" : "px-2")}
+                >
+                  {c.sort ? (
+                    <button
+                      type="button"
+                      onClick={() => onSort(c.sort as SortKey)}
+                      aria-sort={
+                        sort.key === c.sort ? (sort.dir === 1 ? "ascending" : "descending") : "none"
+                      }
+                      className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-[var(--tessera-text)]"
+                    >
+                      {t(`col.${c.key}`)}
+                      {sort.key === c.sort ? (
+                        sort.dir === 1 ? (
+                          <SortAsc className="h-3 w-3 text-[#87bfff]" />
+                        ) : (
+                          <SortDesc className="h-3 w-3 text-[#87bfff]" />
+                        )
+                      ) : (
+                        <ChevronsUpDown className="h-3 w-3 opacity-40" />
                       )}
-                    />
-                  </button>
+                    </button>
+                  ) : (
+                    t(`col.${c.key}`)
+                  )}
                 </th>
               ))}
-              <th className="px-3 py-2 font-medium">{t("col.latency")}</th>
-              <th className="px-3 py-2 font-medium">{t("col.lastCheck")}</th>
+              <th className="w-28 px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
-            {rows.map((c) => (
-              <tr
-                key={c.id}
-                onClick={() => onOpen(c)}
-                className="cursor-pointer border-b border-[var(--tessera-border)]/60 transition-colors hover:bg-[var(--tessera-muted)]"
-              >
-                <td className="px-3 py-2">
-                  <span className="flex items-center gap-2">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
-                      <Plug className="h-3 w-3" />
+            {pageRows.map((c) => {
+              const active = selected?.id === c.id;
+              return (
+                <tr
+                  key={c.id}
+                  onClick={() => onOpen(c)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onOpen(c);
+                    }
+                  }}
+                  tabIndex={0}
+                  // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
+                  role="button"
+                  aria-label={c.name}
+                  className={cn(
+                    "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors last:border-0 hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
+                    active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
+                  )}
+                >
+                  <td className="py-1.5 pl-5 pr-2">
+                    <span className="flex items-center gap-2" title={c.name}>
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[#87bfff]">
+                        <Plug className="h-3 w-3" />
+                      </span>
+                      <span className="truncate font-medium text-[var(--tessera-text)]">
+                        {c.name}
+                      </span>
                     </span>
-                    <span className="font-medium text-[var(--tessera-text)]">{c.name}</span>
-                  </span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <Badge className={CAT_BADGE[c.category]}>{t(`category.${c.category}`)}</Badge>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span
+                      className={cn("inline-flex items-center gap-1.5", STATUS[c.status]?.text)}
+                    >
+                      <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[c.status]?.dot)} />
+                      {t(`status.${c.status}`)}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{c.environment}</span>
+                  </td>
+                  <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
+                    {c.latency}
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{c.last_check}</span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span className="flex items-center justify-end gap-1 whitespace-nowrap">
+                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                        {tt("rowOpen")}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+            {total === 0 ? (
+              <tr>
+                <td
+                  colSpan={COLS.length + 1}
+                  className="px-2 py-6 text-center text-[0.7rem] text-[var(--tessera-text-muted)]"
+                >
+                  {tt("empty")}
                 </td>
-                <td className="px-3 py-2">
-                  <Badge className={CAT_BADGE[c.category]}>{t(`category.${c.category}`)}</Badge>
-                </td>
-                <td className="px-3 py-2">
-                  <span className={cn("inline-flex items-center gap-1.5", STATUS[c.status]?.text)}>
-                    <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[c.status]?.dot)} />
-                    {t(`status.${c.status}`)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-[var(--tessera-text-muted)]">{c.environment}</td>
-                <td className="px-3 py-2 tabular-nums text-[var(--tessera-text-muted)]">
-                  {c.latency}
-                </td>
-                <td className="px-3 py-2 text-[var(--tessera-text-muted)]">{c.last_check}</td>
               </tr>
-            ))}
+            ) : null}
           </tbody>
         </table>
       </div>
-      <div className="border-t border-[var(--tessera-border)] px-3 py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-        {t("rowCount", { n: rows.length })}
-      </div>
+      <TablePagination
+        tt={tt}
+        page={safePage}
+        totalPages={totalPages}
+        start={total === 0 ? 0 : start + 1}
+        end={Math.min(start + perPage, total)}
+        total={total}
+        perPage={perPage}
+        onPage={setPage}
+        onPerPage={setPerPage}
+        accent={ACCENT}
+      />
     </div>
   );
 }
 
+// Shared connaissances-style pagination footer (reused across cockpit tables).
+function pageWindow(page: number, totalPages: number): number[] {
+  const span = Math.min(5, totalPages);
+  let first = Math.max(1, page - Math.floor(span / 2));
+  first = Math.min(first, Math.max(1, totalPages - span + 1));
+  return Array.from({ length: span }, (_, i) => first + i);
+}
+
+function TablePagination({
+  tt,
+  page,
+  totalPages,
+  start,
+  end,
+  total,
+  perPage,
+  onPage,
+  onPerPage,
+  accent,
+}: {
+  tt: TT;
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  total: number;
+  perPage: number;
+  onPage: (p: number) => void;
+  onPerPage: (n: number) => void;
+  accent: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <span className="tabular-nums" aria-live="polite">
+        {tt("summary", { start, end, total })}
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={page <= 1}
+          aria-label={tt("prev")}
+          onClick={() => onPage(Math.max(1, page - 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        {pageWindow(page, totalPages).map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-current={n === page ? "page" : undefined}
+            onClick={() => onPage(n)}
+            style={
+              n === page ? { borderColor: `${accent}99`, background: `${accent}26` } : undefined
+            }
+            className={cn(
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              n === page
+                ? "font-medium text-white"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            {n}
+          </button>
+        ))}
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          aria-label={tt("next")}
+          onClick={() => onPage(Math.min(totalPages, page + 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <label className="flex items-center gap-2">
+        <span>{tt("perPage")}</span>
+        <select
+          value={perPage}
+          onChange={(e) => onPerPage(Number(e.target.value))}
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+        >
+          {ROWS_PER_PAGE_OPTS.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+// ── distribution ─────────────────────────────────────────────────────────────
+
 function Distribution({ t, data }: { t: T; data: Data }) {
   return (
-    <aside className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:h-fit">
+    <aside className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {t("byCategory")}
       </h3>
       {(data.distribution ?? []).map((s) => (
         <div key={s.key} className="flex items-center gap-2 text-[0.7rem]">
-          <span className="w-24 shrink-0 truncate">{t(`category.${s.key}`)}</span>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+          <span className="w-28 shrink-0 truncate">{t(`category.${s.key}`)}</span>
+          <div className="h-[4px] flex-1 overflow-hidden rounded-full bg-[var(--tessera-border)]">
             <div
               className="h-full rounded-full"
               style={{ width: `${s.pct}%`, background: s.color }}
@@ -289,7 +513,59 @@ function Distribution({ t, data }: { t: T; data: Data }) {
   );
 }
 
+// ── drawer ───────────────────────────────────────────────────────────────────
+
 function CxDrawer({ t, cx, onClose }: { t: T; cx: Cx; onClose: () => void }) {
+  const [rect, setRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [shown, setShown] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    return () => opener?.focus?.();
+  }, []);
+  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
+    if (event.key !== "Tab" || !dialogRef.current) return;
+    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+    const first = f[0];
+    const last = f[f.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  useEffect(() => {
+    const measure = () => {
+      const m = document.querySelector("main");
+      if (!m) return;
+      const mr = m.getBoundingClientRect();
+      const c = document.querySelector("[data-shell-content]") ?? m;
+      const cr = c.getBoundingClientRect();
+      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  useEffect(() => {
+    setShown(true);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   const meta: [string, string][] = [
     [t("drawer.role"), cx.role],
     [t("drawer.endpoint"), cx.endpoint],
@@ -301,51 +577,73 @@ function CxDrawer({ t, cx, onClose }: { t: T; cx: Cx; onClose: () => void }) {
   ];
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/40"
-      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
+      style={rect ?? { inset: 0 }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
       <dialog
+        ref={dialogRef}
         open
-        aria-modal
-        className="relative m-0 flex h-full w-full max-w-[460px] flex-col gap-4 overflow-y-auto border-l border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-5 text-[var(--tessera-text)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
+        aria-modal="true"
+        aria-label={cx.name}
+        onKeyDown={onTrapKey}
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+        className={cn(
+          "static m-0 block h-full w-full max-w-[460px] bg-transparent p-0 transition-transform duration-200 ease-out",
+          shown ? "translate-x-0" : "translate-x-full",
+        )}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className={CAT_BADGE[cx.category]}>{t(`category.${cx.category}`)}</Badge>
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 text-[0.66rem]",
-                  STATUS[cx.status]?.text,
-                )}
-              >
-                <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[cx.status]?.dot)} />
-                {t(`status.${cx.status}`)}
-              </span>
+        <aside
+          data-testid="connector-detail"
+          className="flex h-full w-full min-w-0 flex-col gap-4 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-5 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className={CAT_BADGE[cx.category]}>{t(`category.${cx.category}`)}</Badge>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 text-[0.66rem]",
+                    STATUS[cx.status]?.text,
+                  )}
+                >
+                  <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[cx.status]?.dot)} />
+                  {t(`status.${cx.status}`)}
+                </span>
+              </div>
+              <h2 className="mt-2 truncate text-lg font-semibold text-white">{cx.name}</h2>
+              <p className="mt-1 truncate font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
+                {cx.id}
+              </p>
             </div>
-            <h2 className="mt-2 text-lg font-semibold text-white">{cx.name}</h2>
-            <p className="mt-1 font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">{cx.id}</p>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("drawer.close")}
+              className="shrink-0 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("drawer.close")}
-            className="shrink-0 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <p className="text-[0.8rem] leading-relaxed text-[var(--tessera-text)]">{cx.description}</p>
-        <dl className="flex flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[0.72rem]">
-          {meta.map(([k, v]) => (
-            <div key={k} className="flex items-center justify-between gap-3">
-              <dt className="shrink-0 text-[var(--tessera-text-muted)]">{k}</dt>
-              <dd className="min-w-0 truncate text-right font-mono text-[0.68rem] text-[var(--tessera-text)]">
-                {v}
-              </dd>
-            </div>
-          ))}
-        </dl>
+          <p className="text-[0.8rem] leading-relaxed text-[var(--tessera-text)]">
+            {cx.description}
+          </p>
+          <dl className="flex flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[0.72rem]">
+            {meta.map(([k, v]) => (
+              <div key={k} className="flex items-center justify-between gap-3">
+                <dt className="shrink-0 text-[var(--tessera-text-muted)]">{k}</dt>
+                <dd className="min-w-0 truncate text-right font-mono text-[0.68rem] text-[var(--tessera-text)]">
+                  {v}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </aside>
       </dialog>
     </div>
   );

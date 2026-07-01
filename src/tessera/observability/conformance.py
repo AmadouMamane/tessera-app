@@ -71,12 +71,18 @@ def check_arguments(
 
 
 def compute_conformance(
-    path: Path | None = None, *, policy: Policy | None = None, at: str | None = None
+    path: Path | None = None,
+    *,
+    policy: Policy | None = None,
+    at: str | None = None,
+    agent_id: str | None = None,
 ) -> ConformanceReport:
     """Compute tool-argument conformance from the audit log at ``path``.
 
     With ``at`` set, only entries that occurred at or before instant T are
-    counted — the as-of-T read for the cockpit time rail (ADR 0011).
+    counted — the as-of-T read for the cockpit time rail (ADR 0011). With
+    ``agent_id`` set, only that agent's tool calls (the audit log tags each
+    entry's ``agent_id``).
     """
     active_policy = policy or load_policy()
     audit_path = path or get_settings().guard.audit_file
@@ -99,6 +105,8 @@ def compute_conformance(
                 if obj.get("type") != "tessera.guard.audit" or tool == "user_input":
                     continue
                 if not occurred_before(obj.get("occurred_at"), at):
+                    continue
+                if agent_id is not None and obj.get("agent_id") != agent_id:
                     continue
                 arguments = obj.get("arguments")
                 if not isinstance(arguments, dict) or not isinstance(tool, str):

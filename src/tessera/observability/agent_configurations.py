@@ -48,6 +48,14 @@ _TOOLS_DIR = _ROOT / "src" / "tessera" / "agent" / "tools"
 _CORPUS_DIR = _ROOT / "src" / "tessera" / "corpus" / "data"
 _PARIS = ZoneInfo("Europe/Paris")
 
+_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+
+def _loc(lang: str, fr: str, de: str, en: str) -> str:
+    """Pick the locale variant of an inline string (fr / de / en)."""
+    return (fr, de, en)[_LANG_IDX.get(lang, 0)]
+
+
 # --- Editable defaults + option lists (the persisted agent profile) -----------
 # Defaults are the values the agent profile starts from; overrides in the durable
 # store win. Keys here are the contract with the frontend and the save endpoint.
@@ -87,14 +95,100 @@ _OPTIONS: dict[str, list[str]] = {
     "default_language": ["Français", "Allemand", "Anglais"],
 }
 
-# Human labels for the LLM-callable tools governed by the guard policy.
-_TOOL_LABELS: dict[str, str] = {
-    "account_balance": "Consultation de solde",
-    "card_block": "Blocage de carte",
-    "transaction_search": "Recherche de transactions",
-    "loan_simulate": "Simulation de crédit",
-    "ticket_escalate": "Escalade vers un conseiller",
+# Per-key translation of the editable option *values*. The canonical French
+# string is the persisted identity (the durable store always holds it); display
+# and the option list are localized, and ``_canonical_value`` maps any localized
+# value posted by the UI back to the French canonical before persisting. Timezone
+# values are technical identifiers and stay verbatim.
+_VALUE_TR: dict[str, dict[str, tuple[str, str, str]]] = {
+    "owner": {
+        "Équipe Support": ("Équipe Support", "Support-Team", "Support team"),
+        "Équipe Produit": ("Équipe Produit", "Produkt-Team", "Product team"),
+        "Équipe Conformité": ("Équipe Conformité", "Compliance-Team", "Compliance team"),
+        "Équipe ML": ("Équipe ML", "ML-Team", "ML team"),
+    },
+    "fallback_strategy": {
+        "Automatique": ("Automatique", "Automatisch", "Automatic"),
+        "Manuelle": ("Manuelle", "Manuell", "Manual"),
+        "Désactivée": ("Désactivée", "Deaktiviert", "Disabled"),
+    },
+    "tone": {
+        "Professionnel": ("Professionnel", "Professionell", "Professional"),
+        "Amical": ("Amical", "Freundlich", "Friendly"),
+        "Direct": ("Direct", "Direkt", "Direct"),
+        "Pédagogique": ("Pédagogique", "Lehrreich", "Pedagogical"),
+    },
+    "detail": {
+        "Concis": ("Concis", "Praegnant", "Concise"),
+        "Équilibré": ("Équilibré", "Ausgewogen", "Balanced"),
+        "Détaillé": ("Détaillé", "Detailliert", "Detailed"),
+    },
+    "max_length": {
+        "Courte": ("Courte", "Kurz", "Short"),
+        "Moyenne": ("Moyenne", "Mittel", "Medium"),
+        "Longue": ("Longue", "Lang", "Long"),
+    },
+    "routing_strategy": {
+        "Par défaut (Recommandé)": (
+            "Par défaut (Recommandé)",
+            "Standard (Empfohlen)",
+            "Default (Recommended)",
+        ),
+        "Priorité latence": ("Priorité latence", "Latenz-Prioritaet", "Latency priority"),
+        "Priorité qualité": ("Priorité qualité", "Qualitaets-Prioritaet", "Quality priority"),
+        "Coût minimal": ("Coût minimal", "Minimale Kosten", "Minimal cost"),
+    },
+    "default_language": {
+        "Français": ("Français", "Franzoesisch", "French"),
+        "Allemand": ("Allemand", "Deutsch", "German"),
+        "Anglais": ("Anglais", "Englisch", "English"),
+    },
 }
+
+
+def _value_display(key: str, canonical: str, lang: str) -> str:
+    """Localized display of an option value (canonical French in, locale out)."""
+    table = _VALUE_TR.get(key)
+    if not table:
+        return canonical
+    variants = table.get(canonical)
+    return variants[_LANG_IDX.get(lang, 0)] if variants else canonical
+
+
+def _value_options(key: str, lang: str) -> list[str]:
+    """The option list for ``key``, localized for display."""
+    return [_value_display(key, v, lang) for v in _OPTIONS.get(key, [])]
+
+
+def _canonical_value(key: str, value: str) -> str:
+    """Map a (possibly localized) option value back to its French canonical."""
+    table = _VALUE_TR.get(key)
+    if not table:
+        return value
+    for canonical, variants in table.items():
+        if value == canonical or value in variants:
+            return canonical
+    return value
+
+
+# Human labels for the LLM-callable tools governed by the guard policy (fr/de/en).
+_TOOL_LABELS: dict[str, tuple[str, str, str]] = {
+    "account_balance": ("Consultation de solde", "Saldoabfrage", "Balance lookup"),
+    "card_block": ("Blocage de carte", "Kartensperre", "Card block"),
+    "transaction_search": ("Recherche de transactions", "Transaktionssuche", "Transaction search"),
+    "loan_simulate": ("Simulation de crédit", "Kreditsimulation", "Loan simulation"),
+    "ticket_escalate": (
+        "Escalade vers un conseiller",
+        "Eskalation an Berater",
+        "Escalate to an advisor",
+    ),
+}
+
+
+def _tool_label(name: str, lang: str) -> str:
+    variants = _TOOL_LABELS.get(name)
+    return variants[_LANG_IDX.get(lang, 0)] if variants else name.replace("_", " ").title()
+
 
 _SLIDERS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
 _SLIDER_MAX: dict[str, float] = {
@@ -149,26 +243,35 @@ def _save_overrides(state: dict[str, Any], agent_id: str = DEFAULT_AGENT_ID) -> 
 
 _HISTORY_LIMIT = 50
 
-# Human-facing French label for each persistable key (used in the change-log).
-_KEY_LABEL: dict[str, str] = {
-    "name": "Nom de l'agent",
-    "description": "Description",
-    "owner": "Propriétaire",
-    "timezone": "Fuseau horaire",
-    "fallback_strategy": "Stratégie de bascule",
-    "tone": "Ton",
-    "detail": "Détail des réponses",
-    "max_length": "Longueur max",
-    "temperature": "Température",
-    "top_p": "Top P",
-    "frequency_penalty": "Pénalité de fréquence",
-    "presence_penalty": "Pénalité de présence",
-    "routing_strategy": "Stratégie de routage",
-    "parallel_tools": "Exécution parallèle d'outils",
-    "tags": "Tags",
-    "archived": "Archivage",
-    "default_language": "Langue par défaut",
+# Human-facing label for each persistable key, per locale (used in the change-log).
+_KEY_LABEL: dict[str, tuple[str, str, str]] = {
+    "name": ("Nom de l'agent", "Agent-Name", "Agent name"),
+    "description": ("Description", "Beschreibung", "Description"),
+    "owner": ("Propriétaire", "Eigentuemer", "Owner"),
+    "timezone": ("Fuseau horaire", "Zeitzone", "Timezone"),
+    "fallback_strategy": ("Stratégie de bascule", "Fallback-Strategie", "Fallback strategy"),
+    "tone": ("Ton", "Ton", "Tone"),
+    "detail": ("Détail des réponses", "Antwortdetailgrad", "Answer detail"),
+    "max_length": ("Longueur max", "Maximale Laenge", "Max length"),
+    "temperature": ("Température", "Temperatur", "Temperature"),
+    "top_p": ("Top P", "Top P", "Top P"),
+    "frequency_penalty": ("Pénalité de fréquence", "Frequenzstrafe", "Frequency penalty"),
+    "presence_penalty": ("Pénalité de présence", "Praesenzstrafe", "Presence penalty"),
+    "routing_strategy": ("Stratégie de routage", "Routing-Strategie", "Routing strategy"),
+    "parallel_tools": (
+        "Exécution parallèle d'outils",
+        "Parallele Tool-Ausfuehrung",
+        "Parallel tool execution",
+    ),
+    "tags": ("Tags", "Tags", "Tags"),
+    "archived": ("Archivage", "Archivierung", "Archiving"),
+    "default_language": ("Langue par défaut", "Standardsprache", "Default language"),
 }
+
+
+def _key_label(key: str, lang: str) -> str:
+    variants = _KEY_LABEL.get(key)
+    return variants[_LANG_IDX.get(lang, 0)] if variants else key
 
 
 def _history_path() -> Path:
@@ -209,9 +312,13 @@ def available_config_keys() -> set[str]:
 
 
 def _coerce(key: str, value: Any) -> Any:
-    """Coerce an incoming value to the type of its default."""
+    """Coerce an incoming value to the type of its default.
+
+    Option values are normalized to their French canonical, so the durable store
+    always holds the canonical identity regardless of the UI locale that posted.
+    """
     if key == _LANG_KEY:
-        return str(value)
+        return _canonical_value(key, str(value))
     default = _DEFAULTS[key]
     if isinstance(default, bool):
         return bool(value)
@@ -222,7 +329,7 @@ def _coerce(key: str, value: Any) -> Any:
             return default
     if isinstance(default, list):
         return [str(v) for v in value] if isinstance(value, list) else default
-    return str(value)
+    return _canonical_value(key, str(value))
 
 
 def set_agent_config(changes: Mapping[str, Any], agent_id: str = DEFAULT_AGENT_ID) -> None:
@@ -287,8 +394,10 @@ def _effective(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, Any]:
 # --- Read-only repository introspection ---------------------------------------
 
 
-def _lang_label(code: str) -> str:
-    return {"fr": "Français", "de": "Allemand", "en": "Anglais"}.get(code, code)
+def _lang_label(code: str, lang: str = "fr") -> str:
+    """Localized display name for a content-language code (canonical FR for codes)."""
+    canonical = {"fr": "Français", "de": "Allemand", "en": "Anglais"}.get(code, code)
+    return _value_display("default_language", canonical, lang)
 
 
 def _mtime_dt(path: Path) -> datetime:
@@ -302,13 +411,15 @@ def _fmt_mtime(path: Path) -> str:
     return _mtime_dt(path).strftime("%d/%m/%Y %H:%M")
 
 
-def _build_history(policy_path: Path) -> list[dict[str, str]]:
+def _build_history(policy_path: Path, lang: str = "fr") -> list[dict[str, str]]:
     """Real change history: durable form-save log + real config-file mtimes.
 
     No invented events - each row is either a real persisted override save
     (timestamp + the fields that actually changed) or a real file modification
     (the source's actual mtime), newest first.
     """
+    console = _loc(lang, "Console", "Konsole", "Console")
+    repo = _loc(lang, "Dépôt (Git)", "Repository (Git)", "Repository (Git)")
     events: list[tuple[datetime, str, str]] = []
     for entry in _load_change_log():
         try:
@@ -316,20 +427,49 @@ def _build_history(policy_path: Path) -> list[dict[str, str]]:
         except (TypeError, ValueError):
             continue
         keys = [str(k) for k in entry.get("keys", [])]
-        labels = ", ".join(_KEY_LABEL.get(k, k) for k in keys) or "configuration"
-        plural = "s" if len(keys) > 1 else ""
-        events.append((when, "Console", f"{len(keys)} champ{plural} modifié{plural} : {labels}"))
+        labels = ", ".join(_key_label(k, lang) for k in keys) or _loc(
+            lang, "configuration", "Konfiguration", "configuration"
+        )
+        n = len(keys)
+        if lang == "de":
+            summary = f"{n} Feld{'er' if n > 1 else ''} geaendert: {labels}"
+        elif lang == "en":
+            summary = f"{n} field{'s' if n > 1 else ''} changed: {labels}"
+        else:
+            plural = "s" if n > 1 else ""
+            summary = f"{n} champ{plural} modifié{plural} : {labels}"
+        events.append((when, console, summary))
     sources = [
-        (_ROOT / "src" / "tessera" / "settings.py", "Paramètres système (settings.py)"),
-        (policy_path, "Politique garde-fous (policy.yaml)"),
-        (_PROMPTS_DIR / "fr.yaml", "Prompts (fr.yaml)"),
+        (
+            _ROOT / "src" / "tessera" / "settings.py",
+            _loc(
+                lang,
+                "Paramètres système (settings.py)",
+                "Systemeinstellungen (settings.py)",
+                "System settings (settings.py)",
+            ),
+        ),
+        (
+            policy_path,
+            _loc(
+                lang,
+                "Politique garde-fous (policy.yaml)",
+                "Schutzregel-Richtlinie (policy.yaml)",
+                "Guardrail policy (policy.yaml)",
+            ),
+        ),
+        (
+            _PROMPTS_DIR / "fr.yaml",
+            _loc(lang, "Prompts (fr.yaml)", "Prompts (fr.yaml)", "Prompts (fr.yaml)"),
+        ),
     ]
     newest_corpus = max(_CORPUS_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, default=None)
     if newest_corpus is not None:
         sources.append((newest_corpus, f"Corpus ({newest_corpus.name})"))
+    updated = _loc(lang, "mis à jour", "aktualisiert", "updated")
     for path, label in sources:
         if path.exists():
-            events.append((_mtime_dt(path), "Dépôt (Git)", f"{label} mis à jour"))
+            events.append((_mtime_dt(path), repo, f"{label} {updated}"))
     events.sort(key=lambda e: e[0], reverse=True)
     return [
         {"time": when.strftime("%d/%m/%Y %H:%M"), "actor": actor, "label": label}
@@ -391,19 +531,25 @@ def _edit(
     label: str,
     value: str,
     kind: str,
+    lang: str = "fr",
     *,
     options: list[str] | None = None,
     badge: str | None = None,
 ) -> dict[str, object]:
-    """An editable field bound to a persisted key."""
+    """An editable field bound to a persisted key.
+
+    ``value`` is the canonical (French) stored value; it and the option list are
+    localized for display. The frontend posts the localized value back and the
+    save endpoint re-canonicalizes it, so the durable store stays stable.
+    """
     return {
         "key": key,
         "label": label,
-        "value": value,
+        "value": _value_display(key, value, lang),
         "kind": kind,
         "badge": badge,
         "editable": True,
-        "options": options or _OPTIONS.get(key, []),
+        "options": options or _value_options(key, lang),
     }
 
 
@@ -422,7 +568,7 @@ def _slider(key: str, label: str, value: float) -> dict[str, object]:
     }
 
 
-def _definition_block(agent_slug: str) -> dict[str, object]:
+def _definition_block(agent_slug: str, lang: str = "fr") -> dict[str, object]:
     """The read-only *definition* (catalogue) this agent binds to.
 
     Sourced from the governed registry package (``agents.yaml``) — never typed
@@ -436,29 +582,59 @@ def _definition_block(agent_slug: str) -> dict[str, object]:
     except KeyError:
         agent = get_agent(DEFAULT_AGENT_ID)
     return {
-        "title": "Définition (catalogue)",
-        "subtitle": "lecture seule",
+        "title": _loc(
+            lang, "Définition (catalogue)", "Definition (Katalog)", "Definition (catalogue)"
+        ),
+        "subtitle": _loc(lang, "lecture seule", "schreibgeschuetzt", "read-only"),
         "link": {
-            "label": "Voir la définition dans CONFIGURER → Paramètres",
+            "label": _loc(
+                lang,
+                "Voir la définition dans CONFIGURER → Paramètres",
+                "Definition unter KONFIGURIEREN → Parameter anzeigen",
+                "View the definition in CONFIGURE → Parameters",
+            ),
             "href": "/configurer/parametres",
         },
         "rows": [
-            {"label": "Nom de la définition", "value": agent.name},
-            {"label": "Propriétaire", "value": agent.owner},
-            {"label": "Modèle de définition", "value": agent.model},
-            {"label": "Langue par défaut", "value": _lang_label(agent.default_language)},
-            {"label": "Politique de garde-fous", "value": agent.guardrails},
-            {"label": "Jeu d'évaluation", "value": agent.eval_set},
+            {
+                "label": _loc(lang, "Nom de la définition", "Definitionsname", "Definition name"),
+                "value": agent.name,
+            },
+            {"label": _loc(lang, "Propriétaire", "Eigentuemer", "Owner"), "value": agent.owner},
+            {
+                "label": _loc(
+                    lang, "Modèle de définition", "Definitionsmodell", "Definition model"
+                ),
+                "value": agent.model,
+            },
+            {
+                "label": _loc(lang, "Langue par défaut", "Standardsprache", "Default language"),
+                "value": _lang_label(agent.default_language, lang),
+            },
+            {
+                "label": _loc(
+                    lang, "Politique de garde-fous", "Schutzregel-Richtlinie", "Guardrail policy"
+                ),
+                "value": agent.guardrails,
+            },
+            {
+                "label": _loc(lang, "Jeu d'évaluation", "Evaluierungsset", "Evaluation set"),
+                "value": agent.eval_set,
+            },
         ],
     }
 
 
-def compute_agent_configurations(agent_slug: str = DEFAULT_AGENT_ID) -> dict[str, object]:
+def compute_agent_configurations(
+    agent_slug: str = DEFAULT_AGENT_ID, lang: str = "fr"
+) -> dict[str, object]:
     """Return the active agent configuration payload (real + editable overrides).
 
     ``agent_slug`` is the URL slug of the agent in scope; it scopes the in-page
     navigation links (``/agents/<agent_slug>/...``). It is distinct from the
-    internal display id ``agent_id`` (``tessera-assistant-<env>``).
+    internal display id ``agent_id`` (``tessera-assistant-<env>``). ``lang``
+    localizes the chrome and the editable option values for display; the durable
+    store keeps the canonical French values.
     """
     settings = get_settings()
     cfg = _effective(agent_slug)
@@ -471,9 +647,7 @@ def compute_agent_configurations(agent_slug: str = DEFAULT_AGENT_ID) -> dict[str
     )
     policy = load_policy(settings.guard.policy_path)
     allowed_tool_names = [
-        _TOOL_LABELS.get(name, name.replace("_", " ").title())
-        for name, tool in policy.tools.items()
-        if tool.allow
+        _tool_label(name, lang) for name, tool in policy.tools.items() if tool.allow
     ]
     allowed_tools = len(allowed_tool_names)
     guard_count = len(policy.tools) + len(policy.prompt_injection_deny) + len(policy.pii_patterns)
@@ -484,154 +658,301 @@ def compute_agent_configurations(agent_slug: str = DEFAULT_AGENT_ID) -> dict[str
     # Identifiant = the agent's URL slug (the same id stamped on its data),
     # so the displayed identity matches /agents/<slug>/... and the registry.
     agent_id = agent_slug
-    default_lang_label = _lang_label(_registry_default_language(agent_slug, settings))
-    lang_value = str(_load_overrides(agent_slug).get(_LANG_KEY) or default_lang_label)
+    lang_canonical = _canonical_value(
+        _LANG_KEY,
+        str(
+            _load_overrides(agent_slug).get(_LANG_KEY)
+            or _lang_label(_registry_default_language(agent_slug, settings))
+        ),
+    )
+    lang_value = _value_display(_LANG_KEY, lang_canonical, lang)
+    parallel_on = bool(cfg["parallel_tools"])
     archived = bool(cfg["archived"])
-    definition = _definition_block(agent_slug)
+    definition = _definition_block(agent_slug, lang)
 
     return {
-        "title": "Configurations",
-        "subtitle": "Réglages de cet agent : identité, modèle, comportement et statut.",
+        "title": _loc(lang, "Configurations", "Konfigurationen", "Configurations"),
+        "subtitle": _loc(
+            lang,
+            "Réglages de cet agent : identité, modèle, comportement et statut.",
+            "Einstellungen dieses Agenten: Identitaet, Modell, Verhalten und Status.",
+            "Settings for this agent: identity, model, behaviour and status.",
+        ),
         # define / choose / govern: the registry package (agents.yaml) is the
         # read-only *definition* this agent binds to; the sections below are the
         # editable *instance* overrides. In production every change is governed.
         "definition": definition,
-        "governance_banner": (
+        "governance_banner": _loc(
+            lang,
             "Cette configuration s'applique uniquement à cet agent. Toute modification "
-            "en environnement de production est gouvernée, versionnée et auditée."
+            "en environnement de production est gouvernée, versionnée et auditée.",
+            "Diese Konfiguration gilt nur fuer diesen Agenten. Jede Aenderung in der "
+            "Produktionsumgebung ist gesteuert, versioniert und auditiert.",
+            "This configuration applies only to this agent. Any change in the production "
+            "environment is governed, versioned and audited.",
         ),
         # In production, changes are load-bearing + regulated: the inline save is
         # replaced by a governed "propose change" flow (RBAC + versioned event +
         # audit via Release Control). Direct inline save stays for local/staging.
         "governed": get_settings().is_production(),
         "actions": {
-            "save": "Enregistrer les modifications",
-            "saved": "Modifications enregistrées",
-            "reset": "Annuler",
+            "save": _loc(
+                lang, "Enregistrer les modifications", "Aenderungen speichern", "Save changes"
+            ),
+            "saved": _loc(
+                lang, "Modifications enregistrées", "Aenderungen gespeichert", "Changes saved"
+            ),
+            "reset": _loc(lang, "Annuler", "Abbrechen", "Cancel"),
             "more": "...",
-            "propose": "Proposer un changement",
+            "propose": _loc(
+                lang, "Proposer un changement", "Aenderung vorschlagen", "Propose a change"
+            ),
         },
         "identity": {
-            "title": "Identité",
+            "title": _loc(lang, "Identité", "Identitaet", "Identity"),
             "left": [
-                _edit("name", "Nom de l'agent", str(cfg["name"]), "text"),
-                _ro("Identifiant", agent_id, "copy"),
-                _edit("description", "Description", str(cfg["description"]), "textarea"),
+                _edit(
+                    "name",
+                    _loc(lang, "Nom de l'agent", "Agent-Name", "Agent name"),
+                    str(cfg["name"]),
+                    "text",
+                    lang,
+                ),
+                _ro(_loc(lang, "Identifiant", "Kennung", "Identifier"), agent_id, "copy"),
+                _edit(
+                    "description",
+                    _loc(lang, "Description", "Beschreibung", "Description"),
+                    str(cfg["description"]),
+                    "textarea",
+                    lang,
+                ),
             ],
             "right": [
-                _edit("default_language", "Langue par défaut", str(lang_value), "select"),
-                _edit("timezone", "Fuseau horaire", str(cfg["timezone"]), "select"),
-                _edit("owner", "Propriétaire", str(cfg["owner"]), "select"),
+                _edit(
+                    "default_language",
+                    _loc(lang, "Langue par défaut", "Standardsprache", "Default language"),
+                    lang_canonical,
+                    "select",
+                    lang,
+                ),
+                _edit(
+                    "timezone",
+                    _loc(lang, "Fuseau horaire", "Zeitzone", "Timezone"),
+                    str(cfg["timezone"]),
+                    "select",
+                    lang,
+                ),
+                _edit(
+                    "owner",
+                    _loc(lang, "Propriétaire", "Eigentuemer", "Owner"),
+                    str(cfg["owner"]),
+                    "select",
+                    lang,
+                ),
             ],
         },
         "model": {
-            "title": "Modèle",
+            "title": _loc(lang, "Modèle", "Modell", "Model"),
             "left": [
                 _ro(
-                    "Modèle principal",
+                    _loc(lang, "Modèle principal", "Hauptmodell", "Primary model"),
                     active_model,
                     "model",
                     _model_provider(active_model, profile),
                 ),
-                _ro("Version / Snapshot", _model_snapshot(active_model), "info"),
+                _ro(
+                    _loc(lang, "Version / Snapshot", "Version / Snapshot", "Version / Snapshot"),
+                    _model_snapshot(active_model),
+                    "info",
+                ),
             ],
             "right": [
                 _ro(
-                    "Modèle de secours (fallback)",
+                    _loc(
+                        lang,
+                        "Modèle de secours (fallback)",
+                        "Ersatzmodell (Fallback)",
+                        "Fallback model",
+                    ),
                     fallback_model,
                     "model",
                     _model_provider(fallback_model, profile),
                 ),
                 _edit(
                     "fallback_strategy",
-                    "Stratégie de bascule",
+                    _loc(lang, "Stratégie de bascule", "Fallback-Strategie", "Fallback strategy"),
                     str(cfg["fallback_strategy"]),
                     "select",
+                    lang,
                 ),
             ],
             # The model itself is read-only here: it is defined (and approved) in
             # the CONFIGURER model registry, never typed free-text on this page.
             "link": {
-                "label": "Gérer dans le registre des modèles",
+                "label": _loc(
+                    lang,
+                    "Gérer dans le registre des modèles",
+                    "Im Modellregister verwalten",
+                    "Manage in the model registry",
+                ),
                 "href": "/configurer/modeles",
             },
         },
         "behavior": {
-            "title": "Comportement",
+            "title": _loc(lang, "Comportement", "Verhalten", "Behaviour"),
             "selects": [
-                _edit("tone", "Ton", str(cfg["tone"]), "select"),
-                _edit("detail", "Détail des réponses", str(cfg["detail"]), "select"),
-                _edit("max_length", "Longueur max des réponses", str(cfg["max_length"]), "select"),
+                _edit("tone", _loc(lang, "Ton", "Ton", "Tone"), str(cfg["tone"]), "select", lang),
+                _edit(
+                    "detail",
+                    _loc(lang, "Détail des réponses", "Antwortdetailgrad", "Answer detail"),
+                    str(cfg["detail"]),
+                    "select",
+                    lang,
+                ),
+                _edit(
+                    "max_length",
+                    _loc(
+                        lang,
+                        "Longueur max des réponses",
+                        "Maximale Antwortlaenge",
+                        "Max answer length",
+                    ),
+                    str(cfg["max_length"]),
+                    "select",
+                    lang,
+                ),
             ],
             "sliders": [
-                _slider("temperature", "Température", float(cfg["temperature"])),
+                _slider(
+                    "temperature",
+                    _loc(lang, "Température", "Temperatur", "Temperature"),
+                    float(cfg["temperature"]),
+                ),
                 _slider("top_p", "Top P", float(cfg["top_p"])),
                 _slider(
-                    "frequency_penalty", "Pénalité de fréquence", float(cfg["frequency_penalty"])
+                    "frequency_penalty",
+                    _loc(lang, "Pénalité de fréquence", "Frequenzstrafe", "Frequency penalty"),
+                    float(cfg["frequency_penalty"]),
                 ),
-                _slider("presence_penalty", "Pénalité de présence", float(cfg["presence_penalty"])),
+                _slider(
+                    "presence_penalty",
+                    _loc(lang, "Pénalité de présence", "Praesenzstrafe", "Presence penalty"),
+                    float(cfg["presence_penalty"]),
+                ),
             ],
             "tools": {
-                "label": "Outils autorisés",
-                "value": f"{allowed_tools} sélectionnés",
+                "label": _loc(lang, "Outils autorisés", "Erlaubte Tools", "Allowed tools"),
+                "value": _loc(
+                    lang,
+                    f"{allowed_tools} sélectionnés",
+                    f"{allowed_tools} ausgewaehlt",
+                    f"{allowed_tools} selected",
+                ),
                 "items": allowed_tool_names,
                 "href": f"/agents/{agent_slug}/garde-fous",
             },
-            "note": (
+            "note": _loc(
+                lang,
                 "Les paramètres du modèle et du comportement s'appliquent à "
-                "l'environnement de production."
+                "l'environnement de production.",
+                "Die Modell- und Verhaltensparameter gelten fuer die " "Produktionsumgebung.",
+                "The model and behaviour parameters apply to the production " "environment.",
             ),
         },
         "routing": {
-            "title": "Routage & Orchestration",
+            "title": _loc(
+                lang,
+                "Routage & Orchestration",
+                "Routing & Orchestrierung",
+                "Routing & Orchestration",
+            ),
             "left": [
                 _edit(
                     "routing_strategy",
-                    "Stratégie de routage",
+                    _loc(lang, "Stratégie de routage", "Routing-Strategie", "Routing strategy"),
                     str(cfg["routing_strategy"]),
                     "select",
+                    lang,
                 ),
                 _ro(
-                    "Timeout réponse (s)",
+                    _loc(
+                        lang, "Timeout réponse (s)", "Antwort-Timeout (s)", "Response timeout (s)"
+                    ),
                     str(int(settings.api.request_timeout_seconds / 2)),
                     "info",
                 ),
             ],
             "right": [
-                _ro("Nombre max d'itérations", str(settings.memory.history_window + 2), "info"),
-                _edit(
-                    "parallel_tools",
-                    "Exécution parallèle d'outils",
-                    "Activé" if cfg["parallel_tools"] else "Désactivée",
-                    "toggle",
+                _ro(
+                    _loc(lang, "Nombre max d'itérations", "Max. Iterationen", "Max iterations"),
+                    str(settings.memory.history_window + 2),
+                    "info",
                 ),
+                {
+                    "key": "parallel_tools",
+                    "label": _loc(
+                        lang,
+                        "Exécution parallèle d'outils",
+                        "Parallele Tool-Ausfuehrung",
+                        "Parallel tool execution",
+                    ),
+                    "value": _loc(lang, "Activé", "Aktiviert", "Enabled")
+                    if parallel_on
+                    else _loc(lang, "Désactivée", "Deaktiviert", "Disabled"),
+                    "on": parallel_on,
+                    "kind": "toggle",
+                    "badge": None,
+                    "editable": True,
+                    "options": [],
+                },
             ],
         },
         "tags": {
-            "title": "Tags & Métadonnées",
+            "title": _loc(lang, "Tags & Métadonnées", "Tags & Metadaten", "Tags & Metadata"),
             "tags": list(cfg["tags"]),
-            "add_tag": "Ajouter un tag",
-            "metadata_label": "Métadonnées",
-            "metadata": "Aucune métadonnée",
-            "add_metadata": "Ajouter",
+            "add_tag": _loc(lang, "Ajouter un tag", "Tag hinzufuegen", "Add a tag"),
+            "metadata_label": _loc(lang, "Métadonnées", "Metadaten", "Metadata"),
+            "metadata": _loc(lang, "Aucune métadonnée", "Keine Metadaten", "No metadata"),
+            "add_metadata": _loc(lang, "Ajouter", "Hinzufuegen", "Add"),
             # Honest provenance: no invented author. "created" = the repo config
             # baseline; "modified" = the real last override save (or defaults).
-            "created": "Profil issu du dépôt (settings.py + policy.yaml + prompts)",
-            "modified": (
-                f"Dernière sauvegarde via la console le {_fmt_mtime(_state_path())}"
-                if _state_path().exists()
-                else "Valeurs par défaut - aucune surcharge enregistrée"
+            "created": _loc(
+                lang,
+                "Profil issu du dépôt (settings.py + policy.yaml + prompts)",
+                "Profil aus dem Repository (settings.py + policy.yaml + Prompts)",
+                "Profile from the repository (settings.py + policy.yaml + prompts)",
             ),
-            "archive": "Désarchiver cet agent" if archived else "Archiver cet agent",
+            "modified": (
+                _loc(
+                    lang,
+                    f"Dernière sauvegarde via la console le {_fmt_mtime(_state_path())}",
+                    f"Letzte Speicherung ueber die Konsole am {_fmt_mtime(_state_path())}",
+                    f"Last saved via the console on {_fmt_mtime(_state_path())}",
+                )
+                if _state_path().exists()
+                else _loc(
+                    lang,
+                    "Valeurs par défaut - aucune surcharge enregistrée",
+                    "Standardwerte - keine Ueberschreibung gespeichert",
+                    "Default values - no override saved",
+                )
+            ),
+            "archive": _loc(
+                lang, "Désarchiver cet agent", "Agent dearchivieren", "Unarchive this agent"
+            )
+            if archived
+            else _loc(lang, "Archiver cet agent", "Agent archivieren", "Archive this agent"),
             "archived": archived,
         },
         "status": {
-            "title": "Statut de l'agent",
-            "badge": "Archivé" if archived else "Actif",
+            "title": _loc(lang, "Statut de l'agent", "Agent-Status", "Agent status"),
+            "badge": _loc(lang, "Archivé", "Archiviert", "Archived")
+            if archived
+            else _loc(lang, "Actif", "Aktiv", "Active"),
             "badge_tone": "crit" if archived else "good",
             "rows": [
                 {
-                    "label": "Environnement",
+                    "label": _loc(lang, "Environnement", "Umgebung", "Environment"),
                     "value": settings.environment.value.title(),
                     "badge": True,
                 },
@@ -639,57 +960,125 @@ def compute_agent_configurations(agent_slug: str = DEFAULT_AGENT_ID) -> dict[str
                     # `live` tells the frontend to replace this with the real
                     # /readyz probe (is the chat backend actually reachable);
                     # archived agents are never probed.
-                    "label": "Statut",
-                    "value": "Archivé" if archived else "En ligne",
+                    "label": _loc(lang, "Statut", "Status", "Status"),
+                    "value": _loc(lang, "Archivé", "Archiviert", "Archived")
+                    if archived
+                    else _loc(lang, "En ligne", "Online", "Online"),
                     "online": not archived,
                     "live": not archived,
                 },
-                {"label": "Config modifiée le", "value": settings_updated},
-                {"label": "Source", "value": "settings.py (dépôt)", "info": True},
+                {
+                    "label": _loc(
+                        lang, "Config modifiée le", "Konfig geaendert am", "Config changed on"
+                    ),
+                    "value": settings_updated,
+                },
+                {
+                    "label": _loc(lang, "Source", "Quelle", "Source"),
+                    "value": _loc(
+                        lang, "settings.py (dépôt)", "settings.py (Repo)", "settings.py (repo)"
+                    ),
+                    "info": True,
+                },
             ],
         },
         "active_model": {
-            "title": "Modèle actif",
+            "title": _loc(lang, "Modèle actif", "Aktives Modell", "Active model"),
             "name": active_model,
             "provider": _model_provider(active_model, profile),
             "rows": [
-                {"label": "Snapshot", "value": _model_snapshot(active_model)},
-                {"label": "Contexte max", "value": _context_window(active_model)},
+                {
+                    "label": _loc(lang, "Snapshot", "Snapshot", "Snapshot"),
+                    "value": _model_snapshot(active_model),
+                },
+                {
+                    "label": _loc(lang, "Contexte max", "Max. Kontext", "Max context"),
+                    "value": _context_window(active_model),
+                },
             ],
         },
         "summary": {
-            "title": "Résumé",
+            "title": _loc(lang, "Résumé", "Zusammenfassung", "Summary"),
             "rows": [
-                {"label": "Langue", "value": str(lang_value)},
-                {"label": "Ton", "value": str(cfg["tone"])},
-                {"label": "Detail", "value": str(cfg["detail"])},
-                {"label": "Outils autorisés", "value": str(tool_count)},
-                {"label": "Garde-fous actifs", "value": str(guard_count)},
-                {"label": "Prompts actifs", "value": str(prompt_count)},
-                {"label": "Connaissances rattachées", "value": f"{knowledge_count} sources"},
+                {"label": _loc(lang, "Langue", "Sprache", "Language"), "value": str(lang_value)},
+                {
+                    "label": _loc(lang, "Ton", "Ton", "Tone"),
+                    "value": _value_display("tone", str(cfg["tone"]), lang),
+                },
+                {
+                    "label": _loc(lang, "Detail", "Detail", "Detail"),
+                    "value": _value_display("detail", str(cfg["detail"]), lang),
+                },
+                {
+                    "label": _loc(lang, "Outils autorisés", "Erlaubte Tools", "Allowed tools"),
+                    "value": str(tool_count),
+                },
+                {
+                    "label": _loc(
+                        lang, "Garde-fous actifs", "Aktive Schutzregeln", "Active guardrails"
+                    ),
+                    "value": str(guard_count),
+                },
+                {
+                    "label": _loc(lang, "Prompts actifs", "Aktive Prompts", "Active prompts"),
+                    "value": str(prompt_count),
+                },
+                {
+                    "label": _loc(
+                        lang,
+                        "Connaissances rattachées",
+                        "Verknuepftes Wissen",
+                        "Attached knowledge",
+                    ),
+                    "value": _loc(
+                        lang,
+                        f"{knowledge_count} sources",
+                        f"{knowledge_count} Quellen",
+                        f"{knowledge_count} sources",
+                    ),
+                },
             ],
         },
         "history": {
-            "title": "Historique des modifications",
-            "cta": "Voir tout",
-            "items": _build_history(settings.guard.policy_path),
+            "title": _loc(
+                lang, "Historique des modifications", "Aenderungsverlauf", "Change history"
+            ),
+            "cta": _loc(lang, "Voir tout", "Alle anzeigen", "View all"),
+            "items": _build_history(settings.guard.policy_path, lang),
         },
         "links": {
-            "title": "Liens utiles",
+            "title": _loc(lang, "Liens utiles", "Nuetzliche Links", "Useful links"),
             "items": [
                 {
-                    "title": "Sources & mémoire",
-                    "desc": "Gérer le catalogue des sources et la mémoire partagée",
+                    "title": _loc(
+                        lang, "Sources & mémoire", "Quellen & Speicher", "Sources & memory"
+                    ),
+                    "desc": _loc(
+                        lang,
+                        "Gérer le catalogue des sources et la mémoire partagée",
+                        "Quellenkatalog und gemeinsamen Speicher verwalten",
+                        "Manage the source catalogue and shared memory",
+                    ),
                     "href": "/configurer/sources-memoire",
                 },
                 {
-                    "title": "Garde-fous",
-                    "desc": "Voir les politiques de garde-fou appliquées à cet agent",
+                    "title": _loc(lang, "Garde-fous", "Schutzregeln", "Guardrails"),
+                    "desc": _loc(
+                        lang,
+                        "Voir les politiques de garde-fou appliquées à cet agent",
+                        "Auf diesen Agenten angewandte Schutzregeln anzeigen",
+                        "View the guardrail policies applied to this agent",
+                    ),
                     "href": f"/agents/{agent_slug}/garde-fous",
                 },
                 {
-                    "title": "Prompts",
-                    "desc": "Gérer les prompts de cet agent",
+                    "title": _loc(lang, "Prompts", "Prompts", "Prompts"),
+                    "desc": _loc(
+                        lang,
+                        "Gérer les prompts de cet agent",
+                        "Prompts dieses Agenten verwalten",
+                        "Manage this agent's prompts",
+                    ),
                     "href": f"/agents/{agent_slug}/prompts",
                 },
             ],

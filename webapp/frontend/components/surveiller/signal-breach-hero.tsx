@@ -1,11 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Activity, ShieldCheck, TriangleAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { Flame, ShieldCheck, TriangleAlert } from "lucide-react";
 import type { Route } from "next";
+import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 
+import { AlertRibbon, type RibbonVariant } from "@/components/cockpit/alert-ribbon";
 import { Link } from "@/i18n/navigation";
+import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchSLO } from "@/lib/api/client";
 
 const METRIC_LABEL: Record<string, string> = {
@@ -16,62 +19,137 @@ const METRIC_LABEL: Record<string, string> = {
 };
 
 /**
- * P2 — Surveiller signal hero. Leads the page with the **named breached signal**
- * (the real SLO from `/observability/slo`: metric, observed rate vs threshold,
- * burn rate) + a direct remediation link → AGIR Incidents. Honest: when no SLO is
- * breaching it shows a green "respecté" state; nothing is fabricated.
+ * P2 — Surveiller signal hero, rendered as the shared premium {@link AlertRibbon}:
+ * leads the page with the **named breached signal** (the real SLO from
+ * `/observability/slo`: metric, observed rate vs threshold, burn rate) + a direct
+ * remediation link → AGIR Incidents. Honest: when no SLO is breaching it shows the
+ * quiet green "respecté" state; nothing is fabricated. The redundant "SLO franchi ·"
+ * prefix is dropped — the eyebrow already names the category.
+ *
+ * `variant` chooses the presentation (default `gauge`): `gauge` = band + budget
+ * gauge; `slim` = a one-line status line.
  */
-export function SignalBreachHero() {
+export function SignalBreachHero({
+  variant = "gauge",
+  orgWide = false,
+}: {
+  variant?: RibbonVariant;
+  /** Force the fleet (org) SLO, ignoring ?agent=. Set on org-posture pages
+   * (compliance / reliability / improvement) whose body is org-wide, so the hero
+   * never reads one agent's SLO over an org dashboard. */
+  orgWide?: boolean;
+}) {
   const t = useTranslations("signalHero");
+  // The hero leads the page with the SLO; under an agent scope it reads THAT agent's
+  // own SLO (same ?agent= filter the cards use), so the headline never disagrees with
+  // the per-agent KPI grid below it — unless `orgWide` pins it to the fleet SLO.
+  const searchParams = useSearchParams();
+  const scope = orgWide ? "all" : parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
   const { data } = useQuery({
-    queryKey: ["slo-hero"],
-    queryFn: ({ signal }) => fetchSLO(signal),
+    queryKey: ["slo-hero", scope],
+    queryFn: ({ signal }) => fetchSLO(signal, undefined, scope),
     staleTime: 30_000,
   });
 
   if (!data) return null;
   const pct = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")} %`;
+  // Tight (no space before %) for the gauge marker flag: a trailing " %" widens the
+  // box on the right and shifts the visible digits left of the vertical marker.
+  const pctTight = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")}%`;
   const metric = METRIC_LABEL[data.metric] ?? data.metric;
 
   if (!data.breaching) {
+    const okTitle = t("okShort", {
+      metric,
+      rate: pct(data.good_rate),
+      threshold: pct(data.threshold),
+    });
+    if (variant === "slim") {
+      return (
+        <AlertRibbon
+          variant="slim"
+          severity="ok"
+          icon={ShieldCheck}
+          eyebrow={t("title")}
+          title={okTitle}
+        />
+      );
+    }
     return (
-      <section className="flex items-center gap-3 rounded-lg border border-[#3fb37f]/40 bg-[#10231b] px-3.5 py-2.5">
-        <ShieldCheck className="h-5 w-5 shrink-0 text-[#7fe3b3]" />
-        <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            {t("title")}
-          </p>
-          <p className="text-[0.92rem] font-semibold text-[#7fe3b3]">
-            {t("ok", { metric, rate: pct(data.good_rate), threshold: pct(data.threshold) })}
-          </p>
-        </div>
-      </section>
+      <AlertRibbon
+        variant="gauge"
+        severity="ok"
+        icon={ShieldCheck}
+        eyebrow={t("title")}
+        title={okTitle}
+        gauge={{
+          value: data.good_rate,
+          threshold: data.threshold,
+          thresholdLabel: pctTight(data.threshold),
+        }}
+      />
+    );
+  }
+
+  const title = t("breachedShort", {
+    metric,
+    rate: pct(data.good_rate),
+    threshold: pct(data.threshold),
+  });
+  const burn = t("burn", {
+    x: data.burn_rate.toFixed(1).replace(".", ","),
+    bad: data.n_bad,
+    n: data.n,
+  });
+  const remediate = (
+    <Link
+      href={"/agir/incidents-playbooks" as Route}
+      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-[#e0566f]/55 bg-[#e0566f]/15 px-3 text-[11px] font-medium text-[#ffb3c2] transition-colors hover:bg-[#e0566f]/25 hover:text-white"
+    >
+      {t("remediate")} →
+    </Link>
+  );
+
+  if (variant === "slim") {
+    return (
+      <AlertRibbon
+        variant="slim"
+        severity="critical"
+        icon={TriangleAlert}
+        eyebrow={t("title")}
+        title={title}
+        meta={
+          <span className="inline-flex items-center gap-1.5 tabular-nums">
+            <Flame className="h-3 w-3 shrink-0 text-[#ff9bb0]" aria-hidden />
+            {burn}
+          </span>
+        }
+        action={remediate}
+      />
     );
   }
 
   return (
-    <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#e0566f]/50 bg-[#2a1320] px-3.5 py-2.5">
-      <div className="flex min-w-0 items-center gap-3">
-        <TriangleAlert className="h-5 w-5 shrink-0 text-[#ff9bb0]" />
-        <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            {t("title")}
-          </p>
-          <p className="text-[0.95rem] font-semibold text-[#ff9bb0]">
-            {t("breached", { metric, rate: pct(data.good_rate), threshold: pct(data.threshold) })}
-          </p>
-          <p className="mt-0.5 inline-flex items-center gap-1.5 text-[11px] text-[var(--tessera-text-muted)]">
-            <Activity className="h-3 w-3" />
-            {t("burn", { x: data.burn_rate.toFixed(1).replace(".", ","), bad: data.n_bad, n: data.n })}
-          </p>
-        </div>
-      </div>
-      <Link
-        href={"/agir/incidents-playbooks" as Route}
-        className="shrink-0 rounded-md border border-[#e0566f]/60 bg-[#e0566f]/15 px-2.5 py-1.5 text-[11px] font-medium text-[#ff9bb0] transition-colors hover:bg-[#e0566f]/25 hover:text-white"
-      >
-        {t("remediate")} →
-      </Link>
-    </section>
+    <AlertRibbon
+      variant="gauge"
+      pulse
+      pulseStopLabel={t("stopPulse")}
+      severity="critical"
+      icon={TriangleAlert}
+      eyebrow={t("title")}
+      title={title}
+      gauge={{
+        value: data.good_rate,
+        threshold: data.threshold,
+        thresholdLabel: pctTight(data.threshold),
+        caption: (
+          <span className="inline-flex items-center gap-1.5">
+            <Flame className="h-3 w-3 shrink-0 text-[#ff9bb0]" aria-hidden />
+            {burn}
+          </span>
+        ),
+      }}
+      action={remediate}
+    />
   );
 }

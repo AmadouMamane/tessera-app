@@ -90,3 +90,33 @@ def test_collect_node_timings_records_duration(in_memory_spans: InMemorySpanExpo
 
     assert "slow_node" in timings
     assert timings["slow_node"] >= 0.0
+
+
+def test_retrieval_span_records_cited_categories(in_memory_spans: InMemorySpanExporter) -> None:
+    with instrument.retrieval_span("credit_aurore", LanguageCode.FR) as span:
+        instrument.annotate_retrieval(
+            span, categories=["cartes", "comptes"], hit_count=5, top_score=0.81
+        )
+
+    span_data = in_memory_spans.get_finished_spans()[0]
+    assert span_data.name == "retrieve credit_aurore"
+    assert span_data.attributes is not None
+    assert span_data.attributes[semconv.OPENINFERENCE_SPAN_KIND] == "RETRIEVER"
+    assert span_data.attributes[semconv.TESSERA_RETRIEVAL_CORPUS] == "credit_aurore"
+    assert span_data.attributes[semconv.TESSERA_RETRIEVAL_CATEGORIES] == "cartes,comptes"
+    assert span_data.attributes[semconv.TESSERA_RETRIEVAL_HIT_COUNT] == 5
+    assert span_data.attributes[semconv.TESSERA_RETRIEVAL_TOP_SCORE] == pytest.approx(0.81)
+    assert span_data.attributes[semconv.TESSERA_LANGUAGE] == LanguageCode.FR.value
+
+
+def test_retrieval_span_omits_language_when_none(in_memory_spans: InMemorySpanExporter) -> None:
+    with instrument.retrieval_span("regulations", None) as span:
+        instrument.annotate_retrieval(span, categories=[], hit_count=0, top_score=None)
+
+    span_data = in_memory_spans.get_finished_spans()[0]
+    assert span_data.attributes is not None
+    # No cited categories -> empty string (still queryable), no top_score, no language.
+    assert span_data.attributes[semconv.TESSERA_RETRIEVAL_CATEGORIES] == ""
+    assert span_data.attributes[semconv.TESSERA_RETRIEVAL_HIT_COUNT] == 0
+    assert semconv.TESSERA_RETRIEVAL_TOP_SCORE not in span_data.attributes
+    assert semconv.TESSERA_LANGUAGE not in span_data.attributes

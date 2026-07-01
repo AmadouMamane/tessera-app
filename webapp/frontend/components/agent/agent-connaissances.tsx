@@ -947,7 +947,7 @@ function SourcesTable({
                       <span className="w-9 shrink-0 text-[0.72rem] tabular-nums text-[var(--tessera-text)]">
                         {r.coverage}%
                       </span>
-                      <span className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-[var(--tessera-bg)] sm:block">
+                      <span className="hidden h-[4px] w-16 overflow-hidden rounded-full bg-[var(--tessera-border)] sm:block">
                         <span
                           className="block h-full rounded-full bg-[#5fd0c6]"
                           style={{ width: `${r.coverage}%` }}

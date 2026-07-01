@@ -281,7 +281,7 @@ function PassRateBar({ rate }: { rate: number }) {
         : "text-red-700 dark:text-red-400";
   return (
     <div className="flex items-center gap-2">
-      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--muted)]">
+      <div className="h-[4px] w-24 overflow-hidden rounded-full bg-[var(--tessera-border)]">
         <div
           className={`h-full ${gradient} transition-all duration-500`}
           style={{ width: `${pct}%` }}

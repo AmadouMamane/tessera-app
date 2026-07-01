@@ -1,6 +1,8 @@
 "use client";
 
+import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,10 +17,18 @@ export function MetricKpi({
   label,
   series,
   loading,
+  info,
+  onDrill,
+  drillLabel,
 }: {
   label: string;
   series: ScoreSeries | undefined;
   loading: boolean;
+  /** Optional ⓘ explainer rendered next to the tile label. */
+  info?: ReactNode;
+  /** Makes the whole tile a drill-down (jump to the detail tab) with a ↗ affordance. */
+  onDrill?: () => void;
+  drillLabel?: string;
 }) {
   const buckets = series?.buckets ?? [];
   const n = buckets.length;
@@ -37,9 +47,32 @@ export function MetricKpi({
   const mean = series?.mean ?? null;
   const delta = series?.delta ?? null;
   return (
-    <Card className="p-2">
-      <div className="text-[0.7rem] leading-tight text-[var(--muted-foreground)]">{label}</div>
-      <div className="mt-0.5 flex items-end justify-between gap-2">
+    <Card
+      className={`group relative p-2 ${
+        onDrill ? "cursor-pointer transition-colors hover:border-[var(--tessera-green)]/40" : ""
+      }`}
+    >
+      {onDrill ? (
+        <button
+          type="button"
+          onClick={onDrill}
+          aria-label={drillLabel}
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tessera-green)]/40"
+        />
+      ) : null}
+      <div
+        className={`flex items-center gap-1 text-[0.7rem] leading-tight text-[var(--muted-foreground)] ${
+          onDrill ? "pointer-events-none relative z-20" : ""
+        }`}
+      >
+        <span className="min-w-0 truncate">{label}</span>
+        {info ? <span className={onDrill ? "pointer-events-auto" : undefined}>{info}</span> : null}
+      </div>
+      <div
+        className={`mt-0.5 flex items-end justify-between gap-2 ${
+          onDrill ? "pointer-events-none relative z-20" : ""
+        }`}
+      >
         <span className="text-lg font-semibold tabular-nums">
           {mean != null ? `${Math.round(mean * 100)}%` : "—"}
         </span>
@@ -50,7 +83,7 @@ export function MetricKpi({
           </Badge>
         ) : null}
       </div>
-      <div className="mt-0.5 h-3">
+      <div className={`mt-0.5 h-3 ${onDrill ? "pointer-events-none relative z-20" : ""}`}>
         {loading && !series ? (
           <Skeleton className="h-full w-full" />
         ) : (
@@ -76,6 +109,9 @@ export function MetricKpi({
           </svg>
         )}
       </div>
+      {onDrill ? (
+        <ArrowUpRight className="pointer-events-none absolute right-1.5 bottom-1.5 z-20 h-3 w-3 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-70" />
+      ) : null}
     </Card>
   );
 }

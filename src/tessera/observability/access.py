@@ -22,9 +22,64 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.rbac import ROLE_CAPS
 
 __all__ = ["compute_access_overview"]
+
+# Localized free-text (fr, de, en).
+_TR: dict[str, tuple[str, str, str]] = {
+    "team_conformite": ("Conformité", "Compliance", "Compliance"),
+    "team_plateforme": ("Plateforme", "Plattform", "Platform"),
+    "role_admin": ("Administrateur", "Administrator", "Administrator"),
+    "role_auditor": ("Auditeur (lecture)", "Auditor (Lesezugriff)", "Auditor (read)"),
+    "role_superadmin": ("Super-admin", "Super-Admin", "Super-admin"),
+    "desc_admin": (
+        "Administration de la plateforme : cockpit, produit, configuration et release.",
+        "Plattform-Administration: Cockpit, Produkt, Konfiguration und Release.",
+        "Platform administration: cockpit, product, configuration and release.",
+    ),
+    "desc_auditor": (
+        "Lecture seule sur le cockpit et les journaux d'audit, sans action.",
+        "Nur-Lese-Zugriff auf Cockpit und Audit-Logs, ohne Aktion.",
+        "Read-only on the cockpit and audit logs, no action.",
+    ),
+    "desc_superadmin": (
+        "Administration complète incluant l'accès aux modèles frontier.",
+        "Vollstaendige Administration inkl. Zugriff auf Frontier-Modelle.",
+        "Full administration including access to frontier models.",
+    ),
+    "scope_org": ("Organisation", "Organisation", "Organization"),
+    "env_all": ("Tous", "Alle", "All"),
+    "owner_code": (
+        "Défini dans le code (session.ts)",
+        "Im Code definiert (session.ts)",
+        "Defined in code (session.ts)",
+    ),
+    "sub_accounts": ("comptes opérateurs", "Betreiberkonten", "operator accounts"),
+    "sub_roles": ("rôles appliqués", "angewendete Rollen", "enforced roles"),
+    "sub_caps": ("capacités distinctes", "eindeutige Faehigkeiten", "distinct capabilities"),
+    "sub_agents": ("agents couverts (org)", "abgedeckte Agenten (Org)", "agents covered (org)"),
+    "sub_active": ("comptes actifs", "aktive Konten", "active accounts"),
+    "sub_mfa": ("MFA activée", "MFA aktiviert", "MFA enabled"),
+    "caps_label": ("{n} capacités", "{n} Faehigkeiten", "{n} capabilities"),
+}
+_TEAM_KEY = {"Conformité": "team_conformite", "Plateforme": "team_plateforme"}
+_ROLE_LABEL_KEY = {
+    "admin": "role_admin",
+    "auditor": "role_auditor",
+    "superadmin": "role_superadmin",
+}
+_ROLE_DESC_KEY = {
+    "admin": "desc_admin",
+    "auditor": "desc_auditor",
+    "superadmin": "desc_superadmin",
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
+
 
 # Mirror of the seeded operator accounts (accounts.ts / users.py). superadmin is
 # only registered when TESSERA_AUTH_SUPERADMIN_PASSWORD is set, so it is marked
@@ -74,12 +129,6 @@ _AREA_COLOR = {
 # Privileged (can mutate) vs read-only roles — the axis the Type filter partitions.
 _PRIVILEGED = {"admin", "superadmin"}
 
-_ROLE_DESC = {
-    "admin": "Administration de la plateforme : cockpit, produit, configuration et release.",
-    "auditor": "Lecture seule sur le cockpit et les journaux d'audit, sans action.",
-    "superadmin": "Administration complète incluant l'accès aux modèles frontier.",
-}
-
 
 def _kpi(key: str, value: str, sub: str, series: list[int]) -> dict[str, object]:
     return {"key": key, "value": value, "sub": sub, "series": series}
@@ -90,13 +139,21 @@ def _slice(key: str, count: int, total: int, color: str) -> dict[str, object]:
     return {"key": key, "count": count, "pct": pct, "color": color}
 
 
-def _accounts_for(role_id: str) -> list[dict[str, object]]:
+def _accounts_for(role_id: str, lang: str) -> list[dict[str, object]]:
     out: list[dict[str, object]] = []
     for acc in _ACCOUNTS:
         if acc["role"] != role_id:
             continue
         status = "active" if acc["active"] else "provisioned"
-        out.append({"name": str(acc["username"]), "team": str(acc["team"]), "status": status})
+        team = str(acc["team"])
+        team_key = _TEAM_KEY.get(team)
+        out.append(
+            {
+                "name": str(acc["username"]),
+                "team": _t(team_key, lang) if team_key else team,
+                "status": status,
+            }
+        )
     return out
 
 
@@ -117,9 +174,7 @@ def _perm_dist(caps: list[str]) -> list[dict[str, object]]:
         counts[kind] = counts.get(kind, 0) + 1
     total = len(caps) or 1
     order = ["full", "partial", "readonly", "none"]
-    return [
-        _slice(k, counts[k], total, _KIND_COLOR[k]) for k in order if counts.get(k)
-    ]
+    return [_slice(k, counts[k], total, _KIND_COLOR[k]) for k in order if counts.get(k)]
 
 
 def _area_dist(caps: list[str]) -> list[dict[str, object]]:
@@ -155,7 +210,7 @@ class _RoleFull:
     def permissions(self) -> int:
         return len(self.caps)
 
-    def row(self) -> dict[str, object]:
+    def row(self, lang: str) -> dict[str, object]:
         """The client role row: public fields + per-role detail."""
         return {
             "id": self.id,
@@ -165,34 +220,36 @@ class _RoleFull:
             "users": self.users,
             "groups": 0,  # honest: no group store in Phase 1
             "permissions": self.permissions,
-            "scope": "Organisation",
-            "environment": "Tous",
+            "scope": _t("scope_org", lang),
+            "environment": _t("env_all", lang),
             "modified": self.modified,
             "status": "active",
             "caps": self.caps,
             "members": self.members,
             "permission_dist": _perm_dist(self.caps),
             "access_scope": _area_dist(self.caps),
-            "owner": "Défini dans le code (session.ts)",
+            "owner": _t("owner_code", lang),
             "created": "-",
         }
 
 
-def _build_role(role_id: str, meta: dict[str, object], modified: str) -> _RoleFull:
+def _build_role(role_id: str, meta: dict[str, object], modified: str, lang: str) -> _RoleFull:
     caps_raw = meta.get("caps", [])
     caps = [str(c) for c in caps_raw] if isinstance(caps_raw, list) else []
+    label_key = _ROLE_LABEL_KEY.get(role_id)
+    desc_key = _ROLE_DESC_KEY.get(role_id)
     return _RoleFull(
         id=role_id,
-        name=str(meta.get("label", role_id)),
+        name=_t(label_key, lang) if label_key else str(meta.get("label", role_id)),
         type="systeme" if role_id in _PRIVILEGED else "metier",
-        description=_ROLE_DESC.get(role_id, ""),
+        description=_t(desc_key, lang) if desc_key else "",
         modified=modified,
         caps=caps,
-        members=_accounts_for(role_id),
+        members=_accounts_for(role_id, lang),
     )
 
 
-def compute_access_overview() -> dict[str, object]:
+def compute_access_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Roles & access overview, built from the real RBAC model.
 
     Returns:
@@ -202,6 +259,7 @@ def compute_access_overview() -> dict[str, object]:
         and resource distributions) and the governance panels (top roles, access by
         resource, and the honest-empty requests / SoD / inactive panels).
     """
+    lang = _norm_lang(lang)
     now = datetime.now(UTC)
     modified = _role_modified()
 
@@ -212,7 +270,7 @@ def compute_access_overview() -> dict[str, object]:
     except (OSError, ValueError):
         agent_count = 0
 
-    roles_full = [_build_role(rid, meta, modified) for rid, meta in ROLE_CAPS.items()]
+    roles_full = [_build_role(rid, meta, modified, lang) for rid, meta in ROLE_CAPS.items()]
 
     # ── posture ──────────────────────────────────────────────────────────────
     accounts_per_role = [r.users for r in roles_full]
@@ -223,22 +281,26 @@ def compute_access_overview() -> dict[str, object]:
     roles_granting = [sum(1 for r in roles_full if cap in r.caps) for cap in all_caps]
 
     kpis = [
-        _kpi("accounts", str(len(_ACCOUNTS)), "comptes opérateurs", accounts_per_role),
-        _kpi("roles", str(len(roles_full)), "rôles appliqués", caps_per_role),
-        _kpi("capabilities", str(len(all_caps)), "capacités distinctes", roles_granting),
-        _kpi("agents", str(agent_count), "agents couverts (org)", caps_per_role),
-        _kpi("active", str(active_accounts), "comptes actifs", accounts_per_role),
-        _kpi("mfa", f"{mfa_accounts}/{active_accounts}", "MFA activée", accounts_per_role),
+        _kpi("accounts", str(len(_ACCOUNTS)), _t("sub_accounts", lang), accounts_per_role),
+        _kpi("roles", str(len(roles_full)), _t("sub_roles", lang), caps_per_role),
+        _kpi("capabilities", str(len(all_caps)), _t("sub_caps", lang), roles_granting),
+        _kpi("agents", str(agent_count), _t("sub_agents", lang), caps_per_role),
+        _kpi("active", str(active_accounts), _t("sub_active", lang), accounts_per_role),
+        _kpi("mfa", f"{mfa_accounts}/{active_accounts}", _t("sub_mfa", lang), accounts_per_role),
     ]
 
     # ── selected detail (default: first role) — SSR fallback; the client drives
     # the panel from the selected row.
     first = roles_full[0]
-    selected = {**first.row(), "modified": f"{modified} via PR", "scope": "Organisation"}
+    selected = {**first.row(lang), "modified": f"{modified} via PR", "scope": _t("scope_org", lang)}
 
     # ── governance panels ────────────────────────────────────────────────────
     top_roles = [
-        {"name": r.name, "value": r.permissions, "label": f"{r.permissions} capacités"}
+        {
+            "name": r.name,
+            "value": r.permissions,
+            "label": _t("caps_label", lang).format(n=r.permissions),
+        }
         for r in sorted(roles_full, key=lambda r: -r.permissions)
     ]
 
@@ -253,7 +315,7 @@ def compute_access_overview() -> dict[str, object]:
         for area, n in sorted(area_totals.items(), key=lambda kv: -kv[1])
     ]
 
-    roles = [r.row() for r in roles_full]
+    roles = [r.row(lang) for r in roles_full]
 
     return {
         "generated_at": now.isoformat(),

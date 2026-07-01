@@ -15,11 +15,11 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: t("title") };
 }
 
-async function prefetch(queryClient: QueryClient, agentId: string) {
+async function prefetch(queryClient: QueryClient, agentId: string, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["agent-historique", agentId],
+    queryKey: ["agent-historique", agentId, locale],
     queryFn: async () => {
-      const q = `?agent_id=${encodeURIComponent(agentId)}`;
+      const q = `?agent_id=${encodeURIComponent(agentId)}&lang=${encodeURIComponent(locale)}`;
       const response = await fetch(`${backendUrl()}/observability/agent-historique${q}`, {
         cache: "no-store",
         headers: backendHeaders({ Accept: "application/json" }),
@@ -35,7 +35,7 @@ export default async function AgentHistoriquePage({ params }: PageProps) {
   setRequestLocale(locale);
   const queryClient = new QueryClient();
   try {
-    await prefetch(queryClient, agentId);
+    await prefetch(queryClient, agentId, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { FleetExplorer } from "@/components/agent/fleet-explorer";
 import { NewAgentButton } from "@/components/agent/new-agent-button";
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { redirect } from "@/i18n/navigation";
 import { FleetSchema } from "@/lib/api/schemas";
 import { currentRole, hasCockpitAccess, isOperator } from "@/lib/auth/session";
@@ -52,21 +53,42 @@ export default async function FleetPage({ params }: PageProps) {
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
         <div className="flex flex-wrap items-center gap-6">
           <div>
-            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+            <p className="flex items-center gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
               {t("orgConversations")}
+              <MetricInfo
+                title={t("orgConversations")}
+                what={t("explain.orgConversations.what")}
+                how={t("explain.orgConversations.how")}
+                source={t("explain.orgConversations.source")}
+              />
             </p>
             <p className="text-[1.3rem] font-semibold tabular-nums">
               {org ? fmtInt(org.conversations) : "-"}
             </p>
           </div>
           <div>
-            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("naiveSum")}</p>
+            <p className="flex items-center gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
+              {t("naiveSum")}
+              <MetricInfo
+                title={t("naiveSum")}
+                what={t("explain.naiveSum.what")}
+                how={t("explain.naiveSum.how")}
+              />
+            </p>
             <p className="text-[1.3rem] font-semibold tabular-nums text-[var(--tessera-text-muted)]">
               {data ? fmtInt(data.naive_sum_conversations ?? 0) : "-"}
             </p>
           </div>
           <div>
-            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("dedupSaved")}</p>
+            <p className="flex items-center gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
+              {t("dedupSaved")}
+              <MetricInfo
+                title={t("dedupSaved")}
+                what={t("explain.dedupSaved.what")}
+                how={t("explain.dedupSaved.how")}
+                source={t("explain.dedupSaved.source")}
+              />
+            </p>
             <p className="text-[1.3rem] font-semibold tabular-nums text-emerald-300">
               {fmtInt(data?.dedup_saved ?? 0)}
             </p>

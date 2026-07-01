@@ -358,7 +358,7 @@ function CauseBars({ items }: { items: { key: string; label: string; value: numb
             />
             <span className="truncate">{it.label}</span>
           </span>
-          <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--muted)]/40">
+          <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
             <div
               className="h-full rounded-sm"
               style={{

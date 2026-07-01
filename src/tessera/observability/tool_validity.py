@@ -39,11 +39,14 @@ def _has_arg_failure(decisions: Iterable[dict[str, object]]) -> bool:
     return any(".argument." in str(d.get("policy_rule", "")) for d in decisions)
 
 
-def compute_tool_validity(path: Path | None = None, *, at: str | None = None) -> ToolValidityReport:
+def compute_tool_validity(
+    path: Path | None = None, *, at: str | None = None, agent_id: str | None = None
+) -> ToolValidityReport:
     """Compute tool-call validity from the audit log at ``path``.
 
     With ``at`` set, only entries that occurred at or before instant T are
-    counted — the as-of-T read for the cockpit time rail (ADR 0011).
+    counted — the as-of-T read for the cockpit time rail (ADR 0011). With
+    ``agent_id`` set, only that agent's tool calls (audit entries are tagged).
     """
     target = path or get_settings().guard.audit_file
     allowed = denied = errored = arg_failures = 0
@@ -60,6 +63,8 @@ def compute_tool_validity(path: Path | None = None, *, at: str | None = None) ->
                 if obj.get("type") != "tessera.guard.audit" or obj.get("target") == "user_input":
                     continue
                 if not occurred_before(obj.get("occurred_at"), at):
+                    continue
+                if agent_id is not None and obj.get("agent_id") != agent_id:
                     continue
                 outcome = obj.get("outcome")
                 if outcome == "allowed":

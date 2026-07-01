@@ -25,7 +25,7 @@ from tessera.guard.audit import verify_audit_chain
 router = APIRouter(tags=["audit"])
 
 type AuditOutcome = Literal["allowed", "denied", "error"]
-type AuditEventType = Literal["guard", "tool", "memory", "other"]
+type AuditEventType = Literal["guard", "tool", "memory", "governance", "other"]
 type AuditActorRole = Literal["human", "service", "system", "model"]
 type AuditMetricKey = Literal[
     "signed_events",
@@ -254,14 +254,40 @@ def _object_label(target: str, arguments: dict[str, object], policy_rule: str | 
     return target
 
 
+def _governance_label(kind: str, payload: dict[str, object]) -> str:
+    """Readable object for a governance event — the agent acted on, not 'unknown'.
+
+    A hand-off reads ``from → to``; every other governed action (routing, proposal,
+    release, block, lineage deploy) reads the agent it concerns.
+    """
+    agent = _first_text(payload.get("agent_id")) or "?"
+    if kind == "tessera.agent.handoff":
+        src = _first_text(payload.get("from_agent")) or "?"
+        dst = _first_text(payload.get("to_agent")) or agent
+        return f"{src} → {dst}"
+    return agent
+
+
 def _entry_from_payload(payload: dict[str, object]) -> AuditEntry:
-    target = _first_text(payload.get("target")) or "unknown"
+    # Governance events (agent routing / hand-offs / lifecycle) are S1 journal
+    # entries with a `type` of "tessera.agent.*" and NO `target`. Without this they
+    # fell through to target="unknown" → event_type="tool", so a governed routing
+    # decision showed up in the Journal as an anonymous tool call. Detect them and
+    # give them their own category + a real object label.
+    event_kind = _first_text(payload.get("type")) or ""
+    is_governance = event_kind.startswith("tessera.agent.")
+    raw_target = _first_text(payload.get("target"))
+    target = raw_target or (event_kind.removeprefix("tessera.") if is_governance else "unknown")
     occurred_at = _first_text(payload.get("occurred_at")) or datetime.now(UTC).isoformat()
     raw_outcome = _first_text(payload.get("outcome"))
     if raw_outcome == "allowed":
         outcome: AuditOutcome = "allowed"
     elif raw_outcome == "denied":
         outcome = "denied"
+    elif is_governance and raw_outcome is None:
+        # A governed action is a recorded decision, not an error: a block is a
+        # denial, every other governance event an allowed/effected action.
+        outcome = "denied" if event_kind.endswith(("release_blocked", "blocked")) else "allowed"
     else:
         outcome = "error"
     decisions_raw = payload.get("decisions")
@@ -269,12 +295,20 @@ def _entry_from_payload(payload: dict[str, object]) -> AuditEntry:
     decision_maps = [cast(dict[str, object], d) for d in decisions if isinstance(d, dict)]
     arguments_raw = payload.get("arguments")
     arguments = cast(dict[str, object], arguments_raw) if isinstance(arguments_raw, dict) else {}
-    event_type = _event_type(target)
+    event_type: AuditEventType = (
+        "governance" if is_governance else _event_type(raw_target or "unknown")
+    )
     policy_rule = _decision_policy(decision_maps)
     model = _first_text(payload.get("model"))
     data_residency = _first_text(payload.get("data_residency"))
     hash_value = _first_text(payload.get("hash"))
     raw_version = payload.get("version")
+    actor = (_first_text(payload.get("actor")) or "système") if is_governance else (model or target)
+    object_label = (
+        _governance_label(event_kind, payload)
+        if is_governance
+        else _object_label(target, arguments, policy_rule)
+    )
     return AuditEntry(
         occurred_at=occurred_at,
         target=target,
@@ -288,10 +322,10 @@ def _entry_from_payload(payload: dict[str, object]) -> AuditEntry:
         prev_hash=_first_text(payload.get("prev_hash")),
         hash=hash_value,
         event_type=event_type,
-        actor=model or target,
-        actor_role=_actor_role(event_type, outcome),
+        actor=actor,
+        actor_role="human" if is_governance else _actor_role(event_type, outcome),
         scope=data_residency or "local",
-        object_label=_object_label(target, arguments, policy_rule),
+        object_label=object_label,
         policy_rule=policy_rule,
         proof_ref=hash_value[:12] if hash_value else None,
         agent_id=_first_text(payload.get("agent_id")),

@@ -17,6 +17,14 @@ from datetime import UTC, datetime
 
 __all__ = ["compute_automations_overview"]
 
+_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+
+def _loc(lang: str, fr: str, de: str, en: str) -> str:
+    """Pick the locale variant of an inline fixture string (fr / de / en)."""
+    return (fr, de, en)[_LANG_IDX.get(lang, 0)]
+
+
 _TYPE_COLOR = {
     "qualite": "#60a5fa",
     "securite": "#f87171",
@@ -40,8 +48,14 @@ def _kpi(
     }
 
 
-def compute_automations_overview() -> dict[str, object]:
+def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Automations overview payload.
+
+    Args:
+        lang: Locale (fr / de / en) for the free-text fixture fields the
+            frontend renders verbatim (rule names, triggers, actions, scopes,
+            incident labels, journal entries, governance scopes). All other
+            chrome is localized in the frontend via next-intl keys.
 
     Returns:
         A JSON-serialisable mapping with the automation posture KPIs, the rule
@@ -61,11 +75,20 @@ def compute_automations_overview() -> dict[str, object]:
         _kpi("mttr", "3m 42s", "-18 s", False, [5, 5, 4, 4, 4, 4, 3]),
     ]
 
+    sys_role = _loc(lang, "Système", "System", "System")
+    sec_role = _loc(lang, "Sécurité", "Sicherheit", "Security")
     catalogue = [
         {
-            "name": "Gel des releases après régression qualité",
-            "trigger": "Gate FAIL (qualité)",
-            "action": "Geler release",
+            "name": _loc(
+                lang,
+                "Gel des releases après régression qualité",
+                "Releases bei Qualitaetsregression einfrieren",
+                "Freeze releases after quality regression",
+            ),
+            "trigger": _loc(
+                lang, "Gate FAIL (qualité)", "Gate FAIL (Qualitaet)", "Gate FAIL (quality)"
+            ),
+            "action": _loc(lang, "Geler release", "Release einfrieren", "Freeze release"),
             "scope": "Release",
             "mode": "auto",
             "last_run": "12/05/25 11:54",
@@ -74,54 +97,86 @@ def compute_automations_overview() -> dict[str, object]:
             "status": "active",
         },
         {
-            "name": "Lancer red-team après incident",
-            "trigger": "Incident critique",
-            "action": "Lancer red-team",
-            "scope": "Système",
+            "name": _loc(
+                lang,
+                "Lancer red-team après incident",
+                "Red-Team nach Vorfall starten",
+                "Launch red-team after incident",
+            ),
+            "trigger": _loc(lang, "Incident critique", "Kritischer Vorfall", "Critical incident"),
+            "action": _loc(lang, "Lancer red-team", "Red-Team starten", "Launch red-team"),
+            "scope": sys_role,
             "mode": "auto",
             "last_run": "12/05/25 11:09",
             "success": "99% (88/89)",
-            "role": "Système",
+            "role": sys_role,
             "status": "active",
         },
         {
-            "name": "Purge mémoire RGPD sur demande validée",
-            "trigger": "Demande RGPD",
-            "action": "Purger mémoire",
-            "scope": "Mémoire",
+            "name": _loc(
+                lang,
+                "Purge mémoire RGPD sur demande validée",
+                "DSGVO-Speicherbereinigung bei validierter Anfrage",
+                "GDPR memory purge on approved request",
+            ),
+            "trigger": _loc(lang, "Demande RGPD", "DSGVO-Anfrage", "GDPR request"),
+            "action": _loc(lang, "Purger mémoire", "Speicher bereinigen", "Purge memory"),
+            "scope": _loc(lang, "Mémoire", "Speicher", "Memory"),
             "mode": "approb",
             "last_run": "12/05/25 10:58",
             "success": "95% (40/42)",
-            "role": "Système",
+            "role": sys_role,
             "status": "active",
         },
         {
-            "name": "Générer evidence pack après Gate FAIL",
+            "name": _loc(
+                lang,
+                "Générer evidence pack après Gate FAIL",
+                "Evidence-Pack nach Gate FAIL erzeugen",
+                "Generate evidence pack after Gate FAIL",
+            ),
             "trigger": "Gate FAIL",
-            "action": "Générer evidence pack",
-            "scope": "Conformité",
+            "action": _loc(
+                lang,
+                "Générer evidence pack",
+                "Evidence-Pack erzeugen",
+                "Generate evidence pack",
+            ),
+            "scope": _loc(lang, "Conformité", "Konformitaet", "Compliance"),
             "mode": "auto",
             "last_run": "12/05/25 10:41",
             "success": "98% (51/52)",
-            "role": "Système",
+            "role": sys_role,
             "status": "active",
         },
         {
-            "name": "Escalade humaine sur PII leakage",
-            "trigger": "Détection PII",
-            "action": "Notifier sécurité",
-            "scope": "Sécurité",
+            "name": _loc(
+                lang,
+                "Escalade humaine sur PII leakage",
+                "Menschliche Eskalation bei PII-Leak",
+                "Human escalation on PII leakage",
+            ),
+            "trigger": _loc(lang, "Détection PII", "PII-Erkennung", "PII detection"),
+            "action": _loc(
+                lang, "Notifier sécurité", "Sicherheit benachrichtigen", "Notify security"
+            ),
+            "scope": sec_role,
             "mode": "approb",
             "last_run": "12/05/25 11:54",
             "success": "88% (15/17)",
-            "role": "Sécurité",
+            "role": sec_role,
             "status": "active",
         },
         {
-            "name": "Geler budget si dépassement hebdo",
+            "name": _loc(
+                lang,
+                "Geler budget si dépassement hebdo",
+                "Budget bei woechentlicher Ueberschreitung einfrieren",
+                "Freeze budget on weekly overrun",
+            ),
             "trigger": "Budget cap",
-            "action": "Geler budget",
-            "scope": "Coût",
+            "action": _loc(lang, "Geler budget", "Budget einfrieren", "Freeze budget"),
+            "scope": _loc(lang, "Coût", "Kosten", "Cost"),
             "mode": "auto",
             "last_run": "12/05/25 09:27",
             "success": "92% (12/13)",
@@ -134,31 +189,56 @@ def compute_automations_overview() -> dict[str, object]:
         {
             "severity": "critique",
             "id": "AUTO-014",
-            "label": "Triage réglage détecté en production",
+            "label": _loc(
+                lang,
+                "Triage réglage détecté en production",
+                "Triage-Anpassung in Produktion erkannt",
+                "Triage tuning detected in production",
+            ),
             "time": "11:52",
         },
         {
             "severity": "eleve",
             "id": "AUTO-022",
-            "label": "Gate conformité Art. 50 FAIL",
+            "label": _loc(
+                lang,
+                "Gate conformité Art. 50 FAIL",
+                "Konformitaets-Gate Art. 50 FAIL",
+                "Compliance gate Art. 50 FAIL",
+            ),
             "time": "11:47",
         },
         {
             "severity": "eleve",
             "id": "AUTO-017",
-            "label": "Qualité dégradée — Precision < 0.8",
+            "label": _loc(
+                lang,
+                "Qualité dégradée — Precision < 0.8",
+                "Qualitaet verschlechtert — Precision < 0.8",
+                "Quality degraded — Precision < 0.8",
+            ),
             "time": "10:58",
         },
         {
             "severity": "moyen",
             "id": "AUTO-019",
-            "label": "Budget coût dépassé (hebdo)",
+            "label": _loc(
+                lang,
+                "Budget coût dépassé (hebdo)",
+                "Kostenbudget ueberschritten (woechentlich)",
+                "Cost budget exceeded (weekly)",
+            ),
             "time": "10:41",
         },
         {
             "severity": "faible",
             "id": "AUTO-011",
-            "label": "Mémoire obsolète détectée",
+            "label": _loc(
+                lang,
+                "Mémoire obsolète détectée",
+                "Veralteter Speicher erkannt",
+                "Stale memory detected",
+            ),
             "time": "09:27",
         },
     ]
@@ -191,8 +271,13 @@ def compute_automations_overview() -> dict[str, object]:
     journal = [
         {
             "time": "12/05 11:54",
-            "automation": "Escalade humaine sur PII leakage",
-            "trigger": "Détection PII",
+            "automation": _loc(
+                lang,
+                "Escalade humaine sur PII leakage",
+                "Menschliche Eskalation bei PII-Leak",
+                "Human escalation on PII leakage",
+            ),
+            "trigger": _loc(lang, "Détection PII", "PII-Erkennung", "PII detection"),
             "actor": "M. Engineer",
             "evidence": "ev_8b6a1c",
             "duration": "0,8 s",
@@ -200,16 +285,26 @@ def compute_automations_overview() -> dict[str, object]:
         },
         {
             "time": "12/05 11:38",
-            "automation": "Lancer red-team après incident",
-            "trigger": "Incident critique",
-            "actor": "Système",
+            "automation": _loc(
+                lang,
+                "Lancer red-team après incident",
+                "Red-Team nach Vorfall starten",
+                "Launch red-team after incident",
+            ),
+            "trigger": _loc(lang, "Incident critique", "Kritischer Vorfall", "Critical incident"),
+            "actor": sys_role,
             "evidence": "ev_3f12d2e",
             "duration": "12 s",
             "result": "success",
         },
         {
             "time": "12/05 11:21",
-            "automation": "Gel des releases après régression",
+            "automation": _loc(
+                lang,
+                "Gel des releases après régression",
+                "Releases bei Regression einfrieren",
+                "Freeze releases after regression",
+            ),
             "trigger": "Gate FAIL",
             "actor": "S. SysAdmin",
             "evidence": "ev_77c0b1",
@@ -218,8 +313,13 @@ def compute_automations_overview() -> dict[str, object]:
         },
         {
             "time": "12/05 10:58",
-            "automation": "Purge mémoire RGPD",
-            "trigger": "Demande RGPD",
+            "automation": _loc(
+                lang,
+                "Purge mémoire RGPD",
+                "DSGVO-Speicherbereinigung",
+                "GDPR memory purge",
+            ),
+            "trigger": _loc(lang, "Demande RGPD", "DSGVO-Anfrage", "GDPR request"),
             "actor": "Admin",
             "evidence": "ev_92ad11",
             "duration": "3,4 s",
@@ -227,9 +327,14 @@ def compute_automations_overview() -> dict[str, object]:
         },
         {
             "time": "12/05 10:41",
-            "automation": "Générer evidence pack",
+            "automation": _loc(
+                lang,
+                "Générer evidence pack",
+                "Evidence-Pack erzeugen",
+                "Generate evidence pack",
+            ),
             "trigger": "Gate FAIL",
-            "actor": "Système",
+            "actor": sys_role,
             "evidence": "ev_b21f0a",
             "duration": "0,6 s",
             "result": "success",
@@ -237,9 +342,36 @@ def compute_automations_overview() -> dict[str, object]:
     ]
 
     approvals = [
-        {"name": "Purge mémoire RGPD sur demande validée", "since": "21 min", "role": "Admin"},
-        {"name": "Escalade humaine sur PII leakage", "since": "8 min", "role": "Sécurité"},
-        {"name": "Déployer modèle en production", "since": "3 min", "role": "Admin"},
+        {
+            "name": _loc(
+                lang,
+                "Purge mémoire RGPD sur demande validée",
+                "DSGVO-Speicherbereinigung bei validierter Anfrage",
+                "GDPR memory purge on approved request",
+            ),
+            "since": "21 min",
+            "role": "Admin",
+        },
+        {
+            "name": _loc(
+                lang,
+                "Escalade humaine sur PII leakage",
+                "Menschliche Eskalation bei PII-Leak",
+                "Human escalation on PII leakage",
+            ),
+            "since": "8 min",
+            "role": sec_role,
+        },
+        {
+            "name": _loc(
+                lang,
+                "Déployer modèle en production",
+                "Modell in Produktion bereitstellen",
+                "Deploy model to production",
+            ),
+            "since": "3 min",
+            "role": "Admin",
+        },
     ]
 
     guardrails = [
@@ -274,11 +406,37 @@ def compute_automations_overview() -> dict[str, object]:
     governance = {
         "dual_control": True,
         "roles": [
-            {"mode": "Admin", "scope": "Actions sensibles / système"},
-            {"mode": "Compliance+", "scope": "Conformité / RGPD / preuve"},
-            {"mode": "Operator+", "scope": "Qualité / release"},
+            {
+                "mode": "Admin",
+                "scope": _loc(
+                    lang,
+                    "Actions sensibles / système",
+                    "Sensible Aktionen / System",
+                    "Sensitive actions / system",
+                ),
+            },
+            {
+                "mode": "Compliance+",
+                "scope": _loc(
+                    lang,
+                    "Conformité / RGPD / preuve",
+                    "Konformitaet / DSGVO / Nachweis",
+                    "Compliance / GDPR / evidence",
+                ),
+            },
+            {
+                "mode": "Operator+",
+                "scope": _loc(
+                    lang, "Qualité / release", "Qualitaet / Release", "Quality / release"
+                ),
+            },
         ],
-        "default_scope": "Système entier (prod, preprod, staging, dev)",
+        "default_scope": _loc(
+            lang,
+            "Système entier (prod, preprod, staging, dev)",
+            "Gesamtes System (prod, preprod, staging, dev)",
+            "Entire system (prod, preprod, staging, dev)",
+        ),
     }
 
     return {
@@ -300,5 +458,13 @@ def compute_automations_overview() -> dict[str, object]:
         "savings": savings,
         "context": context,
         "governance": governance,
-        "footer": {"source": "YAML · Git", "certified": "Certifié par Tessera Verified"},
+        "footer": {
+            "source": "YAML · Git",
+            "certified": _loc(
+                lang,
+                "Certifié par Tessera Verified",
+                "Zertifiziert von Tessera Verified",
+                "Certified by Tessera Verified",
+            ),
+        },
     }

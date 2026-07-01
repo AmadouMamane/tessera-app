@@ -16,14 +16,17 @@ export async function generateMetadata({ params }: SystemPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchSystem(queryClient: QueryClient) {
+async function prefetchSystem(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["system-profile"],
+    queryKey: ["system-profile", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/system-profile`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/system-profile?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend system-profile returned ${response.status}`);
       return SystemProfileSchema.parse(await response.json());
     },
@@ -36,7 +39,7 @@ export default async function SystemPage({ params }: SystemPageProps) {
   const t = await getTranslations({ locale, namespace: "systemProfile" });
   const queryClient = new QueryClient();
   try {
-    await prefetchSystem(queryClient);
+    await prefetchSystem(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

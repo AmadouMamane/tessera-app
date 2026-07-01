@@ -14,10 +14,12 @@ import {
   ScrollText,
   ShieldCheck,
 } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
@@ -136,6 +138,9 @@ function Kpi({
   series,
   delta,
   deltaUpIsGood,
+  infoKey,
+  onDrill,
+  drillLabel,
 }: {
   label: string;
   value: string;
@@ -145,31 +150,68 @@ function Kpi({
   series?: number[];
   delta?: number | null;
   deltaUpIsGood?: boolean;
+  /** Key under compliance.explain — renders a ⓘ "what is this / how computed". */
+  infoKey?: string;
+  /** Makes the whole tile a drill-down (jump to its detail tab) with a ↗ affordance.
+   * Overlay-button pattern so the inner ⓘ never triggers the drill. */
+  onDrill?: () => void;
+  drillLabel?: string;
 }) {
   const tc = useTranslations("compliance");
+  const te = useTranslations("compliance.explain");
   const showDelta = delta != null && Math.abs(delta) >= 0.005;
   const up = (delta ?? 0) > 0;
   const deltaGood = up === (deltaUpIsGood ?? true);
+  const z = onDrill ? "pointer-events-none relative z-20" : "";
   return (
-    <Card className="flex flex-col gap-0.5 p-3">
-      <div className="truncate text-xs text-[var(--muted-foreground)]">{label}</div>
-      <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
+    <Card
+      className={`group relative flex flex-col gap-0.5 p-3 ${
+        onDrill ? "cursor-pointer transition-colors hover:border-[var(--tessera-green)]/40" : ""
+      }`}
+    >
+      {onDrill ? (
+        <button
+          type="button"
+          onClick={onDrill}
+          aria-label={drillLabel}
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tessera-green)]/40"
+        />
+      ) : null}
+      <div className={`flex items-center gap-1 text-xs text-[var(--muted-foreground)] ${z}`}>
+        <span className="truncate">{label}</span>
+        {infoKey ? (
+          <span className={onDrill ? "pointer-events-auto ml-auto" : "ml-auto"}>
+            <MetricInfo
+              title={label}
+              what={te(`${infoKey}.what`)}
+              how={te(`${infoKey}.how`)}
+              source={te.has(`${infoKey}.source`) ? te(`${infoKey}.source`) : undefined}
+            />
+          </span>
+        ) : null}
+      </div>
+      <div
+        className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"} ${z}`}
+      >
         {value}
         {unit ? (
           <span className="text-base font-medium text-[var(--muted-foreground)]">{unit}</span>
         ) : null}
       </div>
       {showDelta ? (
-        <div className="flex items-center gap-1 text-[0.65rem] tabular-nums">
+        <div className={`flex items-center gap-1 text-[0.65rem] tabular-nums ${z}`}>
           <span className={`whitespace-nowrap ${deltaGood ? GOOD : BAD}`}>
             {up ? "↗" : "↘"} {Math.abs((delta as number) * 100).toFixed(0)} {tc("kpi.pts")}
           </span>
           <span className="truncate text-[var(--muted-foreground)]">{tc("kpi.vsPrev")}</span>
         </div>
       ) : sub ? (
-        <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{sub}</div>
+        <div className={`truncate text-[0.65rem] text-[var(--muted-foreground)] ${z}`}>{sub}</div>
       ) : null}
       {series && series.length > 1 ? <Spark values={series} /> : null}
+      {onDrill ? (
+        <ArrowUpRight className="pointer-events-none absolute right-2 bottom-2 z-20 h-3 w-3 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-70" />
+      ) : null}
     </Card>
   );
 }
@@ -178,7 +220,7 @@ function Kpi({
 function StackBar({ c, p, n }: { c: number; p: number; n: number }) {
   const total = c + p + n || 1;
   return (
-    <div className="flex h-2 w-24 overflow-hidden rounded-full">
+    <div className="flex h-[4px] w-24 overflow-hidden rounded-full">
       <div style={{ width: `${(c / total) * 100}%`, background: "#10b981" }} />
       <div style={{ width: `${(p / total) * 100}%`, background: "#f59e0b" }} />
       <div style={{ width: `${(n / total) * 100}%`, background: "#ef4444" }} />
@@ -217,7 +259,7 @@ function EvidenceDonut({ completeness }: { completeness: number }) {
 
 const POLL = 30_000;
 
-export function ComplianceDashboard() {
+export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const tc = useTranslations("compliance");
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const temporal = useTemporalState();
@@ -249,6 +291,14 @@ export function ComplianceDashboard() {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* SR-01 rail LEADS — directly beneath the SLO breach alert the page renders above
+          the dashboard (user feedback); then the tabs and the per-agent context. */}
+      <SignalCommandBar
+        temporal={temporal}
+        timeline={railTimeline.data}
+        liveStatus={tc("status.realtime")}
+      />
+
       {/* tab bar */}
       <TabStrip
         accent="green"
@@ -261,12 +311,8 @@ export function ComplianceDashboard() {
         }))}
       />
 
-      {/* SR-01 — the unified signal command bar (Live · As-of · Historique). */}
-      <SignalCommandBar
-        temporal={temporal}
-        timeline={railTimeline.data}
-        liveStatus={tc("status.realtime")}
-      />
+      {/* Agent-scope context (Vue par agent) sits below the rail + tabs. */}
+      {agentScope ? <div className="-mt-0.5">{agentScope}</div> : null}
 
       {activeTab !== "overview" && d.tabs?.[activeTab] ? (
         <CatalogTabView tab={d.tabs[activeTab]} footer={<TabFooter tc={tc} />} />
@@ -279,6 +325,7 @@ export function ComplianceDashboard() {
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
                   <Kpi
                     label={tc("kpi.score")}
+                    infoKey="score"
                     value={`${d.score ?? 0}`}
                     unit="/100"
                     sub={tc("kpi.scoreSub")}
@@ -289,6 +336,9 @@ export function ComplianceDashboard() {
                   />
                   <Kpi
                     label={tc("kpi.obligations")}
+                    infoKey="obligations"
+                    onDrill={() => setActiveTab("obligations")}
+                    drillLabel={tc("tabs.obligations")}
                     value={`${d.n_applied ?? 0}`}
                     unit={`/${d.n_obligations ?? 0}`}
                     sub={`${Math.round(((d.n_applied ?? 0) / (d.n_obligations || 1)) * 100)}%`}
@@ -297,6 +347,9 @@ export function ComplianceDashboard() {
                   />
                   <Kpi
                     label={tc("kpi.conformant")}
+                    infoKey="conformant"
+                    onDrill={() => setActiveTab("evaluations")}
+                    drillLabel={tc("tabs.evaluations")}
                     value={`${d.n_conformant ?? 0}`}
                     unit={`/${d.n_controls ?? 0}`}
                     sub={`${Math.round(((d.n_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
@@ -305,24 +358,34 @@ export function ComplianceDashboard() {
                   />
                   <Kpi
                     label={tc("kpi.partial")}
+                    infoKey="partial"
+                    onDrill={() => setActiveTab("evaluations")}
+                    drillLabel={tc("tabs.evaluations")}
                     value={`${d.n_partial ?? 0}`}
                     sub={`${Math.round(((d.n_partial ?? 0) / (d.n_controls || 1)) * 100)}%`}
                     tone={WARN}
                   />
                   <Kpi
                     label={tc("kpi.nonConformant")}
+                    infoKey="nonConformant"
+                    onDrill={() => setActiveTab("evaluations")}
+                    drillLabel={tc("tabs.evaluations")}
                     value={`${d.n_non_conformant ?? 0}`}
                     sub={`${Math.round(((d.n_non_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
                     tone={(d.n_non_conformant ?? 0) > 0 ? BAD : GOOD}
                   />
                   <Kpi
                     label={tc("kpi.residual")}
+                    infoKey="residual"
                     value={`${d.n_residual_risk ?? 0}`}
                     sub={tc("kpi.residualSub")}
                     tone={WARN}
                   />
                   <Kpi
                     label={tc("kpi.deadlines")}
+                    infoKey="deadlines"
+                    onDrill={() => setActiveTab("obligations")}
+                    drillLabel={tc("tabs.obligations")}
                     value={`${d.n_critical_deadlines ?? 0}`}
                     sub={tc("kpi.deadlinesSub")}
                     tone={(d.n_critical_deadlines ?? 0) > 0 ? BAD : GOOD}

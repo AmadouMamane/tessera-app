@@ -732,7 +732,7 @@ function ByType({ data }: { data: Data }) {
               <span className="text-[var(--tessera-text)]">{it.label}</span>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">{it.value}</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+            <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
               <div
                 className={cn("h-full rounded-full", COV_BAR[it.tone] ?? "bg-slate-500")}
                 style={{ width: `${it.pct}%` }}

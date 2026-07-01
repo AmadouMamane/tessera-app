@@ -785,7 +785,7 @@ function DriftBars({ items }: { items: { label: string; value: number }[] }) {
             <span className="w-16 shrink-0 truncate text-[var(--muted-foreground)]">
               {it.label}
             </span>
-            <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--muted)]/40">
+            <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
               <div
                 className="h-full rounded-sm"
                 style={{ width: `${(abs / max) * 100}%`, backgroundColor: driftFill(abs) }}

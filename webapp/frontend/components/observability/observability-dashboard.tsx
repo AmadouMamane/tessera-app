@@ -22,6 +22,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { type ReactNode, useState } from "react";
 
 import { TabStrip } from "@/components/cockpit/tab-strip";
@@ -71,6 +74,7 @@ import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import {
   fetchAIAct,
   fetchAnomalies,
@@ -135,12 +139,15 @@ function Zone({
   label,
   icon: Icon,
   iconClassName = "text-[var(--tessera-green)]",
+  info,
   children,
 }: {
   label: string;
   icon: LucideIcon;
   /** Per-zone accent so each band's icon reads as its own facet. */
   iconClassName?: string;
+  /** Optional ⓘ explainer rendered next to the band label. */
+  info?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -148,13 +155,27 @@ function Zone({
       <h2 className="mt-0.5 mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         <Icon className={`h-3.5 w-3.5 shrink-0 ${iconClassName}`} />
         {label}
+        {info}
       </h2>
       {children}
     </section>
   );
 }
 
-export function ObservabilityDashboard() {
+/** A ⓘ for a quality-page zone/section, reading quality.explain.<k>.{what,how,source}. */
+function SectionInfo({ title, explainKey }: { title: string; explainKey: string }) {
+  const te = useTranslations("quality.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${explainKey}.what`)}
+      how={te(`${explainKey}.how`)}
+      source={te.has(`${explainKey}.source`) ? te(`${explainKey}.source`) : undefined}
+    />
+  );
+}
+
+export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const t = useTranslations("observability");
   const tq = useTranslations("quality");
   const locale = useLocale();
@@ -166,24 +187,28 @@ export function ObservabilityDashboard() {
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
+  // Global agent scope (?agent=) — the score-/bundle-/audit-backed quality signals
+  // read this agent's own turns; shared-policy probes (firewall, refusal) stay org.
+  const searchParams = useSearchParams();
+  const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
 
   const slo = useQuery({
-    queryKey: ["slo", asOf],
-    queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined),
+    queryKey: ["slo", asOf, scope],
+    queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL_MS,
   });
 
   const scoreSeries = useQuery({
-    queryKey: ["score-series", "faithfulness", asOf],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness"),
+    queryKey: ["score-series", "faithfulness", asOf, scope],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
 
   const groundingSeries = useQuery({
-    queryKey: ["score-series", "grounding", asOf],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding"),
+    queryKey: ["score-series", "grounding", asOf, scope],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -197,8 +222,8 @@ export function ObservabilityDashboard() {
   });
 
   const hallucinationSeries = useQuery({
-    queryKey: ["score-series", "hallucination", asOf],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "hallucination"),
+    queryKey: ["score-series", "hallucination", asOf, scope],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "hallucination", scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -264,8 +289,8 @@ export function ObservabilityDashboard() {
   });
 
   const toxicity = useQuery({
-    queryKey: ["toxicity", asOf],
-    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined),
+    queryKey: ["toxicity", asOf, scope],
+    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -337,8 +362,8 @@ export function ObservabilityDashboard() {
   });
 
   const tools = useQuery({
-    queryKey: ["tool-validity", asOf],
-    queryFn: ({ signal }) => fetchToolValidity(signal, asOf ?? undefined),
+    queryKey: ["tool-validity", asOf, scope],
+    queryFn: ({ signal }) => fetchToolValidity(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -350,8 +375,8 @@ export function ObservabilityDashboard() {
   });
 
   const piiLeak = useQuery({
-    queryKey: ["pii-leak", asOf],
-    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined),
+    queryKey: ["pii-leak", asOf, scope],
+    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -363,15 +388,15 @@ export function ObservabilityDashboard() {
   });
 
   const whatChanged = useQuery({
-    queryKey: ["what-changed", asOf],
-    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined),
+    queryKey: ["what-changed", asOf, scope],
+    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 20_000,
   });
 
   const anomalies = useQuery({
-    queryKey: ["anomalies", asOf],
-    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined),
+    queryKey: ["anomalies", asOf, scope],
+    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 20_000,
   });
@@ -395,8 +420,8 @@ export function ObservabilityDashboard() {
   });
 
   const conformance = useQuery({
-    queryKey: ["conformance", asOf],
-    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined),
+    queryKey: ["conformance", asOf, scope],
+    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -408,15 +433,15 @@ export function ObservabilityDashboard() {
   });
 
   const cost = useQuery({
-    queryKey: ["cost", asOf],
-    queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined),
+    queryKey: ["cost", asOf, scope],
+    queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
 
   const funnel = useQuery({
-    queryKey: ["funnel", asOf],
-    queryFn: ({ signal }) => fetchFunnel(signal, asOf ?? undefined),
+    queryKey: ["funnel", asOf, scope],
+    queryFn: ({ signal }) => fetchFunnel(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -485,6 +510,14 @@ export function ObservabilityDashboard() {
       {/* Sticky chrome: tab bar + business actions on one row (image normative),
           the shared compact temporal rail (Live/Replay) below. */}
       <div className="sticky top-0 z-30 -mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+        {/* The temporal rail LEADS the chrome — directly beneath the SLO alert the page
+            renders above the dashboard (user feedback) — then the actions + tabs. */}
+        <SignalCommandBar
+          temporal={temporal}
+          timeline={railTimeline.data}
+          sloTarget={slo.data?.target}
+          liveStatus={tq("temporal.liveData")}
+        />
         {/* Action toolbar (image normative: actions sit on the title row). The tab
             bar keeps its own full-width row below so all six tabs stay visible. A
             left-aligned coverage descriptor anchors the band so the buttons never
@@ -528,13 +561,11 @@ export function ObservabilityDashboard() {
           </div>
         </div>
         <TabBar active={tab} onChange={setTab} />
-        <SignalCommandBar
-          temporal={temporal}
-          timeline={railTimeline.data}
-          sloTarget={slo.data?.target}
-          liveStatus={tq("temporal.liveData")}
-        />
       </div>
+
+      {/* Agent-scope context (filter · per-agent breakdown · note) sits BELOW the rail,
+          so the temporal rail stays directly under the SLO alert. */}
+      {agentScope ? <div className="-mt-0.5">{agentScope}</div> : null}
 
       {/* KPI strip (unlabeled, full page width above the zones+rail — image normative) */}
       {tab === "overview" ? (
@@ -548,6 +579,7 @@ export function ObservabilityDashboard() {
           kappa={calibration.data?.kappa ?? null}
           evaluatedCount={runs.data?.catalogue_cases ?? null}
           loading={scoreSeries.isLoading}
+          onOpen={setTab}
         />
       ) : null}
 
@@ -559,7 +591,12 @@ export function ObservabilityDashboard() {
                   Sécurité & privacy page). Row 1: A | B with B at 3fr so its three
                   sub-cards get real width; row 2: C | D. */}
               <div className="grid items-start gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
-                <Zone label={tq("sec.etat")} icon={Gauge} iconClassName="text-sky-400">
+                <Zone
+                  label={tq("sec.etat")}
+                  icon={Gauge}
+                  iconClassName="text-sky-400"
+                  info={<SectionInfo title={tq("sec.etat")} explainKey="etat" />}
+                >
                   <EtatActuel
                     summary={signalSummary}
                     release={releaseStatus.data}
@@ -573,10 +610,19 @@ export function ObservabilityDashboard() {
                   label={tq("sec.diagnostic")}
                   icon={Stethoscope}
                   iconClassName="text-amber-400"
+                  info={<SectionInfo title={tq("sec.diagnostic")} explainKey="diagnostic" />}
                 >
                   <div className="grid items-start gap-2 xl:grid-cols-3">
-                    <FailureBars report={failedCases.data} loading={failedCases.isLoading} />
-                    <JudgeMini data={calibration.data} loading={calibration.isLoading} />
+                    <FailureBars
+                      report={failedCases.data}
+                      loading={failedCases.isLoading}
+                      onOpen={setTab}
+                    />
+                    <JudgeMini
+                      data={calibration.data}
+                      loading={calibration.isLoading}
+                      onOpen={setTab}
+                    />
                     <PriorityCases
                       report={failedCases.data}
                       loading={failedCases.isLoading}
@@ -597,6 +643,7 @@ export function ObservabilityDashboard() {
                   label={tq("sec.predictive")}
                   icon={TrendingUp}
                   iconClassName="text-violet-400"
+                  info={<SectionInfo title={tq("sec.predictive")} explainKey="predictive" />}
                 >
                   <PredictiveSignals
                     series={scoreSeries.data}
@@ -609,7 +656,12 @@ export function ObservabilityDashboard() {
                   />
                 </Zone>
 
-                <Zone label={tq("sec.actions")} icon={ListChecks} iconClassName="text-emerald-400">
+                <Zone
+                  label={tq("sec.actions")}
+                  icon={ListChecks}
+                  iconClassName="text-emerald-400"
+                  info={<SectionInfo title={tq("sec.actions")} explainKey="actions" />}
+                >
                   <RecommendedActions
                     regressions={releaseStatus.data?.regressions ?? []}
                     failed={failedCases.data}
@@ -756,7 +808,11 @@ export function ObservabilityDashboard() {
           <RunsPassRateTable registry={runs.data} loading={runs.isLoading} />
           <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
           <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
-          <FaithGroundingScatter pairs={metricPairs.data} loading={metricPairs.isLoading} />
+          <FaithGroundingScatter
+            pairs={metricPairs.data}
+            loading={metricPairs.isLoading}
+            onOpen={setTab}
+          />
           <RegressionsByRelease release={releaseStatus.data} loading={releaseStatus.isLoading} />
           <CostQualityScatter data={modelComparison.data} loading={modelComparison.isLoading} />
         </div>

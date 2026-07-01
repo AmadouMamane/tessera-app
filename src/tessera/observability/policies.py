@@ -15,7 +15,31 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+
 __all__ = ["compute_policies_overview"]
+
+# Localized free-text (fr, de, en). Versions/dates/authors/YAML/enum keys verbatim.
+_POL_NAME: dict[str, tuple[str, str, str]] = {
+    "POL-PII-001": ("Blocage PII strict", "Strikte PII-Sperre", "Strict PII block"),
+    "POL-INJ-002": ("Anti prompt-injection", "Anti-Prompt-Injection", "Anti prompt-injection"),
+    "POL-TOOL-002": ("Gouvernance outils", "Tool-Governance", "Tool governance"),
+    "POL-MEM-001": ("TTL mémoire & purge", "Speicher-TTL & Purge", "Memory TTL & purge"),
+    "POL-REG-001": ("Allégations régulées", "Regulierte Aussagen", "Regulated claims"),
+    "POL-LOC-001": ("Localisation contenu", "Inhaltslokalisierung", "Content localization"),
+}
+_IMPACT_METRIC: dict[str, tuple[str, str, str]] = {
+    "violations": ("Violations", "Verstoesse", "Violations"),
+    "false_positives": ("Faux positifs", "Falsch-Positive", "False positives"),
+    "injection": ("Injection coverage", "Injection-Abdeckung", "Injection coverage"),
+    "pii": ("PII blocked", "PII blockiert", "PII blocked"),
+    "tool": ("Tool denials", "Tool-Ablehnungen", "Tool denials"),
+}
+_CHAIN_INTACT = ("Chaîne d'audit intacte", "Audit-Kette intakt", "Audit chain intact")
+
+
+def _idx(lang: str) -> int:
+    return _LANG_IDX.get(lang, 0)
 
 
 def _kpi(
@@ -30,14 +54,19 @@ def _kpi(
     }
 
 
-def compute_policies_overview() -> dict[str, object]:
+def compute_policies_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Policies & guardrails overview payload.
+
+    Args:
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
 
     Returns:
         A JSON-serialisable mapping with the version timeline, posture KPIs,
         critical active policies, version history, YAML diff, runtime guardrails,
         impact simulator and sensitive actions.
     """
+    lang = _norm_lang(lang)
+    li = _idx(lang)
     now = datetime.now(UTC)
 
     version_timeline = [
@@ -247,6 +276,16 @@ def compute_policies_overview() -> dict[str, object]:
 
     quick_links = ["audit_journal", "export_siem", "evidence_pack", "release_control"]
 
+    # Localize the free-text labels (names + impact metrics) by stable key.
+    for pol in active_policies:
+        name = _POL_NAME.get(str(pol["id"]))
+        if name:
+            pol["name"] = name[li]
+    for key, row in zip(
+        ("violations", "false_positives", "injection", "pii", "tool"), impact, strict=False
+    ):
+        row["metric"] = _IMPACT_METRIC[key][li]
+
     return {
         "generated_at": now.isoformat(),
         "active_version": "v2.1",
@@ -261,5 +300,5 @@ def compute_policies_overview() -> dict[str, object]:
         "impact": impact,
         "sensitive_actions": sensitive_actions,
         "quick_links": quick_links,
-        "footer": {"source": "YAML · Git", "chain": "Chaîne d'audit intacte"},
+        "footer": {"source": "YAML · Git", "chain": _CHAIN_INTACT[li]},
     }

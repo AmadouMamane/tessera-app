@@ -57,6 +57,32 @@ type T = ReturnType<typeof useTranslations<"agentConsole">>;
 
 const FIELD_ICONS: LucideIcon[] = [Cpu, Tag, Database, Shield, Activity];
 
+// Console inspector tabs are stable French keys (the panel gating matches them);
+// these are the localized display labels per locale.
+const TAB_LABEL: Record<string, Record<string, string>> = {
+  fr: {
+    Sources: "Sources",
+    Outils: "Outils",
+    "Garde-fous": "Garde-fous",
+    Évaluation: "Évaluation",
+    Debug: "Debug",
+  },
+  de: {
+    Sources: "Quellen",
+    Outils: "Tools",
+    "Garde-fous": "Guardrails",
+    Évaluation: "Bewertung",
+    Debug: "Debug",
+  },
+  en: {
+    Sources: "Sources",
+    Outils: "Tools",
+    "Garde-fous": "Guardrails",
+    Évaluation: "Evaluation",
+    Debug: "Debug",
+  },
+};
+
 const SCORE_TONE: Record<string, string> = {
   good: "text-emerald-300",
   warn: "text-amber-300",
@@ -133,8 +159,8 @@ export function AgentConsole() {
   }, [model, role]);
   const qc = useQueryClient();
   const { data } = useQuery({
-    queryKey: ["agent-console"],
-    queryFn: ({ signal }) => fetchAgentConsole(signal),
+    queryKey: ["agent-console", locale],
+    queryFn: ({ signal }) => fetchAgentConsole(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -958,7 +984,7 @@ function TraceSpan({
           {fmtMs(span.duration_ms)}
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+      <div className="h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
         <div
           className={cn("h-full rounded-full", SPAN_BAR_TONE[span.status] ?? SPAN_BAR_TONE.ok)}
           style={{
@@ -1004,11 +1030,15 @@ function ResponseSummary({
   sessionId?: string;
   t: T;
 }) {
+  const locale = useLocale();
   const baseTabs = data.tabs ?? ["Sources", "Outils", "Garde-fous", "Évaluation"];
   // The Debug tab surfaces the live turn's full internals (prompt, memory,
   // routing, usage, reviewer split, language, draft-vs-final, effective config).
   const tabs = baseTabs.includes("Debug") ? baseTabs : [...baseTabs, "Debug"];
   const [active, setActive] = useState(tabs[0] ?? "Sources");
+  // Tabs are stable keys (panel gating below matches these exact strings); map
+  // them to localized display labels without changing the gating contract.
+  const tabLabel = (tab: string): string => TAB_LABEL[locale]?.[tab] ?? tab;
   // Response-specific signals come from the live turn only (no static fallback);
   // config panels (tools/guardrails) fall back to the real loaded policy pre-turn.
   const quality = debug?.quality;
@@ -1047,7 +1077,7 @@ function ResponseSummary({
                   : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
               )}
             >
-              {tab}
+              {tabLabel(tab)}
             </button>
           );
         })}
@@ -1293,7 +1323,7 @@ function ScoreRow({ label, score }: { label: string; score: number | null }) {
   return (
     <div className="flex items-center gap-2 py-0.5">
       <span className="w-20 shrink-0 text-[0.64rem] text-[var(--tessera-text-muted)]">{label}</span>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--tessera-surface)]">
+      <div className="h-[4px] flex-1 overflow-hidden rounded-full bg-[var(--tessera-border)]">
         {pct !== null ? (
           <div
             className={cn("h-full rounded-full", SPAN_BAR_TONE[tone] ?? SPAN_BAR_TONE.ok)}

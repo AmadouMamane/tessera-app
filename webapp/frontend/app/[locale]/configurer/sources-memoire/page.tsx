@@ -1,5 +1,6 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { SourcesOverview } from "@/components/sources/sources-overview";
@@ -47,7 +48,9 @@ export default async function SourcesPage({ params }: SourcesPageProps) {
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <SourcesOverview />
+        <Suspense fallback={null}>
+          <SourcesOverview />
+        </Suspense>
       </HydrationBoundary>
     </AppShell>
   );

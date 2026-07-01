@@ -138,7 +138,7 @@ function Cell({ col, cells }: { col: TabColumn; cells: Record<string, unknown> }
             {c.have} / {c.total}
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-1 w-12 overflow-hidden rounded-full bg-[var(--tessera-border)]">
+            <span className="h-[4px] w-12 overflow-hidden rounded-full bg-[var(--tessera-border)]">
               <span
                 className="block h-full rounded-full bg-emerald-500"
                 style={{ width: `${c.pct}%` }}
@@ -156,7 +156,7 @@ function Cell({ col, cells }: { col: TabColumn; cells: Record<string, unknown> }
       const t = c.pct >= 90 ? "bg-emerald-500" : c.pct >= 70 ? "bg-amber-500" : "bg-red-500";
       return (
         <span className="flex items-center justify-end gap-1.5">
-          <span className="h-1 w-10 overflow-hidden rounded-full bg-[var(--tessera-border)]">
+          <span className="h-[4px] w-10 overflow-hidden rounded-full bg-[var(--tessera-border)]">
             <span className={`block h-full rounded-full ${t}`} style={{ width: `${c.pct}%` }} />
           </span>
           <span className="w-8 text-right tabular-nums">{c.pct}%</span>
@@ -452,7 +452,7 @@ function Section({ s }: { s: TabSection }) {
             return (
               <li key={bar.label} className="flex items-center gap-2 text-[0.68rem]">
                 <span className="w-24 shrink-0 truncate">{bar.label}</span>
-                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--tessera-border)]">
+                <span className="h-[4px] flex-1 overflow-hidden rounded-full bg-[var(--tessera-border)]">
                   <span
                     className={`block h-full rounded-full ${BAR_BG[tone(bar.tone)]}`}
                     style={{ width: `${Math.round(bar.value * 100)}%` }}

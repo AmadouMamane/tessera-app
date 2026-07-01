@@ -22,6 +22,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { DeltaBadge, MetricCard } from "@/components/cockpit/metric-card";
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart, sampleTicks } from "@/components/cockpit/stretch-chart";
 import { CountList, SummaryPanel } from "@/components/cockpit/summary-panel";
 import { WindowControl, endOfLocalDay } from "@/components/cockpit/window-control";
@@ -54,7 +55,13 @@ import { cn } from "@/lib/cn";
 
 const PAGE_SIZE = 9;
 const OUTCOMES: ReadonlyArray<AuditOutcome> = ["allowed", "denied", "error"];
-const EVENT_TYPES: ReadonlyArray<AuditEventType> = ["guard", "tool", "memory", "other"];
+const EVENT_TYPES: ReadonlyArray<AuditEventType> = [
+  "guard",
+  "tool",
+  "memory",
+  "governance",
+  "other",
+];
 const ACTOR_ROLES: ReadonlyArray<AuditActorRole> = ["human", "service", "system", "model"];
 const ACTOR_ROLE_SET = new Set<string>(ACTOR_ROLES);
 const PERIODS = ["24h", "7d", "30d"] as const;
@@ -295,6 +302,7 @@ function MetricGrid({
 }) {
   const t = useTranslations("audit.metrics");
   const td = useTranslations("audit.delta");
+  const te = useTranslations("audit.explain");
   const metrics = useMemo(
     () => new Map(overview?.metrics.map((metric) => [metric.key, metric])),
     [overview],
@@ -335,6 +343,14 @@ function MetricGrid({
           <MetricCard
             key={key}
             label={t(`${key}.label`)}
+            info={
+              <MetricInfo
+                title={t(`${key}.label`)}
+                what={te(`${key}.what`)}
+                how={te(`${key}.how`)}
+                source={te.has(`${key}.source`) ? te(`${key}.source`) : undefined}
+              />
+            }
             loading={loading || !metric}
             value={
               metric && key === "chain_integrity"

@@ -1,15 +1,30 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Download, FileSearch, Plus, Search, UploadCloud, X } from "lucide-react";
-import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  Download,
+  Search,
+  SortAsc,
+  SortDesc,
+  X,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { fetchSignalCatalogue } from "@/lib/api/client";
-import type { SignalCatalogue as SignalData } from "@/lib/api/schemas";
+import type { ScSignal, SignalCatalogue as SignalData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 const SEV_BADGE: Record<string, string> = {
@@ -25,30 +40,98 @@ const STATUS_BADGE: Record<string, string> = {
   disabled:
     "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
 };
-const DETAIL_TABS = ["overview", "definition", "performance", "history", "dependencies"] as const;
+const SEV_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+const STATUS_RANK: Record<string, number> = {
+  active: 0,
+  evaluation: 1,
+  deprecated: 2,
+  disabled: 3,
+};
 
 type T = ReturnType<typeof useTranslations<"signalCatalogue">>;
+type TT = ReturnType<typeof useTranslations<"table">>;
 type Data = SignalData;
+type SortKey = "name" | "category" | "source" | "severity" | "status" | "quality" | "owner";
+
+const COLS: { key: string; sort?: SortKey; w: string }[] = [
+  { key: "name", sort: "name", w: "18%" },
+  { key: "category", sort: "category", w: "10%" },
+  { key: "source", sort: "source", w: "9%" },
+  { key: "severity", sort: "severity", w: "10%" },
+  { key: "status", sort: "status", w: "11%" },
+  { key: "quality", sort: "quality", w: "10%" },
+  { key: "lastActivity", w: "10%" },
+  { key: "owner", sort: "owner", w: "12%" },
+  { key: "modified", w: "10%" },
+];
+const ROWS_PER_PAGE_OPTS = [10, 25, 50];
+const ACCENT = "#87bfff";
 
 export function SignalCatalogue() {
   const t = useTranslations("signalCatalogue");
+  const tt = useTranslations("table");
+  const locale = useLocale();
   const { data } = useQuery({
-    queryKey: ["signal-catalogue"],
-    queryFn: ({ signal }) => fetchSignalCatalogue(signal),
+    queryKey: ["signal-catalogue", locale],
+    queryFn: ({ signal }) => fetchSignalCatalogue(locale, signal),
     staleTime: 60_000,
   });
 
-  if (!data) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-[var(--tessera-text-muted)]">
-        …
-      </div>
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");
+  const [severity, setSeverity] = useState("all");
+  const [category, setCategory] = useState("all");
+  const [source, setSource] = useState("all");
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "severity", dir: 1 });
+  const [selected, setSelected] = useState<ScSignal | null>(null);
+
+  const signals = useMemo(() => data?.signals ?? [], [data]);
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = signals.filter((s) => {
+      if (status !== "all" && s.status !== status) return false;
+      if (severity !== "all" && s.severity !== severity) return false;
+      if (category !== "all" && s.category !== category) return false;
+      if (source !== "all" && s.source !== source) return false;
+      if (!q) return true;
+      return `${s.name} ${s.description} ${s.id} ${s.owner}`.toLowerCase().includes(q);
+    });
+    const dir = sort.dir;
+    return [...filtered].sort((a, b) => {
+      switch (sort.key) {
+        case "quality":
+          return (a.quality - b.quality) * dir;
+        case "severity":
+          return ((SEV_RANK[a.severity] ?? 0) - (SEV_RANK[b.severity] ?? 0)) * dir;
+        case "status":
+          return ((STATUS_RANK[a.status] ?? 0) - (STATUS_RANK[b.status] ?? 0)) * dir;
+        default:
+          return a[sort.key].localeCompare(b[sort.key], "fr") * dir;
+      }
+    });
+  }, [signals, query, status, severity, category, source, sort]);
+
+  if (!data) return <Skeleton />;
+  if (!data.available) return <Unavailable t={t} />;
+
+  const toggleSort = (key: SortKey) =>
+    setSort((s) =>
+      s.key === key ? { key, dir: (s.dir === 1 ? -1 : 1) as 1 | -1 } : { key, dir: 1 },
     );
-  }
+
+  const onExport = () => {
+    const blob = new Blob([JSON.stringify(data.signals, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tessera-signal-catalogue.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
+    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      <CommandBar t={t} onExport={onExport} />
 
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-9">
         {data.kpis.map((kpi) => (
@@ -56,42 +139,55 @@ export function SignalCatalogue() {
         ))}
       </div>
 
-      <FilterStrip t={t} data={data} />
+      <FilterStrip
+        t={t}
+        data={data}
+        query={query}
+        onQuery={setQuery}
+        status={status}
+        onStatus={setStatus}
+        severity={severity}
+        onSeverity={setSeverity}
+        category={category}
+        onCategory={setCategory}
+        source={source}
+        onSource={setSource}
+        count={rows.length}
+        total={signals.length}
+      />
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <SignalTable t={t} data={data} />
-        <DetailPanel t={t} data={data} />
-      </div>
+      <SignalTable
+        t={t}
+        tt={tt}
+        rows={rows}
+        sort={sort}
+        onSort={toggleSort}
+        selected={selected}
+        onSelect={setSelected}
+      />
 
       <Footer t={t} data={data} />
+
+      {selected ? <SignalDrawer t={t} signal={selected} onClose={() => setSelected(null)} /> : null}
     </div>
   );
 }
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({ t, onExport }: { t: T; onExport: () => void }) {
   return (
-    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-end gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <p className="min-w-0 flex-1 truncate text-xs text-[var(--tessera-text-muted)]">
+        {t("subtitle")}
+      </p>
       <Button
         size="sm"
         variant="outline"
-        className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
-      >
-        <UploadCloud className="h-4 w-4" /> {t("actions.importSignal")}
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
+        onClick={onExport}
+        className="h-9 shrink-0 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
       >
         <Download className="h-4 w-4" /> {t("actions.exportCatalogue")}
-      </Button>
-      <Button
-        size="sm"
-        className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
-      >
-        <Plus className="h-4 w-4" /> {t("actions.createSignal")}
       </Button>
     </section>
   );
@@ -110,304 +206,611 @@ function CompactKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }
   );
 }
 
-function FilterStrip({ t, data }: { t: T; data: Data }) {
-  const selects = ["status", "severity", "category", "source", "owner", "environment"] as const;
+function FilterStrip({
+  t,
+  data,
+  query,
+  onQuery,
+  status,
+  onStatus,
+  severity,
+  onSeverity,
+  category,
+  onCategory,
+  source,
+  onSource,
+  count,
+  total,
+}: {
+  t: T;
+  data: Data;
+  query: string;
+  onQuery: (v: string) => void;
+  status: string;
+  onStatus: (v: string) => void;
+  severity: string;
+  onSeverity: (v: string) => void;
+  category: string;
+  onCategory: (v: string) => void;
+  source: string;
+  onSource: (v: string) => void;
+  count: number;
+  total: number;
+}) {
+  const statuses = useMemo(() => [...new Set(data.signals.map((s) => s.status))], [data.signals]);
+  const severities = useMemo(
+    () =>
+      [...new Set(data.signals.map((s) => s.severity))].sort(
+        (a, b) => (SEV_RANK[a] ?? 0) - (SEV_RANK[b] ?? 0),
+      ),
+    [data.signals],
+  );
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="relative min-w-[200px] flex-1">
+      <div className="relative min-w-[180px] flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--tessera-text-muted)]" />
         <input
           type="search"
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+          aria-label={t("filters.search")}
           placeholder={t("filters.search")}
-          className="h-9 w-full rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-9 pr-3 text-xs text-[var(--tessera-text)] outline-none"
+          className="h-9 w-full rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-9 pr-3 text-xs text-[var(--tessera-text)] outline-none focus:border-[#2e72d2]"
         />
       </div>
-      {selects.map((s) => (
-        <div
-          key={s}
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)]"
-        >
-          {t(`filters.${s}`)} <ChevronRight className="h-3.5 w-3.5 rotate-90" />
-        </div>
-      ))}
-      <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
-        {data.total_signals} {t("footer.total", { n: "" }).replace(/\d+\s*/, "")}
+      <FilterSelect
+        label={t("filters.status")}
+        value={status}
+        onChange={onStatus}
+        options={statuses.map((s) => ({ value: s, label: t(`status.${s}`) }))}
+        allLabel={t("filters.all")}
+      />
+      <FilterSelect
+        label={t("filters.severity")}
+        value={severity}
+        onChange={onSeverity}
+        options={severities.map((s) => ({ value: s, label: t(`severity.${s}`) }))}
+        allLabel={t("filters.all")}
+      />
+      <FilterSelect
+        label={t("filters.category")}
+        value={category}
+        onChange={onCategory}
+        options={data.categories.map((c) => ({ value: c, label: t(`category.${c}`) }))}
+        allLabel={t("filters.all")}
+      />
+      <FilterSelect
+        label={t("filters.source")}
+        value={source}
+        onChange={onSource}
+        options={data.sources.map((s) => ({ value: s, label: s }))}
+        allLabel={t("filters.all")}
+      />
+      <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+        {count}/{total}
       </span>
     </section>
   );
 }
 
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+  allLabel,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  allLabel: string;
+}) {
+  return (
+    <label className="relative shrink-0">
+      <span className="sr-only">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 cursor-pointer appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-3 pr-8 text-xs text-[var(--tessera-text)] outline-none hover:border-[#2e72d2] focus:border-[#2e72d2]"
+      >
+        <option value="all">
+          {label}: {allLabel}
+        </option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#87bfff]" />
+    </label>
+  );
+}
+
 // ── table ────────────────────────────────────────────────────────────────────
 
-function SignalTable({ t, data }: { t: T; data: Data }) {
-  const cols = [
-    "name",
-    "category",
-    "description",
-    "source",
-    "severity",
-    "status",
-    "quality",
-    "lastActivity",
-    "owner",
-    "modified",
-  ] as const;
+function qualityTone(q: number): string {
+  return q >= 90 ? "bg-emerald-400" : q >= 75 ? "bg-amber-400" : "bg-red-400";
+}
+
+function SignalTable({
+  t,
+  tt,
+  rows,
+  sort,
+  onSort,
+  selected,
+  onSelect,
+}: {
+  t: T;
+  tt: TT;
+  rows: ScSignal[];
+  sort: { key: SortKey; dir: 1 | -1 };
+  onSort: (key: SortKey) => void;
+  selected: ScSignal | null;
+  onSelect: (s: ScSignal) => void;
+}) {
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset to page 1 on filter/sort/size change
+  useEffect(() => setPage(1), [total, perPage, sort.key, sort.dir]);
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * perPage;
+  const pageRows = rows.slice(start, start + perPage);
   return (
-    <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full border-collapse text-left text-xs">
-          <thead className="sticky top-0 bg-[var(--tessera-surface)]">
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {cols.map((c) => (
-                <th key={c} className="whitespace-nowrap px-2.5 py-2 font-medium">
-                  {t(`col.${c}`)}
+    <div
+      data-testid="signals-table"
+      className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[940px] table-fixed border-collapse text-left text-[0.72rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {COLS.map((c, idx) => (
+                <th
+                  key={c.key}
+                  style={{ width: c.w }}
+                  className={cn("py-1.5 font-medium", idx === 0 ? "pl-5 pr-2" : "px-2")}
+                >
+                  {c.sort ? (
+                    <button
+                      type="button"
+                      onClick={() => onSort(c.sort as SortKey)}
+                      aria-sort={
+                        sort.key === c.sort ? (sort.dir === 1 ? "ascending" : "descending") : "none"
+                      }
+                      className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-[var(--tessera-text)]"
+                    >
+                      {t(`col.${c.key}`)}
+                      {sort.key === c.sort ? (
+                        sort.dir === 1 ? (
+                          <SortAsc className="h-3 w-3 text-[#87bfff]" />
+                        ) : (
+                          <SortDesc className="h-3 w-3 text-[#87bfff]" />
+                        )
+                      ) : (
+                        <ChevronsUpDown className="h-3 w-3 opacity-40" />
+                      )}
+                    </button>
+                  ) : (
+                    t(`col.${c.key}`)
+                  )}
                 </th>
               ))}
+              <th className="w-28 px-2 py-1.5" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
-            {data.signals.map((sig) => {
-              const active = sig.id === data.selected.id;
+            {pageRows.map((s) => {
+              const active = s.id === selected?.id;
               return (
                 <tr
-                  key={sig.id}
+                  key={s.id}
+                  onClick={() => onSelect(s)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelect(s);
+                    }
+                  }}
+                  tabIndex={0}
+                  // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
+                  role="button"
+                  aria-label={s.name}
                   className={cn(
-                    "cursor-pointer border-b border-[var(--tessera-border)]/60 transition-colors hover:bg-[#0b2b49]",
+                    "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors last:border-0 hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
                   )}
                 >
-                  <td className="px-2.5 py-2">
-                    <span className="font-mono text-[0.7rem] text-[var(--tessera-text)]">
-                      {sig.name}
+                  <td className="py-1.5 pl-5 pr-2">
+                    <span
+                      className="block truncate font-mono text-[0.7rem] text-[var(--tessera-text)]"
+                      title={s.name}
+                    >
+                      {s.name}
                     </span>
-                    <span className="ml-1.5 font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
-                      {sig.id}
+                    <span className="block truncate font-mono text-[0.56rem] text-[var(--tessera-text-muted)]">
+                      {s.id}
                     </span>
                   </td>
-                  <td className="px-2.5 py-2">
-                    <Badge className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
-                      {t(`category.${sig.category}`)}
-                    </Badge>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{t(`category.${s.category}`)}</span>
                   </td>
-                  <td className="max-w-[220px] truncate px-2.5 py-2 text-[var(--tessera-text-muted)]">
-                    {sig.description}
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{s.source}</span>
                   </td>
-                  <td className="px-2.5 py-2 text-[var(--tessera-text-muted)]">{sig.source}</td>
-                  <td className="px-2.5 py-2">
-                    <Badge className={SEV_BADGE[sig.severity]}>
-                      {t(`severity.${sig.severity}`)}
-                    </Badge>
+                  <td className="px-2 py-1.5">
+                    <Badge className={SEV_BADGE[s.severity]}>{t(`severity.${s.severity}`)}</Badge>
                   </td>
-                  <td className="px-2.5 py-2">
-                    <Badge className={STATUS_BADGE[sig.status]}>{t(`status.${sig.status}`)}</Badge>
+                  <td className="px-2 py-1.5">
+                    <Badge className={STATUS_BADGE[s.status]}>{t(`status.${s.status}`)}</Badge>
                   </td>
-                  <td className="px-2.5 py-2">
+                  <td className="px-2 py-1.5">
                     <div className="flex items-center gap-1.5">
-                      <div className="h-1.5 w-10 rounded-full bg-[var(--tessera-bg)]">
+                      <div className="h-[4px] overflow-hidden w-10 shrink-0 rounded-full bg-[var(--tessera-border)]">
                         <div
-                          className={cn(
-                            "h-full rounded-full",
-                            sig.quality >= 90
-                              ? "bg-emerald-400"
-                              : sig.quality >= 75
-                                ? "bg-amber-400"
-                                : "bg-red-400",
-                          )}
-                          style={{ width: `${sig.quality}%` }}
+                          className={cn("h-full rounded-full", qualityTone(s.quality))}
+                          style={{ width: `${s.quality}%` }}
                         />
                       </div>
                       <span className="tabular-nums text-[var(--tessera-text-muted)]">
-                        {sig.quality}%
+                        {s.quality}%
                       </span>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-2.5 py-2 text-[var(--tessera-text-muted)]">
-                    {sig.last_activity}
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{s.last_activity}</span>
                   </td>
-                  <td className="px-2.5 py-2 text-[var(--tessera-text-muted)]">{sig.owner}</td>
-                  <td className="whitespace-nowrap px-2.5 py-2 font-mono text-[0.66rem] text-[var(--tessera-text-muted)]">
-                    {sig.modified}
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    <span className="block truncate" title={s.owner}>
+                      {s.owner}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                    <span className="block truncate">{s.modified}</span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span className="flex items-center justify-end gap-1 whitespace-nowrap">
+                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                        {tt("rowOpen")}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                    </span>
                   </td>
                 </tr>
               );
             })}
+            {total === 0 ? (
+              <tr>
+                <td
+                  colSpan={COLS.length + 1}
+                  className="px-2 py-6 text-center text-[0.7rem] text-[var(--tessera-text-muted)]"
+                >
+                  {tt("empty")}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between border-t border-[var(--tessera-border)] px-3 py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-        <span>
-          1–{data.page_size} / {data.total_signals}
-        </span>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3, "…", 32].map((p, i) => (
-            <button
-              key={`${p}-${i}`}
-              type="button"
-              className={cn(
-                "h-6 min-w-6 rounded px-1.5 text-[0.66rem]",
-                p === 1
-                  ? "bg-[#0d3561] text-[#d8eaff]"
-                  : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
-              )}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TablePagination
+        tt={tt}
+        page={safePage}
+        totalPages={totalPages}
+        start={total === 0 ? 0 : start + 1}
+        end={Math.min(start + perPage, total)}
+        total={total}
+        perPage={perPage}
+        onPage={setPage}
+        onPerPage={setPerPage}
+        accent={ACCENT}
+      />
     </div>
   );
 }
 
-// ── detail panel ─────────────────────────────────────────────────────────────
+// Shared connaissances-style pagination footer (reused across cockpit tables).
+function pageWindow(page: number, totalPages: number): number[] {
+  const span = Math.min(5, totalPages);
+  let first = Math.max(1, page - Math.floor(span / 2));
+  first = Math.min(first, Math.max(1, totalPages - span + 1));
+  return Array.from({ length: span }, (_, i) => first + i);
+}
 
-function DetailPanel({ t, data }: { t: T; data: Data }) {
-  const s = data.selected;
-  const maxDist = Math.max(...s.distribution.map((d) => d.count), 1);
-  const meta: [string, string][] = [
-    [t("detail.source"), s.source],
-    [t("detail.type"), s.type],
-    [t("detail.unit"), s.unit],
-    [t("detail.direction"), s.direction],
-    [t("detail.frequency"), s.frequency],
-    [t("detail.environment"), s.environment],
-  ];
-  const thresholds: [string, string][] = [
-    [t("detail.severity"), s.severity],
-    [t("detail.thresholdCritical"), s.threshold_critical],
-    [t("detail.thresholdAlert"), s.threshold_alert],
-    [t("detail.model"), s.model],
-    [t("detail.lastActivity"), s.last_activity],
-    [t("detail.quality"), `${s.quality}%`],
-  ];
+function TablePagination({
+  tt,
+  page,
+  totalPages,
+  start,
+  end,
+  total,
+  perPage,
+  onPage,
+  onPerPage,
+  accent,
+}: {
+  tt: TT;
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  total: number;
+  perPage: number;
+  onPage: (p: number) => void;
+  onPerPage: (n: number) => void;
+  accent: string;
+}) {
   return (
-    <aside className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate font-mono text-sm font-semibold text-white">{s.name}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-              {s.id}
-            </span>
-            <Badge className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
-              {t(`category.${s.category}`)}
-            </Badge>
-            <Badge className={STATUS_BADGE[s.status]}>{t(`status.${s.status}`)}</Badge>
-          </div>
-        </div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <span className="tabular-nums" aria-live="polite">
+        {tt("summary", { start, end, total })}
+      </span>
+      <div className="flex items-center gap-1">
         <button
           type="button"
-          aria-label="close"
-          className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+          disabled={page <= 1}
+          aria-label={tt("prev")}
+          onClick={() => onPage(Math.max(1, page - 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
         >
-          <X className="h-4 w-4" />
+          <ChevronLeft className="h-3.5 w-3.5" />
         </button>
-      </div>
-
-      <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
-        {DETAIL_TABS.map((tab) => (
+        {pageWindow(page, totalPages).map((n) => (
           <button
-            key={tab}
+            key={n}
             type="button"
+            aria-current={n === page ? "page" : undefined}
+            onClick={() => onPage(n)}
+            style={
+              n === page ? { borderColor: `${accent}99`, background: `${accent}26` } : undefined
+            }
             className={cn(
-              "rounded px-2 py-1 text-[0.66rem] font-medium",
-              tab === "overview"
-                ? "bg-[#0d3561] text-[#d8eaff]"
-                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              n === page
+                ? "font-medium text-white"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
-            {t(`tabs.${tab}`)}
+            {n}
           </button>
         ))}
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          aria-label={tt("next")}
+          onClick={() => onPage(Math.min(totalPages, page + 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-40"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
       </div>
-
-      <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">{s.description}</p>
-
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-        <dl className="flex flex-col gap-1 text-[0.66rem]">
-          {meta.map(([k, v]) => (
-            <KV key={k} label={k} value={v} />
+      <label className="flex items-center gap-2">
+        <span>{tt("perPage")}</span>
+        <select
+          value={perPage}
+          onChange={(e) => onPerPage(Number(e.target.value))}
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+        >
+          {ROWS_PER_PAGE_OPTS.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
           ))}
-        </dl>
-        <dl className="flex flex-col gap-1 text-[0.66rem]">
-          {thresholds.map(([k, v]) => (
-            <KV key={k} label={k} value={v} />
-          ))}
-        </dl>
-      </div>
+        </select>
+      </label>
+    </div>
+  );
+}
 
-      <div className="flex flex-wrap gap-1">
-        {s.tags.map((tag) => (
-          <span
-            key={tag}
-            className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
+// ── drawer ───────────────────────────────────────────────────────────────────
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <p className="mb-1 text-[0.62rem] font-semibold text-[var(--tessera-text)]">
-            {t("detail.distribution")}
-          </p>
-          <div className="flex h-[70px] items-end gap-1">
-            {s.distribution.map((d) => (
-              <div key={d.label} className="flex flex-1 flex-col items-center gap-0.5">
-                <div
-                  className="w-full rounded-t-sm"
-                  style={{ height: `${(d.count / maxDist) * 100}%`, background: d.color }}
-                />
-                <span className="text-[0.46rem] text-[var(--tessera-text-muted)]">{d.label}</span>
+function SignalDrawer({ t, signal, onClose }: { t: T; signal: ScSignal; onClose: () => void }) {
+  const d = signal.detail;
+  const [rect, setRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [shown, setShown] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    return () => opener?.focus?.();
+  }, []);
+  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
+    if (event.key !== "Tab" || !dialogRef.current) return;
+    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+    const first = f[0];
+    const last = f[f.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  useEffect(() => {
+    const measure = () => {
+      const m = document.querySelector("main");
+      if (!m) return;
+      const mr = m.getBoundingClientRect();
+      const c = document.querySelector("[data-shell-content]") ?? m;
+      const cr = c.getBoundingClientRect();
+      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  useEffect(() => {
+    setShown(true);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
+      style={rect ?? { inset: 0 }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <dialog
+        ref={dialogRef}
+        open
+        aria-modal="true"
+        aria-label={signal.name}
+        onKeyDown={onTrapKey}
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+        className={cn(
+          "static m-0 block h-full w-full max-w-[460px] bg-transparent p-0 transition-transform duration-200 ease-out",
+          shown ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        <aside
+          data-testid="signal-detail"
+          className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate font-mono text-sm font-semibold text-white">{d.name}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                  {d.id}
+                </span>
+                <Badge className={SEV_BADGE[d.severity]}>{t(`severity.${d.severity}`)}</Badge>
+                <Badge className={STATUS_BADGE[d.status]}>{t(`status.${d.status}`)}</Badge>
               </div>
-            ))}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("detail.moreDetails")}
+              className="shrink-0 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        </div>
-        <div>
-          <p className="mb-1 text-[0.62rem] font-semibold text-[var(--tessera-text)]">
-            {t("detail.trend")}
-          </p>
-          <div className="h-[70px]">
-            <StretchChart
-              title={t("detail.trend")}
-              lines={[{ points: s.trend, color: "#34d399" }]}
-            />
-          </div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3 border-t border-[var(--tessera-border)] pt-2">
-        <div>
-          <p className="mb-1 text-[0.62rem] font-semibold text-[var(--tessera-text)]">
-            {t("detail.actions")}
+          <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
+            {d.description}
           </p>
-          <ul className="flex flex-col gap-1">
-            {[t("detail.viewSignal"), t("detail.viewEvals")].map((label) => (
-              <li key={label}>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-1.5 text-left text-[0.66rem] text-[#87bfff] hover:text-[#a9d2ff]"
-                >
-                  <FileSearch className="h-3 w-3 shrink-0" /> {label}
-                </button>
-              </li>
-            ))}
-          </ul>
+
+          <Section title={t("detail.secDefinition")}>
+            <RowList rows={d.definition} />
+          </Section>
+
+          <Section title={t("detail.secPerformance")}>
+            <RowList rows={d.performance} />
+          </Section>
+
+          {d.guard.length > 0 ? (
+            <Section title={t("detail.secGuard")}>
+              <RowList rows={d.guard} mono />
+            </Section>
+          ) : null}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Section title={t("detail.byLanguage")}>
+              <BarRow bars={d.distribution} />
+            </Section>
+            <Section title={t("detail.outcomeTitle")}>
+              <BarRow bars={d.outcome} />
+            </Section>
+          </div>
+
+          {d.tags.length > 0 ? (
+            <Section title={t("detail.secTags")}>
+              <div className="flex flex-wrap gap-1">
+                {d.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </Section>
+          ) : null}
+
+          <Section title={t("detail.secUsage")}>
+            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+              {t("detail.loggedBy", { n: d.usage.logged_by })}
+            </p>
+            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+              {t("detail.monitors", { n: d.usage.monitors })}
+            </p>
+          </Section>
+        </aside>
+      </dialog>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-2.5">
+      <p className="mb-1.5 text-[0.6rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function RowList({ rows, mono }: { rows: { label: string; value: string }[]; mono?: boolean }) {
+  return (
+    <dl className="flex flex-col gap-1 text-[0.66rem]">
+      {rows.map((r) => (
+        <div key={r.label} className="flex items-center justify-between gap-2">
+          <dt className="shrink-0 text-[var(--tessera-text-muted)]">{r.label}</dt>
+          <dd
+            className={cn(
+              "min-w-0 truncate text-right text-[var(--tessera-text)]",
+              mono && "font-mono text-[0.62rem]",
+            )}
+          >
+            {r.value}
+          </dd>
         </div>
-        <div>
-          <p className="mb-1 text-[0.62rem] font-semibold text-[var(--tessera-text)]">
-            {t("detail.usage")}
-          </p>
-          <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
-            {t("detail.loggedBy", { n: s.usage.logged_by })}
-          </p>
-          <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
-            {t("detail.monitors", { n: s.usage.monitors })}
-          </p>
+      ))}
+    </dl>
+  );
+}
+
+function BarRow({ bars }: { bars: { label: string; count: number; color: string }[] }) {
+  const max = Math.max(...bars.map((b) => b.count), 1);
+  return (
+    <div className="flex h-[70px] items-end gap-2">
+      {bars.map((b) => (
+        <div key={b.label} className="flex flex-1 flex-col items-center gap-0.5">
+          <span className="text-[0.5rem] tabular-nums text-[var(--tessera-text-muted)]">
+            {b.count}
+          </span>
+          <div
+            className="w-full rounded-t-sm"
+            style={{ height: `${Math.max(4, (b.count / max) * 100)}%`, background: b.color }}
+          />
+          <span className="text-[0.5rem] text-[var(--tessera-text-muted)]">{b.label}</span>
         </div>
-      </div>
-    </aside>
+      ))}
+    </div>
   );
 }
 
@@ -435,11 +838,27 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   );
 }
 
-function KV({ label, value }: { label: string; value: string }) {
+function Skeleton() {
   return (
-    <div className="flex items-center justify-between gap-2">
-      <dt className="shrink-0 text-[var(--tessera-text-muted)]">{label}</dt>
-      <dd className="min-w-0 truncate text-right text-[var(--tessera-text)]">{value}</dd>
+    <div className="flex flex-col gap-3 pb-2">
+      <div className="h-[54px] animate-pulse rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]" />
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-9">
+        {["a", "b", "c", "d", "e", "f", "g", "h", "i"].map((k) => (
+          <div
+            key={k}
+            className="h-[88px] animate-pulse rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
+          />
+        ))}
+      </div>
+      <div className="h-[320px] animate-pulse rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]" />
+    </div>
+  );
+}
+
+function Unavailable({ t }: { t: T }) {
+  return (
+    <div className="flex min-h-[200px] flex-1 items-center justify-center rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-8 text-center text-sm text-[var(--tessera-text-muted)]">
+      {t("subtitle")}
     </div>
   );
 }

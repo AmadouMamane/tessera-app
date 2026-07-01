@@ -69,6 +69,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     role && principal && mintedSurface
       ? mintOperatorAssertion(principal, role, mintedSurface)
       : null;
+  // The role authorized an operator surface but nothing was minted: the signing
+  // key is unset, so the operator path is inert and this turn falls back to the
+  // customer widget (support-client) with no error. Warn loudly — this is the
+  // silent misconfiguration that makes the recouvrement console mis-attribute.
+  if (mintedSurface && !operatorAssertion) {
+    console.warn(
+      "[chat] operator surface authorized but no assertion minted — " +
+        "TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY is unset in the front env. " +
+        "The operator path is inert; this turn falls back to the customer widget " +
+        "(support-client). Set the SAME secret on the agent and the front.",
+    );
+  }
 
   // Per-browser session id — the rate-limit key. Reuse the cookie if present,
   // otherwise mint one and set it on the response. httpOnly so client JS can

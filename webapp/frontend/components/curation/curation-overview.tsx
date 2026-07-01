@@ -16,9 +16,11 @@ import {
   UploadCloud,
   UserCheck,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import type { Route } from "next";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
@@ -27,6 +29,7 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchCurationOverview } from "@/lib/api/client";
 import type { CurationOverview as CurationData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -65,13 +68,28 @@ const ACTION_ICONS = {
 type T = ReturnType<typeof useTranslations<"curation">>;
 type Data = CurationData;
 
+/** ⓘ for a curation KPI/zone/panel — reads curation.explain.<k>.{what,how,source?}; te.has-guarded. */
+function ExplainInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("curation.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te.has(`${k}.how`) ? te(`${k}.how`) : undefined}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 export function CurationOverview() {
   const t = useTranslations("curation");
+  const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const { data } = useQuery({
-    queryKey: ["curation-overview"],
-    queryFn: ({ signal }) => fetchCurationOverview(signal),
+    queryKey: ["curation-overview", locale],
+    queryFn: ({ signal }) => fetchCurationOverview(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -95,14 +113,25 @@ export function CurationOverview() {
         onSelectedAtChange={temporal.setSelectedAt}
         periodKey={temporal.periodKey}
         onPeriodChange={temporal.setPeriodKey}
+        windowEnd={temporal.windowEnd}
+        onPickDate={temporal.pickDate}
         onModeChange={temporal.changeMode}
       />
 
       {/* A · État actuel */}
-      <Zone label={t("zone.actual")}>
+      <Zone
+        label={t("zone.actual")}
+        info={<ExplainInfo k="zone.actual" title={t("zone.actual")} />}
+      >
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
           {data.kpis.map((kpi) => (
-            <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vs7d")} />
+            <KpiTile
+              key={kpi.key}
+              kpi={kpi}
+              label={t(`kpi.${kpi.key}`)}
+              vs={t("delta.vs7d")}
+              info={<ExplainInfo k={`kpi.${kpi.key}`} title={t(`kpi.${kpi.key}`)} />}
+            />
           ))}
         </div>
       </Zone>
@@ -110,7 +139,10 @@ export function CurationOverview() {
       <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-w-0 flex-col gap-3">
           {/* B · Diagnostic de curation */}
-          <Zone label={t("zone.diagnostic")}>
+          <Zone
+            label={t("zone.diagnostic")}
+            info={<ExplainInfo k="zone.diagnostic" title={t("zone.diagnostic")} />}
+          >
             <div className="grid gap-3 xl:grid-cols-12">
               <PriorityLots t={t} data={data} className="xl:col-span-7" />
               <WhyTours t={t} data={data} className="xl:col-span-5" />
@@ -118,10 +150,14 @@ export function CurationOverview() {
           </Zone>
 
           {/* C · Gaps & couverture */}
-          <Zone label={t("zone.gaps")}>
+          <Zone label={t("zone.gaps")} info={<ExplainInfo k="zone.gaps" title={t("zone.gaps")} />}>
             <div className="grid gap-3 xl:grid-cols-12">
               <CoverageHeatmap t={t} data={data} className="xl:col-span-4" />
-              <Panel title={t("panel.distribution")} className="xl:col-span-3">
+              <Panel
+                title={t("panel.distribution")}
+                info={<ExplainInfo k="panel.distribution" title={t("panel.distribution")} />}
+                className="xl:col-span-3"
+              >
                 <Donut
                   slices={data.candidates_distribution}
                   total={data.distribution_total}
@@ -140,7 +176,10 @@ export function CurationOverview() {
       </div>
 
       {/* D · Actions & gouvernance */}
-      <Zone label={t("zone.governance")}>
+      <Zone
+        label={t("zone.governance")}
+        info={<ExplainInfo k="zone.governance" title={t("zone.governance")} />}
+      >
         <div className="grid gap-3 xl:grid-cols-12">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:col-span-8 2xl:grid-cols-5">
             {data.actions.map((a) => (
@@ -152,7 +191,10 @@ export function CurationOverview() {
       </Zone>
 
       {/* E · Impact & tendances */}
-      <Zone label={t("zone.trends")}>
+      <Zone
+        label={t("zone.trends")}
+        info={<ExplainInfo k="zone.trends" title={t("zone.trends")} />}
+      >
         <div className="grid gap-3 xl:grid-cols-12">
           <BacklogTrend t={t} data={data} className="xl:col-span-4" />
           <BalanceChart t={t} data={data} className="xl:col-span-4" />
@@ -218,8 +260,9 @@ function PriorityLots({ t, data, className }: { t: T; data: Data; className?: st
   return (
     <Panel
       title={t("panel.priorityLots")}
+      info={<ExplainInfo k="panel.priorityLots" title={t("panel.priorityLots")} />}
       className={className}
-      action={<ViewAll label={t("viewAll.lots")} />}
+      action={<ViewAll label={t("viewAll.lots")} href="/surveiller/qualite-ia" />}
     >
       <table className="w-full border-collapse text-left text-xs">
         <thead>
@@ -281,7 +324,7 @@ function WhyTours({ t, data, className }: { t: T; data: Data; className?: string
               </td>
               <td className="px-1.5 py-1.5">
                 <div className="flex items-center gap-1.5">
-                  <div className="h-1.5 w-12 rounded-full bg-[var(--tessera-bg)]">
+                  <div className="h-[4px] overflow-hidden w-12 rounded-full bg-[var(--tessera-border)]">
                     <div
                       className="h-full rounded-full bg-[#2e72d2]"
                       style={{ width: `${(w.value / maxValue) * 100}%` }}
@@ -306,7 +349,11 @@ function WhyTours({ t, data, className }: { t: T; data: Data; className?: string
 function CoverageHeatmap({ t, data, className }: { t: T; data: Data; className?: string }) {
   const { rows, cols, cells } = data.coverage;
   return (
-    <Panel title={t("panel.coverage")} className={className}>
+    <Panel
+      title={t("panel.coverage")}
+      info={<ExplainInfo k="panel.coverage" title={t("panel.coverage")} />}
+      className={className}
+    >
       <div className="overflow-x-auto">
         <table className="w-full border-separate border-spacing-1 text-[0.6rem]">
           <thead>
@@ -361,7 +408,7 @@ function QualitySignals({ t, data, className }: { t: T; data: Data; className?: 
               <Badge className={LEVEL_BADGE[s.level]}>{t(`level.${s.level}`)}</Badge>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="h-1 flex-1 rounded-full bg-[var(--tessera-bg)]">
+              <div className="h-[4px] overflow-hidden flex-1 rounded-full bg-[var(--tessera-border)]">
                 <div
                   className={cn(
                     "h-full rounded-full",
@@ -451,7 +498,7 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
             <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
               {t("release.readiness")}
             </span>
-            <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
+            <div className="h-[4px] overflow-hidden flex-1 rounded-full bg-[var(--tessera-border)]">
               <div
                 className="h-full rounded-full bg-emerald-400"
                 style={{ width: `${data.release.readiness}%` }}
@@ -717,11 +764,12 @@ function Footer({ t, data }: { t: T; data: Data }) {
 
 // ── atoms ────────────────────────────────────────────────────────────────────
 
-function Zone({ label, children }: { label: string; children: ReactNode }) {
+function Zone({ label, info, children }: { label: string; info?: ReactNode; children: ReactNode }) {
   return (
     <section className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5">
-      <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      <h2 className="mb-2 flex items-center gap-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {label}
+        {info}
       </h2>
       {children}
     </section>
@@ -730,11 +778,13 @@ function Zone({ label, children }: { label: string; children: ReactNode }) {
 
 function Panel({
   title,
+  info,
   action,
   children,
   className,
 }: {
   title: string;
+  info?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -747,8 +797,9 @@ function Panel({
       )}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="min-w-0 truncate text-[0.8rem] font-semibold text-[var(--tessera-text)]">
-          {title}
+        <h3 className="flex min-w-0 items-center gap-1 text-[0.8rem] font-semibold text-[var(--tessera-text)]">
+          <span className="min-w-0 truncate">{title}</span>
+          {info}
         </h3>
         {action}
       </div>
@@ -757,13 +808,21 @@ function Panel({
   );
 }
 
-function KpiTile({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: string; vs: string }) {
+function KpiTile({
+  kpi,
+  label,
+  vs,
+  info,
+}: { kpi: Data["kpis"][number]; label: string; vs: string; info?: ReactNode }) {
   const up = kpi.delta_label.trim().startsWith("+");
   const good = up === kpi.good_is_up;
   const magnitude = kpi.delta_label.replace(/^[+-]\s*/, "");
   return (
     <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">{label}</p>
+      <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </p>
       <div className="mt-1 flex items-center gap-2">
         <span className="whitespace-nowrap text-[1.5rem] font-semibold leading-none text-white">
           {kpi.value}
@@ -860,7 +919,7 @@ function Donut({
 function ScoreBar({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-1.5">
-      <div className="h-1.5 w-12 rounded-full bg-[var(--tessera-bg)]">
+      <div className="h-[4px] overflow-hidden w-12 rounded-full bg-[var(--tessera-border)]">
         <div className="h-full rounded-full bg-[#2e72d2]" style={{ width: `${value}%` }} />
       </div>
       <span className="tabular-nums text-[var(--tessera-text-muted)]">{value}</span>
@@ -898,12 +957,18 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function ViewAll({ label }: { label: string }) {
+function ViewAll({ label, href }: { label: string; href?: Route }) {
+  const cls =
+    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+  if (href) {
+    return (
+      <Link href={href} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </Link>
+    );
+  }
   return (
-    <button
-      type="button"
-      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
-    >
+    <button type="button" className={cls}>
       {label} <ChevronRight className="h-3 w-3" />
     </button>
   );

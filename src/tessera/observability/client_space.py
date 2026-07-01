@@ -26,6 +26,7 @@ from datetime import UTC, datetime
 from importlib import resources
 from typing import TYPE_CHECKING
 
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -39,6 +40,198 @@ __all__ = [
     "mark_alert_read",
     "update_setting",
 ]
+
+# Localized free-text (fr, de, en). Amounts, dates, references stay verbatim.
+_TR: dict[str, tuple[str, str, str]] = {
+    # documents chrome
+    "doc_sub_total": ("documents disponibles", "verfuegbare Dokumente", "available documents"),
+    "doc_sub_products": ("fiches produit", "Produktbloetter", "product sheets"),
+    "doc_sub_terms": ("conditions & contrats", "Bedingungen & Vertraege", "terms & contracts"),
+    "doc_sub_procedures": ("procédures", "Prozeduren", "procedures"),
+    "doc_footer": (
+        "Corpus Crédit Aurore (pgvector)",
+        "Credit-Aurore-Korpus (pgvector)",
+        "Credit Aurore corpus (pgvector)",
+    ),
+    # requests chrome
+    "req_sub_total": ("demandes au total", "Anfragen insgesamt", "requests in total"),
+    "req_sub_open": ("en attente", "ausstehend", "pending"),
+    "req_sub_progress": ("en cours", "in Bearbeitung", "in progress"),
+    "req_sub_resolved": ("résolues", "geloest", "resolved"),
+    "req_footer": (
+        "File d'escalade — tickets agent",
+        "Eskalationswarteschlange - Agent-Tickets",
+        "Escalation queue - agent tickets",
+    ),
+    # alerts chrome
+    "al_sub_total": ("notifications", "Benachrichtigungen", "notifications"),
+    "al_sub_unread": ("non lues", "ungelesen", "unread"),
+    "al_sub_security": ("sécurité", "Sicherheit", "security"),
+    "al_footer": ("Notifications compte", "Kontobenachrichtigungen", "Account notifications"),
+    # settings chrome
+    "set_footer": (
+        "Préférences client (RGPD)",
+        "Kundenpraeferenzen (DSGVO)",
+        "Customer preferences (GDPR)",
+    ),
+}
+
+# Per-ticket subject + summary (keyed by reference).
+_REQ_TR: dict[str, dict[str, tuple[str, str, str]]] = {
+    "TS-7F3A2C9D11": {
+        "subject": (
+            "Opposition carte Visa Premier",
+            "Sperrung Visa-Premier-Karte",
+            "Visa Premier card block",
+        ),
+        "summary": (
+            "Demande d'opposition immédiate suite à la perte de la carte Visa Premier. "
+            "Carte bloquée et réémission programmée sous 5 jours ouvrés.",
+            "Sofortige Sperrung nach Verlust der Visa-Premier-Karte. Karte gesperrt und "
+            "Neuausstellung innerhalb von 5 Werktagen geplant.",
+            "Immediate block requested after losing the Visa Premier card. Card blocked "
+            "and reissue scheduled within 5 business days.",
+        ),
+    },
+    "TS-2B9E14A7C0": {
+        "subject": (
+            "Simulation prêt immobilier 180 000 €",
+            "Immobilienkredit-Simulation 180.000 EUR",
+            "Mortgage simulation EUR 180,000",
+        ),
+        "summary": (
+            "Étude d'un crédit immobilier sur 20 ans. Pièces justificatives reçues, "
+            "dossier transmis au conseiller pour validation du taux.",
+            "Pruefung eines Immobilienkredits ueber 20 Jahre. Nachweise erhalten, Akte "
+            "zur Zinsbestaetigung an den Berater weitergeleitet.",
+            "Review of a 20-year mortgage. Supporting documents received, file sent to "
+            "the advisor for rate validation.",
+        ),
+    },
+    "TS-55C1D8F2A3": {
+        "subject": (
+            "Contestation prélèvement SEPA",
+            "Anfechtung SEPA-Lastschrift",
+            "SEPA direct-debit dispute",
+        ),
+        "summary": (
+            "Contestation d'un prélèvement de 49,90 € non reconnu. "
+            "Procédure de remboursement SEPA en cours d'ouverture.",
+            "Anfechtung einer nicht erkannten Lastschrift von 49,90 EUR. "
+            "SEPA-Rueckerstattungsverfahren wird eroeffnet.",
+            "Dispute of an unrecognized 49.90 EUR debit. "
+            "SEPA refund procedure being opened.",
+        ),
+    },
+    "TS-A07B33E6F4": {
+        "subject": (
+            "Augmentation plafond de retrait",
+            "Erhoehung des Abhebungslimits",
+            "Withdrawal limit increase",
+        ),
+        "summary": (
+            "Relèvement temporaire du plafond de retrait à 1 500 € / semaine "
+            "accordé pour un déplacement à l'étranger.",
+            "Voruebergehende Erhoehung des Abhebungslimits auf 1.500 EUR / Woche "
+            "fuer eine Auslandsreise gewaehrt.",
+            "Temporary withdrawal-limit increase to EUR 1,500 / week granted for "
+            "a trip abroad.",
+        ),
+    },
+    "TS-9D4C71B0E8": {
+        "subject": (
+            "Activation alertes SMS solde",
+            "Aktivierung SMS-Saldowarnungen",
+            "Enable balance SMS alerts",
+        ),
+        "summary": (
+            "Activation des alertes SMS de solde sous le seuil de 50 €.",
+            "Aktivierung der SMS-Saldowarnungen unterhalb der Schwelle von 50 EUR.",
+            "Enabled balance SMS alerts below the 50 EUR threshold.",
+        ),
+    },
+}
+
+# Per-alert title + body (keyed by id).
+_ALERT_TR: dict[str, dict[str, tuple[str, str, str]]] = {
+    "AL-1001": {
+        "title": (
+            "Relevé de compte disponible",
+            "Kontoauszug verfuegbar",
+            "Account statement available",
+        ),
+        "body": (
+            "Votre relevé du Compte Courant Aurore de mai 2026 est disponible "
+            "dans vos documents.",
+            "Ihr Aurore-Girokontoauszug fuer Mai 2026 ist in Ihren Dokumenten "
+            "verfuegbar.",
+            "Your Aurore current-account statement for May 2026 is available in "
+            "your documents.",
+        ),
+    },
+    "AL-1002": {
+        "title": ("Échéance de prêt à venir", "Anstehende Kreditrate", "Upcoming loan payment"),
+        "body": (
+            "L'échéance de votre crédit consommation (312,40 €) sera prélevée le 15/06/2026.",
+            "Die Rate Ihres Konsumkredits (312,40 EUR) wird am 15.06.2026 abgebucht.",
+            "Your consumer-loan payment (312.40 EUR) will be debited on 15/06/2026.",
+        ),
+    },
+    "AL-1003": {
+        "title": (
+            "Nouvelle connexion détectée",
+            "Neue Anmeldung erkannt",
+            "New sign-in detected",
+        ),
+        "body": (
+            "Une connexion à votre espace a été détectée depuis un nouvel appareil "
+            "(Paris, FR). Si ce n'était pas vous, contactez-nous.",
+            "Eine Anmeldung in Ihrem Bereich wurde von einem neuen Geraet erkannt "
+            "(Paris, FR). Falls Sie das nicht waren, kontaktieren Sie uns.",
+            "A sign-in to your space was detected from a new device (Paris, FR). "
+            "If this was not you, contact us.",
+        ),
+    },
+    "AL-1004": {
+        "title": (
+            "Plafond carte bientôt atteint",
+            "Kartenlimit bald erreicht",
+            "Card limit nearly reached",
+        ),
+        "body": (
+            "Vous avez utilisé 1 820 € sur votre plafond mensuel de 2 000 € "
+            "de la carte Visa Premier.",
+            "Sie haben 1.820 EUR Ihres monatlichen Limits von 2.000 EUR der "
+            "Visa-Premier-Karte verwendet.",
+            "You have used EUR 1,820 of your EUR 2,000 monthly limit on the "
+            "Visa Premier card.",
+        ),
+    },
+    "AL-1005": {
+        "title": (
+            "Authentification forte activée",
+            "Starke Authentifizierung aktiviert",
+            "Strong authentication enabled",
+        ),
+        "body": (
+            "L'authentification forte DSP2 a été activée sur votre compte.",
+            "Die starke PSD2-Authentifizierung wurde fuer Ihr Konto aktiviert.",
+            "PSD2 strong authentication has been enabled on your account.",
+        ),
+    },
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
+
+
+def _req_t(ref: str, field_key: str, lang: str) -> str:
+    return _REQ_TR[ref][field_key][_LANG_IDX.get(lang, 0)]
+
+
+def _alert_t(alert_id: str, field_key: str, lang: str) -> str:
+    return _ALERT_TR[alert_id][field_key][_LANG_IDX.get(lang, 0)]
 
 # ── document taxonomy ────────────────────────────────────────────────────────
 
@@ -142,17 +335,25 @@ def compute_documents(locale: str = "fr") -> dict[str, object]:
     ]
 
     kpis = [
-        {"key": "total", "value": str(len(rows)), "sub": "documents disponibles"},
-        {"key": "products", "value": str(by_cat.get("products", 0)), "sub": "fiches produit"},
-        {"key": "terms", "value": str(by_cat.get("terms", 0)), "sub": "conditions & contrats"},
-        {"key": "procedures", "value": str(by_cat.get("procedures", 0)), "sub": "procédures"},
+        {"key": "total", "value": str(len(rows)), "sub": _t("doc_sub_total", locale)},
+        {
+            "key": "products",
+            "value": str(by_cat.get("products", 0)),
+            "sub": _t("doc_sub_products", locale),
+        },
+        {"key": "terms", "value": str(by_cat.get("terms", 0)), "sub": _t("doc_sub_terms", locale)},
+        {
+            "key": "procedures",
+            "value": str(by_cat.get("procedures", 0)),
+            "sub": _t("doc_sub_procedures", locale),
+        },
     ]
 
     return {
         "kpis": kpis,
         "distribution": distribution,
         "documents": rows,
-        "footer": {"total": len(rows), "source": "Corpus Crédit Aurore (pgvector)"},
+        "footer": {"total": len(rows), "source": _t("doc_footer", locale)},
     }
 
 
@@ -262,22 +463,34 @@ _REQUESTS = [
 ]
 
 
-def compute_requests() -> dict[str, object]:
+def compute_requests(lang: str = "fr") -> dict[str, object]:
     """Return the customer's support requests (escalation tickets)."""
-    rows = list(_REQUESTS)
+    lang = _norm_lang(lang)
+    rows = [
+        {
+            **r,
+            "subject": _req_t(str(r["reference"]), "subject", lang),
+            "summary": _req_t(str(r["reference"]), "summary", lang),
+        }
+        for r in _REQUESTS
+    ]
     counts = {"open": 0, "in_progress": 0, "resolved": 0}
     for r in rows:
         counts[str(r["status"])] = counts.get(str(r["status"]), 0) + 1
     kpis = [
-        {"key": "total", "value": str(len(rows)), "sub": "demandes au total"},
-        {"key": "open", "value": str(counts["open"]), "sub": "en attente"},
-        {"key": "in_progress", "value": str(counts["in_progress"]), "sub": "en cours"},
-        {"key": "resolved", "value": str(counts["resolved"]), "sub": "résolues"},
+        {"key": "total", "value": str(len(rows)), "sub": _t("req_sub_total", lang)},
+        {"key": "open", "value": str(counts["open"]), "sub": _t("req_sub_open", lang)},
+        {
+            "key": "in_progress",
+            "value": str(counts["in_progress"]),
+            "sub": _t("req_sub_progress", lang),
+        },
+        {"key": "resolved", "value": str(counts["resolved"]), "sub": _t("req_sub_resolved", lang)},
     ]
     return {
         "kpis": kpis,
         "requests": rows,
-        "footer": {"total": len(rows), "source": "File d'escalade — tickets agent"},
+        "footer": {"total": len(rows), "source": _t("req_footer", lang)},
     }
 
 
@@ -331,28 +544,37 @@ _ALERTS = [
 ]
 
 
-def compute_alerts() -> dict[str, object]:
+def compute_alerts(lang: str = "fr") -> dict[str, object]:
     """Return account alerts with the durable read-state applied."""
+    lang = _norm_lang(lang)
     read = _read_alert_ids(_load_state())
-    rows = [{**a, "read": a["id"] in read} for a in _ALERTS]
+    rows = [
+        {
+            **a,
+            "title": _alert_t(str(a["id"]), "title", lang),
+            "body": _alert_t(str(a["id"]), "body", lang),
+            "read": a["id"] in read,
+        }
+        for a in _ALERTS
+    ]
     unread = sum(1 for r in rows if not r["read"])
     kpis = [
-        {"key": "total", "value": str(len(rows)), "sub": "notifications"},
-        {"key": "unread", "value": str(unread), "sub": "non lues"},
+        {"key": "total", "value": str(len(rows)), "sub": _t("al_sub_total", lang)},
+        {"key": "unread", "value": str(unread), "sub": _t("al_sub_unread", lang)},
         {
             "key": "security",
             "value": str(sum(1 for a in _ALERTS if a["category"] == "security")),
-            "sub": "sécurité",
+            "sub": _t("al_sub_security", lang),
         },
     ]
     return {
         "kpis": kpis,
         "alerts": rows,
-        "footer": {"total": len(rows), "source": "Notifications compte"},
+        "footer": {"total": len(rows), "source": _t("al_footer", lang)},
     }
 
 
-def mark_alert_read(alert_id: str, *, read: bool) -> dict[str, object]:
+def mark_alert_read(alert_id: str, *, read: bool, lang: str = "fr") -> dict[str, object]:
     """Persist the read/unread state of one alert and return the alerts payload."""
     state = _load_state()
     current = _read_alert_ids(state)
@@ -364,7 +586,7 @@ def mark_alert_read(alert_id: str, *, read: bool) -> dict[str, object]:
             current.discard(alert_id)
     state["alerts_read"] = sorted(current)
     _save_state(state)
-    return compute_alerts()
+    return compute_alerts(lang)
 
 
 # ── settings ─────────────────────────────────────────────────────────────────
@@ -382,8 +604,9 @@ _DEFAULT_SETTINGS: dict[str, object] = {
 _BOOL_KEYS = frozenset(k for k, v in _DEFAULT_SETTINGS.items() if isinstance(v, bool))
 
 
-def compute_settings() -> dict[str, object]:
+def compute_settings(lang: str = "fr") -> dict[str, object]:
     """Return the customer's preferences merged over the defaults."""
+    lang = _norm_lang(lang)
     stored = _load_state().get("settings")
     merged = dict(_DEFAULT_SETTINGS)
     if isinstance(stored, dict):
@@ -406,11 +629,11 @@ def compute_settings() -> dict[str, object]:
         "groups": groups,
         "languages": ["fr", "de", "en"],
         "updated_at": _load_state().get("settings_updated_at", "—"),
-        "footer": {"source": "Préférences client (RGPD)"},
+        "footer": {"source": _t("set_footer", lang)},
     }
 
 
-def update_setting(key: str, value: object) -> dict[str, object]:
+def update_setting(key: str, value: object, lang: str = "fr") -> dict[str, object]:
     """Persist one preference and return the full settings payload.
 
     Boolean keys accept any truthy/falsy value; ``language`` accepts a locale
@@ -418,7 +641,7 @@ def update_setting(key: str, value: object) -> dict[str, object]:
     arbitrary state.
     """
     if key not in _DEFAULT_SETTINGS:
-        return compute_settings()
+        return compute_settings(lang)
     state = _load_state()
     settings = _settings_dict(state)
     if key in _BOOL_KEYS:
@@ -428,4 +651,4 @@ def update_setting(key: str, value: object) -> dict[str, object]:
     state["settings"] = settings
     state["settings_updated_at"] = datetime.now(UTC).strftime("%d/%m/%Y %H:%M")
     _save_state(state)
-    return compute_settings()
+    return compute_settings(lang)

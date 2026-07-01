@@ -33,7 +33,14 @@ if TYPE_CHECKING:
 
     from tessera.settings import LanguageCode
 
-__all__ = ["collect_node_timings", "instrument_node", "node_start_offsets", "tool_span"]
+__all__ = [
+    "annotate_retrieval",
+    "collect_node_timings",
+    "instrument_node",
+    "node_start_offsets",
+    "retrieval_span",
+    "tool_span",
+]
 
 # Per-turn node latencies (ms) + start offsets (ms from the collection origin),
 # collected via collect_node_timings (idea #48). The start offsets make the
@@ -156,6 +163,53 @@ def instrument_node(name: str, fn: Callable[..., Any]) -> Callable[..., Any]:
             return result
 
     return _sync
+
+
+@contextmanager
+def retrieval_span(corpus: str, language: LanguageCode | None) -> Iterator[Span]:
+    """Open a ``retrieve <corpus>`` span around a hybrid-search query.
+
+    The span nests under the active ``invoke_agent`` worker span, so a real turn
+    shows request -> invoke_agent -> retrieve. The caller annotates which source
+    categories the query actually retrieved via :func:`annotate_retrieval`; that
+    is what the Phoenix-backed citation telemetry reads back (idea #4).
+
+    Args:
+        corpus: The corpus searched (becomes part of the span name + an attr).
+        language: The active conversation language, or ``None`` for an
+            all-languages search (the regulatory path).
+
+    Yields:
+        The active span, so the caller can annotate the retrieved categories.
+    """
+    with tracer().start_as_current_span(semconv.retrieval_span_name(corpus)) as span:
+        span.set_attribute(semconv.OPENINFERENCE_SPAN_KIND, "RETRIEVER")
+        span.set_attribute(semconv.TESSERA_RETRIEVAL_CORPUS, corpus)
+        if language is not None:
+            span.set_attribute(semconv.TESSERA_LANGUAGE, _language_value(language))
+        yield span
+
+
+def annotate_retrieval(
+    span: Span,
+    *,
+    categories: list[str],
+    hit_count: int,
+    top_score: float | None,
+) -> None:
+    """Record which source categories a retrieval query cited above threshold.
+
+    Args:
+        span: The active retrieval span.
+        categories: Sorted source-category ids retrieved above the citation
+            threshold (comma-joined onto the span; empty when nothing cited).
+        hit_count: Number of candidate chunks above the threshold.
+        top_score: The best cosine similarity in the candidate set, if any.
+    """
+    span.set_attribute(semconv.TESSERA_RETRIEVAL_CATEGORIES, ",".join(categories))
+    span.set_attribute(semconv.TESSERA_RETRIEVAL_HIT_COUNT, hit_count)
+    if top_score is not None:
+        span.set_attribute(semconv.TESSERA_RETRIEVAL_TOP_SCORE, top_score)
 
 
 @contextmanager

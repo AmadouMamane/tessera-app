@@ -20,14 +20,17 @@ export async function generateMetadata({ params }: ReplayPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchReplay(queryClient: QueryClient) {
+async function prefetchReplay(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["replay-shadow-overview"],
+    queryKey: ["replay-shadow-overview", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/replay-shadow`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/replay-shadow?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend replay-shadow returned ${response.status}`);
       return ReplayShadowOverviewSchema.parse(await response.json());
     },
@@ -38,11 +41,11 @@ export default async function ReplayPage({ params, searchParams }: ReplayPagePro
   const { locale } = await params;
   setRequestLocale(locale);
   const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet();
+  const fleet = await loadFleet(locale);
   const t = await getTranslations({ locale, namespace: "replay" });
   const queryClient = new QueryClient();
   try {
-    await prefetchReplay(queryClient);
+    await prefetchReplay(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }
@@ -50,7 +53,7 @@ export default async function ReplayPage({ params, searchParams }: ReplayPagePro
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} />
+        <GovScopeSection fleet={fleet} scope={scope} locale={locale} perAgent={false} />
       </div>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <ReplayOverview />

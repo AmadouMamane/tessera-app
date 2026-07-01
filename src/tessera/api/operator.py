@@ -37,10 +37,13 @@ from typing import TYPE_CHECKING
 
 from tessera.api.session import SessionContext, resolve_session
 from tessera.authz import AuthState, Surface
+from tessera.observability.logging import get_logger
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from starlette.requests import Request
+
+_LOG = get_logger("tessera.api.operator")
 
 __all__ = [
     "OPERATOR_ASSERTION_HEADER",
@@ -88,8 +91,21 @@ def validate_operator_assertion_key() -> None:
     simply inert there).
     """
     settings = get_settings()
-    if settings.is_production() and settings.api.operator_assertion_signing_key is None:
-        raise RuntimeError(_MISSING_KEY_IN_PROD)
+    if settings.api.operator_assertion_signing_key is None:
+        if settings.is_production():
+            raise RuntimeError(_MISSING_KEY_IN_PROD)
+        # Dev/CI: the operator path is simply inert (safe), but that fails SILENTLY —
+        # the recouvrement console then mis-attributes to support-client. Surface it
+        # ONCE at boot so it is visible without waiting for a mis-routed turn.
+        _LOG.warning(
+            "operator_assertion_key_absent",
+            effect="operator surfaces inert — recouvrement console falls back to support-client",
+            remedy=(
+                "set the SAME secret in TESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY (agent "
+                ".env.local) and TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY (front .env.local); "
+                "`make dev-secrets` generates a matched pair"
+            ),
+        )
 
 
 def _operator_key() -> bytes | None:
@@ -215,4 +231,22 @@ def resolve_request_context(request: Request) -> tuple[SessionContext, Surface]:
         verified = verify_operator_assertion(raw)
         if verified is not None:
             return verified
+        # An assertion was forwarded but did NOT verify. This fails silently — the
+        # turn drops to the customer widget, so an operator surface (e.g. the
+        # recouvrement console) is mis-routed to support-client with no error. The
+        # overwhelmingly common cause in dev is a missing/mismatched signing key.
+        # Warn loudly so it is never diagnosed as a routing bug. (A genuinely forged
+        # token from a visitor also lands here — the safe outcome — but that is rare
+        # enough that warning on every unverified assertion is the right tradeoff.)
+        key_absent = get_settings().api.operator_assertion_signing_key is None
+        _LOG.warning(
+            "operator_assertion_unverified",
+            reason="agent_signing_key_unset" if key_absent else "bad_signature_expired_or_forged",
+            fallback="customer-widget (turn routed to the default support agent)",
+            remedy=(
+                "set the SAME secret in TESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY (agent "
+                ".env.local, double underscore) and TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY "
+                "(front .env.local, single underscore)"
+            ),
+        )
     return resolve_session(request), Surface.SHARED_CUSTOMER_WIDGET

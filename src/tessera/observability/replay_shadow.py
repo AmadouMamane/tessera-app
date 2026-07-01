@@ -18,7 +18,23 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+
 __all__ = ["compute_replay_shadow_overview"]
+
+# Localized free-text (fr, de, en). Service/model/severity/status are stable keys.
+_TR: dict[str, tuple[str, str, str]] = {
+    "baseline_ref": (
+        "Baseline v2.3 (référence)",
+        "Baseline v2.3 (Referenz)",
+        "Baseline v2.3 (reference)",
+    ),
+    "conf_high": ("Élevé", "Hoch", "High"),
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
 
 _SERVICE_COLOR = {
     "chat_support": "#60a5fa",
@@ -63,8 +79,11 @@ def _kpi(
     }
 
 
-def compute_replay_shadow_overview() -> dict[str, object]:
+def compute_replay_shadow_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Replay & shadow overview payload.
+
+    Args:
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
 
     Returns:
         A JSON-serialisable mapping with the replay posture KPIs, traffic and
@@ -72,6 +91,7 @@ def compute_replay_shadow_overview() -> dict[str, object]:
         per-service and per-model distributions, replayed-eval categories,
         proofs & exports tallies and the live activity feed.
     """
+    lang = _norm_lang(lang)
     now = datetime.now(UTC)
 
     kpis = [
@@ -302,7 +322,7 @@ def compute_replay_shadow_overview() -> dict[str, object]:
             "last_export": "11/05/2025 11:28",
         },
         "baselines": [
-            {"value": "v2.3", "label": "Baseline v2.3 (référence)"},
+            {"value": "v2.3", "label": _t("baseline_ref", lang)},
             {"value": "v2.2", "label": "Baseline v2.2"},
             {"value": "v2.1", "label": "Baseline v2.1"},
         ],
@@ -318,7 +338,7 @@ def compute_replay_shadow_overview() -> dict[str, object]:
             "environment": "Production",
             "services": 24,
             "active_users": "1 245",
-            "confidence": "Élevé",
+            "confidence": _t("conf_high", lang),
             "source": "YAML · Git",
         },
     }

@@ -21,6 +21,13 @@ from tessera.observability.incidents_tabs import build_tabs
 
 __all__ = ["compute_incidents_overview"]
 
+_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+
+def _loc(lang: str, fr: str, de: str, en: str) -> str:
+    """Pick the locale variant of an inline fixture string (fr / de / en)."""
+    return (fr, de, en)[_LANG_IDX.get(lang, 0)]
+
 # Severity / domain accent colours, shared by the donut, bars and dots so the
 # whole page reads with one palette.
 _DOMAIN_COLOR = {
@@ -44,8 +51,16 @@ def _kpi(
     }
 
 
-def compute_incidents_overview() -> dict[str, object]:
+def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Incidents & playbooks overview payload.
+
+    Args:
+        lang: Locale (fr / de / en) for the free-text fixture fields the
+            frontend renders verbatim (triggers, playbook names/descriptions,
+            running-playbook steps, journal actions, automation rules,
+            post-mortems). Severity / status / domain / KPI labels are localized
+            in the frontend via next-intl keys; owner / actor names and IDs stay
+            verbatim.
 
     Returns:
         A JSON-serialisable mapping with the current posture KPIs, the triage
@@ -54,6 +69,11 @@ def compute_incidents_overview() -> dict[str, object]:
         renders, in one document.
     """
     now = datetime.now(UTC)
+
+    # Recurring playbook names, localized once and reused across the page so the
+    # triage queue, catalogue and resolution chart stay consistent.
+    pb_pii = _loc(lang, "Purge mémoire PII", "PII-Speicher leeren", "PII memory purge")
+    pb_conf = _loc(lang, "Incident conformité", "Konformitaetsvorfall", "Compliance incident")
 
     kpis = [
         _kpi("open", "14", "+3", False, [9, 10, 8, 11, 12, 13, 14]),
@@ -66,6 +86,7 @@ def compute_incidents_overview() -> dict[str, object]:
         _kpi("evidence", "82", "+12", True, [58, 62, 67, 71, 74, 78, 82]),
     ]
 
+    trig_pii = _loc(lang, "Fuite PII — mémoire", "PII-Leck — Speicher", "PII leak — memory")
     priority_incidents = [
         {
             "id": "INC-231",
@@ -82,13 +103,13 @@ def compute_incidents_overview() -> dict[str, object]:
         {
             "id": "INC-232",
             "severity": "critique",
-            "trigger": "Fuite PII — mémoire",
+            "trigger": trig_pii,
             "domain": "privacy",
             "status": "ouvert",
             "owner": "A. Privacy",
             "sla": "24 min",
             "sla_tone": "crit",
-            "playbook": "Purge mémoire PII",
+            "playbook": pb_pii,
             "role": "Operator+",
         },
         {
@@ -106,7 +127,7 @@ def compute_incidents_overview() -> dict[str, object]:
         {
             "id": "INC-229",
             "severity": "eleve",
-            "trigger": "Grounding faible",
+            "trigger": _loc(lang, "Grounding faible", "Schwaches Grounding", "Weak grounding"),
             "domain": "qualite_rag",
             "status": "ouvert",
             "owner": "M. Engineer",
@@ -118,7 +139,12 @@ def compute_incidents_overview() -> dict[str, object]:
         {
             "id": "INC-227",
             "severity": "moyen",
-            "trigger": "Réponse langue dégradée",
+            "trigger": _loc(
+                lang,
+                "Réponse langue dégradée",
+                "Verschlechterte Sprachantwort",
+                "Degraded language response",
+            ),
             "domain": "qualite_rag",
             "status": "ouvert",
             "owner": "DevRel",
@@ -130,7 +156,9 @@ def compute_incidents_overview() -> dict[str, object]:
         {
             "id": "INC-210",
             "severity": "moyen",
-            "trigger": "Conformité Art. 50",
+            "trigger": _loc(
+                lang, "Conformité Art. 50", "Konformitaet Art. 50", "Compliance Art. 50"
+            ),
             "domain": "conformite",
             "status": "ouvert",
             "owner": "A. Compliance",
@@ -144,35 +172,81 @@ def compute_incidents_overview() -> dict[str, object]:
     playbook_catalog = [
         {
             "name": "Hallucination — RAG",
-            "desc": "Détecter & réduire les hallucinations RAG",
+            "desc": _loc(
+                lang,
+                "Détecter & réduire les hallucinations RAG",
+                "RAG-Halluzinationen erkennen & reduzieren",
+                "Detect & reduce RAG hallucinations",
+            ),
             "runs": 18,
         },
         {
             "name": "Prompt injection containment",
-            "desc": "Confiner une injection de prompt",
+            "desc": _loc(
+                lang,
+                "Confiner une injection de prompt",
+                "Eine Prompt-Injection eindaemmen",
+                "Contain a prompt injection",
+            ),
             "runs": 12,
         },
-        {"name": "Purge mémoire PII", "desc": "Effacer la PII en mémoire (RGPD)", "runs": 9},
+        {
+            "name": pb_pii,
+            "desc": _loc(
+                lang,
+                "Effacer la PII en mémoire (RGPD)",
+                "PII im Speicher loeschen (DSGVO)",
+                "Erase PII from memory (GDPR)",
+            ),
+            "runs": 9,
+        },
         {
             "name": "Freeze release & rollback",
-            "desc": "Geler la release et revenir en arrière",
+            "desc": _loc(
+                lang,
+                "Geler la release et revenir en arrière",
+                "Release einfrieren und zuruecksetzen",
+                "Freeze the release and roll back",
+            ),
             "runs": 13,
         },
-        {"name": "Incident conformité", "desc": "Art. 50 / RGPD — remédiation", "runs": 7},
+        {
+            "name": pb_conf,
+            "desc": _loc(
+                lang,
+                "Art. 50 / RGPD — remédiation",
+                "Art. 50 / DSGVO — Behebung",
+                "Art. 50 / GDPR — remediation",
+            ),
+            "runs": 7,
+        },
     ]
 
     recent_incidents = [
         {"id": "INC-231", "label": "Hallucination — RAG", "severity": "critique", "time": "11:23"},
-        {"id": "INC-232", "label": "Fuite PII — mémoire", "severity": "critique", "time": "11:23"},
+        {"id": "INC-232", "label": trig_pii, "severity": "critique", "time": "11:23"},
         {"id": "INC-227", "label": "Prompt injection", "severity": "eleve", "time": "11:21"},
-        {"id": "INC-219", "label": "Réponse langue dégradée", "severity": "moyen", "time": "11:18"},
+        {
+            "id": "INC-219",
+            "label": _loc(
+                lang,
+                "Réponse langue dégradée",
+                "Verschlechterte Sprachantwort",
+                "Degraded language response",
+            ),
+            "severity": "moyen",
+            "time": "11:18",
+        },
     ]
 
+    def _remaining(value: str) -> str:
+        return _loc(lang, f"{value} restantes", f"{value} verbleibend", f"{value} remaining")
+
     sla_escalations = [
-        {"id": "INC-231", "remaining": "22 min restantes", "tone": "crit"},
-        {"id": "INC-232", "remaining": "28 min restantes", "tone": "crit"},
-        {"id": "INC-225", "remaining": "54 min restantes", "tone": "warn"},
-        {"id": "INC-227", "remaining": "1 h 05 restantes", "tone": "ok"},
+        {"id": "INC-231", "remaining": _remaining("22 min"), "tone": "crit"},
+        {"id": "INC-232", "remaining": _remaining("28 min"), "tone": "crit"},
+        {"id": "INC-225", "remaining": _remaining("54 min"), "tone": "warn"},
+        {"id": "INC-227", "remaining": _remaining("1 h 05"), "tone": "ok"},
     ]
 
     domain_distribution = [
@@ -184,9 +258,26 @@ def compute_incidents_overview() -> dict[str, object]:
     ]
 
     control_cases = [
-        {"id": "CC-012", "label": "Fuite PII & mémoire", "assoc": 2},
-        {"id": "CC-007", "label": "Hallucination systématique", "assoc": 1},
-        {"id": "CC-004", "label": "Conformité Art. 50", "assoc": 1},
+        {
+            "id": "CC-012",
+            "label": _loc(lang, "Fuite PII & mémoire", "PII-Leck & Speicher", "PII leak & memory"),
+            "assoc": 2,
+        },
+        {
+            "id": "CC-007",
+            "label": _loc(
+                lang,
+                "Hallucination systématique",
+                "Systematische Halluzination",
+                "Systematic hallucination",
+            ),
+            "assoc": 1,
+        },
+        {
+            "id": "CC-004",
+            "label": _loc(lang, "Conformité Art. 50", "Konformitaet Art. 50", "Compliance Art. 50"),
+            "assoc": 1,
+        },
     ]
 
     running_playbook = {
@@ -197,12 +288,42 @@ def compute_incidents_overview() -> dict[str, object]:
         "proofs": 3,
         "elapsed": "00:07:31",
         "steps": [
-            {"key": "detection", "label": "Détection", "time": "11:44:22", "state": "done"},
-            {"key": "containment", "label": "Containment", "time": "11:48:48", "state": "current"},
-            {"key": "investigation", "label": "Investigation", "time": "", "state": "todo"},
-            {"key": "remediation", "label": "Remediation", "time": "", "state": "todo"},
-            {"key": "verification", "label": "Vérification", "time": "", "state": "todo"},
-            {"key": "closure", "label": "Clôture", "time": "", "state": "todo"},
+            {
+                "key": "detection",
+                "label": _loc(lang, "Détection", "Erkennung", "Detection"),
+                "time": "11:44:22",
+                "state": "done",
+            },
+            {
+                "key": "containment",
+                "label": _loc(lang, "Containment", "Eindaemmung", "Containment"),
+                "time": "11:48:48",
+                "state": "current",
+            },
+            {
+                "key": "investigation",
+                "label": _loc(lang, "Investigation", "Untersuchung", "Investigation"),
+                "time": "",
+                "state": "todo",
+            },
+            {
+                "key": "remediation",
+                "label": _loc(lang, "Remediation", "Behebung", "Remediation"),
+                "time": "",
+                "state": "todo",
+            },
+            {
+                "key": "verification",
+                "label": _loc(lang, "Vérification", "Verifizierung", "Verification"),
+                "time": "",
+                "state": "todo",
+            },
+            {
+                "key": "closure",
+                "label": _loc(lang, "Clôture", "Abschluss", "Closure"),
+                "time": "",
+                "state": "todo",
+            },
         ],
     }
 
@@ -210,51 +331,88 @@ def compute_incidents_overview() -> dict[str, object]:
         {
             "time": "11:47:31",
             "incident": "INC-231",
-            "action": "Containment — règles MAJ",
+            "action": _loc(
+                lang,
+                "Containment — règles MAJ",
+                "Eindaemmung — Regeln aktualisiert",
+                "Containment — rules updated",
+            ),
             "actor": "M. Engineer",
         },
         {
             "time": "11:46:12",
             "incident": "INC-225",
-            "action": "Qualification — sévérité",
+            "action": _loc(
+                lang,
+                "Qualification — sévérité",
+                "Qualifizierung — Schweregrad",
+                "Triage — severity",
+            ),
             "actor": "S. SysAdmin",
         },
         {
             "time": "11:45:02",
             "incident": "INC-232",
-            "action": "Purge mémoire — lancée",
+            "action": _loc(
+                lang,
+                "Purge mémoire — lancée",
+                "Speicherbereinigung — gestartet",
+                "Memory purge — started",
+            ),
             "actor": "A. Privacy",
         },
         {
             "time": "11:44:22",
             "incident": "INC-231",
-            "action": "Playbook lancé",
+            "action": _loc(lang, "Playbook lancé", "Playbook gestartet", "Playbook launched"),
             "actor": "Auto-page",
         },
         {
             "time": "11:42:50",
             "incident": "INC-228",
-            "action": "Escalade — Admin+",
+            "action": _loc(lang, "Escalade — Admin+", "Eskalation — Admin+", "Escalation — Admin+"),
             "actor": "Auto-escalade",
         },
     ]
 
     automations = [
-        {"rule": "Auto-page critique", "status": "actif", "last": "11:53:41", "role": "Operator+"},
         {
-            "rule": "Auto-triage (mémoire)",
+            "rule": _loc(lang, "Auto-page critique", "Auto-Page kritisch", "Auto-page critical"),
+            "status": "actif",
+            "last": "11:53:41",
+            "role": "Operator+",
+        },
+        {
+            "rule": _loc(
+                lang, "Auto-triage (mémoire)", "Auto-Triage (Speicher)", "Auto-triage (memory)"
+            ),
             "status": "actif",
             "last": "11:51:08",
             "role": "Operator+",
         },
-        {"rule": "Auto-escalade SLA", "status": "actif", "last": "10:59:11", "role": "Operator+"},
         {
-            "rule": "Auto-ouverture playbook",
+            "rule": _loc(lang, "Auto-escalade SLA", "Auto-Eskalation SLA", "Auto-escalation SLA"),
+            "status": "actif",
+            "last": "10:59:11",
+            "role": "Operator+",
+        },
+        {
+            "rule": _loc(
+                lang,
+                "Auto-ouverture playbook",
+                "Auto-Oeffnung Playbook",
+                "Auto-open playbook",
+            ),
             "status": "actif",
             "last": "11:48:17",
             "role": "Compliance+",
         },
-        {"rule": "Auto-redaction PII", "status": "dryrun", "last": "11:48:17", "role": "Admin+"},
+        {
+            "rule": _loc(lang, "Auto-redaction PII", "Auto-Schwaerzung PII", "Auto-redaction PII"),
+            "status": "dryrun",
+            "last": "11:48:17",
+            "role": "Admin+",
+        },
     ]
 
     mttr_series = {
@@ -265,36 +423,66 @@ def compute_incidents_overview() -> dict[str, object]:
 
     resolution_by_playbook = [
         {"name": "Hallucination — RAG", "pct": 73, "ratio": "10/14", "color": "#f97316"},
-        {"name": "Purge mémoire PII", "pct": 89, "ratio": "8/9", "color": "#34d399"},
+        {"name": pb_pii, "pct": 89, "ratio": "8/9", "color": "#34d399"},
         {"name": "Prompt injection containment", "pct": 83, "ratio": "10/12", "color": "#60a5fa"},
         {"name": "Freeze release & rollback", "pct": 75, "ratio": "9/12", "color": "#a78bfa"},
-        {"name": "Incident conformité", "pct": 71, "ratio": "5/7", "color": "#fbbf24"},
+        {"name": pb_conf, "pct": 71, "ratio": "5/7", "color": "#fbbf24"},
     ]
+
+    def _resolved(time: str, day: str) -> str:
+        return _loc(
+            lang, f"Résolu {time} · {day}", f"Geloest {time} · {day}", f"Resolved {time} · {day}"
+        )
 
     postmortems = [
         {
             "id": "INC-224",
             "label": "Hallucination — RAG",
-            "rca": "Chunking trop large — reranker ajusté",
-            "resolved": "Résolu 12:05 · J-2",
+            "rca": _loc(
+                lang,
+                "Chunking trop large — reranker ajusté",
+                "Chunking zu gross — Reranker angepasst",
+                "Chunking too large — reranker adjusted",
+            ),
+            "resolved": _resolved("12:05", "J-2"),
         },
         {
             "id": "INC-221",
-            "label": "Fuite PII — mémoire",
-            "rca": "TTL mémoire manquant — purge auto.",
-            "resolved": "Résolu 16:40 · J-2",
+            "label": trig_pii,
+            "rca": _loc(
+                lang,
+                "TTL mémoire manquant — purge auto.",
+                "Speicher-TTL fehlt — Auto-Bereinigung",
+                "Missing memory TTL — auto purge",
+            ),
+            "resolved": _resolved("16:40", "J-2"),
         },
         {
             "id": "INC-223",
             "label": "Prompt injection",
-            "rca": "Motif jailbreak — règle ajoutée",
-            "resolved": "Résolu 11:03 · J-3",
+            "rca": _loc(
+                lang,
+                "Motif jailbreak — règle ajoutée",
+                "Jailbreak-Muster — Regel hinzugefuegt",
+                "Jailbreak pattern — rule added",
+            ),
+            "resolved": _resolved("11:03", "J-3"),
         },
         {
             "id": "INC-216",
-            "label": "Sortie langue dégradée",
-            "rca": "Routage langue — seuil revu",
-            "resolved": "Résolu 09:18 · J-4",
+            "label": _loc(
+                lang,
+                "Sortie langue dégradée",
+                "Verschlechterte Sprachausgabe",
+                "Degraded language output",
+            ),
+            "rca": _loc(
+                lang,
+                "Routage langue — seuil revu",
+                "Sprachrouting — Schwelle ueberarbeitet",
+                "Language routing — threshold revised",
+            ),
+            "resolved": _resolved("09:18", "J-4"),
         },
     ]
 
@@ -324,9 +512,9 @@ def compute_incidents_overview() -> dict[str, object]:
             "playbooks": 19,
             "proofs": 82,
             "source": "YAML · Git",
-            "sync": "il y a 2 min",
+            "sync": _loc(lang, "il y a 2 min", "vor 2 Min", "2 min ago"),
         },
         # Per-tab operational catalogues (Incidents, Playbooks, Orchestration,
         # Actions, Post-mortems, Problemes connus, Rapports), rendered generically.
-        "tabs": {key: asdict(tab) for key, tab in build_tabs().items()},
+        "tabs": {key: asdict(tab) for key, tab in build_tabs(lang).items()},
     }

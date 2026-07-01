@@ -12,6 +12,7 @@ import {
   Clock,
   Download,
   FileText,
+  Filter,
   History,
   Info,
   Lock,
@@ -24,8 +25,10 @@ import {
   X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import { fetchEtatADate, saveEtatSnapshot } from "@/lib/api/client";
@@ -183,7 +186,11 @@ ${
 
 export function EtatADate() {
   const t = useTranslations("etatADate");
+  const locale = useLocale();
   const qc = useQueryClient();
+  // Per-source scope carried in the URL (`?sources=`), set from the Sources
+  // drawer's "Voir à date" link. Empty = no scope (all sources).
+  const sources = useSearchParams().get("sources") || null;
   // Draft instant (date + time) from the premium picker; empty = none picked.
   const [draft, setDraft] = useState("");
   const [refInput, setRefInput] = useState("");
@@ -195,14 +202,14 @@ export function EtatADate() {
   const [selected, setSelected] = useState<string | null>(null);
 
   const { data } = useQuery({
-    queryKey: ["etat-a-date", asOf],
-    queryFn: ({ signal }) => fetchEtatADate(asOf, signal),
+    queryKey: ["etat-a-date", asOf, sources, locale],
+    queryFn: ({ signal }) => fetchEtatADate(asOf, sources, locale, signal),
     staleTime: 30_000,
   });
 
   const saveSnapshot = useMutation({
-    mutationFn: () => saveEtatSnapshot(asOf),
-    onSuccess: (fresh) => qc.setQueryData(["etat-a-date", asOf], fresh),
+    mutationFn: () => saveEtatSnapshot(asOf, sources, locale),
+    onSuccess: (fresh) => qc.setQueryData(["etat-a-date", asOf, sources, locale], fresh),
   });
 
   function reconstruct() {
@@ -299,6 +306,8 @@ export function EtatADate() {
         meta={data?.meta}
       />
 
+      {data?.meta?.scope ? <ScopeBar t={t} scope={data.meta.scope} /> : null}
+
       {data === undefined ? (
         <EtatSkeleton />
       ) : !data.available ? (
@@ -374,6 +383,25 @@ function Banner({ text, className }: { text: string; className?: string }) {
     >
       <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#f0a23a]" />
       <span>{text}</span>
+    </div>
+  );
+}
+
+type Scope = NonNullable<NonNullable<Data["meta"]>["scope"]>;
+
+/** Per-source scope chip: shows the active source filter + a reset to all. */
+function ScopeBar({ t, scope }: { t: T; scope: Scope }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#7c5cf5]/40 bg-[#6d4aed]/10 px-3 py-2 text-[0.72rem]">
+      <Filter className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
+      <span className="text-[var(--tessera-text-muted)]">{t("scopeLabel")}</span>
+      <span className="font-medium text-[var(--tessera-text)]">{scope.labels.join(" · ")}</span>
+      <Link
+        href="/prouver/etat-a-date"
+        className="ml-auto flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-1 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+      >
+        <X className="h-3 w-3" /> {t("scopeClear")}
+      </Link>
     </div>
   );
 }
@@ -671,6 +699,7 @@ function Panel({
   title,
   icon: Icon,
   iconClass = "text-[#b9a6ff]",
+  info,
   right,
   children,
   className,
@@ -678,6 +707,8 @@ function Panel({
   title: string;
   icon?: typeof ShieldCheck;
   iconClass?: string;
+  /** Optional ⓘ explainer rendered next to the panel title. */
+  info?: React.ReactNode;
   right?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
@@ -690,14 +721,28 @@ function Panel({
       )}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-1.5 text-[0.78rem] font-semibold text-[var(--tessera-text)]">
-          {Icon ? <Icon className={cn("h-4 w-4", iconClass)} /> : null}
-          {title}
+        <h2 className="flex min-w-0 items-center gap-1.5 text-[0.78rem] font-semibold text-[var(--tessera-text)]">
+          {Icon ? <Icon className={cn("h-4 w-4 shrink-0", iconClass)} /> : null}
+          <span className="min-w-0 truncate">{title}</span>
+          {info}
         </h2>
         {right}
       </div>
       {children}
     </section>
+  );
+}
+
+/** A ⓘ for an état-à-date panel, reading etatADate.explain.<k>.{what,how,source?}. */
+function SectionInfo({ title, explainKey }: { title: string; explainKey: string }) {
+  const te = useTranslations("etatADate.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${explainKey}.what`)}
+      how={te(`${explainKey}.how`)}
+      source={te.has(`${explainKey}.source`) ? te(`${explainKey}.source`) : undefined}
+    />
   );
 }
 
@@ -725,6 +770,7 @@ function Reconstructed({ data, className }: { data: Data; className?: string }) 
       title={r.title}
       icon={FileText}
       iconClass="text-violet-300"
+      info={<SectionInfo title={r.title} explainKey="reconstructed" />}
       right={<VerifiedBadge ok={r.verified} label={r.verified_label} />}
       className={className}
     >
@@ -741,7 +787,13 @@ function Original({ data, className }: { data: Data; className?: string }) {
   const o = data.original;
   if (!o) return null;
   return (
-    <Panel title={o.title} icon={MessageSquare} iconClass="text-sky-400" className={className}>
+    <Panel
+      title={o.title}
+      icon={MessageSquare}
+      iconClass="text-sky-400"
+      info={<SectionInfo title={o.title} explainKey="original" />}
+      className={className}
+    >
       <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
         Référence · <span className="font-mono">{o.ref_code}</span>
       </p>
@@ -793,7 +845,13 @@ function GovCardView({
 }) {
   if (!card) return null;
   return (
-    <Panel title={card.title} icon={icon} iconClass={iconClass} className={className}>
+    <Panel
+      title={card.title}
+      icon={icon}
+      iconClass={iconClass}
+      info={<SectionInfo title={card.title} explainKey="govCard" />}
+      className={className}
+    >
       <dl className="flex flex-col gap-1.5 text-[0.72rem]">
         {card.rows.map((r) => (
           <div key={r.label} className="flex h-[1.15rem] items-center justify-between gap-2">
@@ -844,7 +902,13 @@ function Chronology({ data, className }: { data: Data; className?: string }) {
   const tl = data.timeline;
   if (!tl) return null;
   return (
-    <Panel title={tl.title} icon={History} iconClass="text-fuchsia-400" className={className}>
+    <Panel
+      title={tl.title}
+      icon={History}
+      iconClass="text-fuchsia-400"
+      info={<SectionInfo title={tl.title} explainKey="chronology" />}
+      className={className}
+    >
       {tl.rows.length === 0 ? (
         <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">Aucun événement à T.</p>
       ) : (
@@ -903,7 +967,12 @@ function Integrity({ data }: { data: Data }) {
     ["Journalisation", it.chain_label],
   ];
   return (
-    <Panel title={it.title} icon={ShieldCheck} iconClass="text-emerald-400">
+    <Panel
+      title={it.title}
+      icon={ShieldCheck}
+      iconClass="text-emerald-400"
+      info={<SectionInfo title={it.title} explainKey="integrity" />}
+    >
       <dl className="flex flex-col gap-1.5 text-[0.72rem]">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-center justify-between gap-2">
@@ -925,7 +994,13 @@ function AuditPieces({ data, className }: { data: Data; className?: string }) {
   const a = data.audit_pieces;
   if (!a) return null;
   return (
-    <Panel title={a.title} icon={FileText} iconClass="text-blue-400" className={className}>
+    <Panel
+      title={a.title}
+      icon={FileText}
+      iconClass="text-blue-400"
+      info={<SectionInfo title={a.title} explainKey="auditPieces" />}
+      className={className}
+    >
       <ul className="flex flex-col gap-2">
         {a.rows.map((r) => (
           <li key={r.href}>
@@ -947,7 +1022,13 @@ function Handoffs({ data, className }: { data: Data; className?: string }) {
   const h = data.handoffs;
   if (!h) return null;
   return (
-    <Panel title={h.title} icon={ArrowRight} iconClass="text-emerald-400" className={className}>
+    <Panel
+      title={h.title}
+      icon={ArrowRight}
+      iconClass="text-emerald-400"
+      info={<SectionInfo title={h.title} explainKey="handoffs" />}
+      className={className}
+    >
       {h.subtitle ? (
         <p className="mb-2 text-[0.62rem] text-[var(--tessera-text-muted)]">{h.subtitle}</p>
       ) : null}
@@ -1465,7 +1546,12 @@ function Snapshots({ data, onReload }: { data: Data; onReload: (asOf: string | n
   const s = data.snapshots;
   if (!s) return null;
   return (
-    <Panel title={s.title} icon={Bookmark} iconClass="text-rose-400">
+    <Panel
+      title={s.title}
+      icon={Bookmark}
+      iconClass="text-rose-400"
+      info={<SectionInfo title={s.title} explainKey="snapshots" />}
+    >
       {s.rows.length === 0 ? (
         <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">{t("noSnapshots")}</p>
       ) : (

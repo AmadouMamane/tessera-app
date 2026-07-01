@@ -16,14 +16,17 @@ export async function generateMetadata({ params }: SignalsPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchSignals(queryClient: QueryClient) {
+async function prefetchSignals(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["signal-catalogue"],
+    queryKey: ["signal-catalogue", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/signal-catalogue`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/signal-catalogue?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend signal-catalogue returned ${response.status}`);
       return SignalCatalogueSchema.parse(await response.json());
     },
@@ -36,7 +39,7 @@ export default async function SignalsPage({ params }: SignalsPageProps) {
   const t = await getTranslations({ locale, namespace: "signalCatalogue" });
   const queryClient = new QueryClient();
   try {
-    await prefetchSignals(queryClient);
+    await prefetchSignals(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

@@ -84,11 +84,14 @@ support→collections escalation becomes an explicit, governed, audited transiti
   (`Surface.COCKPIT_EMBEDDED`) on the chat path. This is the operator analogue of
   the customer-session wiring and is precisely the forwarding ADR 0009 deferred.
 
-- **Phase C — the dedicated interface.** A collections **case console**
-  (`Surface.DEDICATED_UI`): case list, per-debtor échéancier, relance timeline,
-  governed actions — reusing recouvrement's existing LangGraph package, guard, and
-  audit verbatim (re-skin, no core fork), per the ADR 0008 dedicated-interface
-  pattern.
+- **Phase C — the dedicated business console.** recouvrement's own **business-plane**
+  surface (`Surface.DEDICATED_UI`), reached **directly** by a **`collections`** role
+  (ADR 0013) — never via the cockpit. A purpose-built collections workspace that
+  **mounts recouvrement's real chat core** (re-skin, no fork; reuses its LangGraph
+  package, guard, audit verbatim). Any surrounding panels (handled conversations,
+  escalations, activity) are built **only from real sources** (audit / transcript /
+  `ticket_escalate`); **no fabricated dossiers or échéanciers** — Tessera has no
+  collections-case backend, and a demo must not invent one (honest-empty otherwise).
 
 ## Consequences
 
@@ -195,4 +198,3 @@ timestamped audit log exist.
 header, a forged token, or a widget-surface claim is rejected and falls back to the
 customer path. The customer widget and the cockpit console are untouched; the key
 stays off-repo and fail-closed in production.
-

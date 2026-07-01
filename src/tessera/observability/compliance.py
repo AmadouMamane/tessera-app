@@ -49,15 +49,108 @@ __all__ = [
     "compute_compliance",
 ]
 
-# Framework display labels.
-_FRAMEWORKS: dict[str, str] = {
-    "rgpd": "RGPD (UE)",
-    "ai_act": "EU AI Act",
-    "dora": "DORA",
-    "iso27001": "ISO/IEC 27001",
-    "soc2": "SOC 2 Type II",
-    "internal": "Politiques internes",
+_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+
+def _loc(lang: str, fr: str, de: str, en: str) -> str:
+    """Pick the locale variant of an inline string (fr / de / en)."""
+    return (fr, de, en)[_LANG_IDX.get(lang, 0)]
+
+
+# Framework display labels (fr / de / en); codes/standards stay verbatim.
+_FRAMEWORKS: dict[str, tuple[str, str, str]] = {
+    "rgpd": ("RGPD (UE)", "DSGVO (EU)", "GDPR (EU)"),
+    "ai_act": ("EU AI Act", "EU AI Act", "EU AI Act"),
+    "dora": ("DORA", "DORA", "DORA"),
+    "iso27001": ("ISO/IEC 27001", "ISO/IEC 27001", "ISO/IEC 27001"),
+    "soc2": ("SOC 2 Type II", "SOC 2 Typ II", "SOC 2 Type II"),
+    "internal": ("Politiques internes", "Interne Richtlinien", "Internal policies"),
 }
+
+# Control names per locale, keyed by control id (governance metadata).
+_CONTROL_NAME_TR: dict[str, tuple[str, str, str]] = {
+    "CTRL-01": (
+        "Transparence & information (Art. 50)",
+        "Transparenz & Information (Art. 50)",
+        "Transparency & information (Art. 50)",
+    ),
+    "CTRL-02": (
+        "Supervision humaine (Art. 14)",
+        "Menschliche Aufsicht (Art. 14)",
+        "Human oversight (Art. 14)",
+    ),
+    "CTRL-03": (
+        "Journalisation & traçabilité IA",
+        "KI-Protokollierung & Nachverfolgbarkeit",
+        "AI logging & traceability",
+    ),
+    "CTRL-04": (
+        "Exactitude des citations",
+        "Genauigkeit der Zitate",
+        "Citation accuracy",
+    ),
+    "CTRL-05": (
+        "Minimisation & non-fuite PII",
+        "Minimierung & kein PII-Leck",
+        "Minimization & PII non-leakage",
+    ),
+    "CTRL-06": (
+        "Droit à l'effacement (Art. 17)",
+        "Recht auf Loeschung (Art. 17)",
+        "Right to erasure (Art. 17)",
+    ),
+    "CTRL-07": (
+        "Conformité des sorties structurées",
+        "Konformitaet strukturierter Ausgaben",
+        "Structured-output conformance",
+    ),
+    "CTRL-08": (
+        "Résilience ICT & garde-fous",
+        "IKT-Resilienz & Schutzregeln",
+        "ICT resilience & guardrails",
+    ),
+    "CTRL-09": (
+        "Gestion des incidents IA",
+        "KI-Vorfallmanagement",
+        "AI incident management",
+    ),
+    "CTRL-10": (
+        "Sécurité & confidentialité",
+        "Sicherheit & Vertraulichkeit",
+        "Security & confidentiality",
+    ),
+    "CTRL-11": (
+        "Contrôle d'accès & moindre privilège",
+        "Zugriffskontrolle & geringste Rechte",
+        "Access control & least privilege",
+    ),
+    "CTRL-12": (
+        "Disponibilité & intégrité (SOC 2)",
+        "Verfuegbarkeit & Integritaet (SOC 2)",
+        "Availability & integrity (SOC 2)",
+    ),
+    "CTRL-13": (
+        "Calibration du refus",
+        "Ablehnungskalibrierung",
+        "Refusal calibration",
+    ),
+    "CTRL-14": (
+        "Couverture des contrôles internes",
+        "Abdeckung interner Kontrollen",
+        "Internal controls coverage",
+    ),
+}
+
+
+def _framework_label(code: str, lang: str) -> str:
+    variants = _FRAMEWORKS.get(code)
+    return variants[_LANG_IDX.get(lang, 0)] if variants else code
+
+
+def _control_name(cid: str, fallback: str, lang: str) -> str:
+    variants = _CONTROL_NAME_TR.get(cid)
+    return variants[_LANG_IDX.get(lang, 0)] if variants else fallback
+
 
 _CONFORMANT = "conformant"
 _PARTIAL = "partial"
@@ -295,8 +388,13 @@ def _posture_trend() -> tuple[list[float], float | None]:
     return series, delta
 
 
-def compute_compliance() -> ComplianceReport:
-    """Assemble the compliance posture from the real runtime signals."""
+def compute_compliance(lang: str = "fr") -> ComplianceReport:
+    """Assemble the compliance posture from the real runtime signals.
+
+    ``lang`` (fr / de / en) localizes the framework labels, control / obligation
+    names and the per-tab governance catalogues; signal values and IDs stay
+    verbatim.
+    """
     values = _signal_values()
     score_series, score_delta = _posture_trend()
     controls: list[Control] = []
@@ -308,7 +406,7 @@ def compute_compliance() -> ComplianceReport:
         controls.append(
             Control(
                 id=cid,
-                name=name,
+                name=_control_name(cid, name, lang),
                 framework=fw,
                 signal=signal,
                 status=st,
@@ -321,7 +419,7 @@ def compute_compliance() -> ComplianceReport:
 
     # Per-framework roll-up.
     frameworks: list[Framework] = []
-    for code, label in _FRAMEWORKS.items():
+    for code in _FRAMEWORKS:
         fc = [c for c in controls if c.framework == code]
         if not fc:
             continue
@@ -332,7 +430,7 @@ def compute_compliance() -> ComplianceReport:
         frameworks.append(
             Framework(
                 code=code,
-                label=label,
+                label=_framework_label(code, lang),
                 score=score,
                 n_conformant=n_conf,
                 n_partial=n_part,
@@ -408,5 +506,5 @@ def compute_compliance() -> ComplianceReport:
         non_conformities=non_conformities,
         score_series=score_series,
         score_delta=score_delta,
-        tabs=build_tabs(),
+        tabs=build_tabs(lang),
     )

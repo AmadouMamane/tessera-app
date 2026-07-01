@@ -16,9 +16,11 @@ import {
   ScrollText,
   ShieldCheck,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import type { Route } from "next";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
@@ -27,6 +29,7 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchAutomationsOverview } from "@/lib/api/client";
 import type { AutomationsOverview as AutomationsData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -51,11 +54,12 @@ type Data = AutomationsData;
 
 export function AutomationsOverview() {
   const t = useTranslations("automations");
+  const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const { data } = useQuery({
-    queryKey: ["automations-overview"],
-    queryFn: ({ signal }) => fetchAutomationsOverview(signal),
+    queryKey: ["automations-overview", locale],
+    queryFn: ({ signal }) => fetchAutomationsOverview(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -79,13 +83,21 @@ export function AutomationsOverview() {
         onSelectedAtChange={temporal.setSelectedAt}
         periodKey={temporal.periodKey}
         onPeriodChange={temporal.setPeriodKey}
+        windowEnd={temporal.windowEnd}
+        onPickDate={temporal.pickDate}
         onModeChange={temporal.changeMode}
       />
 
       <Zone label={t("zone.actual")}>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
           {data.kpis.map((kpi) => (
-            <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vsHier")} />
+            <KpiTile
+              key={kpi.key}
+              kpi={kpi}
+              label={t(`kpi.${kpi.key}`)}
+              vs={t("delta.vsHier")}
+              info={<KpiInfo k={kpi.key} title={t(`kpi.${kpi.key}`)} />}
+            />
           ))}
         </div>
       </Zone>
@@ -95,11 +107,17 @@ export function AutomationsOverview() {
           <Zone label={t("zone.catalogue")}>
             <Catalogue t={t} data={data} />
           </Zone>
-          <Zone label={t("zone.pipeline")}>
+          <Zone
+            label={t("zone.pipeline")}
+            info={<KpiInfo k="zone.pipeline" title={t("zone.pipeline")} />}
+          >
             <Pipeline t={t} data={data} />
           </Zone>
           <div className="grid gap-3 xl:grid-cols-2">
-            <Zone label={t("zone.distribution")}>
+            <Zone
+              label={t("zone.distribution")}
+              info={<KpiInfo k="zone.distribution" title={t("zone.distribution")} />}
+            >
               <Panel title="">
                 <Donut
                   slices={data.by_type}
@@ -110,7 +128,7 @@ export function AutomationsOverview() {
                 />
               </Panel>
             </Zone>
-            <Zone label={t("zone.env")}>
+            <Zone label={t("zone.env")} info={<KpiInfo k="zone.env" title={t("zone.env")} />}>
               <EnvBars t={t} data={data} />
             </Zone>
           </div>
@@ -488,7 +506,7 @@ function Guardrails({ t, data, className }: { t: T; data: Data; className?: stri
     <Panel
       title={t("zone.guardrails").replace(/^I · /, "")}
       className={className}
-      action={<ViewAll label={t("viewAll.guardrails")} />}
+      action={<ViewAll label={t("viewAll.guardrails")} href="/configurer/garde-fous" />}
     >
       <ul className="flex flex-col gap-2">
         {data.guardrails.map((g) => (
@@ -608,11 +626,33 @@ function Footer({ t, data }: { t: T; data: Data }) {
 
 // ── atoms ────────────────────────────────────────────────────────────────────
 
-function Zone({ label, children }: { label: string; children: ReactNode }) {
+/** ⓘ for an automations KPI/zone, reading automations.explain.<k>.{what,how,source?}. */
+function KpiInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("automations.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
+function Zone({
+  label,
+  info,
+  children,
+}: {
+  label: string;
+  info?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5">
-      <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
-        {label}
+      <h2 className="mb-2 flex items-center gap-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
       </h2>
       {children}
     </section>
@@ -650,13 +690,21 @@ function Panel({
   );
 }
 
-function KpiTile({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: string; vs: string }) {
+function KpiTile({
+  kpi,
+  label,
+  vs,
+  info,
+}: { kpi: Data["kpis"][number]; label: string; vs: string; info?: ReactNode }) {
   const up = kpi.delta_label.trim().startsWith("+");
   const good = up === kpi.good_is_up;
   const magnitude = kpi.delta_label.replace(/^[+-]\s*/, "");
   return (
     <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">{label}</p>
+      <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </p>
       <div className="mt-1 flex items-center gap-2">
         <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-white">
           {kpi.value}
@@ -771,12 +819,18 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function ViewAll({ label }: { label: string }) {
+function ViewAll({ label, href }: { label: string; href?: Route }) {
+  const cls =
+    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+  if (href) {
+    return (
+      <Link href={href} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </Link>
+    );
+  }
   return (
-    <button
-      type="button"
-      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
-    >
+    <button type="button" className={cls}>
       {label} <ChevronRight className="h-3 w-3" />
     </button>
   );

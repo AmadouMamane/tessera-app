@@ -80,15 +80,14 @@ const styles = `
   }
 
   .ca-apercu3 .util-bar {
-    display: grid;
-    grid-template-columns: minmax(250px, 0.7fr) minmax(0, 1.8fr) minmax(150px, 0.7fr);
+    display: flex;
     align-items: center;
-    gap: 14px;
+    justify-content: space-between;
     background: var(--ca-ink);
     color: #fff;
     font-size: 12px;
     font-weight: 700;
-    padding: 7px 15px;
+    padding: 8px 15px 7px;
   }
 
   .ca-apercu3 .util-bar span {
@@ -288,36 +287,41 @@ const styles = `
 
   .ca-apercu3 .demo-strip {
     display: flex;
-    min-height: 38px;
+    width: 100%;
+    min-height: 36px;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
-    border: 1px solid rgb(185 146 69 / 0.82);
-    border-radius: 4px;
-    background: linear-gradient(90deg, rgb(255 255 255 / 0.04), rgb(185 146 69 / 0.18));
+    border-bottom: 1px solid var(--ca-gold);
+    background: linear-gradient(90deg, #050816 0%, #111b3d 58%, #050816 100%);
     color: #fff;
-    font-size: 13px;
+    font-size: 11.5px;
     font-weight: 800;
-    padding: 3px 6px;
+    line-height: 1;
+    padding: 2px 5px;
+    white-space: nowrap;
   }
 
   .ca-apercu3 .demo-kicker {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 32px;
+    min-height: 22px;
     border-radius: 4px;
     background: var(--ca-gold);
     color: var(--ca-ink);
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 900;
-    padding: 0 12px;
+    padding: 0 8px;
     text-transform: uppercase;
     white-space: nowrap;
   }
 
   .ca-apercu3 .demo-copy {
+    display: inline-flex;
+    min-height: 22px;
+    align-items: center;
     color: rgb(255 255 255 / 0.82);
     font-weight: 800;
     white-space: nowrap;
@@ -326,51 +330,31 @@ const styles = `
   .ca-apercu3 .demo-live {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    min-height: 32px;
+    gap: 6px;
+    min-height: 22px;
     border: 1px solid rgb(255 255 255 / 0.24);
     border-radius: 4px;
     background: rgb(255 255 255 / 0.08);
     color: #fff;
-    padding: 0 12px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 900;
+    padding: 0 8px;
     white-space: nowrap;
+  }
+
+  .ca-apercu3 .demo-live:hover {
+    background: rgb(255 255 255 / 0.16);
   }
 
   .ca-apercu3 .demo-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     flex: none;
     border-radius: 999px;
     background: #35c76e;
-    box-shadow: 0 0 0 4px rgb(53 199 110 / 0.2);
-  }
-
-  .ca-apercu3 .demo-action {
-    display: inline-flex;
-    min-height: 34px;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: 1px solid rgb(255 255 255 / 0.2);
-    border-radius: 4px;
-    background: #fff;
-    color: var(--ca-ink);
-    cursor: pointer;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 900;
-    padding: 0 13px;
-    white-space: nowrap;
-  }
-
-  .ca-apercu3 .demo-action:hover {
-    background: #f3e8c7;
-  }
-
-  .ca-apercu3 .demo-action svg {
-    width: 17px;
-    height: 17px;
-    stroke-width: 2.2;
+    box-shadow: 0 0 0 3px rgb(53 199 110 / 0.2);
   }
 
   .ca-apercu3 .page {
@@ -948,16 +932,6 @@ const styles = `
   }
 
   @media (max-width: 1180px) {
-    .ca-apercu3 .util-bar {
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-
-    .ca-apercu3 .util-left,
-    .ca-apercu3 .util-help {
-      justify-self: start;
-    }
-
     .ca-apercu3 .main-head {
       flex-wrap: wrap;
     }
@@ -979,12 +953,6 @@ const styles = `
       padding-right: 24px;
     }
 
-    .ca-apercu3 .demo-strip {
-      flex-wrap: wrap;
-      justify-content: flex-start;
-      gap: 8px 10px;
-    }
-
     .ca-apercu3 .layout {
       grid-template-columns: minmax(0, 1fr);
       max-width: 860px;
@@ -992,6 +960,15 @@ const styles = `
 
     .ca-apercu3 footer {
       padding: 28px 40px;
+    }
+  }
+
+  @media (max-width: 960px) {
+    .ca-apercu3 .demo-strip {
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      gap: 8px 10px;
+      padding: 6px 12px;
     }
   }
 
@@ -1049,10 +1026,6 @@ const styles = `
     .ca-apercu3 .demo-live {
       flex: 1 1 220px;
       white-space: normal;
-    }
-
-    .ca-apercu3 .demo-action {
-      flex: 1 0 auto;
     }
 
     .ca-apercu3 h1 {
@@ -1142,6 +1115,7 @@ export function CreditAuroreMesComptesHost() {
     <div className="ca-apercu3">
       <style>{styles}</style>
       <div className="portal-window">
+        <DemoStrip />
         <UtilityBar />
         <MainHeader />
         <SubNav />
@@ -1227,7 +1201,6 @@ function UtilityBar() {
         Espace clients professionnels Crédit Aurore
         <ChevronRight />
       </span>
-      <DemoStrip />
       <span className="util-help">
         <AlertTriangle />
         Aide et contacts
@@ -1240,19 +1213,16 @@ function DemoStrip() {
   return (
     <div className="demo-strip" role="note" aria-label="Statut de la démonstration">
       <strong className="demo-kicker">Démo Tessera</strong>
-      <span className="demo-live">
-        <span className="demo-dot" aria-hidden="true" />
-        Assistant intégré et fonctionnel
-      </span>
-      <span className="demo-copy">Données bancaires fictives sur cette page</span>
       <button
-        className="demo-action"
+        className="demo-live"
         type="button"
+        aria-label="Ouvrir l'assistant Tessera"
         onClick={() => openProductChat(GENERAL_HELP_PROMPT)}
       >
-        <MessageCircle aria-hidden="true" />
-        Ouvrir l'assistant
+        <span className="demo-dot" aria-hidden="true" />
+        Assistant support client intégré et fonctionnel
       </button>
+      <span className="demo-copy">Page client fictive, chat réel</span>
     </div>
   );
 }

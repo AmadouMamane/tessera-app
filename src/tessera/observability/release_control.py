@@ -41,11 +41,11 @@ def _agent_meta(agent_id: str) -> tuple[str, str]:
         return agent_id, ""
 
 
-def _agent_release_row(agent_id: str) -> dict[str, object]:
+def _agent_release_row(agent_id: str, lang: str = "fr") -> dict[str, object]:
     """Per-agent release row: policy verdict + lifecycle state + governance history."""
     name, owner = _agent_meta(agent_id)
-    rel = agent_release_state(agent_id)
-    lifecycle = compute_agent_lifecycle(agent_id)
+    rel = agent_release_state(agent_id, lang)
+    lifecycle = compute_agent_lifecycle(agent_id, lang)
     return {
         "agent_id": agent_id,
         "name": name,
@@ -59,18 +59,19 @@ def _agent_release_row(agent_id: str) -> dict[str, object]:
     }
 
 
-def compute_release_control(agent_id: str | None = None) -> dict[str, object]:
+def compute_release_control(agent_id: str | None = None, lang: str = "fr") -> dict[str, object]:
     """Return the release-control payload: per-agent rows + an org summary.
 
     Args:
         agent_id: when set (and not ``"all"``), scope to that one agent; otherwise
             return every registry agent (the default, global view).
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
     """
     ids = _agent_ids()
     if agent_id and agent_id != "all" and agent_id in ids:
         ids = [agent_id]
 
-    rows = [_agent_release_row(aid) for aid in ids]
+    rows = [_agent_release_row(aid, lang) for aid in ids]
 
     # Org summary over the (filtered) population — counts of distinct agents by
     # release readiness. These are agent counts, not deduped conversation totals.

@@ -22,6 +22,30 @@ from tessera.observability.eval_gate_view import build_gate_view
 
 __all__ = ["AgentRelease", "agent_release_state", "fleet_release_states"]
 
+_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+# Localized display of the FR gate-verdict labels (sourced from the shared
+# eval-gate view) + the honest empty state. Unmapped labels fall through verbatim.
+_VERDICT_TR: dict[str, tuple[str, str]] = {
+    "BLOQUÉ par le socle": ("DURCH SOCKEL BLOCKIERT", "BLOCKED by core"),
+    "BLOQUÉ (critiques non dérogés)": (
+        "BLOCKIERT (kritische ohne Ausnahme)",
+        "BLOCKED (unwaived critical)",
+    ),
+    "BLOQUÉ (domaine)": ("BLOCKIERT (Domaene)", "BLOCKED (domain)"),
+    "PASSE": ("BESTANDEN", "PASS"),
+    "Éval non exécutée": ("Eval nicht ausgefuehrt", "Eval not run"),
+}
+
+
+def _verdict_label(label: str, lang: str) -> str:
+    """Localize a gate-verdict label for display (de/en); FR is the canonical."""
+    idx = _LANG_IDX.get(lang, 0)
+    if idx == 0:
+        return label
+    pair = _VERDICT_TR.get(label)
+    return pair[idx - 1] if pair else label
+
 
 def _current_catalogue_version(eval_set_slug: str) -> str:
     """Version (``count-hash``) of an agent's eval set AS IT EXISTS NOW.
@@ -117,18 +141,26 @@ class AgentRelease:
         }
 
 
-def agent_release_state(agent_id: str) -> AgentRelease:
-    """Return the eval-gate release verdict for one agent, or an honest empty state."""
+def agent_release_state(agent_id: str, lang: str = "fr") -> AgentRelease:
+    """Return the eval-gate release verdict for one agent, or an honest empty state.
+
+    ``lang`` localizes the human-facing ``verdict_label`` (fr / de / en); all
+    other fields are language-independent numbers, ids and tone keys.
+    """
     try:
         snap = load_eval_snapshot(agent_id)
     except (FileNotFoundError, OSError, ValueError):
-        return AgentRelease(agent_id=agent_id, available=False, verdict_label="Éval non exécutée")
+        return AgentRelease(
+            agent_id=agent_id,
+            available=False,
+            verdict_label=_verdict_label("Éval non exécutée", lang),
+        )
     gate = build_gate_view(snap)
     return AgentRelease(
         agent_id=agent_id,
         available=True,
         passed=gate.passed,
-        verdict_label=gate.verdict_label,
+        verdict_label=_verdict_label(gate.verdict_label, lang),
         verdict_tone=gate.verdict_tone,
         candidate_version=gate.candidate_version,
         eval_set=snap.eval_set,
@@ -147,7 +179,7 @@ def agent_release_state(agent_id: str) -> AgentRelease:
     )
 
 
-def fleet_release_states() -> dict[str, AgentRelease]:
+def fleet_release_states(lang: str = "fr") -> dict[str, AgentRelease]:
     """Return the release state of every registry agent, keyed by agent id."""
     try:
         from tessera.agent.registry import list_agents
@@ -155,4 +187,4 @@ def fleet_release_states() -> dict[str, AgentRelease]:
         agents = [a.id for a in list_agents()]
     except (OSError, ValueError):
         agents = []
-    return {aid: agent_release_state(aid) for aid in agents}
+    return {aid: agent_release_state(aid, lang) for aid in agents}

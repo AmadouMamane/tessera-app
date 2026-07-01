@@ -583,7 +583,7 @@ function RegressionsByModel({ release }: { release: ReleaseStatus | undefined })
           <span className="w-20 shrink-0 truncate text-[var(--muted-foreground)]">
             {shortModel(r.model)}
           </span>
-          <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--muted)]/40">
+          <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
             <div
               className="h-full rounded-sm bg-red-500"
               style={{ width: `${(Math.abs(r.delta) / max) * 100}%` }}

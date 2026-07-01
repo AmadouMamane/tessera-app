@@ -417,6 +417,20 @@ function withAsOf(path: string, at?: string): string {
 }
 
 /**
+ * Append the optional as-of-T instant (`?at=`) and the global agent scope
+ * (`?agent=`) to an observability path. The agent scope rides the same `?agent=`
+ * key the GOUVERNER/PLATEFORME surfaces use (lib/agent-scope); `"all"` (or empty)
+ * is the org view and is omitted so the URL stays clean.
+ */
+function withScope(path: string, at?: string, agent?: string): string {
+  const params = new URLSearchParams();
+  if (at) params.set("at", at);
+  if (agent && agent !== "all") params.set("agent", agent);
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+/**
  * Recent online-eval scores (eval-as-telemetry; public aggregate surface).
  *
  * With `at` set, the durable score log is read as of that instant (ADR 0011).
@@ -424,8 +438,13 @@ function withAsOf(path: string, at?: string): string {
 export async function fetchEvalScores(
   signal?: AbortSignal,
   at?: string,
+  agent?: string,
 ): Promise<EvalScoresResponse> {
-  return request(withAsOf("/observability/scores", at), { signal }, EvalScoresResponseSchema);
+  return request(
+    withScope("/observability/scores", at, agent),
+    { signal },
+    EvalScoresResponseSchema,
+  );
 }
 
 /** Temporal lineage timeline — dated events for the cockpit time rail (#201). */
@@ -443,8 +462,12 @@ export async function fetchDataRange(signal?: AbortSignal): Promise<DataRange> {
  *
  * With `at` set, the SLO is recomputed over the durable log as of T (ADR 0011).
  */
-export async function fetchSLO(signal?: AbortSignal, at?: string): Promise<SLOReport> {
-  return request(withAsOf("/observability/slo", at), { signal }, SLOReportSchema);
+export async function fetchSLO(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<SLOReport> {
+  return request(withScope("/observability/slo", at, agent), { signal }, SLOReportSchema);
 }
 
 /** Mirror recent captured turns to a candidate model and compare (shadow, #16). */
@@ -491,8 +514,16 @@ export async function fetchLocalization(signal?: AbortSignal): Promise<Localizat
 }
 
 /** Incident playbooks triggered by the live (or as-of-T) signals (#115). */
-export async function fetchPlaybooks(signal?: AbortSignal, at?: string): Promise<PlaybookReport> {
-  return request(withAsOf("/observability/playbooks", at), { signal }, PlaybookReportSchema);
+export async function fetchPlaybooks(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<PlaybookReport> {
+  return request(
+    withScope("/observability/playbooks", at, agent),
+    { signal },
+    PlaybookReportSchema,
+  );
 }
 
 /** Tool least-privilege: granted vs actually-used tools from the audit (#101). */
@@ -506,8 +537,12 @@ export async function fetchCrossTenant(signal?: AbortSignal): Promise<CrossTenan
 }
 
 /** Toxicity / harmful-output rate over captured answers (#60), live or as of T. */
-export async function fetchToxicity(signal?: AbortSignal, at?: string): Promise<ToxicityReport> {
-  return request(withAsOf("/observability/toxicity", at), { signal }, ToxicityReportSchema);
+export async function fetchToxicity(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<ToxicityReport> {
+  return request(withScope("/observability/toxicity", at, agent), { signal }, ToxicityReportSchema);
 }
 
 /** Distil high-scoring captured turns into an SFT dataset (#122). */
@@ -551,8 +586,12 @@ export async function fetchJourney(signal?: AbortSignal): Promise<JourneyReport>
 }
 
 /** Telemetry-mined product backlog: ranked roadmap items (#124), live or as of T. */
-export async function fetchRoadmap(signal?: AbortSignal, at?: string): Promise<RoadmapReport> {
-  return request(withAsOf("/observability/roadmap", at), { signal }, RoadmapReportSchema);
+export async function fetchRoadmap(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<RoadmapReport> {
+  return request(withScope("/observability/roadmap", at, agent), { signal }, RoadmapReportSchema);
 }
 
 /** Staleness of the ingested regulatory corpora vs their review horizon (#50). */
@@ -585,8 +624,12 @@ export async function fetchReproducibility(signal?: AbortSignal): Promise<ReproR
  *
  * With `at` set, the trend is recomputed over the durable log as of T (ADR 0011).
  */
-export async function fetchTrend(signal?: AbortSignal, at?: string): Promise<TrendReport> {
-  return request(withAsOf("/observability/trend", at), { signal }, TrendReportSchema);
+export async function fetchTrend(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<TrendReport> {
+  return request(withScope("/observability/trend", at, agent), { signal }, TrendReportSchema);
 }
 
 /** Calendar-time score series for one metric (Vue d'ensemble chart + metric KPIs). */
@@ -594,10 +637,12 @@ export async function fetchScoreSeries(
   signal?: AbortSignal,
   at?: string,
   metric?: string,
+  agent?: string,
 ): Promise<ScoreSeries> {
   const params = new URLSearchParams();
   if (at) params.set("at", at);
   if (metric) params.set("metric", metric);
+  if (agent && agent !== "all") params.set("agent", agent);
   const query = params.toString();
   return request(
     `/observability/score-series${query ? `?${query}` : ""}`,
@@ -730,8 +775,12 @@ export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<Firew
 }
 
 /** Regulatory compliance posture derived from the real runtime signals (#07). */
-export async function fetchCompliance(signal?: AbortSignal): Promise<ComplianceReport> {
-  return request("/observability/compliance", { signal }, ComplianceReportSchema);
+export async function fetchCompliance(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<ComplianceReport> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/compliance${q}`, { signal }, ComplianceReportSchema);
 }
 
 /** Operational reliability & cost posture derived from the real signals (#08). */
@@ -739,45 +788,77 @@ export async function fetchReliability(
   signal?: AbortSignal,
   days = 14,
   anchor?: string | null,
+  lang?: string,
 ): Promise<ReliabilityReport> {
   const qs = new URLSearchParams({ days: String(days) });
   if (anchor) qs.set("anchor", anchor);
+  if (lang) qs.set("lang", lang);
   return request(`/observability/reliability?${qs}`, { signal }, ReliabilityReportSchema);
 }
 
 /** Continuous-improvement posture mined from the telemetry roadmap (#09). */
-export async function fetchImprovement(signal?: AbortSignal): Promise<ImprovementReport> {
-  return request("/observability/improvement", { signal }, ImprovementReportSchema);
+export async function fetchImprovement(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<ImprovementReport> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/improvement${q}`, { signal }, ImprovementReportSchema);
 }
 
-export async function fetchIncidentsOverview(signal?: AbortSignal): Promise<IncidentsOverview> {
-  return request("/observability/incidents", { signal }, IncidentsOverviewSchema);
+export async function fetchIncidentsOverview(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<IncidentsOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/incidents${q}`, { signal }, IncidentsOverviewSchema);
 }
 
 export async function fetchReplayShadowOverview(
+  lang: string,
   signal?: AbortSignal,
 ): Promise<ReplayShadowOverview> {
-  return request("/observability/replay-shadow", { signal }, ReplayShadowOverviewSchema);
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/replay-shadow${q}`, { signal }, ReplayShadowOverviewSchema);
 }
 
-export async function fetchCurationOverview(signal?: AbortSignal): Promise<CurationOverview> {
-  return request("/observability/curation", { signal }, CurationOverviewSchema);
+export async function fetchCurationOverview(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<CurationOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/curation${q}`, { signal }, CurationOverviewSchema);
 }
 
-export async function fetchAutomationsOverview(signal?: AbortSignal): Promise<AutomationsOverview> {
-  return request("/observability/automations", { signal }, AutomationsOverviewSchema);
+export async function fetchAutomationsOverview(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<AutomationsOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/automations${q}`, { signal }, AutomationsOverviewSchema);
 }
 
-export async function fetchProofsOverview(signal?: AbortSignal): Promise<ProofsOverview> {
-  return request("/observability/proofs", { signal }, ProofsOverviewSchema);
+export async function fetchProofsOverview(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<ProofsOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/proofs${q}`, { signal }, ProofsOverviewSchema);
 }
 
-export async function fetchSignalCatalogue(signal?: AbortSignal): Promise<SignalCatalogue> {
-  return request("/observability/signal-catalogue", { signal }, SignalCatalogueSchema);
+export async function fetchSignalCatalogue(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<SignalCatalogue> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/signal-catalogue${q}`, { signal }, SignalCatalogueSchema);
 }
 
-export async function fetchPoliciesOverview(signal?: AbortSignal): Promise<PoliciesOverview> {
-  return request("/observability/policies", { signal }, PoliciesOverviewSchema);
+export async function fetchPoliciesOverview(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<PoliciesOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/policies${q}`, { signal }, PoliciesOverviewSchema);
 }
 
 export async function fetchSourcesOverview(
@@ -788,30 +869,52 @@ export async function fetchSourcesOverview(
   return request(`/observability/sources${q}`, { signal }, SourcesOverviewSchema);
 }
 
-export async function fetchAccessOverview(signal?: AbortSignal): Promise<AccessOverview> {
-  return request("/observability/access", { signal }, AccessOverviewSchema);
+export async function fetchAccessOverview(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<AccessOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/access${q}`, { signal }, AccessOverviewSchema);
 }
 
-export async function fetchAssistantOverview(signal?: AbortSignal): Promise<AssistantOverview> {
-  return request("/observability/assistant", { signal }, AssistantOverviewSchema);
+export async function fetchAssistantOverview(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<AssistantOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/assistant${q}`, { signal }, AssistantOverviewSchema);
 }
 
 export async function fetchIntegrationsOverview(
+  lang: string,
   signal?: AbortSignal,
 ): Promise<IntegrationsOverview> {
-  return request("/observability/integrations", { signal }, IntegrationsOverviewSchema);
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/integrations${q}`, { signal }, IntegrationsOverviewSchema);
 }
 
-export async function fetchSystemProfile(signal?: AbortSignal): Promise<SystemProfile> {
-  return request("/observability/system-profile", { signal }, SystemProfileSchema);
+export async function fetchSystemProfile(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<SystemProfile> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/system-profile${q}`, { signal }, SystemProfileSchema);
 }
 
-export async function fetchParametersOverview(signal?: AbortSignal): Promise<ParametersOverview> {
-  return request("/observability/parameters", { signal }, ParametersOverviewSchema);
+export async function fetchParametersOverview(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<ParametersOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/parameters${q}`, { signal }, ParametersOverviewSchema);
 }
 
-export async function fetchInboxOverview(signal?: AbortSignal): Promise<InboxOverview> {
-  return request("/observability/inbox", { signal }, InboxOverviewSchema);
+export async function fetchInboxOverview(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<InboxOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/inbox${q}`, { signal }, InboxOverviewSchema);
 }
 
 /** The operator control-cases queue for the overview triage panel (live backlog). */
@@ -829,8 +932,16 @@ export async function fetchControlSignals(
 }
 
 /** Governed-activity feed: real S1 governance events + lineage deploys, live or as of T. */
-export async function fetchGovernance(signal?: AbortSignal, at?: string): Promise<GovernanceFeed> {
-  return request(withAsOf("/observability/governance", at), { signal }, GovernanceFeedSchema);
+export async function fetchGovernance(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<GovernanceFeed> {
+  return request(
+    withScope("/observability/governance", at, agent),
+    { signal },
+    GovernanceFeedSchema,
+  );
 }
 
 /** Real trace observability read back from the Langfuse stack, live or as of T. */
@@ -859,8 +970,13 @@ export async function mutateInboxItem(body: {
 export async function fetchConformance(
   signal?: AbortSignal,
   at?: string,
+  agent?: string,
 ): Promise<ConformanceReport> {
-  return request(withAsOf("/observability/conformance", at), { signal }, ConformanceReportSchema);
+  return request(
+    withScope("/observability/conformance", at, agent),
+    { signal },
+    ConformanceReportSchema,
+  );
 }
 
 /** Topology fingerprint of the live agent graph vs the golden pin (#87). */
@@ -884,8 +1000,16 @@ export async function fetchToolLoops(signal?: AbortSignal): Promise<ToolLoopRepo
 }
 
 /** Tool-call validity (allowed vs denied, argument failures) from the audit trail, live or as of T. */
-export async function fetchToolValidity(signal?: AbortSignal, at?: string): Promise<ToolValidity> {
-  return request(withAsOf("/observability/tool-validity", at), { signal }, ToolValiditySchema);
+export async function fetchToolValidity(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<ToolValidity> {
+  return request(
+    withScope("/observability/tool-validity", at, agent),
+    { signal },
+    ToolValiditySchema,
+  );
 }
 
 /** Language-routing health: served vs detected language + code-switching. */
@@ -899,8 +1023,12 @@ export async function fetchContextOverflow(signal?: AbortSignal): Promise<Overfl
 }
 
 /** Token-cost distribution and token-burn anomalies over captured turns (#33), live or as of T. */
-export async function fetchCost(signal?: AbortSignal, at?: string): Promise<CostReport> {
-  return request(withAsOf("/observability/cost", at), { signal }, CostReportSchema);
+export async function fetchCost(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<CostReport> {
+  return request(withScope("/observability/cost", at, agent), { signal }, CostReportSchema);
 }
 
 /** Business-intent mix and routing confidence over captured questions (#63). */
@@ -914,13 +1042,25 @@ export async function fetchRefusal(signal?: AbortSignal): Promise<RefusalReport>
 }
 
 /** Anomalous-conversation detection: long/looping/repetitive sessions (#69), live or as of T. */
-export async function fetchAnomalies(signal?: AbortSignal, at?: string): Promise<AnomalyReport> {
-  return request(withAsOf("/observability/anomalies", at), { signal }, AnomalyReportSchema);
+export async function fetchAnomalies(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<AnomalyReport> {
+  return request(withScope("/observability/anomalies", at, agent), { signal }, AnomalyReportSchema);
 }
 
 /** Root-cause "what changed": lineage diff + attribution of a score delta (#17), live or as of T. */
-export async function fetchWhatChanged(signal?: AbortSignal, at?: string): Promise<WhatChanged> {
-  return request(withAsOf("/observability/what-changed", at), { signal }, WhatChangedSchema);
+export async function fetchWhatChanged(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<WhatChanged> {
+  return request(
+    withScope("/observability/what-changed", at, agent),
+    { signal },
+    WhatChangedSchema,
+  );
 }
 
 /** Multi-turn self-contradictions across captured sessions (#30). */
@@ -949,18 +1089,30 @@ export async function fetchLocaleFormat(signal?: AbortSignal): Promise<LocaleFor
 }
 
 /** Output PII-leak rate: PII in answers absent from their grounding (#38), live or as of T. */
-export async function fetchPiiLeak(signal?: AbortSignal, at?: string): Promise<PIILeakSummary> {
-  return request(withAsOf("/observability/pii-leak", at), { signal }, PIILeakSummarySchema);
+export async function fetchPiiLeak(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<PIILeakSummary> {
+  return request(withScope("/observability/pii-leak", at, agent), { signal }, PIILeakSummarySchema);
 }
 
 /** Per-language conversation funnel from scored turns (#66), live or as of T. */
-export async function fetchFunnel(signal?: AbortSignal, at?: string): Promise<FunnelReport> {
-  return request(withAsOf("/observability/funnel", at), { signal }, FunnelReportSchema);
+export async function fetchFunnel(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+): Promise<FunnelReport> {
+  return request(withScope("/observability/funnel", at, agent), { signal }, FunnelReportSchema);
 }
 
 /** Session-level goal-completion analytics. */
-export async function fetchSessions(signal?: AbortSignal): Promise<SessionReport> {
-  return request("/observability/sessions", { signal }, SessionReportSchema);
+export async function fetchSessions(signal?: AbortSignal, agent?: string): Promise<SessionReport> {
+  return request(
+    withScope("/observability/sessions", undefined, agent),
+    { signal },
+    SessionReportSchema,
+  );
 }
 
 /** Step-by-step trajectory of a captured turn — session theater (#40/#113). */
@@ -1181,22 +1333,34 @@ export async function fetchBudget(signal?: AbortSignal): Promise<BudgetSnapshot>
 /** Point-in-time reconstruction ("Etat a date", prouver/etat-a-date). */
 export async function fetchEtatADate(
   asOf: string | null,
+  sources?: string | null,
+  lang?: string,
   signal?: AbortSignal,
 ): Promise<EtatADate> {
-  const path = asOf
-    ? `/observability/etat-a-date?as_of=${encodeURIComponent(asOf)}`
-    : "/observability/etat-a-date";
-  return request(path, { signal }, EtatADateSchema);
+  const params = new URLSearchParams();
+  if (asOf) params.set("as_of", asOf);
+  if (sources) params.set("sources", sources);
+  if (lang) params.set("lang", lang);
+  const query = params.toString();
+  return request(
+    query ? `/observability/etat-a-date?${query}` : "/observability/etat-a-date",
+    { signal },
+    EtatADateSchema,
+  );
 }
 
 /** Persist a reconstruction snapshot at T; returns the refreshed payload. */
-export async function saveEtatSnapshot(asOf: string | null): Promise<EtatADate> {
+export async function saveEtatSnapshot(
+  asOf: string | null,
+  sources?: string | null,
+  lang?: string,
+): Promise<EtatADate> {
   return request(
     "/observability/etat-a-date/snapshot",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ as_of: asOf }),
+      body: JSON.stringify({ as_of: asOf, sources: sources ?? null, lang: lang ?? "fr" }),
     },
     EtatADateSchema,
   );
@@ -1212,8 +1376,9 @@ export async function fetchAgentSynthese(
   return request(`/observability/agent-synthese?${query}`, { signal }, AgentSyntheseSchema);
 }
 
-export async function fetchAgentConsole(signal?: AbortSignal): Promise<AgentConsole> {
-  return request("/observability/agent-console", { signal }, AgentConsoleSchema);
+export async function fetchAgentConsole(lang: string, signal?: AbortSignal): Promise<AgentConsole> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/agent-console${q}`, { signal }, AgentConsoleSchema);
 }
 
 /** Sandbox console defaults: the live system prompt + toggleable guard categories. */
@@ -1260,9 +1425,10 @@ export async function saveConsoleFeedback(
 
 export async function fetchAgentConfigurations(
   agentId: string,
+  lang: string,
   signal?: AbortSignal,
 ): Promise<AgentConfigurations> {
-  const q = `?agent_id=${encodeURIComponent(agentId)}`;
+  const q = `?agent_id=${encodeURIComponent(agentId)}${lang ? `&lang=${encodeURIComponent(lang)}` : ""}`;
   return request(`/observability/agent-configurations${q}`, { signal }, AgentConfigurationsSchema);
 }
 
@@ -1270,6 +1436,7 @@ export async function fetchAgentConfigurations(
 export async function saveAgentConfigurations(
   agentId: string,
   changes: Record<string, unknown>,
+  lang: string,
 ): Promise<AgentConfigurations> {
   const q = `?agent_id=${encodeURIComponent(agentId)}`;
   return request(
@@ -1277,7 +1444,7 @@ export async function saveAgentConfigurations(
     {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ changes }),
+      body: JSON.stringify({ changes, lang }),
     },
     AgentConfigurationsSchema,
   );
@@ -1311,8 +1478,9 @@ export async function mutateConnaissancesSource(body: {
   );
 }
 
-export async function fetchAgentAFaire(signal?: AbortSignal): Promise<AgentAFaire> {
-  return request("/observability/agent-a-faire", { signal }, AgentAFaireSchema);
+export async function fetchAgentAFaire(lang: string, signal?: AbortSignal): Promise<AgentAFaire> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/agent-a-faire${q}`, { signal }, AgentAFaireSchema);
 }
 
 /** Persist a status/assignee change for one A-faire item; returns the fresh payload. */
@@ -1320,6 +1488,7 @@ export async function mutateAFaireItem(body: {
   item_id: string;
   status?: string;
   assignee?: string;
+  lang?: string;
 }): Promise<AgentAFaire> {
   return request(
     "/observability/agent-a-faire/item-state",
@@ -1434,9 +1603,11 @@ export async function fetchRbacMatrix(agent: string, signal?: AbortSignal): Prom
 export async function fetchCatalogueConsumers(
   kind: string,
   agent: string,
+  lang: string,
   signal?: AbortSignal,
 ): Promise<CatalogueConsumers> {
   const params = new URLSearchParams({ kind, agent });
+  if (lang) params.set("lang", lang);
   return request(
     `/observability/catalogue-consumers?${params}`,
     { signal },
@@ -1509,19 +1680,25 @@ export async function fetchClientDocuments(
 }
 
 /** Customer support requests (escalation tickets). */
-export async function fetchClientRequests(signal?: AbortSignal): Promise<ClientRequests> {
-  return request("/observability/client/requests", { signal }, ClientRequestsSchema);
+export async function fetchClientRequests(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<ClientRequests> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/client/requests${q}`, { signal }, ClientRequestsSchema);
 }
 
 /** Account alerts with the durable read-state applied. */
-export async function fetchClientAlerts(signal?: AbortSignal): Promise<ClientAlerts> {
-  return request("/observability/client/alerts", { signal }, ClientAlertsSchema);
+export async function fetchClientAlerts(lang: string, signal?: AbortSignal): Promise<ClientAlerts> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/client/alerts${q}`, { signal }, ClientAlertsSchema);
 }
 
 /** Persist one alert's read/unread state; returns the fresh alerts payload. */
 export async function mutateClientAlert(body: {
   alert_id: string;
   read: boolean;
+  lang: string;
 }): Promise<ClientAlerts> {
   return request(
     "/observability/client/alerts/read",
@@ -1535,14 +1712,19 @@ export async function mutateClientAlert(body: {
 }
 
 /** Customer preferences (notifications, privacy/consent, security). */
-export async function fetchClientSettings(signal?: AbortSignal): Promise<ClientSettings> {
-  return request("/observability/client/settings", { signal }, ClientSettingsSchema);
+export async function fetchClientSettings(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<ClientSettings> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/client/settings${q}`, { signal }, ClientSettingsSchema);
 }
 
 /** Persist one preference; returns the full settings payload. */
 export async function mutateClientSetting(body: {
   key: string;
   value: boolean | string;
+  lang: string;
 }): Promise<ClientSettings> {
   return request(
     "/observability/client/settings",
@@ -1558,11 +1740,16 @@ export async function mutateClientSetting(body: {
 // ── Connectors & Users (cockpit) ─────────────────────────────────────────────
 
 /** Connectors overview for the real Tessera stack (configurer/connecteurs). */
-export async function fetchConnectors(signal?: AbortSignal): Promise<ConnectorsOverview> {
-  return request("/observability/connectors", { signal }, ConnectorsOverviewSchema);
+export async function fetchConnectors(
+  lang: string,
+  signal?: AbortSignal,
+): Promise<ConnectorsOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/connectors${q}`, { signal }, ConnectorsOverviewSchema);
 }
 
 /** Users overview from the real seeded operator accounts (admin/utilisateurs). */
-export async function fetchUsers(signal?: AbortSignal): Promise<UsersOverview> {
-  return request("/observability/users", { signal }, UsersOverviewSchema);
+export async function fetchUsers(lang: string, signal?: AbortSignal): Promise<UsersOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/users${q}`, { signal }, UsersOverviewSchema);
 }

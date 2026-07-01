@@ -21,10 +21,12 @@ import {
   Timer,
   UserPlus,
 } from "lucide-react";
+import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -34,6 +36,7 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchIncidentsOverview } from "@/lib/api/client";
 import type { IncidentsOverview as IncidentsOverviewData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -114,6 +117,8 @@ export function IncidentsOverview() {
         onSelectedAtChange={temporal.setSelectedAt}
         periodKey={temporal.periodKey}
         onPeriodChange={temporal.setPeriodKey}
+        windowEnd={temporal.windowEnd}
+        onPickDate={temporal.pickDate}
         onModeChange={temporal.changeMode}
       />
 
@@ -125,7 +130,13 @@ export function IncidentsOverview() {
           <Zone label={t("zone.actual")}>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
               {data.kpis.map((kpi) => (
-                <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vs7d")} />
+                <KpiTile
+                  key={kpi.key}
+                  kpi={kpi}
+                  label={t(`kpi.${kpi.key}`)}
+                  vs={t("delta.vs7d")}
+                  info={<KpiInfo k={kpi.key} title={t(`kpi.${kpi.key}`)} />}
+                />
               ))}
             </div>
           </Zone>
@@ -175,6 +186,19 @@ export function IncidentsOverview() {
 
 type T = ReturnType<typeof useTranslations<"incidents">>;
 type Data = IncidentsOverviewData;
+
+/** ⓘ for an incidents KPI/section, reading incidents.explain.<k>.{what,how,source?}. */
+function KpiInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("incidents.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
@@ -239,7 +263,11 @@ function PriorityQueue({ t, data }: { t: T; data: Data }) {
     "role",
   ] as const;
   return (
-    <Panel title={t("triage.queue")} action={<ViewAll label={t("triage.viewAll")} />}>
+    <Panel
+      title={t("triage.queue")}
+      info={<KpiInfo k="queue" title={t("triage.queue")} />}
+      action={<ViewAll label={t("triage.viewAll")} href="/a-traiter" />}
+    >
       <div className="-mx-1 overflow-x-auto">
         <table className="w-full border-collapse text-left text-xs">
           <thead>
@@ -320,7 +348,10 @@ function Catalog({ t, data }: { t: T; data: Data }) {
 
 function RecentIncidents({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("triage.recent")} action={<ViewAll label={t("triage.viewAll")} />}>
+    <Panel
+      title={t("triage.recent")}
+      action={<ViewAll label={t("triage.viewAll")} href="/a-traiter" />}
+    >
       <ul className="flex flex-col gap-1.5">
         {data.recent_incidents.map((inc) => (
           <li key={inc.id} className="flex items-center gap-2 text-[0.72rem]">
@@ -343,7 +374,11 @@ function RecentIncidents({ t, data }: { t: T; data: Data }) {
 
 function SlaEscalations({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("triage.sla")} action={<ViewAll label={t("triage.viewAll")} />}>
+    <Panel
+      title={t("triage.sla")}
+      info={<KpiInfo k="sla" title={t("triage.sla")} />}
+      action={<ViewAll label={t("triage.viewAll")} href="/a-traiter" />}
+    >
       <ul className="flex flex-col gap-1.5">
         {data.sla_escalations.map((e) => (
           <li key={e.id} className="flex items-center gap-2 text-[0.72rem]">
@@ -684,11 +719,13 @@ function Zone({ label, children }: { label: string; children: ReactNode }) {
 
 function Panel({
   title,
+  info,
   action,
   children,
   className,
 }: {
   title: string;
+  info?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -701,8 +738,9 @@ function Panel({
       )}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="min-w-0 truncate text-[0.8rem] font-semibold text-[var(--tessera-text)]">
-          {title}
+        <h3 className="flex min-w-0 items-center gap-1 text-[0.8rem] font-semibold text-[var(--tessera-text)]">
+          <span className="min-w-0 truncate">{title}</span>
+          {info}
         </h3>
         {action}
       </div>
@@ -715,17 +753,22 @@ function KpiTile({
   kpi,
   label,
   vs,
+  info,
 }: {
   kpi: Data["kpis"][number];
   label: string;
   vs: string;
+  info?: ReactNode;
 }) {
   const up = kpi.delta_label.trim().startsWith("+");
   const good = up === kpi.good_is_up;
   const magnitude = kpi.delta_label.replace(/^[+−-]\s*/, "");
   return (
     <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">{label}</p>
+      <div className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </div>
       <div className="mt-1 flex items-center gap-2">
         <span className="whitespace-nowrap text-[1.5rem] font-semibold leading-none text-white">
           {kpi.value}
@@ -868,12 +911,18 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function ViewAll({ label }: { label: string }) {
+function ViewAll({ label, href }: { label: string; href?: Route }) {
+  const cls =
+    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+  if (href) {
+    return (
+      <Link href={href} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </Link>
+    );
+  }
   return (
-    <button
-      type="button"
-      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
-    >
+    <button type="button" className={cls}>
       {label} <ChevronRight className="h-3 w-3" />
     </button>
   );

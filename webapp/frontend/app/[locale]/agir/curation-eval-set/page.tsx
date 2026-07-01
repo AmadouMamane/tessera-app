@@ -20,14 +20,17 @@ export async function generateMetadata({ params }: CurationPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchCuration(queryClient: QueryClient) {
+async function prefetchCuration(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["curation-overview"],
+    queryKey: ["curation-overview", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/curation`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/curation?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend curation returned ${response.status}`);
       return CurationOverviewSchema.parse(await response.json());
     },
@@ -38,11 +41,11 @@ export default async function CurationPage({ params, searchParams }: CurationPag
   const { locale } = await params;
   setRequestLocale(locale);
   const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet();
+  const fleet = await loadFleet(locale);
   const t = await getTranslations({ locale, namespace: "curation" });
   const queryClient = new QueryClient();
   try {
-    await prefetchCuration(queryClient);
+    await prefetchCuration(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }
@@ -50,7 +53,7 @@ export default async function CurationPage({ params, searchParams }: CurationPag
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} />
+        <GovScopeSection fleet={fleet} scope={scope} locale={locale} perAgent={false} />
       </div>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <CurationOverview />

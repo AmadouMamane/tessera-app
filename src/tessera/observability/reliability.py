@@ -47,6 +47,14 @@ __all__ = [
     "compute_reliability",
 ]
 
+_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+
+def _loc(lang: str, fr: str, de: str, en: str) -> str:
+    """Pick the locale variant of an inline string (fr / de / en)."""
+    return (fr, de, en)[_LANG_IDX.get(lang, 0)]
+
+
 # Estimated local decoding throughput (tokens/second) used to turn the measured
 # token distribution into a latency estimate. A mid-range figure for the small
 # sovereign models on Apple-silicon Ollama; the dashboard labels latency as an
@@ -334,32 +342,104 @@ def _actions(
     funnel: funnel_mod.FunnelReport,
     cost: cost_anomaly_mod.CostReport,
     tool: tool_validity_mod.ToolValidityReport,
+    lang: str = "fr",
 ) -> list[ActionRow]:
     """Rank optimisation actions from the worst live signals (top 5)."""
+    i_qual = _loc(lang, "+qualité", "+Qualitaet", "+quality")
+    i_cost = _loc(lang, "-coût", "-Kosten", "-cost")
+    c_med = _loc(lang, "moyenne", "mittel", "medium")
+    c_high = _loc(lang, "élevée", "hoch", "high")
+    c_low = _loc(lang, "faible", "niedrig", "low")
     cands: list[tuple[float, str, str, str]] = []
-    worst = max(funnel.languages, key=lambda lang: lang.low_score_rate, default=None)
+    worst = max(funnel.languages, key=lambda lang_row: lang_row.low_score_rate, default=None)
     if worst is not None and worst.low_score_rate > 0:
+        svc = worst.language.upper()
         cands.append(
             (
                 worst.low_score_rate,
-                f"Améliorer la qualité du service {worst.language.upper()}",
-                "+qualité",
-                "moyenne",
+                _loc(
+                    lang,
+                    f"Améliorer la qualité du service {svc}",
+                    f"Servicequalitaet {svc} verbessern",
+                    f"Improve {svc} service quality",
+                ),
+                i_qual,
+                c_med,
             )
         )
     if tool.errored > 0:
-        cands.append((0.8, "Corriger les erreurs d'appels outil", "-erreurs", "élevée"))
+        cands.append(
+            (
+                0.8,
+                _loc(
+                    lang,
+                    "Corriger les erreurs d'appels outil",
+                    "Tool-Aufruf-Fehler beheben",
+                    "Fix tool-call errors",
+                ),
+                _loc(lang, "-erreurs", "-Fehler", "-errors"),
+                c_high,
+            )
+        )
     lowpass = [m for m in models if m.pass_rate is not None and m.pass_rate < _LOW_PASS_RATE]
     if lowpass:
         m = min(lowpass, key=lambda m: m.pass_rate or 0.0)
-        cands.append((0.6, f"Réviser le modèle {m.model} (qualité)", "+qualité", "moyenne"))
+        cands.append(
+            (
+                0.6,
+                _loc(
+                    lang,
+                    f"Réviser le modèle {m.model} (qualité)",
+                    f"Modell {m.model} ueberpruefen (Qualitaet)",
+                    f"Review model {m.model} (quality)",
+                ),
+                i_qual,
+                c_med,
+            )
+        )
     if cost.n_anomalies > 0:
-        cands.append((0.5, "Investiguer les pics de tokens", "-coût", "faible"))
+        cands.append(
+            (
+                0.5,
+                _loc(
+                    lang,
+                    "Investiguer les pics de tokens",
+                    "Token-Spitzen untersuchen",
+                    "Investigate token spikes",
+                ),
+                i_cost,
+                c_low,
+            )
+        )
     if tool.denied > 0:
-        cands.append((0.4, "Réviser les permissions d'outils", "-refus", "faible"))
+        cands.append(
+            (
+                0.4,
+                _loc(
+                    lang,
+                    "Réviser les permissions d'outils",
+                    "Tool-Berechtigungen ueberpruefen",
+                    "Review tool permissions",
+                ),
+                _loc(lang, "-refus", "-Ablehnungen", "-denials"),
+                c_low,
+            )
+        )
     if models:
         top = max(models, key=lambda m: m.cost_eur)
-        cands.append((0.3, f"Optimiser le coût de {top.model}", "-coût", "faible"))
+        cands.append(
+            (
+                0.3,
+                _loc(
+                    lang,
+                    f"Optimiser le coût de {top.model}",
+                    f"Kosten von {top.model} optimieren",
+                    f"Optimize cost of {top.model}",
+                ),
+                i_cost,
+                c_low,
+            )
+        )
     cands.sort(key=lambda c: -c[0])
     return [
         ActionRow(priority=i + 1, action=action, impact=impact, complexity=cx)
@@ -455,7 +535,10 @@ def _abs_delta(cur: float, prev: float | None) -> float | None:
 
 
 def _incidents(
-    cost: cost_anomaly_mod.CostReport, tool: tool_validity_mod.ToolValidityReport, day: str
+    cost: cost_anomaly_mod.CostReport,
+    tool: tool_validity_mod.ToolValidityReport,
+    day: str,
+    lang: str = "fr",
 ) -> list[Incident]:
     """Recent incidents from the real anomalies / tool errors in the window."""
     incidents: list[Incident] = [
@@ -465,25 +548,42 @@ def _incidents(
             severity="medium",
             detail=f"{a.tokens} tokens",
             date=day,
-            service="Coût",
+            service=_loc(lang, "Coût", "Kosten", "Cost"),
         )
         for a in cost.anomalies[:4]
     ]
     if tool.errored > 0:
         incidents.append(
-            Incident("Erreur d'appel outil", "tool_error", "high", f"{tool.errored}", day, "Outils")
+            Incident(
+                _loc(lang, "Erreur d'appel outil", "Tool-Aufruf-Fehler", "Tool-call error"),
+                "tool_error",
+                "high",
+                f"{tool.errored}",
+                day,
+                _loc(lang, "Outils", "Tools", "Tools"),
+            )
         )
     if tool.denied > 0:
         incidents.append(
             Incident(
-                "Outil refusé par la garde", "tool_denied", "low", f"{tool.denied}", day, "Garde"
+                _loc(
+                    lang,
+                    "Outil refusé par la garde",
+                    "Vom Guard abgelehntes Tool",
+                    "Tool denied by guard",
+                ),
+                "tool_denied",
+                "low",
+                f"{tool.denied}",
+                day,
+                _loc(lang, "Garde", "Guard", "Guard"),
             )
         )
     return incidents
 
 
 def compute_reliability(
-    *, days: int = _DEFAULT_DAYS, anchor: str | None = None
+    *, days: int = _DEFAULT_DAYS, anchor: str | None = None, lang: str = "fr"
 ) -> ReliabilityReport:
     """Assemble the reliability & cost posture over the window ``[anchor-days, anchor]``.
 
@@ -510,12 +610,12 @@ def compute_reliability(
     scores = [s for s in scores_asof if _in_window(s.get("scored_at"), start, end)]
     funnel_turns: list[tuple[str, str | None, float]] = []
     for s in scores:
-        lang = s.get("language")
-        if not lang:
+        lang_code = s.get("language")
+        if not lang_code:
             continue
         conv = s.get("conversation_id")
         funnel_turns.append(
-            (str(lang), str(conv) if conv is not None else None, float(s.get("score", 0.0)))  # type: ignore[arg-type]
+            (str(lang_code), str(conv) if conv is not None else None, float(s.get("score", 0.0)))  # type: ignore[arg-type]
         )
     funnel = funnel_mod.aggregate_funnel(funnel_turns)
 
@@ -586,7 +686,7 @@ def compute_reliability(
         for lang in funnel.languages
     ]
 
-    incidents = _incidents(cost, tool, end.date().isoformat())
+    incidents = _incidents(cost, tool, end.date().isoformat(), lang)
 
     # Budget projection: linear from spend so far over the window.
     spent = total_cost_eur
@@ -604,7 +704,7 @@ def compute_reliability(
         days=days,
     )
     services_cost = _services_cost(funnel, cost_per_request=cost_per_request)
-    actions = _actions(models, funnel, cost, tool)
+    actions = _actions(models, funnel, cost, tool, lang)
 
     # Period-over-period deltas vs the immediately preceding equal window.
     prev = _headline(start - (end - start), start)

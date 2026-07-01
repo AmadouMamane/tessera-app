@@ -12,9 +12,10 @@ import {
   ShieldCheck,
   UploadCloud,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
   TemporalRail,
@@ -22,6 +23,7 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchProofsOverview } from "@/lib/api/client";
 import type { ProofsOverview as ProofsData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -42,13 +44,27 @@ const TABS = ["overview", "evidencePacks", "exporters", "chain", "destinations"]
 type T = ReturnType<typeof useTranslations<"proofs">>;
 type Data = ProofsData;
 
+/** A ⓘ for a proofs metric/zone, reading proofs.explain.<k>.{what,how,source?}. */
+function ExplainInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("proofs.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 export function ProofsOverview() {
   const t = useTranslations("proofs");
+  const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const { data } = useQuery({
-    queryKey: ["proofs-overview"],
-    queryFn: ({ signal }) => fetchProofsOverview(signal),
+    queryKey: ["proofs-overview", locale],
+    queryFn: ({ signal }) => fetchProofsOverview(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -72,6 +88,8 @@ export function ProofsOverview() {
         onSelectedAtChange={temporal.setSelectedAt}
         periodKey={temporal.periodKey}
         onPeriodChange={temporal.setPeriodKey}
+        windowEnd={temporal.windowEnd}
+        onPickDate={temporal.pickDate}
         onModeChange={temporal.changeMode}
       />
 
@@ -79,7 +97,13 @@ export function ProofsOverview() {
         <div className="grid gap-3 xl:grid-cols-12">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:col-span-10 xl:grid-cols-6">
             {data.kpis.map((kpi) => (
-              <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vs7d")} />
+              <KpiTile
+                key={kpi.key}
+                kpi={kpi}
+                label={t(`kpi.${kpi.key}`)}
+                vs={t("delta.vs7d")}
+                info={<ExplainInfo k={`kpi.${kpi.key}`} title={t(`kpi.${kpi.key}`)} />}
+              />
             ))}
           </div>
           <AlertsPanel t={t} data={data} className="xl:col-span-2" />
@@ -88,7 +112,10 @@ export function ProofsOverview() {
 
       <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-w-0 flex-col gap-3">
-          <Zone label={t("zone.pipeline")}>
+          <Zone
+            label={t("zone.pipeline")}
+            info={<ExplainInfo k="zone.pipeline" title={t("zone.pipeline")} />}
+          >
             <div className="grid gap-3 xl:grid-cols-12">
               <Pipeline t={t} data={data} className="xl:col-span-7" />
               <CurrentPack t={t} data={data} className="xl:col-span-5" />
@@ -110,12 +137,36 @@ export function ProofsOverview() {
             </div>
           </Zone>
 
-          <Zone label={t("zone.exporters")}>
+          <Zone
+            label={t("zone.exporters")}
+            info={<ExplainInfo k="zone.exporters" title={t("zone.exporters")} />}
+            action={
+              <Link
+                href="/configurer/integrations"
+                className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+              >
+                {t("viewAll.exporters")}
+                <ChevronRight className="h-3 w-3" />
+              </Link>
+            }
+          >
             <Exporters t={t} data={data} />
           </Zone>
 
           <div className="grid gap-3 xl:grid-cols-2">
-            <Zone label={t("zone.crypto")}>
+            <Zone
+              label={t("zone.crypto")}
+              info={<ExplainInfo k="zone.crypto" title={t("zone.crypto")} />}
+              action={
+                <Link
+                  href="/prouver/audit-logs"
+                  className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+                >
+                  {t("drill.chain")}
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              }
+            >
               <Crypto t={t} data={data} />
             </Zone>
             <Zone label={t("zone.controlCases")}>
@@ -123,7 +174,10 @@ export function ProofsOverview() {
             </Zone>
           </div>
 
-          <Zone label={t("zone.retention")}>
+          <Zone
+            label={t("zone.retention")}
+            info={<ExplainInfo k="zone.retention" title={t("zone.retention")} />}
+          >
             <Retention t={t} data={data} />
           </Zone>
         </div>
@@ -571,12 +625,26 @@ function Footer({ t, data }: { t: T; data: Data }) {
 
 // ── atoms ────────────────────────────────────────────────────────────────────
 
-function Zone({ label, children }: { label: string; children: ReactNode }) {
+function Zone({
+  label,
+  info,
+  action,
+  children,
+}: {
+  label: string;
+  info?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5">
-      <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
-        {label}
-      </h2>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+          {label}
+          {info}
+        </h2>
+        {action}
+      </div>
       {children}
     </section>
   );
@@ -584,11 +652,13 @@ function Zone({ label, children }: { label: string; children: ReactNode }) {
 
 function Panel({
   title,
+  info,
   action,
   children,
   className,
 }: {
   title: string;
+  info?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -602,8 +672,9 @@ function Panel({
     >
       {title || action ? (
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="min-w-0 truncate text-[0.8rem] font-semibold text-[var(--tessera-text)]">
-            {title}
+          <h3 className="flex min-w-0 items-center gap-1 text-[0.8rem] font-semibold text-[var(--tessera-text)]">
+            <span className="min-w-0 truncate">{title}</span>
+            {info}
           </h3>
           {action}
         </div>
@@ -613,14 +684,22 @@ function Panel({
   );
 }
 
-function KpiTile({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: string; vs: string }) {
+function KpiTile({
+  kpi,
+  label,
+  vs,
+  info,
+}: { kpi: Data["kpis"][number]; label: string; vs: string; info?: ReactNode }) {
   const up = kpi.delta_label.trim().startsWith("+");
   const neutral = !/[+-]/.test(kpi.delta_label.trim().charAt(0));
   const good = up === kpi.good_is_up;
   const magnitude = kpi.delta_label.replace(/^[+-]\s*/, "");
   return (
     <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">{label}</p>
+      <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </p>
       <div className="mt-1 flex items-center gap-2">
         <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-white">
           {kpi.value}

@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  ArrowUpRight,
   type LucideIcon,
   Radio,
   ShieldAlert,
@@ -12,13 +13,17 @@ import {
   Trash2,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "@/i18n/navigation";
+import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import {
   fetchAnomalies,
   fetchConformance,
@@ -106,6 +111,9 @@ function Kpi({
   series,
   delta,
   deltaUpIsGood,
+  infoKey,
+  href,
+  drillLabel,
 }: {
   icon: LucideIcon;
   label: string;
@@ -115,16 +123,47 @@ function Kpi({
   series?: number[];
   delta?: number | null;
   deltaUpIsGood?: boolean;
+  /** Key under security.explain — renders a ⓘ "what is this / how computed". */
+  infoKey?: string;
+  /** Whole-tile drill-down to the real source (overlay ↗). */
+  href?: string;
+  drillLabel?: string;
 }) {
   const ts = useTranslations("security");
+  const te = useTranslations("security.explain");
   const showDelta = delta != null && Math.abs(delta) >= 0.005;
   const up = (delta ?? 0) > 0;
   const deltaGood = up === (deltaUpIsGood ?? true);
   return (
-    <Card className="flex flex-col gap-1 p-3">
-      <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+    <Card
+      className={`group relative flex flex-col gap-1 p-3 ${
+        href ? "transition-colors hover:border-blue-400/40" : ""
+      }`}
+    >
+      {href ? (
+        <Link
+          href={href}
+          aria-label={drillLabel}
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40"
+        />
+      ) : null}
+      <div
+        className={`flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] ${
+          href ? "pointer-events-none relative z-20" : ""
+        }`}
+      >
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
+        {infoKey ? (
+          <span className={href ? "pointer-events-auto ml-auto" : "ml-auto"}>
+            <MetricInfo
+              title={label}
+              what={te(`${infoKey}.what`)}
+              how={te(`${infoKey}.how`)}
+              source={te.has(`${infoKey}.source`) ? te(`${infoKey}.source`) : undefined}
+            />
+          </span>
+        ) : null}
       </div>
       <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
         {value}
@@ -142,6 +181,9 @@ function Kpi({
       {series && series.length > 1 ? <Spark values={series} /> : null}
       {hint ? (
         <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{hint}</div>
+      ) : null}
+      {href ? (
+        <ArrowUpRight className="pointer-events-none absolute right-2 bottom-2 z-20 h-3 w-3 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-70" />
       ) : null}
     </Card>
   );
@@ -217,7 +259,7 @@ function RiskBar({ label, value, sub }: { label: string; value: number; sub?: st
   return (
     <div className="flex items-center gap-2 text-[0.72rem]">
       <span className="w-24 shrink-0 truncate">{label}</span>
-      <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--tessera-muted)]/50">
+      <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
         <div
           className="h-full rounded-sm"
           style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%`, background: tone }}
@@ -386,12 +428,16 @@ function ActionCard({
 
 const POLL = 30_000;
 
-export function SecurityDashboard() {
+export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const ts = useTranslations("security");
   const locale = useLocale();
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
+  // Global agent scope (?agent=) — the score-/bundle-/audit-backed safety signals
+  // read this agent's own turns; shared-policy probes (firewall, refusal) stay org.
+  const searchParams = useSearchParams();
+  const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
 
   const firewall = useQuery({
     queryKey: ["firewall-efficacy"],
@@ -399,8 +445,8 @@ export function SecurityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
   const pii = useQuery({
-    queryKey: ["pii-leak", asOf],
-    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined),
+    queryKey: ["pii-leak", asOf, scope],
+    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
@@ -415,8 +461,8 @@ export function SecurityDashboard() {
     staleTime: Number.POSITIVE_INFINITY,
   });
   const toxicity = useQuery({
-    queryKey: ["toxicity", asOf],
-    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined),
+    queryKey: ["toxicity", asOf, scope],
+    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
@@ -441,14 +487,14 @@ export function SecurityDashboard() {
     refetchInterval: POLL,
   });
   const anomalies = useQuery({
-    queryKey: ["anomalies", asOf],
-    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined),
+    queryKey: ["anomalies", asOf, scope],
+    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
   const conformance = useQuery({
-    queryKey: ["conformance", asOf],
-    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined),
+    queryKey: ["conformance", asOf, scope],
+    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
@@ -459,20 +505,20 @@ export function SecurityDashboard() {
     refetchInterval: historyMode ? false : POLL,
   });
   const faith = useQuery({
-    queryKey: ["score-series", "faithfulness", asOf],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness"),
+    queryKey: ["score-series", "faithfulness", asOf, scope],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
   const grounding = useQuery({
-    queryKey: ["score-series", "grounding", asOf],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding"),
+    queryKey: ["score-series", "grounding", asOf, scope],
+    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
   const whatChanged = useQuery({
-    queryKey: ["what-changed", asOf],
-    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined),
+    queryKey: ["what-changed", asOf, scope],
+    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
@@ -601,6 +647,13 @@ export function SecurityDashboard() {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* The temporal rail LEADS — directly beneath the SLO breach alert the page renders
+          above the dashboard (user feedback) — then the chrome, then the agent scope. */}
+      <SignalCommandBar
+        temporal={temporal}
+        timeline={railTimeline.data}
+        liveStatus={ts("status.realtime")}
+      />
       {/* chrome */}
       <div className="flex items-center justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
         <div className="flex items-center gap-3 text-[0.7rem] text-[var(--muted-foreground)]">
@@ -622,12 +675,9 @@ export function SecurityDashboard() {
         </div>
       </div>
 
-      {/* Shared temporal rail (Live / Replay as-of-T) */}
-      <SignalCommandBar
-        temporal={temporal}
-        timeline={railTimeline.data}
-        liveStatus={ts("status.realtime")}
-      />
+      {/* Agent-scope context (Vue par agent) sits BELOW the rail, so the rail stays
+          directly under the SLO alert. */}
+      {agentScope ? <div className="-mt-0.5">{agentScope}</div> : null}
 
       <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-2">
@@ -637,6 +687,7 @@ export function SecurityDashboard() {
               <Kpi
                 icon={ShieldAlert}
                 label={ts("kpi.attackRate")}
+                infoKey="attackRate"
                 value={pct(attackRate)}
                 tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
                 series={fwSpark}
@@ -646,6 +697,7 @@ export function SecurityDashboard() {
               <Kpi
                 icon={ShieldCheck}
                 label={ts("kpi.blocked")}
+                infoKey="blocked"
                 value={blocked}
                 tone={GOOD}
                 series={fwSpark.map((v) => 1 - v)}
@@ -655,26 +707,34 @@ export function SecurityDashboard() {
               <Kpi
                 icon={ShieldCheck}
                 label={ts("kpi.piiLeak")}
+                infoKey="piiLeak"
                 value={pct(piiRate)}
                 tone={piiRate ? BAD : GOOD}
               />
               <Kpi
                 icon={ShieldCheck}
                 label={ts("kpi.leastPriv")}
+                infoKey="leastPriv"
                 value={`${lp.data?.n_used ?? 0}/${lp.data?.n_granted ?? 0}`}
                 tone={MUTED}
                 hint={ts("kpi.leastPrivHint")}
+                href="/admin/roles-acces"
+                drillLabel={ts("kpi.leastPriv")}
               />
               <Kpi
                 icon={ShieldAlert}
                 label={ts("kpi.sensitiveMemory")}
+                infoKey="sensitiveMemory"
                 value={`${inventory.data?.n_expiring_soon ?? 0}`}
                 tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
                 hint={ts("kpi.sensitiveMemoryHint")}
+                href="/configurer/sources-memoire"
+                drillLabel={ts("kpi.sensitiveMemory")}
               />
               <Kpi
                 icon={ShieldCheck}
                 label={ts("kpi.guard")}
+                infoKey="guard"
                 value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
                 tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
                 hint={`${ts("kpi.recall")} ${fw?.recall?.toFixed(2) ?? "—"}`}
@@ -852,7 +912,7 @@ export function SecurityDashboard() {
                       {fw?.false_negative ?? 0} {ts("panel.bypasses")}
                     </span>
                   </div>
-                  <div className="flex h-2 w-full overflow-hidden rounded-full">
+                  <div className="flex h-[4px] w-full overflow-hidden rounded-full">
                     <div
                       style={{ flexBasis: `${(blockRate ?? 0) * 100}%`, background: "#10b981" }}
                     />

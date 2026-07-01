@@ -82,8 +82,12 @@ def _health(escalation_rate: float) -> str:
     return "crit"
 
 
-async def compute_fleet() -> dict[str, object]:
-    """Return the fleet payload: per-agent observable KPIs + deduplicated org totals."""
+async def compute_fleet(lang: str = "fr") -> dict[str, object]:
+    """Return the fleet payload: per-agent observable KPIs + deduplicated org totals.
+
+    ``lang`` localizes the per-agent release ``verdict_label``; all other fields
+    are language-independent.
+    """
     async with _connection() as conn:
         conn.row_factory = dict_row
         async with conn.cursor() as cur:
@@ -111,7 +115,7 @@ async def compute_fleet() -> dict[str, object]:
             )
 
     incoming, outgoing = _handoff_counts(get_settings().guard.audit_file)
-    releases = fleet_release_states()
+    releases = fleet_release_states(lang)
 
     # Registry first (every agent appears), enriched with its real slice.
     agents: list[dict[str, Any]] = []

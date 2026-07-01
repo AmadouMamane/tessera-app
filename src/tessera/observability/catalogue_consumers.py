@@ -50,7 +50,9 @@ def _items_for(agent: object, kind: str) -> list[str]:
     return []
 
 
-def catalogue_consumers(kind: str, *, agent_scope: str = "all") -> dict[str, object]:
+def catalogue_consumers(
+    kind: str, *, agent_scope: str = "all", lang: str = "fr"
+) -> dict[str, object]:
     """Return, for one catalogue ``kind``, each item and its consumer agents.
 
     Args:
@@ -58,6 +60,7 @@ def catalogue_consumers(kind: str, *, agent_scope: str = "all") -> dict[str, obj
         agent_scope: when set to a concrete agent id, only items consumed by that
             agent are returned (the global filter ?agent=); ``"all"`` returns every
             item used across the fleet.
+        lang: UI language (fr / de / en) for each consumer's release verdict label.
 
     Returns:
         ``{"kind", "route", "items": [{item, consumers: [{agent_id, name, verdict…}]}]}``.
@@ -77,7 +80,7 @@ def catalogue_consumers(kind: str, *, agent_scope: str = "all") -> dict[str, obj
 
     def verdict_of(agent_id: str) -> dict[str, object]:
         if agent_id not in verdicts:
-            verdicts[agent_id] = agent_release_state(agent_id).as_dict()
+            verdicts[agent_id] = agent_release_state(agent_id, lang).as_dict()
         return verdicts[agent_id]
 
     items: list[dict[str, object]] = []

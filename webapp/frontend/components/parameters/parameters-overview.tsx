@@ -14,11 +14,14 @@ import {
   Sparkles,
   UploadCloud,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import type { Route } from "next";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchParametersOverview } from "@/lib/api/client";
 import type { ParametersOverview as ParametersData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -52,11 +55,26 @@ const TABS = [
 type T = ReturnType<typeof useTranslations<"parameters">>;
 type Data = ParametersData;
 
+/** ⓘ for a parameters KPI/section, reading parameters.explain.<k>.{what,how,source?}. */
+function ExplainInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("parameters.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 export function ParametersOverview() {
   const t = useTranslations("parameters");
+  const locale = useLocale();
   const { data } = useQuery({
-    queryKey: ["parameters-overview"],
-    queryFn: ({ signal }) => fetchParametersOverview(signal),
+    queryKey: ["parameters-overview", locale],
+    queryFn: ({ signal }) => fetchParametersOverview(locale, signal),
     staleTime: 60_000,
   });
 
@@ -75,7 +93,12 @@ export function ParametersOverview() {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {data.kpis.map((kpi) => (
-          <CompactKpi key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} />
+          <CompactKpi
+            key={kpi.key}
+            kpi={kpi}
+            label={t(`kpi.${kpi.key}`)}
+            info={<ExplainInfo k={kpi.key} title={t(`kpi.${kpi.key}`)} />}
+          />
         ))}
       </div>
 
@@ -171,11 +194,16 @@ function ConfigVersionBar({ t, data }: { t: T; data: Data }) {
   );
 }
 
-function CompactKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }) {
+function CompactKpi({
+  kpi,
+  label,
+  info,
+}: { kpi: Data["kpis"][number]; label: string; info?: ReactNode }) {
   return (
     <div className="flex h-[96px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.66rem] font-medium text-[var(--tessera-text-muted)]">
-        {label}
+      <p className="flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
       </p>
       <p className="mt-0.5 text-[1.4rem] font-semibold leading-none text-white">{kpi.value}</p>
       <p className="mt-0.5 truncate text-[0.58rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
@@ -223,7 +251,10 @@ function QuickConfig({ t, data }: { t: T; data: Data }) {
 function RecentParams({ t, data }: { t: T; data: Data }) {
   const cols = ["name", "category", "value", "modifiedBy", "date", "status"] as const;
   return (
-    <Panel title={t("recent.title")}>
+    <Panel
+      title={t("recent.title")}
+      action={<ViewAll label={t("drill.audit")} href="/prouver/audit-logs" />}
+    >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.72rem]">
           <thead>
@@ -286,7 +317,11 @@ function ConfigState({ t, data }: { t: T; data: Data }) {
   const C = 2 * Math.PI * R;
   let off = 0;
   return (
-    <Panel title={t("state.title")} action={<ViewAll label={t("state.viewDetail")} />}>
+    <Panel
+      title={t("state.title")}
+      info={<ExplainInfo k="configState" title={t("state.title")} />}
+      action={<ViewAll label={t("state.viewDetail")} />}
+    >
       <div className="flex items-center gap-3">
         <div className="relative h-[92px] w-[92px] shrink-0">
           <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90" aria-hidden="true">
@@ -342,7 +377,10 @@ function ConfigState({ t, data }: { t: T; data: Data }) {
 
 function Compliance({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("compliance.title")} action={<ViewAll label={t("compliance.viewAll")} />}>
+    <Panel
+      title={t("compliance.title")}
+      action={<ViewAll label={t("compliance.viewAll")} href="/surveiller/conformite" />}
+    >
       <ul className="flex flex-col gap-1.5">
         {data.compliance.map((c) => (
           <li key={c.key} className="flex items-center gap-2 text-[0.7rem]">
@@ -384,14 +422,16 @@ function Backup({ t, data }: { t: T; data: Data }) {
 
 function Panel({
   title,
+  info,
   action,
   children,
-}: { title: string; action?: ReactNode; children: ReactNode }) {
+}: { title: string; info?: ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="min-w-0 truncate text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
-          {title}
+        <h3 className="flex min-w-0 items-center gap-1 text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+          <span className="min-w-0 truncate">{title}</span>
+          {info}
         </h3>
         {action}
       </div>
@@ -434,12 +474,18 @@ function Sep() {
   return <span className="hidden text-[var(--tessera-border-strong)] sm:inline">·</span>;
 }
 
-function ViewAll({ label }: { label: string }) {
+function ViewAll({ label, href }: { label: string; href?: Route }) {
+  const cls =
+    "flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+  if (href) {
+    return (
+      <Link href={href} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </Link>
+    );
+  }
   return (
-    <button
-      type="button"
-      className="flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
-    >
+    <button type="button" className={cls}>
       {label} <ChevronRight className="h-3 w-3" />
     </button>
   );

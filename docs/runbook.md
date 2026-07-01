@@ -176,6 +176,36 @@ Two alert policies are configured:
 Both policies have empty `notification_channels` in Terraform — wire your
 channels (PagerDuty, email, Slack) before relying on them.
 
+### Local / on-prem observability stack (ADR 0010)
+
+The sovereign profile ships a self-hosted stack defined in
+`docker-compose.obs.claude.yml` (Compose project `tessera-claude`). The agent
+feeds it only when `TESSERA_OBSERVABILITY__OTEL_ENDPOINT` points at the
+collector (`http://localhost:4418`).
+
+- `make obs-up` — full stack; `make obs-up-core` — collector + Phoenix +
+  Prometheus + Grafana only (when Docker memory is tight; Langfuse v3 pulls in
+  ClickHouse + MinIO and is memory-hungry).
+
+| Backend | URL | Role |
+| --- | --- | --- |
+| Phoenix | http://localhost:16006 | LLM traces (canonical): `POST /chat` → `invoke_agent` → `retrieve` / `execute_tool` + guard verdicts |
+| Langfuse | http://localhost:3900 | cost / tokens / latency / sessions (`admin` via `claude@tessera.local` / `claude-demo-pw`) |
+| Prometheus | http://localhost:19090 | ops metrics — scrapes the agent `/metrics` (`host.docker.internal:9090`) + the collector telemetry (`:8888`) |
+| Grafana | http://localhost:13000 | SLO dashboard "Tessera — Agent Ops" (`admin` / `claude-demo-pw`); turns, p50/p95/p99 latency, guard verdicts, cost, eval scores |
+
+The collector fans out to Phoenix **and** Langfuse; if `langfuse-web` is down its
+exporter retries harmlessly (visible as `otelcol_exporter_send_failed_spans`).
+
+**Retrieval citation telemetry.** The "Taux de citation" / "Citation par source"
+figures on *Sources & mémoire* are derived from real `retrieve` spans:
+`hybrid_search.search()` records, per query, which source categories cleared the
+0.55 cosine threshold (`tessera.retrieval.categories`). Refresh the cache from
+production telemetry with `python -m scripts.phoenix_retrieval` (reads the
+Phoenix span API, writes `<guard.audit_file.parent>/knowledge_citations.json`).
+`scripts/probe_retrieval.py` remains the offline fallback (replays the
+failure-catalogue prompts) when no live traffic exists.
+
 ## Audit log
 
 - **Local:** JSON lines written to `/tmp/tessera/audit.log`

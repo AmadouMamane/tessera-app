@@ -49,6 +49,7 @@ export function MetricCard({
   value,
   delta,
   trend,
+  info,
   loading = false,
 }: {
   label: string;
@@ -57,11 +58,16 @@ export function MetricCard({
   delta?: ReactNode;
   /** The bottom row: a sparkline, a status hint, anything fixed at h-5. */
   trend?: ReactNode;
+  /** Optional <MetricInfo/> — a ⓘ explaining what the metric is / how computed. */
+  info?: ReactNode;
   loading?: boolean;
 }) {
   return (
     <section className="h-[108px] overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="text-xs font-medium text-[var(--tessera-text-muted)]">{label}</p>
+      <p className="flex items-center gap-1 font-medium text-[var(--tessera-text-muted)] text-xs">
+        {label}
+        {info}
+      </p>
       {loading ? (
         <div className="mt-1 flex h-8 items-baseline gap-2">
           <Skeleton className="h-7 w-16" />

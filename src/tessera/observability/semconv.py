@@ -39,14 +39,20 @@ __all__ = [
     "GEN_AI_TOOL_NAME",
     "GEN_AI_USAGE_INPUT_TOKENS",
     "GEN_AI_USAGE_OUTPUT_TOKENS",
+    "OPENINFERENCE_SPAN_KIND",
     "TESSERA_DATA_RESIDENCY",
     "TESSERA_GUARD_DECISION",
     "TESSERA_GUARD_RULE",
     "TESSERA_LANGUAGE",
     "TESSERA_PROFILE",
+    "TESSERA_RETRIEVAL_CATEGORIES",
+    "TESSERA_RETRIEVAL_CORPUS",
+    "TESSERA_RETRIEVAL_HIT_COUNT",
+    "TESSERA_RETRIEVAL_TOP_SCORE",
     "GenAIOperation",
     "add_content_event",
     "agent_span_name",
+    "retrieval_span_name",
     "set_gen_ai_request",
     "set_gen_ai_usage",
     "tool_span_name",
@@ -70,6 +76,17 @@ TESSERA_PROFILE: Final = "tessera.profile"
 TESSERA_DATA_RESIDENCY: Final = "tessera.data_residency"
 TESSERA_GUARD_DECISION: Final = "tessera.guard.decision"
 TESSERA_GUARD_RULE: Final = "tessera.guard.rule"
+# Retrieval spans (idea #4): which knowledge-source categories a real query
+# actually retrieved above the citation threshold, so the citation rate per
+# source can be read back from production telemetry rather than a synthetic probe.
+TESSERA_RETRIEVAL_CORPUS: Final = "tessera.retrieval.corpus"
+TESSERA_RETRIEVAL_CATEGORIES: Final = "tessera.retrieval.categories"
+TESSERA_RETRIEVAL_HIT_COUNT: Final = "tessera.retrieval.hit_count"
+TESSERA_RETRIEVAL_TOP_SCORE: Final = "tessera.retrieval.top_score"
+
+# OpenInference span-kind hint so Phoenix renders the retrieval span as a
+# retriever in its UI. Vendor-neutral backends simply ignore the extra attribute.
+OPENINFERENCE_SPAN_KIND: Final = "openinference.span.kind"
 
 
 class GenAIOperation:
@@ -99,6 +116,21 @@ def agent_span_name(agent_name: str) -> str:
         The conventional span name.
     """
     return f"{GenAIOperation.INVOKE_AGENT} {agent_name}"
+
+
+def retrieval_span_name(corpus: str) -> str:
+    """Return the span name for a retrieval query against a corpus.
+
+    Follows the GenAI ``"{operation} {target}"`` shape, e.g. ``"retrieve
+    regulations"``, so a generic OTel backend groups retrieval spans by corpus.
+
+    Args:
+        corpus: The corpus searched (e.g. ``"regulations"``, ``"credit_aurore"``).
+
+    Returns:
+        The conventional span name.
+    """
+    return f"retrieve {corpus}"
 
 
 def tool_span_name(tool_name: str) -> str:

@@ -78,17 +78,30 @@ def _warm_recent() -> None:
         _RECENT.append(row)
 
 
-def recent_scores() -> list[dict[str, object]]:
-    """Return the most recent eval scores (newest last)."""
+def _by_agent(rows: list[dict[str, object]], agent_id: str | None) -> list[dict[str, object]]:
+    """Keep only ``agent_id``'s scores when scoped; all rows otherwise.
+
+    A row whose ``agent_id`` is absent (pre-tagging history that could not be
+    attributed) is org-only: it never belongs to a single agent's slice, so an
+    agent-scoped read honestly excludes it rather than guessing.
+    """
+    if agent_id is None:
+        return rows
+    return [r for r in rows if r.get("agent_id") == agent_id]
+
+
+def recent_scores(agent_id: str | None = None) -> list[dict[str, object]]:
+    """Return the most recent eval scores (newest last), optionally one agent's."""
     _warm_recent()
-    return list(_RECENT)
+    return _by_agent(list(_RECENT), agent_id)
 
 
-def persisted_scores(at: str | None = None) -> list[dict[str, object]]:
-    """All durably-stored scores, optionally only those as of instant T.
+def persisted_scores(at: str | None = None, agent_id: str | None = None) -> list[dict[str, object]]:
+    """All durably-stored scores, optionally as of instant T and/or one agent.
 
     Returns rows oldest→newest; when ``at`` is set, only those with
-    ``scored_at <= at`` — the as-of-T read for the cockpit time rail (ADR 0011).
+    ``scored_at <= at`` — the as-of-T read for the cockpit time rail (ADR 0011);
+    when ``agent_id`` is set, only that agent's scores (ADR 0007 attribution).
     """
     cutoff: datetime | None = None
     if at:
@@ -118,8 +131,8 @@ def persisted_scores(at: str | None = None) -> list[dict[str, object]]:
                         pass
                 rows.append(obj)
     except OSError:
-        return rows
-    return rows
+        return _by_agent(rows, agent_id)
+    return _by_agent(rows, agent_id)
 
 
 def purge_conversation(conversation_id: str) -> int:
@@ -137,9 +150,7 @@ def purge_conversation(conversation_id: str) -> int:
         path = _scores_path()
         if path.exists():
             surviving = [
-                row
-                for row in persisted_scores()
-                if row.get("conversation_id") != conversation_id
+                row for row in persisted_scores() if row.get("conversation_id") != conversation_id
             ]
             with path.open("w", encoding="utf-8") as fp:
                 for row in surviving:
@@ -155,6 +166,7 @@ def emit_score(
     language: str,
     conversation_id: str | None = None,
     sampled: bool = False,
+    agent_id: str | None = None,
 ) -> None:
     """Emit one eval score to logs, metrics, and the active span.
 
@@ -163,6 +175,9 @@ def emit_score(
         language: The conversation language code (``fr``/``de``/``en``).
         conversation_id: The conversation the score belongs to, if known.
         sampled: Whether this turn was scored via sampling (vs always-on flagged).
+        agent_id: The agent that produced the turn, if known — attributes the
+            score so per-agent SLO / trend / funnel read the agent's own quality
+            (the ``agent_id`` Prometheus label has the matching dimension).
     """
     span = trace.get_current_span()
     span_context = span.get_span_context()
@@ -181,6 +196,8 @@ def emit_score(
     )
     EVAL_SCORE.labels(metric=verdict.metric, language=language).observe(verdict.score)
     span.set_attribute(f"tessera.eval.{verdict.metric}", verdict.score)
+    if agent_id:
+        span.set_attribute("tessera.agent_id", agent_id)
 
     row: dict[str, object] = {
         "scored_at": datetime.now(UTC).isoformat(),
@@ -191,6 +208,7 @@ def emit_score(
         "conversation_id": conversation_id,
         "trace_id": trace_id,
         "sampled": sampled,
+        "agent_id": agent_id,
     }
     _RECENT.append(row)
     _persist(row)  # durable event log for as-of-T reads (ADR 0011)

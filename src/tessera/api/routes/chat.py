@@ -88,10 +88,14 @@ async def _run_online_eval(
     language: LanguageCode,
     conversation_id: uuid.UUID,
     model: str,
+    agent_id: str,
     lineage: Lineage | None = None,
     latency_ms: dict[str, float] | None = None,
 ) -> None:
     """Score the turn off the hot path and capture it for replay (ADR 0010).
+
+    ``agent_id`` attributes the score and the replay bundle to the responding
+    agent, so per-agent SLO / trend / cost read the agent's own turns.
 
     Never raises into the turn.
     """
@@ -102,6 +106,7 @@ async def _run_online_eval(
             context=context,
             language=language.value,
             conversation_id=str(conversation_id),
+            agent_id=agent_id,
             flagged=True,  # the dashboard demo scores every grounded turn
         )
         # Capture the turn for regression-from-production replay (idea #1) with
@@ -115,6 +120,7 @@ async def _run_online_eval(
                 original_score=outcome.verdict.score,
                 original_model=model,
                 conversation_id=str(conversation_id),
+                agent_id=agent_id,
                 lineage=lineage,
                 latency_ms=latency_ms,
             )
@@ -839,6 +845,7 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
                 language=resolved_language,
                 conversation_id=conversation_id,
                 model=effective_model,
+                agent_id=agent_id,
                 lineage=build_lineage(
                     language=resolved_language.value,
                     model=effective_model,

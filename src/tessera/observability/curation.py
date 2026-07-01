@@ -15,7 +15,59 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+
 __all__ = ["compute_curation_overview"]
+
+# Localized free-text (fr, de, en). IDs/names/dates/enum keys stay verbatim.
+_TR: dict[str, tuple[str, str, str]] = {
+    "why1": (
+        "Faible couverture intent crédit immobilier",
+        "Geringe Abdeckung Intent Immobilienkredit",
+        "Low coverage of mortgage intent",
+    ),
+    "why2": (
+        "Faible couverture langue DE",
+        "Geringe Abdeckung Sprache DE",
+        "Low coverage of DE language",
+    ),
+    "why3": (
+        "Cluster de refus sous-segment",
+        "Ablehnungs-Cluster im Untersegment",
+        "Refusal cluster in sub-segment",
+    ),
+    "why4": (
+        "Cas limite compliance Art. 50",
+        "Compliance-Grenzfall Art. 50",
+        "Art. 50 compliance edge case",
+    ),
+    "wf_collect": ("Collecte", "Erfassung", "Collection"),
+    "wf_norm": ("Normalisation", "Normalisierung", "Normalization"),
+    "wf_dedup": ("Déduplication", "Deduplizierung", "Deduplication"),
+    "wf_pii": ("Masquage PII", "PII-Maskierung", "PII masking"),
+    "wf_label": ("Labellisation", "Labeling", "Labeling"),
+    "wf_dual": ("Validation dual-control", "Dual-Control-Validierung", "Dual-control validation"),
+    "wf_promo": ("Promotion dataset", "Dataset-Promotion", "Dataset promotion"),
+    "dt_today": ("aujourd'hui {t}", "heute {t}", "today {t}"),
+    "dt_yesterday": ("hier {t}", "gestern {t}", "yesterday {t}"),
+    "dt_mon": ("lun. {t}", "Mo. {t}", "Mon {t}"),
+    "act1": ("Promotion lot — CUR-018", "Lot-Promotion - CUR-018", "Lot promotion - CUR-018"),
+    "act2": (
+        "Revue assignée — CUR-042",
+        "Review zugewiesen - CUR-042",
+        "Review assigned - CUR-042",
+    ),
+    "act3": ("Masquage PII — lot", "PII-Maskierung - Lot", "PII masking - lot"),
+    "act4": ("Lot créé — CUR-042", "Lot erstellt - CUR-042", "Lot created - CUR-042"),
+    "act5": ("Replay de validation", "Validierungs-Replay", "Validation replay"),
+    "actor_system": ("Système", "System", "System"),
+    "rel_ready": ("Prêt à publier", "Bereit zur Veroeffentlichung", "Ready to publish"),
+    "sync_2min": ("il y a 2 min", "vor 2 Min", "2 min ago"),
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
 
 _DIST_COLOR = {
     "hallucination": "#60a5fa",
@@ -39,8 +91,11 @@ def _kpi(
     }
 
 
-def compute_curation_overview() -> dict[str, object]:
+def compute_curation_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Curation eval-set overview payload.
+
+    Args:
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
 
     Returns:
         A JSON-serialisable mapping with the backlog posture KPIs, the priority
@@ -49,6 +104,7 @@ def compute_curation_overview() -> dict[str, object]:
         datasets, the governance actions and the backlog / balance / pass-rate
         trends.
     """
+    lang = _norm_lang(lang)
     now = datetime.now(UTC)
 
     kpis = [
@@ -106,20 +162,20 @@ def compute_curation_overview() -> dict[str, object]:
     ]
 
     why_tours = [
-        {"reason": "Faible couverture intent crédit immobilier", "value": 92, "cost": "1 h 00"},
-        {"reason": "Faible couverture langue DE", "value": 78, "cost": "0 h 45"},
-        {"reason": "Cluster de refus sous-segment", "value": 73, "cost": "0 h 35"},
-        {"reason": "Cas limite compliance Art. 50", "value": 62, "cost": "0 h 50"},
+        {"reason": _t("why1", lang), "value": 92, "cost": "1 h 00"},
+        {"reason": _t("why2", lang), "value": 78, "cost": "0 h 45"},
+        {"reason": _t("why3", lang), "value": 73, "cost": "0 h 35"},
+        {"reason": _t("why4", lang), "value": 62, "cost": "0 h 50"},
     ]
 
     workflow = [
-        {"step": "Collecte", "qty": 148, "status": "termine"},
-        {"step": "Normalisation", "qty": 148, "status": "termine"},
-        {"step": "Déduplication", "qty": 126, "status": "encours"},
-        {"step": "Masquage PII", "qty": 98, "status": "encours"},
-        {"step": "Labellisation", "qty": 98, "status": "attente"},
-        {"step": "Validation dual-control", "qty": 36, "status": "attente"},
-        {"step": "Promotion dataset", "qty": 36, "status": "attente"},
+        {"step": _t("wf_collect", lang), "qty": 148, "status": "termine"},
+        {"step": _t("wf_norm", lang), "qty": 148, "status": "termine"},
+        {"step": _t("wf_dedup", lang), "qty": 126, "status": "encours"},
+        {"step": _t("wf_pii", lang), "qty": 98, "status": "encours"},
+        {"step": _t("wf_label", lang), "qty": 98, "status": "attente"},
+        {"step": _t("wf_dual", lang), "qty": 36, "status": "attente"},
+        {"step": _t("wf_promo", lang), "qty": 36, "status": "attente"},
     ]
 
     # Eval-set coverage heatmap: 7 segments x 5 dimensions, level in ok/warn/bad/none.
@@ -163,20 +219,25 @@ def compute_curation_overview() -> dict[str, object]:
             "name": "regression-fr-v4",
             "size": "12 842 tours",
             "status": "actif",
-            "updated": "aujourd'hui 11:42",
+            "updated": _t("dt_today", lang).format(t="11:42"),
         },
-        {"name": "safety-fr-v2", "size": "9 763 tours", "status": "actif", "updated": "hier 18:09"},
+        {
+            "name": "safety-fr-v2",
+            "size": "9 763 tours",
+            "status": "actif",
+            "updated": _t("dt_yesterday", lang).format(t="18:09"),
+        },
         {
             "name": "multilingual-edge-v1",
             "size": "8 125 tours",
             "status": "actif",
-            "updated": "hier 18:09",
+            "updated": _t("dt_yesterday", lang).format(t="18:09"),
         },
         {
             "name": "compliance-eu-v3",
             "size": "4 631 tours",
             "status": "actif",
-            "updated": "lun. 16:07",
+            "updated": _t("dt_mon", lang).format(t="16:07"),
         },
     ]
 
@@ -196,11 +257,11 @@ def compute_curation_overview() -> dict[str, object]:
     ]
 
     recent_activity = [
-        {"time": "11:48:24", "action": "Promotion lot — CUR-018", "actor": "A. Compliance"},
-        {"time": "11:42:18", "action": "Revue assignée — CUR-042", "actor": "M. Engineer"},
-        {"time": "11:31:05", "action": "Masquage PII — lot", "actor": "Système"},
-        {"time": "11:20:41", "action": "Lot créé — CUR-042", "actor": "S. Sysadmin"},
-        {"time": "11:05:37", "action": "Replay de validation", "actor": "D. DevRel"},
+        {"time": "11:48:24", "action": _t("act1", lang), "actor": "A. Compliance"},
+        {"time": "11:42:18", "action": _t("act2", lang), "actor": "M. Engineer"},
+        {"time": "11:31:05", "action": _t("act3", lang), "actor": _t("actor_system", lang)},
+        {"time": "11:20:41", "action": _t("act4", lang), "actor": "S. Sysadmin"},
+        {"time": "11:05:37", "action": _t("act5", lang), "actor": "D. DevRel"},
     ]
 
     backlog_trend = {
@@ -234,7 +295,7 @@ def compute_curation_overview() -> dict[str, object]:
         "priority_lots": priority_lots,
         "why_tours": why_tours,
         "workflow": workflow,
-        "release": {"id": "R-2024-11-07-1", "status": "Prêt à publier", "readiness": 87},
+        "release": {"id": "R-2024-11-07-1", "status": _t("rel_ready", lang), "readiness": 87},
         "cohort": "cohorte-2024-11-07",
         "coverage": coverage,
         "candidates_distribution": candidates_distribution,
@@ -250,6 +311,6 @@ def compute_curation_overview() -> dict[str, object]:
         "footer": {
             "release": "R-2024.11.07-1",
             "source": "YAML · Git",
-            "sync": "il y a 2 min",
+            "sync": _t("sync_2min", lang),
         },
     }

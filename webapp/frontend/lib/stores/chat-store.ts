@@ -6,9 +6,10 @@
  * can update messages without prop-drilling and without re-rendering the
  * composer on every token.
  *
- * The store is intentionally kept lean — no persistence yet; reloading the
- * page resets the conversation. Persistence will be added when a
- * conversations API lands on the backend.
+ * The store itself is intentionally kept lean and in-memory. Surfaces that need
+ * continuity add it on top via the durable transcript API: the recouvrement
+ * console lists "Récents" and the produit widget persists its own conversation
+ * id (localStorage) and resumes it through `loadConversation` after a reload.
  */
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";

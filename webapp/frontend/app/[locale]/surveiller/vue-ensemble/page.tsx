@@ -4,7 +4,7 @@ import { AgentBreakdown } from "@/components/agent/agent-breakdown";
 import { AppShell } from "@/components/layout/app-shell";
 import { OverviewDashboard } from "@/components/overview/overview-dashboard";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
-import { readAgentScope } from "@/lib/agent-scope";
+import { isScopedToAgent, readAgentScope } from "@/lib/agent-scope";
 import { loadFleet } from "@/lib/server/fleet";
 
 interface OverviewPageProps {
@@ -36,19 +36,27 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
       // rapport / Générer le dossier de preuves) ne sont plus dans le header : elles
       // sont rendues dans la page, juste au-dessus du rail (PageEvidenceActions).
     >
-      {/* The temporal command bar (SR-01) is the FIRST line of the page; the lead
-          content — breached signal + per-agent breakdown — follows it (rendered as
-          children, right under the bar). */}
-      <OverviewDashboard>
-        <div className="mb-3">
-          <SignalBreachHero />
-        </div>
+      {/* The SLO breach alert LEADS (passed as `lead`); the temporal command bar
+          (SR-01) sits directly beneath it; the per-agent breakdown follows below the
+          bar (children). */}
+      <OverviewDashboard
+        lead={
+          // mb must exceed the temporal chrome's upward `shadow-[0_-20px_…]` (20px)
+          // so the bg-coloured shadow never paints over the alert ribbon's rounded
+          // bottom — mb-6 (24px) keeps a 4px clearance.
+          <div className="mb-6">
+            <SignalBreachHero />
+          </div>
+        }
+      >
         <div className="mb-3">
           <AgentBreakdown fleet={fleet} scope={scope} locale={locale} />
         </div>
-        <p className="mb-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
-          {ts("orgSignalsNote")}
-        </p>
+        {isScopedToAgent(scope) ? (
+          <p className="mb-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
+            {ts("orgSignalsNote")}
+          </p>
+        ) : null}
       </OverviewDashboard>
     </AppShell>
   );

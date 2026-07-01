@@ -13,12 +13,32 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.operator_items import load_items
 
 if TYPE_CHECKING:
     from tessera.observability.operator_items import OperatorItem
 
 __all__ = ["compute_inbox_overview"]
+
+# Localized free-text (fr, de, en).
+_TR: dict[str, tuple[str, str, str]] = {
+    "rail_period": ("Run d'évaluation", "Bewertungslauf", "Evaluation run"),
+    "rail_sla": ("Temps réel", "Echtzeit", "Real time"),
+    "rail_compare": ("Cas en échec", "Fehlgeschlagene Faelle", "Failed cases"),
+    "footer_src": (
+        "Cas d'évaluation en échec - run réel",
+        "Fehlgeschlagene Bewertungsfaelle - realer Lauf",
+        "Failed evaluation cases - real run",
+    ),
+    "v_todo": ("a signalé", "hat gemeldet", "reported"),
+    "v_progress": ("traite", "bearbeitet", "handling"),
+    "v_done": ("a résolu", "hat geloest", "resolved"),
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
 
 _TYPE_COLOR = {
     "conversation": "#60a5fa",
@@ -77,12 +97,13 @@ def _kpi(
     }
 
 
-def compute_inbox_overview(now: datetime | None = None) -> dict[str, object]:
+def compute_inbox_overview(now: datetime | None = None, lang: str = "fr") -> dict[str, object]:
     """Return the full Inbox / A traiter overview payload from real items.
 
     ``now`` is the reference instant for all SLA/age computations; it defaults
     to the current time and is injectable so tests are deterministic.
     """
+    lang = _norm_lang(lang)
     now = now or datetime.now(UTC)
     items = load_items()
     open_items = [i for i in items if i.status != "done"]
@@ -115,10 +136,10 @@ def compute_inbox_overview(now: datetime | None = None) -> dict[str, object]:
     ]
 
     rail = {
-        "period": "Run d'evaluation",
-        "sla": "Temps reel",
+        "period": _t("rail_period", lang),
+        "sla": _t("rail_sla", lang),
         "updated": now.strftime("%d/%m/%Y %H:%M:%S"),
-        "compare": "Cas en echec",
+        "compare": _t("rail_compare", lang),
     }
 
     payload_items = [
@@ -154,7 +175,7 @@ def compute_inbox_overview(now: datetime | None = None) -> dict[str, object]:
     ]
 
     sla_buckets = _sla_buckets(open_items, now)
-    recent_activity = _recent_activity(items)
+    recent_activity = _recent_activity(items, lang)
 
     return {
         "generated_at": now.isoformat(),
@@ -166,7 +187,7 @@ def compute_inbox_overview(now: datetime | None = None) -> dict[str, object]:
         "by_type_total": len(items),
         "sla_buckets": sla_buckets,
         "recent_activity": recent_activity,
-        "footer": {"total": len(items), "source": "Cas d'evaluation en echec - run reel"},
+        "footer": {"total": len(items), "source": _t("footer_src", lang)},
     }
 
 
@@ -186,13 +207,15 @@ def _sla_buckets(open_items: list[OperatorItem], now: datetime) -> list[dict[str
     return [{"key": k, "count": counts[k], "color": colors[k]} for k in counts]
 
 
-def _recent_activity(items: list[OperatorItem]) -> list[dict[str, object]]:
+def _recent_activity(items: list[OperatorItem], lang: str) -> list[dict[str, object]]:
     recent = sorted(items, key=lambda i: i.created_at, reverse=True)[:5]
     out: list[dict[str, object]] = []
     for i in recent:
-        verb = {"todo": "a signale", "progress": "traite", "done": "a resolu"}.get(
-            i.status, "a signale"
-        )
+        verb = {
+            "todo": _t("v_todo", lang),
+            "progress": _t("v_progress", lang),
+            "done": _t("v_done", lang),
+        }.get(i.status, _t("v_todo", lang))
         out.append(
             {
                 "time": i.created_at.strftime("%H:%M"),

@@ -1,17 +1,32 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Activity, CircleDollarSign, Heart, Lock, ServerCog } from "lucide-react";
+import { Activity, ArrowUpRight, CircleDollarSign, Heart, Lock, ServerCog } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "@/i18n/navigation";
 import { fetchBudget, fetchHealth, fetchReadiness } from "@/lib/api/client";
 
 const POLL_MS = 10_000;
+
+/** A ⓘ for a health card, reading health.explain.<k>.{what,how,source?}. */
+function KpiInfo({ title, k }: { title: string; k: string }) {
+  const te = useTranslations("health.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
 
 export function HealthDashboard() {
   const t = useTranslations("health");
@@ -44,6 +59,7 @@ export function HealthDashboard() {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatusCard
         title={t("cards.backend")}
+        info={<KpiInfo title={t("cards.backend")} k="backend" />}
         icon={<ServerCog />}
         loading={health.isPending}
         error={health.error?.message}
@@ -52,6 +68,7 @@ export function HealthDashboard() {
       />
       <StatusCard
         title={t("cards.readiness")}
+        info={<KpiInfo title={t("cards.readiness")} k="readiness" />}
         icon={<Heart />}
         loading={readiness.isPending}
         error={readiness.error?.message}
@@ -59,6 +76,8 @@ export function HealthDashboard() {
       />
       <StatusCard
         title={t("cards.budget")}
+        info={<KpiInfo title={t("cards.budget")} k="budget" />}
+        href="/surveiller/fiabilite-cout"
         icon={<CircleDollarSign />}
         locked={!isAdmin}
         lockedLabel={tAuth("adminOnly")}
@@ -80,6 +99,8 @@ export function HealthDashboard() {
       />
       <StatusCard
         title={t("cards.version")}
+        info={<KpiInfo title={t("cards.version")} k="version" />}
+        href="/agir/release-control"
         icon={<Activity />}
         loading={health.isPending}
         error={health.error?.message}
@@ -103,6 +124,10 @@ interface StatusCardProps {
   custom?: ReactNode;
   locked?: boolean;
   lockedLabel?: string;
+  /** ⓘ explainer rendered next to the card title. */
+  info?: ReactNode;
+  /** Real source this card drills into — makes the whole card a link (↗). */
+  href?: string;
 }
 
 function StatusCard({
@@ -115,6 +140,8 @@ function StatusCard({
   custom,
   locked,
   lockedLabel,
+  info,
+  href,
 }: StatusCardProps) {
   const t = useTranslations("health");
   return (
@@ -122,15 +149,29 @@ function StatusCard({
       {/* premium top hairline + corner glow */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
       <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gold-500/[0.06] blur-2xl transition-all duration-500 group-hover:bg-gold-500/[0.12]" />
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="font-sans text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
-          {title}
+      {/* Whole-card drill-down: an overlay <Link> sibling so the ⓘ never navigates;
+          content is pointer-transparent except the ⓘ. */}
+      {href ? (
+        <Link
+          href={href}
+          aria-label={t("openSource", { label: title })}
+          className="absolute inset-0 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/40"
+        />
+      ) : null}
+      <CardHeader
+        className={`flex flex-row items-center justify-between space-y-0 pb-2 ${
+          href ? "pointer-events-none relative z-20" : ""
+        }`}
+      >
+        <CardTitle className="flex min-w-0 items-center gap-1 font-sans text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+          <span className="min-w-0 truncate">{title}</span>
+          {info ? <span className={href ? "pointer-events-auto" : undefined}>{info}</span> : null}
         </CardTitle>
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-navy-800 to-navy-950 text-gold-400 shadow-[inset_0_1px_1px_oklch(0.8_0.066_85/0.2)] ring-1 ring-gold-500/15 transition-transform duration-300 group-hover:scale-105 dark:from-gold-500/15 dark:to-gold-500/5 dark:ring-gold-400/20 [&_svg]:h-4 [&_svg]:w-4">
           {icon}
         </div>
       </CardHeader>
-      <CardContent className="pt-1">
+      <CardContent className={`pt-1 ${href ? "pointer-events-none relative z-20" : ""}`}>
         {locked ? (
           <span className="flex items-center gap-1.5 text-sm text-[var(--muted-foreground)]">
             <Lock className="h-3.5 w-3.5" />
@@ -151,6 +192,9 @@ function StatusCard({
           </div>
         )}
       </CardContent>
+      {href ? (
+        <ArrowUpRight className="pointer-events-none absolute right-2 bottom-2 z-20 h-3.5 w-3.5 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-70" />
+      ) : null}
     </Card>
   );
 }

@@ -32,7 +32,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ComponentType, ReactNode } from "react";
 
 import {
@@ -59,12 +59,13 @@ const GUARD_BADGE: Record<string, string> = {
 
 export function AssistantOverview({ view }: { view: AssistantView }) {
   const t = useTranslations("assistant");
+  const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const tab: Tab = view === "console" ? "console" : "chat";
   const { data } = useQuery({
-    queryKey: ["assistant-overview"],
-    queryFn: ({ signal }) => fetchAssistantOverview(signal),
+    queryKey: ["assistant-overview", locale],
+    queryFn: ({ signal }) => fetchAssistantOverview(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -95,6 +96,8 @@ export function AssistantOverview({ view }: { view: AssistantView }) {
           onSelectedAtChange={temporal.setSelectedAt}
           periodKey={temporal.periodKey}
           onPeriodChange={temporal.setPeriodKey}
+          windowEnd={temporal.windowEnd}
+          onPickDate={temporal.pickDate}
           onModeChange={temporal.changeMode}
         />
       ) : null}
@@ -671,7 +674,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
         <span className="text-[var(--tessera-text-muted)]">{label}</span>
         <span className="font-medium text-[var(--tessera-text)]">{value.toFixed(1)}/10</span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+      <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
         <div className="h-full rounded-full bg-emerald-400/80" style={{ width: `${pct}%` }} />
       </div>
     </div>

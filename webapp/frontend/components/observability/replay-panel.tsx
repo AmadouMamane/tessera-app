@@ -448,7 +448,7 @@ function LatencyWaterfall({ timings }: { timings: Record<string, number> }) {
         <span>{t("latency.title")}</span>
         <span className="tabular-nums">{Math.round(total)} ms</span>
       </div>
-      <div className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--muted)]">
+      <div className="flex h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
         {entries.map(([name, ms], i) => (
           <div
             key={name}
@@ -589,7 +589,7 @@ function RerankingView({ report }: { report: RerankContribution }) {
         </Badge>
         {report.top1_changed ? <Badge tone="warning">{t("reranking.top1Changed")}</Badge> : null}
       </div>
-      <div className="mt-2 flex h-2 w-full overflow-hidden rounded-full bg-[var(--muted)]">
+      <div className="mt-2 flex h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
         <div
           className="bg-blue-500"
           style={{ width: `${vectorPct}%` }}

@@ -14,9 +14,10 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
   TemporalRail,
@@ -24,6 +25,7 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchReplayShadowOverview } from "@/lib/api/client";
 import type { ReplayShadowOverview } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -55,13 +57,29 @@ const TABS = [
 type T = ReturnType<typeof useTranslations<"replay">>;
 type Data = ReplayShadowOverview;
 
+/** ⓘ for a replay metric/section, reading replay.explain.<k>.{what,how,source?}.
+ * Renders nothing when no explanation exists for the key (e.g. unmapped KPI). */
+function Info({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("replay.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te.has(`${k}.how`) ? te(`${k}.how`) : undefined}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 export function ReplayOverview() {
   const t = useTranslations("replay");
+  const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const { data } = useQuery({
-    queryKey: ["replay-shadow-overview"],
-    queryFn: ({ signal }) => fetchReplayShadowOverview(signal),
+    queryKey: ["replay-shadow-overview", locale],
+    queryFn: ({ signal }) => fetchReplayShadowOverview(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -89,25 +107,40 @@ export function ReplayOverview() {
         onSelectedAtChange={temporal.setSelectedAt}
         periodKey={temporal.periodKey}
         onPeriodChange={temporal.setPeriodKey}
+        windowEnd={temporal.windowEnd}
+        onPickDate={temporal.pickDate}
         onModeChange={temporal.changeMode}
       />
 
       <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_312px]">
         <div className="flex min-w-0 flex-col gap-3">
           {/* A · État actuel */}
-          <Zone label={t("zone.actual")}>
+          <Zone label={t("zone.actual")} info={<Info k="zone.actual" title={t("zone.actual")} />}>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
               {data.kpis.map((kpi) => (
-                <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vs7d")} />
+                <KpiTile
+                  key={kpi.key}
+                  kpi={kpi}
+                  label={t(`kpi.${kpi.key}`)}
+                  vs={t("delta.vs7d")}
+                  info={<Info k={`kpi.${kpi.key}`} title={t(`kpi.${kpi.key}`)} />}
+                />
               ))}
             </div>
           </Zone>
 
           {/* B · Diagnostic des écarts */}
-          <Zone label={t("zone.diagnostic")}>
+          <Zone
+            label={t("zone.diagnostic")}
+            info={<Info k="zone.diagnostic" title={t("zone.diagnostic")} />}
+          >
             <div className="grid gap-3 xl:grid-cols-12">
               <TrafficChart t={t} data={data} className="xl:col-span-4" />
-              <Panel title={t("panel.devByType")} className="xl:col-span-2">
+              <Panel
+                title={t("panel.devByType")}
+                info={<Info k="panel.devByType" title={t("panel.devByType")} />}
+                className="xl:col-span-2"
+              >
                 <Donut
                   slices={data.deviation_by_type}
                   total={data.deviation_total}
@@ -115,7 +148,11 @@ export function ReplayOverview() {
                   labelOf={(k) => t(`type.${k}`)}
                 />
               </Panel>
-              <Panel title={t("panel.severity")} className="xl:col-span-2">
+              <Panel
+                title={t("panel.severity")}
+                info={<Info k="panel.severity" title={t("panel.severity")} />}
+                className="xl:col-span-2"
+              >
                 <Donut
                   slices={data.deviation_severity}
                   total={data.deviation_total}
@@ -128,7 +165,10 @@ export function ReplayOverview() {
           </Zone>
 
           {/* C · Écarts & comparaisons */}
-          <Zone label={t("zone.comparisons")}>
+          <Zone
+            label={t("zone.comparisons")}
+            info={<Info k="zone.comparisons" title={t("zone.comparisons")} />}
+          >
             <div className="grid gap-3 xl:grid-cols-12">
               <TopDeviations t={t} data={data} className="xl:col-span-6" />
               <Comparisons t={t} data={data} className="xl:col-span-3" />
@@ -137,9 +177,16 @@ export function ReplayOverview() {
           </Zone>
 
           {/* D · Distribution & preuves */}
-          <Zone label={t("zone.distribution")}>
+          <Zone
+            label={t("zone.distribution")}
+            info={<Info k="zone.distribution" title={t("zone.distribution")} />}
+          >
             <div className="grid gap-3 xl:grid-cols-12">
-              <Panel title={t("panel.byService")} className="xl:col-span-3">
+              <Panel
+                title={t("panel.byService")}
+                info={<Info k="panel.byService" title={t("panel.byService")} />}
+                className="xl:col-span-3"
+              >
                 <Donut
                   slices={data.by_service}
                   total={data.requests_total}
@@ -148,7 +195,11 @@ export function ReplayOverview() {
                   showCount
                 />
               </Panel>
-              <Panel title={t("panel.byModel")} className="xl:col-span-3">
+              <Panel
+                title={t("panel.byModel")}
+                info={<Info k="panel.byModel" title={t("panel.byModel")} />}
+                className="xl:col-span-3"
+              >
                 <Donut
                   slices={data.by_model}
                   total={data.requests_total}
@@ -413,8 +464,17 @@ function Regressions({ t, data, className }: { t: T; data: Data; className?: str
   return (
     <Panel
       title={t("panel.regressions")}
+      info={<Info k="panel.regressions" title={t("panel.regressions")} />}
       className={className}
-      action={<ViewAll label={t("viewAll.regressions")} />}
+      action={
+        <Link
+          href="/surveiller/fiabilite-cout"
+          className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+        >
+          {t("viewAll.regressions")}
+          <ChevronRight className="h-3 w-3" />
+        </Link>
+      }
     >
       <ul className="flex flex-col gap-1.5">
         {data.top_regressions.map((r) => (
@@ -604,11 +664,12 @@ function Footer({ t, data }: { t: T; data: Data }) {
 
 // ── atoms ────────────────────────────────────────────────────────────────────
 
-function Zone({ label, children }: { label: string; children: ReactNode }) {
+function Zone({ label, info, children }: { label: string; info?: ReactNode; children: ReactNode }) {
   return (
     <section className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5">
-      <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      <h2 className="mb-2 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {label}
+        {info}
       </h2>
       {children}
     </section>
@@ -617,11 +678,13 @@ function Zone({ label, children }: { label: string; children: ReactNode }) {
 
 function Panel({
   title,
+  info,
   action,
   children,
   className,
 }: {
   title: string;
+  info?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -634,8 +697,9 @@ function Panel({
       )}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="min-w-0 truncate text-[0.8rem] font-semibold text-[var(--tessera-text)]">
-          {title}
+        <h3 className="flex min-w-0 items-center gap-1 text-[0.8rem] font-semibold text-[var(--tessera-text)]">
+          <span className="min-w-0 truncate">{title}</span>
+          {info}
         </h3>
         {action}
       </div>
@@ -648,17 +712,22 @@ function KpiTile({
   kpi,
   label,
   vs,
+  info,
 }: {
   kpi: Data["kpis"][number];
   label: string;
   vs: string;
+  info?: ReactNode;
 }) {
   const up = kpi.delta_label.trim().startsWith("+");
   const good = up === kpi.good_is_up;
   const magnitude = kpi.delta_label.replace(/^[+-]\s*/, "");
   return (
     <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">{label}</p>
+      <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </p>
       <div className="mt-1 flex items-center gap-2">
         <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-white">
           {kpi.value}

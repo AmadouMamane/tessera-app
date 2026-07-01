@@ -1,6 +1,6 @@
 .PHONY: install lint typecheck format test test-integration test-all \
         coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
-        obs-up obs-down obs-logs
+        obs-up obs-down obs-logs dev-secrets
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
@@ -97,18 +97,46 @@ bootstrap: install
 	$(MAKE) seed
 	$(MAKE) eval-demo
 
-# ── Observability stack (OTel collector -> Phoenix + Langfuse) ──────────────
+# ── Dev secrets ─────────────────────────────────────────────────────────────
+# Generate the shared operator-assertion HMAC secret and write it to BOTH dev
+# .env.local files (gitignored). Idempotent — skips if already present. The agent
+# loads it from dotenv via the nested delimiter (double underscore); Next reads
+# process.env verbatim (single underscore). Same VALUE, different name per side.
+# Without it the operator path is inert and the recouvrement console mis-attributes.
+dev-secrets:
+	@if grep -q '^TESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY=' .env.local 2>/dev/null \
+	   && grep -q '^TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY=' webapp/frontend/.env.local 2>/dev/null; then \
+	  echo "operator key already set in both .env.local — nothing to do"; \
+	else \
+	  KEY=$$(openssl rand -hex 32); \
+	  touch .env.local webapp/frontend/.env.local; \
+	  grep -q '^TESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY=' .env.local 2>/dev/null \
+	    || printf '\nTESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY=%s\n' "$$KEY" >> .env.local; \
+	  grep -q '^TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY=' webapp/frontend/.env.local 2>/dev/null \
+	    || printf '\nTESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY=%s\n' "$$KEY" >> webapp/frontend/.env.local; \
+	  echo "wrote operator key to .env.local + webapp/frontend/.env.local (restart agent + front)"; \
+	fi
+
+# ── Observability stack (OTel collector -> Phoenix + Langfuse + Grafana) ─────
 # The agent only feeds traces when TESSERA_OBSERVABILITY__OTEL_ENDPOINT points at the
-# collector (see .env.example). `obs-up` boots the collector + Phoenix (UI on
-# http://localhost:16006); add `langfuse-web` for the LLMOps view.
+# collector (see .env.example). `obs-up` boots the full stack:
+#   Phoenix    http://localhost:16006   (LLM traces — canonical)
+#   Langfuse   http://localhost:3900    (cost / tokens / latency / sessions)
+#   Prometheus http://localhost:19090   (ops metrics)
+#   Grafana    http://localhost:13000   (SLO dashboards; admin / claude-demo-pw)
+# Langfuse v3 + ClickHouse + MinIO are memory-hungry — use `obs-up-core` for the
+# lean trace-only path (collector + Phoenix) when Docker memory is tight.
 obs-up:
-	docker compose -f docker-compose.obs.claude.yml up -d otel-collector phoenix
+	docker compose -f docker-compose.obs.claude.yml up -d
+
+obs-up-core:
+	docker compose -f docker-compose.obs.claude.yml up -d otel-collector phoenix prometheus grafana
 
 obs-down:
 	docker compose -f docker-compose.obs.claude.yml down
 
 obs-logs:
-	docker compose -f docker-compose.obs.claude.yml logs -f otel-collector phoenix
+	docker compose -f docker-compose.obs.claude.yml logs -f otel-collector phoenix prometheus grafana
 
 # ── Local development ───────────────────────────────────────────────────────
 

@@ -1,13 +1,25 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Activity, Boxes, Coins, type LucideIcon, ShieldCheck, Timer, Wrench } from "lucide-react";
-import { useTranslations } from "next-intl";
+import {
+  Activity,
+  ArrowUpRight,
+  Boxes,
+  Coins,
+  type LucideIcon,
+  ShieldCheck,
+  Timer,
+  Wrench,
+} from "lucide-react";
+import type { Route } from "next";
+import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { type Period, PeriodRail } from "@/components/observability/period-rail";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "@/i18n/navigation";
 import { fetchReliability } from "@/lib/api/client";
 import type {
   ReliabilityActionRow,
@@ -134,6 +146,8 @@ function Kpi({
   delta,
   deltaUnit,
   deltaUpIsGood,
+  infoKey,
+  href,
 }: {
   icon: LucideIcon;
   label: string;
@@ -144,22 +158,50 @@ function Kpi({
   delta?: number | null;
   deltaUnit?: "pts" | "%";
   deltaUpIsGood?: boolean;
+  /** Key under reliability.explain — renders a ⓘ "what is this / how computed". */
+  infoKey?: string;
+  /** Real source this KPI drills into — makes the whole tile a link with a ↗ affordance.
+   * Overlay-link pattern so the inner ⓘ never triggers the drill. */
+  href?: Route;
 }) {
   const tr = useTranslations("reliability");
+  const te = useTranslations("reliability.explain");
   const showDelta = delta != null && Math.abs(delta) >= 0.005;
   const up = (delta ?? 0) > 0;
   const deltaGood = up === (deltaUpIsGood ?? true);
+  const drill = href ? "pointer-events-none relative z-20" : "";
   return (
-    <Card className="flex flex-col gap-0.5 p-3">
-      <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+    <Card
+      className={`group relative flex flex-col gap-0.5 p-3 ${href ? "transition-colors hover:border-[var(--tessera-green)]/40" : ""}`}
+    >
+      {href ? (
+        <Link
+          href={href}
+          aria-label={label}
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tessera-green)]/40"
+        />
+      ) : null}
+      <div className={`flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] ${drill}`}>
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
+        {infoKey ? (
+          <span className={href ? "pointer-events-auto ml-auto" : "ml-auto"}>
+            <MetricInfo
+              title={label}
+              what={te(`${infoKey}.what`)}
+              how={te(`${infoKey}.how`)}
+              source={te.has(`${infoKey}.source`) ? te(`${infoKey}.source`) : undefined}
+            />
+          </span>
+        ) : null}
       </div>
-      <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
+      <div
+        className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"} ${drill}`}
+      >
         {value}
       </div>
       {showDelta ? (
-        <div className="flex items-center gap-1 text-[0.65rem] tabular-nums">
+        <div className={`flex items-center gap-1 text-[0.65rem] tabular-nums ${drill}`}>
           <span className={`whitespace-nowrap ${deltaGood ? GOOD : BAD}`}>
             {up ? "↗" : "↘"} {Math.abs((delta as number) * 100).toFixed(0)}
             {deltaUnit === "%" ? " %" : ` ${tr("kpi.pts")}`}
@@ -167,13 +209,22 @@ function Kpi({
           <span className="truncate text-[var(--muted-foreground)]">{tr("kpi.vsPrev")}</span>
         </div>
       ) : sub ? (
-        <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{sub}</div>
+        <div className={`truncate text-[0.65rem] text-[var(--muted-foreground)] ${drill}`}>
+          {sub}
+        </div>
       ) : null}
       {series && series.length > 1 ? (
-        <Spark values={series} />
+        <div className={drill}>
+          <Spark values={series} />
+        </div>
       ) : (
-        <SparkEmpty label={tr("noData")} />
+        <div className={drill}>
+          <SparkEmpty label={tr("noData")} />
+        </div>
       )}
+      {href ? (
+        <ArrowUpRight className="pointer-events-none absolute right-1.5 bottom-1.5 z-20 h-3 w-3 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-70" />
+      ) : null}
     </Card>
   );
 }
@@ -343,10 +394,11 @@ const POLL = 30_000;
 
 export function ReliabilityDashboard() {
   const tr = useTranslations("reliability");
+  const locale = useLocale();
   const [period, setPeriod] = useState<Period>({ days: 14, anchor: null });
   const q = useQuery({
-    queryKey: ["reliability", period.days, period.anchor],
-    queryFn: ({ signal }) => fetchReliability(signal, period.days, period.anchor),
+    queryKey: ["reliability", period.days, period.anchor, locale],
+    queryFn: ({ signal }) => fetchReliability(signal, period.days, period.anchor, locale),
     placeholderData: keepPreviousData,
     refetchInterval: period.anchor ? false : POLL,
   });
@@ -395,6 +447,8 @@ export function ReliabilityDashboard() {
               <Kpi
                 icon={ShieldCheck}
                 label={tr("kpi.availability")}
+                infoKey="availability"
+                href="/agir/incidents-playbooks"
                 value={pct(d.availability, 2)}
                 tone={(d.availability ?? 0) >= 0.99 ? GOOD : WARN}
                 sub={tr("kpi.sla")}
@@ -406,6 +460,8 @@ export function ReliabilityDashboard() {
               <Kpi
                 icon={Activity}
                 label={tr("kpi.errorRate")}
+                infoKey="errorRate"
+                href="/agir/incidents-playbooks"
                 value={pct(d.error_rate, 2)}
                 tone={(d.error_rate ?? 0) < 0.01 ? GOOD : WARN}
                 series={errLine}
@@ -416,6 +472,7 @@ export function ReliabilityDashboard() {
               <Kpi
                 icon={Timer}
                 label={tr("kpi.p50")}
+                infoKey="p50"
                 value={ms(d.latency_p50_ms ?? null)}
                 tone={GOOD}
                 sub={tr("kpi.estimated")}
@@ -426,6 +483,7 @@ export function ReliabilityDashboard() {
               <Kpi
                 icon={Timer}
                 label={tr("kpi.p95")}
+                infoKey="p95"
                 value={ms(d.latency_p95_ms ?? null)}
                 tone={WARN}
                 sub={tr("kpi.estimated")}
@@ -433,6 +491,8 @@ export function ReliabilityDashboard() {
               <Kpi
                 icon={Wrench}
                 label={tr("kpi.toolSuccess")}
+                infoKey="toolSuccess"
+                href="/configurer/integrations"
                 value={pct(d.tool_success, 2)}
                 tone={(d.tool_success ?? 0) >= 0.95 ? GOOD : WARN}
                 delta={d.tool_success_delta}
@@ -442,6 +502,7 @@ export function ReliabilityDashboard() {
               <Kpi
                 icon={Coins}
                 label={tr("kpi.totalCost")}
+                infoKey="totalCost"
                 value={eur(d.total_cost_eur ?? 0, 4)}
                 tone={GOOD}
                 sub={tr("kpi.window")}
@@ -453,6 +514,7 @@ export function ReliabilityDashboard() {
               <Kpi
                 icon={Coins}
                 label={tr("kpi.costPerReq")}
+                infoKey="costPerReq"
                 value={eur(d.cost_per_request_eur ?? 0, 6)}
                 tone={GOOD}
                 delta={d.cost_per_request_delta}
@@ -462,6 +524,7 @@ export function ReliabilityDashboard() {
               <Kpi
                 icon={Boxes}
                 label={tr("kpi.requests")}
+                infoKey="requests"
                 value={`${(d.n_requests ?? 0).toLocaleString("fr-FR")}`}
                 sub={`${(d.total_tokens ?? 0).toLocaleString("fr-FR")} ${tr("kpi.tokens")}`}
                 series={d.volume_series}
@@ -622,7 +685,7 @@ export function ReliabilityDashboard() {
                   {(d.providers ?? []).map((p) => (
                     <div key={p.provider} className="flex items-center gap-2 text-[0.72rem]">
                       <span className="w-20 shrink-0 truncate">{p.provider}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-sm bg-[var(--tessera-muted)]/50">
+                      <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
                         <div
                           className="h-full rounded-sm bg-[#60a5fa]"
                           style={{ width: `${(p.n_requests / provTotal) * 100}%` }}
@@ -645,7 +708,7 @@ export function ReliabilityDashboard() {
                       / {eur(d.budget_monthly_eur ?? 0, 0)}
                     </span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--tessera-muted)]/50">
+                  <div className="h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
                     <div
                       className="h-full rounded-full bg-[var(--tessera-green)]"
                       style={{ width: `${Math.min(100, budgetUsed * 100)}%` }}

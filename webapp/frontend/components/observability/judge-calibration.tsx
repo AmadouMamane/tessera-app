@@ -319,7 +319,7 @@ function GroupRows({
         return (
           <li key={g.label} className="flex items-center gap-2 text-[0.72rem]">
             <span className="w-24 shrink-0 truncate">{labelKey ? labelKey(g.label) : g.label}</span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-[var(--tessera-muted)]/50">
+            <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
               <div
                 className="h-full rounded-sm"
                 style={{ width: `${g.agreement * 100}%`, background: tone }}
@@ -909,7 +909,7 @@ export function JudgeRail({
               topCats.map((c) => (
                 <div key={c.label} className="flex items-center gap-2 text-[0.72rem]">
                   <span className="w-20 shrink-0 truncate">{tq(`judge.cat.${c.label}`)}</span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-[var(--tessera-muted)]/50">
+                  <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
                     <div
                       className="h-full rounded-sm"
                       style={{

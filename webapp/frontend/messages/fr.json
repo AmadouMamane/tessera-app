@@ -1,4 +1,9 @@
 {
+  "metricInfo": {
+    "about": "À propos de {name}",
+    "calcul": "Calcul",
+    "source": "Source"
+  },
   "app": {
     "title": "Tessera",
     "subtitle": "AI Control Plane",
@@ -305,7 +310,60 @@
       "auditBroken": "chaîne rompue",
       "vsBaseline": "{delta} vs objectif",
       "noDataAtT": "Aucune donnée à T",
-      "noTrend": "aucune donnée"
+      "noTrend": "aucune donnée",
+      "openSource": "Ouvrir la source : {label}"
+    },
+    "explain": {
+      "quality": {
+        "what": "La part des réponses jugées conformes par l'évaluation continue : fidélité aux sources, absence d'hallucination, respect des règles.",
+        "how": "Réponses conformes ÷ réponses évaluées sur la période, ramené sur 100. La cible est le seuil de service (SLO).",
+        "source": "Journal d'évaluation continue (un score par tour)."
+      },
+      "failingControls": {
+        "what": "Le nombre de contrôles hors de leur cible, sur le nombre de contrôles réellement mesurés sur la période.",
+        "how": "Un contrôle est « en échec » quand sa valeur franchit son seuil (ex. fidélité < 95 %, fuite PII > 0,5 %). Affiché hors-cible ÷ mesurés.",
+        "source": "La table « Contrôles critiques » ci-dessous."
+      },
+      "openRisks": {
+        "what": "Les situations à risque encore ouvertes : sessions anormales détectées plus procédures d'incident déclenchées.",
+        "how": "Anomalies (analyse comportementale des sessions) + playbooks déclenchés, additionnés."
+      },
+      "regression": {
+        "what": "Indique si la dernière comparaison de versions montre une baisse de qualité par rapport à la référence.",
+        "how": "Score de la version courante moins la référence ; « Régression » si l'écart est négatif au-delà du bruit."
+      },
+      "cost": {
+        "what": "Le coût LLM estimé sur la période : tokens consommés multipliés par le tarif du modèle.",
+        "how": "Somme des tokens par tour × tarif par modèle. Le badge signale les pics anormaux.",
+        "source": "Compteurs de tokens par tour."
+      },
+      "audit": {
+        "what": "Le nombre d'événements inscrits au journal d'audit infalsifiable, et l'état de sa chaîne.",
+        "how": "Chaque action sensible ajoute une entrée chaînée par hash ; « chaîne vérifiée » = aucun maillon altéré ni manquant.",
+        "source": "Journal d'audit S1 (hash-chaîné)."
+      },
+      "criticalControls": {
+        "what": "Les contrôles de qualité, sécurité et conformité suivis en continu, avec leur valeur, leur cible et leur tendance.",
+        "how": "Chaque ligne est un signal ; l'état compare la valeur courante à son seuil."
+      },
+      "cases": {
+        "what": "La file des cas de contrôle à traiter par un opérateur, triés par priorité et délai (SLA).",
+        "how": "Cas ouverts issus des contrôles et signalements ; les onglets filtrent par priorité.",
+        "source": "File opérateur (page À traiter)."
+      },
+      "controlCases": {
+        "what": "Les procédures d'incident (playbooks) actuellement déclenchées et leurs premières étapes.",
+        "how": "Un playbook se déclenche quand son signal franchit le seuil défini."
+      },
+      "governed": {
+        "what": "Le flux des décisions gouvernées : routage d'agent, transfert (hand-off), proposition, mise en production.",
+        "how": "Événements append-only du journal de gouvernance, les plus récents d'abord — chacun opposable.",
+        "source": "Journal d'audit S1 (événements de gouvernance)."
+      },
+      "traces": {
+        "what": "Le volume de traces d'exécution et les latences p50/p95 observées.",
+        "how": "Lu depuis la pile Langfuse (traces OpenTelemetry émises par l'agent)."
+      }
     },
     "criticalControls": {
       "title": "Contrôles critiques",
@@ -319,11 +377,13 @@
       "impact": "Impact",
       "action": "Action",
       "investigate": "Investiguer",
-      "liveProbe": "sonde live · hors catalogue"
+      "liveProbe": "sonde live · hors catalogue",
+      "viewAll": "Voir tous les signaux"
     },
     "cases": {
       "title": "Cas de contrôle à traiter",
       "viewAll": "Voir tout ({n})",
+      "openCase": "Ouvrir le cas dans la file",
       "empty": "Aucun cas en file",
       "tab": {
         "all": "Tous",
@@ -344,7 +404,8 @@
       "blocked": "Mise en ligne bloquée · {agent}",
       "deployModel": "Modèle déployé · {version}",
       "deployPrompt": "Prompt déployé · {version}",
-      "deployPolicy": "Politique déployée · {version}"
+      "deployPolicy": "Politique déployée · {version}",
+      "viewAll": "Journal d’audit"
     },
     "traces": {
       "title": "Observabilité · traces",
@@ -376,7 +437,8 @@
     "controlCases": {
       "title": "Incidents à traiter (procédures)",
       "count": "{n} déclenchés",
-      "clear": "Aucune procédure déclenchée — situation nominale."
+      "clear": "Aucune procédure déclenchée — situation nominale.",
+      "viewAll": "Voir dans Incidents"
     },
     "rightColumn": {
       "incidents": "Incidents actifs ou récents",
@@ -391,7 +453,8 @@
         "compliance": "Compliance gate"
       },
       "activities": "Scores récents",
-      "noActivity": "Aucun score récent."
+      "noActivity": "Aucun score récent.",
+      "viewIncidents": "Voir tout"
     },
     "quick": {
       "title": "Actions rapides",
@@ -513,6 +576,34 @@
       "chainHint": "Aucun écart",
       "chainBrokenHint": "Écart détecté"
     },
+    "explain": {
+      "signed_events": {
+        "what": "Le nombre total d'événements inscrits au journal d'audit, chacun signé.",
+        "how": "Toute action sensible ajoute une entrée chaînée par hash sur la fenêtre.",
+        "source": "Journal d'audit S1 (hash-chaîné)."
+      },
+      "sensitive_actions": {
+        "what": "Les actions à enjeu : appels d'outils et accès mémoire (lecture/écriture de données).",
+        "how": "Entrées de type outil ou mémoire, comptées sur la fenêtre."
+      },
+      "guard_refusals": {
+        "what": "Le nombre de décisions où le garde-fou a refusé une action.",
+        "how": "Entrées de garde dont l'issue est « refusé »."
+      },
+      "proof_events": {
+        "what": "Les événements porteurs d'une preuve vérifiable (empreinte/hash réutilisable).",
+        "how": "Entrées dotées d'une empreinte de preuve référençable."
+      },
+      "chain_integrity": {
+        "what": "L'état de la chaîne d'audit : vérifiée (aucun maillon altéré) ou rompue.",
+        "how": "Re-vérification du chaînage par hash de bout en bout ; « rompue » dès un écart.",
+        "source": "Vérification de la chaîne (verify_audit_chain)."
+      },
+      "unique_actors": {
+        "what": "Le nombre d'acteurs distincts (modèle, service, humain, système) ayant agi.",
+        "how": "Décompte des acteurs distincts sur la fenêtre."
+      }
+    },
     "delta": {
       "none": "—"
     },
@@ -550,6 +641,7 @@
       "guard": "Décisions",
       "tool": "Outils",
       "memory": "Mémoire",
+      "governance": "Gouvernance",
       "other": "Autres"
     },
     "roles": {
@@ -716,6 +808,29 @@
     }
   },
   "health": {
+    "openSource": "Ouvrir la source : {label}",
+    "explain": {
+      "backend": {
+        "what": "L'état de santé du service backend (l'API de l'agent) : joignable et opérationnel.",
+        "how": "Sonde de vivacité /healthz ; « ok » = le service répond.",
+        "source": "/healthz."
+      },
+      "readiness": {
+        "what": "L'état de préparation : le service est prêt à traiter le trafic (dépendances chargées).",
+        "how": "Sonde /readyz : base, modèles et corpus prêts ; « down » si une dépendance manque.",
+        "source": "/readyz."
+      },
+      "budget": {
+        "what": "Le coût LLM cumulé estimé (tokens entrée/sortie × tarif du modèle) — réservé aux administrateurs.",
+        "how": "Somme des tokens × tarif par modèle.",
+        "source": "Compteurs de budget (tokens)."
+      },
+      "version": {
+        "what": "La version déployée du backend de l'agent.",
+        "how": "Version rapportée par le service au démarrage.",
+        "source": "/healthz."
+      }
+    },
     "title": "État du service",
     "description": "Indicateurs en temps réel sur le backend, le pool Postgres et le budget LLM.",
     "cards": {
@@ -1392,11 +1507,89 @@
       "openDataset": "Ouvrir dataset"
     },
     "sec": {
-      "etat": "A. État actuel",
-      "diagnostic": "B. Diagnostic racine",
-      "predictive": "C. Signaux prédictifs",
-      "actions": "D. Actions recommandées"
+      "etat": "État actuel",
+      "diagnostic": "Diagnostic racine",
+      "predictive": "Signaux prédictifs",
+      "actions": "Actions recommandées"
     },
+    "explain": {
+      "etat": {
+        "what": "L'état de qualité à l'instant : score global, contrôles en échec ou en alerte, impact de la release courante et évolution sur la période.",
+        "how": "Agrège le SLO de fidélité, le décompte des signaux hors-cible et le diff de la dernière release.",
+        "source": "Évaluation continue + rapports de release."
+      },
+      "diagnostic": {
+        "what": "Pourquoi la qualité dérive : répartition des échecs par type, calibration du juge, cas prioritaires et cause racine.",
+        "how": "Catalogue de failles documentées + regroupement des cas échoués + diff de version."
+      },
+      "predictive": {
+        "what": "Les signaux avant-coureurs d'une régression : risque de régression, dérive du juge, prédicteur d'échec, intention et localisation.",
+        "how": "Modèles de risque appliqués aux séries de scores et à la dérive des métriques."
+      },
+      "actions": {
+        "what": "Les actions concrètes à mener, dérivées des régressions ouvertes et des cas échoués réels.",
+        "how": "Une recommandation est générée par régression ouverte ou cluster de cas."
+      },
+      "scoreGlobal": {
+        "what": "Le score de qualité global sur 100 : part des réponses jugées conformes (SLO de fidélité).",
+        "how": "Réponses conformes ÷ réponses évaluées, ramené sur 100.",
+        "source": "Journal d'évaluation continue."
+      },
+      "nonRegression": {
+        "what": "Le taux de non-régression : part des cas qui ne se sont pas dégradés face à la version de référence.",
+        "how": "Cas stables ou améliorés ÷ cas comparés.",
+        "source": "Rapports de release."
+      },
+      "regressionsOpen": {
+        "what": "Le nombre de régressions encore ouvertes par rapport à la référence.",
+        "how": "Cas dont le score a chuté au-delà du bruit et non encore résolus.",
+        "source": "Rapports de release."
+      },
+      "judgeKappa": {
+        "what": "L'accord (kappa de Cohen) entre le juge LLM et les annotations humaines de référence.",
+        "how": "Kappa calculé sur un jeu doré ; au-delà de 0,6 = accord substantiel.",
+        "source": "Calibration du juge (jeu doré)."
+      },
+      "casEval": {
+        "what": "Le nombre de cas du catalogue évalués lors du dernier run de non-régression.",
+        "how": "Cas exécutés par le harnais d'évaluation.",
+        "source": "Archive des runs."
+      },
+      "faithfulness": {
+        "what": "La fidélité : la réponse reste fidèle aux sources citées, sans extrapolation.",
+        "how": "Score moyen du juge sur la fidélité ; le delta compare à l'ouverture de la période.",
+        "source": "Séries de scores (un score par tour)."
+      },
+      "grounding": {
+        "what": "L'ancrage : la réponse s'appuie sur des passages réellement récupérés.",
+        "how": "Score moyen d'ancrage ; delta sur la période.",
+        "source": "Séries de scores."
+      },
+      "hallucination": {
+        "what": "L'hallucination : affirmations non étayées par les sources.",
+        "how": "Score moyen sur la métrique ; un score plus élevé est meilleur (absence d'hallucination mesurée).",
+        "source": "Séries de scores."
+      },
+      "faithGrounding": {
+        "what": "Le nuage fidélité × ancrage : chaque point est un tour ; en haut à droite = à la fois fidèle et ancré.",
+        "how": "Couples (fidélité, ancrage) par tour ; la couleur résume la moyenne des deux."
+      },
+      "failureDistribution": {
+        "what": "La répartition des cas échoués par type de faille (injection, fuite PII, hallucination…).",
+        "how": "Décompte des cas échoués groupés par catégorie, top 5.",
+        "source": "Catalogue de failles documentées."
+      },
+      "judgeCalibration": {
+        "what": "La fiabilité du juge LLM : accord avec l'humain, biais de verbosité et taille d'échantillon.",
+        "how": "Kappa + accord sur un jeu doré ; corrélation à la longueur de réponse.",
+        "source": "Calibration du juge (jeu doré)."
+      },
+      "priorityCases": {
+        "what": "Les cas échoués les plus graves à traiter en premier, triés par sévérité.",
+        "how": "Cas du catalogue de failles ordonnés critique → bas."
+      }
+    },
+    "seeDetail": "Voir le détail",
     "reco": {
       "title": "Actions recommandées",
       "curate": "Ajouter cas échoués au regression-set",
@@ -2107,7 +2300,7 @@
         "nonRegression": "Taux non-régression",
         "regressionsOpen": "Régressions ouvertes",
         "judgeKappa": "Accord juge κ",
-        "casEval": "Cas évalués (7j)",
+        "casEval": "Cas évalués",
         "casFailed": "Cas échoués"
       },
       "etat": {
@@ -2193,6 +2386,36 @@
       "guard": "Efficacité du guard",
       "recall": "rappel",
       "vs7d": "vs 7j"
+    },
+    "explain": {
+      "attackRate": {
+        "what": "La part des attaques (injections de prompt) qui parviennent à contourner le garde-fou.",
+        "how": "Attaques réussies ÷ attaques tentées sur le corpus adverse. Plus bas = mieux.",
+        "source": "Sonde du pare-feu sur corpus adversarial."
+      },
+      "blocked": {
+        "what": "Le nombre d'injections de prompt détectées et bloquées par le garde-fou.",
+        "how": "Compte des tentatives refusées par le pare-feu sur la période."
+      },
+      "piiLeak": {
+        "what": "La part des réponses contenant une donnée personnelle qui n'aurait pas dû sortir.",
+        "how": "Réponses avec fuite PII ÷ réponses évaluées. Cible ≤ 0,5 %.",
+        "source": "Analyse PII des réponses."
+      },
+      "leastPriv": {
+        "what": "L'écart entre les outils réellement utilisés et ceux accordés à l'agent (moindre privilège).",
+        "how": "Outils utilisés ÷ outils accordés ; un grand écart signale des permissions superflues."
+      },
+      "sensitiveMemory": {
+        "what": "Le nombre d'entrées de mémoire sensible proches de leur expiration (TTL).",
+        "how": "Entrées dont le TTL arrive bientôt à échéance — à purger ou renouveler.",
+        "source": "Inventaire mémoire (gouvernance)."
+      },
+      "guard": {
+        "what": "L'efficacité globale du garde-fou : son F1 (équilibre précision/rappel) face aux attaques.",
+        "how": "F1 = moyenne harmonique précision/rappel ; rappel = attaques détectées ÷ attaques réelles.",
+        "source": "Sonde du pare-feu (corpus adversarial fixe)."
+      }
     },
     "col": {
       "signal": "Signal",
@@ -2363,6 +2586,37 @@
       "pts": "pts",
       "vsPrev": "vs préc."
     },
+    "explain": {
+      "score": {
+        "what": "Le niveau de conformité global de l'agent, dérivé en continu des signaux runtime.",
+        "how": "Agrégation pondérée des contrôles conformes / partiels / non conformes sur les cadres suivis.",
+        "source": "Signaux runtime mappés aux cadres (DORA, RGPD, AI Act…)."
+      },
+      "obligations": {
+        "what": "Le nombre d'obligations réglementaires couvertes par au moins un contrôle.",
+        "how": "Obligations dotées d'un contrôle mappé, sur le total des cadres suivis."
+      },
+      "conformant": {
+        "what": "Le nombre de contrôles dont la preuve runtime satisfait l'obligation.",
+        "how": "Contrôles évalués « conforme » sur la période."
+      },
+      "partial": {
+        "what": "Les contrôles partiellement satisfaits — preuve incomplète ou seuil approché.",
+        "how": "Contrôles évalués « partiel » (ni conforme, ni en échec)."
+      },
+      "nonConformant": {
+        "what": "Les contrôles en échec : l'obligation n'est pas satisfaite.",
+        "how": "Contrôles évalués « non conforme » — à remédier en priorité."
+      },
+      "residual": {
+        "what": "Les risques qui subsistent malgré les contrôles en place, sous surveillance.",
+        "how": "Risques identifiés non clos, pondérés par leur sévérité."
+      },
+      "deadlines": {
+        "what": "Les échéances réglementaires proches qui demandent une action.",
+        "how": "Obligations ou remédiations dont la date limite approche."
+      }
+    },
     "panel": {
       "mapping": "Cartographie réglementaire",
       "obligations": "Obligations à risque ({n})",
@@ -2466,6 +2720,43 @@
       "tokens": "tokens",
       "pts": "pts",
       "vsPrev": "vs préc."
+    },
+    "explain": {
+      "availability": {
+        "what": "La part du temps où le service a répondu correctement (disponibilité opérationnelle).",
+        "how": "1 − (requêtes en erreur ÷ requêtes totales) sur la fenêtre."
+      },
+      "errorRate": {
+        "what": "La part des requêtes terminées en erreur (outil refusé, échec, expiration…).",
+        "how": "Requêtes en erreur ÷ requêtes totales sur la fenêtre. Plus bas = mieux."
+      },
+      "p50": {
+        "what": "La latence médiane : la moitié des requêtes répondent plus vite.",
+        "how": "50e percentile du temps de réponse bout-en-bout sur la fenêtre.",
+        "source": "Traces d'exécution."
+      },
+      "p95": {
+        "what": "La latence de queue : 95 % des requêtes répondent en deçà — révèle les pics.",
+        "how": "95e percentile du temps de réponse bout-en-bout.",
+        "source": "Traces d'exécution."
+      },
+      "toolSuccess": {
+        "what": "La part des appels d'outils qui réussissent (sans refus ni erreur d'argument).",
+        "how": "Appels réussis ÷ appels d'outils totaux."
+      },
+      "totalCost": {
+        "what": "Le coût LLM total sur la fenêtre : tokens consommés × tarif du modèle.",
+        "how": "Somme des tokens par requête × tarif par modèle.",
+        "source": "Compteurs de tokens."
+      },
+      "costPerReq": {
+        "what": "Le coût LLM moyen par requête.",
+        "how": "Coût total ÷ nombre de requêtes sur la fenêtre."
+      },
+      "requests": {
+        "what": "Le volume de requêtes traitées sur la fenêtre.",
+        "how": "Nombre de tours/appels comptabilisés."
+      }
     },
     "panel": {
       "errors": "Répartition des erreurs ({n})",
@@ -2575,6 +2866,7 @@
     "noData": "pas de données"
   },
   "improvement": {
+    "openSource": "Ouvrir la source : {label}",
     "title": "Amélioration",
     "subtitle": "Priorisez, exécutez et mesurez les remédiations qualité de vos agents IA.",
     "loading": "Chargement de la posture d'amélioration…",
@@ -2595,6 +2887,40 @@
       "coverage": "Couverture eval set",
       "debt": "Dette corpus",
       "roi": "ROI estimé"
+    },
+    "explain": {
+      "gain": {
+        "what": "Le gain de qualité atteignable si les améliorations prioritaires sont appliquées.",
+        "how": "Somme des gains estimés (en points) des opportunités ouvertes."
+      },
+      "actions": {
+        "what": "Le nombre d'actions d'amélioration actives recommandées par l'analyse.",
+        "how": "Opportunités au statut actif (à démarrer / en cours)."
+      },
+      "curate": {
+        "what": "Le nombre de cas en attente de curation pour enrichir le jeu d'évaluation.",
+        "how": "Cas signalés (faible score, échec) non encore curés."
+      },
+      "frozen": {
+        "what": "Le nombre de mises en production gelées (gate qualité non franchie).",
+        "how": "Releases bloquées par un garde-fou ou un budget d'erreur épuisé."
+      },
+      "shadow": {
+        "what": "Les candidats à tester en trafic fantôme (shadow) ou par rejeu avant production.",
+        "how": "Variantes prêtes à être comparées sans impacter les utilisateurs."
+      },
+      "coverage": {
+        "what": "La part des comportements clés couverts par le jeu d'évaluation.",
+        "how": "Cas couverts ÷ cas attendus ; viser ≥ 80 %."
+      },
+      "debt": {
+        "what": "L'ancienneté du corpus : depuis combien de temps il n'a pas été rafraîchi.",
+        "how": "Jours depuis la dernière ingestion ou mise à jour significative."
+      },
+      "roi": {
+        "what": "Le retour sur investissement estimé des améliorations rapporté à leur coût.",
+        "how": "Gain attendu rapporté à l'effort estimé."
+      }
     },
     "panel": {
       "opportunities": "Opportunités prioritaires",
@@ -2645,6 +2971,53 @@
     }
   },
   "incidents": {
+    "explain": {
+      "open": {
+        "what": "Le nombre d'incidents actuellement ouverts (non résolus).",
+        "how": "Incidents au statut ouvert ou en cours sur la fenêtre.",
+        "source": "Registre des incidents."
+      },
+      "critical": {
+        "what": "Le nombre d'incidents de sévérité critique encore en cours.",
+        "how": "Incidents ouverts dont la sévérité est « critique »."
+      },
+      "mtta": {
+        "what": "Le délai moyen de prise en charge (MTTA) : du déclenchement à l'accusé de réception, moyenné sur 7 jours.",
+        "how": "Moyenne (accusé − déclenchement) sur les incidents des 7 derniers jours.",
+        "source": "Journal des incidents (horodatages)."
+      },
+      "mttr": {
+        "what": "Le délai moyen de résolution (MTTR) : du déclenchement à la clôture, moyenné sur 7 jours.",
+        "how": "Moyenne (clôture − déclenchement) sur les incidents des 7 derniers jours.",
+        "source": "Journal des incidents (horodatages)."
+      },
+      "playbooks": {
+        "what": "Le nombre de procédures (playbooks) actuellement en cours d'exécution.",
+        "how": "Playbooks à l'état « en cours »."
+      },
+      "autoresolve": {
+        "what": "La part d'incidents résolus automatiquement, sans intervention humaine.",
+        "how": "Incidents auto-résolus ÷ incidents totaux sur la période."
+      },
+      "evidence": {
+        "what": "Le nombre de dossiers de preuves générés à partir des incidents.",
+        "how": "Packs de preuve produits sur la fenêtre.",
+        "source": "Magasin de preuves."
+      },
+      "sla_risk": {
+        "what": "Le nombre d'incidents à risque de dépasser leur échéance de service (SLA).",
+        "how": "Incidents dont le temps restant avant échéance SLA est faible."
+      },
+      "queue": {
+        "what": "La file de triage des incidents, ordonnée par priorité (sévérité croisée au délai SLA).",
+        "how": "Incidents ouverts triés par sévérité puis par délai SLA restant.",
+        "source": "Registre des incidents."
+      },
+      "sla": {
+        "what": "Les escalades SLA : les incidents dont l'échéance de service approche, avec le temps restant.",
+        "how": "Temps restant avant dépassement du SLA, par incident."
+      }
+    },
     "title": "Incidents & procédures",
     "subtitle": "Réponse aux incidents, orchestration des procédures et remédiation gouvernée.",
     "tabs": {
@@ -2787,6 +3160,85 @@
     }
   },
   "replay": {
+    "explain": {
+      "zone": {
+        "actual": {
+          "what": "L'état courant du rejeu / trafic fantôme : volumes, écarts et couverture sur la période.",
+          "how": "Synthèse des KPIs de rejeu agrégés sur la fenêtre d'observation."
+        },
+        "diagnostic": {
+          "what": "D'où viennent les divergences entre le rejeu et la référence, ventilées par type, sévérité et sessions.",
+          "how": "Écarts classés par type et sévérité sur le trafic rejoué."
+        },
+        "comparisons": {
+          "what": "Les comparaisons détaillées : top des écarts, comparaisons récentes et régressions vs la référence.",
+          "how": "Compare chaque rejeu à sa baseline et classe les divergences."
+        },
+        "distribution": {
+          "what": "La distribution du trafic rejoué (par service, par modèle) et les preuves/exports associés.",
+          "how": "Répartition des requêtes rejouées et état des preuves."
+        }
+      },
+      "kpi": {
+        "sessions": {
+          "what": "Le nombre de sessions rejouées (ou en trafic fantôme) sur la période.",
+          "how": "Sessions distinctes passées par le moteur de rejeu."
+        },
+        "requests": {
+          "what": "Le nombre de requêtes rejouées sur la période.",
+          "how": "Total des requêtes envoyées au rejeu / shadow."
+        },
+        "tokens": {
+          "what": "Le nombre de tokens consommés par le rejeu.",
+          "how": "Somme des tokens entrée + sortie du trafic rejoué."
+        },
+        "cost": {
+          "what": "Le coût estimé du rejeu (tokens × tarif du modèle).",
+          "how": "Tokens rejoués × tarif par modèle.",
+          "source": "Compteurs de tokens du rejeu."
+        },
+        "deviations": {
+          "what": "Le nombre d'écarts détectés entre le rejeu et la référence.",
+          "how": "Réponses du rejeu divergeant de la baseline au-delà du seuil.",
+          "source": "Comparaison rejeu vs référence."
+        },
+        "evals": {
+          "what": "Le nombre d'évaluations rejouées sur le trafic fantôme.",
+          "how": "Cas d'évaluation exécutés sur les réponses rejouées."
+        },
+        "proofs": {
+          "what": "Le nombre de preuves générées à partir du rejeu.",
+          "how": "Artefacts de preuve produits par les sessions rejouées."
+        },
+        "coverage": {
+          "what": "La couverture du rejeu : part du trafic de référence effectivement rejoué.",
+          "how": "Trafic rejoué ÷ trafic de référence éligible."
+        }
+      },
+      "panel": {
+        "devByType": {
+          "what": "La répartition des écarts par type (contenu, format, outil, refus…) face à la référence.",
+          "how": "Écarts groupés par catégorie de divergence."
+        },
+        "severity": {
+          "what": "La répartition des écarts par sévérité (critique → faible).",
+          "how": "Écarts pondérés par leur gravité."
+        },
+        "byService": {
+          "what": "La répartition du trafic rejoué par service appelant.",
+          "how": "Requêtes rejouées groupées par service."
+        },
+        "byModel": {
+          "what": "La répartition du trafic rejoué par modèle.",
+          "how": "Requêtes rejouées groupées par modèle."
+        },
+        "regressions": {
+          "what": "Les services dont la qualité régresse le plus face à la référence.",
+          "how": "Top services par écart négatif de score vs baseline.",
+          "source": "Comparaison rejeu vs référence."
+        }
+      }
+    },
     "title": "Rejeu & trafic fantôme",
     "subtitle": "Rejouer précisément des sessions, comparer aux baselines et observer le trafic fantôme.",
     "tabs": {
@@ -2941,6 +3393,81 @@
     }
   },
   "curation": {
+    "explain": {
+      "zone": {
+        "actual": {
+          "what": "L'état courant de la curation : candidats, promouvables, à revoir et rejetés sur la période.",
+          "how": "Synthèse des KPIs de curation agrégés sur la fenêtre d'observation."
+        },
+        "diagnostic": {
+          "what": "Pourquoi des cas entrent en curation : lots prioritaires et raisons des tours retenus.",
+          "how": "Lots scorés par risque + raisons d'inclusion les plus fréquentes."
+        },
+        "gaps": {
+          "what": "Les manques de couverture du jeu d'évaluation (par intention, par langue) et la distribution des candidats.",
+          "how": "Heatmap de couverture croisée + répartition des candidats."
+        },
+        "governance": {
+          "what": "Les actions de curation gouvernées (geler, créer un rejeu, exporter) et l'activité récente.",
+          "how": "Actions disponibles sur les lots + journal des opérations récentes."
+        },
+        "trends": {
+          "what": "Les tendances : backlog de curation, équilibre du jeu et impact des curations sur la qualité.",
+          "how": "Séries temporelles du backlog, de l'équilibre et de l'impact."
+        }
+      },
+      "kpi": {
+        "candidates": {
+          "what": "Le nombre de cas candidats à la curation (en attente d'examen).",
+          "how": "Cas entrants non encore triés sur la période."
+        },
+        "promotable": {
+          "what": "Le nombre de cas prêts à être promus dans le jeu d'évaluation.",
+          "how": "Candidats validés (score ≥ seuil, sans doublon)."
+        },
+        "manual_review": {
+          "what": "Le nombre de cas nécessitant une revue humaine.",
+          "how": "Candidats ambigus marqués pour examen manuel."
+        },
+        "rejected": {
+          "what": "Le nombre de cas rejetés (hors périmètre ou de faible valeur).",
+          "how": "Candidats écartés sur la période."
+        },
+        "intent_coverage": {
+          "what": "La couverture des intentions métier par le jeu d'évaluation.",
+          "how": "Intentions couvertes ÷ intentions cibles.",
+          "source": "Mappe intention → cas d'évaluation."
+        },
+        "lang_coverage": {
+          "what": "La couverture linguistique (FR/DE/EN) du jeu d'évaluation.",
+          "how": "Langues couvertes ÷ langues cibles, pondéré par les cas."
+        },
+        "duplicates": {
+          "what": "Le nombre de doublons détectés parmi les candidats.",
+          "how": "Candidats quasi-identiques regroupés par similarité."
+        },
+        "failures": {
+          "what": "Le nombre de cas issus d'échecs réels de l'agent.",
+          "how": "Candidats provenant de tours échoués.",
+          "source": "Catalogue des cas échoués."
+        }
+      },
+      "panel": {
+        "priorityLots": {
+          "what": "Les lots de candidats prioritaires à curer, classés par risque et score.",
+          "how": "Risque = gravité × valeur d'apprentissage ; lots ordonnés élevé → bas.",
+          "source": "File de curation."
+        },
+        "coverage": {
+          "what": "La couverture du jeu d'évaluation par catégorie et par langue : où il manque des cas.",
+          "how": "Heatmap des cas présents/manquants par axe."
+        },
+        "distribution": {
+          "what": "La répartition des candidats par type/source.",
+          "how": "Candidats groupés par catégorie de provenance."
+        }
+      }
+    },
     "title": "Curation eval set",
     "subtitle": "Sélectionner, enrichir, promouvoir et gouverner les tours qui alimentent les jeux d’évaluation.",
     "tabs": {
@@ -3152,6 +3679,50 @@
     }
   },
   "automations": {
+    "explain": {
+      "active": {
+        "what": "Le nombre d'automations actuellement actives (activées).",
+        "how": "Automations à l'état activé dans le catalogue."
+      },
+      "executions": {
+        "what": "Le nombre d'exécutions d'automations sur la période.",
+        "how": "Total des exécutions déclenchées sur la fenêtre."
+      },
+      "success_rate": {
+        "what": "La part d'exécutions terminées avec succès.",
+        "how": "Exécutions réussies ÷ exécutions totales."
+      },
+      "approvals": {
+        "what": "Le nombre d'approbations humaines en attente avant exécution.",
+        "how": "Étapes d'automation requérant une validation manuelle."
+      },
+      "blocked": {
+        "what": "Le nombre d'exécutions bloquées par un garde-fou ou une condition.",
+        "how": "Exécutions stoppées avant terme par une règle de contrôle."
+      },
+      "sensitive": {
+        "what": "Le nombre d'automations touchant des opérations sensibles (données, paiements, accès).",
+        "how": "Automations marquées « sensibles » dans le catalogue."
+      },
+      "mttr": {
+        "what": "Le délai moyen de remédiation d'une automation en échec.",
+        "how": "Moyenne du temps entre l'échec et la reprise réussie."
+      },
+      "zone": {
+        "pipeline": {
+          "what": "Le pipeline d'exécution des automations sur 24 h : du déclenchement à la fin, étape par étape.",
+          "how": "Exécutions groupées par étape du pipeline."
+        },
+        "distribution": {
+          "what": "La répartition des automations par type (notification, remédiation, enrichissement…).",
+          "how": "Automations groupées par catégorie."
+        },
+        "env": {
+          "what": "La répartition des exécutions par environnement (prod, staging, dev).",
+          "how": "Exécutions groupées par environnement cible."
+        }
+      }
+    },
     "title": "Automations",
     "subtitle": "Orchestrez les règles, déclencheurs et actions automatiques de votre système IA en gardant le contrôle humain, la traçabilité et les garde-fous.",
     "tabs": {
@@ -3317,6 +3888,54 @@
     }
   },
   "proofs": {
+    "explain": {
+      "kpi": {
+        "packs": {
+          "what": "Le nombre de dossiers de preuves (evidence packs) générés sur la période.",
+          "how": "Compte des packs créés par le pipeline de preuve."
+        },
+        "artifacts": {
+          "what": "Le nombre d'artefacts signés cryptographiquement et inclus dans les packs.",
+          "how": "Somme des artefacts scellés (hash + signature)."
+        },
+        "export_rate": {
+          "what": "La part des exports de preuves menés à terme avec succès.",
+          "how": "Exports réussis ÷ exports tentés sur la période."
+        },
+        "exporters": {
+          "what": "Le nombre d'exporteurs (destinations) actuellement actifs et sains.",
+          "how": "Exporteurs à l'état « ok » sur le total configuré."
+        },
+        "latency": {
+          "what": "La latence moyenne de génération puis d'export d'un pack.",
+          "how": "Moyenne du temps pipeline → destination sur la période."
+        },
+        "retention": {
+          "what": "La couverture des obligations de rétention par les preuves conservées.",
+          "how": "Obligations couvertes ÷ obligations applicables."
+        }
+      },
+      "zone": {
+        "pipeline": {
+          "what": "Le pipeline de preuve : de la capture à la signature, puis à l'export vers les destinations.",
+          "how": "Chaque étape est instrumentée ; un blocage à une étape stoppe le pack."
+        },
+        "crypto": {
+          "what": "La vérification cryptographique : chaîne de hachage et signatures attestant l'intégrité des preuves.",
+          "how": "Re-vérifie la chaîne de hash et les signatures des artefacts.",
+          "source": "Journal d'audit S1 (hash-chaîné)."
+        },
+        "exporters": {
+          "what": "Les exporteurs et destinations qui reçoivent les dossiers de preuves (S3, SIEM, coffre…).",
+          "how": "État, format et file d'attente par destination configurée."
+        },
+        "retention": {
+          "what": "Les durées de rétention et les obligations réglementaires couvertes par les preuves.",
+          "how": "Mappe chaque obligation à sa preuve et à son échéance."
+        }
+      }
+    },
+    "drill": { "chain": "Voir le journal d'audit" },
     "title": "Preuves & exporteurs",
     "subtitle": "Assembler, signer, vérifier et exporter les artefacts de preuve de l’IA.",
     "tabs": {
@@ -3561,7 +4180,14 @@
       "loggedBy": "Logué par {n}",
       "monitors": "Surveille {n}",
       "viewSignal": "Voir le signal",
-      "viewEvals": "Voir les évaluations liées"
+      "viewEvals": "Voir les évaluations liées",
+      "secDefinition": "Définition",
+      "secPerformance": "Performance réelle",
+      "secGuard": "Composition de la garde",
+      "byLanguage": "Cas par langue",
+      "outcomeTitle": "Réussite / Échec",
+      "secTags": "Étiquettes",
+      "secUsage": "Usage"
     },
     "footer": {
       "total": "{n} signaux",
@@ -3697,6 +4323,69 @@
     }
   },
   "sources": {
+    "explain": {
+      "sources": {
+        "what": "Le nombre de sources de connaissance connectées (corpus produit, réglementations, mémoire…).",
+        "how": "Sources distinctes inventoriées et indexées."
+      },
+      "corpus": {
+        "what": "Le nombre de corpus indexés (jeux de documents vectorisés).",
+        "how": "Corpus présents dans l'index vectoriel."
+      },
+      "chunks": {
+        "what": "Le nombre total de fragments (chunks) indexés, prêts pour la récupération.",
+        "how": "Somme des fragments sur toutes les sources.",
+        "source": "Index pgvector."
+      },
+      "documents": {
+        "what": "Le nombre total de documents ingérés dans le corpus.",
+        "how": "Documents distincts ingérés."
+      },
+      "languages": {
+        "what": "Le nombre de langues couvertes par les sources (FR/DE/EN).",
+        "how": "Langues distinctes détectées dans le corpus."
+      },
+      "memory": {
+        "what": "Le nombre d'entrées de mémoire long-terme (faits persistés entre sessions).",
+        "how": "Lignes de la mémoire long-terme.",
+        "source": "Table mémoire (pgvector)."
+      },
+      "transcript": {
+        "what": "Le nombre de tours de conversation archivés dans le transcript durable.",
+        "how": "Lignes du transcript de conversation.",
+        "source": "Transcript durable."
+      },
+      "conversations": {
+        "what": "Le nombre de conversations distinctes archivées.",
+        "how": "Conversations distinctes dans le transcript."
+      },
+      "embeddings": {
+        "what": "Le modèle d'embedding actif et la couverture de vectorisation par source.",
+        "how": "Fragments vectorisés ÷ fragments totaux, par source."
+      },
+      "access": {
+        "what": "Qui peut lire chaque source (rôles, portée) et les restrictions d'accès.",
+        "how": "Contrôle d'accès par source et par rôle."
+      },
+      "retention": {
+        "what": "Les durées de rétention et la classification des sources (sensibilité, base légale).",
+        "how": "Politique de rétention appliquée par classification."
+      },
+      "lineage": {
+        "what": "La lignée des données : d'où vient chaque source, sa version d'ingestion et sa fraîcheur.",
+        "how": "Le run d'ingestion fait foi (pas le Git) ; horodatage de la dernière ingestion.",
+        "source": "Lignée du corpus."
+      },
+      "memoryGrowth": {
+        "what": "La croissance de la mémoire et du corpus dans le temps.",
+        "how": "Séries temporelles du volume mémoire/corpus."
+      },
+      "citationBySource": {
+        "what": "La part des citations réelles attribuées à chaque source dans les réponses.",
+        "how": "Citations par source ÷ citations totales.",
+        "source": "Spans de récupération."
+      }
+    },
     "title": "Sources & mémoire",
     "subtitle": "Le substrat de données réel de l'agent : corpus pgvector et mémoire.",
     "activitySubject": "sujet",
@@ -3827,6 +4516,55 @@
     }
   },
   "roles": {
+    "explain": {
+      "accounts": {
+        "what": "Le nombre de comptes gérés (humains et comptes de service).",
+        "how": "Comptes distincts dans le registre d'identités."
+      },
+      "roles": {
+        "what": "Le nombre de rôles définis — des jeux de permissions réutilisables attribués aux comptes.",
+        "how": "Rôles distincts dans le catalogue d'accès."
+      },
+      "capabilities": {
+        "what": "Le nombre de capacités : les permissions atomiques que les rôles regroupent.",
+        "how": "Permissions distinctes référencées par les rôles."
+      },
+      "agents": {
+        "what": "Le nombre d'agents couverts par au moins un rôle d'accès.",
+        "how": "Agents distincts liés à un rôle."
+      },
+      "active": {
+        "what": "Le nombre de comptes actifs (connexion récente, non désactivés).",
+        "how": "Comptes au statut actif sur la période."
+      },
+      "mfa": {
+        "what": "La part de comptes protégés par authentification multi-facteurs (MFA).",
+        "how": "Comptes avec MFA activé ÷ comptes totaux."
+      },
+      "topRoles": {
+        "what": "Les rôles les plus attribués, classés par nombre de comptes rattachés.",
+        "how": "Rôles triés par nombre d'utilisateurs décroissant."
+      },
+      "byResource": {
+        "what": "La répartition des permissions par ressource (données, outils, configuration).",
+        "how": "Permissions groupées par ressource cible."
+      },
+      "pending": {
+        "what": "Les revues d'accès en attente : attributions à valider ou à recertifier.",
+        "how": "Demandes et recertifications d'accès non encore traitées.",
+        "source": "Journal d'audit (revues d'accès)."
+      },
+      "sod": {
+        "what": "Les violations de séparation des tâches (SoD) : combinaisons de droits incompatibles détenues par un même compte.",
+        "how": "Paires de rôles en conflit détenues simultanément.",
+        "source": "Politique de séparation des tâches."
+      },
+      "inactive": {
+        "what": "Les comptes inactifs (sans connexion sur la période) — candidats à la désactivation.",
+        "how": "Comptes sans activité récente."
+      }
+    },
+    "drill": { "audit": "Voir le journal d'audit" },
     "title": "Rôles & accès",
     "subtitle": "Gérez les identités, les rôles, les permissions et les accès à l’ensemble de la plateforme.",
     "actions": {
@@ -3979,6 +4717,36 @@
     }
   },
   "integrations": {
+    "explain": {
+      "tools": {
+        "what": "Le nombre total d'outils (fonctions) que l'agent peut appeler — son périmètre d'intégration.",
+        "how": "Outils déclarés dans le registre, tous statuts confondus."
+      },
+      "allowed": {
+        "what": "Le nombre d'outils autorisés par la politique de garde-fous, sans confirmation requise.",
+        "how": "Outils dont la règle de politique est « allow » sans confirmation.",
+        "source": "Politique guard (policy.yaml)."
+      },
+      "confirmation": {
+        "what": "Le nombre d'outils autorisés mais soumis à une confirmation humaine avant exécution.",
+        "how": "Outils dont la règle exige une confirmation.",
+        "source": "Politique guard (policy.yaml)."
+      },
+      "calls": {
+        "what": "Le nombre total d'appels d'outils sur la période.",
+        "how": "Somme des invocations d'outils sur la fenêtre.",
+        "source": "Journal d'audit des appels d'outils."
+      },
+      "blocked": {
+        "what": "Le nombre d'appels d'outils refusés par les garde-fous (politique de refus).",
+        "how": "Invocations bloquées avant exécution par une règle « deny ».",
+        "source": "Journal d'audit du guard."
+      },
+      "idle": {
+        "what": "Le nombre d'outils disponibles mais jamais appelés sur la période (candidats au retrait).",
+        "how": "Outils avec zéro appel sur la fenêtre."
+      }
+    },
     "title": "Intégrations",
     "subtitle": "Connectez, configurez et surveillez les systèmes et services externes intégrés à Tessera.",
     "actions": {
@@ -4094,6 +4862,21 @@
     }
   },
   "systemProfile": {
+    "explain": {
+      "status": {
+        "what": "L'état de santé agrégé du système : vert si tous les sous-systèmes (API, base, modèles, corpus) répondent.",
+        "how": "Agrégation des sondes de santé de chaque sous-système.",
+        "source": "Sondes /healthz et /readyz."
+      },
+      "mode": {
+        "what": "Le mode d'exécution du déploiement (production, pré-production ou développement).",
+        "how": "Lu depuis la configuration d'environnement au démarrage."
+      },
+      "profile": {
+        "what": "Le profil LLM actif : frontier (Vertex AI) ou sur site (Llama 3.3 70B via Ollama).",
+        "how": "Profil sélectionné qui aiguille les appels du modèle."
+      }
+    },
     "title": "Profil système",
     "subtitle": "Vue technique complète de l’environnement Tessera et de son état opérationnel.",
     "actions": {
@@ -4216,6 +4999,38 @@
     }
   },
   "parameters": {
+    "explain": {
+      "configured": {
+        "what": "Le nombre de paramètres effectivement configurés (dotés d'une valeur définie).",
+        "how": "Paramètres dont la valeur a été renseignée, tous domaines confondus."
+      },
+      "policies": {
+        "what": "Le nombre de politiques de configuration actives.",
+        "how": "Politiques à l'état actif dans la configuration."
+      },
+      "security_rules": {
+        "what": "Le nombre de règles de sécurité configurées (accès, garde-fous, chiffrement).",
+        "how": "Règles contenues dans les politiques de sécurité actives."
+      },
+      "integrations": {
+        "what": "Le nombre d'intégrations externes connectées et opérationnelles.",
+        "how": "Connecteurs à l'état « connecté »."
+      },
+      "models": {
+        "what": "Le nombre de modèles IA disponibles dans le catalogue (chat, embeddings).",
+        "how": "Modèles déclarés au registre de modèles."
+      },
+      "changes": {
+        "what": "Le nombre de modifications de configuration sur les 30 derniers jours — toutes auditées.",
+        "how": "Changements de paramètres journalisés sur la fenêtre de 30 jours.",
+        "source": "Journal d'audit."
+      },
+      "configState": {
+        "what": "La répartition des paramètres par état du cycle de vie : actif, inactif, brouillon, déprécié.",
+        "how": "Paramètres groupés par état de cycle de vie."
+      }
+    },
+    "drill": { "audit": "Voir le journal d'audit" },
     "title": "Paramètres",
     "subtitle": "Configurez le comportement, les politiques et les préférences de la plateforme Tessera.",
     "actions": {
@@ -4342,6 +5157,40 @@
       "avg_time": "Temps moyen",
       "resolution_rate": "Taux de résolution"
     },
+    "explain": {
+      "total": {
+        "what": "Le nombre total de cas de contrôle ouverts à traiter, tous niveaux confondus.",
+        "how": "Cas non résolus dans la file opérateur à l'instant."
+      },
+      "urgent": {
+        "what": "Les cas de priorité urgente, à traiter en premier.",
+        "how": "Cas ouverts dont la priorité est « urgent »."
+      },
+      "sla_2h": {
+        "what": "Les cas dont le délai de traitement (SLA) expire dans moins de 2 heures.",
+        "how": "Cas ouverts dont l'échéance SLA est à moins de 2 h."
+      },
+      "overdue": {
+        "what": "Les cas dont le délai (SLA) est déjà dépassé.",
+        "how": "Cas ouverts dont l'échéance SLA est passée — à rattraper."
+      },
+      "assigned": {
+        "what": "Les cas qui vous sont assignés.",
+        "how": "Cas ouverts dont le responsable est l'utilisateur courant."
+      },
+      "resolved": {
+        "what": "Les cas résolus aujourd'hui.",
+        "how": "Cas passés au statut « résolu » depuis minuit."
+      },
+      "avg_time": {
+        "what": "Le temps moyen de résolution d'un cas.",
+        "how": "Moyenne (ouverture → résolution) sur les cas récemment clos."
+      },
+      "resolution_rate": {
+        "what": "La part des cas reçus qui finissent résolus.",
+        "how": "Cas résolus ÷ cas reçus sur la période."
+      }
+    },
     "delta": {
       "vsHier": "vs hier"
     },
@@ -4407,7 +5256,16 @@
     "footer": {
       "total": "{n} éléments",
       "source": "{src}"
-    }
+    },
+    "rowOpen": "Voir le détail",
+    "close": "Fermer",
+    "page": {
+      "prev": "Page précédente",
+      "next": "Page suivante",
+      "perPage": "Lignes par page",
+      "summary": "Afficher {start} - {end} sur {total}"
+    },
+    "empty": "Aucun élément"
   },
   "assistant": {
     "title": "Assistant",
@@ -4528,6 +5386,22 @@
     }
   },
   "fleet": {
+    "explain": {
+      "orgConversations": {
+        "what": "Le nombre total de conversations de la flotte, dédupliqué : une conversation partagée entre agents (hand-off) n'est comptée qu'une seule fois.",
+        "how": "Conversations distinctes au niveau organisation, les conversations partagées comptées une seule fois.",
+        "source": "Flotte — agrégat org dédupliqué."
+      },
+      "naiveSum": {
+        "what": "La somme naïve des conversations par agent : additionne le total de chaque agent sans dédupliquer, donc surcompte les conversations partagées.",
+        "how": "Somme des conversations de chaque agent, avant déduplication."
+      },
+      "dedupSaved": {
+        "what": "L'écart évité par la déduplication : les conversations comptées en double dans la somme naïve. La ligne « partagées » indique combien sont passées par au moins deux agents (hand-off).",
+        "how": "Somme naïve − total org dédupliqué ; « partagées » = conversations traitées par ≥ 2 agents.",
+        "source": "Flotte — déduplication."
+      }
+    },
     "searchPlaceholder": "Rechercher un agent…",
     "filterAll": "Tous",
     "filterExternal": "Externes",
@@ -5002,9 +5876,56 @@
     "title": "À faire",
     "subtitle": "Vos tâches, revues et validations en attente de traitement.",
     "loading": "Chargement des tâches…",
-    "unavailable": "Tâches indisponibles."
+    "unavailable": "Tâches indisponibles.",
+    "rowOpen": "Voir le détail",
+    "close": "Fermer",
+    "page": {
+      "prev": "Page précédente",
+      "next": "Page suivante",
+      "perPage": "Lignes par page",
+      "summary": "Afficher {start} - {end} sur {total}"
+    },
+    "empty": "Aucun élément"
   },
   "etatADate": {
+    "explain": {
+      "reconstructed": {
+        "what": "L'état reconstruit à l'instant T : la configuration et les données telles qu'elles étaient à la date choisie, rejouées depuis les journaux.",
+        "how": "Reconstruit à partir des journaux append-only (audit, lignée, snapshots) jusqu'à T.",
+        "source": "Snapshot scellé + journaux S1."
+      },
+      "original": {
+        "what": "L'état d'origine : la réponse ou décision telle qu'émise à l'époque, avant toute reconstruction.",
+        "how": "Lu depuis la pièce d'origine (transcript / audit) à l'instant T."
+      },
+      "govCard": {
+        "what": "La configuration de gouvernance (garde-fous, prompt / modèle, release) active à l'instant T.",
+        "how": "Version effective à T, lue depuis la lignée et le journal d'audit."
+      },
+      "chronology": {
+        "what": "La chronologie des événements gouvernés jusqu'à T : déploiements, transferts, décisions.",
+        "how": "Événements append-only ordonnés, bornés à l'instant T."
+      },
+      "integrity": {
+        "what": "La preuve d'intégrité de la reconstruction : couverture des sources, dernière synchro et chaîne d'audit vérifiée.",
+        "how": "Vérifie la chaîne de hash et la couverture des sources à T.",
+        "source": "Journal d'audit S1 (hash-chaîné)."
+      },
+      "auditPieces": {
+        "what": "Les pièces d'audit opposables qui étayent l'état à T — chaque pièce est ouvrable.",
+        "how": "Entrées du journal d'audit liées à l'instant reconstruit.",
+        "source": "Journal d'audit S1."
+      },
+      "handoffs": {
+        "what": "Les passations entre agents survenues jusqu'à T : qui a traité quoi, et pourquoi.",
+        "how": "Événements de hand-off ordonnés, bornés à l'instant T."
+      },
+      "snapshots": {
+        "what": "Les instantanés sauvegardés : des reconstructions scellées et rejouables à l'identique.",
+        "how": "Snapshots persistés ; un clic recharge l'état à leur instant.",
+        "source": "Magasin de snapshots."
+      }
+    },
     "title": "État à date",
     "subtitle": "Reconstituez l'état d'un agent à une date donnée.",
     "agent": "Agent",
@@ -5077,13 +5998,55 @@
     "releaseNotRun": "Éval non exécutée",
     "dedupExplain": "Somme naïve {naive} · {saved} dédoublonnées · {shared} conversations partagées (handoff = 1)",
     "empty": "Aucune donnée flotte disponible.",
-    "orgSignalsNote": "Filtre actif sur la vue par agent ci-dessus. Les signaux org ci-dessous ne sont pas encore ventilés par agent.",
+    "orgSignalsNote": "Filtre agent actif : les cartes ci-dessous lisent les signaux de cet agent. Les sondes de politique partagée (pare-feu, refus), la chaîne d'audit, les traces et le rail temporel restent à l'échelle organisation.",
+    "orgWide": "Échelle org",
+    "orgWideHint": "Sonde de politique partagée — identique pour tous les agents, non ventilable.",
+    "orgPostureNote": "Vue par agent ci-dessus. Cette vue reste à l'échelle organisation — ses indicateurs agrègent toute la flotte, pas l'agent sélectionné.",
     "usefulLinks": "Liens utiles",
     "linkRelease": "Gouvernance · Release Control",
     "linkAudit": "Preuve · Journal d'audit",
     "linkSignals": "Définition · Catalogue de signaux"
   },
   "releaseControl": {
+    "viewFleet": "Voir tous les agents",
+    "viewAgent": "Voir l'agent",
+    "explain": {
+      "passing": {
+        "what": "Le nombre d'agents dont la porte d'évaluation est au vert — donc libérables en production.",
+        "how": "Agents distincts dont le verdict de gate est conforme (socle + cas critiques OK, aucun cas bloquant non couvert).",
+        "source": "Pipeline de release par agent (eval-gate)."
+      },
+      "blocked": {
+        "what": "Le nombre d'agents bloqués par la porte d'évaluation : un cas du socle ou un cas critique échoue.",
+        "how": "Agents dont blocking_socle > 0 ou blocking_t1 > 0, sans dérogation active.",
+        "source": "Pipeline de release par agent (eval-gate)."
+      },
+      "notRun": {
+        "what": "Le nombre d'agents sans évaluation exécutée : aucun verdict n'est encore disponible.",
+        "how": "Agents dont le dernier run d'évaluation est absent.",
+        "source": "Archive des runs d'évaluation."
+      },
+      "socle": {
+        "what": "Le socle : le jeu de cas commun que TOUT agent doit passer (plancher cross-agent), distinct de son set propre.",
+        "how": "Statut OK/échec du sous-ensemble socle dans le dernier run de l'agent.",
+        "source": "Politique d'eval-gate (§7 socle)."
+      },
+      "blockingSocle": {
+        "what": "Le nombre de cas du socle en échec qui bloquent la libération.",
+        "how": "Cas socle non conformes et non couverts par une dérogation active.",
+        "source": "Run d'évaluation de l'agent."
+      },
+      "blockingT1": {
+        "what": "Le nombre de cas critiques (priorité 1) en échec qui bloquent la libération.",
+        "how": "Cas de priorité 1 non conformes, sans dérogation active.",
+        "source": "Run d'évaluation de l'agent."
+      },
+      "waived": {
+        "what": "Le nombre de dérogations actives : exceptions acceptées qui ne bloquent pas, le temps d'un correctif.",
+        "how": "Waivers en cours de validité posés sur des cas en échec.",
+        "source": "Registre des dérogations (waiver store)."
+      }
+    },
     "title": "Release Control",
     "subtitle": "Pipeline de release par agent — verdict eval-gate, package gouverné versionné.",
     "total": "Agents",
@@ -5141,6 +6104,11 @@
     "breached": "SLO franchi · {metric} — {rate} < seuil {threshold}",
     "ok": "SLO respecté · {metric} — {rate} ≥ seuil {threshold}",
     "burn": "Burn ×{x} · {bad}/{n} mauvais sur la fenêtre",
+    "breachedShort": "{metric} — {rate} < seuil {threshold}",
+    "okShort": "{metric} — {rate} ≥ seuil {threshold}",
+    "burnRate": "Burn ×{x}",
+    "burnBad": "{bad}/{n} mauvais sur la fenêtre",
+    "stopPulse": "Acquitter",
     "remediate": "Remédier dans Incidents"
   },
   "shell": {
@@ -5412,13 +6380,79 @@
     }
   },
   "models": {
+    "explain": {
+      "models": {
+        "what": "Le nombre de modèles inscrits au catalogue (chat, embeddings, juges).",
+        "how": "Modèles distincts déclarés dans le registre de modèles."
+      },
+      "chat": {
+        "what": "Le modèle de conversation actuellement actif (qui répond aux clients).",
+        "how": "Modèle de rôle « chat » marqué actif dans le catalogue.",
+        "source": "Registre de modèles."
+      },
+      "embed": {
+        "what": "Le modèle d'embedding actif (qui vectorise le corpus pour la récupération).",
+        "how": "Modèle de rôle « embedding » marqué actif.",
+        "source": "Registre de modèles."
+      },
+      "profile": {
+        "what": "Le profil de déploiement actif : frontier (Vertex AI) ou sur site (Llama 3.3 70B via Ollama).",
+        "how": "Profil sélectionné qui aiguille les appels LLM."
+      },
+      "tokens": {
+        "what": "Le nombre de tokens consommés sur la période (entrée + sortie).",
+        "how": "Somme des tokens entrée et sortie sur la fenêtre.",
+        "source": "Compteurs de budget (tokens)."
+      },
+      "cost": {
+        "what": "Le coût LLM estimé sur la période (tokens × tarif du modèle).",
+        "how": "Somme des tokens × tarif par modèle.",
+        "source": "Compteurs de budget (coût)."
+      }
+    },
     "loading": "Chargement du catalogue de modèles...",
     "empty": "Aucun modèle au catalogue.",
     "close": "Fermer"
   },
   "guardrailCatalogue": {
+    "explain": {
+      "blocks": {
+        "what": "Le nombre de blocs de garde-fous actifs dans la politique (chaque bloc regroupe des règles).",
+        "how": "Blocs de politique distincts chargés."
+      },
+      "deny": {
+        "what": "Le nombre de règles de refus (deny) : motifs ou actions explicitement bloqués.",
+        "how": "Règles de type « deny » dans la politique active."
+      },
+      "pii": {
+        "what": "Le nombre de règles de protection des données personnelles (détection et masquage de PII).",
+        "how": "Règles ciblant la PII dans la politique."
+      },
+      "tools": {
+        "what": "Le nombre d'outils encadrés par les garde-fous (autorisés, à confirmer ou refusés).",
+        "how": "Outils référencés dans les règles d'outils."
+      },
+      "version": {
+        "what": "La version de la politique de garde-fous actuellement déployée.",
+        "how": "Version de la politique chargée au démarrage.",
+        "source": "Politique YAML (guard)."
+      },
+      "decisions": {
+        "what": "Le nombre de décisions de garde-fous journalisées dans la chaîne d'audit.",
+        "how": "Longueur de la chaîne d'audit du guard.",
+        "source": "Journal d'audit S1 (hash-chaîné)."
+      }
+    },
     "loading": "Chargement du catalogue de garde-fous...",
     "empty": "Aucun profil de garde-fous.",
     "close": "Fermer"
+  },
+  "table": {
+    "rowOpen": "Voir le détail",
+    "empty": "Aucun élément",
+    "summary": "Afficher {start} - {end} sur {total}",
+    "prev": "Page précédente",
+    "next": "Page suivante",
+    "perPage": "Lignes par page"
   }
 }

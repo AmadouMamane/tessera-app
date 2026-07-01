@@ -224,7 +224,7 @@ export const ChatErrorEventSchema = z.object({
 
 export const AuditOutcomeSchema = z.enum(["allowed", "denied", "error"]);
 export type AuditOutcome = z.infer<typeof AuditOutcomeSchema>;
-export const AuditEventTypeSchema = z.enum(["guard", "tool", "memory", "other"]);
+export const AuditEventTypeSchema = z.enum(["guard", "tool", "memory", "governance", "other"]);
 export type AuditEventType = z.infer<typeof AuditEventTypeSchema>;
 export const AuditActorRoleSchema = z.enum(["human", "service", "system", "model"]);
 export type AuditActorRole = z.infer<typeof AuditActorRoleSchema>;
@@ -2596,6 +2596,28 @@ const ScKpiSchema = z.object({
   sub: z.string(),
   series: z.array(z.number()),
 });
+const ScRowSchema = z.object({ label: z.string(), value: z.string() });
+const ScBarSchema = z.object({
+  label: z.string(),
+  count: z.number().int(),
+  passed: z.number().int().optional(),
+  color: z.string(),
+});
+const ScDetailSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.string(),
+  status: z.enum(["active", "evaluation", "deprecated", "disabled"]),
+  severity: z.enum(["critical", "high", "medium", "low"]),
+  description: z.string(),
+  definition: z.array(ScRowSchema),
+  performance: z.array(ScRowSchema),
+  guard: z.array(ScRowSchema),
+  distribution: z.array(ScBarSchema),
+  outcome: z.array(ScBarSchema),
+  tags: z.array(z.string()),
+  usage: z.object({ logged_by: z.string(), monitors: z.string() }),
+});
 const ScSignalSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -2608,6 +2630,7 @@ const ScSignalSchema = z.object({
   last_activity: z.string(),
   owner: z.string(),
   modified: z.string(),
+  detail: ScDetailSchema,
 });
 
 export const SignalCatalogueSchema = z.object({
@@ -2617,37 +2640,13 @@ export const SignalCatalogueSchema = z.object({
   page_size: z.number().int(),
   kpis: z.array(ScKpiSchema),
   signals: z.array(ScSignalSchema),
-  selected: z.object({
-    id: z.string(),
-    name: z.string(),
-    category: z.string(),
-    status: z.enum(["active", "evaluation", "deprecated", "disabled"]),
-    description: z.string(),
-    source: z.string(),
-    type: z.string(),
-    unit: z.string(),
-    direction: z.string(),
-    frequency: z.string(),
-    environment: z.string(),
-    tags: z.array(z.string()),
-    created: z.string(),
-    modified: z.string(),
-    severity: z.enum(["critical", "high", "medium", "low"]),
-    threshold_critical: z.string(),
-    threshold_alert: z.string(),
-    model: z.string(),
-    last_activity: z.string(),
-    quality: z.number().int(),
-    distribution: z.array(
-      z.object({ label: z.string(), count: z.number().int(), color: z.string() }),
-    ),
-    trend: z.array(z.number()),
-    usage: z.object({ logged_by: z.string(), monitors: z.string() }),
-  }),
   categories: z.array(z.string()),
+  sources: z.array(z.string()),
+  run_at: z.string(),
   footer: z.object({ total: z.number().int(), source: z.string() }),
 });
 export type SignalCatalogue = z.infer<typeof SignalCatalogueSchema>;
+export type ScSignal = z.infer<typeof ScSignalSchema>;
 
 // ---------------------------------------------------------------------------
 // Policies & guardrails (page #16-policies)
@@ -3608,6 +3607,14 @@ export const EtatADateSchema = z.object({
       agent: z.string(),
       context_source: z.string(),
       timezone: z.string(),
+      scope: z
+        .object({
+          keys: z.array(z.string()),
+          labels: z.array(z.string()),
+          count: z.number(),
+        })
+        .nullable()
+        .optional(),
       banner: z.string(),
     })
     .optional(),
@@ -3877,6 +3884,9 @@ const AgentConfigFieldSchema = z.object({
   badge: z.string().nullable(),
   editable: z.boolean().optional(),
   options: z.array(z.string()).optional(),
+  // Explicit on-state for toggle fields (locale-independent; the displayed
+  // `value` is localized so it can't be string-compared in the client).
+  on: z.boolean().optional(),
 });
 
 const AgentConfigSliderSchema = z.object({

@@ -2,13 +2,22 @@
 
 import { MessageCircle, ShieldCheck, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
 import type { ExternalChatPrompt } from "@/components/chat/chat-room";
 import { CustomerSessionBar } from "@/components/product/customer-session-bar";
+import { fetchConversationMessages } from "@/lib/api/client";
+import { type ChatMessage, useChatStore } from "@/lib/stores/chat-store";
 
 export const PRODUCT_CHAT_EVENT = "tessera:open-product-chat";
+
+// Per-browser key holding the customer's own conversation id, so the produit
+// widget RESUMES it after a reload / return visit instead of dropping it (the
+// chat store is in-memory). It is a capability the customer's browser already
+// holds — resuming only ever loads the conversation whose id is stored here, so
+// there is no cross-customer exposure (the transcript is not subject-scoped).
+const PRODUIT_CID_KEY = "tessera.produit.conversationId";
 
 interface ProductChatEventDetail {
   prompt?: string;
@@ -34,6 +43,66 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
   const t = useTranslations("product.apercu.widget");
   const [open, setOpen] = useState(false);
   const [externalPrompt, setExternalPrompt] = useState<ExternalChatPrompt | null>(null);
+  const conversationId = useChatStore((s) => s.conversationId);
+  const restoredRef = useRef(false);
+
+  // Resume the customer's last conversation on load — so turns made from
+  // /produit "remontent" after a refresh / return visit instead of vanishing
+  // (the store is ephemeral). Runs once; only when nothing is already active, so
+  // it never clobbers an in-flight conversation. A stale/unknown id (e.g. a wiped
+  // DB) loads empty → we clear it and start fresh rather than pin a dead id.
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const state = useChatStore.getState();
+    if (state.conversationId || state.messages.length > 0) return;
+    let cid: string | null = null;
+    try {
+      cid = localStorage.getItem(PRODUIT_CID_KEY);
+    } catch {
+      cid = null;
+    }
+    if (!cid) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetchConversationMessages(cid);
+        if (cancelled) return;
+        if (res.messages.length === 0) {
+          try {
+            localStorage.removeItem(PRODUIT_CID_KEY);
+          } catch {
+            // ignore disabled storage
+          }
+          return;
+        }
+        const msgs: ChatMessage[] = res.messages.map((m) => ({
+          id: globalThis.crypto?.randomUUID() ?? `${Date.now()}-${Math.random()}`,
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: m.content,
+          createdAt: Date.now(),
+        }));
+        useChatStore.getState().loadConversation(cid, msgs);
+      } catch {
+        // offline or stale id — leave the widget fresh, never block the UI
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Remember the active conversation id (while on /produit) so the effect above
+  // can resume it next time. Cleared id (Nouveau chat / branch) is left as-is —
+  // the next turn mints and persists a fresh id.
+  useEffect(() => {
+    if (!conversationId) return;
+    try {
+      localStorage.setItem(PRODUIT_CID_KEY, conversationId);
+    } catch {
+      // ignore disabled storage
+    }
+  }, [conversationId]);
 
   // Esc closes the panel (only while open so we don't swallow Esc elsewhere).
   useEffect(() => {

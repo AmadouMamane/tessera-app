@@ -6,10 +6,10 @@ from tessera.observability import improvement as imp
 
 
 def test_cause_and_action_labels_are_french() -> None:
-    assert imp._cause_label("low_faithfulness") == "Risque hallucination"
-    assert imp._cause_label("low_quality_de") == "Qualité multilingue"
-    assert imp._action_label("low_faithfulness", 11) == "Curer 11 tours vers l'eval set"
-    assert imp._action_label("low_quality_fr", 5) == "Corriger la qualité FR"
+    assert imp._cause_label("low_faithfulness", "fr") == "Risque hallucination"
+    assert imp._cause_label("low_quality_de", "fr") == "Qualité multilingue"
+    assert imp._action_label("low_faithfulness", 11, "fr") == "Curer 11 tours vers l'eval set"
+    assert imp._action_label("low_quality_fr", 5, "fr") == "Corriger la qualité FR"
 
 
 def test_compute_improvement_is_internally_consistent() -> None:

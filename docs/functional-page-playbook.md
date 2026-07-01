@@ -99,6 +99,33 @@ These are mandatory and override the normative screenshots:
   update the specs in lockstep ("Etat reconstruit a T" -> "État reconstruit à T",
   menuitem "Reglementation" -> "Réglementation", etc.).
 
+- **EVERY page MUST be fully trilingual FR / DE / EN — no FR-only data, ever.**
+  The whole site ships in three languages; a page is NOT done if switching the
+  locale leaves any displayed value in French. This applies to **backend-emitted
+  free-text too**, not just the frontend chrome: if the backend returns data
+  strings (descriptions, labels, relative times, KPI subs, status/tier prose),
+  the builder MUST take a `lang` param and localize them. The pattern (Round-6,
+  proven again on Signal catalogue):
+  1. Backend: `compute_<area>(lang)` / `_assemble(..., lang)`; a `_TR: {key: (fr,
+     de, en)}` table + `_t(key, lang)` + `_norm_lang(lang)` (reuse
+     `observability.knowledge._LANG_IDX` / `_norm_lang`). Localize descriptions,
+     fixed values, relative-time, KPI subs, share-of-total suffixes — everything
+     free-text. Keep **stable keys** (status/severity/category enums, id slugs)
+     unlocalized so filters/sorts don't break. **Convention (match
+     guardrail_catalogue): French keeps its accents in the Python source; German
+     transliterates ae/oe/ue/ss; apostrophes stay ASCII `'`** (RUF001-safe).
+  2. Route: add `lang: str = "fr"` query param, pass it through.
+  3. Client: `fetch<Area>(lang, signal?)` building `?lang=${encodeURIComponent(lang)}`.
+  4. Component: `const locale = useLocale()`; thread it into BOTH the react-query
+     `queryKey: ["<area>", locale]` AND the `queryFn` fetch arg, so switching
+     locale refetches.
+  5. `page.tsx` prefetch MUST use the **same** `["<area>", locale]` queryKey and
+     `?lang=${locale}` URL, or SSR hydration mismatches and the page flashes the
+     wrong language. (The default fixed `["<area>"]` key is the usual bug.)
+  Verify by capturing `/de/...` and `/en/...`, not just `/fr/...`. **Audit
+  existing pages**: `grep -rL "lang" src/tessera/observability/*.py` over the
+  data-emitting modules surfaces FR-only builders that still need this treatment.
+
 ## Step 1 — find the real source (don't assume there isn't one)
 
 Check what's actually populated before declaring something a fixture:

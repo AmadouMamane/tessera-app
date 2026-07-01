@@ -16,14 +16,17 @@ export async function generateMetadata({ params }: InboxPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchInbox(queryClient: QueryClient) {
+async function prefetchInbox(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["inbox-overview"],
+    queryKey: ["inbox-overview", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/inbox`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/inbox?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend inbox returned ${response.status}`);
       return InboxOverviewSchema.parse(await response.json());
     },
@@ -36,7 +39,7 @@ export default async function InboxPage({ params }: InboxPageProps) {
   const t = await getTranslations({ locale, namespace: "inbox" });
   const queryClient = new QueryClient();
   try {
-    await prefetchInbox(queryClient);
+    await prefetchInbox(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

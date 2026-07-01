@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowUpRight,
   BookCheck,
   ChevronRight,
   Database,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricKpi } from "@/components/observability/evolution-chart";
 import type { SignalRow } from "@/components/observability/signals-table";
 import { Badge } from "@/components/ui/badge";
@@ -41,25 +43,147 @@ const WARN = "text-amber-600 dark:text-amber-400";
 const BAD = "text-red-600 dark:text-red-400";
 const MUTED = "text-[var(--muted-foreground)]";
 
-/** A plain value KPI tile (no time series), with an optional tone + hint. */
+/** A translucent sub-card used inside the zone bands (same shape as the
+ * Sécurité & privacy `Panel`): every cockpit zone is a banded section grouping
+ * real cards, not flat sections. */
+function SubPanel({
+  title,
+  info,
+  action,
+  children,
+  className,
+}: {
+  title: string;
+  /** Optional ⓘ explainer next to the panel title. */
+  info?: React.ReactNode;
+  /** Optional header-right affordance (e.g. a drill-down link). */
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Card className={`flex h-full min-w-0 flex-col ${className ?? ""}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex min-w-0 items-center gap-1 text-[0.78rem] font-medium">
+          <span className="min-w-0 truncate">{title}</span>
+          {info}
+        </CardTitle>
+      </CardHeader>
+      {/* Drill-down sits in the FOOTER, not the header: these zone sub-cards are
+          narrow, and a header-right link squeezes the title to an ellipsis. */}
+      <CardContent className="flex flex-1 flex-col">
+        {children}
+        {action ? <div className="mt-auto pt-2">{action}</div> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** A compact "see → {tab}" drill-down used in a sub-card header/footer. */
+function CardTabLink({
+  onOpen,
+  tab,
+  label,
+}: {
+  onOpen: (t: OverviewTab) => void;
+  tab: OverviewTab;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(tab)}
+      className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+    >
+      {label}
+      <ChevronRight className="h-3 w-3" />
+    </button>
+  );
+}
+
+/** Compact, overflow-proof case reference for the dense zone-B list
+ * (e.g. "01_prompt_injection" → "#01"). Falls back to the first token. */
+function shortCaseRef(caseId: string): string {
+  const numeric = caseId.match(/^\d+/)?.[0];
+  if (numeric) return `#${numeric}`;
+  const token = caseId.split(/[_-]/)[0] ?? caseId;
+  return token.slice(0, 6).toUpperCase();
+}
+
+/** A ⓘ for a quality KPI tile, reading quality.explain.<k>.{what,how,source}. */
+function KpiInfo({ title, k }: { title: string; k: string }) {
+  const te = useTranslations("quality.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
+/** A plain value KPI tile (no time series), with an optional tone + hint + ⓘ + drill. */
 function ValueKpi({
   label,
   value,
   tone,
   hint,
+  info,
+  onDrill,
+  drillLabel,
 }: {
   label: string;
   value: string;
   tone?: string;
   hint?: string;
+  info?: React.ReactNode;
+  /** Makes the whole tile a drill-down (jump to the detail tab) with a ↗ affordance.
+   * Overlay-button pattern so the inner ⓘ never triggers the drill. */
+  onDrill?: () => void;
+  drillLabel?: string;
 }) {
   return (
-    <Card className="flex flex-col gap-0.5 p-2">
-      <div className="text-[0.7rem] leading-tight text-[var(--muted-foreground)]">{label}</div>
-      <div className={`text-lg font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
+    <Card
+      className={`group relative flex flex-col gap-0.5 p-2 ${
+        onDrill ? "cursor-pointer transition-colors hover:border-[var(--tessera-green)]/40" : ""
+      }`}
+    >
+      {onDrill ? (
+        <button
+          type="button"
+          onClick={onDrill}
+          aria-label={drillLabel}
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tessera-green)]/40"
+        />
+      ) : null}
+      <div
+        className={`flex items-center gap-1 text-[0.7rem] leading-tight text-[var(--muted-foreground)] ${
+          onDrill ? "pointer-events-none relative z-20" : ""
+        }`}
+      >
+        <span className="min-w-0 truncate">{label}</span>
+        {info ? <span className={onDrill ? "pointer-events-auto" : undefined}>{info}</span> : null}
+      </div>
+      <div
+        className={`text-lg font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"} ${
+          onDrill ? "pointer-events-none relative z-20" : ""
+        }`}
+      >
         {value}
       </div>
-      {hint ? <div className="text-[0.6rem] text-[var(--muted-foreground)]">{hint}</div> : null}
+      {hint ? (
+        <div
+          className={`text-[0.6rem] text-[var(--muted-foreground)] ${
+            onDrill ? "pointer-events-none relative z-20" : ""
+          }`}
+        >
+          {hint}
+        </div>
+      ) : null}
+      {onDrill ? (
+        <ArrowUpRight className="pointer-events-none absolute right-1.5 bottom-1.5 z-20 h-3 w-3 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-70" />
+      ) : null}
     </Card>
   );
 }
@@ -104,8 +228,9 @@ export function OverviewKpis({
   nonRegression,
   nRegressions,
   kappa,
-  failedCount,
+  evaluatedCount,
   loading,
+  onOpen,
 }: {
   sloPct: number | null;
   faithfulness: ScoreSeries | undefined;
@@ -114,8 +239,10 @@ export function OverviewKpis({
   nonRegression: number | null;
   nRegressions: number | null;
   kappa: number | null;
-  failedCount: number | null;
+  evaluatedCount: number | null;
   loading: boolean;
+  /** Makes each KPI tile drill into its detail tab (↗). */
+  onOpen?: (tab: OverviewTab) => void;
 }) {
   const tq = useTranslations("quality");
   const scoreTone = sloPct == null ? MUTED : sloPct >= 80 ? GOOD : sloPct >= 60 ? WARN : BAD;
@@ -129,24 +256,63 @@ export function OverviewKpis({
         value={sloPct == null ? "—" : `${sloPct}`}
         tone={scoreTone}
         hint="/100"
+        info={<KpiInfo title={tq("exec.kpi.scoreGlobal")} k="scoreGlobal" />}
+        onDrill={onOpen ? () => onOpen("signals") : undefined}
+        drillLabel={tq("seeDetail")}
       />
-      <MetricKpi label={tq("metrics.faithfulness")} series={faithfulness} loading={loading} />
-      <MetricKpi label={tq("metrics.grounding")} series={grounding} loading={loading} />
+      <MetricKpi
+        label={tq("metrics.faithfulness")}
+        series={faithfulness}
+        loading={loading}
+        info={<KpiInfo title={tq("metrics.faithfulness")} k="faithfulness" />}
+        onDrill={onOpen ? () => onOpen("signals") : undefined}
+        drillLabel={tq("seeDetail")}
+      />
+      <MetricKpi
+        label={tq("metrics.grounding")}
+        series={grounding}
+        loading={loading}
+        info={<KpiInfo title={tq("metrics.grounding")} k="grounding" />}
+        onDrill={onOpen ? () => onOpen("signals") : undefined}
+        drillLabel={tq("seeDetail")}
+      />
       <ValueKpi
         label={tq("exec.kpi.nonRegression")}
         value={nonRegression == null ? "—" : `${Math.round(nonRegression * 100)}%`}
         tone={nonRegTone}
+        info={<KpiInfo title={tq("exec.kpi.nonRegression")} k="nonRegression" />}
+        onDrill={onOpen ? () => onOpen("runs") : undefined}
+        drillLabel={tq("seeDetail")}
       />
-      <MetricKpi label={tq("metrics.hallucination")} series={hallucination} loading={loading} />
+      <MetricKpi
+        label={tq("metrics.hallucination")}
+        series={hallucination}
+        loading={loading}
+        info={<KpiInfo title={tq("metrics.hallucination")} k="hallucination" />}
+        onDrill={onOpen ? () => onOpen("failed") : undefined}
+        drillLabel={tq("seeDetail")}
+      />
       <ValueKpi
         label={tq("exec.kpi.regressionsOpen")}
         value={nRegressions == null ? "—" : String(nRegressions)}
         tone={regTone}
+        info={<KpiInfo title={tq("exec.kpi.regressionsOpen")} k="regressionsOpen" />}
+        onDrill={onOpen ? () => onOpen("runs") : undefined}
+        drillLabel={tq("seeDetail")}
       />
-      <ValueKpi label={tq("exec.kpi.judgeKappa")} value={kappa == null ? "—" : kappa.toFixed(2)} />
       <ValueKpi
-        label={tq("exec.kpi.casFailed")}
-        value={failedCount == null ? "—" : String(failedCount)}
+        label={tq("exec.kpi.judgeKappa")}
+        value={kappa == null ? "—" : kappa.toFixed(2)}
+        info={<KpiInfo title={tq("exec.kpi.judgeKappa")} k="judgeKappa" />}
+        onDrill={onOpen ? () => onOpen("judge") : undefined}
+        drillLabel={tq("seeDetail")}
+      />
+      <ValueKpi
+        label={tq("exec.kpi.casEval")}
+        value={evaluatedCount == null ? "—" : String(evaluatedCount)}
+        info={<KpiInfo title={tq("exec.kpi.casEval")} k="casEval" />}
+        onDrill={onOpen ? () => onOpen("runs") : undefined}
+        drillLabel={tq("seeDetail")}
       />
     </div>
   );
@@ -177,10 +343,7 @@ export function EtatActuel({
   const scoreTone = scorePct == null ? MUTED : scorePct >= 80 ? GOOD : scorePct >= 60 ? WARN : BAD;
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("sec.etat")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2 text-xs">
+      <CardContent className="flex flex-col gap-2 pt-3 text-xs">
         <Row label={tq("exec.etat.globalQuality")}>
           <span className={`tabular-nums font-semibold ${scoreTone}`}>
             {scorePct == null ? "—" : `${scorePct}/100`}
@@ -338,16 +501,11 @@ export function RootCauseDiagnostic({
   const wc = whatChanged;
   if (!wc?.available) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">{tq("charts.diagnostic")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
-            {tq("charts.noDiag")}
-          </p>
-        </CardContent>
-      </Card>
+      <SubPanel title={tq("charts.diagnostic")}>
+        <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">
+          {tq("charts.noDiag")}
+        </p>
+      </SubPanel>
     );
   }
   const changes = wc.changes ?? [];
@@ -361,11 +519,8 @@ export function RootCauseDiagnostic({
   }
   if (wc.regressed) causes.push(tq("charts.scoreRegressed"));
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("charts.diagnostic")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2 text-[0.7rem]">
+    <SubPanel title={tq("charts.diagnostic")}>
+      <div className="flex flex-col gap-2 text-[0.7rem]">
         <div className="grid grid-cols-2 gap-3">
           <section className="min-w-0">
             <h4 className="mb-1 font-semibold text-[var(--muted-foreground)]">
@@ -414,8 +569,8 @@ export function RootCauseDiagnostic({
             </span>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </SubPanel>
   );
 }
 
@@ -495,10 +650,7 @@ export function RecommendedActions({
   ];
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("sec.actions")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-1">
+      <CardContent className="flex flex-col gap-1 pt-3">
         {actions.map((a) => (
           <button
             key={a.key}
@@ -661,9 +813,11 @@ export function RunsBars({
 export function FaithGroundingScatter({
   pairs,
   loading,
+  onOpen,
 }: {
   pairs: MetricPairs | undefined;
   loading: boolean;
+  onOpen?: (tab: OverviewTab) => void;
 }) {
   const tq = useTranslations("quality");
   const points = pairs?.points ?? [];
@@ -672,8 +826,12 @@ export function FaithGroundingScatter({
   const bucketColor = (m: number) => (m >= 0.7 ? "#10b981" : m >= 0.4 ? "#f59e0b" : "#ef4444");
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("charts.faithGrounding")}</CardTitle>
+      <CardHeader className="flex-row items-center justify-between gap-2">
+        <CardTitle className="flex min-w-0 items-center gap-1 text-sm">
+          <span className="min-w-0 truncate">{tq("charts.faithGrounding")}</span>
+          <KpiInfo title={tq("charts.faithGrounding")} k="faithGrounding" />
+        </CardTitle>
+        {onOpen ? <CardTabLink onOpen={onOpen} tab="signals" label={tq("seeDetail")} /> : null}
       </CardHeader>
       <CardContent>
         {loading && !pairs ? (
@@ -787,9 +945,11 @@ function useCatLabel() {
 export function FailureBars({
   report,
   loading,
+  onOpen,
 }: {
   report: FailedCasesReport | undefined;
   loading: boolean;
+  onOpen?: (tab: OverviewTab) => void;
 }) {
   const tq = useTranslations("quality");
   const catLabel = useCatLabel();
@@ -798,81 +958,91 @@ export function FailureBars({
     .slice(0, 5);
   const max = Math.max(1, ...entries.map(([, n]) => n));
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("failed.distribution")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading && !report ? (
-          <Skeleton className="h-32 w-full" />
-        ) : entries.length === 0 ? (
-          <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
-            {tq("failed.empty")}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-1.5 text-[0.65rem]">
-            {entries.map(([key, n], i) => (
-              <li key={key} className="flex flex-col gap-0.5">
-                <div className="flex items-center justify-between gap-1.5">
-                  <span className="truncate">{catLabel(key)}</span>
-                  <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{n}</span>
-                </div>
-                <div className="h-1 w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${Math.max(4, (n / max) * 100)}%`,
-                      background: CAT_COLORS[i % CAT_COLORS.length],
-                    }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+    <SubPanel
+      title={tq("failed.distribution")}
+      info={<KpiInfo title={tq("failed.distribution")} k="failureDistribution" />}
+      action={
+        onOpen ? <CardTabLink onOpen={onOpen} tab="failed" label={tq("seeDetail")} /> : undefined
+      }
+    >
+      {loading && !report ? (
+        <Skeleton className="h-32 w-full" />
+      ) : entries.length === 0 ? (
+        <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
+          {tq("failed.empty")}
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1.5 text-[0.65rem]">
+          {entries.map(([key, n], i) => (
+            <li key={key} className="flex flex-col gap-0.5">
+              <div className="flex items-start justify-between gap-1.5">
+                <span className="min-w-0 leading-tight">{catLabel(key)}</span>
+                <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{n}</span>
+              </div>
+              <div className="h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${Math.max(4, (n / max) * 100)}%`,
+                    background: CAT_COLORS[i % CAT_COLORS.length],
+                  }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SubPanel>
   );
 }
 
 /** "Calibration du juge" — compact κ + agreement read for zone B (image 00). */
-export function JudgeMini({ data, loading }: { data: Calibration | undefined; loading: boolean }) {
+export function JudgeMini({
+  data,
+  loading,
+  onOpen,
+}: {
+  data: Calibration | undefined;
+  loading: boolean;
+  onOpen?: (tab: OverviewTab) => void;
+}) {
   const tq = useTranslations("quality");
   const kappa = data?.kappa ?? null;
   const tone = kappa == null ? MUTED : kappa >= 0.8 ? GOOD : kappa >= 0.6 ? WARN : BAD;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("judge.title")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading && !data ? (
-          <Skeleton className="h-32 w-full" />
-        ) : !data?.available ? (
-          <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
-            {tq("judge.unavailable")}
-          </p>
-        ) : (
-          <div className="flex flex-col gap-1 text-[0.7rem]">
-            <div className="flex items-baseline gap-1.5">
-              <span className={`font-serif text-xl font-semibold tabular-nums ${tone}`}>
-                {kappa == null ? "—" : kappa.toFixed(2)}
-              </span>
-              <span className="text-[var(--muted-foreground)]">{tq("judge.kappa")}</span>
-            </div>
-            <Row label={tq("judge.agreement")}>
-              <span className="tabular-nums">{Math.round((data.agreement ?? 0) * 100)}%</span>
-            </Row>
-            <Row label={tq("judge.verbosity")}>
-              <span className="tabular-nums">{(data.verbosity_corr ?? 0).toFixed(2)}</span>
-            </Row>
-            <Row label={tq("judge.samples")}>
-              <span className="tabular-nums">{data.n ?? 0}</span>
-            </Row>
+    <SubPanel
+      title={tq("judge.title")}
+      info={<KpiInfo title={tq("judge.title")} k="judgeCalibration" />}
+      action={
+        onOpen ? <CardTabLink onOpen={onOpen} tab="judge" label={tq("seeDetail")} /> : undefined
+      }
+    >
+      {loading && !data ? (
+        <Skeleton className="h-32 w-full" />
+      ) : !data?.available ? (
+        <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
+          {tq("judge.unavailable")}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1 text-[0.7rem]">
+          <div className="flex items-baseline gap-1.5">
+            <span className={`font-serif text-xl font-semibold tabular-nums ${tone}`}>
+              {kappa == null ? "—" : kappa.toFixed(2)}
+            </span>
+            <span className="text-[var(--muted-foreground)]">{tq("judge.kappa")}</span>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <Row label={tq("judge.agreement")}>
+            <span className="tabular-nums">{Math.round((data.agreement ?? 0) * 100)}%</span>
+          </Row>
+          <Row label={tq("judge.verbosity")}>
+            <span className="tabular-nums">{(data.verbosity_corr ?? 0).toFixed(2)}</span>
+          </Row>
+          <Row label={tq("judge.samples")}>
+            <span className="tabular-nums">{data.n ?? 0}</span>
+          </Row>
+        </div>
+      )}
+    </SubPanel>
   );
 }
 
@@ -887,7 +1057,6 @@ export function PriorityCases({
   onOpen: (tab: OverviewTab) => void;
 }) {
   const tq = useTranslations("quality");
-  const catLabel = useCatLabel();
   const cases = [...(report?.cases ?? [])]
     .sort(
       (a, b) =>
@@ -896,11 +1065,11 @@ export function PriorityCases({
     )
     .slice(0, 5);
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("exec.priorityCases")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-1.5">
+    <SubPanel
+      title={tq("exec.priorityCases")}
+      info={<KpiInfo title={tq("exec.priorityCases")} k="priorityCases" />}
+    >
+      <div className="flex flex-col gap-1.5">
         {loading && !report ? (
           <Skeleton className="h-32 w-full" />
         ) : cases.length === 0 ? (
@@ -910,14 +1079,18 @@ export function PriorityCases({
         ) : (
           <>
             {cases.map((c) => (
-              <div key={c.case_id} className="flex items-center gap-1.5 text-[0.65rem]">
+              <div
+                key={c.case_id}
+                className="flex items-start gap-1.5 text-[0.65rem]"
+                title={`${c.case_id} · ${c.title}`}
+              >
                 <span
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${SEV_DOT[c.severity] ?? ""}`}
+                  className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${SEV_DOT[c.severity] ?? ""}`}
                 />
-                <span className="shrink-0 font-mono text-[var(--tessera-green)]">{c.case_id}</span>
-                <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
-                  {catLabel(c.category)}
+                <span className="mt-px shrink-0 font-mono text-[0.6rem] text-[var(--tessera-green)]">
+                  {shortCaseRef(c.case_id)}
                 </span>
+                <span className="line-clamp-2 min-w-0 flex-1 leading-snug">{c.title}</span>
               </div>
             ))}
             <button
@@ -930,8 +1103,8 @@ export function PriorityCases({
             </button>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </SubPanel>
   );
 }
 
@@ -948,7 +1121,7 @@ function MiniBarRow({
         <span className="min-w-0 truncate">{label}</span>
         <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{value}</span>
       </div>
-      <div className="h-1 w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
+      <div className="h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
         <div
           className="h-full rounded-full"
           style={{ width: `${Math.max(4, Math.min(100, pct))}%`, background: color }}
@@ -1003,10 +1176,7 @@ export function PredictiveSignals({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("sec.predictive")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2 text-xs">
+      <CardContent className="flex flex-col gap-2 pt-3 text-xs">
         {loading && !risk ? (
           <Skeleton className="h-48 w-full" />
         ) : (
@@ -1192,7 +1362,7 @@ export function RegressionsByRelease({
                     {Math.round(r.delta * 100)} pts
                   </span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
+                <div className="h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
                   <div
                     className="h-full rounded-full bg-red-500"
                     style={{ width: `${Math.max(4, (Math.abs(r.delta) / max) * 100)}%` }}

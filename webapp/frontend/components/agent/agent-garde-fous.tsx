@@ -757,7 +757,7 @@ function RulesTable({
                         <span className="w-9 shrink-0 text-[0.7rem] tabular-nums text-[var(--tessera-text)]">
                           {r.coverage}%
                         </span>
-                        <span className="hidden h-1.5 w-14 overflow-hidden rounded-full bg-[var(--tessera-bg)] lg:block">
+                        <span className="hidden h-[4px] w-14 overflow-hidden rounded-full bg-[var(--tessera-border)] lg:block">
                           <span
                             className={cn(
                               "block h-full rounded-full",
@@ -894,7 +894,7 @@ function Coverage({ data }: { data: Data }) {
               <span className="text-[var(--tessera-text)]">{it.label}</span>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">{it.pct}%</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+            <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
               <div
                 className={cn("h-full rounded-full", COV_BAR[it.tone] ?? "bg-slate-500")}
                 style={{ width: `${it.pct}%` }}
@@ -922,7 +922,7 @@ function Reasons({ data }: { data: Data }) {
               <span className="text-[var(--tessera-text)]">{it.label}</span>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">{it.count}</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+            <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
               <div
                 className={cn("h-full rounded-full", COV_BAR[it.tone] ?? "bg-slate-500")}
                 style={{ width: `${it.pct}%` }}
@@ -947,9 +947,7 @@ function ModeDistribution({ data }: { data: Data }) {
           <li key={it.mode} className="flex flex-col gap-1">
             <div className="flex items-center justify-between text-[0.7rem]">
               <span className="flex items-center gap-1.5 text-[var(--tessera-text)]">
-                <span
-                  className={cn("h-2 w-2 rounded-full", MODE_DOT[it.mode] ?? "bg-slate-400")}
-                />
+                <span className={cn("h-2 w-2 rounded-full", MODE_DOT[it.mode] ?? "bg-slate-400")} />
                 {it.label}
                 <span className="text-[var(--tessera-text-muted)]">
                   · {it.active}/{it.count} actives
@@ -959,7 +957,7 @@ function ModeDistribution({ data }: { data: Data }) {
                 {it.decisions.toLocaleString("fr-FR")} déc.
               </span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--tessera-bg)]">
+            <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
               <div
                 className={cn("h-full rounded-full", MODE_DOT[it.mode] ?? "bg-slate-500")}
                 style={{ width: `${Math.max(it.pct, 3)}%` }}
@@ -989,7 +987,9 @@ function Overrides({ data }: { data: Data }) {
               className="flex items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5"
             >
               <span className="flex min-w-0 flex-col">
-                <span className="truncate text-[0.72rem] text-[var(--tessera-text)]">{it.name}</span>
+                <span className="truncate text-[0.72rem] text-[var(--tessera-text)]">
+                  {it.name}
+                </span>
                 <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
                   {it.category} · {it.mode}
                 </span>

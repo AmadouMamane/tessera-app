@@ -86,6 +86,7 @@ def _row_to_bundle(row: dict[str, object]) -> ReplayBundle | None:
             original_score=float(row.get("original_score", 0.0)),  # type: ignore[arg-type]
             lineage=lineage,
             latency_ms=row.get("latency_ms") if isinstance(row.get("latency_ms"), dict) else None,  # type: ignore[arg-type]
+            agent_id=str(row["agent_id"]) if row.get("agent_id") is not None else None,
         )
     except (KeyError, TypeError, ValueError):
         return None
@@ -143,15 +144,15 @@ def _warm_live_buffer() -> None:
         _BUNDLES.append(bundle)
 
 
-def persisted_bundles(at: str | None = None) -> list[ReplayBundle]:
-    """All durably-stored bundles, optionally only those captured at or before T."""
+def persisted_bundles(at: str | None = None, agent_id: str | None = None) -> list[ReplayBundle]:
+    """All durably-stored bundles, optionally as of T and/or one agent's."""
     bundles = _read_persisted()
     if at is None:
-        return bundles
+        return _bundles_by_agent(bundles, agent_id)
     try:
         cutoff = datetime.fromisoformat(at)
     except ValueError:
-        return bundles
+        return _bundles_by_agent(bundles, agent_id)
     kept: list[ReplayBundle] = []
     for bundle in bundles:
         try:
@@ -159,7 +160,8 @@ def persisted_bundles(at: str | None = None) -> list[ReplayBundle]:
                 kept.append(bundle)
         except ValueError:
             kept.append(bundle)
-    return kept
+    return _bundles_by_agent(kept, agent_id)
+
 
 _ANSWER_SYSTEM = (
     "You are a banking support assistant. Answer the QUESTION using ONLY the "
@@ -182,6 +184,7 @@ class ReplayBundle:
     original_score: float
     lineage: Lineage | None = None
     latency_ms: dict[str, float] | None = None
+    agent_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,10 +210,15 @@ def capture_bundle(
     original_score: float,
     original_model: str,
     conversation_id: str | None = None,
+    agent_id: str | None = None,
     lineage: Lineage | None = None,
     latency_ms: dict[str, float] | None = None,
 ) -> ReplayBundle:
-    """Capture a grounded turn for later replay; returns the stored bundle."""
+    """Capture a grounded turn for later replay; returns the stored bundle.
+
+    ``agent_id`` attributes the bundle to the responding agent so per-agent
+    cost / toxicity / PII / what-changed read that agent's own turns.
+    """
     bundle = ReplayBundle(
         bundle_id=uuid.uuid4().hex,
         captured_at=datetime.now(UTC).isoformat(),
@@ -223,6 +231,7 @@ def capture_bundle(
         original_score=original_score,
         lineage=lineage,
         latency_ms=latency_ms,
+        agent_id=agent_id,
     )
     _warm_live_buffer()
     _BUNDLES.append(bundle)
@@ -230,18 +239,30 @@ def capture_bundle(
     return bundle
 
 
-def recent_bundles(at: str | None = None) -> list[ReplayBundle]:
-    """Return the captured bundles (newest last).
+def _bundles_by_agent(bundles: list[ReplayBundle], agent_id: str | None) -> list[ReplayBundle]:
+    """Keep only ``agent_id``'s bundles when scoped; all otherwise.
+
+    A bundle with no ``agent_id`` (pre-tagging history) is org-only — an
+    agent-scoped read excludes it rather than guessing its owner.
+    """
+    if agent_id is None:
+        return bundles
+    return [b for b in bundles if b.agent_id == agent_id]
+
+
+def recent_bundles(at: str | None = None, agent_id: str | None = None) -> list[ReplayBundle]:
+    """Return the captured bundles (newest last), optionally one agent's.
 
     Live (``at=None``) reads the bounded in-process view (seeded from the durable
     store after a restart). With ``at`` set the durable store is read and filtered
     to bundles captured at or before T — the as-of-T read behind the cockpit time
-    rail (ADR 0011). Values are never fabricated, only filtered.
+    rail (ADR 0011). With ``agent_id`` set, only that agent's bundles. Values are
+    never fabricated, only filtered.
     """
     if at is not None:
-        return persisted_bundles(at)
+        return persisted_bundles(at, agent_id)
     _warm_live_buffer()
-    return list(_BUNDLES)
+    return _bundles_by_agent(list(_BUNDLES), agent_id)
 
 
 def get_bundle(bundle_id: str) -> ReplayBundle | None:
@@ -266,9 +287,7 @@ def purge_conversation(conversation_id: str) -> int:
     try:
         path = _bundles_path()
         if path.exists():
-            surviving = [
-                b for b in _read_persisted() if b.conversation_id != conversation_id
-            ]
+            surviving = [b for b in _read_persisted() if b.conversation_id != conversation_id]
             with path.open("w", encoding="utf-8") as fp:
                 for bundle in surviving:
                     fp.write(json.dumps(_bundle_to_row(bundle)) + "\n")

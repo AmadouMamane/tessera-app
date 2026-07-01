@@ -16,14 +16,17 @@ export async function generateMetadata({ params }: ParametresPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchParameters(queryClient: QueryClient) {
+async function prefetchParameters(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["parameters-overview"],
+    queryKey: ["parameters-overview", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/parameters`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/parameters?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend parameters returned ${response.status}`);
       return ParametersOverviewSchema.parse(await response.json());
     },
@@ -36,7 +39,7 @@ export default async function ParametresPage({ params }: ParametresPageProps) {
   const t = await getTranslations({ locale, namespace: "parameters" });
   const queryClient = new QueryClient();
   try {
-    await prefetchParameters(queryClient);
+    await prefetchParameters(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

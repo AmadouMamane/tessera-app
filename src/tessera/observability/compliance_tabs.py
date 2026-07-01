@@ -20,6 +20,9 @@ every other catalogue page in Tessera carries its domain text.
 
 from __future__ import annotations
 
+from dataclasses import fields, is_dataclass
+from typing import cast
+
 from tessera.observability.catalog_tabs import (
     CatalogTab,
     DetailField,
@@ -1504,8 +1507,8 @@ def _tab_registry() -> CatalogTab:
     )
 
 
-def build_tabs() -> dict[str, CatalogTab]:
-    """Return the deterministic per-tab payloads for the Conformite command bar."""
+def _build_fr_tabs() -> dict[str, CatalogTab]:
+    """Return the deterministic French per-tab payloads (the source of truth)."""
     return {
         "mapping": _tab_mapping(),
         "obligations": _tab_obligations(),
@@ -1515,3 +1518,559 @@ def build_tabs() -> dict[str, CatalogTab]:
         "evidence": _tab_evidence(),
         "registry": _tab_registry(),
     }
+
+
+# Generic translation layer (same approach as ``incidents_tabs``): the catalogue
+# is authored in French; for DE / EN every string leaf of the assembled tab tree
+# is mapped through ``_TR``. Unmapped strings (codes, person names, standards,
+# tech, role titles) fall through verbatim, so a missing entry is a French label,
+# never a crash.
+_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+_TR: dict[str, tuple[str, str]] = {
+    # --- KPI / status / chrome vocabulary -----------------------------------
+    "Cadres actifs": ("Aktive Rahmenwerke", "Active frameworks"),
+    "Cadres a surveiller": ("Zu beobachtende Rahmenwerke", "Frameworks to watch"),
+    "Cadres en baisse": ("Ruecklaeufige Rahmenwerke", "Declining frameworks"),
+    "Obligations actives": ("Aktive Pflichten", "Active obligations"),
+    "Obligations a risque": ("Gefaehrdete Pflichten", "Obligations at risk"),
+    "Obligations mappees": ("Zugeordnete Pflichten", "Mapped obligations"),
+    "Controles mappes": ("Zugeordnete Kontrollen", "Mapped controls"),
+    "Controles a revoir": ("Zu pruefende Kontrollen", "Controls to review"),
+    "Controles degrades": ("Verschlechterte Kontrollen", "Degraded controls"),
+    "Controles passes": ("Bestandene Kontrollen", "Passed controls"),
+    "Controles lies": ("Verknuepfte Kontrollen", "Linked controls"),
+    "Couverture": ("Abdeckung", "Coverage"),
+    "Couverture par cadre": ("Abdeckung nach Rahmenwerk", "Coverage by framework"),
+    "Couverture par systeme": ("Abdeckung nach System", "Coverage by system"),
+    "Couverture preuve": ("Nachweisabdeckung", "Evidence coverage"),
+    "Score de conformite": ("Konformitaetsscore", "Compliance score"),
+    "Echecs critiques": ("Kritische Fehler", "Critical failures"),
+    "Exceptions actives": ("Aktive Ausnahmen", "Active exceptions"),
+    "Exceptions approuvees": ("Genehmigte Ausnahmen", "Approved exceptions"),
+    "Exceptions depassees": ("Ueberfaellige Ausnahmen", "Overdue exceptions"),
+    "Exceptions a echeance proche": ("Ausnahmen mit naher Frist", "Exceptions due soon"),
+    "Incidents ouverts": ("Offene Vorfaelle", "Open incidents"),
+    "Ecarts ouverts": ("Offene Abweichungen", "Open gaps"),
+    "Gaps de couverture": ("Abdeckungsluecken", "Coverage gaps"),
+    "Legal holds actifs": ("Aktive Legal Holds", "Active legal holds"),
+    "Attestations valides": ("Gueltige Bescheinigungen", "Valid attestations"),
+    "Preuves disponibles": ("Verfuegbare Nachweise", "Available evidence"),
+    "Preuves manquantes": ("Fehlende Nachweise", "Missing evidence"),
+    "Preuves expirantes": ("Ablaufende Nachweise", "Expiring evidence"),
+    "Preuves rejouees": ("Wiederholte Nachweise", "Replayed evidence"),
+    "Preuves liees": ("Verknuepfte Nachweise", "Linked evidence"),
+    "Bases legales valides": ("Gueltige Rechtsgrundlagen", "Valid legal bases"),
+    "Finalites documentees": ("Dokumentierte Zwecke", "Documented purposes"),
+    "Durees de retention conformes": (
+        "Konforme Aufbewahrungsfristen",
+        "Compliant retention periods",
+    ),
+    "Delais de purge respectes": ("Eingehaltene Loeschfristen", "Purge deadlines met"),
+    "Jobs de purge planifies": ("Geplante Loeschjobs", "Scheduled purge jobs"),
+    "Ressources sous retention": ("Ressourcen unter Aufbewahrung", "Resources under retention"),
+    "Traitements enregistres": ("Registrierte Verarbeitungen", "Registered processings"),
+    "Ecarts de registre": ("Registerabweichungen", "Register gaps"),
+    "Ecarts de retention": ("Aufbewahrungsabweichungen", "Retention gaps"),
+    "Owners sollicites": ("Angefragte Owner", "Owners requested"),
+    "Evidence pack readiness": ("Evidence-Pack-Bereitschaft", "Evidence pack readiness"),
+    # --- statuses / badges ---------------------------------------------------
+    "Conforme": ("Konform", "Compliant"),
+    "Partiel": ("Teilweise", "Partial"),
+    "Partielle": ("Teilweise", "Partial"),
+    "Applicable partielle": ("Teilweise anwendbar", "Partially applicable"),
+    "Applicable des classification": (
+        "Anwendbar ab Klassifizierung",
+        "Applicable from classification",
+    ),
+    "Echec": ("Fehler", "Failure"),
+    "Critique": ("Kritisch", "Critical"),
+    "Eleve": ("Hoch", "High"),
+    "Moyen": ("Mittel", "Medium"),
+    "Faible": ("Niedrig", "Low"),
+    "Ouvert": ("Offen", "Open"),
+    "En cours": ("Laufend", "In progress"),
+    "En attente": ("Ausstehend", "Pending"),
+    "En retard": ("Verspaetet", "Late"),
+    "Retard": ("Verspaetung", "Late"),
+    "Approuvee": ("Genehmigt", "Approved"),
+    "Validee": ("Validiert", "Validated"),
+    "Valide": ("Gueltig", "Valid"),
+    "Signee": ("Signiert", "Signed"),
+    "Prete": ("Bereit", "Ready"),
+    "Nouveau": ("Neu", "New"),
+    "Depassee": ("Ueberfaellig", "Overdue"),
+    "Expirante": ("Ablaufend", "Expiring"),
+    "Bloque": ("Blockiert", "Blocked"),
+    "Manquante": ("Fehlend", "Missing"),
+    "Manquant / corrompu": ("Fehlend / beschaedigt", "Missing / corrupted"),
+    "Proposition en cours": ("Vorschlag laufend", "Proposal in progress"),
+    "Automatique": ("Automatisch", "Automatic"),
+    "Manuel": ("Manuell", "Manual"),
+    "A corriger": ("Zu korrigieren", "To fix"),
+    "A faire": ("Zu erledigen", "To do"),
+    "Aucun": ("Keiner", "None"),
+    "Aucun hors UE": ("Keiner ausserhalb der EU", "None outside the EU"),
+    # --- column headers / field labels --------------------------------------
+    "Cadre": ("Rahmenwerk", "Framework"),
+    "Cadre / obligation": ("Rahmenwerk / Pflicht", "Framework / obligation"),
+    "Article / Domaine": ("Artikel / Bereich", "Article / Domain"),
+    "Articles applicables": ("Anwendbare Artikel", "Applicable articles"),
+    "Obligation": ("Pflicht", "Obligation"),
+    "Obligation liee": ("Verknuepfte Pflicht", "Linked obligation"),
+    "Controle": ("Kontrolle", "Control"),
+    "Controle principal": ("Hauptkontrolle", "Main control"),
+    "Controles": ("Kontrollen", "Controls"),
+    "Statut": ("Status", "Status"),
+    "Score": ("Score", "Score"),
+    "Type": ("Typ", "Type"),
+    "Date": ("Datum", "Date"),
+    "Duree": ("Dauer", "Duration"),
+    "Duree cible": ("Zieldauer", "Target duration"),
+    "Duree de retention": ("Aufbewahrungsdauer", "Retention period"),
+    "Duree a confirmer": ("Dauer zu bestaetigen", "Duration to confirm"),
+    "Echeance": ("Frist", "Due date"),
+    "Owner": ("Owner", "Owner"),
+    "Proprietaire": ("Eigentuemer", "Owner"),
+    "Proprietaire & signature": ("Eigentuemer & Signatur", "Owner & signature"),
+    "Ressource": ("Ressource", "Resource"),
+    "Resolution": ("Loesung", "Resolution"),
+    "Risque residuel": ("Restrisiko", "Residual risk"),
+    "Niveau de risque residuel": ("Restrisikoniveau", "Residual risk level"),
+    "Categorie de donnees": ("Datenkategorie", "Data category"),
+    "Base legale": ("Rechtsgrundlage", "Legal basis"),
+    "Base legale / cadre": ("Rechtsgrundlage / Rahmen", "Legal basis / framework"),
+    "Finalite": ("Zweck", "Purpose"),
+    "Traitement": ("Verarbeitung", "Processing"),
+    "Campagne": ("Kampagne", "Campaign"),
+    "Campagne / domaine": ("Kampagne / Bereich", "Campaign / domain"),
+    "Methode de purge": ("Loeschmethode", "Purge method"),
+    "Regle de retention": ("Aufbewahrungsregel", "Retention rule"),
+    "Stockage": ("Speicher", "Storage"),
+    "Cause mere": ("Grundursache", "Root cause"),
+    "Empreinte": ("Fingerabdruck", "Fingerprint"),
+    "Signal": ("Signal", "Signal"),
+    "Signaux": ("Signale", "Signals"),
+    "Signaux lies": ("Verknuepfte Signale", "Linked signals"),
+    "Signaux par preuve": ("Signale pro Nachweis", "Signals per evidence"),
+    "Validite": ("Gueltigkeit", "Validity"),
+    "Veille": ("Beobachtung", "Watch"),
+    "Mesure compensatoire": ("Ausgleichsmassnahme", "Compensating measure"),
+    "Chaine d'approbation": ("Genehmigungskette", "Approval chain"),
+    "Niveau de risque": ("Risikoniveau", "Risk level"),
+    # --- section / tab titles -----------------------------------------------
+    "Cartographie reglementaire": ("Regulatorische Kartierung", "Regulatory mapping"),
+    "Obligations & controles": ("Pflichten & Kontrollen", "Obligations & controls"),
+    "Evaluations": ("Evaluierungen", "Evaluations"),
+    "Incidents & exceptions": ("Vorfaelle & Ausnahmen", "Incidents & exceptions"),
+    "Purge & retention": ("Loeschung & Aufbewahrung", "Purge & retention"),
+    "Registre des traitements": ("Verarbeitungsverzeichnis", "Processing register"),
+    "Inventaire des preuves & attestations": (
+        "Inventar der Nachweise & Bescheinigungen",
+        "Evidence & attestations inventory",
+    ),
+    "Campagnes d'evaluation": ("Evaluierungskampagnen", "Evaluation campaigns"),
+    "Jeux d'evaluation": ("Evaluierungssets", "Evaluation sets"),
+    "Echeances reglementaires": ("Regulatorische Fristen", "Regulatory deadlines"),
+    "Echeances de remediation": ("Behebungsfristen", "Remediation deadlines"),
+    "Tendances des scores": ("Score-Trends", "Score trends"),
+    "Tendances d'ecarts": ("Abweichungstrends", "Gap trends"),
+    "Actions rapides": ("Schnellaktionen", "Quick actions"),
+    "Activites recentes": ("Letzte Aktivitaeten", "Recent activities"),
+    "Dernieres attestations": ("Letzte Bescheinigungen", "Latest attestations"),
+    "Dernieres preuves": ("Letzte Nachweise", "Latest evidence"),
+    "Derniere campagne": ("Letzte Kampagne", "Latest campaign"),
+    "Dernier artefact de purge": ("Letztes Loesch-Artefakt", "Latest purge artifact"),
+    "Controles lies (3)": ("Verknuepfte Kontrollen (3)", "Linked controls (3)"),
+    "Controles lies (4)": ("Verknuepfte Kontrollen (4)", "Linked controls (4)"),
+    "Controles mappes (4)": ("Zugeordnete Kontrollen (4)", "Mapped controls (4)"),
+    "Obligations liees (3)": ("Verknuepfte Pflichten (3)", "Linked obligations (3)"),
+    "Exceptions liees (4)": ("Verknuepfte Ausnahmen (4)", "Linked exceptions (4)"),
+    "Preuves a renouveler (312)": ("Zu erneuernde Nachweise (312)", "Evidence to renew (312)"),
+    "Registres a completer (4)": (
+        "Zu vervollstaendigende Register (4)",
+        "Registers to complete (4)",
+    ),
+    "Revues programmees (4)": ("Geplante Pruefungen (4)", "Scheduled reviews (4)"),
+    "Purges a venir (7 jours)": ("Kommende Loeschungen (7 Tage)", "Upcoming purges (7 days)"),
+    "Prochaine purge": ("Naechste Loeschung", "Next purge"),
+    "Prochaine revue": ("Naechste Pruefung", "Next review"),
+    "Gestion du risque": ("Risikomanagement", "Risk management"),
+    "Plan de remediation": ("Behebungsplan", "Remediation plan"),
+    "Strategie de suppression": ("Loeschstrategie", "Deletion strategy"),
+    "Controle de purge": ("Loeschkontrolle", "Purge control"),
+    "Logs d'agent": ("Agent-Protokolle", "Agent logs"),
+    "Exports SIEM": ("SIEM-Exporte", "SIEM exports"),
+    "Tickets support": ("Support-Tickets", "Support tickets"),
+    "Transcriptions": ("Transkripte", "Transcripts"),
+    "Transactions": ("Transaktionen", "Transactions"),
+    "Transferts": ("Uebertragungen", "Transfers"),
+    "Sous-traitants": ("Auftragsverarbeiter", "Processors"),
+    "Sous-traitance TIC": ("IKT-Auslagerung", "ICT outsourcing"),
+    "Donnees": ("Daten", "Data"),
+    "Donnees financieres": ("Finanzdaten", "Financial data"),
+    "Consentement": ("Einwilligung", "Consent"),
+    "Interet legitime": ("Berechtigtes Interesse", "Legitimate interest"),
+    "Obligation legale": ("Rechtliche Verpflichtung", "Legal obligation"),
+    "Execution du contrat": ("Vertragserfuellung", "Contract performance"),
+    "Lutte anti-fraude": ("Betrugsbekaempfung", "Anti-fraud"),
+    "Detection de fraude": ("Betrugserkennung", "Fraud detection"),
+    "Evaluation de solvabilite": ("Bonitaetspruefung", "Creditworthiness assessment"),
+    "Scoring credit": ("Kredit-Scoring", "Credit scoring"),
+    "Verification d'identite": ("Identitaetspruefung", "Identity verification"),
+    "Authentification & KYC": ("Authentifizierung & KYC", "Authentication & KYC"),
+    "Sanctions & PEP": ("Sanktionen & PEP", "Sanctions & PEP"),
+    "Assistance conversationnelle": ("Konversationsunterstuetzung", "Conversational assistance"),
+    "Support client IA": ("KI-Kundensupport", "AI customer support"),
+    "Pseudonymisation renforcee": ("Verstaerkte Pseudonymisierung", "Reinforced pseudonymization"),
+    "Identite, documents": ("Identitaet, Dokumente", "Identity, documents"),
+    "Identite, listes": ("Identitaet, Listen", "Identity, lists"),
+    "Identifiant, contenu": ("Kennung, Inhalt", "Identifier, content"),
+    "Code de conduite IA": ("KI-Verhaltenskodex", "AI code of conduct"),
+    "Politiques internes": ("Interne Richtlinien", "Internal policies"),
+    "Privacy Impact Assessment": ("Datenschutz-Folgenabschaetzung", "Privacy Impact Assessment"),
+    "AIPD a finaliser": ("DSFA abzuschliessen", "DPIA to finalize"),
+    "AIPD Support client IA ouverte": (
+        "DSFA KI-Kundensupport offen",
+        "DPIA AI customer support open",
+    ),
+    "Attestation": ("Bescheinigung", "Attestation"),
+    "Exception": ("Ausnahme", "Exception"),
+    "Exceptions": ("Ausnahmen", "Exceptions"),
+    "Incident": ("Vorfall", "Incident"),
+    "Incidents": ("Vorfaelle", "Incidents"),
+    "Obligations": ("Pflichten", "Obligations"),
+    "Preuve": ("Nachweis", "Evidence"),
+    "Preuve liee": ("Verknuepfter Nachweis", "Linked evidence"),
+    "Preuves": ("Nachweise", "Evidence"),
+    "Rapport": ("Bericht", "Report"),
+    "Legal hold": ("Legal Hold", "Legal hold"),
+    "Gap": ("Luecke", "Gap"),
+    # --- CTAs ----------------------------------------------------------------
+    "Ajouter un traitement": ("Verarbeitung hinzufuegen", "Add a processing"),
+    "Ajouter une preuve": ("Nachweis hinzufuegen", "Add evidence"),
+    "Mapper une obligation": ("Pflicht zuordnen", "Map an obligation"),
+    "Nouvelle exception": ("Neue Ausnahme", "New exception"),
+    "Lancer une evaluation": ("Evaluierung starten", "Launch an evaluation"),
+    "Planifier une revue": ("Pruefung planen", "Schedule a review"),
+    "Forcer revue": ("Pruefung erzwingen", "Force review"),
+    "Generer evidence pack": ("Evidence-Pack erzeugen", "Generate evidence pack"),
+    "Combiner evidence pack": ("Evidence-Pack kombinieren", "Combine evidence pack"),
+    "Voir evidence pack": ("Evidence-Pack anzeigen", "View evidence pack"),
+    "Ouvrir la preuve": ("Nachweis oeffnen", "Open the evidence"),
+    "Ouvrir les preuves": ("Nachweise oeffnen", "Open the evidence"),
+    "Telecharger preuve": ("Nachweis herunterladen", "Download evidence"),
+    "Export": ("Export", "Export"),
+    "Voir le detail": ("Details anzeigen", "View detail"),
+    "Voir le detail par cadre": ("Detail nach Rahmenwerk anzeigen", "View detail by framework"),
+    "Voir les ecarts": ("Abweichungen anzeigen", "View gaps"),
+    "Voir les gaps": ("Luecken anzeigen", "View gaps"),
+    "Voir les registres a completer": (
+        "Zu vervollstaendigende Register anzeigen",
+        "View registers to complete",
+    ),
+    "Voir tous les cadres": ("Alle Rahmenwerke anzeigen", "View all frameworks"),
+    "Voir tous les cadres a surveiller": (
+        "Alle zu beobachtenden Rahmenwerke anzeigen",
+        "View all frameworks to watch",
+    ),
+    "Voir tous les controles a revoir": (
+        "Alle zu pruefenden Kontrollen anzeigen",
+        "View all controls to review",
+    ),
+    "Voir tous les ecarts": ("Alle Abweichungen anzeigen", "View all gaps"),
+    "Voir toutes les activites": ("Alle Aktivitaeten anzeigen", "View all activities"),
+    "Voir toutes les attestations": ("Alle Bescheinigungen anzeigen", "View all attestations"),
+    "Voir toutes les echeances": ("Alle Fristen anzeigen", "View all deadlines"),
+    "Voir toutes les exceptions": ("Alle Ausnahmen anzeigen", "View all exceptions"),
+    "Voir toutes les preuves": ("Alle Nachweise anzeigen", "View all evidence"),
+    "Voir toutes les preuves a renouveler": (
+        "Alle zu erneuernden Nachweise anzeigen",
+        "View all evidence to renew",
+    ),
+    "Voir toutes les purges": ("Alle Loeschungen anzeigen", "View all purges"),
+    "Voir toutes les revues": ("Alle Pruefungen anzeigen", "View all reviews"),
+    "Voir toutes les tendances": ("Alle Trends anzeigen", "View all trends"),
+    # --- article / control labels (FR clause translated) --------------------
+    "Art. 5 - Principes (a-f)": ("Art. 5 - Grundsaetze (a-f)", "Art. 5 - Principles (a-f)"),
+    "Art. 9 - Gestion du risque": ("Art. 9 - Risikomanagement", "Art. 9 - Risk management"),
+    "Art. 9 - Systeme a haut risque": ("Art. 9 - Hochrisikosystem", "Art. 9 - High-risk system"),
+    "Art. 9 - Monitoring post-marche": (
+        "Art. 9 - Post-Market-Monitoring",
+        "Art. 9 - Post-market monitoring",
+    ),
+    "Art. 10 - Gouvernance des donnees": (
+        "Art. 10 - Daten-Governance",
+        "Art. 10 - Data governance",
+    ),
+    "Art. 10 - Qualite des donnees": ("Art. 10 - Datenqualitaet", "Art. 10 - Data quality"),
+    "Art. 13 - Transparence": ("Art. 13 - Transparenz", "Art. 13 - Transparency"),
+    "Art. 13 - Transparence & info": (
+        "Art. 13 - Transparenz & Info",
+        "Art. 13 - Transparency & info",
+    ),
+    "Art. 15 - Exactitude": ("Art. 15 - Genauigkeit", "Art. 15 - Accuracy"),
+    "Art. 17 - SMQ": ("Art. 17 - QMS", "Art. 17 - QMS"),
+    "Art. 30 - Registre des activites": (
+        "Art. 30 - Taetigkeitsverzeichnis",
+        "Art. 30 - Records of activities",
+    ),
+    "RGPD - Article 30 (registre)": (
+        "DSGVO - Artikel 30 (Verzeichnis)",
+        "GDPR - Article 30 (register)",
+    ),
+    "DORA - Art. 28 (sous-traitance TIC)": (
+        "DORA - Art. 28 (IKT-Auslagerung)",
+        "DORA - Art. 28 (ICT outsourcing)",
+    ),
+    "DORA - Art. 28 (test de resilience)": (
+        "DORA - Art. 28 (Resilienztest)",
+        "DORA - Art. 28 (resilience test)",
+    ),
+    "EU AI Act - Art. 15 (rapport annuel)": (
+        "EU AI Act - Art. 15 (Jahresbericht)",
+        "EU AI Act - Art. 15 (annual report)",
+    ),
+    "C-04.1 - Tests adverses": ("C-04.1 - Adversariale Tests", "C-04.1 - Adversarial tests"),
+    "C-05.2 - Transparence": ("C-05.2 - Transparenz", "C-05.2 - Transparency"),
+    "C-05.2 - Transparence UX": ("C-05.2 - Transparenz UX", "C-05.2 - Transparency UX"),
+    "C-05.2 - Transparence utilisateur": (
+        "C-05.2 - Nutzertransparenz",
+        "C-05.2 - User transparency",
+    ),
+    "C-06.1 - Roles & responsabilites": (
+        "C-06.1 - Rollen & Verantwortlichkeiten",
+        "C-06.1 - Roles & responsibilities",
+    ),
+    "C-06.6 - Retention": ("C-06.6 - Aufbewahrung", "C-06.6 - Retention"),
+    "C-08.1 - Pseudonymisation": ("C-08.1 - Pseudonymisierung", "C-08.1 - Pseudonymization"),
+    "C-08.2 - Minimisation": ("C-08.2 - Minimierung", "C-08.2 - Minimization"),
+    "C-09.1 - Surveillance": ("C-09.1 - Ueberwachung", "C-09.1 - Monitoring"),
+    "C-10.1 - Securite": ("C-10.1 - Sicherheit", "C-10.1 - Security"),
+    "C-12.2 - Disponibilite": ("C-12.2 - Verfuegbarkeit", "C-12.2 - Availability"),
+    "C-12.4 - Journalisation": ("C-12.4 - Protokollierung", "C-12.4 - Logging"),
+    "C-13.2 - Donnees": ("C-13.2 - Daten", "C-13.2 - Data"),
+    "C-13.2 - Gouvernance des donnees": (
+        "C-13.2 - Daten-Governance",
+        "C-13.2 - Data governance",
+    ),
+    "C-13.2 - Plan de remediation": ("C-13.2 - Behebungsplan", "C-13.2 - Remediation plan"),
+    "C-15.1 - Gestion du risque": ("C-15.1 - Risikomanagement", "C-15.1 - Risk management"),
+    "C-15.2 - Mesures d'attenuation": (
+        "C-15.2 - Minderungsmassnahmen",
+        "C-15.2 - Mitigation measures",
+    ),
+    "C-17.1 - Effacement": ("C-17.1 - Loeschung", "C-17.1 - Erasure"),
+    "C-22.1 - Decision auto": ("C-22.1 - Auto-Entscheidung", "C-22.1 - Auto decision"),
+    "C-30.1 - Registre": ("C-30.1 - Verzeichnis", "C-30.1 - Register"),
+    "C-30.1 - Tenue du registre": ("C-30.1 - Verzeichnisfuehrung", "C-30.1 - Register keeping"),
+    "C-DORA.1 - Risques TIC": ("C-DORA.1 - IKT-Risiken", "C-DORA.1 - ICT risks"),
+    "C-DORA.1 - Test resilience": ("C-DORA.1 - Resilienztest", "C-DORA.1 - Resilience test"),
+    # --- legal-basis full strings -------------------------------------------
+    "Consentement - RGPD Art. 6": ("Einwilligung - DSGVO Art. 6", "Consent - GDPR Art. 6"),
+    "Contrat - RGPD Art. 6": ("Vertrag - DSGVO Art. 6", "Contract - GDPR Art. 6"),
+    "Interet legitime - RGPD Art. 6": (
+        "Berechtigtes Interesse - DSGVO Art. 6",
+        "Legitimate interest - GDPR Art. 6",
+    ),
+    "Obligation legale - LCB-FT": ("Rechtliche Verpflichtung - GwG", "Legal obligation - AML-CFT"),
+    "Obligation legale - LPF": ("Rechtliche Verpflichtung - LPF", "Legal obligation - LPF"),
+    "Base legale a justifier": ("Rechtsgrundlage zu begruenden", "Legal basis to justify"),
+    "Base legale a reconfirmer": ("Rechtsgrundlage neu zu bestaetigen", "Legal basis to reconfirm"),
+    "Sous-traitant a documenter": ("Auftragsverarbeiter zu dokumentieren", "Processor to document"),
+    # --- detail prose --------------------------------------------------------
+    "Maintenir un systeme de gestion des risques pour l'IA a haut risque.": (
+        "Ein Risikomanagementsystem fuer Hochrisiko-KI aufrechterhalten.",
+        "Maintain a risk-management system for high-risk AI.",
+    ),
+    "Systemes d'IA a haut risque, GPAI, transparence et surveillance humaine.": (
+        "Hochrisiko-KI-Systeme, GPAI, Transparenz und menschliche Aufsicht.",
+        "High-risk AI systems, GPAI, transparency and human oversight.",
+    ),
+    "Evaluation de solvabilite sur base contractuelle, sans decision automatisee.": (
+        "Bonitaetspruefung auf Vertragsbasis, ohne automatisierte Entscheidung.",
+        "Creditworthiness assessment on a contractual basis, without automated decision.",
+    ),
+    "Derogation temporaire RGPD - Art. 6 (3) en attente de mesure compensatoire.": (
+        "Befristete DSGVO-Ausnahme - Art. 6 (3), wartet auf Ausgleichsmassnahme.",
+        "Temporary GDPR waiver - Art. 6 (3), pending compensating measure.",
+    ),
+    "Retention 90 jours sur interet legitime, purge automatique nocturne.": (
+        "90 Tage Aufbewahrung auf berechtigtem Interesse, naechtliche Auto-Loeschung.",
+        "90-day retention on legitimate interest, nightly automatic purge.",
+    ),
+    "Rapport de gestion du risque EU AI Act - Art. 9, signe et horodate.": (
+        "EU-AI-Act-Risikomanagementbericht - Art. 9, signiert und mit Zeitstempel.",
+        "EU AI Act risk-management report - Art. 9, signed and timestamped.",
+    ),
+    "Score de conformite 82 % - 11 echecs critiques, 248 controles evalues.": (
+        "Konformitaetsscore 82 % - 11 kritische Fehler, 248 bewertete Kontrollen.",
+        "Compliance score 82% - 11 critical failures, 248 controls evaluated.",
+    ),
+    # --- activity-log entries (code kept, FR clause translated) -------------
+    "Controle CTRL-09 mis a jour (RGPD)": (
+        "Kontrolle CTRL-09 aktualisiert (DSGVO)",
+        "Control CTRL-09 updated (GDPR)",
+    ),
+    "Controle CTRL-13 repasse conforme": (
+        "Kontrolle CTRL-13 wieder konform",
+        "Control CTRL-13 back to compliant",
+    ),
+    "Controle depasse": ("Kontrolle ueberfaellig", "Control overdue"),
+    "Obligation Art. 13 marquee partielle": (
+        "Pflicht Art. 13 als teilweise markiert",
+        "Obligation Art. 13 marked partial",
+    ),
+    "Obligation OBL-1123 marquee conforme (RGPD)": (
+        "Pflicht OBL-1123 als konform markiert (DSGVO)",
+        "Obligation OBL-1123 marked compliant (GDPR)",
+    ),
+    "Exception EXC-2026-004 creee (DORA)": (
+        "Ausnahme EXC-2026-004 erstellt (DORA)",
+        "Exception EXC-2026-004 created (DORA)",
+    ),
+    "EXC-2026-009 approuvee": ("EXC-2026-009 genehmigt", "EXC-2026-009 approved"),
+    "Ecart EXC-2026-007 ouvert (DORA)": (
+        "Abweichung EXC-2026-007 offen (DORA)",
+        "Gap EXC-2026-007 open (DORA)",
+    ),
+    "INC-2026-001 marquee depassee": (
+        "INC-2026-001 als ueberfaellig markiert",
+        "INC-2026-001 marked overdue",
+    ),
+    "INC-2026-003 escalade a Sophie Bernard": (
+        "INC-2026-003 an Sophie Bernard eskaliert",
+        "INC-2026-003 escalated to Sophie Bernard",
+    ),
+    "Evaluation EU AI Act terminee": (
+        "EU-AI-Act-Evaluierung abgeschlossen",
+        "EU AI Act evaluation completed",
+    ),
+    "Evaluation ISO 27001 completee": (
+        "ISO-27001-Evaluierung abgeschlossen",
+        "ISO 27001 evaluation completed",
+    ),
+    "Evaluation ISO 27001 terminee": (
+        "ISO-27001-Evaluierung abgeschlossen",
+        "ISO 27001 evaluation finished",
+    ),
+    "Evidence pack EU AI Act genere": (
+        "Evidence-Pack EU AI Act erzeugt",
+        "EU AI Act evidence pack generated",
+    ),
+    "Campagne RGPD relancee": ("DSGVO-Kampagne neu gestartet", "GDPR campaign relaunched"),
+    "Attestation DORA renouvelee": ("DORA-Bescheinigung erneuert", "DORA attestation renewed"),
+    "Legal hold ajoute sur Jeux d'evaluation": (
+        "Legal Hold auf Evaluierungssets hinzugefuegt",
+        "Legal hold added on evaluation sets",
+    ),
+    "Regle Exports SIEM mise a jour": (
+        "Regel SIEM-Exporte aktualisiert",
+        "SIEM exports rule updated",
+    ),
+    "Traitement Scoring credit mis a jour": (
+        "Verarbeitung Kredit-Scoring aktualisiert",
+        "Credit-scoring processing updated",
+    ),
+    "Purge auto Logs d'agent executee": (
+        "Auto-Loeschung Agent-Protokolle ausgefuehrt",
+        "Auto-purge agent logs executed",
+    ),
+    "Transcriptions purge en retard signalee": (
+        "Transkript-Loeschung verspaetet gemeldet",
+        "Transcripts purge reported late",
+    ),
+    "Base legale KYC Screening signalee": (
+        "Rechtsgrundlage KYC-Screening gemeldet",
+        "KYC screening legal basis flagged",
+    ),
+    "Revue C-30.1 planifiee": ("Pruefung C-30.1 geplant", "Review C-30.1 scheduled"),
+    "Revue trimestrielle dediee": ("Dedizierte Quartalspruefung", "Dedicated quarterly review"),
+    "PRV-2026-06-0102 horodatee (ISO)": (
+        "PRV-2026-06-0102 mit Zeitstempel (ISO)",
+        "PRV-2026-06-0102 timestamped (ISO)",
+    ),
+    "PRV-2026-06-0118 exportee (RGPD)": (
+        "PRV-2026-06-0118 exportiert (DSGVO)",
+        "PRV-2026-06-0118 exported (GDPR)",
+    ),
+    "PRV-2026-06-0123 signee (EU AI Act)": (
+        "PRV-2026-06-0123 signiert (EU AI Act)",
+        "PRV-2026-06-0123 signed (EU AI Act)",
+    ),
+    "PRV-2026-06-0130 generee (SOC 2)": (
+        "PRV-2026-06-0130 erzeugt (SOC 2)",
+        "PRV-2026-06-0130 generated (SOC 2)",
+    ),
+    "Preuve EV-2026-06-0204 ajoutee": (
+        "Nachweis EV-2026-06-0204 hinzugefuegt",
+        "Evidence EV-2026-06-0204 added",
+    ),
+    "Preuve EV-2026-06-0318 liee a C-15.1": (
+        "Nachweis EV-2026-06-0318 mit C-15.1 verknuepft",
+        "Evidence EV-2026-06-0318 linked to C-15.1",
+    ),
+    "Preuve EV-2026-06-0321 ajoutee a EU AI Act": (
+        "Nachweis EV-2026-06-0321 zu EU AI Act hinzugefuegt",
+        "Evidence EV-2026-06-0321 added to EU AI Act",
+    ),
+    "Preuve PRV-2026-04-0044 marquee manquante": (
+        "Nachweis PRV-2026-04-0044 als fehlend markiert",
+        "Evidence PRV-2026-04-0044 marked missing",
+    ),
+    # --- misc ----------------------------------------------------------------
+    "Comite Conformite": ("Konformitaetskomitee", "Compliance committee"),
+    "Purge automatique": ("Automatische Loeschung", "Automatic purge"),
+    "Securite - ISO 27001": ("Sicherheit - ISO 27001", "Security - ISO 27001"),
+    "purge auto": ("Auto-Loeschung", "auto purge"),
+    "purge manuelle": ("manuelle Loeschung", "manual purge"),
+    "purge manuelle en retard": ("manuelle Loeschung verspaetet", "manual purge late"),
+    "Genere le": ("Erstellt am", "Generated on"),
+    "Log signe": ("Signiertes Protokoll", "Signed log"),
+    "Derogation temporaire": ("Befristete Ausnahme", "Temporary waiver"),
+    "il y a 1 h": ("vor 1 Std", "1 h ago"),
+    "il y a 2 h": ("vor 2 Std", "2 h ago"),
+    "il y a 3 h": ("vor 3 Std", "3 h ago"),
+    "il y a 4 h": ("vor 4 Std", "4 h ago"),
+    "il y a 5 h": ("vor 5 Std", "5 h ago"),
+    "il y a 6 h": ("vor 6 Std", "6 h ago"),
+    "il y a 7 h": ("vor 7 Std", "7 h ago"),
+    "dans 6 jours": ("in 6 Tagen", "in 6 days"),
+    "dans 11 jours": ("in 11 Tagen", "in 11 days"),
+    "dans 12 jours": ("in 12 Tagen", "in 12 days"),
+    "dans 15 jours": ("in 15 Tagen", "in 15 days"),
+    "dans 18 jours": ("in 18 Tagen", "in 18 days"),
+    "dans 22 jours": ("in 22 Tagen", "in 22 days"),
+    "dans 30 jours": ("in 30 Tagen", "in 30 days"),
+    "dans 45 jours": ("in 45 Tagen", "in 45 days"),
+    "dans 60 jours": ("in 60 Tagen", "in 60 days"),
+}
+
+
+def _localize(value: object, idx: int) -> object:
+    """Recursively map every translatable string leaf to locale ``idx`` (de/en)."""
+    if isinstance(value, str):
+        pair = _TR.get(value)
+        return pair[idx] if pair else value
+    if isinstance(value, dict):
+        return {k: _localize(v, idx) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return type(value)(_localize(v, idx) for v in value)
+    if is_dataclass(value) and not isinstance(value, type):
+        kwargs = {f.name: _localize(getattr(value, f.name), idx) for f in fields(value)}
+        return type(value)(**kwargs)
+    return value
+
+
+def build_tabs(lang: str = "fr") -> dict[str, CatalogTab]:
+    """Return the per-tab payloads for the Conformite command bar in ``lang``.
+
+    The fixture is authored in French (the source of truth); for ``de`` / ``en``
+    each string leaf is mapped through ``_TR`` (unmapped strings fall through
+    verbatim), so the governance catalogues are localized end to end.
+    """
+    tabs = _build_fr_tabs()
+    idx = _LANG_IDX.get(lang, 0)
+    if idx == 0:
+        return tabs
+    return {key: cast("CatalogTab", _localize(tab, idx - 1)) for key, tab in tabs.items()}

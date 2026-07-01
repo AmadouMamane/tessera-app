@@ -154,6 +154,36 @@ def test_reconstructed_and_integrity_ids() -> None:
     assert payload["integrity"]["test_query"] == "2/3 sources"  # type: ignore[index]
 
 
+def test_normalize_scope_keeps_only_valid_categories() -> None:
+    assert ead._normalize_scope(None) is None
+    assert ead._normalize_scope("dora, comptes") == {"dora", "comptes"}
+    # unknown keys are dropped; an all-invalid filter degrades to no scope
+    assert ead._normalize_scope("dora,bogus") == {"dora"}
+    assert ead._normalize_scope("bogus,nope") is None
+
+
+def test_scope_restricts_knowledge_dimension_and_sets_meta() -> None:
+    payload = ead._assemble(
+        _rows(),
+        _audit(),
+        _StubPolicy(),
+        _ctx(),
+        _original(),
+        T_MID,
+        now=NOW,
+        scope={"dora"},
+    )
+    keys = {r["key"] for r in payload["table"]["rows"]}  # type: ignore[index]
+    assert keys == {"dora"}  # gdpr/comptes scoped out
+    assert payload["integrity"]["test_query"] == "1/1 sources"  # type: ignore[index]
+    scope = payload["meta"]["scope"]  # type: ignore[index]
+    assert scope["keys"] == ["dora"]
+    assert scope["count"] == 1
+    assert scope["labels"][0].startswith("DORA")
+    # agent-wide cards stay global (not scoped away)
+    assert payload["guardrails"]["rows"]  # type: ignore[index]
+
+
 def test_snapshot_record_captures_headline_figures() -> None:
     rec = ead._snapshot_record(_rows(), _audit(decisions=15484), T_MID, NOW)
     assert rec["ref_code"] == "RES-2026-06-12-0200"

@@ -16,14 +16,17 @@ export async function generateMetadata({ params }: IntegrationsPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchIntegrations(queryClient: QueryClient) {
+async function prefetchIntegrations(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["integrations-overview"],
+    queryKey: ["integrations-overview", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/integrations`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/integrations?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend integrations returned ${response.status}`);
       return IntegrationsOverviewSchema.parse(await response.json());
     },
@@ -36,7 +39,7 @@ export default async function IntegrationsPage({ params }: IntegrationsPageProps
   const t = await getTranslations({ locale, namespace: "integrations" });
   const queryClient = new QueryClient();
   try {
-    await prefetchIntegrations(queryClient);
+    await prefetchIntegrations(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

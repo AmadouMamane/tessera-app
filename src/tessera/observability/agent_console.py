@@ -17,9 +17,86 @@ from zoneinfo import ZoneInfo
 
 from tessera.guard.decisions import load_policy
 from tessera.observability.eval import scores as eval_scores
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import LLMProfile, get_settings
 
 __all__ = ["compute_agent_console"]
+
+# Localized free-text (fr, de, en). Proper nouns (Tessera, Prompt/Sources labels
+# that double as tab keys are localized below) handled explicitly.
+_TR: dict[str, tuple[str, str, str]] = {
+    "ep_title": ("Évaluation automatique", "Automatische Bewertung", "Automatic evaluation"),
+    "ep_note": (
+        "Dernier run d'évaluation — la console ne ré-évalue pas chaque tour.",
+        "Letzter Bewertungslauf - die Konsole bewertet nicht jeden Tour neu.",
+        "Latest evaluation run - the console does not re-evaluate each turn.",
+    ),
+    "ep_cta": ("Voir les évaluations", "Bewertungen ansehen", "View evaluations"),
+    "m_faith": ("Fidélité", "Treue", "Faithfulness"),
+    "m_ground": ("Ancrage", "Verankerung", "Grounding"),
+    "m_hallu": ("Hallucination", "Halluzination", "Hallucination"),
+    "tool_allowed": ("Autorisé", "Erlaubt", "Allowed"),
+    "tools_title": (
+        "Outils disponibles ({n})",
+        "Verfuegbare Tools ({n})",
+        "Available tools ({n})",
+    ),
+    "gd_deny_detail": (
+        "Patterns deny chargés depuis la policy runtime.",
+        "Deny-Patterns aus der Laufzeit-Policy geladen.",
+        "Deny patterns loaded from the runtime policy.",
+    ),
+    "gd_pii_detail": (
+        "Patterns PII chargés depuis la policy runtime.",
+        "PII-Patterns aus der Laufzeit-Policy geladen.",
+        "PII patterns loaded from the runtime policy.",
+    ),
+    "gd_title": (
+        "Garde-fous chargés ({n})",
+        "Geladene Guardrails ({n})",
+        "Loaded guardrails ({n})",
+    ),
+    "lbl_guard": ("Garde-fous", "Guardrails", "Guardrails"),
+    "tab_tools": ("Outils", "Tools", "Tools"),
+    "tab_eval": ("Évaluation", "Bewertung", "Evaluation"),
+    "footer_started": (
+        "Session ouverte à {t}",
+        "Sitzung geoeffnet um {t}",
+        "Session opened at {t}",
+    ),
+    "lang_name": ("Français", "Deutsch", "English"),
+    "placeholder": (
+        "Posez votre question à l'assistant...",
+        "Stellen Sie Ihre Frage an den Assistenten...",
+        "Ask the assistant your question...",
+    ),
+    "fb_useful": ("Utile", "Nuetzlich", "Useful"),
+    "fb_notuseful": ("Pas utile", "Nicht nuetzlich", "Not useful"),
+    "fa_replay": ("Rejouer cette session", "Diese Sitzung wiederholen", "Replay this session"),
+    "fa_compare": (
+        "Comparer à la version actuelle",
+        "Mit aktueller Version vergleichen",
+        "Compare to current version",
+    ),
+    "fa_export": ("Exporter la session", "Sitzung exportieren", "Export session"),
+    "fa_close": ("Clôturer la session", "Sitzung schliessen", "Close session"),
+    "timeline_incidents": ("Timeline incidents", "Vorfall-Timeline", "Incident timeline"),
+    "new_session": ("Nouvelle session", "Neue Sitzung", "New session"),
+    "replay": ("Relire à T", "Bei T abspielen", "Replay at T"),
+    "title": ("Conversation de test", "Testkonversation", "Test conversation"),
+    "subtitle": (
+        "Interagissez avec l'assistant et observez en détail les traces, "
+        "sources, outils et garde-fous.",
+        "Interagieren Sie mit dem Assistenten und beobachten Sie Traces, Quellen, "
+        "Tools und Guardrails im Detail.",
+        "Interact with the assistant and observe traces, sources, tools and "
+        "guardrails in detail.",
+    ),
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
 
 
 _ROOT = Path(__file__).resolve().parents[3]
@@ -70,7 +147,7 @@ def _latest_score(metric: str) -> float | None:
     return values[-1] if values else None
 
 
-def _evaluation_panel() -> dict[str, object]:
+def _evaluation_panel(lang: str) -> dict[str, object]:
     """Latest *real* automated-eval metrics for this agent (honest, not per-turn).
 
     The console does not re-run the evaluation harness on each turn, so this
@@ -80,54 +157,55 @@ def _evaluation_panel() -> dict[str, object]:
     fabricated number.
     """
     metrics = (
-        ("Fidélité", "faithfulness"),
-        ("Ancrage", "grounding"),
-        ("Hallucination", "hallucination"),
+        (_t("m_faith", lang), "faithfulness"),
+        (_t("m_ground", lang), "grounding"),
+        (_t("m_hallu", lang), "hallucination"),
     )
     rows: list[dict[str, object]] = []
     for label, key in metrics:
         value = _latest_score(key)
         rows.append({"label": label, "value": None if value is None else f"{value:.2f}"})
     return {
-        "title": "Évaluation automatique",
-        "note": "Dernier run d'évaluation — la console ne ré-évalue pas chaque tour.",
-        "cta": "Voir les évaluations",
+        "title": _t("ep_title", lang),
+        "note": _t("ep_note", lang),
+        "cta": _t("ep_cta", lang),
         "available": any(row["value"] is not None for row in rows),
         "rows": rows,
     }
 
 
-def _tools_panel() -> dict[str, object]:
+def _tools_panel(lang: str) -> dict[str, object]:
     policy = load_policy(get_settings().guard.policy_path)
     rows = [
-        {"name": name, "status": "Autorisé", "tone": "good", "latency": "policy"}
+        {"name": name, "status": _t("tool_allowed", lang), "tone": "good", "latency": "policy"}
         for name, rule in policy.tools.items()
         if rule.allow
     ][:3]
-    return {"title": f"Outils disponibles ({len(rows)})", "rows": rows}
+    return {"title": _t("tools_title", lang).format(n=len(rows)), "rows": rows}
 
 
-def _guardrails_panel() -> dict[str, object]:
+def _guardrails_panel(lang: str) -> dict[str, object]:
     policy = load_policy(get_settings().guard.policy_path)
     rows = [
         {
             "name": "Prompt Injection Deny",
             "status": str(len(policy.prompt_injection_deny)),
             "tone": "warn",
-            "detail": "Patterns deny chargés depuis la policy runtime.",
+            "detail": _t("gd_deny_detail", lang),
         },
         {
             "name": "PII Output Guard",
             "status": str(len(policy.pii_patterns)),
             "tone": "warn",
-            "detail": "Patterns PII chargés depuis la policy runtime.",
+            "detail": _t("gd_pii_detail", lang),
         },
     ]
-    return {"title": f"Garde-fous chargés ({len(rows)})", "rows": rows}
+    return {"title": _t("gd_title", lang).format(n=len(rows)), "rows": rows}
 
 
-def compute_agent_console() -> dict[str, object]:
+def compute_agent_console(lang: str = "fr") -> dict[str, object]:
     """Return the Console (Debug) payload from live settings and source files."""
+    lang = _norm_lang(lang)
     settings = get_settings()
     model, provider = _active_model()
     prompt_path = _PROMPTS_DIR / f"{settings.default_language.value}.yaml"
@@ -155,41 +233,40 @@ def compute_agent_console() -> dict[str, object]:
             "fields": [
                 {"label": "Prompt", "value": prompt_version},
                 {"label": "Sources", "value": sources_version},
-                {"label": "Garde-fous", "value": guard_version},
+                {"label": _t("lbl_guard", lang), "value": guard_version},
             ],
         },
+        # Stable keys: the frontend gates panel content on these exact strings and
+        # maps them to localized labels for display. Do NOT localize here.
         "tabs": ["Sources", "Outils", "Garde-fous", "Évaluation"],
         # Response-specific panels (quality / sources used / trace) are NOT seeded:
         # before a turn there is no response to summarise, so the frontend renders
         # an honest awaiting state. Only the configuration panels below are real
         # pre-turn (loaded tools / guardrails from the policy) + the latest eval run.
-        "tools": _tools_panel(),
-        "guardrails": _guardrails_panel(),
-        "evaluation": _evaluation_panel(),
+        "tools": _tools_panel(lang),
+        "guardrails": _guardrails_panel(lang),
+        "evaluation": _evaluation_panel(lang),
         "footer": {
-            "started": f"Session ouverte à {_fmt_time(now)}",
+            "started": _t("footer_started", lang).format(t=_fmt_time(now)),
             "live": True,
             "context": "Plateforme Tessera",
-            "language": "Français",
+            "language": _t("lang_name", lang),
             "session_id": session_id,
         },
         "actions": {
-            "input_placeholder": "Posez votre question à l'assistant...",
-            "feedback": ["Utile", "Pas utile"],
+            "input_placeholder": _t("placeholder", lang),
+            "feedback": [_t("fb_useful", lang), _t("fb_notuseful", lang)],
             "footer_actions": [
-                {"key": "replay", "label": "Rejouer cette session"},
-                {"key": "compare", "label": "Comparer à la version actuelle"},
-                {"key": "export", "label": "Exporter la session"},
-                {"key": "close", "label": "Clôturer la session"},
+                {"key": "replay", "label": _t("fa_replay", lang)},
+                {"key": "compare", "label": _t("fa_compare", lang)},
+                {"key": "export", "label": _t("fa_export", lang)},
+                {"key": "close", "label": _t("fa_close", lang)},
             ],
-            "timeline_incidents": "Timeline incidents",
-            "new_session": "Nouvelle session",
-            "replay": "Relire à T",
+            "timeline_incidents": _t("timeline_incidents", lang),
+            "new_session": _t("new_session", lang),
+            "replay": _t("replay", lang),
         },
-        "title": "Conversation de test",
-        "subtitle": (
-            "Interagissez avec l'assistant et observez en détail les traces, "
-            "sources, outils et garde-fous."
-        ),
+        "title": _t("title", lang),
+        "subtitle": _t("subtitle", lang),
         "provider": provider,
     }

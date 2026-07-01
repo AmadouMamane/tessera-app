@@ -1,0 +1,16 @@
+
+L'agent répond — 200 sur /readyz et /healthz (port hôte 8099 → conteneur 8080). Mon 404 d'avant venait juste du mauvais chemin (/health n'existe pas ; les vrais sont /healthz et /readyz). Je récupère le corps pour confirmer que c'est bien Tessera et qu'il est prêt.
+
+  Ran 1 shell command
+
+Oui, l'agent tourne — et il est sain.
+
+- GET /healthz → {"status":"ok","version":"0.3.0"}
+- GET /readyz → {"status":"ready","version":"0.3.0"} (donc liveness et readiness OK)
+- Port hôte 8099 en écoute, servi par com.docker (PID 3450) → c'est le conteneur agent docker-compose (8099:8080).
+
+Détails utiles :
+- Sur 8080 depuis l'hôte → 000 (rien) : normal, 8080 est le port interne du conteneur, exposé sur 8099 côté hôte. Pas de fuite directe.
+- /health, /livez, /, /docs → 404 : ces routes n'existent pas. Les seuls endpoints de santé sont /healthz et /readyz (cf. api/routes/health.py). C'est pour ça que mon tout premier probe sur /health renvoyait 404 alors que l'agent était déjà debout.
+
+Donc : l'agent FastAPI (qui exécute le graphe LangGraph in-process) est lancé via docker-compose, en bonne santé, version 0.3.0, joignable sur http://localhost:8099. Le graphe LangGraph tourne dans ce process — toujours pas de port dédié.

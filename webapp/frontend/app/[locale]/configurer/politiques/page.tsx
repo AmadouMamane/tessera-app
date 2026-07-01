@@ -16,14 +16,17 @@ export async function generateMetadata({ params }: PoliciesPageProps) {
   return { title: t("title") };
 }
 
-async function prefetchPolicies(queryClient: QueryClient) {
+async function prefetchPolicies(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["policies-overview"],
+    queryKey: ["policies-overview", locale],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/policies`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const response = await fetch(
+        `${backendUrl()}/observability/policies?lang=${encodeURIComponent(locale)}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend policies returned ${response.status}`);
       return PoliciesOverviewSchema.parse(await response.json());
     },
@@ -36,7 +39,7 @@ export default async function PoliciesPage({ params }: PoliciesPageProps) {
   const t = await getTranslations({ locale, namespace: "policies" });
   const queryClient = new QueryClient();
   try {
-    await prefetchPolicies(queryClient);
+    await prefetchPolicies(queryClient, locale);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

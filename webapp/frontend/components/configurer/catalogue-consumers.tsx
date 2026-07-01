@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Users } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
@@ -43,12 +43,13 @@ export function CatalogueConsumers({ kind }: { kind: string }) {
 
 function CatalogueConsumersInner({ kind }: { kind: string }) {
   const t = useTranslations("usedBy");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["catalogue-consumers", kind, scope],
-    queryFn: ({ signal }) => fetchCatalogueConsumers(kind, scope, signal),
+    queryKey: ["catalogue-consumers", kind, scope, locale],
+    queryFn: ({ signal }) => fetchCatalogueConsumers(kind, scope, locale, signal),
     staleTime: 60_000,
   });
 

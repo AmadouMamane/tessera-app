@@ -14,6 +14,9 @@ every other catalogue page in Tessera.
 
 from __future__ import annotations
 
+from dataclasses import fields, is_dataclass
+from typing import cast
+
 from tessera.observability.catalog_tabs import (
     CatalogTab,
     DetailField,
@@ -1332,8 +1335,8 @@ def _tab_rapports() -> CatalogTab:
     )
 
 
-def build_tabs() -> dict[str, CatalogTab]:
-    """Return the deterministic per-tab payloads for the Incidents command bar."""
+def _build_fr_tabs() -> dict[str, CatalogTab]:
+    """Return the deterministic French per-tab payloads (the source of truth)."""
     return {
         "incidents": _tab_incidents(),
         "playbooks": _tab_playbooks(),
@@ -1343,3 +1346,533 @@ def build_tabs() -> dict[str, CatalogTab]:
         "problemes": _tab_problemes(),
         "rapports": _tab_rapports(),
     }
+
+
+# Generic translation layer: the catalogue fixture is authored in French; for
+# DE / EN every string leaf of the assembled tab tree is mapped through ``_TR``.
+# Unmapped strings (codes, owner names, colours, technical proper nouns) fall
+# through verbatim, so an incomplete entry is a French label, never a crash.
+_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+_TR: dict[str, tuple[str, str]] = {
+    # --- KPI labels / posture ------------------------------------------------
+    "Incidents ouverts": ("Offene Vorfaelle", "Open incidents"),
+    "Incidents critiques": ("Kritische Vorfaelle", "Critical incidents"),
+    "Incidents majeurs": ("Schwere Vorfaelle", "Major incidents"),
+    "Playbooks actifs": ("Aktive Playbooks", "Active playbooks"),
+    "Playbooks bloques": ("Blockierte Playbooks", "Blocked playbooks"),
+    "SLA respecte": ("SLA eingehalten", "SLA met"),
+    "SLA a risque": ("SLA gefaehrdet", "SLA at risk"),
+    "Taux de succes": ("Erfolgsrate", "Success rate"),
+    "Taux succes": ("Erfolgsrate", "Success rate"),
+    "Temps moyen": ("Durchschnittszeit", "Average time"),
+    "Temps moyen de cloture": ("Durchschnittliche Abschlusszeit", "Average closure time"),
+    "Temps de cycle (p50)": ("Zykluszeit (p50)", "Cycle time (p50)"),
+    "Temps de cycle p50": ("Zykluszeit p50", "Cycle time p50"),
+    "Latence p50": ("Latenz p50", "Latency p50"),
+    "Cout estime": ("Geschaetzte Kosten", "Estimated cost"),
+    "Cout d'incident": ("Vorfallkosten", "Incident cost"),
+    "Cout incident": ("Vorfallkosten", "Incident cost"),
+    "Impact estime borne": ("Geschaetzte Auswirkung begrenzt", "Estimated impact bounded"),
+    "Executions 24h": ("Ausfuehrungen 24h", "Executions 24h"),
+    "Executions en cours": ("Laufende Ausfuehrungen", "Running executions"),
+    "Executions recentes": ("Letzte Ausfuehrungen", "Recent executions"),
+    "Actions executees 24h": ("Ausgefuehrte Aktionen 24h", "Actions executed 24h"),
+    "Actions en attente": ("Ausstehende Aktionen", "Pending actions"),
+    "Actions en sortie": ("Ausgehende Aktionen", "Outbound actions"),
+    "Actions assignees": ("Zugewiesene Aktionen", "Assigned actions"),
+    "Actions annulees": ("Stornierte Aktionen", "Cancelled actions"),
+    "Approbations en attente": ("Ausstehende Freigaben", "Pending approvals"),
+    "Approbations requises": ("Erforderliche Freigaben", "Required approvals"),
+    "Exceptions actives": ("Aktive Ausnahmen", "Active exceptions"),
+    "Post-mortems ouverts": ("Offene Post-mortems", "Open post-mortems"),
+    "Post-mortems retardes": ("Verzoegerte Post-mortems", "Delayed post-mortems"),
+    "Post-mortems lies": ("Verknuepfte Post-mortems", "Linked post-mortems"),
+    "Problemes ouverts": ("Offene Probleme", "Open problems"),
+    "Rapports generes": ("Erstellte Berichte", "Reports generated"),
+    "Rapports envoyes": ("Gesendete Berichte", "Reports sent"),
+    "Completes (30j)": ("Abgeschlossen (30T)", "Completed (30d)"),
+    "Resolu (24h)": ("Geloest (24h)", "Resolved (24h)"),
+    "Terminees": ("Abgeschlossen", "Completed"),
+    "Workflows actifs": ("Aktive Workflows", "Active workflows"),
+    "Workflows en cours": ("Laufende Workflows", "Running workflows"),
+    "Recidives": ("Rueckfaelle", "Recurrences"),
+    "Recurrences": ("Wiederholungen", "Recurrences"),
+    # --- column headers ------------------------------------------------------
+    "Incident": ("Vorfall", "Incident"),
+    "Severite": ("Schweregrad", "Severity"),
+    "Service": ("Service", "Service"),
+    "Owner": ("Owner", "Owner"),
+    "Age": ("Alter", "Age"),
+    "Statut": ("Status", "Status"),
+    "Titre": ("Titel", "Title"),
+    "Type": ("Typ", "Type"),
+    "Type d'action": ("Aktionstyp", "Action type"),
+    "Criticite": ("Kritikalitaet", "Criticality"),
+    "Composant": ("Komponente", "Component"),
+    "Composants impactes": ("Betroffene Komponenten", "Impacted components"),
+    "Famille": ("Familie", "Family"),
+    "Cible": ("Ziel", "Target"),
+    "Direction": ("Richtung", "Direction"),
+    "Demandeur": ("Antragsteller", "Requester"),
+    "Destinataires": ("Empfaenger", "Recipients"),
+    "Echeance": ("Frist", "Due date"),
+    "Derniere execution": ("Letzte Ausfuehrung", "Last run"),
+    "Premiere detection": ("Erste Erkennung", "First detection"),
+    "Detecte": ("Erkannt", "Detected"),
+    "Conditions": ("Bedingungen", "Conditions"),
+    "Periode": ("Zeitraum", "Period"),
+    "Fenetre": ("Fenster", "Window"),
+    "Sujet": ("Thema", "Subject"),
+    "Portee": ("Geltungsbereich", "Scope"),
+    "Impact": ("Auswirkung", "Impact"),
+    "Playbook lie": ("Verknuepftes Playbook", "Linked playbook"),
+    "Playbook": ("Playbook", "Playbook"),
+    "Declencheur": ("Ausloeser", "Trigger"),
+    "Action": ("Aktion", "Action"),
+    "Probable": ("Wahrscheinlich", "Probable"),
+    # --- status / badge vocabulary ------------------------------------------
+    "Critique": ("Kritisch", "Critical"),
+    "Eleve": ("Hoch", "High"),
+    "Moyen": ("Mittel", "Medium"),
+    "Faible": ("Niedrig", "Low"),
+    "Ouvert": ("Offen", "Open"),
+    "En analyse": ("In Analyse", "Analyzing"),
+    "En cours": ("Laufend", "In progress"),
+    "En revue": ("In Pruefung", "In review"),
+    "En attente": ("Ausstehend", "Pending"),
+    "Mitige": ("Eingedaemmt", "Mitigated"),
+    "Resolu": ("Geloest", "Resolved"),
+    "Degrade": ("Beeintraechtigt", "Degraded"),
+    "Bloque": ("Blockiert", "Blocked"),
+    "Actif": ("Aktiv", "Active"),
+    "Pret": ("Bereit", "Ready"),
+    "Nouveau": ("Neu", "New"),
+    "Surveille": ("Ueberwacht", "Monitored"),
+    "Suspendu": ("Ausgesetzt", "Suspended"),
+    "Retarde": ("Verzoegert", "Delayed"),
+    "Confirmee": ("Bestaetigt", "Confirmed"),
+    "Confirme": ("Bestaetigt", "Confirmed"),
+    "Perimetre confirme": ("Geltungsbereich bestaetigt", "Scope confirmed"),
+    "Probleme connu": ("Bekanntes Problem", "Known problem"),
+    "Approuvee": ("Genehmigt", "Approved"),
+    "Rejetee": ("Abgelehnt", "Rejected"),
+    "Annulee": ("Storniert", "Cancelled"),
+    "Executee": ("Ausgefuehrt", "Executed"),
+    "Envoye": ("Gesendet", "Sent"),
+    "Valide": ("Validiert", "Validated"),
+    "Validee": ("Validiert", "Validated"),
+    "Revue": ("Pruefung", "Review"),
+    "en revue": ("in Pruefung", "in review"),
+    "Recidive": ("Rueckfall", "Recurrence"),
+    "Recurrence": ("Wiederholung", "Recurrence"),
+    "Avert": ("Warnung", "Warning"),
+    "Auto": ("Auto", "Auto"),
+    "Global": ("Global", "Global"),
+    "Oui (2)": ("Ja (2)", "Yes (2)"),
+    "non corrige": ("nicht behoben", "not fixed"),
+    # --- section titles / panels --------------------------------------------
+    "File d'incidents en temps reel": ("Echtzeit-Vorfallwarteschlange", "Real-time incident queue"),
+    "File d'actions gouvernees": ("Warteschlange gesteuerter Aktionen", "Governed actions queue"),
+    "Demandes d'escalade": ("Eskalationsanfragen", "Escalation requests"),
+    "Detections recentes": ("Letzte Erkennungen", "Recent detections"),
+    "Erreurs recentes": ("Letzte Fehler", "Recent errors"),
+    "Erreurs d'orchestration": ("Orchestrierungsfehler", "Orchestration errors"),
+    "Activite recente": ("Letzte Aktivitaet", "Recent activity"),
+    "Activites recentes": ("Letzte Aktivitaeten", "Recent activities"),
+    "Actions rapides": ("Schnellaktionen", "Quick actions"),
+    "Actions correctives": ("Korrekturmassnahmen", "Corrective actions"),
+    "Actions correctives par statut": (
+        "Korrekturmassnahmen nach Status",
+        "Corrective actions by status",
+    ),
+    "Actions par criticite": ("Aktionen nach Kritikalitaet", "Actions by criticality"),
+    "Causes meres": ("Grundursachen", "Root causes"),
+    "Bibliotheque de playbooks": ("Playbook-Bibliothek", "Playbook library"),
+    "Versions du playbook": ("Playbook-Versionen", "Playbook versions"),
+    "Cles d'automatisation": ("Automatisierungsschluessel", "Automation keys"),
+    "Regles de routage": ("Routing-Regeln", "Routing rules"),
+    "Registre des problemes connus": ("Register bekannter Probleme", "Known problems register"),
+    "Inventaire des rapports": ("Berichtsinventar", "Reports inventory"),
+    "Rapports recents": ("Letzte Berichte", "Recent reports"),
+    "Workflows par famille": ("Workflows nach Familie", "Workflows by family"),
+    "Couverture par type d'incident": (
+        "Abdeckung nach Vorfalltyp",
+        "Coverage by incident type",
+    ),
+    "Repartition par severite": ("Verteilung nach Schweregrad", "Breakdown by severity"),
+    "Impact par service": ("Auswirkung nach Service", "Impact by service"),
+    "Succes des playbooks par type": (
+        "Playbook-Erfolg nach Typ",
+        "Playbook success by type",
+    ),
+    "Tendances des incidents": ("Vorfalltrends", "Incident trends"),
+    "Synthese executive": ("Executive Summary", "Executive summary"),
+    "Synthese mensuelle des incidents, MTTR, cout et post-mortems pour mai 2026.": (
+        "Monatliche Zusammenfassung der Vorfaelle, MTTR, Kosten und Post-mortems fuer Mai 2026.",
+        "Monthly summary of incidents, MTTR, cost and post-mortems for May 2026.",
+    ),
+    "Verifications de securite (pre-execution)": (
+        "Sicherheitspruefungen (vor Ausfuehrung)",
+        "Security checks (pre-execution)",
+    ),
+    "Habilitations disponibles": ("Verfuegbare Berechtigungen", "Available permissions"),
+    "Preuves liees": ("Verknuepfte Nachweise", "Linked evidence"),
+    "Incidents lies (3)": ("Verknuepfte Vorfaelle (3)", "Linked incidents (3)"),
+    "Post-mortems & CAPA": ("Post-mortems & CAPA", "Post-mortems & CAPA"),
+    "Etapes (6)": ("Schritte (6)", "Steps (6)"),
+    "Etapes": ("Schritte", "Steps"),
+    "Sections": ("Abschnitte", "Sections"),
+    "Par famille": ("Nach Familie", "By family"),
+    # --- CTAs / actions ------------------------------------------------------
+    "Declarer un incident": ("Vorfall melden", "Declare an incident"),
+    "Lancer un playbook": ("Playbook starten", "Launch a playbook"),
+    "Ouvrir le playbook": ("Playbook oeffnen", "Open the playbook"),
+    "Ouvrir le tableau de triage": ("Triage-Board oeffnen", "Open the triage board"),
+    "Assigner une action": ("Aktion zuweisen", "Assign an action"),
+    "Nouvelle action": ("Neue Aktion", "New action"),
+    "Nouveau workflow": ("Neuer Workflow", "New workflow"),
+    "Nouveau probleme": ("Neues Problem", "New problem"),
+    "Editer": ("Bearbeiten", "Edit"),
+    "Editer le workflow": ("Workflow bearbeiten", "Edit the workflow"),
+    "Dupliquer": ("Duplizieren", "Duplicate"),
+    "Importer une regle": ("Regel importieren", "Import a rule"),
+    "Exporter": ("Exportieren", "Export"),
+    "Exporter le journal": ("Protokoll exportieren", "Export the log"),
+    "Generer": ("Generieren", "Generate"),
+    "Planifier": ("Planen", "Schedule"),
+    "Telecharger": ("Herunterladen", "Download"),
+    "Acquitter": ("Bestaetigen", "Acknowledge"),
+    "Approuver": ("Genehmigen", "Approve"),
+    "Rejeter": ("Ablehnen", "Reject"),
+    "Escalader": ("Eskalieren", "Escalate"),
+    "Executer": ("Ausfuehren", "Execute"),
+    "Cloturer": ("Abschliessen", "Close"),
+    "Suspendre": ("Aussetzen", "Suspend"),
+    "Valider": ("Validieren", "Validate"),
+    "Envoyer": ("Senden", "Send"),
+    "Tester a blanc": ("Trockenlauf testen", "Dry-run test"),
+    "Lier un incident": ("Vorfall verknuepfen", "Link an incident"),
+    "Gerer les habilitations": ("Berechtigungen verwalten", "Manage permissions"),
+    "Voir l'historique": ("Verlauf anzeigen", "View history"),
+    "Voir le graphe": ("Graph anzeigen", "View graph"),
+    "Voir le journal": ("Protokoll anzeigen", "View log"),
+    "Voir la dette technique": ("Technische Schuld anzeigen", "View technical debt"),
+    "Voir les approbations": ("Freigaben anzeigen", "View approvals"),
+    "Voir les exceptions": ("Ausnahmen anzeigen", "View exceptions"),
+    "Voir les latences": ("Latenzen anzeigen", "View latencies"),
+    "Voir les recidives": ("Rueckfaelle anzeigen", "View recurrences"),
+    "Voir les relations": ("Beziehungen anzeigen", "View relations"),
+    "Voir les tendances": ("Trends anzeigen", "View trends"),
+    "Voir tous les rapports": ("Alle Berichte anzeigen", "View all reports"),
+    "Voir toute l'activite": ("Gesamte Aktivitaet anzeigen", "View all activity"),
+    "Voir toutes les activites": ("Alle Aktivitaeten anzeigen", "View all activities"),
+    "Voir toutes les detections": ("Alle Erkennungen anzeigen", "View all detections"),
+    "Voir toutes les erreurs": ("Alle Fehler anzeigen", "View all errors"),
+    "Voir toutes les executions": ("Alle Ausfuehrungen anzeigen", "View all executions"),
+    # --- incident / playbook prose ------------------------------------------
+    "Hallucination RAG sur scoring credit": (
+        "RAG-Halluzination beim Kredit-Scoring",
+        "RAG hallucination on credit scoring",
+    ),
+    "Hallucination RAG recurrente": (
+        "Wiederkehrende RAG-Halluzination",
+        "Recurring RAG hallucination",
+    ),
+    "Hallucination RAG recurrente sur le scoring credit, cause mere en ancrage.": (
+        "Wiederkehrende RAG-Halluzination beim Kredit-Scoring, Grundursache im Grounding.",
+        "Recurring RAG hallucination on credit scoring, root cause in grounding.",
+    ),
+    "Hallucination detectee sur une reponse de scoring credit, playbook RAG declenche.": (
+        "Halluzination bei einer Kredit-Scoring-Antwort erkannt, RAG-Playbook ausgeloest.",
+        "Hallucination detected on a credit-scoring answer, RAG playbook triggered.",
+    ),
+    "Hallucinations recurrentes sur reponses ancrees, workaround de reranking actif.": (
+        "Wiederkehrende Halluzinationen bei verankerten Antworten, Reranking-Workaround aktiv.",
+        "Recurring hallucinations on grounded answers, reranking workaround active.",
+    ),
+    "Hallucination": ("Halluzination", "Hallucination"),
+    "Hallucination RAG": ("RAG-Halluzination", "RAG hallucination"),
+    "Hallucinations - RAG": ("Halluzinationen - RAG", "Hallucinations - RAG"),
+    "Latence elevee passerelle LLM": ("Hohe Latenz LLM-Gateway", "High latency LLM gateway"),
+    "Latence gateway": ("Gateway-Latenz", "Gateway latency"),
+    "Latence gateway sous charge": ("Gateway-Latenz unter Last", "Gateway latency under load"),
+    "Fuite PII potentielle en reponse": (
+        "Moegliches PII-Leck in Antwort",
+        "Potential PII leak in response",
+    ),
+    "Fuite PII en reponse": ("PII-Leck in Antwort", "PII leak in response"),
+    "Fuite PII intermittente": ("Intermittierendes PII-Leck", "Intermittent PII leak"),
+    "Fuite PII - confinement": ("PII-Leck - Eindaemmung", "PII leak - containment"),
+    "Echec d'outil card_block": ("Tool-Fehler card_block", "Tool failure card_block"),
+    "Echec outil card_block": ("Tool-Fehler card_block", "Tool failure card_block"),
+    "Erreur d'outil": ("Tool-Fehler", "Tool error"),
+    "Reprise outil en echec": ("Wiederholung fehlgeschlagenes Tool", "Retry failed tool"),
+    "Outil en echec - reprise": ("Fehlgeschlagenes Tool - Wiederholung", "Failed tool - retry"),
+    "Degradation embeddings": ("Embedding-Verschlechterung", "Embedding degradation"),
+    "Degradation embeddings Vertex": (
+        "Vertex-Embedding-Verschlechterung",
+        "Vertex embedding degradation",
+    ),
+    "Derive embeddings Vertex": ("Vertex-Embedding-Drift", "Vertex embedding drift"),
+    "Purge cache embeddings": ("Embedding-Cache leeren", "Purge embedding cache"),
+    "Refus excessifs": ("Uebermaessige Ablehnungen", "Excessive refusals"),
+    "Refus excessifs apres deploiement": (
+        "Uebermaessige Ablehnungen nach Deployment",
+        "Excessive refusals after deployment",
+    ),
+    "Refus excessifs post-deploiement": (
+        "Uebermaessige Ablehnungen nach Deployment",
+        "Excessive refusals post-deployment",
+    ),
+    "Refus excessif - recalibrage": (
+        "Uebermaessige Ablehnung - Neukalibrierung",
+        "Excessive refusal - recalibration",
+    ),
+    "Pic de refus": ("Ablehnungsspitze", "Refusal spike"),
+    "Pic de refus injustifies": (
+        "Spitze ungerechtfertigter Ablehnungen",
+        "Spike of unjustified refusals",
+    ),
+    "Forcer recalibrage refus": (
+        "Ablehnungs-Neukalibrierung erzwingen",
+        "Force refusal recalibration",
+    ),
+    "Seuil de confiance trop bas": ("Konfidenzschwelle zu niedrig", "Confidence threshold too low"),
+    "Seuil latence": ("Latenzschwelle", "Latency threshold"),
+    "Reactiver le reranker": ("Reranker reaktivieren", "Re-enable the reranker"),
+    "Reranker desactive en prod": ("Reranker in Prod deaktiviert", "Reranker disabled in prod"),
+    "Reranking force + seuil releve": (
+        "Reranking erzwungen + Schwelle erhoeht",
+        "Reranking forced + threshold raised",
+    ),
+    "Reduire la taille de chunk": ("Chunk-Groesse reduzieren", "Reduce chunk size"),
+    "Chunking trop large du corpus": (
+        "Zu grosses Chunking des Korpus",
+        "Chunking too large for the corpus",
+    ),
+    "Redemarrer worker retrieval": (
+        "Retrieval-Worker neu starten",
+        "Restart retrieval worker",
+    ),
+    "Enrichissement signal RAG": ("RAG-Signalanreicherung", "RAG signal enrichment"),
+    "Signal PII": ("PII-Signal", "PII signal"),
+    "Signal firewall": ("Firewall-Signal", "Firewall signal"),
+    "Signal hallucination": ("Halluzinationssignal", "Hallucination signal"),
+    "PII detectee": ("PII erkannt", "PII detected"),
+    "Confinement reponse": ("Antwort-Eindaemmung", "Response containment"),
+    "Confinement et regeneration ancree d'une reponse hallucinee, capture de preuves.": (
+        "Eindaemmung und verankerte Regenerierung einer halluzinierten Antwort, Nachweiserfassung.",
+        "Containment and grounded regeneration of a hallucinated answer, evidence capture.",
+    ),
+    "Collecte de preuve & cloture": ("Nachweiserfassung & Abschluss", "Evidence capture & closure"),
+    "Escalade & notification astreinte": (
+        "Eskalation & Bereitschaftsbenachrichtigung",
+        "Escalation & on-call notification",
+    ),
+    "Routage incident critique privacy": (
+        "Routing kritischer Privacy-Vorfall",
+        "Critical privacy incident routing",
+    ),
+    "Route les incidents critiques privacy vers SecOps avec confinement immediat.": (
+        "Leitet kritische Privacy-Vorfaelle mit sofortiger Eindaemmung an SecOps.",
+        "Routes critical privacy incidents to SecOps with immediate containment.",
+    ),
+    "Severite critique": ("Kritischer Schweregrad", "Critical severity"),
+    "Severite critique + domaine privacy": (
+        "Kritischer Schweregrad + Privacy-Domaene",
+        "Critical severity + privacy domain",
+    ),
+    "Isoler workload support": ("Support-Workload isolieren", "Isolate support workload"),
+    "Isoler le workload support suite a INC-2024-2285, en attente de dual control.": (
+        "Support-Workload nach INC-2024-2285 isolieren, wartet auf Dual Control.",
+        "Isolate the support workload after INC-2024-2285, pending dual control.",
+    ),
+    "Isolation reseau": ("Netzwerkisolierung", "Network isolation"),
+    "Revoquer cle API tierce": (
+        "Drittanbieter-API-Schluessel widerrufen",
+        "Revoke third-party API key",
+    ),
+    "Rollback gateway v2.2.15": ("Gateway-Rollback v2.2.15", "Gateway rollback v2.2.15"),
+    "Auto-remediation gateway": ("Gateway-Auto-Behebung", "Gateway auto-remediation"),
+    "Mitigation automatique": ("Automatische Eindaemmung", "Automatic mitigation"),
+    "Ouverture ticket P0": ("P0-Ticket eroeffnen", "Open P0 ticket"),
+    "Panne gateway prolongee": ("Laengerer Gateway-Ausfall", "Prolonged gateway outage"),
+    "Latence gateway - rollback": ("Gateway-Latenz - Rollback", "Gateway latency - rollback"),
+    "Dette technique critique": ("Kritische technische Schuld", "Critical technical debt"),
+    "Conformite": ("Konformitaet", "Compliance"),
+    "Conformite SLA reponse": ("Antwort-SLA-Konformitaet", "Response SLA compliance"),
+    "Securite": ("Sicherheit", "Security"),
+    "Qualite": ("Qualitaet", "Quality"),
+    "Fiabilite": ("Zuverlaessigkeit", "Reliability"),
+    "Disponibilite": ("Verfuegbarkeit", "Availability"),
+    "Direction des risques": ("Risikoabteilung", "Risk management"),
+    "Comite reliability": ("Reliability-Komitee", "Reliability committee"),
+    "Bilan trimestriel fiabilite": (
+        "Quartalsbericht Zuverlaessigkeit",
+        "Quarterly reliability review",
+    ),
+    "Resume mensuel incidents": ("Monatliche Vorfallzusammenfassung", "Monthly incident summary"),
+    "Synthese mensuelle des incidents": (
+        "Monatliche Vorfallzusammenfassung",
+        "Monthly incident summary",
+    ),
+    "Rapport privacy & PII": ("Privacy- & PII-Bericht", "Privacy & PII report"),
+    "Rapport": ("Bericht", "Report"),
+    "SLA reporting": ("SLA-Reporting", "SLA reporting"),
+    "Extrait pour audit DORA": ("Auszug fuer DORA-Audit", "Extract for DORA audit"),
+    "Approbation": ("Freigabe", "Approval"),
+    "Sauvegarde disponible": ("Backup verfuegbar", "Backup available"),
+    "Workarounds actifs": ("Aktive Workarounds", "Active workarounds"),
+    "Workaround actif": ("Workaround aktiv", "Workaround active"),
+    "Dual control": ("Dual Control", "Dual control"),
+    "dual control": ("Dual Control", "dual control"),
+    "Fin de mitigation": ("Ende der Eindaemmung", "End of mitigation"),
+    "A faire": ("Zu erledigen", "To do"),
+    # --- orchestration step labels (numbered) -------------------------------
+    "1. Detection de signal": ("1. Signalerkennung", "1. Signal detection"),
+    "2. Validation & correlation": ("2. Validierung & Korrelation", "2. Validation & correlation"),
+    "3. Triage & enrichissement": ("3. Triage & Anreicherung", "3. Triage & enrichment"),
+    "4. Mitigation": ("4. Eindaemmung", "4. Mitigation"),
+    "5. Preuve & capture": ("5. Nachweis & Erfassung", "5. Evidence & capture"),
+    "6. Cloture": ("6. Abschluss", "6. Closure"),
+    # --- activity-log entries (code prefix kept, French clause translated) ----
+    "ACT-44188 - quarantaine": ("ACT-44188 - Quarantaene", "ACT-44188 - quarantine"),
+    "ACT-44190 annulee (rejet dual control)": (
+        "ACT-44190 storniert (Dual-Control-Ablehnung)",
+        "ACT-44190 cancelled (dual control rejection)",
+    ),
+    "ACT-44198 redemarrage worker reussi": (
+        "ACT-44198 Worker-Neustart erfolgreich",
+        "ACT-44198 worker restart successful",
+    ),
+    "ACT-44203 - revocation cle": ("ACT-44203 - Schluesselwiderruf", "ACT-44203 - key revocation"),
+    "ACT-44207 purge cache reussie": (
+        "ACT-44207 Cache-Bereinigung erfolgreich",
+        "ACT-44207 cache purge successful",
+    ),
+    "ACT-44210 rollback gateway reussi": (
+        "ACT-44210 Gateway-Rollback erfolgreich",
+        "ACT-44210 gateway rollback successful",
+    ),
+    "ACT-44213 - isolation": ("ACT-44213 - Isolierung", "ACT-44213 - isolation"),
+    "INC-2024-2269 resolu par Marc Dupont": (
+        "INC-2024-2269 geloest von Marc Dupont",
+        "INC-2024-2269 resolved by Marc Dupont",
+    ),
+    "INC-2024-2288 mitige (rollback gateway)": (
+        "INC-2024-2288 eingedaemmt (Gateway-Rollback)",
+        "INC-2024-2288 mitigated (gateway rollback)",
+    ),
+    "INC-2024-2291 escalade en critique": (
+        "INC-2024-2291 auf kritisch eskaliert",
+        "INC-2024-2291 escalated to critical",
+    ),
+    "PB-04 declenche sur INC-2024-2291": (
+        "PB-04 ausgeloest auf INC-2024-2291",
+        "PB-04 triggered on INC-2024-2291",
+    ),
+    "PB-04 execute sur INC-2024-2291": (
+        "PB-04 ausgefuehrt auf INC-2024-2291",
+        "PB-04 executed on INC-2024-2291",
+    ),
+    "PB-07 confinement PII reussi": (
+        "PB-07 PII-Eindaemmung erfolgreich",
+        "PB-07 PII containment successful",
+    ),
+    "PB-09 - quarantaine": ("PB-09 - Quarantaene", "PB-09 - quarantine"),
+    "PB-11 rollback gateway reussi": (
+        "PB-11 Gateway-Rollback erfolgreich",
+        "PB-11 gateway rollback successful",
+    ),
+    "PB-14 - isolation": ("PB-14 - Isolierung", "PB-14 - isolation"),
+    "PB-21 - recalibrage": ("PB-21 - Neukalibrierung", "PB-21 - recalibration"),
+    "PB-21 suspendu (echec etape 3)": (
+        "PB-21 ausgesetzt (Schritt 3 fehlgeschlagen)",
+        "PB-21 suspended (step 3 failed)",
+    ),
+    "PM-2024-221 valide par Lea Moreau": (
+        "PM-2024-221 validiert von Lea Moreau",
+        "PM-2024-221 validated by Lea Moreau",
+    ),
+    "PM-2024-229 marque retarde": (
+        "PM-2024-229 als verzoegert markiert",
+        "PM-2024-229 marked delayed",
+    ),
+    "PM-2024-231 cause mere confirmee": (
+        "PM-2024-231 Grundursache bestaetigt",
+        "PM-2024-231 root cause confirmed",
+    ),
+    "PRB-1002 marque resolu": ("PRB-1002 als geloest markiert", "PRB-1002 marked resolved"),
+    "PRB-1015 - latence gateway": ("PRB-1015 - Gateway-Latenz", "PRB-1015 - gateway latency"),
+    "PRB-1019 - fuite PII": ("PRB-1019 - PII-Leck", "PRB-1019 - PII leak"),
+    "PRB-1019 nouvelle detection": ("PRB-1019 neue Erkennung", "PRB-1019 new detection"),
+    "PRB-1024 - hallucinations": ("PRB-1024 - Halluzinationen", "PRB-1024 - hallucinations"),
+    "PRB-1024 Hallucinations - RAG": (
+        "PRB-1024 Halluzinationen - RAG",
+        "PRB-1024 hallucinations - RAG",
+    ),
+    "PRB-1024 recurrence sur INC-2024-2291": (
+        "PRB-1024 Wiederholung auf INC-2024-2291",
+        "PRB-1024 recurrence on INC-2024-2291",
+    ),
+    "Prompt injection - isolation": (
+        "Prompt-Injection - Isolierung",
+        "Prompt injection - isolation",
+    ),
+    "REP-2026-05 envoye au comite": (
+        "REP-2026-05 an Komitee gesendet",
+        "REP-2026-05 sent to committee",
+    ),
+    "REP-2026-06 genere": ("REP-2026-06 erstellt", "REP-2026-06 generated"),
+    "REP-2026-06-PRIV genere": ("REP-2026-06-PRIV erstellt", "REP-2026-06-PRIV generated"),
+    "REP-2026-06 Resume mensuel": (
+        "REP-2026-06 Monatszusammenfassung",
+        "REP-2026-06 monthly summary",
+    ),
+    "RAG Hallucination - P0": ("RAG-Halluzination - P0", "RAG hallucination - P0"),
+    "PB-04 RAG Hallucination": ("PB-04 RAG-Halluzination", "PB-04 RAG hallucination"),
+    # --- relative-time / misc ------------------------------------------------
+    "dans 18 min": ("in 18 Min", "in 18 min"),
+    "il y a 1 h": ("vor 1 Std", "1 h ago"),
+    "il y a 2 h": ("vor 2 Std", "2 h ago"),
+    "il y a 3 h": ("vor 3 Std", "3 h ago"),
+    "il y a 4 h": ("vor 4 Std", "4 h ago"),
+    "il y a 5 h": ("vor 5 Std", "5 h ago"),
+    "il y a 4 min": ("vor 4 Min", "4 min ago"),
+    "il y a 11 min": ("vor 11 Min", "11 min ago"),
+    "il y a 12 min": ("vor 12 Min", "12 min ago"),
+    "il y a 22 min": ("vor 22 Min", "22 min ago"),
+    "il y a 2 j": ("vor 2 T", "2 d ago"),
+    "il y a 18 j": ("vor 18 T", "18 d ago"),
+    "il y a 41 j": ("vor 41 T", "41 d ago"),
+}
+
+
+def _localize(value: object, idx: int) -> object:
+    """Recursively map every translatable string leaf to locale ``idx`` (de/en)."""
+    if isinstance(value, str):
+        pair = _TR.get(value)
+        return pair[idx] if pair else value
+    if isinstance(value, dict):
+        return {k: _localize(v, idx) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return type(value)(_localize(v, idx) for v in value)
+    if is_dataclass(value) and not isinstance(value, type):
+        kwargs = {f.name: _localize(getattr(value, f.name), idx) for f in fields(value)}
+        return type(value)(**kwargs)
+    return value
+
+
+def build_tabs(lang: str = "fr") -> dict[str, CatalogTab]:
+    """Return the per-tab payloads for the Incidents command bar in ``lang``.
+
+    The fixture is authored in French (the source of truth); for ``de`` / ``en``
+    each string leaf is mapped through ``_TR`` (unmapped strings fall through
+    verbatim), so the operational catalogues are localized end to end.
+    """
+    tabs = _build_fr_tabs()
+    idx = _LANG_IDX.get(lang, 0)
+    if idx == 0:
+        return tabs
+    return {key: cast("CatalogTab", _localize(tab, idx - 1)) for key, tab in tabs.items()}

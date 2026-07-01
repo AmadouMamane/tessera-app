@@ -19,6 +19,7 @@ from pathlib import Path
 
 from tessera.guard.audit import emit_agent_lifecycle
 from tessera.observability.eval_data import load_eval_snapshot
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
 
 __all__ = [
@@ -28,6 +29,43 @@ __all__ = [
     "release_decision",
     "request_release",
 ]
+
+# Localized free-text (fr, de, en).
+_TR: dict[str, tuple[str, str, str]] = {
+    "r_no_run": (
+        "aucun run d'évaluation pour cet agent — lancez son eval set d'abord.",
+        "kein Bewertungslauf fuer diesen Agenten - starten Sie zuerst sein Eval-Set.",
+        "no evaluation run for this agent - run its eval set first.",
+    ),
+    "r_validated": (
+        "eval-gate validé (socle critique OK + domaine ≥ seuil).",
+        "Eval-Gate bestanden (kritische Basis OK + Domaene ≥ Schwelle).",
+        "eval-gate passed (critical floor OK + domain >= threshold).",
+    ),
+    "r_blocked_critical": (
+        "bloqué par le socle critique (zéro tolérance) : {cats}",
+        "durch die kritische Basis blockiert (Null-Toleranz): {cats}",
+        "blocked by the critical floor (zero tolerance): {cats}",
+    ),
+    "r_blocked_domain": (
+        "bloqué : le taux du domaine est sous le seuil de l'eval set.",
+        "blockiert: die Domaenenrate liegt unter der Schwelle des Eval-Sets.",
+        "blocked: the domain rate is below the eval set threshold.",
+    ),
+    "r_no_verdict": (
+        "aucun verdict de gate sur ce run (relancez via --agent).",
+        "kein Gate-Verdikt fuer diesen Lauf (erneut mit --agent ausfuehren).",
+        "no gate verdict on this run (re-run via --agent).",
+    ),
+    "s_live": ("Live", "Live", "Live"),
+    "s_ready": ("Prêt à promouvoir", "Bereit zur Promotion", "Ready to promote"),
+    "s_blocked": ("Bloqué (eval-gate)", "Blockiert (Eval-Gate)", "Blocked (eval-gate)"),
+    "s_awaiting": ("En attente d'évaluation", "Bewertung ausstehend", "Awaiting evaluation"),
+}
+
+
+def _t(key: str, lang: str) -> str:
+    return _TR[key][_LANG_IDX.get(lang, 0)]
 
 # Latest governance phase, derived from the S1 chain (most recent wins).
 _PHASE_EVENTS: dict[str, str] = {
@@ -64,35 +102,33 @@ class ReleaseDecision:
         }
 
 
-def release_decision(agent_id: str) -> ReleaseDecision:
+def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
     """Decide whether ``agent_id`` may go live, from its own eval-gate verdict.
 
     Live requires a run of the agent's OWN set that cleared the two-level gate.
     No run, or a blocked gate, means the agent cannot be promoted.
     """
+    lang = _norm_lang(lang)
     try:
         snap = load_eval_snapshot(agent_id)
     except FileNotFoundError:
         return ReleaseDecision(
             agent_id=agent_id,
             allowed=False,
-            reason="aucun run d'évaluation pour cet agent — lancez son eval set d'abord.",
+            reason=_t("r_no_run", lang),
             has_run=False,
             gate_passed=None,
             failed_critical=(),
             run_at="",
         )
     if snap.gate_passed is True:
-        reason = "eval-gate validé (socle critique OK + domaine ≥ seuil)."
+        reason = _t("r_validated", lang)
     elif snap.gate_failed_critical:
-        reason = (
-            "bloqué par le socle critique (zéro tolérance) : "
-            + ", ".join(snap.gate_failed_critical)
-        )
+        reason = _t("r_blocked_critical", lang).format(cats=", ".join(snap.gate_failed_critical))
     elif snap.gate_passed is False:
-        reason = "bloqué : le taux du domaine est sous le seuil de l'eval set."
+        reason = _t("r_blocked_domain", lang)
     else:
-        reason = "aucun verdict de gate sur ce run (relancez via --agent)."
+        reason = _t("r_no_verdict", lang)
     return ReleaseDecision(
         agent_id=agent_id,
         allowed=snap.gate_passed is True,
@@ -156,20 +192,21 @@ def lifecycle_history(agent_id: str, limit: int = 12) -> list[dict[str, object]]
     return events[:limit]
 
 
-def compute_agent_lifecycle(agent_id: str) -> dict[str, object]:
+def compute_agent_lifecycle(agent_id: str, lang: str = "fr") -> dict[str, object]:
     """Lifecycle payload: current state, the gated release decision, and history."""
-    decision = release_decision(agent_id)
+    lang = _norm_lang(lang)
+    decision = release_decision(agent_id, lang)
     history = lifecycle_history(agent_id)
     last_phase = str(history[0]["phase"]) if history else "registered"
     # The effective state combines the last recorded transition with gate readiness.
     if last_phase == "live" and decision.allowed:
-        state, tone = "Live", "good"
+        state, tone = _t("s_live", lang), "good"
     elif decision.allowed:
-        state, tone = "Prêt à promouvoir", "good"
+        state, tone = _t("s_ready", lang), "good"
     elif decision.has_run:
-        state, tone = "Bloqué (eval-gate)", "bad"
+        state, tone = _t("s_blocked", lang), "bad"
     else:
-        state, tone = "En attente d'évaluation", "warn"
+        state, tone = _t("s_awaiting", lang), "warn"
     return {
         "agent_id": agent_id,
         "state": state,
