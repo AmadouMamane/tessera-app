@@ -3,8 +3,8 @@
 - Status: **accepted** (decision 2026-07-01) — implementation phased and pending
   (see §Migration plan). **Amended 2026-07-02: (§Amendment 1) eval-score detail moves off Langfuse
   — Langfuse becomes a best-effort mirror, no longer a spine source; (§Amendment 2) split by nature
-  — GATING socle → owned Postgres (bounded, opposable), ONLINE monitoring → partitioned Postgres now
-  + columnar at scale, aggregates stay Prometheus; (§Amendment 3) the audit/proof ledger is homed —
+  — GATING socle → owned Postgres (bounded, opposable), ONLINE monitoring → **owned ClickHouse**
+  (direct insert, its native workload — not via Langfuse; §Correction 2b), aggregates stay Prometheus; (§Amendment 3) the audit/proof ledger is homed —
   flat file → owned append-only hash-chained Postgres (as-of-T, never third-party; Hica seal =
   enrichment), under the governing rule *own what gates or proves; best-effort what you sample or observe*.**
   Supersedes the Phase-1 per-signal `?agent=` wiring shipped in this branch, which is absorbed as
@@ -166,6 +166,44 @@ Nature 2 is traffic-driven and must be sized with the real `sample_rate` × 3-me
 (monitoring detail) reads `eval_online_scores`; both aggregate via Prometheus; Langfuse mirrors
 Nature 2 only (best-effort drill-down). §Amendment 1's single `eval_scores` table is superseded by
 these two.
+
+### Correction 2b (2026-07-02) — Nature 2 home is **owned ClickHouse now**, not "partitioned Postgres → columnar at a trigger"
+
+**Status: accepted; supersedes the Nature-2 *home* above.** The "partitioned Postgres now, columnar-eligible
+at a volume trigger" plan is withdrawn. **ClickHouse already runs in the stack** (under Langfuse), and the
+online monitoring scores are *literally* its workload (append-only, time-series, dimensional, aggregation +
+as-of-T windows). Starting in partitioned Postgres would (a) **hand-roll** the monthly partition + retention
+DROP that ClickHouse does **natively** (`MergeTree PARTITION BY` + `TTL`), and (b) incur a **build-twice**
+migration at the trigger. The trigger **disappears** — it is already resolved.
+
+**Decision.** `eval_online_scores` lives in an **owned ClickHouse table, written by direct insert** — **never
+via Langfuse's public Scores ingestion** (proven fragile 2026-07-02: `201` accepted, never materialised).
+Langfuse/Phoenix keep the *trace* for drill-down (via `trace_id`); the score value + dimensions are owned in
+ClickHouse. The **gating scores + the audit/S1 ledger stay in Postgres** — the load-bearing, transactional,
+opposable facts; ClickHouse is **not** a home for a fact that gates or proves.
+
+```sql
+-- Nature 2 (corrected): online per-turn monitoring telemetry — OWNED ClickHouse table, direct insert.
+CREATE TABLE tessera.eval_online_scores (
+    scored_at        DateTime64(3),
+    agent_id         LowCardinality(String),
+    language         LowCardinality(String),
+    model            LowCardinality(String),
+    metric           LowCardinality(String),
+    score            Float64,
+    conversation_id  String,
+    trace_id         String,          -- link to the Langfuse/Phoenix trace (drill-down)
+    sampled          UInt8,           -- 0 = flagged (always judged), 1 = sampled
+    judge_model      String
+) ENGINE = MergeTree
+ORDER BY (agent_id, metric, scored_at)          -- serves per-agent/metric + as-of-T windows
+PARTITION BY toYYYYMM(scored_at)                -- native monthly partitions (no hand-rolled job)
+TTL toDateTime(scored_at) + INTERVAL 6 MONTH;   -- native retention (tune the window)
+```
+
+**Final split:** porteurs (gating scores + ledger) → **Postgres**; online firehose → **owned ClickHouse**
+(direct insert, native partition + `TTL`); aggregates → **Prometheus**; traces → **Langfuse + Phoenix**. The
+§Amendment 2 Postgres `eval_online_scores` DDL + the volume-projection *trigger* are **superseded** by this.
 
 ## Amendment 3 (2026-07-02) — the audit / proof ledger: owned, but promote the flat file → an owned append-only hash-chained Postgres table (scale + as-of-T), never third-party
 
@@ -443,7 +481,8 @@ src/tessera/observability/spine/
 ├── capabilities.py     # per-signal dimension declarations (single source of honesty truth)
 └── adapters/
     ├── __init__.py
-    ├── postgres.py     # ⚠ Amend.1–3: owned eval_gating/eval_online + promoted ledger reads (as-of-T) — the DURABLE source
+    ├── postgres.py     # ⚠ Amend.1–3: owned eval_gating scores + promoted ledger reads (as-of-T) — porteurs
+    ├── clickhouse.py   # ⚠ Corr.2b: owned eval_online monitoring scores (direct insert; MergeTree + native TTL)
     ├── langfuse.py     # traces by metadata + time window (scores = best-effort MIRROR only, never read)
     ├── prometheus.py   # PromQL label-selector + range
     └── ledger.py       # ⚠ Amend.3: reads the owned append-only hash-chained Postgres ledger (was audit.log flat file)

@@ -40,14 +40,16 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
   still system-of-record). The amendments require the following NEW `pending` phases, which SUPERSEDE the
   earlier "voie 1 = rewrite `langfuse_scores.py` as the Langfuse-native SOURCE" plan — Langfuse is now a
   best-effort MIRROR, Postgres is the source:**
-  - **G1 — Postgres score tables.** `ensure_eval_scores_schema()` at lifespan (Tessera builds schema via
-    idempotent `ensure_*_schema`, not Alembic): `eval_gating_scores` (plain indexed) + `eval_online_scores`
-    (monthly `PARTITION BY RANGE(scored_at)` + retention DROP). DDL = ADR §Amend.2.
-  - **G2 — Write path (outbox).** `emit_score` writes **durably to Postgres** (the truth), then **mirrors to
-    Langfuse via the SDK** (the "voie 1" `create_score`, repurposed as best-effort sync; stable `score_id`
-    dedup). Online path already off the hot path (`_spawn_background`). jsonl kept until parity.
-  - **G3 — Spine reads Postgres.** Repoint `SpineStoresReader.scores` from Langfuse → the new `postgres.py`
-    adapter (as-of-T by `scored_at`). Langfuse ceases to be a spine source.
+  - **G1 — Stores.** Postgres via idempotent `ensure_*_schema` (not Alembic): `eval_gating_scores` (plain
+    indexed — the porteur). **Owned ClickHouse table `eval_online_scores`** (direct insert; `MergeTree` +
+    native `PARTITION BY toYYYYMM(scored_at)` + `TTL` — no hand-rolled retention). DDL = ADR §Amend.2 +
+    **§Correction 2b**. **Never via Langfuse's Scores ingestion.**
+  - **G2 — Write path.** `emit_score`: **gating** → durable Postgres insert **+ best-effort Langfuse Score
+    mirror via the SDK** ("voie 1" `create_score`, drill-down UX); **online** → **direct ClickHouse insert**
+    (no Langfuse Score mirror — the trace already lives in Langfuse/Phoenix via `trace_id`). Online path
+    already off the hot path (`_spawn_background`). jsonl kept until parity.
+  - **G3 — Spine reads owned stores.** Repoint `SpineStoresReader.scores`: **gating → `postgres.py`**,
+    **online → `clickhouse.py`** (both as-of-T by `scored_at`). Langfuse ceases to be a spine source.
   - **G4 — Backfill → shadow → flip → retire jsonl.** Backfill `scores.jsonl`→Postgres (idempotent);
     `TESSERA_SPINE_SOURCE=shadow` until `tessera_spine_shadow_divergence_total{fact=scores}=match` over a
     window → flip per-signal → **retire jsonl** (Phase D's gate, finally met, from Postgres).
