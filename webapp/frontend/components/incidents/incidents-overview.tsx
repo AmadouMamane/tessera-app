@@ -110,7 +110,6 @@ export function IncidentsOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} />
-      <SyntheticNotice signalId="incidents" />
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}
@@ -125,7 +124,10 @@ export function IncidentsOverview() {
       />
 
       {activeTab !== "overview" && data.tabs?.[activeTab] ? (
-        <CatalogTabView tab={data.tabs[activeTab]} footer={<Footer t={t} data={data} />} />
+        <div className="flex min-w-0 flex-col gap-2">
+          <SyntheticNotice signalId="incidents" compact />
+          <CatalogTabView tab={data.tabs[activeTab]} footer={<Footer t={t} data={data} />} />
+        </div>
       ) : (
         <>
           {/* A · État actuel */}
@@ -161,6 +163,7 @@ export function IncidentsOverview() {
 
           {/* C · Exécution & automation */}
           <Zone label={t("zone.execution")}>
+            <SyntheticNotice signalId="incidents" compact />
             <div className="grid gap-3 xl:grid-cols-12">
               <RunningPlaybook t={t} data={data} className="xl:col-span-4" />
               <ResponseJournal t={t} data={data} className="xl:col-span-4" />
@@ -171,6 +174,7 @@ export function IncidentsOverview() {
 
           {/* D · Impact & performance */}
           <Zone label={t("zone.impact")}>
+            <SyntheticNotice signalId="incidents" compact />
             <div className="grid gap-3 xl:grid-cols-12">
               <MttrChart t={t} data={data} className="xl:col-span-3" />
               <ResolutionBars t={t} data={data} className="xl:col-span-3" />
@@ -323,6 +327,7 @@ function PriorityQueue({ t, data }: { t: T; data: Data }) {
 function Catalog({ t, data }: { t: T; data: Data }) {
   return (
     <Panel title={t("triage.catalog")} action={<ViewAll label={t("triage.viewCatalog")} />}>
+      <SyntheticNotice signalId="incidents" compact />
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
         {data.playbook_catalog.map((pb) => (
           <div
