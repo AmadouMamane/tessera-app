@@ -1,20 +1,25 @@
 """Curation eval-set cockpit overview (page #12).
 
-Composes the "Curation eval set" overview: the current backlog posture
-(candidate turns, promotable / to-review / rejected, intent & language coverage,
-duplicates, blocked failures), the priority curation lots with why-this-turn
-rationale, the curation workflow stages, the eval-set coverage heatmap, the
-candidate-quality signals, the linked datasets, the governance actions and the
-backlog / promote-reject-review / pass-rate-impact trends.
+Composes the "Curation eval set" overview. The page has a REAL decision core and
+a demonstration subsystem:
 
-The dataset is a deterministic reference fixture (no live curation store in this
-build); values are stable across calls so the page never "dances" on refetch.
+* **REAL (from :mod:`tessera.observability.curation_store`):** the backlog posture
+  KPIs (candidates / promotable / manual-review / rejected / pending / …), the
+  priority curation lots and the candidate distribution are derived from the real
+  failed evaluation cases and their durable curation decisions (promote / review /
+  reject), mutated by the curation endpoint and surviving restarts.
+* **DEMONSTRATION:** the why-this-turn rationale, the collect→…→promote workflow
+  stages, the eval-set coverage heatmap, the candidate-quality signals, the linked
+  datasets, the governance owners/actions and the trend charts describe a fuller
+  curation subsystem this build does not implement. They stay a deterministic
+  fixture; the frontend marks their zones with the ``curation`` synthetic notice.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tessera.observability.curation_store import decision_counts, load_candidates
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 
 __all__ = ["compute_curation_overview"]
@@ -69,11 +74,13 @@ _TR: dict[str, tuple[str, str, str]] = {
 def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
 
+
 _DIST_COLOR = {
     "hallucination": "#60a5fa",
     "grounding": "#34d399",
     "conformite": "#a78bfa",
     "pii_securite": "#f472b6",
+    "outils": "#22d3ee",
     "multilingue": "#fbbf24",
     "autres": "#64748b",
 }
@@ -107,58 +114,44 @@ def compute_curation_overview(lang: str = "fr") -> dict[str, object]:
     lang = _norm_lang(lang)
     now = datetime.now(UTC)
 
+    # ── REAL decision core (curation_store over failed eval cases) ──────────
+    candidates = load_candidates()
+    counts = decision_counts()
+    n_escalations = sum(1 for c in candidates if c.needs_escalation)
+    n_critical = sum(1 for c in candidates if c.priority == "crit")
+    n_decided = counts["promote"] + counts["review"] + counts["reject"]
+
+    def _flat(v: int) -> list[int]:
+        # Honest: the current real count, no fabricated trend line.
+        return [v] * 7
+
     kpis = [
-        _kpi("candidates", "148", "+15", True, [120, 126, 130, 135, 140, 144, 148]),
-        _kpi("promotable", "36", "+6", True, [28, 30, 31, 33, 34, 35, 36]),
-        _kpi("manual_review", "21", "+3", False, [16, 17, 18, 19, 20, 20, 21]),
-        _kpi("rejected", "17", "+2", False, [13, 14, 14, 15, 16, 16, 17]),
-        _kpi("intent_coverage", "82%", "+4 pts", True, [74, 76, 77, 79, 80, 81, 82]),
-        _kpi("lang_coverage", "94%", "+1 pt", True, [90, 91, 92, 92, 93, 93, 94]),
-        _kpi("duplicates", "12", "-2", False, [16, 15, 15, 14, 13, 13, 12]),
-        _kpi("failures", "3", "-1", False, [5, 5, 4, 4, 4, 3, 3]),
+        _kpi("candidates", str(counts["total"]), "0", True, _flat(counts["total"])),
+        _kpi("promotable", str(counts["promote"]), "0", True, _flat(counts["promote"])),
+        _kpi("manual_review", str(counts["review"]), "0", False, _flat(counts["review"])),
+        _kpi("rejected", str(counts["reject"]), "0", False, _flat(counts["reject"])),
+        _kpi("pending", str(counts["pending"]), "0", False, _flat(counts["pending"])),
+        _kpi("escalations", str(n_escalations), "0", False, _flat(n_escalations)),
+        _kpi("critical", str(n_critical), "0", False, _flat(n_critical)),
+        _kpi("decided", str(n_decided), "0", True, _flat(n_decided)),
     ]
 
+    # Real: the highest-priority candidates (store sort = crit-first, top score,
+    # oldest). Each row carries its durable decision + the unique candidate_id the
+    # decision endpoint mutates. ``source`` is "replay": candidates come from the
+    # eval harness replaying the catalogue cases.
     priority_lots = [
         {
-            "id": "CUR-042",
-            "source": "live",
-            "category": "hallucination",
-            "score": 92,
-            "risk": "eleve",
-            "owner": "S. Sysadmin",
-        },
-        {
-            "id": "CUR-037",
+            "id": f"{c.case_id} · {c.language.upper()}",
+            "candidate_id": c.candidate_id,
             "source": "replay",
-            "category": "pii",
-            "score": 88,
-            "risk": "bas",
-            "owner": "A. Compliance",
-        },
-        {
-            "id": "CUR-018",
-            "source": "live",
-            "category": "conformite",
-            "score": 81,
-            "risk": "bas",
-            "owner": "A. Compliance",
-        },
-        {
-            "id": "CUR-009",
-            "source": "shadow",
-            "category": "outils",
-            "score": 78,
-            "risk": "bas",
-            "owner": "D. DevRel",
-        },
-        {
-            "id": "CUR-031",
-            "source": "live",
-            "category": "grounding",
-            "score": 72,
-            "risk": "moyen",
-            "owner": "M. Engineer",
-        },
+            "category": c.curation_category,
+            "score": c.score,
+            "risk": c.risk,
+            "owner": c.decided_by or "—",
+            "decision": c.decision,
+        }
+        for c in candidates[:6]
     ]
 
     why_tours = [
@@ -196,13 +189,20 @@ def compute_curation_overview(lang: str = "fr") -> dict[str, object]:
         "cells": cov_levels,
     }
 
+    # Real: candidate counts per curation dimension (only dimensions with real
+    # candidates appear; nothing is fabricated to fill the donut).
+    _dist_counts: dict[str, int] = {}
+    for c in candidates:
+        _dist_counts[c.curation_category] = _dist_counts.get(c.curation_category, 0) + 1
+    _dist_total = len(candidates) or 1
     candidates_distribution = [
-        {"key": "hallucination", "count": 47, "pct": 32, "color": _DIST_COLOR["hallucination"]},
-        {"key": "grounding", "count": 34, "pct": 23, "color": _DIST_COLOR["grounding"]},
-        {"key": "conformite", "count": 22, "pct": 15, "color": _DIST_COLOR["conformite"]},
-        {"key": "pii_securite", "count": 16, "pct": 11, "color": _DIST_COLOR["pii_securite"]},
-        {"key": "multilingue", "count": 14, "pct": 9, "color": _DIST_COLOR["multilingue"]},
-        {"key": "autres", "count": 15, "pct": 10, "color": _DIST_COLOR["autres"]},
+        {
+            "key": key,
+            "count": n,
+            "pct": round(n / _dist_total * 100),
+            "color": _DIST_COLOR.get(key, _DIST_COLOR["autres"]),
+        }
+        for key, n in sorted(_dist_counts.items(), key=lambda kv: kv[1], reverse=True)
     ]
 
     quality_signals = [
@@ -299,7 +299,7 @@ def compute_curation_overview(lang: str = "fr") -> dict[str, object]:
         "cohort": "cohorte-2024-11-07",
         "coverage": coverage,
         "candidates_distribution": candidates_distribution,
-        "distribution_total": 148,
+        "distribution_total": len(candidates),
         "quality_signals": quality_signals,
         "linked_datasets": linked_datasets,
         "owners": owners,

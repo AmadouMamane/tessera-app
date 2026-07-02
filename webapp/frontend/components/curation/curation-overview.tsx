@@ -1,10 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
+  Check,
   ChevronRight,
   Database,
+  Eye,
   FileSearch,
   Filter,
   GitBranch,
@@ -15,10 +17,11 @@ import {
   Snowflake,
   UploadCloud,
   UserCheck,
+  X,
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
@@ -31,7 +34,7 @@ import {
 } from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { fetchCurationOverview } from "@/lib/api/client";
+import { fetchCurationOverview, mutateCurationDecision } from "@/lib/api/client";
 import type { CurationOverview as CurationData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
@@ -94,6 +97,13 @@ export function CurationOverview() {
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+  const qc = useQueryClient();
+  const decide = useMutation({
+    mutationFn: mutateCurationDecision,
+    onSuccess: (fresh) => qc.setQueryData(["curation-overview", locale], fresh),
+  });
+  const onDecide = (candidateId: string, decision: "promote" | "review" | "reject") =>
+    decide.mutate({ candidate_id: candidateId, decision, lang: locale });
 
   if (!data) {
     return (
@@ -106,7 +116,6 @@ export function CurationOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} />
-      <SyntheticNotice signalId="curation" />
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}
@@ -146,7 +155,13 @@ export function CurationOverview() {
             info={<ExplainInfo k="zone.diagnostic" title={t("zone.diagnostic")} />}
           >
             <div className="grid gap-3 xl:grid-cols-12">
-              <PriorityLots t={t} data={data} className="xl:col-span-7" />
+              <PriorityLots
+                t={t}
+                data={data}
+                onDecide={onDecide}
+                deciding={decide.isPending}
+                className="xl:col-span-7"
+              />
               <WhyTours t={t} data={data} className="xl:col-span-5" />
             </div>
           </Zone>
@@ -182,6 +197,7 @@ export function CurationOverview() {
         label={t("zone.governance")}
         info={<ExplainInfo k="zone.governance" title={t("zone.governance")} />}
       >
+        <SyntheticNotice signalId="curation" compact />
         <div className="grid gap-3 xl:grid-cols-12">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:col-span-8 2xl:grid-cols-5">
             {data.actions.map((a) => (
@@ -197,6 +213,7 @@ export function CurationOverview() {
         label={t("zone.trends")}
         info={<ExplainInfo k="zone.trends" title={t("zone.trends")} />}
       >
+        <SyntheticNotice signalId="curation" compact />
         <div className="grid gap-3 xl:grid-cols-12">
           <BacklogTrend t={t} data={data} className="xl:col-span-4" />
           <BalanceChart t={t} data={data} className="xl:col-span-4" />
@@ -258,7 +275,26 @@ function CommandBar({ t }: { t: T }) {
 
 // ── zone B ───────────────────────────────────────────────────────────────────
 
-function PriorityLots({ t, data, className }: { t: T; data: Data; className?: string }) {
+const DECISION_BADGE: Record<string, string> = {
+  pending: "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
+  promote: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  review: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  reject: "border-red-500/30 bg-red-500/15 text-red-300",
+};
+
+function PriorityLots({
+  t,
+  data,
+  onDecide,
+  deciding,
+  className,
+}: {
+  t: T;
+  data: Data;
+  onDecide: (candidateId: string, decision: "promote" | "review" | "reject") => void;
+  deciding: boolean;
+  className?: string;
+}) {
   return (
     <Panel
       title={t("panel.priorityLots")}
@@ -266,38 +302,73 @@ function PriorityLots({ t, data, className }: { t: T; data: Data; className?: st
       className={className}
       action={<ViewAll label={t("viewAll.lots")} href="/surveiller/qualite-ia" />}
     >
-      <table className="w-full border-collapse text-left text-xs">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-2 py-1.5 font-medium">{t("col.id")}</th>
-            <th className="px-2 py-1.5 font-medium">{t("col.source")}</th>
-            <th className="px-2 py-1.5 font-medium">{t("col.category")}</th>
-            <th className="px-2 py-1.5 font-medium">{t("col.score")}</th>
-            <th className="px-2 py-1.5 font-medium">{t("col.risk")}</th>
-            <th className="px-2 py-1.5 font-medium">{t("col.owner")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.priority_lots.map((lot) => (
-            <tr key={lot.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-              <td className="px-2 py-1.5 font-mono text-[0.7rem] text-[#87bfff]">{lot.id}</td>
-              <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                {t(`source.${lot.source}`)}
-              </td>
-              <td className="px-2 py-1.5 text-[var(--tessera-text)]">
-                {t(`category.${lot.category}`)}
-              </td>
-              <td className="px-2 py-1.5">
-                <ScoreBar value={lot.score} />
-              </td>
-              <td className="px-2 py-1.5">
-                <Badge className={RISK_BADGE[lot.risk]}>{t(`risk.${lot.risk}`)}</Badge>
-              </td>
-              <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{lot.owner}</td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-xs">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-2 py-1.5 font-medium">{t("col.id")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("col.category")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("col.risk")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("col.decision")}</th>
+              <th className="px-2 py-1.5 text-right font-medium">{t("col.actions")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.priority_lots.map((lot) => (
+              <tr
+                key={lot.candidate_id}
+                className="border-b border-[var(--tessera-border)]/60 last:border-0"
+              >
+                <td
+                  className="max-w-[130px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[#87bfff]"
+                  title={lot.id}
+                >
+                  {lot.id}
+                </td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-[var(--tessera-text)]">
+                  {t(`category.${lot.category}`)}
+                </td>
+                <td className="px-2 py-1.5">
+                  <Badge className={RISK_BADGE[lot.risk]}>{t(`risk.${lot.risk}`)}</Badge>
+                </td>
+                <td className="px-2 py-1.5">
+                  <Badge className={DECISION_BADGE[lot.decision]}>
+                    {t(`decide.${lot.decision}`)}
+                  </Badge>
+                </td>
+                <td className="px-2 py-1.5">
+                  <div className="flex items-center justify-end gap-1">
+                    <DecideButton
+                      icon={Check}
+                      label={t("decide.promote")}
+                      active={lot.decision === "promote"}
+                      tone="emerald"
+                      disabled={deciding}
+                      onClick={() => onDecide(lot.candidate_id, "promote")}
+                    />
+                    <DecideButton
+                      icon={Eye}
+                      label={t("decide.review")}
+                      active={lot.decision === "review"}
+                      tone="amber"
+                      disabled={deciding}
+                      onClick={() => onDecide(lot.candidate_id, "review")}
+                    />
+                    <DecideButton
+                      icon={X}
+                      label={t("decide.reject")}
+                      active={lot.decision === "reject"}
+                      tone="red"
+                      disabled={deciding}
+                      onClick={() => onDecide(lot.candidate_id, "reject")}
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }
@@ -310,6 +381,7 @@ function WhyTours({ t, data, className }: { t: T; data: Data; className?: string
       className={className}
       action={<ViewAll label={t("viewAll.reasons")} />}
     >
+      <SyntheticNotice signalId="curation" compact />
       <table className="w-full border-collapse text-left text-[0.72rem]">
         <thead>
           <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
@@ -356,6 +428,7 @@ function CoverageHeatmap({ t, data, className }: { t: T; data: Data; className?:
       info={<ExplainInfo k="panel.coverage" title={t("panel.coverage")} />}
       className={className}
     >
+      <SyntheticNotice signalId="curation" compact />
       <div className="overflow-x-auto">
         <table className="w-full border-separate border-spacing-1 text-[0.6rem]">
           <thead>
@@ -400,6 +473,7 @@ function QualitySignals({ t, data, className }: { t: T; data: Data; className?: 
       className={className}
       action={<ViewAll label={t("viewAll.signals")} />}
     >
+      <SyntheticNotice signalId="curation" compact />
       <ul className="flex flex-col gap-2">
         {data.quality_signals.map((s) => (
           <li key={s.key} className="flex flex-col gap-1 text-[0.66rem]">
@@ -441,6 +515,7 @@ function LinkedDatasets({ t, data, className }: { t: T; data: Data; className?: 
       className={className}
       action={<ViewAll label={t("viewAll.datasets")} />}
     >
+      <SyntheticNotice signalId="curation" compact />
       <table className="w-full border-collapse text-left text-[0.68rem]">
         <thead>
           <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
@@ -472,6 +547,7 @@ function LinkedDatasets({ t, data, className }: { t: T; data: Data; className?: 
 function CurationRail({ t, data }: { t: T; data: Data }) {
   return (
     <aside className="flex min-w-0 flex-col gap-3">
+      <SyntheticNotice signalId="curation" compact />
       <Panel title={t("panel.workflow")} action={<ViewAll label={t("viewAll.workflow")} />}>
         <ul className="flex flex-col gap-1.5">
           {data.workflow.map((w) => (
@@ -918,14 +994,52 @@ function Donut({
   );
 }
 
-function ScoreBar({ value }: { value: number }) {
+const DECIDE_TONE: Record<"emerald" | "amber" | "red", { active: string; idle: string }> = {
+  emerald: {
+    active: "border-emerald-500/50 bg-emerald-500/25 text-emerald-200",
+    idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-emerald-500/40 hover:text-emerald-300",
+  },
+  amber: {
+    active: "border-amber-500/50 bg-amber-500/25 text-amber-200",
+    idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-amber-500/40 hover:text-amber-300",
+  },
+  red: {
+    active: "border-red-500/50 bg-red-500/25 text-red-200",
+    idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-red-500/40 hover:text-red-300",
+  },
+};
+
+function DecideButton({
+  icon: Icon,
+  label,
+  active,
+  tone,
+  disabled,
+  onClick,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  active: boolean;
+  tone: "emerald" | "amber" | "red";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const c = DECIDE_TONE[tone];
   return (
-    <div className="flex items-center gap-1.5">
-      <div className="h-[4px] overflow-hidden w-12 rounded-full bg-[var(--tessera-border)]">
-        <div className="h-full rounded-full bg-[#2e72d2]" style={{ width: `${value}%` }} />
-      </div>
-      <span className="tabular-nums text-[var(--tessera-text-muted)]">{value}</span>
-    </div>
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-6 w-6 items-center justify-center rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+        active ? c.active : c.idle,
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
   );
 }
 

@@ -2306,11 +2306,13 @@ const CurKpiSchema = z.object({
 });
 const CurLotSchema = z.object({
   id: z.string(),
+  candidate_id: z.string(),
   source: z.enum(["live", "replay", "shadow"]),
   category: z.string(),
   score: z.number().int(),
   risk: z.enum(["eleve", "moyen", "bas"]),
   owner: z.string(),
+  decision: z.enum(["pending", "promote", "review", "reject"]),
 });
 const CurWhySchema = z.object({
   reason: z.string(),

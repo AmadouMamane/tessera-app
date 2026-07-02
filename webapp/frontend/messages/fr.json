@@ -3477,20 +3477,24 @@
       },
       "kpi": {
         "candidates": {
-          "what": "Le nombre de cas candidats à la curation (en attente d'examen).",
-          "how": "Cas entrants non encore triés sur la période."
+          "what": "Le nombre total de candidats à la curation.",
+          "how": "Cas d'évaluation échoués de la dernière exécution de chaque agent.",
+          "source": "Rapports d'évaluation (eval/reports)."
         },
         "promotable": {
-          "what": "Le nombre de cas prêts à être promus dans le jeu d'évaluation.",
-          "how": "Candidats validés (score ≥ seuil, sans doublon)."
+          "what": "Le nombre de candidats promus vers l'eval set.",
+          "how": "Décisions « promouvoir » dans le store durable.",
+          "source": "Store de décisions de curation (S1)."
         },
         "manual_review": {
-          "what": "Le nombre de cas nécessitant une revue humaine.",
-          "how": "Candidats ambigus marqués pour examen manuel."
+          "what": "Le nombre de candidats en revue manuelle.",
+          "how": "Décisions « revoir » dans le store durable.",
+          "source": "Store de décisions de curation (S1)."
         },
         "rejected": {
-          "what": "Le nombre de cas rejetés (hors périmètre ou de faible valeur).",
-          "how": "Candidats écartés sur la période."
+          "what": "Le nombre de candidats rejetés.",
+          "how": "Décisions « rejeter » dans le store durable.",
+          "source": "Store de décisions de curation (S1)."
         },
         "intent_coverage": {
           "what": "La couverture des intentions métier par le jeu d'évaluation.",
@@ -3509,6 +3513,26 @@
           "what": "Le nombre de cas issus d'échecs réels de l'agent.",
           "how": "Candidats provenant de tours échoués.",
           "source": "Catalogue des cas échoués."
+        },
+        "pending": {
+          "what": "Le nombre de candidats sans décision.",
+          "how": "Cas échoués dont la décision est « en attente ».",
+          "source": "Store de décisions de curation (S1)."
+        },
+        "escalations": {
+          "what": "Le nombre de candidats nécessitant une escalade.",
+          "how": "Cas échoués marqués needs_escalation par le harnais.",
+          "source": "Rapports d'évaluation."
+        },
+        "critical": {
+          "what": "Le nombre de candidats de priorité critique.",
+          "how": "Cas échoués de catégorie critique (PII, injection).",
+          "source": "Catégorie du cas d'évaluation."
+        },
+        "decided": {
+          "what": "Le nombre de candidats déjà décidés.",
+          "how": "Promus + à revoir + rejetés dans le store durable.",
+          "source": "Store de décisions de curation (S1)."
         }
       },
       "panel": {
@@ -3563,7 +3587,11 @@
       "intent_coverage": "Couverture intents",
       "lang_coverage": "Couverture langues",
       "duplicates": "Doublons détectés",
-      "failures": "Failures / PII bloquées"
+      "failures": "Failures / PII bloquées",
+      "pending": "En attente",
+      "escalations": "Escalades",
+      "critical": "Critiques",
+      "decided": "Décidés"
     },
     "panel": {
       "priorityLots": "Lots candidats prioritaires",
@@ -3588,7 +3616,9 @@
       "category": "Catégorie",
       "score": "Score de valeur",
       "risk": "Risque",
-      "owner": "Propriétaire"
+      "owner": "Propriétaire",
+      "decision": "Décision",
+      "actions": "Actions"
     },
     "whyCol": {
       "reason": "Raison principale",
@@ -3615,7 +3645,10 @@
       "pii": "PII",
       "conformite": "Conformité",
       "outils": "Outils",
-      "grounding": "Ancrage"
+      "grounding": "Ancrage",
+      "pii_securite": "PII / Sécurité",
+      "multilingue": "Multilingue",
+      "autres": "Autres"
     },
     "wfStatus": {
       "termine": "Terminé",
@@ -3627,6 +3660,7 @@
       "grounding": "Ancrage",
       "conformite": "Conformité",
       "pii_securite": "PII / Sécurité",
+      "outils": "Outils",
       "multilingue": "Multilingue",
       "autres": "Autres"
     },
@@ -3735,6 +3769,12 @@
       "chain": "Chaîne de vérité · OK",
       "source": "Source de vérité : {src}",
       "sync": "Dernière mise à jour : {ago}"
+    },
+    "decide": {
+      "pending": "En attente",
+      "promote": "Promouvoir",
+      "review": "Revoir",
+      "reject": "Rejeter"
     }
   },
   "automations": {

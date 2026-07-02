@@ -829,6 +829,23 @@ export async function fetchCurationOverview(
   return request(`/observability/curation${q}`, { signal }, CurationOverviewSchema);
 }
 
+/** Persist a curation decision (promote/review/reject) for one candidate; returns fresh payload. */
+export async function mutateCurationDecision(body: {
+  candidate_id: string;
+  decision: "pending" | "promote" | "review" | "reject";
+  lang?: string;
+}): Promise<CurationOverview> {
+  return request(
+    "/observability/curation/decision",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    CurationOverviewSchema,
+  );
+}
+
 export async function fetchAutomationsOverview(
   lang: string,
   signal?: AbortSignal,

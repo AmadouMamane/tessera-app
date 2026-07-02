@@ -1679,6 +1679,30 @@ async def observability_curation(lang: str = "fr") -> dict[str, object]:
         return {"available": False}
 
 
+class _CurationDecisionBody(BaseModel):
+    """A durable curation decision (promote/review/reject) for one candidate."""
+
+    candidate_id: str
+    decision: str
+    decided_by: str = ""
+    lang: str = "fr"
+
+
+@router.post("/observability/curation/decision")
+async def observability_curation_decision(body: _CurationDecisionBody) -> dict[str, object]:
+    """Persist a curation decision for one real candidate; return the fresh payload."""
+    from tessera.observability import curation_store
+
+    if body.candidate_id not in curation_store.available_candidate_ids():
+        raise HTTPException(status_code=404, detail="unknown candidate")
+    if body.decision not in curation_store.DECISIONS:
+        raise HTTPException(status_code=422, detail="invalid decision")
+    curation_store.set_decision(
+        body.candidate_id, decision=body.decision, decided_by=body.decided_by
+    )
+    return {"available": True, **curation_mod.compute_curation_overview(body.lang)}
+
+
 @router.get("/observability/replay-shadow")
 async def observability_replay_shadow(lang: str = "fr") -> dict[str, object]:
     """Replay & shadow overview (page #11).

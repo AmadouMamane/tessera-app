@@ -3477,20 +3477,24 @@
       },
       "kpi": {
         "candidates": {
-          "what": "Die Zahl der Kurationskandidaten (warten auf Prüfung).",
-          "how": "Eingehende, noch nicht sortierte Fälle im Zeitraum."
+          "what": "Die Gesamtzahl der Kurationskandidaten.",
+          "how": "Fehlgeschlagene Bewertungsfälle aus dem letzten Lauf jedes Agenten.",
+          "source": "Bewertungsberichte (eval/reports)."
         },
         "promotable": {
-          "what": "Die Zahl der Fälle, die ins Eval-Set befördert werden können.",
-          "how": "Validierte Kandidaten (Score ≥ Schwelle, kein Duplikat)."
+          "what": "Die Zahl der in das Eval-Set geförderten Kandidaten.",
+          "how": "« Fördern »-Entscheidungen im dauerhaften Store.",
+          "source": "Kurations-Entscheidungsstore (S1)."
         },
         "manual_review": {
-          "what": "Die Zahl der Fälle, die eine menschliche Prüfung erfordern.",
-          "how": "Mehrdeutige Kandidaten zur manuellen Prüfung markiert."
+          "what": "Die Zahl der Kandidaten in manueller Prüfung.",
+          "how": "« Prüfen »-Entscheidungen im dauerhaften Store.",
+          "source": "Kurations-Entscheidungsstore (S1)."
         },
         "rejected": {
-          "what": "Die Zahl der abgelehnten Fälle (außerhalb des Rahmens oder geringwertig).",
-          "how": "Im Zeitraum verworfene Kandidaten."
+          "what": "Die Zahl der abgelehnten Kandidaten.",
+          "how": "« Ablehnen »-Entscheidungen im dauerhaften Store.",
+          "source": "Kurations-Entscheidungsstore (S1)."
         },
         "intent_coverage": {
           "what": "Wie gut Geschäftsabsichten vom Eval-Set abgedeckt sind.",
@@ -3509,6 +3513,26 @@
           "what": "Die Zahl der aus realen Agent-Fehlern stammenden Fälle.",
           "how": "Kandidaten aus fehlgeschlagenen Tours.",
           "source": "Katalog fehlgeschlagener Fälle."
+        },
+        "pending": {
+          "what": "Die Zahl der Kandidaten ohne Entscheidung.",
+          "how": "Fehlgeschlagene Fälle mit Entscheidung « ausstehend ».",
+          "source": "Kurations-Entscheidungsstore (S1)."
+        },
+        "escalations": {
+          "what": "Die Zahl der Kandidaten, die eine Eskalation erfordern.",
+          "how": "Als needs_escalation markierte fehlgeschlagene Fälle.",
+          "source": "Bewertungsberichte."
+        },
+        "critical": {
+          "what": "Die Zahl der Kandidaten mit kritischer Priorität.",
+          "how": "Fehlgeschlagene Fälle kritischer Kategorie (PII, Injection).",
+          "source": "Kategorie des Bewertungsfalls."
+        },
+        "decided": {
+          "what": "Die Zahl der bereits entschiedenen Kandidaten.",
+          "how": "Gefördert + zu prüfen + abgelehnt im dauerhaften Store.",
+          "source": "Kurations-Entscheidungsstore (S1)."
         }
       },
       "panel": {
@@ -3563,7 +3587,11 @@
       "intent_coverage": "Intent-Abdeckung",
       "lang_coverage": "Sprach-Abdeckung",
       "duplicates": "Erkannte Duplikate",
-      "failures": "Failures / PII geblockt"
+      "failures": "Failures / PII geblockt",
+      "pending": "Ausstehend",
+      "escalations": "Eskalationen",
+      "critical": "Kritische",
+      "decided": "Entschieden"
     },
     "panel": {
       "priorityLots": "Priorisierte Kandidaten-Lose",
@@ -3588,7 +3616,9 @@
       "category": "Kategorie",
       "score": "Wert-Score",
       "risk": "Risiko",
-      "owner": "Verantwortlicher"
+      "owner": "Verantwortlicher",
+      "decision": "Entscheidung",
+      "actions": "Aktionen"
     },
     "whyCol": {
       "reason": "Hauptgrund",
@@ -3615,7 +3645,10 @@
       "pii": "PII",
       "conformite": "Compliance",
       "outils": "Tools",
-      "grounding": "Verankerung"
+      "grounding": "Verankerung",
+      "pii_securite": "PII / Sicherheit",
+      "multilingue": "Mehrsprachig",
+      "autres": "Sonstige"
     },
     "wfStatus": {
       "termine": "Abgeschlossen",
@@ -3627,6 +3660,7 @@
       "grounding": "Verankerung",
       "conformite": "Compliance",
       "pii_securite": "PII / Sicherheit",
+      "outils": "Werkzeuge",
       "multilingue": "Mehrsprachig",
       "autres": "Andere"
     },
@@ -3735,6 +3769,12 @@
       "chain": "Wahrheitskette · OK",
       "source": "Quelle der Wahrheit: {src}",
       "sync": "Letzte Aktualisierung: {ago}"
+    },
+    "decide": {
+      "pending": "Ausstehend",
+      "promote": "Fördern",
+      "review": "Prüfen",
+      "reject": "Ablehnen"
     }
   },
   "automations": {

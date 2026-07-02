@@ -3477,20 +3477,24 @@
       },
       "kpi": {
         "candidates": {
-          "what": "The number of cases candidate for curation (awaiting review).",
-          "how": "Incoming cases not yet triaged over the period."
+          "what": "The total number of curation candidates.",
+          "how": "Failed evaluation cases from each agent's latest run.",
+          "source": "Evaluation reports (eval/reports)."
         },
         "promotable": {
-          "what": "The number of cases ready to be promoted into the eval set.",
-          "how": "Validated candidates (score ≥ threshold, no duplicate)."
+          "what": "The number of candidates promoted to the eval set.",
+          "how": "'Promote' decisions in the durable store.",
+          "source": "Curation decision store (S1)."
         },
         "manual_review": {
-          "what": "The number of cases needing human review.",
-          "how": "Ambiguous candidates flagged for manual review."
+          "what": "The number of candidates in manual review.",
+          "how": "'Review' decisions in the durable store.",
+          "source": "Curation decision store (S1)."
         },
         "rejected": {
-          "what": "The number of rejected cases (out of scope or low value).",
-          "how": "Candidates discarded over the period."
+          "what": "The number of rejected candidates.",
+          "how": "'Reject' decisions in the durable store.",
+          "source": "Curation decision store (S1)."
         },
         "intent_coverage": {
           "what": "How well business intents are covered by the eval set.",
@@ -3509,6 +3513,26 @@
           "what": "The number of cases sourced from real agent failures.",
           "how": "Candidates originating from failed tours.",
           "source": "Failed-case catalogue."
+        },
+        "pending": {
+          "what": "The number of candidates with no decision.",
+          "how": "Failed cases whose decision is 'pending'.",
+          "source": "Curation decision store (S1)."
+        },
+        "escalations": {
+          "what": "The number of candidates requiring escalation.",
+          "how": "Failed cases flagged needs_escalation by the harness.",
+          "source": "Evaluation reports."
+        },
+        "critical": {
+          "what": "The number of critical-priority candidates.",
+          "how": "Failed cases of a critical category (PII, injection).",
+          "source": "Evaluation case category."
+        },
+        "decided": {
+          "what": "The number of candidates already decided.",
+          "how": "Promoted + review + rejected in the durable store.",
+          "source": "Curation decision store (S1)."
         }
       },
       "panel": {
@@ -3563,7 +3587,11 @@
       "intent_coverage": "Intent coverage",
       "lang_coverage": "Language coverage",
       "duplicates": "Duplicates detected",
-      "failures": "Failures / PII blocked"
+      "failures": "Failures / PII blocked",
+      "pending": "Pending",
+      "escalations": "Escalations",
+      "critical": "Critical",
+      "decided": "Decided"
     },
     "panel": {
       "priorityLots": "Priority candidate lots",
@@ -3588,7 +3616,9 @@
       "category": "Category",
       "score": "Value score",
       "risk": "Risk",
-      "owner": "Owner"
+      "owner": "Owner",
+      "decision": "Decision",
+      "actions": "Actions"
     },
     "whyCol": {
       "reason": "Main reason",
@@ -3615,7 +3645,10 @@
       "pii": "PII",
       "conformite": "Compliance",
       "outils": "Tools",
-      "grounding": "Grounding"
+      "grounding": "Grounding",
+      "pii_securite": "PII / Security",
+      "multilingue": "Multilingual",
+      "autres": "Other"
     },
     "wfStatus": {
       "termine": "Done",
@@ -3627,6 +3660,7 @@
       "grounding": "Grounding",
       "conformite": "Compliance",
       "pii_securite": "PII / Security",
+      "outils": "Tools",
       "multilingue": "Multilingual",
       "autres": "Other"
     },
@@ -3735,6 +3769,12 @@
       "chain": "Truth chain · OK",
       "source": "Source of truth: {src}",
       "sync": "Last update: {ago}"
+    },
+    "decide": {
+      "pending": "Pending",
+      "promote": "Promote",
+      "review": "Review",
+      "reject": "Reject"
     }
   },
   "automations": {
