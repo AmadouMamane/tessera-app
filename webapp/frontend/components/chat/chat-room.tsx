@@ -391,12 +391,12 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
               description={emptyDescription}
               icon={
                 isRecouvrement ? (
-                  <RecouvrementMark className="h-14 brightness-90 contrast-125 saturate-95 drop-shadow-[0_5px_14px_rgba(0,0,0,0.4)]" />
+                  <RecouvrementMark className="h-16 brightness-80 contrast-125 saturate-90 drop-shadow-[0_5px_12px_rgba(0,0,0,0.32)]" />
                 ) : undefined
               }
               iconClassName={
                 isRecouvrement
-                  ? "h-20 w-20 rounded-2xl bg-navy-950/90 shadow-[0_0_24px_-12px_oklch(0.8_0.066_85/0.45)] ring-1 ring-gold-400/15 dark:bg-navy-950/90 dark:shadow-[0_0_24px_-12px_oklch(0.8_0.066_85/0.45)] dark:ring-gold-400/15"
+                  ? "h-16 w-16 rounded-2xl bg-gold-500/65 shadow-[0_0_28px_-14px_oklch(0.8_0.066_85/0.4)] ring-1 ring-gold-400/15 dark:bg-gold-500/65 dark:shadow-[0_0_28px_-14px_oklch(0.8_0.066_85/0.4)] dark:ring-gold-400/15"
                   : undefined
               }
               suggestionsLabel={t("startWith")}
