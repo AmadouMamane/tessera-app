@@ -35,6 +35,28 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **V1 (as-of-T / SR-01) ✅ — `1b57e5a`** (twice-green + pushed). The à-un-instant / Historique
+  contract is now PROVEN on the owned stores, not assumed from live mode. **Determinism hardening
+  first** (fix-the-adapter-before-trusting-live): both reads impose a **total order** — ClickHouse
+  `ORDER BY (scored_at, metric, trace_id, conversation_id)` (+ DESC twin for the live newest-200
+  cut, so boundary ties can't float with part-merge order), Postgres gating `(scored_at, id)`.
+  **Hermetic**: total-order clauses unit-locked; the seam contract "a read at past T ignores rows
+  landing after T" locked over the fake. **Contracts** (live stores, self-cleaning, 3× green):
+  frozen-and-reproducible despite later writes on BOTH stores (CH view at T unchanged after a
+  post-T insert; the porteur's view at T unchanged after a LATER release run lands). **Live on real
+  data**: `snapshot?at=` serves the frozen view from the owned stores (T=02T00:00 → exactly the 3
+  July-1 rows / slo n=1; T=16:15 → 6 rows / slo n=2; gating 211/4; `honoured=['time']`,
+  `source=spine`; immutable-past cache hit = identical body hash); **fresh-process
+  reproducibility** — two separate processes, same (scope,T) ⇒ identical SHAs (CH `e8ce4c9d…`, PG
+  `74af9dcf…` over 92 rows/3 runs at a run-splitting T; onboarding×fr×T → 24); **parity AT T at SET
+  level** legacy↔owned (scores 6=6/3=3 metric-equal; gating 92=92 and 62=62 with equal
+  (run,case,language) sets — 62 shows per-case `scored_at` precision splitting an in-flight run
+  identically on both sides). Note: as-of-T on the ONLINE store is reproducible **within the
+  6-month TTL retention** by design — an instant older than retention loses its rows on both
+  mediums equally (monitoring telemetry; the opposable gating porteur has no TTL). **Bake started**
+  (V3): :8392 relaunched per-fact SHADOW (scores+gating) + ledger=postgres, background traffic loop
+  (scoped sweeps every 60s + a real turn every ~4 min, counters checkpointed to
+  `/tmp/tessera-bake.log`) — G5/H2 stay gated on the sustained window.
 - **Phase H ✅ — `df1ee67`** (twice-green + pushed). **The audit/S1 ledger is promoted** (§Amendment 3).
   One journal, one chain: the S1 governance events already flow through `emit_audit`, so promoting
   `audit.log` promotes both ledgers the amendment names. (1) **`guard/ledger_store.py`**:
