@@ -29,11 +29,29 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | G4 | Backfill (jsonl→CH, reports→PG) → shadow parity `{fact=scores}` → flip per-fact → owned-store erasure | ✅ done | `b9b532c` | Backfill idempotent (2nd run = 0); boot sweep; shadow bake **28/28 match scores + 28/28 gating, 0 diverge** across a live turn (dual-write 9=9); **flipped per-fact live** (`TESSERA_SPINE_SOURCE_SCORES/_GATING=spine`) — values identical, `source` badge resolved at read time; `DELETE /memory` purges the owned CH store (probe-proven). Retirement gated → G5 |
 | G5 | Retire scores.jsonl: route the 17 direct `persisted_scores`/`recent_scores` call expressions through the reader seam → sustained bake → stop the jsonl write → per-fact defaults flip to `spine` → delete the dev file | ✅ done | `3f970f7` | `read_scores(at, agent, full=)` seam helper (ring / as-of / full-history semantics preserved site-by-site); suite pinned `TESSERA_SPINE_SOURCE=jsonl` (hermetic; sources contract-tested); write-stop + defaults gated on the 75-min bake (see log) |
 | H | Ledger promotion (§Amend.3, SEPARATE): audit/S1 → owned append-only hash-chained Postgres; dual-write → backfill (verify) → shadow-verify → cut | ✅ done | `df1ee67` | One journal, one chain (S1 flows through `emit_audit`). `audit_ledger` append-only **enforced by trigger**; verification = chain WALK from genesis (order-independent); backfill refuses a broken file chain; dual-write FIFO + boot reconcile. Live: 649 real entries promoted, shadow-verify OK, turn → 652=652, **cut proven** (`TESSERA_LEDGER_SOURCE=postgres`, integrity over rows identical, medium visible). Flat-file retirement + direct-reader sweep = H2, after operating time |
-| H2 | Retire the flat audit file: route the **18 true ledger-reader files** through `ledger_store` (each has a bespoke parse loop: system_profile ×7, etat_a_date ×5, routes/audit ×4, agent_garde_fous ×3, integrations/governance_feed/agent_synthese/routes-observability ×2, tool_validity/sources/session_detail/proofs/guardrail_catalogue/guard_explain/fleet/conformance/agent_lifecycle ×1; `audit_file.parent` anchors are NOT ledger reads and stay), implement the real `postgres` sink (synchronous durable insert + file-spool fallback; chain seed from the table head), hold `shadow_verify_ledger` over operating time, then stop the file write | ⬜ pending | — | Compliance-sensitive — its own phase, never rushed into a session tail. The file stays canonical-written + boot-reconciled meanwhile; the spine's ledger reads are already cut (H) |
+| H2 | Retire the flat audit file: route the **18 true ledger-reader files** through `ledger_store` (each has a bespoke parse loop: system_profile ×7, etat_a_date ×5, routes/audit ×4, agent_garde_fous ×3, integrations/governance_feed/agent_synthese/routes-observability ×2, tool_validity/sources/session_detail/proofs/guardrail_catalogue/guard_explain/fleet/conformance/agent_lifecycle ×1; `audit_file.parent` anchors are NOT ledger reads and stay), implement the real `postgres` sink (synchronous durable insert + file-spool fallback; chain seed from the table head), hold `shadow_verify_ledger` over operating time, then stop the file write | 🟡 in progress | `40628de` (step 1/5) | **Step 1/5 ✅** — the true reader set is **17 files** (the "18" here miscounts its own list; re-derived from the code: every `verify_audit_chain` call + every audit-file `open`), all routed through the source-aware seam (`read_ledger_entries` / `verify_active_ledger` / `ledger_available`). File mode byte-identical (twice-green); no reader left on the flat file. Remaining: durable sink+spool (2), chain continuity at cut (3), sustained bake (4), cut+retire (5). Compliance-sensitive — the file stays canonical-written + boot-reconciled until step 5 |
 
 Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed) · ⛔ blocked (see notes).
 
 ## Log (newest first)
+
+- **H2 step 1/5 ✅ — `40628de`** (twice-green + pushed). **Every direct ledger reader now
+  routes through the source-aware seam** — no reader is left on the flat file for the cut.
+  New in `guard/ledger_store.py`: `read_ledger_entries(path=None)` (all entries oldest→newest
+  from the ACTIVE source; file mode parses `path`/the settings file, postgres reads the promoted
+  table in `seq` order and raises→honest-empty when unreachable), `verify_active_ledger(path=None)`
+  (path-aware), `ledger_available(path=None)` (source-aware health). **17 reader files** rerouted
+  (guard-decision aggregation, chain integrity, handoff/routing/lifecycle history, as-of-T scans,
+  System-profile health/count, the two API routes incl. the stat-keyed cache which is bypassed in
+  postgres mode) — the note's "18" miscounts its own enumeration; the real set was re-derived from
+  the code (every `verify_audit_chain` call + every audit-file `open`; `audit_file.parent` sibling-
+  state anchors and `bundles.jsonl`/`scores.jsonl` are NOT ledger reads and stay; `spine/current.py`
+  was already on the seam from H). **File mode is byte-identical**, so the whole sweep is a
+  behaviour-preserving refactor: 988 unit twice-green, mypy --strict 247, ruff+format clean, 10
+  new hermetic seam tests (file==raw-parse; postgres reads the table ignoring the path). Backend-
+  only diff (tsc/biome unaffected). Isolated from a parallel codex frontend WIP (recouvrement logo)
+  via targeted staging (19 files, never `git add -A`). **Next: step 2 — durable synchronous sink +
+  spool fallback (zero-loss on a Postgres blip), with the dedicated failure-path test.**
 
 - **G5 ✅ — `3f970f7`** (twice-green + pushed) — **scores.jsonl retired, on a genuinely met gate.**
   The bake (V3): **77 minutes** of per-fact shadow over REAL traffic (12-scope snapshot sweeps every
