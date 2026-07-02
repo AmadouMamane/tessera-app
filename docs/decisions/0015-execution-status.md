@@ -23,11 +23,32 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | D | Retire convenience jsonl (scores/bundles) after all signals flipped + baked; keep audit/S1 ledgers; erasure reaches spine + cache | ✅ done | `dfff8d8` | GDPR erasure now reaches the spine: `delete_conversation` (Langfuse batch trace delete) + unconditional snapshot-cache eviction; `purge_telemetry` folds spine count + `spine_reached` into the footprint (unreachable→deferred, never faked). Prometheus needs no per-series delete (no `conversation_id` label). **jsonl kept** as system of record — the ADR gates retirement on parity, not yet met (Phase C); the flip mechanism is in place. Verified live: DELETE→204, reaches Langfuse, deletes nothing real |
 | E | Four cards (traces / inbox / release / audit) + fixtures flagged synthetic / derived from spine | ✅ done | `9553c1b` | Inbox **ventilated** — `OperatorItem.agent_id` from each agent's own eval run (fabrication-proof: no run → no items), `?agent=` filter, `inbox {AGENT,TIME}` in both registries (verified live: 78 items across 3 agents, `?agent=recouvrement`→7). Fixtures (incidents/curation/automations/replay_shadow) flagged by a registry-driven `<SyntheticNotice>`. Traces/Release/Audit verified already-honest (audit integrity is a real `verify_audit_chain`, not a TODO) → no rebuild. Registry mirror reconciled (faithfulness/pii/tools declared backend-side) |
 | F | Add language + model dimensions to Scope UI (no route sweep) — prove agent × time × language cube | ✅ done | `98ddf13` | The 9 store-derived signals + traces declare the full `_CUBE` {agent,time,language,model}; readers (current/fake/spine) filter by language/model; the registry narrows unsupported dims away (a language filter can't reach conformance/audit). Adding the dimension was a Scope field + registry entry + reader filter — **no route sweep** (the snapshot serves the cube for free). Proven 3 ways: hermetic (4 tests), live wire (`snapshot?language=fr` → honoured=['language']), live data-level over REAL ci data (de:21/en:21, exhaustive partition; model honestly sparse) |
+| G1 | Owned stores: Postgres `eval_gating_scores` (porteur) + owned ClickHouse `eval_online_scores` (§Amend.2 + §Corr.2b) | ✅ done | `fea97e9` | `ensure_eval_gating_schema()` at lifespan (env-schema isolated, unique re-ingest key) + `ClickHouseAdapter.ensure_schema()` (MergeTree, `PARTITION BY toYYYYMM`, native `TTL` 6 mo; best-effort at boot — monitoring telemetry never blocks boot). Live-proven: `SHOW CREATE TABLE` + `pg_indexes` match the amendments byte-for-byte; 3 live contract tests |
+| G2 | Write path: gating → durable Postgres + best-effort Langfuse SDK mirror; online → direct ClickHouse insert (never Langfuse Scores ingestion) | ⬜ pending | — | |
+| G3 | Spine reads owned stores: gating → `adapters/postgres.py`, online → `adapters/clickhouse.py` (as-of-T by `scored_at`); Langfuse ceases to be a spine source | ⬜ pending | — | |
+| G4 | Backfill (jsonl→CH, reports→PG) → shadow parity `{fact=scores}` → flip per-signal → retire jsonl; erasure reaches the owned stores | ⬜ pending | — | |
+| H | Ledger promotion (§Amend.3, SEPARATE): audit/S1 → owned append-only hash-chained Postgres; dual-write → backfill (verify) → shadow-verify → cut → retire flat file | ⬜ pending | — | |
 
 Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed) · ⛔ blocked (see notes).
 
 ## Log (newest first)
 
+- **Phase G1 ✅ — `fea97e9`** (twice-green + pushed). Built the two owned stores exactly per the
+  amendments. **Postgres `eval_gating_scores`** (§Amendment 2, Nature 1 — the porteur):
+  `ensure_eval_gating_schema()` at API lifespan, plain indexed table (no partition machinery),
+  unique `(run_id, case_id, language, metric)` re-ingest key, materialised in the active env schema
+  (ADR 0014 anti-fallthrough). **Owned ClickHouse `tessera.eval_online_scores`** (§Correction 2b —
+  the monitoring firehose): `ClickHouseAdapter` (urllib HTTP, header auth, unreachable →
+  `SpineUnavailableError`), `ensure_schema()` creates the owned database + `MergeTree` table with
+  `ORDER BY (agent_id, metric, scored_at)`, **native** `PARTITION BY toYYYYMM(scored_at)` + `TTL`
+  6 months — always direct DDL, **never Langfuse's Scores ingestion**; boot-time bootstrap is
+  best-effort (sampled telemetry never blocks boot; deferred + logged when the stack is down, the
+  write path re-ensures lazily). Gate twice-green: ruff + ruff-format (repo baseline 30 pre-existing,
+  none mine) + mypy strict (244) + 921 unit (9 new locking the DDL to the amendments) + tsc clean +
+  biome baseline untouched (backend-only diff). **Live-proven**: 3 integration contract tests pass
+  against the real backends; `SHOW CREATE TABLE tessera.eval_online_scores` shows
+  MergeTree + `toYYYYMM(scored_at)` + `TTL … toIntervalMonth(6)`; `pg_indexes` in `tessera_local`
+  (and `tessera_ci`) shows `eval_gating_uq (run_id, case_id, language, metric)`. **Next: G2.**
 - **📐 AMENDMENT 3 (docs only) + REVISED IMPLEMENTATION ROADMAP — the audit/proof ledger is homed; the
   governing rule names the whole model.** (2026-07-02, docs only, no code, not pushed. See ADR §Amendment 3.)
   Governing rule across Amend.1–3: **own what gates or proves; best-effort what you sample or observe** (a
