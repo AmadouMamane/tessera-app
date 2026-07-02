@@ -35,6 +35,21 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **V2 (ledger consolidation RATIFIED, ADR amended — §Correction 3b) ✅** (docs, 2026-07-02). The H
+  implementation consolidated the "two ledgers" into one — a deviation from the ADR's prose that is
+  now examined and **ratified, docs aligned to code**. Facts (live table): ONE chain, families
+  `tessera.guard.audit` (726 `user_input` + tool targets + **9 governance `memory.*` events**,
+  emitted by `governance.audit_memory` through the same `emit_audit`) + `tessera.agent.*`; **no
+  second journal file exists** in the state dir — the "S1 journal" was always a logical family
+  within `audit.log`. Soundness: (1) one chain = **total order across families** (consent-before-
+  action is a provable chain fact; two ledgers would have no provable inter-order) + one head to
+  seal; (2) **no distinction lost** — families separable by closed vocabularies (`type`; within
+  guard.audit, `target ∈ {memory.write,read,forget}` + `policy_rule "*.governance"`, `Literal`-typed
+  at the single emitter); (3) same retention/access class (DORA ICT evidence + GDPR Art. 7(1)/17
+  accountability — "keep, never mutate", same RBAC); (4) the named duty: pure-guard consumers
+  exclude `memory.*` targets, union views (audit_count) present as the whole S1 journal. ADR
+  edited: §Amendment 3 point 4 + new §Correction 3b + §Non-negotiable carve-out note + the two
+  §Physical-backends rows + the home map + the header status line.
 - **V1 (as-of-T / SR-01) ✅ — `1b57e5a`** (twice-green + pushed). The à-un-instant / Historique
   contract is now PROVEN on the owned stores, not assumed from live mode. **Determinism hardening
   first** (fix-the-adapter-before-trusting-live): both reads impose a **total order** — ClickHouse

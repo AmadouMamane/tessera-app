@@ -6,7 +6,8 @@
   — GATING socle → owned Postgres (bounded, opposable), ONLINE monitoring → **owned ClickHouse**
   (direct insert, its native workload — not via Langfuse; §Correction 2b), aggregates stay Prometheus; (§Amendment 3) the audit/proof ledger is homed —
   flat file → owned append-only hash-chained Postgres (as-of-T, never third-party; Hica seal =
-  enrichment), under the governing rule *own what gates or proves; best-effort what you sample or observe*.**
+  enrichment; §Correction 3b: guard audit + S1 governance = ONE consolidated journal, ratified),
+  under the governing rule *own what gates or proves; best-effort what you sample or observe*.**
   Supersedes the Phase-1 per-signal `?agent=` wiring shipped in this branch, which is absorbed as
   the transitional state.
 - Date: 2026-07-01
@@ -245,13 +246,53 @@ link, not the ownership.
    unverifiable), never to "no ledger". This mirrors the Langfuse-mirror pattern for scores: the enrichment
    is best-effort; the owned store is load-bearing.
 4. **The S1 governance journal** follows the same promotion (owned append-only hash-chained Postgres,
-   as-of-T indexed) — it is the carve-out's second tamper-evident ledger.
+   as-of-T indexed). *(§Correction 3b below: it is not a second physical ledger — it is the same
+   journal, and the promotion covered both families at once.)*
+
+### Correction 3b (2026-07-02) — ONE consolidated ledger: the S1 journal and the guard audit trail are the same chain (ratified)
+
+**Status: accepted; ratifies the implementation (docs aligned to code — the deviation was in the
+prose, not the system).** Point 4 above (and the original carve-out) described the S1 governance
+journal as a *second* tamper-evident ledger. **The code has always had ONE physical journal**:
+every S1 event family — guard decisions, routing, handoffs, lifecycle transitions, AND the
+governance events (`memory.write` / `memory.read` / `memory.forget`, emitted by
+`governance.audit_memory` through the same `emit_audit`) — links into the **same hash chain** in
+`audit.log`, so Phase H promoted them together into the one `audit_ledger` table. Verified on the
+live ledger: one chain, families `tessera.guard.audit` (726 `user_input`, tool targets, 9
+governance `memory.*` events) + `tessera.agent.*`; no second journal file exists anywhere in the
+state dir.
+
+**The consolidation is ratified as sound — deliberately kept, not re-separated:**
+
+1. **Stronger, not weaker, opposability.** One chain = one **total order across families**:
+   "the consent screening happened before the tool call" is a chain-order fact, provable; with two
+   ledgers the inter-ledger order would be unprovable (no shared clock). One head seals everything
+   — the Hica enrichment attests both families at once.
+2. **No distinction is lost.** The families are separable by **closed vocabularies**: `type`
+   (`tessera.guard.audit` / `tessera.agent.routing|handoff|proposed|<phase>`), and within
+   `guard.audit` the governance events carry `target ∈ {memory.write, memory.read, memory.forget}`
+   (a `Literal` at the single emitter) + `policy_rule = "<action>.governance"`. Filtering IS the
+   distinction — and it is how consumers already behave (the governance feed selects the memory
+   family; the guard views select tool targets).
+3. **Same retention / access class.** Both families are compliance evidence ("keep, never
+   mutate"): guard decisions = DORA ICT evidence; consent/erasure events = GDPR Art. 7(1) / 17
+   accountability (the ledger proves *that* consent/erasure happened — the Art. 17(3)(b) posture;
+   erasure never mutates the ledger). Same operator surface, same RBAC; no requirement in this
+   repo demands divergent retention between the families.
+4. **The duty it creates, named:** a consumer that wants only tool-guard decisions must exclude
+   the `memory.*` targets (and vice-versa) — the union view (e.g. the `audit_count` signal) is the
+   S1 journal as a whole, and presents itself as such.
+
+**Supersedes:** point 4's "second tamper-evident ledger" (same journal, promoted together); the
+§Non-negotiable carve-out's "`audit.log` **and** the S1 governance journal" phrasing (one journal,
+two event families); the §Physical-backends *Governance* row's separate "S1 journal" home (the
+same consolidated journal, read filtered by family).
 
 **The complete home map (Amendments 1–3, one rule).**
 
 | Fact | Load-bearing? (gates/proves, not sampled) | Home |
 |---|---|---|
-| **Audit ledger / S1 journal (proof chain)** | **YES — supreme** | **Owned Postgres, append-only, hash-chained**, as-of-T indexed; **Hica seal = enrichment**. Never third-party. |
+| **Audit ledger / S1 journal (proof chain — ONE consolidated journal, §Corr.3b)** | **YES — supreme** | **Owned Postgres, append-only, hash-chained**, as-of-T indexed; **Hica seal = enrichment**. Never third-party. |
 | **Gating scores (socle / release)** | **YES** | **Owned Postgres `eval_gating_scores`** (§Amendment 2); Langfuse = best-effort mirror. |
 | **Online monitoring scores (sampled)** | **NO (sampled by design)** | **Postgres `eval_online_scores` partitioned** now → **columnar (ClickHouse)** at the §Amendment 2 trigger. |
 | **Aggregates (SLO / trend / quantile)** | derived | **Prometheus**. |
@@ -361,6 +402,9 @@ tamper-evidence** (Langfuse is not an append-only hash chain). They already carr
 `agent_id` (they are dimensioned), and reading them directly, filtered by `agent_id` +
 `occurred_at`, is correct. **They are not the smell; they are the compliance ledger.**
 Removing them would degrade security in the name of purity — explicitly rejected.
+*(§Correction 3b: "`audit.log` and the S1 journal" is ONE physical journal — the governance
+events are a family within the same chain — promoted together to the owned `audit_ledger`
+table by §Amendment 3.)*
 
 ## Architecture
 
@@ -384,8 +428,8 @@ Every cockpit signal is a **derivation over turns**, parameterised by `Scope`:
 | Eval scores (faithfulness/grounding/hallucination) | `scores.jsonl` → **retire** (role assumed by Postgres) | **⚠ Amended (§Amendment 1): owned Postgres `eval_scores` table** (was "Langfuse scores on the trace") + Prometheus `EVAL_SCORE` | **Postgres (as-of-T by `scored_at`, indexed agent/metric/trace)** + Prometheus (SLO/quantile series); Langfuse = best-effort mirror, not read |
 | Captured turns (cost / toxicity / pii / replay) | `bundles.jsonl` → **retire** | Langfuse **trace** (holds input/context/output) | Langfuse (filter by `agent_id`, time window); derived signals computed over trace payloads |
 | Metric series (turns, duration, budget) | Prometheus (partial) | Prometheus | PromQL with label selectors + range |
-| Guard decisions (conformance, tool-validity) | `audit.log` → **keep (ledger)** | `audit.log` (hash-chained, `agent_id`) | Ledger adapter, filtered by `agent_id` + `occurred_at` |
-| Governance (routing/handoff/proposed/release/deploy) | S1 journal → **keep (ledger)** | S1 journal (hash-chained, `agent_id`) | Ledger adapter, filtered |
+| Guard decisions (conformance, tool-validity) | `audit.log` → **keep (ledger)** | **⚠ Amend.3+Corr.3b: the ONE consolidated journal — promoted to owned append-only hash-chained Postgres `audit_ledger`** | Ledger adapter, filtered by `agent_id` + `occurred_at` (family = tool/`user_input` targets) |
+| Governance (routing/handoff/proposed/release/deploy + memory consent/erasure) | S1 events → **keep (ledger)** | **⚠ Corr.3b: same consolidated journal** (families `tessera.agent.*` + `guard.audit` with `memory.*` targets) | Ledger adapter, filtered by family |
 | Fixtures (incidents/curation/automations/replay-shadow) | deterministic fixture | derive from spine where a real fact exists; else `synthetic:true` | registry marks `synthetic` |
 
 ### Right tool for the job — the capability matrix
