@@ -26,13 +26,44 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | G1 | Owned stores: Postgres `eval_gating_scores` (porteur) + owned ClickHouse `eval_online_scores` (§Amend.2 + §Corr.2b) | ✅ done | `fea97e9` | `ensure_eval_gating_schema()` at lifespan (env-schema isolated, unique re-ingest key) + `ClickHouseAdapter.ensure_schema()` (MergeTree, `PARTITION BY toYYYYMM`, native `TTL` 6 mo; best-effort at boot — monitoring telemetry never blocks boot). Live-proven: `SHOW CREATE TABLE` + `pg_indexes` match the amendments byte-for-byte; 3 live contract tests |
 | G2 | Write path: gating → durable Postgres + best-effort Langfuse SDK mirror; online → direct ClickHouse insert (never Langfuse Scores ingestion) | ✅ done | `f82fb33` | `emit_score` → direct owned-CH insert (no online score mirror — the trace IS the drill-down); eval runner → per-case Postgres rows (unique-key idempotent) + SDK mirror **session-anchored on run_id** (anchorless proven rejected 400), stable UUID5 score_id, flushed at CLI exit. Live-proven both legs; suite hermetic via env kill-switches |
 | G3 | Spine reads owned stores: gating → `adapters/postgres.py`, online → `adapters/clickhouse.py` (as-of-T by `scored_at`); Langfuse ceases to be a spine source | ✅ done | `f28fd08` | `SpineStoresReader.scores` → owned CH (server-side bound params; live = ring semantics for parity); new `PostgresGatingAdapter`; `gating` = first-class spine fact (protocol + 4 readers + shadow `fact=gating` + memoised context + cube-declared snapshot signal, FE mirror). Live: gating 211 rows/4 real runs; perf p95 cold 5.6ms / 3 upstream reads |
-| G4 | Backfill (jsonl→CH, reports→PG) → shadow parity `{fact=scores}` → flip per-signal → retire jsonl; erasure reaches the owned stores | ⬜ pending | — | |
+| G4 | Backfill (jsonl→CH, reports→PG) → shadow parity `{fact=scores}` → flip per-fact → owned-store erasure | ✅ done | `b9b532c` | Backfill idempotent (2nd run = 0); boot sweep; shadow bake **28/28 match scores + 28/28 gating, 0 diverge** across a live turn (dual-write 9=9); **flipped per-fact live** (`TESSERA_SPINE_SOURCE_SCORES/_GATING=spine`) — values identical, `source` badge resolved at read time; `DELETE /memory` purges the owned CH store (probe-proven). Retirement gated → G5 |
+| G5 | Retire scores.jsonl: route the 19 direct `persisted_scores`/`recent_scores` call sites (routes/observability ×12, proofs ×3, compliance ×3, availability/reliability/improvement/agent_console) through the reader seam → longer bake → stop the jsonl write → delete the file | ⬜ pending | — | ADR gate: "all signals flipped **and baked**" — the direct-route reads are the un-flipped tail; bake window as of 2026-07-02 is minutes old |
 | H | Ledger promotion (§Amend.3, SEPARATE): audit/S1 → owned append-only hash-chained Postgres; dual-write → backfill (verify) → shadow-verify → cut → retire flat file | ⬜ pending | — | |
 
 Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed) · ⛔ blocked (see notes).
 
 ## Log (newest first)
 
+- **Phase G4 ✅ — `b9b532c`** (twice-green + pushed). **The migration executed**: backfill → shadow
+  bake → per-fact flip → owned-store erasure. (1) **Backfill, idempotent**:
+  `scripts/backfill_owned_scores.py` fills the owned ClickHouse table from `scores.jsonl` by
+  **difference** (dedup key `(scored_at@ms, metric, conversation_id, trace_id)` — computable
+  identically on both sides) and sweeps the report archive into the porteur via
+  `ingest_gating_reports()`; run live: online 6→**3 inserted** (3 were live-written by G2), gating
+  **211 rows / 4 real release runs** + **211 Langfuse mirror scores** materialised; second run =
+  **0 + 0** (proof). The same sweep reconciles at every boot (best-effort, logged, never blocks).
+  (2) **Shadow bake over real traffic**: `TESSERA_SPINE_SOURCE=shadow`, 28 scoped snapshot computes
+  (org × 3 agents × 4 languages) spanning a **live `/chat` turn mid-bake** (dual-write proven:
+  jsonl 9 = CH 9): `tessera_spine_shadow_divergence_total` → **scores 28/28 match, gating 28/28
+  match, 0 diverge**; bundles 20 match / 8 diverge (the declared-lossy fact — stays jsonl forever).
+  (3) **Per-fact flip, live**: new `TESSERA_SPINE_SOURCE_SCORES` / `_GATING` overrides +
+  `FactRouter` (bundles/audit have NO override — lossy-by-design / carve-out); relaunched :8392
+  flipped → **values identical** (slo byte-equal, scores 9 rows, gating 211/4, `onboarding×fr` = 24
+  with honoured=['agent','language']); the per-signal **`source` badge is resolved at read time**
+  from the fact's active source (`capability.fact`), so the UI shows `spine` for
+  scores/slo/trend/funnel/faithfulness/gating and `jsonl` for the bundles-backed signals — a flip
+  can never be silent. (4) **Erasure reaches the owned store**: `ClickHouseAdapter.
+  delete_conversation` (count-then-delete, values bound server-side) behind `purge_owned_scores`
+  (deferred-never-faked, folded into `ErasureFootprint`); proven live — synthetic probe row +
+  `DELETE /memory/{id}` → 204, probe purged, the 9 real rows intact; the gating porteur carries no
+  `conversation_id` by construction (release runs are not subject-linked). Gate twice-green: ruff +
+  format + mypy strict (246) + **960 unit** (15 new) + 7 live contracts ×2 + tsc. **jsonl
+  retirement stays gated by the ADR's own rule** ("all signals flipped AND baked"): the 19 direct
+  `persisted_scores`/`recent_scores` call sites (routes/observability ×12, proofs ×3, compliance
+  ×3, availability, reliability, improvement, agent_console) still read the file and the bake
+  window is minutes old → enumerated as **G5**, never silently dropped. Flip env vars must be in
+  the backend's PROCESS environment (the factory reads `os.environ`, not `.env.local`). **Next: H
+  (ledger promotion) — G5 rides a longer bake.**
 - **Phase G3 ✅ — `f28fd08`** (twice-green + pushed). The spine now reads the **owned stores**;
   **Langfuse ceased to be a spine source** (§Amendment 1). (1) `SpineStoresReader.scores` reads the
   owned ClickHouse table: `ClickHouseAdapter.online_scores(scope)` pushes as-of-T + agent/language/
