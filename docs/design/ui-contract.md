@@ -321,11 +321,13 @@ Endpoint `/observability/rbac-matrix?agent=`. The page mounts the global filter 
 a `RbacAgentMatrix` (role × agent grid). **Honest current state:** the enforced
 roles are **org-wide**, so every cell reads "org" — stated truthfully, not a
 fabricated per-agent grant. **Follow-up (logged):** a per-agent role-binding store
-(assigning a role to specific agents, e.g. "ML Eng on support-client"). **Deviation
-(pre-existing, flagged not fixed):** the legacy `AccessOverview` panel below is a
-deterministic **fixture** (`observability/access.py` — hardcoded counts/users); it
-predates this pass and is out of scope here, but it contradicts the zéro-hardcode
-discipline and should be made real or removed in a dedicated cleanup.
+(assigning a role to specific agents, e.g. "ML Eng on support-client"). **Resolved (2026-07-03):** the `AccessOverview`
+panel is no longer a fixture — `observability/access.py` now derives from the real
+enforced model: roles/caps from `ROLE_CAPS` (the same caps the auth layer checks),
+accounts = the seeded operator accounts (ADR 0009; defined in code like the roles,
+changed via PR — there is no runtime user table in Phase 1), real `rbac.py` mtime,
+real registry agent count, and honest empty states for the storeless slots
+(requests / SoD / inactive). Read-only by design, like Prompts.
 
 **Prouver / Audit — agent_id filter (Tier 2).** The guard audit chain already
 carries `agent_id` (Phase 0). Surfaced it: `AuditEntry` now parses `agent_id`; the
