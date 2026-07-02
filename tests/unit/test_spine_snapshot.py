@@ -62,7 +62,7 @@ class _CountingReader:
 
     def __init__(self, inner: SpineReader) -> None:
         self._inner = inner
-        self.calls = {"scores": 0, "bundles": 0, "audit": 0}
+        self.calls = {"scores": 0, "bundles": 0, "audit": 0, "gating": 0}
 
     def scores(self, scope: Scope) -> list[dict[str, object]]:
         self.calls["scores"] += 1
@@ -75,6 +75,10 @@ class _CountingReader:
     def audit_entries(self, scope: Scope) -> list[dict[str, object]]:
         self.calls["audit"] += 1
         return self._inner.audit_entries(scope)
+
+    def gating_scores(self, scope: Scope) -> list[dict[str, object]]:
+        self.calls["gating"] += 1
+        return self._inner.gating_scores(scope)
 
 
 @pytest.fixture(autouse=True)
@@ -99,10 +103,11 @@ class TestSnapshotShape:
         counting = _CountingReader(FakeSpineReader(scores=[_score("support")], bundles=[]))
         set_reader(counting)
         snap = await compute_snapshot(Scope())
-        # Nine signals, but scores + bundles are each read exactly once.
+        # Ten signals, but scores + bundles + gating are each read exactly once.
         assert counting.calls["scores"] == 1
         assert counting.calls["bundles"] == 1
-        assert snap["meta"]["upstream_reads"] == 2
+        assert counting.calls["gating"] == 1
+        assert snap["meta"]["upstream_reads"] == 3
 
     async def test_scope_filters_by_agent(self) -> None:
         set_reader(

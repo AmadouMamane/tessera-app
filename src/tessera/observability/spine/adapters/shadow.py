@@ -63,3 +63,9 @@ class ShadowReader:
     def audit_entries(self, scope: Scope) -> list[dict[str, object]]:
         """The ledger is local and canonical — served directly, no shadow (§carve-out)."""
         return self._primary.audit_entries(scope)
+
+    def gating_scores(self, scope: Scope) -> list[dict[str, object]]:
+        """Serve the file-archive gating rows; compare the owned Postgres table's."""
+        primary = self._primary.gating_scores(scope)
+        self._compare("gating", len(primary), lambda: list(self._shadow.gating_scores(scope)))
+        return primary

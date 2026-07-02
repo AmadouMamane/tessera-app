@@ -28,10 +28,12 @@ class FakeSpineReader:
         scores: list[dict[str, object]] | None = None,
         bundles: list[ReplayBundle] | None = None,
         audit_entries: list[dict[str, object]] | None = None,
+        gating: list[dict[str, object]] | None = None,
     ) -> None:
         self._scores = list(scores or [])
         self._bundles = list(bundles or [])
         self._audit = list(audit_entries or [])
+        self._gating = list(gating or [])
 
     def scores(self, scope: Scope) -> list[dict[str, object]]:
         """Seeded score rows, filtered by as-of-T + agent + language/model, like the store."""
@@ -58,3 +60,14 @@ class FakeSpineReader:
     def audit_entries(self, scope: Scope) -> list[dict[str, object]]:  # noqa: ARG002
         """The seeded ledger entries whole (scope filter applied downstream)."""
         return list(self._audit)
+
+    def gating_scores(self, scope: Scope) -> list[dict[str, object]]:
+        """Seeded gating rows, filtered by as-of-T + agent + language/model, like the store."""
+        rows = [r for r in self._gating if occurred_before(r.get("scored_at"), scope.at)]
+        if scope.agent_id is not None:
+            rows = [r for r in rows if r.get("agent_id") == scope.agent_id]
+        if scope.language is not None:
+            rows = [r for r in rows if r.get("language") == scope.language]
+        if scope.model is not None:
+            rows = [r for r in rows if r.get("model") == scope.model]
+        return rows

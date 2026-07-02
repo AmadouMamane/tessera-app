@@ -23,17 +23,26 @@ fabricated zero.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from typing import Final
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Final
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
 
+if TYPE_CHECKING:
+    from tessera.observability.spine.scope import Scope
+
 __all__ = ["ONLINE_SCORES_TABLE", "ClickHouseAdapter", "ClickHouseConfig", "online_scores_ddl"]
+
+# Mirrors the live ring buffer's bound (``eval.scores._RECENT`` maxlen) so the live read
+# has the same semantics as the jsonl reader it must hold parity with.
+_LIVE_LIMIT: Final = 200
 
 ONLINE_SCORES_TABLE: Final = "eval_online_scores"
 
@@ -114,19 +123,26 @@ class ClickHouseAdapter:
         """The fully-qualified owned online-scores table (``<database>.<table>``)."""
         return f"{self._config.database}.{ONLINE_SCORES_TABLE}"
 
-    def execute(self, query: str, *, data: bytes | None = None) -> str:
+    def execute(
+        self, query: str, *, data: bytes | None = None, params: dict[str, str] | None = None
+    ) -> str:
         """Run one statement over the HTTP interface and return the raw response body.
 
         With ``data`` the query goes in the URL and ``data`` is the POST body (the
         ``INSERT … FORMAT JSONEachRow`` shape); otherwise the query itself is the body.
+        ``params`` bind ``{name:Type}`` placeholders server-side (``param_<name>``) — values
+        never enter the SQL text, so a scoped read is injection-safe by construction.
         Auth uses the ClickHouse HTTP headers, so the query string never carries a secret.
         """
+        url_params: dict[str, str] = {f"param_{k}": v for k, v in (params or {}).items()}
         if data is not None:
-            url = f"{self._config.url}/?{urllib.parse.urlencode({'query': query})}"
+            url_params["query"] = query
             body = data
         else:
-            url = f"{self._config.url}/"
             body = query.encode("utf-8")
+        url = f"{self._config.url}/"
+        if url_params:
+            url = f"{url}?{urllib.parse.urlencode(url_params)}"
         request = urllib.request.Request(  # noqa: S310 — self-hosted spine
             url,
             data=body,
@@ -158,3 +174,106 @@ class ClickHouseAdapter:
         """
         self.execute(f"CREATE DATABASE IF NOT EXISTS {self._config.database}")
         self.execute(online_scores_ddl(self._config.database))
+
+    def online_scores(self, scope: Scope) -> list[dict[str, object]]:
+        """Online score rows for ``scope``, shaped exactly like the jsonl store's rows.
+
+        The G4 parity gate compares this read against the jsonl reader count-for-count,
+        so the semantics mirror it deliberately: **as-of-T** (``scope.at``) reads every
+        row at/before T with the dimension filters pushed into SQL; **live** (no ``at``)
+        mirrors the in-process ring — the last ``200`` rows org-wide by ``scored_at``,
+        dimension filters applied *after* the cut, exactly like ``recent_scores``. An
+        unparsable ``at`` falls back to no time bound (the jsonl reader ignores a bad
+        cutoff rather than dropping data).
+        """
+        table = self.table
+        if scope.at:
+            cutoff = _ch_datetime(scope.at)
+            conditions: list[str] = []
+            params: dict[str, str] = {}
+            if cutoff is not None:
+                conditions.append("scored_at <= {at:DateTime64(3)}")
+                params["at"] = cutoff
+            if scope.agent_id is not None:
+                conditions.append("agent_id = {agent:String}")
+                params["agent"] = scope.agent_id
+            if scope.language is not None:
+                conditions.append("language = {language:String}")
+                params["language"] = scope.language
+            if scope.model is not None:
+                conditions.append("model = {model:String}")
+                params["model"] = scope.model
+            where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+            raw = self.execute(
+                f"SELECT * FROM {table}{where} ORDER BY scored_at FORMAT JSONEachRow",  # noqa: S608 — identifiers validated, values bound server-side
+                params=params,
+            )
+            return [_row_from_ch(r) for r in _jsonl_lines(raw)]
+        raw = self.execute(
+            f"SELECT * FROM {table} ORDER BY scored_at DESC LIMIT {_LIVE_LIMIT} "  # noqa: S608 — identifiers validated, constant limit
+            "FORMAT JSONEachRow"
+        )
+        rows = [_row_from_ch(r) for r in reversed(list(_jsonl_lines(raw)))]
+        if scope.agent_id is not None:
+            rows = [r for r in rows if r.get("agent_id") == scope.agent_id]
+        if scope.language is not None:
+            rows = [r for r in rows if r.get("language") == scope.language]
+        if scope.model is not None:
+            rows = [r for r in rows if r.get("model") == scope.model]
+        return rows
+
+
+def _ch_datetime(value: str) -> str | None:
+    """An ISO instant as a ClickHouse ``DateTime64(3)`` literal (UTC), or ``None``."""
+    try:
+        stamp = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=UTC)
+    utc = stamp.astimezone(UTC)
+    return utc.strftime("%Y-%m-%d %H:%M:%S.") + f"{utc.microsecond // 1000:03d}"
+
+
+def _jsonl_lines(raw: str) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            obj = json.loads(stripped)
+        except ValueError:
+            continue
+        if isinstance(obj, dict):
+            rows.append(obj)
+    return rows
+
+
+def _opt(value: object) -> str | None:
+    """The table's ``""`` "unattributed" marker mapped back to ``None`` (never invented)."""
+    return value if isinstance(value, str) and value else None
+
+
+def _row_from_ch(row: dict[str, object]) -> dict[str, object]:
+    """One ClickHouse row → the jsonl row shape every score consumer already reads.
+
+    ``scored_at`` is reconstructed as ISO-8601 UTC; ClickHouse stores millisecond
+    precision, so the sub-millisecond digits of the original jsonl stamp are gone —
+    truncated, never padded with invented digits.
+    """
+    scored_at = row.get("scored_at")
+    return {
+        "scored_at": (
+            f"{scored_at.replace(' ', 'T')}+00:00" if isinstance(scored_at, str) else None
+        ),
+        "metric": _opt(row.get("metric")),
+        "score": row.get("score"),
+        "language": _opt(row.get("language")),
+        "judge_model": _opt(row.get("judge_model")),
+        "conversation_id": _opt(row.get("conversation_id")),
+        "trace_id": _opt(row.get("trace_id")),
+        "sampled": bool(row.get("sampled")),
+        "agent_id": _opt(row.get("agent_id")),
+        "model": _opt(row.get("model")),
+    }

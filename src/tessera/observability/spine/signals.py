@@ -97,6 +97,37 @@ async def _read_funnel(scope: Scope) -> dict[str, object]:
     return asdict(funnel_mod.aggregate_funnel(turns))
 
 
+async def _read_gating(scope: Scope) -> dict[str, object]:
+    """Compact release-gating summary from the porteur rows (§Amendment 2).
+
+    The rows themselves are bounded but verbose (cases x languages x runs), so the
+    snapshot carries per-run aggregates + the latest run's verdict — enough for a
+    release card without dumping the socle into every payload.
+    """
+    rows = current_context().gating_scores(scope)
+    runs: dict[str, dict[str, object]] = {}
+    for row in rows:
+        run_id = str(row.get("run_id") or "")
+        run = runs.setdefault(
+            run_id,
+            {"run_id": run_id, "agent_id": row.get("agent_id"), "passed": 0, "total": 0, "at": ""},
+        )
+        run["total"] = int(run["total"]) + 1  # type: ignore[call-overload]
+        if row.get("passed"):
+            run["passed"] = int(run["passed"]) + 1  # type: ignore[call-overload]
+        scored_at = str(row.get("scored_at") or "")
+        if scored_at > str(run["at"]):
+            run["at"] = scored_at
+    latest = max(runs.values(), key=lambda r: str(r["at"])) if runs else None
+    return {
+        "row_count": len(rows),
+        "run_count": len(runs),
+        "latest_run": latest,
+        "as_of": scope.at,
+        "agent": scope.agent_param,
+    }
+
+
 async def _read_toxicity(scope: Scope) -> dict[str, object]:
     turns = [(b.question, b.original_answer) for b in current_context().bundles(scope)]
     return asdict(toxicity_mod.scan_toxicity(turns))
@@ -182,6 +213,7 @@ _READS = {
     "slo": _read_slo,
     "trend": _read_trend,
     "funnel": _read_funnel,
+    "gating": _read_gating,
     "toxicity": _read_toxicity,
     "pii_leak": _read_pii_leak,
     "cost": _read_cost,

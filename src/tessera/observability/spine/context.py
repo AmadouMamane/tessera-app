@@ -26,7 +26,7 @@ __all__ = [
 
 
 class SnapshotContext:
-    """Memoises the three shared reads (scores / bundles / audit) for one snapshot.
+    """Memoises the four shared reads (scores / bundles / audit / gating) for one snapshot.
 
     ``upstream_reads`` counts distinct backend loads — the metric the perf probe asserts
     stays O(1) (a small constant), proving the snapshot shares reads instead of fanning out
@@ -38,6 +38,7 @@ class SnapshotContext:
         self._scores: dict[str, list[dict[str, object]]] = {}
         self._bundles: dict[str, list[ReplayBundle]] = {}
         self._audit: list[dict[str, object]] | None = None
+        self._gating: dict[str, list[dict[str, object]]] = {}
         self.upstream_reads = 0
 
     def scores(self, scope: Scope) -> list[dict[str, object]]:
@@ -68,6 +69,16 @@ class SnapshotContext:
             self.upstream_reads += 1
             self._audit = self._reader.audit_entries(scope)
         return self._audit
+
+    def gating_scores(self, scope: Scope) -> list[dict[str, object]]:
+        """Gating rows for the scope, read from the backend at most once per snapshot."""
+        cache_key = scope.key()
+        cached = self._gating.get(cache_key)
+        if cached is None:
+            self.upstream_reads += 1
+            cached = self._reader.gating_scores(scope)
+            self._gating[cache_key] = cached
+        return cached
 
 
 _current: contextvars.ContextVar[SnapshotContext | None] = contextvars.ContextVar(

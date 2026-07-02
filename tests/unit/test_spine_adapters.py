@@ -96,28 +96,33 @@ class TestLangfuseDeletion:
 
 
 class TestSpineReaderMapping:
-    def test_scores_map_from_langfuse(self) -> None:
+    def test_scores_read_the_owned_clickhouse_store_not_langfuse(self) -> None:
+        # §Amendment 1 + §Correction 2b: the spine's score rows come from the owned
+        # ClickHouse table; Langfuse is never consulted for a score.
+        class _StubClickHouse:
+            def online_scores(self, scope: Scope) -> list[dict[str, object]]:
+                return [{"metric": "faithfulness", "score": 0.9, "agent_id": "support"}]
+
+        class _NeverLangfuse:
+            def scores_by_metadata(
+                self, scope: Scope, *, limit: int = 100
+            ) -> list[dict[str, object]]:
+                raise AssertionError("Langfuse must not be read for scores (§Amendment 1)")
+
         reader = SpineStoresReader(
-            langfuse=_StubLangfuse(  # type: ignore[arg-type]
-                scores=[
-                    {
-                        "timestamp": "2026-06-10T00:00:00Z",
-                        "name": "faithfulness",
-                        "value": 0.9,
-                        "traceId": "t1",
-                        "comment": "llama3.2:3b",
-                        "metadata": {"agent_id": "support", "language": "fr", "model": "m"},
-                    }
-                ],
-                traces=[],
-            )
+            clickhouse=_StubClickHouse(),  # type: ignore[arg-type]
+            langfuse=_NeverLangfuse(),  # type: ignore[arg-type]
         )
         rows = reader.scores(Scope())
-        assert rows[0]["metric"] == "faithfulness"
-        assert rows[0]["score"] == 0.9
-        assert rows[0]["agent_id"] == "support"
-        assert rows[0]["model"] == "m"
-        assert rows[0]["judge_model"] == "llama3.2:3b"
+        assert rows == [{"metric": "faithfulness", "score": 0.9, "agent_id": "support"}]
+
+    def test_gating_reads_the_owned_postgres_porteur(self) -> None:
+        class _StubPostgres:
+            def gating_scores(self, scope: Scope) -> list[dict[str, object]]:
+                return [{"run_id": "r1", "case_id": "c1", "passed": True}]
+
+        reader = SpineStoresReader(postgres=_StubPostgres())  # type: ignore[arg-type]
+        assert reader.gating_scores(Scope())[0]["run_id"] == "r1"
 
     def test_bundles_map_from_traces_lossy_but_shaped(self) -> None:
         reader = SpineStoresReader(

@@ -90,6 +90,10 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("slo", _CUBE, in_snapshot=True),
     _cap("trend", _CUBE, in_snapshot=True),
     _cap("funnel", _CUBE, in_snapshot=True),
+    # Release-gating socle (§Amendment 2 Nature 1): per-case verdicts carry agent, language,
+    # model and scored_at — the full cube. Current source = the report-file archive; the
+    # owned Postgres porteur shadows it until parity (G4), like scores over ClickHouse.
+    _cap("gating", _CUBE, in_snapshot=True),
     _cap("toxicity", _CUBE, in_snapshot=True),
     _cap("pii_leak", _CUBE, in_snapshot=True),
     _cap("cost", _CUBE, in_snapshot=True),

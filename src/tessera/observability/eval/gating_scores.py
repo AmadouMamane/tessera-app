@@ -31,6 +31,7 @@ __all__ = [
     "GATING_TABLE",
     "GatingScoreRow",
     "ensure_eval_gating_schema",
+    "gating_row_dict",
     "gating_rows_from_report",
     "record_gating_report",
     "record_gating_rows",
@@ -97,6 +98,27 @@ class GatingScoreRow:
     catalogue_version: str | None
     judge_model: str | None
     scored_at: datetime
+
+
+def gating_row_dict(row: GatingScoreRow) -> dict[str, object]:
+    """One gating row as the plain dict shape the spine readers serve.
+
+    Both sides of the G4 parity comparison (report files vs the owned Postgres table)
+    serialize through this one function, so the shapes cannot drift apart.
+    """
+    return {
+        "run_id": row.run_id,
+        "case_id": row.case_id,
+        "agent_id": row.agent_id,
+        "language": row.language,
+        "model": row.model,
+        "metric": row.metric,
+        "score": row.score,
+        "passed": row.passed,
+        "catalogue_version": row.catalogue_version,
+        "judge_model": row.judge_model,
+        "scored_at": row.scored_at.isoformat(),
+    }
 
 
 def _parse_run_at(run_at: str) -> datetime | None:

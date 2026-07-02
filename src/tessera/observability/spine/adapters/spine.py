@@ -1,16 +1,16 @@
-"""The spine-backed ``SpineReader`` (ADR 0015 §Migration C).
+"""The spine-backed ``SpineReader`` (ADR 0015 §Migration C, re-homed by §Amend.1-3).
 
-Implements the read seam over the live spine: eval scores + captured turns from **Langfuse**
-(detail), the tamper-evident **ledger** locally (the carve-out — it never leaves the process).
-Aggregate *numbers* (SLO/rate/quantile) are read from **Prometheus** by the aggregate helpers,
-never by summing the rows here — the hot path keeps aggregates on Prometheus, detail on
-Langfuse, and never mixes the two for the same number.
+Implements the read seam over the live spine — **owned stores first** (the amendments):
+online score detail from the owned **ClickHouse** table (§Correction 2b), release-gating
+rows from the owned **Postgres** porteur (§Amendment 2), the tamper-evident **ledger**
+locally (the carve-out — it never leaves the process). **Langfuse ceased to be a spine
+source for any number** (§Amendment 1): it serves only the *trace* view (captured-turn
+shells, drill-down, erasure). Aggregate numbers (SLO/rate/quantile) stay on **Prometheus**
+— never summed from rows here.
 
-This reader is not the default: it is selected via ``TESSERA_SPINE_SOURCE=spine`` or run behind
-the :class:`~tessera.observability.spine.adapters.shadow.ShadowReader` (``=shadow``) which serves
-jsonl and logs divergence until a signal holds parity. Until the spine has accumulated
-dimensioned history, the row-level reads here are intentionally sparse — served only in shadow,
-never presented as the real per-agent view.
+This reader is not the default: it is selected via ``TESSERA_SPINE_SOURCE=spine`` or run
+behind the :class:`~tessera.observability.spine.adapters.shadow.ShadowReader` (``=shadow``)
+which serves jsonl and logs divergence until a signal holds parity.
 """
 
 from __future__ import annotations
@@ -18,8 +18,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from tessera.observability.replay import ReplayBundle
+from tessera.observability.spine.adapters.clickhouse import ClickHouseAdapter
 from tessera.observability.spine.adapters.current import _read_audit_ledger
 from tessera.observability.spine.adapters.langfuse import LangfuseAdapter
+from tessera.observability.spine.adapters.postgres import PostgresGatingAdapter
 from tessera.observability.spine.adapters.prometheus import PrometheusAdapter
 
 if TYPE_CHECKING:
@@ -38,14 +40,20 @@ def _opt_str(value: object) -> str | None:
 
 
 class SpineStoresReader:
-    """Reads dimensioned facts from the live spine (Langfuse detail + local ledger)."""
+    """Reads dimensioned facts from the owned stores (+ Langfuse traces, local ledger)."""
 
     def __init__(
         self,
         *,
+        clickhouse: ClickHouseAdapter | None = None,
+        postgres: PostgresGatingAdapter | None = None,
         langfuse: LangfuseAdapter | None = None,
         prometheus: PrometheusAdapter | None = None,
     ) -> None:
+        self._clickhouse = (
+            clickhouse if clickhouse is not None else ClickHouseAdapter(timeout_s=0.8)
+        )
+        self._postgres = postgres if postgres is not None else PostgresGatingAdapter()
         self._langfuse = langfuse if langfuse is not None else LangfuseAdapter()
         self._prometheus = prometheus if prometheus is not None else PrometheusAdapter()
 
@@ -55,31 +63,17 @@ class SpineStoresReader:
         return self._prometheus
 
     def scores(self, scope: Scope) -> list[dict[str, object]]:
-        """Eval score rows from Langfuse scores, shaped like the jsonl store's rows.
+        """Online score rows from the OWNED ClickHouse table (§Correction 2b).
 
-        Langfuse filters by agent + time; ``language`` / ``model`` are applied here over the
-        mapped rows so the agent x time x language cube reads identically to the jsonl path.
+        As-of-T + every dimension are pushed into the store's query; the rows come back
+        in the exact jsonl shape, so every score consumer reads identically. Langfuse is
+        no longer read for any score (§Amendment 1).
         """
-        rows: list[dict[str, object]] = []
-        for row in self._langfuse.scores_by_metadata(scope):
-            metadata = _meta(row)
-            rows.append(
-                {
-                    "scored_at": _opt_str(row.get("timestamp")),
-                    "metric": _opt_str(row.get("name")),
-                    "score": row.get("value"),
-                    "language": metadata.get("language"),
-                    "agent_id": metadata.get("agent_id"),
-                    "model": metadata.get("model"),
-                    "trace_id": _opt_str(row.get("traceId")),
-                    "judge_model": _opt_str(row.get("comment")),
-                }
-            )
-        if scope.language is not None:
-            rows = [r for r in rows if r.get("language") == scope.language]
-        if scope.model is not None:
-            rows = [r for r in rows if r.get("model") == scope.model]
-        return rows
+        return self._clickhouse.online_scores(scope)
+
+    def gating_scores(self, scope: Scope) -> list[dict[str, object]]:
+        """Release-gating rows from the OWNED Postgres porteur (§Amendment 2)."""
+        return self._postgres.gating_scores(scope)
 
     def bundles(self, scope: Scope) -> list[ReplayBundle]:
         """Captured turns from Langfuse traces (best-effort; content-capture gated fields empty).

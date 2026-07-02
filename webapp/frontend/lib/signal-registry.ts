@@ -50,6 +50,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   slo: cap(CUBE),
   trend: cap(CUBE),
   funnel: cap(CUBE),
+  // Release-gating socle (ADR 0015 §Amendment 2): per-case verdicts carry the full cube.
+  gating: cap(CUBE),
   toxicity: cap(CUBE),
   pii_leak: cap(CUBE),
   cost: cap(CUBE),

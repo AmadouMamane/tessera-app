@@ -60,6 +60,75 @@ class CurrentStoresReader:
         """The whole guard audit ledger (scope filter is applied downstream by signals)."""
         return _read_audit_ledger()
 
+    def gating_scores(self, scope: Scope) -> list[dict[str, object]]:
+        """Release-gating rows from the report-file archive (the current gating store).
+
+        Reads the env-aware report files (ADR 0014 layer 3) through the same pure
+        report→rows mapping the Postgres write path uses, so the file view and the owned
+        table serve one shape — the G4 parity precondition. Files are parsed once per
+        ``(path, mtime)`` and cached (the archive is immutable timestamped files), so the
+        hot path never re-parses megabytes of JSON per snapshot.
+        """
+        from tessera.observability._asof import occurred_before
+
+        rows = [r for r in _gating_archive_rows() if occurred_before(r.get("scored_at"), scope.at)]
+        if scope.agent_id is not None:
+            rows = [r for r in rows if r.get("agent_id") == scope.agent_id]
+        if scope.language is not None:
+            rows = [r for r in rows if r.get("language") == scope.language]
+        if scope.model is not None:
+            rows = [r for r in rows if r.get("model") == scope.model]
+        return rows
+
+
+# (path, mtime_ns) → that file's gating rows. Archive files are immutable (timestamped
+# names; only latest*.json is rewritten), so the cache is correct by construction and
+# bounded by the number of report files.
+_GATING_CACHE: dict[str, tuple[int, list[dict[str, object]]]] = {}
+
+
+def _gating_archive_rows() -> list[dict[str, object]]:
+    """Every gating row in the env's report archive, oldest→newest, mtime-cached."""
+    import json
+
+    from tessera.observability.eval.gating_scores import (
+        gating_row_dict,
+        gating_rows_from_report,
+    )
+    from tessera.observability.eval.report_paths import iter_report_files
+
+    rows: list[dict[str, object]] = []
+    seen_runs: set[str] = set()
+    for path in sorted(iter_report_files()):
+        try:
+            stat_ns = path.stat().st_mtime_ns
+        except OSError:
+            continue
+        key = str(path)
+        cached = _GATING_CACHE.get(key)
+        if cached is None or cached[0] != stat_ns:
+            try:
+                report = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                _GATING_CACHE[key] = (stat_ns, [])
+                continue
+            parsed = (
+                [gating_row_dict(r) for r in gating_rows_from_report(report)]
+                if isinstance(report, dict)
+                else []
+            )
+            _GATING_CACHE[key] = (stat_ns, parsed)
+        file_rows = _GATING_CACHE[key][1]
+        if not file_rows:
+            continue
+        run_id = str(file_rows[0].get("run_id"))
+        if run_id in seen_runs:  # latest_<agent>.json duplicates its timestamped archive
+            continue
+        seen_runs.add(run_id)
+        rows.extend(file_rows)
+    rows.sort(key=lambda r: str(r.get("scored_at") or ""))
+    return rows
+
 
 def _read_audit_ledger() -> list[dict[str, object]]:
     """Parse the guard audit log (``type == tessera.guard.audit``), best effort.

@@ -10,6 +10,7 @@ tables never keep a synthetic row.
 from __future__ import annotations
 
 import time
+import uuid
 
 import pytest
 
@@ -54,7 +55,7 @@ class TestClickHouseWriteContract:
 
         adapter = _clickhouse()
         adapter.ensure_schema()
-        probe_metric = "contract-probe-metric"
+        probe_metric = f"contract-probe-{uuid.uuid4().hex[:12]}"
         line = online_score_line(
             {
                 "scored_at": "2026-01-01T00:00:00+00:00",
@@ -89,6 +90,54 @@ class TestClickHouseWriteContract:
                 break
             time.sleep(0.3)
         assert remaining == "0"
+
+
+class TestClickHouseReadContract:
+    def test_online_scores_scoped_read_round_trips(self) -> None:
+        from tessera.observability.clickhouse_scores import online_score_line
+        from tessera.observability.spine.scope import Scope
+
+        adapter = _clickhouse()
+        adapter.ensure_schema()
+        probe_agent = f"g3-read-probe-{uuid.uuid4().hex[:12]}"
+        lines = []
+        for stamp, metric in (
+            ("2026-01-01T00:00:00+00:00", "faithfulness"),
+            ("2026-01-02T00:00:00+00:00", "grounding"),
+        ):
+            line = online_score_line(
+                {
+                    "scored_at": stamp,
+                    "metric": metric,
+                    "score": 0.7,
+                    "language": "fr",
+                    "judge_model": "probe",
+                    "conversation_id": "g3-conv",
+                    "trace_id": "g3-trace",
+                    "sampled": True,
+                    "agent_id": probe_agent,
+                    "model": "probe-model",
+                }
+            )
+            assert line is not None
+            lines.append(line)
+        adapter.execute(f"INSERT INTO {adapter.table} FORMAT JSONEachRow", data=b"\n".join(lines))
+        try:
+            rows = adapter.online_scores(Scope(agent_id=probe_agent))
+            assert [r["metric"] for r in rows] == ["faithfulness", "grounding"]
+            assert rows[0]["scored_at"] == "2026-01-01T00:00:00.000+00:00"
+            assert rows[0]["sampled"] is True
+            # As-of-T excludes the later row server-side.
+            asof = adapter.online_scores(
+                Scope(agent_id=probe_agent, at="2026-01-01T12:00:00+00:00")
+            )
+            assert [r["metric"] for r in asof] == ["faithfulness"]
+            # Language slice composes with agent.
+            assert adapter.online_scores(Scope(agent_id=probe_agent, language="de")) == []
+        finally:
+            adapter.execute(
+                f"DELETE FROM {adapter.table} WHERE agent_id = '{probe_agent}'"  # noqa: S608 — fixed probe literal
+            )
 
 
 class TestPostgresGatingContract:
@@ -153,6 +202,48 @@ class TestPostgresGatingContract:
             ]
         finally:
             # The porteur never keeps a synthetic run.
+            async with pool.connection() as conn, conn.cursor() as cur:
+                await cur.execute("DELETE FROM eval_gating_scores WHERE run_id = %s", (run_id,))
+                await conn.commit()
+
+    async def test_gating_adapter_reads_the_porteur_scoped(self) -> None:
+        from tessera.observability.eval.gating_scores import record_gating_report
+        from tessera.observability.spine.adapters.postgres import PostgresGatingAdapter
+        from tessera.observability.spine.scope import Scope
+        from tessera.retrieval.store import get_pool
+
+        probe_agent = "g3-gating-probe-agent"
+        report: dict[str, object] = {
+            "run_at": "20260102T000000Z",
+            "agent_id": probe_agent,
+            "model": "probe-model",
+            "catalogue_version": "probe-1",
+            "results": [
+                {"case_id": "01", "language": "fr", "passed": True},
+                {"case_id": "02", "language": "de", "passed": False},
+            ],
+        }
+        try:
+            inserted = await record_gating_report(report)
+        except Exception:  # any connection failure means "no local Postgres"
+            pytest.skip("postgres not up (docker compose up)")
+        run_id = f"20260102T000000Z_{probe_agent}"
+        adapter = PostgresGatingAdapter()
+        try:
+            assert inserted == 2
+            rows = adapter.gating_scores(Scope(agent_id=probe_agent))
+            assert [r["case_id"] for r in rows] == ["01", "02"]
+            assert rows[0]["metric"] == "case_pass"
+            assert isinstance(rows[0]["scored_at"], str)  # ISO — the shared row shape
+            # As-of-T before the run → nothing; language slice composes with agent.
+            assert (
+                adapter.gating_scores(Scope(agent_id=probe_agent, at="2026-01-01T00:00:00+00:00"))
+                == []
+            )
+            french = adapter.gating_scores(Scope(agent_id=probe_agent, language="fr"))
+            assert [r["case_id"] for r in french] == ["01"]
+        finally:
+            pool = get_pool()
             async with pool.connection() as conn, conn.cursor() as cur:
                 await cur.execute("DELETE FROM eval_gating_scores WHERE run_id = %s", (run_id,))
                 await conn.commit()

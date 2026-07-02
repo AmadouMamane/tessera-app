@@ -45,3 +45,7 @@ class SpineReader(Protocol):
     def audit_entries(self, scope: Scope) -> list[dict[str, object]]:
         """Guard audit ledger entries (tamper-evident; stays local, unfiltered at read)."""
         ...
+
+    def gating_scores(self, scope: Scope) -> list[dict[str, object]]:
+        """Release-gating rows for the scope (as-of-T + dims), oldest→newest (§Amend.2)."""
+        ...
