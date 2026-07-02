@@ -43,6 +43,7 @@ from tessera.memory.persistent import ensure_longterm_schema
 from tessera.memory.summary import ensure_summary_schema
 from tessera.memory.transcript import ensure_transcript_schema
 from tessera.observability import logging as obs_logging, metrics, traces
+from tessera.observability.eval.gating_scores import ensure_eval_gating_schema
 from tessera.retrieval.citations import ensure_citation_schema
 from tessera.retrieval.store import ensure_schema, get_pool
 from tessera.settings import get_settings
@@ -51,6 +52,26 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 __all__ = ["build_app", "cli"]
+
+
+async def _ensure_online_score_store() -> None:
+    """Bootstrap the owned ClickHouse online-score table, best-effort (§Correction 2b).
+
+    Online scores are sampled monitoring telemetry — by the ADR's governing rule they are
+    *not* load-bearing, so an absent obs stack must never block boot: the bootstrap is
+    deferred (the write path re-ensures lazily) and logged, never fabricated.
+    """
+    import asyncio
+
+    from tessera.observability.spine.adapters.base import SpineUnavailableError
+    from tessera.observability.spine.adapters.clickhouse import ClickHouseAdapter
+
+    try:
+        await asyncio.to_thread(ClickHouseAdapter().ensure_schema)
+    except SpineUnavailableError as exc:
+        obs_logging.get_logger("tessera.spine").warning(
+            "clickhouse.ensure_deferred", error=str(exc)
+        )
 
 
 @asynccontextmanager
@@ -71,6 +92,8 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await ensure_consent_schema()  # ADR 0007, governance
         await ensure_citation_schema()  # retrieval citation counters
         await ensure_settings_schema()  # persisted runtime flags
+        await ensure_eval_gating_schema()  # ADR 0015 §Amendment 2 — gating socle (porteur)
+        await _ensure_online_score_store()  # ADR 0015 §Correction 2b — best-effort
         yield
     finally:
         await pool.close()
