@@ -35,6 +35,20 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **H2 step 3/5 ✅ — `9d1dd90`** (twice-green + live proof + pushed). **Chain continuity through
+  the cut.** At process start the chain resumes from whichever medium is canonical:
+  `_seed_chain_head` seeds from the file pre-cut (unchanged) but from the **promoted table's
+  tail** after the cut (`TESSERA_LEDGER_SOURCE=postgres`) via `ledger_head_hash()` (max-`seq`
+  row — `seq` is chain order under the spool's whole-batch FIFO drain). So the first post-cut
+  entry's `prev_hash` is the last pre-cut entry's hash, and `verify` walks genesis→tail
+  **unbroken across the boundary**. Empty/unreachable table → fall back to file/genesis (never
+  silently starts a new chain). Proven hermetically (seed switches with source; fresh process
+  post-cut links to the table tail; `verify_ledger_rows([e0,e1,new])` intact) and **live on real
+  Postgres** (ci schema: real head == tail, new links to it, real table chain verifies len 3).
+  Gate twice-green: 997 unit, mypy --strict, ruff+format clean. **Next: step 4 — sustained
+  shadow-verify bake over real traffic (divergence{ledger}=0 held; dual-write file==table,
+  both chains verified) before the irreversible cut.**
+
 - **H2 step 2/5 ✅ — `20346a7`** (twice-green + failure-path test + live proof + pushed). **The
   durable spool sink** — acceptance criterion #1 for retiring the flat file. The best-effort FIFO
   dual-write is replaced: `enqueue_ledger_entry` fsyncs each chained entry to a per-env spool
