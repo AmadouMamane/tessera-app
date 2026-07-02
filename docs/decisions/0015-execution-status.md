@@ -24,7 +24,7 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | E | Four cards (traces / inbox / release / audit) + fixtures flagged synthetic / derived from spine | ✅ done | `9553c1b` | Inbox **ventilated** — `OperatorItem.agent_id` from each agent's own eval run (fabrication-proof: no run → no items), `?agent=` filter, `inbox {AGENT,TIME}` in both registries (verified live: 78 items across 3 agents, `?agent=recouvrement`→7). Fixtures (incidents/curation/automations/replay_shadow) flagged by a registry-driven `<SyntheticNotice>`. Traces/Release/Audit verified already-honest (audit integrity is a real `verify_audit_chain`, not a TODO) → no rebuild. Registry mirror reconciled (faithfulness/pii/tools declared backend-side) |
 | F | Add language + model dimensions to Scope UI (no route sweep) — prove agent × time × language cube | ✅ done | `98ddf13` | The 9 store-derived signals + traces declare the full `_CUBE` {agent,time,language,model}; readers (current/fake/spine) filter by language/model; the registry narrows unsupported dims away (a language filter can't reach conformance/audit). Adding the dimension was a Scope field + registry entry + reader filter — **no route sweep** (the snapshot serves the cube for free). Proven 3 ways: hermetic (4 tests), live wire (`snapshot?language=fr` → honoured=['language']), live data-level over REAL ci data (de:21/en:21, exhaustive partition; model honestly sparse) |
 | G1 | Owned stores: Postgres `eval_gating_scores` (porteur) + owned ClickHouse `eval_online_scores` (§Amend.2 + §Corr.2b) | ✅ done | `fea97e9` | `ensure_eval_gating_schema()` at lifespan (env-schema isolated, unique re-ingest key) + `ClickHouseAdapter.ensure_schema()` (MergeTree, `PARTITION BY toYYYYMM`, native `TTL` 6 mo; best-effort at boot — monitoring telemetry never blocks boot). Live-proven: `SHOW CREATE TABLE` + `pg_indexes` match the amendments byte-for-byte; 3 live contract tests |
-| G2 | Write path: gating → durable Postgres + best-effort Langfuse SDK mirror; online → direct ClickHouse insert (never Langfuse Scores ingestion) | ⬜ pending | — | |
+| G2 | Write path: gating → durable Postgres + best-effort Langfuse SDK mirror; online → direct ClickHouse insert (never Langfuse Scores ingestion) | ✅ done | `f82fb33` | `emit_score` → direct owned-CH insert (no online score mirror — the trace IS the drill-down); eval runner → per-case Postgres rows (unique-key idempotent) + SDK mirror **session-anchored on run_id** (anchorless proven rejected 400), stable UUID5 score_id, flushed at CLI exit. Live-proven both legs; suite hermetic via env kill-switches |
 | G3 | Spine reads owned stores: gating → `adapters/postgres.py`, online → `adapters/clickhouse.py` (as-of-T by `scored_at`); Langfuse ceases to be a spine source | ⬜ pending | — | |
 | G4 | Backfill (jsonl→CH, reports→PG) → shadow parity `{fact=scores}` → flip per-signal → retire jsonl; erasure reaches the owned stores | ⬜ pending | — | |
 | H | Ledger promotion (§Amend.3, SEPARATE): audit/S1 → owned append-only hash-chained Postgres; dual-write → backfill (verify) → shadow-verify → cut → retire flat file | ⬜ pending | — | |
@@ -33,6 +33,30 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **Phase G2 ✅ — `f82fb33`** (twice-green + pushed). Both owned write legs are live, exactly per the
+  amendments. **Online** (§Correction 2b): `emit_score` direct-inserts each verdict row into
+  `tessera.eval_online_scores` (`clickhouse_scores.py`: JSONEachRow, daemon thread off the already-cold
+  path, lazy ensure, unattributed dims → `""` never fabricated, rows without an instant skipped) — the
+  Langfuse **online** score mirror is REMOVED (the trace in Langfuse/Phoenix + `trace_id` on the owned
+  row is the drill-down; Langfuse's fragile Scores ingestion is never used). jsonl stays system of
+  record until G4 parity. **Gating** (§Amendment 2): the eval runner now records every release run
+  durably — `gating_rows_from_report` (pure; agent-less catalogue probes yield NO rows — no fabricated
+  attribution; `run_id = run_at + agent` so archive and `latest_<agent>.json` dedup), `record_gating_rows`
+  (`ON CONFLICT DO NOTHING` on the unique key → idempotent re-ingest, the G4 backfill primitive), and a
+  best-effort CLI hook that never fails a run. **Mirror**: `langfuse_scores.py` rewritten around the
+  official SDK ("voie 1") — **empirically settled the anchor**: anchorless scores are rejected (400,
+  proven live); **session-anchored scores materialise + list via the v2 API** (proven live, probe
+  deleted) → gating scores mirror session-anchored on the run id, stable UUID5 `score_id` (dedup),
+  flushed at CLI exit; the hand-rolled ingestion POST is deleted. **Hermeticity**: both legs default OFF
+  under tests (`TESSERA_CLICKHOUSE_SCORES=0`, `TESSERA_LANGFUSE_SCORES=0` in conftest), opt-in per-test
+  over stubs; a real import cycle (scores → clickhouse_scores → spine.adapters → current → scores) was
+  broken by lazy adapter imports. Gate twice-green: ruff + format + mypy strict (245) + **937 unit**
+  (16 new) + 5 live contract (insert round-trip self-cleaning w/ bounded lightweight-delete poll;
+  idempotent gating re-record self-cleaning) + tsc clean. **Live-proven e2e**: one real `/chat` turn on
+  :8392 → 3 judge rows **byte-equal jsonl↔owned ClickHouse** (agent/language/model/sampled/ms) while
+  Langfuse scores stay **0**; one real 1-case `onboarding` eval run (scratch-redirected archive) →
+  Postgres row (`catalogue_version 25-92b10927`, real) + session-anchored mirror score in Langfuse v2;
+  re-record → **0** inserted; probes cleaned from every store. **Next: G3.**
 - **Phase G1 ✅ — `fea97e9`** (twice-green + pushed). Built the two owned stores exactly per the
   amendments. **Postgres `eval_gating_scores`** (§Amendment 2, Nature 1 — the porteur):
   `ensure_eval_gating_schema()` at API lifespan, plain indexed table (no partition machinery),
