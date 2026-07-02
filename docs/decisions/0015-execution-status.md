@@ -28,6 +28,41 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **📐 AMENDMENT 3 (docs only) + REVISED IMPLEMENTATION ROADMAP — the audit/proof ledger is homed; the
+  governing rule names the whole model.** (2026-07-02, docs only, no code, not pushed. See ADR §Amendment 3.)
+  Governing rule across Amend.1–3: **own what gates or proves; best-effort what you sample or observe** (a
+  fact you *sample* is, by construction, not load-bearing). Homes: audit/S1 ledger + gating scores → **owned
+  Postgres**; online sampled scores → partitioned Postgres (columnar at scale); aggregates → Prometheus;
+  traces → Langfuse/Phoenix best-effort. The ADR body's Migration §A→F is annotated superseded for
+  scores+ledger; the canonical tree gains `adapters/postgres.py`.
+
+  **A→F are ✅ done, but they built the pre-amendment shape (spine reads Langfuse for score detail; jsonl
+  still system-of-record). The amendments require the following NEW `pending` phases, which SUPERSEDE the
+  earlier "voie 1 = rewrite `langfuse_scores.py` as the Langfuse-native SOURCE" plan — Langfuse is now a
+  best-effort MIRROR, Postgres is the source:**
+  - **G1 — Postgres score tables.** `ensure_eval_scores_schema()` at lifespan (Tessera builds schema via
+    idempotent `ensure_*_schema`, not Alembic): `eval_gating_scores` (plain indexed) + `eval_online_scores`
+    (monthly `PARTITION BY RANGE(scored_at)` + retention DROP). DDL = ADR §Amend.2.
+  - **G2 — Write path (outbox).** `emit_score` writes **durably to Postgres** (the truth), then **mirrors to
+    Langfuse via the SDK** (the "voie 1" `create_score`, repurposed as best-effort sync; stable `score_id`
+    dedup). Online path already off the hot path (`_spawn_background`). jsonl kept until parity.
+  - **G3 — Spine reads Postgres.** Repoint `SpineStoresReader.scores` from Langfuse → the new `postgres.py`
+    adapter (as-of-T by `scored_at`). Langfuse ceases to be a spine source.
+  - **G4 — Backfill → shadow → flip → retire jsonl.** Backfill `scores.jsonl`→Postgres (idempotent);
+    `TESSERA_SPINE_SOURCE=shadow` until `tessera_spine_shadow_divergence_total{fact=scores}=match` over a
+    window → flip per-signal → **retire jsonl** (Phase D's gate, finally met, from Postgres).
+  - **H — Ledger promotion (§Amend.3 — SEPARATE, compliance-sensitive, run AFTER G, never mixed).** Promote
+    `audit.log` + S1 journal → owned **append-only hash-chained Postgres** (`seq, occurred_at, agent_id,
+    payload, prev_hash, hash`), append-only enforced, `verify_audit_chain` over rows, dual-write → backfill
+    (recompute+verify chain on import) → shadow-verify (chain matches file AND table) → cut reads → retire the
+    flat file. Hica seal = best-effort enrichment. **Never flip a ledger read before its chain verifies.**
+
+  **Preconditions before launching G/H (ADR §Precondition + operator rules):** (1) **clean tree / sole-writer**
+  — currently ~16 unpushed local commits + uncommitted ADR docs edits + possible codex WIP → commit the ADR
+  docs (targeted, *these files only*, never `git add -A`) and confirm no parallel writer; (2) **push decision**
+  — the ADR protocol pushes per phase, the operator's standing rule is **NE POUSSE PAS** → resolve (local-only
+  override, or push the branch) before the run reaches a commit.
+
 - **📐 AMENDMENT 2 (docs only) — split score detail by NATURE + VOLUME (gating socle vs online
   monitoring). Roadmap (a) becomes two tables.** (2026-07-02, docs only, no code, not pushed. See
   ADR §Amendment 2, grounded in `eval/online.py`: `online_eval_sample_rate` default **0.1**, **3

@@ -4,7 +4,9 @@
   (see §Migration plan). **Amended 2026-07-02: (§Amendment 1) eval-score detail moves off Langfuse
   — Langfuse becomes a best-effort mirror, no longer a spine source; (§Amendment 2) split by nature
   — GATING socle → owned Postgres (bounded, opposable), ONLINE monitoring → partitioned Postgres now
-  + columnar at scale, aggregates stay Prometheus.**
+  + columnar at scale, aggregates stay Prometheus; (§Amendment 3) the audit/proof ledger is homed —
+  flat file → owned append-only hash-chained Postgres (as-of-T, never third-party; Hica seal =
+  enrichment), under the governing rule *own what gates or proves; best-effort what you sample or observe*.**
   Supersedes the Phase-1 per-signal `?agent=` wiring shipped in this branch, which is absorbed as
   the transitional state.
 - Date: 2026-07-01
@@ -164,6 +166,71 @@ Nature 2 is traffic-driven and must be sized with the real `sample_rate` × 3-me
 (monitoring detail) reads `eval_online_scores`; both aggregate via Prometheus; Langfuse mirrors
 Nature 2 only (best-effort drill-down). §Amendment 1's single `eval_scores` table is superseded by
 these two.
+
+## Amendment 3 (2026-07-02) — the audit / proof ledger: owned, but promote the flat file → an owned append-only hash-chained Postgres table (scale + as-of-T), never third-party
+
+**Status: accepted.** Completes the "own what **proves**" half that §Amendment 1–2 left implicit — they
+homed the eval **scores**; this homes the **audit / proof chain**, the *supreme* load-bearing fact. It
+**refines the medium** of the §Non-negotiable carve-out **without weakening it**: the ledger stays **owned
+and hash-chained**; only its physical store changes from a flat file to an owned, indexed, append-only
+Postgres table.
+
+**The governing rule (unifies Amendments 1–3).** Split every fact by one test — *does a single wrong or
+missing instance change a contractual decision (gate / audit / compliance), and must it be reproducible and
+never silently lost?* → **Own what gates or proves; best-effort what you merely sample or observe.** A fact
+you deliberately **sample** is, by construction, *not* load-bearing — you have already accepted losing most
+of it. The audit ledger is the purest load-bearing fact; the online sampled scores (§Amendment 2, Nature 2)
+are the purest monitoring telemetry. This is the maintainers' two constraints (one source of truth per
+concern; controlled latency) applied **by nature of fact**.
+
+**Why.** The carve-out correctly keeps the ledger **owned** (its sequential hash chain *is* the DORA/BaFin
+evidence; exporting to Langfuse — not an append-only hash chain — would break tamper-evidence). But it left
+the ledger as a **flat file** (`audit.log`, the ~25 MB the ADR notes), which shares the jsonl medium's two
+defects: it does **not scale** (O(n) linear scan) and it is **not cleanly as-of-T queryable** — yet the
+**TE-01 "État à date"** rail (ADR 0011) must reconstruct the audited state **at T**. The medium is the weak
+link, not the ownership.
+
+**The decision.**
+
+1. **Promote the ledger content to an owned, append-only, hash-chained Postgres table** —
+   `(seq bigserial, occurred_at timestamptz, agent_id, payload jsonb, prev_hash, hash)`, **strict
+   append-only** (no `UPDATE`/`DELETE`; enforced by grants/trigger), `verify_audit_chain` recomputes the
+   chain over rows, indexed on `occurred_at` / `seq` for **as-of-T** reconstruction. The hash chain — not
+   the medium — is the tamper-evidence: a Postgres row is as chain-protected as a file line, and gains index
+   + scale + as-of-T. **Same "own it, index it, scale it" move as §Amendment 1 for scores, now applied to
+   the ledger, with append-only + chain integrity added.**
+2. **Never third-party.** Reinforced: the ledger's integrity is the one thing you never delegate — not to
+   Langfuse, not to ClickHouse. Opposability requires you **own and prove** the chain yourself.
+3. **External seal (Hica) = opposability ENRICHMENT, not the store.** The owned ledger is the truth; the
+   third-party seal periodically **attests** the chain head (the "Scellé · opposable" badge). **Owned first,
+   sealed second** — the seal being unavailable degrades to "Intégrité partielle" (chain valid, seal
+   unverifiable), never to "no ledger". This mirrors the Langfuse-mirror pattern for scores: the enrichment
+   is best-effort; the owned store is load-bearing.
+4. **The S1 governance journal** follows the same promotion (owned append-only hash-chained Postgres,
+   as-of-T indexed) — it is the carve-out's second tamper-evident ledger.
+
+**The complete home map (Amendments 1–3, one rule).**
+
+| Fact | Load-bearing? (gates/proves, not sampled) | Home |
+|---|---|---|
+| **Audit ledger / S1 journal (proof chain)** | **YES — supreme** | **Owned Postgres, append-only, hash-chained**, as-of-T indexed; **Hica seal = enrichment**. Never third-party. |
+| **Gating scores (socle / release)** | **YES** | **Owned Postgres `eval_gating_scores`** (§Amendment 2); Langfuse = best-effort mirror. |
+| **Online monitoring scores (sampled)** | **NO (sampled by design)** | **Postgres `eval_online_scores` partitioned** now → **columnar (ClickHouse)** at the §Amendment 2 trigger. |
+| **Aggregates (SLO / trend / quantile)** | derived | **Prometheus**. |
+| **Traces / spans** | debug | **Langfuse + Phoenix**, best-effort. |
+
+**Rationale & supersessions.** One rule — *own what gates or proves; best-effort what you sample or observe*
+— homes every fact. **Supersedes** the §Non-negotiable carve-out's *medium* ("local flat file"): its
+*principle* (owned, hash-chained, never exported to Langfuse) is **kept and strengthened**; only "flat file"
+becomes "owned append-only hash-chained Postgres table". The §Physical-backends rows *Guard decisions* and
+*Governance* ("`audit.log` / S1 journal" flat-file homes) are amended to the Postgres append-only ledger; the
+as-of-T contract (ADR 0011 / TE-01) now has an indexed home.
+
+**Migration note (see `0015-execution-status.md`).** Promote the ledger like the scores: create the
+append-only hash-chained table → dual-write + backfill the existing `audit.log` (recompute + `verify` the
+chain on import) → shadow-verify (`verify_audit_chain` matches file **and** table) → cut reads to Postgres →
+retire the flat file. Same shadow-before-flip discipline; **never** flip a ledger read before its chain
+verifies against the file.
 
 ## Context
 
@@ -376,15 +443,31 @@ src/tessera/observability/spine/
 ├── capabilities.py     # per-signal dimension declarations (single source of honesty truth)
 └── adapters/
     ├── __init__.py
-    ├── langfuse.py     # traces/scores by metadata + time window
+    ├── postgres.py     # ⚠ Amend.1–3: owned eval_gating/eval_online + promoted ledger reads (as-of-T) — the DURABLE source
+    ├── langfuse.py     # traces by metadata + time window (scores = best-effort MIRROR only, never read)
     ├── prometheus.py   # PromQL label-selector + range
-    └── ledger.py       # audit.log / S1 journal, filtered (tamper-evident, stays local)
+    └── ledger.py       # ⚠ Amend.3: reads the owned append-only hash-chained Postgres ledger (was audit.log flat file)
 webapp/frontend/lib/
 ├── scope.ts            # parseScope / withScope / scopeKey  (folds agent-scope + temporal-url)
 └── signal-registry.ts  # signalId → {dimensions, synthetic}  (drives UI badges/filters)
 ```
 
 ## Migration plan (ordered, each phase independently shippable)
+
+> **⚠ Superseded for eval-score home + the audit ledger by Amendments 1–3.** The A→F *skeleton* stands
+> (Scope, registry, capability-driven UI, batched snapshot, shadow-before-flip). What changes is *where the
+> facts live*: eval-score **detail** is emitted to **owned Postgres** (`eval_gating_scores` /
+> `eval_online_scores`, §Amend.2), the **spine reads Postgres** (new `adapters/postgres.py`), **Langfuse is a
+> best-effort outbox MIRROR** (SDK — the "voie 1" fix repurposed as sync, not a source), and the **audit / S1
+> ledgers are promoted to owned append-only hash-chained Postgres** (§Amend.3). Concretely, overriding the
+> steps below: **Phase B** writes each score durably to Postgres (+ best-effort SDK mirror) *instead of*
+> "emit a Langfuse score on the trace" as the source; **Phase C** reads score **detail** via `postgres.py`
+> (aggregates still Prometheus; cost/toxicity/pii traces still Langfuse; conformance/governance still ledger);
+> **Phase D** retires jsonl **into Postgres** (not into Langfuse-only) and routes GDPR erasure to Postgres +
+> the Langfuse mirror; **new Phase G** promotes the audit + S1 ledgers to Postgres (append-only, enforced,
+> `verify_audit_chain`, dual-write → backfill → shadow-verify → cut → retire the flat file) — a **separate,
+> compliance-sensitive workstream run *after* the scores**, never mixed with them. The **ordered, authoritative
+> sequence lives in `0015-execution-status.md`** (which supersedes this A→F wording where they differ).
 
 **A — Foundations (no behaviour change, kills the bug class).**
 Introduce `Scope` + the registry + `capabilities.py`, and migrate the existing Phase-1
