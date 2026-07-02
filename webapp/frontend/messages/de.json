@@ -4448,7 +4448,7 @@
     },
     "zone": {
       "activePolicies": "A · Kritische aktive Policies",
-      "history": "B · Verlauf & Versionen (letzte 5)",
+      "history": "B · Historie & Versionen",
       "diff": "C · YAML-Diff / Änderungen",
       "guardrails": "D · Runtime-Leitplanken (24h)",
       "impact": "E · Impact-Simulator",

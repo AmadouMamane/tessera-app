@@ -151,10 +151,14 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("curation", frozenset(), synthetic=True),
     _cap("automations", frozenset(), synthetic=True),
     _cap("replay_shadow", frozenset(), synthetic=True),
-    # The Policies & guardrails overview is a full demonstration fixture today (hardcoded
-    # version timeline / KPIs / active policies), so it is flagged synthetic — the page
-    # carries a visible "demonstration data" notice rather than reading as live governance.
-    _cap("policies", frozenset(), synthetic=True),
+    # Policies & guardrails: the governance core is REAL (active policies = the compiled
+    # guard/policy.yaml keyed by the emitted policy_rule ids; posture KPIs + runtime gauges
+    # = ledger decisions; version rail = the real policy version + mtime; chain = live).
+    _cap("policies", frozenset()),
+    # …but the impact simulator and the multi-actor approval workflow describe a
+    # policy-versioning subsystem this build does not implement (policy.yaml is a single
+    # Git-managed file). Those zones stay a flagged demonstration fixture.
+    _cap("policy_versioning", frozenset(), synthetic=True),
     # The Proofs page's export half — evidence-pack assembly/signing/export, exporters &
     # destinations, control-case linkage, retention obligations, export journal — is a SIEM
     # subsystem this build does not implement. Flagged synthetic so those zones carry the

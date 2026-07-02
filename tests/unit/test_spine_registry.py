@@ -22,8 +22,11 @@ from tessera.observability.spine.scope import Dimension, Scope
 
 class TestCapabilities:
     def test_fixtures_are_flagged_synthetic(self) -> None:
-        for signal_id in ("incidents", "curation", "automations", "replay_shadow", "policies"):
+        # policies graduated to a real core; its versioning subsystem stays flagged.
+        for signal_id in ("incidents", "curation", "automations", "replay_shadow"):
             assert capability_for(signal_id).synthetic is True
+        assert capability_for("policies").synthetic is False
+        assert capability_for("policy_versioning").synthetic is True
 
     def test_fixed_corpus_probes_are_org_wide(self) -> None:
         # A fixed-corpus probe of the shared policy declares no AGENT dimension → org-wide.

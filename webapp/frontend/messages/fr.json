@@ -4448,7 +4448,7 @@
     },
     "zone": {
       "activePolicies": "A · Politiques critiques actives",
-      "history": "B · Historique & versions (5 dernières)",
+      "history": "B · Historique & versions",
       "diff": "C · Diff YAML / changements",
       "guardrails": "D · Garde-fous runtime (24h)",
       "impact": "E · Simulateur d’impact",

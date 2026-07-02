@@ -83,8 +83,12 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   curation: cap(ORG, { synthetic: true }),
   automations: cap(ORG, { synthetic: true }),
   replay_shadow: cap(ORG, { synthetic: true }),
-  // Policies & guardrails overview is a full demonstration fixture (hardcoded) today.
-  policies: cap(ORG, { synthetic: true }),
+  // Policies & guardrails: the governance core is REAL (compiled guard/policy.yaml rows
+  // keyed by emitted policy_rule ids + ledger-derived KPIs/gauges + live chain status)…
+  policies: cap(ORG),
+  // …while the impact simulator + approval workflow describe a policy-versioning
+  // subsystem this build does not implement — those zones stay flagged.
+  policy_versioning: cap(ORG, { synthetic: true }),
   // Proofs page — the export half (pack assembly/signing/export, exporters, destinations,
   // retention, journal) is a SIEM subsystem this build does not implement; its artifact
   // counts and audit-chain integrity are real. The export zones carry the demo notice.

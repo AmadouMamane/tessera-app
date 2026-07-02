@@ -8,16 +8,18 @@ import {
   FileCode2,
   FileSearch,
   GitCompare,
-  Plus,
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
+import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchPoliciesOverview } from "@/lib/api/client";
 import type { PoliciesOverview as PoliciesData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -56,6 +58,14 @@ const TABS = [
   "impactSimulator",
   "approvals",
 ] as const;
+type Tab = (typeof TABS)[number];
+
+const LINK_ROUTES: Record<string, Route> = {
+  audit_journal: "/prouver/audit-logs",
+  export_siem: "/configurer/integrations",
+  evidence_pack: "/prouver/evidence-store",
+  release_control: "/agir/release-control",
+};
 
 type T = ReturnType<typeof useTranslations<"policies">>;
 type Data = PoliciesData;
@@ -63,6 +73,7 @@ type Data = PoliciesData;
 export function PoliciesOverview() {
   const t = useTranslations("policies");
   const locale = useLocale();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const { data } = useQuery({
     queryKey: ["policies-overview", locale],
     queryFn: ({ signal }) => fetchPoliciesOverview(locale, signal),
@@ -79,31 +90,74 @@ export function PoliciesOverview() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
-      <SyntheticNotice signalId="policies" />
+      <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
       <VersionRail t={t} data={data} />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {data.kpis.map((kpi) => (
-          <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vsHier")} />
-        ))}
+      <div id="policies-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
+        {activeTab === "activePolicies" ? (
+          <ActivePolicies t={t} data={data} onViewAll={() => setActiveTab("history")} />
+        ) : null}
+        {activeTab === "history" ? (
+          <div className="grid gap-3 xl:grid-cols-12">
+            <VersionHistory t={t} data={data} className="xl:col-span-6" />
+            <DiffYaml t={t} data={data} className="xl:col-span-6" />
+          </div>
+        ) : null}
+        {activeTab === "runtimeGuardrails" ? (
+          <div className="grid gap-3 xl:grid-cols-12">
+            <Guardrails t={t} data={data} className="xl:col-span-5" />
+            <ActivePolicies
+              t={t}
+              data={data}
+              className="xl:col-span-7"
+              onViewAll={() => setActiveTab("activePolicies")}
+            />
+          </div>
+        ) : null}
+        {activeTab === "impactSimulator" ? (
+          <div className="flex min-w-0 flex-col gap-2">
+            <SyntheticNotice signalId="policy_versioning" compact />
+            <Impact t={t} data={data} />
+          </div>
+        ) : null}
+        {activeTab === "approvals" ? (
+          <div className="flex min-w-0 flex-col gap-2">
+            <SyntheticNotice signalId="policy_versioning" compact />
+            <PoliciesRail t={t} data={data} full />
+          </div>
+        ) : null}
       </div>
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_316px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <div className="grid gap-3 xl:grid-cols-12">
-            <ActivePolicies t={t} data={data} className="xl:col-span-7" />
-            <VersionHistory t={t} data={data} className="xl:col-span-5" />
+      {activeTab !== "overview" ? null : (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            {data.kpis.map((kpi) => (
+              <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vsHier")} />
+            ))}
           </div>
-          <div className="grid gap-3 xl:grid-cols-12">
-            <DiffYaml t={t} data={data} className="xl:col-span-5" />
-            <Guardrails t={t} data={data} className="xl:col-span-3" />
-            <Impact t={t} data={data} className="xl:col-span-4" />
-          </div>
-        </div>
 
-        <PoliciesRail t={t} data={data} />
-      </div>
+          <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_316px]">
+            <div className="flex min-w-0 flex-col gap-3">
+              <div className="grid gap-3 xl:grid-cols-12">
+                <ActivePolicies
+                  t={t}
+                  data={data}
+                  className="xl:col-span-7"
+                  onViewAll={() => setActiveTab("activePolicies")}
+                />
+                <VersionHistory t={t} data={data} className="xl:col-span-5" />
+              </div>
+              <div className="grid gap-3 xl:grid-cols-12">
+                <DiffYaml t={t} data={data} className="xl:col-span-5" />
+                <Guardrails t={t} data={data} className="xl:col-span-3" />
+                <Impact t={t} data={data} className="xl:col-span-4" flagged />
+              </div>
+            </div>
+
+            <PoliciesRail t={t} data={data} />
+          </div>
+        </>
+      )}
 
       <Footer t={t} data={data} />
     </div>
@@ -112,17 +166,33 @@ export function PoliciesOverview() {
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({
+  t,
+  active,
+  onSelect,
+}: {
+  t: T;
+  active: Tab;
+  onSelect: (tab: Tab) => void;
+}) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+      <div
+        role="tablist"
+        aria-label={t("tabs.overview")}
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+      >
         {TABS.map((tab) => (
           <button
             key={tab}
             type="button"
+            role="tab"
+            aria-selected={tab === active}
+            aria-controls="policies-tabpanel"
+            onClick={() => onSelect(tab)}
             className={cn(
               "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
-              tab === "overview"
+              tab === active
                 ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
             )}
@@ -135,13 +205,7 @@ function CommandBar({ t }: { t: T }) {
         <Button
           size="sm"
           variant="outline"
-          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
-        >
-          <Plus className="h-4 w-4" /> {t("actions.createDraft")}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
+          onClick={() => onSelect("history")}
           className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
         >
           <GitCompare className="h-4 w-4" /> {t("actions.compareVersions")}
@@ -149,15 +213,19 @@ function CommandBar({ t }: { t: T }) {
         <Button
           size="sm"
           variant="outline"
+          onClick={() => onSelect("history")}
           className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
         >
           <FileCode2 className="h-4 w-4" /> {t("actions.diffYaml")}
         </Button>
         <Button
+          asChild
           size="sm"
           className="h-9 gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/60 px-3 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/80"
         >
-          <ShieldCheck className="h-4 w-4" /> {t("actions.requestApproval")}
+          <Link href="/agir/release-control">
+            <ShieldCheck className="h-4 w-4" /> {t("actions.requestApproval")}
+          </Link>
         </Button>
       </div>
     </section>
@@ -200,7 +268,17 @@ function VersionRail({ t, data }: { t: T; data: Data }) {
 
 // ── zone A / B ───────────────────────────────────────────────────────────────
 
-function ActivePolicies({ t, data, className }: { t: T; data: Data; className?: string }) {
+function ActivePolicies({
+  t,
+  data,
+  className,
+  onViewAll,
+}: {
+  t: T;
+  data: Data;
+  className?: string;
+  onViewAll?: () => void;
+}) {
   const cols = [
     "id",
     "name",
@@ -216,7 +294,7 @@ function ActivePolicies({ t, data, className }: { t: T; data: Data; className?: 
     <Panel
       title={t("zone.activePolicies")}
       className={className}
-      action={<ViewAll label={t("viewAll.policies")} />}
+      action={<ViewAll label={t("viewAll.policies")} onClick={onViewAll} />}
     >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.72rem]">
@@ -360,9 +438,20 @@ function Guardrails({ t, data, className }: { t: T; data: Data; className?: stri
   );
 }
 
-function Impact({ t, data, className }: { t: T; data: Data; className?: string }) {
+function Impact({
+  t,
+  data,
+  className,
+  flagged,
+}: {
+  t: T;
+  data: Data;
+  className?: string;
+  flagged?: boolean;
+}) {
   return (
     <Panel title={t("zone.impact")} className={className}>
+      {flagged ? <SyntheticNotice signalId="policy_versioning" compact /> : null}
       <table className="w-full border-collapse text-left text-[0.68rem]">
         <thead>
           <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
@@ -400,7 +489,7 @@ function Impact({ t, data, className }: { t: T; data: Data; className?: string }
 
 // ── right rail ───────────────────────────────────────────────────────────────
 
-function PoliciesRail({ t, data }: { t: T; data: Data }) {
+function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
   const d = data.version_detail;
   const linkIcons: Record<string, typeof FileSearch> = {
     audit_journal: FileSearch,
@@ -409,7 +498,7 @@ function PoliciesRail({ t, data }: { t: T; data: Data }) {
     release_control: GitCompare,
   };
   return (
-    <aside className="flex min-w-0 flex-col gap-3">
+    <aside className={full ? "grid min-w-0 gap-3 lg:grid-cols-3" : "flex min-w-0 flex-col gap-3"}>
       <Panel title={`${t("zone.detail")} · ${d.version}`}>
         <dl className="flex flex-col gap-1.5 text-[0.7rem]">
           <KV label={t("version.effectiveFrom")} value={d.effective_from} />
@@ -421,6 +510,7 @@ function PoliciesRail({ t, data }: { t: T; data: Data }) {
       </Panel>
 
       <Panel title={t("zone.sensitive")}>
+        <SyntheticNotice signalId="policy_versioning" compact />
         <ul className="flex flex-col gap-1">
           {data.sensitive_actions.map((a) => (
             <li key={a.key}>
@@ -452,13 +542,13 @@ function PoliciesRail({ t, data }: { t: T; data: Data }) {
             const Icon = linkIcons[link] ?? FileSearch;
             return (
               <li key={link}>
-                <button
-                  type="button"
+                <Link
+                  href={LINK_ROUTES[link] ?? "/prouver/audit-logs"}
                   className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.68rem] text-[#87bfff] transition-colors hover:bg-[var(--tessera-muted)]"
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="min-w-0 flex-1 truncate">{t(`links.${link}`)}</span>
-                </button>
+                </Link>
               </li>
             );
           })}
@@ -580,10 +670,12 @@ function KV({ label, value, mono }: { label: string; value: string; mono?: boole
   );
 }
 
-function ViewAll({ label }: { label: string }) {
+function ViewAll({ label, onClick }: { label: string; onClick?: () => void }) {
+  if (!onClick) return null;
   return (
     <button
       type="button"
+      onClick={onClick}
       className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
     >
       {label} <ChevronRight className="h-3 w-3" />
