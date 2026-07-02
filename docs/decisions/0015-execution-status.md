@@ -28,6 +28,35 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **📐 AMENDMENT 1 (docs only) — eval-score DETAIL home = owned Postgres table; Langfuse demoted to
+  a best-effort mirror. Roadmap revised.** (2026-07-02, docs only, no code, not pushed. See ADR
+  §Amendment 1.) The voie-1 proof (below) validated *delivery* (the SDK materialises a Langfuse
+  score), **not the choice of durable home**. A score **gates a release**: its durability + read-path
+  must not depend on a third party. So the authoritative home of score detail becomes an **owned,
+  transactional Postgres table**, not Langfuse. Langfuse stays as a **best-effort mirror** (drill-down
+  UX) — and the voie-1 SDK fix is **repurposed as the SYNC mechanism (outbox), not the authoritative
+  write.** Prometheus aggregates / Phoenix / audit-ledger + bundles carve-outs = unchanged; jsonl's
+  durable-write role is **assumed by Postgres** (not "nothing", not Langfuse-only).
+
+  **REVISED ROADMAP (replaces the "emit to Langfuse as source → retire jsonl" plan in the voie-1
+  entry below):**
+  - **(a)** Postgres `eval_scores` table (cols metric/score/agent_id/language/model/scored_at/
+    trace_id/judge_model; index `(agent_id, metric, scored_at, trace_id)`) + a **durable,
+    transactional write adapter** (replaces the `scores.jsonl` append; the online-eval scoring path
+    writes here, `eval/scores.py`).
+  - **(b)** `SpineStoresReader.scores` → **reads Postgres** (as-of-T by `scored_at`), not Langfuse.
+    Langfuse ceases to be a spine upstream.
+  - **(c)** **Outbox sync → Langfuse via the SDK** (stable `score_id` = dedup; reconcile drops
+    continuously). **← the voie-1 SDK fix serves HERE**, as best-effort mirror, non-authoritative.
+  - **(d)** Backfill `persisted_scores()` (jsonl) → **Postgres** (then the mirror syncs it to Langfuse).
+  - **(e)** `TESSERA_SPINE_SOURCE=shadow` until `tessera_spine_shadow_divergence_total{fact=scores,
+    result=match}` holds over a window.
+  - **(f)** Flip spine `scores` source → **Postgres** per-signal.
+  - **(g)** Retire the `scores.jsonl` (its role now owned by Postgres). audit ledger + bundles stay
+    local carve-outs.
+
+  Note: the parity `fact=scores` is now **jsonl↔Postgres** during migration (the owned store), with
+  Langfuse verified separately as a mirror. Nothing flipped; `TESSERA_SPINE_SOURCE` still `jsonl`.
 - **✅ DELIVERY FIX PROVEN (voie 1) — the Langfuse SDK materialises scores; the hand-rolled POST
   does not. Ready to implement.** (2026-07-02, proof only, no code change yet, probe score deleted →
   CH clean.) The Phase-D flip was blocked because Langfuse `default.scores` = 0. **Root cause

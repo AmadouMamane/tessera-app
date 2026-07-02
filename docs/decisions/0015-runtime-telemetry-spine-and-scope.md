@@ -1,8 +1,10 @@
 # 0015 — Runtime telemetry spine & first-class Scope for multi-dimensional cockpit signals
 
 - Status: **accepted** (decision 2026-07-01) — implementation phased and pending
-  (see §Migration plan). Supersedes the Phase-1 per-signal `?agent=` wiring shipped
-  in this branch, which is absorbed as the transitional state.
+  (see §Migration plan). **Amended 2026-07-02 (see §Amendment 1): eval-score detail moves to an
+  owned Postgres table; Langfuse is demoted to a best-effort mirror, no longer a spine source.**
+  Supersedes the Phase-1 per-signal `?agent=` wiring shipped in this branch, which is absorbed as
+  the transitional state.
 - Date: 2026-07-01
 - Deciders: Tessera maintainers
 - Branch: `feature/redesign`
@@ -12,6 +14,53 @@
   `docker-compose.obs.claude.yml` (Langfuse / Phoenix / Prometheus / Grafana stack),
   `src/tessera/observability/metrics.py`, `src/tessera/observability/eval/scores.py`,
   `src/tessera/observability/replay.py`, `src/tessera/observability/langfuse_obs.py`.
+
+## Amendment 1 (2026-07-02) — eval-score DETAIL lives in an owned Postgres table; Langfuse demoted to a best-effort mirror
+
+**Status: accepted.** This amendment revises the *letter* of the original decision ("eval-score
+detail → Langfuse") while keeping its *spirit* (one indexed, scalable source per concern; zero
+convenience duplicate). It changes only the **durable home + read-path of eval-score DETAIL**.
+Prometheus aggregates, Phoenix, the audit-ledger carve-out, and captured-turns/bundles are
+**unchanged**.
+
+**Why (the load-bearing rationale).** An eval score **gates a release**. Its durability and its
+read-path must not depend on a third-party service. The original design made Langfuse the durable
+home + upstream source of score detail; that couples a release-gating business fact to Langfuse's
+availability and ingestion quirks (proven on 2026-07-02: the raw ingestion POST accepts a score
+`201` but never materialises in ClickHouse — only the official SDK does; §Execution-status log).
+Even with a working SDK, *delivery* being solved does not make Langfuse the right **durable home**.
+
+**The decision.**
+
+1. **Owned Postgres table = the source of truth.** Eval-score detail
+   (`metric`, `score`, `agent_id`, `language`, `model`, `scored_at`, `trace_id`, `judge_model`) is
+   written **durably and transactionally** to an owned Postgres table (`eval_scores`), indexed on
+   `(agent_id, metric, scored_at, trace_id)`, queryable **as-of-T** by `scored_at` — the same
+   as-of-T contract as ADR 0011.
+2. **`SpineStoresReader.scores` reads Postgres, not Langfuse.** Langfuse ceases to be an upstream
+   source of the spine. Neither the spine nor the cockpit read any *number* from Langfuse.
+3. **Langfuse = best-effort synchronized MIRROR** (score↔trace drill-down + Langfuse dashboards),
+   fed by the SDK. The 2026-07-02 "voie 1" SDK fix is **repurposed as the SYNC mechanism, not the
+   authoritative write.** Pattern = **outbox**: write Postgres (truth) → sync Langfuse (stable
+   `score_id` = idempotent dedup) → **reconcile drops continuously** (not a one-shot). Langfuse
+   being down degrades gracefully: the cockpit numbers survive; only the drill-down UX is stale.
+4. **Prometheus = aggregates (derived), unchanged. Phoenix = debug, non-authoritative, unchanged.**
+5. **jsonl is retired — but its durable-write role is assumed by Postgres** (not by "nothing", not
+   by Langfuse-only). The audit ledger + replay bundles remain **local carve-outs**, unchanged.
+
+**Rationale, distilled:** don't couple the durability + read-path of a release-gating fact to a
+third party; graceful degradation (Langfuse down → cockpit numbers intact); reproducibility (owned,
+transactional, deterministic as-of-T); **separate by nature** (a business-carrying fact → owned
+transactional store; traces → best-effort sink); consistency with the audit-ledger carve-out
+(already owned). This is the honest reading of "one indexed scalable source per concern."
+
+**Supersedes, for eval scores specifically:** §Physical backends row *Eval scores* ("Langfuse
+scores on the trace" as the spine home → **Postgres**); §Architecture row *LLM detail: eval scores*
+("cockpit reads scores from Langfuse" → **from Postgres**); §Per-signal *Quality/SLO/trend/funnel/
+scores* ("move source to Langfuse scores" → **to Postgres**); §Read-model split ("detail on
+Langfuse" → **detail on the owned store; Langfuse is a mirror, not a read source**); §Open question
+*Score model in Langfuse* (resolved — Langfuse is no longer the score source). The revised migration
+sequence lives in `0015-execution-status.md`.
 
 ## Context
 
@@ -124,7 +173,7 @@ Every cockpit signal is a **derivation over turns**, parameterised by `Scope`:
 
 | Fact type | Today (retire / keep) | Spine home | Read adapter |
 |---|---|---|---|
-| Eval scores (faithfulness/grounding/hallucination) | `scores.jsonl` → **retire** | Langfuse **scores on the trace** + Prometheus `EVAL_SCORE` | Langfuse (per-trace, metadata filter) + Prometheus (SLO/quantile series) |
+| Eval scores (faithfulness/grounding/hallucination) | `scores.jsonl` → **retire** (role assumed by Postgres) | **⚠ Amended (§Amendment 1): owned Postgres `eval_scores` table** (was "Langfuse scores on the trace") + Prometheus `EVAL_SCORE` | **Postgres (as-of-T by `scored_at`, indexed agent/metric/trace)** + Prometheus (SLO/quantile series); Langfuse = best-effort mirror, not read |
 | Captured turns (cost / toxicity / pii / replay) | `bundles.jsonl` → **retire** | Langfuse **trace** (holds input/context/output) | Langfuse (filter by `agent_id`, time window); derived signals computed over trace payloads |
 | Metric series (turns, duration, budget) | Prometheus (partial) | Prometheus | PromQL with label selectors + range |
 | Guard decisions (conformance, tool-validity) | `audit.log` → **keep (ledger)** | `audit.log` (hash-chained, `agent_id`) | Ledger adapter, filtered by `agent_id` + `occurred_at` |
@@ -298,11 +347,13 @@ latency + cache-hit-rate as Prometheus metrics — we dogfood the spine.
 
 ### Mandatory patterns (in order of leverage)
 
-1. **Read-model split — aggregates on Prometheus, detail on Langfuse.** Every dashboard
+1. **Read-model split — aggregates on Prometheus, detail on the owned store.** Every dashboard
    *number* (SLO, rate, quantile, cost, count, trend) comes from **Prometheus** — a
-   pre-aggregated TSDB built for range + label queries. **Langfuse is queried only for detail**
-   (opening a trace, the Traces card, drill-downs), never to compute an aggregate on the hot
-   path. *Rule: the hot path never pulls raw traces to sum a number.*
+   pre-aggregated TSDB built for range + label queries. **Detail is read from the owned store**
+   (§Amendment 1: eval-score detail from Postgres `eval_scores`) — never to compute an aggregate on
+   the hot path. **Langfuse is a best-effort mirror for score↔trace drill-down UX, not a spine read
+   source** (was "detail on Langfuse" before §Amendment 1). *Rule: the hot path never pulls raw
+   traces to sum a number, and never reads a release-gating number from a third-party service.*
 2. **Batched snapshot endpoint (the anti-fan-out).** `GET /observability/snapshot?scope=…`
    returns **all** signals for a scope in one backend pass that shares the underlying reads
    (one multi-metric PromQL query; at most one Langfuse query for the trace-summary card). The
