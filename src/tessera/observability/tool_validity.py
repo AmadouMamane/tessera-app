@@ -9,12 +9,11 @@ failures (a malformed IBAN, an impossible amount, …).
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability._asof import occurred_before
-from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -48,33 +47,23 @@ def compute_tool_validity(
     counted — the as-of-T read for the cockpit time rail (ADR 0011). With
     ``agent_id`` set, only that agent's tool calls (audit entries are tagged).
     """
-    target = path or get_settings().guard.audit_file
     allowed = denied = errored = arg_failures = 0
-    if target.exists():
-        with target.open("r", encoding="utf-8") as fp:
-            for raw in fp:
-                stripped = raw.strip()
-                if not stripped:
-                    continue
-                try:
-                    obj = json.loads(stripped)
-                except json.JSONDecodeError:
-                    continue
-                if obj.get("type") != "tessera.guard.audit" or obj.get("target") == "user_input":
-                    continue
-                if not occurred_before(obj.get("occurred_at"), at):
-                    continue
-                if agent_id is not None and obj.get("agent_id") != agent_id:
-                    continue
-                outcome = obj.get("outcome")
-                if outcome == "allowed":
-                    allowed += 1
-                elif outcome == "denied":
-                    denied += 1
-                    if _has_arg_failure(obj.get("decisions", [])):
-                        arg_failures += 1
-                elif outcome == "error":
-                    errored += 1
+    for obj in read_ledger_entries(path):
+        if obj.get("type") != "tessera.guard.audit" or obj.get("target") == "user_input":
+            continue
+        if not occurred_before(obj.get("occurred_at"), at):
+            continue
+        if agent_id is not None and obj.get("agent_id") != agent_id:
+            continue
+        outcome = obj.get("outcome")
+        if outcome == "allowed":
+            allowed += 1
+        elif outcome == "denied":
+            denied += 1
+            if _has_arg_failure(obj.get("decisions", [])):
+                arg_failures += 1
+        elif outcome == "error":
+            errored += 1
 
     total = allowed + denied + errored
     return ToolValidityReport(

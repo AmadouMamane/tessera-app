@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 from psycopg.rows import dict_row
 
 from tessera.corpus.lineage import IngestionRun, load_ingestion_runs
-from tessera.guard.audit import verify_audit_chain
+from tessera.guard.ledger_store import verify_active_ledger
 from tessera.memory.governance import ttl_for
 from tessera.observability.knowledge import (
     _LANG_IDX,
@@ -49,7 +49,6 @@ from tessera.observability.knowledge import (
 from tessera.retrieval.chunking import ChunkerConfig
 from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.retrieval.store import _connection
-from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -427,9 +426,7 @@ async def _fetch_index_chars() -> dict[str, int]:
                     "FROM documents GROUP BY 1"
                 )
                 return {
-                    str(r["cat"]): int(r["chars"] or 0)
-                    for r in await cur.fetchall()
-                    if r["cat"]
+                    str(r["cat"]): int(r["chars"] or 0) for r in await cur.fetchall() if r["cat"]
                 }
         except Exception:
             await conn.rollback()
@@ -535,9 +532,7 @@ async def _daily_growth(table: str) -> list[dict[str, object]]:
                     f"WHERE created_at >= now() - interval '{int(_HISTORY_DAYS)} days' "
                     "GROUP BY 1 ORDER BY 1"
                 )
-                return [
-                    {"day": str(r["day"]), "count": int(r["n"])} for r in await cur.fetchall()
-                ]
+                return [{"day": str(r["day"]), "count": int(r["n"])} for r in await cur.fetchall()]
         except Exception:
             await conn.rollback()
             return []
@@ -667,14 +662,26 @@ async def build_sources_overview(lang: str = "fr") -> dict[str, object]:
         _TX_ID: await _daily_growth("conversation_messages"),
     }
     index_chars = await _fetch_index_chars()
-    chain = verify_audit_chain(get_settings().guard.audit_file)
+    chain = verify_active_ledger()
     audit = (chain.verified, chain.length, chain.broken_at)
     activity = await _fetch_activity()
     latency = await _fetch_latency()
     cost_gauge = _read_cost_gauge()
     return _assemble(
-        rows, ltm, tx, await load_citation_probe(), consumers, fleet, history, index_chars,
-        audit, activity, latency, cost_gauge, lang, lineage_runs=lineage,
+        rows,
+        ltm,
+        tx,
+        await load_citation_probe(),
+        consumers,
+        fleet,
+        history,
+        index_chars,
+        audit,
+        activity,
+        latency,
+        cost_gauge,
+        lang,
+        lineage_runs=lineage,
     )
 
 

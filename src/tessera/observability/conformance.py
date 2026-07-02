@@ -12,13 +12,12 @@ skipped — the metric is honest about what it can actually see.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from tessera.guard.decisions import load_policy
+from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability._asof import occurred_before
-from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -85,41 +84,29 @@ def compute_conformance(
     entry's ``agent_id``).
     """
     active_policy = policy or load_policy()
-    audit_path = path or get_settings().guard.audit_file
     n_calls = 0
     n_checked = 0
     n_conformant = 0
     violations: list[str] = []
 
-    if audit_path.exists():
-        with audit_path.open("r", encoding="utf-8") as fp:
-            for raw in fp:
-                stripped = raw.strip()
-                if not stripped:
-                    continue
-                try:
-                    obj = json.loads(stripped)
-                except json.JSONDecodeError:
-                    continue
-                tool = obj.get("target")
-                if obj.get("type") != "tessera.guard.audit" or tool == "user_input":
-                    continue
-                if not occurred_before(obj.get("occurred_at"), at):
-                    continue
-                if agent_id is not None and obj.get("agent_id") != agent_id:
-                    continue
-                arguments = obj.get("arguments")
-                if not isinstance(arguments, dict) or not isinstance(tool, str):
-                    continue
-                n_calls += 1
-                checked, conformant, field_violations = check_arguments(
-                    arguments, active_policy.tool(tool)
-                )
-                n_checked += checked
-                n_conformant += conformant
-                for name in field_violations:
-                    if len(violations) < _EXAMPLE_LIMIT:
-                        violations.append(f"{tool}.{name}")
+    for obj in read_ledger_entries(path):
+        tool = obj.get("target")
+        if obj.get("type") != "tessera.guard.audit" or tool == "user_input":
+            continue
+        if not occurred_before(obj.get("occurred_at"), at):
+            continue
+        if agent_id is not None and obj.get("agent_id") != agent_id:
+            continue
+        arguments = obj.get("arguments")
+        if not isinstance(arguments, dict) or not isinstance(tool, str):
+            continue
+        n_calls += 1
+        checked, conformant, field_violations = check_arguments(arguments, active_policy.tool(tool))
+        n_checked += checked
+        n_conformant += conformant
+        for name in field_violations:
+            if len(violations) < _EXAMPLE_LIMIT:
+                violations.append(f"{tool}.{name}")
 
     return ConformanceReport(
         n_calls=n_calls,

@@ -13,14 +13,12 @@ this module governs the *promotion decision*, not a live registry edit.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
-from pathlib import Path
 
 from tessera.guard.audit import emit_agent_lifecycle
+from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability.eval_data import load_eval_snapshot
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
-from tessera.settings import get_settings
 
 __all__ = [
     "ReleaseDecision",
@@ -66,6 +64,7 @@ _TR: dict[str, tuple[str, str, str]] = {
 
 def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
+
 
 # Latest governance phase, derived from the S1 chain (most recent wins).
 _PHASE_EVENTS: dict[str, str] = {
@@ -152,42 +151,27 @@ def request_release(agent_id: str, *, actor: str = "operator") -> ReleaseDecisio
     return decision
 
 
-def _audit_path() -> Path:
-    return Path(get_settings().guard.audit_file)
-
-
 def lifecycle_history(agent_id: str, limit: int = 12) -> list[dict[str, object]]:
     """Return this agent's governance events (newest first) from the S1 chain."""
-    path = _audit_path()
     events: list[dict[str, object]] = []
-    if not path.exists():
-        return events
-    with path.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            try:
-                obj = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            event_type = str(obj.get("type", ""))
-            phase = _PHASE_EVENTS.get(event_type)
-            if phase is None:
-                continue
-            # `proposed` carries proposed_name (no agent_id yet); keep it for the
-            # fleet view but skip it when scoping to a concrete agent.
-            if obj.get("agent_id") != agent_id:
-                continue
-            events.append(
-                {
-                    "phase": phase,
-                    "type": event_type,
-                    "occurred_at": str(obj.get("occurred_at", "")),
-                    "actor": str(obj.get("actor", "")),
-                    "reason": str(obj.get("reason", "")),
-                }
-            )
+    for obj in read_ledger_entries():
+        event_type = str(obj.get("type", ""))
+        phase = _PHASE_EVENTS.get(event_type)
+        if phase is None:
+            continue
+        # `proposed` carries proposed_name (no agent_id yet); keep it for the
+        # fleet view but skip it when scoping to a concrete agent.
+        if obj.get("agent_id") != agent_id:
+            continue
+        events.append(
+            {
+                "phase": phase,
+                "type": event_type,
+                "occurred_at": str(obj.get("occurred_at", "")),
+                "actor": str(obj.get("actor", "")),
+                "reason": str(obj.get("reason", "")),
+            }
+        )
     events.sort(key=lambda e: str(e.get("occurred_at", "")), reverse=True)
     return events[:limit]
 

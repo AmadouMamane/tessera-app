@@ -1945,27 +1945,10 @@ async def observability_roadmap(at: str | None = None, agent: str = "all") -> di
 
 
 def _read_audit_entries() -> list[dict[str, object]]:
-    """Read the guard audit log into a list of parsed entry dicts (best effort)."""
-    import json
+    """Guard-audit entries from the ACTIVE ledger source (§Amendment 3 seam; best effort)."""
+    from tessera.guard.ledger_store import read_ledger_entries
 
-    from tessera.settings import get_settings
-
-    path = get_settings().guard.audit_file
-    entries: list[dict[str, object]] = []
-    if not path.exists():
-        return entries
-    with path.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            try:
-                obj = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(obj, dict) and obj.get("type") == "tessera.guard.audit":
-                entries.append(obj)
-    return entries
+    return [obj for obj in read_ledger_entries() if obj.get("type") == "tessera.guard.audit"]
 
 
 @router.get("/observability/memory")
@@ -2286,8 +2269,7 @@ async def observability_ai_act(at: str | None = None) -> dict[str, object]:
     Turn and oversight counts honour T; the audit-chain integrity check is a
     structural property of the whole log, so it stays live.
     """
-    from tessera.guard.audit import verify_audit_chain
-    from tessera.settings import get_settings
+    from tessera.guard.ledger_store import ledger_available, verify_active_ledger
 
     entries = _read_audit_entries()
     oversight = sum(
@@ -2295,14 +2277,13 @@ async def observability_ai_act(at: str | None = None) -> dict[str, object]:
         for e in entries
         if e.get("target") == "ticket_escalate" and occurred_before(e.get("occurred_at"), at)
     )
-    audit_path = get_settings().guard.audit_file
-    chain = verify_audit_chain(audit_path)
+    chain = verify_active_ledger()
     signals = ai_act_mod.AIActSignals(
         disclosure_enabled=True,  # disclosure shipped on the chat UI (#134)
         n_turns=len(replay_mod.recent_bundles(at)),
         oversight_events=oversight,
         escalation_available=True,
-        audit_present=audit_path.exists(),
+        audit_present=ledger_available(),
         audit_chain_verified=chain.verified,
         data_governance_enabled=True,
     )

@@ -20,10 +20,10 @@ the labels — so no presentation French is hard-coded here.
 
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING
 
+from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability import replay as replay_mod
 from tessera.observability._asof import occurred_before
 
@@ -76,20 +76,8 @@ def _audit_path() -> Path:
 
 def _read_audit_governance(at: str | None, agent: str | None) -> list[GovernanceEvent]:
     """Parse the S1 journal for agent-governance events ≤ T (newest-first, raw)."""
-    path = _audit_path()
     events: list[GovernanceEvent] = []
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return events
-    for raw in text.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        try:
-            obj = json.loads(line)
-        except ValueError:
-            continue
+    for obj in read_ledger_entries(_audit_path()):
         kind = _GOVERNANCE_TYPES.get(str(obj.get("type", "")))
         if kind is None:
             continue

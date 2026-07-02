@@ -28,12 +28,14 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
 
-from tessera.guard.audit import ChainStatus, verify_audit_chain
 from tessera.guard.decisions import Policy, load_policy
+from tessera.guard.ledger_store import read_ledger_entries, verify_active_ledger
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from tessera.guard.audit import ChainStatus
 
 __all__ = [
     "available_rules",
@@ -315,25 +317,15 @@ def _parse_dt(value: object) -> datetime | None:
 def _scan_audit(path: Path, now: datetime) -> _AuditScan:
     """Aggregate per-rule and global decision stats from the JSON-Lines log."""
     scan = _AuditScan()
-    if not path.exists():
-        return scan
-    with path.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            try:
-                obj = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            if obj.get("type") != "tessera.guard.audit":
-                continue
-            decisions = obj.get("decisions")
-            if not isinstance(decisions, list):
-                continue
-            for decision in decisions:
-                if isinstance(decision, dict):
-                    _record_decision(scan, decision, now)
+    for obj in read_ledger_entries(path):
+        if obj.get("type") != "tessera.guard.audit":
+            continue
+        decisions = obj.get("decisions")
+        if not isinstance(decisions, list):
+            continue
+        for decision in decisions:
+            if isinstance(decision, dict):
+                _record_decision(scan, decision, now)
     return scan
 
 
@@ -656,7 +648,7 @@ async def build_agent_garde_fous(lang: str = "fr") -> dict[str, object]:
     now = datetime.now(UTC)
     policy = load_policy()
     scan = _scan_audit(settings.guard.audit_file, now)
-    chain = verify_audit_chain(settings.guard.audit_file)
+    chain = verify_active_ledger()
     policy_mtime = _policy_mtime(settings.guard.policy_path)
     return _assemble(policy, scan, chain, _load_state(), policy_mtime, lang, now)
 

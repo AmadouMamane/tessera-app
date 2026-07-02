@@ -9,7 +9,6 @@ schema returned by both readers is identical, defined here as
 
 from __future__ import annotations
 
-import json
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -20,7 +19,7 @@ from typing import Annotated, Literal, cast
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from tessera.guard.audit import verify_audit_chain
+from tessera.guard.ledger_store import ledger_source, read_ledger_entries, verify_active_ledger
 
 router = APIRouter(tags=["audit"])
 
@@ -333,28 +332,22 @@ def _entry_from_payload(payload: dict[str, object]) -> AuditEntry:
 
 
 def _read_entries_uncached(path: Path) -> list[AuditEntry]:
-    if not path.exists():
-        return []
     out: list[AuditEntry] = []
-    with path.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            try:
-                payload = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            try:
-                out.append(_entry_from_payload(payload))
-            except (ValidationError, TypeError):
-                continue
+    for payload in read_ledger_entries(path):
+        try:
+            out.append(_entry_from_payload(payload))
+        except (ValidationError, TypeError):
+            continue
     return out
 
 
 def _read_entries(path: Path) -> list[AuditEntry]:
     global _ENTRIES_CACHE
 
+    # The stat-keyed cache is a file-mode optimisation; after the cut the promoted
+    # table is the source (no file mtime/size to key on), so read it fresh each call.
+    if ledger_source() == "postgres":
+        return _read_entries_uncached(path)
     state = _audit_file_state(path)
     with _ENTRIES_CACHE_LOCK:
         if _ENTRIES_CACHE is not None and _ENTRIES_CACHE.state == state:
@@ -367,11 +360,16 @@ def _read_entries(path: Path) -> list[AuditEntry]:
 def _audit_integrity(path: Path) -> AuditIntegrity:
     global _INTEGRITY_CACHE
 
+    if ledger_source() == "postgres":
+        status = verify_active_ledger(path)
+        return AuditIntegrity(
+            verified=status.verified, length=status.length, broken_at=status.broken_at
+        )
     state = _audit_file_state(path)
     with _INTEGRITY_CACHE_LOCK:
         if _INTEGRITY_CACHE is not None and _INTEGRITY_CACHE.state == state:
             return _INTEGRITY_CACHE.integrity
-        status = verify_audit_chain(path)
+        status = verify_active_ledger(path)
         integrity = AuditIntegrity(
             verified=status.verified,
             length=status.length,

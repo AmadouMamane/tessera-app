@@ -36,7 +36,6 @@ verbatim French.
 
 from __future__ import annotations
 
-import json
 from collections import Counter, deque
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -47,10 +46,9 @@ from psycopg.rows import dict_row
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.agent.registry import Agent, get_agent
-from tessera.guard.audit import verify_audit_chain
+from tessera.guard.ledger_store import read_ledger_entries, verify_active_ledger
 from tessera.observability.agent_configurations import _effective
 from tessera.retrieval.store import _connection
-from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -245,34 +243,22 @@ def _scan_journal(agent_id: str, since: datetime | None) -> dict[str, Any]:
     handoff_events: list[dict[str, Any]] = []
     guard_events: deque[dict[str, Any]] = deque(maxlen=_JOURNAL_EVENT_CAP)
 
-    path = get_settings().guard.audit_file
-    if not path.exists():
-        return {"in": 0, "out": 0, "routing": routing, "events": []}
-
-    with path.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            try:
-                obj = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            when = _parse_iso(obj.get("occurred_at"))
-            if since is not None and when is not None and when < since:
-                continue
-            kind = obj.get("type")
-            if kind == "tessera.agent.handoff":
-                _consume_handoff(obj, agent_id, when, handoff_events)
-                if obj.get("to_agent") == agent_id:
-                    handoffs_in += 1
-                if obj.get("from_agent") == agent_id:
-                    handoffs_out += 1
-            elif kind == "tessera.agent.routing" and obj.get("agent_id") == agent_id:
-                motif = str(obj.get("reason") or "").split("->", 1)[0].strip() or "autre"
-                routing[motif] += 1
-            elif kind == "tessera.guard.audit" and obj.get("agent_id") == agent_id:
-                guard_events.append(_guard_event(obj, when))
+    for obj in read_ledger_entries():
+        when = _parse_iso(obj.get("occurred_at"))
+        if since is not None and when is not None and when < since:
+            continue
+        kind = obj.get("type")
+        if kind == "tessera.agent.handoff":
+            _consume_handoff(obj, agent_id, when, handoff_events)
+            if obj.get("to_agent") == agent_id:
+                handoffs_in += 1
+            if obj.get("from_agent") == agent_id:
+                handoffs_out += 1
+        elif kind == "tessera.agent.routing" and obj.get("agent_id") == agent_id:
+            motif = str(obj.get("reason") or "").split("->", 1)[0].strip() or "autre"
+            routing[motif] += 1
+        elif kind == "tessera.guard.audit" and obj.get("agent_id") == agent_id:
+            guard_events.append(_guard_event(obj, when))
 
     events = sorted(
         [e for e in (*handoff_events, *guard_events) if e["when"] is not None],
@@ -800,7 +786,7 @@ async def compute_agent_synthese(
     since = datetime.now(UTC) - timedelta(days=period_days) if period_days else None
     journal = _scan_journal(agent.id, since)
     try:
-        chain = verify_audit_chain(get_settings().guard.audit_file)
+        chain = verify_active_ledger()
         chain_ok = chain.verified
     except (OSError, ValueError):
         chain_ok = True

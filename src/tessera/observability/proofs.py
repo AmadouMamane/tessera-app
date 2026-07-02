@@ -22,12 +22,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from tessera.guard.audit import verify_audit_chain
+from tessera.guard.ledger_store import verify_active_ledger
 from tessera.observability.eval.report_paths import iter_report_files
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.replay import persisted_bundles
 from tessera.observability.spine.adapters import read_scores
-from tessera.settings import get_settings
 
 __all__ = ["compute_proofs_overview"]
 
@@ -144,7 +143,7 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
     now = datetime.now(UTC)
 
     # ── Real derivable core ────────────────────────────────────────────────
-    chain = verify_audit_chain(get_settings().guard.audit_file)
+    chain = verify_active_ledger()
     n_audit = chain.length
     n_scores = len(read_scores(full=True))
     n_bundles = len(persisted_bundles())

@@ -36,6 +36,7 @@ from psycopg.rows import dict_row
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.guard.decisions import load_policy
+from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability._asof import occurred_before
 from tessera.observability.agent_configurations import _effective
 from tessera.observability.eval_data import load_eval_snapshot
@@ -215,33 +216,23 @@ def _scan_documents(rows: Sequence[dict[str, Any]], at: datetime | None) -> dict
 
 def _scan_audit(path: Path, at: datetime | None) -> _AuditAsOf:
     scan = _AuditAsOf()
-    if not path.exists():
-        return scan
-    with path.open(encoding="utf-8") as fp:
-        for raw in fp:
-            line = raw.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            occurred = entry.get("occurred_at")
-            if not occurred_before(occurred, at.isoformat() if at else None):
-                continue
-            scan.decisions += 1
-            if entry.get("outcome") == "denied":
-                scan.blocked += 1
-            elif entry.get("outcome") == "allowed":
-                scan.allowed += 1
-            for dec in entry.get("decisions", []) or []:
-                rule = dec.get("policy_rule") or dec.get("rule")
-                if rule:
-                    scan.rules.add(str(rule))
-            occurred_dt = _parse_at(occurred) if isinstance(occurred, str) else None
-            if occurred_dt is not None:
-                scan.first_at = min(scan.first_at or occurred_dt, occurred_dt)
-                scan.last_at = max(scan.last_at or occurred_dt, occurred_dt)
+    for entry in read_ledger_entries(path):
+        occurred = entry.get("occurred_at")
+        if not occurred_before(occurred, at.isoformat() if at else None):
+            continue
+        scan.decisions += 1
+        if entry.get("outcome") == "denied":
+            scan.blocked += 1
+        elif entry.get("outcome") == "allowed":
+            scan.allowed += 1
+        for dec in entry.get("decisions", []) or []:
+            rule = dec.get("policy_rule") or dec.get("rule")
+            if rule:
+                scan.rules.add(str(rule))
+        occurred_dt = _parse_at(occurred) if isinstance(occurred, str) else None
+        if occurred_dt is not None:
+            scan.first_at = min(scan.first_at or occurred_dt, occurred_dt)
+            scan.last_at = max(scan.last_at or occurred_dt, occurred_dt)
     return scan
 
 
@@ -251,34 +242,24 @@ def _scan_handoffs(path: Path, at: datetime | None) -> list[dict[str, Any]]:
     The same S1 journal that proves config also proves routing: the handoffs that
     had happened by T are part of the opposable state at T.
     """
-    if not path.exists():
-        return []
     found: list[tuple[str, dict[str, Any]]] = []
-    with path.open(encoding="utf-8") as fp:
-        for raw in fp:
-            line = raw.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if entry.get("type") != "tessera.agent.handoff":
-                continue
-            occurred = entry.get("occurred_at")
-            if not occurred_before(occurred, at.isoformat() if at else None):
-                continue
-            found.append(
-                (
-                    str(occurred or ""),
-                    {
-                        "from": str(entry.get("from_agent", "")),
-                        "to": str(entry.get("to_agent", "")),
-                        "reason": str(entry.get("reason", "")),
-                        "at": _fmt(_parse_at(occurred)) if isinstance(occurred, str) else "-",
-                    },
-                )
+    for entry in read_ledger_entries(path):
+        if entry.get("type") != "tessera.agent.handoff":
+            continue
+        occurred = entry.get("occurred_at")
+        if not occurred_before(occurred, at.isoformat() if at else None):
+            continue
+        found.append(
+            (
+                str(occurred or ""),
+                {
+                    "from": str(entry.get("from_agent", "")),
+                    "to": str(entry.get("to_agent", "")),
+                    "reason": str(entry.get("reason", "")),
+                    "at": _fmt(_parse_at(occurred)) if isinstance(occurred, str) else "-",
+                },
             )
+        )
     found.sort(key=lambda e: e[0], reverse=True)
     return [item for _, item in found]
 

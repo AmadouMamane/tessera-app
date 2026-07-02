@@ -12,13 +12,13 @@ fabricated. The page is read-only.
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from psycopg.rows import dict_row
 
+from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability._asof import occurred_before
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
@@ -54,31 +54,19 @@ def _read_s1(
     conversation_id: str, audit_path: Path, at: str | None, event_type: str
 ) -> list[dict[str, Any]]:
     """Read S1 events of ``event_type`` for one conversation (as-of ``at``)."""
-    if not audit_path.exists():
-        return []
     out: list[dict[str, Any]] = []
-    with audit_path.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            try:
-                obj = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            if obj.get("type") != event_type:
-                continue
-            if obj.get("conversation_id") != conversation_id:
-                continue
-            if not occurred_before(obj.get("occurred_at"), at):
-                continue
-            out.append(obj)
+    for obj in read_ledger_entries(audit_path):
+        if obj.get("type") != event_type:
+            continue
+        if obj.get("conversation_id") != conversation_id:
+            continue
+        if not occurred_before(obj.get("occurred_at"), at):
+            continue
+        out.append(obj)
     return out
 
 
-async def compute_session_detail(
-    conversation_id: str, at: str | None = None
-) -> dict[str, object]:
+async def compute_session_detail(conversation_id: str, at: str | None = None) -> dict[str, object]:
     """Return the turn-by-turn detail of one conversation, attributed per agent.
 
     Args:
@@ -144,9 +132,7 @@ async def compute_session_detail(
             }
         )
 
-    handoff_events = _read_s1(
-        conversation_id, audit_path, at, "tessera.agent.handoff"
-    )
+    handoff_events = _read_s1(conversation_id, audit_path, at, "tessera.agent.handoff")
     handoffs = [
         {
             "from": str(h.get("from_agent", "")),

@@ -21,7 +21,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import tessera
-from tessera.guard.audit import verify_audit_chain
+from tessera.guard.ledger_store import ledger_available, read_ledger_entries, verify_active_ledger
 from tessera.observability.eval.report_paths import iter_report_files
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
@@ -72,6 +72,7 @@ _TR: dict[str, tuple[str, str, str]] = {
 
 def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
+
 
 # Process start time (module import) — a real, monotonic-enough uptime base.
 _START = datetime.now(UTC)
@@ -137,8 +138,8 @@ def _health(audit_file: Path) -> list[dict[str, str]]:
 
     chain_ok = True
     try:
-        chain_ok = bool(verify_audit_chain(audit_file).verified)
-    except (OSError, ValueError):
+        chain_ok = bool(verify_active_ledger(audit_file).verified)
+    except Exception:  # a health probe never crashes the page (postgres unreachable, …)
         chain_ok = False
 
     def ok(flag: bool) -> str:
@@ -148,7 +149,7 @@ def _health(audit_file: Path) -> list[dict[str, str]]:
         {"key": "policy", "status": ok(policy.is_file())},
         {"key": "prompts", "status": ok(_file_count(prompts, "*.yaml") >= _REQUIRED_LANGS)},
         {"key": "corpus", "status": ok(_file_count(corpus, "*.json") > 0)},
-        {"key": "audit_log", "status": ok(audit_file.is_file())},
+        {"key": "audit_log", "status": ok(ledger_available(audit_file))},
         {"key": "audit_chain", "status": ok(chain_ok)},
         {"key": "firewall", "status": ok(_dep("mcp-firewall") != "-")},
         {"key": "eval_reports", "status": ok(len(iter_report_files()) > 0)},
@@ -306,11 +307,7 @@ def compute_system_profile(lang: str = "fr") -> dict[str, object]:
         "support": str(settings.environment),
     }
 
-    audit_file = settings.guard.audit_file
-    audit_lines = 0
-    if audit_file.is_file():
-        with audit_file.open("r", encoding="utf-8") as fp:
-            audit_lines = sum(1 for _ in fp)
+    audit_lines = len(read_ledger_entries())
     chain_label = next((h["status"] for h in health_checks if h["key"] == "audit_chain"), "warn")
     runtime = {
         "uptime": _uptime(now, lang),

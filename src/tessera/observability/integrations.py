@@ -24,12 +24,12 @@ ae/oe/ue/ss); enum keys (category/status/criticality) stay stable.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from tessera.guard.decisions import Policy, ToolPolicy, load_policy
+from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
 
@@ -235,25 +235,15 @@ def _record(scan: _Scan, decision: dict[str, object], now: datetime) -> None:
 def _scan_audit(path: Path, now: datetime) -> _Scan:
     """Aggregate per-tool decision stats from the guard audit log."""
     scan = _Scan()
-    if not path.exists():
-        return scan
-    with path.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            try:
-                obj = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            if obj.get("type") != "tessera.guard.audit":
-                continue
-            decisions = obj.get("decisions")
-            if not isinstance(decisions, list):
-                continue
-            for decision in decisions:
-                if isinstance(decision, dict):
-                    _record(scan, decision, now)
+    for obj in read_ledger_entries(path):
+        if obj.get("type") != "tessera.guard.audit":
+            continue
+        decisions = obj.get("decisions")
+        if not isinstance(decisions, list):
+            continue
+        for decision in decisions:
+            if isinstance(decision, dict):
+                _record(scan, decision, now)
     return scan
 
 

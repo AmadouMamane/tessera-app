@@ -18,10 +18,9 @@ Free-text is localized (fr/de/en); enum keys (status) stay stable.
 
 from __future__ import annotations
 
-from tessera.guard.audit import verify_audit_chain
 from tessera.guard.decisions import Policy, load_policy
+from tessera.guard.ledger_store import verify_active_ledger
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
-from tessera.settings import get_settings
 
 __all__ = ["available_guardrail_ids", "build_guardrail_catalogue"]
 
@@ -184,7 +183,7 @@ def build_guardrail_catalogue(lang: str = "fr", *, agent_scope: str = "all") -> 
     """Assemble the platform guardrail-catalogue payload from real policy + audit."""
     lang = _norm_lang(lang)
     comp = _Composition(load_policy())
-    chain = verify_audit_chain(get_settings().guard.audit_file)
+    chain = verify_active_ledger()
     items = _consumer_items(agent_scope)
 
     rows = [_block_row(item, comp, chain, lang) for item in items]

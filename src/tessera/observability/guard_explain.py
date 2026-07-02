@@ -9,12 +9,11 @@ the guard is actually doing and which rule is doing the heavy lifting.
 
 from __future__ import annotations
 
-import json
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from tessera.settings import get_settings
+from tessera.guard.ledger_store import read_ledger_entries
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -45,37 +44,27 @@ class GuardExplainReport:
 
 def compute_guard_explain(path: Path | None = None) -> GuardExplainReport:
     """Aggregate fired guard rules from the audit log at ``path``."""
-    audit_path = path or get_settings().guard.audit_file
     pair_counts: Counter[tuple[str, str]] = Counter()
     n_entries = 0
     n_decisions = 0
     n_denials = 0
 
-    if audit_path.exists():
-        with audit_path.open("r", encoding="utf-8") as fp:
-            for raw in fp:
-                stripped = raw.strip()
-                if not stripped:
-                    continue
-                try:
-                    obj = json.loads(stripped)
-                except json.JSONDecodeError:
-                    continue
-                if obj.get("type") != "tessera.guard.audit":
-                    continue
-                decisions = obj.get("decisions")
-                if not isinstance(decisions, list):
-                    continue
-                n_entries += 1
-                for decision in decisions:
-                    if not isinstance(decision, dict):
-                        continue
-                    rule = str(decision.get("policy_rule", "unknown"))
-                    kind = str(decision.get("decision", "unknown"))
-                    pair_counts[(rule, kind)] += 1
-                    n_decisions += 1
-                    if kind == "deny":
-                        n_denials += 1
+    for obj in read_ledger_entries(path):
+        if obj.get("type") != "tessera.guard.audit":
+            continue
+        decisions = obj.get("decisions")
+        if not isinstance(decisions, list):
+            continue
+        n_entries += 1
+        for decision in decisions:
+            if not isinstance(decision, dict):
+                continue
+            rule = str(decision.get("policy_rule", "unknown"))
+            kind = str(decision.get("decision", "unknown"))
+            pair_counts[(rule, kind)] += 1
+            n_decisions += 1
+            if kind == "deny":
+                n_denials += 1
 
     rules = [
         RuleCount(rule=rule, decision=kind, count=count)

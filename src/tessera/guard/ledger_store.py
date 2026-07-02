@@ -53,8 +53,10 @@ __all__ = [
     "dual_write_enabled",
     "enqueue_ledger_entry",
     "ensure_audit_ledger_schema",
+    "ledger_available",
     "ledger_source",
     "load_ledger_payloads_sync",
+    "read_ledger_entries",
     "shadow_verify_ledger",
     "verify_active_ledger",
     "verify_ledger_rows",
@@ -312,6 +314,57 @@ def load_ledger_payloads_sync(at: str | None = None) -> list[dict[str, Any]]:
     return [row[0] for row in rows if isinstance(row[0], dict)]
 
 
+# ── Read seam (every direct ledger consumer routes here — ADR 0015 H2) ──────────
+# The flat-file parse and the promoted-table read return byte-identical payload dicts,
+# so a consumer's downstream ``type``/agent/as-of filtering is unchanged across the cut.
+# Consumers keep their own filters and call one of these instead of opening the file.
+
+
+def read_ledger_entries(path: Path | None = None) -> list[dict[str, Any]]:
+    """Every ledger entry (oldest→newest) from the ACTIVE source — the single read seam.
+
+    ``file`` (default) parses the flat journal at ``path`` — or the settings audit file
+    when ``path`` is omitted; tests inject a temp chain here. ``postgres`` reads the
+    promoted append-only table in ``seq`` order (``path`` ignored — the cut). Both mediums
+    yield the same dicts, so a caller's filtering is identical before and after the cut.
+    In postgres mode an unreachable store raises ``psycopg.Error`` — the caller maps that
+    to honest-empty (never a fabricated zero), exactly as the spine adapter does.
+    """
+    if ledger_source() == "postgres":
+        return load_ledger_payloads_sync()
+    from tessera.settings import get_settings
+
+    target = path if path is not None else get_settings().guard.audit_file
+    if not target.exists():
+        return []
+    return _file_entries(target)
+
+
+def _ledger_reachable() -> bool:
+    """Cheap probe: is the promoted ledger table reachable? (health, postgres mode)."""
+    try:
+        with _connect_sync() as conn:
+            conn.execute(f"SELECT 1 FROM {LEDGER_TABLE} LIMIT 1")  # noqa: S608 — fixed ident
+        return True
+    except Exception:
+        return False
+
+
+def ledger_available(path: Path | None = None) -> bool:
+    """Whether the ACTIVE ledger source is materialised — the health signal.
+
+    ``file``: the journal file exists on disk. ``postgres``: the promoted table is
+    reachable. Replaces a bare ``audit_file.is_file()`` so a health check reads whichever
+    medium is canonical after the cut (post-cut, the flat file is gone by design).
+    """
+    if ledger_source() == "postgres":
+        return _ledger_reachable()
+    from tessera.settings import get_settings
+
+    target = path if path is not None else get_settings().guard.audit_file
+    return target.is_file()
+
+
 @dataclass(frozen=True, slots=True)
 class LedgerShadowStatus:
     """The shadow-verify verdict: both mediums verify AND agree (the cut gate)."""
@@ -344,10 +397,14 @@ def shadow_verify_ledger(path: Path) -> LedgerShadowStatus:
     )
 
 
-def verify_active_ledger() -> ChainStatus:
-    """Chain integrity of the ACTIVE ledger source (file today, Postgres after the cut)."""
+def verify_active_ledger(path: Path | None = None) -> ChainStatus:
+    """Chain integrity of the ACTIVE ledger source (file today, Postgres after the cut).
+
+    In file mode ``path`` verifies that file when given (an explicit/test chain), else the
+    settings audit file; in postgres mode the promoted table is walked (``path`` ignored).
+    """
     from tessera.settings import get_settings
 
     if ledger_source() == "postgres":
         return verify_ledger_rows(load_ledger_payloads_sync())
-    return verify_audit_chain(get_settings().guard.audit_file)
+    return verify_audit_chain(path if path is not None else get_settings().guard.audit_file)

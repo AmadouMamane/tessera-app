@@ -13,11 +13,11 @@ eval (Phase 4) and is intentionally absent here.
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, Any
 
 from psycopg.rows import dict_row
 
+from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability.agent_release import fleet_release_states
 from tessera.observability.agent_scope import dedup_org_total
 from tessera.retrieval.store import _connection
@@ -52,25 +52,15 @@ def _handoff_counts(audit_path: Path) -> tuple[dict[str, int], dict[str, int]]:
     """Count S1 handoff events per agent: (incoming by to_agent, outgoing by from_agent)."""
     incoming: dict[str, int] = {}
     outgoing: dict[str, int] = {}
-    if not audit_path.exists():
-        return incoming, outgoing
-    with audit_path.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            try:
-                obj = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            if obj.get("type") != "tessera.agent.handoff":
-                continue
-            to_agent = str(obj.get("to_agent", ""))
-            from_agent = str(obj.get("from_agent", ""))
-            if to_agent:
-                incoming[to_agent] = incoming.get(to_agent, 0) + 1
-            if from_agent:
-                outgoing[from_agent] = outgoing.get(from_agent, 0) + 1
+    for obj in read_ledger_entries(audit_path):
+        if obj.get("type") != "tessera.agent.handoff":
+            continue
+        to_agent = str(obj.get("to_agent", ""))
+        from_agent = str(obj.get("from_agent", ""))
+        if to_agent:
+            incoming[to_agent] = incoming.get(to_agent, 0) + 1
+        if from_agent:
+            outgoing[from_agent] = outgoing.get(from_agent, 0) + 1
     return incoming, outgoing
 
 
