@@ -27,14 +27,31 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | G2 | Write path: gating → durable Postgres + best-effort Langfuse SDK mirror; online → direct ClickHouse insert (never Langfuse Scores ingestion) | ✅ done | `f82fb33` | `emit_score` → direct owned-CH insert (no online score mirror — the trace IS the drill-down); eval runner → per-case Postgres rows (unique-key idempotent) + SDK mirror **session-anchored on run_id** (anchorless proven rejected 400), stable UUID5 score_id, flushed at CLI exit. Live-proven both legs; suite hermetic via env kill-switches |
 | G3 | Spine reads owned stores: gating → `adapters/postgres.py`, online → `adapters/clickhouse.py` (as-of-T by `scored_at`); Langfuse ceases to be a spine source | ✅ done | `f28fd08` | `SpineStoresReader.scores` → owned CH (server-side bound params; live = ring semantics for parity); new `PostgresGatingAdapter`; `gating` = first-class spine fact (protocol + 4 readers + shadow `fact=gating` + memoised context + cube-declared snapshot signal, FE mirror). Live: gating 211 rows/4 real runs; perf p95 cold 5.6ms / 3 upstream reads |
 | G4 | Backfill (jsonl→CH, reports→PG) → shadow parity `{fact=scores}` → flip per-fact → owned-store erasure | ✅ done | `b9b532c` | Backfill idempotent (2nd run = 0); boot sweep; shadow bake **28/28 match scores + 28/28 gating, 0 diverge** across a live turn (dual-write 9=9); **flipped per-fact live** (`TESSERA_SPINE_SOURCE_SCORES/_GATING=spine`) — values identical, `source` badge resolved at read time; `DELETE /memory` purges the owned CH store (probe-proven). Retirement gated → G5 |
-| G5 | Retire scores.jsonl: route the 19 direct `persisted_scores`/`recent_scores` call sites (routes/observability ×12, proofs ×3, compliance ×3, availability/reliability/improvement/agent_console) through the reader seam → longer bake → stop the jsonl write → delete the file | ⬜ pending | — | ADR gate: "all signals flipped **and baked**" — the direct-route reads are the un-flipped tail; bake window as of 2026-07-02 is minutes old |
+| G5 | Retire scores.jsonl: route the 17 direct `persisted_scores`/`recent_scores` call expressions through the reader seam → sustained bake → stop the jsonl write → per-fact defaults flip to `spine` → delete the dev file | ✅ done | `3f970f7` | `read_scores(at, agent, full=)` seam helper (ring / as-of / full-history semantics preserved site-by-site); suite pinned `TESSERA_SPINE_SOURCE=jsonl` (hermetic; sources contract-tested); write-stop + defaults gated on the 75-min bake (see log) |
 | H | Ledger promotion (§Amend.3, SEPARATE): audit/S1 → owned append-only hash-chained Postgres; dual-write → backfill (verify) → shadow-verify → cut | ✅ done | `df1ee67` | One journal, one chain (S1 flows through `emit_audit`). `audit_ledger` append-only **enforced by trigger**; verification = chain WALK from genesis (order-independent); backfill refuses a broken file chain; dual-write FIFO + boot reconcile. Live: 649 real entries promoted, shadow-verify OK, turn → 652=652, **cut proven** (`TESSERA_LEDGER_SOURCE=postgres`, integrity over rows identical, medium visible). Flat-file retirement + direct-reader sweep = H2, after operating time |
-| H2 | Retire the flat audit file: route the ~10 direct `verify_audit_chain`/`audit_file` readers (routes/audit ×2, routes/observability ×2, agent_garde_fous, agent_synthese, guardrail_catalogue, proofs, sources, system_profile, lineage) through `ledger_store`, hold shadow-verify over operating time, then stop the file write | ⬜ pending | — | Never before shadow-verify holds continuously; the file stays canonical-written meanwhile |
+| H2 | Retire the flat audit file: route the **18 true ledger-reader files** through `ledger_store` (each has a bespoke parse loop: system_profile ×7, etat_a_date ×5, routes/audit ×4, agent_garde_fous ×3, integrations/governance_feed/agent_synthese/routes-observability ×2, tool_validity/sources/session_detail/proofs/guardrail_catalogue/guard_explain/fleet/conformance/agent_lifecycle ×1; `audit_file.parent` anchors are NOT ledger reads and stay), implement the real `postgres` sink (synchronous durable insert + file-spool fallback; chain seed from the table head), hold `shadow_verify_ledger` over operating time, then stop the file write | ⬜ pending | — | Compliance-sensitive — its own phase, never rushed into a session tail. The file stays canonical-written + boot-reconciled meanwhile; the spine's ledger reads are already cut (H) |
 
 Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed) · ⛔ blocked (see notes).
 
 ## Log (newest first)
 
+- **G5 ✅ — `3f970f7`** (twice-green + pushed) — **scores.jsonl retired, on a genuinely met gate.**
+  The bake (V3): **77 minutes** of per-fact shadow over REAL traffic (12-scope snapshot sweeps every
+  60s + a real `/chat` turn every ~4 min; 15 checkpoints in `/tmp/tessera-bake.log`):
+  `tessera_spine_shadow_divergence_total` → **scores 900/900 match, gating 900/900 match, ZERO
+  diverge/unavailable over the whole window**; dual-write lockstep held throughout (jsonl 67 = CH 67
+  at window end; ledger 889=889, both chains verified). Then the activation: `read_scores(at, agent,
+  full=)` seam helper (ring / as-of / full-history semantics preserved site-by-site) now serves the
+  **17 former direct call expressions**; per-fact defaults flip to `spine` (explicit env = the
+  operator escape hatch; the unit suite pins the legacy source and stays hermetic — 978 unit tests
+  twice-green); `emit_score` no longer writes the file (durable home = the owned CH table; a
+  pre-retirement file stays READ-only: degraded reader, backfill source, erasure surface); the dev
+  file was moved aside after the final 67=67 parity. **Live-proven on code defaults (no spine
+  env)**: scores/slo/gating serve `source=spine`; the live view returns **67 rows from ClickHouse
+  after a restart** (the old ring came back empty — retirement made live views restart-proof);
+  as-of 16:15 still exactly 6 rows; gating 211/4; `score-series` n=22 with populated buckets through
+  the rerouted full-history read; audit integrity over the Postgres rows (889, chain valid,
+  medium=postgres).
 - **V2 (ledger consolidation RATIFIED, ADR amended — §Correction 3b) ✅** (docs, 2026-07-02). The H
   implementation consolidated the "two ledgers" into one — a deviation from the ADR's prose that is
   now examined and **ratified, docs aligned to code**. Facts (live table): ONE chain, families
