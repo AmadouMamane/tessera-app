@@ -122,13 +122,23 @@ class SignalRegistry:
 
     def _report(self, spec: SignalSpec, scope: Scope, *, unavailable: bool) -> ScopeReport:
         supported = spec.dimensions
+        # A fact-backed signal reports its fact's ACTIVE source (per-fact flip, G4): the
+        # badge is resolved at read time, so a flipped signal can never show a stale
+        # hardcoded source. Fact-less signals keep their static declaration.
+        from tessera.observability.spine.adapters import fact_source
+
+        source = (
+            fact_source(spec.capability.fact)
+            if spec.capability.fact is not None
+            else spec.capability.source
+        )
         return ScopeReport(
             signal_id=spec.id,
             honoured=scope.filters & supported,
             ignored=scope.filters - supported,
             org_wide=Dimension.AGENT not in supported,
             synthetic=spec.synthetic,
-            source=spec.capability.source,
+            source=source,
             unavailable=unavailable,
         )
 

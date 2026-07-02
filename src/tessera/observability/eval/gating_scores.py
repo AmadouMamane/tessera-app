@@ -33,6 +33,7 @@ __all__ = [
     "ensure_eval_gating_schema",
     "gating_row_dict",
     "gating_rows_from_report",
+    "ingest_gating_reports",
     "record_gating_report",
     "record_gating_rows",
 ]
@@ -254,3 +255,38 @@ async def record_gating_report(report: Mapping[str, object], *, flush_mirror: bo
 
         langfuse_scores.mirror_gating_rows(rows, flush=flush_mirror)
     return inserted
+
+
+async def ingest_gating_reports() -> tuple[int, int]:
+    """Reconcile the env's report-file archive into the porteur (idempotent sweep).
+
+    Parses every report the environment can read (ADR 0014 path resolution), records the
+    release runs, and returns ``(reports_with_rows, rows_inserted)``. The unique key makes
+    a re-sweep free, so this runs at every boot **and** serves as the G4 historical
+    backfill — the file archive and the owned table converge without a separate tool.
+    Non-release (agent-less) reports contribute nothing, by design.
+    """
+    import json
+
+    from tessera.observability.eval.report_paths import iter_report_files
+
+    reports_with_rows = 0
+    inserted_total = 0
+    seen_runs: set[str] = set()
+    for path in sorted(iter_report_files()):
+        try:
+            report = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(report, dict):
+            continue
+        rows = gating_rows_from_report(report)
+        if not rows:
+            continue
+        run_id = rows[0].run_id
+        if run_id in seen_runs:  # latest_<agent>.json duplicates its timestamped archive
+            continue
+        seen_runs.add(run_id)
+        reports_with_rows += 1
+        inserted_total += await record_gating_report(report)
+    return reports_with_rows, inserted_total

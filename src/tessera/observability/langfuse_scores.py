@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol
 if TYPE_CHECKING:
     from tessera.observability.eval.gating_scores import GatingScoreRow
 
-__all__ = ["gating_score_id", "mirror_gating_rows"]
+__all__ = ["flush_mirror", "gating_score_id", "mirror_gating_rows"]
 
 # Fixed namespace for deterministic score ids — never regenerate, or dedup breaks.
 _SCORE_NS = uuid.UUID("6f9c2d1e-8a4b-4f3a-9b6d-2e1c5a7d0b43")
@@ -123,6 +123,15 @@ def set_client(client: _ScoreClient | None) -> None:
     """Override the SDK client (tests inject a stub; ``None`` resets the singleton)."""
     global _client
     _client = client
+
+
+def flush_mirror() -> None:
+    """Drain the SDK batch if a client exists (CLI exits — backfill/sweep tools)."""
+    if _client is not None:
+        try:
+            _client.flush()
+        except Exception as exc:  # draining is best-effort, like everything here
+            sys.stderr.write(f"tessera.langfuse_scores: flush failed: {exc}\n")
 
 
 def mirror_gating_rows(rows: list[GatingScoreRow], *, flush: bool = False) -> int:

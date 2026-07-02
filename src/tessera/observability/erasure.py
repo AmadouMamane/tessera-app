@@ -45,6 +45,7 @@ __all__ = [
     "ErasureFootprint",
     "coverage",
     "footprint",
+    "purge_owned_scores",
     "purge_spine",
     "purge_telemetry",
 ]
@@ -69,6 +70,12 @@ class ErasureFootprint:
     total: int
     n_spine: int = 0
     spine_reached: bool = True
+    # The OWNED online-score store (ClickHouse, §Correction 2b): erasure must reach the
+    # durable home of the score rows, not only the local jsonl + the Langfuse traces.
+    # The gating porteur carries no conversation_id (release runs are not subject-linked),
+    # so it has no erasure surface by construction.
+    n_owned_scores: int = 0
+    owned_reached: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +135,33 @@ def _spine_delete(conversation_id: str) -> int:
     return LangfuseAdapter().delete_conversation(conversation_id)
 
 
+def _owned_scores_delete(conversation_id: str) -> int:
+    """Delete the conversation's rows in the owned ClickHouse score store (the seam)."""
+    from tessera.observability.spine.adapters.clickhouse import ClickHouseAdapter
+
+    return ClickHouseAdapter().delete_conversation(conversation_id)
+
+
+def purge_owned_scores(conversation_id: str) -> tuple[int, bool]:
+    """Erase a conversation's rows in the owned online-score store (§Correction 2b).
+
+    Same honesty contract as :func:`purge_spine`: best-effort, ``(n_deleted, reached)``,
+    an unreachable store is logged and reported — deferred, never faked.
+    """
+    deleted = 0
+    reached = True
+    try:
+        deleted = _owned_scores_delete(conversation_id)
+    except SpineUnavailableError as exc:
+        reached = False
+        _LOG.warning(
+            "owned-score erasure deferred (clickhouse unreachable): %s",
+            exc,
+            extra={"conversation_id": conversation_id},
+        )
+    return deleted, reached
+
+
 def purge_spine(conversation_id: str) -> tuple[int, bool]:
     """Erase a conversation in the spine (Langfuse traces) + evict the read-through cache.
 
@@ -162,6 +196,7 @@ def purge_telemetry(conversation_id: str) -> ErasureFootprint:
     """
     n_bundles = replay_mod.purge_conversation(conversation_id)
     n_scores = scores_mod.purge_conversation(conversation_id)
+    n_owned, owned_reached = purge_owned_scores(conversation_id)
     n_spine, spine_reached = purge_spine(conversation_id)
     return ErasureFootprint(
         conversation_id=conversation_id,
@@ -170,4 +205,6 @@ def purge_telemetry(conversation_id: str) -> ErasureFootprint:
         total=n_bundles + n_scores,
         n_spine=n_spine,
         spine_reached=spine_reached,
+        n_owned_scores=n_owned,
+        owned_reached=owned_reached,
     )

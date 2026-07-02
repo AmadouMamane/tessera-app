@@ -53,6 +53,11 @@ class SignalCapability:
     # scope-varying). Org-wide fixed-corpus probes are declared here for their badges
     # but served by their own cached endpoints, so they stay off the hot path.
     in_snapshot: bool = False
+    # The spine fact this signal derives from ("scores" | "gating" | "bundles"), when it
+    # has one. A fact-backed signal's reported ``source`` is resolved at read time from
+    # the fact's ACTIVE source (the per-fact flip, G4) — a flipped signal is visibly
+    # flipped, never a stale hardcoded "jsonl". Fact-less signals keep the static field.
+    fact: str | None = None
 
     @property
     def org_wide(self) -> bool:
@@ -67,6 +72,7 @@ def _cap(
     synthetic: bool = False,
     source: str = SOURCE_JSONL,
     in_snapshot: bool = False,
+    fact: str | None = None,
 ) -> SignalCapability:
     return SignalCapability(
         id=signal_id,
@@ -74,6 +80,7 @@ def _cap(
         synthetic=synthetic,
         source=source,
         in_snapshot=in_snapshot,
+        fact=fact,
     )
 
 
@@ -86,19 +93,19 @@ _CUBE = {AGENT, TIME, LANGUAGE, MODEL}
 # --- The declaration table (the honesty contract, mirrored by lib/signal-registry.ts) ---
 _DECLARATIONS: tuple[SignalCapability, ...] = (
     # Store-derived, per-agent + as-of-T + language + model — the batched snapshot hot path.
-    _cap("scores", _CUBE, in_snapshot=True),
-    _cap("slo", _CUBE, in_snapshot=True),
-    _cap("trend", _CUBE, in_snapshot=True),
-    _cap("funnel", _CUBE, in_snapshot=True),
+    _cap("scores", _CUBE, in_snapshot=True, fact="scores"),
+    _cap("slo", _CUBE, in_snapshot=True, fact="scores"),
+    _cap("trend", _CUBE, in_snapshot=True, fact="scores"),
+    _cap("funnel", _CUBE, in_snapshot=True, fact="scores"),
     # Release-gating socle (§Amendment 2 Nature 1): per-case verdicts carry agent, language,
     # model and scored_at — the full cube. Current source = the report-file archive; the
     # owned Postgres porteur shadows it until parity (G4), like scores over ClickHouse.
-    _cap("gating", _CUBE, in_snapshot=True),
-    _cap("toxicity", _CUBE, in_snapshot=True),
-    _cap("pii_leak", _CUBE, in_snapshot=True),
-    _cap("cost", _CUBE, in_snapshot=True),
-    _cap("anomalies", _CUBE, in_snapshot=True),
-    _cap("what_changed", _CUBE, in_snapshot=True),
+    _cap("gating", _CUBE, in_snapshot=True, fact="gating"),
+    _cap("toxicity", _CUBE, in_snapshot=True, fact="bundles"),
+    _cap("pii_leak", _CUBE, in_snapshot=True, fact="bundles"),
+    _cap("cost", _CUBE, in_snapshot=True, fact="bundles"),
+    _cap("anomalies", _CUBE, in_snapshot=True, fact="bundles"),
+    _cap("what_changed", _CUBE, in_snapshot=True, fact="bundles"),
     # Ledger-backed, per-agent + as-of-T. Declared + registered now (so their badges and
     # ``?signals=`` reads work), but they read the tamper-evident ledger — a large
     # hash-chained file — so they stay off the default hot path until Phase C gives them a
@@ -135,8 +142,8 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # (faithfulness ⊂ scores, pii ≡ pii_leak, tools ≡ tool_validity). Declared here so the
     # backend stays the single source of truth the frontend registry mirrors exactly, and so
     # every displayed control declares its capability (no undeclared, silently-defaulted row).
-    _cap("faithfulness", {AGENT, TIME}),
-    _cap("pii", {AGENT, TIME}),
+    _cap("faithfulness", {AGENT, TIME}, fact="scores"),
+    _cap("pii", {AGENT, TIME}, fact="bundles"),
     _cap("tools", {AGENT, TIME}),
     # Deterministic fixtures — no real per-agent substrate. Flagged synthetic so they can
     # never be silently ventilated (project rule: never call a deterministic fixture real).

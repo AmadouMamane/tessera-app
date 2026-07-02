@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from tessera.observability.spine.adapters.clickhouse import ClickHouseAdapter
 
-__all__ = ["online_score_line", "record_online_score"]
+__all__ = ["online_row_key", "online_score_line", "record_online_score"]
 
 _STRING_COLUMNS = ("agent_id", "language", "model", "conversation_id", "trace_id", "judge_model")
 
@@ -89,6 +89,27 @@ def online_score_line(row: Mapping[str, object]) -> bytes | None:
         value = row.get(column)
         payload[column] = value if isinstance(value, str) else ""
     return json.dumps(payload).encode("utf-8")
+
+
+def online_row_key(row: Mapping[str, object]) -> tuple[str, str, str, str] | None:
+    """A row's identity at the owned store's precision — the backfill's dedup key (pure).
+
+    ``(scored_at@ms, metric, conversation_id, trace_id)``: what both the jsonl row and the
+    ClickHouse row can compute identically (the store keeps millisecond stamps), so the
+    idempotent backfill inserts exactly the difference — twice-run = zero new rows.
+    """
+    scored_at = _clickhouse_datetime(row.get("scored_at"))
+    metric = row.get("metric")
+    if scored_at is None or not isinstance(metric, str):
+        return None
+    conversation = row.get("conversation_id")
+    trace = row.get("trace_id")
+    return (
+        scored_at,
+        metric,
+        conversation if isinstance(conversation, str) else "",
+        trace if isinstance(trace, str) else "",
+    )
 
 
 def _get_adapter() -> ClickHouseAdapter:

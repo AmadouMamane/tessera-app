@@ -222,6 +222,28 @@ class ClickHouseAdapter:
             rows = [r for r in rows if r.get("model") == scope.model]
         return rows
 
+    def delete_conversation(self, conversation_id: str) -> int:
+        """Erase a conversation's online score rows (GDPR Art. 17 — the owned-store leg).
+
+        Counts first, then issues a lightweight ``DELETE`` (rows are masked from reads
+        immediately and physically removed by the mutation) — both value-bound. Returns
+        the number of rows the deletion covers; 0 for an unknown conversation.
+        """
+        if not conversation_id:
+            return 0
+        params = {"conv": conversation_id}
+        count = self.execute(
+            f"SELECT count() FROM {self.table} WHERE conversation_id = {{conv:String}}",  # noqa: S608 — fixed identifiers, value bound server-side
+            params=params,
+        ).strip()
+        deleted = int(count) if count.isdigit() else 0
+        if deleted:
+            self.execute(
+                f"DELETE FROM {self.table} WHERE conversation_id = {{conv:String}}",  # noqa: S608 — fixed identifiers, value bound server-side
+                params=params,
+            )
+        return deleted
+
 
 def _ch_datetime(value: str) -> str | None:
     """An ISO instant as a ClickHouse ``DateTime64(3)`` literal (UTC), or ``None``."""

@@ -74,6 +74,26 @@ async def _ensure_online_score_store() -> None:
         )
 
 
+async def _reconcile_gating_archive() -> None:
+    """Converge the report-file archive into the gating porteur at boot (ADR 0015 G4).
+
+    Idempotent by the table's unique key (a re-sweep inserts nothing), bounded by the
+    archive size, and best-effort: a sweep failure is logged, never blocks boot — the
+    report files remain the archive and the next boot (or the backfill CLI) retries.
+    """
+    from tessera.observability.eval.gating_scores import ingest_gating_reports
+
+    try:
+        reports, inserted = await ingest_gating_reports()
+    except Exception as exc:  # reconciliation must never block boot
+        obs_logging.get_logger("tessera.spine").warning("gating.sweep_deferred", error=str(exc))
+        return
+    if inserted:
+        obs_logging.get_logger("tessera.spine").info(
+            "gating.sweep_recorded", reports=reports, rows_inserted=inserted
+        )
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
@@ -94,6 +114,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await ensure_settings_schema()  # persisted runtime flags
         await ensure_eval_gating_schema()  # ADR 0015 §Amendment 2 — gating socle (porteur)
         await _ensure_online_score_store()  # ADR 0015 §Correction 2b — best-effort
+        await _reconcile_gating_archive()  # ADR 0015 G4 — idempotent file→porteur sweep
         yield
     finally:
         await pool.close()
