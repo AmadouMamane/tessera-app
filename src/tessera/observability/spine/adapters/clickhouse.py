@@ -44,6 +44,14 @@ __all__ = ["ONLINE_SCORES_TABLE", "ClickHouseAdapter", "ClickHouseConfig", "onli
 # has the same semantics as the jsonl reader it must hold parity with.
 _LIVE_LIMIT: Final = 200
 
+# A TOTAL order, not just time: rows sharing a millisecond would otherwise come back in
+# whatever part-merge order ClickHouse happens to hold, and an as-of-T read must be
+# REPRODUCIBLE — same (scope, T) ⇒ same rows in the same order (SR-01 "Vue figée au T").
+# The DESC twin keeps the live newest-200 cut deterministic at the boundary too; the
+# python `reversed()` of that cut yields exactly the ascending total order.
+_TOTAL_ORDER: Final = "scored_at, metric, trace_id, conversation_id"
+_TOTAL_ORDER_DESC: Final = "scored_at DESC, metric DESC, trace_id DESC, conversation_id DESC"
+
 ONLINE_SCORES_TABLE: Final = "eval_online_scores"
 
 # Database / identifier names are interpolated into DDL, so they must stay plain
@@ -205,12 +213,12 @@ class ClickHouseAdapter:
                 params["model"] = scope.model
             where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
             raw = self.execute(
-                f"SELECT * FROM {table}{where} ORDER BY scored_at FORMAT JSONEachRow",  # noqa: S608 — identifiers validated, values bound server-side
+                f"SELECT * FROM {table}{where} ORDER BY {_TOTAL_ORDER} FORMAT JSONEachRow",  # noqa: S608 — identifiers validated, values bound server-side
                 params=params,
             )
             return [_row_from_ch(r) for r in _jsonl_lines(raw)]
         raw = self.execute(
-            f"SELECT * FROM {table} ORDER BY scored_at DESC LIMIT {_LIVE_LIMIT} "  # noqa: S608 — identifiers validated, constant limit
+            f"SELECT * FROM {table} ORDER BY {_TOTAL_ORDER_DESC} LIMIT {_LIVE_LIMIT} "  # noqa: S608 — identifiers validated, constant limit
             "FORMAT JSONEachRow"
         )
         rows = [_row_from_ch(r) for r in reversed(list(_jsonl_lines(raw)))]

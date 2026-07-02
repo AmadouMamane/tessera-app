@@ -32,12 +32,16 @@ def _cutoff(at: str) -> datetime | None:
     return stamp if stamp.tzinfo is not None else stamp.replace(tzinfo=UTC)
 
 
-__all__ = ["PostgresGatingAdapter"]
+__all__ = ["GATING_TOTAL_ORDER", "PostgresGatingAdapter"]
 
 # Bounded like the other spine adapters (0.8 s reads): the snapshot must degrade to an
 # honest-empty signal rather than stall on a slow store.
 _STATEMENT_TIMEOUT_MS = 800
 _CONNECT_TIMEOUT_S = 1
+
+# A TOTAL order: `id` (insert order) breaks scored_at ties so the same (scope, T) always
+# returns the same rows in the same order — the SR-01 as-of-T reproducibility contract.
+GATING_TOTAL_ORDER = " ORDER BY scored_at, id"
 
 
 class PostgresGatingAdapter:
@@ -73,7 +77,7 @@ class PostgresGatingAdapter:
         query = (
             "SELECT run_id, case_id, agent_id, language, model, metric, score, passed,"  # noqa: S608
             f" catalogue_version, judge_model, scored_at FROM {GATING_TABLE}{where}"
-            " ORDER BY scored_at"
+            f"{GATING_TOTAL_ORDER}"
         )
         try:
             with psycopg.connect(

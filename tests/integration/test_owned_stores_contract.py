@@ -152,6 +152,67 @@ class TestClickHouseReadContract:
             )
 
 
+class TestClickHouseAsOfContract:
+    def test_asof_view_is_frozen_and_reproducible_despite_later_writes(self) -> None:
+        """SR-01: same (scope, T) ⇒ same result — even after new rows land past T."""
+        import json as _json
+
+        from tessera.observability.clickhouse_scores import online_score_line
+        from tessera.observability.spine.scope import Scope
+
+        adapter = _clickhouse()
+        adapter.ensure_schema()
+        probe_agent = f"asof-probe-{uuid.uuid4().hex[:12]}"
+
+        def _line(stamp: str, metric: str) -> bytes:
+            line = online_score_line(
+                {
+                    "scored_at": stamp,
+                    "metric": metric,
+                    "score": 0.7,
+                    "language": "fr",
+                    "judge_model": "probe",
+                    "conversation_id": "asof-conv",
+                    "trace_id": "asof-trace",
+                    "sampled": True,
+                    "agent_id": probe_agent,
+                    "model": "m",
+                }
+            )
+            assert line is not None
+            return line
+
+        at = "2026-06-01T12:00:00+00:00"  # inside TTL retention; between T1 and T2
+        adapter.execute(
+            f"INSERT INTO {adapter.table} FORMAT JSONEachRow",
+            data=b"\n".join(
+                [
+                    _line("2026-06-01T00:00:00+00:00", "faithfulness"),
+                    _line("2026-06-02T00:00:00+00:00", "grounding"),
+                ]
+            ),
+        )
+        try:
+            frozen = adapter.online_scores(Scope(agent_id=probe_agent, at=at))
+            assert [r["metric"] for r in frozen] == ["faithfulness"]
+            # New rows land AFTER T — the view at T must not move.
+            adapter.execute(
+                f"INSERT INTO {adapter.table} FORMAT JSONEachRow",
+                data=_line("2026-06-04T00:00:00+00:00", "hallucination"),
+            )
+            again = adapter.online_scores(Scope(agent_id=probe_agent, at=at))
+            assert _json.dumps(again, sort_keys=True) == _json.dumps(frozen, sort_keys=True)
+            # And the post-T row IS visible to a later T (the freeze is T, not the probe).
+            later = adapter.online_scores(
+                Scope(agent_id=probe_agent, at="2026-06-05T00:00:00+00:00")
+            )
+            assert [r["metric"] for r in later] == ["faithfulness", "grounding", "hallucination"]
+        finally:
+            adapter.execute(
+                f"DELETE FROM {adapter.table} WHERE agent_id = '{probe_agent}'"  # noqa: S608 — fixed probe literal
+            )
+
+
 class TestPostgresGatingContract:
     async def test_ensure_schema_is_idempotent_and_carries_the_unique_key(self) -> None:
         from psycopg.rows import dict_row
@@ -258,4 +319,51 @@ class TestPostgresGatingContract:
             pool = get_pool()
             async with pool.connection() as conn, conn.cursor() as cur:
                 await cur.execute("DELETE FROM eval_gating_scores WHERE run_id = %s", (run_id,))
+                await conn.commit()
+
+    async def test_asof_view_is_frozen_and_reproducible_despite_later_runs(self) -> None:
+        """SR-01: the porteur's view at T never moves when a LATER release run lands."""
+        import json as _json
+
+        from tessera.observability.eval.gating_scores import record_gating_report
+        from tessera.observability.spine.adapters.postgres import PostgresGatingAdapter
+        from tessera.observability.spine.scope import Scope
+        from tessera.retrieval.store import get_pool
+
+        probe_agent = f"asof-gating-{uuid.uuid4().hex[:8]}"
+
+        def _report(run_at: str, case_id: str) -> dict[str, object]:
+            return {
+                "run_at": run_at,
+                "agent_id": probe_agent,
+                "model": "m",
+                "catalogue_version": "probe-1",
+                "results": [{"case_id": case_id, "language": "fr", "passed": True}],
+            }
+
+        try:
+            assert await record_gating_report(_report("20260605T000000Z", "case_a")) == 1
+        except Exception:  # any connection failure means "no local Postgres"
+            pytest.skip("postgres not up (docker compose up)")
+        adapter = PostgresGatingAdapter()
+        at = "2026-06-06T00:00:00+00:00"
+        try:
+            frozen = adapter.gating_scores(Scope(agent_id=probe_agent, at=at))
+            assert [r["case_id"] for r in frozen] == ["case_a"]
+            # A LATER release run lands — the opposable view at T must not move.
+            assert await record_gating_report(_report("20260607T000000Z", "case_b")) == 1
+            again = adapter.gating_scores(Scope(agent_id=probe_agent, at=at))
+            assert _json.dumps(again, sort_keys=True, default=str) == _json.dumps(
+                frozen, sort_keys=True, default=str
+            )
+            later = adapter.gating_scores(
+                Scope(agent_id=probe_agent, at="2026-06-08T00:00:00+00:00")
+            )
+            assert [r["case_id"] for r in later] == ["case_a", "case_b"]
+        finally:
+            pool = get_pool()
+            async with pool.connection() as conn, conn.cursor() as cur:
+                await cur.execute(
+                    "DELETE FROM eval_gating_scores WHERE agent_id = %s", (probe_agent,)
+                )
                 await conn.commit()

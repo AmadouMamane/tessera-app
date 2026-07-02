@@ -82,6 +82,37 @@ class TestClickHouseOnlineRead:
         assert len(rows) == 1
         assert rows[0]["agent_id"] == "support-client"
 
+    def test_asof_and_live_orders_are_total_not_just_temporal(self) -> None:
+        # SR-01 reproducibility: same (scope, T) ⇒ same rows in the same ORDER, even when
+        # timestamps tie at the store's millisecond precision — the query must impose a
+        # total order, never leave ties to part-merge order.
+        adapter = _adapter()
+        seen: list[str] = []
+        adapter.execute = (  # type: ignore[method-assign]
+            lambda query, *_args, **_kwargs: seen.append(query) or ""
+        )
+        adapter.online_scores(Scope(at="2026-07-03T00:00:00+00:00"))
+        adapter.online_scores(Scope())
+        assert "ORDER BY scored_at, metric, trace_id, conversation_id" in seen[0]
+        assert (
+            "ORDER BY scored_at DESC, metric DESC, trace_id DESC, conversation_id DESC" in seen[1]
+        )
+
+    def test_frozen_view_at_t_ignores_later_rows(self) -> None:
+        # The seam contract behind « Vue figée au {T} » : a read at a past T must not
+        # change when rows land after T.
+        from tessera.observability.spine.adapters.fake import FakeSpineReader
+
+        early = {"metric": "faithfulness", "score": 0.9, "scored_at": "2026-06-01T00:00:00+00:00"}
+        reader = FakeSpineReader(scores=[early])
+        at = "2026-06-02T00:00:00+00:00"
+        before = reader.scores(Scope(at=at))
+        reader._scores.append(
+            {"metric": "faithfulness", "score": 0.1, "scored_at": "2026-06-03T00:00:00+00:00"}
+        )
+        after = reader.scores(Scope(at=at))
+        assert before == after == [early]
+
     def test_unattributed_marker_maps_back_to_none(self) -> None:
         adapter = _adapter()
         bare = (
@@ -140,6 +171,14 @@ class TestCurrentGatingArchive:
         payload["agent_id"] = None
         (tmp_path / "20260601T000000Z.json").write_text(json.dumps(payload), encoding="utf-8")
         assert CurrentStoresReader().gating_scores(Scope()) == []
+
+
+class TestGatingTotalOrder:
+    def test_the_porteur_read_imposes_a_total_order(self) -> None:
+        from tessera.observability.spine.adapters.postgres import GATING_TOTAL_ORDER
+
+        # `id` breaks scored_at ties: same (scope, T) ⇒ same rows in the same order.
+        assert GATING_TOTAL_ORDER == " ORDER BY scored_at, id"
 
 
 class TestShadowGating:
