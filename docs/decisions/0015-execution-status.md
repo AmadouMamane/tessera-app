@@ -28,12 +28,40 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | G3 | Spine reads owned stores: gating → `adapters/postgres.py`, online → `adapters/clickhouse.py` (as-of-T by `scored_at`); Langfuse ceases to be a spine source | ✅ done | `f28fd08` | `SpineStoresReader.scores` → owned CH (server-side bound params; live = ring semantics for parity); new `PostgresGatingAdapter`; `gating` = first-class spine fact (protocol + 4 readers + shadow `fact=gating` + memoised context + cube-declared snapshot signal, FE mirror). Live: gating 211 rows/4 real runs; perf p95 cold 5.6ms / 3 upstream reads |
 | G4 | Backfill (jsonl→CH, reports→PG) → shadow parity `{fact=scores}` → flip per-fact → owned-store erasure | ✅ done | `b9b532c` | Backfill idempotent (2nd run = 0); boot sweep; shadow bake **28/28 match scores + 28/28 gating, 0 diverge** across a live turn (dual-write 9=9); **flipped per-fact live** (`TESSERA_SPINE_SOURCE_SCORES/_GATING=spine`) — values identical, `source` badge resolved at read time; `DELETE /memory` purges the owned CH store (probe-proven). Retirement gated → G5 |
 | G5 | Retire scores.jsonl: route the 19 direct `persisted_scores`/`recent_scores` call sites (routes/observability ×12, proofs ×3, compliance ×3, availability/reliability/improvement/agent_console) through the reader seam → longer bake → stop the jsonl write → delete the file | ⬜ pending | — | ADR gate: "all signals flipped **and baked**" — the direct-route reads are the un-flipped tail; bake window as of 2026-07-02 is minutes old |
-| H | Ledger promotion (§Amend.3, SEPARATE): audit/S1 → owned append-only hash-chained Postgres; dual-write → backfill (verify) → shadow-verify → cut → retire flat file | ⬜ pending | — | |
+| H | Ledger promotion (§Amend.3, SEPARATE): audit/S1 → owned append-only hash-chained Postgres; dual-write → backfill (verify) → shadow-verify → cut | ✅ done | `df1ee67` | One journal, one chain (S1 flows through `emit_audit`). `audit_ledger` append-only **enforced by trigger**; verification = chain WALK from genesis (order-independent); backfill refuses a broken file chain; dual-write FIFO + boot reconcile. Live: 649 real entries promoted, shadow-verify OK, turn → 652=652, **cut proven** (`TESSERA_LEDGER_SOURCE=postgres`, integrity over rows identical, medium visible). Flat-file retirement + direct-reader sweep = H2, after operating time |
+| H2 | Retire the flat audit file: route the ~10 direct `verify_audit_chain`/`audit_file` readers (routes/audit ×2, routes/observability ×2, agent_garde_fous, agent_synthese, guardrail_catalogue, proofs, sources, system_profile, lineage) through `ledger_store`, hold shadow-verify over operating time, then stop the file write | ⬜ pending | — | Never before shadow-verify holds continuously; the file stays canonical-written meanwhile |
 
 Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed) · ⛔ blocked (see notes).
 
 ## Log (newest first)
 
+- **Phase H ✅ — `df1ee67`** (twice-green + pushed). **The audit/S1 ledger is promoted** (§Amendment 3).
+  One journal, one chain: the S1 governance events already flow through `emit_audit`, so promoting
+  `audit.log` promotes both ledgers the amendment names. (1) **`guard/ledger_store.py`**:
+  `audit_ledger (seq, occurred_at, agent_id, payload jsonb, prev_hash, hash)`, append-only
+  **enforced by a `BEFORE UPDATE OR DELETE` trigger that raises** (mutation impossible at the
+  store), unique `hash` = idempotence key, `occurred_at`/`seq` indexed for as-of-T (TE-01).
+  (2) **Verification WALKS the chain** from the genesis hash via `prev_hash`, recomputing every
+  canonical payload — order-independent (a healed dual-write gap lands late without weakening the
+  proof); fork / orphan / gap / edited payload all break the walk. (3) **Dual-write**:
+  `_append_to_chain` enqueues each chained entry to one FIFO writer thread (file sink only; chain
+  order preserved); a missed insert self-heals at the boot reconcile. (4) **Verified backfill**:
+  refuses to import a file whose chain does not verify (recompute+verify on import); idempotent;
+  runs at every boot best-effort. (5) **The cut**: `TESSERA_LEDGER_SOURCE=postgres` repoints the
+  spine's ledger read (unreachable → `SpineUnavailableError`, honest-empty) and `audit_integrity`
+  verifies over the OWNED ROWS, reporting its active `medium` — gated on `shadow_verify_ledger`
+  (both mediums verify AND cover the same entries). **Live-proven on the real dev ledger**: boot
+  promoted **649 verified entries** → shadow-verify OK (649=649); a real guarded turn dual-wrote →
+  **652=652**, chains intact; the cut serves `chain_valid=True, length 653, medium=postgres` and
+  `audit_count 649` — byte-identical to file-mode. **Debugging honesty**: the contract flake was
+  NOT the store — probes dated Jan-2026 sat exactly on the 6-month TTL edge (today is 07-02!) and
+  background TTL merges erased them mid-test (`written_rows=2` then gone — proven via
+  `system.query_log`); probes now sit inside retention, the poll workaround was removed, and the
+  suite held **10/10 consecutive green**. Gate twice-green: ruff + format + mypy strict (247) +
+  **974 unit** (14 new) + 16 live contracts + tsc. Hermeticity: `TESSERA_LEDGER_DUAL_WRITE=0`
+  under tests. **Remaining tail = H2** (flat-file retirement + the ~10 direct
+  `verify_audit_chain`/`audit_file` readers), gated on shadow-verify holding over operating time —
+  the file stays canonical-written meanwhile. Hica seal remains enrichment, never the store.
 - **Phase G4 ✅ — `b9b532c`** (twice-green + pushed). **The migration executed**: backfill → shadow
   bake → per-fact flip → owned-store erasure. (1) **Backfill, idempotent**:
   `scripts/backfill_owned_scores.py` fills the owned ClickHouse table from `scores.jsonl` by
