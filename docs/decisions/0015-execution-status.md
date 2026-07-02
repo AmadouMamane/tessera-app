@@ -25,7 +25,7 @@ reads this first, then continues the **next `pending` phase** — no re-work.
 | F | Add language + model dimensions to Scope UI (no route sweep) — prove agent × time × language cube | ✅ done | `98ddf13` | The 9 store-derived signals + traces declare the full `_CUBE` {agent,time,language,model}; readers (current/fake/spine) filter by language/model; the registry narrows unsupported dims away (a language filter can't reach conformance/audit). Adding the dimension was a Scope field + registry entry + reader filter — **no route sweep** (the snapshot serves the cube for free). Proven 3 ways: hermetic (4 tests), live wire (`snapshot?language=fr` → honoured=['language']), live data-level over REAL ci data (de:21/en:21, exhaustive partition; model honestly sparse) |
 | G1 | Owned stores: Postgres `eval_gating_scores` (porteur) + owned ClickHouse `eval_online_scores` (§Amend.2 + §Corr.2b) | ✅ done | `fea97e9` | `ensure_eval_gating_schema()` at lifespan (env-schema isolated, unique re-ingest key) + `ClickHouseAdapter.ensure_schema()` (MergeTree, `PARTITION BY toYYYYMM`, native `TTL` 6 mo; best-effort at boot — monitoring telemetry never blocks boot). Live-proven: `SHOW CREATE TABLE` + `pg_indexes` match the amendments byte-for-byte; 3 live contract tests |
 | G2 | Write path: gating → durable Postgres + best-effort Langfuse SDK mirror; online → direct ClickHouse insert (never Langfuse Scores ingestion) | ✅ done | `f82fb33` | `emit_score` → direct owned-CH insert (no online score mirror — the trace IS the drill-down); eval runner → per-case Postgres rows (unique-key idempotent) + SDK mirror **session-anchored on run_id** (anchorless proven rejected 400), stable UUID5 score_id, flushed at CLI exit. Live-proven both legs; suite hermetic via env kill-switches |
-| G3 | Spine reads owned stores: gating → `adapters/postgres.py`, online → `adapters/clickhouse.py` (as-of-T by `scored_at`); Langfuse ceases to be a spine source | ⬜ pending | — | |
+| G3 | Spine reads owned stores: gating → `adapters/postgres.py`, online → `adapters/clickhouse.py` (as-of-T by `scored_at`); Langfuse ceases to be a spine source | ✅ done | `f28fd08` | `SpineStoresReader.scores` → owned CH (server-side bound params; live = ring semantics for parity); new `PostgresGatingAdapter`; `gating` = first-class spine fact (protocol + 4 readers + shadow `fact=gating` + memoised context + cube-declared snapshot signal, FE mirror). Live: gating 211 rows/4 real runs; perf p95 cold 5.6ms / 3 upstream reads |
 | G4 | Backfill (jsonl→CH, reports→PG) → shadow parity `{fact=scores}` → flip per-signal → retire jsonl; erasure reaches the owned stores | ⬜ pending | — | |
 | H | Ledger promotion (§Amend.3, SEPARATE): audit/S1 → owned append-only hash-chained Postgres; dual-write → backfill (verify) → shadow-verify → cut → retire flat file | ⬜ pending | — | |
 
@@ -33,6 +33,34 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **Phase G3 ✅ — `f28fd08`** (twice-green + pushed). The spine now reads the **owned stores**;
+  **Langfuse ceased to be a spine source** (§Amendment 1). (1) `SpineStoresReader.scores` reads the
+  owned ClickHouse table: `ClickHouseAdapter.online_scores(scope)` pushes as-of-T + agent/language/
+  model **server-side as bound `param_` placeholders** (values never enter SQL text); the live
+  (no-`at`) read deliberately mirrors the jsonl ring's semantics — last 200 rows org-wide, THEN
+  dimension filters — because the G4 parity gate compares the two readers count-for-count; rows map
+  back to the exact jsonl shape (`""`→`None`, `sampled`→bool, ISO reconstructed, ms truncated never
+  padded). (2) New `adapters/postgres.py` (`PostgresGatingAdapter`): the gating porteur read —
+  short-lived sync connection (the readers are sync), env-schema `search_path` (ADR 0014), bounded
+  `statement_timeout` 800ms, `psycopg.Error` → `SpineUnavailableError` (honest-empty). (3) **gating
+  is a first-class spine fact**: `SpineReader.gating_scores` on the protocol; `CurrentStoresReader`
+  reads the env-aware report-file archive through the same pure report→rows mapping as the write
+  path (mtime-keyed cache; `latest_<agent>.json` deduped against its timestamped twin by run_id);
+  fake seeded; `ShadowReader` records `tessera_spine_shadow_divergence_total{fact="gating"}`;
+  `SnapshotContext` memoises it (4 shared reads); a compact `gating` snapshot signal (run summaries,
+  never the full socle dump) declared over the full cube in `capabilities.py` AND the frontend
+  `lib/signal-registry.ts` mirror. Contract-test flake fixed honestly: probe identities are
+  uuid-suffixed because ClickHouse lightweight-delete visibility is async across back-to-back runs.
+  Gate twice-green: ruff + format + mypy strict (246) + **945 unit** (8 new) + **7 live contracts**
+  (scoped CH read round-trip incl. as-of exclusion + language compose; PG porteur read incl.
+  as-of/agent/language; 3× consecutive green) + tsc + biome + 10 registry vitest. **Live-proven on
+  :8392**: `snapshot?signals=gating` → **211 rows / 4 real release runs** (latest `support-client`
+  59/119 — the real 18/06 run), `agent=onboarding&language=fr` → 24 rows/1 run with
+  `honoured=['agent','language']`; `SpineStoresReader` serves the 3 real ClickHouse rows (agent
+  slice included) and the honestly-empty Postgres porteur (0 until the G4 backfill); **perf budgets
+  met**: cold p95 5.6ms (<300), warm 3.9ms (<150), **3 upstream reads for 10 signals** (≤4). The
+  owned CH table ends the phase holding exactly the 3 real judge rows (all probes purged). **Next:
+  G4.**
 - **Phase G2 ✅ — `f82fb33`** (twice-green + pushed). Both owned write legs are live, exactly per the
   amendments. **Online** (§Correction 2b): `emit_score` direct-inserts each verdict row into
   `tessera.eval_online_scores` (`clickhouse_scores.py`: JSONEachRow, daemon thread off the already-cold
