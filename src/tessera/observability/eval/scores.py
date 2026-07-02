@@ -6,9 +6,13 @@ One score becomes three signals:
    log-based metric and the BigQuery sink filter on
    (``infra/terraform/observability_genai.tf``);
 2. a Prometheus histogram observation — for Grafana on the on-prem profile;
-3. a span attribute — so the score lives inside the trace tree too.
+3. a span attribute — so the score lives inside the trace tree too;
+4. a direct insert into the OWNED ClickHouse store (ADR 0015 §Correction 2b) —
+   the durable, dimensioned home of the row since the G5 jsonl retirement.
 
 The effect: quality becomes a time series you can alert on, exactly like latency.
+The local ``scores.jsonl`` is no longer written; where a pre-retirement file
+exists it stays readable (the degraded/legacy reader + the erasure surface).
 """
 
 from __future__ import annotations
@@ -41,26 +45,16 @@ _WARMED = False
 
 
 def _scores_path() -> Path:
-    """Durable append-only store for scores — the event log behind as-of-T reads.
+    """The legacy jsonl score log — read-only since its G5 retirement (ADR 0015).
 
-    Lives next to the guard audit log (ADR 0011). Unlike ``_RECENT`` (volatile,
-    bounded), this survives restarts and lets ``/observability/*?at=`` recompute
-    quality/SLO/trend as of any instant T.
+    The durable home of score rows is the owned ClickHouse table (§Correction 2b);
+    this path is kept only to READ a pre-retirement file where one exists (the
+    degraded/legacy reader, the backfill source, and the erasure surface). Nothing
+    writes it anymore.
     """
     from tessera.settings import get_settings
 
     return get_settings().guard.audit_file.parent / "scores.jsonl"
-
-
-def _persist(row: dict[str, object]) -> None:
-    """Append one score to the durable store (best effort; never blocks a turn)."""
-    try:
-        path = _scores_path()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as fp:
-            fp.write(json.dumps(row) + "\n")
-    except OSError:
-        pass
 
 
 def _warm_recent() -> None:
@@ -224,11 +218,11 @@ def emit_score(
         "model": model,
     }
     _RECENT.append(row)
-    _persist(row)  # durable event log for as-of-T reads (ADR 0011)
 
-    # Direct insert into the OWNED online-score store (ClickHouse, ADR 0015 §Correction
-    # 2b) — the durable dimensioned home of this row once G4 parity flips; best-effort +
-    # non-blocking here (the jsonl event log above stays the system of record until then).
-    # No Langfuse Score mirror for online rows: the turn's trace already lives in
+    # The OWNED online-score store (ClickHouse, ADR 0015 §Correction 2b) is the durable
+    # home of this row — direct insert, off the hot path. The convenience jsonl write was
+    # retired at G5 (flip + bake held per the ADR's own gate); the file, where one still
+    # exists, is a read-only legacy artifact (and an erasure surface), never written. No
+    # Langfuse Score mirror for online rows: the turn's trace already lives in
     # Langfuse/Phoenix and the row carries trace_id for drill-down.
     clickhouse_scores.record_online_score(row)

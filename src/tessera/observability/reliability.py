@@ -31,8 +31,8 @@ from tessera.observability import (
     tool_validity as tool_validity_mod,
 )
 from tessera.observability.eval.runs import compare_models, load_runs
-from tessera.observability.eval.scores import persisted_scores
 from tessera.observability.eval.series import compute_score_series
+from tessera.observability.spine.adapters import read_scores
 
 __all__ = [
     "ActionRow",
@@ -606,7 +606,7 @@ def compute_reliability(
     # All scores up to T: the window aggregates (funnel) use the in-window slice,
     # but the trend/daily helpers need the *previous* period too (for the
     # period-over-period delta), so they re-window the broader set themselves.
-    scores_asof = persisted_scores(at=anchor_iso)
+    scores_asof = read_scores(anchor_iso)
     scores = [s for s in scores_asof if _in_window(s.get("scored_at"), start, end)]
     funnel_turns: list[tuple[str, str | None, float]] = []
     for s in scores:

@@ -27,8 +27,11 @@ class _RecordingSpan:
 
 
 class TestEvalScoreLabels:
-    def test_emit_score_stamps_agent_and_model_labels(self, tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-        monkeypatch.setattr(scores_mod, "_scores_path", lambda: tmp_path / "scores.jsonl")
+    def test_emit_score_stamps_agent_and_model_labels(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        # The durable leg is the OWNED store since G5 (the jsonl write is retired) —
+        # capture the row handed to the ClickHouse recorder and assert its dimensions.
+        captured: list[dict[str, object]] = []
+        monkeypatch.setattr(scores_mod.clickhouse_scores, "record_online_score", captured.append)
         verdict = JudgeVerdict(metric="faithfulness", score=0.9, rationale="x", judge_model="stub")
         scores_mod.emit_score(verdict, language="fr", agent_id="probe-agent", model="probe-model")
         sample = metrics.registry.get_sample_value(
@@ -41,13 +44,10 @@ class TestEvalScoreLabels:
             },
         )
         assert sample == 0.9
-        # The durable row also carries the model dimension now.
-        rows = [json.loads(line) for line in (tmp_path / "scores.jsonl").read_text().splitlines()]
-        assert rows[-1]["agent_id"] == "probe-agent"
-        assert rows[-1]["model"] == "probe-model"
+        assert captured[-1]["agent_id"] == "probe-agent"
+        assert captured[-1]["model"] == "probe-model"
 
-    def test_missing_dimensions_get_sentinels_not_crash(self, tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-        monkeypatch.setattr(scores_mod, "_scores_path", lambda: tmp_path / "scores.jsonl")
+    def test_missing_dimensions_get_sentinels_not_crash(self) -> None:
         # A unique metric name isolates this series from other tests' emissions in the shared
         # process registry, so the sentinel labels ("none"/"unknown") are asserted exactly.
         verdict = JudgeVerdict(

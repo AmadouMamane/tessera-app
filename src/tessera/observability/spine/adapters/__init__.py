@@ -32,6 +32,7 @@ __all__ = [
     "SpineUnavailableError",
     "fact_source",
     "get_reader",
+    "read_scores",
     "set_reader",
     "spine_source",
 ]
@@ -52,17 +53,28 @@ def spine_source() -> str:
 
 
 def fact_source(fact: str) -> str:
-    """The active source for one fact: its per-fact override, else the global source.
+    """The active source for one fact: per-fact env > explicit global env > default.
 
-    Only the flippable facts (``scores``, ``gating``) honour an override; every other
-    fact reports the global source. This is what the per-signal ``source`` badge shows,
-    so a flipped signal is visibly flipped — never silently.
+    Since G5 (the jsonl retirement, baked per the ADR's own gate) the flippable facts
+    (``scores``, ``gating``) **default to ``spine``** — the owned stores are the system
+    of record; ``jsonl`` remains the *explicit* degraded fallback (set the global or the
+    per-fact env). Every other fact reports the global source. This resolved value is
+    what the per-signal ``source`` badge shows, so a flipped signal is visibly flipped.
     """
     if fact in _FLIPPABLE_FACTS:
         raw = os.environ.get(f"TESSERA_SPINE_SOURCE_{fact.upper()}", "").strip().lower()
         if raw in _SOURCES:
             return raw
+        if _explicit_global() is not None:
+            return spine_source()
+        return "spine"
     return spine_source()
+
+
+def _explicit_global() -> str | None:
+    """The global source when the operator actually set it, else ``None``."""
+    raw = os.environ.get("TESSERA_SPINE_SOURCE", "").strip().lower()
+    return raw if raw in _SOURCES else None
 
 
 class FactRouter:
@@ -109,11 +121,15 @@ def _has_fact_overrides() -> bool:
 
 
 def _build_reader() -> SpineReader:
-    source = spine_source()
-    if not _has_fact_overrides():
+    # An EXPLICIT global source with no per-fact override keeps the legacy whole-reader
+    # semantics (the operator pinned one source for everything — tests and the degraded
+    # fallback use this). Otherwise — including the no-env default since G5 — the
+    # per-fact router serves each fact from its own active source.
+    if _explicit_global() is not None and not _has_fact_overrides():
+        source = spine_source()
         if source == "jsonl":
             return CurrentStoresReader()
-        # Import the spine-backed adapters lazily so the default jsonl path never pulls
+        # Import the spine-backed adapters lazily so the pinned-jsonl path never pulls
         # the owned-store clients (and stays offline/import-light in the fast test loop).
         from tessera.observability.spine.adapters.spine import SpineStoresReader
 
@@ -136,6 +152,26 @@ def get_reader() -> SpineReader:
     if _reader is None:
         _reader = _build_reader()
     return _reader
+
+
+def read_scores(
+    at: str | None = None, agent_id: str | None = None, *, full: bool = False
+) -> list[dict[str, object]]:
+    """Score rows through the active reader seam — the one door every consumer uses (G5).
+
+    Three explicit semantics, mirroring what the direct store calls used to encode:
+    ``at`` set → the as-of-T view; ``at`` ``None`` with ``full=True`` → the full history
+    (read as-of *now*, so the flipped sources serve it identically to the legacy
+    ``persisted_scores()``); ``at`` ``None`` without ``full`` → the live ring cut
+    (``recent_scores`` semantics). Routing through the seam is what lets a consumer follow
+    the per-fact source flip without knowing any store exists.
+    """
+    from datetime import UTC, datetime
+
+    from tessera.observability.spine.scope import Scope
+
+    cutoff = at if at is not None else (datetime.now(UTC).isoformat() if full else None)
+    return get_reader().scores(Scope(at=cutoff, agent_id=agent_id))
 
 
 def set_reader(reader: SpineReader | None) -> None:

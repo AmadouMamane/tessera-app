@@ -13,8 +13,8 @@ to every dimension of :class:`~tessera.observability.spine.scope.Scope`.
 
 from __future__ import annotations
 
-from tessera.observability.eval.scores import persisted_scores
 from tessera.observability.replay import persisted_bundles
+from tessera.observability.spine.adapters import read_scores
 from tessera.observability.spine.scope import Dimension
 
 __all__ = ["dimension_availability"]
@@ -34,7 +34,7 @@ def dimension_availability() -> dict[str, str | None]:
     start); a per-agent/model/language boundary is the earliest row that *carries* that
     dimension — so a read before it is honestly org-wide, never a fabricated per-agent past.
     """
-    scores = persisted_scores(None)
+    scores = read_scores(full=True)
     bundles = persisted_bundles(None)
 
     score_times = [str(s.get("scored_at", "")) for s in scores]

@@ -34,8 +34,8 @@ from tessera.observability import (
     replay as replay_mod,
 )
 from tessera.observability.compliance_tabs import build_tabs
-from tessera.observability.eval.scores import persisted_scores, recent_scores
 from tessera.observability.eval.series import compute_score_series
+from tessera.observability.spine.adapters import read_scores
 
 if TYPE_CHECKING:
     from tessera.observability.catalog_tabs import CatalogTab
@@ -281,7 +281,7 @@ def _signal_values() -> dict[str, float]:
     bundles = replay_mod.recent_bundles()
     citation_turns = [(b.original_answer, b.context) for b in bundles]
     pii_turns = [(b.original_answer, f"{b.question}\n{b.context}") for b in bundles]
-    scores = recent_scores()
+    scores = read_scores()
 
     ai_signals = ai_act_mod.AIActSignals(
         disclosure_enabled=True,
@@ -367,7 +367,7 @@ def _posture_trend() -> tuple[list[float], float | None]:
         composite mean-minus-previous-window delta (0..1), or ``None``.
     """
     try:
-        rows = persisted_scores()
+        rows = read_scores(full=True)
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.compliance: posture_trend failed: {exc}\n")
         return [], None

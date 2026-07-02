@@ -5,7 +5,7 @@ Composes the "Preuves & exporteurs" overview. The page has two halves:
 * **The derivable core is REAL.** The proof posture (artifact counts), the
   artifact distribution and the cryptographic-verification zone are computed
   from the actual durable stores this build owns — the hash-chained audit ledger
-  (:func:`verify_audit_chain`), the eval-score store (``persisted_scores``), the
+  (:func:`verify_audit_chain`), the eval-score store (the reader seam), the
   replay-bundle store (``persisted_bundles``) and the eval-report archive
   (``iter_report_files``). The chain integrity is reported honestly: verified
   when the on-disk chain re-derives, broken (with the first bad index) otherwise.
@@ -24,9 +24,9 @@ from datetime import UTC, datetime
 
 from tessera.guard.audit import verify_audit_chain
 from tessera.observability.eval.report_paths import iter_report_files
-from tessera.observability.eval.scores import persisted_scores
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.replay import persisted_bundles
+from tessera.observability.spine.adapters import read_scores
 from tessera.settings import get_settings
 
 __all__ = ["compute_proofs_overview"]
@@ -146,7 +146,7 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
     # ── Real derivable core ────────────────────────────────────────────────
     chain = verify_audit_chain(get_settings().guard.audit_file)
     n_audit = chain.length
-    n_scores = len(persisted_scores())
+    n_scores = len(read_scores(full=True))
     n_bundles = len(persisted_bundles())
     n_reports = sum(1 for _ in iter_report_files())
     total = n_audit + n_scores + n_bundles + n_reports

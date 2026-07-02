@@ -26,8 +26,8 @@ from tessera.observability import (
     routing_intent as routing_intent_mod,
 )
 from tessera.observability.eval.datasets import load_quality_datasets
-from tessera.observability.eval.scores import recent_scores
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+from tessera.observability.spine.adapters import read_scores
 
 # Localized free-text (fr, de, en) for the mined cause/action labels.
 _TR: dict[str, tuple[str, str, str]] = {
@@ -73,6 +73,7 @@ _TR: dict[str, tuple[str, str, str]] = {
 
 def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
+
 
 __all__ = [
     "Candidate",
@@ -183,7 +184,7 @@ def _action_label(signal: str, evidence: int, lang: str) -> str:
 def compute_improvement(lang: str = "fr") -> ImprovementReport:
     """Assemble the continuous-improvement posture from the real telemetry."""
     lang = _norm_lang(lang)
-    scores = recent_scores()
+    scores = read_scores()
     n_turns = 0
     n_low = 0
     languages_low: dict[str, int] = {}

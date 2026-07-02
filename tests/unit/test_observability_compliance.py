@@ -95,7 +95,7 @@ def test_posture_trend_buckets_real_scores(monkeypatch) -> None:
                 "score": 0.5,
             }
         )
-    monkeypatch.setattr(comp, "persisted_scores", lambda: rows)
+    monkeypatch.setattr(comp, "read_scores", lambda **_kwargs: rows)
     series, delta = comp._posture_trend()
     assert len(series) > 1  # a real multi-point sparkline
     assert all(0.0 <= v <= 1.0 for v in series)
@@ -103,5 +103,5 @@ def test_posture_trend_buckets_real_scores(monkeypatch) -> None:
 
 
 def test_posture_trend_empty_log_yields_no_trend(monkeypatch) -> None:
-    monkeypatch.setattr(comp, "persisted_scores", list)
+    monkeypatch.setattr(comp, "read_scores", lambda **_kwargs: [])
     assert comp._posture_trend() == ([], None)

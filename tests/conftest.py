@@ -39,6 +39,11 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     # reach Postgres (and the append-only table could never be cleaned). The promoted
     # ledger is covered by its own unit (pure chain walk) + contract tests.
     monkeypatch.setenv("TESSERA_LEDGER_DUAL_WRITE", "0")
+    # Since G5 the flippable facts DEFAULT to the owned stores; the unit suite pins the
+    # legacy jsonl source explicitly (tests seed the local stores and must stay offline).
+    # The spine sources themselves are covered by the fact-flip unit tests (which drop
+    # this pin) and by the live contract tests.
+    monkeypatch.setenv("TESSERA_SPINE_SOURCE", "jsonl")
     # Eval reports are partitioned per env (ADR 0014, layer 3); the real archive
     # is a local-dev artifact under eval/reports/local. Pin the resolver at it so
     # the report-backed assertions read real data regardless of the test env.

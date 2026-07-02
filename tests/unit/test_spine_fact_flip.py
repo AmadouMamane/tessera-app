@@ -25,23 +25,28 @@ from tessera.observability.spine.scope import Scope
 
 
 class TestFactSource:
-    def test_defaults_to_the_global_source(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_flippable_facts_default_to_the_owned_stores_since_g5(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        # G5 (flip + bake held): with NO env at all, the owned stores are the system of
+        # record; an EXPLICIT global source remains the operator escape hatch.
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
         monkeypatch.delenv("TESSERA_SPINE_SOURCE_SCORES", raising=False)
-        assert fact_source("scores") == "jsonl"
+        assert fact_source("scores") == "spine"
+        assert fact_source("gating") == "spine"
         monkeypatch.setenv("TESSERA_SPINE_SOURCE", "shadow")
         assert fact_source("scores") == "shadow"
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE", "jsonl")  # the degraded fallback, explicit
+        assert fact_source("scores") == "jsonl"
 
     def test_flippable_fact_honours_its_override(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
-        monkeypatch.setenv("TESSERA_SPINE_SOURCE_SCORES", "spine")
-        assert fact_source("scores") == "spine"
-        assert fact_source("gating") == "jsonl"  # untouched fact stays on the global
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE_SCORES", "jsonl")
+        assert fact_source("scores") == "jsonl"  # per-fact override wins over the default
+        assert fact_source("gating") == "spine"  # untouched fact keeps the G5 default
 
-    def test_invalid_override_falls_back_to_global(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_invalid_override_falls_back_to_the_default_chain(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
         monkeypatch.setenv("TESSERA_SPINE_SOURCE_SCORES", "bogus")
-        assert fact_source("scores") == "jsonl"
+        assert fact_source("scores") == "spine"
 
     def test_non_flippable_fact_ignores_overrides(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         # bundles is lossy-by-design in the spine; audit is the carve-out — no override.
@@ -54,6 +59,7 @@ class TestFactRouter:
     def test_routes_each_fact_to_its_active_source(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
         monkeypatch.setenv("TESSERA_SPINE_SOURCE_SCORES", "spine")
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE_GATING", "jsonl")  # explicit legacy contrast
         current = FakeSpineReader(
             scores=[{"metric": "from-jsonl"}], gating=[{"run_id": "from-jsonl"}]
         )
@@ -75,8 +81,19 @@ class TestFactRouter:
         finally:
             set_reader(None)
 
-    def test_factory_stays_legacy_without_overrides(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_factory_defaults_to_the_router_since_g5(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        # No env at all → the per-fact router (scores/gating on the owned stores).
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
+        monkeypatch.delenv("TESSERA_SPINE_SOURCE_SCORES", raising=False)
+        monkeypatch.delenv("TESSERA_SPINE_SOURCE_GATING", raising=False)
+        set_reader(None)
+        try:
+            assert isinstance(get_reader(), FactRouter)
+        finally:
+            set_reader(None)
+
+    def test_explicit_global_jsonl_is_the_legacy_escape_hatch(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE", "jsonl")
         monkeypatch.delenv("TESSERA_SPINE_SOURCE_SCORES", raising=False)
         monkeypatch.delenv("TESSERA_SPINE_SOURCE_GATING", raising=False)
         set_reader(None)
@@ -92,12 +109,13 @@ class TestDynamicSourceBadge:
 
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
         monkeypatch.setenv("TESSERA_SPINE_SOURCE_SCORES", "spine")
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE_GATING", "jsonl")  # explicit legacy pin
         set_reader(FakeSpineReader(scores=[]))
         try:
             result = await get_registry().read("scores", Scope())
             assert result.report.source == "spine"  # the flip is visible, never stale
             gating = await get_registry().read("gating", Scope())
-            assert gating.report.source == "jsonl"  # unflipped fact stays honest too
+            assert gating.report.source == "jsonl"  # the pinned-legacy fact says so honestly
         finally:
             set_reader(None)
 

@@ -16,8 +16,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from tessera.guard.decisions import load_policy
-from tessera.observability.eval import scores as eval_scores
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+from tessera.observability.spine.adapters import read_scores
 from tessera.settings import LLMProfile, get_settings
 
 __all__ = ["compute_agent_console"]
@@ -131,7 +131,7 @@ def _active_model() -> tuple[str, str]:
 
 
 def _score_rows(metric: str) -> list[float]:
-    rows = eval_scores.recent_scores()
+    rows = read_scores()
     values: list[float] = []
     for row in rows:
         if row.get("metric") != metric:

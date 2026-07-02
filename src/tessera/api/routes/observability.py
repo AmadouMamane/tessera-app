@@ -125,8 +125,8 @@ from tessera.observability._asof import occurred_before
 from tessera.observability.eval.calibration import calibrate, gold_consensus, load_gold_set
 from tessera.observability.eval.ensemble import evaluate_ensemble
 from tessera.observability.eval.judge import LLMJudge
-from tessera.observability.eval.scores import persisted_scores, recent_scores
 from tessera.observability.eval.sycophancy import detect_sycophancy
+from tessera.observability.spine.adapters import read_scores
 from tessera.observability.spine.availability import dimension_availability
 from tessera.observability.spine.scope import Scope
 from tessera.observability.spine.snapshot import compute_snapshot
@@ -270,7 +270,7 @@ def _scores_for(at: str | None, agent_id: str | None = None) -> list[dict[str, o
 
     Scoped to ``agent_id`` when set (per-agent SLO / trend / funnel / scores).
     """
-    return persisted_scores(at, agent_id) if at else recent_scores(agent_id)
+    return read_scores(at, agent_id)
 
 
 def _data_availability_start(
@@ -434,7 +434,7 @@ async def observability_data_range() -> dict[str, object]:
     This bounds the time-rail "Aller à une date" calendar honestly: picking a
     window end before ``start`` would land on an empty window — no persisted signal
     exists that far back. The range is derived from the *same durable sources* the
-    as-of-T reads recompute from — the full eval score log (``persisted_scores``,
+    as-of-T reads recompute from — the full eval score log (the reader seam,
     not the bounded live ring) and the tamper-evident guard audit log — so it never
     promises data the cockpit cannot actually show. ``start`` is null when no data
     exists yet. Timestamps are ISO 8601; ``start`` is the lexicographic minimum,
@@ -442,7 +442,7 @@ async def observability_data_range() -> dict[str, object]:
     """
     from datetime import UTC, datetime
 
-    scores = persisted_scores(None)
+    scores = read_scores(full=True)
     audit_entries = _read_audit_entries()
     start = _data_availability_start(scores, audit_entries)
     return {
@@ -565,7 +565,7 @@ async def observability_score_series(
         with contextlib.suppress(ValueError):
             end = datetime.fromisoformat(at)
     series = compute_score_series(
-        persisted_scores(at, _agent_or_none(agent)),
+        read_scores(at, _agent_or_none(agent), full=True),
         metric=metric,
         end=end,
         days=days,
@@ -599,7 +599,7 @@ async def observability_judge_drift(
         with contextlib.suppress(ValueError):
             end = datetime.fromisoformat(at)
     drift = compute_judge_drift(
-        persisted_scores(at), metric=metric, end=end, days=days, n_buckets=buckets
+        read_scores(at, full=True), metric=metric, end=end, days=days, n_buckets=buckets
     )
     return {**asdict(drift), "as_of": at}
 
@@ -633,7 +633,7 @@ async def observability_regression_risk(
         with contextlib.suppress(ValueError):
             end = datetime.fromisoformat(at)
     risk = compute_regression_risk(
-        persisted_scores(at),
+        read_scores(at, full=True),
         release_status(),
         end=end,
         metric=metric,
@@ -665,7 +665,9 @@ async def observability_signal_status_trend(
     if at:
         with contextlib.suppress(ValueError):
             end = datetime.fromisoformat(at)
-    trend = compute_status_counts_trend(persisted_scores(at), metric=metric, end=end, days=days)
+    trend = compute_status_counts_trend(
+        read_scores(at, full=True), metric=metric, end=end, days=days
+    )
     return {**asdict(trend), "as_of": at}
 
 
@@ -682,7 +684,7 @@ async def observability_metric_pairs(
     """
     from tessera.observability.eval.series import compute_metric_pairs
 
-    pairs = compute_metric_pairs(persisted_scores(at), x_metric=x, y_metric=y)
+    pairs = compute_metric_pairs(read_scores(at, full=True), x_metric=x, y_metric=y)
     return {**asdict(pairs), "as_of": at}
 
 
@@ -1975,7 +1977,7 @@ async def observability_memory() -> dict[str, object]:
 @router.get("/observability/erasure-coverage")
 async def observability_erasure_coverage() -> dict[str, object]:
     """The telemetry-erasure surface: conversations, bundles, scores in scope (#180)."""
-    return asdict(erasure_mod.coverage(replay_mod.recent_bundles(), recent_scores()))
+    return asdict(erasure_mod.coverage(replay_mod.recent_bundles(), read_scores()))
 
 
 @router.get("/observability/erasure/{conversation_id}")
@@ -1985,7 +1987,7 @@ async def observability_erasure_preview(conversation_id: str) -> dict[str, objec
         erasure_mod.footprint(
             conversation_id,
             bundles=replay_mod.recent_bundles(),
-            scores=recent_scores(),
+            scores=read_scores(),
         )
     )
 
@@ -2632,7 +2634,7 @@ async def observability_sessions(agent: str = "all") -> dict[str, object]:
     ``agent`` scopes to one agent's scored turns (``all`` = org view).
     """
     turns: list[tuple[str | None, float]] = []
-    for score in recent_scores(_agent_or_none(agent)):
+    for score in read_scores(agent_id=_agent_or_none(agent)):
         conv = score.get("conversation_id")
         raw = score.get("score", 0.0)
         turns.append((conv if isinstance(conv, str) else None, float(raw)))  # type: ignore[arg-type]
