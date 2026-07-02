@@ -3954,8 +3954,9 @@
           "how": "Anzahl der vom Beweis-Pipeline erstellten Packs."
         },
         "artifacts": {
-          "what": "Die Zahl der kryptografisch signierten Artefakte in den Packs.",
-          "how": "Summe der versiegelten Artefakte (Hash + Signatur)."
+          "what": "Die Gesamtzahl der realen Beweisartefakte über alle Familien.",
+          "how": "Summe der realen Zählungen: Audit-Einträge + Bewertungs-Scores + Replay-Bundles + Berichte.",
+          "source": "Audit-Log S1, scores.jsonl, bundles.jsonl, eval/reports/."
         },
         "export_rate": {
           "what": "Der Anteil der erfolgreich abgeschlossenen Beweis-Exporte.",
@@ -3972,6 +3973,31 @@
         "retention": {
           "what": "Wie gut Aufbewahrungspflichten durch aufbewahrte Beweise abgedeckt sind.",
           "how": "Abgedeckte Pflichten ÷ anwendbare Pflichten."
+        },
+        "audit_entries": {
+          "what": "Die Anzahl der Einträge im hash-verketteten Audit-Log.",
+          "how": "Kettenlänge, neu abgeleitet durch verify_audit_chain.",
+          "source": "Audit-Log S1 (hash-verkettet)."
+        },
+        "eval_scores": {
+          "what": "Die Anzahl dauerhafter Bewertungs-Scores (einer pro bewertetem Turn).",
+          "how": "Zählung des Score-Stores (persisted_scores).",
+          "source": "scores.jsonl (S1)."
+        },
+        "replays": {
+          "what": "Die Anzahl erfasster Replay-Bundles.",
+          "how": "Zählung des Replay-Stores (persisted_bundles).",
+          "source": "bundles.jsonl (S1)."
+        },
+        "reports": {
+          "what": "Die Anzahl archivierter Berichte des Bewertungs-Harness.",
+          "how": "Zählung der Dateien im Ordner eval/reports (pro Umgebung).",
+          "source": "Berichtsarchiv (ADR 0014)."
+        },
+        "chain": {
+          "what": "Die Integrität der hash-verketteten Audit-Kette.",
+          "how": "verify_audit_chain leitet jeden Hash neu ab; 100 % wenn kein Bruch.",
+          "source": "Audit-Log S1."
         }
       },
       "zone": {
@@ -4030,11 +4056,16 @@
     },
     "kpi": {
       "packs": "Erzeugte Packs",
-      "artifacts": "Signierte Artefakte",
+      "artifacts": "Beweisartefakte",
       "export_rate": "Export-Rate",
       "exporters": "Aktive Exporteure",
       "latency": "Ø Latenz",
-      "retention": "Aufbewahrungs-Abdeckung"
+      "retention": "Aufbewahrungs-Abdeckung",
+      "audit_entries": "Audit-Einträge",
+      "eval_scores": "Bewertungs-Scores",
+      "replays": "Replay-Bundles",
+      "reports": "Bewertungsberichte",
+      "chain": "Ketten-Integrität"
     },
     "pipeline": {
       "collecte": "Erfassung",
@@ -4042,7 +4073,8 @@
       "signature": "Signatur",
       "pack": "Pack",
       "export": "Export",
-      "chainOk": "Nachweiskette intakt"
+      "chainOk": "Nachweiskette intakt",
+      "chainBroken": "Beweiskette unterbrochen"
     },
     "pack": {
       "contents": "Inhalt",
@@ -4099,7 +4131,8 @@
       "validSignatures": "Gültige Signaturen",
       "algorithm": "Algorithmus",
       "keyRotation": "Schlüsselrotation",
-      "anomalies": "Anomalien"
+      "anomalies": "Anomalien",
+      "chainLength": "Kettenlänge"
     },
     "ccCol": {
       "caseId": "Case-ID",
@@ -4123,7 +4156,9 @@
     "integrity": {
       "intact": "Intakt",
       "noAnomaly": "Keine Anomalie erkannt",
-      "lastCheck": "Letzte Prüfung"
+      "lastCheck": "Letzte Prüfung",
+      "broken": "Unterbrochen",
+      "hasAnomaly": "Anomalie in der Kette erkannt"
     },
     "queue": {
       "pendingSignature": "Warten auf Signatur",

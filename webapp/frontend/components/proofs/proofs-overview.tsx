@@ -16,6 +16,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import {
   TemporalRail,
@@ -116,6 +117,7 @@ export function ProofsOverview() {
             label={t("zone.pipeline")}
             info={<ExplainInfo k="zone.pipeline" title={t("zone.pipeline")} />}
           >
+            <SyntheticNotice signalId="evidence_export" compact />
             <div className="grid gap-3 xl:grid-cols-12">
               <Pipeline t={t} data={data} className="xl:col-span-7" />
               <CurrentPack t={t} data={data} className="xl:col-span-5" />
@@ -150,6 +152,7 @@ export function ProofsOverview() {
               </Link>
             }
           >
+            <SyntheticNotice signalId="evidence_export" compact />
             <Exporters t={t} data={data} />
           </Zone>
 
@@ -170,6 +173,7 @@ export function ProofsOverview() {
               <Crypto t={t} data={data} />
             </Zone>
             <Zone label={t("zone.controlCases")}>
+              <SyntheticNotice signalId="evidence_export" compact />
               <ControlCases t={t} data={data} />
             </Zone>
           </div>
@@ -178,6 +182,7 @@ export function ProofsOverview() {
             label={t("zone.retention")}
             info={<ExplainInfo k="zone.retention" title={t("zone.retention")} />}
           >
+            <SyntheticNotice signalId="evidence_export" compact />
             <Retention t={t} data={data} />
           </Zone>
         </div>
@@ -268,8 +273,14 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
             </li>
           ))}
         </ol>
-        <p className="inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--tessera-green)]">
-          <ShieldCheck className="h-3.5 w-3.5" /> {t("pipeline.chainOk")}
+        <p
+          className={cn(
+            "inline-flex items-center gap-1.5 text-[0.7rem]",
+            data.chain_verified ? "text-[var(--tessera-green)]" : "text-red-300",
+          )}
+        >
+          <ShieldCheck className="h-3.5 w-3.5" />{" "}
+          {data.chain_verified ? t("pipeline.chainOk") : t("pipeline.chainBroken")}
         </p>
       </div>
     </Panel>
@@ -319,6 +330,7 @@ function CurrentPack({ t, data, className }: { t: T; data: Data; className?: str
 function RecentPacks({ t, data, className }: { t: T; data: Data; className?: string }) {
   return (
     <Panel title="" className={className} action={<ViewAll label={t("viewAll.packs")} />}>
+      <SyntheticNotice signalId="evidence_export" compact />
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.7rem]">
           <thead>
@@ -432,8 +444,12 @@ function Crypto({ t, data }: { t: T; data: Data }) {
         </div>
         <dl className="flex min-w-0 flex-1 flex-col gap-1.5 text-[0.7rem]">
           <KV label={t("crypto.algorithm")} value={c.algorithm} mono />
-          <KV label={t("crypto.keyRotation")} value={c.key_rotation} />
-          <KV label={t("crypto.anomalies")} value={String(c.anomalies)} tone="text-emerald-300" />
+          <KV label={t("crypto.chainLength")} value={c.chain_length} />
+          <KV
+            label={t("crypto.anomalies")}
+            value={String(c.anomalies)}
+            tone={c.anomalies === 0 ? "text-emerald-300" : "text-red-300"}
+          />
         </dl>
       </div>
     </Panel>
@@ -541,15 +557,29 @@ function ProofsRail({ t, data }: { t: T; data: Data }) {
     <aside className="flex min-w-0 flex-col gap-3">
       <Panel title={t("zone.integrity")}>
         <div className="flex items-center gap-3">
-          <ShieldCheck className="h-9 w-9 shrink-0 text-emerald-400" />
+          <ShieldCheck
+            className={cn(
+              "h-9 w-9 shrink-0",
+              data.chain_verified ? "text-emerald-400" : "text-red-400",
+            )}
+          />
           <div>
-            <p className="text-sm font-semibold text-emerald-300">{t("integrity.intact")}</p>
+            <p
+              className={cn(
+                "text-sm font-semibold",
+                data.chain_verified ? "text-emerald-300" : "text-red-300",
+              )}
+            >
+              {data.chain_verified ? t("integrity.intact") : t("integrity.broken")}
+            </p>
             <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
-              {t("integrity.noAnomaly")}
+              {data.chain_verified ? t("integrity.noAnomaly") : t("integrity.hasAnomaly")}
             </p>
           </div>
         </div>
       </Panel>
+
+      <SyntheticNotice signalId="evidence_export" compact />
 
       <Panel title={t("zone.quickActions")}>
         <ul className="flex flex-col gap-1">

@@ -1,21 +1,33 @@
 """Proofs & exporter cockpit overview (page #15).
 
-Composes the "Preuves & exporteurs" overview: the proof posture (packs
-generated, signed artifacts, export rate, active exporters, latency, retention
-coverage), the proof-assembly pipeline, the current evidence pack, the recent
-packs, the artifact distribution, the exporters & destinations, the
-cryptographic verification, the control-case-linked proofs, the retention
-obligations and the live export journal.
+Composes the "Preuves & exporteurs" overview. The page has two halves:
 
-The dataset is a deterministic reference fixture (no live proof store in this
-build); values are stable across calls so the page never "dances".
+* **The derivable core is REAL.** The proof posture (artifact counts), the
+  artifact distribution and the cryptographic-verification zone are computed
+  from the actual durable stores this build owns — the hash-chained audit ledger
+  (:func:`verify_audit_chain`), the eval-score store (``persisted_scores``), the
+  replay-bundle store (``persisted_bundles``) and the eval-report archive
+  (``iter_report_files``). The chain integrity is reported honestly: verified
+  when the on-disk chain re-derives, broken (with the first bad index) otherwise.
+
+* **The export / SIEM subsystem is a demonstration.** Evidence-pack assembly,
+  signing and export, the exporters & destinations, control-case linkage, the
+  retention obligations and the export journal describe a full enterprise
+  subsystem that does not exist in this build. Those fields stay a deterministic
+  reference fixture, and the frontend marks their zones with the registry-driven
+  ``evidence_export`` synthetic notice — never presenting them as live.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tessera.guard.audit import verify_audit_chain
+from tessera.observability.eval.report_paths import iter_report_files
+from tessera.observability.eval.scores import persisted_scores
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+from tessera.observability.replay import persisted_bundles
+from tessera.settings import get_settings
 
 __all__ = ["compute_proofs_overview"]
 
@@ -32,6 +44,16 @@ _ART_COLOR = {
 # (Prod / Credit Aurore / FR), format codes (JSONL/PDF) and obligation codes
 # (DORA/BaFin/RGPD) stay verbatim; only human prose is translated.
 _TR: dict[str, tuple[str, str, str]] = {
+    "alert_chain_ok": (
+        "Chaîne d'audit vérifiée",
+        "Audit-Kette verifiziert",
+        "Audit chain verified",
+    ),
+    "alert_chain_broken": (
+        "Chaîne d'audit rompue à l'entrée {n}",
+        "Audit-Kette bei Eintrag {n} unterbrochen",
+        "Audit chain broken at entry {n}",
+    ),
     "alert_degraded": ("1 destination dégradée", "1 Ziel degradiert", "1 destination degraded"),
     "alert_noloss": ("0 perte de données", "0 Datenverlust", "0 data loss"),
     "u_years": ("{n} ans", "{n} Jahre", "{n} yrs"),
@@ -65,6 +87,11 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Beweiskette intakt",
         "Proof chain intact",
     ),
+    "footer_chain_broken": (
+        "Chaîne de preuve rompue (entrée {n})",
+        "Beweiskette unterbrochen (Eintrag {n})",
+        "Proof chain broken (entry {n})",
+    ),
 }
 
 
@@ -78,6 +105,11 @@ def _years(n: int, lang: str) -> str:
 
 def _days(n: int, lang: str) -> str:
     return _TR["u_days"][_LANG_IDX.get(lang, 0)].format(n=n)
+
+
+def _fmt_int(n: int) -> str:
+    """Group thousands with a thin space (matches the normative's ``1 248``)."""
+    return f"{n:,}".replace(",", " ")
 
 
 def _kpi(
@@ -95,33 +127,95 @@ def _kpi(
 def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Proofs & exporter overview payload.
 
+    The proof-posture KPIs, the artifact distribution and the cryptographic
+    verification are derived from real stores (audit ledger, eval scores, replay
+    bundles, eval reports); the evidence-pack assembly/export and SIEM chrome are
+    a deterministic demonstration flagged ``evidence_export`` in the frontend.
+
     Args:
         lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
 
     Returns:
-        A JSON-serialisable mapping with the proof posture KPIs, the assembly
-        pipeline, the current evidence pack, the recent packs, the artifact
-        distribution, the exporters & destinations, the cryptographic
-        verification, the control-case proofs, the retention obligations and
-        the export journal.
+        A JSON-serialisable mapping. ``chain_verified`` reflects the real audit
+        chain; the ``crypto`` zone, the ``kpis`` and ``artifacts_distribution``
+        are real; the pack/exporter/retention/journal fields are demonstration.
     """
     lang = _norm_lang(lang)
     now = datetime.now(UTC)
 
+    # ── Real derivable core ────────────────────────────────────────────────
+    chain = verify_audit_chain(get_settings().guard.audit_file)
+    n_audit = chain.length
+    n_scores = len(persisted_scores())
+    n_bundles = len(persisted_bundles())
+    n_reports = sum(1 for _ in iter_report_files())
+    total = n_audit + n_scores + n_bundles + n_reports
+
+    def _pct(n: int) -> int:
+        return round(n / total * 100) if total else 0
+
+    def _flat(v: int) -> list[int]:
+        # Honest: the current real count, no fabricated trend line.
+        return [v] * 7
+
+    # Percentage of the chain that re-derives cleanly (100% when intact; when a
+    # break is found at index b, the b entries before it are the intact prefix).
+    intact_pct = (
+        100
+        if chain.verified
+        else (round((chain.broken_at or 0) / chain.length * 100) if chain.length else 0)
+    )
+
     kpis = [
-        _kpi("packs", "42", "+16%", True, [30, 33, 35, 37, 39, 40, 42]),
-        _kpi("artifacts", "1 248", "+12%", True, [980, 1040, 1100, 1150, 1190, 1220, 1248]),
-        _kpi("export_rate", "99.6%", "+0.3 pp", True, [98, 98, 99, 99, 99, 99, 100]),
-        _kpi("exporters", "8 / 8", "0", True, [8, 8, 8, 8, 8, 8, 8]),
-        _kpi("latency", "18 s", "-8%", False, [24, 23, 22, 21, 20, 19, 18]),
-        _kpi("retention", "100%", "0 pp", True, [100, 100, 100, 100, 100, 100, 100]),
+        _kpi("artifacts", _fmt_int(total), "0", True, _flat(total)),
+        _kpi("audit_entries", _fmt_int(n_audit), "0", True, _flat(n_audit)),
+        _kpi("eval_scores", _fmt_int(n_scores), "0", True, _flat(n_scores)),
+        _kpi("replays", _fmt_int(n_bundles), "0", True, _flat(n_bundles)),
+        _kpi("reports", _fmt_int(n_reports), "0", True, _flat(n_reports)),
+        _kpi("chain", f"{intact_pct}%", "0", True, _flat(intact_pct)),
     ]
 
-    alerts = [
-        {"level": "warn", "label": _t("alert_degraded", lang)},
-        {"level": "ok", "label": _t("alert_noloss", lang)},
+    if chain.verified:
+        alerts = [{"level": "ok", "label": _t("alert_chain_ok", lang)}]
+    else:
+        alerts = [
+            {
+                "level": "bad",
+                "label": _t("alert_chain_broken", lang).format(n=chain.broken_at),
+            }
+        ]
+
+    # Real artifact families (durable stores only). manifests/snapshots have no
+    # real store in this build, so they are omitted rather than fabricated.
+    _families = [
+        ("audit_logs", n_audit),
+        ("reports", n_reports),
+        ("eval_scores", n_scores),
+        ("replays", n_bundles),
+    ]
+    _families.sort(key=lambda kv: kv[1], reverse=True)
+    artifacts_distribution = [
+        {"key": k, "count": n, "pct": _pct(n), "color": _ART_COLOR[k]} for k, n in _families
     ]
 
+    crypto = {
+        "valid_signatures": f"{intact_pct}%",
+        "algorithm": "SHA-256",
+        "chain_length": _fmt_int(n_audit),
+        "anomalies": 0 if chain.verified else 1,
+    }
+
+    footer_chain = (
+        _t("footer_chain", lang)
+        if chain.verified
+        else _t("footer_chain_broken", lang).format(n=chain.broken_at)
+    )
+
+    # ── SIEM / export subsystem — demonstration (flagged evidence_export) ───
+    # These describe evidence-pack assembly, signing, export, destinations,
+    # control-case linkage, retention and the export journal: a subsystem this
+    # build does not implement. Kept as a deterministic reference fixture; the
+    # frontend marks each zone with the registry-driven synthetic notice.
     pipeline = [
         {"key": "collecte", "count": "1 248", "status": "ok"},
         {"key": "normalisation", "count": "1 248", "status": "ok"},
@@ -198,15 +292,6 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
         },
     ]
 
-    artifacts_distribution = [
-        {"key": "audit_logs", "count": 512, "pct": 41, "color": _ART_COLOR["audit_logs"]},
-        {"key": "eval_scores", "count": 256, "pct": 21, "color": _ART_COLOR["eval_scores"]},
-        {"key": "replays", "count": 192, "pct": 15, "color": _ART_COLOR["replays"]},
-        {"key": "manifests", "count": 128, "pct": 10, "color": _ART_COLOR["manifests"]},
-        {"key": "snapshots", "count": 96, "pct": 8, "color": _ART_COLOR["snapshots"]},
-        {"key": "reports", "count": 64, "pct": 5, "color": _ART_COLOR["reports"]},
-    ]
-
     exporters = [
         {
             "destination": "SIEM / SOC",
@@ -249,13 +334,6 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
             "retention": _days(180, lang),
         },
     ]
-
-    crypto = {
-        "valid_signatures": "100%",
-        "algorithm": "Ed25519",
-        "key_rotation": "12/05/2026",
-        "anomalies": 0,
-    }
 
     control_case_proofs = [
         {
@@ -325,20 +403,21 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
     return {
         "generated_at": now.isoformat(),
         "period_days": 7,
-        "updated_at": "11:54:01",
+        "updated_at": now.strftime("%H:%M:%S"),
+        "chain_verified": chain.verified,
         "kpis": kpis,
         "alerts": alerts,
-        "alert_count": 2,
+        "alert_count": len(alerts),
         "pipeline": pipeline,
         "current_pack": current_pack,
         "recent_packs": recent_packs,
         "artifacts_distribution": artifacts_distribution,
-        "artifacts_total": 1248,
+        "artifacts_total": total,
         "exporters": exporters,
         "crypto": crypto,
         "control_case_proofs": control_case_proofs,
         "retention": retention,
         "export_journal": export_journal,
         "queue": queue,
-        "footer": {"chain": _t("footer_chain", lang), "source": "YAML · Git"},
+        "footer": {"chain": footer_chain, "source": "YAML · Git"},
     }

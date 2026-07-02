@@ -3954,8 +3954,9 @@
           "how": "Compte des packs créés par le pipeline de preuve."
         },
         "artifacts": {
-          "what": "Le nombre d'artefacts signés cryptographiquement et inclus dans les packs.",
-          "how": "Somme des artefacts scellés (hash + signature)."
+          "what": "Le total des artefacts de preuve réels sur toutes les familles.",
+          "how": "Somme des comptes réels : entrées d'audit + scores d'évaluation + bundles de rejeu + rapports.",
+          "source": "Journal d'audit S1, scores.jsonl, bundles.jsonl, eval/reports/."
         },
         "export_rate": {
           "what": "La part des exports de preuves menés à terme avec succès.",
@@ -3972,6 +3973,31 @@
         "retention": {
           "what": "La couverture des obligations de rétention par les preuves conservées.",
           "how": "Obligations couvertes ÷ obligations applicables."
+        },
+        "audit_entries": {
+          "what": "Le nombre d'entrées du journal d'audit hash-chaîné.",
+          "how": "Longueur de la chaîne re-dérivée par verify_audit_chain.",
+          "source": "Journal d'audit S1 (hash-chaîné)."
+        },
+        "eval_scores": {
+          "what": "Le nombre de scores d'évaluation durables (un par tour évalué).",
+          "how": "Comptage du store de scores (persisted_scores).",
+          "source": "scores.jsonl (S1)."
+        },
+        "replays": {
+          "what": "Le nombre de bundles de rejeu capturés.",
+          "how": "Comptage du store de rejeu (persisted_bundles).",
+          "source": "bundles.jsonl (S1)."
+        },
+        "reports": {
+          "what": "Le nombre de rapports du harnais d'évaluation archivés.",
+          "how": "Comptage des fichiers du dossier eval/reports (par environnement).",
+          "source": "Archive de rapports (ADR 0014)."
+        },
+        "chain": {
+          "what": "L'intégrité de la chaîne d'audit hash-chaînée.",
+          "how": "verify_audit_chain re-dérive chaque hash ; 100 % si aucune rupture.",
+          "source": "Journal d'audit S1."
         }
       },
       "zone": {
@@ -4030,11 +4056,16 @@
     },
     "kpi": {
       "packs": "Packs générés",
-      "artifacts": "Artefacts signés",
+      "artifacts": "Artefacts de preuve",
       "export_rate": "Taux d’export",
       "exporters": "Exporteurs actifs",
       "latency": "Latence moy.",
-      "retention": "Couverture rétention"
+      "retention": "Couverture rétention",
+      "audit_entries": "Entrées d'audit",
+      "eval_scores": "Scores d'évaluation",
+      "replays": "Bundles de rejeu",
+      "reports": "Rapports d'évaluation",
+      "chain": "Intégrité de la chaîne"
     },
     "pipeline": {
       "collecte": "Collecte",
@@ -4042,7 +4073,8 @@
       "signature": "Signature",
       "pack": "Pack",
       "export": "Export",
-      "chainOk": "Chaîne de preuve intacte"
+      "chainOk": "Chaîne de preuve intacte",
+      "chainBroken": "Chaîne de preuve rompue"
     },
     "pack": {
       "contents": "Contenu",
@@ -4099,7 +4131,8 @@
       "validSignatures": "Signatures valides",
       "algorithm": "Algorithme",
       "keyRotation": "Rotation des clés",
-      "anomalies": "Anomalies"
+      "anomalies": "Anomalies",
+      "chainLength": "Longueur de chaîne"
     },
     "ccCol": {
       "caseId": "Case ID",
@@ -4123,7 +4156,9 @@
     "integrity": {
       "intact": "Intacte",
       "noAnomaly": "Aucune anomalie détectée",
-      "lastCheck": "Dernier contrôle"
+      "lastCheck": "Dernier contrôle",
+      "broken": "Rompue",
+      "hasAnomaly": "Anomalie détectée dans la chaîne"
     },
     "queue": {
       "pendingSignature": "En attente de signature",

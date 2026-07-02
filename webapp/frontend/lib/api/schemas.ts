@@ -2513,6 +2513,7 @@ export const ProofsOverviewSchema = z.object({
   generated_at: z.string(),
   period_days: z.number().int(),
   updated_at: z.string(),
+  chain_verified: z.boolean(),
   kpis: z.array(PfKpiSchema),
   alerts: z.array(z.object({ level: z.enum(["ok", "warn", "bad"]), label: z.string() })),
   alert_count: z.number().int(),
@@ -2552,7 +2553,7 @@ export const ProofsOverviewSchema = z.object({
   crypto: z.object({
     valid_signatures: z.string(),
     algorithm: z.string(),
-    key_rotation: z.string(),
+    chain_length: z.string(),
     anomalies: z.number().int(),
   }),
   control_case_proofs: z.array(

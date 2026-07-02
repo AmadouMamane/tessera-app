@@ -144,6 +144,11 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # version timeline / KPIs / active policies), so it is flagged synthetic — the page
     # carries a visible "demonstration data" notice rather than reading as live governance.
     _cap("policies", frozenset(), synthetic=True),
+    # The Proofs page's export half — evidence-pack assembly/signing/export, exporters &
+    # destinations, control-case linkage, retention obligations, export journal — is a SIEM
+    # subsystem this build does not implement. Flagged synthetic so those zones carry the
+    # demonstration notice; the page's artifact counts and audit-chain integrity are REAL.
+    _cap("evidence_export", frozenset(), synthetic=True),
 )
 
 CAPABILITIES: dict[str, SignalCapability] = {c.id: c for c in _DECLARATIONS}

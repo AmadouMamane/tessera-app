@@ -3954,8 +3954,9 @@
           "how": "Count of packs created by the proof pipeline."
         },
         "artifacts": {
-          "what": "The number of cryptographically signed artifacts bundled in the packs.",
-          "how": "Sum of sealed artifacts (hash + signature)."
+          "what": "The total of real proof artifacts across all families.",
+          "how": "Sum of real counts: audit entries + evaluation scores + replay bundles + reports.",
+          "source": "Audit log S1, scores.jsonl, bundles.jsonl, eval/reports/."
         },
         "export_rate": {
           "what": "The share of evidence exports completed successfully.",
@@ -3972,6 +3973,31 @@
         "retention": {
           "what": "How well retention obligations are covered by retained evidence.",
           "how": "Covered obligations ÷ applicable obligations."
+        },
+        "audit_entries": {
+          "what": "The number of entries in the hash-chained audit log.",
+          "how": "Chain length re-derived by verify_audit_chain.",
+          "source": "Audit log S1 (hash-chained)."
+        },
+        "eval_scores": {
+          "what": "The number of durable evaluation scores (one per scored turn).",
+          "how": "Count of the score store (persisted_scores).",
+          "source": "scores.jsonl (S1)."
+        },
+        "replays": {
+          "what": "The number of captured replay bundles.",
+          "how": "Count of the replay store (persisted_bundles).",
+          "source": "bundles.jsonl (S1)."
+        },
+        "reports": {
+          "what": "The number of archived evaluation-harness reports.",
+          "how": "Count of files in eval/reports (per environment).",
+          "source": "Report archive (ADR 0014)."
+        },
+        "chain": {
+          "what": "The integrity of the hash-chained audit chain.",
+          "how": "verify_audit_chain re-derives every hash; 100% if no break.",
+          "source": "Audit log S1."
         }
       },
       "zone": {
@@ -4030,11 +4056,16 @@
     },
     "kpi": {
       "packs": "Packs generated",
-      "artifacts": "Signed artifacts",
+      "artifacts": "Proof artifacts",
       "export_rate": "Export rate",
       "exporters": "Active exporters",
       "latency": "Avg latency",
-      "retention": "Retention coverage"
+      "retention": "Retention coverage",
+      "audit_entries": "Audit entries",
+      "eval_scores": "Evaluation scores",
+      "replays": "Replay bundles",
+      "reports": "Evaluation reports",
+      "chain": "Chain integrity"
     },
     "pipeline": {
       "collecte": "Collection",
@@ -4042,7 +4073,8 @@
       "signature": "Signature",
       "pack": "Pack",
       "export": "Export",
-      "chainOk": "Proof chain intact"
+      "chainOk": "Proof chain intact",
+      "chainBroken": "Proof chain broken"
     },
     "pack": {
       "contents": "Contents",
@@ -4099,7 +4131,8 @@
       "validSignatures": "Valid signatures",
       "algorithm": "Algorithm",
       "keyRotation": "Key rotation",
-      "anomalies": "Anomalies"
+      "anomalies": "Anomalies",
+      "chainLength": "Chain length"
     },
     "ccCol": {
       "caseId": "Case ID",
@@ -4123,7 +4156,9 @@
     "integrity": {
       "intact": "Intact",
       "noAnomaly": "No anomaly detected",
-      "lastCheck": "Last check"
+      "lastCheck": "Last check",
+      "broken": "Broken",
+      "hasAnomaly": "Anomaly detected in the chain"
     },
     "queue": {
       "pendingSignature": "Awaiting signature",

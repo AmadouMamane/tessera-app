@@ -83,6 +83,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   replay_shadow: cap(ORG, { synthetic: true }),
   // Policies & guardrails overview is a full demonstration fixture (hardcoded) today.
   policies: cap(ORG, { synthetic: true }),
+  // Proofs page — the export half (pack assembly/signing/export, exporters, destinations,
+  // retention, journal) is a SIEM subsystem this build does not implement; its artifact
+  // counts and audit-chain integrity are real. The export zones carry the demo notice.
+  evidence_export: cap(ORG, { synthetic: true }),
   // UI control-row aliases (the overview "critical controls" table uses these ids).
   faithfulness: cap(AGENT_TIME),
   pii: cap(AGENT_TIME),
