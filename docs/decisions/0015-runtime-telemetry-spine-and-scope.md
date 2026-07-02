@@ -1,8 +1,10 @@
 # 0015 — Runtime telemetry spine & first-class Scope for multi-dimensional cockpit signals
 
 - Status: **accepted** (decision 2026-07-01) — implementation phased and pending
-  (see §Migration plan). **Amended 2026-07-02 (see §Amendment 1): eval-score detail moves to an
-  owned Postgres table; Langfuse is demoted to a best-effort mirror, no longer a spine source.**
+  (see §Migration plan). **Amended 2026-07-02: (§Amendment 1) eval-score detail moves off Langfuse
+  — Langfuse becomes a best-effort mirror, no longer a spine source; (§Amendment 2) split by nature
+  — GATING socle → owned Postgres (bounded, opposable), ONLINE monitoring → partitioned Postgres now
+  + columnar at scale, aggregates stay Prometheus.**
   Supersedes the Phase-1 per-signal `?agent=` wiring shipped in this branch, which is absorbed as
   the transitional state.
 - Date: 2026-07-01
@@ -61,6 +63,107 @@ scores* ("move source to Langfuse scores" → **to Postgres**); §Read-model spl
 Langfuse" → **detail on the owned store; Langfuse is a mirror, not a read source**); §Open question
 *Score model in Langfuse* (resolved — Langfuse is no longer the score source). The revised migration
 sequence lives in `0015-execution-status.md`.
+
+## Amendment 2 (2026-07-02) — two NATURES of eval score (volume ≠, home ≠), not "all → Postgres"
+
+**Status: accepted.** Refines §Amendment 1, which said "eval-score detail → one owned Postgres
+table." That conflated two facts with **different volumes and different roles**. They get different
+homes. Grounded in the real mechanism (`src/tessera/observability/eval/online.py`): online eval
+judges every *flagged* turn and a **`online_eval_sample_rate` (default 0.1)** sample of the rest,
+scoring **3 metrics per judged turn** (faithfulness + grounding + hallucination).
+
+### Nature 1 — GATING scores (offline harness / release socle) → OWNED POSTGRES, no machinery
+
+The socle that **gates a release** (the harness run over the catalogue: today **64 cases** ×
+languages × runs, `eval/reports/*.json`; carries `gate_passed` / `gate_min_pass_rate` /
+`gate_standard_*`). **Low, bounded volume** (cases × languages × metrics × runs — grows per
+*release*, not per *traffic*; ~hundreds→low-thousands of rows/run). This is **the load-bearing,
+opposable fact** → an owned, transactional Postgres table, durable + as-of-T. **Small → a plain
+indexed table, no partitioning/retention machinery.**
+
+```sql
+-- Nature 1: the release-gating socle (bounded; the opposable fact)
+CREATE TABLE eval_gating_scores (
+    id                bigserial PRIMARY KEY,
+    run_id            text        NOT NULL,      -- the harness run (socle)
+    case_id           text        NOT NULL,      -- catalogue case (eval/failures/NN_*)
+    agent_id          text        NOT NULL,
+    language          text        NOT NULL,
+    model             text        NOT NULL,
+    metric            text        NOT NULL,
+    score             double precision NOT NULL,
+    passed            boolean     NOT NULL,       -- per-case gate verdict
+    catalogue_version text,
+    judge_model       text,
+    scored_at         timestamptz NOT NULL
+);
+CREATE INDEX eval_gating_run   ON eval_gating_scores (run_id);
+CREATE INDEX eval_gating_agent ON eval_gating_scores (agent_id, scored_at);
+-- idempotent re-ingest / backfill (a run+case+lang+metric is unique)
+CREATE UNIQUE INDEX eval_gating_uq ON eval_gating_scores (run_id, case_id, language, metric);
+```
+
+### Nature 2 — ONLINE MONITORING scores (sampled prod turns) → PARTITIONED POSTGRES now, COLUMNAR-eligible at scale
+
+The per-turn telemetry from `evaluate_turn` (today `scores.jsonl`). **Volume = traffic ×
+sample_rate × 3 metrics (+ every flagged turn)** — **high and traffic-driven**. This is **NOT the
+gating fact**: the SLO/trend/quantile numbers come from Prometheus (Nature 3); this table is the
+per-turn *detail* (drill-down, disagreement triage, as-of-T monitoring). **Design the volume levers
+NOW, not deferred:** monthly **PARTITION on `scored_at`** + a **retention policy** (drop old
+partitions) + an access index. The two volume knobs are **`online_eval_sample_rate`** and the
+**retention window**.
+
+```sql
+-- Nature 2: online per-turn monitoring telemetry (high volume; partition + retention now)
+CREATE TABLE eval_online_scores (
+    id              bigserial,
+    scored_at       timestamptz NOT NULL,
+    agent_id        text,
+    language        text,
+    model           text,
+    metric          text        NOT NULL,
+    score           double precision NOT NULL,
+    conversation_id uuid,
+    trace_id        text,                     -- link to the Langfuse mirror trace (drill-down)
+    sampled         boolean     NOT NULL,      -- false = flagged (always judged), true = sampled
+    judge_model     text,
+    PRIMARY KEY (id, scored_at)
+) PARTITION BY RANGE (scored_at);              -- monthly children, e.g. _2026_07 [07-01, 08-01)
+CREATE INDEX eval_online_agent ON eval_online_scores (agent_id, metric, scored_at);
+CREATE INDEX eval_online_time  ON eval_online_scores (scored_at);
+-- Retention = a scheduled DROP of partitions older than the hot window (e.g. keep 3–6 months).
+-- Partition pruning serves the as-of-T / window reads; DROP PARTITION is O(1) cleanup.
+```
+
+**Volume projection (traffic × sample_rate 0.1 × 3, + flagged), to size the trigger:**
+
+| Traffic (turns/day) | Online rows/day (~) | Online rows/year (~) | Home |
+|---|---|---|---|
+| 10 k | ~3 k | ~1.1 M | Postgres partitioned — trivial |
+| 100 k | ~30 k | ~11 M | Postgres partitioned — comfortable |
+| 1 M | ~300 k | ~110 M | Postgres partitioned — nearing the trigger |
+| 10 M | ~3 M | ~1.1 B | **columnar (ClickHouse — owned or via Langfuse)** |
+
+**Trigger to migrate Nature 2 to columnar:** when the online table projects **> ~hundreds of
+millions of rows/year sustained** (≈ **> ~1 M turns/day at sample_rate 0.1 × 3**), OR when partition
+maintenance can no longer hold the read-latency budget → move `eval_online_scores` to a **columnar
+store (ClickHouse, owned or via Langfuse)**. It is monitoring telemetry, **not the gating fact**, so
+this move never touches release opposability (Nature 1 stays Postgres). Lowering
+`online_eval_sample_rate` or shortening retention defers the trigger.
+
+### Nature 3 — AGGREGATES (SLO / trend / quantiles) → Prometheus, for BOTH natures, unchanged
+
+`EVAL_SCORE` histogram + recording rules (`tessera:eval_score:mean5m/mean1h`, per agent/metric/
+language/model). Neither nature is summed row-by-row on the hot path.
+
+**Rationale:** separate by **nature AND volume**. The gating fact (small, opposable, owned →
+Postgres, no machinery) ≠ monitoring telemetry (voluminous, tunable → partition + retention now,
+columnar at scale). This corrects §Amendment 1's too-global "low volume": only Nature 1 is small;
+Nature 2 is traffic-driven and must be sized with the real `sample_rate` × 3-metrics fan-out.
+**Read paths:** release/opposability reads `eval_gating_scores`; `SpineStoresReader.scores`
+(monitoring detail) reads `eval_online_scores`; both aggregate via Prometheus; Langfuse mirrors
+Nature 2 only (best-effort drill-down). §Amendment 1's single `eval_scores` table is superseded by
+these two.
 
 ## Context
 

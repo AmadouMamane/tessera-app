@@ -28,6 +28,29 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **📐 AMENDMENT 2 (docs only) — split score detail by NATURE + VOLUME (gating socle vs online
+  monitoring). Roadmap (a) becomes two tables.** (2026-07-02, docs only, no code, not pushed. See
+  ADR §Amendment 2, grounded in `eval/online.py`: `online_eval_sample_rate` default **0.1**, **3
+  metrics/judged turn**, catalogue **64 cases**.) §Amendment 1's single `eval_scores` table
+  conflated two facts:
+  - **Nature 1 — GATING socle** (offline harness, `eval/reports/*.json`, `gate_*` fields): bounded
+    (cases×langs×metrics×runs, grows per *release*), the **opposable** fact → owned Postgres
+    **`eval_gating_scores`** (plain indexed table, **no partition/retention machinery**). Read by
+    release/opposability.
+  - **Nature 2 — ONLINE monitoring** (per-turn `evaluate_turn`, today `scores.jsonl`): volume =
+    **traffic × sample_rate × 3 (+ flagged)**, traffic-driven, **not the gating fact** → Postgres
+    **`eval_online_scores`** **PARTITIONED monthly on `scored_at` + retention policy + index NOW**;
+    **columnar (ClickHouse) at scale** (trigger: > ~hundreds of M rows/yr ≈ > ~1 M turns/day @ 0.1×3).
+    `SpineStoresReader.scores` reads THIS table; Langfuse mirrors THIS nature only.
+  - Prometheus aggregates (SLO/trend/quantile) = both natures, unchanged. DDL for both tables is in
+    ADR §Amendment 2.
+
+  **Roadmap delta vs the Amendment-1 entry below:** step **(a)** is now **two tables** —
+  `eval_gating_scores` (Nature 1, from `eval/reports`) + `eval_online_scores` (Nature 2, partitioned,
+  from `scores.jsonl`). Steps (b) spine→`eval_online_scores`; (c) outbox→Langfuse mirrors Nature 2
+  (voie-1 SDK); (d) backfill jsonl→`eval_online_scores` **and** `eval/reports`→`eval_gating_scores`;
+  (e)-(g) unchanged (shadow parity is now jsonl↔`eval_online_scores`). Nothing flipped;
+  `TESSERA_SPINE_SOURCE` still `jsonl`.
 - **📐 AMENDMENT 1 (docs only) — eval-score DETAIL home = owned Postgres table; Langfuse demoted to
   a best-effort mirror. Roadmap revised.** (2026-07-02, docs only, no code, not pushed. See ADR
   §Amendment 1.) The voie-1 proof (below) validated *delivery* (the SDK materialises a Langfuse
