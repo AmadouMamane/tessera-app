@@ -167,3 +167,32 @@ Two corollaries for whoever continues this:
 3. **The flagged subsystem pages** — per page, decide BUILD vs keep-flagged. The cleanest real
    build is **curation**: a durable curation-decision store (promote/review/reject) over the
    real failed-eval-case candidates (mirror `operator_items` exactly). Each is one Round.
+
+## Session 2b — normative alignment (LOCAL, unpushed: `499e279` `6d9ffdc` `d87212a`)
+
+**User pointed to the normative images** in `docs/ui-reference/<plane>/<section>/NN-<page>-vue-
+ensemble-normative.png` (e.g. `gouverner/surveiller/08-fiabilite-cout…`, `plateforme/configurer/
+21-parametres…`; `qualite-ia/` has a per-sub-tab folder). **Directive:** *on any incoherence, take
+everything you can from the normative image, KEEP the real metrics already on the page, unless
+they're totally bogus.* CODEX_NOTE.md: spec > screenshots.
+
+Applied:
+- **Comprehensive overviews** (`499e279`): the normative "Vue d'ensemble" is the WHOLE dashboard
+  (every panel), the other tabs are focused subsets. Fixed Fiabilité + Amélioration overviews to
+  comprehensive (real panels only; panels with no backend source — cache hit-rate, quota TPM/RPM,
+  change-log, burndown — OMITTED, not fabricated). Screenshot-verified.
+- **Paramètres 'Modèles IA configurés'** (`6d9ffdc`): added the normative's missing model section,
+  100% real from the catalogue (`_catalogue_models`/`_active_ids`).
+- **Paramètres 10-tab bar** (`d87212a`): was a dead 10-`<button>` bar; now functional. Overview
+  comprehensive, each config tab shows real settings filtered by category (`recent_params` expanded
+  to 22 real settings tagged by tab) + relevant sections; Notifications = honest empty.
+
+**Method (proven):** `activeTab` + `role=tablist/tab/tabpanel`; keep the overview comprehensive; the
+focused tabs drop content (that's what proves switching in e2e). Where a backend value keeps its
+label TRUE, swap it real in the same payload shape (frontend untouched); where the frontend LABEL
+encodes a fixture concept, edit i18n in lockstep. **Screenshot recipe:** tmp `.mjs` **in
+`webapp/frontend/`** importing `chromium` from `@playwright/test`, login `admin/tessera-admin`,
+`screenshot({fullPage})`.
+
+**Still to do:** proofs (real audit-chain + artifact counts, Paramètres-style); curation store;
+assistant (real transcript vs canned sample); check other pages vs their normative with the directive.
