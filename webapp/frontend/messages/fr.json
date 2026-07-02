@@ -2598,6 +2598,41 @@
       "refusal": "Refus mal calibré",
       "pii": "Fuite PII",
       "toxicity": "Toxicité"
+    },
+    "tabs": {
+      "overview": "Vue d’ensemble",
+      "promptInjection": "Prompt injection",
+      "pii": "PII & Privacy",
+      "guard": "Guard & policies",
+      "tools": "Outils & privilèges",
+      "memory": "Mémoire & GDPR",
+      "isolation": "Isolation & tenants",
+      "redteam": "Red-team & efficacité"
+    },
+    "tabx": {
+      "probes": "Attaques testées (harnais)",
+      "escaped": "Échappées (faux négatifs)",
+      "attackSuccess": "Taux de réussite d’attaque",
+      "piiTurns": "Tours avec fuite PII",
+      "recall": "Rappel du guard",
+      "precision": "Précision du guard",
+      "conformance": "Conformité des réponses",
+      "guardLinks": "Gouvernance & registres",
+      "linkPolicies": "Politiques & garde-fous (registre)",
+      "linkGuardrails": "Catalogue des garde-fous",
+      "linkAudit": "Journal d’audit (chaîne)",
+      "overProvCount": "Outils sur-provisionnés",
+      "overProvRate": "Taux de sur-provisionnement",
+      "erasureCompleteness": "Complétude d’effacement",
+      "isolationProbes": "Tours sondés (cross-tenant)",
+      "isolationLeaks": "Fuites détectées",
+      "isolationTitle": "Cloisonnement de cette instance",
+      "isolationFactEnv": "Un déploiement par environnement (local / staging / prod) — aucun mélange de données entre environnements (ADR 0014).",
+      "isolationFactSchema": "Schéma Postgres dédié par environnement : transcript, scores, ledger et corpus sont isolés par search_path.",
+      "isolationFactState": "État fichier par environnement (rapports d'éval, décisions, bundles) sous un répertoire dédié — la sonde cross-tenant ci-contre mesure les fuites mémoire réelles.",
+      "linkSystem": "Profil système",
+      "domainCases": "Cas échoués du domaine (harnais)",
+      "noCases": "Aucun cas échoué dans ce domaine."
     }
   },
   "compliance": {

@@ -2598,6 +2598,41 @@
       "refusal": "Fehlkalibrierte Verweigerung",
       "pii": "PII-Leak",
       "toxicity": "Toxizität"
+    },
+    "tabs": {
+      "overview": "Uebersicht",
+      "promptInjection": "Prompt-Injection",
+      "pii": "PII & Privacy",
+      "guard": "Guard & Policies",
+      "tools": "Tools & Privilegien",
+      "memory": "Speicher & DSGVO",
+      "isolation": "Isolation & Tenants",
+      "redteam": "Red-Team & Wirksamkeit"
+    },
+    "tabx": {
+      "probes": "Getestete Angriffe (Harness)",
+      "escaped": "Durchgekommen (False Negatives)",
+      "attackSuccess": "Angriffs-Erfolgsquote",
+      "piiTurns": "Turns mit PII-Leck",
+      "recall": "Guard-Recall",
+      "precision": "Guard-Praezision",
+      "conformance": "Antwort-Konformitaet",
+      "guardLinks": "Governance & Register",
+      "linkPolicies": "Policies & Guardrails (Register)",
+      "linkGuardrails": "Guardrail-Katalog",
+      "linkAudit": "Audit-Journal (Kette)",
+      "overProvCount": "Ueberprovisionierte Tools",
+      "overProvRate": "Ueberprovisionierungsrate",
+      "erasureCompleteness": "Loesch-Vollstaendigkeit",
+      "isolationProbes": "Geprobte Turns (Cross-Tenant)",
+      "isolationLeaks": "Erkannte Lecks",
+      "isolationTitle": "Abschottung dieser Instanz",
+      "isolationFactEnv": "Ein Deployment pro Umgebung (local / staging / prod) — keine Datenvermischung zwischen Umgebungen (ADR 0014).",
+      "isolationFactSchema": "Dediziertes Postgres-Schema pro Umgebung: Transkript, Scores, Ledger und Korpus sind per search_path isoliert.",
+      "isolationFactState": "Dateizustand pro Umgebung (Eval-Berichte, Entscheidungen, Bundles) in einem eigenen Verzeichnis — die Cross-Tenant-Sonde misst reale Speicher-Lecks.",
+      "linkSystem": "Systemprofil",
+      "domainCases": "Fehlgeschlagene Faelle der Domaene (Harness)",
+      "noCases": "Keine fehlgeschlagenen Faelle in dieser Domaene."
     }
   },
   "compliance": {

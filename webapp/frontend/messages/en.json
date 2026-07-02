@@ -2598,6 +2598,41 @@
       "refusal": "Mis-calibrated refusal",
       "pii": "PII leak",
       "toxicity": "Toxicity"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "promptInjection": "Prompt injection",
+      "pii": "PII & Privacy",
+      "guard": "Guard & policies",
+      "tools": "Tools & privileges",
+      "memory": "Memory & GDPR",
+      "isolation": "Isolation & tenants",
+      "redteam": "Red-team & efficacy"
+    },
+    "tabx": {
+      "probes": "Attacks tested (harness)",
+      "escaped": "Escaped (false negatives)",
+      "attackSuccess": "Attack success rate",
+      "piiTurns": "Turns with PII leak",
+      "recall": "Guard recall",
+      "precision": "Guard precision",
+      "conformance": "Response conformance",
+      "guardLinks": "Governance & registries",
+      "linkPolicies": "Policies & guardrails (registry)",
+      "linkGuardrails": "Guardrail catalogue",
+      "linkAudit": "Audit journal (chain)",
+      "overProvCount": "Over-provisioned tools",
+      "overProvRate": "Over-provisioning rate",
+      "erasureCompleteness": "Erasure completeness",
+      "isolationProbes": "Probed turns (cross-tenant)",
+      "isolationLeaks": "Leaks detected",
+      "isolationTitle": "Isolation of this instance",
+      "isolationFactEnv": "One deployment per environment (local / staging / prod) — no data mixing across environments (ADR 0014).",
+      "isolationFactSchema": "Dedicated Postgres schema per environment: transcript, scores, ledger and corpus are isolated via search_path.",
+      "isolationFactState": "Per-environment file state (eval reports, decisions, bundles) under a dedicated directory — the cross-tenant probe measures real memory leaks.",
+      "linkSystem": "System profile",
+      "domainCases": "Failed cases in this domain (harness)",
+      "noCases": "No failed cases in this domain."
     }
   },
   "compliance": {

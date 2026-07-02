@@ -12,9 +12,11 @@ import {
   Snowflake,
   Trash2,
 } from "lucide-react";
+import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
@@ -398,12 +400,14 @@ function ActionCard({
   desc,
   roleLabel,
   cta,
+  href,
 }: {
   icon: LucideIcon;
   title: string;
   desc: string;
   roleLabel: string;
   cta: string;
+  href: Route;
 }) {
   const ts = useTranslations("security");
   return (
@@ -417,8 +421,13 @@ function ActionCard({
         <Badge tone="warning">{roleLabel}</Badge>
         <Badge tone="danger">{ts("dualControl")}</Badge>
       </div>
-      <Button size="sm" variant="outline" className="mt-auto h-7 justify-center text-[0.7rem]">
-        {cta}
+      <Button
+        asChild
+        size="sm"
+        variant="outline"
+        className="mt-auto h-7 justify-center text-[0.7rem]"
+      >
+        <Link href={href}>{cta}</Link>
       </Button>
     </Card>
   );
@@ -428,12 +437,27 @@ function ActionCard({
 
 const POLL = 30_000;
 
+// The 8 normative sub-views (32-1..32-8): overview stays comprehensive; the seven
+// focused tabs are curated REAL views over the same live security signals.
+const SEC_TABS = [
+  "overview",
+  "promptInjection",
+  "pii",
+  "guard",
+  "tools",
+  "memory",
+  "isolation",
+  "redteam",
+] as const;
+type SecTab = (typeof SEC_TABS)[number];
+
 export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const ts = useTranslations("security");
   const locale = useLocale();
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
+  const [activeTab, setActiveTab] = useState<SecTab>("overview");
   // Global agent scope (?agent=) — the score-/bundle-/audit-backed safety signals
   // read this agent's own turns; shared-policy probes (firewall, refusal) stay org.
   const searchParams = useSearchParams();
@@ -645,6 +669,576 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       ? erasure.data.n_bundles / erasure.data.n_conversations
       : null;
 
+  // ── focused-tab building blocks (same live queries, curated per domain) ────
+  const controlsTable = (rows: Control[]) => (
+    <Card>
+      <CardContent className="overflow-x-auto p-0">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+              <th className="px-3 py-2 font-medium">{ts("col.signal")}</th>
+              <th className="px-3 py-2 font-medium">{ts("col.state")}</th>
+              <th className="px-3 py-2 font-medium">{ts("col.value")}</th>
+              <th className="px-3 py-2 font-medium">{ts("col.target")}</th>
+              <th className="px-3 py-2 font-medium">{ts("col.action")}</th>
+              <th className="px-3 py-2 font-medium">{ts("col.role")}</th>
+              <th className="px-3 py-2 font-medium">{ts("col.case")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.key} className="border-b border-[var(--border)]/50">
+                <td className="px-3 py-2 font-medium">{ts(`ctrl.${c.key}`)}</td>
+                <td className="px-3 py-2">
+                  <Badge tone={TONE_BADGE[c.tone]}>{ts(`state.${c.tone}`)}</Badge>
+                </td>
+                <td className={`px-3 py-2 tabular-nums ${toneText(c.tone)}`}>{c.value}</td>
+                <td className="px-3 py-2 tabular-nums text-[var(--muted-foreground)]">
+                  {c.target}
+                </td>
+                <td className="px-3 py-2 text-[var(--muted-foreground)]">{c.action}</td>
+                <td className="px-3 py-2">{c.role}</td>
+                <td className="px-3 py-2 font-mono text-[0.7rem] text-[var(--tessera-green)]">
+                  {c.case}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardContent>
+    </Card>
+  );
+
+  // Real failed harness cases for one domain ([] = all domains).
+  const domainCases = (cats: string[]) =>
+    (failed.data?.cases ?? []).filter(
+      (c) => cats.length === 0 || cats.some((k) => c.category.includes(k)),
+    );
+  const casesPanel = (cats: string[], max = 6) => {
+    const rows = domainCases(cats);
+    return (
+      <Panel title={ts("tabx.domainCases")}>
+        {rows.length === 0 ? (
+          <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+            {ts("tabx.noCases")}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-1 text-[0.72rem]">
+            {rows.slice(0, max).map((c) => (
+              <li key={`${c.case_id}.${c.language}`} className="flex items-center gap-1.5">
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
+                />
+                <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                <span className="shrink-0 font-mono text-[0.6rem] uppercase text-[var(--muted-foreground)]">
+                  {c.language}
+                </span>
+                <span className="shrink-0 font-mono text-[0.6rem] text-[var(--tessera-green)]">
+                  {c.case_id}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    );
+  };
+
+  const redteamPanel = (
+    <Panel title={ts("panel.redteam")}>
+      <div className="flex flex-col gap-1.5 text-[0.72rem]">
+        <div className="flex items-baseline gap-2">
+          <span className="text-xl font-semibold tabular-nums">{blocked}</span>
+          <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
+          <span className="ml-auto font-semibold tabular-nums text-amber-500">
+            {fw?.false_negative ?? 0} {ts("panel.bypasses")}
+          </span>
+        </div>
+        <div className="flex h-[4px] w-full overflow-hidden rounded-full">
+          <div style={{ flexBasis: `${(blockRate ?? 0) * 100}%`, background: "#10b981" }} />
+          <div style={{ flexGrow: 1, background: "#f97316" }} />
+        </div>
+        <KV label={ts("panel.blockRate")} value={pct(blockRate)} tone={GOOD} />
+        <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
+      </div>
+    </Panel>
+  );
+
+  const erasurePanel = (
+    <Panel title={ts("panel.erasureSurface")}>
+      <div className="flex items-center gap-3">
+        <Gauge value={erasureComplete ?? 0} label={ts("panel.completeness")} tone="#10b981" />
+        <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
+          <KV label={ts("panel.conversations")} value={`${erasure.data?.n_conversations ?? 0}`} />
+          <KV label={ts("panel.bundles")} value={`${erasure.data?.n_bundles ?? 0}`} />
+          <KV label={ts("panel.scores")} value={`${erasure.data?.n_scores ?? 0}`} />
+        </div>
+      </div>
+    </Panel>
+  );
+
+  const inversionPanel = (
+    <Panel title={ts("panel.inversion")}>
+      {inversion.data?.available === false || inversion.isLoading ? (
+        <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+          {ts("panel.computing")}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1 text-[0.72rem]">
+          <KV
+            label={ts("panel.recoverable")}
+            value={`${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0}`}
+            tone={(inversion.data?.n_recoverable ?? 0) > 0 ? BAD : GOOD}
+          />
+          <KV label={ts("panel.recoveryRate")} value={pct(invRate)} />
+          <KV label={ts("panel.threshold")} value={inversion.data?.threshold?.toFixed(2) ?? "—"} />
+        </div>
+      )}
+    </Panel>
+  );
+
+  const trendPanel = (
+    <Panel title={ts("panel.trend")}>
+      <LineChart
+        a={attackSeries}
+        b={incidentSeries}
+        aLabel={ts("panel.attackLine")}
+        bLabel={ts("panel.incidentLine")}
+      />
+    </Panel>
+  );
+
+  const kpiGrid = (children: ReactNode) => (
+    <Zone label={ts("sec.actual")}>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">{children}</div>
+    </Zone>
+  );
+
+  // The seven focused domain views (normatives 32-2..32-8), every value live.
+  const domainView: Record<Exclude<SecTab, "overview">, ReactNode> = {
+    promptInjection: (
+      <>
+        {kpiGrid(
+          <>
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("tabx.probes")}
+              infoKey="attackRate"
+              value={`${fw?.n_positive ?? 0}`}
+              tone={MUTED}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.blocked")}
+              infoKey="blocked"
+              value={blocked}
+              tone={GOOD}
+              series={fwSpark.map((v) => 1 - v)}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("tabx.escaped")}
+              infoKey="attackRate"
+              value={`${fw?.false_negative ?? 0}`}
+              tone={(fw?.false_negative ?? 0) > 0 ? WARN : GOOD}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("tabx.attackSuccess")}
+              infoKey="attackRate"
+              value={pct(attackRate)}
+              tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
+              series={fwSpark}
+            />
+          </>,
+        )}
+        <Zone label={ts("sec.controls")}>
+          {controlsTable(controls.filter((c) => c.key === "promptInjection"))}
+        </Zone>
+        <Zone label={ts("sec.diagnostic")}>
+          <div className="grid gap-2 lg:grid-cols-3">
+            {trendPanel}
+            {redteamPanel}
+            {casesPanel(["prompt_injection"])}
+          </div>
+        </Zone>
+      </>
+    ),
+    pii: (
+      <>
+        {kpiGrid(
+          <>
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.piiLeak")}
+              infoKey="piiLeak"
+              value={pct(piiRate)}
+              tone={piiRate ? BAD : GOOD}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("tabx.piiTurns")}
+              infoKey="piiLeak"
+              value={`${pii.data?.n_with_leak ?? 0}/${pii.data?.n_turns ?? 0}`}
+              tone={MUTED}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("ctrl.toxicity")}
+              infoKey="piiLeak"
+              value={pct(toxRate, 2)}
+              tone={toxRate ? BAD : GOOD}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("kpi.sensitiveMemory")}
+              infoKey="sensitiveMemory"
+              value={`${inventory.data?.n_expiring_soon ?? 0}`}
+              tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
+              href="/configurer/sources-memoire"
+              drillLabel={ts("kpi.sensitiveMemory")}
+            />
+          </>,
+        )}
+        <Zone label={ts("sec.controls")}>
+          {controlsTable(controls.filter((c) => c.key === "piiLeak" || c.key === "toxicity"))}
+        </Zone>
+        <Zone label={ts("sec.privacy")}>
+          <div className="grid gap-2 lg:grid-cols-3">
+            {erasurePanel}
+            {inversionPanel}
+            {casesPanel(["pii"])}
+          </div>
+        </Zone>
+      </>
+    ),
+    guard: (
+      <>
+        {kpiGrid(
+          <>
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.guard")}
+              infoKey="guard"
+              value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
+              tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("tabx.recall")}
+              infoKey="guard"
+              value={fw?.recall?.toFixed(2) ?? "—"}
+              tone={MUTED}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("tabx.precision")}
+              infoKey="guard"
+              value={fw?.precision?.toFixed(2) ?? "—"}
+              tone={MUTED}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("tabx.conformance")}
+              infoKey="guard"
+              value={pct(conformance.data?.conformance_rate)}
+              tone={(conformance.data?.conformance_rate ?? 1) >= 0.95 ? GOOD : WARN}
+            />
+          </>,
+        )}
+        <Zone label={ts("sec.diagnostic")}>
+          <div className="grid gap-2 lg:grid-cols-3">
+            <Panel title={ts("panel.refusal")}>
+              <div className="flex items-center gap-2">
+                <Gauge
+                  value={refusal.data?.over_refusal_rate ?? 0}
+                  label={ts("panel.overRefusal")}
+                  tone="#f59e0b"
+                />
+                <div className="flex min-w-0 flex-col gap-1 text-[0.7rem]">
+                  <KV
+                    label={ts("panel.underRefusal")}
+                    value={pct(refusal.data?.under_refusal_rate)}
+                    tone={(refusal.data?.under_refusal_rate ?? 0) > 0.1 ? BAD : GOOD}
+                  />
+                  <KV label={ts("panel.legit")} value={`${refusal.data?.n_legit ?? 0}`} />
+                  <KV label={ts("panel.forbidden")} value={`${refusal.data?.n_forbidden ?? 0}`} />
+                </div>
+              </div>
+            </Panel>
+            <Panel title={ts("panel.whatChanged")}>
+              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                {(whatChanged.data?.changes ?? []).length === 0 ? (
+                  <li className="text-[var(--muted-foreground)]">{ts("panel.noChanges")}</li>
+                ) : (
+                  (whatChanged.data?.changes ?? []).slice(0, 4).map((c) => (
+                    <li key={c.field} className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate">{c.field}</span>
+                      <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                        {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
+                      </span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </Panel>
+            <Panel title={ts("tabx.guardLinks")}>
+              <div className="flex flex-col gap-1.5 text-[0.72rem]">
+                <Link
+                  href="/configurer/politiques"
+                  className="flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 hover:border-[var(--tessera-green)] hover:text-[var(--tessera-green)]"
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                  {ts("tabx.linkPolicies")}
+                </Link>
+                <Link
+                  href="/configurer/garde-fous"
+                  className="flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 hover:border-[var(--tessera-green)] hover:text-[var(--tessera-green)]"
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                  {ts("tabx.linkGuardrails")}
+                </Link>
+                <Link
+                  href="/prouver/audit-logs"
+                  className="flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 hover:border-[var(--tessera-green)] hover:text-[var(--tessera-green)]"
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                  {ts("tabx.linkAudit")}
+                </Link>
+              </div>
+            </Panel>
+          </div>
+        </Zone>
+      </>
+    ),
+    tools: (
+      <>
+        {kpiGrid(
+          <>
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.leastPriv")}
+              infoKey="leastPriv"
+              value={`${lp.data?.n_used ?? 0}/${lp.data?.n_granted ?? 0}`}
+              tone={MUTED}
+              href="/admin/roles-acces"
+              drillLabel={ts("kpi.leastPriv")}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("tabx.overProvCount")}
+              infoKey="leastPriv"
+              value={`${lp.data?.n_over_provisioned ?? 0}`}
+              tone={(lp.data?.n_over_provisioned ?? 0) > 0 ? WARN : GOOD}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("tabx.overProvRate")}
+              infoKey="leastPriv"
+              value={pct(overProvRate)}
+              tone={overProvRate && overProvRate > 0.4 ? BAD : WARN}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("ctrl.toolMisuse")}
+              infoKey="leastPriv"
+              value={`${pct(overProvRate)}`}
+              tone={MUTED}
+            />
+          </>,
+        )}
+        <Zone label={ts("sec.controls")}>
+          {controlsTable(controls.filter((c) => c.key === "toolMisuse"))}
+        </Zone>
+        <Zone label={ts("sec.diagnostic")}>
+          <div className="grid gap-2 lg:grid-cols-2">
+            <Panel title={ts("panel.overPriv")}>
+              <ul className="flex flex-col gap-1 text-[0.72rem]">
+                {(lp.data?.usage ?? []).slice(0, 8).map((u) => {
+                  const over = lp.data?.over_provisioned.includes(u.tool);
+                  return (
+                    <li key={u.tool} className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate font-mono">{u.tool}</span>
+                      <Badge tone={over ? "warning" : "success"}>
+                        {over ? ts("overProvisioned") : `${u.used}`}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
+            {casesPanel(["tool"])}
+          </div>
+        </Zone>
+      </>
+    ),
+    memory: (
+      <>
+        {kpiGrid(
+          <>
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("kpi.sensitiveMemory")}
+              infoKey="sensitiveMemory"
+              value={`${inventory.data?.n_expiring_soon ?? 0}`}
+              tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
+              href="/configurer/sources-memoire"
+              drillLabel={ts("kpi.sensitiveMemory")}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("panel.conversations")}
+              infoKey="sensitiveMemory"
+              value={`${erasure.data?.n_conversations ?? 0}`}
+              tone={MUTED}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("tabx.erasureCompleteness")}
+              infoKey="sensitiveMemory"
+              value={pct(erasureComplete)}
+              tone={GOOD}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("panel.recoverable")}
+              infoKey="sensitiveMemory"
+              value={`${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0}`}
+              tone={(inversion.data?.n_recoverable ?? 0) > 0 ? BAD : GOOD}
+            />
+          </>,
+        )}
+        <Zone label={ts("sec.privacy")}>
+          <div className="grid gap-2 lg:grid-cols-3">
+            {erasurePanel}
+            {inversionPanel}
+            {casesPanel(["memory", "pii"])}
+          </div>
+        </Zone>
+      </>
+    ),
+    isolation: (
+      <>
+        {kpiGrid(
+          <>
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("ctrl.crossTenant")}
+              infoKey="crossTenant"
+              value={pct(xtRate)}
+              tone={xtRate ? BAD : GOOD}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("tabx.isolationProbes")}
+              infoKey="crossTenant"
+              value={`${crossTenant.data?.n_turns ?? 0}`}
+              tone={MUTED}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("tabx.isolationLeaks")}
+              infoKey="crossTenant"
+              value={`${crossTenant.data?.n_leaks ?? 0}`}
+              tone={(crossTenant.data?.n_leaks ?? 0) > 0 ? BAD : GOOD}
+            />
+          </>,
+        )}
+        <Zone label={ts("sec.controls")}>
+          {controlsTable(controls.filter((c) => c.key === "crossTenant"))}
+        </Zone>
+        <Zone label={ts("sec.diagnostic")}>
+          <div className="grid gap-2 lg:grid-cols-2">
+            <Panel title={ts("tabx.isolationTitle")}>
+              <ul className="flex flex-col gap-1.5 text-[0.72rem] text-[var(--muted-foreground)]">
+                <li>{ts("tabx.isolationFactEnv")}</li>
+                <li>{ts("tabx.isolationFactSchema")}</li>
+                <li>{ts("tabx.isolationFactState")}</li>
+              </ul>
+              <Link
+                href="/admin/profil-systeme"
+                className="mt-2 inline-flex items-center gap-1 text-[0.7rem] text-[var(--tessera-green)] hover:underline"
+              >
+                {ts("tabx.linkSystem")} <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </Panel>
+            {casesPanel(["cross_tenant", "tenant"])}
+          </div>
+        </Zone>
+      </>
+    ),
+    redteam: (
+      <>
+        {kpiGrid(
+          <>
+            <Kpi
+              icon={Siren}
+              label={ts("tabx.probes")}
+              infoKey="attackRate"
+              value={`${fw?.n_positive ?? 0}`}
+              tone={MUTED}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.blocked")}
+              infoKey="blocked"
+              value={blocked}
+              tone={GOOD}
+            />
+            <Kpi
+              icon={ShieldAlert}
+              label={ts("tabx.attackSuccess")}
+              infoKey="attackRate"
+              value={pct(attackRate)}
+              tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
+              series={fwSpark}
+            />
+            <Kpi
+              icon={ShieldCheck}
+              label={ts("kpi.guard")}
+              infoKey="guard"
+              value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
+              tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
+            />
+          </>,
+        )}
+        <Zone label={ts("sec.diagnostic")}>
+          <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+            <Panel title={ts("panel.failures")}>
+              {failureSlices.length === 0 ? (
+                <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                  {ts("panel.noFailures")}
+                </p>
+              ) : (
+                <FailureDonut slices={failureSlices} label={ts("panel.failuresUnit")} />
+              )}
+            </Panel>
+            <Panel title={ts("panel.regression")}>
+              <div className="flex items-center gap-3">
+                <Gauge
+                  value={regression.data?.risk_score ?? 0}
+                  tone={(regression.data?.risk_score ?? 0) >= 0.5 ? "#ef4444" : "#f59e0b"}
+                />
+                <div className="flex flex-col gap-0.5 text-[0.7rem]">
+                  <span
+                    className={`text-base font-semibold ${(regression.data?.risk_score ?? 0) >= 0.5 ? BAD : WARN}`}
+                  >
+                    {ts(`level.${regression.data?.level ?? "low"}`)}
+                  </span>
+                  <span className="text-[var(--muted-foreground)]">
+                    {ts("panel.regression7d")}: {pct(regression.data?.probability_7d)}
+                  </span>
+                </div>
+              </div>
+            </Panel>
+            {trendPanel}
+            {casesPanel([], 8)}
+          </div>
+        </Zone>
+      </>
+    ),
+  };
+
   return (
     <div className="flex flex-col gap-2">
       {/* The temporal rail LEADS — directly beneath the SLO breach alert the page renders
@@ -656,21 +1250,43 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       />
       {/* chrome */}
       <div className="flex items-center justify-between gap-3 border-b border-[var(--tessera-border)] pb-1.5">
-        <div className="flex items-center gap-3 text-[0.7rem] text-[var(--muted-foreground)]">
-          <span className="flex items-center gap-1.5 text-[var(--tessera-green)]">
-            <span className="h-2 w-2 rounded-full bg-[var(--tessera-green)]" /> {ts("live")}
-          </span>
-          <span>{ts("period")}</span>
+        <div
+          role="tablist"
+          aria-label={ts("tabs.overview")}
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+        >
+          {SEC_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={tab === activeTab}
+              aria-controls="security-tabpanel"
+              onClick={() => setActiveTab(tab)}
+              className={`h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors ${
+                tab === activeTab
+                  ? "border-[#007a55] bg-[#0b3d2e] text-[#d6f0e3]"
+                  : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
+              }`}
+            >
+              {ts(`tabs.${tab}`)}
+            </button>
+          ))}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
+            asChild
             size="sm"
             className="h-8 gap-2 border border-[#007a55] bg-[#005c42] text-xs text-[#d6f0e3] hover:bg-[#006d4e]"
           >
-            <Siren className="h-3.5 w-3.5" /> {ts("cta.redteam")}
+            <Link href="/surveiller/qualite-ia">
+              <Siren className="h-3.5 w-3.5" /> {ts("cta.redteam")}
+            </Link>
           </Button>
-          <Button size="sm" variant="outline" className="h-8 gap-2 text-xs">
-            <ShieldCheck className="h-3.5 w-3.5" /> {ts("cta.report")}
+          <Button asChild size="sm" variant="outline" className="h-8 gap-2 text-xs">
+            <Link href="/prouver/evidence-store">
+              <ShieldCheck className="h-3.5 w-3.5" /> {ts("cta.report")}
+            </Link>
           </Button>
         </div>
       </div>
@@ -679,339 +1295,316 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           directly under the SLO alert. */}
       {agentScope ? <div className="-mt-0.5">{agentScope}</div> : null}
 
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex min-w-0 flex-col gap-2">
-          {/* A. État actuel */}
-          <Zone label={ts("sec.actual")}>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-              <Kpi
-                icon={ShieldAlert}
-                label={ts("kpi.attackRate")}
-                infoKey="attackRate"
-                value={pct(attackRate)}
-                tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
-                series={fwSpark}
-                delta={sparkDelta(attackSeries)}
-                deltaUpIsGood={false}
-              />
-              <Kpi
-                icon={ShieldCheck}
-                label={ts("kpi.blocked")}
-                infoKey="blocked"
-                value={blocked}
-                tone={GOOD}
-                series={fwSpark.map((v) => 1 - v)}
-                delta={sparkDelta(incidentSeries.map((v) => -v))}
-                deltaUpIsGood
-              />
-              <Kpi
-                icon={ShieldCheck}
-                label={ts("kpi.piiLeak")}
-                infoKey="piiLeak"
-                value={pct(piiRate)}
-                tone={piiRate ? BAD : GOOD}
-              />
-              <Kpi
-                icon={ShieldCheck}
-                label={ts("kpi.leastPriv")}
-                infoKey="leastPriv"
-                value={`${lp.data?.n_used ?? 0}/${lp.data?.n_granted ?? 0}`}
-                tone={MUTED}
-                hint={ts("kpi.leastPrivHint")}
-                href="/admin/roles-acces"
-                drillLabel={ts("kpi.leastPriv")}
-              />
-              <Kpi
-                icon={ShieldAlert}
-                label={ts("kpi.sensitiveMemory")}
-                infoKey="sensitiveMemory"
-                value={`${inventory.data?.n_expiring_soon ?? 0}`}
-                tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
-                hint={ts("kpi.sensitiveMemoryHint")}
-                href="/configurer/sources-memoire"
-                drillLabel={ts("kpi.sensitiveMemory")}
-              />
-              <Kpi
-                icon={ShieldCheck}
-                label={ts("kpi.guard")}
-                infoKey="guard"
-                value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
-                tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
-                hint={`${ts("kpi.recall")} ${fw?.recall?.toFixed(2) ?? "—"}`}
-              />
-            </div>
-          </Zone>
+      {activeTab !== "overview" ? (
+        <div id="security-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-2">
+          {domainView[activeTab]}
+        </div>
+      ) : (
+        <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="flex min-w-0 flex-col gap-2">
+            {/* A. État actuel */}
+            <Zone label={ts("sec.actual")}>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+                <Kpi
+                  icon={ShieldAlert}
+                  label={ts("kpi.attackRate")}
+                  infoKey="attackRate"
+                  value={pct(attackRate)}
+                  tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
+                  series={fwSpark}
+                  delta={sparkDelta(attackSeries)}
+                  deltaUpIsGood={false}
+                />
+                <Kpi
+                  icon={ShieldCheck}
+                  label={ts("kpi.blocked")}
+                  infoKey="blocked"
+                  value={blocked}
+                  tone={GOOD}
+                  series={fwSpark.map((v) => 1 - v)}
+                  delta={sparkDelta(incidentSeries.map((v) => -v))}
+                  deltaUpIsGood
+                />
+                <Kpi
+                  icon={ShieldCheck}
+                  label={ts("kpi.piiLeak")}
+                  infoKey="piiLeak"
+                  value={pct(piiRate)}
+                  tone={piiRate ? BAD : GOOD}
+                />
+                <Kpi
+                  icon={ShieldCheck}
+                  label={ts("kpi.leastPriv")}
+                  infoKey="leastPriv"
+                  value={`${lp.data?.n_used ?? 0}/${lp.data?.n_granted ?? 0}`}
+                  tone={MUTED}
+                  hint={ts("kpi.leastPrivHint")}
+                  href="/admin/roles-acces"
+                  drillLabel={ts("kpi.leastPriv")}
+                />
+                <Kpi
+                  icon={ShieldAlert}
+                  label={ts("kpi.sensitiveMemory")}
+                  infoKey="sensitiveMemory"
+                  value={`${inventory.data?.n_expiring_soon ?? 0}`}
+                  tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
+                  hint={ts("kpi.sensitiveMemoryHint")}
+                  href="/configurer/sources-memoire"
+                  drillLabel={ts("kpi.sensitiveMemory")}
+                />
+                <Kpi
+                  icon={ShieldCheck}
+                  label={ts("kpi.guard")}
+                  infoKey="guard"
+                  value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
+                  tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
+                  hint={`${ts("kpi.recall")} ${fw?.recall?.toFixed(2) ?? "—"}`}
+                />
+              </div>
+            </Zone>
 
-          {/* B. Contrôles critiques */}
-          <Zone label={ts("sec.controls")}>
-            <Card>
-              <CardContent className="overflow-x-auto p-0">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                      <th className="px-3 py-2 font-medium">{ts("col.signal")}</th>
-                      <th className="px-3 py-2 font-medium">{ts("col.state")}</th>
-                      <th className="px-3 py-2 font-medium">{ts("col.value")}</th>
-                      <th className="px-3 py-2 font-medium">{ts("col.target")}</th>
-                      <th className="px-3 py-2 font-medium">{ts("col.action")}</th>
-                      <th className="px-3 py-2 font-medium">{ts("col.role")}</th>
-                      <th className="px-3 py-2 font-medium">{ts("col.case")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {controls.map((c) => (
-                      <tr key={c.key} className="border-b border-[var(--border)]/50">
-                        <td className="px-3 py-2 font-medium">{ts(`ctrl.${c.key}`)}</td>
-                        <td className="px-3 py-2">
-                          <Badge tone={TONE_BADGE[c.tone]}>{ts(`state.${c.tone}`)}</Badge>
-                        </td>
-                        <td className={`px-3 py-2 tabular-nums ${toneText(c.tone)}`}>{c.value}</td>
-                        <td className="px-3 py-2 tabular-nums text-[var(--muted-foreground)]">
-                          {c.target}
-                        </td>
-                        <td className="px-3 py-2 text-[var(--muted-foreground)]">{c.action}</td>
-                        <td className="px-3 py-2">{c.role}</td>
-                        <td className="px-3 py-2 font-mono text-[0.7rem] text-[var(--tessera-green)]">
-                          {c.case}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-          </Zone>
+            {/* B. Contrôles critiques */}
+            <Zone label={ts("sec.controls")}>{controlsTable(controls)}</Zone>
 
-          {/* C. Diagnostic racine */}
-          <Zone label={ts("sec.diagnostic")}>
-            <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
-              <Panel title={ts("panel.failures")}>
-                {failureSlices.length === 0 ? (
-                  <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
-                    {ts("panel.noFailures")}
-                  </p>
-                ) : (
-                  <FailureDonut slices={failureSlices} label={ts("panel.failuresUnit")} />
-                )}
-              </Panel>
-              <Panel title={ts("panel.whatChanged")}>
-                <ul className="flex flex-col gap-1.5 text-[0.72rem]">
-                  {(whatChanged.data?.changes ?? []).length === 0 ? (
-                    <li className="text-[var(--muted-foreground)]">{ts("panel.noChanges")}</li>
+            {/* C. Diagnostic racine */}
+            <Zone label={ts("sec.diagnostic")}>
+              <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+                <Panel title={ts("panel.failures")}>
+                  {failureSlices.length === 0 ? (
+                    <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                      {ts("panel.noFailures")}
+                    </p>
                   ) : (
-                    (whatChanged.data?.changes ?? []).slice(0, 4).map((c) => (
-                      <li key={c.field} className="flex items-center gap-2">
-                        <span className="min-w-0 flex-1 truncate">{c.field}</span>
+                    <FailureDonut slices={failureSlices} label={ts("panel.failuresUnit")} />
+                  )}
+                </Panel>
+                <Panel title={ts("panel.whatChanged")}>
+                  <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                    {(whatChanged.data?.changes ?? []).length === 0 ? (
+                      <li className="text-[var(--muted-foreground)]">{ts("panel.noChanges")}</li>
+                    ) : (
+                      (whatChanged.data?.changes ?? []).slice(0, 4).map((c) => (
+                        <li key={c.field} className="flex items-center gap-2">
+                          <span className="min-w-0 flex-1 truncate">{c.field}</span>
+                          <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                            {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
+                          </span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </Panel>
+                <Panel title={ts("panel.refusal")}>
+                  <div className="flex items-center gap-2">
+                    <Gauge
+                      value={refusal.data?.over_refusal_rate ?? 0}
+                      label={ts("panel.overRefusal")}
+                      tone="#f59e0b"
+                    />
+                    <div className="flex min-w-0 flex-col gap-1 text-[0.7rem]">
+                      <KV
+                        label={ts("panel.underRefusal")}
+                        value={pct(refusal.data?.under_refusal_rate)}
+                        tone={(refusal.data?.under_refusal_rate ?? 0) > 0.1 ? BAD : GOOD}
+                      />
+                      <KV label={ts("panel.legit")} value={`${refusal.data?.n_legit ?? 0}`} />
+                      <KV
+                        label={ts("panel.forbidden")}
+                        value={`${refusal.data?.n_forbidden ?? 0}`}
+                      />
+                    </div>
+                  </div>
+                </Panel>
+                <Panel title={ts("panel.priorityCases")}>
+                  <ul className="flex flex-col gap-1 text-[0.72rem]">
+                    {(failed.data?.cases ?? []).slice(0, 4).map((c) => (
+                      <li key={c.case_id} className="flex items-center gap-1.5">
+                        <span
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
+                        />
+                        <span className="min-w-0 flex-1 truncate">{c.title}</span>
                         <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
-                          {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
+                          {c.case_id}
                         </span>
                       </li>
-                    ))
-                  )}
-                </ul>
-              </Panel>
-              <Panel title={ts("panel.refusal")}>
-                <div className="flex items-center gap-2">
-                  <Gauge
-                    value={refusal.data?.over_refusal_rate ?? 0}
-                    label={ts("panel.overRefusal")}
-                    tone="#f59e0b"
+                    ))}
+                  </ul>
+                </Panel>
+              </div>
+            </Zone>
+
+            {/* D. Signaux prédictifs */}
+            <Zone label={ts("sec.predictive")}>
+              <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
+                <Panel title={ts("panel.trend")}>
+                  <LineChart
+                    a={attackSeries}
+                    b={incidentSeries}
+                    aLabel={ts("panel.attackLine")}
+                    bLabel={ts("panel.incidentLine")}
                   />
-                  <div className="flex min-w-0 flex-col gap-1 text-[0.7rem]">
-                    <KV
-                      label={ts("panel.underRefusal")}
-                      value={pct(refusal.data?.under_refusal_rate)}
-                      tone={(refusal.data?.under_refusal_rate ?? 0) > 0.1 ? BAD : GOOD}
+                </Panel>
+                <Panel title={ts("panel.regression")}>
+                  <div className="flex items-center gap-3">
+                    <Gauge
+                      value={regression.data?.risk_score ?? 0}
+                      tone={(regression.data?.risk_score ?? 0) >= 0.5 ? "#ef4444" : "#f59e0b"}
                     />
-                    <KV label={ts("panel.legit")} value={`${refusal.data?.n_legit ?? 0}`} />
-                    <KV label={ts("panel.forbidden")} value={`${refusal.data?.n_forbidden ?? 0}`} />
-                  </div>
-                </div>
-              </Panel>
-              <Panel title={ts("panel.priorityCases")}>
-                <ul className="flex flex-col gap-1 text-[0.72rem]">
-                  {(failed.data?.cases ?? []).slice(0, 4).map((c) => (
-                    <li key={c.case_id} className="flex items-center gap-1.5">
+                    <div className="flex flex-col gap-0.5 text-[0.7rem]">
                       <span
-                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
-                      />
-                      <span className="min-w-0 flex-1 truncate">{c.title}</span>
-                      <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
-                        {c.case_id}
+                        className={`text-base font-semibold ${(regression.data?.risk_score ?? 0) >= 0.5 ? BAD : WARN}`}
+                      >
+                        {ts(`level.${regression.data?.level ?? "low"}`)}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
-            </div>
-          </Zone>
+                      <span className="text-[var(--muted-foreground)]">
+                        {ts("panel.regression7d")}: {pct(regression.data?.probability_7d)}
+                      </span>
+                    </div>
+                  </div>
+                </Panel>
+                <Panel title={ts("panel.domainRisk")}>
+                  <div className="flex flex-col gap-1.5">
+                    {domainRisks.map((d) => (
+                      <RiskBar key={d.key} label={ts(`domain.${d.key}`)} value={d.value} />
+                    ))}
+                  </div>
+                </Panel>
+                <Panel title={ts("panel.overPriv")}>
+                  <ul className="flex flex-col gap-1 text-[0.72rem]">
+                    {(lp.data?.usage ?? []).slice(0, 5).map((u) => {
+                      const over = lp.data?.over_provisioned.includes(u.tool);
+                      return (
+                        <li key={u.tool} className="flex items-center justify-between gap-2">
+                          <span className="min-w-0 truncate font-mono">{u.tool}</span>
+                          <Badge tone={over ? "warning" : "success"}>
+                            {over ? ts("overProvisioned") : `${u.used}`}
+                          </Badge>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Panel>
+              </div>
+            </Zone>
 
-          {/* D. Signaux prédictifs */}
-          <Zone label={ts("sec.predictive")}>
-            <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
-              <Panel title={ts("panel.trend")}>
-                <LineChart
-                  a={attackSeries}
-                  b={incidentSeries}
-                  aLabel={ts("panel.attackLine")}
-                  bLabel={ts("panel.incidentLine")}
+            {/* E. Privacy / Mémoire / SOC */}
+            <Zone label={ts("sec.privacy")}>
+              <div className="grid gap-2 lg:grid-cols-3">
+                <Panel title={ts("panel.redteam")}>
+                  <div className="flex flex-col gap-1.5 text-[0.72rem]">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-semibold tabular-nums">{blocked}</span>
+                      <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
+                      <span className="ml-auto font-semibold tabular-nums text-amber-500">
+                        {fw?.false_negative ?? 0} {ts("panel.bypasses")}
+                      </span>
+                    </div>
+                    <div className="flex h-[4px] w-full overflow-hidden rounded-full">
+                      <div
+                        style={{ flexBasis: `${(blockRate ?? 0) * 100}%`, background: "#10b981" }}
+                      />
+                      <div style={{ flexGrow: 1, background: "#f97316" }} />
+                    </div>
+                    <KV label={ts("panel.blockRate")} value={pct(blockRate)} tone={GOOD} />
+                    <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
+                  </div>
+                </Panel>
+                <Panel title={ts("panel.erasureSurface")}>
+                  <div className="flex items-center gap-3">
+                    <Gauge
+                      value={erasureComplete ?? 0}
+                      label={ts("panel.completeness")}
+                      tone="#10b981"
+                    />
+                    <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
+                      <KV
+                        label={ts("panel.conversations")}
+                        value={`${erasure.data?.n_conversations ?? 0}`}
+                      />
+                      <KV label={ts("panel.bundles")} value={`${erasure.data?.n_bundles ?? 0}`} />
+                      <KV label={ts("panel.scores")} value={`${erasure.data?.n_scores ?? 0}`} />
+                    </div>
+                  </div>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 h-7 w-full justify-center text-[0.7rem]"
+                  >
+                    <Link href="/configurer/sources-memoire">{ts("panel.purgeCta")}</Link>
+                  </Button>
+                </Panel>
+                <Panel title={ts("panel.inversion")}>
+                  {inversion.data?.available === false || inversion.isLoading ? (
+                    <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                      {ts("panel.computing")}
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-1 text-[0.72rem]">
+                      <KV
+                        label={ts("panel.recoverable")}
+                        value={`${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0}`}
+                        tone={(inversion.data?.n_recoverable ?? 0) > 0 ? BAD : GOOD}
+                      />
+                      <KV label={ts("panel.recoveryRate")} value={pct(invRate)} />
+                      <KV
+                        label={ts("panel.threshold")}
+                        value={inversion.data?.threshold?.toFixed(2) ?? "—"}
+                      />
+                    </div>
+                  )}
+                </Panel>
+              </div>
+            </Zone>
+
+            {/* F. Actions recommandées */}
+            <Zone label={ts("sec.actions")}>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <ActionCard
+                  icon={Siren}
+                  title={ts("act.redteamTitle")}
+                  desc={ts("act.redteamDesc")}
+                  roleLabel={ts("role.security")}
+                  cta={ts("act.redteamCta")}
+                  href="/surveiller/qualite-ia"
                 />
-              </Panel>
-              <Panel title={ts("panel.regression")}>
-                <div className="flex items-center gap-3">
-                  <Gauge
-                    value={regression.data?.risk_score ?? 0}
-                    tone={(regression.data?.risk_score ?? 0) >= 0.5 ? "#ef4444" : "#f59e0b"}
-                  />
-                  <div className="flex flex-col gap-0.5 text-[0.7rem]">
-                    <span
-                      className={`text-base font-semibold ${(regression.data?.risk_score ?? 0) >= 0.5 ? BAD : WARN}`}
-                    >
-                      {ts(`level.${regression.data?.level ?? "low"}`)}
-                    </span>
-                    <span className="text-[var(--muted-foreground)]">
-                      {ts("panel.regression7d")}: {pct(regression.data?.probability_7d)}
-                    </span>
-                  </div>
-                </div>
-              </Panel>
-              <Panel title={ts("panel.domainRisk")}>
-                <div className="flex flex-col gap-1.5">
-                  {domainRisks.map((d) => (
-                    <RiskBar key={d.key} label={ts(`domain.${d.key}`)} value={d.value} />
-                  ))}
-                </div>
-              </Panel>
-              <Panel title={ts("panel.overPriv")}>
-                <ul className="flex flex-col gap-1 text-[0.72rem]">
-                  {(lp.data?.usage ?? []).slice(0, 5).map((u) => {
-                    const over = lp.data?.over_provisioned.includes(u.tool);
-                    return (
-                      <li key={u.tool} className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 truncate font-mono">{u.tool}</span>
-                        <Badge tone={over ? "warning" : "success"}>
-                          {over ? ts("overProvisioned") : `${u.used}`}
-                        </Badge>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Panel>
-            </div>
-          </Zone>
+                <ActionCard
+                  icon={Snowflake}
+                  title={ts("act.freezeTitle")}
+                  desc={ts("act.freezeDesc")}
+                  roleLabel="Admin+"
+                  cta={ts("act.freezeCta")}
+                  href="/agir/release-control"
+                />
+                <ActionCard
+                  icon={ShieldAlert}
+                  title={ts("act.playbookTitle")}
+                  desc={ts("act.playbookDesc")}
+                  roleLabel={ts("role.security")}
+                  cta={ts("act.playbookCta")}
+                  href="/agir/incidents-playbooks"
+                />
+                <ActionCard
+                  icon={Trash2}
+                  title={ts("act.purgeTitle")}
+                  desc={ts("act.purgeDesc")}
+                  roleLabel={ts("role.privacy")}
+                  cta={ts("act.purgeCta")}
+                  href="/configurer/sources-memoire"
+                />
+              </div>
+            </Zone>
+          </div>
 
-          {/* E. Privacy / Mémoire / SOC */}
-          <Zone label={ts("sec.privacy")}>
-            <div className="grid gap-2 lg:grid-cols-3">
-              <Panel title={ts("panel.redteam")}>
-                <div className="flex flex-col gap-1.5 text-[0.72rem]">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-semibold tabular-nums">{blocked}</span>
-                    <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
-                    <span className="ml-auto font-semibold tabular-nums text-amber-500">
-                      {fw?.false_negative ?? 0} {ts("panel.bypasses")}
-                    </span>
-                  </div>
-                  <div className="flex h-[4px] w-full overflow-hidden rounded-full">
-                    <div
-                      style={{ flexBasis: `${(blockRate ?? 0) * 100}%`, background: "#10b981" }}
-                    />
-                    <div style={{ flexGrow: 1, background: "#f97316" }} />
-                  </div>
-                  <KV label={ts("panel.blockRate")} value={pct(blockRate)} tone={GOOD} />
-                  <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
-                </div>
-              </Panel>
-              <Panel title={ts("panel.erasureSurface")}>
-                <div className="flex items-center gap-3">
-                  <Gauge
-                    value={erasureComplete ?? 0}
-                    label={ts("panel.completeness")}
-                    tone="#10b981"
-                  />
-                  <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
-                    <KV
-                      label={ts("panel.conversations")}
-                      value={`${erasure.data?.n_conversations ?? 0}`}
-                    />
-                    <KV label={ts("panel.bundles")} value={`${erasure.data?.n_bundles ?? 0}`} />
-                    <KV label={ts("panel.scores")} value={`${erasure.data?.n_scores ?? 0}`} />
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-2 h-7 w-full justify-center text-[0.7rem]"
-                >
-                  {ts("panel.purgeCta")}
-                </Button>
-              </Panel>
-              <Panel title={ts("panel.inversion")}>
-                {inversion.data?.available === false || inversion.isLoading ? (
-                  <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
-                    {ts("panel.computing")}
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-1 text-[0.72rem]">
-                    <KV
-                      label={ts("panel.recoverable")}
-                      value={`${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0}`}
-                      tone={(inversion.data?.n_recoverable ?? 0) > 0 ? BAD : GOOD}
-                    />
-                    <KV label={ts("panel.recoveryRate")} value={pct(invRate)} />
-                    <KV
-                      label={ts("panel.threshold")}
-                      value={inversion.data?.threshold?.toFixed(2) ?? "—"}
-                    />
-                  </div>
-                )}
-              </Panel>
-            </div>
-          </Zone>
-
-          {/* F. Actions recommandées */}
-          <Zone label={ts("sec.actions")}>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <ActionCard
-                icon={Siren}
-                title={ts("act.redteamTitle")}
-                desc={ts("act.redteamDesc")}
-                roleLabel={ts("role.security")}
-                cta={ts("act.redteamCta")}
-              />
-              <ActionCard
-                icon={Snowflake}
-                title={ts("act.freezeTitle")}
-                desc={ts("act.freezeDesc")}
-                roleLabel="Admin+"
-                cta={ts("act.freezeCta")}
-              />
-              <ActionCard
-                icon={ShieldAlert}
-                title={ts("act.playbookTitle")}
-                desc={ts("act.playbookDesc")}
-                roleLabel={ts("role.security")}
-                cta={ts("act.playbookCta")}
-              />
-              <ActionCard
-                icon={Trash2}
-                title={ts("act.purgeTitle")}
-                desc={ts("act.purgeDesc")}
-                roleLabel={ts("role.privacy")}
-                cta={ts("act.purgeCta")}
-              />
-            </div>
-          </Zone>
+          <SecurityRail
+            firewall={fw}
+            conformance={conformance.data}
+            lp={lp.data}
+            anomalies={anomalies.data}
+            failed={failed.data}
+          />
         </div>
-
-        <SecurityRail
-          firewall={fw}
-          conformance={conformance.data}
-          lp={lp.data}
-          anomalies={anomalies.data}
-          failed={failed.data}
-        />
-      </div>
+      )}
 
       {/* footer status */}
       <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
