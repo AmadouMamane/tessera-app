@@ -12,8 +12,10 @@ import {
   ShieldCheck,
   UploadCloud,
 } from "lucide-react";
+import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
@@ -41,6 +43,7 @@ const EXP_BADGE: Record<string, string> = {
   down: "border-red-500/30 bg-red-500/15 text-red-300",
 };
 const TABS = ["overview", "evidencePacks", "exporters", "chain", "destinations"] as const;
+type Tab = (typeof TABS)[number];
 
 type T = ReturnType<typeof useTranslations<"proofs">>;
 type Data = ProofsData;
@@ -63,6 +66,7 @@ export function ProofsOverview() {
   const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const { data } = useQuery({
     queryKey: ["proofs-overview", locale],
     queryFn: ({ signal }) => fetchProofsOverview(locale, signal),
@@ -78,9 +82,89 @@ export function ProofsOverview() {
     );
   }
 
+  // Zones reused by the focused tabs (identical rendering + honesty flags).
+  const pipelineZone = (
+    <Zone
+      label={t("zone.pipeline")}
+      info={<ExplainInfo k="zone.pipeline" title={t("zone.pipeline")} />}
+    >
+      <SyntheticNotice signalId="evidence_export" compact />
+      <div className="grid gap-3 xl:grid-cols-12">
+        <Pipeline t={t} data={data} className="xl:col-span-7" />
+        <CurrentPack t={t} data={data} className="xl:col-span-5" />
+      </div>
+    </Zone>
+  );
+  const packsZone = (
+    <Zone label={t("zone.recentPacks")}>
+      <div className="grid gap-3 xl:grid-cols-12">
+        <RecentPacks t={t} data={data} className="xl:col-span-8" />
+        <Panel title={t("zone.distribution")} className="xl:col-span-4">
+          <Donut
+            slices={data.artifacts_distribution}
+            total={data.artifacts_total}
+            caption="Total"
+            labelOf={(k) => t(`art.${k}`)}
+            showCount
+          />
+        </Panel>
+      </div>
+    </Zone>
+  );
+  const exportersZone = (
+    <Zone
+      label={t("zone.exporters")}
+      info={<ExplainInfo k="zone.exporters" title={t("zone.exporters")} />}
+      action={
+        <Link
+          href="/configurer/integrations"
+          className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+        >
+          {t("viewAll.exporters")}
+          <ChevronRight className="h-3 w-3" />
+        </Link>
+      }
+    >
+      <SyntheticNotice signalId="evidence_export" compact />
+      <Exporters t={t} data={data} />
+    </Zone>
+  );
+  const cryptoZone = (
+    <Zone
+      label={t("zone.crypto")}
+      info={<ExplainInfo k="zone.crypto" title={t("zone.crypto")} />}
+      action={
+        <Link
+          href="/prouver/audit-logs"
+          className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+        >
+          {t("drill.chain")}
+          <ChevronRight className="h-3 w-3" />
+        </Link>
+      }
+    >
+      <Crypto t={t} data={data} />
+    </Zone>
+  );
+  const controlCasesZone = (
+    <Zone label={t("zone.controlCases")}>
+      <SyntheticNotice signalId="evidence_export" compact />
+      <ControlCases t={t} data={data} />
+    </Zone>
+  );
+  const retentionZone = (
+    <Zone
+      label={t("zone.retention")}
+      info={<ExplainInfo k="zone.retention" title={t("zone.retention")} />}
+    >
+      <SyntheticNotice signalId="evidence_export" compact />
+      <Retention t={t} data={data} />
+    </Zone>
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
+      <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}
@@ -94,101 +178,65 @@ export function ProofsOverview() {
         onModeChange={temporal.changeMode}
       />
 
-      <Zone label={t("zone.actual")}>
-        <div className="grid gap-3 xl:grid-cols-12">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:col-span-10 xl:grid-cols-6">
-            {data.kpis.map((kpi) => (
-              <KpiTile
-                key={kpi.key}
-                kpi={kpi}
-                label={t(`kpi.${kpi.key}`)}
-                vs={t("delta.vs7d")}
-                info={<ExplainInfo k={`kpi.${kpi.key}`} title={t(`kpi.${kpi.key}`)} />}
-              />
-            ))}
-          </div>
-          <AlertsPanel t={t} data={data} className="xl:col-span-2" />
-        </div>
-      </Zone>
-
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <Zone
-            label={t("zone.pipeline")}
-            info={<ExplainInfo k="zone.pipeline" title={t("zone.pipeline")} />}
-          >
-            <SyntheticNotice signalId="evidence_export" compact />
-            <div className="grid gap-3 xl:grid-cols-12">
-              <Pipeline t={t} data={data} className="xl:col-span-7" />
-              <CurrentPack t={t} data={data} className="xl:col-span-5" />
-            </div>
-          </Zone>
-
-          <Zone label={t("zone.recentPacks")}>
-            <div className="grid gap-3 xl:grid-cols-12">
-              <RecentPacks t={t} data={data} className="xl:col-span-8" />
-              <Panel title={t("zone.distribution")} className="xl:col-span-4">
-                <Donut
-                  slices={data.artifacts_distribution}
-                  total={data.artifacts_total}
-                  caption="Total"
-                  labelOf={(k) => t(`art.${k}`)}
-                  showCount
-                />
-              </Panel>
-            </div>
-          </Zone>
-
-          <Zone
-            label={t("zone.exporters")}
-            info={<ExplainInfo k="zone.exporters" title={t("zone.exporters")} />}
-            action={
-              <Link
-                href="/configurer/integrations"
-                className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
-              >
-                {t("viewAll.exporters")}
-                <ChevronRight className="h-3 w-3" />
-              </Link>
-            }
-          >
-            <SyntheticNotice signalId="evidence_export" compact />
-            <Exporters t={t} data={data} />
-          </Zone>
-
+      <div id="proofs-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
+        {activeTab === "evidencePacks" ? (
+          <>
+            {packsZone}
+            {pipelineZone}
+          </>
+        ) : null}
+        {activeTab === "exporters" ? exportersZone : null}
+        {activeTab === "chain" ? (
           <div className="grid gap-3 xl:grid-cols-2">
-            <Zone
-              label={t("zone.crypto")}
-              info={<ExplainInfo k="zone.crypto" title={t("zone.crypto")} />}
-              action={
-                <Link
-                  href="/prouver/audit-logs"
-                  className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
-                >
-                  {t("drill.chain")}
-                  <ChevronRight className="h-3 w-3" />
-                </Link>
-              }
-            >
-              <Crypto t={t} data={data} />
-            </Zone>
-            <Zone label={t("zone.controlCases")}>
-              <SyntheticNotice signalId="evidence_export" compact />
-              <ControlCases t={t} data={data} />
+            {cryptoZone}
+            <Zone label={t("zone.alerts")}>
+              <AlertsPanel t={t} data={data} />
             </Zone>
           </div>
-
-          <Zone
-            label={t("zone.retention")}
-            info={<ExplainInfo k="zone.retention" title={t("zone.retention")} />}
-          >
-            <SyntheticNotice signalId="evidence_export" compact />
-            <Retention t={t} data={data} />
-          </Zone>
-        </div>
-
-        <ProofsRail t={t} data={data} />
+        ) : null}
+        {activeTab === "destinations" ? (
+          <>
+            {retentionZone}
+            {controlCasesZone}
+          </>
+        ) : null}
       </div>
+
+      {activeTab !== "overview" ? null : (
+        <>
+          <Zone label={t("zone.actual")}>
+            <div className="grid gap-3 xl:grid-cols-12">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:col-span-10 xl:grid-cols-6">
+                {data.kpis.map((kpi) => (
+                  <KpiTile
+                    key={kpi.key}
+                    kpi={kpi}
+                    label={t(`kpi.${kpi.key}`)}
+                    vs={t("delta.vs7d")}
+                    info={<ExplainInfo k={`kpi.${kpi.key}`} title={t(`kpi.${kpi.key}`)} />}
+                  />
+                ))}
+              </div>
+              <AlertsPanel t={t} data={data} className="xl:col-span-2" />
+            </div>
+          </Zone>
+
+          <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="flex min-w-0 flex-col gap-3">
+              {pipelineZone}
+              {packsZone}
+              {exportersZone}
+              <div className="grid gap-3 xl:grid-cols-2">
+                {cryptoZone}
+                {controlCasesZone}
+              </div>
+              {retentionZone}
+            </div>
+
+            <ProofsRail t={t} data={data} />
+          </div>
+        </>
+      )}
 
       <Footer t={t} data={data} />
     </div>
@@ -197,16 +245,32 @@ export function ProofsOverview() {
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({
+  t,
+  active,
+  onSelect,
+}: {
+  t: T;
+  active: Tab;
+  onSelect: (tab: Tab) => void;
+}) {
   return (
-    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <section
+      role="tablist"
+      aria-label={t("tabs.overview")}
+      className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+    >
       {TABS.map((tab) => (
         <button
           key={tab}
           type="button"
+          role="tab"
+          aria-selected={tab === active}
+          aria-controls="proofs-tabpanel"
+          onClick={() => onSelect(tab)}
           className={cn(
             "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
-            tab === "overview"
+            tab === active
               ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
               : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
           )}
@@ -223,7 +287,9 @@ function AlertsPanel({ t, data, className }: { t: T; data: Data; className?: str
     <Panel
       title={t("zone.alerts")}
       className={className}
-      action={<ViewAll label={t("viewAll.alerts", { n: data.alert_count })} />}
+      action={
+        <ViewAll label={t("viewAll.alerts", { n: data.alert_count })} href="/prouver/audit-logs" />
+      }
     >
       <ul className="flex flex-col gap-1.5">
         {data.alerts.map((a) => (
@@ -329,7 +395,11 @@ function CurrentPack({ t, data, className }: { t: T; data: Data; className?: str
 
 function RecentPacks({ t, data, className }: { t: T; data: Data; className?: string }) {
   return (
-    <Panel title="" className={className} action={<ViewAll label={t("viewAll.packs")} />}>
+    <Panel
+      title=""
+      className={className}
+      action={<ViewAll label={t("viewAll.packs")} href="/prouver/etat-a-date" />}
+    >
       <SyntheticNotice signalId="evidence_export" compact />
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.7rem]">
@@ -387,7 +457,10 @@ function RecentPacks({ t, data, className }: { t: T; data: Data; className?: str
 
 function Exporters({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title="" action={<ViewAll label={t("viewAll.exporters")} />}>
+    <Panel
+      title=""
+      action={<ViewAll label={t("viewAll.exporters")} href="/configurer/integrations" />}
+    >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.72rem]">
           <thead>
@@ -604,7 +677,10 @@ function ProofsRail({ t, data }: { t: T; data: Data }) {
         </ul>
       </Panel>
 
-      <Panel title={t("zone.journal")} action={<ViewAll label={t("viewAll.all")} />}>
+      <Panel
+        title={t("zone.journal")}
+        action={<ViewAll label={t("viewAll.all")} href="/prouver/audit-logs" />}
+      >
         <ul className="flex flex-col gap-1.5">
           {data.export_journal.map((j, i) => (
             <li key={`${j.time}-${j.label}-${i}`} className="flex items-center gap-2 text-[0.7rem]">
@@ -627,7 +703,10 @@ function ProofsRail({ t, data }: { t: T; data: Data }) {
         </ul>
       </Panel>
 
-      <Panel title={t("zone.queue")} action={<ViewAll label={t("queue.viewQueue")} />}>
+      <Panel
+        title={t("zone.queue")}
+        action={<ViewAll label={t("queue.viewQueue")} href="/configurer/integrations" />}
+      >
         <dl className="flex flex-col gap-1.5 text-[0.7rem]">
           <KV label={t("queue.pendingSignature")} value={String(data.queue.pending_signature)} />
           <KV label={t("queue.pendingExport")} value={String(data.queue.pending_export)} />
@@ -867,14 +946,14 @@ function KV({
   );
 }
 
-function ViewAll({ label }: { label: string }) {
+function ViewAll({ label, href }: { label: string; href: Route }) {
   return (
-    <button
-      type="button"
+    <Link
+      href={href}
       className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
     >
       {label} <ChevronRight className="h-3 w-3" />
-    </button>
+    </Link>
   );
 }
 
