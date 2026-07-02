@@ -131,15 +131,30 @@ def _gating_archive_rows() -> list[dict[str, object]]:
 
 
 def _read_audit_ledger() -> list[dict[str, object]]:
-    """Parse the guard audit log (``type == tessera.guard.audit``), best effort.
+    """Guard-audit entries from the ACTIVE ledger source (§Amendment 3 cut switch).
 
-    Mirrors the routes' ``_read_audit_entries`` so the ledger read matches today's exactly.
-    The full ledger is returned unfiltered; downstream signals apply the scope filter
-    (agent / as-of-T) via :mod:`tessera.observability.spine.adapters.ledger`.
+    ``file`` (default) parses the flat journal exactly as the routes do; ``postgres``
+    reads the promoted append-only table — the cut, only ever enabled after
+    ``shadow_verify_ledger`` holds (never flip a ledger read before its chain verifies).
+    Both return only ``type == tessera.guard.audit`` rows, unfiltered; downstream signals
+    apply the scope filter via :mod:`tessera.observability.spine.adapters.ledger`.
     """
     import json
 
+    from tessera.guard.ledger_store import ledger_source, load_ledger_payloads_sync
     from tessera.settings import get_settings
+
+    if ledger_source() == "postgres":
+        import psycopg
+
+        from tessera.observability.spine.adapters.base import SpineUnavailableError
+
+        try:
+            payloads = load_ledger_payloads_sync()
+        except psycopg.Error as exc:
+            msg = f"promoted ledger unreachable: {exc}"
+            raise SpineUnavailableError(msg) from exc
+        return [p for p in payloads if p.get("type") == "tessera.guard.audit"]
 
     path = get_settings().guard.audit_file
     entries: list[dict[str, object]] = []

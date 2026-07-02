@@ -270,6 +270,13 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
                 _emit_postgres(entry)
     except Exception as exc:
         sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")
+    if sink == "file":
+        # ADR 0015 §Amendment 3 — dual-write the chained entry to the promoted
+        # append-only Postgres ledger (best-effort FIFO; the boot reconcile self-heals a
+        # missed insert). The file stays canonical until the TESSERA_LEDGER_SOURCE cut.
+        from tessera.guard.ledger_store import enqueue_ledger_entry
+
+        enqueue_ledger_entry(entry)
 
 
 def emit_handoff(

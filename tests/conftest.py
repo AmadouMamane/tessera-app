@@ -35,6 +35,10 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     # clients (opting back in per-test) and proven live by the contract tests.
     monkeypatch.setenv("TESSERA_CLICKHOUSE_SCORES", "0")
     monkeypatch.setenv("TESSERA_LANGFUSE_SCORES", "0")
+    # The §Amendment 3 ledger dual-write is off too: audit emission in tests must not
+    # reach Postgres (and the append-only table could never be cleaned). The promoted
+    # ledger is covered by its own unit (pure chain walk) + contract tests.
+    monkeypatch.setenv("TESSERA_LEDGER_DUAL_WRITE", "0")
     # Eval reports are partitioned per env (ADR 0014, layer 3); the real archive
     # is a local-dev artifact under eval/reports/local. Pin the resolver at it so
     # the report-backed assertions read real data regardless of the test env.

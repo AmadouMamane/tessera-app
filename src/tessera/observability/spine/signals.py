@@ -193,18 +193,19 @@ async def _read_audit_count(scope: Scope) -> dict[str, object]:
 async def _read_audit_integrity(_scope: Scope) -> dict[str, object]:
     """Org-wide crypto invariant: the whole hash chain (all entry types), never per-agent.
 
-    Verifies the full ledger — a per-agent sub-chain would be a weaker guarantee — so this
-    intentionally reads the file directly rather than the scope-filtered ctx entries. The
-    scope is unused: integrity is a whole-fleet property (its capability declares no dims).
+    Verifies the full ACTIVE ledger (§Amendment 3: the flat file by default, the promoted
+    append-only Postgres table after the cut) — a per-agent sub-chain would be a weaker
+    guarantee, so this intentionally bypasses the scope-filtered ctx entries. The scope is
+    unused: integrity is a whole-fleet property (its capability declares no dims).
     """
-    from tessera.guard.audit import verify_audit_chain
-    from tessera.settings import get_settings
+    from tessera.guard.ledger_store import ledger_source, verify_active_ledger
 
-    status = verify_audit_chain(get_settings().guard.audit_file)
+    status = verify_active_ledger()
     return {
         "chain_valid": status.verified,
         "length": status.length,
         "broken_at": status.broken_at,
+        "medium": ledger_source(),
     }
 
 

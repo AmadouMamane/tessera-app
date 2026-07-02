@@ -58,7 +58,7 @@ class TestClickHouseWriteContract:
         probe_metric = f"contract-probe-{uuid.uuid4().hex[:12]}"
         line = online_score_line(
             {
-                "scored_at": "2026-01-01T00:00:00+00:00",
+                "scored_at": "2026-06-01T00:00:00+00:00",
                 "metric": probe_metric,
                 "score": 0.5,
                 "language": "fr",
@@ -102,8 +102,8 @@ class TestClickHouseReadContract:
         probe_agent = f"g3-read-probe-{uuid.uuid4().hex[:12]}"
         lines = []
         for stamp, metric in (
-            ("2026-01-01T00:00:00+00:00", "faithfulness"),
-            ("2026-01-02T00:00:00+00:00", "grounding"),
+            ("2026-06-01T00:00:00+00:00", "faithfulness"),
+            ("2026-06-02T00:00:00+00:00", "grounding"),
         ):
             line = online_score_line(
                 {
@@ -123,17 +123,29 @@ class TestClickHouseReadContract:
             lines.append(line)
         adapter.execute(f"INSERT INTO {adapter.table} FORMAT JSONEachRow", data=b"\n".join(lines))
         try:
-            rows = adapter.online_scores(Scope(agent_id=probe_agent))
+            # Probes are dated INSIDE the TTL retention window (a probe older than the
+            # 6-month TTL is legitimately erased by a background merge — that IS the
+            # native retention working). Presence is asserted via the AS-OF read: it is
+            # unbounded (`scored_at <= at`); the live mode's newest-200 ring cut is
+            # unit-locked in test_spine_owned_reads and proves nothing about presence.
+            rows = adapter.online_scores(
+                Scope(agent_id=probe_agent, at="2026-06-03T00:00:00+00:00")
+            )
             assert [r["metric"] for r in rows] == ["faithfulness", "grounding"]
-            assert rows[0]["scored_at"] == "2026-01-01T00:00:00.000+00:00"
+            assert rows[0]["scored_at"] == "2026-06-01T00:00:00.000+00:00"
             assert rows[0]["sampled"] is True
             # As-of-T excludes the later row server-side.
             asof = adapter.online_scores(
-                Scope(agent_id=probe_agent, at="2026-01-01T12:00:00+00:00")
+                Scope(agent_id=probe_agent, at="2026-06-01T12:00:00+00:00")
             )
             assert [r["metric"] for r in asof] == ["faithfulness"]
-            # Language slice composes with agent.
-            assert adapter.online_scores(Scope(agent_id=probe_agent, language="de")) == []
+            # Language slice composes with agent (same unbounded as-of read).
+            assert (
+                adapter.online_scores(
+                    Scope(agent_id=probe_agent, language="de", at="2026-06-03T00:00:00+00:00")
+                )
+                == []
+            )
         finally:
             adapter.execute(
                 f"DELETE FROM {adapter.table} WHERE agent_id = '{probe_agent}'"  # noqa: S608 — fixed probe literal
@@ -235,7 +247,7 @@ class TestPostgresGatingContract:
             assert [r["case_id"] for r in rows] == ["01", "02"]
             assert rows[0]["metric"] == "case_pass"
             assert isinstance(rows[0]["scored_at"], str)  # ISO — the shared row shape
-            # As-of-T before the run → nothing; language slice composes with agent.
+            # As-of-T before the run (stamped 2026-01-02) → nothing; then language slice.
             assert (
                 adapter.gating_scores(Scope(agent_id=probe_agent, at="2026-01-01T00:00:00+00:00"))
                 == []

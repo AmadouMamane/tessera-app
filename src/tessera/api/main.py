@@ -94,6 +94,29 @@ async def _reconcile_gating_archive() -> None:
         )
 
 
+async def _reconcile_audit_ledger() -> None:
+    """Promote/reconcile the audit journal into the append-only Postgres ledger (§Amend.3).
+
+    The backfill verifies the file chain FIRST and refuses a broken one; the unique hash
+    makes a re-run free; a missed dual-write heals here. Best-effort at boot — the flat
+    file remains canonical until the ``TESSERA_LEDGER_SOURCE`` cut, so a deferred sweep
+    is honest, never blocking.
+    """
+    from tessera.guard.ledger_store import backfill_ledger_from_file, ensure_audit_ledger_schema
+
+    log = obs_logging.get_logger("tessera.ledger")
+    try:
+        await ensure_audit_ledger_schema()
+        inserted, status = await backfill_ledger_from_file(get_settings().guard.audit_file)
+    except Exception as exc:  # promotion must never block boot
+        log.warning("ledger.promotion_deferred", error=str(exc))
+        return
+    if not status.verified:
+        log.warning("ledger.file_chain_broken", broken_at=status.broken_at, length=status.length)
+    elif inserted:
+        log.info("ledger.promoted", rows_inserted=inserted, chain_length=status.length)
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
@@ -115,6 +138,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await ensure_eval_gating_schema()  # ADR 0015 §Amendment 2 — gating socle (porteur)
         await _ensure_online_score_store()  # ADR 0015 §Correction 2b — best-effort
         await _reconcile_gating_archive()  # ADR 0015 G4 — idempotent file→porteur sweep
+        await _reconcile_audit_ledger()  # ADR 0015 §Amendment 3 — verified file→table copy
         yield
     finally:
         await pool.close()
