@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
-import { fetchBudget, fetchHealth, fetchReadiness } from "@/lib/api/client";
+import { fetchBudget, fetchHealth, fetchReadiness, fetchTailSampling } from "@/lib/api/client";
 
 const POLL_MS = 10_000;
 
@@ -55,61 +55,134 @@ export function HealthDashboard() {
     enabled: isAdmin,
   });
 
+  const tail = useQuery({
+    queryKey: ["tail-sampling"],
+    queryFn: ({ signal }) => fetchTailSampling(signal),
+    refetchInterval: POLL_MS * 3,
+  });
+
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatusCard
-        title={t("cards.backend")}
-        info={<KpiInfo title={t("cards.backend")} k="backend" />}
-        icon={<ServerCog />}
-        loading={health.isPending}
-        error={health.error?.message}
-        status={health.data?.status}
-        helper={health.data?.version ? `v${health.data.version}` : undefined}
-      />
-      <StatusCard
-        title={t("cards.readiness")}
-        info={<KpiInfo title={t("cards.readiness")} k="readiness" />}
-        icon={<Heart />}
-        loading={readiness.isPending}
-        error={readiness.error?.message}
-        status={readiness.data?.status}
-      />
-      <StatusCard
-        title={t("cards.budget")}
-        info={<KpiInfo title={t("cards.budget")} k="budget" />}
-        href="/surveiller/fiabilite-cout"
-        icon={<CircleDollarSign />}
-        locked={!isAdmin}
-        lockedLabel={tAuth("adminOnly")}
-        loading={isAdmin && budget.isPending}
-        error={budget.error?.message}
-        custom={
-          budget.data ? (
-            <div className="flex flex-col gap-1">
-              <span className="font-serif text-2xl font-semibold">
-                € {budget.data.estimated_cost_eur.toFixed(4)}
-              </span>
-              <span className="text-xs text-[var(--muted-foreground)]">
-                {budget.data.input_tokens.toLocaleString()} in ·{" "}
-                {budget.data.output_tokens.toLocaleString()} out
-              </span>
-            </div>
-          ) : null
-        }
-      />
-      <StatusCard
-        title={t("cards.version")}
-        info={<KpiInfo title={t("cards.version")} k="version" />}
-        href="/agir/release-control"
-        icon={<Activity />}
-        loading={health.isPending}
-        error={health.error?.message}
-        custom={
-          health.data ? (
-            <span className="font-mono text-base font-medium">{health.data.version}</span>
-          ) : null
-        }
-      />
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatusCard
+          title={t("cards.backend")}
+          info={<KpiInfo title={t("cards.backend")} k="backend" />}
+          icon={<ServerCog />}
+          loading={health.isPending}
+          error={health.error?.message}
+          status={health.data?.status}
+          helper={health.data?.version ? `v${health.data.version}` : undefined}
+        />
+        <StatusCard
+          title={t("cards.readiness")}
+          info={<KpiInfo title={t("cards.readiness")} k="readiness" />}
+          icon={<Heart />}
+          loading={readiness.isPending}
+          error={readiness.error?.message}
+          status={readiness.data?.status}
+        />
+        <StatusCard
+          title={t("cards.budget")}
+          info={<KpiInfo title={t("cards.budget")} k="budget" />}
+          href="/surveiller/fiabilite-cout"
+          icon={<CircleDollarSign />}
+          locked={!isAdmin}
+          lockedLabel={tAuth("adminOnly")}
+          loading={isAdmin && budget.isPending}
+          error={budget.error?.message}
+          custom={
+            budget.data ? (
+              <div className="flex flex-col gap-1">
+                <span className="font-serif text-2xl font-semibold">
+                  € {budget.data.estimated_cost_eur.toFixed(4)}
+                </span>
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {budget.data.input_tokens.toLocaleString()} in ·{" "}
+                  {budget.data.output_tokens.toLocaleString()} out
+                </span>
+              </div>
+            ) : null
+          }
+        />
+        <StatusCard
+          title={t("cards.version")}
+          info={<KpiInfo title={t("cards.version")} k="version" />}
+          href="/agir/release-control"
+          icon={<Activity />}
+          loading={health.isPending}
+          error={health.error?.message}
+          custom={
+            health.data ? (
+              <span className="font-mono text-base font-medium">{health.data.version}</span>
+            ) : null
+          }
+        />
+      </div>
+
+      {/* Tail-based sampling — REAL: analyze_sampling over the captured replay
+        bundles (slow / low-faithfulness turns are always kept; a deterministic
+        base-rate sample of the head is kept for baseline visibility). */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="flex min-w-0 items-center gap-1 font-sans text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+            <span className="min-w-0 truncate">{t("tail.title")}</span>
+            <KpiInfo title={t("tail.title")} k="tailSampling" />
+          </CardTitle>
+          {tail.data ? (
+            <Badge tone={tail.data.tail_retention_rate >= 1 ? "success" : "warning"}>
+              {t("tail.guarantee", {
+                pct: Math.round(tail.data.tail_retention_rate * 100),
+              })}
+            </Badge>
+          ) : null}
+        </CardHeader>
+        <CardContent className="pt-1">
+          {tail.isPending ? (
+            <Skeleton className="h-12 w-full" />
+          ) : tail.error ? (
+            <Badge tone="danger">{t("status.down")}</Badge>
+          ) : tail.data ? (
+            tail.data.n_traces === 0 ? (
+              <p className="text-xs text-[var(--muted-foreground)]">{t("tail.empty")}</p>
+            ) : (
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                <TailStat label={t("tail.traces")} value={`${tail.data.n_traces}`} />
+                <TailStat
+                  label={t("tail.kept")}
+                  value={`${tail.data.n_kept} (${Math.round(tail.data.retention_rate * 100)}%)`}
+                />
+                <TailStat
+                  label={t("tail.tailKept")}
+                  value={`${tail.data.n_tail - Math.round((1 - tail.data.tail_retention_rate) * tail.data.n_tail)}/${tail.data.n_tail}`}
+                />
+                <TailStat
+                  label={t("tail.slow", { ms: Math.round(tail.data.slow_threshold_ms) })}
+                  value={`${tail.data.n_slow}`}
+                />
+                <TailStat
+                  label={t("tail.lowScore", { s: tail.data.score_threshold.toFixed(2) })}
+                  value={`${tail.data.n_low_score}`}
+                />
+                <TailStat
+                  label={t("tail.baseRate")}
+                  value={`${Math.round(tail.data.base_rate * 100)}%`}
+                />
+              </dl>
+            )
+          ) : null}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function TailStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <dt className="truncate text-[0.66rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+        {label}
+      </dt>
+      <dd className="font-mono text-sm font-medium text-[var(--foreground)]">{value}</dd>
     </div>
   );
 }

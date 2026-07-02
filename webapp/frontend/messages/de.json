@@ -872,6 +872,11 @@
         "what": "Die bereitgestellte Version des Agenten-Backends.",
         "how": "Vom Dienst beim Start gemeldete Version.",
         "source": "/healthz."
+      },
+      "tailSampling": {
+        "what": "Die Trace-Retention-Politik: langsame oder wenig treue Turns werden IMMER behalten; eine deterministische Stichprobe des Heads bleibt fuer die Basissicht.",
+        "how": "analyze_sampling(recent_bundles()) — Tail = Latenz ≥ Schwelle ODER Score < Schwelle; Head per deterministischem Hash der bundle_id zur Basisrate.",
+        "source": "Erfasste Replay-Bundles (echte Turns), src/tessera/observability/tail_sampling.py"
       }
     },
     "title": "Servicestatus",
@@ -886,6 +891,17 @@
       "ok": "Betriebsbereit",
       "degraded": "Beeinträchtigt",
       "down": "Offline"
+    },
+    "tail": {
+      "title": "Tail-basiertes Sampling (Traces)",
+      "guarantee": "Tail behalten: {pct}%",
+      "traces": "Gesehene Traces",
+      "kept": "Behalten",
+      "tailKept": "Tail behalten",
+      "slow": "Langsam (≥ {ms} ms)",
+      "lowScore": "Niedriger Score (< {s})",
+      "baseRate": "Basisrate (Head)",
+      "empty": "Noch keine Traces erfasst — der Replay-Puffer ist leer."
     }
   },
   "settings": {

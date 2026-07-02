@@ -872,6 +872,11 @@
         "what": "La version déployée du backend de l'agent.",
         "how": "Version rapportée par le service au démarrage.",
         "source": "/healthz."
+      },
+      "tailSampling": {
+        "what": "La politique de rétention des traces : les tours lents ou à faible fidélité sont TOUJOURS conservés ; un échantillon déterministe de la tête est gardé pour la visibilité de base.",
+        "how": "analyze_sampling(recent_bundles()) — tail = latence ≥ seuil OU score < seuil ; tête conservée par hachage déterministe du bundle_id au taux de base.",
+        "source": "Bundles de replay capturés (tours réels), src/tessera/observability/tail_sampling.py"
       }
     },
     "title": "État du service",
@@ -886,6 +891,17 @@
       "ok": "Opérationnel",
       "degraded": "Dégradé",
       "down": "Hors ligne"
+    },
+    "tail": {
+      "title": "Échantillonnage tail-based (traces)",
+      "guarantee": "Tail conservé : {pct}%",
+      "traces": "Traces vues",
+      "kept": "Conservées",
+      "tailKept": "Tail conservé",
+      "slow": "Lentes (≥ {ms} ms)",
+      "lowScore": "Bas score (< {s})",
+      "baseRate": "Taux de base (tête)",
+      "empty": "Aucune trace capturée pour l'instant — le tampon replay est vide."
     }
   },
   "settings": {
