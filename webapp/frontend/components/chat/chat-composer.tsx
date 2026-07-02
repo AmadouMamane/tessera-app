@@ -25,10 +25,16 @@ interface ChatComposerProps {
   isStreaming?: boolean;
   onSubmit: (message: string) => void | Promise<void>;
   onAbort?: () => void;
+  placeholder?: string;
+  streamingPlaceholder?: string;
+  disclosure?: string;
 }
 
 export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
-  ({ disabled, isStreaming, onSubmit, onAbort }, ref) => {
+  (
+    { disabled, isStreaming, onSubmit, onAbort, placeholder, streamingPlaceholder, disclosure },
+    ref,
+  ) => {
     const t = useTranslations("chat");
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const [value, setValue] = useState("");
@@ -80,10 +86,14 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={isStreaming ? t("streamingPlaceholder") : t("placeholder")}
+              placeholder={
+                isStreaming
+                  ? (streamingPlaceholder ?? t("streamingPlaceholder"))
+                  : (placeholder ?? t("placeholder"))
+              }
               rows={1}
               className="min-h-[36px] flex-1 resize-none overflow-hidden border-0 bg-transparent px-0 py-1 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-              aria-label={t("placeholder")}
+              aria-label={placeholder ?? t("placeholder")}
             />
             {isStreaming && onAbort ? (
               <Button
@@ -125,7 +135,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
             is persistent (never toggled) and rendered from bundled i18n rather
             than a network call. Mirrors tessera.observability.disclosure. */}
         <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[0.6rem] text-[var(--muted-foreground)]/70">
-          {t("disclosure")}
+          {disclosure ?? t("disclosure")}
         </p>
       </div>
     );

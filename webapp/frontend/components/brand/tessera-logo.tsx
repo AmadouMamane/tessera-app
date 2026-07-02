@@ -34,3 +34,18 @@ export function TesseraLogo({ className }: { className?: string }) {
     </>
   );
 }
+
+export function TesseraMark({ className }: { className?: string }) {
+  return (
+    <Image
+      src="/brand/tessera-mark.png"
+      alt=""
+      aria-hidden="true"
+      width={59}
+      height={59}
+      priority
+      unoptimized
+      className={cn("h-10 w-10 shrink-0 object-contain", className)}
+    />
+  );
+}

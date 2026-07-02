@@ -242,7 +242,7 @@ function BrandLead({ title, href }: { title?: string; href: string }) {
   return (
     <div className="flex min-w-0 items-center gap-4">
       <Link href={href} className="flex shrink-0 items-center gap-2">
-        <TesseraLogo className="h-[40px]" />
+        <TesseraLogo className="h-11" />
       </Link>
       {title ? (
         <span className="truncate font-sans text-base font-semibold text-[var(--text-primary)]">

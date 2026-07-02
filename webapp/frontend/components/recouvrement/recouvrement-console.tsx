@@ -1,13 +1,13 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PanelLeftClose, PanelLeftOpen, Search, ShieldAlert, SquarePen } from "lucide-react";
+import { PanelLeftClose, Search, ShieldAlert, SquarePen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
 import { AppHeader } from "@/components/layout/app-header";
-import { RecouvrementLogo } from "@/components/recouvrement/recouvrement-logo";
+import { RecouvrementLogo, RecouvrementMark } from "@/components/recouvrement/recouvrement-logo";
 import { fetchConversationMessages, fetchConversations } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
 import { type ChatMessage, useChatStore } from "@/lib/stores/chat-store";
@@ -113,19 +113,29 @@ export function RecouvrementConsole() {
             collapsed ? "justify-center px-2" : "justify-between px-3",
           )}
         >
-          {collapsed ? null : <RecouvrementLogo label={t("title")} tagline={t("badge")} />}
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            aria-label={collapsed ? t("expandPanel") : t("collapsePanel")}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-[var(--tessera-text-muted)] transition-colors hover:bg-[var(--tessera-surface)] hover:text-[var(--tessera-text)]"
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" />
-            )}
-          </button>
+          {collapsed ? (
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label={t("expandPanel")}
+              title={t("expandPanel")}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-md transition-colors hover:bg-[var(--tessera-surface)]"
+            >
+              <RecouvrementMark className="h-8" />
+            </button>
+          ) : (
+            <>
+              <RecouvrementLogo label={t("title")} tagline={t("badge")} />
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                aria-label={t("collapsePanel")}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-[var(--tessera-text-muted)] transition-colors hover:bg-[var(--tessera-surface)] hover:text-[var(--tessera-text)]"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-1 p-2">

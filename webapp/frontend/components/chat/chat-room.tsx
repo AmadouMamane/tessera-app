@@ -16,11 +16,13 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { RecouvrementMark } from "@/components/recouvrement/recouvrement-logo";
 import type { Locale } from "@/i18n/routing";
 import { streamChat } from "@/lib/api/sse";
+import { cn } from "@/lib/cn";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { ChatComposer, type ChatComposerHandle } from "./chat-composer";
 import { MessageBubble } from "./message-bubble";
@@ -99,6 +101,13 @@ interface ChatRoomProps {
 export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: ChatRoomProps = {}) {
   const t = useTranslations("chat");
   const locale = useLocale() as Locale;
+  const isRecouvrement = surface === "recouvrement";
+  const assistantName = isRecouvrement ? t("recouvrementAssistantSaid") : t("assistantSaid");
+  const emptyDescription = isRecouvrement ? t("recouvrementDescription") : t("description");
+  const disclosure = isRecouvrement ? t("recouvrementDisclosure") : t("disclosure");
+  const streamingPlaceholder = isRecouvrement
+    ? t("recouvrementStreamingPlaceholder")
+    : t("streamingPlaceholder");
   const composerRef = useRef<ChatComposerHandle>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
@@ -379,7 +388,17 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
           /* fix 1: flex-1 + justify-center to vertically center the empty state */
           <div className="flex flex-1 items-center justify-center">
             <EmptyWithSuggestions
-              description={t("description")}
+              description={emptyDescription}
+              icon={
+                isRecouvrement ? (
+                  <RecouvrementMark className="h-16 brightness-75 contrast-125 saturate-90 drop-shadow-[0_8px_18px_rgba(0,0,0,0.35)]" />
+                ) : undefined
+              }
+              iconClassName={
+                isRecouvrement
+                  ? "h-20 w-20 rounded-none bg-transparent shadow-none ring-0 dark:bg-transparent dark:shadow-none dark:ring-0"
+                  : undefined
+              }
               suggestionsLabel={t("startWith")}
               suggestions={suggestions}
               onSelect={(text) => {
@@ -408,6 +427,8 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
                   isFirst={idx === 0}
                   isStreaming={isStreaming}
                   isLastUserMessage={isLastUserMsg}
+                  assistantName={assistantName}
+                  assistantSurface={isRecouvrement ? "recouvrement" : undefined}
                   onEdit={m.role === "user" ? handleInlineEdit : undefined}
                 />
               );
@@ -416,11 +437,15 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
             {isStreaming && messages[messages.length - 1]?.role === "user" && (
               <div className="mt-5 flex items-start gap-3 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
                 <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-navy-800 to-navy-950 text-gold-400 shadow-[inset_0_1px_1px_oklch(0.8_0.066_85/0.2)] ring-1 ring-gold-500/15 dark:from-gold-500 dark:to-gold-600 dark:text-navy-950 dark:ring-gold-300/25">
-                  <Sparkles className="h-4 w-4 animate-pulse" />
+                  {isRecouvrement ? (
+                    <RecouvrementMark className="h-5 animate-pulse" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 animate-pulse" />
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[0.7rem] font-medium text-[var(--muted-foreground)]">
-                    {t("assistantSaid")}
+                    {assistantName}
                   </span>
                   <TypingDots />
                 </div>
@@ -465,6 +490,8 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
         isStreaming={isStreaming}
         onSubmit={sendMessage}
         onAbort={() => abortRef.current?.abort()}
+        streamingPlaceholder={streamingPlaceholder}
+        disclosure={disclosure}
       />
     </div>
   );
@@ -472,6 +499,8 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
 
 interface EmptyWithSuggestionsProps {
   description: string;
+  icon?: ReactNode;
+  iconClassName?: string;
   suggestionsLabel: string;
   suggestions: Suggestion[];
   onSelect: (text: string) => void;
@@ -479,6 +508,8 @@ interface EmptyWithSuggestionsProps {
 
 function EmptyWithSuggestions({
   description,
+  icon,
+  iconClassName,
   suggestionsLabel,
   suggestions,
   onSelect,
@@ -486,8 +517,13 @@ function EmptyWithSuggestions({
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
       {/* Icon — glow ring + mount animation */}
-      <div className="animate-in zoom-in-90 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-900 text-gold-400 shadow-[0_0_28px_-4px_oklch(0.8_0.066_85/0.3)] ring-1 ring-gold-500/20 duration-500 dark:bg-gold-500 dark:text-navy-950 dark:shadow-[0_0_40px_-4px_oklch(0.8_0.066_85/0.55)] dark:ring-gold-400/30">
-        <Sparkles className="h-8 w-8" />
+      <div
+        className={cn(
+          "animate-in zoom-in-90 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-900 text-gold-400 shadow-[0_0_28px_-4px_oklch(0.8_0.066_85/0.3)] ring-1 ring-gold-500/20 duration-500 dark:bg-gold-500 dark:text-navy-950 dark:shadow-[0_0_40px_-4px_oklch(0.8_0.066_85/0.55)] dark:ring-gold-400/30",
+          iconClassName,
+        )}
+      >
+        {icon ?? <Sparkles className="h-8 w-8" />}
       </div>
 
       {/* Description + regulatory trust badges — fade in after icon */}

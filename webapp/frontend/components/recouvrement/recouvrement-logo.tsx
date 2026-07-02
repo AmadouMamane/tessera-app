@@ -1,12 +1,27 @@
-import { Banknote } from "lucide-react";
+import Image from "next/image";
 
 import { cn } from "@/lib/cn";
 
+export function RecouvrementMark({ className }: { className?: string }) {
+  return (
+    <Image
+      src="/brand/recouvrement-mark.png"
+      alt=""
+      aria-hidden="true"
+      width={243}
+      height={256}
+      priority
+      unoptimized
+      className={cn("h-[2.1rem] w-auto shrink-0 object-contain", className)}
+    />
+  );
+}
+
 /**
  * The recouvrement console's OWN logo — a distinct product identity, not the
- * Tessera control-plane lockup. A rounded badge carrying the agent's glyph
- * (Banknote, from the shared agent-icon system) + the wordmark and an "interne"
- * tagline. The label/tagline are passed in so they stay localized.
+ * Tessera control-plane lockup. The shield comes from the normative product logo
+ * under `docs/ui-reference/produit/recouvrement/logo-normative-recouvrement`;
+ * the wordmark is rendered as text so it stays crisp at sidebar size.
  */
 export function RecouvrementLogo({
   label,
@@ -18,20 +33,15 @@ export function RecouvrementLogo({
   className?: string;
 }) {
   return (
-    <div className={cn("flex min-w-0 items-center gap-2.5", className)}>
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-400">
-        <Banknote className="h-5 w-5" aria-hidden="true" />
-      </span>
-      <span className="flex min-w-0 flex-col leading-tight">
-        <span className="truncate font-semibold text-sm tracking-tight text-[var(--tessera-text)]">
-          {label}
-        </span>
-        {tagline ? (
-          <span className="truncate text-[0.6rem] font-medium uppercase tracking-wider text-[var(--tessera-text-muted)]">
-            {tagline}
-          </span>
-        ) : null}
-      </span>
+    <div
+      className={cn(
+        "flex h-[50px] w-[196px] min-w-0 flex-col items-center justify-center",
+        className,
+      )}
+    >
+      <RecouvrementMark />
+      <span className="font-semibold text-[0.95rem] leading-[0.95rem] text-[#d9b46f]">{label}</span>
+      {tagline ? <span className="sr-only">{tagline}</span> : null}
     </div>
   );
 }

@@ -38,7 +38,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { AuthControl } from "@/components/auth/auth-control";
-import { TesseraLogo } from "@/components/brand/tessera-logo";
+import { TesseraLogo, TesseraMark } from "@/components/brand/tessera-logo";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import { useShellChrome } from "./shell-chrome";
@@ -645,30 +645,8 @@ function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
         collapsed ? "justify-center px-2" : "justify-center px-3 md:justify-start md:px-5",
       )}
     >
-      {collapsed ? <TesseraMark /> : <TesseraLogo className="h-9" />}
+      {collapsed ? <TesseraMark /> : <TesseraLogo className="h-11" />}
     </div>
-  );
-}
-
-function TesseraMark() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-9 w-9 shrink-0 text-[var(--tessera-text)]"
-      viewBox="0 0 36 36"
-      fill="none"
-    >
-      <path
-        d="M18 3.5 31 10.75v14.5L18 32.5 5 25.25v-14.5L18 3.5Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M18 3.5v14.7m0 14.3V18.2m0 0L5 10.75m13 7.45 13-7.45M5 25.25l13-7.05 13 7.05"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-    </svg>
   );
 }
 

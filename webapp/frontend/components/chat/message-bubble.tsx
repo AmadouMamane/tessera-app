@@ -4,6 +4,7 @@ import { AlertTriangle, Check, Copy, Pencil, Sparkles, User2 } from "lucide-reac
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { RecouvrementMark } from "@/components/recouvrement/recouvrement-logo";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/lib/stores/chat-store";
@@ -15,6 +16,8 @@ interface MessageBubbleProps {
   isFirst?: boolean;
   isStreaming?: boolean;
   isLastUserMessage?: boolean;
+  assistantName?: string;
+  assistantSurface?: "recouvrement";
   onEdit?: (id: string, newContent: string) => void;
 }
 
@@ -28,10 +31,13 @@ export function MessageBubble({
   isFirst = false,
   isStreaming = false,
   isLastUserMessage = true,
+  assistantName,
+  assistantSurface,
   onEdit,
 }: MessageBubbleProps) {
   const t = useTranslations("chat");
   const isUser = message.role === "user";
+  const assistantLabel = assistantName ?? t("assistantSaid");
   const [copied, setCopied] = useState(false);
   const [userCopied, setUserCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -102,7 +108,7 @@ export function MessageBubble({
         !isFirst && (isGrouped ? "mt-1" : "mt-5"),
         isUser ? "flex-row-reverse" : "flex-row",
       )}
-      aria-label={isUser ? t("youSaid") : t("assistantSaid")}
+      aria-label={isUser ? t("youSaid") : assistantLabel}
     >
       {/* Avatar — invisible spacer when grouped to preserve alignment */}
       {isGrouped ? (
@@ -117,7 +123,13 @@ export function MessageBubble({
               : "bg-gradient-to-br from-navy-800 to-navy-950 text-gold-400 shadow-[inset_0_1px_1px_oklch(0.8_0.066_85/0.2)] ring-1 ring-gold-500/15 dark:from-gold-500 dark:to-gold-600 dark:text-navy-950 dark:ring-gold-300/25",
           )}
         >
-          {isUser ? <User2 className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+          {isUser ? (
+            <User2 className="h-4 w-4" />
+          ) : assistantSurface === "recouvrement" ? (
+            <RecouvrementMark className="h-5" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
         </div>
       )}
 
@@ -127,7 +139,7 @@ export function MessageBubble({
         {!isGrouped && (
           <div className={cn("flex items-baseline gap-2", isUser ? "justify-end px-1" : "")}>
             <span className="text-[0.7rem] font-medium text-[var(--muted-foreground)]">
-              {isUser ? t("youSaid") : t("assistantSaid")}
+              {isUser ? t("youSaid") : assistantLabel}
             </span>
             <span className="text-[0.62rem] tabular-nums text-[var(--muted-foreground)]/40">
               {formatTime(message.createdAt)}
