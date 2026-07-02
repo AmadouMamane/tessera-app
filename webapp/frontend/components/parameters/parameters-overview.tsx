@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -72,6 +72,7 @@ function ExplainInfo({ k, title }: { k: string; title: string }) {
 export function ParametersOverview() {
   const t = useTranslations("parameters");
   const locale = useLocale();
+  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("overview");
   const { data } = useQuery({
     queryKey: ["parameters-overview", locale],
     queryFn: ({ signal }) => fetchParametersOverview(locale, signal),
@@ -88,7 +89,7 @@ export function ParametersOverview() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
+      <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} />
       <ConfigVersionBar t={t} data={data} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -102,45 +103,109 @@ export function ParametersOverview() {
         ))}
       </div>
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <QuickConfig t={t} data={data} />
-          <RecentParams t={t} data={data} />
-          <ModelsConfigured t={t} data={data} />
-          <UsagePolicies t={t} data={data} />
+      {activeTab === "overview" ? (
+        <div
+          id="parameters-tabpanel"
+          role="tabpanel"
+          aria-labelledby="parameters-tab-overview"
+          className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]"
+        >
+          <div className="flex min-w-0 flex-col gap-3">
+            <QuickConfig t={t} data={data} />
+            <RecentParams t={t} data={data} />
+            <ModelsConfigured t={t} data={data} />
+            <UsagePolicies t={t} data={data} />
+          </div>
+          <aside className="flex min-w-0 flex-col gap-3">
+            <ConfigState t={t} data={data} />
+            <Compliance t={t} data={data} />
+            <Backup t={t} data={data} />
+          </aside>
         </div>
-        <aside className="flex min-w-0 flex-col gap-3">
-          <ConfigState t={t} data={data} />
-          <Compliance t={t} data={data} />
-          <Backup t={t} data={data} />
-        </aside>
-      </div>
+      ) : (
+        <CategoryView t={t} data={data} tab={activeTab} />
+      )}
 
       <Footer t={t} data={data} />
     </div>
   );
 }
 
+/** A single config category (one of the CommandBar tabs): its real settings +
+ *  the sections relevant to it. Categories with no real source (Notifications)
+ *  render an honest empty state, never fabricated content. */
+function CategoryView({ t, data, tab }: { t: T; data: Data; tab: (typeof TABS)[number] }) {
+  let extra: ReactNode = null;
+  if (tab === "models") extra = <ModelsConfigured t={t} data={data} />;
+  else if (tab === "security")
+    extra = (
+      <>
+        <UsagePolicies t={t} data={data} />
+        <Compliance t={t} data={data} />
+      </>
+    );
+  else if (tab === "audit") extra = <Compliance t={t} data={data} />;
+  else if (tab === "system")
+    extra = (
+      <>
+        <ConfigState t={t} data={data} />
+        <Backup t={t} data={data} />
+      </>
+    );
+  else if (tab === "general") extra = <QuickConfig t={t} data={data} />;
+  return (
+    <div
+      id="parameters-tabpanel"
+      role="tabpanel"
+      aria-labelledby={`parameters-tab-${tab}`}
+      className="flex min-w-0 flex-col gap-3"
+    >
+      <RecentParams t={t} data={data} category={tab} title={t(`tabs.${tab}`)} />
+      {extra}
+    </div>
+  );
+}
+
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({
+  t,
+  activeTab,
+  onSelect,
+}: {
+  t: T;
+  activeTab: (typeof TABS)[number];
+  onSelect: (tab: (typeof TABS)[number]) => void;
+}) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={cn(
-              "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
-              tab === "overview"
-                ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
-                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
-            )}
-          >
-            {t(`tabs.${tab}`)}
-          </button>
-        ))}
+      <div
+        role="tablist"
+        aria-label={t("title")}
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+      >
+        {TABS.map((tab) => {
+          const active = tab === activeTab;
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              id={`parameters-tab-${tab}`}
+              aria-selected={active}
+              aria-controls="parameters-tabpanel"
+              onClick={() => onSelect(tab)}
+              className={cn(
+                "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
+                active
+                  ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
+                  : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+              )}
+            >
+              {t(`tabs.${tab}`)}
+            </button>
+          );
+        })}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Button
@@ -249,11 +314,19 @@ function QuickConfig({ t, data }: { t: T; data: Data }) {
   );
 }
 
-function RecentParams({ t, data }: { t: T; data: Data }) {
+function RecentParams({
+  t,
+  data,
+  category,
+  title,
+}: { t: T; data: Data; category?: string; title?: string }) {
   const cols = ["name", "category", "value", "modifiedBy", "date", "status"] as const;
+  const rows = category
+    ? data.recent_params.filter((p) => p.category === category)
+    : data.recent_params;
   return (
     <Panel
-      title={t("recent.title")}
+      title={title ?? t("recent.title")}
       action={<ViewAll label={t("drill.audit")} href="/prouver/audit-logs" />}
     >
       <div className="overflow-x-auto">
@@ -268,22 +341,38 @@ function RecentParams({ t, data }: { t: T; data: Data }) {
             </tr>
           </thead>
           <tbody>
-            {data.recent_params.map((p) => (
-              <tr key={p.name} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-text)]">
-                  {p.name}
-                </td>
-                <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{p.category}</td>
-                <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[#87bfff]">{p.value}</td>
-                <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{p.modified_by}</td>
-                <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
-                  {p.date}
-                </td>
-                <td className="px-2 py-1.5">
-                  <Badge className={PARAM_STATUS[p.status]}>{t(`paramStatus.${p.status}`)}</Badge>
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={cols.length}
+                  className="px-2 py-5 text-center text-[var(--tessera-text-muted)]"
+                >
+                  {t("recent.empty")}
                 </td>
               </tr>
-            ))}
+            ) : (
+              rows.map((p) => (
+                <tr
+                  key={p.name}
+                  className="border-b border-[var(--tessera-border)]/60 last:border-0"
+                >
+                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-text)]">
+                    {p.name}
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                    {t(`tabs.${p.category}`)}
+                  </td>
+                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[#87bfff]">{p.value}</td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{p.modified_by}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
+                    {p.date}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <Badge className={PARAM_STATUS[p.status]}>{t(`paramStatus.${p.status}`)}</Badge>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

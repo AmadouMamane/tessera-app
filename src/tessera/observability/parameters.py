@@ -232,55 +232,58 @@ def compute_parameters_overview(lang: str = "fr") -> dict[str, object]:
     guard_day = _fmt_day(policy_mtime) if policy_mtime is not None else "-"
     cfg_day = _fmt_day(settings_mtime) if settings_mtime is not None else "-"
     by = _t("by_config", lang)
+
+    def _row(name: str, cat: str, value: str, day: str) -> dict[str, str]:
+        return {
+            "name": name,
+            "category": cat,
+            "value": value,
+            "modified_by": by,
+            "date": day,
+            "status": "active",
+        }
+
+    st = settings
+    # Real, current settings grouped by the config tab they belong to (the tab keys
+    # the frontend filters on). Every value is read straight from the live config.
     recent_params = [
-        {
-            "name": "memory.backend",
-            "category": "models_ai",
-            "value": settings.memory.backend,
-            "modified_by": by,
-            "date": cfg_day,
-            "status": "active",
-        },
-        {
-            "name": "memory.history_window",
-            "category": "models_ai",
-            "value": str(settings.memory.history_window),
-            "modified_by": by,
-            "date": cfg_day,
-            "status": "active",
-        },
-        {
-            "name": "memory.token_budget",
-            "category": "data",
-            "value": f"{settings.memory.token_budget} tokens",
-            "modified_by": by,
-            "date": cfg_day,
-            "status": "active",
-        },
-        {
-            "name": "guard.escalation_confidence_threshold",
-            "category": "security",
-            "value": f"{settings.guard.escalation_confidence_threshold}",
-            "modified_by": by,
-            "date": guard_day,
-            "status": "active",
-        },
-        {
-            "name": "guard.fail_closed",
-            "category": "security",
-            "value": str(settings.guard.fail_closed).lower(),
-            "modified_by": by,
-            "date": guard_day,
-            "status": "active",
-        },
-        {
-            "name": "api.rate_limit_chat",
-            "category": "general",
-            "value": settings.api.rate_limit_chat,
-            "modified_by": by,
-            "date": cfg_day,
-            "status": "active",
-        },
+        _row("environment", "general", st.environment.value, cfg_day),
+        _row("default_language", "general", st.default_language.value, cfg_day),
+        _row("deployment_mode", "general", st.deployment_mode.value, cfg_day),
+        _row("guard.fail_closed", "security", str(st.guard.fail_closed).lower(), guard_day),
+        _row(
+            "guard.escalation_confidence_threshold",
+            "security",
+            f"{st.guard.escalation_confidence_threshold}",
+            guard_day,
+        ),
+        _row(
+            "api.security_headers_enabled",
+            "security",
+            str(st.api.security_headers_enabled).lower(),
+            cfg_day,
+        ),
+        _row("memory.token_budget", "data", f"{st.memory.token_budget} tokens", cfg_day),
+        _row("memory.history_window", "data", str(st.memory.history_window), cfg_day),
+        _row("memory.consent_default", "data", str(st.memory.consent_default).lower(), cfg_day),
+        _row("memory.backend", "models", st.memory.backend, cfg_day),
+        _row("ollama.chat_model", "models", st.ollama.chat_model, cfg_day),
+        _row("ollama.embedding_model", "models", st.ollama.embedding_model, cfg_day),
+        _row("api.rate_limit_chat", "access", st.api.rate_limit_chat, cfg_day),
+        _row("api.rate_limit_chat_global", "access", st.api.rate_limit_chat_global, cfg_day),
+        _row("api.tls_terminated", "access", str(st.api.tls_terminated).lower(), cfg_day),
+        _row("postgres.vector_table", "integrations", st.postgres.vector_table, cfg_day),
+        _row(
+            "observability.metrics_port",
+            "integrations",
+            str(st.observability.metrics_port),
+            cfg_day,
+        ),
+        _row("secrets.provider", "integrations", st.secrets.provider, cfg_day),
+        _row("guard.audit_sink", "audit", st.guard.audit_sink, guard_day),
+        _row("observability.log_level", "audit", st.observability.log_level, cfg_day),
+        _row("observability.data_residency", "system", st.observability.data_residency, cfg_day),
+        _row("observability.profile", "system", st.observability.profile, cfg_day),
     ]
 
     config_state = {

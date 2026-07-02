@@ -5147,7 +5147,8 @@
       "integrations": "Intégrations"
     },
     "recent": {
-      "title": "Paramètres récents"
+      "title": "Paramètres clés",
+      "empty": "Aucun paramètre dans cette catégorie."
     },
     "col": {
       "name": "Paramètre",

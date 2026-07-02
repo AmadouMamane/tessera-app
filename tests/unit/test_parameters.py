@@ -61,6 +61,26 @@ def test_recent_params_carry_the_actual_settings_values() -> None:
     assert by_name["guard.fail_closed"] == str(settings.guard.fail_closed).lower()
 
 
+def test_recent_params_are_categorized_by_config_tab() -> None:
+    payload = compute_parameters_overview("fr")
+    tab_keys = {
+        "general",
+        "security",
+        "data",
+        "models",
+        "access",
+        "notifications",
+        "integrations",
+        "audit",
+        "system",
+    }
+    cats = {p["category"] for p in payload["recent_params"]}  # type: ignore[index,union-attr]
+    # Every param sits under a real config tab, and several categories are populated
+    # (so the tab bar filters to real content, not empty tables everywhere).
+    assert cats <= tab_keys
+    assert {"security", "models", "access", "system", "integrations", "audit"} <= cats
+
+
 def test_config_state_sums_to_configured_and_is_all_active() -> None:
     payload = compute_parameters_overview("fr")
     configured = int(_kpi(payload, "configured"))
