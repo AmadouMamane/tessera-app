@@ -229,3 +229,39 @@ modèles = params + real "Modèles IA configurés (8)"), Notifications = honest 
 
 **Still to do:** curation store (validate/review/reject over failed eval cases, mirror
 `operator_items`); assistant (real transcript vs canned sample); normative sweep of other pages.
+
+## Session 2d — assistant flagged + curation real (LOCAL, unpushed: `665ed46` `9177182`)
+
+- **assistant (`665ed46`)** — the Assistant overview is a canned localized *sample* conversation
+  (rich grounded Q&A). This build has no per-conversation grounded-session store, so it cannot be
+  made real without fabricating. Flagged via a new synthetic `assistant` capability + a
+  `<SyntheticNotice>`. **Finding:** `AssistantOverview` is an **orphan component** (mounted in no
+  route); the REAL conversation view already exists and is real —
+  `agents/[id]/historique/[sessionId]` reads `/observability/session-detail` and renders actual
+  transcript turns. So the real-conversation need is already met; the flag only makes the sample
+  honest if/when mounted.
+- **curation (`9177182`) — the flagship "create the source" build.** New `curation_store.py`
+  (mirrors `operator_items` exactly): candidates = real failed eval cases per agent (78 live);
+  each candidate's decision (pending/promote/review/reject) persisted to a durable JSON next to the
+  audit log, mutated by a new endpoint `POST /observability/curation/decision`. Backend `curation.py`
+  now derives the KPIs (candidates/promotable/manual_review/rejected/pending/escalations/critical/
+  decided), the priority lots (real candidates + decision + candidate_id) and the distribution donut
+  from the store. Frontend: promote/review/reject buttons on the priority lots POST + update KPIs
+  live (verified e2e — click flips the badge, Promouvables 0→1, En attente 78→77); the page-level
+  synthetic notice was **moved to the demo zones only** (why-tours, coverage, quality signals,
+  datasets, governance, trends, rail) so the real decision core is unflagged. Schema: CurLotSchema
+  += candidate_id + decision. `tests/unit/test_curation.py` (5). i18n fr/de/en additive.
+  **GOTCHA:** a real curation_category (`outils`, from tool_misuse) was missing from `dist.*` i18n +
+  `_DIST_COLOR` → MISSING_MESSAGE at render; when a real derived key can differ from the fixture's
+  key set, add ALL possible keys to i18n + the color map.
+
+**Method that keeps working (proofs + curation):** unflag the real core, register/keep a synthetic
+signal, drop `<SyntheticNotice compact />` on each demo zone only; make KPIs real where the label
+stays true (else add i18n keys in lockstep); mirror `operator_items` for any durable decision store
+(candidate from failed eval case + JSON state next to the audit log + set/load/available/counts +
+a POST endpoint that returns the fresh payload).
+
+**Still to do:** normative sweep of the other pages vs their `docs/ui-reference/**` images with the
+directive (take from normative, keep real, never fabricate). Remaining flagged subsystem fixtures
+that are honestly-flagged and can stay OR get a real core later: incidents, automations,
+replay_shadow, policies.
