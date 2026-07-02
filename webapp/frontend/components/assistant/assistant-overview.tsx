@@ -35,6 +35,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import type { ComponentType, ReactNode } from "react";
 
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import {
   TemporalRail,
   useRailTimeline,
@@ -80,6 +81,7 @@ export function AssistantOverview({ view }: { view: AssistantView }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+      <SyntheticNotice signalId="assistant" />
       {tab === "console" ? (
         <div className="flex shrink-0 items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[0.7rem] font-medium text-amber-200">
           <Terminal className="h-3.5 w-3.5" />

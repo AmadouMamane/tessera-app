@@ -149,6 +149,11 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # subsystem this build does not implement. Flagged synthetic so those zones carry the
     # demonstration notice; the page's artifact counts and audit-chain integrity are REAL.
     _cap("evidence_export", frozenset(), synthetic=True),
+    # The Assistant page renders a canned, localized *sample* conversation (grounded Q&A with
+    # sources/guardrails/quality) — a legitimate UX illustration, but not real traffic. This
+    # build ships without a per-conversation grounded-session store, so it is flagged synthetic
+    # and the page carries the demonstration notice rather than reading as a live exchange.
+    _cap("assistant", frozenset(), synthetic=True),
 )
 
 CAPABILITIES: dict[str, SignalCapability] = {c.id: c for c in _DECLARATIONS}

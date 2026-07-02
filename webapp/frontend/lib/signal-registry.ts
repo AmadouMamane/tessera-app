@@ -87,6 +87,9 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   // retention, journal) is a SIEM subsystem this build does not implement; its artifact
   // counts and audit-chain integrity are real. The export zones carry the demo notice.
   evidence_export: cap(ORG, { synthetic: true }),
+  // Assistant page renders a canned, localized sample conversation (no per-conversation
+  // grounded-session store in this build); flagged so it reads as a demonstration, not live.
+  assistant: cap(ORG, { synthetic: true }),
   // UI control-row aliases (the overview "critical controls" table uses these ids).
   faithfulness: cap(AGENT_TIME),
   pii: cap(AGENT_TIME),
