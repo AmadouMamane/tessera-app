@@ -44,6 +44,11 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     # The spine sources themselves are covered by the fact-flip unit tests (which drop
     # this pin) and by the live contract tests.
     monkeypatch.setenv("TESSERA_SPINE_SOURCE", "jsonl")
+    # H2 step 5 retired the flat audit.log: the ledger source now DEFAULTS to the promoted
+    # Postgres table (the cut). The unit suite pins the legacy file source so audit reads +
+    # emission stay offline/hermetic; the table read is covered by the ledger contract tests
+    # and the seam's postgres branch is unit-tested by monkeypatching the table read.
+    monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "file")
     # Eval reports are partitioned per env (ADR 0014, layer 3); the real archive
     # is a local-dev artifact under eval/reports/local. Pin the resolver at it so
     # the report-backed assertions read real data regardless of the test env.

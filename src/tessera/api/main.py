@@ -109,13 +109,19 @@ async def _reconcile_audit_ledger() -> None:
     )
 
     log = obs_logging.get_logger("tessera.ledger")
+    audit_file = get_settings().guard.audit_file
     try:
         await ensure_audit_ledger_schema()
-        # Replay any entries spooled before a crash/outage (durable dual-write leg): on
-        # recovery the spool lands in the table, so no audit is lost across a restart.
+        # The promoted table is canonical (H2 cut): boot depends only on the schema + the
+        # spool replay for durability. Replay entries spooled before a crash/outage so no
+        # audit is lost across a restart.
         if not drain_spool():
             log.warning("ledger.spool_replay_deferred")
-        inserted, status = await backfill_ledger_from_file(get_settings().guard.audit_file)
+        # Legacy/escape only: a still-present flat file is reconciled into the table
+        # (idempotent). Post-retirement the file is absent → no-op, NOT a boot dependency.
+        if not audit_file.exists():
+            return
+        inserted, status = await backfill_ledger_from_file(audit_file)
     except Exception as exc:  # promotion must never block boot
         log.warning("ledger.promotion_deferred", error=str(exc))
         return

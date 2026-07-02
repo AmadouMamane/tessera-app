@@ -110,9 +110,15 @@ ON CONFLICT (hash) DO NOTHING
 
 
 def ledger_source() -> str:
-    """The active ledger read source: ``file`` (default) | ``postgres`` (the cut)."""
-    raw = os.environ.get("TESSERA_LEDGER_SOURCE", "file").strip().lower()
-    return raw if raw in {"file", "postgres"} else "file"
+    """The active ledger source — ``postgres`` (default) or ``file`` (the escape).
+
+    Since the H2 step-5 cut the promoted append-only table is canonical for BOTH reads and
+    writes (baked default): readers serve from it and the flat-file write stops (see
+    :mod:`tessera.guard.audit`). ``TESSERA_LEDGER_SOURCE=file`` reverts to the flat file
+    (read + written) as the operator escape hatch, until ``audit.log`` is finally removed.
+    """
+    raw = os.environ.get("TESSERA_LEDGER_SOURCE", "postgres").strip().lower()
+    return raw if raw in {"file", "postgres"} else "postgres"
 
 
 def dual_write_enabled() -> bool:

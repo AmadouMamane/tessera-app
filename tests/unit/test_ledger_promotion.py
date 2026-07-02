@@ -80,17 +80,23 @@ class TestChainWalkVerification:
 
 
 class TestSourceSwitch:
-    def test_default_is_the_flat_file(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_default_is_the_promoted_table(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        # H2 step 5: the cut is baked — the default source is the promoted Postgres table.
         monkeypatch.delenv("TESSERA_LEDGER_SOURCE", raising=False)
-        assert ledger_source() == "file"
+        assert ledger_source() == "postgres"
 
     def test_cut_selects_postgres(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "postgres")
         assert ledger_source() == "postgres"
 
-    def test_unknown_value_falls_back_to_file(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-        monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "langfuse")  # never a third party
+    def test_file_escape_reverts_to_the_flat_file(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        # The operator escape hatch (=file), until audit.log is finally removed.
+        monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "file")
         assert ledger_source() == "file"
+
+    def test_unknown_value_falls_back_to_the_table(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "langfuse")  # never a third party
+        assert ledger_source() == "postgres"
 
     def test_suite_disables_the_dual_write(self) -> None:
         # conftest hermeticity: audit emission in tests must never reach Postgres.
@@ -128,7 +134,9 @@ class TestActiveLedgerIntegritySignal:
         from tessera.observability.spine.scope import Scope
         from tessera.observability.spine.signals import _read_audit_integrity
 
+        # The baked default is the promoted table; the signal reports the active medium.
         monkeypatch.delenv("TESSERA_LEDGER_SOURCE", raising=False)
+        monkeypatch.setattr("tessera.guard.ledger_store.load_ledger_payloads_sync", list)
         data = await _read_audit_integrity(Scope())
-        assert data["medium"] == "file"  # the H cut is visible in the signal payload
-        assert isinstance(data["chain_valid"], bool)  # the shared ci file's verdict, honest
+        assert data["medium"] == "postgres"  # the cut is visible in the signal payload
+        assert isinstance(data["chain_valid"], bool)  # honest verdict over the table rows

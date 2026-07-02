@@ -277,12 +277,19 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
     entry["prev_hash"] = _last_hash
     entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
     _last_hash = entry["hash"]
+    from tessera.guard.ledger_store import enqueue_ledger_entry, ledger_source
+
+    cut = ledger_source() == "postgres"
     try:
         match sink:
             case "stdout":
                 _emit_stdout(entry)
             case "file":
-                _emit_file(entry, audit_file)
+                # After the cut (TESSERA_LEDGER_SOURCE=postgres — the default since H2 step 5)
+                # the promoted table is canonical, so the flat file write STOPS. The operator
+                # escape (=file) resumes it until the file is finally removed.
+                if not cut:
+                    _emit_file(entry, audit_file)
             case "cloud_logging":
                 _emit_cloud_logging(entry)
             case "postgres":
@@ -290,11 +297,9 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
     except Exception as exc:
         sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")
     if sink == "file":
-        # ADR 0015 §Amendment 3 — dual-write the chained entry to the promoted
-        # append-only Postgres ledger (best-effort FIFO; the boot reconcile self-heals a
-        # missed insert). The file stays canonical until the TESSERA_LEDGER_SOURCE cut.
-        from tessera.guard.ledger_store import enqueue_ledger_entry
-
+        # ADR 0015 §Amendment 3 — dual-write the chained entry to the promoted append-only
+        # Postgres ledger via the durable spool (zero-loss). Post-cut this is the ONLY durable
+        # sink; pre-cut it mirrors the canonical file. The boot reconcile replays the spool.
         enqueue_ledger_entry(entry)
 
 
