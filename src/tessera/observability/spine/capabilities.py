@@ -150,7 +150,13 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("incidents", frozenset(), synthetic=True),
     _cap("curation", frozenset(), synthetic=True),
     _cap("automations", frozenset(), synthetic=True),
-    _cap("replay_shadow", frozenset(), synthetic=True),
+    # Replay & shadow: the replay core is REAL (captured bundles, the durable
+    # replay_runs journal written by POST /observability/replay, and run-N vs
+    # run-N-1 eval comparisons with exact newly-failing cases)…
+    _cap("replay_shadow", frozenset()),
+    # …while fleet-wide shadow-traffic mirroring + evidence-export tallies are a
+    # subsystem this build does not implement — those zones stay flagged.
+    _cap("shadow_traffic", frozenset(), synthetic=True),
     # Policies & guardrails: the governance core is REAL (active policies = the compiled
     # guard/policy.yaml keyed by the emitted policy_rule ids; posture KPIs + runtime gauges
     # = ledger decisions; version rail = the real policy version + mtime; chain = live).

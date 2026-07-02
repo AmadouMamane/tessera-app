@@ -82,7 +82,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   incidents: cap(ORG, { synthetic: true }),
   curation: cap(ORG, { synthetic: true }),
   automations: cap(ORG, { synthetic: true }),
-  replay_shadow: cap(ORG, { synthetic: true }),
+  // Replay & shadow: real core (bundles + durable replay journal + run-to-run
+  // eval comparisons); the shadow-fleet/export zones stay flagged below.
+  replay_shadow: cap(ORG),
+  shadow_traffic: cap(ORG, { synthetic: true }),
   // Policies & guardrails: the governance core is REAL (compiled guard/policy.yaml rows
   // keyed by emitted policy_rule ids + ledger-derived KPIs/gauges + live chain status)…
   policies: cap(ORG),

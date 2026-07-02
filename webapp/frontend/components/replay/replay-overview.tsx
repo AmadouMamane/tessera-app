@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
@@ -54,6 +55,7 @@ const TABS = [
   "evals",
   "exports",
 ] as const;
+type Tab = (typeof TABS)[number];
 
 type T = ReturnType<typeof useTranslations<"replay">>;
 type Data = ReplayShadowOverview;
@@ -78,6 +80,7 @@ export function ReplayOverview() {
   const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const { data } = useQuery({
     queryKey: ["replay-shadow-overview", locale],
     queryFn: ({ signal }) => fetchReplayShadowOverview(locale, signal),
@@ -95,8 +98,7 @@ export function ReplayOverview() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
-      <SyntheticNotice signalId="replay_shadow" />
+      <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
       {/* AGIR / Replay is XT-01's home (registre): the rail keeps the legitimate
           execution-replay cassette (début · précédent · play/pause · suivant · fin).
           SURVEILLER surfaces stay on the default "signal" event navigation. */}
@@ -114,111 +116,180 @@ export function ReplayOverview() {
         onModeChange={temporal.changeMode}
       />
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_312px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          {/* A · État actuel */}
-          <Zone label={t("zone.actual")} info={<Info k="zone.actual" title={t("zone.actual")} />}>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
-              {data.kpis.map((kpi) => (
-                <KpiTile
-                  key={kpi.key}
-                  kpi={kpi}
-                  label={t(`kpi.${kpi.key}`)}
-                  vs={t("delta.vs7d")}
-                  info={<Info k={`kpi.${kpi.key}`} title={t(`kpi.${kpi.key}`)} />}
-                />
-              ))}
-            </div>
-          </Zone>
-
-          {/* B · Diagnostic des écarts */}
-          <Zone
-            label={t("zone.diagnostic")}
-            info={<Info k="zone.diagnostic" title={t("zone.diagnostic")} />}
-          >
-            <div className="grid gap-3 xl:grid-cols-12">
-              <TrafficChart t={t} data={data} className="xl:col-span-4" />
-              <Panel
-                title={t("panel.devByType")}
-                info={<Info k="panel.devByType" title={t("panel.devByType")} />}
-                className="xl:col-span-2"
-              >
-                <Donut
-                  slices={data.deviation_by_type}
-                  total={data.deviation_total}
-                  caption={t("legend.critical")}
-                  labelOf={(k) => t(`type.${k}`)}
-                />
-              </Panel>
-              <Panel
-                title={t("panel.severity")}
-                info={<Info k="panel.severity" title={t("panel.severity")} />}
-                className="xl:col-span-2"
-              >
-                <Donut
-                  slices={data.deviation_severity}
-                  total={data.deviation_total}
-                  caption={t("legend.critical")}
-                  labelOf={(k) => t(`severity.${k}`)}
-                />
-              </Panel>
-              <RecentSessions t={t} data={data} className="xl:col-span-4" />
-            </div>
-          </Zone>
-
-          {/* C · Écarts & comparaisons */}
-          <Zone
-            label={t("zone.comparisons")}
-            info={<Info k="zone.comparisons" title={t("zone.comparisons")} />}
-          >
-            <div className="grid gap-3 xl:grid-cols-12">
-              <TopDeviations t={t} data={data} className="xl:col-span-6" />
-              <Comparisons t={t} data={data} className="xl:col-span-3" />
-              <Regressions t={t} data={data} className="xl:col-span-3" />
-            </div>
-          </Zone>
-
-          {/* D · Distribution & preuves */}
-          <Zone
-            label={t("zone.distribution")}
-            info={<Info k="zone.distribution" title={t("zone.distribution")} />}
-          >
-            <div className="grid gap-3 xl:grid-cols-12">
-              <Panel
-                title={t("panel.byService")}
-                info={<Info k="panel.byService" title={t("panel.byService")} />}
-                className="xl:col-span-3"
-              >
-                <Donut
-                  slices={data.by_service}
-                  total={data.requests_total}
-                  caption={t("kpi.requests").toLowerCase()}
-                  labelOf={(k) => t(`service.${k}`)}
-                  showCount
-                />
-              </Panel>
-              <Panel
-                title={t("panel.byModel")}
-                info={<Info k="panel.byModel" title={t("panel.byModel")} />}
-                className="xl:col-span-3"
-              >
-                <Donut
-                  slices={data.by_model}
-                  total={data.requests_total}
-                  caption={t("kpi.requests").toLowerCase()}
-                  labelOf={(k) => t(`model.${k}`)}
-                  showCount
-                />
-              </Panel>
-              <EvalsByCategory t={t} data={data} className="xl:col-span-2" />
-              <ProofsExports t={t} data={data} className="xl:col-span-2" />
-              <QuickActions t={t} className="xl:col-span-2" />
-            </div>
-          </Zone>
-        </div>
-
-        <ReplayRail t={t} data={data} />
+      <div id="replay-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
+        {activeTab === "sessions" ? (
+          <div className="grid gap-3 xl:grid-cols-12">
+            <RecentSessions t={t} data={data} className="xl:col-span-7" />
+            <TrafficChart t={t} data={data} className="xl:col-span-5" />
+          </div>
+        ) : null}
+        {activeTab === "shadow" ? (
+          <div className="flex min-w-0 flex-col gap-2">
+            <SyntheticNotice signalId="shadow_traffic" compact />
+            <Panel title={t("tabs.shadow")}>
+              <p className="text-xs leading-relaxed text-[var(--tessera-text-muted)]">
+                {t("tabx.shadowExplain")}
+              </p>
+            </Panel>
+          </div>
+        ) : null}
+        {activeTab === "comparisons" ? (
+          <div className="grid gap-3 xl:grid-cols-12">
+            <Comparisons t={t} data={data} className="xl:col-span-6" />
+            <Regressions t={t} data={data} className="xl:col-span-6" />
+          </div>
+        ) : null}
+        {activeTab === "baselines" ? <BaselinesPanel t={t} data={data} /> : null}
+        {activeTab === "diffs" ? (
+          <div className="grid gap-3 xl:grid-cols-12">
+            <TopDeviations t={t} data={data} className="xl:col-span-8" />
+            <Panel
+              title={t("panel.devByType")}
+              info={<Info k="panel.devByType" title={t("panel.devByType")} />}
+              className="xl:col-span-2"
+            >
+              <Donut
+                slices={data.deviation_by_type}
+                total={data.deviation_total}
+                caption={t("legend.critical")}
+                labelOf={(k) => t(`type.${k}`)}
+              />
+            </Panel>
+            <Panel
+              title={t("panel.severity")}
+              info={<Info k="panel.severity" title={t("panel.severity")} />}
+              className="xl:col-span-2"
+            >
+              <Donut
+                slices={data.deviation_severity}
+                total={data.deviation_total}
+                caption={t("legend.critical")}
+                labelOf={(k) => t(`severity.${k}`)}
+              />
+            </Panel>
+          </div>
+        ) : null}
+        {activeTab === "evals" ? (
+          <div className="grid gap-3 xl:grid-cols-12">
+            <EvalsByCategory t={t} data={data} className="xl:col-span-4" />
+            <Comparisons t={t} data={data} className="xl:col-span-8" />
+          </div>
+        ) : null}
+        {activeTab === "exports" ? (
+          <div className="flex min-w-0 flex-col gap-2">
+            <SyntheticNotice signalId="shadow_traffic" compact />
+            <ProofsExports t={t} data={data} />
+          </div>
+        ) : null}
       </div>
+
+      {activeTab !== "overview" ? null : (
+        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_312px]">
+          <div className="flex min-w-0 flex-col gap-3">
+            {/* A · État actuel */}
+            <Zone label={t("zone.actual")} info={<Info k="zone.actual" title={t("zone.actual")} />}>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+                {data.kpis.map((kpi) => (
+                  <KpiTile
+                    key={kpi.key}
+                    kpi={kpi}
+                    label={t(`kpi.${kpi.key}`)}
+                    vs={t("delta.vs7d")}
+                    info={<Info k={`kpi.${kpi.key}`} title={t(`kpi.${kpi.key}`)} />}
+                  />
+                ))}
+              </div>
+            </Zone>
+
+            {/* B · Diagnostic des écarts */}
+            <Zone
+              label={t("zone.diagnostic")}
+              info={<Info k="zone.diagnostic" title={t("zone.diagnostic")} />}
+            >
+              <div className="grid gap-3 xl:grid-cols-12">
+                <TrafficChart t={t} data={data} className="xl:col-span-4" />
+                <Panel
+                  title={t("panel.devByType")}
+                  info={<Info k="panel.devByType" title={t("panel.devByType")} />}
+                  className="xl:col-span-2"
+                >
+                  <Donut
+                    slices={data.deviation_by_type}
+                    total={data.deviation_total}
+                    caption={t("legend.critical")}
+                    labelOf={(k) => t(`type.${k}`)}
+                  />
+                </Panel>
+                <Panel
+                  title={t("panel.severity")}
+                  info={<Info k="panel.severity" title={t("panel.severity")} />}
+                  className="xl:col-span-2"
+                >
+                  <Donut
+                    slices={data.deviation_severity}
+                    total={data.deviation_total}
+                    caption={t("legend.critical")}
+                    labelOf={(k) => t(`severity.${k}`)}
+                  />
+                </Panel>
+                <RecentSessions t={t} data={data} className="xl:col-span-4" />
+              </div>
+            </Zone>
+
+            {/* C · Écarts & comparaisons */}
+            <Zone
+              label={t("zone.comparisons")}
+              info={<Info k="zone.comparisons" title={t("zone.comparisons")} />}
+            >
+              <div className="grid gap-3 xl:grid-cols-12">
+                <TopDeviations t={t} data={data} className="xl:col-span-6" />
+                <Comparisons t={t} data={data} className="xl:col-span-3" />
+                <Regressions t={t} data={data} className="xl:col-span-3" />
+              </div>
+            </Zone>
+
+            {/* D · Distribution & preuves */}
+            <Zone
+              label={t("zone.distribution")}
+              info={<Info k="zone.distribution" title={t("zone.distribution")} />}
+            >
+              <div className="grid gap-3 xl:grid-cols-12">
+                <Panel
+                  title={t("panel.byService")}
+                  info={<Info k="panel.byService" title={t("panel.byService")} />}
+                  className="xl:col-span-3"
+                >
+                  <Donut
+                    slices={data.by_service}
+                    total={data.requests_total}
+                    caption={t("kpi.requests").toLowerCase()}
+                    labelOf={(k) => (t.has(`service.${k}`) ? t(`service.${k}`) : k)}
+                    showCount
+                  />
+                </Panel>
+                <Panel
+                  title={t("panel.byModel")}
+                  info={<Info k="panel.byModel" title={t("panel.byModel")} />}
+                  className="xl:col-span-3"
+                >
+                  <Donut
+                    slices={data.by_model}
+                    total={data.requests_total}
+                    caption={t("kpi.requests").toLowerCase()}
+                    labelOf={(k) => (t.has(`model.${k}`) ? t(`model.${k}`) : k)}
+                    showCount
+                  />
+                </Panel>
+                <EvalsByCategory t={t} data={data} className="xl:col-span-2" />
+                <ProofsExports t={t} data={data} className="xl:col-span-2" />
+                <QuickActions t={t} className="xl:col-span-2" />
+              </div>
+            </Zone>
+          </div>
+
+          <ReplayRail t={t} data={data} />
+        </div>
+      )}
 
       <Footer t={t} data={data} />
     </div>
@@ -227,17 +298,33 @@ export function ReplayOverview() {
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({
+  t,
+  active,
+  onSelect,
+}: {
+  t: T;
+  active: Tab;
+  onSelect: (tab: Tab) => void;
+}) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+      <div
+        role="tablist"
+        aria-label={t("tabs.overview")}
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+      >
         {TABS.map((tab) => (
           <button
             key={tab}
             type="button"
+            role="tab"
+            aria-selected={tab === active}
+            aria-controls="replay-tabpanel"
+            onClick={() => onSelect(tab)}
             className={cn(
               "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
-              tab === "overview"
+              tab === active
                 ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
             )}
@@ -249,6 +336,7 @@ function CommandBar({ t }: { t: T }) {
       <Button
         size="sm"
         variant="outline"
+        onClick={() => onSelect("comparisons")}
         className="h-9 shrink-0 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
       >
         <GitCompare className="h-4 w-4" /> {t("rail.compareBaseline")}
@@ -257,13 +345,40 @@ function CommandBar({ t }: { t: T }) {
   );
 }
 
+function BaselinesPanel({ t, data }: { t: T; data: Data }) {
+  return (
+    <Panel title={t("tabx.baselinesTitle")}>
+      {data.baselines.length === 0 ? (
+        <p className="py-6 text-center text-xs text-[var(--tessera-text-muted)]">
+          {t("tabx.baselinesEmpty")}
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {data.baselines.map((b) => (
+            <li
+              key={b.value}
+              className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-xs"
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{b.label}</span>
+              <span className="shrink-0 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                {b.value}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
 // ── zone B ───────────────────────────────────────────────────────────────────
 
 function TrafficChart({ t, data, className }: { t: T; data: Data; className?: string }) {
   const tr = data.replay_traffic;
   const niceMax = (v: number, step: number) => Math.max(step, Math.ceil(v / step) * step);
-  const reqMax = niceMax(Math.max(...tr.requests, 1), 20); // K
-  const tokMax = niceMax(Math.max(...tr.tokens, 1), 25); // M
+  const reqMax = niceMax(Math.max(...tr.requests, 1), 4);
+  const tokMax = niceMax(Math.max(...tr.tokens, 1), 4);
   const fracs = [1, 0.75, 0.5, 0.25, 0];
   const W = 240;
   const H = 112;
@@ -278,7 +393,7 @@ function TrafficChart({ t, data, className }: { t: T; data: Data; className?: st
         <div className="flex gap-1">
           <div className="flex w-7 flex-col justify-between py-[5px] text-right text-[0.5rem] tabular-nums text-[var(--tessera-text-muted)]">
             {fracs.map((f) => (
-              <span key={f}>{Math.round(f * reqMax)}K</span>
+              <span key={f}>{Math.round(f * reqMax)}</span>
             ))}
           </div>
           <svg
@@ -326,7 +441,7 @@ function TrafficChart({ t, data, className }: { t: T; data: Data; className?: st
           </svg>
           <div className="flex w-7 flex-col justify-between py-[5px] text-left text-[0.5rem] tabular-nums text-[var(--tessera-text-muted)]">
             {fracs.map((f) => (
-              <span key={f}>{Math.round(f * tokMax)}M</span>
+              <span key={f}>{Math.round(f * tokMax)}</span>
             ))}
           </div>
         </div>
@@ -527,6 +642,7 @@ function EvalsByCategory({ t, data, className }: { t: T; data: Data; className?:
 }
 
 function ProofsExports({ t, data, className }: { t: T; data: Data; className?: string }) {
+  // Export subsystem — flagged demonstration (shadow_traffic).
   const p = data.proofs_exports;
   const rows: [string, string][] = [
     [t("proofs.generated"), p.generated],
@@ -541,6 +657,7 @@ function ProofsExports({ t, data, className }: { t: T; data: Data; className?: s
       className={className}
       action={<ViewAll label={t("exportBtn.all")} />}
     >
+      <SyntheticNotice signalId="shadow_traffic" compact />
       <dl className="flex flex-col gap-1.5 text-[0.7rem]">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-center justify-between gap-2">

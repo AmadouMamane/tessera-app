@@ -1771,11 +1771,27 @@ async def observability_replays() -> dict[str, object]:
 
 @router.post("/observability/replay")
 async def observability_replay(payload: ReplayRequest) -> dict[str, object]:
-    """Replay a captured turn against a candidate model and diff the result."""
+    """Replay a captured turn against a candidate model and diff the result.
+
+    Every executed replay is journalled durably (replay_store) so the Replay &
+    shadow page's "requêtes rejouées" / deviation figures reflect real runs.
+    """
     bundle = replay_mod.get_bundle(payload.bundle_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail="replay bundle not found")
     result = await replay_mod.replay(bundle, model=payload.model)
+    try:
+        from tessera.observability.replay_store import record_replay_run
+
+        record_replay_run(
+            result.bundle_id,
+            agent_id=bundle.agent_id,
+            model=result.candidate_model,
+            score_delta=result.score_delta,
+            similarity=result.similarity,
+        )
+    except Exception as exc:  # journalling must never break the replay itself
+        sys.stderr.write(f"tessera.observability.replay_store: record failed: {exc}\n")
     return asdict(result)
 
 
