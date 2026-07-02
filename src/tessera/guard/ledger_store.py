@@ -56,6 +56,7 @@ __all__ = [
     "enqueue_ledger_entry",
     "ensure_audit_ledger_schema",
     "ledger_available",
+    "ledger_head_hash",
     "ledger_source",
     "load_ledger_payloads_sync",
     "read_ledger_entries",
@@ -413,6 +414,26 @@ def read_ledger_entries(path: Path | None = None) -> list[dict[str, Any]]:
     if not target.exists():
         return []
     return _file_entries(target)
+
+
+def ledger_head_hash() -> str | None:
+    """The hash of the promoted chain's tail (max ``seq``), or None if empty/unreachable.
+
+    Seeds a fresh process's chain AFTER the cut so the next entry links to the last row —
+    this is what makes the chain continuous across the file→table boundary (the first
+    post-cut entry's ``prev_hash`` is the last pre-cut entry's hash, so ``verify`` walks
+    genesis→tail unbroken). ``seq`` is chain order: the spool drains FIFO in one whole-batch
+    transaction, so insert order never diverges from chain order. Returns None (never
+    genesis) on empty/unreachable so the caller chooses the fallback explicitly.
+    """
+    try:
+        with _connect_sync() as conn:
+            row = conn.execute(
+                f"SELECT hash FROM {LEDGER_TABLE} ORDER BY seq DESC LIMIT 1"  # noqa: S608
+            ).fetchone()
+    except Exception:
+        return None
+    return row[0] if row and isinstance(row[0], str) else None
 
 
 def _ledger_reachable() -> bool:

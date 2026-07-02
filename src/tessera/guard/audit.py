@@ -244,6 +244,25 @@ def emit_audit(
     _append_to_chain(entry, sink, settings.guard.audit_file)
 
 
+def _seed_chain_head(sink: _Sink, audit_file: Path) -> str:
+    """Resume the chain at process start from whichever medium is canonical.
+
+    After the cut (``TESSERA_LEDGER_SOURCE=postgres``) the promoted table is canonical, so
+    seed from the TABLE head — the next entry links to the last row, keeping the chain
+    continuous across the file→table boundary (``verify`` walks genesis→tail unbroken). If
+    the table is empty/unreachable, fall back to the file/genesis rather than silently
+    starting a NEW chain (which would fork the walk). Pre-cut, seed from the file sink;
+    other sinks chain from genesis.
+    """
+    from tessera.guard.ledger_store import ledger_head_hash, ledger_source
+
+    if ledger_source() == "postgres":
+        head = ledger_head_hash()
+        if head is not None:
+            return head
+    return _seed_last_hash(audit_file) if sink == "file" else _GENESIS_HASH
+
+
 def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> None:
     """Link ``entry`` into the tamper-evident hash chain and emit it to ``sink``.
 
@@ -254,7 +273,7 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
     """
     global _last_hash
     if _last_hash is None:
-        _last_hash = _seed_last_hash(audit_file) if sink == "file" else _GENESIS_HASH
+        _last_hash = _seed_chain_head(sink, audit_file)
     entry["prev_hash"] = _last_hash
     entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
     _last_hash = entry["hash"]
