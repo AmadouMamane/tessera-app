@@ -18,12 +18,14 @@ Guarantees, enforced not promised:
   order (``seq``) is a write audit, never the proof.
 * **Never import a broken chain**: the backfill verifies the file chain first and
   refuses to copy a file that does not verify.
-* **Dual-write is best-effort and self-healing**: entries enqueue to a single FIFO
-  writer thread (chain order preserved); a missed insert is reconciled by the idempotent
-  boot backfill (``ON CONFLICT (hash) DO NOTHING``). The FILE stays the canonical store
-  until the cut (``TESSERA_LEDGER_SOURCE=postgres``), which is gated on
-  :func:`shadow_verify_ledger` holding — never flip a ledger read before its chain
-  verifies (§Amendment 3 migration note).
+* **Dual-write is durable, not best-effort** (H2, step 2): each chained entry is fsynced to
+  a local spool before emit returns, then drained into the table in chain order by a
+  background writer; a Postgres outage leaves entries spooled and replays them on recovery
+  (including boot) — **zero loss, zero duplicate** (``ON CONFLICT (hash) DO NOTHING`` +
+  whole-batch transaction), **chain order preserved**. The spool is the mechanism that lets
+  the flat ``audit.log`` be retired at the cut. The FILE stays the canonical store until the
+  cut (``TESSERA_LEDGER_SOURCE=postgres``), gated on :func:`shadow_verify_ledger` holding —
+  never flip a ledger read before its chain verifies (§Amendment 3 migration note).
 
 The unit suite disables the dual-write (``TESSERA_LEDGER_DUAL_WRITE=0``) so audit
 emission stays hermetic; the write/backfill legs are covered by contract tests.
@@ -33,7 +35,6 @@ from __future__ import annotations
 
 import json
 import os
-import queue
 import sys
 import threading
 from dataclasses import dataclass
@@ -50,6 +51,7 @@ __all__ = [
     "LEDGER_TABLE",
     "LedgerShadowStatus",
     "backfill_ledger_from_file",
+    "drain_spool",
     "dual_write_enabled",
     "enqueue_ledger_entry",
     "ensure_audit_ledger_schema",
@@ -167,11 +169,20 @@ async def ensure_audit_ledger_schema() -> None:
         await conn.commit()
 
 
-# ── Dual-write (one FIFO writer thread — chain order preserved) ────────────────
+# ── Durable dual-write: spool → Postgres (zero-loss on a Postgres blip) ─────────
+# The chained entry is appended to a durable local spool (fsync) BEFORE emit returns; a
+# background writer drains the spool into the append-only table in chain order. A Postgres
+# outage leaves entries in the spool (never dropped); on recovery — including a process
+# restart (boot replays the spool) — the drain lands them. Zero loss (fsync before ack),
+# zero duplicate (ON CONFLICT (hash) DO NOTHING + whole-batch transaction), chain order
+# preserved (FIFO spool). The spool holds only entries not yet durable in Postgres and
+# self-clears — it is the mechanism that lets the flat audit.log be retired at the cut.
 
-_queue: queue.Queue[dict[str, Any]] = queue.Queue()
+_spool_lock = threading.Lock()
+_wake = threading.Event()
 _writer_lock = threading.Lock()
 _writer_started = False
+_DRAIN_RETRY_SECONDS: Final = 5.0
 
 
 def _connect_sync() -> Any:
@@ -185,33 +196,97 @@ def _connect_sync() -> Any:
     return conn
 
 
-def _insert_sync(entry: Mapping[str, Any]) -> None:
-    with _connect_sync() as conn:
-        conn.execute(_INSERT_ENTRY, _row_tuple(entry))
-        conn.commit()
+def _spool_path() -> Path:
+    """The durable spool of entries not yet committed to the table (per-env, ADR 0014)."""
+    from tessera.settings import get_settings
+
+    return get_settings().guard.audit_file.parent / "audit_spool.jsonl"
+
+
+def _spool_append(entry: Mapping[str, Any]) -> None:
+    """Durably append one chained entry to the spool (append + flush + fsync)."""
+    path = _spool_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(dict(entry), ensure_ascii=False)
+    with _spool_lock, path.open("a", encoding="utf-8") as fp:
+        fp.write(line + "\n")
+        fp.flush()
+        os.fsync(fp.fileno())
+
+
+def _read_spool_locked() -> list[dict[str, Any]]:
+    """Spooled entries in FIFO (chain) order. Call under ``_spool_lock``."""
+    path = _spool_path()
+    if not path.exists():
+        return []
+    entries: list[dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as fp:
+        for raw in fp:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            try:
+                obj = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                entries.append(obj)
+    return entries
+
+
+def drain_spool() -> bool:
+    """Replay spooled entries into the table in chain order — never drops one.
+
+    One transaction: the batch commits whole (spool cleared) or not at all (spool kept,
+    order intact), so there is never a partial replay; re-draining a committed batch is a
+    no-op (``ON CONFLICT (hash) DO NOTHING``). Returns True when the spool is empty
+    afterwards, False when Postgres was unreachable and the entries remain spooled.
+    """
+    with _spool_lock:
+        entries = _read_spool_locked()
+        if not entries:
+            return True
+        try:
+            with _connect_sync() as conn:
+                for entry in entries:
+                    conn.execute(_INSERT_ENTRY, _row_tuple(entry))
+                conn.commit()
+        except Exception as exc:  # Postgres unreachable — keep the spool, replay later
+            sys.stderr.write(
+                f"tessera.ledger: spool drain deferred ({len(entries)} pending): {exc}\n"
+            )
+            return False
+        _spool_path().write_text("", encoding="utf-8")
+        return True
 
 
 def _writer_loop() -> None:
     while True:
-        entry = _queue.get()
+        _wake.wait(timeout=_DRAIN_RETRY_SECONDS)
+        _wake.clear()
         try:
-            _insert_sync(entry)
-        except Exception as exc:  # the boot reconcile self-heals a missed insert
-            sys.stderr.write(f"tessera.ledger: dual-write deferred: {exc}\n")
-        finally:
-            _queue.task_done()
+            drain_spool()
+        except Exception as exc:  # a background reconciler thread must never die
+            sys.stderr.write(f"tessera.ledger: writer loop error: {exc}\n")
 
 
 def enqueue_ledger_entry(entry: Mapping[str, Any]) -> None:
-    """Queue one chained entry for the Postgres leg (best-effort, order-preserving)."""
+    """Durably record one chained entry for the Postgres leg (spool → table).
+
+    Spools the entry (fsync) before returning — zero loss even across a crash or a Postgres
+    outage — then wakes the background drain. Only the Postgres *visibility* is asynchronous;
+    the *durability* is synchronous. ``TESSERA_LEDGER_DUAL_WRITE=0`` disables the whole leg
+    so the unit suite stays hermetic.
+    """
     global _writer_started
     if not dual_write_enabled():
         return
+    _spool_append(entry)
     with _writer_lock:
         if not _writer_started:
             threading.Thread(target=_writer_loop, daemon=True, name="tessera-ledger").start()
             _writer_started = True
-    _queue.put(dict(entry))
+    _wake.set()
 
 
 # ── Backfill + verification ────────────────────────────────────────────────────

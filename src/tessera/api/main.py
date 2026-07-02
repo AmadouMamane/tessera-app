@@ -102,11 +102,19 @@ async def _reconcile_audit_ledger() -> None:
     file remains canonical until the ``TESSERA_LEDGER_SOURCE`` cut, so a deferred sweep
     is honest, never blocking.
     """
-    from tessera.guard.ledger_store import backfill_ledger_from_file, ensure_audit_ledger_schema
+    from tessera.guard.ledger_store import (
+        backfill_ledger_from_file,
+        drain_spool,
+        ensure_audit_ledger_schema,
+    )
 
     log = obs_logging.get_logger("tessera.ledger")
     try:
         await ensure_audit_ledger_schema()
+        # Replay any entries spooled before a crash/outage (durable dual-write leg): on
+        # recovery the spool lands in the table, so no audit is lost across a restart.
+        if not drain_spool():
+            log.warning("ledger.spool_replay_deferred")
         inserted, status = await backfill_ledger_from_file(get_settings().guard.audit_file)
     except Exception as exc:  # promotion must never block boot
         log.warning("ledger.promotion_deferred", error=str(exc))
