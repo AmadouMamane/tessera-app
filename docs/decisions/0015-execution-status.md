@@ -28,6 +28,34 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **🔎 Parity probe for the jsonl→spine flip (Phase D gate) — flip NOT safe; scores never reach
+  ClickHouse.** (2026-07-02, diagnosis only, no code change, nothing flipped.) Asked to flip to the
+  spine, I measured parity with the real readers instead of flipping blind. **Authoritative
+  result** (`TESSERA_ENVIRONMENT=local`): `CurrentStoresReader` vs `SpineStoresReader` —
+  `scores` jsonl=3 / spine=**0** → DIVERGE; `bundles` jsonl=1 / spine=100 (lossy trace-shells,
+  no grounding/lineage — lossy *by design*, never a real flip); `audit` = local carve-out (never
+  flips). So the only flippable fact is `scores`, and the spine holds **zero**. Flipping
+  `TESSERA_SPINE_SOURCE=spine` now would blank every score-derived signal (SLO/quality/trend/
+  funnel/faithfulness) — the exact regression this gate forbids.
+  **Root cause (infra, not Tessera code):** ClickHouse `default.scores` = **0** rows (traces
+  173 684, observations 264 536 — the OTel path works). The Tessera mirror emits correctly: POST
+  `/api/public/ingestion` `score-create` → HTTP **207 `{status:201, errors:[]}`** (accepted), and
+  the jsonl scores carry a valid `trace_id`. But the score never materialises in ClickHouse: the
+  public-ingestion score path produces **no MinIO `events/` blob** (all 200 252 blobs are
+  `events/otel/…`), and the `ingestion-queue:failed` set holds only **old (06-09) stalled
+  `trace-create` jobs** — unrelated. **Restarting `langfuse-worker` did NOT fix it** (clean reboot,
+  all executors incl. `ingestion-queue` re-registered, ClickhouseWriter restarted; fresh
+  `score-create` still → CH scores 0, no error logged). The eval score *values* are also not
+  cleanly queryable from observations (`tessera.eval.*` not present as observation metadata keys).
+  **Verdict:** the flip is blocked by Langfuse-v3 self-hosted score ingestion (a third-party infra
+  issue a worker restart/config tweak does not resolve), **and even once fixed the flip still needs
+  a historical backfill + a shadow-mode bake to parity** — not a one-shot. **Recommendation:** keep
+  `TESSERA_SPINE_SOURCE=jsonl` (jsonl stays the system of record, per this ADR's own gate — audit +
+  bundles are local by design anyway); to actually migrate scores later, either (a) fix Langfuse
+  v3 public score ingestion, or (b) re-point `SpineStoresReader.scores` at a source that
+  materialises (a spine-adapter code change), then run `=shadow` until
+  `tessera_spine_shadow_divergence_total{fact=scores,result=match}` holds over a window, then flip
+  per-signal. Nothing was flipped; `TESSERA_SPINE_SOURCE` is unchanged (default `jsonl`).
 - **🎉 ADR 0015 COMPLETE — Phases A→F all done, twice-green + pushed** (`697106f` · `828016f` ·
   `f6723f5` · `dfff8d8` · `9553c1b` · `98ddf13`). The runtime telemetry spine + first-class Scope
   is in place end to end: capability-declared signal registry (the "filter shown but ignored" bug
