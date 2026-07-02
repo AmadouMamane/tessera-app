@@ -101,6 +101,7 @@ class CurationCandidate:
     needs_escalation: bool
     decision: str  # pending/promote/review/reject (durable)
     decided_by: str  # durable; "" when undecided
+    decided_at: str  # durable ISO timestamp of the last decision; "" when undecided
 
 
 def _state_path() -> Path:
@@ -139,6 +140,7 @@ def set_decision(candidate_id: str, *, decision: str, decided_by: str = "") -> N
     state = _load_state()
     entry = state.get(candidate_id, {"decision": _DEFAULT_DECISION, "decided_by": ""})
     entry["decision"] = decision
+    entry["decided_at"] = "" if decision == _DEFAULT_DECISION else datetime.now(UTC).isoformat()
     if decided_by:
         entry["decided_by"] = decided_by
     state[candidate_id] = entry
@@ -201,6 +203,7 @@ def load_candidates(agent_id: str | None = None) -> list[CurationCandidate]:
                     needs_escalation=s.needs_escalation,
                     decision=st.get("decision", _DEFAULT_DECISION),
                     decided_by=st.get("decided_by", ""),
+                    decided_at=st.get("decided_at", ""),
                 )
             )
     # Most urgent first: crit < high < mod < low, then highest score, then oldest.

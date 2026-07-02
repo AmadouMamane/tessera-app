@@ -3553,6 +3553,23 @@
           "what": "The distribution of candidates by type/source.",
           "how": "Candidates grouped by origin category."
         }
+      },
+      "tabview": {
+        "curate": {
+          "what": "Every real curation candidate: each failed evaluation case from each agent's latest run.",
+          "how": "candidates = cases with passed=false in the eval report; each candidate's decision (promote/review/reject) is persisted.",
+          "source": "eval/reports (per env) + curation_decisions.json (durable store)"
+        },
+        "decided": {
+          "what": "Candidates carrying this durable decision, with the real decision timestamp.",
+          "how": "Filter on the persisted decision; re-deciding updates the store immediately.",
+          "source": "curation_decisions.json (durable store)"
+        },
+        "history": {
+          "what": "The real journal of curation decisions, newest first.",
+          "how": "Each decision is timestamped when recorded (decided_at); ordering follows that timestamp.",
+          "source": "curation_decisions.json (durable store)"
+        }
       }
     },
     "title": "Eval-set curation",
@@ -3622,7 +3639,11 @@
       "risk": "Risk",
       "owner": "Owner",
       "decision": "Decision",
-      "actions": "Actions"
+      "actions": "Actions",
+      "agent": "Agent",
+      "language": "Language",
+      "decidedAt": "Decided at",
+      "decidedBy": "Decided by"
     },
     "whyCol": {
       "reason": "Main reason",
@@ -3779,6 +3800,15 @@
       "promote": "Promote",
       "review": "Review",
       "reject": "Reject"
+    },
+    "tabview": {
+      "curateTitle": "Curation queue — real candidates",
+      "searchPlaceholder": "Search a case or agent…",
+      "queueCount": "{n} candidates",
+      "promotionsTitle": "Promoted candidates (real decisions)",
+      "rejectionsTitle": "Rejected candidates (real decisions)",
+      "historyTitle": "Decision history",
+      "empty": "No candidates in this state."
     }
   },
   "automations": {

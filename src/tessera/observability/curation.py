@@ -154,6 +154,27 @@ def compute_curation_overview(lang: str = "fr") -> dict[str, object]:
         for c in candidates[:6]
     ]
 
+    # Real: the FULL candidate queue (the curate/promotions/rejections/history tabs
+    # work over every real candidate, not just the top-6 overview slice).
+    candidate_lots = [
+        {
+            "id": f"{c.case_id} · {c.language.upper()}",
+            "candidate_id": c.candidate_id,
+            "agent_id": c.agent_id,
+            "title": c.title,
+            "source": "replay",
+            "category": c.curation_category,
+            "language": c.language,
+            "priority": c.priority,
+            "score": c.score,
+            "risk": c.risk,
+            "owner": c.decided_by or "—",
+            "decision": c.decision,
+            "decided_at": c.decided_at,
+        }
+        for c in candidates
+    ]
+
     why_tours = [
         {"reason": _t("why1", lang), "value": 92, "cost": "1 h 00"},
         {"reason": _t("why2", lang), "value": 78, "cost": "0 h 45"},
@@ -293,6 +314,7 @@ def compute_curation_overview(lang: str = "fr") -> dict[str, object]:
         "updated_at": "11:54:01",
         "kpis": kpis,
         "priority_lots": priority_lots,
+        "candidate_lots": candidate_lots,
         "why_tours": why_tours,
         "workflow": workflow,
         "release": {"id": "R-2024-11-07-1", "status": _t("rel_ready", lang), "readiness": 87},

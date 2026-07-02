@@ -3553,6 +3553,23 @@
           "what": "La répartition des candidats par type/source.",
           "how": "Candidats groupés par catégorie de provenance."
         }
+      },
+      "tabview": {
+        "curate": {
+          "what": "Tous les candidats de curation réels : chaque cas d'évaluation échoué du dernier run de chaque agent.",
+          "how": "candidats = cas avec passed=false dans le rapport d'évaluation ; décision (promouvoir/revoir/rejeter) persistée par candidat.",
+          "source": "eval/reports (par env) + curation_decisions.json (store durable)"
+        },
+        "decided": {
+          "what": "Les candidats portant cette décision durable, avec l'horodatage réel de la décision.",
+          "how": "Filtre sur la décision persistée ; re-décider met à jour le store immédiatement.",
+          "source": "curation_decisions.json (store durable)"
+        },
+        "history": {
+          "what": "Le journal réel des décisions de curation, les plus récentes d'abord.",
+          "how": "Chaque décision est horodatée à l'enregistrement (decided_at) ; l'ordre suit cet horodatage.",
+          "source": "curation_decisions.json (store durable)"
+        }
       }
     },
     "title": "Curation eval set",
@@ -3622,7 +3639,11 @@
       "risk": "Risque",
       "owner": "Propriétaire",
       "decision": "Décision",
-      "actions": "Actions"
+      "actions": "Actions",
+      "agent": "Agent",
+      "language": "Langue",
+      "decidedAt": "Décidé le",
+      "decidedBy": "Décidé par"
     },
     "whyCol": {
       "reason": "Raison principale",
@@ -3779,6 +3800,15 @@
       "promote": "Promouvoir",
       "review": "Revoir",
       "reject": "Rejeter"
+    },
+    "tabview": {
+      "curateTitle": "File de curation — candidats réels",
+      "searchPlaceholder": "Rechercher un cas, un agent…",
+      "queueCount": "{n} candidats",
+      "promotionsTitle": "Candidats promus (décisions réelles)",
+      "rejectionsTitle": "Candidats rejetés (décisions réelles)",
+      "historyTitle": "Historique des décisions",
+      "empty": "Aucun candidat dans cet état."
     }
   },
   "automations": {

@@ -98,6 +98,11 @@ def test_set_decision_persists(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     reloaded = cstore._load_state()
     assert reloaded["support-client.01.fr"]["decision"] == "reject"
     assert reloaded["support-client.01.fr"]["decided_by"] == "claire"
+    # A real decision is timestamped; resetting to pending clears the timestamp.
+    assert reloaded["support-client.01.fr"]["decided_at"]
+    cstore.set_decision("support-client.01.fr", decision="pending")
+    assert cstore._load_state()["support-client.01.fr"]["decided_at"] == ""
+    cstore.set_decision("support-client.01.fr", decision="reject")
     # An invalid decision is ignored, not persisted as-is.
     cstore.set_decision("support-client.01.fr", decision="bogus")
     assert cstore._load_state()["support-client.01.fr"]["decision"] == "reject"
@@ -129,3 +134,35 @@ def test_backend_derives_decision_core_from_the_store(monkeypatch: pytest.Monkey
     # Subsystem chrome stays a fixture (shape only).
     for key in ("workflow", "coverage", "why_tours", "linked_datasets", "backlog_trend"):
         assert payload[key]
+
+
+def test_candidate_lots_expose_the_full_real_queue(monkeypatch: pytest.MonkeyPatch) -> None:
+    _wire(
+        monkeypatch,
+        [
+            _session("01", "pii_leak", passed=False),
+            _session("03", "tool_misuse", passed=False),
+            _session("04", "hallucination", passed=False),
+        ],
+        {
+            "support-client.01.fr": {
+                "decision": "promote",
+                "decided_by": "a",
+                "decided_at": "2026-06-16T11:59:00+00:00",
+            }
+        },
+    )
+    payload = curation.compute_curation_overview("fr")
+    lots = payload["candidate_lots"]
+    assert isinstance(lots, list)
+    # Every real candidate is exposed (not just the top-6 overview slice).
+    assert len(lots) == 3
+    by_id = {lot["candidate_id"]: lot for lot in lots}
+    promoted = by_id["support-client.01.fr"]
+    assert promoted["decision"] == "promote"
+    assert promoted["decided_at"] == "2026-06-16T11:59:00+00:00"
+    assert promoted["agent_id"] == "support-client"
+    assert promoted["language"] == "fr"
+    assert promoted["title"] == "01 title"
+    # Undecided rows carry an empty decided_at, never a fabricated time.
+    assert by_id["support-client.03.fr"]["decided_at"] == ""

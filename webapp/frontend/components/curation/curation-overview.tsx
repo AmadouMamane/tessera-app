@@ -22,6 +22,7 @@ import {
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import type { ComponentType, ReactNode } from "react";
+import { useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
@@ -61,6 +62,7 @@ const COV_BG: Record<string, string> = {
 };
 
 const TABS = ["overview", "curate", "coverage", "promotions", "rejections", "history"] as const;
+type Tab = (typeof TABS)[number];
 const ACTION_ICONS = {
   promote: UploadCloud,
   assign_review: UserCheck,
@@ -98,6 +100,7 @@ export function CurationOverview() {
     refetchInterval: 30_000,
   });
   const qc = useQueryClient();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const decide = useMutation({
     mutationFn: mutateCurationDecision,
     onSuccess: (fresh) => qc.setQueryData(["curation-overview", locale], fresh),
@@ -115,7 +118,7 @@ export function CurationOverview() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
+      <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}
@@ -129,97 +132,130 @@ export function CurationOverview() {
         onModeChange={temporal.changeMode}
       />
 
-      {/* A · État actuel */}
-      <Zone
-        label={t("zone.actual")}
-        info={<ExplainInfo k="zone.actual" title={t("zone.actual")} />}
-      >
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
-          {data.kpis.map((kpi) => (
-            <KpiTile
-              key={kpi.key}
-              kpi={kpi}
-              label={t(`kpi.${kpi.key}`)}
-              vs={t("delta.vs7d")}
-              info={<ExplainInfo k={`kpi.${kpi.key}`} title={t(`kpi.${kpi.key}`)} />}
-            />
-          ))}
-        </div>
-      </Zone>
-
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          {/* B · Diagnostic de curation */}
-          <Zone
-            label={t("zone.diagnostic")}
-            info={<ExplainInfo k="zone.diagnostic" title={t("zone.diagnostic")} />}
-          >
-            <div className="grid gap-3 xl:grid-cols-12">
-              <PriorityLots
-                t={t}
-                data={data}
-                onDecide={onDecide}
-                deciding={decide.isPending}
-                className="xl:col-span-7"
-              />
-              <WhyTours t={t} data={data} className="xl:col-span-5" />
-            </div>
-          </Zone>
-
-          {/* C · Gaps & couverture */}
-          <Zone label={t("zone.gaps")} info={<ExplainInfo k="zone.gaps" title={t("zone.gaps")} />}>
-            <div className="grid gap-3 xl:grid-cols-12">
-              <CoverageHeatmap t={t} data={data} className="xl:col-span-4" />
-              <Panel
-                title={t("panel.distribution")}
-                info={<ExplainInfo k="panel.distribution" title={t("panel.distribution")} />}
-                className="xl:col-span-3"
-              >
-                <Donut
-                  slices={data.candidates_distribution}
-                  total={data.distribution_total}
-                  caption="candidats"
-                  labelOf={(k) => t(`dist.${k}`)}
-                  showCount
-                />
-              </Panel>
-              <QualitySignals t={t} data={data} className="xl:col-span-2" />
-              <LinkedDatasets t={t} data={data} className="xl:col-span-3" />
-            </div>
-          </Zone>
-        </div>
-
-        <CurationRail t={t} data={data} />
+      <div id="curation-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
+        {activeTab === "curate" ? (
+          <CurateQueue t={t} data={data} onDecide={onDecide} deciding={decide.isPending} />
+        ) : null}
+        {activeTab === "coverage" ? <CoverageTab t={t} data={data} /> : null}
+        {activeTab === "promotions" ? (
+          <DecidedTab
+            t={t}
+            data={data}
+            decision="promote"
+            onDecide={onDecide}
+            deciding={decide.isPending}
+          />
+        ) : null}
+        {activeTab === "rejections" ? (
+          <DecidedTab
+            t={t}
+            data={data}
+            decision="reject"
+            onDecide={onDecide}
+            deciding={decide.isPending}
+          />
+        ) : null}
+        {activeTab === "history" ? <HistoryTab t={t} data={data} /> : null}
       </div>
 
-      {/* D · Actions & gouvernance */}
-      <Zone
-        label={t("zone.governance")}
-        info={<ExplainInfo k="zone.governance" title={t("zone.governance")} />}
-      >
-        <SyntheticNotice signalId="curation" compact />
-        <div className="grid gap-3 xl:grid-cols-12">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:col-span-8 2xl:grid-cols-5">
-            {data.actions.map((a) => (
-              <ActionCard key={a.key} action={a} t={t} />
-            ))}
-          </div>
-          <RecentActivity t={t} data={data} className="xl:col-span-4" />
-        </div>
-      </Zone>
+      {activeTab !== "overview" ? null : (
+        <>
+          {/* A · État actuel */}
+          <Zone
+            label={t("zone.actual")}
+            info={<ExplainInfo k="zone.actual" title={t("zone.actual")} />}
+          >
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+              {data.kpis.map((kpi) => (
+                <KpiTile
+                  key={kpi.key}
+                  kpi={kpi}
+                  label={t(`kpi.${kpi.key}`)}
+                  vs={t("delta.vs7d")}
+                  info={<ExplainInfo k={`kpi.${kpi.key}`} title={t(`kpi.${kpi.key}`)} />}
+                />
+              ))}
+            </div>
+          </Zone>
 
-      {/* E · Impact & tendances */}
-      <Zone
-        label={t("zone.trends")}
-        info={<ExplainInfo k="zone.trends" title={t("zone.trends")} />}
-      >
-        <SyntheticNotice signalId="curation" compact />
-        <div className="grid gap-3 xl:grid-cols-12">
-          <BacklogTrend t={t} data={data} className="xl:col-span-4" />
-          <BalanceChart t={t} data={data} className="xl:col-span-4" />
-          <ImpactPanel t={t} data={data} className="xl:col-span-4" />
-        </div>
-      </Zone>
+          <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="flex min-w-0 flex-col gap-3">
+              {/* B · Diagnostic de curation */}
+              <Zone
+                label={t("zone.diagnostic")}
+                info={<ExplainInfo k="zone.diagnostic" title={t("zone.diagnostic")} />}
+              >
+                <div className="grid gap-3 xl:grid-cols-12">
+                  <PriorityLots
+                    t={t}
+                    data={data}
+                    onDecide={onDecide}
+                    deciding={decide.isPending}
+                    className="xl:col-span-7"
+                  />
+                  <WhyTours t={t} data={data} className="xl:col-span-5" />
+                </div>
+              </Zone>
+
+              {/* C · Gaps & couverture */}
+              <Zone
+                label={t("zone.gaps")}
+                info={<ExplainInfo k="zone.gaps" title={t("zone.gaps")} />}
+              >
+                <div className="grid gap-3 xl:grid-cols-12">
+                  <CoverageHeatmap t={t} data={data} className="xl:col-span-4" />
+                  <Panel
+                    title={t("panel.distribution")}
+                    info={<ExplainInfo k="panel.distribution" title={t("panel.distribution")} />}
+                    className="xl:col-span-3"
+                  >
+                    <Donut
+                      slices={data.candidates_distribution}
+                      total={data.distribution_total}
+                      caption="candidats"
+                      labelOf={(k) => t(`dist.${k}`)}
+                      showCount
+                    />
+                  </Panel>
+                  <QualitySignals t={t} data={data} className="xl:col-span-2" />
+                  <LinkedDatasets t={t} data={data} className="xl:col-span-3" />
+                </div>
+              </Zone>
+            </div>
+
+            <CurationRail t={t} data={data} />
+          </div>
+
+          {/* D · Actions & gouvernance */}
+          <Zone
+            label={t("zone.governance")}
+            info={<ExplainInfo k="zone.governance" title={t("zone.governance")} />}
+          >
+            <SyntheticNotice signalId="curation" compact />
+            <div className="grid gap-3 xl:grid-cols-12">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:col-span-8 2xl:grid-cols-5">
+                {data.actions.map((a) => (
+                  <ActionCard key={a.key} action={a} t={t} />
+                ))}
+              </div>
+              <RecentActivity t={t} data={data} className="xl:col-span-4" />
+            </div>
+          </Zone>
+
+          {/* E · Impact & tendances */}
+          <Zone
+            label={t("zone.trends")}
+            info={<ExplainInfo k="zone.trends" title={t("zone.trends")} />}
+          >
+            <SyntheticNotice signalId="curation" compact />
+            <div className="grid gap-3 xl:grid-cols-12">
+              <BacklogTrend t={t} data={data} className="xl:col-span-4" />
+              <BalanceChart t={t} data={data} className="xl:col-span-4" />
+              <ImpactPanel t={t} data={data} className="xl:col-span-4" />
+            </div>
+          </Zone>
+        </>
+      )}
 
       <Footer t={t} data={data} />
     </div>
@@ -228,17 +264,33 @@ export function CurationOverview() {
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({
+  t,
+  active,
+  onSelect,
+}: {
+  t: T;
+  active: Tab;
+  onSelect: (tab: Tab) => void;
+}) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+      <div
+        role="tablist"
+        aria-label={t("tabs.overview")}
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+      >
         {TABS.map((tab) => (
           <button
             key={tab}
             type="button"
+            role="tab"
+            aria-selected={tab === active}
+            aria-controls="curation-tabpanel"
+            onClick={() => onSelect(tab)}
             className={cn(
               "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
-              tab === "overview"
+              tab === active
                 ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
             )}
@@ -249,24 +301,31 @@ function CommandBar({ t }: { t: T }) {
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Button
+          asChild
           size="sm"
           variant="outline"
           className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
         >
-          <PlayCircle className="h-4 w-4" /> {t("actions.launchScoring")}
+          <Link href="/surveiller/qualite-ia">
+            <PlayCircle className="h-4 w-4" /> {t("actions.launchScoring")}
+          </Link>
         </Button>
         <Button
           size="sm"
+          onClick={() => onSelect("curate")}
           className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
         >
           <Plus className="h-4 w-4" /> {t("actions.createLot")}
         </Button>
         <Button
+          asChild
           size="sm"
           variant="outline"
           className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
         >
-          <FileSearch className="h-4 w-4" /> {t("actions.evidencePack")}
+          <Link href="/prouver/evidence-store">
+            <FileSearch className="h-4 w-4" /> {t("actions.evidencePack")}
+          </Link>
         </Button>
       </div>
     </section>
@@ -370,6 +429,285 @@ function PriorityLots({
         </table>
       </div>
     </Panel>
+  );
+}
+
+// ── focused tab views (all rows come from the real curation store) ───────────
+
+type Candidate = Data["candidate_lots"][number];
+type OnDecide = (candidateId: string, decision: "promote" | "review" | "reject") => void;
+
+function fmtDecidedAt(iso: string, locale: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function CandidateRows({
+  t,
+  rows,
+  onDecide,
+  deciding,
+  showDecidedAt,
+}: {
+  t: T;
+  rows: Candidate[];
+  onDecide: OnDecide;
+  deciding: boolean;
+  showDecidedAt?: boolean;
+}) {
+  const locale = useLocale();
+  if (rows.length === 0) {
+    return (
+      <p className="px-2 py-6 text-center text-xs text-[var(--tessera-text-muted)]">
+        {t("tabview.empty")}
+      </p>
+    );
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-left text-xs">
+        <thead>
+          <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="px-2 py-1.5 font-medium">{t("col.id")}</th>
+            <th className="px-2 py-1.5 font-medium">{t("col.agent")}</th>
+            <th className="px-2 py-1.5 font-medium">{t("col.category")}</th>
+            <th className="px-2 py-1.5 font-medium">{t("col.language")}</th>
+            <th className="px-2 py-1.5 font-medium">{t("col.risk")}</th>
+            <th className="px-2 py-1.5 font-medium">{t("col.decision")}</th>
+            {showDecidedAt ? (
+              <th className="px-2 py-1.5 font-medium">{t("col.decidedAt")}</th>
+            ) : null}
+            <th className="px-2 py-1.5 text-right font-medium">{t("col.actions")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((lot) => (
+            <tr
+              key={lot.candidate_id}
+              className="border-b border-[var(--tessera-border)]/60 last:border-0"
+            >
+              <td
+                className="max-w-[170px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[#87bfff]"
+                title={lot.title}
+              >
+                {lot.id}
+              </td>
+              <td className="whitespace-nowrap px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                {lot.agent_id}
+              </td>
+              <td className="whitespace-nowrap px-2 py-1.5 text-[var(--tessera-text)]">
+                {t(`category.${lot.category}`)}
+              </td>
+              <td className="whitespace-nowrap px-2 py-1.5 uppercase text-[var(--tessera-text-muted)]">
+                {lot.language}
+              </td>
+              <td className="px-2 py-1.5">
+                <Badge className={RISK_BADGE[lot.risk]}>{t(`risk.${lot.risk}`)}</Badge>
+              </td>
+              <td className="px-2 py-1.5">
+                <Badge className={DECISION_BADGE[lot.decision]}>
+                  {t(`decide.${lot.decision}`)}
+                </Badge>
+              </td>
+              {showDecidedAt ? (
+                <td className="whitespace-nowrap px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                  {fmtDecidedAt(lot.decided_at, locale)}
+                </td>
+              ) : null}
+              <td className="px-2 py-1.5">
+                <div className="flex items-center justify-end gap-1">
+                  <DecideButton
+                    icon={Check}
+                    label={t("decide.promote")}
+                    active={lot.decision === "promote"}
+                    tone="emerald"
+                    disabled={deciding}
+                    onClick={() => onDecide(lot.candidate_id, "promote")}
+                  />
+                  <DecideButton
+                    icon={Eye}
+                    label={t("decide.review")}
+                    active={lot.decision === "review"}
+                    tone="amber"
+                    disabled={deciding}
+                    onClick={() => onDecide(lot.candidate_id, "review")}
+                  />
+                  <DecideButton
+                    icon={X}
+                    label={t("decide.reject")}
+                    active={lot.decision === "reject"}
+                    tone="red"
+                    disabled={deciding}
+                    onClick={() => onDecide(lot.candidate_id, "reject")}
+                  />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CurateQueue({
+  t,
+  data,
+  onDecide,
+  deciding,
+}: {
+  t: T;
+  data: Data;
+  onDecide: OnDecide;
+  deciding: boolean;
+}) {
+  const [q, setQ] = useState("");
+  const needle = q.trim().toLowerCase();
+  const rows = data.candidate_lots.filter(
+    (l) =>
+      !needle || `${l.id} ${l.title} ${l.agent_id} ${l.language}`.toLowerCase().includes(needle),
+  );
+  return (
+    <Zone
+      label={t("tabview.curateTitle")}
+      info={<ExplainInfo k="tabview.curate" title={t("tabview.curateTitle")} />}
+    >
+      <Panel
+        title={t("tabview.queueCount", { n: rows.length })}
+        action={
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t("tabview.searchPlaceholder")}
+            aria-label={t("tabview.searchPlaceholder")}
+            className="h-8 w-56 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-xs text-[var(--tessera-text)] outline-none transition-colors placeholder:text-[var(--tessera-text-muted)] focus:border-[#2e72d2]"
+          />
+        }
+      >
+        <CandidateRows t={t} rows={rows} onDecide={onDecide} deciding={deciding} />
+      </Panel>
+    </Zone>
+  );
+}
+
+function DecidedTab({
+  t,
+  data,
+  decision,
+  onDecide,
+  deciding,
+}: {
+  t: T;
+  data: Data;
+  decision: "promote" | "reject";
+  onDecide: OnDecide;
+  deciding: boolean;
+}) {
+  const rows = data.candidate_lots.filter((l) => l.decision === decision);
+  const title =
+    decision === "promote" ? t("tabview.promotionsTitle") : t("tabview.rejectionsTitle");
+  return (
+    <Zone label={title} info={<ExplainInfo k="tabview.decided" title={title} />}>
+      <Panel title={t("tabview.queueCount", { n: rows.length })}>
+        <CandidateRows t={t} rows={rows} onDecide={onDecide} deciding={deciding} showDecidedAt />
+      </Panel>
+    </Zone>
+  );
+}
+
+function HistoryTab({ t, data }: { t: T; data: Data }) {
+  const locale = useLocale();
+  const rows = data.candidate_lots
+    .filter((l) => l.decision !== "pending")
+    .sort((a, b) => (b.decided_at || "").localeCompare(a.decided_at || ""));
+  return (
+    <Zone
+      label={t("tabview.historyTitle")}
+      info={<ExplainInfo k="tabview.history" title={t("tabview.historyTitle")} />}
+    >
+      <Panel title={t("tabview.queueCount", { n: rows.length })}>
+        {rows.length === 0 ? (
+          <p className="px-2 py-6 text-center text-xs text-[var(--tessera-text-muted)]">
+            {t("tabview.empty")}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                  <th className="px-2 py-1.5 font-medium">{t("col.decidedAt")}</th>
+                  <th className="px-2 py-1.5 font-medium">{t("col.id")}</th>
+                  <th className="px-2 py-1.5 font-medium">{t("col.agent")}</th>
+                  <th className="px-2 py-1.5 font-medium">{t("col.decision")}</th>
+                  <th className="px-2 py-1.5 font-medium">{t("col.decidedBy")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((lot) => (
+                  <tr
+                    key={lot.candidate_id}
+                    className="border-b border-[var(--tessera-border)]/60 last:border-0"
+                  >
+                    <td className="whitespace-nowrap px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                      {fmtDecidedAt(lot.decided_at, locale)}
+                    </td>
+                    <td
+                      className="max-w-[190px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[#87bfff]"
+                      title={lot.title}
+                    >
+                      {lot.id}
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                      {lot.agent_id}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Badge className={DECISION_BADGE[lot.decision]}>
+                        {t(`decide.${lot.decision}`)}
+                      </Badge>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-[var(--tessera-text)]">
+                      {lot.owner}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+    </Zone>
+  );
+}
+
+function CoverageTab({ t, data }: { t: T; data: Data }) {
+  return (
+    <Zone label={t("zone.gaps")} info={<ExplainInfo k="zone.gaps" title={t("zone.gaps")} />}>
+      <div className="grid gap-3 xl:grid-cols-12">
+        <CoverageHeatmap t={t} data={data} className="xl:col-span-5" />
+        <Panel
+          title={t("panel.distribution")}
+          info={<ExplainInfo k="panel.distribution" title={t("panel.distribution")} />}
+          className="xl:col-span-4"
+        >
+          <Donut
+            slices={data.candidates_distribution}
+            total={data.distribution_total}
+            caption="candidats"
+            labelOf={(k) => t(`dist.${k}`)}
+            showCount
+          />
+        </Panel>
+        <QualitySignals t={t} data={data} className="xl:col-span-3" />
+      </div>
+    </Zone>
   );
 }
 

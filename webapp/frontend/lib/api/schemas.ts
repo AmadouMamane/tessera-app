@@ -2314,6 +2314,21 @@ const CurLotSchema = z.object({
   owner: z.string(),
   decision: z.enum(["pending", "promote", "review", "reject"]),
 });
+const CurCandidateSchema = z.object({
+  id: z.string(),
+  candidate_id: z.string(),
+  agent_id: z.string(),
+  title: z.string(),
+  source: z.enum(["live", "replay", "shadow"]),
+  category: z.string(),
+  language: z.string(),
+  priority: z.enum(["crit", "high", "mod", "low"]),
+  score: z.number().int(),
+  risk: z.enum(["eleve", "moyen", "bas"]),
+  owner: z.string(),
+  decision: z.enum(["pending", "promote", "review", "reject"]),
+  decided_at: z.string(),
+});
 const CurWhySchema = z.object({
   reason: z.string(),
   value: z.number().int(),
@@ -2365,6 +2380,7 @@ export const CurationOverviewSchema = z.object({
   updated_at: z.string(),
   kpis: z.array(CurKpiSchema),
   priority_lots: z.array(CurLotSchema),
+  candidate_lots: z.array(CurCandidateSchema),
   why_tours: z.array(CurWhySchema),
   workflow: z.array(CurWorkflowSchema),
   release: z.object({ id: z.string(), status: z.string(), readiness: z.number().int() }),

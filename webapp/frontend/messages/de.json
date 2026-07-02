@@ -3553,6 +3553,23 @@
           "what": "Die Verteilung der Kandidaten nach Typ/Quelle.",
           "how": "Kandidaten nach Herkunftskategorie gruppiert."
         }
+      },
+      "tabview": {
+        "curate": {
+          "what": "Alle echten Kurationskandidaten: jeder fehlgeschlagene Evaluationsfall des letzten Laufs jedes Agenten.",
+          "how": "Kandidaten = Faelle mit passed=false im Evaluationsbericht; Entscheidung pro Kandidat persistiert.",
+          "source": "eval/reports (pro Env) + curation_decisions.json (dauerhafter Store)"
+        },
+        "decided": {
+          "what": "Kandidaten mit dieser dauerhaften Entscheidung, mit echtem Zeitstempel.",
+          "how": "Filter auf die persistierte Entscheidung; erneutes Entscheiden aktualisiert den Store sofort.",
+          "source": "curation_decisions.json (dauerhafter Store)"
+        },
+        "history": {
+          "what": "Das echte Journal der Kurationsentscheidungen, neueste zuerst.",
+          "how": "Jede Entscheidung wird beim Speichern mit Zeitstempel versehen (decided_at).",
+          "source": "curation_decisions.json (dauerhafter Store)"
+        }
       }
     },
     "title": "Eval-Set-Kuratierung",
@@ -3622,7 +3639,11 @@
       "risk": "Risiko",
       "owner": "Verantwortlicher",
       "decision": "Entscheidung",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "agent": "Agent",
+      "language": "Sprache",
+      "decidedAt": "Entschieden am",
+      "decidedBy": "Entschieden von"
     },
     "whyCol": {
       "reason": "Hauptgrund",
@@ -3779,6 +3800,15 @@
       "promote": "Fördern",
       "review": "Prüfen",
       "reject": "Ablehnen"
+    },
+    "tabview": {
+      "curateTitle": "Kurationswarteschlange — echte Kandidaten",
+      "searchPlaceholder": "Fall oder Agent suchen…",
+      "queueCount": "{n} Kandidaten",
+      "promotionsTitle": "Befoerderte Kandidaten (echte Entscheidungen)",
+      "rejectionsTitle": "Abgelehnte Kandidaten (echte Entscheidungen)",
+      "historyTitle": "Entscheidungsverlauf",
+      "empty": "Keine Kandidaten in diesem Zustand."
     }
   },
   "automations": {
