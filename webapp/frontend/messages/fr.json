@@ -5194,6 +5194,18 @@
     "footer": {
       "version": "{v}",
       "source": "Source de vérité : {src}"
+    },
+    "models": {
+      "title": "Modèles IA configurés ({n})",
+      "colName": "Modèle",
+      "colProvider": "Fournisseur",
+      "colRole": "Rôle",
+      "colStatus": "Statut",
+      "active": "Actif",
+      "available": "Disponible",
+      "chat": "Chat",
+      "embedding": "Embedding",
+      "manage": "Gérer les modèles"
     }
   },
   "inbox": {

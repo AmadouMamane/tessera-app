@@ -106,6 +106,7 @@ export function ParametersOverview() {
         <div className="flex min-w-0 flex-col gap-3">
           <QuickConfig t={t} data={data} />
           <RecentParams t={t} data={data} />
+          <ModelsConfigured t={t} data={data} />
           <UsagePolicies t={t} data={data} />
         </div>
         <aside className="flex min-w-0 flex-col gap-3">
@@ -304,6 +305,53 @@ function UsagePolicies({ t, data }: { t: T; data: Data }) {
           </li>
         ))}
       </ul>
+    </Panel>
+  );
+}
+
+const MODEL_STATUS: Record<string, string> = {
+  active: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  available:
+    "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
+};
+
+function ModelsConfigured({ t, data }: { t: T; data: Data }) {
+  const models = data.models_configured;
+  const cols = ["colName", "colProvider", "colRole", "colStatus"] as const;
+  return (
+    <Panel
+      title={t("models.title", { n: models.length })}
+      action={<ViewAll label={t("models.manage")} href="/configurer/modeles" />}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.72rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {cols.map((c) => (
+                <th key={c} className="whitespace-nowrap px-2 py-1.5 font-medium">
+                  {t(`models.${c}`)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {models.map((m) => (
+              <tr key={m.name} className="border-b border-[var(--tessera-border)]/60 last:border-0">
+                <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-text)]">
+                  {m.name}
+                </td>
+                <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{m.provider}</td>
+                <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                  {t(`models.${m.role}`)}
+                </td>
+                <td className="px-2 py-1.5">
+                  <Badge className={MODEL_STATUS[m.status]}>{t(`models.${m.status}`)}</Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }

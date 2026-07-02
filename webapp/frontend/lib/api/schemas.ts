@@ -3263,6 +3263,16 @@ export const ParametersOverviewSchema = z.object({
   }),
   compliance: z.array(z.object({ key: z.string(), status: z.enum(["ok", "warn", "bad"]) })),
   usage_policies: z.array(z.object({ name: z.string(), value: z.string(), status: z.string() })),
+  models_configured: z
+    .array(
+      z.object({
+        name: z.string(),
+        provider: z.string(),
+        role: z.string(),
+        status: z.enum(["active", "available"]),
+      }),
+    )
+    .default([]),
   backup: z.object({
     last_backup: z.string(),
     frequency: z.string(),

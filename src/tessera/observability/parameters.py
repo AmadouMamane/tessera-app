@@ -20,7 +20,11 @@ from pathlib import Path
 
 from tessera.guard.decisions import load_policy
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
-from tessera.observability.model_catalogue import available_model_ids
+from tessera.observability.model_catalogue import (
+    _active_ids,
+    _catalogue_models,
+    available_model_ids,
+)
 from tessera.settings import Settings, get_settings
 
 __all__ = ["compute_parameters_overview"]
@@ -338,6 +342,21 @@ def compute_parameters_overview(lang: str = "fr") -> dict[str, object]:
         "size": f"{policy_size // 1024 or 1} KB",
     }
 
+    # Real model layer: the configured catalogue models, flagging the chat /
+    # embedding models that actually serve under the current profile. Same source
+    # the /configurer/modeles page uses — never a fabricated model list.
+    active_chat, active_embed = _active_ids()
+    active_model_ids = {active_chat, active_embed}
+    models_configured = [
+        {
+            "name": m.model_id,
+            "provider": m.provider,
+            "role": m.role,
+            "status": "active" if m.model_id in active_model_ids else "available",
+        }
+        for m in _catalogue_models()
+    ]
+
     return {
         "generated_at": now.isoformat(),
         "config_version": config_version,
@@ -347,6 +366,7 @@ def compute_parameters_overview(lang: str = "fr") -> dict[str, object]:
         "config_state": config_state,
         "compliance": compliance,
         "usage_policies": usage_policies,
+        "models_configured": models_configured,
         "backup": backup,
         "footer": {"version": f"policy v{policy.version}", "source": "YAML · Git"},
     }

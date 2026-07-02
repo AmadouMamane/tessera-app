@@ -95,3 +95,15 @@ def test_localization_switches_the_usage_policy_labels() -> None:
     en_label = en["usage_policies"][0]["name"]  # type: ignore[index]
     assert fr_label != de_label != en_label
     assert fr["usage_policies"][0]["value"] == en["usage_policies"][0]["value"]  # type: ignore[index]
+
+
+def test_models_configured_come_from_the_real_catalogue() -> None:
+    payload = compute_parameters_overview("fr")
+    models = payload["models_configured"]  # type: ignore[index]
+    names = {m["name"] for m in models}  # type: ignore[index,union-attr]
+    # Exactly the catalogue's known model ids — no invented model list.
+    assert names == available_model_ids()
+    # Every role is a real enum value; at least one model serves under the profile.
+    assert all(m["role"] in ("chat", "embedding") for m in models)  # type: ignore[index]
+    active = {m["name"] for m in models if m["status"] == "active"}  # type: ignore[index]
+    assert active and active <= names

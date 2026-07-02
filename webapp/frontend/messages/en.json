@@ -5194,6 +5194,18 @@
     "footer": {
       "version": "{v}",
       "source": "Source of truth: {src}"
+    },
+    "models": {
+      "title": "Configured AI models ({n})",
+      "colName": "Model",
+      "colProvider": "Provider",
+      "colRole": "Role",
+      "colStatus": "Status",
+      "active": "Active",
+      "available": "Available",
+      "chat": "Chat",
+      "embedding": "Embedding",
+      "manage": "Manage models"
     }
   },
   "inbox": {

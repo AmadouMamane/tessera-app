@@ -5194,6 +5194,18 @@
     "footer": {
       "version": "{v}",
       "source": "Quelle der Wahrheit: {src}"
+    },
+    "models": {
+      "title": "Konfigurierte KI-Modelle ({n})",
+      "colName": "Modell",
+      "colProvider": "Anbieter",
+      "colRole": "Rolle",
+      "colStatus": "Status",
+      "active": "Aktiv",
+      "available": "Verfügbar",
+      "chat": "Chat",
+      "embedding": "Embedding",
+      "manage": "Modelle verwalten"
     }
   },
   "inbox": {
