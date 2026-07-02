@@ -196,3 +196,36 @@ encodes a fixture concept, edit i18n in lockstep. **Screenshot recipe:** tmp `.m
 
 **Still to do:** proofs (real audit-chain + artifact counts, Paramètres-style); curation store;
 assistant (real transcript vs canned sample); check other pages vs their normative with the directive.
+
+## Session 2c — proofs done (LOCAL, unpushed: `1339157`)
+
+**proofs (`prouver/evidence-store`) — real derivable core + flagged SIEM half.** DONE, committed
+`1339157` (10 files, +418/-76). The page was a full fixture; split it honestly:
+
+- **REAL** (from this build's durable stores, verified live): the 6 KPIs are now real
+  artifact/chain metrics — total proof artifacts, audit entries (`verify_audit_chain(...).length`
+  = 598 live), eval scores (`persisted_scores`), replay bundles (`persisted_bundles`), eval
+  reports (`iter_report_files` = 54), chain integrity %. Distribution donut = real families
+  (manifests/snapshots OMITTED, not fabricated). Crypto zone = real `verify_audit_chain`:
+  **SHA-256** (the fixture lied "Ed25519"), real chain length, 0 anomalies, honest when broken.
+  Integrity rail + pipeline chain line + footer driven by a new `chain_verified` payload bool.
+  Alerts = chain status.
+- **DEMONSTRATION** (SIEM/export subsystem this build lacks): pack assembly/signing/export,
+  exporters & destinations, control-case linkage, retention, export journal — kept as fixture and
+  flagged via a **new registry-driven `evidence_export` synthetic signal** (`capabilities.py` +
+  `signal-registry.ts`). Each SIEM zone shows a compact `<SyntheticNotice compact />` (new prop);
+  real zones stay unflagged. 6 notices render.
+- Schema: `crypto.key_rotation` → `crypto.chain_length`; added `chain_verified`.
+  `tests/unit/test_proofs.py` (6 tests) proves derivation. i18n fr/de/en additive.
+- **GOTCHA (bit me):** an i18n string containing `<env>` (in `reports.how`) makes next-intl's ICU
+  parser throw `INVALID_MESSAGE: UNCLOSED_TAG` at render (→ a cascade React "setState in render"
+  warning via ExplainInfo). **Never put `<...>` in message strings** — use `(...)` or `[...]`.
+  Caught via a console-error capture (parametres = 0 errors as control). Gate 2× green + 0 console
+  errors fr/de/en + screenshot-verified.
+
+**Also verified this session:** commit `d87212a` (Paramètres 10-tab bar) — screenshot-confirmed the
+tabs filter params by category (Sécurité = 3 guard settings + usage policies + compliance; IA &
+modèles = params + real "Modèles IA configurés (8)"), Notifications = honest empty.
+
+**Still to do:** curation store (validate/review/reject over failed eval cases, mirror
+`operator_items`); assistant (real transcript vs canned sample); normative sweep of other pages.
