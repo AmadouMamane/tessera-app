@@ -62,7 +62,7 @@ export function SignalBreachHero({
     const okTitle = t("okShort", {
       metric,
       rate: pct(data.good_rate),
-      threshold: pct(data.threshold),
+      threshold: pct(data.target),
     });
     if (variant === "slim") {
       return (
@@ -84,8 +84,8 @@ export function SignalBreachHero({
         title={okTitle}
         gauge={{
           value: data.good_rate,
-          threshold: data.threshold,
-          thresholdLabel: pctTight(data.threshold),
+          threshold: data.target,
+          thresholdLabel: pctTight(data.target),
         }}
       />
     );
@@ -94,7 +94,7 @@ export function SignalBreachHero({
   const title = t("breachedShort", {
     metric,
     rate: pct(data.good_rate),
-    threshold: pct(data.threshold),
+    threshold: pct(data.target),
   });
   const burn = t("burn", {
     x: data.burn_rate.toFixed(1).replace(".", ","),
@@ -140,8 +140,8 @@ export function SignalBreachHero({
       title={title}
       gauge={{
         value: data.good_rate,
-        threshold: data.threshold,
-        thresholdLabel: pctTight(data.threshold),
+        threshold: data.target,
+        thresholdLabel: pctTight(data.target),
         caption: (
           <span className="inline-flex items-center gap-1.5">
             <Flame className="h-3 w-3 shrink-0 text-[#ff9bb0]" aria-hidden />
