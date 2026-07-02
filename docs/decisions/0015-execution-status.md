@@ -28,6 +28,54 @@ Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green + pushed
 
 ## Log (newest first)
 
+- **✅ DELIVERY FIX PROVEN (voie 1) — the Langfuse SDK materialises scores; the hand-rolled POST
+  does not. Ready to implement.** (2026-07-02, proof only, no code change yet, probe score deleted →
+  CH clean.) The Phase-D flip was blocked because Langfuse `default.scores` = 0. **Root cause
+  isolated:** the raw urllib POST in `langfuse_scores.py` to `/api/public/ingestion` returns
+  **201 but never materialises** (no MinIO `events/` blob; silent drop) — while the **official
+  Langfuse SDK v4.7.1** (already in `.venv`) `create_score(...)+flush()` **DID materialise**:
+  ClickHouse `default.scores` 0→1, Langfuse `/api/public/scores` 0→1, and — end to end —
+  `SpineStoresReader.scores(Scope(agent_id="support-client"))` → **1** and `Scope(language="fr")`
+  → **1** (the score carried `metadata={agent_id,language,model}`; the Phase-C reader works
+  unchanged — only the data was missing). Neither Phoenix nor Langfuse observations passively
+  capture the score (`tessera.eval.*` span attr does NOT reach either trace store — online-eval
+  runs off the exported span), so the emit must be *active* → the SDK is the premium, ADR-faithful
+  path (Langfuse=ClickHouse detail store; Prometheus aggregates already wired: rules
+  `tessera:eval_score:mean5m/mean1h` loaded but ~0 samples on low traffic; jsonl to be retired).
+
+  **PROVEN emit (copy-paste):**
+  `from langfuse import Langfuse; lf=Langfuse(host="http://localhost:3900",
+  public_key="pk-lf-claude-public", secret_key="sk-lf-claude-secret");
+  lf.create_score(name="faithfulness", value=0.86, trace_id=<real trace id>, data_type="NUMERIC",
+  comment=<judge_model>, metadata={"agent_id":..., "language":..., "model":...}); lf.flush()`.
+  Verify: `docker exec tessera-claude-clickhouse clickhouse-client --user clickhouse --password
+  clickhouse --query "SELECT count() FROM default.scores"`. A real trace id:
+  `GET :3900/api/public/traces?limit=1` (Basic auth pk/sk). Delete a probe score:
+  `DELETE :3900/api/public/scores/<id>`.
+
+  **NEXT — the flip roadmap (resume here after /clear):**
+  1. **Emit fix (step 1, committable now):** rewrite `src/tessera/observability/langfuse_scores.py`
+     to emit via the SDK (module singleton `Langfuse(...)`; `emit_langfuse_score` → `create_score`),
+     KEEPING: `_enabled()` gate (`TESSERA_LANGFUSE_SCORES`), `trace_id is None` no-op, best-effort
+     non-blocking (SDK batches on its own bg thread — the daemon-thread wrapper can go), offline
+     no-op so `tests/unit` stay hermetic (keep a pure/mocked seam; the old `build_score_event` unit
+     test needs updating). Caller is `eval/scores.py:232` (unchanged). Then live-prove: a real
+     `/chat` turn on `:8392` materialises its score in CH. Gate 2× green.
+  2. **Backfill:** idempotent script replaying `persisted_scores()` (jsonl rows carry
+     scored_at/metric/score/language/agent_id/model/trace_id/judge_model) → Langfuse via the SDK
+     with a **stable score_id** (dedup) — fills the forward-only gap, the flip's prerequisite.
+  3. **Shadow bake:** `TESSERA_SPINE_SOURCE=shadow` until
+     `tessera_spine_shadow_divergence_total{fact=scores,result=match}` holds over a window (needs
+     time + traffic — not instant).
+  4. **Flip + retire jsonl:** `=spine` per-signal, then delete the convenience jsonl (audit +
+     bundles stay local by design — bundles are lossy-from-traces, audit is the ledger carve-out).
+
+  **Stack anchors:** obs = `docker-compose.obs.claude.yml`, containers `tessera-claude-*`
+  (Langfuse :3900, Phoenix :16006, Prometheus :19090, ClickHouse :18123 user/pw `clickhouse`,
+  Redis pw `claude-redis`, MinIO). Backend dev :8392 (see restart cmd in CLAUDE session prompt),
+  front :3097. **Push coupling:** `git push` would also push the 6 unpushed cockpit-sweep commits
+  (proofs `1339157`, curation `9177182`, assistant `665ed46`, automations `2a51d1a`, + 2 docs) and
+  the diagnosis doc `7791ad7` — decide branch-push vs keep-local before pushing the emit fix.
 - **🔎 Parity probe for the jsonl→spine flip (Phase D gate) — flip NOT safe; scores never reach
   ClickHouse.** (2026-07-02, diagnosis only, no code change, nothing flipped.) Asked to flip to the
   spine, I measured parity with the real readers instead of flipping blind. **Authoritative
