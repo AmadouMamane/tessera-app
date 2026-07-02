@@ -1,15 +1,16 @@
 """Phase B — completing the dimensioning (ADR 0015 §Migration B).
 
 Locks: the agent_id + model labels on EVAL_SCORE, the newly-wired per-agent
-GUARD_DECISIONS_TOTAL, the turn-span dimension stamping, the per-dimension "data available
-since" boundaries, and the best-effort Langfuse score/trace helpers.
+GUARD_DECISIONS_TOTAL, the turn-span dimension stamping, and the per-dimension "data
+available since" boundaries. (The score write paths moved to the owned stores in G2 —
+see ``test_score_write_paths.py``.)
 """
 
 from __future__ import annotations
 
 import json
 
-from tessera.observability import langfuse_scores, metrics, semconv
+from tessera.observability import metrics, semconv
 from tessera.observability.eval import scores as scores_mod
 from tessera.observability.eval.judge import JudgeVerdict
 from tessera.observability.spine.availability import dimension_availability
@@ -132,33 +133,6 @@ class TestDimensionAvailability:
         assert since["agent"] == late
         assert since["model"] == late
         assert since["language"] == early
-
-
-class TestLangfuseScore:
-    def test_build_score_event_shape(self) -> None:
-        event = langfuse_scores.build_score_event(
-            trace_id="abc",
-            name="faithfulness",
-            value=0.8,
-            agent_id="support-client",
-            language="fr",
-            model="llama3.2:3b",
-            comment="judge",
-        )
-        assert event["type"] == "score-create"
-        body = event["body"]
-        assert isinstance(body, dict)
-        assert body["traceId"] == "abc"
-        assert body["value"] == 0.8
-        assert body["metadata"] == {
-            "agent_id": "support-client",
-            "language": "fr",
-            "model": "llama3.2:3b",
-        }
-
-    def test_no_trace_is_a_noop(self) -> None:
-        # No recording trace (offline unit) → best-effort emission is skipped, never raises.
-        assert langfuse_scores.emit_langfuse_score(trace_id=None, name="x", value=0.1) is None
 
 
 class TestLangfuseBackfillHelpers:

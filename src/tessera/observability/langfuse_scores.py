@@ -1,38 +1,90 @@
-"""Best-effort Langfuse score emission (ADR 0015 §Migration B).
+"""Best-effort Langfuse mirror of GATING scores via the official SDK (ADR 0015 §Amend.1-2).
 
-Mirrors each online-eval verdict as a Langfuse **score** on the turn's trace, so eval
-quality is queryable per-trace in Langfuse — filterable by ``agent_id`` / ``language`` /
-``model`` (the dimensions carried in the score metadata). It is strictly best-effort: the
-durable score log (``scores.jsonl`` → Prometheus / the spine) stays the system of record;
-Langfuse is an *additional* index for trace-level drill-down.
+Langfuse is **not** a home of any score fact: the gating socle lives in owned Postgres
+(§Amendment 2, Nature 1) and the online firehose in owned ClickHouse (§Correction 2b —
+online rows get **no** score mirror; their *trace* already lives in Langfuse/Phoenix and
+carries the drill-down). This module is the sync leg the amendments kept: it mirrors each
+release-gating verdict as a Langfuse score for drill-down UX, using the **official SDK**
+("voie 1", proven 2026-07-02 — the hand-rolled ingestion POST returned 201 yet never
+materialised and is gone).
 
-Safety: emission never blocks or raises into the turn. The POST runs on a short-lived
-daemon thread with a small timeout and swallows every error, so a slow or absent spine
-degrades silently — never a fabricated score, never a stalled response. When there is no
-recording trace (``trace_id is None``, e.g. offline unit tests), it is a no-op, so the
-existing suite stays offline and fast.
+Anchoring: harness rows carry no trace, so each score anchors on ``session_id = run_id``
+— the run's real identity, listable via Langfuse's v2 scores API (proven live: a
+session-anchored score materialises and lists; an anchorless one is rejected 400). A
+stable ``score_id`` (UUID5 of the unique gating key) makes re-mirroring idempotent, so
+the boot-time sweep and backfill can re-send freely.
 
-Credentials are the self-hosted local project keys already present in the env (matching
-``docker-compose.obs.claude.yml``); in a deployed profile they resolve from Secret Manager.
+Strictly best-effort: never blocks or raises into the caller (the SDK batches on its own
+background thread; ``flush()`` is the caller's option at CLI exit). Disabled with
+``TESSERA_LANGFUSE_SCORES=0``; the unit suite stubs the client and stays offline.
 """
 
 from __future__ import annotations
 
-import base64
-import json
 import os
-import threading
-import urllib.error
-import urllib.request
-from datetime import UTC, datetime
-from uuid import uuid4
+import sys
+import uuid
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
-__all__ = ["build_score_event", "emit_langfuse_score"]
+if TYPE_CHECKING:
+    from tessera.observability.eval.gating_scores import GatingScoreRow
 
-_HOST = os.environ.get("LANGFUSE_HOST", "http://localhost:3900")
-_PUBLIC = os.environ.get("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public")
-_SECRET = os.environ.get("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret")
-_TIMEOUT_S = float(os.environ.get("TESSERA_LANGFUSE_SCORE_TIMEOUT", "1.5"))
+__all__ = ["gating_score_id", "mirror_gating_rows"]
+
+# Fixed namespace for deterministic score ids — never regenerate, or dedup breaks.
+_SCORE_NS = uuid.UUID("6f9c2d1e-8a4b-4f3a-9b6d-2e1c5a7d0b43")
+
+
+class _ScoreClient(Protocol):
+    """The one SDK surface this mirror uses (kept narrow so tests stub it flat)."""
+
+    def create_score(
+        self,
+        *,
+        name: str,
+        value: float,
+        session_id: str,
+        score_id: str,
+        data_type: Literal["NUMERIC", "CATEGORICAL", "BOOLEAN", "TEXT"],
+        comment: str | None,
+        metadata: dict[str, object],
+    ) -> None: ...
+
+    def flush(self) -> None: ...
+
+
+class _SdkClient:
+    """Thin wrapper pinning the SDK to the narrow protocol surface (strict-typed seam)."""
+
+    def __init__(self, sdk: Any) -> None:  # the SDK's own type is overload-heavy
+        self._sdk = sdk
+
+    def create_score(
+        self,
+        *,
+        name: str,
+        value: float,
+        session_id: str,
+        score_id: str,
+        data_type: Literal["NUMERIC", "CATEGORICAL", "BOOLEAN", "TEXT"],
+        comment: str | None,
+        metadata: dict[str, object],
+    ) -> None:
+        self._sdk.create_score(
+            name=name,
+            value=value,
+            session_id=session_id,
+            score_id=score_id,
+            data_type=data_type,
+            comment=comment,
+            metadata=metadata,
+        )
+
+    def flush(self) -> None:
+        self._sdk.flush()
+
+
+_client: _ScoreClient | None = None
 
 
 def _enabled() -> bool:
@@ -40,83 +92,73 @@ def _enabled() -> bool:
     return os.environ.get("TESSERA_LANGFUSE_SCORES", "1").lower() not in {"0", "false", "no", "off"}
 
 
-def build_score_event(
-    *,
-    trace_id: str,
-    name: str,
-    value: float,
-    agent_id: str | None,
-    language: str | None,
-    model: str | None,
-    comment: str | None,
-) -> dict[str, object]:
-    """Build the Langfuse ingestion ``score-create`` event (pure — unit-testable)."""
-    metadata: dict[str, object] = {}
-    if agent_id:
-        metadata["agent_id"] = agent_id
-    if language:
-        metadata["language"] = language
-    if model:
-        metadata["model"] = model
-    body: dict[str, object] = {
-        "traceId": trace_id,
-        "name": name,
-        "value": value,
-        "dataType": "NUMERIC",
-    }
-    if comment:
-        body["comment"] = comment
-    if metadata:
-        body["metadata"] = metadata
-    return {
-        "id": uuid4().hex,
-        "type": "score-create",
-        "timestamp": datetime.now(UTC).isoformat(),
-        "body": body,
-    }
+def gating_score_id(row: GatingScoreRow) -> str:
+    """Deterministic Langfuse score id for a gating row (stable across re-mirrors)."""
+    key = f"{row.run_id}|{row.case_id}|{row.language}|{row.metric}"
+    return str(uuid.uuid5(_SCORE_NS, key))
 
 
-def _post(event: dict[str, object]) -> None:
-    payload = json.dumps({"batch": [event]}).encode()
-    token = base64.b64encode(f"{_PUBLIC}:{_SECRET}".encode()).decode()
-    request = urllib.request.Request(  # noqa: S310 — fixed local/self-hosted spine URL
-        f"{_HOST}/api/public/ingestion",
-        data=payload,
-        method="POST",
-        headers={"Authorization": f"Basic {token}", "Content-Type": "application/json"},
-    )
+def _get_client() -> _ScoreClient | None:
+    """The lazy SDK singleton — never constructed while disabled or under unit tests."""
+    global _client
+    if _client is not None:
+        return _client
     try:
-        with urllib.request.urlopen(request, timeout=_TIMEOUT_S):  # noqa: S310
-            return
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
-        # Best-effort: a slow/absent spine must never surface — the durable log is canonical.
-        return
+        from langfuse import Langfuse
+
+        _client = _SdkClient(
+            Langfuse(
+                host=os.environ.get("LANGFUSE_HOST", "http://localhost:3900"),
+                public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public"),
+                secret_key=os.environ.get("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret"),
+            )
+        )
+    except Exception as exc:  # missing SDK/creds — mirroring is enrichment, never fatal
+        sys.stderr.write(f"tessera.langfuse_scores: mirror unavailable: {exc}\n")
+        return None
+    return _client
 
 
-def emit_langfuse_score(
-    *,
-    trace_id: str | None,
-    name: str,
-    value: float,
-    agent_id: str | None = None,
-    language: str | None = None,
-    model: str | None = None,
-    comment: str | None = None,
-) -> None:
-    """Mirror one eval verdict as a Langfuse score on its trace (best-effort, non-blocking).
+def set_client(client: _ScoreClient | None) -> None:
+    """Override the SDK client (tests inject a stub; ``None`` resets the singleton)."""
+    global _client
+    _client = client
 
-    A no-op when there is no recording trace or when disabled. Otherwise the POST runs on a
-    daemon thread so ``emit_score`` returns immediately.
+
+def mirror_gating_rows(rows: list[GatingScoreRow], *, flush: bool = False) -> int:
+    """Mirror gating rows as session-anchored Langfuse scores; return the count handed off.
+
+    Best-effort by construction: disabled, SDK-less, or unreachable → 0, never a raise.
+    ``flush=True`` drains the SDK batch before returning (for CLI exits — the runner);
+    the API path leaves batching to the SDK's background thread.
     """
-    if trace_id is None or not _enabled():
-        return
-    event = build_score_event(
-        trace_id=trace_id,
-        name=name,
-        value=value,
-        agent_id=agent_id,
-        language=language,
-        model=model,
-        comment=comment,
-    )
-    threading.Thread(target=_post, args=(event,), daemon=True).start()
+    if not rows or not _enabled():
+        return 0
+    client = _get_client()
+    if client is None:
+        return 0
+    mirrored = 0
+    try:
+        for row in rows:
+            client.create_score(
+                name=row.metric,
+                value=row.score,
+                session_id=row.run_id,
+                score_id=gating_score_id(row),
+                data_type="NUMERIC",
+                comment=row.case_id,
+                metadata={
+                    "agent_id": row.agent_id,
+                    "language": row.language,
+                    "model": row.model,
+                    "case_id": row.case_id,
+                    "catalogue_version": row.catalogue_version,
+                    "passed": row.passed,
+                },
+            )
+            mirrored += 1
+        if flush:
+            client.flush()
+    except Exception as exc:  # a mirror hiccup must never surface into the write path
+        sys.stderr.write(f"tessera.langfuse_scores: mirror failed after {mirrored}: {exc}\n")
+    return mirrored

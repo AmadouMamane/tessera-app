@@ -283,6 +283,25 @@ def _build_gate(
     return verdict, payload
 
 
+async def _record_gating(payload: str) -> None:
+    """Record a release-gating run in the owned Postgres table (ADR 0015 §Amendment 2).
+
+    Best-effort at the CLI boundary: a down Postgres must never fail an eval run — the
+    report file remains the archive of record and the idempotent sweep reconciles later.
+    Non-agent catalogue runs produce no gating rows (the socle is per-agent) and log
+    nothing. The Langfuse mirror is flushed before exit (CLI processes don't linger).
+    """
+    from tessera.observability.eval.gating_scores import record_gating_report
+
+    try:
+        inserted = await record_gating_report(json.loads(payload), flush_mirror=True)
+    except Exception as exc:
+        sys.stderr.write(f"gating store unavailable (report file remains the archive): {exc}\n")
+        return
+    if inserted:
+        sys.stdout.write(f"Gating rows recorded → {inserted}\n")
+
+
 def _persist_report(args: argparse.Namespace, payload: str, run_ts: str, lang_suffix: str) -> Path:
     """Write the timestamped archive + the relevant "latest", and return the archive.
 
@@ -406,6 +425,7 @@ async def _run_all(args: argparse.Namespace) -> int:
     )
 
     archive = _persist_report(args, payload, run_ts, lang_suffix)
+    await _record_gating(payload)  # durable porteur (ADR 0015 §Amendment 2), best-effort
 
     sys.stdout.write(f"Report saved → {archive.name}\n")
     sys.stdout.write(scorecard.render_markdown() + "\n")

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from opentelemetry import trace
 
-from tessera.observability import langfuse_scores
+from tessera.observability import clickhouse_scores
 from tessera.observability.logging import get_logger
 from tessera.observability.metrics import EVAL_SCORE
 
@@ -170,7 +170,7 @@ def emit_score(
     agent_id: str | None = None,
     model: str | None = None,
 ) -> None:
-    """Emit one eval score to logs, metrics, the active span, and Langfuse.
+    """Emit one eval score to logs, metrics, the active span, and the owned store.
 
     Args:
         verdict: The judge's verdict for one metric.
@@ -226,15 +226,9 @@ def emit_score(
     _RECENT.append(row)
     _persist(row)  # durable event log for as-of-T reads (ADR 0011)
 
-    # Best-effort: mirror the verdict as a Langfuse score on the turn's trace, so eval
-    # scores are queryable per-trace in Langfuse (ADR 0015 §Migration B). Never blocks or
-    # raises into the turn — a slow/absent spine degrades silently, never fabricates.
-    langfuse_scores.emit_langfuse_score(
-        trace_id=trace_id,
-        name=verdict.metric,
-        value=verdict.score,
-        agent_id=agent_id,
-        language=language,
-        model=model,
-        comment=verdict.judge_model,
-    )
+    # Direct insert into the OWNED online-score store (ClickHouse, ADR 0015 §Correction
+    # 2b) — the durable dimensioned home of this row once G4 parity flips; best-effort +
+    # non-blocking here (the jsonl event log above stays the system of record until then).
+    # No Langfuse Score mirror for online rows: the turn's trace already lives in
+    # Langfuse/Phoenix and the row carries trace_id for drill-down.
+    clickhouse_scores.record_online_score(row)

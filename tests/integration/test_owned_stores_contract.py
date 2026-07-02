@@ -9,6 +9,8 @@ tables never keep a synthetic row.
 
 from __future__ import annotations
 
+import time
+
 import pytest
 
 from tessera.observability.eval.gating_scores import GATING_TABLE, ensure_eval_gating_schema
@@ -46,6 +48,49 @@ class TestClickHouseOnlineStoreContract:
         assert adapter.table.split(".")[0] != "default"  # owned ≠ Langfuse's ingestion home
 
 
+class TestClickHouseWriteContract:
+    def test_online_insert_round_trips_and_cleans_up(self) -> None:
+        from tessera.observability.clickhouse_scores import online_score_line
+
+        adapter = _clickhouse()
+        adapter.ensure_schema()
+        probe_metric = "contract-probe-metric"
+        line = online_score_line(
+            {
+                "scored_at": "2026-01-01T00:00:00+00:00",
+                "metric": probe_metric,
+                "score": 0.5,
+                "language": "fr",
+                "judge_model": "probe",
+                "conversation_id": "contract-probe-conv",
+                "trace_id": "contract-probe-trace",
+                "sampled": True,
+                "agent_id": "contract-probe-agent",
+                "model": "probe-model",
+            }
+        )
+        assert line is not None
+        adapter.execute(f"INSERT INTO {adapter.table} FORMAT JSONEachRow", data=line)
+        try:
+            count = adapter.execute(
+                f"SELECT count() FROM {adapter.table} WHERE metric = '{probe_metric}'"  # noqa: S608 — fixed probe literals
+            ).strip()
+            assert count == "1"
+        finally:
+            # Lightweight delete: the probe never lingers (G4 parity counts must stay real).
+            adapter.execute(f"DELETE FROM {adapter.table} WHERE metric = '{probe_metric}'")  # noqa: S608
+        # Lightweight-delete visibility can lag one beat on a fresh table — poll, bounded.
+        remaining = "?"
+        for _ in range(10):
+            remaining = adapter.execute(
+                f"SELECT count() FROM {adapter.table} WHERE metric = '{probe_metric}'"  # noqa: S608 — fixed probe literals
+            ).strip()
+            if remaining == "0":
+                break
+            time.sleep(0.3)
+        assert remaining == "0"
+
+
 class TestPostgresGatingContract:
     async def test_ensure_schema_is_idempotent_and_carries_the_unique_key(self) -> None:
         from psycopg.rows import dict_row
@@ -68,3 +113,46 @@ class TestPostgresGatingContract:
         unique = [d for d in defs if "UNIQUE" in d and "eval_gating_uq" in d]
         assert len(unique) == 1
         assert "run_id, case_id, language, metric" in unique[0]
+
+    async def test_record_gating_report_is_idempotent_and_cleans_up(self) -> None:
+        from psycopg.rows import dict_row
+
+        from tessera.observability.eval.gating_scores import record_gating_report
+        from tessera.retrieval.store import get_pool
+
+        probe_run_at = "20260101T000000Z"
+        report: dict[str, object] = {
+            "run_at": probe_run_at,
+            "agent_id": "contract-probe-agent",
+            "model": "probe-model",
+            "catalogue_version": "probe-1",
+            "results": [
+                {"case_id": "probe_case", "language": "fr", "passed": True},
+                {"case_id": "probe_case", "language": "de", "passed": False},
+            ],
+        }
+        try:
+            first = await record_gating_report(report)
+        except Exception:  # any connection failure means "no local Postgres"
+            pytest.skip("postgres not up (docker compose up)")
+        run_id = f"{probe_run_at}_contract-probe-agent"
+        pool = get_pool()
+        try:
+            assert first == 2
+            assert await record_gating_report(report) == 0  # unique key → re-ingest is free
+            async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+                await cur.execute(
+                    "SELECT language, passed, score FROM eval_gating_scores"
+                    " WHERE run_id = %s ORDER BY language",
+                    (run_id,),
+                )
+                rows = await cur.fetchall()
+            assert [(r["language"], r["passed"], r["score"]) for r in rows] == [
+                ("de", False, 0.0),
+                ("fr", True, 1.0),
+            ]
+        finally:
+            # The porteur never keeps a synthetic run.
+            async with pool.connection() as conn, conn.cursor() as cur:
+                await cur.execute("DELETE FROM eval_gating_scores WHERE run_id = %s", (run_id,))
+                await conn.commit()
