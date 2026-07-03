@@ -3838,17 +3838,73 @@
       },
       "panel": {
         "priorityLots": {
-          "what": "The priority candidate lots to curate, ranked by risk and score.",
-          "how": "Risk = severity × learning value; lots ordered high → low.",
-          "source": "Curation queue."
+          "what": "The priority candidate lots to handle first.",
+          "how": "Real candidates sorted by priority (crit>high>mod>low), then by a fixed tier score (crit 92 / high 82 / mod 72 / low 62), then oldest first.",
+          "source": "Curation queue (curation_store) — failed eval cases."
         },
         "coverage": {
-          "what": "Eval-set coverage by category and language: where cases are missing.",
-          "how": "Heatmap of present/missing cases per axis."
+          "what": "The eval set's coverage by intent and language.",
+          "how": "Demonstration subsystem: the grid is a fixed heatmap, unrelated to the real candidates.",
+          "source": "No real source (demonstration)."
         },
         "distribution": {
           "what": "The distribution of candidates by type/source.",
           "how": "Candidates grouped by origin category."
+        },
+        "whyTours": {
+          "what": "Why these turns are curation candidates.",
+          "how": "Demonstration subsystem: reasons and values illustrative, with no real source.",
+          "source": "No real source (demonstration)."
+        },
+        "qualitySignals": {
+          "what": "The candidates' quality signals (dedup, grounding…).",
+          "how": "Demonstration subsystem: illustrative percentages, with no real source.",
+          "source": "No real source (demonstration)."
+        },
+        "linkedDatasets": {
+          "what": "The datasets linked to the eval set.",
+          "how": "Demonstration subsystem: illustrative names and sizes, with no real store.",
+          "source": "No real source (demonstration)."
+        },
+        "workflow": {
+          "what": "The steps of the curation workflow.",
+          "how": "Demonstration subsystem: illustrative steps and quantities.",
+          "source": "No real source (demonstration)."
+        },
+        "release": {
+          "what": "The current evaluation release.",
+          "how": "Demonstration subsystem: illustrative id and readiness level.",
+          "source": "No real source (demonstration)."
+        },
+        "linkedEvidence": {
+          "what": "The linked sets and their evidence pack.",
+          "how": "Demonstration subsystem: illustrative cohort, with no real link.",
+          "source": "No real source (demonstration)."
+        },
+        "owners": {
+          "what": "The owners and required roles for curation.",
+          "how": "Demonstration subsystem: illustrative owners.",
+          "source": "No real source (demonstration)."
+        },
+        "recentActivity": {
+          "what": "The recent curation activities.",
+          "how": "Demonstration subsystem: illustrative entries (fictitious CUR-xxx ids).",
+          "source": "No real source (demonstration)."
+        },
+        "backlogTrend": {
+          "what": "The evolution of the curation queue.",
+          "how": "Demonstration subsystem: illustrative time series (not the real queue counters).",
+          "source": "No real source (demonstration)."
+        },
+        "balance": {
+          "what": "The promote / reject / review balance over time.",
+          "how": "Demonstration subsystem: illustrative stacked series.",
+          "source": "No real source (demonstration)."
+        },
+        "impact": {
+          "what": "The expected impact of curation on the pass rate.",
+          "how": "Demonstration subsystem: illustrative before/after, with no real pass-rate computation.",
+          "source": "No real source (demonstration)."
         }
       },
       "tabview": {

@@ -3838,17 +3838,73 @@
       },
       "panel": {
         "priorityLots": {
-          "what": "Die prioritären Kandidaten-Lose zur Kuration, nach Risiko und Score gereiht.",
-          "how": "Risiko = Schweregrad × Lernwert; Lose hoch → niedrig geordnet.",
-          "source": "Kurations-Warteschlange."
+          "what": "Die vorrangigen Kandidatenlots, zuerst zu bearbeiten.",
+          "how": "Reale Kandidaten sortiert nach Priorität (crit>high>mod>low), dann nach festem Stufen-Score (crit 92 / high 82 / mod 72 / low 62), dann die ältesten.",
+          "source": "Kurations-Warteschlange (curation_store) — fehlgeschlagene Eval-Fälle."
         },
         "coverage": {
-          "what": "Eval-Set-Abdeckung nach Kategorie und Sprache: wo Fälle fehlen.",
-          "how": "Heatmap vorhandener/fehlender Fälle je Achse."
+          "what": "Die Abdeckung des Evaluationssets nach Intention und Sprache.",
+          "how": "Demonstrations-Subsystem: das Raster ist eine feste Heatmap, ohne Bezug zu den realen Kandidaten.",
+          "source": "Keine reale Quelle (Demonstration)."
         },
         "distribution": {
           "what": "Die Verteilung der Kandidaten nach Typ/Quelle.",
           "how": "Kandidaten nach Herkunftskategorie gruppiert."
+        },
+        "whyTours": {
+          "what": "Warum diese Turns Kurationskandidaten sind.",
+          "how": "Demonstrations-Subsystem: Gründe und Werte illustrativ, ohne reale Quelle.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "qualitySignals": {
+          "what": "Die Qualitätssignale der Kandidaten (Deduplizierung, Grounding…).",
+          "how": "Demonstrations-Subsystem: illustrative Prozentsätze, ohne reale Quelle.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "linkedDatasets": {
+          "what": "Die mit dem Evaluationsset verknüpften Datensätze.",
+          "how": "Demonstrations-Subsystem: illustrative Namen und Größen, ohne realen Store.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "workflow": {
+          "what": "Die Schritte des Kurations-Workflows.",
+          "how": "Demonstrations-Subsystem: illustrative Schritte und Mengen.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "release": {
+          "what": "Die laufende Evaluations-Release.",
+          "how": "Demonstrations-Subsystem: illustrative Kennung und Bereitschaftsgrad.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "linkedEvidence": {
+          "what": "Die verknüpften Sets und ihr Nachweispaket.",
+          "how": "Demonstrations-Subsystem: illustrative Kohorte, ohne realen Link.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "owners": {
+          "what": "Die Verantwortlichen und erforderlichen Rollen für die Kuration.",
+          "how": "Demonstrations-Subsystem: illustrative Verantwortliche.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "recentActivity": {
+          "what": "Die jüngsten Kurationsaktivitäten.",
+          "how": "Demonstrations-Subsystem: illustrative Einträge (fiktive Kennungen CUR-xxx).",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "backlogTrend": {
+          "what": "Die Entwicklung der Kurations-Warteschlange.",
+          "how": "Demonstrations-Subsystem: illustrative Zeitreihe (nicht die realen Warteschlangenzähler).",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "balance": {
+          "what": "Das Gleichgewicht Promote / Ablehnen / Prüfen im Zeitverlauf.",
+          "how": "Demonstrations-Subsystem: illustrative gestapelte Reihen.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "impact": {
+          "what": "Die erwartete Auswirkung der Kuration auf die Erfolgsquote.",
+          "how": "Demonstrations-Subsystem: illustratives Vorher/Nachher, ohne reale Pass-Rate-Berechnung.",
+          "source": "Keine reale Quelle (Demonstration)."
         }
       },
       "tabview": {

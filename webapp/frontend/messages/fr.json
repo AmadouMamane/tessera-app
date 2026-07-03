@@ -3838,17 +3838,73 @@
       },
       "panel": {
         "priorityLots": {
-          "what": "Les lots de candidats prioritaires à curer, classés par risque et score.",
-          "how": "Risque = gravité × valeur d'apprentissage ; lots ordonnés élevé → bas.",
-          "source": "File de curation."
+          "what": "Les lots de candidats prioritaires à traiter en premier.",
+          "how": "Candidats réels triés par priorité (crit>high>mod>low), puis par score de palier fixe (crit 92 / high 82 / mod 72 / low 62), puis les plus anciens.",
+          "source": "File de curation (curation_store) — cas d'éval en échec."
         },
         "coverage": {
-          "what": "La couverture du jeu d'évaluation par catégorie et par langue : où il manque des cas.",
-          "how": "Heatmap des cas présents/manquants par axe."
+          "what": "La couverture du jeu d'évaluation par intention et langue.",
+          "how": "Sous-système de démonstration : la grille est une heatmap fixe, sans lien avec les candidats réels.",
+          "source": "Pas de source réelle (démonstration)."
         },
         "distribution": {
           "what": "La répartition des candidats par type/source.",
           "how": "Candidats groupés par catégorie de provenance."
+        },
+        "whyTours": {
+          "what": "Pourquoi ces tours sont candidats à la curation.",
+          "how": "Sous-système de démonstration : raisons et valeurs illustratives, sans source réelle.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "qualitySignals": {
+          "what": "Les signaux de qualité des candidats (déduplication, ancrage…).",
+          "how": "Sous-système de démonstration : pourcentages illustratifs, sans source réelle.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "linkedDatasets": {
+          "what": "Les jeux de données liés au set d'évaluation.",
+          "how": "Sous-système de démonstration : noms et tailles illustratifs, sans store réel.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "workflow": {
+          "what": "Les étapes du workflow de curation.",
+          "how": "Sous-système de démonstration : étapes et quantités illustratives.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "release": {
+          "what": "La release d'évaluation en cours.",
+          "how": "Sous-système de démonstration : identifiant et niveau de préparation illustratifs.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "linkedEvidence": {
+          "what": "Les jeux liés et leur dossier de preuves.",
+          "how": "Sous-système de démonstration : cohorte illustrative, sans lien réel.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "owners": {
+          "what": "Les responsables et rôles requis pour la curation.",
+          "how": "Sous-système de démonstration : responsables illustratifs.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "recentActivity": {
+          "what": "Les activités de curation récentes.",
+          "how": "Sous-système de démonstration : entrées illustratives (identifiants fictifs CUR-xxx).",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "backlogTrend": {
+          "what": "L'évolution de la file d'attente de curation.",
+          "how": "Sous-système de démonstration : série temporelle illustrative (pas les compteurs réels de la file).",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "balance": {
+          "what": "L'équilibre promote / rejeter / revoir dans le temps.",
+          "how": "Sous-système de démonstration : séries empilées illustratives.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "impact": {
+          "what": "L'impact attendu de la curation sur le taux de réussite.",
+          "how": "Sous-système de démonstration : avant/après illustratifs, sans calcul réel de pass-rate.",
+          "source": "Pas de source réelle (démonstration)."
         }
       },
       "tabview": {

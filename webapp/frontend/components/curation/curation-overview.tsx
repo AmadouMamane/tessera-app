@@ -716,6 +716,7 @@ function WhyTours({ t, data, className }: { t: T; data: Data; className?: string
   return (
     <Panel
       title={t("panel.whyTours")}
+      info={<ExplainInfo k="panel.whyTours" title={t("panel.whyTours")} />}
       className={className}
       action={<ViewAll label={t("viewAll.reasons")} />}
     >
@@ -808,6 +809,7 @@ function QualitySignals({ t, data, className }: { t: T; data: Data; className?: 
   return (
     <Panel
       title={t("panel.qualitySignals")}
+      info={<ExplainInfo k="panel.qualitySignals" title={t("panel.qualitySignals")} />}
       className={className}
       action={<ViewAll label={t("viewAll.signals")} />}
     >
@@ -850,6 +852,7 @@ function LinkedDatasets({ t, data, className }: { t: T; data: Data; className?: 
   return (
     <Panel
       title={t("panel.linkedDatasets")}
+      info={<ExplainInfo k="panel.linkedDatasets" title={t("panel.linkedDatasets")} />}
       className={className}
       action={<ViewAll label={t("viewAll.datasets")} />}
     >
@@ -886,7 +889,11 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
   return (
     <aside className="flex min-w-0 flex-col gap-3">
       <SyntheticNotice signalId="curation" compact />
-      <Panel title={t("panel.workflow")} action={<ViewAll label={t("viewAll.workflow")} />}>
+      <Panel
+        title={t("panel.workflow")}
+        info={<ExplainInfo k="panel.workflow" title={t("panel.workflow")} />}
+        action={<ViewAll label={t("viewAll.workflow")} />}
+      >
         <ul className="flex flex-col gap-1.5">
           {data.workflow.map((w) => (
             <li key={w.step} className="flex items-center gap-2 text-[0.7rem]">
@@ -902,7 +909,11 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
         </ul>
       </Panel>
 
-      <Panel title={t("panel.release")} action={<ViewAll label={t("release.viewDetail")} />}>
+      <Panel
+        title={t("panel.release")}
+        info={<ExplainInfo k="panel.release" title={t("panel.release")} />}
+        action={<ViewAll label={t("release.viewDetail")} />}
+      >
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2 text-[0.72rem]">
             <span className="font-mono text-[#87bfff]">{data.release.id}</span>
@@ -927,7 +938,10 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
         </div>
       </Panel>
 
-      <Panel title={t("panel.linkedEvidence")}>
+      <Panel
+        title={t("panel.linkedEvidence")}
+        info={<ExplainInfo k="panel.linkedEvidence" title={t("panel.linkedEvidence")} />}
+      >
         <div className="flex flex-col gap-2 text-[0.72rem]">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[var(--tessera-text-muted)]">{t("evidence.currentCohort")}</span>
@@ -944,7 +958,10 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
         </div>
       </Panel>
 
-      <Panel title={t("panel.owners")}>
+      <Panel
+        title={t("panel.owners")}
+        info={<ExplainInfo k="panel.owners" title={t("panel.owners")} />}
+      >
         <table className="w-full border-collapse text-left text-[0.68rem]">
           <thead>
             <tr className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
@@ -1030,6 +1047,7 @@ function RecentActivity({ t, data, className }: { t: T; data: Data; className?: 
   return (
     <Panel
       title={t("panel.recentActivity")}
+      info={<ExplainInfo k="panel.recentActivity" title={t("panel.recentActivity")} />}
       className={className}
       action={<ViewAll label={t("viewAll.activities")} />}
     >
@@ -1065,7 +1083,11 @@ function RecentActivity({ t, data, className }: { t: T; data: Data; className?: 
 function BacklogTrend({ t, data, className }: { t: T; data: Data; className?: string }) {
   const b = data.backlog_trend;
   return (
-    <Panel title={t("panel.backlogTrend")} className={className}>
+    <Panel
+      title={t("panel.backlogTrend")}
+      info={<ExplainInfo k="panel.backlogTrend" title={t("panel.backlogTrend")} />}
+      className={className}
+    >
       <div className="h-[120px]">
         <StretchChart
           title={t("panel.backlogTrend")}
@@ -1091,7 +1113,11 @@ function BacklogTrend({ t, data, className }: { t: T; data: Data; className?: st
 function BalanceChart({ t, data, className }: { t: T; data: Data; className?: string }) {
   const b = data.balance;
   return (
-    <Panel title={t("panel.balance")} className={className}>
+    <Panel
+      title={t("panel.balance")}
+      info={<ExplainInfo k="panel.balance" title={t("panel.balance")} />}
+      className={className}
+    >
       <div className="flex h-[120px] items-end gap-1.5">
         {b.labels.map((l, i) => {
           const promote = b.promote[i] ?? 0;
@@ -1132,6 +1158,7 @@ function ImpactPanel({ t, data, className }: { t: T; data: Data; className?: str
   return (
     <Panel
       title={t("panel.impact")}
+      info={<ExplainInfo k="panel.impact" title={t("panel.impact")} />}
       className={className}
       action={<ViewAll label={t("impact.viewDetail")} />}
     >
