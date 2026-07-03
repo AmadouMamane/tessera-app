@@ -13,6 +13,7 @@ import {
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,16 +63,21 @@ function Kpi({
   tone,
   hint,
   hintTone,
+  explainKey,
 }: {
   label: string;
   value: string;
   tone?: string;
   hint?: string;
   hintTone?: string;
+  explainKey?: string;
 }) {
   return (
     <Card className="flex flex-col gap-1 p-3">
-      <div className="truncate text-xs text-[var(--muted-foreground)]">{label}</div>
+      <div className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
+        <span className="truncate">{label}</span>
+        {explainKey ? <QInfo title={label} k={explainKey} className="ml-auto" /> : null}
+      </div>
       <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
         {value}
       </div>
@@ -504,48 +510,56 @@ export function JudgeCalibration({
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
         <Kpi
           label={tq("judge.kappaTitle")}
+          explainKey="jgKappa"
           value={kappa.toFixed(2)}
           tone={kappaTone}
           hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.agreementGlobal")}
+          explainKey="jgAgreement"
           value={data.agreement == null ? "—" : `${Math.round(data.agreement * 100)}%`}
           tone={data.agreement != null && data.agreement >= 0.8 ? GOOD : WARN}
           hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.fp")}
+          explainKey="jgFp"
           value={`${((fp / total) * 100).toFixed(1)}%`}
           tone={fp / total < 0.05 ? GOOD : WARN}
           hint={`${fp}/${total}`}
         />
         <Kpi
           label={tq("judge.fn")}
+          explainKey="jgFn"
           value={`${((fn / total) * 100).toFixed(1)}%`}
           tone={fn / total < 0.05 ? GOOD : WARN}
           hint={`${fn}/${total}`}
         />
         <Kpi
           label={tq("judge.verbosityBias")}
+          explainKey="jgVerbosity"
           value={verbosity.toFixed(2)}
           tone={verbTone}
           hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.clemency")}
+          explainKey="jgClemency"
           value={clemency.toFixed(2)}
           tone={clemency < 0.2 ? GOOD : clemency < 0.4 ? WARN : BAD}
           hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.drift")}
+          explainKey="jgDrift"
           value={driftDiv == null ? "—" : driftDiv.toFixed(2)}
           tone={driftDiv == null ? MUTED : driftDiv < 0.05 ? GOOD : driftDiv < 0.1 ? WARN : BAD}
           hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.casDisagree")}
+          explainKey="jgDisagree"
           value={`${nDisagree}`}
           tone={nDisagree === 0 ? GOOD : WARN}
           hint={`${tq("judge.overrides")}: ${data.n_overrides ?? 0}`}
@@ -555,16 +569,16 @@ export function JudgeCalibration({
       {/* B. Diagnostic de calibration ── matrix · curve · distribution · donut */}
       <Sec>{tq("judge.secDiag")}</Sec>
       <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
-        <Panel title={`1) ${tq("judge.confusion")}`}>
+        <Panel title={`1) ${tq("judge.confusion")}`} explainKey="jgConfusion">
           <ConfusionMatrix tp={tp} fp={fp} fn={fn} tn={tn} />
         </Panel>
-        <Panel title={`2) ${tq("judge.curve")}`}>
+        <Panel title={`2) ${tq("judge.curve")}`} explainKey="jgCurve">
           <CalibrationCurve points={points} />
         </Panel>
-        <Panel title={`3) ${tq("judge.distribution")}`}>
+        <Panel title={`3) ${tq("judge.distribution")}`} explainKey="jgDistribution">
           <ScoreDistribution points={points} />
         </Panel>
-        <Panel title={`4) ${tq("judge.disagreeDist")}`}>
+        <Panel title={`4) ${tq("judge.disagreeDist")}`} explainKey="jgDisagreeDist">
           <DisagreementDonut data={donutData} total={nDisagree} />
         </Panel>
       </div>
@@ -572,20 +586,24 @@ export function JudgeCalibration({
       {/* C. Segments à risque & dérive */}
       <Sec>{tq("judge.secSegments")}</Sec>
       <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-4">
-        <Panel title={`1) ${tq("judge.kappaEvolution")}`} className="2xl:col-span-1">
+        <Panel
+          title={`1) ${tq("judge.kappaEvolution")}`}
+          explainKey="jgKappaEvo"
+          className="2xl:col-span-1"
+        >
           <MiniLine buckets={drift?.buckets ?? []} baseline={drift?.mean ?? undefined} />
           <p className="mt-1 text-[0.62rem] text-[var(--muted-foreground)]">
             {tq("judge.kappaEvolutionNote")}
           </p>
         </Panel>
-        <Panel title={`2) ${tq("judge.byLanguage")}`}>
+        <Panel title={`2) ${tq("judge.byLanguage")}`} explainKey="jgByLang">
           <GroupRows groups={data.by_language ?? []} labelKey={(l) => l.toUpperCase()} showKappa />
         </Panel>
-        <Panel title={`3) ${tq("judge.byMetric")}`}>
+        <Panel title={`3) ${tq("judge.byMetric")}`} explainKey="jgByMetric">
           <GroupRows groups={data.by_category ?? []} labelKey={(l) => tq(`judge.cat.${l}`)} />
         </Panel>
         <div className="flex flex-col gap-2">
-          <Panel title={`4) ${tq("judge.topSegments")}`}>
+          <Panel title={`4) ${tq("judge.topSegments")}`} explainKey="jgTopSeg">
             <ul className="flex flex-col gap-1 text-[0.72rem]">
               {(data.by_segment ?? [])
                 .filter((s) => s.n_disagree > 0)
@@ -603,7 +621,7 @@ export function JudgeCalibration({
               ) : null}
             </ul>
           </Panel>
-          <Panel title={`5) ${tq("judge.overrides")}`}>
+          <Panel title={`5) ${tq("judge.overrides")}`} explainKey="jgOverrides">
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-semibold tabular-nums">{data.n_overrides ?? 0}</span>
               <span className="text-[0.65rem] text-[var(--muted-foreground)]">
@@ -625,7 +643,7 @@ export function JudgeCalibration({
       </div>
 
       {/* 6) Cas échoués représentatifs */}
-      <Panel title={`6) ${tq("judge.repCases")}`}>
+      <Panel title={`6) ${tq("judge.repCases")}`} explainKey="jgRepCases">
         {disagreements.length === 0 ? (
           <p className="py-3 text-center text-sm text-[var(--muted-foreground)]">
             {tq("judge.noDisagreements")}
@@ -750,17 +768,22 @@ export function JudgeCalibration({
 /** A bordered, titled mini-card used across zones B/C. */
 function Panel({
   title,
+  explainKey,
   children,
   className,
 }: {
   title: string;
+  explainKey?: string;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <Card className={`min-w-0 ${className ?? ""}`}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-[0.78rem] font-medium">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-[0.78rem] font-medium">
+          {title}
+          {explainKey ? <QInfo title={title} k={explainKey} /> : null}
+        </CardTitle>
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
@@ -839,7 +862,10 @@ export function JudgeRail({
         {/* Fiche juge */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{tq("judge.fiche")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {tq("judge.fiche")}
+              <QInfo title={tq("judge.fiche")} k="jgFiche" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1 text-[0.72rem]">
             <RailRow label={tq("judge.model")}>
@@ -859,7 +885,10 @@ export function JudgeRail({
         {/* Gates qualité */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{tq("judge.qualityGates")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {tq("judge.qualityGates")}
+              <QInfo title={tq("judge.qualityGates")} k="jgGates" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {gates.map((g) => (
@@ -879,7 +908,10 @@ export function JudgeRail({
         {/* Résumé du risque */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{tq("judge.riskSummary")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {tq("judge.riskSummary")}
+              <QInfo title={tq("judge.riskSummary")} k="jgRisk" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <div className="flex items-end gap-2">
@@ -898,7 +930,10 @@ export function JudgeRail({
         {/* Top catégories en désaccord */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{tq("judge.topDisagree")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {tq("judge.topDisagree")}
+              <QInfo title={tq("judge.topDisagree")} k="jgTopDisagree" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {topCats.length === 0 ? (
@@ -930,7 +965,10 @@ export function JudgeRail({
         {/* Actions sensibles */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{tq("judge.sensitiveActions")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {tq("judge.sensitiveActions")}
+              <QInfo title={tq("judge.sensitiveActions")} k="jgSensitive" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             <SensitiveAction icon={Snowflake} label={tq("judge.act.freezeTitle")} />

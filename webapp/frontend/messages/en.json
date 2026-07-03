@@ -1996,6 +1996,121 @@
         "what": "Narrows score-over-time and recent runs to a window of real run dates.",
         "how": "Selection of N days anchored on an existing run date.",
         "source": "Run dates from the archive."
+      },
+      "jgKappa": {
+        "what": "Cohen's kappa between the LLM judge and the human label on the gold set.",
+        "how": "Chance-corrected agreement; green threshold at 0.80.",
+        "source": "Calibration (judge vs gold)."
+      },
+      "jgAgreement": {
+        "what": "Raw agreement rate between judge and human on the gold set.",
+        "how": "Share of points where judge and human agree.",
+        "source": "Calibration (judge vs gold)."
+      },
+      "jgFp": {
+        "what": "False positives: the judge says « good », the human says « no ».",
+        "how": "FP relative to the number of gold points.",
+        "source": "Calibration (judge vs gold)."
+      },
+      "jgFn": {
+        "what": "False negatives: the judge says « no », the human says « good ».",
+        "how": "FN relative to the number of gold points.",
+        "source": "Calibration (judge vs gold)."
+      },
+      "jgVerbosity": {
+        "what": "Verbosity bias: correlation between answer length and judge score.",
+        "how": "Correlation; near 0 = no bias.",
+        "source": "Calibration (judge vs gold)."
+      },
+      "jgClemency": {
+        "what": "Leniency: mean score the judge gives to cases the human rated bad.",
+        "how": "Mean score on « bad » cases; lower is better.",
+        "source": "Calibration (judge vs gold)."
+      },
+      "jgDrift": {
+        "what": "Judge drift over time versus the baseline.",
+        "how": "Divergence of the judge's readings; warns beyond 0.10.",
+        "source": "Judge drift."
+      },
+      "jgDisagree": {
+        "what": "Number of gold cases where judge and human diverge; hint = human overrides.",
+        "how": "Count of points with no agreement; overrides = human corrections.",
+        "source": "Calibration (judge vs gold)."
+      },
+      "jgConfusion": {
+        "what": "2×2 judge × human matrix (TP/FP/FN/TN) on the gold set.",
+        "how": "Cross-tabulation of the judge and human labels.",
+        "source": "Calibration points."
+      },
+      "jgCurve": {
+        "what": "Reliability curve: judge score vs human agreement, per bin.",
+        "how": "Gold points grouped by judge score.",
+        "source": "Calibration points."
+      },
+      "jgDistribution": {
+        "what": "Distribution of the scores the judge assigned on the gold set.",
+        "how": "Histogram of the judge scores.",
+        "source": "Calibration points."
+      },
+      "jgDisagreeDist": {
+        "what": "Breakdown of disagreements by category.",
+        "how": "Disagreements grouped by category.",
+        "source": "Calibration (disagreements by category)."
+      },
+      "jgKappaEvo": {
+        "what": "κ evolution over 30 days, compared to the baseline.",
+        "how": "Kappa per bucket of the judge drift.",
+        "source": "Judge drift (buckets)."
+      },
+      "jgByLang": {
+        "what": "Judge-human agreement by language.",
+        "how": "Kappa/agreement computed per language.",
+        "source": "Calibration (by language)."
+      },
+      "jgByMetric": {
+        "what": "Judge-human agreement by metric.",
+        "how": "Agreement computed per metric category.",
+        "source": "Calibration (by category)."
+      },
+      "jgTopSeg": {
+        "what": "Segments with the most judge-human disagreements.",
+        "how": "Segments sorted by disagreement count, top 4.",
+        "source": "Calibration (by segment)."
+      },
+      "jgOverrides": {
+        "what": "Cases where a human overrode the judge's verdict.",
+        "how": "Count and share of human overrides on the gold set.",
+        "source": "Calibration points (human override)."
+      },
+      "jgRepCases": {
+        "what": "Representative judge-human disagreement cases, with score and status.",
+        "how": "Gold points where judge and human diverge.",
+        "source": "Calibration points."
+      },
+      "jgFiche": {
+        "what": "Judge identity: model, number of annotated gold points, release.",
+        "how": "Fields of the calibration set.",
+        "source": "Calibration (judge, gold set)."
+      },
+      "jgGates": {
+        "what": "Calibration gates: κ ≥ 0.80, agreement ≥ 80%, drift < 0.10.",
+        "how": "Each threshold compared to its current value gives PASS or watch.",
+        "source": "Calibration · judge drift."
+      },
+      "jgRisk": {
+        "what": "Calibration risk score, from 0 to 100.",
+        "how": "Mean of (1−κ, drift/0.10, 1−agreement) × 100; the bullets are attention points.",
+        "source": "Calibration · judge drift."
+      },
+      "jgTopDisagree": {
+        "what": "Categories in most disagreement, with their share.",
+        "how": "Categories sorted by disagreement count.",
+        "source": "Calibration (disagreements by category)."
+      },
+      "jgSensitive": {
+        "what": "Governed sensitive actions: freeze the judge, change thresholds.",
+        "how": "High-impact actions requiring an elevated role or dual control.",
+        "source": "Governed-actions policy."
       }
     },
     "seeDetail": "View details",

@@ -1996,6 +1996,121 @@
         "what": "Begrenzt Score über Zeit und aktuelle Runs auf ein Fenster echter Run-Daten.",
         "how": "Auswahl von N Tagen, verankert an einem bestehenden Run-Datum.",
         "source": "Run-Daten des Archivs."
+      },
+      "jgKappa": {
+        "what": "Cohens Kappa zwischen LLM-Richter und menschlichem Label auf dem Gold-Set.",
+        "how": "Zufallskorrigierte Übereinstimmung; grüne Schwelle bei 0,80.",
+        "source": "Kalibrierung (Richter vs. Gold)."
+      },
+      "jgAgreement": {
+        "what": "Rohe Übereinstimmungsrate zwischen Richter und Mensch auf dem Gold-Set.",
+        "how": "Anteil der Punkte, an denen Richter und Mensch übereinstimmen.",
+        "source": "Kalibrierung (Richter vs. Gold)."
+      },
+      "jgFp": {
+        "what": "Falsch-Positive: Der Richter sagt « gut », der Mensch « nein ».",
+        "how": "FP bezogen auf die Zahl der Gold-Punkte.",
+        "source": "Kalibrierung (Richter vs. Gold)."
+      },
+      "jgFn": {
+        "what": "Falsch-Negative: Der Richter sagt « nein », der Mensch « gut ».",
+        "how": "FN bezogen auf die Zahl der Gold-Punkte.",
+        "source": "Kalibrierung (Richter vs. Gold)."
+      },
+      "jgVerbosity": {
+        "what": "Verbositäts-Bias: Korrelation zwischen Antwortlänge und Richter-Score.",
+        "how": "Korrelation; nahe 0 = kein Bias.",
+        "source": "Kalibrierung (Richter vs. Gold)."
+      },
+      "jgClemency": {
+        "what": "Milde: mittlerer Score des Richters für vom Menschen als schlecht bewertete Fälle.",
+        "how": "Mittlerer Score auf « schlechten » Fällen; niedriger = besser.",
+        "source": "Kalibrierung (Richter vs. Gold)."
+      },
+      "jgDrift": {
+        "what": "Drift des Richters über die Zeit gegenüber der Baseline.",
+        "how": "Divergenz der Richter-Messungen; Warnung ab 0,10.",
+        "source": "Richter-Drift."
+      },
+      "jgDisagree": {
+        "what": "Zahl der Gold-Fälle mit Richter-Mensch-Divergenz; Hinweis = menschliche Overrides.",
+        "how": "Zahl der Punkte ohne Übereinstimmung; Overrides = menschliche Korrekturen.",
+        "source": "Kalibrierung (Richter vs. Gold)."
+      },
+      "jgConfusion": {
+        "what": "2×2-Matrix Richter × Mensch (RP/FP/FN/RN) auf dem Gold-Set.",
+        "how": "Kreuztabellierung der Richter- und Mensch-Labels.",
+        "source": "Kalibrierungspunkte."
+      },
+      "jgCurve": {
+        "what": "Zuverlässigkeitskurve: Richter-Score vs. menschliche Übereinstimmung, je Bin.",
+        "how": "Gold-Punkte nach Richter-Score gruppiert.",
+        "source": "Kalibrierungspunkte."
+      },
+      "jgDistribution": {
+        "what": "Verteilung der vom Richter vergebenen Scores auf dem Gold-Set.",
+        "how": "Histogramm der Richter-Scores.",
+        "source": "Kalibrierungspunkte."
+      },
+      "jgDisagreeDist": {
+        "what": "Verteilung der Uneinigkeiten nach Kategorie.",
+        "how": "Uneinigkeiten nach Kategorie gruppiert.",
+        "source": "Kalibrierung (Uneinigkeiten je Kategorie)."
+      },
+      "jgKappaEvo": {
+        "what": "κ-Verlauf über 30 Tage, verglichen mit der Baseline.",
+        "how": "Kappa je Bucket der Richter-Drift.",
+        "source": "Richter-Drift (Buckets)."
+      },
+      "jgByLang": {
+        "what": "Richter-Mensch-Übereinstimmung je Sprache.",
+        "how": "Kappa/Übereinstimmung je Sprache berechnet.",
+        "source": "Kalibrierung (je Sprache)."
+      },
+      "jgByMetric": {
+        "what": "Richter-Mensch-Übereinstimmung je Metrik.",
+        "how": "Übereinstimmung je Metrik-Kategorie berechnet.",
+        "source": "Kalibrierung (je Kategorie)."
+      },
+      "jgTopSeg": {
+        "what": "Segmente mit den meisten Richter-Mensch-Uneinigkeiten.",
+        "how": "Segmente nach Uneinigkeitszahl sortiert, Top 4.",
+        "source": "Kalibrierung (je Segment)."
+      },
+      "jgOverrides": {
+        "what": "Fälle, in denen ein Mensch das Richter-Urteil korrigiert hat.",
+        "how": "Zahl und Anteil menschlicher Overrides auf dem Gold-Set.",
+        "source": "Kalibrierungspunkte (menschlicher Override)."
+      },
+      "jgRepCases": {
+        "what": "Repräsentative Fälle von Richter-Mensch-Uneinigkeit, mit Score und Status.",
+        "how": "Gold-Punkte, an denen Richter und Mensch divergieren.",
+        "source": "Kalibrierungspunkte."
+      },
+      "jgFiche": {
+        "what": "Identität des Richters: Modell, Zahl annotierter Gold-Punkte, Release.",
+        "how": "Felder des Kalibrierungssatzes.",
+        "source": "Kalibrierung (Richter, Gold-Set)."
+      },
+      "jgGates": {
+        "what": "Kalibrierungsbarrieren: κ ≥ 0,80, Übereinstimmung ≥ 80 %, Drift < 0,10.",
+        "how": "Jede Schwelle gegen den aktuellen Wert gibt PASS oder beobachten.",
+        "source": "Kalibrierung · Richter-Drift."
+      },
+      "jgRisk": {
+        "what": "Kalibrierungs-Risikoscore, von 0 bis 100.",
+        "how": "Mittel aus (1−κ, Drift/0,10, 1−Übereinstimmung) × 100; die Punkte sind Hinweise.",
+        "source": "Kalibrierung · Richter-Drift."
+      },
+      "jgTopDisagree": {
+        "what": "Kategorien mit der größten Uneinigkeit, mit ihrem Anteil.",
+        "how": "Kategorien nach Uneinigkeitszahl sortiert.",
+        "source": "Kalibrierung (Uneinigkeiten je Kategorie)."
+      },
+      "jgSensitive": {
+        "what": "Gesteuerte sensible Aktionen: Richter einfrieren, Schwellen ändern.",
+        "how": "Aktionen mit hoher Wirkung, die erhöhte Rolle oder Vier-Augen-Prinzip erfordern.",
+        "source": "Richtlinie für gesteuerte Aktionen."
       }
     },
     "seeDetail": "Details anzeigen",

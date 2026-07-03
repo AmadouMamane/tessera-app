@@ -1996,6 +1996,121 @@
         "what": "Restreint le score au fil du temps et les runs récents à une fenêtre de dates de runs réelles.",
         "how": "Sélection de N jours ancrée sur une date de run existante.",
         "source": "Dates de runs de l'archive."
+      },
+      "jgKappa": {
+        "what": "Kappa de Cohen entre le juge LLM et l'étiquette humaine sur le jeu étalon.",
+        "how": "Accord corrigé du hasard ; seuil vert à 0,80.",
+        "source": "Calibration (juge vs or)."
+      },
+      "jgAgreement": {
+        "what": "Taux d'accord brut entre le juge et l'humain sur l'étalon.",
+        "how": "Part des points où juge et humain concordent.",
+        "source": "Calibration (juge vs or)."
+      },
+      "jgFp": {
+        "what": "Faux positifs : le juge dit « bon », l'humain dit « non ».",
+        "how": "FP rapportés au nombre de points étalon.",
+        "source": "Calibration (juge vs or)."
+      },
+      "jgFn": {
+        "what": "Faux négatifs : le juge dit « non », l'humain dit « bon ».",
+        "how": "FN rapportés au nombre de points étalon.",
+        "source": "Calibration (juge vs or)."
+      },
+      "jgVerbosity": {
+        "what": "Biais de verbosité : corrélation entre longueur de réponse et score du juge.",
+        "how": "Corrélation ; proche de 0 = pas de biais.",
+        "source": "Calibration (juge vs or)."
+      },
+      "jgClemency": {
+        "what": "Clémence : score moyen que le juge donne aux cas jugés mauvais par l'humain.",
+        "how": "Score moyen sur les cas « mauvais » ; plus bas = mieux.",
+        "source": "Calibration (juge vs or)."
+      },
+      "jgDrift": {
+        "what": "Dérive du juge dans le temps par rapport à la ligne de base.",
+        "how": "Divergence des relevés du juge ; alerte au-delà de 0,10.",
+        "source": "Dérive juge."
+      },
+      "jgDisagree": {
+        "what": "Nombre de cas étalon où juge et humain divergent ; astuce = overrides humains.",
+        "how": "Compte des points sans accord ; overrides = corrections humaines.",
+        "source": "Calibration (juge vs or)."
+      },
+      "jgConfusion": {
+        "what": "Matrice 2×2 juge × humain (VP/FP/FN/VN) sur l'étalon.",
+        "how": "Comptage croisé des étiquettes juge et humain.",
+        "source": "Points de calibration."
+      },
+      "jgCurve": {
+        "what": "Courbe de fiabilité : score du juge vs accord humain, par tranche.",
+        "how": "Points étalon regroupés par score du juge.",
+        "source": "Points de calibration."
+      },
+      "jgDistribution": {
+        "what": "Distribution des scores attribués par le juge sur l'étalon.",
+        "how": "Histogramme des scores du juge.",
+        "source": "Points de calibration."
+      },
+      "jgDisagreeDist": {
+        "what": "Répartition des désaccords par catégorie.",
+        "how": "Désaccords regroupés par catégorie.",
+        "source": "Calibration (désaccords par catégorie)."
+      },
+      "jgKappaEvo": {
+        "what": "Évolution de κ sur 30 jours, comparée à la ligne de base.",
+        "how": "Kappa par bucket de la dérive juge.",
+        "source": "Dérive juge (buckets)."
+      },
+      "jgByLang": {
+        "what": "Accord juge-humain par langue.",
+        "how": "Kappa/accord calculé par langue.",
+        "source": "Calibration (par langue)."
+      },
+      "jgByMetric": {
+        "what": "Accord juge-humain par métrique.",
+        "how": "Accord calculé par catégorie de métrique.",
+        "source": "Calibration (par catégorie)."
+      },
+      "jgTopSeg": {
+        "what": "Segments présentant le plus de désaccords juge-humain.",
+        "how": "Segments triés par nombre de désaccords, top 4.",
+        "source": "Calibration (par segment)."
+      },
+      "jgOverrides": {
+        "what": "Cas où un humain a corrigé le verdict du juge.",
+        "how": "Compte et part des overrides humains sur l'étalon.",
+        "source": "Points de calibration (override humain)."
+      },
+      "jgRepCases": {
+        "what": "Cas représentatifs de désaccord juge-humain, avec score et statut.",
+        "how": "Points étalon où juge et humain divergent.",
+        "source": "Points de calibration."
+      },
+      "jgFiche": {
+        "what": "Identité du juge : modèle, nombre de points étalon annotés, release.",
+        "how": "Champs du jeu de calibration.",
+        "source": "Calibration (juge, jeu étalon)."
+      },
+      "jgGates": {
+        "what": "Barrières de calibration : κ ≥ 0,80, accord ≥ 80 %, dérive < 0,10.",
+        "how": "Chaque seuil comparé à sa valeur courante donne PASS ou à surveiller.",
+        "source": "Calibration · dérive juge."
+      },
+      "jgRisk": {
+        "what": "Score de risque de calibration, de 0 à 100.",
+        "how": "Moyenne de (1−κ, dérive/0,10, 1−accord) × 100 ; les puces sont des points d'attention.",
+        "source": "Calibration · dérive juge."
+      },
+      "jgTopDisagree": {
+        "what": "Catégories les plus en désaccord, avec leur part des désaccords.",
+        "how": "Catégories triées par nombre de désaccords.",
+        "source": "Calibration (désaccords par catégorie)."
+      },
+      "jgSensitive": {
+        "what": "Actions sensibles gouvernées : geler le juge, changer les seuils.",
+        "how": "Actions à fort impact exigeant un rôle élevé ou un double contrôle.",
+        "source": "Politique d'actions gouvernées."
       }
     },
     "seeDetail": "Voir le détail",
