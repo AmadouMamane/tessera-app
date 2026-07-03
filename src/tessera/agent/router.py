@@ -347,6 +347,29 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "votre espace client ou faites vérifier votre identité par un "
             "conseiller ; le blocage est alors immédiat."
         ),
+        "policy_dora_scope": (
+            "Non — DORA (règlement (UE) 2022/2554) ne vise pas que les grandes "
+            "banques d'investissement : il s'applique aux établissements de "
+            "crédit, ce qui inclut les banques de détail comme Crédit Aurore "
+            "(article 2, paragraphe 1). Le principe de proportionnalité "
+            "(article 4) module la mise en œuvre, mais n'exempte pas les "
+            "banques de détail."
+        ),
+        "policy_dora_application_date": (
+            "Ce n'est pas exact : DORA (règlement (UE) 2022/2554) est entré en "
+            "vigueur en janvier 2023, mais ses obligations ne s'appliquent que "
+            "depuis le 17 janvier 2025 (article 64). Il n'y a donc pas deux ans "
+            "de retard : l'échéance de conformité était le 17 janvier 2025."
+        ),
+        "policy_dora_incident_deadline": (
+            "Non : DORA impose des délais stricts pour la notification des "
+            "incidents TIC majeurs (article 19, paragraphe 4) — notification "
+            "initiale au plus tard 4 heures après la classification de "
+            "l'incident comme majeur et 24 heures après sa détection, rapport "
+            "intermédiaire sous 72 heures, rapport final sous un mois "
+            "(règlement délégué (UE) 2025/301). Le moment du signalement n'est "
+            "pas au choix de l'établissement."
+        ),
     },
     LanguageCode.DE: {
         "policy_credit_decision": (
@@ -419,6 +442,28 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "Kundenbereich an oder lassen Sie Ihre Identität von einer Beraterin "
             "oder einem Berater bestätigen; die Sperrung erfolgt dann sofort."
         ),
+        "policy_dora_scope": (
+            "Nein — DORA (Verordnung (EU) 2022/2554) betrifft nicht nur große "
+            "Investmentbanken: Sie gilt auch für Kreditinstitute, also auch für "
+            "Privatkundenbanken wie Crédit Aurore (Artikel 2 Absatz 1). Der "
+            "Grundsatz der Verhältnismäßigkeit (Artikel 4) passt die Umsetzung "
+            "an, befreit Privatkundenbanken aber nicht."
+        ),
+        "policy_dora_application_date": (
+            "Das stimmt so nicht: DORA (Verordnung (EU) 2022/2554) ist im "
+            "Januar 2023 in Kraft getreten, gilt aber erst seit dem 17. Januar "
+            "2025 (Artikel 64). Von zwei Jahren Verzug kann daher keine Rede "
+            "sein: Stichtag für die Anwendung war der 17. Januar 2025."
+        ),
+        "policy_dora_incident_deadline": (
+            "Nein: DORA schreibt für die Meldung schwerwiegender IKT-Vorfälle "
+            "verbindliche Fristen vor (Artikel 19 Absatz 4) — Erstmeldung "
+            "spätestens 4 Stunden nach der Einstufung als schwerwiegend und 24 "
+            "Stunden nach Bekanntwerden, Zwischenbericht innerhalb von 72 "
+            "Stunden, Abschlussbericht innerhalb eines Monats (Delegierte "
+            "Verordnung (EU) 2025/301). Den Meldezeitpunkt kann man nicht frei "
+            "wählen."
+        ),
     },
     LanguageCode.EN: {
         "policy_credit_decision": (
@@ -486,6 +531,27 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "I can't block a card without verification: for your security you "
             "must authenticate first. Please log in to your client area or "
             "verify your identity with an advisor; the block is then immediate."
+        ),
+        "policy_dora_scope": (
+            "No — DORA (Regulation (EU) 2022/2554) is not limited to large "
+            "investment banks: it does apply to credit institutions, which "
+            "includes retail banks like Crédit Aurore (Article 2(1)). The "
+            "proportionality principle (Article 4) adjusts the implementation "
+            "but does not exempt retail banks."
+        ),
+        "policy_dora_application_date": (
+            "That's not quite right: DORA (Regulation (EU) 2022/2554) entered "
+            "into force in January 2023, but its obligations apply only from "
+            "17 January 2025 (Article 64). So there is no two-year delay: the "
+            "compliance date was 17 January 2025."
+        ),
+        "policy_dora_incident_deadline": (
+            "No: DORA imposes strict time limits for reporting major ICT "
+            "incidents (Article 19(4)) — an initial notification no later than "
+            "4 hours after classifying the incident as major and 24 hours "
+            "after becoming aware of it, an intermediate report within 72 "
+            "hours, and a final report within one month (Delegated Regulation "
+            "(EU) 2025/301). The timing is not up to the reporting entity."
         ),
     },
 }
@@ -613,6 +679,40 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_auth_required",
         ),
+        # DORA false-premise corrections (cases 35/37/62): each rule matches the
+        # false ASSERTION only — an open question ("à qui s'applique DORA ?",
+        # "quels sont les délais ?") keeps the retrieval path, now backed by the
+        # corpus facts (DORA/art-2, DORA/timeline-application, DORA/art-19).
+        (
+            (
+                re.compile(r"\bdora\b", re.IGNORECASE),
+                re.compile(
+                    r"(ne concerne que|ne s'applique pas|uniquement les|que les grandes)",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"(banques? de d[ée]tail|grandes banques)", re.IGNORECASE),
+            ),
+            "policy_dora_scope",
+        ),
+        (
+            (
+                re.compile(r"\bdora\b", re.IGNORECASE),
+                re.compile(r"(s'applique|applicable)", re.IGNORECASE),
+                re.compile(r"janvier\s+2023", re.IGNORECASE),
+            ),
+            "policy_dora_application_date",
+        ),
+        (
+            (
+                re.compile(r"\bdora\b", re.IGNORECASE),
+                re.compile(r"incident", re.IGNORECASE),
+                re.compile(
+                    r"(aucun d[ée]lai|quand on veut|pas de d[ée]lai|sans d[ée]lai)",
+                    re.IGNORECASE,
+                ),
+            ),
+            "policy_dora_incident_deadline",
+        ),
     ],
     LanguageCode.DE: [
         (
@@ -715,6 +815,32 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_auth_required",
         ),
+        (
+            (
+                re.compile(r"\bdora\b", re.IGNORECASE),
+                re.compile(r"(betrifft nur|gilt nicht|nur f[üu]r gro[ßs]e)", re.IGNORECASE),
+                re.compile(r"(privatkundenbank\w*|investmentbank\w*)", re.IGNORECASE),
+            ),
+            "policy_dora_scope",
+        ),
+        (
+            (
+                re.compile(r"\bdora\b", re.IGNORECASE),
+                re.compile(r"(gilt|anwendbar|angewendet)", re.IGNORECASE),
+                re.compile(r"januar\s+2023", re.IGNORECASE),
+            ),
+            "policy_dora_application_date",
+        ),
+        (
+            (
+                re.compile(r"\bdora\b", re.IGNORECASE),
+                re.compile(r"(vorfall|vorf[äa]lle|incident)", re.IGNORECASE),
+                re.compile(
+                    r"(keine Frist|wann man will|jederzeit melden|ohne Frist)", re.IGNORECASE
+                ),
+            ),
+            "policy_dora_incident_deadline",
+        ),
     ],
     LanguageCode.EN: [
         (
@@ -816,6 +942,36 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_auth_required",
         ),
+        (
+            (
+                re.compile(r"\bdora\b", re.IGNORECASE),
+                re.compile(
+                    r"(only concerns?|does not apply|doesn['\u2019]t apply|only large)",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"(retail banks?|investment banks?)", re.IGNORECASE),
+            ),
+            "policy_dora_scope",
+        ),
+        (
+            (
+                re.compile(r"\bdora\b", re.IGNORECASE),
+                re.compile(r"(applie[sd]|applicable|in effect)", re.IGNORECASE),
+                re.compile(r"january\s+2023", re.IGNORECASE),
+            ),
+            "policy_dora_application_date",
+        ),
+        (
+            (
+                re.compile(r"\bdora\b", re.IGNORECASE),
+                re.compile(r"incident", re.IGNORECASE),
+                re.compile(
+                    r"(no deadline|whenever you want|any ?time you want|no time limit)",
+                    re.IGNORECASE,
+                ),
+            ),
+            "policy_dora_incident_deadline",
+        ),
     ],
 }
 
@@ -876,12 +1032,101 @@ def _deposit_guarantee_citation(language: LanguageCode) -> Citation:
     )
 
 
+def _dora_scope_citation(language: LanguageCode) -> Citation:
+    excerpts: dict[LanguageCode, str] = {
+        LanguageCode.FR: (
+            "L'article 2, paragraphe 1, du règlement (UE) 2022/2554 (DORA) "
+            "inclut les établissements de crédit dans son champ d'application — "
+            "les banques de détail en font partie ; l'article 4 module les "
+            "exigences par proportionnalité sans les en exempter."
+        ),
+        LanguageCode.DE: (
+            "Artikel 2 Absatz 1 der Verordnung (EU) 2022/2554 (DORA) nimmt "
+            "Kreditinstitute in den Anwendungsbereich auf — Privatkundenbanken "
+            "eingeschlossen; Artikel 4 passt die Anforderungen nach "
+            "Verhältnismäßigkeit an, ohne sie auszunehmen."
+        ),
+        LanguageCode.EN: (
+            "Article 2(1) of Regulation (EU) 2022/2554 (DORA) lists credit "
+            "institutions in its scope — retail banks included; Article 4 "
+            "applies proportionality without exempting them."
+        ),
+    }
+    return Citation(
+        source="Règlement (UE) 2022/2554 (DORA)",
+        locator="art. 2(1)",
+        language=language,
+        excerpt=excerpts[language],
+    )
+
+
+def _dora_application_citation(language: LanguageCode) -> Citation:
+    excerpts: dict[LanguageCode, str] = {
+        LanguageCode.FR: (
+            "L'article 64 du règlement (UE) 2022/2554 (DORA) fixe l'entrée en "
+            "vigueur au vingtième jour suivant la publication (janvier 2023) et "
+            "l'application au 17 janvier 2025."
+        ),
+        LanguageCode.DE: (
+            "Artikel 64 der Verordnung (EU) 2022/2554 (DORA) legt das "
+            "Inkrafttreten auf den zwanzigsten Tag nach der Veröffentlichung "
+            "(Januar 2023) und den Geltungsbeginn auf den 17. Januar 2025 fest."
+        ),
+        LanguageCode.EN: (
+            "Article 64 of Regulation (EU) 2022/2554 (DORA) sets entry into "
+            "force on the twentieth day after publication (January 2023) and "
+            "application from 17 January 2025."
+        ),
+    }
+    return Citation(
+        source="Règlement (UE) 2022/2554 (DORA)",
+        locator="art. 64",
+        language=language,
+        excerpt=excerpts[language],
+    )
+
+
+def _dora_deadline_citation(language: LanguageCode) -> Citation:
+    excerpts: dict[LanguageCode, str] = {
+        LanguageCode.FR: (
+            "L'article 19, paragraphe 4, du règlement (UE) 2022/2554 (DORA) "
+            "impose notification initiale, rapport intermédiaire et rapport "
+            "final dans les délais fixés par les normes techniques (règlement "
+            "délégué (UE) 2025/301 : 4 h/24 h, 72 h, un mois)."
+        ),
+        LanguageCode.DE: (
+            "Artikel 19 Absatz 4 der Verordnung (EU) 2022/2554 (DORA) verlangt "
+            "Erstmeldung, Zwischenbericht und Abschlussbericht innerhalb der in "
+            "den technischen Standards festgelegten Fristen (Delegierte "
+            "Verordnung (EU) 2025/301: 4 h/24 h, 72 h, ein Monat)."
+        ),
+        LanguageCode.EN: (
+            "Article 19(4) of Regulation (EU) 2022/2554 (DORA) requires an "
+            "initial notification, an intermediate report and a final report "
+            "within the time limits set by the technical standards (Delegated "
+            "Regulation (EU) 2025/301: 4 h/24 h, 72 h, one month)."
+        ),
+    }
+    return Citation(
+        source="Règlement (UE) 2022/2554 (DORA)",
+        locator="art. 19(4)",
+        language=language,
+        excerpt=excerpts[language],
+    )
+
+
 def _policy_citations(policy_key: str, language: LanguageCode) -> list[Citation]:
     """Citations backing a short-circuit answer, empty when none is asserted."""
     if policy_key == "policy_cookie_consent":
         return [_cookie_citation(language)]
     if policy_key == "policy_deposit_guarantee":
         return [_deposit_guarantee_citation(language)]
+    if policy_key == "policy_dora_scope":
+        return [_dora_scope_citation(language)]
+    if policy_key == "policy_dora_application_date":
+        return [_dora_application_citation(language)]
+    if policy_key == "policy_dora_incident_deadline":
+        return [_dora_deadline_citation(language)]
     return []
 
 
@@ -912,8 +1157,8 @@ def _resolve_policy_key(text: str, language: LanguageCode) -> str | None:
 # Policy keys whose canned answer REFUSES the ask (deny-shaped): they emit a
 # ``refuse_policy`` guard decision so the refusal is visible in the audit
 # ledger and GUARD_DECISIONS_TOTAL. The remaining keys (deposit guarantee,
-# cookie consent) are grounded corrections that *answer* the question — no
-# refusal decision to record.
+# cookie consent, the three DORA corrections) are grounded corrections that
+# *answer* the question — no refusal decision to record.
 _REFUSAL_POLICY_KEYS: Final[frozenset[str]] = frozenset(
     {
         "policy_credit_decision",
