@@ -1686,6 +1686,76 @@
       "priorityCases": {
         "what": "The most severe failed cases to handle first, sorted by severity.",
         "how": "Failure-catalogue cases ordered critical → low."
+      },
+      "sigActive": {
+        "what": "Number of quality signals instrumented and evaluated live, out of the 200 in the reference catalogue.",
+        "how": "One row per signal derived from the live reports (SLO, calibration, citations, guardrails, PII, cost, routing…); « / 200 » places coverage within the catalogue. The curve and delta come from the durable status journal.",
+        "source": "Signal catalogue × Tessera evaluation reports."
+      },
+      "sigCrit": {
+        "what": "Signals whose live value breaches the critical threshold (red band).",
+        "how": "Status = measured value against the signal threshold; « critical » when the critical threshold is breached. Delta and curve from the durable status journal.",
+        "source": "Per-signal evaluation reports."
+      },
+      "sigWarn": {
+        "what": "Signals in the warning band: degraded but below the critical threshold.",
+        "how": "Measured value between the warning and critical thresholds.",
+        "source": "Per-signal evaluation reports."
+      },
+      "sigOk": {
+        "what": "Signals that meet their quality threshold.",
+        "how": "Measured value at or above the expected level.",
+        "source": "Per-signal evaluation reports."
+      },
+      "sigNa": {
+        "what": "Signals with no live measurement yet — shown « — » rather than a fabricated value.",
+        "how": "No report available for the period; Tessera's no-mock discipline.",
+        "source": "Per-signal evaluation reports."
+      },
+      "sigRegistry": {
+        "what": "Full signal catalogue, grouped by severity, with each signal's value, threshold and status.",
+        "how": "One row per metric (code shown, e.g. rag.faithfulness.mean); status derived from value vs threshold; filterable by entity and status.",
+        "source": "Catalogue metadata × live reports."
+      },
+      "sigTheme": {
+        "what": "Distribution of signals by family: fidelity, security, compliance, reliability, sessions.",
+        "how": "Count of signals per category, as a share of the total.",
+        "source": "Category carried by each catalogue signal."
+      },
+      "sigHeatmap": {
+        "what": "Concentration of signals by owning entity (answer, judge, corpus, guardrail…) and severity.",
+        "how": "Count of signals for each (entity, status) pair; intensity follows the count.",
+        "source": "Derived signal rows."
+      },
+      "sigRailFiche": {
+        "what": "Detail of the selected signal: metric code, value, threshold, source and scope.",
+        "how": "Fields of the row selected in the registry.",
+        "source": "Signal catalogue (YAML) · tessera-eval collector."
+      },
+      "sigRailCases": {
+        "what": "Documented failure cases attached to the quality signals.",
+        "how": "Excerpts from the non-regression failure catalogue.",
+        "source": "Failed-cases report."
+      },
+      "sigRailRelease": {
+        "what": "Production version and the state of the quality gates (deploy blocked when regressions are open).",
+        "how": "Blocked when the number of open regressions is greater than 0.",
+        "source": "Release status · non-regression gate."
+      },
+      "sigRailActivity": {
+        "what": "Latest quality events: last run, release, configuration change.",
+        "how": "Aggregate of the last eval run, the current release and the configuration diff.",
+        "source": "Run registry · release · configuration diff."
+      },
+      "sigRailActions": {
+        "what": "Governed remediations proposed from the current state of the gates and regressions.",
+        "how": "Derived from release status and open cases; some require dual control.",
+        "source": "Release status · remediation policy."
+      },
+      "evolution": {
+        "what": "Mean fidelity score day by day over the current window.",
+        "how": "Per-bucket mean from the score journal; gaps with no eval stay empty (never a fabricated zero); the delta compares to the first bucket.",
+        "source": "Score series (fidelity), durable journal."
       }
     },
     "seeDetail": "View details",

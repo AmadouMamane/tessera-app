@@ -4,6 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -151,7 +152,10 @@ export function EvolutionChart({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between gap-2 text-sm">
-          {tq("charts.evolution")}
+          <span className="flex items-center gap-1.5">
+            {tq("charts.evolution")}
+            <QInfo title={tq("charts.evolution")} k="evolution" />
+          </span>
           {delta != null ? (
             <Badge tone={delta >= 0 ? "success" : "danger"} className="tabular-nums">
               {delta >= 0 ? "+" : ""}

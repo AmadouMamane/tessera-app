@@ -1686,6 +1686,76 @@
       "priorityCases": {
         "what": "Die schwerwiegendsten fehlgeschlagenen Fälle, die zuerst zu bearbeiten sind, nach Schweregrad sortiert.",
         "how": "Fälle aus dem Fehlerkatalog, geordnet kritisch → niedrig."
+      },
+      "sigActive": {
+        "what": "Anzahl der live instrumentierten und ausgewerteten Qualitätssignale, von den 200 des Referenzkatalogs.",
+        "how": "Eine Zeile je Signal aus den Live-Berichten (SLO, Kalibrierung, Zitate, Guardrails, PII, Kosten, Routing…); « / 200 » verortet die Abdeckung im Katalog. Kurve und Delta stammen aus dem dauerhaften Statusjournal.",
+        "source": "Signalkatalog × Tessera-Auswertungsberichte."
+      },
+      "sigCrit": {
+        "what": "Signale, deren Live-Wert die kritische Schwelle überschreitet (roter Bereich).",
+        "how": "Status = gemessener Wert gegen die Signalschwelle; « kritisch », wenn die kritische Schwelle überschritten ist. Delta und Kurve aus dem dauerhaften Statusjournal.",
+        "source": "Auswertungsberichte je Signal."
+      },
+      "sigWarn": {
+        "what": "Signale im Warnbereich: verschlechtert, aber unter der kritischen Schwelle.",
+        "how": "Gemessener Wert zwischen Warn- und kritischer Schwelle.",
+        "source": "Auswertungsberichte je Signal."
+      },
+      "sigOk": {
+        "what": "Signale, die ihre Qualitätsschwelle einhalten.",
+        "how": "Gemessener Wert auf oder über dem erwarteten Niveau.",
+        "source": "Auswertungsberichte je Signal."
+      },
+      "sigNa": {
+        "what": "Signale noch ohne Live-Messung — als « — » statt eines erfundenen Werts angezeigt.",
+        "how": "Kein Bericht für den Zeitraum verfügbar; Tesseras No-Mock-Disziplin.",
+        "source": "Auswertungsberichte je Signal."
+      },
+      "sigRegistry": {
+        "what": "Vollständiger Signalkatalog, nach Schweregrad gruppiert, mit Wert, Schwelle und Status je Signal.",
+        "how": "Eine Zeile je Metrik (Code sichtbar, z. B. rag.faithfulness.mean); Status aus Wert vs. Schwelle; nach Entität und Status filterbar.",
+        "source": "Katalog-Metadaten × Live-Berichte."
+      },
+      "sigTheme": {
+        "what": "Verteilung der Signale nach Familie: Treue, Sicherheit, Konformität, Zuverlässigkeit, Sitzungen.",
+        "how": "Anzahl der Signale je Kategorie, als Anteil am Gesamten.",
+        "source": "Kategorie jedes Katalogsignals."
+      },
+      "sigHeatmap": {
+        "what": "Konzentration der Signale nach verantwortlicher Entität (Antwort, Richter, Korpus, Guardrail…) und Schweregrad.",
+        "how": "Anzahl der Signale je Paar (Entität, Status); die Intensität folgt der Anzahl.",
+        "source": "Abgeleitete Signalzeilen."
+      },
+      "sigRailFiche": {
+        "what": "Detail des ausgewählten Signals: Metrik-Code, Wert, Schwelle, Quelle und Geltungsbereich.",
+        "how": "Felder der im Register ausgewählten Zeile.",
+        "source": "Signalkatalog (YAML) · Kollektor tessera-eval."
+      },
+      "sigRailCases": {
+        "what": "Dokumentierte Fehlerfälle, die den Qualitätssignalen zugeordnet sind.",
+        "how": "Auszüge aus dem Non-Regressions-Fehlerkatalog.",
+        "source": "Bericht der fehlgeschlagenen Fälle."
+      },
+      "sigRailRelease": {
+        "what": "Produktionsversion und Zustand der Qualitätsbarrieren (Deployment blockiert bei offenen Regressionen).",
+        "how": "Blockiert, wenn die Zahl offener Regressionen größer als 0 ist.",
+        "source": "Release-Status · Non-Regressions-Gate."
+      },
+      "sigRailActivity": {
+        "what": "Letzte Qualitätsereignisse: letzter Run, Release, Konfigurationsänderung.",
+        "how": "Aggregat aus letztem Auswertungs-Run, aktueller Release und Konfigurations-Diff.",
+        "source": "Run-Register · Release · Konfigurations-Diff."
+      },
+      "sigRailActions": {
+        "what": "Gesteuerte Abhilfen, vorgeschlagen nach aktuellem Zustand der Gates und Regressionen.",
+        "how": "Abgeleitet aus Release-Status und offenen Fällen; einige erfordern das Vier-Augen-Prinzip.",
+        "source": "Release-Status · Abhilfe-Richtlinie."
+      },
+      "evolution": {
+        "what": "Mittlerer Treue-Score Tag für Tag über das aktuelle Fenster.",
+        "how": "Bucket-Mittel aus dem Score-Journal; Lücken ohne Auswertung bleiben leer (nie eine erfundene Null); das Delta vergleicht mit dem ersten Bucket.",
+        "source": "Score-Serie (Treue), dauerhaftes Journal."
       }
     },
     "seeDetail": "Details anzeigen",

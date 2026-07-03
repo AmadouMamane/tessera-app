@@ -1686,6 +1686,76 @@
       "priorityCases": {
         "what": "Les cas échoués les plus graves à traiter en premier, triés par sévérité.",
         "how": "Cas du catalogue de failles ordonnés critique → bas."
+      },
+      "sigActive": {
+        "what": "Nombre de signaux qualité instrumentés et évalués en direct, sur les 200 du catalogue de référence.",
+        "how": "Une ligne par signal dérivée des rapports en direct (SLO, calibration, citations, garde-fous, PII, coût, routage…) ; « / 200 » situe la couverture dans le catalogue. La courbe et l'écart proviennent du journal de statuts durable.",
+        "source": "Catalogue de signaux × rapports d'évaluation Tessera."
+      },
+      "sigCrit": {
+        "what": "Signaux dont la valeur en direct franchit le seuil critique (bande rouge).",
+        "how": "Statut = valeur mesurée comparée au seuil du signal ; « crit » quand le seuil critique est franchi. Écart et courbe issus du journal de statuts durable.",
+        "source": "Rapports d'évaluation par signal."
+      },
+      "sigWarn": {
+        "what": "Signaux en zone d'alerte : dégradés mais sous le seuil critique.",
+        "how": "Valeur mesurée située entre le seuil d'alerte et le seuil critique.",
+        "source": "Rapports d'évaluation par signal."
+      },
+      "sigOk": {
+        "what": "Signaux qui respectent leur seuil qualité.",
+        "how": "Valeur mesurée au niveau ou au-dessus du seuil attendu.",
+        "source": "Rapports d'évaluation par signal."
+      },
+      "sigNa": {
+        "what": "Signaux encore sans mesure en direct — affichés « — » plutôt qu'une valeur inventée.",
+        "how": "Aucun rapport disponible pour la période ; discipline sans-simulacre de Tessera.",
+        "source": "Rapports d'évaluation par signal."
+      },
+      "sigRegistry": {
+        "what": "Catalogue complet des signaux, groupés par gravité, avec valeur, seuil et statut de chacun.",
+        "how": "Une ligne par métrique (code affiché, ex. rag.faithfulness.mean) ; statut dérivé de la valeur vs seuil ; filtrable par entité et par statut.",
+        "source": "Métadonnées du catalogue × rapports en direct."
+      },
+      "sigTheme": {
+        "what": "Répartition des signaux par famille : fidélité, sécurité, conformité, fiabilité, sessions.",
+        "how": "Compte des signaux par catégorie, en part du total.",
+        "source": "Catégorie portée par chaque signal du catalogue."
+      },
+      "sigHeatmap": {
+        "what": "Concentration des signaux par entité responsable (réponse, juge, corpus, garde-fou…) et par gravité.",
+        "how": "Compte des signaux pour chaque couple (entité, statut) ; l'intensité suit le compte.",
+        "source": "Lignes de signal dérivées."
+      },
+      "sigRailFiche": {
+        "what": "Détail du signal sélectionné : code métrique, valeur, seuil, source et périmètre.",
+        "how": "Champs de la ligne sélectionnée dans le registre.",
+        "source": "Catalogue de signaux (YAML) · collecteur tessera-eval."
+      },
+      "sigRailCases": {
+        "what": "Cas d'échec documentés rattachés aux signaux qualité.",
+        "how": "Extraits du catalogue de défaillances de non-régression.",
+        "source": "Rapport des cas échoués."
+      },
+      "sigRailRelease": {
+        "what": "Version en production et état des barrières qualité (déploiement bloqué si des régressions sont ouvertes).",
+        "how": "Bloqué quand le nombre de régressions ouvertes est supérieur à 0.",
+        "source": "État de release · gate de non-régression."
+      },
+      "sigRailActivity": {
+        "what": "Derniers évènements qualité : dernier run, release, changement de configuration.",
+        "how": "Agrégat du dernier run d'éval, de la release courante et du diff de configuration.",
+        "source": "Registre des runs · release · diff de configuration."
+      },
+      "sigRailActions": {
+        "what": "Remédiations gouvernées proposées selon l'état courant des gates et des régressions.",
+        "how": "Dérivées du statut de release et des cas ouverts ; certaines exigent un double contrôle.",
+        "source": "État de release · politique de remédiation."
+      },
+      "evolution": {
+        "what": "Score de fidélité moyen jour par jour sur la fenêtre courante.",
+        "how": "Moyenne par bucket du journal de scores ; les creux sans éval restent vides (jamais un zéro inventé) ; l'écart compare au premier bucket.",
+        "source": "Série de scores (fidélité), journal durable."
       }
     },
     "seeDetail": "Voir le détail",

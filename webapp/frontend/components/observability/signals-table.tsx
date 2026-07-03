@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Fragment, useMemo, useState } from "react";
 
+import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
@@ -596,7 +597,10 @@ export function SignalsTable({
     <Card>
       <CardHeader className="gap-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-sm">{tq("signalsTable.title")}</CardTitle>
+          <span className="flex items-center gap-1.5">
+            <CardTitle className="text-sm">{tq("signalsTable.title")}</CardTitle>
+            <QInfo title={tq("signalsTable.title")} k="sigRegistry" />
+          </span>
           <span className="text-xs text-[var(--muted-foreground)]">
             {tq("signalsTable.count", { shown: shown.length, total: summary.total })}
           </span>
@@ -875,7 +879,10 @@ export function ThemeDistribution({ rows }: { rows: SignalRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm">{tq("signalsTable.themeTitle")}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          {tq("signalsTable.themeTitle")}
+          <QInfo title={tq("signalsTable.themeTitle")} k="sigTheme" />
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap items-center gap-3">
@@ -954,7 +961,10 @@ export function SignalHeatmap({ rows }: { rows: SignalRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm">{tq("signalsTable.heatmapTitle")}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          {tq("signalsTable.heatmapTitle")}
+          <QInfo title={tq("signalsTable.heatmapTitle")} k="sigHeatmap" />
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
@@ -1147,6 +1157,12 @@ export function SignalKpis({
               style={{ background: STATUS_HEX[t.status] }}
             />
             <span className="truncate">{t.label}</span>
+            {/* Severity keys map 1:1 to quality.explain.sig{Active,Crit,Warn,Ok,Na}. */}
+            <QInfo
+              title={t.label}
+              k={`sig${t.key.charAt(0).toUpperCase()}${t.key.slice(1)}`}
+              className="ml-auto"
+            />
           </div>
           <div className="flex items-end justify-between gap-2">
             <div className="flex flex-col">
@@ -1233,7 +1249,10 @@ export function SignalsRail({
         {/* Fiche signal */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">{tq("signalsRail.fiche")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {tq("signalsRail.fiche")}
+              <QInfo title={tq("signalsRail.fiche")} k="sigRailFiche" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5 text-[0.7rem]">
             {fiche ? (
@@ -1267,7 +1286,10 @@ export function SignalsRail({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-2 text-sm">
-              {tq("signalsRail.cases")}
+              <span className="flex items-center gap-1.5">
+                {tq("signalsRail.cases")}
+                <QInfo title={tq("signalsRail.cases")} k="sigRailCases" />
+              </span>
               <RailLink onClick={() => onOpen("failed")}>{tq("rr.seeCases")}</RailLink>
             </CardTitle>
           </CardHeader>
@@ -1294,7 +1316,10 @@ export function SignalsRail({
         {current ? (
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">{tq("signalsRail.release")}</CardTitle>
+              <CardTitle className="flex items-center gap-1.5 text-sm">
+                {tq("signalsRail.release")}
+                <QInfo title={tq("signalsRail.release")} k="sigRailRelease" />
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-1.5 text-[0.7rem]">
               <div className="flex items-center gap-2">
@@ -1324,7 +1349,10 @@ export function SignalsRail({
         {/* Activités récentes */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">{tq("rr.activity")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {tq("rr.activity")}
+              <QInfo title={tq("rr.activity")} k="sigRailActivity" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {activity.length === 0 ? (
@@ -1346,7 +1374,10 @@ export function SignalsRail({
         {/* Actions prescriptives */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">{tq("signalsRail.actions")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {tq("signalsRail.actions")}
+              <QInfo title={tq("signalsRail.actions")} k="sigRailActions" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
             <RailAction onClick={() => onOpen("failed")}>{tq("signalsRail.createCase")}</RailAction>
