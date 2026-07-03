@@ -3365,6 +3365,36 @@
       "deadlines": {
         "what": "Les échéances réglementaires proches qui demandent une action.",
         "how": "Obligations ou remédiations dont la date limite approche."
+      },
+      "mapping": {
+        "what": "Score de conformité par cadre réglementaire (DORA, RGPD, BaFin, CNIL…).",
+        "how": "Un cadre par ligne ; score = part des contrôles conformes.",
+        "source": "Rapport de conformité (par cadre)."
+      },
+      "obligTable": {
+        "what": "Obligations réglementaires applicables : statut, échéance, responsable.",
+        "how": "Une ligne par obligation ; statut appliqué ou en cours.",
+        "source": "Rapport de conformité (obligations)."
+      },
+      "evidence": {
+        "what": "Complétude des preuves d'audit : valides, manquantes, bloquantes.",
+        "how": "Part des preuves valides sur le total attendu.",
+        "source": "Rapport de conformité (preuves)."
+      },
+      "controls": {
+        "what": "Contrôles de conformité et leur statut.",
+        "how": "Une ligne par contrôle : conforme, partiel ou non conforme.",
+        "source": "Rapport de conformité (contrôles)."
+      },
+      "missing": {
+        "what": "Contrôles sans preuve valide, avec le cadre concerné.",
+        "how": "Contrôles non conformes rattachés à leur preuve attendue.",
+        "source": "Rapport de conformité (contrôles)."
+      },
+      "incidents": {
+        "what": "Non-conformités ouvertes : gravité et statut de traitement.",
+        "how": "Une ligne par non-conformité enregistrée.",
+        "source": "Rapport de conformité (non-conformités)."
       }
     },
     "panel": {

@@ -3365,6 +3365,36 @@
       "deadlines": {
         "what": "The near regulatory deadlines that require action.",
         "how": "Obligations or remediations whose due date is approaching."
+      },
+      "mapping": {
+        "what": "Compliance score per regulatory framework (DORA, GDPR, BaFin, CNIL…).",
+        "how": "One framework per row; score = share of conformant controls.",
+        "source": "Compliance report (per framework)."
+      },
+      "obligTable": {
+        "what": "Applicable regulatory obligations: status, deadline, owner.",
+        "how": "One row per obligation; status applied or in progress.",
+        "source": "Compliance report (obligations)."
+      },
+      "evidence": {
+        "what": "Completeness of audit evidence: valid, missing, blocking.",
+        "how": "Share of valid evidence over the expected total.",
+        "source": "Compliance report (evidence)."
+      },
+      "controls": {
+        "what": "Compliance controls and their status.",
+        "how": "One row per control: conformant, partial or non-conformant.",
+        "source": "Compliance report (controls)."
+      },
+      "missing": {
+        "what": "Controls with no valid evidence, with the framework concerned.",
+        "how": "Non-conformant controls mapped to their expected evidence.",
+        "source": "Compliance report (controls)."
+      },
+      "incidents": {
+        "what": "Open non-conformities: severity and handling status.",
+        "how": "One row per recorded non-conformity.",
+        "source": "Compliance report (non-conformities)."
       }
     },
     "panel": {

@@ -90,11 +90,31 @@ function Panel({
   action,
   children,
   className,
-}: { title: string; action?: ReactNode; children: ReactNode; className?: string }) {
+  infoKey,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  infoKey?: string;
+}) {
+  const te = useTranslations("compliance.explain");
+  const info =
+    infoKey && te.has(`${infoKey}.what`) ? (
+      <MetricInfo
+        title={title}
+        what={te(`${infoKey}.what`)}
+        how={te.has(`${infoKey}.how`) ? te(`${infoKey}.how`) : undefined}
+        source={te.has(`${infoKey}.source`) ? te(`${infoKey}.source`) : undefined}
+      />
+    ) : null;
   return (
     <Card className={`flex h-full min-w-0 flex-col ${className ?? ""}`}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-        <CardTitle className="text-[0.78rem] font-medium">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-1 text-[0.78rem] font-medium">
+          <span>{title}</span>
+          {info}
+        </CardTitle>
         {action}
       </CardHeader>
       <CardContent className="flex-1">{children}</CardContent>
@@ -396,7 +416,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
               {/* B. Cartographie · obligations · evidence */}
               <Zone label={tc("sec.mapping")}>
                 <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)]">
-                  <Panel title={tc("panel.mapping")}>
+                  <Panel title={tc("panel.mapping")} infoKey="mapping">
                     <table className="w-full text-[0.72rem]">
                       <thead>
                         <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
@@ -413,7 +433,10 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     </table>
                   </Panel>
 
-                  <Panel title={tc("panel.obligations", { n: d.obligations?.length ?? 0 })}>
+                  <Panel
+                    title={tc("panel.obligations", { n: d.obligations?.length ?? 0 })}
+                    infoKey="obligTable"
+                  >
                     <table className="w-full text-[0.72rem]">
                       <thead>
                         <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
@@ -431,7 +454,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     </table>
                   </Panel>
 
-                  <Panel title={tc("panel.evidence")}>
+                  <Panel title={tc("panel.evidence")} infoKey="evidence">
                     <div className="flex items-center gap-3">
                       <EvidenceDonut completeness={d.evidence_completeness ?? 0} />
                       <ul className="flex flex-col gap-1 text-[0.7rem]">
@@ -469,7 +492,10 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
               {/* C. Contrôles · preuves manquantes · incidents */}
               <Zone label={tc("sec.controls")}>
                 <div className="grid gap-2 lg:grid-cols-3">
-                  <Panel title={tc("panel.controls", { n: d.controls?.length ?? 0 })}>
+                  <Panel
+                    title={tc("panel.controls", { n: d.controls?.length ?? 0 })}
+                    infoKey="controls"
+                  >
                     <ul className="flex flex-col gap-1 text-[0.72rem]">
                       {(d.controls ?? []).slice(0, 6).map((c) => (
                         <li key={c.id} className="flex items-center gap-2">
@@ -482,7 +508,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     </ul>
                   </Panel>
 
-                  <Panel title={tc("panel.missing")}>
+                  <Panel title={tc("panel.missing")} infoKey="missing">
                     <ul className="flex flex-col gap-1 text-[0.72rem]">
                       {(d.controls ?? [])
                         .filter((c) => c.status !== "conformant")
@@ -500,7 +526,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     </ul>
                   </Panel>
 
-                  <Panel title={tc("panel.incidents")}>
+                  <Panel title={tc("panel.incidents")} infoKey="incidents">
                     <table className="w-full text-[0.7rem]">
                       <thead>
                         <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">

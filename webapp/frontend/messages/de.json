@@ -3365,6 +3365,36 @@
       "deadlines": {
         "what": "Die nahen regulatorischen Fristen, die eine Handlung erfordern.",
         "how": "Pflichten oder Behebungen, deren Frist näher rückt."
+      },
+      "mapping": {
+        "what": "Konformitätsscore je Regelwerk (DORA, DSGVO, BaFin, CNIL…).",
+        "how": "Ein Regelwerk je Zeile; Score = Anteil konformer Kontrollen.",
+        "source": "Konformitätsbericht (je Regelwerk)."
+      },
+      "obligTable": {
+        "what": "Anwendbare regulatorische Pflichten: Status, Frist, Verantwortlicher.",
+        "how": "Eine Zeile je Pflicht; Status angewandt oder laufend.",
+        "source": "Konformitätsbericht (Pflichten)."
+      },
+      "evidence": {
+        "what": "Vollständigkeit der Audit-Nachweise: gültig, fehlend, blockierend.",
+        "how": "Anteil gültiger Nachweise am erwarteten Gesamt.",
+        "source": "Konformitätsbericht (Nachweise)."
+      },
+      "controls": {
+        "what": "Konformitätskontrollen und ihr Status.",
+        "how": "Eine Zeile je Kontrolle: konform, teilweise oder nicht konform.",
+        "source": "Konformitätsbericht (Kontrollen)."
+      },
+      "missing": {
+        "what": "Kontrollen ohne gültigen Nachweis, mit betroffenem Regelwerk.",
+        "how": "Nicht konforme Kontrollen ihrem erwarteten Nachweis zugeordnet.",
+        "source": "Konformitätsbericht (Kontrollen)."
+      },
+      "incidents": {
+        "what": "Offene Abweichungen: Schwere und Bearbeitungsstatus.",
+        "how": "Eine Zeile je erfasster Abweichung.",
+        "source": "Konformitätsbericht (Abweichungen)."
       }
     },
     "panel": {
