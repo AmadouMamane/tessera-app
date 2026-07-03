@@ -363,6 +363,46 @@
       "traces": {
         "what": "Le volume de traces d'exécution et les latences p50/p95 observées.",
         "how": "Lu depuis la pile Langfuse (traces OpenTelemetry émises par l'agent)."
+      },
+      "rightIncidents": {
+        "what": "Les incidents de sécurité et qualité actifs.",
+        "how": "Playbooks déclenchés (grappes de refus guard, faible fidélité) + sessions anormales détectées.",
+        "source": "Incidents & playbooks + détection d'anomalies."
+      },
+      "rightRelease": {
+        "what": "L'état des portes de release (qualité, sécurité, conformité).",
+        "how": "Qualité = SLO non franchi ; sécurité = 0 toxicité et 0 fuite PII ; conformité = AI-Act + taux de conformité >= 95 %.",
+        "source": "SLO + toxicité/PII + conformité."
+      },
+      "rightActivities": {
+        "what": "Les derniers scores d'évaluation enregistrés.",
+        "how": "Les 6 scores les plus récents (métrique, langue, valeur).",
+        "source": "Scores d'évaluation."
+      },
+      "analyticsScores": {
+        "what": "La tendance des scores de qualité sur la période.",
+        "how": "Moyenne par bucket temporel + direction (amélioration/dégradation) et premier vs second demi.",
+        "source": "Rapport de tendance (scores d'éval)."
+      },
+      "analyticsDistribution": {
+        "what": "La répartition du trafic évalué par langue.",
+        "how": "Part des tours par langue (FR/DE/EN), couleur = score moyen de la langue.",
+        "source": "Entonnoir d'évaluation (par langue)."
+      },
+      "analyticsImpact": {
+        "what": "L'impact relatif des signaux de contrôle.",
+        "how": "Contrôles triés par gravité ; la barre reflète la sévérité, la valeur = mesure du signal.",
+        "source": "Signaux de contrôle en direct."
+      },
+      "governanceSection": {
+        "what": "Les actions recommandées, dérivées de la feuille de route.",
+        "how": "Éléments de roadmap réels : thème, gravité et suggestion par signal.",
+        "source": "Feuille de route (roadmap)."
+      },
+      "footerConfidence": {
+        "what": "La confiance globale : part des signaux suivis qui atteignent leur cible.",
+        "how": "Signaux à l'état ok / total des signaux suivis.",
+        "source": "Contrôles critiques (état des signaux)."
       }
     },
     "criticalControls": {

@@ -13,7 +13,6 @@ import {
   Gauge,
   GitBranch,
   Inbox,
-  Info,
   Lightbulb,
   Network,
   Rocket,
@@ -1635,6 +1634,7 @@ function IncidentsCard({
       <CardHeader className="flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("incidents")}
+          <SectionInfo title={t("incidents")} explainKey="rightIncidents" />
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
         <Link
@@ -1708,6 +1708,7 @@ function ReleaseCard({
         <div>
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("release")}
+            <SectionInfo title={t("release")} explainKey="rightRelease" />
             {provTag ? <TimeTagChip kind={provTag} /> : null}
           </CardTitle>
           {whatChanged?.available &&
@@ -1852,6 +1853,7 @@ function RecentActivitiesCard({
       <CardHeader className="flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("activities")}
+          <SectionInfo title={t("activities")} explainKey="rightActivities" />
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
       </CardHeader>
@@ -1913,6 +1915,7 @@ function AnalyticsSection({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("scores")}
+            <SectionInfo title={t("scores")} explainKey="analyticsScores" />
             {provTag ? <TimeTagChip kind={provTag} /> : null}
           </CardTitle>
         </CardHeader>
@@ -1942,6 +1945,7 @@ function AnalyticsSection({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("distribution")}
+            <SectionInfo title={t("distribution")} explainKey="analyticsDistribution" />
             {provTag ? <TimeTagChip kind={provTag} /> : null}
           </CardTitle>
         </CardHeader>
@@ -1977,6 +1981,7 @@ function AnalyticsSection({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("impact")}
+            <SectionInfo title={t("impact")} explainKey="analyticsImpact" />
             {provTag ? <TimeTagChip kind={provTag} /> : null}
           </CardTitle>
         </CardHeader>
@@ -2033,6 +2038,7 @@ function GovernanceSection({
       <CardHeader className="flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
+          <SectionInfo title={t("title")} explainKey="governanceSection" />
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
         <Badge tone="neutral">{t("subtitle")}</Badge>
@@ -2121,7 +2127,7 @@ function TrustFooter({
         <b className={cn("font-semibold tabular-nums", toneText[confTone])}>
           {confidence == null ? "—" : `${confidence}%`}
         </b>
-        <Info className="h-3 w-3 opacity-60" />
+        <SectionInfo title={t("confidence")} explainKey="footerConfidence" />
       </span>
       <span className="h-[4px] w-32 overflow-hidden rounded-full bg-[var(--tessera-border)]">
         <span

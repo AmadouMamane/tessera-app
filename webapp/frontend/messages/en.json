@@ -363,6 +363,46 @@
       "traces": {
         "what": "The volume of execution traces and the observed p50/p95 latencies.",
         "how": "Read from the Langfuse stack (OpenTelemetry traces the agent emits)."
+      },
+      "rightIncidents": {
+        "what": "The active security and quality incidents.",
+        "how": "Fired playbooks (guard-deny clusters, low faithfulness) + detected anomalous sessions.",
+        "source": "Incidents & playbooks + anomaly detection."
+      },
+      "rightRelease": {
+        "what": "The state of the release gates (quality, security, compliance).",
+        "how": "Quality = SLO not breaching; security = 0 toxicity and 0 PII leak; compliance = AI-Act + conformance rate >= 95%.",
+        "source": "SLO + toxicity/PII + conformance."
+      },
+      "rightActivities": {
+        "what": "The most recently recorded evaluation scores.",
+        "how": "The 6 latest scores (metric, language, value).",
+        "source": "Evaluation scores."
+      },
+      "analyticsScores": {
+        "what": "The trend of quality scores over the period.",
+        "how": "Mean per time bucket + direction (improving/degrading) and first vs second half.",
+        "source": "Trend report (eval scores)."
+      },
+      "analyticsDistribution": {
+        "what": "The distribution of evaluated traffic by language.",
+        "how": "Share of turns per language (FR/DE/EN), color = the language's mean score.",
+        "source": "Evaluation funnel (by language)."
+      },
+      "analyticsImpact": {
+        "what": "The relative impact of the control signals.",
+        "how": "Controls sorted by severity; the bar reflects severity, the value = the signal's measure.",
+        "source": "Live control signals."
+      },
+      "governanceSection": {
+        "what": "The recommended actions, derived from the roadmap.",
+        "how": "Real roadmap items: theme, severity and suggestion per signal.",
+        "source": "Roadmap."
+      },
+      "footerConfidence": {
+        "what": "Overall confidence: the share of tracked signals that meet their target.",
+        "how": "Signals in the ok state / all tracked signals.",
+        "source": "Critical controls (signal state)."
       }
     },
     "criticalControls": {
