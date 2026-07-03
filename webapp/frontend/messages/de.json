@@ -6386,7 +6386,8 @@
       },
       "models": {
         "what": "Die Zahl der im Katalog verfügbaren KI-Modelle (Chat, Embeddings).",
-        "how": "Im Modellregister deklarierte Modelle."
+        "how": "Im Modellregister deklarierte Modelle.",
+        "source": "Modellkatalog."
       },
       "changes": {
         "what": "Die Zahl der Konfigurationsänderungen der letzten 30 Tage — alle auditiert.",
@@ -6396,6 +6397,28 @@
       "configState": {
         "what": "Die Aufschlüsselung der Parameter nach Lebenszyklus-Status: aktiv, inaktiv, Entwurf, veraltet.",
         "how": "Parameter nach Lebenszyklus-Status gruppiert."
+      },
+      "quick": {
+        "what": "Schnellzugriff auf die Parameter-Kategorien, mit ihrer Beschreibung.",
+        "how": "Eine Karte je Konfigurationskategorie."
+      },
+      "recent": {
+        "what": "Zuletzt geänderte Parameter: Wert, Autor, Datum, Status.",
+        "how": "Protokoll der Konfigurationsänderungen, neueste zuerst.",
+        "source": "Konfigurations-Auditprotokoll."
+      },
+      "usage": {
+        "what": "Aktive Nutzungsregeln und ihre Werte (Quotas, Limits).",
+        "how": "Ein Eintrag je konfigurierter Regel."
+      },
+      "compliance": {
+        "what": "Konformitätsstatus je Regelwerk.",
+        "how": "Status je Regelwerk; « konform », wenn die Kontrolle besteht.",
+        "source": "Konformitätskontrollen."
+      },
+      "backup": {
+        "what": "Letzte Sicherung, Häufigkeit, Aufbewahrung und Größe.",
+        "how": "Metadaten der Sicherungsrichtlinie."
       }
     },
     "drill": {

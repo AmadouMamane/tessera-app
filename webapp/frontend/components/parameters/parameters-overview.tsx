@@ -282,7 +282,11 @@ function CompactKpi({
 
 function QuickConfig({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("quick.title")} action={<ViewAll label={t("quick.customize")} />}>
+    <Panel
+      title={t("quick.title")}
+      info={<ExplainInfo k="quick" title={t("quick.title")} />}
+      action={<ViewAll label={t("quick.customize")} />}
+    >
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {data.categories.map((c) => {
           const Icon = CAT_ICON[c.key] ?? ShieldCheck;
@@ -327,6 +331,7 @@ function RecentParams({
   return (
     <Panel
       title={title ?? t("recent.title")}
+      info={<ExplainInfo k="recent" title={title ?? t("recent.title")} />}
       action={<ViewAll label={t("drill.audit")} href="/prouver/audit-logs" />}
     >
       <div className="overflow-x-auto">
@@ -382,7 +387,7 @@ function RecentParams({
 
 function UsagePolicies({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("usage.title")}>
+    <Panel title={t("usage.title")} info={<ExplainInfo k="usage" title={t("usage.title")} />}>
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {data.usage_policies.map((p) => (
           <li
@@ -410,6 +415,7 @@ function ModelsConfigured({ t, data }: { t: T; data: Data }) {
   return (
     <Panel
       title={t("models.title", { n: models.length })}
+      info={<ExplainInfo k="models" title={t("models.title", { n: models.length })} />}
       action={<ViewAll label={t("models.manage")} href="/configurer/modeles" />}
     >
       <div className="overflow-x-auto">
@@ -516,6 +522,7 @@ function Compliance({ t, data }: { t: T; data: Data }) {
   return (
     <Panel
       title={t("compliance.title")}
+      info={<ExplainInfo k="compliance" title={t("compliance.title")} />}
       action={<ViewAll label={t("compliance.viewAll")} href="/surveiller/conformite" />}
     >
       <ul className="flex flex-col gap-1.5">
@@ -545,7 +552,7 @@ function Backup({ t, data }: { t: T; data: Data }) {
     [t("backup.size"), b.size],
   ];
   return (
-    <Panel title={t("backup.title")}>
+    <Panel title={t("backup.title")} info={<ExplainInfo k="backup" title={t("backup.title")} />}>
       <dl className="flex flex-col gap-1.5 text-[0.7rem]">
         {rows.map(([k, v]) => (
           <KV key={k} label={k} value={v} />

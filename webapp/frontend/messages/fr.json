@@ -6386,7 +6386,8 @@
       },
       "models": {
         "what": "Le nombre de modèles IA disponibles dans le catalogue (chat, embeddings).",
-        "how": "Modèles déclarés au registre de modèles."
+        "how": "Modèles déclarés au registre de modèles.",
+        "source": "Catalogue de modèles."
       },
       "changes": {
         "what": "Le nombre de modifications de configuration sur les 30 derniers jours — toutes auditées.",
@@ -6396,6 +6397,28 @@
       "configState": {
         "what": "La répartition des paramètres par état du cycle de vie : actif, inactif, brouillon, déprécié.",
         "how": "Paramètres groupés par état de cycle de vie."
+      },
+      "quick": {
+        "what": "Accès rapide aux catégories de paramètres, avec leur description.",
+        "how": "Une carte par catégorie de configuration."
+      },
+      "recent": {
+        "what": "Derniers paramètres modifiés : valeur, auteur, date, statut.",
+        "how": "Journal des modifications de configuration, le plus récent en tête.",
+        "source": "Journal d'audit de configuration."
+      },
+      "usage": {
+        "what": "Règles d'usage actives et leurs valeurs (quotas, limites).",
+        "how": "Une entrée par règle configurée."
+      },
+      "compliance": {
+        "what": "État de conformité par cadre réglementaire.",
+        "how": "Statut par cadre ; « conforme » quand le contrôle passe.",
+        "source": "Contrôles de conformité."
+      },
+      "backup": {
+        "what": "Dernière sauvegarde, fréquence, rétention et taille.",
+        "how": "Métadonnées de la politique de sauvegarde."
       }
     },
     "drill": {

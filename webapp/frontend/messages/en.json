@@ -6386,7 +6386,8 @@
       },
       "models": {
         "what": "The number of AI models available in the catalogue (chat, embeddings).",
-        "how": "Models declared in the model registry."
+        "how": "Models declared in the model registry.",
+        "source": "Model catalogue."
       },
       "changes": {
         "what": "The number of configuration changes over the last 30 days — all audited.",
@@ -6396,6 +6397,28 @@
       "configState": {
         "what": "The breakdown of parameters by lifecycle state: active, inactive, draft, deprecated.",
         "how": "Parameters grouped by lifecycle state."
+      },
+      "quick": {
+        "what": "Quick access to the parameter categories, with their description.",
+        "how": "One card per configuration category."
+      },
+      "recent": {
+        "what": "Most recently changed parameters: value, author, date, status.",
+        "how": "Log of configuration changes, newest first.",
+        "source": "Configuration audit log."
+      },
+      "usage": {
+        "what": "Active usage rules and their values (quotas, limits).",
+        "how": "One entry per configured rule."
+      },
+      "compliance": {
+        "what": "Compliance status per regulatory framework.",
+        "how": "Status per framework; « compliant » when the control passes.",
+        "source": "Compliance controls."
+      },
+      "backup": {
+        "what": "Last backup, frequency, retention and size.",
+        "how": "Backup-policy metadata."
       }
     },
     "drill": {
