@@ -4748,6 +4748,108 @@
     "footer": {
       "source": "Source de vérité : {src}",
       "chain": "{txt}"
+    },
+    "explain": {
+      "active_policies": {
+        "what": "Le nombre de politiques/règles compilées actuellement en vigueur.",
+        "how": "4 familles fixes + une règle par outil défini dans policy.yaml.",
+        "source": "Politique de garde compilée (policy.yaml)."
+      },
+      "blocking_guardrails": {
+        "what": "Le nombre de règles qui bloquent (action deny).",
+        "how": "Compte des règles actives dont l'action est deny.",
+        "source": "Politique de garde compilée."
+      },
+      "violations_blocked": {
+        "what": "Le nombre de violations bloquées sur les dernières 24 h.",
+        "how": "Décisions deny du ledger d'audit horodatées dans les 24 h.",
+        "source": "Ledger d'audit (Postgres, append-only)."
+      },
+      "false_positives": {
+        "what": "Les faux positifs sur 24 h — non mesurés dans cette version.",
+        "how": "Aucun mécanisme ne classe une décision comme faux positif ; la valeur reste un tiret.",
+        "source": "Pas de source réelle (démonstration)."
+      },
+      "pending_versions": {
+        "what": "Les versions de politique en attente d'approbation.",
+        "how": "Sous-système de versioning/approbation absent ; la valeur reste 0.",
+        "source": "Pas de source réelle (démonstration)."
+      },
+      "exceptions": {
+        "what": "Les exceptions de politique en vigueur.",
+        "how": "Aucun registre d'exceptions ; la valeur reste un tiret.",
+        "source": "Pas de source réelle (démonstration)."
+      },
+      "deny_policies": {
+        "what": "La part des décisions du ledger qui sont des refus (deny).",
+        "how": "totals[deny] / total des décisions (cumul, pas seulement 24 h).",
+        "source": "Ledger d'audit (Postgres)."
+      },
+      "pii_detection": {
+        "what": "La part des décisions qui transforment/masquent une donnée (PII).",
+        "how": "totals[transform] / total des décisions (cumul).",
+        "source": "Ledger d'audit (Postgres)."
+      },
+      "attacks_blocked": {
+        "what": "La part des refus déclenchés par la règle d'injection de prompt.",
+        "how": "Décisions deny dont policy_rule commence par prompt_injection.",
+        "source": "Ledger d'audit (Postgres)."
+      },
+      "tool_denials": {
+        "what": "Les refus liés aux outils (policy_rule tool.*, deny).",
+        "how": "Compte des décisions deny préfixées tool.",
+        "source": "Ledger d'audit (Postgres)."
+      },
+      "pii_blocked": {
+        "what": "Le nombre de transformations PII appliquées (masquages).",
+        "how": "totals[transform] du ledger, en valeur absolue (cumul).",
+        "source": "Ledger d'audit (Postgres)."
+      },
+      "memory_approved": {
+        "what": "La part des écritures mémoire gouvernées qui sont approuvées.",
+        "how": "allow / total des règles memory.* ; 100 % par défaut sans trafic.",
+        "source": "Ledger d'audit (Postgres)."
+      },
+      "zoneActivePolicies": {
+        "what": "Les règles de politique porteuses en vigueur.",
+        "how": "Chaque ligne = une règle compilée ; action par outil dérivée de policy.yaml (allow/confirm/deny).",
+        "source": "Politique de garde compilée (policy.yaml)."
+      },
+      "zoneHistory": {
+        "what": "L'historique des versions de la politique.",
+        "how": "policy.yaml n'a qu'une version active ; la date affichée est le mtime du fichier.",
+        "source": "policy.yaml (fichier)."
+      },
+      "zoneDiff": {
+        "what": "Le résumé de forme de la politique active (pas un diff : aucune version antérieure).",
+        "how": "Compteurs vivants : motifs deny, transforms, motifs PII, outils.",
+        "source": "Politique de garde compilée."
+      },
+      "zoneGuardrails": {
+        "what": "Les parts d'activité des garde-fous côté runtime.",
+        "how": "Cumul des décisions du ledger par famille ; le libellé 24h du titre est indicatif, les jauges sont cumulées.",
+        "source": "Ledger d'audit (Postgres)."
+      },
+      "zoneImpact": {
+        "what": "Le simulateur d'impact d'un changement de politique.",
+        "how": "Sous-système de démonstration : valeurs illustratives, sans source réelle.",
+        "source": "Pas de source réelle (démonstration)."
+      },
+      "zoneDetail": {
+        "what": "Le détail de la version de politique active.",
+        "how": "Entrée en vigueur = mtime du fichier ; commit et approbateur ne sont pas sourcés.",
+        "source": "policy.yaml + métadonnées de déploiement."
+      },
+      "zoneSensitive": {
+        "what": "Les actions sensibles sur la politique (rollback, activation forcée).",
+        "how": "Sous-système de démonstration : boutons illustratifs, sans exécution.",
+        "source": "Pas de source réelle (démonstration)."
+      },
+      "versionRail": {
+        "what": "La version de politique active et sa frise.",
+        "how": "Version = policy.version ; la frise a un seul jalon (date = mtime du fichier).",
+        "source": "policy.yaml."
+      }
     }
   },
   "sources": {

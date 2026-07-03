@@ -4748,6 +4748,108 @@
     "footer": {
       "source": "Source of truth: {src}",
       "chain": "{txt}"
+    },
+    "explain": {
+      "active_policies": {
+        "what": "The number of compiled policies/rules currently in force.",
+        "how": "4 fixed families + one rule per tool defined in policy.yaml.",
+        "source": "Compiled guard policy (policy.yaml)."
+      },
+      "blocking_guardrails": {
+        "what": "The number of rules that block (action deny).",
+        "how": "Count of active rules whose action is deny.",
+        "source": "Compiled guard policy."
+      },
+      "violations_blocked": {
+        "what": "The number of violations blocked over the last 24h.",
+        "how": "Deny decisions from the audit ledger timestamped within 24h.",
+        "source": "Audit ledger (Postgres, append-only)."
+      },
+      "false_positives": {
+        "what": "False positives over 24h — not measured in this build.",
+        "how": "No mechanism classifies a decision as a false positive; the value stays a dash.",
+        "source": "No real source (demonstration)."
+      },
+      "pending_versions": {
+        "what": "Policy versions awaiting approval.",
+        "how": "Versioning/approval subsystem absent; the value stays 0.",
+        "source": "No real source (demonstration)."
+      },
+      "exceptions": {
+        "what": "Policy exceptions in force.",
+        "how": "No exceptions registry; the value stays a dash.",
+        "source": "No real source (demonstration)."
+      },
+      "deny_policies": {
+        "what": "The share of ledger decisions that are denials (deny).",
+        "how": "totals[deny] / all decisions (cumulative, not only 24h).",
+        "source": "Audit ledger (Postgres)."
+      },
+      "pii_detection": {
+        "what": "The share of decisions that transform/mask data (PII).",
+        "how": "totals[transform] / all decisions (cumulative).",
+        "source": "Audit ledger (Postgres)."
+      },
+      "attacks_blocked": {
+        "what": "The share of denials triggered by the prompt-injection rule.",
+        "how": "Deny decisions whose policy_rule starts with prompt_injection.",
+        "source": "Audit ledger (Postgres)."
+      },
+      "tool_denials": {
+        "what": "Tool-related denials (policy_rule tool.*, deny).",
+        "how": "Count of deny decisions prefixed tool.",
+        "source": "Audit ledger (Postgres)."
+      },
+      "pii_blocked": {
+        "what": "The number of PII transformations applied (masking).",
+        "how": "totals[transform] of the ledger, absolute (cumulative).",
+        "source": "Audit ledger (Postgres)."
+      },
+      "memory_approved": {
+        "what": "The share of governed memory writes that are approved.",
+        "how": "allow / all memory.* rules; defaults to 100% when there is no traffic.",
+        "source": "Audit ledger (Postgres)."
+      },
+      "zoneActivePolicies": {
+        "what": "The load-bearing policy rules in force.",
+        "how": "Each row = one compiled rule; per-tool action derived from policy.yaml (allow/confirm/deny).",
+        "source": "Compiled guard policy (policy.yaml)."
+      },
+      "zoneHistory": {
+        "what": "The policy version history.",
+        "how": "policy.yaml has only one active version; the date shown is the file's mtime.",
+        "source": "policy.yaml (file)."
+      },
+      "zoneDiff": {
+        "what": "The shape summary of the active policy (not a diff: no prior version).",
+        "how": "Live counts: deny patterns, transforms, PII patterns, tools.",
+        "source": "Compiled guard policy."
+      },
+      "zoneGuardrails": {
+        "what": "The runtime guardrails' activity shares.",
+        "how": "Cumulative ledger decisions per family; the 24h in the title is indicative, the gauges are cumulative.",
+        "source": "Audit ledger (Postgres)."
+      },
+      "zoneImpact": {
+        "what": "The impact simulator for a policy change.",
+        "how": "Demonstration subsystem: illustrative values, no real source.",
+        "source": "No real source (demonstration)."
+      },
+      "zoneDetail": {
+        "what": "The detail of the active policy version.",
+        "how": "Effective-from = file mtime; commit and approver are not sourced.",
+        "source": "policy.yaml + deployment metadata."
+      },
+      "zoneSensitive": {
+        "what": "The sensitive actions on the policy (rollback, forced activation).",
+        "how": "Demonstration subsystem: illustrative buttons, no execution.",
+        "source": "No real source (demonstration)."
+      },
+      "versionRail": {
+        "what": "The active policy version and its timeline.",
+        "how": "Version = policy.version; the timeline has a single marker (date = file mtime).",
+        "source": "policy.yaml."
+      }
     }
   },
   "sources": {

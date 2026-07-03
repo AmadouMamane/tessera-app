@@ -4748,6 +4748,108 @@
     "footer": {
       "source": "Quelle der Wahrheit: {src}",
       "chain": "{txt}"
+    },
+    "explain": {
+      "active_policies": {
+        "what": "Die Anzahl der aktuell wirksamen kompilierten Richtlinien/Regeln.",
+        "how": "4 feste Familien + eine Regel je in policy.yaml definiertem Tool.",
+        "source": "Kompilierte Guard-Richtlinie (policy.yaml)."
+      },
+      "blocking_guardrails": {
+        "what": "Die Anzahl der Regeln, die blockieren (Aktion deny).",
+        "how": "Zählung der aktiven Regeln mit Aktion deny.",
+        "source": "Kompilierte Guard-Richtlinie."
+      },
+      "violations_blocked": {
+        "what": "Die Anzahl der in den letzten 24 h blockierten Verstöße.",
+        "how": "Deny-Entscheidungen des Audit-Ledgers mit Zeitstempel in 24 h.",
+        "source": "Audit-Ledger (Postgres, append-only)."
+      },
+      "false_positives": {
+        "what": "Die Fehlalarme über 24 h — in dieser Version nicht gemessen.",
+        "how": "Kein Mechanismus stuft eine Entscheidung als Fehlalarm ein; der Wert bleibt ein Strich.",
+        "source": "Keine reale Quelle (Demonstration)."
+      },
+      "pending_versions": {
+        "what": "Die auf Genehmigung wartenden Richtlinienversionen.",
+        "how": "Versionierungs-/Genehmigungs-Subsystem fehlt; der Wert bleibt 0.",
+        "source": "Keine reale Quelle (Demonstration)."
+      },
+      "exceptions": {
+        "what": "Die geltenden Richtlinienausnahmen.",
+        "how": "Kein Ausnahmeregister; der Wert bleibt ein Strich.",
+        "source": "Keine reale Quelle (Demonstration)."
+      },
+      "deny_policies": {
+        "what": "Der Anteil der Ledger-Entscheidungen, die Ablehnungen (deny) sind.",
+        "how": "totals[deny] / alle Entscheidungen (kumuliert, nicht nur 24 h).",
+        "source": "Audit-Ledger (Postgres)."
+      },
+      "pii_detection": {
+        "what": "Der Anteil der Entscheidungen, die Daten transformieren/maskieren (PII).",
+        "how": "totals[transform] / alle Entscheidungen (kumuliert).",
+        "source": "Audit-Ledger (Postgres)."
+      },
+      "attacks_blocked": {
+        "what": "Der Anteil der durch die Prompt-Injection-Regel ausgelösten Ablehnungen.",
+        "how": "Deny-Entscheidungen, deren policy_rule mit prompt_injection beginnt.",
+        "source": "Audit-Ledger (Postgres)."
+      },
+      "tool_denials": {
+        "what": "Die tool-bezogenen Ablehnungen (policy_rule tool.*, deny).",
+        "how": "Zählung der deny-Entscheidungen mit Präfix tool.",
+        "source": "Audit-Ledger (Postgres)."
+      },
+      "pii_blocked": {
+        "what": "Die Anzahl der angewandten PII-Transformationen (Maskierungen).",
+        "how": "totals[transform] des Ledgers, absolut (kumuliert).",
+        "source": "Audit-Ledger (Postgres)."
+      },
+      "memory_approved": {
+        "what": "Der Anteil der gesteuerten Speicherschreibvorgänge, die genehmigt sind.",
+        "how": "allow / alle memory.*-Regeln; 100 % standardmäßig ohne Verkehr.",
+        "source": "Audit-Ledger (Postgres)."
+      },
+      "zoneActivePolicies": {
+        "what": "Die tragenden Richtlinienregeln in Kraft.",
+        "how": "Jede Zeile = eine kompilierte Regel; Aktion je Tool aus policy.yaml (allow/confirm/deny).",
+        "source": "Kompilierte Guard-Richtlinie (policy.yaml)."
+      },
+      "zoneHistory": {
+        "what": "Die Versionshistorie der Richtlinie.",
+        "how": "policy.yaml hat nur eine aktive Version; das angezeigte Datum ist der mtime der Datei.",
+        "source": "policy.yaml (Datei)."
+      },
+      "zoneDiff": {
+        "what": "Die Formzusammenfassung der aktiven Richtlinie (kein Diff: keine Vorversion).",
+        "how": "Live-Zähler: deny-Muster, Transforms, PII-Muster, Tools.",
+        "source": "Kompilierte Guard-Richtlinie."
+      },
+      "zoneGuardrails": {
+        "what": "Die Aktivitätsanteile der Guardrails zur Laufzeit.",
+        "how": "Kumulierte Ledger-Entscheidungen je Familie; das 24h im Titel ist indikativ, die Anzeigen sind kumuliert.",
+        "source": "Audit-Ledger (Postgres)."
+      },
+      "zoneImpact": {
+        "what": "Der Wirkungssimulator einer Richtlinienänderung.",
+        "how": "Demonstrations-Subsystem: illustrative Werte, ohne reale Quelle.",
+        "source": "Keine reale Quelle (Demonstration)."
+      },
+      "zoneDetail": {
+        "what": "Das Detail der aktiven Richtlinienversion.",
+        "how": "Inkrafttreten = mtime der Datei; Commit und Genehmiger sind nicht belegt.",
+        "source": "policy.yaml + Deployment-Metadaten."
+      },
+      "zoneSensitive": {
+        "what": "Die sensiblen Aktionen an der Richtlinie (Rollback, erzwungene Aktivierung).",
+        "how": "Demonstrations-Subsystem: illustrative Schaltflächen, ohne Ausführung.",
+        "source": "Keine reale Quelle (Demonstration)."
+      },
+      "versionRail": {
+        "what": "Die aktive Richtlinienversion und ihre Zeitleiste.",
+        "how": "Version = policy.version; die Zeitleiste hat nur einen Punkt (Datum = mtime der Datei).",
+        "source": "policy.yaml."
+      }
     }
   },
   "sources": {

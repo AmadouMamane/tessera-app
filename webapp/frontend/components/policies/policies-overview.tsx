@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  ArrowUpRight,
   ChevronRight,
   Database,
   FileCode2,
@@ -16,6 +17,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
@@ -65,6 +67,16 @@ const LINK_ROUTES: Record<string, Route> = {
   export_siem: "/configurer/integrations",
   evidence_pack: "/prouver/evidence-store",
   release_control: "/agir/release-control",
+};
+
+// Honest per-KPI drill-down: only where a real per-item source exists. The rule
+// count aggregates the compiled guard policy -> the guardrail catalogue; the 24h
+// violations are ledger deny decisions -> the audit journal. The fixture KPIs
+// (false positives / pending versions / exceptions) have no source -> no link.
+const KPI_HREF: Record<string, Route | undefined> = {
+  active_policies: "/configurer/garde-fous",
+  blocking_guardrails: "/configurer/garde-fous",
+  violations_blocked: "/prouver/audit-logs",
 };
 
 type T = ReturnType<typeof useTranslations<"policies">>;
@@ -132,7 +144,15 @@ export function PoliciesOverview() {
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {data.kpis.map((kpi) => (
-              <KpiTile key={kpi.key} kpi={kpi} label={t(`kpi.${kpi.key}`)} vs={t("delta.vsHier")} />
+              <KpiTile
+                key={kpi.key}
+                kpi={kpi}
+                label={t(`kpi.${kpi.key}`)}
+                vs={t("delta.vsHier")}
+                info={<PolInfo k={kpi.key} title={t(`kpi.${kpi.key}`)} />}
+                href={KPI_HREF[kpi.key]}
+                drillLabel={t(`kpi.${kpi.key}`)}
+              />
             ))}
           </div>
 
@@ -235,9 +255,12 @@ function CommandBar({
 function VersionRail({ t, data }: { t: T; data: Data }) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <span className="text-xs font-medium text-[var(--tessera-text-muted)]">
-        {t("version.active")}{" "}
-        <span className="font-semibold text-emerald-300">{data.active_version}</span>
+      <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--tessera-text-muted)]">
+        <span>
+          {t("version.active")}{" "}
+          <span className="font-semibold text-emerald-300">{data.active_version}</span>
+        </span>
+        <PolInfo k="versionRail" title={t("version.active")} />
       </span>
       <ol className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         {data.version_timeline.map((v, i) => (
@@ -294,6 +317,7 @@ function ActivePolicies({
     <Panel
       title={t("zone.activePolicies")}
       className={className}
+      info={<PolInfo k="zoneActivePolicies" title={t("zone.activePolicies")} />}
       action={<ViewAll label={t("viewAll.policies")} onClick={onViewAll} />}
     >
       <div className="overflow-x-auto">
@@ -349,6 +373,7 @@ function VersionHistory({ t, data, className }: { t: T; data: Data; className?: 
     <Panel
       title={t("zone.history")}
       className={className}
+      info={<PolInfo k="zoneHistory" title={t("zone.history")} />}
       action={<ViewAll label={t("viewAll.history")} />}
     >
       <table className="w-full border-collapse text-left text-[0.72rem]">
@@ -393,7 +418,11 @@ function VersionHistory({ t, data, className }: { t: T; data: Data; className?: 
 
 function DiffYaml({ t, data, className }: { t: T; data: Data; className?: string }) {
   return (
-    <Panel title={`${t("zone.diff")} (${data.diff.title})`} className={className}>
+    <Panel
+      title={`${t("zone.diff")} (${data.diff.title})`}
+      className={className}
+      info={<PolInfo k="zoneDiff" title={t("zone.diff")} />}
+    >
       <pre className="overflow-x-auto rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2 font-mono text-[0.64rem] leading-relaxed">
         {data.diff.lines.map((l, i) => (
           <div
@@ -416,13 +445,20 @@ function DiffYaml({ t, data, className }: { t: T; data: Data; className?: string
 
 function Guardrails({ t, data, className }: { t: T; data: Data; className?: string }) {
   return (
-    <Panel title={t("zone.guardrails")} className={className}>
+    <Panel
+      title={t("zone.guardrails")}
+      className={className}
+      info={<PolInfo k="zoneGuardrails" title={t("zone.guardrails")} />}
+    >
       <ul className="flex flex-col gap-2">
         {data.guardrails.map((g) => (
           <li key={g.key} className="flex flex-col gap-0.5 text-[0.66rem]">
             <div className="flex items-center justify-between gap-1.5">
-              <span className="min-w-0 truncate text-[var(--tessera-text)]">
-                {t(`gr.${g.key}`)}
+              <span className="flex min-w-0 items-center gap-1">
+                <span className="min-w-0 truncate text-[var(--tessera-text)]">
+                  {t(`gr.${g.key}`)}
+                </span>
+                <PolInfo k={g.key} title={t(`gr.${g.key}`)} />
               </span>
               <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
                 {g.value}
@@ -450,7 +486,11 @@ function Impact({
   flagged?: boolean;
 }) {
   return (
-    <Panel title={t("zone.impact")} className={className}>
+    <Panel
+      title={t("zone.impact")}
+      className={className}
+      info={<PolInfo k="zoneImpact" title={t("zone.impact")} />}
+    >
       {flagged ? <SyntheticNotice signalId="policy_versioning" compact /> : null}
       <table className="w-full border-collapse text-left text-[0.68rem]">
         <thead>
@@ -499,7 +539,10 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
   };
   return (
     <aside className={full ? "grid min-w-0 gap-3 lg:grid-cols-3" : "flex min-w-0 flex-col gap-3"}>
-      <Panel title={`${t("zone.detail")} · ${d.version}`}>
+      <Panel
+        title={`${t("zone.detail")} · ${d.version}`}
+        info={<PolInfo k="zoneDetail" title={t("zone.detail")} />}
+      >
         <dl className="flex flex-col gap-1.5 text-[0.7rem]">
           <KV label={t("version.effectiveFrom")} value={d.effective_from} />
           <KV label={t("version.commit")} value={d.commit} mono />
@@ -509,7 +552,10 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
         </dl>
       </Panel>
 
-      <Panel title={t("zone.sensitive")}>
+      <Panel
+        title={t("zone.sensitive")}
+        info={<PolInfo k="zoneSensitive" title={t("zone.sensitive")} />}
+      >
         <SyntheticNotice signalId="policy_versioning" compact />
         <ul className="flex flex-col gap-1">
           {data.sensitive_actions.map((a) => (
@@ -575,14 +621,29 @@ function Footer({ t, data }: { t: T; data: Data }) {
 
 // ── atoms ────────────────────────────────────────────────────────────────────
 
+/** ⓘ grounded in policies.explain.<k> (what / how computed / source). */
+function PolInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("policies.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 function Panel({
   title,
   action,
+  info,
   children,
   className,
 }: {
   title: string;
   action?: ReactNode;
+  info?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
@@ -594,9 +655,12 @@ function Panel({
       )}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="min-w-0 truncate text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
-          {title}
-        </h3>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h3 className="min-w-0 truncate text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+            {title}
+          </h3>
+          {info ? <span className="shrink-0">{info}</span> : null}
+        </div>
         {action}
       </div>
       <div className="min-h-0 flex-1">{children}</div>
@@ -604,14 +668,45 @@ function Panel({
   );
 }
 
-function KpiTile({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: string; vs: string }) {
+function KpiTile({
+  kpi,
+  label,
+  vs,
+  info,
+  href,
+  drillLabel,
+}: {
+  kpi: Data["kpis"][number];
+  label: string;
+  vs: string;
+  info?: ReactNode;
+  href?: Route;
+  drillLabel?: string;
+}) {
   const up = kpi.delta_label.trim().startsWith("+");
   const neutral = kpi.delta_label.trim() === "0";
   const good = up === kpi.good_is_up;
   const magnitude = kpi.delta_label.replace(/^[+-]\s*/, "");
   return (
-    <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">{label}</p>
+    <div
+      className={cn(
+        "group relative flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
+        href && "transition-colors hover:border-[#2e72d2]/50",
+      )}
+    >
+      {href ? (
+        <Link
+          href={href}
+          aria-label={drillLabel}
+          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2e72d2]/40"
+        />
+      ) : null}
+      <div className={cn("flex items-center gap-1.5", href && "pointer-events-none relative z-20")}>
+        <p className="min-w-0 flex-1 truncate text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+          {label}
+        </p>
+        {info ? <span className={href ? "pointer-events-auto" : undefined}>{info}</span> : null}
+      </div>
       <div className="mt-1 flex items-center gap-2">
         <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-white">
           {kpi.value}
@@ -637,6 +732,9 @@ function KpiTile({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: string;
         </span>
         <span className="text-[var(--tessera-text-muted)]">{vs}</span>
       </div>
+      {href ? (
+        <ArrowUpRight className="pointer-events-none absolute right-2 bottom-2 z-20 h-3 w-3 text-[var(--tessera-text-muted)] opacity-30 transition-opacity group-hover:opacity-70" />
+      ) : null}
     </div>
   );
 }
