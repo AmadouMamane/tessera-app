@@ -3737,6 +3737,36 @@
       "roi": {
         "what": "Le retour sur investissement estimé des améliorations rapporté à leur coût.",
         "how": "Gain attendu rapporté à l'effort estimé."
+      },
+      "opportunities": {
+        "what": "Actions d'amélioration priorisées : cause, gain estimé, effort, risque, responsable.",
+        "how": "Une ligne par opportunité, triée par gain.",
+        "source": "Analyse d'amélioration (dérivée des cas échoués et des signaux qualité)."
+      },
+      "causes": {
+        "what": "Répartition des causes racines des problèmes qualité.",
+        "how": "Compte des problèmes par cause.",
+        "source": "Analyse d'amélioration (clusters de défaillances)."
+      },
+      "candidate": {
+        "what": "Version candidate au déploiement et l'état de ses gates qualité.",
+        "how": "Chaque gate comparé à son seuil donne PASS ou à surveiller.",
+        "source": "État de release (candidat)."
+      },
+      "topProblems": {
+        "what": "Problèmes adressables au plus fort gain apporté.",
+        "how": "Problèmes triés par gain réparti, top 5.",
+        "source": "Analyse d'amélioration."
+      },
+      "current": {
+        "what": "Version qui sert actuellement la production.",
+        "how": "Version courante lue dans le rapport.",
+        "source": "État de release."
+      },
+      "sensitive": {
+        "what": "Raccourcis gouvernés vers les actions à fort impact (gel, prompts, corpus).",
+        "how": "Liens vers les pages gouvernées ; rôle élevé requis.",
+        "source": "Pages d'action gouvernées."
       }
     },
     "panel": {

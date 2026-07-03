@@ -3737,6 +3737,36 @@
       "roi": {
         "what": "Der geschätzte Return on Investment der Verbesserungen im Verhältnis zu ihren Kosten.",
         "how": "Erwarteter Gewinn bezogen auf den geschätzten Aufwand."
+      },
+      "opportunities": {
+        "what": "Priorisierte Verbesserungsmaßnahmen: Ursache, geschätzter Gewinn, Aufwand, Risiko, Verantwortlicher.",
+        "how": "Eine Zeile je Opportunität, nach Gewinn sortiert.",
+        "source": "Verbesserungsanalyse (aus Fehlerfällen und Qualitätssignalen abgeleitet)."
+      },
+      "causes": {
+        "what": "Verteilung der Grundursachen der Qualitätsprobleme.",
+        "how": "Zahl der Probleme je Ursache.",
+        "source": "Verbesserungsanalyse (Fehler-Cluster)."
+      },
+      "candidate": {
+        "what": "Deployment-Kandidatenversion und der Zustand ihrer Qualitäts-Gates.",
+        "how": "Jedes Gate gegen seinen Schwellwert gibt PASS oder beobachten.",
+        "source": "Release-Status (Kandidat)."
+      },
+      "topProblems": {
+        "what": "Adressierbare Probleme mit dem größten Gewinn.",
+        "how": "Nach zugeordnetem Gewinn sortiert, Top 5.",
+        "source": "Verbesserungsanalyse."
+      },
+      "current": {
+        "what": "Version, die derzeit die Produktion bedient.",
+        "how": "Aktuelle Version aus dem Bericht gelesen.",
+        "source": "Release-Status."
+      },
+      "sensitive": {
+        "what": "Gesteuerte Verknüpfungen zu Aktionen mit hoher Wirkung (Einfrieren, Prompts, Korpus).",
+        "how": "Links zu gesteuerten Seiten; erhöhte Rolle erforderlich.",
+        "source": "Gesteuerte Aktionsseiten."
       }
     },
     "panel": {

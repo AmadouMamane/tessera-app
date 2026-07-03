@@ -314,7 +314,10 @@ export function ImprovementDashboard() {
   };
 
   const panelOpportunities = (
-    <Panel title={ti("panel.opportunities")}>
+    <Panel
+      title={ti("panel.opportunities")}
+      info={<ExplainInfo k="opportunities" title={ti("panel.opportunities")} />}
+    >
       <div className="overflow-x-auto">
         <table className="w-full text-[0.72rem]">
           <thead>
@@ -339,7 +342,7 @@ export function ImprovementDashboard() {
   );
 
   const panelCauses = (
-    <Panel title={ti("panel.causes")}>
+    <Panel title={ti("panel.causes")} info={<ExplainInfo k="causes" title={ti("panel.causes")} />}>
       {causeSlices.length === 0 ? (
         <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>
       ) : (
@@ -572,7 +575,10 @@ function CandidateCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-        <CardTitle className="text-sm">{candidate.version}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          {candidate.version}
+          <ExplainInfo k="candidate" title={ti("rail.candidate")} />
+        </CardTitle>
         <Badge tone="neutral">{ti("rail.candidate")}</Badge>
       </CardHeader>
       <CardContent className="flex flex-col gap-1.5">
@@ -598,7 +604,10 @@ function TopProblemsCard({ topProblems }: { topProblems: Opportunity[] }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{ti("rail.topProblems")}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          {ti("rail.topProblems")}
+          <ExplainInfo k="topProblems" title={ti("rail.topProblems")} />
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-1.5">
         {topProblems.length === 0 ? (
@@ -622,7 +631,10 @@ function CurrentReleaseCard({ currentVersion }: { currentVersion: string }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{ti("rail.current")}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          {ti("rail.current")}
+          <ExplainInfo k="current" title={ti("rail.current")} />
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex items-center justify-between gap-2 text-[0.72rem]">
         <span className="font-serif text-base font-semibold tabular-nums">
@@ -678,7 +690,10 @@ function ImprovementRail({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{ti("rail.sensitive")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {ti("rail.sensitive")}
+              <ExplainInfo k="sensitive" title={ti("rail.sensitive")} />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             <SensitiveLink

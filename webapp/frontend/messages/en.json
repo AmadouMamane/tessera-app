@@ -3737,6 +3737,36 @@
       "roi": {
         "what": "The estimated return on investment of the improvements versus their cost.",
         "how": "Expected gain relative to estimated effort."
+      },
+      "opportunities": {
+        "what": "Prioritised improvement actions: cause, estimated gain, effort, risk, owner.",
+        "how": "One row per opportunity, sorted by gain.",
+        "source": "Improvement analysis (derived from failed cases and quality signals)."
+      },
+      "causes": {
+        "what": "Breakdown of the root causes of quality problems.",
+        "how": "Count of problems per cause.",
+        "source": "Improvement analysis (failure clusters)."
+      },
+      "candidate": {
+        "what": "Deployment-candidate version and the state of its quality gates.",
+        "how": "Each gate compared to its threshold gives PASS or watch.",
+        "source": "Release status (candidate)."
+      },
+      "topProblems": {
+        "what": "Addressable problems with the highest gain delivered.",
+        "how": "Sorted by apportioned gain, top 5.",
+        "source": "Improvement analysis."
+      },
+      "current": {
+        "what": "Version currently serving production.",
+        "how": "Current version read from the report.",
+        "source": "Release status."
+      },
+      "sensitive": {
+        "what": "Governed shortcuts to high-impact actions (freeze, prompts, corpus).",
+        "how": "Links to governed pages; elevated role required.",
+        "source": "Governed action pages."
       }
     },
     "panel": {
