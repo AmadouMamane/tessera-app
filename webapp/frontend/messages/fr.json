@@ -1756,6 +1756,106 @@
         "what": "Score de fidélité moyen jour par jour sur la fenêtre courante.",
         "how": "Moyenne par bucket du journal de scores ; les creux sans éval restent vides (jamais un zéro inventé) ; l'écart compare au premier bucket.",
         "source": "Série de scores (fidélité), journal durable."
+      },
+      "runRuns": {
+        "what": "Nombre de runs d'évaluation exécutés sur la fenêtre courante, rapporté au total du registre.",
+        "how": "Compte des runs de la fenêtre ; « / N » = total archivé.",
+        "source": "Archive des runs (fichiers de rapport d'éval)."
+      },
+      "runCatalogue": {
+        "what": "Version du catalogue de défaillances évalué et langues couvertes.",
+        "how": "Version et langues déclarées par le registre de runs.",
+        "source": "Registre des runs (catalogue_version)."
+      },
+      "runCases": {
+        "what": "Total des cas rejoués sur la fenêtre, rapporté à la taille du catalogue.",
+        "how": "Somme des cas par run ; « / N » = cas du catalogue.",
+        "source": "Archive des runs."
+      },
+      "runDrift": {
+        "what": "Dérive absolue moyenne d'un run à l'autre sur les datasets thématiques.",
+        "how": "Moyenne des |dérive| par dataset ; « n/d » si aucune donnée.",
+        "source": "Datasets de qualité (dérive par thème)."
+      },
+      "runCost": {
+        "what": "Coût d'évaluation cumulé sur la fenêtre (euros).",
+        "how": "Somme des coûts estimés des runs facturés ; « gratuit » en local.",
+        "source": "Archive des runs (coût estimé)."
+      },
+      "runRelease": {
+        "what": "Version en production ; teinte selon les régressions ouvertes.",
+        "how": "Version courante ; alerte si des régressions sont ouvertes.",
+        "source": "État de release."
+      },
+      "runDuration": {
+        "what": "Latence moyenne des runs de la fenêtre ; sous-titre = corpus périmés.",
+        "how": "Moyenne des latences par run ; corpus périmés issus du rapport de fraîcheur.",
+        "source": "Archive des runs · rapport de fraîcheur."
+      },
+      "runTable": {
+        "what": "Journal des runs d'évaluation archivés : modèle, cas, pass-rate, écart, coût.",
+        "how": "Une ligne par run ; écart = pass-rate vs run précédent du même modèle.",
+        "source": "Archive des runs."
+      },
+      "runCtx": {
+        "what": "Métadonnées du run sélectionné : modèle, dataset, horodatage, coût, latence.",
+        "how": "Champs du run choisi dans le tableau.",
+        "source": "Archive des runs."
+      },
+      "runDatasets": {
+        "what": "Datasets thématiques évalués, avec cas, couverture et dérive.",
+        "how": "Une ligne par thème du catalogue de défaillances.",
+        "source": "Datasets de qualité (thèmes × runs)."
+      },
+      "runChPassrate": {
+        "what": "Taux de réussite des derniers runs complets, du plus ancien au plus récent.",
+        "how": "Runs à 10 cas ou plus, triés par date, 12 derniers.",
+        "source": "Archive des runs (pass_rate)."
+      },
+      "runChCoverage": {
+        "what": "Part du dataset couverte par l'évaluation, par thème.",
+        "how": "Couverture déclarée par dataset.",
+        "source": "Datasets de qualité."
+      },
+      "runChDrift": {
+        "what": "Dérive moyenne d'un run à l'autre par thème, plus forte magnitude en tête.",
+        "how": "Dérive par dataset, triée par |valeur|.",
+        "source": "Datasets de qualité."
+      },
+      "runChDistribution": {
+        "what": "Répartition des cas d'évaluation par thème ; centre = total des cas.",
+        "how": "Cas par dataset ; total au centre du donut.",
+        "source": "Datasets de qualité (cas par thème)."
+      },
+      "runChCostQuality": {
+        "what": "Coût par modèle mis en regard du pass-rate, modèles triés par réussite.",
+        "how": "Coût estimé et pass-rate par modèle ; coût nul ignoré.",
+        "source": "Comparaison des modèles."
+      },
+      "runChPerf": {
+        "what": "Pass-rate par modèle évalué.",
+        "how": "Taux de réussite par modèle.",
+        "source": "Comparaison des modèles."
+      },
+      "runRailRelease": {
+        "what": "Release en production et régressions ouvertes.",
+        "how": "Version courante ; badge d'alerte si des régressions restent ouvertes.",
+        "source": "État de release."
+      },
+      "runRailDatasets": {
+        "what": "Nombre de datasets suivis et part de couverture.",
+        "how": "Datasets surveillés ; couverture = part évaluée.",
+        "source": "Datasets de qualité."
+      },
+      "runRailActivity": {
+        "what": "Derniers runs archivés, du plus récent au plus ancien.",
+        "how": "Les quatre runs les plus récents de l'archive.",
+        "source": "Archive des runs."
+      },
+      "runRailHealth": {
+        "what": "Signaux d'exploitation du pipeline : jobs, workers, file, fraîcheur.",
+        "how": "Jobs en fenêtre et fraîcheur réels ; workers/file « — » sans source (jamais un faux OK).",
+        "source": "Rapport pipeline des datasets."
       }
     },
     "seeDetail": "Voir le détail",

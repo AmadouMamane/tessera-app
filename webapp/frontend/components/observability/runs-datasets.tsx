@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
@@ -142,18 +143,21 @@ function Kpi({
   value,
   tone,
   sub,
+  explainKey,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   tone?: string;
   sub?: React.ReactNode;
+  explainKey?: string;
 }) {
   return (
     <Card className="flex flex-col gap-0.5 p-2">
       <div className="flex items-center gap-1 text-[0.65rem] leading-tight text-[var(--muted-foreground)]">
         <span className="opacity-70">{icon}</span>
         {label}
+        {explainKey ? <QInfo title={label} k={explainKey} className="ml-auto" /> : null}
       </div>
       <div
         className={`text-lg font-semibold leading-tight tabular-nums ${tone ?? "text-[var(--foreground)]"}`}
@@ -205,24 +209,28 @@ export function RunsKpis({
       <Kpi
         icon={<Activity className="h-3 w-3" />}
         label={tq("runs.kpi.runs7d")}
+        explainKey="runRuns"
         value={String(nRuns)}
         sub={tq("runs.kpi.ofTotal", { n: registry?.n ?? 0 })}
       />
       <Kpi
         icon={<Layers className="h-3 w-3" />}
         label={tq("runs.kpi.catalogue")}
+        explainKey="runCatalogue"
         value={version ? `v${version.split("-")[0]}` : DASH}
         sub={langBadges(langs)}
       />
       <Kpi
         icon={<Database className="h-3 w-3" />}
         label={tq("runs.kpi.cases")}
+        explainKey="runCases"
         value={cases.toLocaleString("fr-FR")}
         sub={tq("runs.kpi.casesSub", { n: registry?.catalogue_cases ?? 0 })}
       />
       <Kpi
         icon={<GitBranch className="h-3 w-3" />}
         label={tq("runs.kpi.drift")}
+        explainKey="runDrift"
         value={meanDrift == null ? DASH : meanDrift.toFixed(2)}
         tone={meanDrift == null ? MUTED : meanDrift >= 0.3 ? WARN : undefined}
         sub={meanDrift == null ? tq("runs.kpi.driftNa") : tq("runs.kpi.driftMean")}
@@ -230,12 +238,14 @@ export function RunsKpis({
       <Kpi
         icon={<Coins className="h-3 w-3" />}
         label={tq("runs.kpi.cost7d")}
+        explainKey="runCost"
         value={fmtEur(cost)}
         sub={costs.length ? tq("runs.kpi.costSub", { n: costs.length }) : tq("runs.free")}
       />
       <Kpi
         icon={<Workflow className="h-3 w-3" />}
         label={tq("runs.kpi.release")}
+        explainKey="runRelease"
         value={rel ? rel.version : DASH}
         tone={relTone}
         sub={
@@ -249,6 +259,7 @@ export function RunsKpis({
       <Kpi
         icon={<Clock className="h-3 w-3" />}
         label={tq("runs.kpi.avgDuration")}
+        explainKey="runDuration"
         value={fmtDuration(avgLat)}
         sub={staleN != null ? tq("runs.kpi.staleCorpora", { n: staleN }) : undefined}
       />
@@ -300,7 +311,10 @@ export function RunsEvalTable({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-sm">{tq("runs.table.title")}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          {tq("runs.table.title")}
+          <QInfo title={tq("runs.table.title")} k="runTable" />
+        </CardTitle>
         <Badge tone="neutral" className="text-[0.65rem]">
           {tq("runs.count", { n: registry?.n ?? 0 })}
         </Badge>
@@ -439,7 +453,10 @@ export function RunContextPanel({
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-sm">{tq("runs.ctx.title")}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          {tq("runs.ctx.title")}
+          <QInfo title={tq("runs.ctx.title")} k="runCtx" />
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {run == null ? (
@@ -545,7 +562,10 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-sm">{tq("runs.qdatasets.title")}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          {tq("runs.qdatasets.title")}
+          <QInfo title={tq("runs.qdatasets.title")} k="runDatasets" />
+        </CardTitle>
         <Badge tone="neutral" className="text-[0.65rem]">
           {tq("runs.qdatasets.count", { n: report?.n ?? 0 })}
         </Badge>
@@ -948,12 +968,21 @@ function ChartEmpty() {
   );
 }
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({
+  title,
+  explainKey,
+  children,
+}: {
+  title: string;
+  explainKey?: string;
+  children: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader className="pb-1">
-        <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+        <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
           {title}
+          {explainKey ? <QInfo title={title} k={explainKey} /> : null}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-1">{children}</CardContent>
@@ -1012,22 +1041,22 @@ export function RunsCharts({
 
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-      <ChartCard title={tq("runs.charts.passrate")}>
+      <ChartCard title={tq("runs.charts.passrate")} explainKey="runChPassrate">
         <MiniLine values={recent} band />
       </ChartCard>
-      <ChartCard title={tq("runs.charts.coverage")}>
+      <ChartCard title={tq("runs.charts.coverage")} explainKey="runChCoverage">
         <CoverageBars items={coverage} />
       </ChartCard>
-      <ChartCard title={tq("runs.charts.drift")}>
+      <ChartCard title={tq("runs.charts.drift")} explainKey="runChDrift">
         <DriftBars items={drift} />
       </ChartCard>
-      <ChartCard title={tq("runs.charts.distribution")}>
+      <ChartCard title={tq("runs.charts.distribution")} explainKey="runChDistribution">
         <MiniDonut items={caseDist} center={totalCases.toLocaleString("fr-FR")} />
       </ChartCard>
-      <ChartCard title={tq("runs.charts.costQuality")}>
+      <ChartCard title={tq("runs.charts.costQuality")} explainKey="runChCostQuality">
         <DualLine labels={costLabels} costs={costs} rates={rates} />
       </ChartCard>
-      <ChartCard title={tq("runs.charts.perfByModel")}>
+      <ChartCard title={tq("runs.charts.perfByModel")} explainKey="runChPerf">
         <MiniBars items={perfPts} band />
       </ChartCard>
     </div>
@@ -1090,6 +1119,7 @@ export function RunsRail({
           <CardTitle className="flex items-center gap-1.5 text-[0.8rem]">
             <Workflow className="h-3.5 w-3.5" />
             {tq("runs.rail.release")}
+            <QInfo title={tq("runs.rail.release")} k="runRailRelease" />
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
@@ -1120,6 +1150,7 @@ export function RunsRail({
           <CardTitle className="flex items-center gap-1.5 text-[0.8rem]">
             <Boxes className="h-3.5 w-3.5" />
             {tq("runs.rail.datasets")}
+            <QInfo title={tq("runs.rail.datasets")} k="runRailDatasets" />
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
@@ -1144,6 +1175,7 @@ export function RunsRail({
           <CardTitle className="flex items-center gap-1.5 text-[0.8rem]">
             <Activity className="h-3.5 w-3.5" />
             {tq("runs.rail.activity")}
+            <QInfo title={tq("runs.rail.activity")} k="runRailActivity" />
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
@@ -1174,6 +1206,7 @@ export function RunsRail({
           <CardTitle className="flex items-center gap-1.5 text-[0.8rem]">
             <Database className="h-3.5 w-3.5" />
             {tq("runs.rail.health")}
+            <QInfo title={tq("runs.rail.health")} k="runRailHealth" />
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-1">

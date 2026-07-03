@@ -1756,6 +1756,106 @@
         "what": "Mittlerer Treue-Score Tag für Tag über das aktuelle Fenster.",
         "how": "Bucket-Mittel aus dem Score-Journal; Lücken ohne Auswertung bleiben leer (nie eine erfundene Null); das Delta vergleicht mit dem ersten Bucket.",
         "source": "Score-Serie (Treue), dauerhaftes Journal."
+      },
+      "runRuns": {
+        "what": "Anzahl der im aktuellen Fenster ausgeführten Evaluierungs-Runs, bezogen auf das Gesamt des Registers.",
+        "how": "Zahl der Runs im Fenster; « / N » = archiviertes Gesamt.",
+        "source": "Run-Archiv (Eval-Berichtsdateien)."
+      },
+      "runCatalogue": {
+        "what": "Version des ausgewerteten Fehlerkatalogs und abgedeckte Sprachen.",
+        "how": "Version und Sprachen laut Run-Register.",
+        "source": "Run-Register (catalogue_version)."
+      },
+      "runCases": {
+        "what": "Gesamtzahl der im Fenster erneut ausgeführten Fälle, bezogen auf die Kataloggröße.",
+        "how": "Summe der Fälle je Run; « / N » = Katalogfälle.",
+        "source": "Run-Archiv."
+      },
+      "runDrift": {
+        "what": "Mittlere absolute Run-zu-Run-Abweichung über die thematischen Datensätze.",
+        "how": "Mittel der |Abweichung| je Datensatz; « n/v » ohne Daten.",
+        "source": "Qualitätsdatensätze (Abweichung je Thema)."
+      },
+      "runCost": {
+        "what": "Kumulierte Evaluierungskosten im Fenster (Euro).",
+        "how": "Summe der geschätzten Kosten abgerechneter Runs; « gratis » lokal.",
+        "source": "Run-Archiv (geschätzte Kosten)."
+      },
+      "runRelease": {
+        "what": "Produktionsversion; Farbe je nach offenen Regressionen.",
+        "how": "Aktuelle Version; Warnung bei offenen Regressionen.",
+        "source": "Release-Status."
+      },
+      "runDuration": {
+        "what": "Mittlere Latenz der Runs im Fenster; Untertitel = veraltete Korpora.",
+        "how": "Mittel der Latenzen je Run; veraltete Korpora aus dem Frischebericht.",
+        "source": "Run-Archiv · Frischebericht."
+      },
+      "runTable": {
+        "what": "Protokoll der archivierten Evaluierungs-Runs: Modell, Fälle, Pass-Rate, Delta, Kosten.",
+        "how": "Eine Zeile je Run; Delta = Pass-Rate vs. vorheriger Run desselben Modells.",
+        "source": "Run-Archiv."
+      },
+      "runCtx": {
+        "what": "Metadaten des gewählten Runs: Modell, Datensatz, Zeitstempel, Kosten, Latenz.",
+        "how": "Felder des in der Tabelle gewählten Runs.",
+        "source": "Run-Archiv."
+      },
+      "runDatasets": {
+        "what": "Ausgewertete thematische Datensätze mit Fällen, Abdeckung und Abweichung.",
+        "how": "Eine Zeile je Thema des Fehlerkatalogs.",
+        "source": "Qualitätsdatensätze (Themen × Runs)."
+      },
+      "runChPassrate": {
+        "what": "Erfolgsquote der letzten vollständigen Runs, von alt nach neu.",
+        "how": "Runs mit 10 oder mehr Fällen, nach Datum sortiert, letzte 12.",
+        "source": "Run-Archiv (pass_rate)."
+      },
+      "runChCoverage": {
+        "what": "Vom Evaluierung abgedeckter Datensatzanteil, je Thema.",
+        "how": "Je Datensatz gemeldete Abdeckung.",
+        "source": "Qualitätsdatensätze."
+      },
+      "runChDrift": {
+        "what": "Mittlere Run-zu-Run-Abweichung je Thema, größte Magnitude zuerst.",
+        "how": "Abweichung je Datensatz, nach |Wert| sortiert.",
+        "source": "Qualitätsdatensätze."
+      },
+      "runChDistribution": {
+        "what": "Verteilung der Evaluierungsfälle je Thema; Mitte = Gesamtzahl der Fälle.",
+        "how": "Fälle je Datensatz; Gesamt in der Donut-Mitte.",
+        "source": "Qualitätsdatensätze (Fälle je Thema)."
+      },
+      "runChCostQuality": {
+        "what": "Kosten je Modell gegen Pass-Rate, Modelle nach Erfolg sortiert.",
+        "how": "Geschätzte Kosten und Pass-Rate je Modell; Nullkosten ignoriert.",
+        "source": "Modellvergleich."
+      },
+      "runChPerf": {
+        "what": "Pass-Rate je ausgewertetem Modell.",
+        "how": "Erfolgsquote je Modell.",
+        "source": "Modellvergleich."
+      },
+      "runRailRelease": {
+        "what": "Produktions-Release und offene Regressionen.",
+        "how": "Aktuelle Version; Warn-Badge bei offenen Regressionen.",
+        "source": "Release-Status."
+      },
+      "runRailDatasets": {
+        "what": "Anzahl überwachter Datensätze und Abdeckungsanteil.",
+        "how": "Überwachte Datensätze; Abdeckung = ausgewerteter Anteil.",
+        "source": "Qualitätsdatensätze."
+      },
+      "runRailActivity": {
+        "what": "Letzte archivierte Runs, von neu nach alt.",
+        "how": "Die vier neuesten Runs des Archivs.",
+        "source": "Run-Archiv."
+      },
+      "runRailHealth": {
+        "what": "Betriebssignale der Pipeline: Jobs, Workers, Queue, Frische.",
+        "how": "Jobs im Fenster und Frische real; Workers/Queue « — » ohne Quelle (nie ein falsches OK).",
+        "source": "Pipeline-Bericht der Datensätze."
       }
     },
     "seeDetail": "Details anzeigen",

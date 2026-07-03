@@ -1756,6 +1756,106 @@
         "what": "Mean fidelity score day by day over the current window.",
         "how": "Per-bucket mean from the score journal; gaps with no eval stay empty (never a fabricated zero); the delta compares to the first bucket.",
         "source": "Score series (fidelity), durable journal."
+      },
+      "runRuns": {
+        "what": "Number of evaluation runs executed in the current window, relative to the registry total.",
+        "how": "Count of runs in the window; « / N » = archived total.",
+        "source": "Run archive (eval report files)."
+      },
+      "runCatalogue": {
+        "what": "Version of the failure catalogue evaluated and the languages covered.",
+        "how": "Version and languages declared by the run registry.",
+        "source": "Run registry (catalogue_version)."
+      },
+      "runCases": {
+        "what": "Total cases replayed over the window, relative to the catalogue size.",
+        "how": "Sum of cases per run; « / N » = catalogue cases.",
+        "source": "Run archive."
+      },
+      "runDrift": {
+        "what": "Mean absolute run-over-run drift across the themed datasets.",
+        "how": "Mean of |drift| per dataset; « n/a » when no data.",
+        "source": "Quality datasets (drift per theme)."
+      },
+      "runCost": {
+        "what": "Cumulative evaluation cost over the window (euros).",
+        "how": "Sum of estimated costs of priced runs; « free » when local.",
+        "source": "Run archive (estimated cost)."
+      },
+      "runRelease": {
+        "what": "Production version; tinted by open regressions.",
+        "how": "Current version; warns when regressions are open.",
+        "source": "Release status."
+      },
+      "runDuration": {
+        "what": "Mean run latency over the window; subtitle = stale corpora.",
+        "how": "Mean of per-run latencies; stale corpora from the freshness report.",
+        "source": "Run archive · freshness report."
+      },
+      "runTable": {
+        "what": "Log of archived evaluation runs: model, cases, pass-rate, delta, cost.",
+        "how": "One row per run; delta = pass-rate vs the same model's previous run.",
+        "source": "Run archive."
+      },
+      "runCtx": {
+        "what": "Metadata of the selected run: model, dataset, timestamp, cost, latency.",
+        "how": "Fields of the run picked in the table.",
+        "source": "Run archive."
+      },
+      "runDatasets": {
+        "what": "Themed datasets evaluated, with cases, coverage and drift.",
+        "how": "One row per theme of the failure catalogue.",
+        "source": "Quality datasets (themes × runs)."
+      },
+      "runChPassrate": {
+        "what": "Pass-rate of the latest full runs, oldest to newest.",
+        "how": "Runs with 10 or more cases, sorted by date, last 12.",
+        "source": "Run archive (pass_rate)."
+      },
+      "runChCoverage": {
+        "what": "Share of the dataset covered by evaluation, per theme.",
+        "how": "Coverage declared per dataset.",
+        "source": "Quality datasets."
+      },
+      "runChDrift": {
+        "what": "Mean run-over-run drift per theme, largest magnitude first.",
+        "how": "Drift per dataset, sorted by |value|.",
+        "source": "Quality datasets."
+      },
+      "runChDistribution": {
+        "what": "Distribution of evaluation cases by theme; centre = total cases.",
+        "how": "Cases per dataset; total in the donut centre.",
+        "source": "Quality datasets (cases per theme)."
+      },
+      "runChCostQuality": {
+        "what": "Cost per model set against pass-rate, models sorted by success.",
+        "how": "Estimated cost and pass-rate per model; zero cost skipped.",
+        "source": "Model comparison."
+      },
+      "runChPerf": {
+        "what": "Pass-rate per evaluated model.",
+        "how": "Success rate per model.",
+        "source": "Model comparison."
+      },
+      "runRailRelease": {
+        "what": "Production release and open regressions.",
+        "how": "Current version; warning badge when regressions remain open.",
+        "source": "Release status."
+      },
+      "runRailDatasets": {
+        "what": "Number of monitored datasets and coverage share.",
+        "how": "Monitored datasets; coverage = evaluated share.",
+        "source": "Quality datasets."
+      },
+      "runRailActivity": {
+        "what": "Latest archived runs, newest to oldest.",
+        "how": "The four most recent runs in the archive.",
+        "source": "Run archive."
+      },
+      "runRailHealth": {
+        "what": "Pipeline operations signals: jobs, workers, queue, freshness.",
+        "how": "Jobs in window and freshness are real; workers/queue « — » with no source (never a fake OK).",
+        "source": "Datasets pipeline report."
       }
     },
     "seeDetail": "View details",
