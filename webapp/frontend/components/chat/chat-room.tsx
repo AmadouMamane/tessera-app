@@ -391,7 +391,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
               description={emptyDescription}
               icon={
                 isRecouvrement ? (
-                  <RecouvrementMark className="h-[3.45rem] translate-x-[4px] brightness-80 contrast-125 saturate-90 drop-shadow-[0_5px_12px_rgba(0,0,0,0.32)]" />
+                  <RecouvrementMark className="h-[3.4rem] translate-x-[3.5px] brightness-80 contrast-125 saturate-90 drop-shadow-[0_5px_12px_rgba(0,0,0,0.32)]" />
                 ) : undefined
               }
               iconClassName={
