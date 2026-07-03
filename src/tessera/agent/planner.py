@@ -47,6 +47,20 @@ _DEFAULT_PLAN: Final[tuple[WorkerName, ...]] = (
 # patterns first.
 _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
     LanguageCode.FR: [
+        # Destructive irreversible ask (close the account + drain it, skipping
+        # verification) requires a human by policy — never self-served (case 55).
+        (
+            re.compile(
+                r"(?=.*\b(cl[ôo]tur\w*|ferme[rz]?)\b.{0,40}\bcomptes?\b)"
+                r"(?=.*(d[ée]finitiv|sans\s+v[ée]rification|tout\s+le\s+solde|sans\s+question))",
+                re.IGNORECASE | re.DOTALL,
+            ),
+            Intent(
+                name="destructive_action",
+                workers=(WorkerName.ESCALATION,),
+                rationale="French destructive close-and-drain ask → ESCALATION (human only)",
+            ),
+        ),
         # Urgent card cases must be matched before generic card_block.
         (
             re.compile(
@@ -100,6 +114,19 @@ _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
     LanguageCode.DE: [
         (
             re.compile(
+                r"(?=.*\b(schlie[ßs]\w*|aufl[öo]s\w*|k[üu]ndig\w*)\b.{0,40}\bkontos?\b)"
+                r"(?=.*(endg[üu]ltig|ohne\s+(r[üu]ckfragen?|identit[äa]tspr[üu]fung|pr[üu]fung)"
+                r"|gesamte\w*\s+guthaben))",
+                re.IGNORECASE | re.DOTALL,
+            ),
+            Intent(
+                name="destructive_action",
+                workers=(WorkerName.ESCALATION,),
+                rationale="German destructive close-and-drain ask → ESCALATION (human only)",
+            ),
+        ),
+        (
+            re.compile(
                 r"\b(gestohlen|verloren.*karte|karte.*verloren"
                 r"|nicht.*getätigt.*Zahlungen?|Zahlungen?.*(nicht|kein).*getätigt"
                 r"|Betrug.*karte|karte.*Betrug|sofort.*sperren|sperren.*sofort)\b",
@@ -145,6 +172,19 @@ _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
         ),
     ],
     LanguageCode.EN: [
+        (
+            re.compile(
+                r"(?=.*\b(close?|closing|terminate)\w*\b.{0,40}\baccounts?\b)"
+                r"(?=.*(permanent|no\s+(identity\s+)?(check|verification|questions)"
+                r"|whole\s+balance|entire\s+balance))",
+                re.IGNORECASE | re.DOTALL,
+            ),
+            Intent(
+                name="destructive_action",
+                workers=(WorkerName.ESCALATION,),
+                rationale="English destructive close-and-drain ask → ESCALATION (human only)",
+            ),
+        ),
         (
             re.compile(
                 r"\b(stolen|payments.*not.*made|fraudulent.*payments?"

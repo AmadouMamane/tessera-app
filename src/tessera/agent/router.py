@@ -24,6 +24,7 @@ from tessera.agent.state import (
     Citation,
     GuardDecisionRecord,
 )
+from tessera.authz import Auth, auth_satisfies
 from tessera.settings import LanguageCode, get_settings
 
 __all__ = ["LanguageDetectionResult", "detect_language", "run"]
@@ -340,6 +341,12 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "compte : le titulaire peut faire la demande lui-même, ou vous pouvez "
             "présenter une procuration en agence."
         ),
+        "policy_auth_required": (
+            "Je ne peux pas bloquer une carte sans vérification : pour votre "
+            "sécurité, vous devez d'abord vous authentifier. Connectez-vous à "
+            "votre espace client ou faites vérifier votre identité par un "
+            "conseiller ; le blocage est alors immédiat."
+        ),
     },
     LanguageCode.DE: {
         "policy_credit_decision": (
@@ -406,6 +413,12 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "einsehen: Der Kontoinhaber kann die Auskunft selbst anfordern, oder "
             "Sie legen eine Vollmacht vor."
         ),
+        "policy_auth_required": (
+            "Ohne Prüfung kann ich keine Karte sperren: Zu Ihrer Sicherheit "
+            "müssen Sie sich zuerst authentifizieren. Melden Sie sich in Ihrem "
+            "Kundenbereich an oder lassen Sie Ihre Identität von einer Beraterin "
+            "oder einem Berater bestätigen; die Sperrung erfolgt dann sofort."
+        ),
     },
     LanguageCode.EN: {
         "policy_credit_decision": (
@@ -468,6 +481,11 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "correlating details. I can only access your own account: the "
             "account holder can request this directly, or you can provide a "
             "power of attorney."
+        ),
+        "policy_auth_required": (
+            "I can't block a card without verification: for your security you "
+            "must authenticate first. Please log in to your client area or "
+            "verify your identity with an advisor; the block is then immediate."
         ),
     },
 }
@@ -583,6 +601,18 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_confidential_procedures",
         ),
+        # Card-block DEMAND that explicitly skips verification (cases 29/54):
+        # matched only on a session below customer-auth (see run()); a theft
+        # report ("ma carte a été volée") carries no skip-verification phrase
+        # and keeps its escalation path (case 40).
+        (
+            (
+                re.compile(r"(bloqu\w*|opposition)", re.IGNORECASE),
+                re.compile(r"\bcartes?\b", re.IGNORECASE),
+                re.compile(r"sans .{0,40}(authentifi|v[ée]rifi|identit[ée])", re.IGNORECASE),
+            ),
+            "policy_auth_required",
+        ),
     ],
     LanguageCode.DE: [
         (
@@ -677,6 +707,14 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_confidential_procedures",
         ),
+        (
+            (
+                re.compile(r"(sperr\w*)", re.IGNORECASE),
+                re.compile(r"\bkarten?\b", re.IGNORECASE),
+                re.compile(r"ohne .{0,50}(authentifizier|identit[äa]t|pr[üu]fung)", re.IGNORECASE),
+            ),
+            "policy_auth_required",
+        ),
     ],
     LanguageCode.EN: [
         (
@@ -766,6 +804,18 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_confidential_procedures",
         ),
+        (
+            (
+                re.compile(r"(block\w*|freeze)", re.IGNORECASE),
+                re.compile(r"\bcards?\b", re.IGNORECASE),
+                re.compile(
+                    r"(without .{0,40}(authenticat|verif|check)|"
+                    r"no (identity )?(check|verification)s?)",
+                    re.IGNORECASE,
+                ),
+            ),
+            "policy_auth_required",
+        ),
     ],
 }
 
@@ -843,6 +893,22 @@ def _match_policy(text: str, language: LanguageCode) -> str | None:
     return None
 
 
+def _resolve_policy_key(text: str, language: LanguageCode) -> str | None:
+    """The matched policy key, minus matches the session's auth state voids.
+
+    ``policy_auth_required`` (case 29) exists because the session sits below
+    the card tool's ``customer-auth`` floor: an authenticated customer's block
+    request must keep its normal worker path, so the match is dropped there.
+    """
+    key = _match_policy(text, language)
+    if key == "policy_auth_required":
+        from tessera.guard.audit import current_auth_state
+
+        if auth_satisfies(current_auth_state.get(), Auth.CUSTOMER_AUTH):
+            return None
+    return key
+
+
 # Policy keys whose canned answer REFUSES the ask (deny-shaped): they emit a
 # ``refuse_policy`` guard decision so the refusal is visible in the audit
 # ledger and GUARD_DECISIONS_TOTAL. The remaining keys (deposit guarantee,
@@ -857,6 +923,7 @@ _REFUSAL_POLICY_KEYS: Final[frozenset[str]] = frozenset(
         "policy_investment_advice",
         "policy_confidential_procedures",
         "policy_fraud_evasion",
+        "policy_auth_required",
     }
 )
 
@@ -959,7 +1026,7 @@ def run(state: AgentState) -> dict[str, object]:
     # Refusal-shaped keys emit a ``refuse_policy`` guard decision (audit ledger +
     # metric); the "policy" sandbox override records the decision but lets the
     # turn fall through to the LLM.
-    policy_key = _match_policy(input_check.sanitised_text, language)
+    policy_key = _resolve_policy_key(input_check.sanitised_text, language)
     if policy_key is not None:
         if policy_key in _REFUSAL_POLICY_KEYS:
             guard_decisions.append(emit_refuse_policy(policy_key))
