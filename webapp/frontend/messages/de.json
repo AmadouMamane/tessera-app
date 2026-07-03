@@ -4893,6 +4893,53 @@
     "footer": {
       "total": "{n} Signale",
       "source": "Quelle der Wahrheit: {src}"
+    },
+    "explain": {
+      "total": {
+        "what": "Die Anzahl der überwachten Signale (Kategorien).",
+        "how": "Anzahl der Taxonomie-Kategorien mit mindestens einem Fall im letzten Evaluationslauf.",
+        "source": "Evaluations-Snapshot (llama3.2:3b)."
+      },
+      "active": {
+        "what": "Die als aktiv geltenden Signale.",
+        "how": "Signale, deren Eval-Set mindestens 8 Fälle hat — ein Stichprobenschwellwert, kein Betriebszustand.",
+        "source": "Evaluations-Snapshot."
+      },
+      "evaluation": {
+        "what": "Die noch in Evaluation befindlichen Signale (zu kleine Stichprobe).",
+        "how": "Signale, deren Eval-Set weniger als 8 Fälle hat.",
+        "source": "Evaluations-Snapshot."
+      },
+      "deprecated": {
+        "what": "Die veralteten Signale.",
+        "how": "In dieser Version ist kein Signal als veraltet markiert; immer 0.",
+        "source": "Keine reale Quelle (inaktiver Zweig)."
+      },
+      "disabled": {
+        "what": "Die deaktivierten Signale.",
+        "how": "In dieser Version ist kein Signal als deaktiviert markiert; immer 0.",
+        "source": "Keine reale Quelle (inaktiver Zweig)."
+      },
+      "critical": {
+        "what": "Die Signale mit kritischem Schweregrad.",
+        "how": "In der Taxonomie als kritisch etikettierte Signale (kodiertes Fachurteil).",
+        "source": "Signal-Taxonomie (_TAXO)."
+      },
+      "high": {
+        "what": "Die Signale mit hohem Schweregrad.",
+        "how": "In der Taxonomie als hoch etikettierte Signale.",
+        "source": "Signal-Taxonomie (_TAXO)."
+      },
+      "medium": {
+        "what": "Die Signale mit mittlerem Schweregrad.",
+        "how": "In der Taxonomie als mittel etikettierte Signale.",
+        "source": "Signal-Taxonomie (_TAXO)."
+      },
+      "low": {
+        "what": "Die Signale mit niedrigem Schweregrad.",
+        "how": "Keine Kategorie ist in der aktuellen Taxonomie als niedrig etikettiert; immer 0.",
+        "source": "Keine reale Quelle (Taxonomie ohne Stufe niedrig)."
+      }
     }
   },
   "policies": {

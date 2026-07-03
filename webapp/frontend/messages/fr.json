@@ -4893,6 +4893,53 @@
     "footer": {
       "total": "{n} signaux",
       "source": "Source de vérité : {src}"
+    },
+    "explain": {
+      "total": {
+        "what": "Le nombre de signaux (catégories) surveillés.",
+        "how": "Nombre de catégories de la taxonomie ayant au moins un cas dans le dernier run d'évaluation.",
+        "source": "Instantané d'évaluation (llama3.2:3b)."
+      },
+      "active": {
+        "what": "Les signaux considérés comme actifs.",
+        "how": "Signaux dont le jeu d'éval compte au moins 8 cas — c'est un seuil d'échantillon, pas un état opérationnel.",
+        "source": "Instantané d'évaluation."
+      },
+      "evaluation": {
+        "what": "Les signaux encore en évaluation (échantillon insuffisant).",
+        "how": "Signaux dont le jeu d'éval compte moins de 8 cas.",
+        "source": "Instantané d'évaluation."
+      },
+      "deprecated": {
+        "what": "Les signaux dépréciés.",
+        "how": "Aucun signal n'est marqué déprécié dans cette version ; toujours 0.",
+        "source": "Pas de source réelle (branche inactive)."
+      },
+      "disabled": {
+        "what": "Les signaux désactivés.",
+        "how": "Aucun signal n'est marqué désactivé dans cette version ; toujours 0.",
+        "source": "Pas de source réelle (branche inactive)."
+      },
+      "critical": {
+        "what": "Les signaux de sévérité critique.",
+        "how": "Signaux étiquetés critique dans la taxonomie (jugement métier codé).",
+        "source": "Taxonomie des signaux (_TAXO)."
+      },
+      "high": {
+        "what": "Les signaux de sévérité élevée.",
+        "how": "Signaux étiquetés élevé dans la taxonomie.",
+        "source": "Taxonomie des signaux (_TAXO)."
+      },
+      "medium": {
+        "what": "Les signaux de sévérité moyenne.",
+        "how": "Signaux étiquetés moyen dans la taxonomie.",
+        "source": "Taxonomie des signaux (_TAXO)."
+      },
+      "low": {
+        "what": "Les signaux de sévérité faible.",
+        "how": "Aucune catégorie n'est étiquetée faible dans la taxonomie actuelle ; toujours 0.",
+        "source": "Pas de source réelle (taxonomie sans niveau faible)."
+      }
     }
   },
   "policies": {

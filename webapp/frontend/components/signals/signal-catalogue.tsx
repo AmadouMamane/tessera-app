@@ -21,6 +21,7 @@ import {
   useState,
 } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { fetchSignalCatalogue } from "@/lib/api/client";
@@ -193,11 +194,26 @@ function CommandBar({ t, onExport }: { t: T; onExport: () => void }) {
   );
 }
 
+/** ⓘ for a signal-catalogue KPI, reading signalCatalogue.explain.<k>. */
+function ExplainInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("signalCatalogue.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te.has(`${k}.how`) ? te(`${k}.how`) : undefined}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 function CompactKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }) {
   return (
     <div className="flex h-[88px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
-      <p className="truncate text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
-        {label}
+      <p className="flex items-center gap-1 text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        <ExplainInfo k={kpi.key} title={label} />
       </p>
       <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{kpi.value}</p>
       <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>

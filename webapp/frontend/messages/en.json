@@ -4893,6 +4893,53 @@
     "footer": {
       "total": "{n} signals",
       "source": "Source of truth: {src}"
+    },
+    "explain": {
+      "total": {
+        "what": "The number of monitored signals (categories).",
+        "how": "Count of taxonomy categories with at least one case in the latest eval run.",
+        "source": "Eval snapshot (llama3.2:3b)."
+      },
+      "active": {
+        "what": "The signals considered active.",
+        "how": "Signals whose eval set has at least 8 cases — a sample-size threshold, not an operational state.",
+        "source": "Eval snapshot."
+      },
+      "evaluation": {
+        "what": "The signals still in evaluation (too small a sample).",
+        "how": "Signals whose eval set has fewer than 8 cases.",
+        "source": "Eval snapshot."
+      },
+      "deprecated": {
+        "what": "The deprecated signals.",
+        "how": "No signal is marked deprecated in this build; always 0.",
+        "source": "No real source (inactive branch)."
+      },
+      "disabled": {
+        "what": "The disabled signals.",
+        "how": "No signal is marked disabled in this build; always 0.",
+        "source": "No real source (inactive branch)."
+      },
+      "critical": {
+        "what": "The critical-severity signals.",
+        "how": "Signals tagged critical in the taxonomy (coded business judgment).",
+        "source": "Signal taxonomy (_TAXO)."
+      },
+      "high": {
+        "what": "The high-severity signals.",
+        "how": "Signals tagged high in the taxonomy.",
+        "source": "Signal taxonomy (_TAXO)."
+      },
+      "medium": {
+        "what": "The medium-severity signals.",
+        "how": "Signals tagged medium in the taxonomy.",
+        "source": "Signal taxonomy (_TAXO)."
+      },
+      "low": {
+        "what": "The low-severity signals.",
+        "how": "No category is tagged low in the current taxonomy; always 0.",
+        "source": "No real source (taxonomy has no low tier)."
+      }
     }
   },
   "policies": {
