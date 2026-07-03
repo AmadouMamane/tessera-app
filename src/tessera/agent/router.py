@@ -312,6 +312,34 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "Vous pouvez consulter votre récapitulatif à tout moment dans votre "
             "espace client."
         ),
+        "policy_investment_advice": (
+            "Le conseil en investissement est hors de mon périmètre : je ne peux "
+            "pas donner de conseil personnalisé ni recommander de titres. Pour un "
+            "placement adapté à votre situation, rapprochez-vous d'un conseiller "
+            "habilité de Crédit Aurore."
+        ),
+        "policy_confidential_procedures": (
+            "Je ne peux pas divulguer nos procédures de sécurité : les seuils et "
+            "les règles de notre détection anti-fraude sont confidentiels. Ces "
+            "dispositifs protègent l'ensemble de nos clients. Si vous avez une "
+            "question sur une opération de votre compte, je suis à votre "
+            "disposition."
+        ),
+        "policy_fraud_evasion": (
+            "Je ne peux pas vous aider à contourner nos contrôles anti-fraude ou "
+            "les obligations de déclaration : fractionner des versements pour "
+            "échapper à la détection est illégal. Si vous avez une question sur "
+            "une opération légitime, je suis à votre disposition."
+        ),
+        "policy_third_party_pii": (
+            "Je ne peux pas traiter cette demande : elle porte sur les données "
+            "d'un tiers. La confidentialité bancaire et le RGPD m'interdisent de "
+            "divulguer ou de rechercher les informations d'une autre personne "
+            "(solde, opérations, IBAN, revenus), et je ne peux pas identifier un "
+            "client par recoupement. Je ne peux consulter que votre propre "
+            "compte : le titulaire peut faire la demande lui-même, ou vous pouvez "
+            "présenter une procuration en agence."
+        ),
     },
     LanguageCode.DE: {
         "policy_credit_decision": (
@@ -350,6 +378,34 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "und Ihre Daten verlassen Ihren gesicherten Bereich nicht. Ihre "
             "Übersicht finden Sie jederzeit in Ihrem Kundenbereich."
         ),
+        "policy_investment_advice": (
+            "Ich kann keine Anlageberatung geben: Die Empfehlung konkreter "
+            "Wertpapiere liegt außerhalb meines Aufgabenbereichs. Für eine auf "
+            "Ihre Situation zugeschnittene Anlage wenden Sie sich bitte an eine "
+            "qualifizierte Beraterin oder einen qualifizierten Berater von "
+            "Crédit Aurore."
+        ),
+        "policy_confidential_procedures": (
+            "Interne Sicherheitsverfahren kann ich nicht offenlegen: Die "
+            "Schwellenwerte und Regeln unserer Betrugserkennung sind vertraulich. "
+            "Diese Kontrollen schützen alle unsere Kundinnen und Kunden. Bei "
+            "Fragen zu einem Umsatz auf Ihrem Konto helfe ich Ihnen gerne."
+        ),
+        "policy_fraud_evasion": (
+            "Dabei kann ich nicht helfen: Einzahlungen zu stückeln, um "
+            "Meldeschwellen oder unsere Betrugserkennung zu umgehen, ist illegal. "
+            "Bei Fragen zu einer legitimen Transaktion stehe ich Ihnen gerne zur "
+            "Verfügung."
+        ),
+        "policy_third_party_pii": (
+            "Diese Anfrage kann ich nicht bearbeiten: Sie betrifft die Daten "
+            "eines Dritten. Bankgeheimnis und Datenschutz (DSGVO) verbieten mir, "
+            "Informationen über eine andere Person offenzulegen oder abzurufen "
+            "(Kontostand, Umsätze, IBAN, Gehalt), und ich kann keine Person durch "
+            "Datenabgleich identifizieren. Ich kann nur Ihr eigenes Konto "
+            "einsehen: Der Kontoinhaber kann die Auskunft selbst anfordern, oder "
+            "Sie legen eine Vollmacht vor."
+        ),
     },
     LanguageCode.EN: {
         "policy_credit_decision": (
@@ -385,6 +441,33 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "e-mail address: I have no outbound channel, and your data never leaves "
             "your secure space. You can view your account summary at any time in "
             "your client area."
+        ),
+        "policy_investment_advice": (
+            "I cannot give investment advice or recommend specific securities — "
+            "that is out of scope for this service. For an investment suited to "
+            "your situation, please speak with a qualified adviser at Crédit "
+            "Aurore."
+        ),
+        "policy_confidential_procedures": (
+            "I cannot disclose our internal security procedures: the thresholds "
+            "and rules of our fraud detection are confidential. These controls "
+            "protect all our customers. If you have a question about a "
+            "transaction on your account, I'm happy to help."
+        ),
+        "policy_fraud_evasion": (
+            "I cannot help with that: structuring deposits to stay under "
+            "reporting thresholds or to evade our fraud detection is illegal. If "
+            "you have a question about a legitimate transaction, I'm happy to "
+            "help."
+        ),
+        "policy_third_party_pii": (
+            "I cannot process this request: it concerns a third party's data. "
+            "Banking confidentiality and privacy law (GDPR) prevent me from "
+            "disclosing or looking up another person's information (balance, "
+            "transactions, IBAN, salary), and I cannot identify a customer by "
+            "correlating details. I can only access your own account: the "
+            "account holder can request this directly, or you can provide a "
+            "power of attorney."
         ),
     },
 }
@@ -448,6 +531,58 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_cookie_consent",
         ),
+        (
+            (
+                re.compile(
+                    r"\b(actions?|titres?|bourse|boursi[eè]re?s?|etf|obligations?|"
+                    r"portefeuille|crypto\w*)\b",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"\b(investir|placer|placements?|acheter|rendement)\b", re.IGNORECASE),
+                re.compile(
+                    r"(dis-moi|dites-moi|donne|conseil|recommand|dois-je|lesquel|quel(le)?s?\b)",
+                    re.IGNORECASE,
+                ),
+            ),
+            "policy_investment_advice",
+        ),
+        # Evasion before confidential-procedures: an evasion ask often names the
+        # same anti-fraud vocabulary, and must get the structuring refusal.
+        (
+            (
+                re.compile(
+                    r"([ée]viter|contourner|[ée]chapper|d[ée]jouer|rester sous|passer sous)",
+                    re.IGNORECASE,
+                ),
+                re.compile(
+                    r"(seuil de d[ée]claration|service anti-?fraude|tracfin|"
+                    r"d[ée]tection anti-?fraude)",
+                    re.IGNORECASE,
+                ),
+                re.compile(
+                    r"(d[ée]coup|fractionn|diviser|versements?|d[ée]p[ôo]ts?|esp[èe]ces|liquide)",
+                    re.IGNORECASE,
+                ),
+            ),
+            "policy_fraud_evasion",
+        ),
+        (
+            (
+                re.compile(
+                    r"(anti-?fraude|d[ée]tection de (la )?fraude|alerte (de )?fraude)",
+                    re.IGNORECASE,
+                ),
+                re.compile(
+                    r"(seuils?\b|r[èe]gles?\b|crit[èe]res?|param[èe]tres?|d[ée]clench|algorithme)",
+                    re.IGNORECASE,
+                ),
+                re.compile(
+                    r"(expliqu|d[ée]taill|dis-moi|dites|donne|liste|quel(le)?s?\b|comment)",
+                    re.IGNORECASE,
+                ),
+            ),
+            "policy_confidential_procedures",
+        ),
     ],
     LanguageCode.DE: [
         (
@@ -501,6 +636,47 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
             ),
             "policy_cookie_consent",
         ),
+        (
+            (
+                re.compile(
+                    r"\b(aktien?|wertpapier\w*|b[öo]rse|etf|anleihen?|krypto\w*|portfolio)\b",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"\b(investieren|anlegen|anzulegen|kaufen|rendite)\b", re.IGNORECASE),
+                re.compile(r"(sag mir|sagen sie|nenn|empfehl|welche|soll ich)", re.IGNORECASE),
+            ),
+            "policy_investment_advice",
+        ),
+        (
+            (
+                re.compile(
+                    r"(vermeiden|umgehen|entgehen|entkommen|unter .{0,30}bleiben|unbemerkt)",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"(meldeschwelle|meldegrenze|betrugsabteilung)", re.IGNORECASE),
+                re.compile(
+                    r"(st[üu]ck(el|le)|aufteil|splitt|einzahlungen?|[üu]berweisungen?|"
+                    r"bargeld|einlagen)",
+                    re.IGNORECASE,
+                ),
+            ),
+            "policy_fraud_evasion",
+        ),
+        (
+            (
+                re.compile(
+                    r"(betrugsalarm|betrugserkennung|anti-?betrug|betrugspr[üu]fung|"
+                    r"betrugsregeln)",
+                    re.IGNORECASE,
+                ),
+                re.compile(
+                    r"(schwellenwert|regeln?\b|kriterien|parameter|ausl[öo]s|algorithm)",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"(erkl[äa]r|sag|nenn|welche|wie\b|liste)", re.IGNORECASE),
+            ),
+            "policy_confidential_procedures",
+        ),
     ],
     LanguageCode.EN: [
         (
@@ -550,6 +726,45 @@ _POLICY_RULES: Final[dict[LanguageCode, list[tuple[tuple[re.Pattern[str], ...], 
                 re.compile(r"(consent|banner|gdpr|eprivacy|privacy)", re.IGNORECASE),
             ),
             "policy_cookie_consent",
+        ),
+        (
+            (
+                re.compile(
+                    r"\b(stocks?|shares?|securities|tickers?|etf|bonds?|crypto\w*|portfolio)\b",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"\b(invest|buy|return|yield)", re.IGNORECASE),
+                re.compile(r"(tell me|which|should i|recommend|give me)", re.IGNORECASE),
+            ),
+            "policy_investment_advice",
+        ),
+        (
+            (
+                re.compile(
+                    r"(avoid|evade|dodge|bypass|stay under|keep under)",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"(reporting threshold|anti-?fraud team|\baml\b)", re.IGNORECASE),
+                re.compile(
+                    r"(split|structur|break (up|down)|deposits?|transfers?|\bcash\b|payments?)",
+                    re.IGNORECASE,
+                ),
+            ),
+            "policy_fraud_evasion",
+        ),
+        (
+            (
+                re.compile(
+                    r"(anti-?fraud|fraud (detection|alerts?|monitoring|rules))",
+                    re.IGNORECASE,
+                ),
+                re.compile(
+                    r"(thresholds?|rules?\b|criteria|parameters|triggers?|algorithm)",
+                    re.IGNORECASE,
+                ),
+                re.compile(r"(explain|tell me|which|what\b|how\b|list\b)", re.IGNORECASE),
+            ),
+            "policy_confidential_procedures",
         ),
     ],
 }
@@ -628,6 +843,24 @@ def _match_policy(text: str, language: LanguageCode) -> str | None:
     return None
 
 
+# Policy keys whose canned answer REFUSES the ask (deny-shaped): they emit a
+# ``refuse_policy`` guard decision so the refusal is visible in the audit
+# ledger and GUARD_DECISIONS_TOTAL. The remaining keys (deposit guarantee,
+# cookie consent) are grounded corrections that *answer* the question — no
+# refusal decision to record.
+_REFUSAL_POLICY_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "policy_credit_decision",
+        "policy_transfer_unconfirmed",
+        "policy_card_timing",
+        "policy_competitor",
+        "policy_investment_advice",
+        "policy_confidential_procedures",
+        "policy_fraud_evasion",
+    }
+)
+
+
 def run(state: AgentState) -> dict[str, object]:
     """Router node entry point.
 
@@ -644,7 +877,12 @@ def run(state: AgentState) -> dict[str, object]:
     # adapter imports agent.state, which triggers the agent package init and the
     # graph, which imports this router — so a top-level import of check_user_input
     # would hit a partially-initialised guard.adapter on a fresh import.
-    from tessera.guard.adapter import check_exfiltration, check_user_input
+    from tessera.guard.adapter import (
+        check_exfiltration,
+        check_third_party_pii,
+        check_user_input,
+        emit_refuse_policy,
+    )
 
     # Injection check runs before any language pinning logic. The sandbox can
     # disable it for a turn via guard_overrides; the decision is still recorded
@@ -695,23 +933,50 @@ def run(state: AgentState) -> dict[str, object]:
                 "plan_rationale": "input blocked by exfiltration guard (pii.exfiltration_patterns)",
             }
 
+    # Third-party PII guard (pii.third_party_*_patterns, cases 13/14/15/16/47
+    # and the third-party leg of 31): a request to disclose ANOTHER person's
+    # account data — or to single a customer out via correlated attributes —
+    # is refused deterministically at input, before any tool or LLM call. Same
+    # sandbox contract as above: decision always recorded, "pii" override
+    # skips only the block.
+    third_party = check_third_party_pii(input_check.sanitised_text)
+    if third_party is not None:
+        guard_decisions.append(third_party)
+        if "pii" not in set(state.get("guard_overrides") or []):
+            return {
+                "guard_decisions": guard_decisions,
+                **language_update,
+                "needs_escalation": False,
+                "final_response": _POLICY_RESPONSES[language]["policy_third_party_pii"],
+                "plan": [],
+                "plan_rationale": (
+                    f"input refused by third-party PII guard ({third_party.policy_rule})"
+                ),
+            }
+
     # Deterministic policy short-circuit: a vetted, compliant answer for specific
     # high-risk asks, bypassing the LLM (same mechanism as the injection guard).
+    # Refusal-shaped keys emit a ``refuse_policy`` guard decision (audit ledger +
+    # metric); the "policy" sandbox override records the decision but lets the
+    # turn fall through to the LLM.
     policy_key = _match_policy(input_check.sanitised_text, language)
     if policy_key is not None:
-        update: dict[str, object] = {
-            "guard_decisions": guard_decisions,
-            **language_update,
-            "needs_escalation": False,
-            "final_response": _POLICY_RESPONSES[language][policy_key],
-            "plan": [],
-            "plan_rationale": f"deterministic policy short-circuit: {policy_key}",
-        }
-        # A short-circuit that asserts a regulation must carry its source, so the
-        # answer is grounded (not just compliant) end to end.
-        citations = _policy_citations(policy_key, language)
-        if citations:
-            update["citations"] = citations
-        return update
+        if policy_key in _REFUSAL_POLICY_KEYS:
+            guard_decisions.append(emit_refuse_policy(policy_key))
+        if "policy" not in set(state.get("guard_overrides") or []):
+            update: dict[str, object] = {
+                "guard_decisions": guard_decisions,
+                **language_update,
+                "needs_escalation": False,
+                "final_response": _POLICY_RESPONSES[language][policy_key],
+                "plan": [],
+                "plan_rationale": f"deterministic policy short-circuit: {policy_key}",
+            }
+            # A short-circuit that asserts a regulation must carry its source, so
+            # the answer is grounded (not just compliant) end to end.
+            citations = _policy_citations(policy_key, language)
+            if citations:
+                update["citations"] = citations
+            return update
 
     return {"guard_decisions": guard_decisions, **language_update}

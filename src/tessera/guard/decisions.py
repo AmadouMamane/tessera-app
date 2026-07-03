@@ -90,6 +90,13 @@ class Policy:
     # matching EVERY pattern (egress verb + e-mail address + account-data term)
     # is refused at input — see guard.adapter.check_exfiltration. Empty = off.
     exfiltration_patterns: tuple[re.Pattern[str], ...] = ()
+    # Conjunctive third-party PII rules (``pii.third_party_*_patterns``): a
+    # user turn matching EVERY pattern of either block (a relation noun + a
+    # third-person-possessed account datum + a disclosure ask, or a
+    # singling-out correlation ask) is refused at input — see
+    # guard.adapter.check_third_party_pii. Empty = off.
+    third_party_data_patterns: tuple[re.Pattern[str], ...] = ()
+    third_party_singling_patterns: tuple[re.Pattern[str], ...] = ()
 
     def tool(self, name: str) -> ToolPolicy:
         """Return the policy for ``name`` or a deny-all fallback."""
@@ -157,12 +164,12 @@ def load_policy(path: Path | None = None) -> Policy:
 
     pii_raw = parsed.get("pii") or {}
     pii_patterns = tuple(re.compile(str(p)) for p in pii_raw.get("redact_patterns", []) or [])
-    exfiltration_raw = pii_raw.get("exfiltration_patterns") or {}
-    exfiltration = (
-        tuple(re.compile(str(p)) for p in exfiltration_raw.values())
-        if isinstance(exfiltration_raw, dict)
-        else ()
-    )
+
+    def _conjunctive(key: str) -> tuple[re.Pattern[str], ...]:
+        block = pii_raw.get(key) or {}
+        if not isinstance(block, dict):
+            return ()
+        return tuple(re.compile(str(p)) for p in block.values())
 
     return Policy(
         version=int(parsed.get("version", 0)),
@@ -170,7 +177,9 @@ def load_policy(path: Path | None = None) -> Policy:
         prompt_injection_deny=deny,
         prompt_injection_transforms=transforms,
         pii_patterns=pii_patterns,
-        exfiltration_patterns=exfiltration,
+        exfiltration_patterns=_conjunctive("exfiltration_patterns"),
+        third_party_data_patterns=_conjunctive("third_party_data_patterns"),
+        third_party_singling_patterns=_conjunctive("third_party_singling_patterns"),
     )
 
 

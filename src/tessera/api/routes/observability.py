@@ -1097,6 +1097,7 @@ async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
     overrides are applied per-turn at chat time, never persisted here.
     """
     from tessera.agent.reporter import load_prompts
+    from tessera.agent.router import _POLICY_RULES
     from tessera.guard.decisions import load_policy
     from tessera.settings import LanguageCode, get_settings
 
@@ -1121,6 +1122,15 @@ async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
                     "label": "Masquage PII",
                     "count": len(policy.pii_patterns),
                     "detail": "Masque les données personnelles dans la trace d'audit des outils.",
+                },
+                {
+                    "key": "policy",
+                    "label": "Refus policy",
+                    "count": len(_POLICY_RULES.get(language, [])),
+                    "detail": (
+                        "Court-circuits déterministes : conseil hors-scope, procédures "
+                        "confidentielles, évasion anti-fraude, promesses interdites."
+                    ),
                 },
                 {
                     "key": "tools",

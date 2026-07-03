@@ -38,6 +38,7 @@ from tessera.observability.metrics import GUARD_DECISIONS_TOTAL
 from tessera.settings import LanguageCode, get_settings
 
 if TYPE_CHECKING:
+    import re
     from collections.abc import Awaitable, Callable
 
     # Runtime-imported lazily inside the functions below to avoid a
@@ -48,7 +49,9 @@ __all__ = [
     "GuardedResult",
     "InputCheckResult",
     "check_exfiltration",
+    "check_third_party_pii",
     "check_user_input",
+    "emit_refuse_policy",
     "guarded_invoke",
 ]
 
@@ -325,6 +328,92 @@ def check_exfiltration(
     emit_audit(
         target="user_input",
         arguments={"text": "[redacted — exfiltration request]"},
+        decisions=[record],
+        sink=get_settings().guard.audit_sink,
+        outcome="denied",
+    )
+    _record_guard_decision("user_input", "denied")
+    return record
+
+
+def check_third_party_pii(
+    text: str,
+    *,
+    policy: Policy | None = None,
+) -> GuardDecisionRecord | None:
+    """Detect a request to disclose another person's account data.
+
+    The agent only ever serves the authenticated session's own account;
+    third-party data requires a mandate handled in-branch, never in chat
+    (harness cases 13/14/15/47 — named third party's salary / history / IBAN /
+    balance — and 31, the balance tool aimed at a colleague's account). A
+    second conjunctive block catches the singling-out linkage attack (case 16
+    — "the only customer born in 1987 who transferred to Spain"). Both rules
+    live in ``pii.third_party_*_patterns`` of the policy: every pattern of a
+    block must match, so "what is MY balance", a joint-account ask or a
+    procedural "how do I close her account" never trips them. The router
+    refuses the matched turn at input, before any tool or LLM call.
+
+    Returns:
+        The DENY :class:`GuardDecisionRecord` when every pattern of one block
+        matched, ``None`` otherwise.
+    """
+    from tessera.agent.state import GuardDecisionRecord
+
+    active_policy = policy or load_policy()
+    blocks: tuple[tuple[str, tuple[re.Pattern[str], ...], str], ...] = (
+        (
+            "pii.third_party_data_patterns",
+            active_policy.third_party_data_patterns,
+            "refuse_third_party_pii: user asked to disclose another person's account data",
+        ),
+        (
+            "pii.third_party_singling_patterns",
+            active_policy.third_party_singling_patterns,
+            "refuse_third_party_pii: user asked to single out a customer via correlated attributes",
+        ),
+    )
+    for rule, patterns, rationale in blocks:
+        if not patterns or not all(pattern.search(text) for pattern in patterns):
+            continue
+        record = GuardDecisionRecord(
+            target="user_input",
+            decision=DecisionKind.DENY.value,
+            policy_rule=rule,
+            rationale=rationale,
+        )
+        emit_audit(
+            target="user_input",
+            arguments={"text": "[redacted — third-party data request]"},
+            decisions=[record],
+            sink=get_settings().guard.audit_sink,
+            outcome="denied",
+        )
+        _record_guard_decision("user_input", "denied")
+        return record
+    return None
+
+
+def emit_refuse_policy(policy_key: str) -> GuardDecisionRecord:
+    """Record a ``refuse_policy`` decision for a deterministic policy refusal.
+
+    The router's policy short-circuit historically answered without leaving a
+    guard decision; refusal-shaped short-circuits (investment advice,
+    confidential procedures, fraud evasion, credit decision, …) now feed the
+    same surfaces as every guard decision: the turn's ``guard_decisions``,
+    the hash-chained audit trail and ``GUARD_DECISIONS_TOTAL``.
+    """
+    from tessera.agent.state import GuardDecisionRecord
+
+    record = GuardDecisionRecord(
+        target="user_input",
+        decision=DecisionKind.DENY.value,
+        policy_rule=f"policy.{policy_key}",
+        rationale=f"refuse_policy: deterministic policy short-circuit {policy_key}",
+    )
+    emit_audit(
+        target="user_input",
+        arguments={"policy_key": policy_key},
         decisions=[record],
         sink=get_settings().guard.audit_sink,
         outcome="denied",

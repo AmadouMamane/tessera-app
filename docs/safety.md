@@ -54,7 +54,12 @@ repeated denies on the same tool signal an adversarial user (see guard scoring).
 - `prompt_injection.deny_patterns` (reject the turn) and
   `prompt_injection.transform_patterns` (strip the offending substring).
 - `pii.redact_patterns` — email, IBAN, 16-digit PAN, FR/DE phone, applied to all
-  tool inputs and outputs.
+  tool inputs and outputs — plus three conjunctive input-refusal blocks
+  (`exfiltration_patterns`, `third_party_data_patterns`,
+  `third_party_singling_patterns`): a user turn matching every pattern of a
+  block (e.g. relation noun + third-person-possessed account datum + disclosure
+  ask) is refused deterministically at the router, before any tool or LLM call
+  (cases 13–16, 46, 47).
 
 ## Guard scoring in the reviewer
 

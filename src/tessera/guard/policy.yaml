@@ -26,6 +26,10 @@
 #                                         # and to the final response (output guard)
 #     exfiltration_patterns:              # conjunctive: ALL must match to deny
 #       <name>: regex
+#     third_party_data_patterns:          # conjunctive: ALL must match to deny
+#       <name>: regex
+#     third_party_singling_patterns:      # conjunctive: ALL must match to deny
+#       <name>: regex
 
 version: 1
 
@@ -154,3 +158,35 @@ pii:
     egress_verb: "(?i)\\b(envoie[sz]?|envoyer|envoyez|transmet(s|tez|tre)?|transf[eè]re[sz]?|transf[ée]rez|forward|send|e-?mails?|mail[es]?|sende[nt]?|sendest|schick(e|st|t|en)?|weiterleiten|leite|[üu]bermitt(le|elst|elt|eln))\\b"
     external_address: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
     account_data: "(?i)\\b(comptes?|soldes?|iban|rib|relev[ée]s?|op[ée]rations?|transactions?|virements?|historique|r[ée]capitulatifs?|konto\\w*|ums[äa]tze|zusammenfassung|accounts?|balances?|statements?|summary|history)\\b"
+
+  # Third-party PII guard (harness cases 13/14/15/47, tool-auth 31): a request
+  # to DISCLOSE another person's account data is refused at input — the agent
+  # only ever serves the authenticated session's own account, and third-party
+  # data requires a mandate handled in-branch, never in chat. Conjunctive rule,
+  # deliberately narrow (a false positive breaks a legitimate turn): it takes a
+  # relation noun naming the third party AND a third-person possessive tying
+  # the account data to that person AND an explicit disclosure ask. "My
+  # husband and I have a joint account, what is our balance?" (first-person
+  # data), "my mother passed away, how do I close her account?" (procedural,
+  # no disclosure ask) and "I transferred money to my sister's account, has it
+  # arrived?" (no disclosure ask) never trip it.
+  third_party_data_patterns:
+    # Relation/civility noun naming a person other than the session holder.
+    third_party_subject: "(?i)\\b(voisins?|voisines?|coll[eè]gues?|fr[eè]res?|s[œo]eurs?|s[œo]urs?|maris?|femmes?|[ée]poux|[ée]pouses?|amis?|amies?|colocataires?|cousins?|cousines?|oncles?|tantes?|p[eè]res?|m[eè]res?|fils|filles?|patrons?|autre client|M\\.|Mme|Mlle|Monsieur|Madame|Nachbar(in|n|s)?|Kolleg(e|en|in|innen)|Bruders?|Schwester|Mann(es)?|Ehemann(es)?|Frau|Ehefrau|Freund(in|es)?|Mitbewohner(in|s)?|Vaters?|Mutter|Sohn(es)?|Tochter|Chef(in|s)?|anderer? Kunde|anderen Kunden|Herrn?|neighbou?rs?|colleagues?|brothers?|sisters?|husbands?|wife|wives|friends?|flatmates?|roommates?|fathers?|mothers?|sons?|daughters?|another customer|other customer|Mr|Mrs|Ms|Miss)\\b"
+    # Account data possessed by a third person (son/sein/his — never mon/mein/my).
+    # The German sein/ihr leg is case-sensitive on purpose: formal "Ihr Konto"
+    # (= YOUR account, capital I mid-sentence) must never count as third-party.
+    third_party_possession: "(?i:\\b(son|sa|leur)\\s+(salaire|solde|compte|iban|rib|historique|op[ée]rations?|transactions?|relev[ée]s?|revenus?|d[ée]couverts?|encours)\\b|\\bcompte\\s+d[eu]\\s+(mon|ma|son|sa)\\b|\\b(his|her|their)\\s+(accounts?|balances?|salar(y|ies)|iban|transactions?|statements?|histor(y|ies)|overdrafts?)\\b|\\bKonto\\w*\\s+(meiner|meines|seiner|seines|ihrer|ihres|deiner|deines)\\b)|\\b(sein(e[mnrs]?|es|er)?|ihr(e[mnrs]?|es|er)?)\\s+(Konto\\w*|Gehalt\\w*|Umsatz|Ums[äa]tzen?|IBAN|Saldo|Transaktion\\w*|Kontoausz(ug|[üu]ge)|Verm[öo]gen|Einkommen)\\b|\\b([A-Z][a-z]\\w*|(?i:neighbou?rs?|colleagues?|brothers?|sisters?|husbands?|wife|wives|friends?|flatmates?|roommates?|fathers?|mothers?|sons?|daughters?))['’]s\\s+(?i:accounts?|balances?|salary|iban|transactions?|statements?|history)\\b"
+    # Explicit ask to hand the data over (never a procedural "how do I…").
+    disclosure_request: "(?i)\\b(quel(le)?s?\\s+(est|sont|[ée]tai(en)?t)|combien|donne[sz]?[- ]?(moi|nous)?|sors[- ]?(moi)?|montre[sz]?|affiche[sz]?|communique[sz]?|redonne[sz]?|indique[sz]?|fournis|je veux|dis[- ]moi|dites[- ]moi|wie hoch|wie viel|was ist|nenn(e|en)?\\b|gib\\b|geben sie|zeig(e|en)?\\b|sag(e|en)?\\s+(mir|sie mir)|verrat(e|en)?|m[öo]chte ich|ich will|what(['’]s|\\s+is|\\s+are|\\s+was)|how much|give me|pull\\b|show\\b|read back|tell me|i want|list\\b|share\\b)"
+
+  # Singling-out / re-identification guard (harness case 16): an ask to name
+  # the one customer matching correlated quasi-identifiers (branch × birth
+  # year × transaction) is a linkage attack, refused at input. Conjunctive:
+  # a singling quantifier AND an identifying attribute AND an identity ask.
+  # "Am I the only customer with this problem?" never trips it (no identity
+  # ask); "who is your branch manager?" never trips it (no quantifier).
+  third_party_singling_patterns:
+    singling_quantifier: "(?i)\\b(seule?)\\s+(client|d[ée]posant|titulaire)|einzig\\w*\\s+(Kunde|Kundin)|\\b(only|single|one)\\s+customer"
+    identifying_attribute: "(?i)n[ée]e?\\s+en\\s+(19|20)\\d{2}|geboren\\s+(im\\s+Jahre?\\s+)?(19|20)\\d{2}|born\\s+in\\s+(19|20)\\d{2}"
+    identity_request: "(?i)\\b(son|leur)\\s+nom|\\bnom\\s+du\\s+client|seinen?\\s+Namen|ihren?\\s+Namen|wie\\s+hei[ßs]t|(his|her|their)\\s+name|who\\s+is|qui\\s+est|wer\\s+ist"
