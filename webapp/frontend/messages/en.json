@@ -4012,7 +4012,8 @@
       "prod": "Prod",
       "preprod": "Preprod",
       "staging": "Staging",
-      "dev": "Dev"
+      "dev": "Dev",
+      "local": "Local"
     },
     "jCol": {
       "time": "Timestamp",
@@ -4079,6 +4080,12 @@
     "footer": {
       "source": "Source of truth: {src}",
       "certified": "{txt}"
+    },
+    "tabx": {
+      "evaluateNow": "Evaluate rules now",
+      "evaluating": "Evaluating…",
+      "auditLink": "Open the audit journal (chain)",
+      "noApprovals": "No pending approvals — the approval queue is a demonstration subsystem."
     }
   },
   "proofs": {

@@ -4012,7 +4012,8 @@
       "prod": "Prod",
       "preprod": "Preprod",
       "staging": "Préproduction",
-      "dev": "Dev"
+      "dev": "Dev",
+      "local": "Local"
     },
     "jCol": {
       "time": "Horodatage",
@@ -4079,6 +4080,12 @@
     "footer": {
       "source": "Source de vérité : {src}",
       "certified": "{txt}"
+    },
+    "tabx": {
+      "evaluateNow": "Évaluer les règles maintenant",
+      "evaluating": "Évaluation…",
+      "auditLink": "Ouvrir le journal d’audit (chaîne)",
+      "noApprovals": "Aucune approbation en attente — la file d’approbation est un sous-système de démonstration."
     }
   },
   "proofs": {

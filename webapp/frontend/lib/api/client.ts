@@ -846,6 +846,33 @@ export async function mutateCurationDecision(body: {
   );
 }
 
+/** Evaluate every enabled automation rule against its real store; journalled. */
+export async function mutateAutomationsEvaluate(lang: string): Promise<AutomationsOverview> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(
+    `/observability/automations/evaluate${q}`,
+    { method: "POST" },
+    AutomationsOverviewSchema,
+  );
+}
+
+/** Persist an automation rule's enabled flag; returns the fresh payload. */
+export async function mutateAutomationRuleState(body: {
+  rule_id: string;
+  enabled: boolean;
+  lang?: string;
+}): Promise<AutomationsOverview> {
+  return request(
+    "/observability/automations/rule-state",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    AutomationsOverviewSchema,
+  );
+}
+
 export async function fetchAutomationsOverview(
   lang: string,
   signal?: AbortSignal,

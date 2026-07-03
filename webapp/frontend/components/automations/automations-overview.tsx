@@ -1,10 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Download,
   FileSearch,
@@ -12,13 +11,13 @@ import {
   GitBranch,
   PauseCircle,
   PlayCircle,
-  Plus,
   ScrollText,
   ShieldCheck,
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
@@ -31,7 +30,11 @@ import {
 } from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { fetchAutomationsOverview } from "@/lib/api/client";
+import {
+  fetchAutomationsOverview,
+  mutateAutomationRuleState,
+  mutateAutomationsEvaluate,
+} from "@/lib/api/client";
 import type { AutomationsOverview as AutomationsData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
@@ -49,6 +52,7 @@ const RESULT_BADGE: Record<string, string> = {
 };
 
 const TABS = ["overview", "rules", "executions", "queue", "approvals", "audit"] as const;
+type Tab = (typeof TABS)[number];
 
 type T = ReturnType<typeof useTranslations<"automations">>;
 type Data = AutomationsData;
@@ -58,11 +62,21 @@ export function AutomationsOverview() {
   const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["automations-overview", locale],
     queryFn: ({ signal }) => fetchAutomationsOverview(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
+  });
+  const evaluate = useMutation({
+    mutationFn: () => mutateAutomationsEvaluate(locale),
+    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale], fresh),
+  });
+  const toggleRule = useMutation({
+    mutationFn: mutateAutomationRuleState,
+    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale], fresh),
   });
 
   if (!data) {
@@ -75,8 +89,14 @@ export function AutomationsOverview() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} />
-      <SyntheticNotice signalId="automations" />
+      <CommandBar
+        t={t}
+        active={activeTab}
+        onSelect={setActiveTab}
+        onEvaluate={() => evaluate.mutate()}
+        evaluating={evaluate.isPending}
+        data={data}
+      />
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}
@@ -90,66 +110,128 @@ export function AutomationsOverview() {
         onModeChange={temporal.changeMode}
       />
 
-      <Zone label={t("zone.actual")}>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-          {data.kpis.map((kpi) => (
-            <KpiTile
-              key={kpi.key}
-              kpi={kpi}
-              label={t(`kpi.${kpi.key}`)}
-              vs={t("delta.vsHier")}
-              info={<KpiInfo k={kpi.key} title={t(`kpi.${kpi.key}`)} />}
-            />
-          ))}
-        </div>
-      </Zone>
-
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_316px]">
-        <div className="flex min-w-0 flex-col gap-3">
+      <div id="automations-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
+        {activeTab === "rules" ? (
           <Zone label={t("zone.catalogue")}>
-            <Catalogue t={t} data={data} />
+            <Catalogue
+              t={t}
+              data={data}
+              onToggle={(id, enabled) => toggleRule.mutate({ rule_id: id, enabled, lang: locale })}
+              toggling={toggleRule.isPending}
+            />
           </Zone>
-          <Zone
-            label={t("zone.pipeline")}
-            info={<KpiInfo k="zone.pipeline" title={t("zone.pipeline")} />}
-          >
-            <Pipeline t={t} data={data} />
-          </Zone>
-          <div className="grid gap-3 xl:grid-cols-2">
-            <Zone
-              label={t("zone.distribution")}
-              info={<KpiInfo k="zone.distribution" title={t("zone.distribution")} />}
-            >
-              <Panel title="">
-                <Donut
-                  slices={data.by_type}
-                  total={data.by_type_total}
-                  caption="automations"
-                  labelOf={(k) => t(`type.${k}`)}
-                  showCount
-                />
-              </Panel>
+        ) : null}
+        {activeTab === "executions" ? (
+          <>
+            <Zone label={t("zone.journal")}>
+              <Journal t={t} data={data} />
             </Zone>
-            <Zone label={t("zone.env")} info={<KpiInfo k="zone.env" title={t("zone.env")} />}>
-              <EnvBars t={t} data={data} />
-            </Zone>
+            <div className="grid gap-3 xl:grid-cols-2">
+              <Performance t={t} data={data} />
+              <Zone
+                label={t("zone.pipeline")}
+                info={<KpiInfo k="zone.pipeline" title={t("zone.pipeline")} />}
+              >
+                <Pipeline t={t} data={data} />
+              </Zone>
+            </div>
+          </>
+        ) : null}
+        {activeTab === "queue" || activeTab === "approvals" ? (
+          <div className="flex min-w-0 flex-col gap-2">
+            <SyntheticNotice signalId="automation_workflow" compact />
+            <div className="grid gap-3 xl:grid-cols-2">
+              <Approvals t={t} data={data} />
+              <Savings t={t} data={data} />
+            </div>
           </div>
+        ) : null}
+        {activeTab === "audit" ? (
           <Zone label={t("zone.journal")}>
             <Journal t={t} data={data} />
+            <div className="mt-2">
+              <Link
+                href="/prouver/audit-logs"
+                className="inline-flex items-center gap-1 text-[0.7rem] text-[var(--tessera-green)] hover:underline"
+              >
+                {t("tabx.auditLink")}
+              </Link>
+            </div>
           </Zone>
-        </div>
-
-        <AutomationsRail t={t} data={data} />
+        ) : null}
       </div>
 
-      {/* Bottom band: approvals · guardrails · performance · savings · context */}
-      <div className="grid gap-3 xl:grid-cols-12">
-        <Approvals t={t} data={data} className="xl:col-span-3" />
-        <Guardrails t={t} data={data} className="xl:col-span-2" />
-        <Performance t={t} data={data} className="xl:col-span-3" />
-        <Savings t={t} data={data} className="xl:col-span-2" />
-        <ContextPanel t={t} data={data} className="xl:col-span-2" />
-      </div>
+      {activeTab !== "overview" ? null : (
+        <>
+          <Zone label={t("zone.actual")}>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+              {data.kpis.map((kpi) => (
+                <KpiTile
+                  key={kpi.key}
+                  kpi={kpi}
+                  label={t(`kpi.${kpi.key}`)}
+                  vs={t("delta.vsHier")}
+                  info={<KpiInfo k={kpi.key} title={t(`kpi.${kpi.key}`)} />}
+                />
+              ))}
+            </div>
+          </Zone>
+
+          <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_316px]">
+            <div className="flex min-w-0 flex-col gap-3">
+              <Zone label={t("zone.catalogue")}>
+                <Catalogue
+                  t={t}
+                  data={data}
+                  onToggle={(id, enabled) =>
+                    toggleRule.mutate({ rule_id: id, enabled, lang: locale })
+                  }
+                  toggling={toggleRule.isPending}
+                />
+              </Zone>
+              <Zone
+                label={t("zone.pipeline")}
+                info={<KpiInfo k="zone.pipeline" title={t("zone.pipeline")} />}
+              >
+                <Pipeline t={t} data={data} />
+              </Zone>
+              <div className="grid gap-3 xl:grid-cols-2">
+                <Zone
+                  label={t("zone.distribution")}
+                  info={<KpiInfo k="zone.distribution" title={t("zone.distribution")} />}
+                >
+                  <Panel title="">
+                    <Donut
+                      slices={data.by_type}
+                      total={data.by_type_total}
+                      caption="automations"
+                      labelOf={(k) => t(`type.${k}`)}
+                      showCount
+                    />
+                  </Panel>
+                </Zone>
+                <Zone label={t("zone.env")} info={<KpiInfo k="zone.env" title={t("zone.env")} />}>
+                  <EnvBars t={t} data={data} />
+                </Zone>
+              </div>
+              <Zone label={t("zone.journal")}>
+                <Journal t={t} data={data} />
+              </Zone>
+            </div>
+
+            <AutomationsRail t={t} data={data} />
+          </div>
+
+          {/* Bottom band: approvals · guardrails · performance · savings · context */}
+          <div className="grid gap-3 xl:grid-cols-12">
+            <Approvals t={t} data={data} className="xl:col-span-3" />
+            <Guardrails t={t} data={data} className="xl:col-span-2" />
+            <Performance t={t} data={data} className="xl:col-span-3" />
+            <Savings t={t} data={data} className="xl:col-span-2" />
+            <ContextPanel t={t} data={data} className="xl:col-span-2" />
+          </div>
+        </>
+      )}
 
       <Footer t={t} data={data} />
     </div>
@@ -158,17 +240,48 @@ export function AutomationsOverview() {
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
-function CommandBar({ t }: { t: T }) {
+function CommandBar({
+  t,
+  active,
+  onSelect,
+  onEvaluate,
+  evaluating,
+  data,
+}: {
+  t: T;
+  active: Tab;
+  onSelect: (tab: Tab) => void;
+  onEvaluate: () => void;
+  evaluating: boolean;
+  data: Data;
+}) {
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "automations-overview.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+      <div
+        role="tablist"
+        aria-label={t("tabs.overview")}
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+      >
         {TABS.map((tab) => (
           <button
             key={tab}
             type="button"
+            role="tab"
+            aria-selected={tab === active}
+            aria-controls="automations-tabpanel"
+            onClick={() => onSelect(tab)}
             className={cn(
               "h-8 shrink-0 rounded-md border px-3 text-xs font-medium transition-colors",
-              tab === "overview"
+              tab === active
                 ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
             )}
@@ -180,31 +293,30 @@ function CommandBar({ t }: { t: T }) {
       <div className="flex shrink-0 items-center gap-2">
         <Button
           size="sm"
+          onClick={onEvaluate}
+          disabled={evaluating}
           className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
         >
-          <Plus className="h-4 w-4" /> {t("actions.createAutomation")}
+          <FlaskConical className="h-4 w-4" />{" "}
+          {evaluating ? t("tabx.evaluating") : t("tabx.evaluateNow")}
         </Button>
         <Button
           size="sm"
           variant="outline"
+          onClick={exportJson}
           className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
         >
-          <FlaskConical className="h-4 w-4" /> {t("actions.simulateRule")}
+          <Download className="h-4 w-4" /> {t("actions.export")}
         </Button>
         <Button
+          asChild
           size="sm"
           variant="outline"
           className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
         >
-          <Download className="h-4 w-4" /> {t("actions.export")}{" "}
-          <ChevronDown className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
-        >
-          <FileSearch className="h-4 w-4" /> {t("actions.evidencePack")}
+          <Link href="/prouver/evidence-store">
+            <FileSearch className="h-4 w-4" /> {t("actions.evidencePack")}
+          </Link>
         </Button>
       </div>
     </section>
@@ -213,7 +325,17 @@ function CommandBar({ t }: { t: T }) {
 
 // ── catalogue ────────────────────────────────────────────────────────────────
 
-function Catalogue({ t, data }: { t: T; data: Data }) {
+function Catalogue({
+  t,
+  data,
+  onToggle,
+  toggling,
+}: {
+  t: T;
+  data: Data;
+  onToggle: (id: string, enabled: boolean) => void;
+  toggling: boolean;
+}) {
   const cols = [
     "name",
     "trigger",
@@ -240,10 +362,7 @@ function Catalogue({ t, data }: { t: T; data: Data }) {
           </thead>
           <tbody>
             {data.catalogue.map((row) => (
-              <tr
-                key={row.name}
-                className="border-b border-[var(--tessera-border)]/60 last:border-0"
-              >
+              <tr key={row.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
                 <td className="max-w-[220px] truncate px-2 py-1.5 font-medium text-[var(--tessera-text)]">
                   {row.name}
                 </td>
@@ -267,7 +386,15 @@ function Catalogue({ t, data }: { t: T; data: Data }) {
                 <td className="px-2 py-1.5 tabular-nums text-emerald-300">{row.success}</td>
                 <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{row.role}</td>
                 <td className="px-2 py-1.5">
-                  <span className="inline-flex items-center gap-1.5 text-[0.7rem]">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={row.status === "active"}
+                    aria-label={`${row.name} — ${t(`status.${row.status}`)}`}
+                    disabled={toggling}
+                    onClick={() => onToggle(row.id, row.status !== "active")}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-[0.7rem] transition-colors hover:border-[var(--tessera-border)] hover:bg-[var(--tessera-muted)] disabled:opacity-60"
+                  >
                     <span
                       className={cn(
                         "h-1.5 w-1.5 rounded-full",
@@ -275,7 +402,7 @@ function Catalogue({ t, data }: { t: T; data: Data }) {
                       )}
                     />
                     {t(`status.${row.status}`)}
-                  </span>
+                  </button>
                 </td>
               </tr>
             ))}
@@ -477,30 +604,38 @@ function AutomationsRail({ t, data }: { t: T; data: Data }) {
 // ── bottom band ──────────────────────────────────────────────────────────────
 
 function Approvals({ t, data, className }: { t: T; data: Data; className?: string }) {
+  // Approval queue — flagged demonstration (automation_workflow subsystem).
   return (
     <Panel
       title={t("zone.approvals").replace(/^H · /, "")}
       className={className}
       action={<ViewAll label={t("viewAll.all")} />}
     >
-      <ul className="flex flex-col gap-2">
-        {data.approvals.map((a) => (
-          <li key={a.name} className="flex items-center gap-2 text-[0.7rem]">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[var(--tessera-text)]">{a.name}</p>
-              <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">
-                {t("approve.since", { t: a.since })}
-              </p>
-            </div>
-            <Button
-              size="sm"
-              className="h-7 shrink-0 border border-[#007a55] bg-[#005c42] px-2.5 text-[0.66rem] text-[#d6f0e3] hover:bg-[#006d4e]"
-            >
-              {t("approve.cta")}
-            </Button>
-          </li>
-        ))}
-      </ul>
+      <SyntheticNotice signalId="automation_workflow" compact />
+      {data.approvals.length === 0 ? (
+        <p className="py-4 text-center text-[0.68rem] text-[var(--tessera-text-muted)]">
+          {t("tabx.noApprovals")}
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {data.approvals.map((a) => (
+            <li key={a.name} className="flex items-center gap-2 text-[0.7rem]">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[var(--tessera-text)]">{a.name}</p>
+                <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">
+                  {t("approve.since", { t: a.since })}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="h-7 shrink-0 border border-[#007a55] bg-[#005c42] px-2.5 text-[0.66rem] text-[#d6f0e3] hover:bg-[#006d4e]"
+              >
+                {t("approve.cta")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
     </Panel>
   );
 }
@@ -566,6 +701,7 @@ function Performance({ t, data, className }: { t: T; data: Data; className?: str
 function Savings({ t, data, className }: { t: T; data: Data; className?: string }) {
   return (
     <Panel title={t("zone.savings").replace(/^K · /, "")} className={className}>
+      <SyntheticNotice signalId="automation_workflow" compact />
       <dl className="flex flex-col gap-2">
         {data.savings.map((s) => (
           <div key={s.key} className="flex items-center justify-between gap-2">

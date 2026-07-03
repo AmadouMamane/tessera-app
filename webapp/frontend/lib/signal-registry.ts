@@ -81,7 +81,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   // silently ventilated).
   incidents: cap(ORG, { synthetic: true }),
   curation: cap(ORG, { synthetic: true }),
-  automations: cap(ORG, { synthetic: true }),
+  // Automations: real rule/execution core (code-defined rules over owned stores,
+  // durable toggles, journalled evaluations); approvals/savings stay flagged.
+  automations: cap(ORG),
+  automation_workflow: cap(ORG, { synthetic: true }),
   // Replay & shadow: real core (bundles + durable replay journal + run-to-run
   // eval comparisons); the shadow-fleet/export zones stay flagged below.
   replay_shadow: cap(ORG),

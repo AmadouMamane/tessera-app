@@ -1,39 +1,103 @@
 """Automations cockpit overview (page #13).
 
-Composes the "Automations" overview: the automation posture (active rules,
-24h executions, success rate, approvals, guardrail blocks, sensitive actions,
-auto-MTTR), the rule catalogue, the execution pipeline funnel, the breakdowns
-(by type, by environment), the execution journal, the pending approvals, the
-most-used guardrails, the 30-day performance and savings, and the governance /
-release context.
+The page has a REAL rule/execution core and a demonstration workflow chrome:
 
-The dataset is a deterministic reference fixture (no live automation store in
-this build); values are stable across calls so the page never "dances".
+* **REAL (from :mod:`tessera.observability.automation_store` — the created
+  source):** the catalogue is the code-defined rule set, each rule evaluating a
+  real condition against the owned stores (release gate, audit chain,
+  low-faithfulness turns, guard deny volume, curation backlog) with a durable
+  enabled flag; the execution journal, posture KPIs, pipeline funnel and
+  per-day performance derive from the journalled evaluations actually executed
+  via ``POST /observability/automations/evaluate``; the guardrail-solicitation
+  counts read the audit ledger. Storeless figures (MTTR auto, blocked-by-
+  guardrail) render ``—``.
+* **DEMONSTRATION (``automation_workflow`` synthetic signal):** the approval
+  queue and the savings/impact tallies describe a ticketing/ROI subsystem this
+  build does not implement; those zones stay flagged with honest dashes.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from tessera.observability.automation_store import (
+    RULES,
+    list_rule_states,
+    load_runs,
+)
+from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+from tessera.settings import get_settings
 
 __all__ = ["compute_automations_overview"]
 
-_LANG_IDX = {"fr": 0, "de": 1, "en": 2}
-
 
 def _loc(lang: str, fr: str, de: str, en: str) -> str:
-    """Pick the locale variant of an inline fixture string (fr / de / en)."""
     return (fr, de, en)[_LANG_IDX.get(lang, 0)]
 
 
 _TYPE_COLOR = {
     "qualite": "#60a5fa",
-    "securite": "#f87171",
+    "securite": "#f97316",
     "conformite": "#a78bfa",
     "memoire": "#34d399",
     "release": "#fbbf24",
     "cout": "#f472b6",
 }
 _ENV_COLOR = {"prod": "#34d399", "preprod": "#60a5fa", "staging": "#fbbf24", "dev": "#f472b6"}
+
+# Localized rule copy (name / trigger / action), keyed by rule id.
+_RULE_COPY: dict[str, tuple[tuple[str, str, str], tuple[str, str, str], tuple[str, str, str]]] = {
+    "gate_freeze": (
+        (
+            "Gel release sur gate FAIL",
+            "Release-Freeze bei Gate FAIL",
+            "Freeze release on gate FAIL",
+        ),
+        (
+            "Dernier run d'éval : gate FAIL",
+            "Letzter Eval-Lauf: Gate FAIL",
+            "Latest eval run: gate FAIL",
+        ),
+        ("Recommander le gel de release", "Release-Freeze empfehlen", "Recommend release freeze"),
+    ),
+    "chain_alert": (
+        ("Alerte chaîne d'audit", "Audit-Ketten-Alarm", "Audit-chain alert"),
+        (
+            "verify_active_ledger : chaîne rompue",
+            "verify_active_ledger: Kette gebrochen",
+            "verify_active_ledger: chain broken",
+        ),
+        ("Alerter conformité", "Compliance alarmieren", "Alert compliance"),
+    ),
+    "low_faith_review": (
+        ("Revue fidélité faible", "Review geringe Treue", "Low-faithfulness review"),
+        (
+            "Tours capturés sous le seuil de fidélité",
+            "Erfasste Turns unter Treue-Schwelle",
+            "Captured turns below faithfulness threshold",
+        ),
+        ("Ouvrir une revue qualité", "Qualitaets-Review oeffnen", "Open a quality review"),
+    ),
+    "deny_spike": (
+        ("Pic de refus guard", "Guard-Ablehnungsspitze", "Guard deny spike"),
+        (
+            "Refus guard 24h au-dessus du seuil",
+            "Guard-Denies 24h ueber Schwelle",
+            "Guard denies 24h above threshold",
+        ),
+        ("Notifier l'équipe sécurité", "Sicherheitsteam benachrichtigen", "Notify security team"),
+    ),
+    "curation_backlog": (
+        ("Backlog de curation", "Kurations-Backlog", "Curation backlog"),
+        (
+            "Candidats en attente au-dessus du seuil",
+            "Wartende Kandidaten ueber Schwelle",
+            "Pending candidates above threshold",
+        ),
+        ("Assigner une revue de curation", "Kurations-Review zuweisen", "Assign a curation review"),
+    ),
+}
 
 
 def _kpi(
@@ -48,408 +112,243 @@ def _kpi(
     }
 
 
+def _parse_at(value: object) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except (ValueError, TypeError):
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+def _guardrail_counts() -> list[dict[str, object]]:
+    """Real guardrail solicitations from the ledger (deny/transform per family)."""
+    try:
+        from tessera.guard.ledger_store import read_ledger_entries
+
+        entries = read_ledger_entries()
+    except Exception:
+        return []
+    pii = injection = tools = 0
+    for entry in entries:
+        if entry.get("type") != "tessera.guard.audit":
+            continue
+        decisions = entry.get("decisions")
+        for dec in decisions if isinstance(decisions, list) else []:
+            if not isinstance(dec, dict):
+                continue
+            rule = str(dec.get("policy_rule", "") or "")
+            kind = str(dec.get("decision", ""))
+            if rule.startswith("pii") and kind in {"deny", "transform"}:
+                pii += 1
+            elif rule.startswith("prompt_injection") and kind == "deny":
+                injection += 1
+            elif rule.startswith("tool.") and kind == "deny":
+                tools += 1
+    total = (pii + injection + tools) or 1
+    rows: list[tuple[str, int]] = [
+        ("pii_guard", pii),
+        ("policy_check", injection),
+        ("release_gate", tools),
+    ]
+    return [
+        {"key": key, "count": count, "pct": round(count / total * 100)}
+        for key, count in rows
+        if count > 0
+    ]
+
+
+def _posture_kpis(
+    now: datetime,
+    runs: list[dict[str, object]],
+    states: dict[str, bool],
+    day_keys: list[str],
+    n_ok: int,
+    n_approb: int,
+) -> tuple[list[dict[str, object]], list[int]]:
+    """REAL posture KPIs from the journal (storeless figures render dashes)."""
+    cutoff_24h = now - timedelta(hours=24)
+    runs_24h = [r for r in runs if (_parse_at(r.get("at")) or now) >= cutoff_24h]
+    n_active = sum(1 for enabled in states.values() if enabled)
+    n_sensitive = sum(1 for rule in RULES if rule.role.startswith("Admin"))
+    day_runs = dict.fromkeys(day_keys, 0)
+    for run in runs:
+        when = _parse_at(run.get("at"))
+        if when and when.date().isoformat() in day_runs:
+            day_runs[when.date().isoformat()] += 1
+    run_series = list(day_runs.values())
+    kpis = [
+        _kpi("active", str(n_active), "0", True, [n_active] * 7),
+        _kpi("executions", str(len(runs_24h)), "0", True, run_series),
+        _kpi(
+            "success_rate",
+            f"{n_ok / len(runs) * 100:.1f}%" if runs else "—",
+            "—",
+            True,
+            [0] * 7,
+        ),
+        _kpi("approvals", str(n_approb), "0", True, [n_approb] * 7),
+        _kpi("blocked", "—", "—", False, [0] * 7),
+        _kpi("sensitive", str(n_sensitive), "0", False, [n_sensitive] * 7),
+        _kpi("mttr", "—", "—", True, [0] * 7),
+    ]
+    return kpis, run_series
+
+
 def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
-    """Return the full Automations overview payload.
+    """Return the Automations overview payload (real rule core + flagged demo).
 
     Args:
-        lang: Locale (fr / de / en) for the free-text fixture fields the
-            frontend renders verbatim (rule names, triggers, actions, scopes,
-            incident labels, journal entries, governance scopes). All other
-            chrome is localized in the frontend via next-intl keys.
+        lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
 
     Returns:
-        A JSON-serialisable mapping with the automation posture KPIs, the rule
-        catalogue, the execution pipeline, the type / environment breakdowns,
-        the execution journal, the pending approvals, the most-used guardrails,
-        the performance / savings trends and the governance & release context.
+        A JSON-serialisable mapping with the rule catalogue (real definitions +
+        durable enabled state + journalled last runs), the execution journal,
+        the posture KPIs, funnel, distributions and governance — plus the
+        flagged approval-queue / savings fixtures.
     """
+    lang = _norm_lang(lang)
     now = datetime.now(UTC)
+    settings = get_settings()
+    env = settings.environment
 
-    kpis = [
-        _kpi("active", "28", "+3", True, [22, 23, 24, 25, 26, 27, 28]),
-        _kpi("executions", "1 284", "+11%", True, [980, 1040, 1100, 1150, 1200, 1240, 1284]),
-        _kpi("success_rate", "96.8%", "+2.4 pts", True, [93, 94, 94, 95, 95, 96, 97]),
-        _kpi("approvals", "9", "+1", True, [6, 7, 7, 8, 8, 9, 9]),
-        _kpi("blocked", "17", "+2", False, [11, 12, 13, 14, 15, 16, 17]),
-        _kpi("sensitive", "6", "-1", True, [8, 8, 7, 7, 6, 7, 6]),
-        _kpi("mttr", "3m 42s", "-18 s", False, [5, 5, 4, 4, 4, 4, 3]),
-    ]
+    states = list_rule_states()
+    runs = load_runs()
+    by_rule_runs: dict[str, list[dict[str, Any]]] = {}
+    for run in runs:
+        by_rule_runs.setdefault(str(run.get("rule_id", "")), []).append(run)
 
-    sys_role = _loc(lang, "Système", "System", "System")
-    sec_role = _loc(lang, "Sécurité", "Sicherheit", "Security")
-    catalogue = [
-        {
-            "name": _loc(
-                lang,
-                "Gel des releases après régression qualité",
-                "Releases bei Qualitaetsregression einfrieren",
-                "Freeze releases after quality regression",
-            ),
-            "trigger": _loc(
-                lang, "Gate FAIL (qualité)", "Gate FAIL (Qualitaet)", "Gate FAIL (quality)"
-            ),
-            "action": _loc(lang, "Geler release", "Release einfrieren", "Freeze release"),
-            "scope": "Release",
-            "mode": "auto",
-            "last_run": "12/05/25 11:54",
-            "success": "100% (7/7)",
-            "role": "Operator+",
-            "status": "active",
-        },
-        {
-            "name": _loc(
-                lang,
-                "Lancer red-team après incident",
-                "Red-Team nach Vorfall starten",
-                "Launch red-team after incident",
-            ),
-            "trigger": _loc(lang, "Incident critique", "Kritischer Vorfall", "Critical incident"),
-            "action": _loc(lang, "Lancer red-team", "Red-Team starten", "Launch red-team"),
-            "scope": sys_role,
-            "mode": "auto",
-            "last_run": "12/05/25 11:09",
-            "success": "99% (88/89)",
-            "role": sys_role,
-            "status": "active",
-        },
-        {
-            "name": _loc(
-                lang,
-                "Purge mémoire RGPD sur demande validée",
-                "DSGVO-Speicherbereinigung bei validierter Anfrage",
-                "GDPR memory purge on approved request",
-            ),
-            "trigger": _loc(lang, "Demande RGPD", "DSGVO-Anfrage", "GDPR request"),
-            "action": _loc(lang, "Purger mémoire", "Speicher bereinigen", "Purge memory"),
-            "scope": _loc(lang, "Mémoire", "Speicher", "Memory"),
-            "mode": "approb",
-            "last_run": "12/05/25 10:58",
-            "success": "95% (40/42)",
-            "role": sys_role,
-            "status": "active",
-        },
-        {
-            "name": _loc(
-                lang,
-                "Générer evidence pack après Gate FAIL",
-                "Evidence-Pack nach Gate FAIL erzeugen",
-                "Generate evidence pack after Gate FAIL",
-            ),
-            "trigger": "Gate FAIL",
-            "action": _loc(
-                lang,
-                "Générer evidence pack",
-                "Evidence-Pack erzeugen",
-                "Generate evidence pack",
-            ),
-            "scope": _loc(lang, "Conformité", "Konformitaet", "Compliance"),
-            "mode": "auto",
-            "last_run": "12/05/25 10:41",
-            "success": "98% (51/52)",
-            "role": sys_role,
-            "status": "active",
-        },
-        {
-            "name": _loc(
-                lang,
-                "Escalade humaine sur PII leakage",
-                "Menschliche Eskalation bei PII-Leak",
-                "Human escalation on PII leakage",
-            ),
-            "trigger": _loc(lang, "Détection PII", "PII-Erkennung", "PII detection"),
-            "action": _loc(
-                lang, "Notifier sécurité", "Sicherheit benachrichtigen", "Notify security"
-            ),
-            "scope": sec_role,
-            "mode": "approb",
-            "last_run": "12/05/25 11:54",
-            "success": "88% (15/17)",
-            "role": sec_role,
-            "status": "active",
-        },
-        {
-            "name": _loc(
-                lang,
-                "Geler budget si dépassement hebdo",
-                "Budget bei woechentlicher Ueberschreitung einfrieren",
-                "Freeze budget on weekly overrun",
-            ),
-            "trigger": "Budget cap",
-            "action": _loc(lang, "Geler budget", "Budget einfrieren", "Freeze budget"),
-            "scope": _loc(lang, "Coût", "Kosten", "Cost"),
-            "mode": "auto",
-            "last_run": "12/05/25 09:27",
-            "success": "92% (12/13)",
-            "role": "Admin",
-            "status": "paused",
-        },
-    ]
+    def _last_run_label(rule_id: str) -> str:
+        rule_runs = by_rule_runs.get(rule_id, [])
+        if not rule_runs:
+            return "—"
+        when = _parse_at(rule_runs[-1].get("at"))
+        return when.strftime("%d/%m %H:%M") if when else "—"
 
-    recent_incidents = [
-        {
-            "severity": "critique",
-            "id": "AUTO-014",
-            "label": _loc(
-                lang,
-                "Triage réglage détecté en production",
-                "Triage-Anpassung in Produktion erkannt",
-                "Triage tuning detected in production",
-            ),
-            "time": "11:52",
-        },
-        {
-            "severity": "eleve",
-            "id": "AUTO-022",
-            "label": _loc(
-                lang,
-                "Gate conformité Art. 50 FAIL",
-                "Konformitaets-Gate Art. 50 FAIL",
-                "Compliance gate Art. 50 FAIL",
-            ),
-            "time": "11:47",
-        },
-        {
-            "severity": "eleve",
-            "id": "AUTO-017",
-            "label": _loc(
-                lang,
-                "Qualité dégradée — Precision < 0.8",
-                "Qualitaet verschlechtert — Precision < 0.8",
-                "Quality degraded — Precision < 0.8",
-            ),
-            "time": "10:58",
-        },
-        {
-            "severity": "moyen",
-            "id": "AUTO-019",
-            "label": _loc(
-                lang,
-                "Budget coût dépassé (hebdo)",
-                "Kostenbudget ueberschritten (woechentlich)",
-                "Cost budget exceeded (weekly)",
-            ),
-            "time": "10:41",
-        },
-        {
-            "severity": "faible",
-            "id": "AUTO-011",
-            "label": _loc(
-                lang,
-                "Mémoire obsolète détectée",
-                "Veralteter Speicher erkannt",
-                "Stale memory detected",
-            ),
-            "time": "09:27",
-        },
-    ]
+    # ── REAL catalogue: code-defined rules + durable state + journalled runs ─
+    catalogue = []
+    for rule in RULES:
+        name, trigger, action = _RULE_COPY[rule.id]
+        rule_runs = by_rule_runs.get(rule.id, [])
+        n_runs = len(rule_runs)
+        n_fired = sum(1 for r in rule_runs if r.get("fired"))
+        catalogue.append(
+            {
+                "id": rule.id,
+                "name": _loc(lang, *name),
+                "trigger": _loc(lang, *trigger),
+                "action": _loc(lang, *action),
+                "scope": env,
+                "mode": rule.mode,
+                "last_run": _last_run_label(rule.id),
+                "success": f"{n_fired}/{n_runs}" if n_runs else "—",
+                "role": rule.role,
+                "status": "active" if states.get(rule.id, True) else "paused",
+            }
+        )
+
+    n_ok = sum(1 for r in runs if r.get("result") != "error")
+    n_approb = sum(1 for rule in RULES if rule.mode == "approb")
+    day_keys = [(now - timedelta(days=d)).date().isoformat() for d in range(6, -1, -1)]
+    kpis, run_series = _posture_kpis(now, runs, states, day_keys, n_ok, n_approb)
+
+    # ── REAL feed: the latest fired evaluations ──────────────────────────────
+    sev_by_rule = {rule.id: rule.severity for rule in RULES}
+    fired_runs = [r for r in reversed(runs) if r.get("fired")]
+    recent_incidents = []
+    for run in fired_runs[:5]:
+        rule_id = str(run.get("rule_id", ""))
+        when = _parse_at(run.get("at"))
+        copy = _RULE_COPY.get(rule_id)
+        recent_incidents.append(
+            {
+                "severity": sev_by_rule.get(rule_id, "moyen"),
+                "id": f"AUTO-{rule_id}",
+                "label": _loc(lang, *copy[0]) if copy else rule_id,
+                "time": when.strftime("%H:%M") if when else "—",
+            }
+        )
+
+    # ── REAL funnel from the journal ─────────────────────────────────────────
+    n_total = len(runs)
+    n_fired_total = sum(1 for r in runs if r.get("fired"))
+    n_approb_fired = sum(
+        1
+        for r in runs
+        if r.get("fired")
+        and next((ru.mode for ru in RULES if ru.id == r.get("rule_id")), "") == "approb"
+    )
+
+    def _pct(part: int) -> float:
+        return round(part / n_total * 100, 1) if n_total else 0.0
 
     pipeline = [
-        {"key": "trigger", "count": "1 284", "pct": 100},
-        {"key": "evaluation", "count": "1 221", "pct": 95.1},
-        {"key": "guardrail", "count": "1 148", "pct": 89.5},
-        {"key": "approval", "count": "312", "pct": 24.3},
-        {"key": "execution", "count": "1 042", "pct": 81.2},
-        {"key": "proof", "count": "1 006", "pct": 78.4},
+        {"key": "trigger", "count": str(n_total), "pct": 100.0 if n_total else 0.0},
+        {"key": "evaluation", "count": str(n_ok), "pct": _pct(n_ok)},
+        {"key": "guardrail", "count": str(n_fired_total), "pct": _pct(n_fired_total)},
+        {"key": "approval", "count": str(n_approb_fired), "pct": _pct(n_approb_fired)},
+        {"key": "execution", "count": str(n_fired_total), "pct": _pct(n_fired_total)},
+        {"key": "proof", "count": str(n_total), "pct": 100.0 if n_total else 0.0},
     ]
+    completion = f"{_pct(n_ok):.1f}%" if n_total else "—"
 
+    # ── REAL distributions ───────────────────────────────────────────────────
+    type_counts: dict[str, int] = {}
+    for rule in RULES:
+        type_counts[rule.type] = type_counts.get(rule.type, 0) + 1
+    n_rules = len(RULES) or 1
     by_type = [
-        {"key": "qualite", "count": 9, "pct": 32, "color": _TYPE_COLOR["qualite"]},
-        {"key": "securite", "count": 6, "pct": 21, "color": _TYPE_COLOR["securite"]},
-        {"key": "conformite", "count": 5, "pct": 18, "color": _TYPE_COLOR["conformite"]},
-        {"key": "memoire", "count": 3, "pct": 11, "color": _TYPE_COLOR["memoire"]},
-        {"key": "release", "count": 3, "pct": 11, "color": _TYPE_COLOR["release"]},
-        {"key": "cout", "count": 2, "pct": 7, "color": _TYPE_COLOR["cout"]},
+        {
+            "key": key,
+            "count": count,
+            "pct": round(count / n_rules * 100),
+            "color": _TYPE_COLOR.get(key, "#64748b"),
+        }
+        for key, count in sorted(type_counts.items(), key=lambda kv: -kv[1])
     ]
-
     by_env = [
-        {"key": "prod", "count": 812, "color": _ENV_COLOR["prod"]},
-        {"key": "preprod", "count": 246, "color": _ENV_COLOR["preprod"]},
-        {"key": "staging", "count": 152, "color": _ENV_COLOR["staging"]},
-        {"key": "dev", "count": 74, "color": _ENV_COLOR["dev"]},
+        {"key": env, "count": len(runs), "color": _ENV_COLOR.get(env, "#f472b6")},
     ]
 
-    journal = [
-        {
-            "time": "12/05 11:54",
-            "automation": _loc(
-                lang,
-                "Escalade humaine sur PII leakage",
-                "Menschliche Eskalation bei PII-Leak",
-                "Human escalation on PII leakage",
-            ),
-            "trigger": _loc(lang, "Détection PII", "PII-Erkennung", "PII detection"),
-            "actor": "M. Engineer",
-            "evidence": "ev_8b6a1c",
-            "duration": "0,8 s",
-            "result": "approb",
-        },
-        {
-            "time": "12/05 11:38",
-            "automation": _loc(
-                lang,
-                "Lancer red-team après incident",
-                "Red-Team nach Vorfall starten",
-                "Launch red-team after incident",
-            ),
-            "trigger": _loc(lang, "Incident critique", "Kritischer Vorfall", "Critical incident"),
-            "actor": sys_role,
-            "evidence": "ev_3f12d2e",
-            "duration": "12 s",
-            "result": "success",
-        },
-        {
-            "time": "12/05 11:21",
-            "automation": _loc(
-                lang,
-                "Gel des releases après régression",
-                "Releases bei Regression einfrieren",
-                "Freeze releases after regression",
-            ),
-            "trigger": "Gate FAIL",
-            "actor": "S. SysAdmin",
-            "evidence": "ev_77c0b1",
-            "duration": "1,2 s",
-            "result": "success",
-        },
-        {
-            "time": "12/05 10:58",
-            "automation": _loc(
-                lang,
-                "Purge mémoire RGPD",
-                "DSGVO-Speicherbereinigung",
-                "GDPR memory purge",
-            ),
-            "trigger": _loc(lang, "Demande RGPD", "DSGVO-Anfrage", "GDPR request"),
-            "actor": "Admin",
-            "evidence": "ev_92ad11",
-            "duration": "3,4 s",
-            "result": "approb",
-        },
-        {
-            "time": "12/05 10:41",
-            "automation": _loc(
-                lang,
-                "Générer evidence pack",
-                "Evidence-Pack erzeugen",
-                "Generate evidence pack",
-            ),
-            "trigger": "Gate FAIL",
-            "actor": sys_role,
-            "evidence": "ev_b21f0a",
-            "duration": "0,6 s",
-            "result": "success",
-        },
+    journal = _journal_rows(runs, lang)
+
+    # ── DEMONSTRATION: approval queue + savings (automation_workflow) ────────
+    approvals: list[dict[str, object]] = []
+    savings = [
+        {"key": "tickets", "value": "—", "delta": "—"},
+        {"key": "minutes", "value": "—", "delta": "—"},
+        {"key": "executions", "value": str(len(runs)), "delta": "—"},
+        {"key": "evidences", "value": "—", "delta": "—"},
     ]
 
-    approvals = [
-        {
-            "name": _loc(
-                lang,
-                "Purge mémoire RGPD sur demande validée",
-                "DSGVO-Speicherbereinigung bei validierter Anfrage",
-                "GDPR memory purge on approved request",
-            ),
-            "since": "21 min",
-            "role": "Admin",
-        },
-        {
-            "name": _loc(
-                lang,
-                "Escalade humaine sur PII leakage",
-                "Menschliche Eskalation bei PII-Leak",
-                "Human escalation on PII leakage",
-            ),
-            "since": "8 min",
-            "role": sec_role,
-        },
-        {
-            "name": _loc(
-                lang,
-                "Déployer modèle en production",
-                "Modell in Produktion bereitstellen",
-                "Deploy model to production",
-            ),
-            "since": "3 min",
-            "role": "Admin",
-        },
-    ]
-
-    guardrails = [
-        {"key": "pii_guard", "count": 228, "pct": 25},
-        {"key": "release_gate", "count": 194, "pct": 21},
-        {"key": "policy_check", "count": 152, "pct": 17},
-        {"key": "dual_control", "count": 96, "pct": 11},
-        {"key": "budget_cap", "count": 64, "pct": 7},
-    ]
+    guardrails = _guardrail_counts()
 
     performance = {
-        "labels": ["03/05", "05/05", "07/05", "09/05", "11/05"],
-        "success": [94, 95, 95, 96, 97],
-        "average": [88, 89, 90, 91, 92],
+        "labels": [k[5:] for k in day_keys],
+        "success": run_series,
+        "average": [0] * len(run_series),
     }
 
-    savings = [
-        {"key": "tickets", "value": "152", "delta": "+24%"},
-        {"key": "minutes", "value": "2 148 min", "delta": "+18%"},
-        {"key": "executions", "value": "21 436", "delta": "+11%"},
-        {"key": "evidences", "value": "1 006", "delta": "+9%"},
-    ]
-
-    context = {
-        "version": "v1.7.0",
-        "last_modified": "12/05/25 11:10",
-        "author": "A. Compliance",
-        "branch": "main",
-        "scope": "Prod",
-    }
+    context = _context_block(lang, env)
 
     governance = {
-        "dual_control": True,
+        "dual_control": n_approb > 0,
         "roles": [
-            {
-                "mode": "Admin",
-                "scope": _loc(
-                    lang,
-                    "Actions sensibles / système",
-                    "Sensible Aktionen / System",
-                    "Sensitive actions / system",
-                ),
-            },
-            {
-                "mode": "Compliance+",
-                "scope": _loc(
-                    lang,
-                    "Conformité / RGPD / preuve",
-                    "Konformitaet / DSGVO / Nachweis",
-                    "Compliance / GDPR / evidence",
-                ),
-            },
-            {
-                "mode": "Operator+",
-                "scope": _loc(
-                    lang, "Qualité / release", "Qualitaet / Release", "Quality / release"
-                ),
-            },
+            {"mode": rule.role, "scope": _loc(lang, *_RULE_COPY[rule.id][0])} for rule in RULES
         ],
-        "default_scope": _loc(
-            lang,
-            "Système entier (prod, preprod, staging, dev)",
-            "Gesamtes System (prod, preprod, staging, dev)",
-            "Entire system (prod, preprod, staging, dev)",
-        ),
+        "default_scope": env,
     }
 
     return {
         "generated_at": now.isoformat(),
         "period_days": 7,
-        "updated_at": "11:54:01",
+        "updated_at": now.strftime("%H:%M:%S"),
         "kpis": kpis,
         "catalogue": catalogue,
         "recent_incidents": recent_incidents,
         "pipeline": pipeline,
-        "completion": "78.4%",
+        "completion": completion,
         "by_type": by_type,
-        "by_type_total": 28,
+        "by_type_total": len(RULES),
         "by_env": by_env,
         "journal": journal,
         "approvals": approvals,
@@ -459,12 +358,57 @@ def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
         "context": context,
         "governance": governance,
         "footer": {
-            "source": "YAML · Git",
-            "certified": _loc(
-                lang,
-                "Certifié par Tessera Verified",
-                "Zertifiziert von Tessera Verified",
-                "Certified by Tessera Verified",
-            ),
+            "source": "automation_store · journal",
+            "certified": "—",
         },
+    }
+
+
+def _journal_rows(runs: list[dict[str, object]], lang: str) -> list[dict[str, object]]:
+    """The real journal rows, newest first (result mapped to the page enum)."""
+
+    def _result_key(run: dict[str, Any]) -> str:
+        if run.get("result") == "error":
+            return "fail"
+        if run.get("fired"):
+            rule_mode = next((ru.mode for ru in RULES if ru.id == run.get("rule_id")), "auto")
+            return "approb" if rule_mode == "approb" else "success"
+        return "success"
+
+    rows: list[dict[str, object]] = []
+    for run in list(reversed(runs))[:8]:
+        rule_id = str(run.get("rule_id", ""))
+        when = _parse_at(run.get("at"))
+        copy = _RULE_COPY.get(rule_id)
+        rows.append(
+            {
+                "time": when.strftime("%H:%M:%S") if when else "—",
+                "automation": _loc(lang, *copy[0]) if copy else rule_id,
+                "trigger": str(run.get("observed", "")),
+                "actor": _loc(lang, "Système", "System", "System"),
+                "evidence": "—",
+                "duration": f"{run.get('duration_ms', 0)} ms",
+                "result": _result_key(run),
+            }
+        )
+    return rows
+
+
+def _context_block(lang: str, env: str) -> dict[str, object]:
+    """Real context: the rule-set size + the store module's own mtime."""
+    try:
+        from pathlib import Path
+
+        import tessera.observability.automation_store as store_mod
+
+        mtime = datetime.fromtimestamp(Path(store_mod.__file__).stat().st_mtime, tz=UTC)
+        modified = mtime.strftime("%d/%m/%y %H:%M")
+    except OSError:
+        modified = "—"
+    return {
+        "version": f"{len(RULES)} règles" if lang == "fr" else f"{len(RULES)} rules",
+        "last_modified": modified,
+        "author": "automation_store.py (code)",
+        "branch": env,
+        "scope": env,
     }

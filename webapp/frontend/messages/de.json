@@ -4012,7 +4012,8 @@
       "prod": "Prod",
       "preprod": "Preprod",
       "staging": "Vorproduktion",
-      "dev": "Dev"
+      "dev": "Dev",
+      "local": "Lokal"
     },
     "jCol": {
       "time": "Zeitstempel",
@@ -4079,6 +4080,12 @@
     "footer": {
       "source": "Quelle der Wahrheit: {src}",
       "certified": "{txt}"
+    },
+    "tabx": {
+      "evaluateNow": "Regeln jetzt auswerten",
+      "evaluating": "Auswertung…",
+      "auditLink": "Audit-Journal oeffnen (Kette)",
+      "noApprovals": "Keine wartenden Freigaben — die Freigabe-Queue ist ein Demo-Subsystem."
     }
   },
   "proofs": {

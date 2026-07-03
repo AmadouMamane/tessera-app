@@ -22,13 +22,13 @@ from tessera.observability.spine.scope import Dimension, Scope
 
 class TestCapabilities:
     def test_fixtures_are_flagged_synthetic(self) -> None:
-        # policies + replay_shadow graduated to real cores; their absent
-        # subsystems keep dedicated synthetic flags.
-        for signal_id in ("incidents", "curation", "automations"):
+        # policies / replay_shadow / automations graduated to real cores; their
+        # absent subsystems keep dedicated synthetic flags.
+        for signal_id in ("incidents", "curation"):
             assert capability_for(signal_id).synthetic is True
-        for signal_id in ("policies", "replay_shadow"):
+        for signal_id in ("policies", "replay_shadow", "automations"):
             assert capability_for(signal_id).synthetic is False
-        for signal_id in ("policy_versioning", "shadow_traffic"):
+        for signal_id in ("policy_versioning", "shadow_traffic", "automation_workflow"):
             assert capability_for(signal_id).synthetic is True
 
     def test_fixed_corpus_probes_are_org_wide(self) -> None:

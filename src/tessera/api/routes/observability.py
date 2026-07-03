@@ -1665,6 +1665,40 @@ async def observability_automations(lang: str = "fr") -> dict[str, object]:
         return {"available": False}
 
 
+class _AutomationRuleStateBody(BaseModel):
+    """Durable enable/disable for one code-defined automation rule."""
+
+    rule_id: str
+    enabled: bool
+    lang: str = "fr"
+
+
+@router.post("/observability/automations/evaluate")
+async def observability_automations_evaluate(lang: str = "fr") -> dict[str, object]:
+    """Evaluate every enabled automation rule against its REAL store now.
+
+    Each evaluation is journalled durably (automation_runs.json); the fresh
+    overview payload is returned so the client swaps its cache in one trip.
+    """
+    from tessera.observability import automation_store
+
+    automation_store.evaluate_rules()
+    return {"available": True, **automations_mod.compute_automations_overview(lang)}
+
+
+@router.post("/observability/automations/rule-state")
+async def observability_automations_rule_state(
+    body: _AutomationRuleStateBody,
+) -> dict[str, object]:
+    """Persist a rule's enabled flag; 404 on unknown rule; returns fresh payload."""
+    from tessera.observability import automation_store
+
+    if body.rule_id not in automation_store.available_rule_ids():
+        raise HTTPException(status_code=404, detail="unknown automation rule")
+    automation_store.set_rule_enabled(body.rule_id, enabled=body.enabled)
+    return {"available": True, **automations_mod.compute_automations_overview(body.lang)}
+
+
 @router.get("/observability/curation")
 async def observability_curation(lang: str = "fr") -> dict[str, object]:
     """Curation eval-set overview (page #12).

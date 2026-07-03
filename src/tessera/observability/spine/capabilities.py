@@ -149,7 +149,13 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # never be silently ventilated (project rule: never call a deterministic fixture real).
     _cap("incidents", frozenset(), synthetic=True),
     _cap("curation", frozenset(), synthetic=True),
-    _cap("automations", frozenset(), synthetic=True),
+    # Automations: the rule/execution core is REAL (code-defined rules evaluated
+    # against the owned stores; durable enabled flags; a journal of evaluations
+    # actually executed via POST /observability/automations/evaluate)…
+    _cap("automations", frozenset()),
+    # …while the approval queue + savings/ROI tallies are a ticketing subsystem
+    # this build does not implement — those zones stay flagged.
+    _cap("automation_workflow", frozenset(), synthetic=True),
     # Replay & shadow: the replay core is REAL (captured bundles, the durable
     # replay_runs journal written by POST /observability/replay, and run-N vs
     # run-N-1 eval comparisons with exact newly-failing cases)…

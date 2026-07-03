@@ -2433,6 +2433,7 @@ const AuKpiSchema = z.object({
   series: z.array(z.number()),
 });
 const AuCatalogueSchema = z.object({
+  id: z.string(),
   name: z.string(),
   trigger: z.string(),
   action: z.string(),
