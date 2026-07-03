@@ -96,7 +96,13 @@ prompt_injection:
     # Roleplay / persona override — DENY (not transform: LLM must never see it)
     - "(?i)\\b(act as|pretend to be|roleplay as|play the role of)\\b.{0,60}(no restriction|without rule|without limit|sans restriction|sans r[eè]gle|aucune limite|ohne Einschr[äa]nkung|keine Regeln)"
     - "(?i)\\b(tu joues? le r[ôo]le|joue le r[ôo]le|fais semblant d'[eê]tre)\\b.{0,80}(sans|aucune|pas de).{0,30}(restriction|r[eè]gle|limite|contr[ôo]le)"
-    - "(?i)\\b(spiele? die Rolle|tu so als ob du)\\b.{0,80}(ohne|keine).{0,30}(Einschr[äa]nkung|Regel|Grenze)"
+    # Covers conjugated/inverted forms — "spielst du die Rolle", "du spielst
+    # die Rolle", "spiel jetzt die Rolle", "übernimm die Rolle" (case 07-de).
+    - "(?i)\\b(spiel(e|st|t)?\\s+(du\\s+)?(jetzt\\s+)?die Rolle|[üu]bernimm(st)?\\s+(du\\s+)?(jetzt\\s+)?die Rolle|tu so als ob du)\\b.{0,80}(ohne|keine).{0,30}(Einschr[äa]nkung|Regel|Grenze)"
+    # System-prompt extraction — "repeat the text above" (case 44, Sydney-style).
+    # Conjunctive: a repeat-verb followed by a context/system target. A benign
+    # "répète ta dernière réponse" or "repeat after me" never trips it.
+    - "(?i)\\b(r[ée]p[èeé]te[sz]?|r[ée]p[ée]ter|repeat|wiederhol(e|en|st|t)?)\\b.{0,80}\\b(au[- ]dessus|above|oberhalb|ce qui pr[ée]c[èe]de|instructions? initiales?|initial instructions|urspr[üu]nglichen? Anweisungen|system[- ]?prompt)"
     # XML / pseudo-tag instruction injection (case 10)
     - "</?\\s*(system|instruction|prompt|rule|override|admin)[^>]{0,50}>"
     - "(?i)(</motif>|</raison>|</reason>|</field>).*<(system|instruction|prompt)"
