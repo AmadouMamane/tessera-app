@@ -4481,6 +4481,51 @@
         "retention": {
           "what": "Aufbewahrungsfristen und die durch die Beweise abgedeckten regulatorischen Pflichten.",
           "how": "Ordnet jede Pflicht ihrem Beweis und ihrer Frist zu."
+        },
+        "actual": {
+          "what": "Der aktuelle Zustand des Nachweispakets.",
+          "how": "Aktuelle Artefaktzähler (Audit, Scores, Bundles, Berichte) und Kettenintegrität.",
+          "source": "Audit-Ledger + Score-/Bundle-/Bericht-Stores."
+        },
+        "distribution": {
+          "what": "Die Verteilung der Nachweisartefakte nach Familie.",
+          "how": "Anteile der 4 realen Stores: Audit-Logs, Berichte, Eval-Scores, Replay-Bundles.",
+          "source": "Audit-Ledger + Eval-/Replay-Stores."
+        },
+        "alerts": {
+          "what": "Die Warnungen zu den Export-Nachweisen.",
+          "how": "Nur eine Warnung: der Zustand der Audit-Kette (intakt oder gebrochen), Spiegel derselben Prüfung wie das KPI Integrität.",
+          "source": "Audit-Ledger-Kette (Hash)."
+        },
+        "integrity": {
+          "what": "Die Integrität der Nachweiskette.",
+          "how": "verify_active_ledger(): ist die Hash-Kette durchgängig verifizierbar?",
+          "source": "Audit-Ledger-Kette (Hash)."
+        },
+        "recentPacks": {
+          "what": "Die jüngsten Nachweispakete (Packs).",
+          "how": "Demonstrations-Subsystem: die Zeilen sind illustrativ, ohne realen Pack-Store.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "currentPack": {
+          "what": "Das gerade zusammengestellte Nachweispaket.",
+          "how": "Demonstrations-Subsystem: Kennung, Hash und Unterzeichner illustrativ, ohne reale Zusammenstellung.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "controlCases": {
+          "what": "Die den Kontrollfällen zugeordneten Nachweise.",
+          "how": "Demonstrations-Subsystem: die Zuordnungen sind illustrativ (die Kategorien bleiben reale Fehlerfamilien).",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "journal": {
+          "what": "Das Export-Journal.",
+          "how": "Demonstrations-Subsystem: illustrative Einträge (der Link führt zum echten Audit-Journal).",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "queue": {
+          "what": "Die zu bearbeitenden Nachweise.",
+          "how": "Demonstrations-Subsystem: illustrative Zähler für ausstehende Signaturen/Exporte/Prüfungen.",
+          "source": "Keine reale Quelle (Demonstration)."
         }
       }
     },

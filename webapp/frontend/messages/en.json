@@ -4481,6 +4481,51 @@
         "retention": {
           "what": "Retention periods and the regulatory obligations covered by the evidence.",
           "how": "Maps each obligation to its evidence and its due date."
+        },
+        "actual": {
+          "what": "The current state of the evidence store.",
+          "how": "Current artifact counts (audit, scores, bundles, reports) and chain integrity.",
+          "source": "Audit ledger + score/bundle/report stores."
+        },
+        "distribution": {
+          "what": "The distribution of proof artifacts by family.",
+          "how": "Shares of the 4 real stores: audit logs, reports, eval scores, replay bundles.",
+          "source": "Audit ledger + eval/replay stores."
+        },
+        "alerts": {
+          "what": "The alerts on the export evidence.",
+          "how": "A single alert: the audit chain's state (intact or broken), a mirror of the same check as the Integrity KPI.",
+          "source": "Audit ledger chain (hash)."
+        },
+        "integrity": {
+          "what": "The integrity of the proof chain.",
+          "how": "verify_active_ledger(): is the hash chain verifiable end to end?",
+          "source": "Audit ledger chain (hash)."
+        },
+        "recentPacks": {
+          "what": "The recent evidence packs.",
+          "how": "Demonstration subsystem: the rows are illustrative, with no real pack store.",
+          "source": "No real source (demonstration)."
+        },
+        "currentPack": {
+          "what": "The evidence pack currently being assembled.",
+          "how": "Demonstration subsystem: id, hash and signer illustrative, with no real assembly.",
+          "source": "No real source (demonstration)."
+        },
+        "controlCases": {
+          "what": "The proofs linked to the control cases.",
+          "how": "Demonstration subsystem: the links are illustrative (the categories stay real failure families).",
+          "source": "No real source (demonstration)."
+        },
+        "journal": {
+          "what": "The export journal.",
+          "how": "Demonstration subsystem: illustrative entries (the link leads to the real audit journal).",
+          "source": "No real source (demonstration)."
+        },
+        "queue": {
+          "what": "The proofs pending processing.",
+          "how": "Demonstration subsystem: illustrative counters for pending signatures/exports/verifications.",
+          "source": "No real source (demonstration)."
         }
       }
     },

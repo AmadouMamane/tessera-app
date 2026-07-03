@@ -96,10 +96,17 @@ export function ProofsOverview() {
     </Zone>
   );
   const packsZone = (
-    <Zone label={t("zone.recentPacks")}>
+    <Zone
+      label={t("zone.recentPacks")}
+      info={<ExplainInfo k="zone.recentPacks" title={t("zone.recentPacks")} />}
+    >
       <div className="grid gap-3 xl:grid-cols-12">
         <RecentPacks t={t} data={data} className="xl:col-span-8" />
-        <Panel title={t("zone.distribution")} className="xl:col-span-4">
+        <Panel
+          title={t("zone.distribution")}
+          info={<ExplainInfo k="zone.distribution" title={t("zone.distribution")} />}
+          className="xl:col-span-4"
+        >
           <Donut
             slices={data.artifacts_distribution}
             total={data.artifacts_total}
@@ -147,7 +154,10 @@ export function ProofsOverview() {
     </Zone>
   );
   const controlCasesZone = (
-    <Zone label={t("zone.controlCases")}>
+    <Zone
+      label={t("zone.controlCases")}
+      info={<ExplainInfo k="zone.controlCases" title={t("zone.controlCases")} />}
+    >
       <SyntheticNotice signalId="evidence_export" compact />
       <ControlCases t={t} data={data} />
     </Zone>
@@ -189,7 +199,10 @@ export function ProofsOverview() {
         {activeTab === "chain" ? (
           <div className="grid gap-3 xl:grid-cols-2">
             {cryptoZone}
-            <Zone label={t("zone.alerts")}>
+            <Zone
+              label={t("zone.alerts")}
+              info={<ExplainInfo k="zone.alerts" title={t("zone.alerts")} />}
+            >
               <AlertsPanel t={t} data={data} />
             </Zone>
           </div>
@@ -204,7 +217,10 @@ export function ProofsOverview() {
 
       {activeTab !== "overview" ? null : (
         <>
-          <Zone label={t("zone.actual")}>
+          <Zone
+            label={t("zone.actual")}
+            info={<ExplainInfo k="zone.actual" title={t("zone.actual")} />}
+          >
             <div className="grid gap-3 xl:grid-cols-12">
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:col-span-10 xl:grid-cols-6">
                 {data.kpis.map((kpi) => (
@@ -286,6 +302,7 @@ function AlertsPanel({ t, data, className }: { t: T; data: Data; className?: str
   return (
     <Panel
       title={t("zone.alerts")}
+      info={<ExplainInfo k="zone.alerts" title={t("zone.alerts")} />}
       className={className}
       action={
         <ViewAll label={t("viewAll.alerts", { n: data.alert_count })} href="/prouver/audit-logs" />
@@ -356,7 +373,11 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
 function CurrentPack({ t, data, className }: { t: T; data: Data; className?: string }) {
   const p = data.current_pack;
   return (
-    <Panel title={t("zone.currentPack")} className={className}>
+    <Panel
+      title={t("zone.currentPack")}
+      info={<ExplainInfo k="zone.currentPack" title={t("zone.currentPack")} />}
+      className={className}
+    >
       <div className="flex flex-col gap-2 text-[0.72rem]">
         <div className="flex items-center justify-between gap-2">
           <span className="font-mono text-[#87bfff]">{p.id}</span>
@@ -628,7 +649,10 @@ function Retention({ t, data }: { t: T; data: Data }) {
 function ProofsRail({ t, data }: { t: T; data: Data }) {
   return (
     <aside className="flex min-w-0 flex-col gap-3">
-      <Panel title={t("zone.integrity")}>
+      <Panel
+        title={t("zone.integrity")}
+        info={<ExplainInfo k="zone.integrity" title={t("zone.integrity")} />}
+      >
         <div className="flex items-center gap-3">
           <ShieldCheck
             className={cn(
@@ -679,6 +703,7 @@ function ProofsRail({ t, data }: { t: T; data: Data }) {
 
       <Panel
         title={t("zone.journal")}
+        info={<ExplainInfo k="zone.journal" title={t("zone.journal")} />}
         action={<ViewAll label={t("viewAll.all")} href="/prouver/audit-logs" />}
       >
         <ul className="flex flex-col gap-1.5">
@@ -705,6 +730,7 @@ function ProofsRail({ t, data }: { t: T; data: Data }) {
 
       <Panel
         title={t("zone.queue")}
+        info={<ExplainInfo k="zone.queue" title={t("zone.queue")} />}
         action={<ViewAll label={t("queue.viewQueue")} href="/configurer/integrations" />}
       >
         <dl className="flex flex-col gap-1.5 text-[0.7rem]">

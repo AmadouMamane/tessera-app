@@ -4481,6 +4481,51 @@
         "retention": {
           "what": "Les durées de rétention et les obligations réglementaires couvertes par les preuves.",
           "how": "Mappe chaque obligation à sa preuve et à son échéance."
+        },
+        "actual": {
+          "what": "L'état actuel du dossier de preuves.",
+          "how": "Compteurs courants des artefacts (audit, scores, bundles, rapports) et intégrité de la chaîne.",
+          "source": "Ledger d'audit + stores de scores/bundles/rapports."
+        },
+        "distribution": {
+          "what": "La répartition des artefacts de preuve par famille.",
+          "how": "Parts des 4 stores réels : journaux d'audit, rapports, scores d'éval, bundles de rejeu.",
+          "source": "Ledger d'audit + stores d'éval/rejeu."
+        },
+        "alerts": {
+          "what": "Les alertes sur les preuves d'export.",
+          "how": "Une seule alerte : l'état de la chaîne d'audit (intacte ou rompue), reflet du même contrôle que le KPI Intégrité.",
+          "source": "Chaîne du ledger d'audit (hash)."
+        },
+        "integrity": {
+          "what": "L'intégrité de la chaîne de preuve.",
+          "how": "verify_active_ledger() : la chaîne de hash est-elle vérifiable de bout en bout ?",
+          "source": "Chaîne du ledger d'audit (hash)."
+        },
+        "recentPacks": {
+          "what": "Les dossiers de preuves (packs) récents.",
+          "how": "Sous-système de démonstration : les lignes sont illustratives, sans store réel de packs.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "currentPack": {
+          "what": "Le dossier de preuves en cours d'assemblage.",
+          "how": "Sous-système de démonstration : identifiant, hash et signataire illustratifs, sans assemblage réel.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "controlCases": {
+          "what": "Les preuves rattachées aux cas de contrôle.",
+          "how": "Sous-système de démonstration : les rattachements sont illustratifs (les catégories restent des familles d'échec réelles).",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "journal": {
+          "what": "Le journal des exports.",
+          "how": "Sous-système de démonstration : entrées illustratives (le lien mène au vrai journal d'audit).",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "queue": {
+          "what": "Les preuves en attente de traitement.",
+          "how": "Sous-système de démonstration : compteurs illustratifs de signatures/exports/vérifications en attente.",
+          "source": "Pas de source réelle (démonstration)."
         }
       }
     },
