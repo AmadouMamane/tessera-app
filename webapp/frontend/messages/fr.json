@@ -1901,6 +1901,101 @@
         "what": "Détail complet du cas échoué sélectionné : invite, réponse, attendu, raisons.",
         "how": "Champs du cas choisi dans la liste.",
         "source": "Archive des cas échoués."
+      },
+      "modelReferent": {
+        "what": "Modèle de référence de la comparaison (le meilleur en tête).",
+        "how": "Premier modèle du classement par pass-rate.",
+        "source": "Comparaison des modèles."
+      },
+      "modelScore": {
+        "what": "Score de réussite du modèle référent, sur 100, avec l'écart au relevé précédent.",
+        "how": "pass_rate × 100 ; écart = dernier bucket vs précédent.",
+        "source": "Comparaison des modèles (évolution)."
+      },
+      "modelFaith": {
+        "what": "Fidélité moyenne du modèle référent.",
+        "how": "Score de fidélité du référent.",
+        "source": "Comparaison des modèles."
+      },
+      "modelGrounding": {
+        "what": "Taux d'ancrage du modèle référent.",
+        "how": "Part des réponses ancrées dans les sources.",
+        "source": "Comparaison des modèles."
+      },
+      "modelNonReg": {
+        "what": "Taux de non-régression de l'organisation.",
+        "how": "Part des cas sans régression au dernier gate.",
+        "source": "État de release."
+      },
+      "modelHallucination": {
+        "what": "Sûreté anti-hallucination du référent (1 moins le taux d'hallucination).",
+        "how": "100 moins le taux d'hallucination du référent, en %.",
+        "source": "Comparaison des modèles."
+      },
+      "modelKappa": {
+        "what": "Accord global juge-or (kappa de Cohen).",
+        "how": "Kappa du juge LLM contre l'étalon annoté.",
+        "source": "Calibration (juge vs or)."
+      },
+      "modelCases": {
+        "what": "Cas évalués pour le référent ; sous-titre = modèles actifs.",
+        "how": "Nombre de cas du référent ; N modèles comparés.",
+        "source": "Comparaison des modèles."
+      },
+      "modelScoreByModel": {
+        "what": "Pass-rate par modèle au fil du temps, sur la période choisie.",
+        "how": "Séries par modèle depuis l'archive des runs, bornées à la période.",
+        "source": "Archive des runs."
+      },
+      "modelRadar": {
+        "what": "Profil par métrique de chaque modèle (fidélité, ancrage…).",
+        "how": "Scores par métrique et par modèle.",
+        "source": "Comparaison des modèles."
+      },
+      "modelHeatmap": {
+        "what": "Pass-rate par modèle et par catégorie de cas.",
+        "how": "Taux de réussite croisé modèle × catégorie.",
+        "source": "Comparaison des modèles (par catégorie)."
+      },
+      "modelFaithGrounding": {
+        "what": "Nuage fidélité vs ancrage par modèle.",
+        "how": "Un point par modèle : fidélité en x, ancrage en y.",
+        "source": "Comparaison des modèles."
+      },
+      "modelCostQuality": {
+        "what": "Nuage coût vs pass-rate par modèle.",
+        "how": "Un point par modèle : coût estimé en x, pass-rate en y.",
+        "source": "Comparaison des modèles."
+      },
+      "modelRecentRuns": {
+        "what": "Pass-rate des derniers runs sur la période choisie.",
+        "how": "Runs récents bornés à la période, par date.",
+        "source": "Archive des runs."
+      },
+      "modelRegressions": {
+        "what": "Régressions ouvertes attribuées par modèle.",
+        "how": "Régressions du gate courant regroupées par modèle.",
+        "source": "État de release (régressions)."
+      },
+      "modelTable": {
+        "what": "Tableau détaillé par modèle : score, fidélité, ancrage, coût, cas.",
+        "how": "Une ligne par modèle comparé.",
+        "source": "Comparaison des modèles."
+      },
+      "modelIntent": {
+        "what": "Performance par intent — indisponible : Tessera n'a pas d'étiquettes modèle × intent.",
+        "how": "Aucune source réelle ; panneau « indisponible » plutôt qu'une valeur inventée.",
+        "source": "Aucune (non instrumenté)."
+      },
+      "modelDrift": {
+        "what": "Dérive des juges (fidélité, ancrage), consensus et stabilité des séries.",
+        "how": "Dérive juge, consensus inter-juges et variance des séries de score.",
+        "source": "Dérive juge · consensus juge."
+      },
+      "modelPeriod": {
+        "what": "Restreint le score au fil du temps et les runs récents à une fenêtre de dates de runs réelles.",
+        "how": "Sélection de N jours ancrée sur une date de run existante.",
+        "source": "Dates de runs de l'archive."
       }
     },
     "seeDetail": "Voir le détail",

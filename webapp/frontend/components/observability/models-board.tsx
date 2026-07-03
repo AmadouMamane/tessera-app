@@ -15,6 +15,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
@@ -92,18 +93,21 @@ function Kpi({
   value,
   sub,
   tone,
+  explainKey,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sub?: React.ReactNode;
   tone?: string;
+  explainKey?: string;
 }) {
   return (
     <Card className="flex flex-col gap-0.5 p-2.5">
       <span className="flex items-center gap-1 text-[0.62rem] text-[var(--muted-foreground)]">
         <span className="opacity-70">{icon}</span>
         {label}
+        {explainKey ? <QInfo title={label} k={explainKey} /> : null}
       </span>
       <span className={`text-lg font-semibold leading-tight tabular-nums ${tone ?? ""}`}>
         {value}
@@ -153,6 +157,7 @@ function ModelsKpis({
       <Kpi
         icon={<Award className="h-3.5 w-3.5" />}
         label={tq("models.kpi.referent")}
+        explainKey="modelReferent"
         value={ref ? shortModel(ref.model) : DASH}
         sub={
           ref ? (
@@ -165,6 +170,7 @@ function ModelsKpis({
       <Kpi
         icon={<Gauge className="h-3.5 w-3.5" />}
         label={tq("models.kpi.score")}
+        explainKey="modelScore"
         value={ref ? `${fmtScore(ref.pass_rate)}/100` : DASH}
         tone={ref ? scoreToneClass(ref.pass_rate) : undefined}
         sub={<DeltaSub delta={evoDelta(ref?.evolution)} />}
@@ -172,33 +178,39 @@ function ModelsKpis({
       <Kpi
         icon={<Target className="h-3.5 w-3.5" />}
         label={tq("models.kpi.faithfulness")}
+        explainKey="modelFaith"
         value={ref?.faithfulness != null ? ref.faithfulness.toFixed(2) : DASH}
       />
       <Kpi
         icon={<Crosshair className="h-3.5 w-3.5" />}
         label={tq("models.kpi.grounding")}
+        explainKey="modelGrounding"
         value={pctOrDash(ref?.grounding)}
       />
       <Kpi
         icon={<ShieldCheck className="h-3.5 w-3.5" />}
         label={tq("models.kpi.nonReg")}
+        explainKey="modelNonReg"
         value={pctOrDash(nonReg)}
       />
       <Kpi
         icon={<ShieldAlert className="h-3.5 w-3.5" />}
         label={tq("models.kpi.hallucination")}
+        explainKey="modelHallucination"
         value={ref?.hallucination != null ? `${Math.round((1 - ref.hallucination) * 100)}%` : DASH}
         tone="text-amber-500"
       />
       <Kpi
         icon={<Sparkles className="h-3.5 w-3.5" />}
         label={tq("models.kpi.kappa")}
+        explainKey="modelKappa"
         value={kappa != null ? kappa.toFixed(2) : DASH}
         sub={tq("models.kpi.kappaGlobal")}
       />
       <Kpi
         icon={<Coins className="h-3.5 w-3.5" />}
         label={tq("models.kpi.cases")}
+        explainKey="modelCases"
         value={ref ? String(ref.total_cases) : DASH}
         sub={tq("models.kpi.active", { n: models.length })}
       />
@@ -701,7 +713,10 @@ function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between pb-1">
-        <CardTitle className="text-sm">{tq("models.table.title")}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          {tq("models.table.title")}
+          <QInfo title={tq("models.table.title")} k="modelTable" />
+        </CardTitle>
         {comparison?.judge_model ? (
           <Badge tone="neutral" className="text-[0.6rem]">
             {tq("models.table.judge", { m: comparison.judge_model })}
@@ -785,12 +800,21 @@ function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }
 
 // ───────────────────────────────── helpers ───────────────────────────────────
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({
+  title,
+  explainKey,
+  children,
+}: {
+  title: string;
+  explainKey?: string;
+  children: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader className="pb-1">
-        <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+        <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
           {title}
+          {explainKey ? <QInfo title={title} k={explainKey} /> : null}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-1">{children}</CardContent>
@@ -804,8 +828,9 @@ function IntentUnavailable() {
   return (
     <Card>
       <CardHeader className="pb-1">
-        <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+        <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
           {tq("models.intent.title")}
+          <QInfo title={tq("models.intent.title")} k="modelIntent" />
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col items-center justify-center gap-1 py-6 text-center">
@@ -870,7 +895,10 @@ export function ModelsPeriodRail({
     <aside className="flex w-full flex-col gap-2 2xl:w-72">
       <Card>
         <CardHeader className="pb-1">
-          <CardTitle className="text-[0.8rem]">{tq("models.period.title")}</CardTitle>
+          <CardTitle className="flex items-center gap-1.5 text-[0.8rem]">
+            {tq("models.period.title")}
+            <QInfo title={tq("models.period.title")} k="modelPeriod" />
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 pt-1">
           <div className="flex flex-col gap-1">
@@ -982,16 +1010,16 @@ export function ModelsBoard({
 
       {/* Row 1: score over time · radar · category heatmap · faith×grounding */}
       <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
-        <ChartCard title={tq("models.charts.scoreByModel")}>
+        <ChartCard title={tq("models.charts.scoreByModel")} explainKey="modelScoreByModel">
           <ScoreLines series={series} />
         </ChartCard>
-        <ChartCard title={tq("models.charts.radar")}>
+        <ChartCard title={tq("models.charts.radar")} explainKey="modelRadar">
           <QualityRadar models={models} />
         </ChartCard>
-        <ChartCard title={tq("models.charts.heatmap")}>
+        <ChartCard title={tq("models.charts.heatmap")} explainKey="modelHeatmap">
           <CategoryHeatmap models={models} />
         </ChartCard>
-        <ChartCard title={tq("models.charts.faithGrounding")}>
+        <ChartCard title={tq("models.charts.faithGrounding")} explainKey="modelFaithGrounding">
           <ModelScatter
             models={models}
             x={(m) => m.faithfulness}
@@ -1006,7 +1034,7 @@ export function ModelsBoard({
       <div className="grid gap-2 2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <ModelsTable comparison={comparison} />
         <IntentUnavailable />
-        <ChartCard title={tq("models.charts.costQuality")}>
+        <ChartCard title={tq("models.charts.costQuality")} explainKey="modelCostQuality">
           <ModelScatter
             models={models}
             x={(m) => m.est_cost_eur ?? 0}
@@ -1019,10 +1047,10 @@ export function ModelsBoard({
 
       {/* Row 3: recent runs · regressions by model · drift & stability */}
       <div className="grid gap-2 2xl:grid-cols-3">
-        <ChartCard title={tq("models.charts.recentRuns")}>
+        <ChartCard title={tq("models.charts.recentRuns")} explainKey="modelRecentRuns">
           <PassRateRuns registry={registry} period={period} />
         </ChartCard>
-        <ChartCard title={tq("models.charts.regressions")}>
+        <ChartCard title={tq("models.charts.regressions")} explainKey="modelRegressions">
           <RegressionsByModel release={release} />
         </ChartCard>
         <Card>
@@ -1030,6 +1058,7 @@ export function ModelsBoard({
             <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
               <Activity className="h-3.5 w-3.5" />
               {tq("models.charts.drift")}
+              <QInfo title={tq("models.charts.drift")} k="modelDrift" />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-1">

@@ -1901,6 +1901,101 @@
         "what": "Vollständiges Detail des gewählten fehlgeschlagenen Falls: Prompt, Antwort, Erwartung, Gründe.",
         "how": "Felder des in der Liste gewählten Falls.",
         "source": "Archiv fehlgeschlagener Fälle."
+      },
+      "modelReferent": {
+        "what": "Referenzmodell des Vergleichs (bestes zuerst).",
+        "how": "Erstes Modell im Pass-Rate-Ranking.",
+        "source": "Modellvergleich."
+      },
+      "modelScore": {
+        "what": "Erfolgsscore des Referenzmodells, von 100, mit Abstand zum vorherigen Wert.",
+        "how": "pass_rate × 100; Delta = letzter Bucket vs. vorheriger.",
+        "source": "Modellvergleich (Entwicklung)."
+      },
+      "modelFaith": {
+        "what": "Mittlere Treue des Referenzmodells.",
+        "how": "Treue-Score des Referenten.",
+        "source": "Modellvergleich."
+      },
+      "modelGrounding": {
+        "what": "Verankerungsrate des Referenzmodells.",
+        "how": "Anteil der in Quellen verankerten Antworten.",
+        "source": "Modellvergleich."
+      },
+      "modelNonReg": {
+        "what": "Nicht-Regressionsrate der Organisation.",
+        "how": "Anteil der Fälle ohne Regression im letzten Gate.",
+        "source": "Release-Status."
+      },
+      "modelHallucination": {
+        "what": "Anti-Halluzinations-Sicherheit des Referenten (1 minus Halluzinationsrate).",
+        "how": "100 minus Halluzinationsrate des Referenten, in %.",
+        "source": "Modellvergleich."
+      },
+      "modelKappa": {
+        "what": "Globale Richter-Gold-Übereinstimmung (Cohens Kappa).",
+        "how": "Kappa des LLM-Richters gegen den annotierten Standard.",
+        "source": "Kalibrierung (Richter vs. Gold)."
+      },
+      "modelCases": {
+        "what": "Für den Referenten ausgewertete Fälle; Untertitel = aktive Modelle.",
+        "how": "Fallzahl des Referenten; N verglichene Modelle.",
+        "source": "Modellvergleich."
+      },
+      "modelScoreByModel": {
+        "what": "Pass-Rate je Modell über die Zeit, im gewählten Zeitraum.",
+        "how": "Serien je Modell aus dem Run-Archiv, auf den Zeitraum begrenzt.",
+        "source": "Run-Archiv."
+      },
+      "modelRadar": {
+        "what": "Metrik-Profil jedes Modells (Treue, Verankerung…).",
+        "how": "Scores je Metrik und Modell.",
+        "source": "Modellvergleich."
+      },
+      "modelHeatmap": {
+        "what": "Pass-Rate je Modell und Fallkategorie.",
+        "how": "Erfolgsquote Modell × Kategorie.",
+        "source": "Modellvergleich (nach Kategorie)."
+      },
+      "modelFaithGrounding": {
+        "what": "Streudiagramm Treue vs. Verankerung je Modell.",
+        "how": "Ein Punkt je Modell: Treue auf x, Verankerung auf y.",
+        "source": "Modellvergleich."
+      },
+      "modelCostQuality": {
+        "what": "Streudiagramm Kosten vs. Pass-Rate je Modell.",
+        "how": "Ein Punkt je Modell: geschätzte Kosten auf x, Pass-Rate auf y.",
+        "source": "Modellvergleich."
+      },
+      "modelRecentRuns": {
+        "what": "Pass-Rate der letzten Runs im gewählten Zeitraum.",
+        "how": "Aktuelle Runs auf den Zeitraum begrenzt, nach Datum.",
+        "source": "Run-Archiv."
+      },
+      "modelRegressions": {
+        "what": "Offene Regressionen je Modell zugeordnet.",
+        "how": "Regressionen des aktuellen Gates je Modell gruppiert.",
+        "source": "Release-Status (Regressionen)."
+      },
+      "modelTable": {
+        "what": "Detailtabelle je Modell: Score, Treue, Verankerung, Kosten, Fälle.",
+        "how": "Eine Zeile je verglichenem Modell.",
+        "source": "Modellvergleich."
+      },
+      "modelIntent": {
+        "what": "Leistung nach Intent — nicht verfügbar: Tessera hat keine Modell × Intent-Labels.",
+        "how": "Keine echte Quelle; Panel « nicht verfügbar » statt eines erfundenen Werts.",
+        "source": "Keine (nicht instrumentiert)."
+      },
+      "modelDrift": {
+        "what": "Richter-Drift (Treue, Verankerung), Konsens und Serienstabilität.",
+        "how": "Richter-Drift, Richter-Konsens und Varianz der Score-Serien.",
+        "source": "Richter-Drift · Richter-Konsens."
+      },
+      "modelPeriod": {
+        "what": "Begrenzt Score über Zeit und aktuelle Runs auf ein Fenster echter Run-Daten.",
+        "how": "Auswahl von N Tagen, verankert an einem bestehenden Run-Datum.",
+        "source": "Run-Daten des Archivs."
       }
     },
     "seeDetail": "Details anzeigen",

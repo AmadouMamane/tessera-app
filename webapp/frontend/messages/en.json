@@ -1901,6 +1901,101 @@
         "what": "Full detail of the selected failed case: prompt, response, expected, reasons.",
         "how": "Fields of the case picked in the list.",
         "source": "Failed-cases archive."
+      },
+      "modelReferent": {
+        "what": "Reference model of the comparison (best first).",
+        "how": "First model in the pass-rate ranking.",
+        "source": "Model comparison."
+      },
+      "modelScore": {
+        "what": "Success score of the reference model, out of 100, with the gap to the previous reading.",
+        "how": "pass_rate × 100; delta = last bucket vs previous.",
+        "source": "Model comparison (evolution)."
+      },
+      "modelFaith": {
+        "what": "Mean faithfulness of the reference model.",
+        "how": "Faithfulness score of the reference.",
+        "source": "Model comparison."
+      },
+      "modelGrounding": {
+        "what": "Grounding rate of the reference model.",
+        "how": "Share of answers grounded in sources.",
+        "source": "Model comparison."
+      },
+      "modelNonReg": {
+        "what": "Organisation non-regression rate.",
+        "how": "Share of cases with no regression at the last gate.",
+        "source": "Release status."
+      },
+      "modelHallucination": {
+        "what": "Anti-hallucination safety of the reference (1 minus the hallucination rate).",
+        "how": "100 minus the reference hallucination rate, in %.",
+        "source": "Model comparison."
+      },
+      "modelKappa": {
+        "what": "Global judge-gold agreement (Cohen's kappa).",
+        "how": "Kappa of the LLM judge against the annotated standard.",
+        "source": "Calibration (judge vs gold)."
+      },
+      "modelCases": {
+        "what": "Cases evaluated for the reference; subtitle = active models.",
+        "how": "Reference case count; N models compared.",
+        "source": "Model comparison."
+      },
+      "modelScoreByModel": {
+        "what": "Pass-rate per model over time, over the selected period.",
+        "how": "Per-model series from the run archive, bounded to the period.",
+        "source": "Run archive."
+      },
+      "modelRadar": {
+        "what": "Per-metric profile of each model (faithfulness, grounding…).",
+        "how": "Scores per metric and model.",
+        "source": "Model comparison."
+      },
+      "modelHeatmap": {
+        "what": "Pass-rate per model and case category.",
+        "how": "Success rate crossing model × category.",
+        "source": "Model comparison (by category)."
+      },
+      "modelFaithGrounding": {
+        "what": "Faithfulness vs grounding scatter per model.",
+        "how": "One point per model: faithfulness on x, grounding on y.",
+        "source": "Model comparison."
+      },
+      "modelCostQuality": {
+        "what": "Cost vs pass-rate scatter per model.",
+        "how": "One point per model: estimated cost on x, pass-rate on y.",
+        "source": "Model comparison."
+      },
+      "modelRecentRuns": {
+        "what": "Pass-rate of recent runs over the selected period.",
+        "how": "Recent runs bounded to the period, by date.",
+        "source": "Run archive."
+      },
+      "modelRegressions": {
+        "what": "Open regressions attributed per model.",
+        "how": "Current-gate regressions grouped by model.",
+        "source": "Release status (regressions)."
+      },
+      "modelTable": {
+        "what": "Detailed per-model table: score, faithfulness, grounding, cost, cases.",
+        "how": "One row per compared model.",
+        "source": "Model comparison."
+      },
+      "modelIntent": {
+        "what": "Performance by intent — unavailable: Tessera has no model × intent labels.",
+        "how": "No real source; the panel shows « unavailable » rather than a fabricated value.",
+        "source": "None (not instrumented)."
+      },
+      "modelDrift": {
+        "what": "Judge drift (faithfulness, grounding), consensus and series stability.",
+        "how": "Judge drift, inter-judge consensus and score-series variance.",
+        "source": "Judge drift · judge consensus."
+      },
+      "modelPeriod": {
+        "what": "Narrows score-over-time and recent runs to a window of real run dates.",
+        "how": "Selection of N days anchored on an existing run date.",
+        "source": "Run dates from the archive."
       }
     },
     "seeDetail": "View details",
