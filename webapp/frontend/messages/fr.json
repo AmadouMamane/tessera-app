@@ -3485,38 +3485,44 @@
       },
       "kpi": {
         "sessions": {
-          "what": "Le nombre de sessions rejouées (ou en trafic fantôme) sur la période.",
-          "how": "Sessions distinctes passées par le moteur de rejeu."
+          "what": "Le nombre de sessions capturées passées par le moteur de rejeu.",
+          "how": "Nombre de bundles capturés récents (plafonné aux 100 derniers), pas le nombre de rejeux effectifs.",
+          "source": "Bundles de rejeu en mémoire (warmés depuis bundles.jsonl)."
         },
         "requests": {
-          "what": "Le nombre de requêtes rejouées sur la période.",
-          "how": "Total des requêtes envoyées au rejeu / shadow."
+          "what": "Le nombre de requêtes rejouées enregistrées.",
+          "how": "Taille du journal des rejeux (plafonné à 500), cumul — pas une fenêtre de N jours.",
+          "source": "Journal des rejeux (replay_runs.json)."
         },
         "tokens": {
-          "what": "Le nombre de tokens consommés par le rejeu.",
-          "how": "Somme des tokens entrée + sortie du trafic rejoué."
+          "what": "Les tokens rejoués — non disponibles dans cette version.",
+          "how": "Les bundles ne portent pas de compteur de tokens ; la valeur reste un tiret.",
+          "source": "Pas de source réelle."
         },
         "cost": {
-          "what": "Le coût estimé du rejeu (tokens × tarif du modèle).",
-          "how": "Tokens rejoués × tarif par modèle.",
-          "source": "Compteurs de tokens du rejeu."
+          "what": "Le coût de rejeu — non disponible dans cette version.",
+          "how": "Sans compteur de tokens, aucun coût ne peut être calculé ; la valeur reste un tiret.",
+          "source": "Pas de source réelle."
         },
         "deviations": {
-          "what": "Le nombre d'écarts détectés entre le rejeu et la référence.",
-          "how": "Réponses du rejeu divergeant de la baseline au-delà du seuil.",
-          "source": "Comparaison rejeu vs référence."
+          "what": "Le nombre d'écarts critiques par rapport à la référence.",
+          "how": "Rejeux dont le score baisse de 0,10+ vs baseline, PLUS les cas d'éval qui passaient au run N-1 et échouent au run N.",
+          "source": "Journal des rejeux + rapports d'évaluation."
         },
         "evals": {
-          "what": "Le nombre d'évaluations rejouées sur le trafic fantôme.",
-          "how": "Cas d'évaluation exécutés sur les réponses rejouées."
+          "what": "Le nombre de runs d'évaluation comparés (hors ligne, modèle llama3.2:3b).",
+          "how": "Somme des enregistrements de taux de réussite par agent issus des rapports d'éval — ce ne sont pas des rejeux de trafic fantôme.",
+          "source": "Rapports d'évaluation (eval/reports)."
         },
         "proofs": {
-          "what": "Le nombre de preuves générées à partir du rejeu.",
-          "how": "Artefacts de preuve produits par les sessions rejouées."
+          "what": "Les preuves générées — non disponibles dans cette version.",
+          "how": "Sous-système de preuves de rejeu non implémenté ; la valeur reste un tiret.",
+          "source": "Pas de source réelle."
         },
         "coverage": {
-          "what": "La couverture du rejeu : part du trafic de référence effectivement rejoué.",
-          "how": "Trafic rejoué ÷ trafic de référence éligible."
+          "what": "La couverture du trafic fantôme — non disponible.",
+          "how": "Aucun dénominateur de trafic éligible n'est calculé ; la valeur reste un tiret.",
+          "source": "Pas de source réelle."
         }
       },
       "panel": {
@@ -3540,6 +3546,46 @@
           "what": "Les services dont la qualité régresse le plus face à la référence.",
           "how": "Top services par écart négatif de score vs baseline.",
           "source": "Comparaison rejeu vs référence."
+        },
+        "traffic": {
+          "what": "Le trafic rejouable par jour.",
+          "how": "Barres = bundles capturés par jour (100 derniers) ; la ligne tokens reste à zéro (les bundles n'ont pas de tokens).",
+          "source": "Bundles de rejeu en mémoire."
+        },
+        "recentSessions": {
+          "what": "Les sessions les plus récemment capturées.",
+          "how": "Les 6 derniers bundles ; statut rejouée si le bundle a déjà été exécuté via le rejeu, sinon terminé.",
+          "source": "Bundles de rejeu + journal des rejeux."
+        },
+        "baselines": {
+          "what": "Les références de comparaison disponibles.",
+          "how": "Le dernier run d'évaluation réel de chaque agent (avec son catalogue).",
+          "source": "Rapports d'évaluation (eval/reports)."
+        },
+        "topDeviations": {
+          "what": "Les 10 écarts les plus importants vs référence.",
+          "how": "Mélange de deux sources : rejeux à fort delta de score (Δ chiffré) et cas d'éval passés puis échoués (réussi puis échoué).",
+          "source": "Journal des rejeux + rapports d'évaluation."
+        },
+        "comparisons": {
+          "what": "Les comparaisons de runs récentes par agent.",
+          "how": "Un agent avec au moins 2 runs d'éval : run courant vs précédent ; sessions = nombre de cas d'éval, écarts = cas nouvellement en échec.",
+          "source": "Rapports d'évaluation (eval/reports)."
+        },
+        "evalsByCat": {
+          "what": "Les écarts d'évaluation par catégorie.",
+          "how": "Attention : identique à la répartition des écarts par type — un décompte des cas nouvellement en échec par catégorie, pas des rejeux.",
+          "source": "Rapports d'évaluation (eval/reports)."
+        },
+        "proofsExports": {
+          "what": "Le sous-système d'export de preuves de rejeu.",
+          "how": "Démonstration : toutes les valeurs restent des tirets, sans source réelle.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "activity": {
+          "what": "L'activité de rejeu récente.",
+          "how": "Flux des derniers événements de rejeu (identifiant, heure, statut).",
+          "source": "Journal des rejeux."
         }
       }
     },

@@ -3485,38 +3485,44 @@
       },
       "kpi": {
         "sessions": {
-          "what": "Die Zahl der wiedergespielten (oder Schatten-) Sitzungen im Zeitraum.",
-          "how": "Eindeutige Sitzungen durch die Replay-Engine."
+          "what": "Die Anzahl der erfassten Sitzungen, die durch die Replay-Engine liefen.",
+          "how": "Anzahl der jüngsten erfassten Bundles (auf die letzten 100 begrenzt), nicht die Anzahl tatsächlicher Replays.",
+          "source": "Replay-Bundles im Speicher (aus bundles.jsonl geladen)."
         },
         "requests": {
-          "what": "Die Zahl der wiedergespielten Anfragen im Zeitraum.",
-          "how": "Gesamtzahl der an Replay / Shadow gesendeten Anfragen."
+          "what": "Die Anzahl der protokollierten wiederholten Anfragen.",
+          "how": "Größe des Replay-Journals (auf 500 begrenzt), kumuliert — kein N-Tage-Fenster.",
+          "source": "Replay-Journal (replay_runs.json)."
         },
         "tokens": {
-          "what": "Die Zahl der von Replay verbrauchten Tokens.",
-          "how": "Summe der Eingabe- + Ausgabe-Tokens des wiedergespielten Verkehrs."
+          "what": "Die wiederholten Tokens — in dieser Version nicht verfügbar.",
+          "how": "Die Bundles tragen keinen Token-Zähler; der Wert bleibt ein Strich.",
+          "source": "Keine reale Quelle."
         },
         "cost": {
-          "what": "Die geschätzten Replay-Kosten (Tokens × Modelltarif).",
-          "how": "Wiedergespielte Tokens × Tarif pro Modell.",
-          "source": "Replay-Token-Zähler."
+          "what": "Die Replay-Kosten — in dieser Version nicht verfügbar.",
+          "how": "Ohne Token-Zähler lässt sich kein Kostenwert berechnen; der Wert bleibt ein Strich.",
+          "source": "Keine reale Quelle."
         },
         "deviations": {
-          "what": "Die Zahl der zwischen Replay und Referenz erkannten Abweichungen.",
-          "how": "Replay-Antworten, die über die Schwelle hinaus von der Baseline abweichen.",
-          "source": "Replay-vs-Referenz-Vergleich."
+          "what": "Die Anzahl kritischer Abweichungen gegenüber der Referenz.",
+          "how": "Replays, deren Score um 0,10+ vs Baseline fällt, PLUS Eval-Fälle, die in Run N-1 bestanden und in Run N scheitern.",
+          "source": "Replay-Journal + Evaluationsberichte."
         },
         "evals": {
-          "what": "Die Zahl der auf Schattenverkehr wiedergespielten Bewertungen.",
-          "how": "Auf wiedergespielten Antworten ausgeführte Eval-Fälle."
+          "what": "Die Anzahl verglichener Evaluationsläufe (offline, Modell llama3.2:3b).",
+          "how": "Summe der Erfolgsraten-Datensätze je Agent aus den Eval-Berichten — keine Schattenverkehr-Replays.",
+          "source": "Evaluationsberichte (eval/reports)."
         },
         "proofs": {
-          "what": "Die Zahl der aus Replay erzeugten Beweise.",
-          "how": "Von wiedergespielten Sitzungen erzeugte Beweis-Artefakte."
+          "what": "Die generierten Nachweise — in dieser Version nicht verfügbar.",
+          "how": "Replay-Nachweis-Subsystem nicht implementiert; der Wert bleibt ein Strich.",
+          "source": "Keine reale Quelle."
         },
         "coverage": {
-          "what": "Replay-Abdeckung: Anteil des tatsächlich wiedergespielten Referenzverkehrs.",
-          "how": "Wiedergespielter Verkehr ÷ förderfähiger Referenzverkehr."
+          "what": "Die Abdeckung des Schattenverkehrs — nicht verfügbar.",
+          "how": "Kein Nenner für zulässigen Verkehr wird berechnet; der Wert bleibt ein Strich.",
+          "source": "Keine reale Quelle."
         }
       },
       "panel": {
@@ -3540,6 +3546,46 @@
           "what": "Die Dienste, deren Qualität am stärksten gegenüber der Referenz zurückgeht.",
           "how": "Top-Dienste nach negativer Score-Differenz vs. Baseline.",
           "source": "Replay-vs-Referenz-Vergleich."
+        },
+        "traffic": {
+          "what": "Der wiederholbare Verkehr pro Tag.",
+          "how": "Balken = erfasste Bundles pro Tag (letzte 100); die Linie Tokens bleibt bei null (Bundles haben keine Tokens).",
+          "source": "Replay-Bundles im Speicher."
+        },
+        "recentSessions": {
+          "what": "Die zuletzt erfassten Sitzungen.",
+          "how": "Die 6 jüngsten Bundles; Status wiederholt, wenn das Bundle bereits per Replay ausgeführt wurde, sonst beendet.",
+          "source": "Replay-Bundles + Replay-Journal."
+        },
+        "baselines": {
+          "what": "Die verfügbaren Vergleichsreferenzen.",
+          "how": "Der letzte reale Evaluationslauf jedes Agenten (mit seinem Katalog).",
+          "source": "Evaluationsberichte (eval/reports)."
+        },
+        "topDeviations": {
+          "what": "Die 10 größten Abweichungen vs Referenz.",
+          "how": "Mischung zweier Quellen: Replays mit großem Score-Delta (numerisches Δ) und Eval-Fälle bestanden dann gescheitert (bestanden dann gescheitert).",
+          "source": "Replay-Journal + Evaluationsberichte."
+        },
+        "comparisons": {
+          "what": "Die jüngsten Lauf-Vergleiche je Agent.",
+          "how": "Ein Agent mit mindestens 2 Eval-Läufen: aktueller vs vorheriger Lauf; Sitzungen = Anzahl Eval-Fälle, Abweichungen = neu gescheiterte Fälle.",
+          "source": "Evaluationsberichte (eval/reports)."
+        },
+        "evalsByCat": {
+          "what": "Die Evaluationsabweichungen nach Kategorie.",
+          "how": "Achtung: identisch mit der Verteilung Abweichungen nach Typ — eine Zählung neu gescheiterter Fälle je Kategorie, keine Replays.",
+          "source": "Evaluationsberichte (eval/reports)."
+        },
+        "proofsExports": {
+          "what": "Das Subsystem für Replay-Nachweis-Exporte.",
+          "how": "Demonstration: alle Werte bleiben Striche, ohne reale Quelle.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "activity": {
+          "what": "Die jüngste Replay-Aktivität.",
+          "how": "Strom der letzten Replay-Ereignisse (Kennung, Uhrzeit, Status).",
+          "source": "Replay-Journal."
         }
       }
     },

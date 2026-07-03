@@ -347,7 +347,10 @@ function CommandBar({
 
 function BaselinesPanel({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title={t("tabx.baselinesTitle")}>
+    <Panel
+      title={t("tabx.baselinesTitle")}
+      info={<Info k="panel.baselines" title={t("tabx.baselinesTitle")} />}
+    >
       {data.baselines.length === 0 ? (
         <p className="py-6 text-center text-xs text-[var(--tessera-text-muted)]">
           {t("tabx.baselinesEmpty")}
@@ -388,7 +391,11 @@ function TrafficChart({ t, data, className }: { t: T; data: Data; className?: st
   const y = (v: number, max: number) => top + (1 - v / max) * (H - top);
   const line = tr.tokens.map((v, i) => `${((i + 0.5) / n) * W},${y(v, tokMax)}`).join(" ");
   return (
-    <Panel title={t("panel.traffic")} className={className}>
+    <Panel
+      title={t("panel.traffic")}
+      info={<Info k="panel.traffic" title={t("panel.traffic")} />}
+      className={className}
+    >
       <div className="flex flex-col gap-1">
         <div className="flex gap-1">
           <div className="flex w-7 flex-col justify-between py-[5px] text-right text-[0.5rem] tabular-nums text-[var(--tessera-text-muted)]">
@@ -463,6 +470,7 @@ function RecentSessions({ t, data, className }: { t: T; data: Data; className?: 
   return (
     <Panel
       title={t("panel.recentSessions")}
+      info={<Info k="panel.recentSessions" title={t("panel.recentSessions")} />}
       className={className}
       action={<ViewAll label={t("viewAll.all")} />}
     >
@@ -502,6 +510,7 @@ function TopDeviations({ t, data, className }: { t: T; data: Data; className?: s
   return (
     <Panel
       title={t("panel.topDeviations")}
+      info={<Info k="panel.topDeviations" title={t("panel.topDeviations")} />}
       className={className}
       action={<ViewAll label={t("viewAll.deviations")} />}
     >
@@ -548,6 +557,7 @@ function Comparisons({ t, data, className }: { t: T; data: Data; className?: str
   return (
     <Panel
       title={t("panel.comparisons")}
+      info={<Info k="panel.comparisons" title={t("panel.comparisons")} />}
       className={className}
       action={<ViewAll label={t("viewAll.comparisons")} />}
     >
@@ -616,6 +626,7 @@ function EvalsByCategory({ t, data, className }: { t: T; data: Data; className?:
   return (
     <Panel
       title={t("panel.evalsByCat")}
+      info={<Info k="panel.evalsByCat" title={t("panel.evalsByCat")} />}
       className={className}
       action={<ViewAll label={t("viewAll.categories")} />}
     >
@@ -654,6 +665,7 @@ function ProofsExports({ t, data, className }: { t: T; data: Data; className?: s
   return (
     <Panel
       title={t("panel.proofsExports")}
+      info={<Info k="panel.proofsExports" title={t("panel.proofsExports")} />}
       className={className}
       action={<ViewAll label={t("exportBtn.all")} />}
     >
@@ -729,7 +741,11 @@ function ReplayRail({ t, data }: { t: T; data: Data }) {
         </div>
       </Panel>
 
-      <Panel title={t("rail.activity")} action={<ViewAll label={t("rail.viewJournal")} />}>
+      <Panel
+        title={t("rail.activity")}
+        info={<Info k="panel.activity" title={t("rail.activity")} />}
+        action={<ViewAll label={t("rail.viewJournal")} />}
+      >
         <ul className="flex flex-col gap-1.5">
           {data.activity_feed.map((a) => (
             <li key={`${a.id}-${a.time}`} className="flex items-center gap-2 text-[0.7rem]">

@@ -3485,38 +3485,44 @@
       },
       "kpi": {
         "sessions": {
-          "what": "The number of replayed (or shadow) sessions over the period.",
-          "how": "Distinct sessions run through the replay engine."
+          "what": "The number of captured sessions that went through the replay engine.",
+          "how": "Count of recent captured bundles (capped at the last 100), not the number of actual replays.",
+          "source": "In-memory replay bundles (warmed from bundles.jsonl)."
         },
         "requests": {
-          "what": "The number of replayed requests over the period.",
-          "how": "Total requests sent to replay / shadow."
+          "what": "The number of logged replayed requests.",
+          "how": "Size of the replay journal (capped at 500), cumulative — not an N-day window.",
+          "source": "Replay journal (replay_runs.json)."
         },
         "tokens": {
-          "what": "The number of tokens consumed by replay.",
-          "how": "Sum of input + output tokens of replayed traffic."
+          "what": "The replayed tokens — not available in this build.",
+          "how": "Bundles carry no token counter; the value stays a dash.",
+          "source": "No real source."
         },
         "cost": {
-          "what": "The estimated cost of replay (tokens × model rate).",
-          "how": "Replayed tokens × rate per model.",
-          "source": "Replay token counters."
+          "what": "The replay cost — not available in this build.",
+          "how": "Without a token counter no cost can be computed; the value stays a dash.",
+          "source": "No real source."
         },
         "deviations": {
-          "what": "The number of deviations detected between replay and the baseline.",
-          "how": "Replay answers diverging from the baseline beyond the threshold.",
-          "source": "Replay vs baseline comparison."
+          "what": "The number of critical deviations vs the reference.",
+          "how": "Replays whose score drops by 0.10+ vs baseline, PLUS eval cases passing at run N-1 and failing at run N.",
+          "source": "Replay journal + eval reports."
         },
         "evals": {
-          "what": "The number of evaluations replayed on shadow traffic.",
-          "how": "Eval cases run on replayed answers."
+          "what": "The number of eval runs compared (offline, model llama3.2:3b).",
+          "how": "Sum of per-agent pass-rate records from the eval reports — not shadow-traffic replays.",
+          "source": "Eval reports (eval/reports)."
         },
         "proofs": {
-          "what": "The number of proofs generated from replay.",
-          "how": "Proof artifacts produced by replayed sessions."
+          "what": "The generated proofs — not available in this build.",
+          "how": "Replay proof subsystem not implemented; the value stays a dash.",
+          "source": "No real source."
         },
         "coverage": {
-          "what": "Replay coverage: share of baseline traffic actually replayed.",
-          "how": "Replayed traffic ÷ eligible baseline traffic."
+          "what": "The shadow-traffic coverage — not available.",
+          "how": "No eligible-traffic denominator is computed; the value stays a dash.",
+          "source": "No real source."
         }
       },
       "panel": {
@@ -3540,6 +3546,46 @@
           "what": "The services whose quality regresses the most versus the baseline.",
           "how": "Top services by negative score gap vs baseline.",
           "source": "Replay vs baseline comparison."
+        },
+        "traffic": {
+          "what": "The replayable traffic per day.",
+          "how": "Bars = captured bundles per day (last 100); the tokens line stays at zero (bundles have no tokens).",
+          "source": "In-memory replay bundles."
+        },
+        "recentSessions": {
+          "what": "The most recently captured sessions.",
+          "how": "The 6 latest bundles; status replayed if the bundle has already been executed via replay, else done.",
+          "source": "Replay bundles + replay journal."
+        },
+        "baselines": {
+          "what": "The available comparison baselines.",
+          "how": "Each agent's latest real eval run (with its catalogue).",
+          "source": "Eval reports (eval/reports)."
+        },
+        "topDeviations": {
+          "what": "The 10 largest deviations vs the reference.",
+          "how": "A mix of two sources: replays with a large score delta (numeric Δ) and eval cases passed then failed (passed then failed).",
+          "source": "Replay journal + eval reports."
+        },
+        "comparisons": {
+          "what": "The recent run comparisons per agent.",
+          "how": "An agent with at least 2 eval runs: current vs previous run; sessions = eval-case count, deviations = newly failed cases.",
+          "source": "Eval reports (eval/reports)."
+        },
+        "evalsByCat": {
+          "what": "The evaluation deviations by category.",
+          "how": "Note: identical to the deviations-by-type distribution — a count of newly failed cases per category, not replays.",
+          "source": "Eval reports (eval/reports)."
+        },
+        "proofsExports": {
+          "what": "The replay proof-export subsystem.",
+          "how": "Demonstration: all values stay dashes, with no real source.",
+          "source": "No real source (demonstration)."
+        },
+        "activity": {
+          "what": "The recent replay activity.",
+          "how": "Stream of the latest replay events (id, time, status).",
+          "source": "Replay journal."
         }
       }
     },
