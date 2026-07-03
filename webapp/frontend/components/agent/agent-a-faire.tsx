@@ -1,5 +1,6 @@
 "use client";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpRight,
@@ -239,11 +240,26 @@ function Timeline({ data }: { data: Data }) {
   );
 }
 
+/** ⓘ for an A-faire metric, reading agentAFaire.explain.<k>.{what,how,source?}. */
+function ExplainInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("agentAFaire.explain");
+  if (!te.has(`${k}.what`)) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te.has(`${k}.how`) ? te(`${k}.how`) : undefined}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
+  );
+}
+
 function Kpi({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
   return (
     <div className="flex h-[96px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
-        {kpi.label}
+      <p className="flex items-center gap-1 text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
+        <span className="min-w-0 truncate">{kpi.label}</span>
+        <ExplainInfo k={kpi.key} title={kpi.label} />
       </p>
       <p className="mt-0.5 whitespace-nowrap text-[1.3rem] font-semibold leading-none text-white">
         {kpi.value}
@@ -885,11 +901,19 @@ function TaskDrawer({
   );
 }
 
-function Panel({ title, cta, children }: { title: string; cta?: string; children: ReactNode }) {
+function Panel({
+  title,
+  cta,
+  info,
+  children,
+}: { title: string; cta?: string; info?: ReactNode; children: ReactNode }) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-[0.74rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
+        <h3 className="flex min-w-0 items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
+          <span className="min-w-0 truncate">{title}</span>
+          {info}
+        </h3>
         {cta ? (
           <button
             type="button"
@@ -912,7 +936,7 @@ function Donut({ data }: { data: Data }) {
   const C = 2 * Math.PI * R;
   let off = 0;
   return (
-    <Panel title={d.title} cta={d.cta}>
+    <Panel title={d.title} cta={d.cta} info={<ExplainInfo k="donut" title={d.title} />}>
       <div className="flex items-center gap-3">
         <div className="relative h-[92px] w-[92px] shrink-0">
           <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90" aria-hidden="true">
@@ -964,7 +988,7 @@ function Sla({ data }: { data: Data }) {
   if (!s) return null;
   const max = Math.max(...s.buckets.map((b) => b.count), 1);
   return (
-    <Panel title={s.title} cta={s.cta}>
+    <Panel title={s.title} cta={s.cta} info={<ExplainInfo k="sla" title={s.title} />}>
       <ul className="flex flex-col gap-2">
         {s.buckets.map((b) => (
           <li key={b.label} className="flex items-center gap-2 text-[0.66rem]">
@@ -1021,7 +1045,7 @@ function Activity({ data }: { data: Data }) {
   const a = data.activity;
   if (!a) return null;
   return (
-    <Panel title={a.title} cta={a.cta}>
+    <Panel title={a.title} cta={a.cta} info={<ExplainInfo k="activity" title={a.title} />}>
       <ul className="flex flex-col gap-1.5">
         {a.items.map((it, i) => (
           <li

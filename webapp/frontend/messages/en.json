@@ -6706,7 +6706,64 @@
       "perPage": "Rows per page",
       "summary": "Showing {start} - {end} of {total}"
     },
-    "empty": "No items"
+    "empty": "No items",
+    "explain": {
+      "total": {
+        "what": "The total number of open control cases to handle.",
+        "how": "Backlog cases whose status is not done.",
+        "source": "Operator backlog (failed eval cases)."
+      },
+      "urgent": {
+        "what": "The urgent-priority (critical) cases.",
+        "how": "Open cases whose priority is critical.",
+        "source": "Operator backlog."
+      },
+      "sla2h": {
+        "what": "The cases whose deadline (SLA) expires in under 2 hours.",
+        "how": "Open cases with positive remaining time below the warning threshold.",
+        "source": "Operator backlog + per-priority SLA."
+      },
+      "late": {
+        "what": "The cases whose deadline (SLA) is already past.",
+        "how": "Open cases with negative remaining time.",
+        "source": "Operator backlog + per-priority SLA."
+      },
+      "mine": {
+        "what": "The cases assigned to you.",
+        "how": "Cases whose assignee is Moi.",
+        "source": "Operator backlog (durable assignment)."
+      },
+      "resolved": {
+        "what": "The resolved cases.",
+        "how": "Backlog cases whose status is done.",
+        "source": "Operator backlog (durable status)."
+      },
+      "avgtime": {
+        "what": "The average handling time — not instrumented.",
+        "how": "No handling duration is measured; the value stays a dash.",
+        "source": "No real source (not instrumented)."
+      },
+      "slaok": {
+        "what": "The share of open cases still within their deadline.",
+        "how": "(open cases - overdue) / open cases, as a %.",
+        "source": "Operator backlog + SLA."
+      },
+      "donut": {
+        "what": "The distribution of open cases by priority.",
+        "how": "Count of open cases per level (critical, high, medium, low).",
+        "source": "Operator backlog."
+      },
+      "sla": {
+        "what": "The distribution of cases by SLA deadline.",
+        "how": "Cases grouped by remaining time before the deadline is breached.",
+        "source": "Operator backlog + per-priority SLA."
+      },
+      "activity": {
+        "what": "The recent activity on the backlog.",
+        "how": "Latest status and assignment changes.",
+        "source": "Operator backlog (durable state)."
+      }
+    }
   },
   "etatADate": {
     "explain": {

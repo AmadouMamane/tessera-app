@@ -6706,7 +6706,64 @@
       "perPage": "Zeilen pro Seite",
       "summary": "{start} - {end} von {total}"
     },
-    "empty": "Keine Einträge"
+    "empty": "Keine Einträge",
+    "explain": {
+      "total": {
+        "what": "Die Gesamtzahl der offenen zu bearbeitenden Kontrollfälle.",
+        "how": "Backlog-Fälle, deren Status nicht erledigt ist.",
+        "source": "Operator-Backlog (fehlgeschlagene Eval-Fälle)."
+      },
+      "urgent": {
+        "what": "Die Fälle mit dringender Priorität (kritisch).",
+        "how": "Offene Fälle mit Priorität kritisch.",
+        "source": "Operator-Backlog."
+      },
+      "sla2h": {
+        "what": "Die Fälle, deren Frist (SLA) in weniger als 2 Stunden abläuft.",
+        "how": "Offene Fälle mit positiver, aber unter der Warnschwelle liegender Restzeit.",
+        "source": "Operator-Backlog + SLA je Priorität."
+      },
+      "late": {
+        "what": "Die Fälle, deren Frist (SLA) bereits überschritten ist.",
+        "how": "Offene Fälle mit negativer Restzeit.",
+        "source": "Operator-Backlog + SLA je Priorität."
+      },
+      "mine": {
+        "what": "Die Ihnen zugewiesenen Fälle.",
+        "how": "Fälle, deren Zuweisung Moi ist.",
+        "source": "Operator-Backlog (dauerhafte Zuweisung)."
+      },
+      "resolved": {
+        "what": "Die gelösten Fälle.",
+        "how": "Backlog-Fälle mit Status erledigt.",
+        "source": "Operator-Backlog (dauerhafter Status)."
+      },
+      "avgtime": {
+        "what": "Die mittlere Bearbeitungszeit — nicht instrumentiert.",
+        "how": "Es wird keine Bearbeitungsdauer gemessen; der Wert bleibt ein Strich.",
+        "source": "Keine reale Quelle (nicht instrumentiert)."
+      },
+      "slaok": {
+        "what": "Der Anteil der offenen Fälle, die noch im Zeitrahmen sind.",
+        "how": "(offene Fälle - überfällig) / offene Fälle, in %.",
+        "source": "Operator-Backlog + SLA."
+      },
+      "donut": {
+        "what": "Die Verteilung der offenen Fälle nach Priorität.",
+        "how": "Zählung der offenen Fälle je Stufe (kritisch, hoch, mittel, niedrig).",
+        "source": "Operator-Backlog."
+      },
+      "sla": {
+        "what": "Die Verteilung der Fälle nach SLA-Frist.",
+        "how": "Fälle gruppiert nach Restzeit bis zur Fristüberschreitung.",
+        "source": "Operator-Backlog + SLA je Priorität."
+      },
+      "activity": {
+        "what": "Die jüngste Aktivität im Backlog.",
+        "how": "Letzte Status- und Zuweisungsänderungen.",
+        "source": "Operator-Backlog (dauerhafter Zustand)."
+      }
+    }
   },
   "etatADate": {
     "explain": {

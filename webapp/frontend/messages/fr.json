@@ -6706,7 +6706,64 @@
       "perPage": "Lignes par page",
       "summary": "Afficher {start} - {end} sur {total}"
     },
-    "empty": "Aucun élément"
+    "empty": "Aucun élément",
+    "explain": {
+      "total": {
+        "what": "Le nombre total de cas de contrôle ouverts à traiter.",
+        "how": "Cas du backlog dont le statut n'est pas résolu.",
+        "source": "Backlog opérateur (cas d'éval en échec)."
+      },
+      "urgent": {
+        "what": "Les cas de priorité urgente (critique).",
+        "how": "Cas ouverts dont la priorité est critique.",
+        "source": "Backlog opérateur."
+      },
+      "sla2h": {
+        "what": "Les cas dont le délai (SLA) expire dans moins de 2 heures.",
+        "how": "Cas ouverts dont le temps restant est positif mais inférieur au seuil d'alerte.",
+        "source": "Backlog opérateur + SLA par priorité."
+      },
+      "late": {
+        "what": "Les cas dont le délai (SLA) est déjà dépassé.",
+        "how": "Cas ouverts dont le temps restant est négatif.",
+        "source": "Backlog opérateur + SLA par priorité."
+      },
+      "mine": {
+        "what": "Les cas qui vous sont assignés.",
+        "how": "Cas dont l'assigné est Moi.",
+        "source": "Backlog opérateur (assignation durable)."
+      },
+      "resolved": {
+        "what": "Les cas résolus.",
+        "how": "Cas du backlog dont le statut est résolu.",
+        "source": "Backlog opérateur (statut durable)."
+      },
+      "avgtime": {
+        "what": "Le temps moyen de traitement — non instrumenté.",
+        "how": "Aucune durée de traitement n'est mesurée ; la valeur reste un tiret.",
+        "source": "Pas de source réelle (non instrumenté)."
+      },
+      "slaok": {
+        "what": "La part des cas ouverts encore dans les délais.",
+        "how": "(cas ouverts - en retard) / cas ouverts, en %.",
+        "source": "Backlog opérateur + SLA."
+      },
+      "donut": {
+        "what": "La répartition des cas ouverts par priorité.",
+        "how": "Compte des cas ouverts par niveau (critique, élevé, moyen, faible).",
+        "source": "Backlog opérateur."
+      },
+      "sla": {
+        "what": "La répartition des cas par échéance SLA.",
+        "how": "Cas regroupés par temps restant avant dépassement du délai.",
+        "source": "Backlog opérateur + SLA par priorité."
+      },
+      "activity": {
+        "what": "L'activité récente sur le backlog.",
+        "how": "Derniers changements de statut et d'assignation opérés.",
+        "source": "Backlog opérateur (état durable)."
+      }
+    }
   },
   "etatADate": {
     "explain": {
