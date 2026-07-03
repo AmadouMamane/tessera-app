@@ -47,6 +47,24 @@ _DEFAULT_PLAN: Final[tuple[WorkerName, ...]] = (
 # patterns first.
 _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
     LanguageCode.FR: [
+        # A customer in acute distress (gambling loss, despair, self-harm cues)
+        # must reach a human, never a self-service answer (case 61). Markers are
+        # STRONG on purpose: ordinary debt talk — the recouvrement agent's whole
+        # domain — must never escalate ("je suis endetté, comment faire un
+        # échéancier ?" stays a normal turn).
+        (
+            re.compile(
+                r"(ne\s+vois\s+plus\s+d['\u2019]issue|plus\s+aucune\s+issue|situation\s+sans\s+issue"
+                r"|tout\s+perdu\s+au\s+jeu|perdu\w*\s+au\s+jeu|d[ée]tresse|d[ée]sesp[ée]r\w*"
+                r"|suicid\w*|en\s+finir\s+avec|envie\s+d['\u2019]en\s+finir)",
+                re.IGNORECASE,
+            ),
+            Intent(
+                name="vulnerable_customer",
+                workers=(WorkerName.ESCALATION,),
+                rationale="French distress/vulnerability signals → ESCALATION (human care)",
+            ),
+        ),
         # Destructive irreversible ask (close the account + drain it, skipping
         # verification) requires a human by policy — never self-served (case 55).
         (
@@ -114,6 +132,19 @@ _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
     LanguageCode.DE: [
         (
             re.compile(
+                r"(keinen?\s+Ausweg|ausweglos|Gl[üu]cksspiel\s+verloren"
+                r"|alles\s+beim\s+(Gl[üu]cks)?spiel\w*\s+verloren|verzweifelt|Verzweiflung"
+                r"|suizid\w*|selbstmord|wei[ßs]\s+nicht\s+mehr\s+weiter)",
+                re.IGNORECASE,
+            ),
+            Intent(
+                name="vulnerable_customer",
+                workers=(WorkerName.ESCALATION,),
+                rationale="German distress/vulnerability signals → ESCALATION (human care)",
+            ),
+        ),
+        (
+            re.compile(
                 r"(?=.*\b(schlie[ßs]\w*|aufl[öo]s\w*|k[üu]ndig\w*)\b.{0,40}\bkontos?\b)"
                 r"(?=.*(endg[üu]ltig|ohne\s+(r[üu]ckfragen?|identit[äa]tspr[üu]fung|pr[üu]fung)"
                 r"|gesamte\w*\s+guthaben))",
@@ -172,6 +203,18 @@ _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
         ),
     ],
     LanguageCode.EN: [
+        (
+            re.compile(
+                r"(no\s+way\s+out|lost\s+everything\s+gambling|gambling.{0,30}lost\s+everything"
+                r"|desperate|hopeless|suicid\w*|end\s+it\s+all|can['\u2019]t\s+go\s+on)",
+                re.IGNORECASE,
+            ),
+            Intent(
+                name="vulnerable_customer",
+                workers=(WorkerName.ESCALATION,),
+                rationale="English distress/vulnerability signals → ESCALATION (human care)",
+            ),
+        ),
         (
             re.compile(
                 r"(?=.*\b(close?|closing|terminate)\w*\b.{0,40}\baccounts?\b)"
