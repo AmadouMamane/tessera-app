@@ -1819,7 +1819,9 @@ async def observability_replay(payload: ReplayRequest) -> dict[str, object]:
 
         record_replay_run(
             result.bundle_id,
-            agent_id=bundle.agent_id,
+            # Pre-attribution bundles carry no agent; "none" is the shared
+            # unattributed marker (same convention as the guard metrics).
+            agent_id=bundle.agent_id or "none",
             model=result.candidate_model,
             score_delta=result.score_delta,
             similarity=result.similarity,

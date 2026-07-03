@@ -86,6 +86,10 @@ class Policy:
     prompt_injection_deny: tuple[re.Pattern[str], ...]
     prompt_injection_transforms: tuple[tuple[re.Pattern[str], str], ...]
     pii_patterns: tuple[re.Pattern[str], ...]
+    # Conjunctive egress rule (``pii.exfiltration_patterns``): a user turn
+    # matching EVERY pattern (egress verb + e-mail address + account-data term)
+    # is refused at input — see guard.adapter.check_exfiltration. Empty = off.
+    exfiltration_patterns: tuple[re.Pattern[str], ...] = ()
 
     def tool(self, name: str) -> ToolPolicy:
         """Return the policy for ``name`` or a deny-all fallback."""
@@ -153,6 +157,12 @@ def load_policy(path: Path | None = None) -> Policy:
 
     pii_raw = parsed.get("pii") or {}
     pii_patterns = tuple(re.compile(str(p)) for p in pii_raw.get("redact_patterns", []) or [])
+    exfiltration_raw = pii_raw.get("exfiltration_patterns") or {}
+    exfiltration = (
+        tuple(re.compile(str(p)) for p in exfiltration_raw.values())
+        if isinstance(exfiltration_raw, dict)
+        else ()
+    )
 
     return Policy(
         version=int(parsed.get("version", 0)),
@@ -160,6 +170,7 @@ def load_policy(path: Path | None = None) -> Policy:
         prompt_injection_deny=deny,
         prompt_injection_transforms=transforms,
         pii_patterns=pii_patterns,
+        exfiltration_patterns=exfiltration,
     )
 
 

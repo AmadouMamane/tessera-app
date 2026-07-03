@@ -45,6 +45,14 @@ from tessera.guard.audit import (
     emit_routing,
     guard_disabled,
 )
+from tessera.guard.redaction import (
+    StreamingRedactor,
+    apply_output_guard,
+    contains_pii,
+    emit_output_redaction,
+    redact_text,
+    redaction_notice,
+)
 from tessera.llm.budget import estimate_turn_cost
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
@@ -568,6 +576,13 @@ def _debug_draft(state: Mapping[str, object], final_response: str) -> dict[str, 
     else:
         source = None
         label = "Aucun brouillon"
+    # The Debug surface must not become the PII channel the output guard just
+    # closed: the pre-guard draft is masked too. It stays raw only under the
+    # sandbox "pii" override, where the operator is explicitly probing the guard.
+    overrides = state.get("guard_overrides")
+    pii_guard_off = isinstance(overrides, list) and "pii" in overrides
+    if source and not pii_guard_off:
+        source = redact_text(source).text
     return {
         "title": "Brouillon vs réponse finale",
         "draft": source,
@@ -655,7 +670,7 @@ def _sse(event: str, payload: object) -> bytes:
     return f"event: {event}\ndata: {body}\n\n".encode()
 
 
-async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently statement-heavy (graph run + stream + persist + eval)
+async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherently statement- and branch-heavy (graph run + guarded stream + persist + eval)
     request: ChatRequest,
     *,
     surface: Surface,
@@ -768,6 +783,13 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
     # Otherwise (escalation / injection block) final_response is already set.
     final_response: str
     turn_citations: list[Citation] = list(state.get("citations", []))
+    resolved_language: LanguageCode = state.get("language", language)
+    # Output guard (cases 02/45): the reporter node is bypassed on the streaming
+    # path, so its redaction runs here instead — on the token stream itself, not
+    # just on the stored final_response (a masked transcript is worthless if the
+    # raw PAN already crossed the wire). The sandbox "pii" override disables it.
+    pii_guard_off = bool(request.guard_overrides and "pii" in request.guard_overrides)
+    output_guard_record: GuardDecisionRecord | None = None
     # The reporter's generation (LLM synthesis) runs here in Phase 2, outside the
     # Phase-1 node-timing context — measure it so the trace waterfall can show it.
     reporter_ms: float | None = None
@@ -780,31 +802,68 @@ async def _stream_turn(  # noqa: PLR0915  SSE turn handler is inherently stateme
             # astream_synthesise threads the backend's exact per-call token usage
             # onto the state (state["input_tokens"]/["output_tokens"]) and stashes
             # the raw pre-strip output — both consumed by the Debug envelope.
+            redactor = None if pii_guard_off else StreamingRedactor()
             async for token in reporter_module.astream_synthesise(state):
                 tokens.append(token)
-                yield _sse("turn.token", {"token": token})
+                emitted = token if redactor is None else redactor.feed(token)
+                if emitted:
+                    yield _sse("turn.token", {"token": emitted})
             # Cite the chunks that actually ground the answer's claims (across
             # every worker), falling back to the worker-selected citations when
             # attribution finds nothing so a turn never loses its sources.
             # Sources are surfaced as structured citations (turn.end payload +
             # UI pills), so we deliberately do not also append a text "Sources:"
             # footer to the answer — that duplicated them in the bubble.
-            final_response = "".join(tokens)
+            if redactor is None:
+                final_response = "".join(tokens)
+            else:
+                tail = redactor.flush()
+                if tail:
+                    yield _sse("turn.token", {"token": tail})
+                final_response = redactor.text
+                if redactor.redactions:
+                    output_guard_record = emit_output_redaction(redactor.redactions)
+                if redactor.redactions or contains_pii(request.message):
+                    # Streamed verbatim too, so the bubble and the stored
+                    # final_response stay byte-identical.
+                    notice = f"\n\n{redaction_notice(resolved_language)}"
+                    yield _sse("turn.token", {"token": notice})
+                    final_response += notice
             grounded = select_grounded_citations(final_response, docs)
             if grounded:
                 turn_citations = grounded
         elif draft:
-            final_response = reporter_module.render(state)
+            final_response, output_guard_record = apply_output_guard(
+                reporter_module.render(state),
+                language=resolved_language,
+                user_input=request.message,
+                disabled=pii_guard_off,
+            )
         else:
             from tessera.agent.reporter import _FALLBACK_RESPONSES
 
-            final_response = _FALLBACK_RESPONSES[state["language"]]
+            final_response, output_guard_record = apply_output_guard(
+                _FALLBACK_RESPONSES[resolved_language],
+                language=resolved_language,
+                user_input=request.message,
+                disabled=pii_guard_off,
+            )
         reporter_ms = (time.perf_counter() - reporter_perf_start) * _MS_PER_SECOND
     else:
-        final_response = str(state.get("final_response", ""))
+        # Escalation / short-circuit texts are vetted, but the guard still
+        # sweeps them so no path can return unmasked PII.
+        final_response, output_guard_record = apply_output_guard(
+            str(state.get("final_response", "")),
+            language=resolved_language,
+            disabled=pii_guard_off,
+        )
+    if output_guard_record is not None:
+        # Surface the redact_output decision in this turn's guard_decisions
+        # (Debug envelope + downstream persistence); the audit ledger entry was
+        # already emitted by the guard itself.
+        state["guard_decisions"] = [*state.get("guard_decisions", []), output_guard_record]
 
     duration = time.perf_counter() - started
-    resolved_language: LanguageCode = state.get("language", language)
     AGENT_TURN_DURATION.labels(agent_id=agent_id, language=resolved_language.value).observe(
         duration
     )

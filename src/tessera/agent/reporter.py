@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Final
 import yaml
 
 from tessera.agent.state import AgentState, Citation, ConversationMessage
+from tessera.guard.redaction import apply_output_guard
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.memory import get_memory_backend, scope_for
 from tessera.settings import LanguageCode
@@ -298,7 +299,14 @@ def render(state: AgentState) -> str:
 
 
 async def run(state: AgentState) -> dict[str, object]:
-    """Reporter node entry point."""
+    """Reporter node entry point.
+
+    Renders the final answer, then runs the guard's output leg
+    (``pii.redact_patterns``) before the response is returned, persisted or
+    evaluated — the reviewer/reporter boundary is where the output guard runs
+    (harness cases 02/45). The streaming chat route pauses before this node and
+    applies the same guard to its token stream instead.
+    """
     language = state["language"]
     draft = state.get("draft_response")
     docs = state.get("retrieved_documents", [])
@@ -308,19 +316,35 @@ async def run(state: AgentState) -> dict[str, object]:
     if docs:
         # Retrieved documents are present — always synthesise via LLM so
         # every aspect of the question (tool result + regulation) is addressed.
-        final, input_tokens, output_tokens = await _synthesise(state)
+        raw_final, input_tokens, output_tokens = await _synthesise(state)
+    elif draft:
+        # Tool result only, no retrieval docs — render the draft directly.
+        raw_final = render(state)
+    else:
+        raw_final = _FALLBACK_RESPONSES[language]
+
+    final, guard_record = apply_output_guard(
+        raw_final,
+        language=language,
+        user_input=str(state.get("user_input", "")),
+        disabled="pii" in set(state.get("guard_overrides") or ()),
+    )
+    if docs:
+        # Footer appended after the guard: citation sources carry no PII by
+        # construction, and the masking notice must read as part of the answer,
+        # never as part of the sources block.
         citations_footer = format_citations(state.get("citations", []), language)
         if citations_footer:
             final = final + citations_footer
-    elif draft:
-        # Tool result only, no retrieval docs — render the draft directly.
-        final = render(state)
-    else:
-        final = _FALLBACK_RESPONSES[language]
 
-    return {
+    update: dict[str, object] = {
         "final_response": final,
         "messages": [ConversationMessage(role="assistant", content=final)],
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
     }
+    if guard_record is not None:
+        # Accumulates via the state reducer — feeds guard_decisions, the Debug
+        # surface and the audit trail already written by the guard.
+        update["guard_decisions"] = [guard_record]
+    return update

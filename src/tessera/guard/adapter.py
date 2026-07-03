@@ -44,7 +44,13 @@ if TYPE_CHECKING:
     # guard.adapter -> agent.state -> agent.graph -> guard.adapter import cycle.
     from tessera.agent.state import GuardDecisionRecord
 
-__all__ = ["GuardedResult", "InputCheckResult", "check_user_input", "guarded_invoke"]
+__all__ = [
+    "GuardedResult",
+    "InputCheckResult",
+    "check_exfiltration",
+    "check_user_input",
+    "guarded_invoke",
+]
 
 
 def _record_guard_decision(target: str, decision: str) -> None:
@@ -283,6 +289,48 @@ def check_user_input(
         sanitised_text=sanitised,
         decisions=tuple(records),
     )
+
+
+def check_exfiltration(
+    text: str,
+    *,
+    policy: Policy | None = None,
+) -> GuardDecisionRecord | None:
+    """Detect a request to push account data to an external e-mail address.
+
+    The agent has no outbound e-mail channel, so a message combining an egress
+    verb, an e-mail address and an account-data term is never legitimate
+    (harness case 46 — user-driven exfiltration). The rule is the conjunctive
+    ``pii.exfiltration_patterns`` block of the policy: every pattern must
+    match, so a bare address ("my new e-mail is x@y.com") or a bare verb
+    ("send me my statement") never trips it. The router refuses the matched
+    turn at input, before any tool or LLM call.
+
+    Returns:
+        The DENY :class:`GuardDecisionRecord` when every pattern matched,
+        ``None`` otherwise.
+    """
+    from tessera.agent.state import GuardDecisionRecord
+
+    active_policy = policy or load_policy()
+    patterns = active_policy.exfiltration_patterns
+    if not patterns or not all(pattern.search(text) for pattern in patterns):
+        return None
+    record = GuardDecisionRecord(
+        target="user_input",
+        decision=DecisionKind.DENY.value,
+        policy_rule="pii.exfiltration_patterns",
+        rationale="user asked to send account data to an external e-mail address",
+    )
+    emit_audit(
+        target="user_input",
+        arguments={"text": "[redacted — exfiltration request]"},
+        decisions=[record],
+        sink=get_settings().guard.audit_sink,
+        outcome="denied",
+    )
+    _record_guard_decision("user_input", "denied")
+    return record
 
 
 async def guarded_invoke(

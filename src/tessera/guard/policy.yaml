@@ -23,6 +23,9 @@
 #         replacement: string
 #   pii:
 #     redact_patterns: [regex, ...]       # applied to all tool inputs/outputs
+#                                         # and to the final response (output guard)
+#     exfiltration_patterns:              # conjunctive: ALL must match to deny
+#       <name>: regex
 
 version: 1
 
@@ -120,8 +123,9 @@ prompt_injection:
     - "(?i)missachte (dein(e|en)?) (Regeln?|Richtlinien?|Anweisungen?)"
   transform_patterns: []
 
-# Patterns that constitute personal data and must be masked from logs and
-# from arguments echoed back to the LLM.
+# Patterns that constitute personal data and must be masked from logs, from
+# arguments echoed back to the LLM, and from the agent's final response (the
+# output guard — tessera.guard.redaction, harness cases 02/45).
 pii:
   redact_patterns:
     # Email
@@ -134,3 +138,13 @@ pii:
     - "\\b(?:\\+33|0)[1-9](?:[ .-]?[0-9]{2}){4}\\b"
     # German phone number
     - "\\b(?:\\+49|0)[1-9][0-9]{1,4}[ /-]?[0-9]{3,10}\\b"
+
+  # Egress guard (harness case 46): a request to *send account data to an
+  # e-mail address* is refused at input — the agent has no outbound e-mail
+  # channel, so third-party egress is never legitimate. Conjunctive rule:
+  # every pattern below must match the user input. A bare address ("my new
+  # e-mail is x@y.com") or a bare verb ("send me my statement") never trips it.
+  exfiltration_patterns:
+    egress_verb: "(?i)\\b(envoie[sz]?|envoyer|envoyez|transmet(s|tez|tre)?|transf[eè]re[sz]?|transf[ée]rez|forward|send|e-?mails?|mail[es]?|sende[nt]?|sendest|schick(e|st|t|en)?|weiterleiten|leite|[üu]bermitt(le|elst|elt|eln))\\b"
+    external_address: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
+    account_data: "(?i)\\b(comptes?|soldes?|iban|rib|relev[ée]s?|op[ée]rations?|transactions?|virements?|historique|r[ée]capitulatifs?|konto\\w*|ums[äa]tze|zusammenfassung|accounts?|balances?|statements?|summary|history)\\b"

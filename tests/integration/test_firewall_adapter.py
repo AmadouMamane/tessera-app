@@ -5,7 +5,9 @@ from __future__ import annotations
 import pytest
 
 from tessera.agent.tools import account_balance, ticket_escalate
+from tessera.authz import AuthState
 from tessera.guard.adapter import guarded_invoke
+from tessera.guard.audit import current_auth_state
 from tessera.settings import LanguageCode
 
 pytestmark = [pytest.mark.integration, pytest.mark.firewall]
@@ -14,12 +16,19 @@ pytestmark = [pytest.mark.integration, pytest.mark.firewall]
 class TestFirewallAgainstRealPolicy:
     @pytest.mark.asyncio
     async def test_account_balance_allowed_for_known_customer(self) -> None:
-        result = await guarded_invoke(
-            tool_name="account_balance",
-            invoke=lambda: account_balance.fetch(customer_id="demo-customer-001"),
-            arguments={"customer_id": "demo-customer-001"},
-            language=LanguageCode.FR,
-        )
+        # account_balance carries the customer-auth floor (ADR 0008/0009): a
+        # "known customer" is an authenticated session, so the test sets the
+        # server-derived auth-state the chat route would have published.
+        token = current_auth_state.set(AuthState.CUSTOMER)
+        try:
+            result = await guarded_invoke(
+                tool_name="account_balance",
+                invoke=lambda: account_balance.fetch(customer_id="demo-customer-001"),
+                arguments={"customer_id": "demo-customer-001"},
+                language=LanguageCode.FR,
+            )
+        finally:
+            current_auth_state.reset(token)
         assert result.allowed is True
         assert result.result is not None
         assert result.error is None

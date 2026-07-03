@@ -302,6 +302,13 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "consentement et le traitement des données personnelles. Les deux textes "
             "s'appliquent ensemble."
         ),
+        "policy_exfiltration": (
+            "Je ne peux pas envoyer de données de votre compte (solde, IBAN, "
+            "opérations) vers une adresse e-mail : je ne dispose d'aucun canal "
+            "d'envoi externe et vos données ne quittent pas votre espace sécurisé. "
+            "Vous pouvez consulter votre récapitulatif à tout moment dans votre "
+            "espace client."
+        ),
     },
     LanguageCode.DE: {
         "policy_credit_decision": (
@@ -334,6 +341,12 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "ergänzend für die Qualität der Einwilligung und die Verarbeitung "
             "personenbezogener Daten. Beide gelten zusammen."
         ),
+        "policy_exfiltration": (
+            "Ich kann keine Daten Ihres Kontos (Kontostand, IBAN, Umsätze) an eine "
+            "E-Mail-Adresse senden: Ich verfüge über keinen externen Versandkanal, "
+            "und Ihre Daten verlassen Ihren gesicherten Bereich nicht. Ihre "
+            "Übersicht finden Sie jederzeit in Ihrem Kundenbereich."
+        ),
     },
     LanguageCode.EN: {
         "policy_credit_decision": (
@@ -363,6 +376,12 @@ _POLICY_RESPONSES: Final[dict[LanguageCode, dict[str, str]]] = {
             "Art. 5(3)), which requires the consent banner. The GDPR (Regulation "
             "2016/679) applies in addition, for the standard of consent and the "
             "processing of personal data. Both apply together."
+        ),
+        "policy_exfiltration": (
+            "I can't send your account data (balance, IBAN, transactions) to an "
+            "e-mail address: I have no outbound channel, and your data never leaves "
+            "your secure space. You can view your account summary at any time in "
+            "your client area."
         ),
     },
 }
@@ -594,7 +613,7 @@ def run(state: AgentState) -> dict[str, object]:
     # adapter imports agent.state, which triggers the agent package init and the
     # graph, which imports this router — so a top-level import of check_user_input
     # would hit a partially-initialised guard.adapter on a fresh import.
-    from tessera.guard.adapter import check_user_input
+    from tessera.guard.adapter import check_exfiltration, check_user_input
 
     # Injection check runs before any language pinning logic. The sandbox can
     # disable it for a turn via guard_overrides; the decision is still recorded
@@ -626,6 +645,24 @@ def run(state: AgentState) -> dict[str, object]:
             "language": detection.language,
             "language_confidence": detection.confidence,
         }
+
+    # Exfiltration guard (pii.exfiltration_patterns, case 46): an ask to push
+    # account data to an e-mail address is refused before any tool or LLM runs —
+    # the agent has no outbound e-mail channel, so third-party egress is never
+    # legitimate. Mirrors the injection guard's sandbox contract: the decision
+    # is always recorded for audit; the "pii" override skips only the block.
+    exfiltration = check_exfiltration(input_check.sanitised_text)
+    if exfiltration is not None:
+        guard_decisions.append(exfiltration)
+        if "pii" not in set(state.get("guard_overrides") or []):
+            return {
+                "guard_decisions": guard_decisions,
+                **language_update,
+                "needs_escalation": False,
+                "final_response": _POLICY_RESPONSES[language]["policy_exfiltration"],
+                "plan": [],
+                "plan_rationale": "input blocked by exfiltration guard (pii.exfiltration_patterns)",
+            }
 
     # Deterministic policy short-circuit: a vetted, compliant answer for specific
     # high-risk asks, bypassing the LLM (same mechanism as the injection guard).

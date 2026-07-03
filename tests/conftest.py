@@ -59,6 +59,10 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     )
     # Audit reads via API need a file path:
     monkeypatch.setenv("TESSERA_AUDIT_FILE", str(tmp_path / "audit.log"))
+    # The dev .env.local demo override (auto-grant retention consent) must never
+    # leak into the suite: governance tests assert the conservative default
+    # (no long-term retention without explicit consent).
+    monkeypatch.setenv("TESSERA_MEMORY__CONSENT_DEFAULT", "false")
     get_settings.cache_clear()
     get_memory_backend.cache_clear()
     yield
