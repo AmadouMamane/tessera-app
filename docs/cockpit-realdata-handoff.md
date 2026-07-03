@@ -265,3 +265,50 @@ a POST endpoint that returns the fresh payload).
 directive (take from normative, keep real, never fabricate). Remaining flagged subsystem fixtures
 that are honestly-flagged and can stay OR get a real core later: incidents, automations,
 replay_shadow, policies.
+
+## Session 3 — the whole remaining backlog (LOCAL, unpushed; night of 2026-07-03)
+
+Full-inventory pass first (3 read-only agents: routes+dead tabs / fixture modules / normative
+gaps), then EVERY remaining hole built, zone by zone, each twice-green + e2e-proven
+(front :3097 → backend :8392) + committed with targeted paths. 31/31 e2e across the 8 new specs.
+
+- **`321e922` Curation dead 6-tab bar → real store views.** `candidate_lots` (ALL 78 real
+  candidates) + `decided_at` stamped by `set_decision`; À curer = searchable full queue with
+  decide buttons; Promotions/Rejets = durable decision lists; Historique = real decision journal.
+- **`146f75e` Evidence store dead 5-tab bar wired** (chain tab = the real verify zone) + the five
+  dead ViewAll chevron buttons became real links.
+- **`ed8313f` Sécurité & Privacy 8-tab bar (normatives 32-1..32-8)** — THE structural hole: the
+  monolithic real page gained the normative bar; 7 focused tabs are curated REAL views over the
+  same live signals (firewall/pii/refusal/least-priv/erasure+inversion/cross-tenant/failed harness
+  cases per domain); dead chrome CTAs + 4 ActionCards + purge CTA wired to real routes.
+- **`c6a4797` Politiques real core + 6 tabs.** Rows = compiled policy.yaml keyed by EMITTED
+  policy_rule ids; KPIs/gauges = ledger (denies 24h + series, shares); version rail = real single
+  version + mtime; chain = live verify. Registry: `policies` real, new `policy_versioning`
+  synthetic flags impact-simulator + approvals zones only.
+- **`246cd3d` Tail-sampling surfaced on Observabilité** (it was real but unread by any page).
+- **`600de38` access.py was ALREADY real** — resolved the stale ui-contract deviation note.
+- **`3762d6f` + `8cc1f1b` Incidents feed real.** Deny clusters from the ledger (7-day window, real
+  counts/times/series) + low-faithfulness bundle cluster; KPIs open/critical real, lifecycle
+  metrics honest dashes; control cases = top failed-eval categories. Page-level banner replaced by
+  compact notices on the still-fixture zones (playbook engine / impact / catalogue / fixture tabs).
+- **`28b857a` Replay & shadow real + NEW `replay_store.py`.** Sessions/distributions/activity from
+  captured bundles; the durable replay journal is written by POST /observability/replay (figures
+  grow only from real runs); comparisons/regressions = REAL eval run-N vs run-N-1 diffs (exact
+  newly-failing cases; live: support-client -16.3 pt). 8 tabs wired; `shadow_traffic` synthetic
+  flags shadow/exports; the traffic chart lost its fabricated K/M units.
+- **`312ff4c` Automations: the source CREATED (`automation_store.py`).** 5 code-defined rules
+  evaluating REAL conditions (per-agent gate FAIL, chain verify, low-faith turns, deny volume,
+  curation backlog); durable enabled flags + a journal of evaluations actually executed via the
+  new POST evaluate; rule-state POST toggles. Live observed values: "gate FAIL: support-client,
+  onboarding, recouvrement", "1 143 denies / 24h", "78 pending". 6 tabs wired; catalogue status =
+  real durable toggle; Évaluer-maintenant = real journalled action; fake create/simulate buttons
+  removed (rules are code-defined, changed via PR). `automation_workflow` synthetic flags
+  approvals/savings.
+
+**Honesty registry after this session:** synthetic = incidents (lifecycle only, zones-scoped),
+curation (demo zones), evidence_export, assistant, policy_versioning, shadow_traffic,
+automation_workflow. Graduated to REAL: policies, replay_shadow, automations.
+
+**State: the hole map is EMPTY** — every cockpit page and sub-tab is either real or explicitly
+zone-flagged demonstration; no dead tab bars remain (inventory verified: 0 ScaffoldView, 0 dead
+bars). Remaining honest fixtures are the flagged subsystem zones listed above.
