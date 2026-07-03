@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Final
 import yaml
 
 from tessera.agent.state import AgentState, Citation, ConversationMessage
+from tessera.guard import grounding
 from tessera.guard.redaction import apply_output_guard
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.memory import get_memory_backend, scope_for
@@ -310,6 +311,7 @@ async def run(state: AgentState) -> dict[str, object]:
     language = state["language"]
     draft = state.get("draft_response")
     docs = state.get("retrieved_documents", [])
+    overrides = set(state.get("guard_overrides") or ())
 
     input_tokens = 0
     output_tokens = 0
@@ -323,16 +325,37 @@ async def run(state: AgentState) -> dict[str, object]:
     else:
         raw_final = _FALLBACK_RESPONSES[language]
 
+    # Grounding-refusal gate (guard.grounding): a synthesised answer that
+    # asserts a specific claim the retrieved corpus cannot back is replaced by
+    # the vetted hedge before it is returned, persisted or evaluated. Tool- and
+    # policy-grounded turns are exempt inside the guard.
+    grounding_check: grounding.GroundingCheck | None = None
+    if docs:
+        grounding_check = grounding.apply_grounding_guard(
+            raw_final,
+            language=language,
+            documents=docs,
+            user_input=str(state.get("user_input", "")),
+            tool_grounded=any(call.succeeded for call in state.get("tool_calls", [])),
+            policy_refusal=any(
+                "refused" in e or "refusal" in e or "policy" in e for e in state.get("errors", [])
+            ),
+            disabled="grounding" in overrides,
+        )
+        raw_final = grounding_check.text
+
     final, guard_record = apply_output_guard(
         raw_final,
         language=language,
         user_input=str(state.get("user_input", "")),
-        disabled="pii" in set(state.get("guard_overrides") or ()),
+        disabled="pii" in overrides,
     )
-    if docs:
+    replaced = grounding_check is not None and grounding_check.replaced
+    if docs and not replaced:
         # Footer appended after the guard: citation sources carry no PII by
         # construction, and the masking notice must read as part of the answer,
-        # never as part of the sources block.
+        # never as part of the sources block. A hedged answer cites nothing —
+        # there is no source backing the claim it refused to make.
         citations_footer = format_citations(state.get("citations", []), language)
         if citations_footer:
             final = final + citations_footer
@@ -343,8 +366,23 @@ async def run(state: AgentState) -> dict[str, object]:
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
     }
-    if guard_record is not None:
+    # Honest self-assessment: a replaced answer, or one that itself declares
+    # it cannot find/confirm the fact, must not carry a confident score.
+    if replaced:
+        update["confidence"] = grounding.REPLACED_CONFIDENCE
+        update["grounding_score"] = grounding.REPLACED_GROUNDING
+    elif grounding.declares_unanswerable(raw_final):
+        ceiling = grounding.UNANSWERABLE_CONFIDENCE_CEILING
+        if float(state.get("confidence") or 0.0) > ceiling:
+            update["confidence"] = ceiling
+            update["grounding_score"] = min(float(state.get("grounding_score") or 1.0), ceiling)
+    records = [
+        record
+        for record in ((grounding_check.record if grounding_check else None), guard_record)
+        if record is not None
+    ]
+    if records:
         # Accumulates via the state reducer — feeds guard_decisions, the Debug
         # surface and the audit trail already written by the guard.
-        update["guard_decisions"] = [guard_record]
+        update["guard_decisions"] = records
     return update

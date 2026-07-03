@@ -585,10 +585,38 @@ def _cookie_citation(language: LanguageCode) -> Citation:
     )
 
 
+def _deposit_guarantee_citation(language: LanguageCode) -> Citation:
+    excerpts: dict[LanguageCode, str] = {
+        LanguageCode.FR: (
+            "La directive 2014/49/UE relative aux systèmes de garantie des "
+            "dépôts fixe le niveau de couverture à 100 000 € par déposant et "
+            "par établissement de crédit (article 6, paragraphe 1)."
+        ),
+        LanguageCode.DE: (
+            "Die Richtlinie 2014/49/EU über Einlagensicherungssysteme legt "
+            "die Deckungssumme auf 100 000 € je Einleger und Kreditinstitut "
+            "fest (Artikel 6 Absatz 1)."
+        ),
+        LanguageCode.EN: (
+            "Directive 2014/49/EU on deposit guarantee schemes sets the "
+            "coverage level at EUR 100 000 per depositor per credit "
+            "institution (Article 6(1))."
+        ),
+    }
+    return Citation(
+        source="Directive 2014/49/UE (garantie des dépôts)",
+        locator="art. 6(1)",
+        language=language,
+        excerpt=excerpts[language],
+    )
+
+
 def _policy_citations(policy_key: str, language: LanguageCode) -> list[Citation]:
     """Citations backing a short-circuit answer, empty when none is asserted."""
     if policy_key == "policy_cookie_consent":
         return [_cookie_citation(language)]
+    if policy_key == "policy_deposit_guarantee":
+        return [_deposit_guarantee_citation(language)]
     return []
 
 

@@ -15,8 +15,12 @@ When the fused score falls below
 ``needs_escalation`` to ``True`` with a structured reason. The graph then
 routes to the escalation worker instead of the reporter.
 
-The reviewer is intentionally rule-based and side-effect-free — it must be
-deterministic so the regression harness can assert on its outputs.
+The reviewer is intentionally rule-based and deterministic so the regression
+harness can assert on its outputs. Since the grounding-refusal gate
+(:mod:`tessera.guard.grounding`), it also *enforces* the canonical
+hallucination case instead of merely scoring it: a non-empty draft backed by
+zero retrieved documents is replaced by the vetted hedge (and the decision is
+recorded on the audit trail) rather than rendered to the customer.
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ from dataclasses import dataclass
 from typing import Final
 
 from tessera.agent.state import AgentState  # noqa: TCH001  — LangGraph introspects run() at runtime
+from tessera.guard import grounding
 from tessera.settings import get_settings
 
 __all__ = ["ReviewOutcome", "review", "run"]
@@ -161,4 +166,28 @@ def run(state: AgentState) -> dict[str, object]:
     }
     if outcome.reason is not None:
         update["escalation_reason"] = outcome.reason
+
+    # Grounding-refusal gate, draft leg: a non-empty draft with zero
+    # supporting documents (grounding 0.1 — no tool result, no policy
+    # refusal) is never emitted. Replace it with the vetted hedge and answer
+    # directly instead of escalating: "I cannot confirm this" is the
+    # resolution, not a case for a human handoff.
+    draft = state.get("draft_response")
+    docs = state.get("retrieved_documents", [])
+    if (
+        draft
+        and not docs
+        and outcome.grounding_score <= grounding.REPLACED_GROUNDING
+        and "grounding" not in set(state.get("guard_overrides") or ())
+    ):
+        language = state.get("language") or get_settings().default_language
+        update["draft_response"] = grounding.hedge_response(language)
+        update["needs_escalation"] = False
+        update["confidence"] = grounding.REPLACED_CONFIDENCE
+        update["guard_decisions"] = [
+            grounding.emit_refuse_ungrounded(
+                "draft_response", "non-empty draft with no supporting document"
+            )
+        ]
+        update.pop("escalation_reason", None)
     return update
