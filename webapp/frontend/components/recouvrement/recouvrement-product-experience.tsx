@@ -9,23 +9,31 @@ import {
   CircleCheck,
   CircleHelp,
   Clock3,
+  Copy,
   FileText,
   Folder,
   Home,
   Info,
   LockKeyhole,
   Mail,
+  Maximize2,
+  Minimize2,
   PenLine,
   Phone,
+  Pin,
   Search,
   Send,
   ShieldCheck,
   Sparkles,
   Users,
+  X,
 } from "lucide-react";
 import { useLocale } from "next-intl";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CreditAuroreLogo } from "@/components/brand/credit-aurore-logo";
+import type { Locale } from "@/i18n/routing";
+import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
 
 const navigation = [
@@ -48,21 +56,25 @@ const assistantActions = [
   {
     label: "Résumer ce dossier",
     description: "Obtenir les points clés en quelques secondes",
+    prompt: "Résume ce dossier de recouvrement pour préparer l'action suivante.",
     Icon: FileText,
   },
   {
     label: "Rédiger une relance",
     description: "Message personnalisé prêt à envoyer",
+    prompt: "Prépare une relance amiable et propose un échéancier adapté à la situation.",
     Icon: PenLine,
   },
   {
     label: "Vérifier une règle",
     description: "Contrôler la conformité en un clic",
+    prompt: "Vérifie les règles applicables avant de contacter le client sur ce dossier.",
     Icon: ShieldCheck,
   },
   {
     label: "Proposer un échéancier",
     description: "Simulation adaptée à la situation",
+    prompt: "Propose un échéancier adapté à la situation et indique les points à valider.",
     Icon: CalendarDays,
   },
 ];
@@ -75,7 +87,11 @@ const nextItems = [
 
 const quickActions = [
   { label: "Préparer une relance", detail: "Rédiger un message personnalisé", Icon: FileText },
-  { label: "Créer un échéancier", detail: "Proposer un plan de remboursement", Icon: CalendarDays },
+  {
+    label: "Préparer un échéancier",
+    detail: "Proposer un plan de remboursement",
+    Icon: CalendarDays,
+  },
   { label: "Reporter un dossier", detail: "Choisir une nouvelle date", Icon: FileText },
   { label: "Escalader à un responsable", detail: "Demander une validation", Icon: Users },
   { label: "Consulter l'historique", detail: "Voir toutes les actions", Icon: Clock3 },
@@ -83,6 +99,128 @@ const quickActions = [
 
 const cardClass =
   "rounded-[6px] border border-[#dcdee6] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]";
+
+const defaultAssistantTab = "Préparer une relance";
+
+const assistantTabs = [
+  defaultAssistantTab,
+  "Proposer un échéancier",
+  "Vérifier une règle",
+  "Résumer",
+];
+
+const contextItems = [
+  "Promesse de paiement non tenue le 12 juin.",
+  "840,00 €",
+  "Retard de 32 jours",
+  "Contact autorisé aujourd'hui de 8h à 20h",
+];
+
+const verificationItems = [
+  "Ton professionnel et factuel",
+  "Absence de pression injustifiée",
+  "Informations exactes et à jour",
+  "Contact autorisé aujourd'hui",
+  "Conforme au cadre réglementaire",
+];
+
+type AssistantMode = "closed" | "drawer" | "pinned";
+type AssistantStatus = "idle" | "loading" | "ready" | "error";
+
+interface DraftVersion {
+  id: string;
+  label: string;
+  title: string;
+  body: string;
+}
+
+interface AssistantThreadMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  streaming?: boolean;
+  error?: boolean;
+}
+
+interface GeneratedAssistantContent {
+  summary: string[];
+  versions: DraftVersion[];
+  paymentPlan: string;
+  complianceChecks: string[];
+  nextActions: string[];
+  rawResponse: string;
+}
+
+const fallbackAssistantContent: GeneratedAssistantContent = {
+  summary: [],
+  versions: [],
+  paymentPlan: "",
+  complianceChecks: [],
+  nextActions: [],
+  rawResponse: "",
+};
+
+const loadingRows = ["loading-row-1", "loading-row-2", "loading-row-3"];
+const skeletonLineKeys = [
+  "skeleton-line-1",
+  "skeleton-line-2",
+  "skeleton-line-3",
+  "skeleton-line-4",
+  "skeleton-line-5",
+  "skeleton-line-6",
+];
+
+const recouvrementThinkingSteps = [
+  "Recouvrement analyse le dossier RC-2048",
+  "Recouvrement prépare les variantes de réponse",
+  "Recouvrement vérifie les règles de contact",
+  "Recouvrement consolide les prochaines actions",
+];
+
+const defaultAssistantPrompt =
+  "Prépare une relance amiable et propose un échéancier adapté à la situation.";
+
+const recouvrementDrawerSystemPrompt = [
+  "Tu es l'assistant interne Recouvrement de Crédit Aurore pour Julie Dubois, chargée de recouvrement.",
+  "Tu aides à préparer une action sur un dossier, tu ne promets jamais qu'elle est exécutée.",
+  "N'oriente jamais Julie vers un service client : tu formules directement l'aide opérationnelle pour le dossier.",
+  "N'invente pas de téléphone, d'adresse e-mail, de frais ou de sanction.",
+  "Base les brouillons sur le contexte dossier transmis, pas sur des conditions générales externes sauf si l'utilisateur demande explicitement une règle.",
+  "N'utilise pas les expressions manquement grave, résiliation, sanction, frais d'incident ou mise en demeure dans une relance amiable.",
+  "Le ton d'une réponse client doit rester amiable, factuel, sans menace et sans pression injustifiée.",
+  "Un échéancier est seulement préparé ou proposé, puis validé avec le client.",
+  "Réponds en français, sans JSON, avec exactement ces titres Markdown dans cet ordre :",
+  "## Résumé du dossier",
+  "## Réponse au client",
+  "### V1 — version courte et directe",
+  "### V2 — version plus empathique",
+  "### V3 — version avec proposition d'échéancier",
+  "## Règles et conformité",
+  "## Prochaines actions suggérées",
+  "Chaque version doit contenir un brouillon complet prêt à relire, pas une consigne.",
+  "Les règles et conformité doivent mentionner seulement les contrôles utiles au recouvrement de ce dossier.",
+].join("\n");
+
+const dossierContextForAssistant = [
+  "Contexte dossier RC-2048 transmis par l'espace Recouvrement.",
+  "Client : M. D.",
+  "Montant dû : 840,00 €.",
+  "Retard : 32 jours.",
+  "Promesse de paiement non tenue le 12 juin.",
+  "Contact autorisé aujourd'hui de 8h à 20h.",
+  "Échéancier envisageable, uniquement après validation client.",
+].join("\n");
+
+function getSubjectId(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const key = "tessera.subjectId";
+  let id = window.localStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID();
+    window.localStorage.setItem(key, id);
+  }
+  return id;
+}
 
 function CountBadge({ count, className }: { count: number; className?: string }) {
   return (
@@ -97,40 +235,1135 @@ function CountBadge({ count, className }: { count: number; className?: string })
   );
 }
 
+function AssistantCardBloom() {
+  return (
+    <svg
+      className="pointer-events-none absolute top-[56px] right-[-15px] z-30 h-[78px] w-[28px]"
+      viewBox="0 0 28 78"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <filter id="assistantBloomBlur" x="-25%" y="-20%" width="150%" height="140%">
+          <feGaussianBlur stdDeviation="3" />
+        </filter>
+        <radialGradient id="assistantBloomFill" cx="50%" cy="50%" r="64%">
+          <stop offset="0" stopColor="#c9c0ff" stopOpacity="0.52" />
+          <stop offset="0.54" stopColor="#d8d1ff" stopOpacity="0.32" />
+          <stop offset="1" stopColor="#e7e3ff" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <path
+        d="M14 0V4M14 74V78"
+        fill="none"
+        stroke="#c8bbff"
+        strokeLinecap="round"
+        strokeOpacity="0.7"
+        strokeWidth="1"
+      />
+      <path
+        d="M14 4C15.2 25.9 18.2 33.4 26 39C18.2 44.6 15.2 52.1 14 74C12.8 52.1 9.8 44.6 2 39C9.8 33.4 12.8 25.9 14 4Z"
+        fill="#faf8ff"
+      />
+      <path
+        d="M14 3C15.3 25.5 18.4 33.2 27 39C18.4 44.8 15.3 52.5 14 75C12.7 52.5 9.6 44.8 1 39C9.6 33.2 12.7 25.5 14 3Z"
+        fill="#d7d0ff"
+        fillOpacity="0.18"
+        filter="url(#assistantBloomBlur)"
+      />
+      <path
+        d="M14 4C15.2 25.9 18.2 33.4 26 39C18.2 44.6 15.2 52.1 14 74C12.8 52.1 9.8 44.6 2 39C9.8 33.4 12.8 25.9 14 4Z"
+        fill="url(#assistantBloomFill)"
+      />
+    </svg>
+  );
+}
+
+function assistantTabForAction(action: string) {
+  if (action.includes("échéancier")) {
+    return "Proposer un échéancier";
+  }
+  if (action.includes("règle")) {
+    return "Vérifier une règle";
+  }
+  if (action.includes("Résumer")) {
+    return "Résumer";
+  }
+  return "Préparer une relance";
+}
+
+function assistantPromptForTab(activeTab: string) {
+  const action = assistantActions.find((item) => assistantTabForAction(item.label) === activeTab);
+  return action?.prompt ?? defaultAssistantPrompt;
+}
+
+function asString(value: unknown) {
+  if (typeof value !== "string") return "";
+  return value
+    .trim()
+    .replace(/^fait dossier\s*:?\s*/i, "")
+    .replace(/\bnotre service client\b/gi, "Crédit Aurore")
+    .replace(/\ble service client\b/gi, "Crédit Aurore")
+    .replace(/\bdu service client\b/gi, "de Crédit Aurore");
+}
+
+function normalizeAssistantText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+function cleanAssistantHeading(line: string) {
+  return line
+    .replace(/^#+\s*/, "")
+    .replace(/^[-*]\s*/, "")
+    .replace(/^[_*]+/, "")
+    .replace(/[_*:]+$/, "")
+    .trim();
+}
+
+function isVersionHeading(line: string) {
+  const normalized = normalizeAssistantText(cleanAssistantHeading(line));
+  return /^(reponse au client\s*[-–—:]?\s*)?(version\s*)?v?\s*[123]\b/.test(normalized);
+}
+
+function isAssistantSectionHeading(line: string) {
+  const normalized = normalizeAssistantText(cleanAssistantHeading(line));
+  if (isVersionHeading(line)) return true;
+  if (normalized.length > 84) return false;
+  return [
+    "resume du dossier",
+    "resume",
+    "reponse au client",
+    "regles et conformite",
+    "conformite",
+    "prochaines actions",
+    "prochaines actions suggerees",
+    "echeancier",
+    "plan de paiement",
+  ].some((heading) => normalized.startsWith(heading));
+}
+
+function stripListPrefix(line: string) {
+  return line
+    .replace(/^[-*•]\s*/, "")
+    .replace(/^\d+[.)]\s*/, "")
+    .replace(/^:\s*/, "")
+    .trim();
+}
+
+function blockToItems(block: string, maxItems = 5) {
+  return block
+    .split(/\r?\n/)
+    .map(stripListPrefix)
+    .filter((line) => line && !isAssistantSectionHeading(line))
+    .slice(0, maxItems);
+}
+
+function extractSectionBlock(lines: string[], headings: string[]) {
+  const start = lines.findIndex((line) => {
+    const normalized = normalizeAssistantText(cleanAssistantHeading(line));
+    return headings.some((heading) => normalized.startsWith(heading));
+  });
+  if (start === -1) return "";
+
+  const body: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (isAssistantSectionHeading(line)) break;
+    body.push(line);
+  }
+  return body.join("\n").trim();
+}
+
+function extractDraftVersions(lines: string[]): DraftVersion[] {
+  const markers = lines.flatMap((line, index) => {
+    const cleaned = cleanAssistantHeading(line);
+    const match = cleaned.match(
+      /^(?:Réponse au client\s*[-–—:]?\s*)?(?:Version\s*)?V?\s*([123])\b\s*[-–—:]?\s*(.*)$/i,
+    );
+    if (!match) return [];
+    return [
+      {
+        index,
+        id: `v${match[1]}`,
+        label: `V${match[1]}`,
+        title: match[2]?.trim() || `Version ${match[1]}`,
+      },
+    ];
+  });
+
+  return markers
+    .map((marker, markerIndex) => {
+      const nextVersionIndex = markers[markerIndex + 1]?.index ?? lines.length;
+      const body: string[] = [];
+      for (const line of lines.slice(marker.index + 1, nextVersionIndex)) {
+        if (isAssistantSectionHeading(line) && !isVersionHeading(line)) break;
+        body.push(line);
+      }
+      return {
+        id: marker.id,
+        label: marker.label,
+        title: marker.title,
+        body: body.join("\n").trim(),
+      };
+    })
+    .filter((version) => version.body.length > 0)
+    .slice(0, 3);
+}
+
+function parseGeneratedAssistantContent(raw: string): GeneratedAssistantContent {
+  const text = asString(raw);
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const responseBlock = extractSectionBlock(lines, ["reponse au client"]);
+  const versions = extractDraftVersions(lines);
+  const fallbackVersion =
+    responseBlock && versions.length === 0
+      ? [
+          {
+            id: "v1",
+            label: "V1",
+            title: "Version proposée",
+            body: responseBlock,
+          },
+        ]
+      : [];
+
+  return {
+    summary: blockToItems(extractSectionBlock(lines, ["resume du dossier", "resume"])),
+    versions: versions.length > 0 ? versions : fallbackVersion,
+    paymentPlan: extractSectionBlock(lines, ["echeancier", "plan de paiement"]),
+    complianceChecks: blockToItems(
+      extractSectionBlock(lines, ["regles et conformite", "conformite"]),
+      6,
+    ),
+    nextActions: blockToItems(
+      extractSectionBlock(lines, ["prochaines actions suggerees", "prochaines actions"]),
+      5,
+    ),
+    rawResponse: text,
+  };
+}
+
+function buildAssistantHistory(thread: AssistantThreadMessage[]) {
+  const stableMessages = thread.filter((message) => message.content.trim() && !message.streaming);
+  return [
+    { role: "user" as const, content: dossierContextForAssistant },
+    ...stableMessages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    })),
+  ];
+}
+
+function AssistantContextPanel({ compact = false }: { compact?: boolean }) {
+  const items = compact
+    ? [
+        "Promesse de paiement non tenue le 12 juin.",
+        "840,00 € · Retard de 32 jours",
+        "Contact autorisé aujourd'hui de 8h à 20h",
+      ]
+    : contextItems;
+
+  return (
+    <section
+      className={cn("rounded-[6px] border border-[#dfe2ec] bg-white", compact ? "p-4" : "p-5")}
+    >
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <h3 className="!font-sans !text-[#071044] font-bold text-sm">
+          Contexte retenu par l'assistant
+        </h3>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 font-semibold text-[#6048ff] text-xs"
+        >
+          <PenLine className="h-4 w-4" />
+          Modifier le contexte
+        </button>
+      </div>
+      <div className={cn("grid gap-2 text-[#071044] text-xs", compact ? "" : "sm:grid-cols-2")}>
+        {items.map((item) => (
+          <div
+            key={item}
+            className={cn(
+              "flex items-center gap-2 rounded-[5px] bg-[#fbfbfd] px-3",
+              compact ? "min-h-7 text-[0.72rem]" : "min-h-8",
+            )}
+          >
+            <CircleCheck className="h-4 w-4 shrink-0 text-[#071044]/70" />
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SkeletonLines({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="space-y-2">
+      {skeletonLineKeys.slice(0, rows).map((key, index) => (
+        <span
+          key={key}
+          className={cn(
+            "block h-3 rounded-full bg-[#eef0f7]",
+            index === rows - 1 ? "w-2/3" : "w-full",
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
+function AssistantDraftPanel({
+  compact = false,
+  content,
+  selectedVersionId,
+  status,
+  onSelectVersion,
+}: {
+  compact?: boolean;
+  content: GeneratedAssistantContent;
+  selectedVersionId: string;
+  status: AssistantStatus;
+  onSelectVersion: (versionId: string) => void;
+}) {
+  const paragraphClassName = compact ? "mt-3" : "mt-4";
+  const selectedVersion =
+    content.versions.find((version) => version.id === selectedVersionId) ?? content.versions[0];
+  const draftParagraphs = (selectedVersion?.body ?? "")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  return (
+    <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="!font-sans !text-[#071044] font-bold text-sm">
+          Réponse au client
+          {selectedVersion ? (
+            <span className="ml-2 font-semibold text-[#071044]/62 text-xs">
+              {selectedVersion.title}
+            </span>
+          ) : null}
+        </h3>
+        <div className="flex shrink-0 items-center gap-1 rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-1">
+          {(status === "loading" && content.versions.length === 0
+            ? ["v1", "v2", "v3"].map((id) => ({ id, label: id.toUpperCase() }))
+            : content.versions
+          ).map((version) => (
+            <button
+              key={version.id}
+              type="button"
+              disabled={status === "loading" || content.versions.length === 0}
+              onClick={() => onSelectVersion(version.id)}
+              className={cn(
+                "h-7 min-w-9 rounded-[4px] px-2 font-bold text-[0.68rem] transition",
+                selectedVersion?.id === version.id
+                  ? "bg-[#6048ff] text-white shadow-[0_4px_10px_rgba(96,72,255,0.22)]"
+                  : "text-[#071044]/70 hover:bg-white",
+              )}
+            >
+              {version.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div
+        className={cn(
+          "rounded-[5px] border border-[#dfe2ec] bg-white text-[#071044]",
+          compact
+            ? "min-h-[188px] px-3 py-3 text-xs leading-5"
+            : "min-h-[132px] px-4 py-3 text-sm leading-6",
+        )}
+      >
+        {status === "loading" ? (
+          <SkeletonLines rows={6} />
+        ) : draftParagraphs.length > 0 ? (
+          draftParagraphs.map((paragraph, index) => (
+            <p key={paragraph} className={index === 0 ? undefined : paragraphClassName}>
+              {paragraph}
+            </p>
+          ))
+        ) : (
+          <p className="text-[#071044]/60">
+            Le chat Recouvrement n'a pas encore renvoyé de version exploitable.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function AssistantVerificationPanel({
+  checks,
+  status,
+}: {
+  checks: string[];
+  status: AssistantStatus;
+}) {
+  return (
+    <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
+      <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">Règles et conformité</h3>
+      <ul className="space-y-2.5 text-[#071044] text-xs">
+        {status === "loading"
+          ? loadingRows.map((row) => (
+              <li key={row}>
+                <SkeletonLines rows={1} />
+              </li>
+            ))
+          : checks.map((item) => (
+              <li key={item} className="flex items-center gap-3">
+                <Check className="h-4 w-4 shrink-0 text-[#16843a]" />
+                <span>{item}</span>
+                <Info className="ml-auto h-3.5 w-3.5 shrink-0 text-[#071044]/55" />
+              </li>
+            ))}
+      </ul>
+    </section>
+  );
+}
+
+function AssistantConversationPanel({
+  compact = false,
+  inputValue,
+  messages,
+  showComposer = true,
+  status,
+  thinkingLabel,
+  onInputChange,
+  onSubmit,
+}: {
+  compact?: boolean;
+  inputValue: string;
+  messages: AssistantThreadMessage[];
+  showComposer?: boolean;
+  status: AssistantStatus;
+  thinkingLabel: string;
+  onInputChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
+  const visibleMessages = messages.slice(compact ? -3 : -5);
+
+  return (
+    <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="!font-sans !text-[#071044] font-bold text-sm">Chat Recouvrement</h3>
+        {status === "loading" ? (
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#f0edff] px-3 py-1 font-bold text-[#6048ff] text-[0.66rem]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#6048ff]" />
+            {thinkingLabel}
+          </span>
+        ) : null}
+      </div>
+      <div
+        className={cn(
+          "space-y-3 overflow-y-auto rounded-[5px] border border-[#eef0f7] bg-[#fbfbfd] p-3",
+          compact ? "max-h-[180px]" : "max-h-[238px]",
+        )}
+      >
+        {visibleMessages.map((message) => (
+          <div
+            key={message.id}
+            className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}
+          >
+            <div
+              className={cn(
+                "max-w-[86%] rounded-[6px] px-3 py-2 text-xs leading-5",
+                message.role === "user"
+                  ? "bg-[#f0edff] text-[#071044]"
+                  : "border border-[#dfe2ec] bg-white text-[#071044]",
+                message.error && "border-[#ffd2c9] bg-[#fff5f3] text-[#a23b2a]",
+              )}
+            >
+              {message.content ? (
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              ) : (
+                <p className="inline-flex items-center gap-1.5 font-semibold text-[#6048ff]">
+                  Recouvrement réfléchit
+                  <span className="h-1 w-1 animate-bounce rounded-full bg-[#6048ff]" />
+                  <span className="h-1 w-1 animate-bounce rounded-full bg-[#6048ff] [animation-delay:120ms]" />
+                  <span className="h-1 w-1 animate-bounce rounded-full bg-[#6048ff] [animation-delay:240ms]" />
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      {showComposer ? (
+        <form
+          className="mt-3 flex min-h-11 items-center gap-3 rounded-[5px] border border-[#b7aaff] bg-white px-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          <input
+            aria-label="Question assistant"
+            value={inputValue}
+            onChange={(event) => onInputChange(event.target.value)}
+            placeholder="Continuer avec le chat Recouvrement..."
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#071044]/55"
+          />
+          <button
+            type="submit"
+            aria-label="Envoyer la question"
+            disabled={status === "loading" || inputValue.trim().length === 0}
+            className="grid h-9 w-9 place-items-center rounded-[5px] bg-[#6048ff] text-white transition disabled:bg-[#c8bbff]"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </form>
+      ) : null}
+    </section>
+  );
+}
+
+function AssistantDrawer({
+  mode,
+  activeTab,
+  content,
+  error,
+  inputValue,
+  messages,
+  selectedVersionId,
+  status,
+  thinkingLabel,
+  onClose,
+  onExpand,
+  onInputChange,
+  onRegenerate,
+  onSelectVersion,
+  onSendMessage,
+  onSelectTab,
+  onTogglePinned,
+}: {
+  mode: Exclude<AssistantMode, "closed">;
+  activeTab: string;
+  content: GeneratedAssistantContent;
+  error: string | null;
+  inputValue: string;
+  messages: AssistantThreadMessage[];
+  selectedVersionId: string;
+  status: AssistantStatus;
+  thinkingLabel: string;
+  onClose: () => void;
+  onExpand: () => void;
+  onInputChange: (value: string) => void;
+  onRegenerate: () => void;
+  onSelectVersion: (versionId: string) => void;
+  onSendMessage: () => void;
+  onSelectTab: (tab: string) => void;
+  onTogglePinned: () => void;
+}) {
+  const isPinned = mode === "pinned";
+  const summary = content.summary.length > 0 ? content.summary : fallbackAssistantContent.summary;
+  const checks =
+    content.complianceChecks.length > 0 ? content.complianceChecks : verificationItems.slice(0, 4);
+  const nextActions =
+    content.nextActions.length > 0
+      ? content.nextActions
+      : ["Relire la proposition avant action.", "Insérer le brouillon après validation."];
+  const initialPrompt =
+    messages.find((message) => message.role === "user")?.content ??
+    assistantPromptForTab(activeTab);
+
+  return (
+    <aside
+      aria-label="Assistant de traitement"
+      aria-modal={isPinned ? undefined : true}
+      role={isPinned ? "complementary" : "dialog"}
+      className={cn(
+        "fixed right-0 z-50 flex flex-col overflow-hidden border-[#dfe2ec] border-l bg-white text-[#071044] transition-[width,box-shadow,transform] duration-300 ease-out",
+        "top-[90px] h-[calc(100vh-90px)] max-md:top-0 max-md:h-screen",
+        isPinned
+          ? "w-[496px] max-w-[calc(100vw-18px)] shadow-[-12px_0_36px_rgba(7,16,68,0.08)]"
+          : "w-[704px] max-w-[calc(100vw-22px)] shadow-[-26px_0_70px_rgba(7,16,68,0.18)]",
+      )}
+    >
+      <header
+        className={cn(
+          "shrink-0 border-[#dfe2ec] border-b bg-white px-6",
+          isPinned ? "py-5" : "py-4",
+        )}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2
+              className={cn(
+                "flex items-center gap-2 !font-sans !text-[#071044] font-extrabold tracking-[0]",
+                isPinned ? "text-[0.94rem] leading-6" : "flex-wrap text-xl",
+              )}
+            >
+              {!isPinned ? <Sparkles className="h-5 w-5 text-[#6048ff]" /> : null}
+              <span className="whitespace-nowrap">Assistant de traitement</span>
+              <span className="whitespace-nowrap font-semibold text-[#071044]/80">
+                {isPinned ? "- RC-2048" : "RC-2048"}
+              </span>
+              <span
+                className={cn(
+                  "rounded-full bg-[#f0edff] font-bold text-[#6048ff]",
+                  isPinned ? "px-1.5 py-0.5 text-[0.5rem]" : "px-2.5 py-1 text-[0.68rem]",
+                )}
+              >
+                Contextualisé
+              </span>
+            </h2>
+            {!isPinned ? (
+              <p className="mt-1 text-[#071044]/70 text-sm">
+                Contextualisé sur le dossier prioritaire
+              </p>
+            ) : null}
+          </div>
+          <div className={cn("flex shrink-0 items-center", isPinned ? "gap-1.5" : "gap-2")}>
+            <button
+              type="button"
+              aria-label={isPinned ? "Détacher l'assistant" : "Épingler l'assistant"}
+              onClick={onTogglePinned}
+              className={cn(
+                "grid place-items-center rounded-[5px] border border-[#dfe2ec] text-[#071044] transition hover:bg-[#f7f8fb]",
+                isPinned ? "h-7 w-7" : "h-8 w-8",
+              )}
+            >
+              {isPinned ? <Minimize2 className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              aria-label="Agrandir l'assistant"
+              onClick={onExpand}
+              className={cn(
+                "grid place-items-center rounded-[5px] border border-[#dfe2ec] text-[#071044] transition hover:bg-[#f7f8fb]",
+                isPinned ? "h-7 w-7" : "h-8 w-8",
+              )}
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Fermer l'assistant"
+              onClick={onClose}
+              className={cn(
+                "grid place-items-center rounded-[5px] text-[#071044] transition hover:bg-[#f7f8fb]",
+                isPinned ? "h-7 w-7" : "h-8 w-8",
+              )}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+        {isPinned ? (
+          <div className="mt-5 flex gap-4 overflow-x-auto border-[#eceef5] border-b">
+            {assistantTabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => onSelectTab(tab)}
+                className={cn(
+                  "relative h-10 shrink-0 font-bold text-[0.72rem] transition",
+                  activeTab === tab ? "text-[#6048ff]" : "text-[#071044]",
+                )}
+              >
+                {tab}
+                <span
+                  className={cn(
+                    "absolute right-0 bottom-0 left-0 h-0.5 rounded-full bg-[#6048ff] transition-opacity",
+                    activeTab === tab ? "opacity-100" : "opacity-0",
+                  )}
+                />
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </header>
+
+      {isPinned ? (
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <div className="space-y-4">
+            <AssistantContextPanel compact />
+            <AssistantDraftPanel
+              compact
+              content={content}
+              selectedVersionId={selectedVersionId}
+              status={status}
+              onSelectVersion={onSelectVersion}
+            />
+            <AssistantVerificationPanel checks={checks} status={status} />
+            <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
+              <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">
+                Prochaines actions suggérées
+              </h3>
+              <ul className="space-y-2 text-[#071044] text-xs">
+                {status === "loading"
+                  ? loadingRows.slice(0, 2).map((row) => (
+                      <li key={row}>
+                        <SkeletonLines rows={1} />
+                      </li>
+                    ))
+                  : nextActions.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </section>
+            <AssistantConversationPanel
+              compact
+              inputValue={inputValue}
+              messages={messages}
+              status={status}
+              thinkingLabel={thinkingLabel}
+              onInputChange={onInputChange}
+              onSubmit={onSendMessage}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <section className="grid gap-3 rounded-[6px] border border-[#dfe2ec] bg-white p-4 md:grid-cols-[minmax(0,1fr)_120px_100px_168px]">
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fbf0dd] font-bold text-[#d97700]">
+                MD
+              </span>
+              <div>
+                <p className="font-bold text-sm">M. D.</p>
+                <p className="mt-1 rounded-[5px] bg-[#ffe8e5] px-2 py-1 font-semibold text-[#f23932] text-xs">
+                  Promesse non tenue
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="font-extrabold text-sm">840,00 €</p>
+              <p className="mt-1 text-xs">Montant dû</p>
+            </div>
+            <div>
+              <p className="font-extrabold text-sm">32 jours</p>
+              <p className="mt-1 text-xs">Retard</p>
+            </div>
+            <div className="rounded-[5px] bg-[#e9f7e9] px-3 py-2 text-[#145b2b] text-xs">
+              <p className="flex items-center gap-2 font-bold">
+                <CircleCheck className="h-4 w-4" />
+                Contact autorisé
+              </p>
+              <p className="mt-1">8h - 20h</p>
+            </div>
+          </section>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {assistantActions.map(({ label, Icon }) => {
+              const tab = assistantTabForAction(label);
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => onSelectTab(tab)}
+                  className={cn(
+                    "flex min-h-12 items-center justify-center gap-2 rounded-[5px] border px-3 font-bold text-xs transition",
+                    activeTab === tab
+                      ? "border-[#b7aaff] bg-[#f4f1ff] text-[#6048ff]"
+                      : "border-[#dfe2ec] bg-white text-[#071044] hover:bg-[#f7f8fb]",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 ml-auto max-w-[430px] rounded-[6px] bg-[#f0edff] px-5 py-4 text-[#071044] text-sm leading-6 shadow-[0_8px_18px_rgba(96,72,255,0.08)]">
+            {initialPrompt}
+          </div>
+
+          <article className="mt-5 rounded-[6px] border border-[#dfe2ec] bg-white p-5 shadow-[0_12px_28px_rgba(7,16,68,0.05)]">
+            <div className="mb-4 flex items-center gap-3 text-sm">
+              <Sparkles
+                className={cn("h-5 w-5 text-[#6048ff]", status === "loading" && "animate-pulse")}
+              />
+              <p className="font-bold">
+                {status === "loading"
+                  ? thinkingLabel
+                  : "Voici une proposition adaptée au dossier RC-2048."}
+              </p>
+              <button
+                type="button"
+                onClick={onRegenerate}
+                className="ml-auto font-semibold text-[#6048ff] text-xs"
+              >
+                Régénérer
+              </button>
+            </div>
+            {error ? (
+              <div className="mb-4 rounded-[5px] border border-[#ffd2c9] bg-[#fff5f3] px-4 py-3 text-[#a23b2a] text-xs">
+                {error}
+              </div>
+            ) : null}
+            <div className="grid gap-4">
+              <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
+                  Résumé du dossier
+                </h3>
+                <ul className="space-y-1.5 text-xs leading-5">
+                  {status === "loading"
+                    ? loadingRows.map((row) => (
+                        <li key={row}>
+                          <SkeletonLines rows={1} />
+                        </li>
+                      ))
+                    : summary.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              </section>
+              <AssistantDraftPanel
+                content={content}
+                selectedVersionId={selectedVersionId}
+                status={status}
+                onSelectVersion={onSelectVersion}
+              />
+              {content.paymentPlan || status === "loading" ? (
+                <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                  <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
+                    Échéancier proposé
+                  </h3>
+                  {status === "loading" ? (
+                    <SkeletonLines rows={2} />
+                  ) : (
+                    <p className="text-xs leading-5">{content.paymentPlan}</p>
+                  )}
+                </section>
+              ) : null}
+              <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
+                  Règles et conformité
+                </h3>
+                <ul className="space-y-1.5 text-xs leading-5">
+                  {status === "loading"
+                    ? loadingRows.map((row) => (
+                        <li key={row}>
+                          <SkeletonLines rows={1} />
+                        </li>
+                      ))
+                    : checks.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              </section>
+              <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
+                  Prochaines actions suggérées
+                </h3>
+                <ul className="space-y-1.5 text-xs leading-5">
+                  {status === "loading"
+                    ? loadingRows.slice(0, 2).map((row) => (
+                        <li key={row}>
+                          <SkeletonLines rows={1} />
+                        </li>
+                      ))
+                    : nextActions.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              </section>
+              <AssistantConversationPanel
+                inputValue={inputValue}
+                messages={messages}
+                showComposer={false}
+                status={status}
+                thinkingLabel={thinkingLabel}
+                onInputChange={onInputChange}
+                onSubmit={onSendMessage}
+              />
+            </div>
+          </article>
+        </div>
+      )}
+
+      <footer className="shrink-0 border-[#dfe2ec] border-t bg-white px-6 py-4">
+        {isPinned ? (
+          <>
+            <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_1fr_1.05fr]">
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-3 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
+              >
+                <PenLine className="h-4 w-4" />
+                Modifier
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-3 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
+              >
+                <Folder className="h-4 w-4" />
+                Insérer
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] bg-[linear-gradient(180deg,#e38a00,#cf7300)] px-3 font-bold text-white text-xs shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
+              >
+                <Send className="h-4 w-4" />
+                Valider
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <button
+                type="button"
+                onClick={onTogglePinned}
+                className="inline-flex items-center gap-2 font-semibold text-[#071044]"
+              >
+                <ChevronRight className="h-4 w-4 rotate-180" />
+                Réduire le panneau
+              </button>
+              <button
+                type="button"
+                onClick={onExpand}
+                className="inline-flex items-center gap-2 font-semibold text-[#071044]"
+              >
+                Agrandir
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] bg-[linear-gradient(180deg,#e38a00,#cf7300)] px-4 font-bold text-white text-xs shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
+              >
+                <PenLine className="h-4 w-4" />
+                Créer un brouillon
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-4 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
+              >
+                <Folder className="h-4 w-4" />
+                Insérer dans le dossier
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-4 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
+              >
+                <Copy className="h-4 w-4" />
+                Copier le message
+              </button>
+            </div>
+            <form
+              className="mt-4 flex min-h-[56px] items-center gap-3 rounded-[5px] border border-[#b7aaff] bg-white px-4 shadow-[0_8px_18px_rgba(96,72,255,0.06)]"
+              onSubmit={(event) => {
+                event.preventDefault();
+                onSendMessage();
+              }}
+            >
+              <input
+                aria-label="Question assistant"
+                value={inputValue}
+                onChange={(event) => onInputChange(event.target.value)}
+                placeholder="Continuer avec le chat Recouvrement..."
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#071044]/55"
+              />
+              <button
+                type="submit"
+                aria-label="Envoyer la question"
+                disabled={status === "loading" || inputValue.trim().length === 0}
+                className="grid h-10 w-10 place-items-center rounded-[5px] bg-[#6048ff] text-white transition disabled:bg-[#c8bbff]"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </form>
+            <p className="mt-3 text-[#071044]/55 text-[0.68rem]">
+              L'assistant peut se tromper. Vérifiez toujours les informations avant action.
+            </p>
+          </>
+        )}
+      </footer>
+    </aside>
+  );
+}
+
 export function RecouvrementProductExperience() {
-  const locale = useLocale();
-  const assistantHref = `/${locale}/recouvrement`;
+  const locale = useLocale() as Locale;
+  const [assistantMode, setAssistantMode] = useState<AssistantMode>("closed");
+  const [activeAssistantTab, setActiveAssistantTab] = useState(defaultAssistantTab);
+  const [assistantContent, setAssistantContent] =
+    useState<GeneratedAssistantContent>(fallbackAssistantContent);
+  const [assistantStatus, setAssistantStatus] = useState<AssistantStatus>("idle");
+  const [assistantError, setAssistantError] = useState<string | null>(null);
+  const [assistantThread, setAssistantThread] = useState<AssistantThreadMessage[]>([]);
+  const [assistantInput, setAssistantInput] = useState("");
+  const [selectedVersionId, setSelectedVersionId] = useState("v1");
+  const [generationNonce, setGenerationNonce] = useState(0);
+  const [thinkingStep, setThinkingStep] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const assistantThreadRef = useRef<AssistantThreadMessage[]>([]);
+  const conversationIdRef = useRef<string | null>(null);
+  const isAssistantOpen = assistantMode !== "closed";
+  const thinkingLabel =
+    recouvrementThinkingSteps[thinkingStep % recouvrementThinkingSteps.length] ??
+    "Recouvrement réfléchit";
+
+  useEffect(() => {
+    assistantThreadRef.current = assistantThread;
+  }, [assistantThread]);
+
+  const openAssistant = (action = defaultAssistantTab) => {
+    setActiveAssistantTab(assistantTabForAction(action));
+    setAssistantMode("drawer");
+  };
+  const closeAssistant = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setAssistantMode("closed");
+  };
+  const expandAssistant = () => setAssistantMode("drawer");
+  const togglePinnedAssistant = () =>
+    setAssistantMode((currentMode) => (currentMode === "pinned" ? "drawer" : "pinned"));
+  const regenerateAssistantContent = useCallback(() => {
+    setGenerationNonce((nonce) => nonce + 1);
+  }, []);
+
+  const sendAssistantTurn = useCallback(
+    (message: string, resetThread: boolean) => {
+      const trimmedMessage = message.trim();
+      if (!trimmedMessage) return;
+
+      const priorThread = resetThread
+        ? []
+        : assistantThreadRef.current.filter((item) => !item.streaming);
+      const userMessage: AssistantThreadMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: trimmedMessage,
+      };
+      const assistantMessage: AssistantThreadMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "",
+        streaming: true,
+      };
+
+      if (resetThread) {
+        conversationIdRef.current = null;
+        setAssistantContent(fallbackAssistantContent);
+        setSelectedVersionId("v1");
+      }
+
+      setAssistantInput("");
+      setAssistantError(null);
+      setAssistantStatus("loading");
+      setAssistantThread([...priorThread, userMessage, assistantMessage]);
+
+      const controller = new AbortController();
+      abortRef.current?.abort();
+      abortRef.current = controller;
+
+      let rawResponse = "";
+
+      void streamChat(
+        {
+          message: trimmedMessage,
+          language: locale,
+          conversation_id: resetThread ? undefined : (conversationIdRef.current ?? undefined),
+          subject_id: getSubjectId(),
+          history: buildAssistantHistory(priorThread),
+          system_prompt_override: recouvrementDrawerSystemPrompt,
+        },
+        {
+          signal: controller.signal,
+          surface: "recouvrement",
+          onStart: ({ conversation_id }) => {
+            conversationIdRef.current = conversation_id;
+          },
+          onToken: (token) => {
+            rawResponse += token;
+            setAssistantThread((current) =>
+              current.map((item) =>
+                item.id === assistantMessage.id ? { ...item, content: item.content + token } : item,
+              ),
+            );
+          },
+          onEnd: (envelope) => {
+            const finalResponse = asString(envelope.final_response || rawResponse);
+            const parsed = parseGeneratedAssistantContent(finalResponse);
+            setAssistantContent(parsed);
+            setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
+            setAssistantThread((current) =>
+              current.map((item) =>
+                item.id === assistantMessage.id
+                  ? { ...item, content: finalResponse, streaming: false }
+                  : item,
+              ),
+            );
+            setAssistantStatus("ready");
+          },
+          onError: (message) => {
+            if (controller.signal.aborted) return;
+            setAssistantError(message);
+            setAssistantStatus("error");
+            setAssistantThread((current) =>
+              current.map((item) =>
+                item.id === assistantMessage.id
+                  ? { ...item, content: message, streaming: false, error: true }
+                  : item,
+              ),
+            );
+          },
+        },
+      ).catch((err) => {
+        if (controller.signal.aborted) return;
+        const message = err instanceof Error ? err.message : String(err);
+        setAssistantError(message);
+        setAssistantStatus("error");
+        setAssistantThread((current) =>
+          current.map((item) =>
+            item.id === assistantMessage.id
+              ? { ...item, content: message, streaming: false, error: true }
+              : item,
+          ),
+        );
+      });
+    },
+    [locale],
+  );
+
+  const selectAssistantTab = useCallback(
+    (tab: string) => {
+      if (tab === activeAssistantTab) {
+        regenerateAssistantContent();
+        return;
+      }
+      setActiveAssistantTab(tab);
+    },
+    [activeAssistantTab, regenerateAssistantContent],
+  );
+
+  const sendAssistantFollowUp = useCallback(() => {
+    sendAssistantTurn(assistantInput, false);
+  }, [assistantInput, sendAssistantTurn]);
+
+  useEffect(() => {
+    if (assistantStatus !== "loading") {
+      setThinkingStep(0);
+      return;
+    }
+    const interval = window.setInterval(() => {
+      setThinkingStep((step) => step + 1);
+    }, 1350);
+    return () => window.clearInterval(interval);
+  }, [assistantStatus]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: generationNonce intentionally retriggers a fresh assistant turn.
+  useEffect(() => {
+    if (!isAssistantOpen) return;
+    sendAssistantTurn(assistantPromptForTab(activeAssistantTab), true);
+  }, [activeAssistantTab, generationNonce, isAssistantOpen, sendAssistantTurn]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#c9ccd1] font-sans text-[#050816]">
       <div className="mx-auto min-h-screen max-w-[1718px] bg-white">
         <div className="flex min-h-screen flex-col">
-          <div className="flex min-h-9 items-center justify-between gap-4 bg-[#050816] px-4 text-white text-xs font-bold sm:px-6">
-            <span className="inline-flex items-center gap-2">
-              Espace recouvrement Crédit Aurore
-              <ChevronRight className="h-4 w-4" />
-            </span>
-            <span className="hidden items-center gap-2 sm:inline-flex">
-              <CircleHelp className="h-4 w-4" />
-              Aide et contacts
-            </span>
-          </div>
-
-          <header className="flex min-h-[76px] shrink-0 flex-wrap items-center gap-5 border-[#d0d0d0] border-b bg-white px-4 py-3 sm:px-6 lg:flex-nowrap lg:px-[23px]">
+          <header className="flex min-h-[90px] shrink-0 flex-wrap items-center gap-5 border-[#d0d0d0] border-b bg-white px-4 py-3 sm:px-6 lg:flex-nowrap lg:px-[23px]">
             <CreditAuroreLogo className="min-w-[250px] gap-[9px]" gradientIdPrefix="caRecLogo" />
-            <nav
-              className="hidden flex-1 items-center gap-7 lg:flex"
-              aria-label="Navigation produit"
-            >
-              <span className="relative font-bold text-[#b99245] text-[13px]">
-                Recouvrement
-                <span className="-bottom-[29px] absolute right-0 left-0 h-[3px] bg-[#b99245]" />
-              </span>
-              <span className="font-bold text-[13px] text-[#222]">Pilotage</span>
-              <span className="font-bold text-[13px] text-[#222]">Règles métier</span>
-              <span className="font-bold text-[13px] text-[#222]">Reporting</span>
-            </nav>
-            <label className="relative order-last block w-full max-w-[360px] md:order-none lg:ml-auto">
+            <label className="relative order-last block w-full max-w-[430px] md:order-none lg:ml-auto">
               <Search className="-translate-y-1/2 absolute top-1/2 left-4 h-5 w-5 text-[#050816]" />
               <input
                 aria-label="Rechercher"
@@ -139,6 +1372,13 @@ export function RecouvrementProductExperience() {
               />
             </label>
             <div className="flex items-center gap-4 sm:gap-6">
+              <button
+                type="button"
+                className="hidden flex-col items-center gap-1 text-[10.5px] sm:flex"
+              >
+                <CircleHelp className="h-[22px] w-[22px]" />
+                Aide
+              </button>
               <button
                 type="button"
                 className="relative flex flex-col items-center gap-1 text-[10.5px]"
@@ -223,7 +1463,14 @@ export function RecouvrementProductExperience() {
                     </p>
                   </div>
 
-                  <div className="grid gap-[31px] xl:grid-cols-[minmax(0,818px)_377px]">
+                  <div
+                    className={cn(
+                      "grid gap-[31px]",
+                      assistantMode === "pinned"
+                        ? "xl:grid-cols-[minmax(0,1fr)] xl:pr-[520px]"
+                        : "xl:grid-cols-[minmax(0,1fr)_352px]",
+                    )}
+                  >
                     <section className="min-w-0">
                       <section className={cn(cardClass, "p-6 sm:p-8")}>
                         <div className="mb-5">
@@ -307,58 +1554,63 @@ export function RecouvrementProductExperience() {
                               Reporter
                               <Clock3 className="h-5 w-5" />
                             </button>
-                            <a
-                              href={assistantHref}
+                            <button
+                              type="button"
+                              onClick={() => openAssistant("Préparer une relance")}
                               className="inline-flex h-11 w-[198px] items-center justify-center gap-2 rounded-lg px-1.5 font-semibold text-[#6048ff] text-[0.74rem] transition hover:bg-[#f4f1ff]"
                             >
                               <Sparkles className="h-4 w-4" />
                               Préparer avec l'assistant
-                            </a>
+                            </button>
                           </div>
                         </div>
                       </section>
 
-                      <section className="relative mt-8 overflow-hidden rounded-[6px] border border-[#c8bbff] bg-[linear-gradient(120deg,#fbfaff,#f9f7ff)] p-6 shadow-[0_10px_24px_rgba(96,72,255,0.045)]">
-                        <Sparkles className="-right-1 absolute top-14 h-16 w-16 text-[#7a63ff]/22" />
-                        <Sparkles className="absolute right-8 bottom-8 h-7 w-7 text-[#7a63ff]/18" />
-                        <div className="mb-6 flex items-center justify-between gap-4">
+                      <section className="relative mt-8 rounded-[6px] border border-[#c8bbff] bg-[linear-gradient(120deg,#fbfaff,#f9f7ff)] py-6 pr-6 pl-5 shadow-[0_14px_30px_rgba(96,72,255,0.055)]">
+                        <AssistantCardBloom />
+                        <div className="relative z-10 mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                           <div>
-                            <h2 className="flex items-center gap-3 !font-sans !text-[#6048ff] font-bold text-sm uppercase tracking-[0]">
+                            <h2 className="flex flex-wrap items-center gap-3 !font-sans !text-[#6048ff] font-bold text-sm uppercase tracking-[0]">
                               <Sparkles className="h-5 w-5" />
-                              Assistant de traitement <span className="font-medium">— RC-2048</span>
+                              Assistant de traitement
+                              <span className="rounded-full border border-[#c8bbff] bg-white px-2.5 py-1 font-bold text-[#6048ff] text-[0.68rem]">
+                                RC-2048
+                              </span>
                             </h2>
-                            <p className="mt-2 text-sm">
-                              L'assistant vous aide à agir plus vite et en toute conformité.
+                            <p className="mt-2 max-w-[520px] text-[#071044] text-sm">
+                              Aide contextualisée sur ce dossier prioritaire.
                             </p>
                           </div>
-                          <a
-                            href={assistantHref}
-                            className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-[#c7bbff] bg-white px-4 font-semibold text-[#6048ff] text-xs transition hover:bg-[#f4f1ff]"
+                          <button
+                            type="button"
+                            onClick={() => openAssistant()}
+                            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[7px] border border-[#9d8cff] bg-white px-4 font-bold text-[#6048ff] text-xs shadow-[0_8px_18px_rgba(96,72,255,0.12)] transition hover:bg-[#f4f1ff]"
                           >
                             Ouvrir l'assistant complet
                             <ChevronRight className="h-4 w-4" />
-                          </a>
+                          </button>
                         </div>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="relative z-10 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                           {assistantActions.map(({ label, description, Icon }) => (
-                            <a
+                            <button
                               key={label}
-                              href={assistantHref}
-                              className="flex h-[108px] items-center gap-3 overflow-hidden rounded-[5px] border border-[#e2defd] bg-white p-3 text-left shadow-[0_6px_16px_rgba(96,72,255,0.025)] transition hover:border-[#b7aaff] hover:bg-[#fbfaff]"
+                              type="button"
+                              onClick={() => openAssistant(label)}
+                              className="flex h-[112px] items-center gap-3 overflow-hidden rounded-[5px] border border-[#e2defd] bg-white px-3.5 py-3 text-left shadow-[0_8px_18px_rgba(96,72,255,0.035)] transition hover:border-[#b7aaff] hover:bg-[#fbfaff]"
                             >
                               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f0edff] text-[#6048ff]">
                                 <Icon className="h-5 w-5" />
                               </span>
-                              <span className="min-w-0">
-                                <span className="block font-bold text-[0.72rem] leading-4">
+                              <span className="min-w-0 flex-1">
+                                <span className="block font-bold text-[0.76rem] leading-[1rem]">
                                   {label}
                                 </span>
-                                <span className="mt-1.5 block text-[0.64rem] leading-[1.05rem]">
+                                <span className="mt-1.5 block text-[0.66rem] leading-[0.98rem]">
                                   {description}
                                 </span>
                               </span>
                               <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0" />
-                            </a>
+                            </button>
                           ))}
                         </div>
                       </section>
@@ -420,11 +1672,21 @@ export function RecouvrementProductExperience() {
                       </section>
                     </section>
 
-                    <aside className="space-y-8 xl:sticky xl:top-8 xl:self-start">
+                    <aside
+                      className={cn(
+                        "space-y-8 xl:sticky xl:top-8 xl:self-start",
+                        assistantMode === "pinned" && "xl:hidden",
+                      )}
+                    >
                       <section className={cn(cardClass, "overflow-hidden")}>
-                        <h2 className="border-[#e4e6ee] border-b px-6 py-6 !font-sans !text-[#050816] font-extrabold text-lg">
-                          Actions rapides
-                        </h2>
+                        <div className="border-[#e4e6ee] border-b px-6 py-6">
+                          <h2 className="!font-sans !text-[#050816] font-extrabold text-lg">
+                            Actions rapides
+                          </h2>
+                          <p className="mt-1.5 text-[#5d6275] text-xs">
+                            Actions générales sur la file du jour.
+                          </p>
+                        </div>
                         <div className="divide-y divide-[#e4e6ee]">
                           {quickActions.map(({ label, detail, Icon }) => (
                             <button
@@ -478,8 +1740,9 @@ export function RecouvrementProductExperience() {
                         </div>
                       </section>
 
-                      <a
-                        href={assistantHref}
+                      <button
+                        type="button"
+                        onClick={() => openAssistant("Vérifier une règle")}
                         className="flex w-full items-center gap-4 rounded-[6px] border border-[#f1d8ab] bg-[linear-gradient(90deg,#fff8ec,#fff2de)] p-6 text-left shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition hover:bg-[#ffefcf]"
                       >
                         <Sparkles className="h-7 w-7 text-[#071044]" />
@@ -492,7 +1755,7 @@ export function RecouvrementProductExperience() {
                           </span>
                         </span>
                         <ChevronRight className="ml-auto h-5 w-5" />
-                      </a>
+                      </button>
                     </aside>
                   </div>
                 </div>
@@ -501,6 +1764,35 @@ export function RecouvrementProductExperience() {
           </div>
         </div>
       </div>
+      {assistantMode === "drawer" ? (
+        <button
+          type="button"
+          aria-label="Fermer l'assistant"
+          onClick={closeAssistant}
+          className="fixed inset-x-0 bottom-0 top-[90px] z-40 bg-[#050816]/38 backdrop-blur-[1px] transition-opacity max-md:top-0"
+        />
+      ) : null}
+      {assistantMode !== "closed" ? (
+        <AssistantDrawer
+          mode={assistantMode}
+          activeTab={activeAssistantTab}
+          content={assistantContent}
+          error={assistantError}
+          inputValue={assistantInput}
+          messages={assistantThread}
+          selectedVersionId={selectedVersionId}
+          status={assistantStatus}
+          thinkingLabel={thinkingLabel}
+          onClose={closeAssistant}
+          onExpand={expandAssistant}
+          onInputChange={setAssistantInput}
+          onRegenerate={regenerateAssistantContent}
+          onSelectVersion={setSelectedVersionId}
+          onSendMessage={sendAssistantFollowUp}
+          onSelectTab={selectAssistantTab}
+          onTogglePinned={togglePinnedAssistant}
+        />
+      ) : null}
     </div>
   );
 }
