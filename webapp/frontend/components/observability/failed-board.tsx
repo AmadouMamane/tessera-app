@@ -18,6 +18,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FailedRunCase, FailedRunsReport, ReleaseStatus } from "@/lib/api/schemas";
@@ -126,6 +127,7 @@ function KpiTile({
   tone,
   spark,
   sparkColor,
+  explainKey,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -134,6 +136,7 @@ function KpiTile({
   tone?: string;
   spark?: number[];
   sparkColor?: string;
+  explainKey?: string;
 }) {
   return (
     <Card className="flex flex-col gap-1 p-2.5">
@@ -141,6 +144,7 @@ function KpiTile({
         <span className="flex items-center gap-1 text-[0.65rem] text-[var(--muted-foreground)]">
           <span className="opacity-70">{icon}</span>
           {label}
+          {explainKey ? <QInfo title={label} k={explainKey} /> : null}
         </span>
         {sub ? <span className="text-[0.6rem] text-[var(--muted-foreground)]">{sub}</span> : null}
       </div>
@@ -167,6 +171,7 @@ function FailedKpis({ report }: { report: FailedRunsReport | undefined }) {
       <KpiTile
         icon={<AlertCircle className="h-3.5 w-3.5" />}
         label={tq("failed.kpi.total")}
+        explainKey="failTotal"
         value={String(total)}
         tone="text-red-500 dark:text-red-400"
         spark={trend}
@@ -175,6 +180,7 @@ function FailedKpis({ report }: { report: FailedRunsReport | undefined }) {
       <KpiTile
         icon={<AlertCircle className="h-3.5 w-3.5" />}
         label={tq("failed.kpi.critical")}
+        explainKey="failCritical"
         value={String(report?.n_critical ?? 0)}
         sub={pct(report?.n_critical ?? 0, total)}
         tone="text-red-500 dark:text-red-400"
@@ -184,6 +190,7 @@ function FailedKpis({ report }: { report: FailedRunsReport | undefined }) {
       <KpiTile
         icon={<Sparkles className="h-3.5 w-3.5" />}
         label={tq("failed.kpi.new")}
+        explainKey="failNew"
         value={String(report?.n_new ?? 0)}
         sub={pct(report?.n_new ?? 0, total)}
         tone="text-amber-500 dark:text-amber-400"
@@ -193,6 +200,7 @@ function FailedKpis({ report }: { report: FailedRunsReport | undefined }) {
       <KpiTile
         icon={<Repeat className="h-3.5 w-3.5" />}
         label={tq("failed.kpi.recurrent")}
+        explainKey="failRecurrent"
         value={String(report?.n_recurrent ?? 0)}
         sub={pct(report?.n_recurrent ?? 0, total)}
         tone="text-violet-500 dark:text-violet-400"
@@ -695,8 +703,9 @@ export function FailedBoard({
       <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+            <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
               {tq("failed.distribution")}
+              <QInfo title={tq("failed.distribution")} k="failDistribution" />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-1">
@@ -705,8 +714,9 @@ export function FailedBoard({
         </Card>
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+            <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
               {tq("failed.charts.evolution")}
+              <QInfo title={tq("failed.charts.evolution")} k="failEvolution" />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-1">
@@ -715,8 +725,9 @@ export function FailedBoard({
         </Card>
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+            <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
               {tq("failed.charts.causes")}
+              <QInfo title={tq("failed.charts.causes")} k="failCauses" />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-1">
@@ -725,8 +736,9 @@ export function FailedBoard({
         </Card>
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+            <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
               {tq("failed.charts.sla")}
+              <QInfo title={tq("failed.charts.sla")} k="failSla" />
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1 pt-1 text-[0.7rem]">
@@ -813,8 +825,9 @@ export function FailedRail({
       <Card>
         <CardHeader className="pb-1">
           <CardTitle className="flex items-center justify-between gap-2 text-[0.8rem]">
-            <span className="font-mono text-[0.72rem]">
+            <span className="flex items-center gap-1.5 font-mono text-[0.72rem]">
               {failedCase?.id ?? tq("failed.rail.none")}
+              <QInfo title={tq("failed.rail.fiche")} k="failFiche" />
             </span>
             <span className="flex items-center gap-1.5">
               {failedCase ? (

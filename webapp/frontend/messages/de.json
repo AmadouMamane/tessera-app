@@ -1856,6 +1856,51 @@
         "what": "Betriebssignale der Pipeline: Jobs, Workers, Queue, Frische.",
         "how": "Jobs im Fenster und Frische real; Workers/Queue « — » ohne Quelle (nie ein falsches OK).",
         "source": "Pipeline-Bericht der Datensätze."
+      },
+      "failTotal": {
+        "what": "Gesamtzahl fehlgeschlagener Evaluierungsfälle im Fenster.",
+        "how": "Zahl der fehlgeschlagenen Fälle im Archiv; die Kurve folgt dem Trend.",
+        "source": "Archiv fehlgeschlagener Fälle (echte Runs)."
+      },
+      "failCritical": {
+        "what": "Fehlgeschlagene Fälle kritischer Schwere; Untertitel = Anteil am Gesamt.",
+        "how": "Als « kritisch » markierte Fälle; Prozent vom Gesamt.",
+        "source": "Archiv fehlgeschlagener Fälle."
+      },
+      "failNew": {
+        "what": "Erstmals aufgetretene fehlgeschlagene Fälle.",
+        "how": "Zuvor nie erfasste Fälle; Prozent vom Gesamt.",
+        "source": "Archiv fehlgeschlagener Fälle."
+      },
+      "failRecurrent": {
+        "what": "Fehlgeschlagene Fälle, die sich von Run zu Run wiederholen.",
+        "how": "In früheren Runs bereits gesehene Fälle; Prozent vom Gesamt.",
+        "source": "Archiv fehlgeschlagener Fälle."
+      },
+      "failDistribution": {
+        "what": "Verteilung der fehlgeschlagenen Fälle nach Fehlerkategorie.",
+        "how": "Zahl je Kategorie; Donut-Mitte = Gesamt.",
+        "source": "Archiv fehlgeschlagener Fälle (nach Kategorie)."
+      },
+      "failEvolution": {
+        "what": "Entwicklung der Zahl fehlgeschlagener Fälle über die Zeit.",
+        "how": "Fälle je Zeitintervall, nach Schwere gestapelt.",
+        "source": "Archiv fehlgeschlagener Fälle (Trend)."
+      },
+      "failCauses": {
+        "what": "Fünf häufigste Ursachen nach Fallzahl.",
+        "how": "Häufigste Kategorien, Top 5.",
+        "source": "Archiv fehlgeschlagener Fälle (nach Kategorie)."
+      },
+      "failSla": {
+        "what": "Triage-Kennzahlen: mittlere Latenz, Anteil kritisch/neu, betroffene Modelle.",
+        "how": "Mittlere Fall-Latenz, Anteile, Zahl verschiedener Modelle.",
+        "source": "Archiv fehlgeschlagener Fälle."
+      },
+      "failFiche": {
+        "what": "Vollständiges Detail des gewählten fehlgeschlagenen Falls: Prompt, Antwort, Erwartung, Gründe.",
+        "how": "Felder des in der Liste gewählten Falls.",
+        "source": "Archiv fehlgeschlagener Fälle."
       }
     },
     "seeDetail": "Details anzeigen",
@@ -2126,7 +2171,8 @@
         "exportReport": "Bericht exportieren",
         "genEvidence": "Qualitäts-Evidence-Pack erzeugen",
         "release": "Release",
-        "safety": "Erforderliche Rolle · hohe Sicherheitsstufe"
+        "safety": "Erforderliche Rolle · hohe Sicherheitsstufe",
+        "fiche": "Ausgewählter Fall"
       }
     },
     "judge": {

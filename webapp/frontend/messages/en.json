@@ -1856,6 +1856,51 @@
         "what": "Pipeline operations signals: jobs, workers, queue, freshness.",
         "how": "Jobs in window and freshness are real; workers/queue « — » with no source (never a fake OK).",
         "source": "Datasets pipeline report."
+      },
+      "failTotal": {
+        "what": "Total number of failed evaluation cases over the window.",
+        "how": "Count of failed cases in the archive; the curve follows the trend.",
+        "source": "Failed-cases archive (real runs)."
+      },
+      "failCritical": {
+        "what": "Failed cases of critical severity; subtitle = share of total.",
+        "how": "Cases flagged « critical »; percent of total.",
+        "source": "Failed-cases archive."
+      },
+      "failNew": {
+        "what": "Failed cases seen for the first time.",
+        "how": "Cases never recorded before; percent of total.",
+        "source": "Failed-cases archive."
+      },
+      "failRecurrent": {
+        "what": "Failed cases that recur from one run to the next.",
+        "how": "Cases already seen in previous runs; percent of total.",
+        "source": "Failed-cases archive."
+      },
+      "failDistribution": {
+        "what": "Distribution of failed cases by failure category.",
+        "how": "Count per category; donut centre = total.",
+        "source": "Failed-cases archive (by category)."
+      },
+      "failEvolution": {
+        "what": "Evolution of the failed-case count over time.",
+        "how": "Cases per time bucket, stacked by severity.",
+        "source": "Failed-cases archive (trend)."
+      },
+      "failCauses": {
+        "what": "Top five root causes by case count.",
+        "how": "Most frequent categories, top 5.",
+        "source": "Failed-cases archive (by category)."
+      },
+      "failSla": {
+        "what": "Triage markers: mean latency, critical/new share, models affected.",
+        "how": "Mean case latency, shares, distinct model count.",
+        "source": "Failed-cases archive."
+      },
+      "failFiche": {
+        "what": "Full detail of the selected failed case: prompt, response, expected, reasons.",
+        "how": "Fields of the case picked in the list.",
+        "source": "Failed-cases archive."
       }
     },
     "seeDetail": "View details",
@@ -2126,7 +2171,8 @@
         "exportReport": "Export report",
         "genEvidence": "Generate quality evidence pack",
         "release": "Release",
-        "safety": "Required role · high safety level"
+        "safety": "Required role · high safety level",
+        "fiche": "Selected case"
       }
     },
     "judge": {

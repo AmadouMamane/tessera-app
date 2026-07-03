@@ -1856,6 +1856,51 @@
         "what": "Signaux d'exploitation du pipeline : jobs, workers, file, fraîcheur.",
         "how": "Jobs en fenêtre et fraîcheur réels ; workers/file « — » sans source (jamais un faux OK).",
         "source": "Rapport pipeline des datasets."
+      },
+      "failTotal": {
+        "what": "Nombre total de cas d'évaluation échoués sur la fenêtre.",
+        "how": "Compte des cas échoués de l'archive ; la courbe suit la tendance.",
+        "source": "Archive des cas échoués (runs réels)."
+      },
+      "failCritical": {
+        "what": "Cas échoués de gravité critique ; sous-titre = part du total.",
+        "how": "Cas marqués « critique » ; pourcentage sur le total.",
+        "source": "Archive des cas échoués."
+      },
+      "failNew": {
+        "what": "Cas échoués apparus pour la première fois.",
+        "how": "Cas jamais enregistrés auparavant ; pourcentage sur le total.",
+        "source": "Archive des cas échoués."
+      },
+      "failRecurrent": {
+        "what": "Cas échoués qui se répètent d'un run à l'autre.",
+        "how": "Cas déjà vus lors de runs précédents ; pourcentage sur le total.",
+        "source": "Archive des cas échoués."
+      },
+      "failDistribution": {
+        "what": "Répartition des cas échoués par catégorie de défaillance.",
+        "how": "Compte par catégorie ; centre du donut = total.",
+        "source": "Archive des cas échoués (par catégorie)."
+      },
+      "failEvolution": {
+        "what": "Évolution du nombre de cas échoués dans le temps.",
+        "how": "Cas par intervalle de temps, empilés par gravité.",
+        "source": "Archive des cas échoués (tendance)."
+      },
+      "failCauses": {
+        "what": "Cinq premières causes racines par nombre de cas.",
+        "how": "Catégories les plus fréquentes, top 5.",
+        "source": "Archive des cas échoués (par catégorie)."
+      },
+      "failSla": {
+        "what": "Repères de triage : latence moyenne, part critique/nouveaux, modèles touchés.",
+        "how": "Latence moyenne des cas, parts, nombre de modèles distincts.",
+        "source": "Archive des cas échoués."
+      },
+      "failFiche": {
+        "what": "Détail complet du cas échoué sélectionné : invite, réponse, attendu, raisons.",
+        "how": "Champs du cas choisi dans la liste.",
+        "source": "Archive des cas échoués."
       }
     },
     "seeDetail": "Voir le détail",
@@ -2126,7 +2171,8 @@
         "exportReport": "Exporter rapport",
         "genEvidence": "Générer dossier de preuves qualité",
         "release": "Release",
-        "safety": "Rôle requis · niveau de sûreté élevé"
+        "safety": "Rôle requis · niveau de sûreté élevé",
+        "fiche": "Cas sélectionné"
       }
     },
     "judge": {
