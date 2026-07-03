@@ -4077,33 +4077,119 @@
         "how": "Erfolgreiche Ausführungen ÷ Gesamtausführungen."
       },
       "approvals": {
-        "what": "Die Zahl der vor der Ausführung ausstehenden menschlichen Freigaben.",
-        "how": "Automationsschritte, die manuelle Validierung erfordern."
+        "what": "Die Anzahl der Regeln im Genehmigungsmodus (menschliche Freigabe nötig).",
+        "how": "Statische Zählung der Regeln mit Modus approb — keine Warteschlange.",
+        "source": "Regelkatalog (automation_store)."
       },
       "blocked": {
-        "what": "Die Zahl der durch einen Guardrail oder eine Bedingung blockierten Ausführungen.",
-        "how": "Vor Abschluss durch eine Kontrollregel gestoppte Ausführungen."
+        "what": "Die von einem Guardrail blockierten Ausführungen — in dieser Version nicht gemessen.",
+        "how": "Die Engine erzeugt kein Ergebnis blocked; der Wert bleibt ein Strich.",
+        "source": "Keine reale Quelle (nicht implementiert)."
       },
       "sensitive": {
-        "what": "Die Zahl der Automationen, die sensible Operationen berühren (Daten, Zahlungen, Zugriff).",
-        "how": "Im Katalog als „sensibel“ markierte Automationen."
+        "what": "Die Anzahl der Regeln, die einer Admin+-Rolle vorbehalten sind (am sensibelsten).",
+        "how": "Zählung der Regeln, deren erforderliche Rolle mit Admin beginnt.",
+        "source": "Regelkatalog (automation_store)."
       },
       "mttr": {
-        "what": "Die mittlere Zeit zur Behebung einer fehlgeschlagenen Automation.",
-        "how": "Durchschnittliche Zeit zwischen Fehler und erfolgreicher Wiederholung."
+        "what": "Die mittlere Behebungszeit (MTTR) — nicht instrumentiert.",
+        "how": "Es wird keine Behebungsdauer gemessen; der Wert bleibt ein Strich.",
+        "source": "Keine reale Quelle (nicht instrumentiert)."
       },
       "zone": {
         "pipeline": {
-          "what": "Die 24-Stunden-Ausführungspipeline der Automationen: von der Auslösung bis zum Abschluss, Stufe für Stufe.",
-          "how": "Ausführungen nach Pipeline-Stufe gruppiert."
+          "what": "Der Trichter der Automations-Ausführungen.",
+          "how": "Über das gesamte gespeicherte Journal gezählt (bis 400), nicht über 24 h trotz Titel; einige Stufen wiederholen sich.",
+          "source": "Ausführungsjournal (automation_store)."
         },
         "distribution": {
-          "what": "Die Aufschlüsselung der Automationen nach Typ (Benachrichtigung, Remediation, Anreicherung…).",
-          "how": "Automationen nach Kategorie gruppiert."
+          "what": "Die Verteilung der Regeln nach Kategorie.",
+          "how": "Gruppierung der Katalogregeln nach ihrem Typ (Qualität, Sicherheit, Konformität, Release).",
+          "source": "Regelkatalog (automation_store)."
         },
         "env": {
-          "what": "Die Aufschlüsselung der Ausführungen nach Umgebung (Prod, Staging, Dev).",
-          "how": "Ausführungen nach Zielumgebung gruppiert."
+          "what": "Die Ausführungen je Deployment-Umgebung.",
+          "how": "Nur ein Balken: die Umgebung dieses Deployments (ein Deployment sieht die anderen nicht).",
+          "source": "Ausführungsjournal (automation_store)."
+        },
+        "actual": {
+          "what": "Der aktuelle Zustand der gesteuerten Automations.",
+          "how": "Aktuelle Werte der Indikatoren (aktive Regeln, Ausführungen 24 h, Erfolgsquote).",
+          "source": "Regelkatalog + Ausführungsjournal."
+        },
+        "catalogue": {
+          "what": "Der Katalog der Automations-Regeln und ihr Zustand.",
+          "how": "Die 5 kodierten Regeln mit Bedingung, Modus, erforderlicher Rolle und dauerhaftem Aktivierungsschalter.",
+          "source": "Regelkatalog (automation_store)."
+        },
+        "journal": {
+          "what": "Das Journal der Regelausführungen.",
+          "how": "Bis zu 8 jüngste Ausführungen; Auslöser und Dauer real, Akteur = System.",
+          "source": "Ausführungsjournal (automation_store)."
+        },
+        "guardrails": {
+          "what": "Die am häufigsten beanspruchten Guardrails.",
+          "how": "Kumulierte Ledger-Entscheidungen je Familie (PII, Injection, Tool); trotz Titel nicht auf 7 Tage begrenzt.",
+          "source": "Audit-Ledger (Guard)."
+        },
+        "performance": {
+          "what": "Die Leistung der Automations im Zeitverlauf.",
+          "how": "Linie Erfolg = erfolgreiche Ausführungen pro Tag (7 reale Tage); die Linie Durchschnitt ist noch nicht belegt.",
+          "source": "Ausführungsjournal (automation_store)."
+        },
+        "savings": {
+          "what": "Die geschätzten Einsparungen der Automations.",
+          "how": "Demonstrations-Subsystem: nur die Anzahl der Ausführungen ist real, die anderen Kacheln bleiben Striche.",
+          "source": "Ausführungsjournal (Rest: Demonstration)."
+        },
+        "context": {
+          "what": "Der Versionskontext des Regelkatalogs.",
+          "how": "Version = Anzahl der Regeln; geändert = mtime der Datei automation_store.py, kein Changelog.",
+          "source": "Datei automation_store.py."
+        },
+        "approvals": {
+          "what": "Die Genehmigungswarteschlange der Automations.",
+          "how": "Demonstrations-Subsystem: die Warteschlange ist in dieser Version immer leer.",
+          "source": "Keine reale Quelle (Demonstration)."
+        },
+        "governance": {
+          "what": "Die Governance der Automations: Kontrolle und erforderliche Rollen.",
+          "how": "Vier-Augen-Prinzip, wenn mindestens eine Regel im Genehmigungsmodus ist; eine erforderliche Rolle je Regel.",
+          "source": "Regelkatalog (automation_store)."
+        }
+      },
+      "rule": {
+        "gate_freeze": {
+          "what": "Empfiehlt das Einfrieren einer Release, wenn das letzte Eval-Gate eines Agenten fehlschlägt.",
+          "how": "Löst aus, wenn der letzte Eval-Run eines Agenten gate_passed = falsch hat.",
+          "source": "Agentenregister + Evaluationshistorie."
+        },
+        "chain_alert": {
+          "what": "Alarmiert Compliance, wenn die Audit-Kette nicht mehr verifizierbar ist.",
+          "how": "Löst aus, wenn verify_active_ledger() fehlschlägt (Kette gebrochen).",
+          "source": "Audit-Ledger-Kette (Hash)."
+        },
+        "low_faith_review": {
+          "what": "Öffnet eine Qualitätsprüfung, wenn zu viele jüngste Antworten geringe Treue haben.",
+          "how": "Löst aus, wenn mindestens 3 jüngste Bundles einen Ursprungs-Score unter 0,80 haben.",
+          "source": "Jüngste Replay-Bundles (replay)."
+        },
+        "deny_spike": {
+          "what": "Benachrichtigt die Sicherheit bei einem Anstieg der Guard-Ablehnungen.",
+          "how": "Löst aus, wenn mindestens 50 deny-Entscheidungen in gleitenden 24 h protokolliert werden.",
+          "source": "Audit-Ledger (Guard-Entscheidungen)."
+        },
+        "curation_backlog": {
+          "what": "Weist eine Kurations-Prüfung zu, wenn der Rückstand wartender Kandidaten zu groß ist.",
+          "how": "Löst aus, wenn mindestens 20 Kurationskandidaten warten.",
+          "source": "Kurations-Warteschlange (curation_store)."
+        }
+      },
+      "panel": {
+        "recentIncidents": {
+          "what": "Die jüngsten Automations-Vorfälle.",
+          "how": "Die 5 jüngsten ausgelösten Ausführungen, mit dem Schweregrad der Regel.",
+          "source": "Ausführungsjournal (automation_store)."
         }
       }
     },

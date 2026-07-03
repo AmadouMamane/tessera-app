@@ -4077,33 +4077,119 @@
         "how": "Successful executions ÷ total executions."
       },
       "approvals": {
-        "what": "The number of human approvals pending before execution.",
-        "how": "Automation steps requiring manual validation."
+        "what": "The number of rules in approval mode (human sign-off required).",
+        "how": "Static count of rules whose mode is approb — not a live queue.",
+        "source": "Rules catalogue (automation_store)."
       },
       "blocked": {
-        "what": "The number of executions blocked by a guardrail or condition.",
-        "how": "Executions halted before completion by a control rule."
+        "what": "Executions blocked by a guardrail — not measured in this build.",
+        "how": "The engine never produces a blocked result; the value stays a dash.",
+        "source": "No real source (not implemented)."
       },
       "sensitive": {
-        "what": "The number of automations touching sensitive operations (data, payments, access).",
-        "how": "Automations flagged 'sensitive' in the catalogue."
+        "what": "The number of rules reserved to an Admin+ role (the most sensitive).",
+        "how": "Count of rules whose required role starts with Admin.",
+        "source": "Rules catalogue (automation_store)."
       },
       "mttr": {
-        "what": "The mean time to remediate a failed automation.",
-        "how": "Average time between failure and successful retry."
+        "what": "Mean time to remediation (MTTR) — not instrumented.",
+        "how": "No remediation duration is measured; the value stays a dash.",
+        "source": "No real source (not instrumented)."
       },
       "zone": {
         "pipeline": {
-          "what": "The 24h automation execution pipeline: from trigger to completion, stage by stage.",
-          "how": "Executions grouped by pipeline stage."
+          "what": "The funnel of automation executions.",
+          "how": "Counted over the whole retained journal (up to 400), not 24h despite the title; some stages repeat.",
+          "source": "Execution journal (automation_store)."
         },
         "distribution": {
-          "what": "The breakdown of automations by type (notification, remediation, enrichment…).",
-          "how": "Automations grouped by category."
+          "what": "The distribution of rules by category.",
+          "how": "Grouping of catalogue rules by their type (quality, security, conformance, release).",
+          "source": "Rules catalogue (automation_store)."
         },
         "env": {
-          "what": "The breakdown of executions by environment (prod, staging, dev).",
-          "how": "Executions grouped by target environment."
+          "what": "Executions per deployment environment.",
+          "how": "A single bar: this deployment's environment (a deployment can't see the others).",
+          "source": "Execution journal (automation_store)."
+        },
+        "actual": {
+          "what": "The current state of the governed automations.",
+          "how": "Current values of the indicators (active rules, 24h executions, success rate).",
+          "source": "Rules catalogue + execution journal."
+        },
+        "catalogue": {
+          "what": "The catalogue of automation rules and their state.",
+          "how": "The 5 coded rules with their condition, mode, required role and durable enable toggle.",
+          "source": "Rules catalogue (automation_store)."
+        },
+        "journal": {
+          "what": "The journal of rule executions.",
+          "how": "Up to the 8 most recent executions; trigger and duration real, actor = System.",
+          "source": "Execution journal (automation_store)."
+        },
+        "guardrails": {
+          "what": "The most-exercised guardrails.",
+          "how": "Cumulative ledger decisions per family (PII, injection, tool); despite the title, not limited to 7 days.",
+          "source": "Audit ledger (guard)."
+        },
+        "performance": {
+          "what": "The performance of automations over time.",
+          "how": "The success line = successful executions per day (7 real days); the average line is not sourced yet.",
+          "source": "Execution journal (automation_store)."
+        },
+        "savings": {
+          "what": "The estimated savings from automations.",
+          "how": "Demonstration subsystem: only the execution count is real, the other tiles stay dashes.",
+          "source": "Execution journal (rest: demonstration)."
+        },
+        "context": {
+          "what": "The version context of the rules catalogue.",
+          "how": "Version = number of rules; modified = mtime of automation_store.py, not a changelog.",
+          "source": "File automation_store.py."
+        },
+        "approvals": {
+          "what": "The automations' approval queue.",
+          "how": "Demonstration subsystem: the queue is always empty in this build.",
+          "source": "No real source (demonstration)."
+        },
+        "governance": {
+          "what": "The governance of automations: control and required roles.",
+          "how": "Dual control if at least one rule is in approval mode; one required role per rule.",
+          "source": "Rules catalogue (automation_store)."
+        }
+      },
+      "rule": {
+        "gate_freeze": {
+          "what": "Recommends freezing a release when an agent's latest eval gate fails.",
+          "how": "Fires if an agent's latest eval run has gate_passed = false.",
+          "source": "Agent registry + eval history."
+        },
+        "chain_alert": {
+          "what": "Alerts compliance when the audit chain is no longer verifiable.",
+          "how": "Fires if verify_active_ledger() fails (broken chain).",
+          "source": "Audit ledger chain (hash)."
+        },
+        "low_faith_review": {
+          "what": "Opens a quality review when too many recent answers have low faithfulness.",
+          "how": "Fires if at least 3 recent bundles have an original score below 0.80.",
+          "source": "Recent replay bundles (replay)."
+        },
+        "deny_spike": {
+          "what": "Notifies security on a spike of guard denials.",
+          "how": "Fires if at least 50 deny decisions are logged over a rolling 24h.",
+          "source": "Audit ledger (guard decisions)."
+        },
+        "curation_backlog": {
+          "what": "Assigns a curation review when the backlog of pending candidates is too large.",
+          "how": "Fires if at least 20 curation candidates are pending.",
+          "source": "Curation queue (curation_store)."
+        }
+      },
+      "panel": {
+        "recentIncidents": {
+          "what": "The recent automation incidents.",
+          "how": "The 5 most recent fired executions, with the rule's severity.",
+          "source": "Execution journal (automation_store)."
         }
       }
     },

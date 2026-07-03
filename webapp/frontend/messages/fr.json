@@ -4077,33 +4077,119 @@
         "how": "Exécutions réussies ÷ exécutions totales."
       },
       "approvals": {
-        "what": "Le nombre d'approbations humaines en attente avant exécution.",
-        "how": "Étapes d'automation requérant une validation manuelle."
+        "what": "Le nombre de règles en mode approbation (validation humaine requise).",
+        "how": "Compte statique des règles dont le mode est approb — ce n'est pas une file d'attente.",
+        "source": "Catalogue de règles (automation_store)."
       },
       "blocked": {
-        "what": "Le nombre d'exécutions bloquées par un garde-fou ou une condition.",
-        "how": "Exécutions stoppées avant terme par une règle de contrôle."
+        "what": "Les exécutions bloquées par un garde-fou — non mesurées dans cette version.",
+        "how": "Le moteur ne produit aucun résultat bloque ; la valeur reste un tiret.",
+        "source": "Pas de source réelle (non implémenté)."
       },
       "sensitive": {
-        "what": "Le nombre d'automations touchant des opérations sensibles (données, paiements, accès).",
-        "how": "Automations marquées « sensibles » dans le catalogue."
+        "what": "Le nombre de règles réservées à un rôle Admin+ (les plus sensibles).",
+        "how": "Compte des règles dont le rôle requis commence par Admin.",
+        "source": "Catalogue de règles (automation_store)."
       },
       "mttr": {
-        "what": "Le délai moyen de remédiation d'une automation en échec.",
-        "how": "Moyenne du temps entre l'échec et la reprise réussie."
+        "what": "Le temps moyen de remédiation (MTTR) — non instrumenté.",
+        "how": "Aucune durée de remédiation n'est mesurée ; la valeur reste un tiret.",
+        "source": "Pas de source réelle (non instrumenté)."
       },
       "zone": {
         "pipeline": {
-          "what": "Le pipeline d'exécution des automations sur 24 h : du déclenchement à la fin, étape par étape.",
-          "how": "Exécutions groupées par étape du pipeline."
+          "what": "L'entonnoir des exécutions d'automations.",
+          "how": "Compté sur tout le journal conservé (jusqu'à 400), pas sur 24 h malgré le titre ; certaines étapes se répètent.",
+          "source": "Journal d'exécution (automation_store)."
         },
         "distribution": {
-          "what": "La répartition des automations par type (notification, remédiation, enrichissement…).",
-          "how": "Automations groupées par catégorie."
+          "what": "La répartition des règles par catégorie.",
+          "how": "Regroupement des règles du catalogue par leur type (qualité, sécurité, conformité, release).",
+          "source": "Catalogue de règles (automation_store)."
         },
         "env": {
-          "what": "La répartition des exécutions par environnement (prod, staging, dev).",
-          "how": "Exécutions groupées par environnement cible."
+          "what": "Les exécutions par environnement de déploiement.",
+          "how": "Une seule barre : l'environnement de ce déploiement (un déploiement ne voit pas les autres).",
+          "source": "Journal d'exécution (automation_store)."
+        },
+        "actual": {
+          "what": "L'état actuel des automations gouvernées.",
+          "how": "Valeurs courantes des indicateurs (règles actives, exécutions 24 h, taux de succès).",
+          "source": "Catalogue de règles + journal d'exécution."
+        },
+        "catalogue": {
+          "what": "Le catalogue des règles d'automation et leur état.",
+          "how": "Les 5 règles codées, avec leur condition, mode, rôle requis et interrupteur d'activation durable.",
+          "source": "Catalogue de règles (automation_store)."
+        },
+        "journal": {
+          "what": "Le journal des exécutions de règles.",
+          "how": "Jusqu'aux 8 exécutions les plus récentes ; déclencheur et durée réels, acteur = Système.",
+          "source": "Journal d'exécution (automation_store)."
+        },
+        "guardrails": {
+          "what": "Les garde-fous les plus sollicités.",
+          "how": "Cumul des décisions du ledger par famille (PII, injection, tool) ; malgré le titre, ce n'est pas limité à 7 jours.",
+          "source": "Ledger d'audit (guard)."
+        },
+        "performance": {
+          "what": "La performance des automations dans le temps.",
+          "how": "Ligne succès = exécutions réussies par jour (7 jours réels) ; la ligne moyenne n'est pas encore sourcée.",
+          "source": "Journal d'exécution (automation_store)."
+        },
+        "savings": {
+          "what": "Les gains estimés des automations.",
+          "how": "Sous-système de démonstration : seul le nombre d'exécutions est réel, les autres tuiles restent des tirets.",
+          "source": "Journal d'exécution (le reste : démonstration)."
+        },
+        "context": {
+          "what": "Le contexte de version du catalogue de règles.",
+          "how": "Version = nombre de règles ; modifié = mtime du fichier automation_store.py, pas un changelog.",
+          "source": "Fichier automation_store.py."
+        },
+        "approvals": {
+          "what": "La file d'approbation des automations.",
+          "how": "Sous-système de démonstration : la file est toujours vide dans cette version.",
+          "source": "Pas de source réelle (démonstration)."
+        },
+        "governance": {
+          "what": "La gouvernance des automations : contrôle et rôles requis.",
+          "how": "Double contrôle si au moins une règle est en mode approbation ; un rôle requis par règle.",
+          "source": "Catalogue de règles (automation_store)."
+        }
+      },
+      "rule": {
+        "gate_freeze": {
+          "what": "Recommande le gel de release quand la dernière porte d'évaluation d'un agent échoue.",
+          "how": "Se déclenche si le dernier run d'éval d'un agent a gate_passed = faux.",
+          "source": "Registre d'agents + historique d'évaluation."
+        },
+        "chain_alert": {
+          "what": "Alerte la conformité quand la chaîne d'audit n'est plus vérifiable.",
+          "how": "Se déclenche si verify_active_ledger() échoue (chaîne rompue).",
+          "source": "Chaîne du ledger d'audit (hash)."
+        },
+        "low_faith_review": {
+          "what": "Ouvre une revue qualité quand trop de réponses récentes ont une fidélité faible.",
+          "how": "Se déclenche si au moins 3 bundles récents ont un score d'origine inférieur à 0,80.",
+          "source": "Bundles de rejeu récents (replay)."
+        },
+        "deny_spike": {
+          "what": "Notifie la sécurité lors d'un pic de refus du garde-fou.",
+          "how": "Se déclenche si au moins 50 décisions deny sont enregistrées sur 24 h glissantes.",
+          "source": "Ledger d'audit (décisions guard)."
+        },
+        "curation_backlog": {
+          "what": "Assigne une revue de curation quand le backlog de candidats en attente est trop grand.",
+          "how": "Se déclenche si au moins 20 candidats de curation sont en attente.",
+          "source": "File de curation (curation_store)."
+        }
+      },
+      "panel": {
+        "recentIncidents": {
+          "what": "Les incidents d'automation récents.",
+          "how": "Les 5 exécutions déclenchées les plus récentes, avec la gravité de la règle.",
+          "source": "Journal d'exécution (automation_store)."
         }
       }
     },

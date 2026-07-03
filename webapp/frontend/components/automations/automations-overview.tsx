@@ -112,7 +112,10 @@ export function AutomationsOverview() {
 
       <div id="automations-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
         {activeTab === "rules" ? (
-          <Zone label={t("zone.catalogue")}>
+          <Zone
+            label={t("zone.catalogue")}
+            info={<KpiInfo k="zone.catalogue" title={t("zone.catalogue")} />}
+          >
             <Catalogue
               t={t}
               data={data}
@@ -123,7 +126,10 @@ export function AutomationsOverview() {
         ) : null}
         {activeTab === "executions" ? (
           <>
-            <Zone label={t("zone.journal")}>
+            <Zone
+              label={t("zone.journal")}
+              info={<KpiInfo k="zone.journal" title={t("zone.journal")} />}
+            >
               <Journal t={t} data={data} />
             </Zone>
             <div className="grid gap-3 xl:grid-cols-2">
@@ -147,7 +153,10 @@ export function AutomationsOverview() {
           </div>
         ) : null}
         {activeTab === "audit" ? (
-          <Zone label={t("zone.journal")}>
+          <Zone
+            label={t("zone.journal")}
+            info={<KpiInfo k="zone.journal" title={t("zone.journal")} />}
+          >
             <Journal t={t} data={data} />
             <div className="mt-2">
               <Link
@@ -163,7 +172,10 @@ export function AutomationsOverview() {
 
       {activeTab !== "overview" ? null : (
         <>
-          <Zone label={t("zone.actual")}>
+          <Zone
+            label={t("zone.actual")}
+            info={<KpiInfo k="zone.actual" title={t("zone.actual")} />}
+          >
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
               {data.kpis.map((kpi) => (
                 <KpiTile
@@ -179,7 +191,10 @@ export function AutomationsOverview() {
 
           <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_316px]">
             <div className="flex min-w-0 flex-col gap-3">
-              <Zone label={t("zone.catalogue")}>
+              <Zone
+                label={t("zone.catalogue")}
+                info={<KpiInfo k="zone.catalogue" title={t("zone.catalogue")} />}
+              >
                 <Catalogue
                   t={t}
                   data={data}
@@ -214,7 +229,10 @@ export function AutomationsOverview() {
                   <EnvBars t={t} data={data} />
                 </Zone>
               </div>
-              <Zone label={t("zone.journal")}>
+              <Zone
+                label={t("zone.journal")}
+                info={<KpiInfo k="zone.journal" title={t("zone.journal")} />}
+              >
                 <Journal t={t} data={data} />
               </Zone>
             </div>
@@ -363,8 +381,11 @@ function Catalogue({
           <tbody>
             {data.catalogue.map((row) => (
               <tr key={row.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="max-w-[220px] truncate px-2 py-1.5 font-medium text-[var(--tessera-text)]">
-                  {row.name}
+                <td className="max-w-[240px] px-2 py-1.5 font-medium text-[var(--tessera-text)]">
+                  <span className="flex min-w-0 items-center gap-1">
+                    <span className="min-w-0 truncate">{row.name}</span>
+                    <KpiInfo k={`rule.${row.id}`} title={row.name} />
+                  </span>
                 </td>
                 <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{row.trigger}</td>
                 <td className="px-2 py-1.5 text-[var(--tessera-text)]">{row.action}</td>
@@ -470,7 +491,7 @@ function EnvBars({ t, data }: { t: T; data: Data }) {
 
 function Journal({ t, data }: { t: T; data: Data }) {
   return (
-    <Panel title="" action={<ViewAll label={t("viewAll.journal")} />}>
+    <Panel title="" action={<ViewAll label={t("viewAll.journal")} href="/prouver/audit-logs" />}>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.7rem]">
           <thead>
@@ -522,10 +543,14 @@ function AutomationsRail({ t, data }: { t: T; data: Data }) {
   const g = data.governance;
   return (
     <aside className="flex min-w-0 flex-col gap-3">
-      <Panel title={t("panel.recentIncidents")} action={<ViewAll label={t("viewAll.all")} />}>
+      <Panel
+        title={t("panel.recentIncidents")}
+        info={<KpiInfo k="panel.recentIncidents" title={t("panel.recentIncidents")} />}
+        action={<ViewAll label={t("viewAll.all")} href="/prouver/audit-logs" />}
+      >
         <ul className="flex flex-col gap-1.5">
-          {data.recent_incidents.map((inc) => (
-            <li key={inc.id} className="flex items-center gap-2 text-[0.72rem]">
+          {data.recent_incidents.map((inc, i) => (
+            <li key={`${inc.id}-${i}`} className="flex items-center gap-2 text-[0.72rem]">
               <Badge className={SEV_BADGE[inc.severity]}>{t(`severity.${inc.severity}`)}</Badge>
               <span className="font-mono text-[0.64rem] text-[#87bfff]">{inc.id}</span>
               <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
@@ -561,7 +586,10 @@ function AutomationsRail({ t, data }: { t: T; data: Data }) {
         </div>
       </Panel>
 
-      <Panel title={t("zone.governance").replace(/^G · /, "")}>
+      <Panel
+        title={t("zone.governance").replace(/^G · /, "")}
+        info={<KpiInfo k="zone.governance" title={t("zone.governance").replace(/^G · /, "")} />}
+      >
         <div className="flex flex-col gap-2 text-[0.7rem]">
           <span className="inline-flex w-fit items-center gap-1.5 rounded border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] text-emerald-300">
             <ShieldCheck className="h-3 w-3" /> {t("gov.dualControl")}
@@ -571,8 +599,8 @@ function AutomationsRail({ t, data }: { t: T; data: Data }) {
               {t("gov.rolesByMode")}
             </p>
             <ul className="flex flex-col gap-1">
-              {g.roles.map((r) => (
-                <li key={r.mode} className="flex items-start gap-2">
+              {g.roles.map((r, i) => (
+                <li key={`${r.mode}-${i}`} className="flex items-start gap-2">
                   <Badge className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
                     {/* r.mode here is a role-authority tier (Admin / Compliance+ /
                         Operator+), not the auto/approb execution mode — render the
@@ -609,6 +637,7 @@ function Approvals({ t, data, className }: { t: T; data: Data; className?: strin
     <Panel
       title={t("zone.approvals").replace(/^H · /, "")}
       className={className}
+      info={<KpiInfo k="zone.approvals" title={t("zone.approvals").replace(/^H · /, "")} />}
       action={<ViewAll label={t("viewAll.all")} />}
     >
       <SyntheticNotice signalId="automation_workflow" compact />
@@ -646,6 +675,7 @@ function Guardrails({ t, data, className }: { t: T; data: Data; className?: stri
     <Panel
       title={t("zone.guardrails").replace(/^I · /, "")}
       className={className}
+      info={<KpiInfo k="zone.guardrails" title={t("zone.guardrails").replace(/^I · /, "")} />}
       action={<ViewAll label={t("viewAll.guardrails")} href="/configurer/garde-fous" />}
     >
       <ul className="flex flex-col gap-2">
@@ -678,6 +708,7 @@ function Performance({ t, data, className }: { t: T; data: Data; className?: str
     <Panel
       title={t("zone.performance").replace(/^J · /, "")}
       className={className}
+      info={<KpiInfo k="zone.performance" title={t("zone.performance").replace(/^J · /, "")} />}
       action={<ViewAll label={t("viewAll.performance")} />}
     >
       <div className="h-[100px]">
@@ -700,7 +731,11 @@ function Performance({ t, data, className }: { t: T; data: Data; className?: str
 
 function Savings({ t, data, className }: { t: T; data: Data; className?: string }) {
   return (
-    <Panel title={t("zone.savings").replace(/^K · /, "")} className={className}>
+    <Panel
+      title={t("zone.savings").replace(/^K · /, "")}
+      className={className}
+      info={<KpiInfo k="zone.savings" title={t("zone.savings").replace(/^K · /, "")} />}
+    >
       <SyntheticNotice signalId="automation_workflow" compact />
       <dl className="flex flex-col gap-2">
         {data.savings.map((s) => (
@@ -736,6 +771,7 @@ function ContextPanel({ t, data, className }: { t: T; data: Data; className?: st
     <Panel
       title={t("zone.context").replace(/^L · /, "")}
       className={className}
+      info={<KpiInfo k="zone.context" title={t("zone.context").replace(/^L · /, "")} />}
       action={<ViewAll label={t("ctx.history")} />}
     >
       <dl className="flex flex-col gap-1 text-[0.68rem]">
@@ -803,11 +839,13 @@ function Zone({
 function Panel({
   title,
   action,
+  info,
   children,
   className,
 }: {
   title: string;
   action?: ReactNode;
+  info?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
@@ -818,10 +856,11 @@ function Panel({
         className,
       )}
     >
-      {title || action ? (
+      {title || action || info ? (
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="min-w-0 truncate text-[0.8rem] font-semibold text-[var(--tessera-text)]">
-            {title}
+          <h3 className="flex min-w-0 items-center gap-1 text-[0.8rem] font-semibold text-[var(--tessera-text)]">
+            <span className="min-w-0 truncate">{title}</span>
+            {info}
           </h3>
           {action}
         </div>
