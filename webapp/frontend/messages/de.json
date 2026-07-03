@@ -3511,6 +3511,66 @@
         "what": "Antwortlatenz nach Perzentilen: p50 / p95 / p99 = die Dauer, unter der 50 %, 95 % bzw. 99 % der Durchläufe liegen.",
         "how": "Perzentile berechnet über die beobachteten Durchlaufdauern im Zeitraum.",
         "source": "Gemessene Durchlaufdauern (Observability)."
+      },
+      "availErrors": {
+        "what": "Verfügbarkeit und Fehlerrate über die Zeit überlagert.",
+        "how": "Zwei Serien je Intervall: Verfügbarkeit (1 minus Fehler) und Fehlerrate.",
+        "source": "Zuverlässigkeits-Telemetrie (OTel-Spans)."
+      },
+      "errors": {
+        "what": "Verteilung der Fehler nach Typ.",
+        "how": "Zahl der Fehler nach Typ gruppiert über das Fenster.",
+        "source": "Zuverlässigkeits-Telemetrie (Fehler-Spans)."
+      },
+      "costPerDay": {
+        "what": "Aggregierte Inferenzkosten je Tag.",
+        "how": "Summe der geschätzten Kosten je Tag.",
+        "source": "Kostenregister (je Anfrage)."
+      },
+      "volumePerDay": {
+        "what": "Zahl der verarbeiteten Anfragen je Tag.",
+        "how": "Zahl der Anfragen je Tag.",
+        "source": "Zuverlässigkeits-Telemetrie."
+      },
+      "costByModel": {
+        "what": "Kosten, Anfragen, Pass-Rate und Latenz je Modell.",
+        "how": "Eine Zeile je Modell über das Fenster.",
+        "source": "Kostenregister × Telemetrie."
+      },
+      "servicesCost": {
+        "what": "Kostenintensivste Dienste, mit Anfragen, Kosten und Anteil.",
+        "how": "Dienste nach Kosten sortiert; Anteil = Kosten / Gesamt.",
+        "source": "Kostenregister je Dienst."
+      },
+      "incidents": {
+        "what": "Aktuelle Zuverlässigkeitsvorfälle: Datum, Typ, Dienst, Schwere.",
+        "how": "Ereignisse des Vorfallregisters über das Fenster.",
+        "source": "Vorfallregister."
+      },
+      "actions": {
+        "what": "Priorisierte Korrekturmaßnahmen: Priorität, Wirkung, Komplexität.",
+        "how": "Aus Zuverlässigkeits- und Kostensignalen abgeleitete Maßnahmen.",
+        "source": "Zuverlässigkeitsanalyse (aus Signalen abgeleitet)."
+      },
+      "services": {
+        "what": "Erfolgsrate, p50-Latenz und Anfragen je Dienst.",
+        "how": "Eine Zeile je instrumentiertem Dienst.",
+        "source": "Zuverlässigkeits-Telemetrie je Dienst."
+      },
+      "providers": {
+        "what": "Anteil der Anfragen je LLM-Anbieter.",
+        "how": "Anfragen je Anbieter bezogen auf das Gesamt.",
+        "source": "Zuverlässigkeits-Telemetrie (Routing)."
+      },
+      "budget": {
+        "what": "Monatsbudget: ausgegeben, projiziert und im oder über Budget.",
+        "how": "Kumuliert ausgegeben, lineare Monatsprojektion, gegen die Schwelle.",
+        "source": "Kostenregister · konfiguriertes Budget."
+      },
+      "qualityTrend": {
+        "what": "Aktueller Qualitätsscore und sein Trend.",
+        "how": "Letzter Punkt der Qualitätsserie und sein Delta.",
+        "source": "Qualitäts-Score-Journal."
       }
     },
     "panel": {

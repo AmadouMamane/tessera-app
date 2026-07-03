@@ -109,13 +109,26 @@ function Panel({
   children,
   note,
   info,
-}: { title: string; children: ReactNode; note?: string; info?: ReactNode }) {
+  infoKey,
+}: { title: string; children: ReactNode; note?: string; info?: ReactNode; infoKey?: string }) {
+  const te = useTranslations("reliability.explain");
+  // Shared ⓘ: pass an `infoKey` and the panel builds its own MetricInfo from
+  // reliability.explain.<k>, reusing the panel's own title as the popover heading.
+  const auto =
+    infoKey && te.has(`${infoKey}.what`) ? (
+      <MetricInfo
+        title={title}
+        what={te(`${infoKey}.what`)}
+        how={te.has(`${infoKey}.how`) ? te(`${infoKey}.how`) : undefined}
+        source={te.has(`${infoKey}.source`) ? te(`${infoKey}.source`) : undefined}
+      />
+    ) : null;
   return (
     <Card className="flex h-full min-w-0 flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-1 text-[0.78rem] font-medium">
           <span>{title}</span>
-          {info}
+          {info ?? auto}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1">
@@ -384,7 +397,6 @@ const POLL = 30_000;
 
 export function ReliabilityDashboard() {
   const tr = useTranslations("reliability");
-  const te = useTranslations("reliability.explain");
   const locale = useLocale();
   const [period, setPeriod] = useState<Period>({ days: 14, anchor: null });
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("overview");
@@ -536,7 +548,7 @@ export function ReliabilityDashboard() {
   };
 
   const panelAvailErrors = (
-    <Panel title={tr("panel.availErrors")} note={tr("panel.availNote")}>
+    <Panel title={tr("panel.availErrors")} note={tr("panel.availNote")} infoKey="availErrors">
       <MultiLine
         lines={[
           { label: tr("leg.availability"), color: "#34d399", values: availLine },
@@ -547,7 +559,10 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelErrors = (
-    <Panel title={tr("panel.errors", { n: errSlices.reduce((s, x) => s + x.count, 0) })}>
+    <Panel
+      title={tr("panel.errors", { n: errSlices.reduce((s, x) => s + x.count, 0) })}
+      infoKey="errors"
+    >
       {errSlices.length === 0 ? (
         <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
           {tr("noErrors")}
@@ -558,20 +573,7 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelLatency = (
-    <Panel
-      title={tr("panel.latency")}
-      note={tr("panel.latencyNote")}
-      info={
-        te.has("latency.what") ? (
-          <MetricInfo
-            title={tr("panel.latency")}
-            what={te("latency.what")}
-            how={te.has("latency.how") ? te("latency.how") : undefined}
-            source={te.has("latency.source") ? te("latency.source") : undefined}
-          />
-        ) : null
-      }
-    >
+    <Panel title={tr("panel.latency")} note={tr("panel.latencyNote")} infoKey="latency">
       <div className="flex flex-col gap-2">
         <LatStat label={tr("leg.p50")} value={ms(d.latency_p50_ms ?? null)} tone={GOOD} />
         <LatStat label={tr("leg.p95")} value={ms(d.latency_p95_ms ?? null)} tone={WARN} />
@@ -580,17 +582,17 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelCostPerDay = (
-    <Panel title={tr("panel.costPerDay")}>
+    <Panel title={tr("panel.costPerDay")} infoKey="costPerDay">
       <DayBars values={costDay} format={(v) => eur(v, 4)} />
     </Panel>
   );
   const panelVolumePerDay = (
-    <Panel title={tr("panel.volumePerDay")}>
+    <Panel title={tr("panel.volumePerDay")} infoKey="volumePerDay">
       <DayBars values={volumeDay} color="#60a5fa" format={(v) => `${Math.round(v)}`} />
     </Panel>
   );
   const panelCostByModel = (
-    <Panel title={tr("panel.costByModel", { n: d.models?.length ?? 0 })}>
+    <Panel title={tr("panel.costByModel", { n: d.models?.length ?? 0 })} infoKey="costByModel">
       <div className="overflow-x-auto">
         <table className="w-full text-[0.72rem]">
           <thead>
@@ -613,7 +615,10 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelServicesCost = (
-    <Panel title={tr("panel.topServices", { n: d.services_cost?.length ?? 0 })}>
+    <Panel
+      title={tr("panel.topServices", { n: d.services_cost?.length ?? 0 })}
+      infoKey="servicesCost"
+    >
       <table className="w-full text-[0.72rem]">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
@@ -639,7 +644,7 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelIncidents = (
-    <Panel title={tr("panel.incidents", { n: d.incidents?.length ?? 0 })}>
+    <Panel title={tr("panel.incidents", { n: d.incidents?.length ?? 0 })} infoKey="incidents">
       {(d.incidents ?? []).length === 0 ? (
         <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
           {tr("noIncidents")}
@@ -664,7 +669,7 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelActions = (
-    <Panel title={tr("panel.actions", { n: d.actions?.length ?? 0 })}>
+    <Panel title={tr("panel.actions", { n: d.actions?.length ?? 0 })} infoKey="actions">
       <table className="w-full text-[0.7rem]">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
@@ -683,7 +688,7 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelServices = (
-    <Panel title={tr("panel.services")}>
+    <Panel title={tr("panel.services")} infoKey="services">
       <table className="w-full text-[0.72rem]">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
@@ -702,7 +707,10 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelProviders = (
-    <Panel title={tr("panel.providerBreakdown", { n: (d.providers ?? []).length })}>
+    <Panel
+      title={tr("panel.providerBreakdown", { n: (d.providers ?? []).length })}
+      infoKey="providers"
+    >
       <div className="flex flex-col gap-1.5">
         {(d.providers ?? []).map((p) => (
           <div key={p.provider} className="flex items-center gap-2 text-[0.72rem]">
@@ -722,7 +730,7 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelBudget = (
-    <Panel title={tr("panel.budgetForecast")}>
+    <Panel title={tr("panel.budgetForecast")} infoKey="budget">
       <div className="flex flex-col gap-1.5 text-[0.72rem]">
         <div className="mb-1 flex items-end gap-2">
           <span className="text-2xl font-semibold tabular-nums">
@@ -751,7 +759,11 @@ export function ReliabilityDashboard() {
     </Panel>
   );
   const panelQualityTrend = (
-    <Panel title={tr("rail.qualityTrend")} note={tr("rail.qualityTrendNote")}>
+    <Panel
+      title={tr("rail.qualityTrend")}
+      note={tr("rail.qualityTrendNote")}
+      infoKey="qualityTrend"
+    >
       {(d.quality_series ?? []).length > 1 ? (
         <div className="flex flex-col gap-1">
           <div className="flex items-baseline justify-between gap-2">

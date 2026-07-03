@@ -3511,6 +3511,66 @@
         "what": "Latence de réponse par centiles : p50 / p95 / p99 = la durée sous laquelle tombent respectivement 50 %, 95 % et 99 % des tours.",
         "how": "Centiles calculés sur les durées de tour observées sur la période.",
         "source": "Durées de tour mesurées (observabilité)."
+      },
+      "availErrors": {
+        "what": "Disponibilité et taux d'erreur superposés dans le temps.",
+        "how": "Deux séries par intervalle : disponibilité (1 moins erreurs) et taux d'erreur.",
+        "source": "Télémétrie de fiabilité (spans OTel)."
+      },
+      "errors": {
+        "what": "Répartition des erreurs par type.",
+        "how": "Compte des erreurs regroupées par type sur la fenêtre.",
+        "source": "Télémétrie de fiabilité (spans en erreur)."
+      },
+      "costPerDay": {
+        "what": "Coût d'inférence agrégé par jour.",
+        "how": "Somme des coûts estimés par journée.",
+        "source": "Registre de coûts (par requête)."
+      },
+      "volumePerDay": {
+        "what": "Nombre de requêtes traitées par jour.",
+        "how": "Compte des requêtes par journée.",
+        "source": "Télémétrie de fiabilité."
+      },
+      "costByModel": {
+        "what": "Coût, requêtes, pass-rate et latence par modèle.",
+        "how": "Une ligne par modèle sur la fenêtre.",
+        "source": "Registre de coûts × télémétrie."
+      },
+      "servicesCost": {
+        "what": "Services les plus coûteux, avec requêtes, coût et part.",
+        "how": "Services triés par coût ; part = coût / total.",
+        "source": "Registre de coûts par service."
+      },
+      "incidents": {
+        "what": "Incidents de fiabilité récents : date, type, service, gravité.",
+        "how": "Évènements du registre d'incidents sur la fenêtre.",
+        "source": "Registre d'incidents."
+      },
+      "actions": {
+        "what": "Actions correctives priorisées : priorité, impact, complexité.",
+        "how": "Actions dérivées des signaux de fiabilité et de coût.",
+        "source": "Analyse de fiabilité (dérivé des signaux)."
+      },
+      "services": {
+        "what": "Taux de succès, latence p50 et requêtes par service.",
+        "how": "Une ligne par service instrumenté.",
+        "source": "Télémétrie de fiabilité par service."
+      },
+      "providers": {
+        "what": "Part des requêtes par fournisseur LLM.",
+        "how": "Requêtes par fournisseur rapportées au total.",
+        "source": "Télémétrie de fiabilité (routage)."
+      },
+      "budget": {
+        "what": "Budget mensuel : dépensé, projeté, et sous ou hors budget.",
+        "how": "Dépensé cumulé, projection linéaire au mois, comparés au seuil.",
+        "source": "Registre de coûts · budget configuré."
+      },
+      "qualityTrend": {
+        "what": "Score de qualité récent et sa tendance.",
+        "how": "Dernier point de la série qualité et son écart.",
+        "source": "Journal de scores qualité."
       }
     },
     "panel": {

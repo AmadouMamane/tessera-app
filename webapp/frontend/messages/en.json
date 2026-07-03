@@ -3511,6 +3511,66 @@
         "what": "Response latency by percentile: p50 / p95 / p99 = the duration below which 50%, 95%, and 99% of turns fall, respectively.",
         "how": "Percentiles computed over observed turn durations in the period.",
         "source": "Measured turn durations (observability)."
+      },
+      "availErrors": {
+        "what": "Availability and error rate overlaid over time.",
+        "how": "Two series per interval: availability (1 minus errors) and error rate.",
+        "source": "Reliability telemetry (OTel spans)."
+      },
+      "errors": {
+        "what": "Breakdown of errors by type.",
+        "how": "Count of errors grouped by type over the window.",
+        "source": "Reliability telemetry (error spans)."
+      },
+      "costPerDay": {
+        "what": "Inference cost aggregated per day.",
+        "how": "Sum of estimated costs per day.",
+        "source": "Cost ledger (per request)."
+      },
+      "volumePerDay": {
+        "what": "Number of requests handled per day.",
+        "how": "Count of requests per day.",
+        "source": "Reliability telemetry."
+      },
+      "costByModel": {
+        "what": "Cost, requests, pass-rate and latency per model.",
+        "how": "One row per model over the window.",
+        "source": "Cost ledger × telemetry."
+      },
+      "servicesCost": {
+        "what": "Most costly services, with requests, cost and share.",
+        "how": "Services sorted by cost; share = cost / total.",
+        "source": "Cost ledger per service."
+      },
+      "incidents": {
+        "what": "Recent reliability incidents: date, type, service, severity.",
+        "how": "Events from the incident register over the window.",
+        "source": "Incident register."
+      },
+      "actions": {
+        "what": "Prioritised corrective actions: priority, impact, complexity.",
+        "how": "Actions derived from reliability and cost signals.",
+        "source": "Reliability analysis (derived from signals)."
+      },
+      "services": {
+        "what": "Success rate, p50 latency and requests per service.",
+        "how": "One row per instrumented service.",
+        "source": "Reliability telemetry per service."
+      },
+      "providers": {
+        "what": "Share of requests per LLM provider.",
+        "how": "Requests per provider relative to the total.",
+        "source": "Reliability telemetry (routing)."
+      },
+      "budget": {
+        "what": "Monthly budget: spent, projected, and within or over budget.",
+        "how": "Cumulative spent, linear monthly projection, against the threshold.",
+        "source": "Cost ledger · configured budget."
+      },
+      "qualityTrend": {
+        "what": "Recent quality score and its trend.",
+        "how": "Last point of the quality series and its delta.",
+        "source": "Quality score journal."
       }
     },
     "panel": {
