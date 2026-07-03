@@ -2474,6 +2474,196 @@
         "what": "Die Gesamtwirksamkeit des Guards: sein F1 (Balance Präzision/Recall) gegen Angriffe.",
         "how": "F1 = harmonisches Mittel aus Präzision/Recall; Recall = erkannte ÷ tatsächliche Angriffe.",
         "source": "Firewall-Sonde (fester Angriffskorpus)."
+      },
+      "probes": {
+        "what": "Die Anzahl der adversen Sonden (Injektionen), die gegen den Guard ausgeführt werden.",
+        "how": "Zählung der positiven (Angriffs-)Fälle im festen adversarialen Korpus (n_positive).",
+        "source": "Firewall-Wirksamkeitssonde."
+      },
+      "escaped": {
+        "what": "Die Anzahl der Angriffe, die den Guard unentdeckt passiert haben.",
+        "how": "Falsch-Negative: vom Firewall nicht blockierte Angriffe (false_negative).",
+        "source": "Firewall-Wirksamkeitssonde."
+      },
+      "piiTurns": {
+        "what": "Die Turns, deren Antwort personenbezogene Daten enthielt, vom Gesamten.",
+        "how": "n_with_leak / n_turns über die analysierten Turns.",
+        "source": "PII-Analyse der Antworten."
+      },
+      "toxicity": {
+        "what": "Der Anteil der als toxisch markierten Antworten.",
+        "how": "n_toxic / bewertete Antworten. Ziel < 0,1 %.",
+        "source": "Toxizitätsanalyse der Antworten."
+      },
+      "recall": {
+        "what": "Der Anteil der realen Angriffe, den der Guard erkennt.",
+        "how": "TP / (TP + FN) = erkannte Angriffe / reale Angriffe.",
+        "source": "Firewall-Wirksamkeitssonde."
+      },
+      "precision": {
+        "what": "Der Anteil der Blockierungen, die echte Angriffe betrafen (wenige Fehlalarme).",
+        "how": "TP / (TP + FP) = korrekte Blockierungen / alle Blockierungen.",
+        "source": "Firewall-Wirksamkeitssonde."
+      },
+      "conformance": {
+        "what": "Der Anteil der richtlinienkonformen Antworten.",
+        "how": "Konforme Antworten / bewertete Antworten.",
+        "source": "Konformitätsbewertung (siehe Konformität)."
+      },
+      "overProvCount": {
+        "what": "Die Anzahl gewährter, aber nie genutzter Tools (überflüssiges Privileg).",
+        "how": "Zählung gewährter Tools ohne jede Nutzung (n_over_provisioned).",
+        "source": "Least-Privilege-Analyse (gewährt vs. genutzt)."
+      },
+      "overProvRate": {
+        "what": "Der Anteil der gewährten Tools, die überflüssig sind.",
+        "how": "n_over_provisioned / n_granted.",
+        "source": "Least-Privilege-Analyse."
+      },
+      "toolMisuse": {
+        "what": "Die Exposition durch Über-Privilegierung der dem Agenten gewährten Tools.",
+        "how": "Über-privilegierte / gewährte Tools; hoch = überflüssige Rechte.",
+        "source": "Least-Privilege-Analyse + Tool-Richtlinie."
+      },
+      "conversations": {
+        "what": "Die Anzahl der von der Lösch-/Nachweisfläche abgedeckten Konversationen.",
+        "how": "Eindeutige Transcript-Konversationen mit einem Nachweispaket.",
+        "source": "Löschabdeckung / Transcript."
+      },
+      "erasure": {
+        "what": "Der Anteil der Konversationen mit vollständigem Lösch-/Nachweispaket.",
+        "how": "n_bundles / n_conversations.",
+        "source": "Löschabdeckung (Recht auf Vergessen)."
+      },
+      "inversion": {
+        "what": "Speicher, deren Quelltext aus dem Embedding rekonstruierbar ist (Inversionsangriff).",
+        "how": "n_recoverable / n_memories oberhalb der Ähnlichkeitsschwelle.",
+        "source": "Embedding-Inversionssonde."
+      },
+      "isolationProbes": {
+        "what": "Die Anzahl der durchgeführten Mandanten-Isolationsprüfungen.",
+        "how": "Zählung der auf mandantenübergreifende Lecks getesteten Turns.",
+        "source": "Mandanten-Isolationssonde."
+      },
+      "isolationLeaks": {
+        "what": "Die Anzahl der Turns, die Daten eines anderen Mandanten preisgaben.",
+        "how": "Zählung der Turns, bei denen die Isolation versagte.",
+        "source": "Mandanten-Isolationssonde."
+      },
+      "domainCases": {
+        "what": "Die fehlgeschlagenen Nichtregressions-Testfälle für diese Domäne.",
+        "how": "Fälle, in denen der Agent scheitert, nach Domänenkategorie gefiltert.",
+        "source": "Fehler-Harness (eval/failures)."
+      },
+      "redteam": {
+        "what": "Blockierte Injektionen vs. Umgehungen der adversen Kampagne.",
+        "how": "Blockierte True-Positives / gesamt, mit Umgehungen (False-Negatives).",
+        "source": "Firewall-Wirksamkeitssonde."
+      },
+      "erasureSurface": {
+        "what": "Die Abdeckung der Nachweise zum Recht auf Löschung.",
+        "how": "Anzeige Pakete/Konversationen + Zähler (Konversationen, Pakete, Scores).",
+        "source": "Löschabdeckung."
+      },
+      "trend": {
+        "what": "Der Risikotrend über 30 Tage aus den dauerhaften Scores.",
+        "how": "1 - Treue-Mittel (Angriffe) und 1 - Grounding-Mittel (Vorfälle) je Bucket.",
+        "source": "Dauerhafte Score-Serie."
+      },
+      "refusal": {
+        "what": "Die Balance zwischen Über- und Unter-Verweigerung des Guards.",
+        "how": "Über-Verweigerungsrate (legitime abgelehnt) und Unter-Verweigerung (Verbotenes erlaubt).",
+        "source": "Verweigerungsbewertung."
+      },
+      "whatChanged": {
+        "what": "Die jüngsten Konfigurations-/Richtlinienänderungen.",
+        "how": "Felder, deren Vorher-/Nachher-Wert sich unterscheidet.",
+        "source": "Zustandsvergleich (what-changed)."
+      },
+      "overPriv": {
+        "what": "Das Detail gewährt-vs-genutzt je Tool, das Überflüssiges markiert.",
+        "how": "Tools der gewährten Menge mit geringer oder keiner Nutzung.",
+        "source": "Least-Privilege-Analyse."
+      },
+      "isolationFacts": {
+        "what": "Wie die Mandantentrennung durchgesetzt wird (Fakt, keine Metrik).",
+        "how": "Trennung nach Umgebung, Schema und Sitzungszustand.",
+        "source": "Systemprofil / Deployment."
+      },
+      "failures": {
+        "what": "Die beobachteten Fehler gruppiert nach Familie.",
+        "how": "Zählung je Familie: Injektion, Tool-Missbrauch, Inversion, Verweigerung, PII, Toxizität.",
+        "source": "Live-Sicherheitssignale."
+      },
+      "regression": {
+        "what": "Die Wahrscheinlichkeit, dass der Guard zurückfällt.",
+        "how": "Risiko-Score + 7-Tage-Wahrscheinlichkeit + Stufe.",
+        "source": "Regressionsrisiko-Modell."
+      },
+      "domainRisk": {
+        "what": "Das normalisierte Risiko je Sicherheitsdomäne.",
+        "how": "Maximum der realen Domänenraten (Injektion, Datenschutz, Tools, Speicher, Konformität).",
+        "source": "Live-Sicherheitssignale."
+      },
+      "priorityCases": {
+        "what": "Die schwersten fehlgeschlagenen Fälle, zuerst zu bearbeiten.",
+        "how": "Erste Harness-Fälle nach Schweregrad sortiert.",
+        "source": "Fehler-Harness (eval/failures)."
+      },
+      "zoneActual": {
+        "what": "Der Live-Schnappschuss der Sicherheitslage.",
+        "how": "Aktuelle Werte jedes wichtigen Sicherheitssignals.",
+        "source": "Live-Sicherheitssonden und -Scores."
+      },
+      "zoneControls": {
+        "what": "Die tragenden Sicherheitskontrollen mit ihrem Zielschwellwert.",
+        "how": "Live-Wert jeder Kontrolle vs. Ziel + Verantwortlicher + Fall.",
+        "source": "Sicherheitssignale + Guard-Richtlinie."
+      },
+      "zoneDiagnostic": {
+        "what": "Die Ursachendiagnostik hinter der Lage.",
+        "how": "Fehlerverteilung, Verweigerungskalibrierung, jüngste Änderungen, Prioritätsfälle.",
+        "source": "Bewertungs- und Guard-Signale."
+      },
+      "zonePredictive": {
+        "what": "Die vorausschauenden Risikoindikatoren.",
+        "how": "Risikotrend, Regressionswahrscheinlichkeit, Domänenrisiko, Über-Privilegierung.",
+        "source": "Score-Serie + Regressionsmodell."
+      },
+      "zonePrivacy": {
+        "what": "Die Datenschutz- und Speicher-Governance-Fläche.",
+        "how": "Red-Team-Blockierungen, Löschvollständigkeit, Speicher-Inversion.",
+        "source": "Firewall-/Lösch-/Inversionssonden."
+      },
+      "zoneActions": {
+        "what": "Die gesteuerten Abhilfemaßnahmen für die aktuelle Lage.",
+        "how": "Jede Karte führt zu einer Vier-Augen-Aktion (Freeze, Playbook, Löschung).",
+        "source": "Abgeleitet aus offenen Kontrollen."
+      },
+      "railIncidents": {
+        "what": "Die schwersten offenen Sicherheitsfälle.",
+        "how": "Erste fehlgeschlagene Harness-Fälle nach Schweregrad.",
+        "source": "Fehler-Harness (eval/failures)."
+      },
+      "railGates": {
+        "what": "Der Status der Datenschutz-/Sicherheits-Gates.",
+        "how": "PASS/WATCH/FAIL aus den Schwellwerten für Präzision und Konformität.",
+        "source": "Firewall + Konformität."
+      },
+      "railTools": {
+        "what": "Nutzung und Risiko je Tool.",
+        "how": "Nutzungszahl + Über-Provisionierungs-Markierung.",
+        "source": "Least-Privilege-Analyse."
+      },
+      "railSiem": {
+        "what": "Die exportierbaren Sicherheitsereignisse.",
+        "how": "Reale Fall-IDs + Schweregrade (+ Anomalie-Anzahl).",
+        "source": "Fehler-Harness + Anomalie-Detektor."
+      },
+      "crossTenant": {
+        "what": "Der Anteil der Turns, die Daten eines anderen Mandanten preisgaben.",
+        "how": "n_leaks / n_turns des mandantenübergreifenden Isolationstests. Ziel 0 %.",
+        "source": "Mandanten-Isolationssonde."
       }
     },
     "col": {

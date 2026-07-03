@@ -2474,6 +2474,196 @@
         "what": "L'efficacité globale du garde-fou : son F1 (équilibre précision/rappel) face aux attaques.",
         "how": "F1 = moyenne harmonique précision/rappel ; rappel = attaques détectées ÷ attaques réelles.",
         "source": "Sonde du pare-feu (corpus adversarial fixe)."
+      },
+      "probes": {
+        "what": "Le nombre de sondes adverses (injections) lancées contre le garde-fou.",
+        "how": "Compte des cas positifs (attaques) du corpus adversarial fixe (n_positive).",
+        "source": "Sonde d'efficacité du pare-feu."
+      },
+      "escaped": {
+        "what": "Le nombre d'attaques qui ont franchi le garde-fou sans être détectées.",
+        "how": "Faux négatifs : attaques que le pare-feu n'a pas bloquées (false_negative).",
+        "source": "Sonde d'efficacité du pare-feu."
+      },
+      "piiTurns": {
+        "what": "Les tours dont la réponse contenait une donnée personnelle, sur le total évalué.",
+        "how": "n_with_leak / n_turns sur les tours analysés.",
+        "source": "Analyse PII des réponses."
+      },
+      "toxicity": {
+        "what": "La part des réponses signalées comme toxiques.",
+        "how": "n_toxic / réponses évaluées. Cible < 0,1 %.",
+        "source": "Analyse de toxicité des réponses."
+      },
+      "recall": {
+        "what": "La part des attaques réelles que le garde-fou détecte.",
+        "how": "TP / (TP + FN) = attaques détectées / attaques réelles.",
+        "source": "Sonde d'efficacité du pare-feu."
+      },
+      "precision": {
+        "what": "La part des blocages qui visaient de vraies attaques (peu de faux positifs).",
+        "how": "TP / (TP + FP) = blocages corrects / total des blocages.",
+        "source": "Sonde d'efficacité du pare-feu."
+      },
+      "conformance": {
+        "what": "La part des réponses conformes à la politique.",
+        "how": "Réponses conformes / réponses évaluées.",
+        "source": "Évaluation de conformité (voir Conformité)."
+      },
+      "overProvCount": {
+        "what": "Le nombre d'outils accordés mais jamais utilisés (privilège superflu).",
+        "how": "Compte des outils accordés dont l'usage est nul (n_over_provisioned).",
+        "source": "Analyse du moindre privilège (accordés vs utilisés)."
+      },
+      "overProvRate": {
+        "what": "La part des outils accordés qui sont superflus.",
+        "how": "n_over_provisioned / n_granted.",
+        "source": "Analyse du moindre privilège."
+      },
+      "toolMisuse": {
+        "what": "L'exposition liée au sur-privilège des outils accordés à l'agent.",
+        "how": "Outils sur-provisionnés / accordés ; élevé = permissions superflues.",
+        "source": "Analyse du moindre privilège + politique d'outils."
+      },
+      "conversations": {
+        "what": "Le nombre de conversations couvertes par la surface d'effacement/preuve.",
+        "how": "Conversations distinctes du transcript disposant d'un lot de preuves.",
+        "source": "Couverture d'effacement / transcript."
+      },
+      "erasure": {
+        "what": "La part des conversations disposant d'un lot d'effacement/preuve complet.",
+        "how": "n_bundles / n_conversations.",
+        "source": "Couverture d'effacement (droit à l'oubli)."
+      },
+      "inversion": {
+        "what": "Les mémoires dont le texte source peut être reconstruit depuis l'embedding (inversion).",
+        "how": "n_recoverable / n_memories au-dessus du seuil de similarité.",
+        "source": "Sonde d'inversion d'embedding."
+      },
+      "isolationProbes": {
+        "what": "Le nombre de contrôles d'isolation multi-tenant effectués.",
+        "how": "Compte des tours testés pour une fuite inter-tenant.",
+        "source": "Sonde d'isolation multi-tenant."
+      },
+      "isolationLeaks": {
+        "what": "Le nombre de tours ayant laissé fuir les données d'un autre tenant.",
+        "how": "Compte des tours où l'isolation a échoué.",
+        "source": "Sonde d'isolation multi-tenant."
+      },
+      "domainCases": {
+        "what": "Les cas du harnais de non-régression en échec pour ce domaine.",
+        "how": "Cas où l'agent échoue, filtrés par catégorie du domaine.",
+        "source": "Harnais d'échecs (eval/failures)."
+      },
+      "redteam": {
+        "what": "Injections bloquées vs. contournements de la campagne adverse.",
+        "how": "Vrais positifs bloqués / total, avec les contournements (faux négatifs).",
+        "source": "Sonde d'efficacité du pare-feu."
+      },
+      "erasureSurface": {
+        "what": "La couverture des preuves du droit à l'effacement.",
+        "how": "Jauge lots/conversations + compteurs (conversations, lots, scores).",
+        "source": "Couverture d'effacement."
+      },
+      "trend": {
+        "what": "La tendance du risque sur 30 jours à partir des scores durables.",
+        "how": "1 - moyenne de fidélité (attaques) et 1 - moyenne d'ancrage (incidents) par bucket.",
+        "source": "Série de scores durable."
+      },
+      "refusal": {
+        "what": "L'équilibre entre sur-refus et sous-refus du garde-fou.",
+        "how": "Taux de sur-refus (légitimes refusés) et sous-refus (interdits autorisés).",
+        "source": "Évaluation du refus."
+      },
+      "whatChanged": {
+        "what": "Les changements récents de configuration/politique.",
+        "how": "Champs dont la valeur avant/après diffère.",
+        "source": "Comparaison d'état (what-changed)."
+      },
+      "overPriv": {
+        "what": "Le détail accordé-vs-utilisé par outil, signalant le superflu.",
+        "how": "Outils de l'ensemble accordé avec un usage faible ou nul.",
+        "source": "Analyse du moindre privilège."
+      },
+      "isolationFacts": {
+        "what": "Comment l'isolation entre tenants est appliquée (fait, non métrique).",
+        "how": "Séparation par environnement, schéma et état de session.",
+        "source": "Profil système / déploiement."
+      },
+      "failures": {
+        "what": "Les échecs observés regroupés par famille.",
+        "how": "Compte par famille : injection, mésusage d'outil, inversion, refus, PII, toxicité.",
+        "source": "Signaux de sécurité en direct."
+      },
+      "regression": {
+        "what": "La probabilité que le garde-fou régresse.",
+        "how": "Score de risque + probabilité à 7 jours + niveau.",
+        "source": "Modèle de risque de régression."
+      },
+      "domainRisk": {
+        "what": "Le risque normalisé par domaine de sécurité.",
+        "how": "Maximum des taux réels du domaine (injection, vie privée, outils, mémoire, conformité).",
+        "source": "Signaux de sécurité en direct."
+      },
+      "priorityCases": {
+        "what": "Les cas en échec les plus graves à traiter en premier.",
+        "how": "Premiers cas du harnais triés par gravité.",
+        "source": "Harnais d'échecs (eval/failures)."
+      },
+      "zoneActual": {
+        "what": "L'instantané de la posture de sécurité en direct.",
+        "how": "Valeurs courantes de chaque signal de sécurité clé.",
+        "source": "Sondes et scores de sécurité en direct."
+      },
+      "zoneControls": {
+        "what": "Les contrôles de sécurité porteurs, avec leur seuil cible.",
+        "how": "Valeur en direct de chaque contrôle vs sa cible + responsable + cas.",
+        "source": "Signaux de sécurité + politique du garde-fou."
+      },
+      "zoneDiagnostic": {
+        "what": "Les diagnostics de cause racine derrière la posture.",
+        "how": "Répartition des échecs, calibration du refus, changements récents, cas prioritaires.",
+        "source": "Signaux d'évaluation et de garde-fou."
+      },
+      "zonePredictive": {
+        "what": "Les indicateurs de risque prospectifs.",
+        "how": "Tendance du risque, probabilité de régression, risque par domaine, sur-privilège.",
+        "source": "Série de scores + modèle de régression."
+      },
+      "zonePrivacy": {
+        "what": "La surface vie privée et gouvernance mémoire.",
+        "how": "Blocages red team, complétude d'effacement, inversion mémoire.",
+        "source": "Sondes pare-feu / effacement / inversion."
+      },
+      "zoneActions": {
+        "what": "Les remédiations gouvernées pour la posture actuelle.",
+        "how": "Chaque carte mène à une action à double contrôle (gel, playbook, purge).",
+        "source": "Dérivées des contrôles ouverts."
+      },
+      "railIncidents": {
+        "what": "Les cas de sécurité ouverts les plus graves.",
+        "how": "Premiers cas du harnais en échec, triés par gravité.",
+        "source": "Harnais d'échecs (eval/failures)."
+      },
+      "railGates": {
+        "what": "L'état des portes de confidentialité/sécurité.",
+        "how": "PASS/WATCH/FAIL à partir des seuils de précision et de conformité.",
+        "source": "Pare-feu + conformité."
+      },
+      "railTools": {
+        "what": "L'usage et le risque par outil.",
+        "how": "Nombre d'utilisations + marqueur de sur-provision.",
+        "source": "Analyse du moindre privilège."
+      },
+      "railSiem": {
+        "what": "Les événements de sécurité exportables.",
+        "how": "Identifiants de cas réels + gravités (+ nombre d'anomalies).",
+        "source": "Harnais d'échecs + détecteur d'anomalies."
+      },
+      "crossTenant": {
+        "what": "La part des tours ayant laissé fuir les données d'un autre tenant.",
+        "how": "n_leaks / n_turns du test d'isolation inter-tenant. Cible 0 %.",
+        "source": "Sonde d'isolation multi-tenant."
       }
     },
     "col": {

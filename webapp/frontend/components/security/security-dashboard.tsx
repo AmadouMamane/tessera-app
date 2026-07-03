@@ -83,11 +83,15 @@ function Panel({
   title,
   children,
   className,
-}: { title: string; children: ReactNode; className?: string }) {
+  info,
+}: { title: string; children: ReactNode; className?: string; info?: ReactNode }) {
   return (
     <Card className={`flex h-full min-w-0 flex-col ${className ?? ""}`}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-[0.78rem] font-medium">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-[0.78rem] font-medium">
+          <span className="min-w-0 truncate">{title}</span>
+          {info ? <span className="ml-auto shrink-0">{info}</span> : null}
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex-1">{children}</CardContent>
     </Card>
@@ -95,12 +99,32 @@ function Panel({
 }
 
 /** A translucent banded section grouping one cockpit zone (A · B · C · …). */
-function Zone({ label, children }: { label: string; children: ReactNode }) {
+function Zone({ label, children, info }: { label: string; children: ReactNode; info?: ReactNode }) {
   return (
     <section className="rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5">
-      <Sec>{label}</Sec>
+      <div className="flex items-center gap-1.5">
+        <Sec>{label}</Sec>
+        {info ? <span className="shrink-0">{info}</span> : null}
+      </div>
       <div className="mt-1.5">{children}</div>
     </section>
+  );
+}
+
+/**
+ * ⓘ for a section / zone / panel title, grounded in security.explain.<k>
+ * (what / how computed / source). Mirrors the KPI-tile affordance so every
+ * heading is self-explaining, not just the metric tiles.
+ */
+function SecInfo({ k, title }: { k: string; title: string }) {
+  const te = useTranslations("security.explain");
+  return (
+    <MetricInfo
+      title={title}
+      what={te(`${k}.what`)}
+      how={te(`${k}.how`)}
+      source={te.has(`${k}.source`) ? te(`${k}.source`) : undefined}
+    />
   );
 }
 
@@ -717,7 +741,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const casesPanel = (cats: string[], max = 6) => {
     const rows = domainCases(cats);
     return (
-      <Panel title={ts("tabx.domainCases")}>
+      <Panel
+        title={ts("tabx.domainCases")}
+        info={<SecInfo k="domainCases" title={ts("tabx.domainCases")} />}
+      >
         {rows.length === 0 ? (
           <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
             {ts("tabx.noCases")}
@@ -745,7 +772,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   };
 
   const redteamPanel = (
-    <Panel title={ts("panel.redteam")}>
+    <Panel title={ts("panel.redteam")} info={<SecInfo k="redteam" title={ts("panel.redteam")} />}>
       <div className="flex flex-col gap-1.5 text-[0.72rem]">
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-semibold tabular-nums">{blocked}</span>
@@ -765,7 +792,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   );
 
   const erasurePanel = (
-    <Panel title={ts("panel.erasureSurface")}>
+    <Panel
+      title={ts("panel.erasureSurface")}
+      info={<SecInfo k="erasureSurface" title={ts("panel.erasureSurface")} />}
+    >
       <div className="flex items-center gap-3">
         <Gauge value={erasureComplete ?? 0} label={ts("panel.completeness")} tone="#10b981" />
         <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
@@ -778,7 +808,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   );
 
   const inversionPanel = (
-    <Panel title={ts("panel.inversion")}>
+    <Panel
+      title={ts("panel.inversion")}
+      info={<SecInfo k="inversion" title={ts("panel.inversion")} />}
+    >
       {inversion.data?.available === false || inversion.isLoading ? (
         <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
           {ts("panel.computing")}
@@ -798,7 +831,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   );
 
   const trendPanel = (
-    <Panel title={ts("panel.trend")}>
+    <Panel title={ts("panel.trend")} info={<SecInfo k="trend" title={ts("panel.trend")} />}>
       <LineChart
         a={attackSeries}
         b={incidentSeries}
@@ -809,7 +842,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   );
 
   const kpiGrid = (children: ReactNode) => (
-    <Zone label={ts("sec.actual")}>
+    <Zone label={ts("sec.actual")} info={<SecInfo k="zoneActual" title={ts("sec.actual")} />}>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">{children}</div>
     </Zone>
   );
@@ -823,7 +856,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             <Kpi
               icon={ShieldAlert}
               label={ts("tabx.probes")}
-              infoKey="attackRate"
+              infoKey="probes"
               value={`${fw?.n_positive ?? 0}`}
               tone={MUTED}
             />
@@ -838,7 +871,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             <Kpi
               icon={ShieldAlert}
               label={ts("tabx.escaped")}
-              infoKey="attackRate"
+              infoKey="escaped"
               value={`${fw?.false_negative ?? 0}`}
               tone={(fw?.false_negative ?? 0) > 0 ? WARN : GOOD}
             />
@@ -849,13 +882,21 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               value={pct(attackRate)}
               tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
               series={fwSpark}
+              href="/surveiller/qualite-ia"
+              drillLabel={ts("tabx.attackSuccess")}
             />
           </>,
         )}
-        <Zone label={ts("sec.controls")}>
+        <Zone
+          label={ts("sec.controls")}
+          info={<SecInfo k="zoneControls" title={ts("sec.controls")} />}
+        >
           {controlsTable(controls.filter((c) => c.key === "promptInjection"))}
         </Zone>
-        <Zone label={ts("sec.diagnostic")}>
+        <Zone
+          label={ts("sec.diagnostic")}
+          info={<SecInfo k="zoneDiagnostic" title={ts("sec.diagnostic")} />}
+        >
           <div className="grid gap-2 lg:grid-cols-3">
             {trendPanel}
             {redteamPanel}
@@ -878,14 +919,14 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             <Kpi
               icon={ShieldAlert}
               label={ts("tabx.piiTurns")}
-              infoKey="piiLeak"
+              infoKey="piiTurns"
               value={`${pii.data?.n_with_leak ?? 0}/${pii.data?.n_turns ?? 0}`}
               tone={MUTED}
             />
             <Kpi
               icon={ShieldAlert}
               label={ts("ctrl.toxicity")}
-              infoKey="piiLeak"
+              infoKey="toxicity"
               value={pct(toxRate, 2)}
               tone={toxRate ? BAD : GOOD}
             />
@@ -900,10 +941,16 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             />
           </>,
         )}
-        <Zone label={ts("sec.controls")}>
+        <Zone
+          label={ts("sec.controls")}
+          info={<SecInfo k="zoneControls" title={ts("sec.controls")} />}
+        >
           {controlsTable(controls.filter((c) => c.key === "piiLeak" || c.key === "toxicity"))}
         </Zone>
-        <Zone label={ts("sec.privacy")}>
+        <Zone
+          label={ts("sec.privacy")}
+          info={<SecInfo k="zonePrivacy" title={ts("sec.privacy")} />}
+        >
           <div className="grid gap-2 lg:grid-cols-3">
             {erasurePanel}
             {inversionPanel}
@@ -926,29 +973,37 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             <Kpi
               icon={ShieldCheck}
               label={ts("tabx.recall")}
-              infoKey="guard"
+              infoKey="recall"
               value={fw?.recall?.toFixed(2) ?? "—"}
               tone={MUTED}
             />
             <Kpi
               icon={ShieldCheck}
               label={ts("tabx.precision")}
-              infoKey="guard"
+              infoKey="precision"
               value={fw?.precision?.toFixed(2) ?? "—"}
               tone={MUTED}
             />
             <Kpi
               icon={ShieldCheck}
               label={ts("tabx.conformance")}
-              infoKey="guard"
+              infoKey="conformance"
               value={pct(conformance.data?.conformance_rate)}
               tone={(conformance.data?.conformance_rate ?? 1) >= 0.95 ? GOOD : WARN}
+              href="/surveiller/conformite"
+              drillLabel={ts("tabx.conformance")}
             />
           </>,
         )}
-        <Zone label={ts("sec.diagnostic")}>
+        <Zone
+          label={ts("sec.diagnostic")}
+          info={<SecInfo k="zoneDiagnostic" title={ts("sec.diagnostic")} />}
+        >
           <div className="grid gap-2 lg:grid-cols-3">
-            <Panel title={ts("panel.refusal")}>
+            <Panel
+              title={ts("panel.refusal")}
+              info={<SecInfo k="refusal" title={ts("panel.refusal")} />}
+            >
               <div className="flex items-center gap-2">
                 <Gauge
                   value={refusal.data?.over_refusal_rate ?? 0}
@@ -966,7 +1021,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                 </div>
               </div>
             </Panel>
-            <Panel title={ts("panel.whatChanged")}>
+            <Panel
+              title={ts("panel.whatChanged")}
+              info={<SecInfo k="whatChanged" title={ts("panel.whatChanged")} />}
+            >
               <ul className="flex flex-col gap-1.5 text-[0.72rem]">
                 {(whatChanged.data?.changes ?? []).length === 0 ? (
                   <li className="text-[var(--muted-foreground)]">{ts("panel.noChanges")}</li>
@@ -1027,32 +1085,41 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             <Kpi
               icon={ShieldAlert}
               label={ts("tabx.overProvCount")}
-              infoKey="leastPriv"
+              infoKey="overProvCount"
               value={`${lp.data?.n_over_provisioned ?? 0}`}
               tone={(lp.data?.n_over_provisioned ?? 0) > 0 ? WARN : GOOD}
             />
             <Kpi
               icon={ShieldAlert}
               label={ts("tabx.overProvRate")}
-              infoKey="leastPriv"
+              infoKey="overProvRate"
               value={pct(overProvRate)}
               tone={overProvRate && overProvRate > 0.4 ? BAD : WARN}
             />
             <Kpi
               icon={ShieldCheck}
               label={ts("ctrl.toolMisuse")}
-              infoKey="leastPriv"
+              infoKey="toolMisuse"
               value={`${pct(overProvRate)}`}
               tone={MUTED}
             />
           </>,
         )}
-        <Zone label={ts("sec.controls")}>
+        <Zone
+          label={ts("sec.controls")}
+          info={<SecInfo k="zoneControls" title={ts("sec.controls")} />}
+        >
           {controlsTable(controls.filter((c) => c.key === "toolMisuse"))}
         </Zone>
-        <Zone label={ts("sec.diagnostic")}>
+        <Zone
+          label={ts("sec.diagnostic")}
+          info={<SecInfo k="zoneDiagnostic" title={ts("sec.diagnostic")} />}
+        >
           <div className="grid gap-2 lg:grid-cols-2">
-            <Panel title={ts("panel.overPriv")}>
+            <Panel
+              title={ts("panel.overPriv")}
+              info={<SecInfo k="overPriv" title={ts("panel.overPriv")} />}
+            >
               <ul className="flex flex-col gap-1 text-[0.72rem]">
                 {(lp.data?.usage ?? []).slice(0, 8).map((u) => {
                   const over = lp.data?.over_provisioned.includes(u.tool);
@@ -1088,27 +1155,30 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             <Kpi
               icon={ShieldCheck}
               label={ts("panel.conversations")}
-              infoKey="sensitiveMemory"
+              infoKey="conversations"
               value={`${erasure.data?.n_conversations ?? 0}`}
               tone={MUTED}
             />
             <Kpi
               icon={ShieldCheck}
               label={ts("tabx.erasureCompleteness")}
-              infoKey="sensitiveMemory"
+              infoKey="erasure"
               value={pct(erasureComplete)}
               tone={GOOD}
             />
             <Kpi
               icon={ShieldAlert}
               label={ts("panel.recoverable")}
-              infoKey="sensitiveMemory"
+              infoKey="inversion"
               value={`${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0}`}
               tone={(inversion.data?.n_recoverable ?? 0) > 0 ? BAD : GOOD}
             />
           </>,
         )}
-        <Zone label={ts("sec.privacy")}>
+        <Zone
+          label={ts("sec.privacy")}
+          info={<SecInfo k="zonePrivacy" title={ts("sec.privacy")} />}
+        >
           <div className="grid gap-2 lg:grid-cols-3">
             {erasurePanel}
             {inversionPanel}
@@ -1127,29 +1197,40 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               infoKey="crossTenant"
               value={pct(xtRate)}
               tone={xtRate ? BAD : GOOD}
+              href="/admin/profil-systeme"
+              drillLabel={ts("ctrl.crossTenant")}
             />
             <Kpi
               icon={ShieldCheck}
               label={ts("tabx.isolationProbes")}
-              infoKey="crossTenant"
+              infoKey="isolationProbes"
               value={`${crossTenant.data?.n_turns ?? 0}`}
               tone={MUTED}
             />
             <Kpi
               icon={ShieldAlert}
               label={ts("tabx.isolationLeaks")}
-              infoKey="crossTenant"
+              infoKey="isolationLeaks"
               value={`${crossTenant.data?.n_leaks ?? 0}`}
               tone={(crossTenant.data?.n_leaks ?? 0) > 0 ? BAD : GOOD}
             />
           </>,
         )}
-        <Zone label={ts("sec.controls")}>
+        <Zone
+          label={ts("sec.controls")}
+          info={<SecInfo k="zoneControls" title={ts("sec.controls")} />}
+        >
           {controlsTable(controls.filter((c) => c.key === "crossTenant"))}
         </Zone>
-        <Zone label={ts("sec.diagnostic")}>
+        <Zone
+          label={ts("sec.diagnostic")}
+          info={<SecInfo k="zoneDiagnostic" title={ts("sec.diagnostic")} />}
+        >
           <div className="grid gap-2 lg:grid-cols-2">
-            <Panel title={ts("tabx.isolationTitle")}>
+            <Panel
+              title={ts("tabx.isolationTitle")}
+              info={<SecInfo k="isolationFacts" title={ts("tabx.isolationTitle")} />}
+            >
               <ul className="flex flex-col gap-1.5 text-[0.72rem] text-[var(--muted-foreground)]">
                 <li>{ts("tabx.isolationFactEnv")}</li>
                 <li>{ts("tabx.isolationFactSchema")}</li>
@@ -1174,7 +1255,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             <Kpi
               icon={Siren}
               label={ts("tabx.probes")}
-              infoKey="attackRate"
+              infoKey="probes"
               value={`${fw?.n_positive ?? 0}`}
               tone={MUTED}
             />
@@ -1192,6 +1273,8 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               value={pct(attackRate)}
               tone={attackRate != null && attackRate > 0.2 ? BAD : WARN}
               series={fwSpark}
+              href="/surveiller/qualite-ia"
+              drillLabel={ts("tabx.attackSuccess")}
             />
             <Kpi
               icon={ShieldCheck}
@@ -1202,9 +1285,15 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             />
           </>,
         )}
-        <Zone label={ts("sec.diagnostic")}>
+        <Zone
+          label={ts("sec.diagnostic")}
+          info={<SecInfo k="zoneDiagnostic" title={ts("sec.diagnostic")} />}
+        >
           <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
-            <Panel title={ts("panel.failures")}>
+            <Panel
+              title={ts("panel.failures")}
+              info={<SecInfo k="failures" title={ts("panel.failures")} />}
+            >
               {failureSlices.length === 0 ? (
                 <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
                   {ts("panel.noFailures")}
@@ -1213,7 +1302,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                 <FailureDonut slices={failureSlices} label={ts("panel.failuresUnit")} />
               )}
             </Panel>
-            <Panel title={ts("panel.regression")}>
+            <Panel
+              title={ts("panel.regression")}
+              info={<SecInfo k="regression" title={ts("panel.regression")} />}
+            >
               <div className="flex items-center gap-3">
                 <Gauge
                   value={regression.data?.risk_score ?? 0}
@@ -1303,7 +1395,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
         <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-w-0 flex-col gap-2">
             {/* A. État actuel */}
-            <Zone label={ts("sec.actual")}>
+            <Zone
+              label={ts("sec.actual")}
+              info={<SecInfo k="zoneActual" title={ts("sec.actual")} />}
+            >
               <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
                 <Kpi
                   icon={ShieldAlert}
@@ -1364,12 +1459,23 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             </Zone>
 
             {/* B. Contrôles critiques */}
-            <Zone label={ts("sec.controls")}>{controlsTable(controls)}</Zone>
+            <Zone
+              label={ts("sec.controls")}
+              info={<SecInfo k="zoneControls" title={ts("sec.controls")} />}
+            >
+              {controlsTable(controls)}
+            </Zone>
 
             {/* C. Diagnostic racine */}
-            <Zone label={ts("sec.diagnostic")}>
+            <Zone
+              label={ts("sec.diagnostic")}
+              info={<SecInfo k="zoneDiagnostic" title={ts("sec.diagnostic")} />}
+            >
               <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
-                <Panel title={ts("panel.failures")}>
+                <Panel
+                  title={ts("panel.failures")}
+                  info={<SecInfo k="failures" title={ts("panel.failures")} />}
+                >
                   {failureSlices.length === 0 ? (
                     <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
                       {ts("panel.noFailures")}
@@ -1378,7 +1484,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     <FailureDonut slices={failureSlices} label={ts("panel.failuresUnit")} />
                   )}
                 </Panel>
-                <Panel title={ts("panel.whatChanged")}>
+                <Panel
+                  title={ts("panel.whatChanged")}
+                  info={<SecInfo k="whatChanged" title={ts("panel.whatChanged")} />}
+                >
                   <ul className="flex flex-col gap-1.5 text-[0.72rem]">
                     {(whatChanged.data?.changes ?? []).length === 0 ? (
                       <li className="text-[var(--muted-foreground)]">{ts("panel.noChanges")}</li>
@@ -1394,7 +1503,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     )}
                   </ul>
                 </Panel>
-                <Panel title={ts("panel.refusal")}>
+                <Panel
+                  title={ts("panel.refusal")}
+                  info={<SecInfo k="refusal" title={ts("panel.refusal")} />}
+                >
                   <div className="flex items-center gap-2">
                     <Gauge
                       value={refusal.data?.over_refusal_rate ?? 0}
@@ -1415,7 +1527,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     </div>
                   </div>
                 </Panel>
-                <Panel title={ts("panel.priorityCases")}>
+                <Panel
+                  title={ts("panel.priorityCases")}
+                  info={<SecInfo k="priorityCases" title={ts("panel.priorityCases")} />}
+                >
                   <ul className="flex flex-col gap-1 text-[0.72rem]">
                     {(failed.data?.cases ?? []).slice(0, 4).map((c) => (
                       <li key={c.case_id} className="flex items-center gap-1.5">
@@ -1434,9 +1549,15 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             </Zone>
 
             {/* D. Signaux prédictifs */}
-            <Zone label={ts("sec.predictive")}>
+            <Zone
+              label={ts("sec.predictive")}
+              info={<SecInfo k="zonePredictive" title={ts("sec.predictive")} />}
+            >
               <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
-                <Panel title={ts("panel.trend")}>
+                <Panel
+                  title={ts("panel.trend")}
+                  info={<SecInfo k="trend" title={ts("panel.trend")} />}
+                >
                   <LineChart
                     a={attackSeries}
                     b={incidentSeries}
@@ -1444,7 +1565,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     bLabel={ts("panel.incidentLine")}
                   />
                 </Panel>
-                <Panel title={ts("panel.regression")}>
+                <Panel
+                  title={ts("panel.regression")}
+                  info={<SecInfo k="regression" title={ts("panel.regression")} />}
+                >
                   <div className="flex items-center gap-3">
                     <Gauge
                       value={regression.data?.risk_score ?? 0}
@@ -1462,14 +1586,20 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     </div>
                   </div>
                 </Panel>
-                <Panel title={ts("panel.domainRisk")}>
+                <Panel
+                  title={ts("panel.domainRisk")}
+                  info={<SecInfo k="domainRisk" title={ts("panel.domainRisk")} />}
+                >
                   <div className="flex flex-col gap-1.5">
                     {domainRisks.map((d) => (
                       <RiskBar key={d.key} label={ts(`domain.${d.key}`)} value={d.value} />
                     ))}
                   </div>
                 </Panel>
-                <Panel title={ts("panel.overPriv")}>
+                <Panel
+                  title={ts("panel.overPriv")}
+                  info={<SecInfo k="overPriv" title={ts("panel.overPriv")} />}
+                >
                   <ul className="flex flex-col gap-1 text-[0.72rem]">
                     {(lp.data?.usage ?? []).slice(0, 5).map((u) => {
                       const over = lp.data?.over_provisioned.includes(u.tool);
@@ -1488,9 +1618,15 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             </Zone>
 
             {/* E. Privacy / Mémoire / SOC */}
-            <Zone label={ts("sec.privacy")}>
+            <Zone
+              label={ts("sec.privacy")}
+              info={<SecInfo k="zonePrivacy" title={ts("sec.privacy")} />}
+            >
               <div className="grid gap-2 lg:grid-cols-3">
-                <Panel title={ts("panel.redteam")}>
+                <Panel
+                  title={ts("panel.redteam")}
+                  info={<SecInfo k="redteam" title={ts("panel.redteam")} />}
+                >
                   <div className="flex flex-col gap-1.5 text-[0.72rem]">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xl font-semibold tabular-nums">{blocked}</span>
@@ -1509,7 +1645,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
                   </div>
                 </Panel>
-                <Panel title={ts("panel.erasureSurface")}>
+                <Panel
+                  title={ts("panel.erasureSurface")}
+                  info={<SecInfo k="erasureSurface" title={ts("panel.erasureSurface")} />}
+                >
                   <div className="flex items-center gap-3">
                     <Gauge
                       value={erasureComplete ?? 0}
@@ -1534,7 +1673,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     <Link href="/configurer/sources-memoire">{ts("panel.purgeCta")}</Link>
                   </Button>
                 </Panel>
-                <Panel title={ts("panel.inversion")}>
+                <Panel
+                  title={ts("panel.inversion")}
+                  info={<SecInfo k="inversion" title={ts("panel.inversion")} />}
+                >
                   {inversion.data?.available === false || inversion.isLoading ? (
                     <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
                       {ts("panel.computing")}
@@ -1558,7 +1700,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             </Zone>
 
             {/* F. Actions recommandées */}
-            <Zone label={ts("sec.actions")}>
+            <Zone
+              label={ts("sec.actions")}
+              info={<SecInfo k="zoneActions" title={ts("sec.actions")} />}
+            >
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <ActionCard
                   icon={Siren}
@@ -1669,7 +1814,12 @@ function SecurityRail({
       <div className="flex flex-col gap-2 xl:sticky xl:top-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{ts("rail.incidents")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {ts("rail.incidents")}
+              <span className="ml-auto shrink-0">
+                <SecInfo k="railIncidents" title={ts("rail.incidents")} />
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {incidents.length === 0 ? (
@@ -1702,7 +1852,12 @@ function SecurityRail({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{ts("rail.privacyEvidence")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {ts("rail.privacyEvidence")}
+              <span className="ml-auto shrink-0">
+                <SecInfo k="railGates" title={ts("rail.privacyEvidence")} />
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {gates.map((g) => (
@@ -1749,7 +1904,12 @@ function SecurityRail({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{ts("rail.tools")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {ts("rail.tools")}
+              <span className="ml-auto shrink-0">
+                <SecInfo k="railTools" title={ts("rail.tools")} />
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <table className="w-full text-[0.7rem]">
@@ -1780,7 +1940,12 @@ function SecurityRail({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{ts("rail.siem")}</CardTitle>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              {ts("rail.siem")}
+              <span className="ml-auto shrink-0">
+                <SecInfo k="railSiem" title={ts("rail.siem")} />
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
             {incidents.slice(0, 3).map((c) => (

@@ -2474,6 +2474,196 @@
         "what": "The guard's overall efficacy: its F1 (precision/recall balance) against attacks.",
         "how": "F1 = harmonic mean of precision/recall; recall = detected ÷ actual attacks.",
         "source": "Firewall probe (fixed adversarial corpus)."
+      },
+      "probes": {
+        "what": "The number of adversarial probes (injections) run against the guard.",
+        "how": "Count of positive (attack) cases in the fixed adversarial corpus (n_positive).",
+        "source": "Firewall efficacy probe."
+      },
+      "escaped": {
+        "what": "The number of attacks that slipped past the guard undetected.",
+        "how": "False negatives: attacks the firewall failed to block (false_negative).",
+        "source": "Firewall efficacy probe."
+      },
+      "piiTurns": {
+        "what": "Turns whose response contained personal data, out of all evaluated.",
+        "how": "n_with_leak / n_turns over analysed turns.",
+        "source": "PII analysis of responses."
+      },
+      "toxicity": {
+        "what": "The share of responses flagged as toxic.",
+        "how": "n_toxic / evaluated responses. Target < 0.1%.",
+        "source": "Toxicity analysis of responses."
+      },
+      "recall": {
+        "what": "The share of real attacks the guard detects.",
+        "how": "TP / (TP + FN) = detected attacks / real attacks.",
+        "source": "Firewall efficacy probe."
+      },
+      "precision": {
+        "what": "The share of blocks that hit real attacks (few false positives).",
+        "how": "TP / (TP + FP) = correct blocks / all blocks.",
+        "source": "Firewall efficacy probe."
+      },
+      "conformance": {
+        "what": "The share of responses that conform to policy.",
+        "how": "Conformant responses / evaluated responses.",
+        "source": "Conformance evaluation (see Compliance)."
+      },
+      "overProvCount": {
+        "what": "The number of granted tools never used (excess privilege).",
+        "how": "Count of granted tools with zero use (n_over_provisioned).",
+        "source": "Least-privilege analysis (granted vs used)."
+      },
+      "overProvRate": {
+        "what": "The share of granted tools that are excess.",
+        "how": "n_over_provisioned / n_granted.",
+        "source": "Least-privilege analysis."
+      },
+      "toolMisuse": {
+        "what": "The exposure from over-privilege on the agent's granted tools.",
+        "how": "Over-provisioned / granted tools; high = superfluous permissions.",
+        "source": "Least-privilege analysis + tool policy."
+      },
+      "conversations": {
+        "what": "The number of conversations covered by the erasure/evidence surface.",
+        "how": "Distinct transcript conversations that have an evidence bundle.",
+        "source": "Erasure coverage / transcript."
+      },
+      "erasure": {
+        "what": "The share of conversations with a complete erasure/evidence bundle.",
+        "how": "n_bundles / n_conversations.",
+        "source": "Erasure coverage (right to erasure)."
+      },
+      "inversion": {
+        "what": "Memories whose source text can be reconstructed from the embedding (inversion).",
+        "how": "n_recoverable / n_memories above the similarity threshold.",
+        "source": "Embedding-inversion probe."
+      },
+      "isolationProbes": {
+        "what": "The number of cross-tenant isolation checks run.",
+        "how": "Count of turns tested for cross-tenant leakage.",
+        "source": "Cross-tenant isolation probe."
+      },
+      "isolationLeaks": {
+        "what": "The number of turns that leaked another tenant's data.",
+        "how": "Count of turns where isolation failed.",
+        "source": "Cross-tenant isolation probe."
+      },
+      "domainCases": {
+        "what": "The non-regression harness cases failing for this domain.",
+        "how": "Cases where the agent fails, filtered by domain category.",
+        "source": "Failure harness (eval/failures)."
+      },
+      "redteam": {
+        "what": "Blocked injections vs bypasses from the adversarial campaign.",
+        "how": "True positives blocked / total, with the bypasses (false negatives).",
+        "source": "Firewall efficacy probe."
+      },
+      "erasureSurface": {
+        "what": "The coverage of right-to-erasure evidence.",
+        "how": "Bundles/conversations gauge + counts (conversations, bundles, scores).",
+        "source": "Erasure coverage."
+      },
+      "trend": {
+        "what": "The 30-day risk trend from the durable scores.",
+        "how": "1 - faithfulness mean (attacks) and 1 - grounding mean (incidents) per bucket.",
+        "source": "Durable score series."
+      },
+      "refusal": {
+        "what": "The balance between over- and under-refusal of the guard.",
+        "how": "Over-refusal rate (legit refused) and under-refusal (forbidden allowed).",
+        "source": "Refusal evaluation."
+      },
+      "whatChanged": {
+        "what": "Recent configuration/policy changes.",
+        "how": "Fields whose before/after value differs.",
+        "source": "State diff (what-changed)."
+      },
+      "overPriv": {
+        "what": "The per-tool granted-vs-used detail, flagging the excess.",
+        "how": "Tools in the granted set with low or no use.",
+        "source": "Least-privilege analysis."
+      },
+      "isolationFacts": {
+        "what": "How tenant isolation is enforced (a fact, not a metric).",
+        "how": "Separation by environment, schema and session state.",
+        "source": "System profile / deployment."
+      },
+      "failures": {
+        "what": "Observed failures grouped by family.",
+        "how": "Count per family: injection, tool misuse, inversion, refusal, PII, toxicity.",
+        "source": "Live security signals."
+      },
+      "regression": {
+        "what": "The probability that the guard regresses.",
+        "how": "Risk score + 7-day probability + level.",
+        "source": "Regression-risk model."
+      },
+      "domainRisk": {
+        "what": "The normalized risk per security domain.",
+        "how": "Max of the domain's real rates (injection, privacy, tools, memory, compliance).",
+        "source": "Live security signals."
+      },
+      "priorityCases": {
+        "what": "The most severe failed cases to handle first.",
+        "how": "First harness cases sorted by severity.",
+        "source": "Failure harness (eval/failures)."
+      },
+      "zoneActual": {
+        "what": "The live snapshot of the security posture.",
+        "how": "Current values of each headline security signal.",
+        "source": "Live security probes and scores."
+      },
+      "zoneControls": {
+        "what": "The load-bearing security controls, with their target threshold.",
+        "how": "Each control's live value vs its target + owner + case.",
+        "source": "Security signals + guard policy."
+      },
+      "zoneDiagnostic": {
+        "what": "The root-cause diagnostics behind the posture.",
+        "how": "Failure distribution, refusal calibration, recent changes, priority cases.",
+        "source": "Eval and guard signals."
+      },
+      "zonePredictive": {
+        "what": "The forward-looking risk indicators.",
+        "how": "Risk trend, regression probability, per-domain risk, over-privilege.",
+        "source": "Score series + regression model."
+      },
+      "zonePrivacy": {
+        "what": "The privacy and memory-governance surface.",
+        "how": "Red-team blocks, erasure completeness, memory inversion.",
+        "source": "Firewall/erasure/inversion probes."
+      },
+      "zoneActions": {
+        "what": "The governed remediations for the current posture.",
+        "how": "Each card leads to a dual-control action (freeze, playbook, purge).",
+        "source": "Derived from the open controls."
+      },
+      "railIncidents": {
+        "what": "The most severe open security cases.",
+        "how": "Top failed harness cases, sorted by severity.",
+        "source": "Failure harness (eval/failures)."
+      },
+      "railGates": {
+        "what": "The privacy/security gate status.",
+        "how": "PASS/WATCH/FAIL from the precision and conformance thresholds.",
+        "source": "Firewall + conformance."
+      },
+      "railTools": {
+        "what": "Per-tool usage and risk.",
+        "how": "Used count + over-provisioned flag.",
+        "source": "Least-privilege analysis."
+      },
+      "railSiem": {
+        "what": "The exportable security events.",
+        "how": "Real case ids + severities (+ anomaly count).",
+        "source": "Failure harness + anomaly detector."
+      },
+      "crossTenant": {
+        "what": "The share of turns that leaked another tenant's data.",
+        "how": "n_leaks / n_turns of the cross-tenant isolation test. Target 0%.",
+        "source": "Cross-tenant isolation probe."
       }
     },
     "col": {
