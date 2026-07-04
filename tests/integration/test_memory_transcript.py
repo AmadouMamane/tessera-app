@@ -96,6 +96,37 @@ class TestTranscriptRoundTrip:
     async def test_unknown_conversation_is_empty(self) -> None:
         assert await load_transcript(uuid.uuid4()) == []
 
+    async def test_missed_pan_seam_is_masked_at_persistence(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # Defence-in-depth backstop (pii-input-redaction §4.2): a Luhn-valid
+        # PAN reaching the durable transcript unmasked is stored masked and the
+        # missed seam is logged — fail-safe, the write proceeds.
+        conv = uuid.uuid4()
+        await append_messages(
+            conv,
+            uuid.uuid4(),
+            [
+                ConversationMessage(role="user", content="ma carte 4242 4242 4242 4242 svp"),
+                ConversationMessage(role="assistant", content="Je m'en occupe."),
+            ],
+        )
+        loaded = await load_transcript(conv)
+        assert loaded[0].content == "ma carte XXXX XXXX XXXX 4242 svp"
+        assert loaded[1].content == "Je m'en occupe."
+        assert "missed seam" in capsys.readouterr().err
+
+    async def test_luhn_invalid_run_persists_verbatim(self) -> None:
+        # The declared residual (§4.4): a card-shaped typo is NOT rewritten.
+        conv = uuid.uuid4()
+        await append_messages(
+            conv,
+            uuid.uuid4(),
+            [ConversationMessage(role="user", content="carte 4970 1012 3456 7890 ?")],
+        )
+        loaded = await load_transcript(conv)
+        assert loaded[0].content == "carte 4970 1012 3456 7890 ?"
+
 
 @pytest.mark.usefixtures("_schema")
 class TestListConversations:

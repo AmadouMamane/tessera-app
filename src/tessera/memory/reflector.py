@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from tessera.guard.redaction import mask_pan
 from tessera.memory import governance
 from tessera.memory.entities import extract_entities
 from tessera.memory.persistent import upsert_memory
@@ -44,7 +45,10 @@ async def _extract_facts(turn: TurnRecord) -> list[str]:
 
     prompts = load_prompts(turn.language)
     instruction = prompts.get("memory_extract", _DEFAULT_EXTRACT_INSTRUCTION)
-    exchange = f"Customer: {turn.user_input}\nAgent: {turn.final_response}"
+    # Input-leg PAN mask (pii-input-redaction, cold-path model call): the
+    # fact-extraction model never sees a clear card number; governance still
+    # screens/minimises every resulting candidate downstream.
+    exchange = mask_pan(f"Customer: {turn.user_input}\nAgent: {turn.final_response}").text
     response = await get_summary_backend().chat(
         [
             ChatMessage(role="system", content=instruction),

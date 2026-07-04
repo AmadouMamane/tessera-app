@@ -19,6 +19,7 @@ import json
 import re
 from typing import TYPE_CHECKING, Final
 
+from tessera.guard.redaction import mask_pan
 from tessera.memory.protocol import EntityLedger
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ __all__ = [
     "extract_from_messages",
     "ledger_from_json",
     "ledger_to_json",
+    "mask_ledger_pans",
 ]
 
 
@@ -120,6 +122,32 @@ def extract_from_messages(messages: Sequence[ConversationMessage]) -> EntityLedg
     for message in messages:
         ledger = ledger.merge(extract_entities(message.content))
     return ledger
+
+
+def mask_ledger_pans(ledger: EntityLedger) -> EntityLedger:
+    """Return ``ledger`` with every Luhn-valid PAN value stored masked.
+
+    The designed entity seam of the input-side PAN redaction
+    (docs/design/pii-input-redaction.md, Option A seam 3): extraction runs on
+    the raw text for detection fidelity, but a card number captured as an
+    account/ticket reference (or grazed by any other field's pattern) is
+    persisted in the output leg's masked form. IBANs pass through untouched —
+    the Luhn gate and IBAN-context exclusion live in
+    :func:`tessera.guard.redaction.mask_pan`, the single input-leg primitive.
+    """
+
+    def _mask_all(values: tuple[str, ...]) -> tuple[str, ...]:
+        return tuple(mask_pan(value).text for value in values)
+
+    masked = EntityLedger(
+        amounts=_mask_all(ledger.amounts),
+        account_refs=_mask_all(ledger.account_refs),
+        dates=_mask_all(ledger.dates),
+        ticket_refs=_mask_all(ledger.ticket_refs),
+        products=_mask_all(ledger.products),
+        citations=_mask_all(ledger.citations),
+    )
+    return ledger if masked == ledger else masked
 
 
 def ledger_to_json(ledger: EntityLedger) -> str:

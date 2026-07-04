@@ -1,0 +1,20 @@
+{
+  "source": "scripts/calibrate_pan_mask.py — real-transcript replay",
+  "generated_at": "2026-07-04T08:22:36+00:00",
+  "rows_scanned": 3260,
+  "user_rows": 1630,
+  "masked": [
+    {
+      "span": "4539 1488 0343 6467",
+      "masked_as": "XXXX XXXX XXXX 6467",
+      "excerpt": "Bonjour, peux-tu me confirmer ma carte 4539 1488 0343 6467 en entier ?"
+    }
+  ],
+  "unmasked": [
+    {
+      "run": "1782768199125",
+      "reason": "luhn_fail",
+      "excerpt": "RESUME-PROBE-1782768199125 puis-je ouvrir un livret A ?"
+    }
+  ]
+}

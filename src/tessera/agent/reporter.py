@@ -21,7 +21,7 @@ import yaml
 
 from tessera.agent.state import AgentState, Citation, ConversationMessage
 from tessera.guard import grounding
-from tessera.guard.redaction import apply_output_guard
+from tessera.guard.redaction import apply_output_guard, mask_pan
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.memory import get_memory_backend, scope_for
 from tessera.settings import LanguageCode
@@ -150,21 +150,37 @@ async def _build_chat_messages(
     msgs.extend(ChatMessage(role=m.role, content=m.content) for m in context.recent_verbatim)
     msgs.append(ChatMessage(role="user", content=current_user_content))
 
+    # Input-leg PAN mask (docs/design/pii-input-redaction.md, Option A seam 1):
+    # every part leaving the turn state toward the model — current user content,
+    # window verbatim, summary, entity rendering, long-term items — is swept in
+    # one place, which also cleans the Debug capture below. Guards and entity
+    # extraction already ran upstream on the raw state. The sandbox "pii"
+    # override keeps the console playground's raw-prompt probing intact.
+    pii_off = "pii" in (state.get("guard_overrides") or ())
+
+    def _shield(text: str) -> str:
+        return text if pii_off else mask_pan(text).text
+
+    msgs = [ChatMessage(role=m.role, content=_shield(m.content), name=m.name) for m in msgs]
+
     # Capture the exact assembled prompt and the injected memory context for the
     # console Debug surface (real data only — this is what the LLM actually sees).
     state["debug_prompt_messages"] = [{"role": m.role, "content": m.content} for m in msgs]
     ledger = context.entities
     state["debug_memory"] = {
-        "summary": context.summary,
+        "summary": _shield(context.summary) if context.summary else context.summary,
         "entities": [
-            *ledger.amounts,
-            *ledger.account_refs,
-            *ledger.dates,
-            *ledger.ticket_refs,
-            *ledger.products,
-            *ledger.citations,
+            _shield(item)
+            for item in (
+                *ledger.amounts,
+                *ledger.account_refs,
+                *ledger.dates,
+                *ledger.ticket_refs,
+                *ledger.products,
+                *ledger.citations,
+            )
         ],
-        "long_term": [item.text for item in context.long_term],
+        "long_term": [_shield(item.text) for item in context.long_term],
         "recent_verbatim": len(context.recent_verbatim),
         "backend": type(backend).__name__,
     }

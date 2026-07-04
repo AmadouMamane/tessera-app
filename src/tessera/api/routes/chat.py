@@ -50,6 +50,7 @@ from tessera.guard.redaction import (
     apply_output_guard,
     contains_pii,
     emit_output_redaction,
+    mask_pan,
     redact_text,
     redaction_notice,
 )
@@ -876,7 +877,15 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # Persist this turn to the durable transcript (ADR 0007, Mechanism A). A
     # transcript failure must never break the user's response, so it degrades
     # to a logged warning.
-    user_msg = ConversationMessage(role="user", content=request.message)
+    # Input-leg PAN mask (docs/design/pii-input-redaction.md, Option A seam 2):
+    # the durable transcript — and the context window it feeds on later turns —
+    # stores the masked form. The TurnRecord below keeps the raw text so entity
+    # extraction retains detection fidelity; the memory layer masks at its own
+    # exits (model calls + durable writes). The sandbox "pii" override skips
+    # the seam; the persistence backstops stay unconditional.
+    persisted_user_text = request.message if pii_guard_off else mask_pan(request.message).text
+    user_msg = ConversationMessage(role="user", content=persisted_user_text)
+    raw_user_msg = ConversationMessage(role="user", content=request.message)
     assistant_msg = ConversationMessage(role="assistant", content=final_response)
     try:
         await append_messages(
@@ -897,7 +906,7 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
             turn=TurnRecord(
                 user_input=request.message,
                 final_response=final_response,
-                messages=[*(prior_messages or []), user_msg, assistant_msg],
+                messages=[*(prior_messages or []), raw_user_msg, assistant_msg],
                 language=resolved_language,
             ),
         )
@@ -910,9 +919,11 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     if docs_for_eval and final_response:
         context_text = "\n\n".join(getattr(doc, "text", "") for doc in docs_for_eval)
         effective_model = request.model or get_settings().ollama.chat_model
+        # Sink 6 of the design note: the judge and the durable replay bundle
+        # receive the masked question — faithful to what the model itself saw.
         _spawn_background(
             _run_online_eval(
-                question=request.message,
+                question=persisted_user_text,
                 answer=final_response,
                 context=context_text,
                 language=resolved_language,
