@@ -711,6 +711,16 @@ export type NonConformity = z.infer<typeof NonConformitySchema>;
 
 // --- Conformite command-bar tabs (generic catalogue shape) ---------------
 
+// Plain-language "what does this number mean?" text rendered as the ⓘ popover
+// next to a KPI / panel / table title; populated grounded + localized by the
+// backend (compliance_tabs.py). Optional so untouched tabs keep working.
+export const TabExplainSchema = z.object({
+  what: z.string(),
+  how: z.string().nullable().optional(),
+  source: z.string().nullable().optional(),
+});
+export type TabExplain = z.infer<typeof TabExplainSchema>;
+
 export const TabKpiSchema = z.object({
   label: z.string(),
   value: z.string(),
@@ -719,6 +729,7 @@ export const TabKpiSchema = z.object({
   delta: z.string().nullable().optional(),
   delta_good: z.boolean().nullable().optional(),
   tone: z.string().nullable().optional(),
+  explain: TabExplainSchema.nullable().optional(),
 });
 export type TabKpi = z.infer<typeof TabKpiSchema>;
 
@@ -756,6 +767,7 @@ export const TabDetailSchema = z.object({
   fields: z.array(DetailFieldSchema),
   lists: z.array(DetailListSchema),
   actions: z.array(z.string()),
+  explain: TabExplainSchema.nullable().optional(),
 });
 export type TabDetail = z.infer<typeof TabDetailSchema>;
 
@@ -778,11 +790,13 @@ export const TabSectionSchema = z.object({
   bars: z.array(z.record(z.string(), z.unknown())),
   series: z.array(z.record(z.string(), z.unknown())),
   actions: z.array(z.string()),
+  explain: TabExplainSchema.nullable().optional(),
 });
 export type TabSection = z.infer<typeof TabSectionSchema>;
 
 export const CatalogTabSchema = z.object({
   table_title: z.string(),
+  table_explain: TabExplainSchema.nullable().optional(),
   kpis: z.array(TabKpiSchema),
   columns: z.array(TabColumnSchema),
   rows: z.array(TabRowSchema),

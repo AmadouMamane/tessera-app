@@ -22,6 +22,7 @@ __all__ = [
     "SectionItem",
     "TabColumn",
     "TabDetail",
+    "TabExplain",
     "TabKpi",
     "TabRow",
     "TabSection",
@@ -30,6 +31,21 @@ __all__ = [
     "delta",
     "owner",
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class TabExplain:
+    """Plain-language "what does this number mean?" text for a KPI / panel.
+
+    Rendered as the info popover next to a metric or section title: ``what`` it
+    is, ``how`` it is computed, and the ``source`` it comes from. Authored in
+    French (ASCII) like the rest of the catalogue and localized through the
+    module ``_TR`` map, so DE / EN come for free.
+    """
+
+    what: str
+    how: str | None = None
+    source: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +59,7 @@ class TabKpi:
     delta: str | None = None  # pre-formatted, ASCII signs, e.g. "+8.2%"
     delta_good: bool | None = None  # True -> green, False -> red
     tone: str | None = None  # good | warn | bad | neutral
+    explain: TabExplain | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +109,7 @@ class TabDetail:
     fields: list[DetailField] = field(default_factory=list)
     lists: list[DetailList] = field(default_factory=list)
     actions: list[str] = field(default_factory=list)
+    explain: TabExplain | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +136,7 @@ class TabSection:
     bars: list[dict[str, object]] = field(default_factory=list)  # {label,value,tone?}
     series: list[dict[str, object]] = field(default_factory=list)  # {label,color,points}
     actions: list[str] = field(default_factory=list)
+    explain: TabExplain | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +149,7 @@ class CatalogTab:
     rows: list[TabRow] = field(default_factory=list)
     detail: TabDetail | None = None
     sections: list[TabSection] = field(default_factory=list)
+    table_explain: TabExplain | None = None
 
 
 # --- cell builders --------------------------------------------------------
