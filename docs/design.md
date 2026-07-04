@@ -20,9 +20,9 @@ agents, each verifiable independently:
    dependency; when it is importable the adapter delegates decision logic to
    it, otherwise it falls back to the local policy engine in
    `src/tessera/guard/decisions.py`. The interface is identical either way.
-2. **Offline regression harness** — a catalogue of forty publicly documented
+2. **Offline regression harness** — a catalogue of 63 publicly documented
    agent failures lives under `eval/failures/` and is replayed against the live
-   graph on every push. See `docs/eval.md`.
+   graph nightly in CI and per agent on demand. See `docs/eval.md`.
 3. **Structured audit trail** — every guard decision emits a typed,
    JSON-serialisable record to a configurable sink. See "Audit trail design"
    below and `docs/compliance.md`.
