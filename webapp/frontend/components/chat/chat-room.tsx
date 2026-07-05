@@ -535,7 +535,7 @@ function EmptyWithSuggestions({
           {(["RGPD", "DORA", "BaFin", "CNIL"] as const).map((label) => (
             <span
               key={label}
-              className="inline-flex items-center gap-1.5 rounded-full border border-rose-100 bg-rose-50/50 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-rose-700"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--muted)]/30 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-[var(--muted-foreground)]"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-green-500/80" />
               {label}
@@ -547,11 +547,11 @@ function EmptyWithSuggestions({
       {/* Suggested prompts — decorative divider + stagger animation */}
       <div className="w-full space-y-3">
         <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-rose-100" />
+          <div className="h-px flex-1 bg-[var(--border)]" />
           <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
             {suggestionsLabel}
           </p>
-          <div className="h-px flex-1 bg-rose-100" />
+          <div className="h-px flex-1 bg-[var(--border)]" />
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {suggestions.map(({ text, Icon }, idx) => (
