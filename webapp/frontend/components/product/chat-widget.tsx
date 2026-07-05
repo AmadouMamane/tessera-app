@@ -39,8 +39,6 @@ interface ChatWidgetProps {
  * Desktop: ~400px × min(620px, 80vh) anchored bottom-right above the FAB.
  * Mobile: full-screen on open. Esc or the FAB/close button collapses it.
  */
-export const CHAT_WIDGET_STATE_EVENT = "tessera-chat-widget-state";
-
 export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
   const t = useTranslations("product.apercu.widget");
   const [open, setOpen] = useState(!hideLauncher);
@@ -48,13 +46,6 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
   const [externalPrompt, setExternalPrompt] = useState<ExternalChatPrompt | null>(null);
   const conversationId = useChatStore((s) => s.conversationId);
   const restoredRef = useRef(false);
-
-  // Sync state with other components
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent(CHAT_WIDGET_STATE_EVENT, { detail: { open } })
-    );
-  }, [open]);
 
   // Resume the customer's last conversation on load — so turns made from
   // /produit "remontent" after a refresh / return visit instead of vanishing
@@ -148,7 +139,7 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
       if (!state.conversationId) {
         try {
           localStorage.removeItem(PRODUIT_CID_KEY);
-        } catch {}
+        } catch { }
       }
     });
   }, []);
@@ -189,7 +180,7 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
               <span className="truncate text-sm font-semibold">{t("title")}</span>
               <span className="truncate text-[0.68rem] text-white/55">{t("subtitle")}</span>
             </div>
-            
+
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
