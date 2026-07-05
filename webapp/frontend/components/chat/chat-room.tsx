@@ -368,7 +368,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
  aria-live="polite"
  aria-label={t("title")}
  className="relative flex flex-1 flex-col overflow-y-auto [overflow-anchor:none] bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,rgba(244,63,94,0.03),transparent)] px-4 py-6 sm:px-8 text-[var(--foreground)]"
- style={{ '--foreground': '#0f172a', '--muted-foreground': '#475569' } as React.CSSProperties}
+ style={{ '--foreground': '#f8fafc', '--muted-foreground': '#cbd5e1' } as React.CSSProperties}
  >
  {/* fix 2: "Nouvelle conversation" as absolute overlay, only when there are messages */}
  {messages.length > 0 && (
@@ -521,7 +521,7 @@ function EmptyWithSuggestions({
  {/* Icon — glow ring + mount animation */}
  <div
  className={cn(
- "animate-in zoom-in-90 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-900 text-gold-400 shadow-[0_0_28px_-4px_oklch(0.8_0.066_85/0.3)] ring-1 ring-gold-500/20 duration-500 )] ",
+ "animate-in zoom-in-90 flex h-16 w-16 items-center justify-center rounded-2xl backdrop-blur-md bg-white/5 text-gold-400 shadow-[0_0_30px_rgba(234,179,8,0.2)] ring-1 ring-gold-500/30 duration-500",
  iconClassName,
  )}
  >
@@ -535,7 +535,7 @@ function EmptyWithSuggestions({
  {(["RGPD", "DORA", "BaFin", "CNIL"] as const).map((label) => (
  <span
  key={label}
- className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--muted)]/30 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-[var(--muted-foreground)]"
+ className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-slate-300"
  >
  <span className="h-1.5 w-1.5 rounded-full bg-green-500/80" />
  {label}
@@ -560,16 +560,16 @@ function EmptyWithSuggestions({
  type="button"
  onClick={() => onSelect(text)}
  style={{ animationDelay: `${idx * 60}ms` }}
- className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-rose-100 bg-white backdrop-blur-md px-4 py-3 text-left text-sm text-black shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-rose-300/60 hover:bg-rose-50 hover:shadow-[0_8px_20px_-6px_rgba(244,63,94,0.15)]"
+ className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-white/10 bg-white/5 backdrop-blur-md px-4 py-3 text-left text-sm text-slate-200 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-500/30 hover:bg-white/10 hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.2)]"
  >
  {/* spotlight inner glow */}
- <span className="absolute inset-0 z-0 bg-gradient-to-br from-rose-200/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+ <span className="absolute inset-0 z-0 bg-gradient-to-br from-gold-500/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
  {/* sliding gold left border */}
- <span className="absolute left-0 top-0 z-10 h-full w-0.5 origin-top scale-y-0 bg-gradient-to-b from-rose-400 to-rose-600 transition-transform duration-300 group-hover:scale-y-100" />
+ <span className="absolute left-0 top-0 z-10 h-full w-0.5 origin-top scale-y-0 bg-gradient-to-b from-gold-400 to-gold-600 transition-transform duration-300 group-hover:scale-y-100" />
 
  {/* icon container */}
- <div className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-rose-200/50 backdrop-blur-sm transition-colors duration-300 group-hover:bg-rose-300/60">
- <Icon className="h-3.5 w-3.5 text-rose-600 transition-colors duration-300 group-hover:text-rose-700" />
+ <div className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gold-500/10 backdrop-blur-sm transition-colors duration-300 group-hover:bg-gold-500/20">
+ <Icon className="h-3.5 w-3.5 text-gold-400 transition-colors duration-300 group-hover:text-gold-300" />
  </div>
  <span className="relative z-10 leading-snug drop-shadow-sm">{text}</span>
  </button>
