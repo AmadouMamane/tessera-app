@@ -297,6 +297,7 @@ module = [
     "ollama.*",
     "openai.*",
     "mcp_firewall.*",
+    "langfuse.*",
     "promptfoo.*",
     "deepeval.*",
     "mem0.*",
