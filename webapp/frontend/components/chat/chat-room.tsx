@@ -367,7 +367,8 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
         role="log"
         aria-live="polite"
         aria-label={t("title")}
-        className="relative flex flex-1 flex-col overflow-y-auto [overflow-anchor:none] [mask-image:linear-gradient(180deg,transparent_0%,black_24px,black_calc(100%-24px),transparent_100%)] bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,oklch(1_0.004_240/0.05),transparent)] px-4 py-6 sm:px-8 dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,oklch(1_0.004_240/0.08),transparent)]"
+        className="relative flex flex-1 flex-col overflow-y-auto [overflow-anchor:none] [mask-image:linear-gradient(180deg,transparent_0%,black_24px,black_calc(100%-24px),transparent_100%)] bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,oklch(1_0.004_240/0.05),transparent)] px-4 py-6 sm:px-8 dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,oklch(1_0.004_240/0.08),transparent)] text-[var(--foreground)]"
+        style={{ '--foreground': '#0f172a', '--muted-foreground': '#475569' } as React.CSSProperties}
       >
         {/* fix 2: "Nouvelle conversation" as absolute overlay, only when there are messages */}
         {messages.length > 0 && (

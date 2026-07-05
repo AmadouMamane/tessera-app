@@ -165,7 +165,7 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
           role="dialog"
           aria-label={t("title")}
           className={cn(
-            "fixed inset-0 z-50 flex flex-col overflow-hidden border-[var(--border)] bg-[var(--card)] shadow-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out sm:inset-auto sm:bottom-24 sm:right-6 sm:rounded-2xl sm:border transition-[width,height]",
+            "fixed inset-0 z-50 flex flex-col overflow-hidden border-[var(--border)] bg-white dark:bg-zinc-950 shadow-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out sm:inset-auto sm:bottom-24 sm:right-6 sm:rounded-2xl sm:border transition-[width,height]",
             isExpanded
               ? "sm:h-[85vh] sm:w-[550px]"
               : "sm:h-[min(620px,80vh)] sm:w-[400px]"
