@@ -367,7 +367,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
         role="log"
         aria-live="polite"
         aria-label={t("title")}
-        className="relative flex flex-1 flex-col overflow-y-auto [overflow-anchor:none] [mask-image:linear-gradient(180deg,transparent_0%,black_24px,black_calc(100%-24px),transparent_100%)] bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,oklch(1_0.004_240/0.05),transparent)] px-4 py-6 sm:px-8 dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,oklch(1_0.004_240/0.08),transparent)] text-[var(--foreground)]"
+        className="relative flex flex-1 flex-col overflow-y-auto [overflow-anchor:none] [mask-image:linear-gradient(180deg,transparent_0%,black_24px,black_calc(100%-24px),transparent_100%)] bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,rgba(244,63,94,0.03),transparent)] px-4 py-6 sm:px-8 text-[var(--foreground)]"
         style={{ '--foreground': '#0f172a', '--muted-foreground': '#475569' } as React.CSSProperties}
       >
         {/* fix 2: "Nouvelle conversation" as absolute overlay, only when there are messages */}
@@ -398,7 +398,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
               }
               iconClassName={
                 isRecouvrement
-                  ? "h-16 w-16 rounded-2xl bg-gold-500/65 shadow-[0_0_28px_-14px_oklch(0.8_0.066_85/0.4)] ring-1 ring-gold-400/15 dark:bg-gold-500/65 dark:shadow-[0_0_28px_-14px_oklch(0.8_0.066_85/0.4)] dark:ring-gold-400/15"
+                  ? "h-16 w-16 rounded-2xl bg-rose-100 shadow-[0_0_28px_-14px_rgba(244,63,94,0.3)] ring-1 ring-rose-300/40"
                   : undefined
               }
               suggestionsLabel={t("startWith")}
@@ -521,7 +521,7 @@ function EmptyWithSuggestions({
       {/* Icon — glow ring + mount animation */}
       <div
         className={cn(
-          "animate-in zoom-in-90 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-900 text-gold-400 shadow-[0_0_28px_-4px_oklch(0.8_0.066_85/0.3)] ring-1 ring-gold-500/20 duration-500 dark:bg-gold-500 dark:text-navy-950 dark:shadow-[0_0_40px_-4px_oklch(0.8_0.066_85/0.55)] dark:ring-gold-400/30",
+          "animate-in zoom-in-90 flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 shadow-[0_0_28px_-4px_rgba(244,63,94,0.2)] ring-1 ring-rose-200 duration-500",
           iconClassName,
         )}
       >
@@ -535,7 +535,7 @@ function EmptyWithSuggestions({
           {(["RGPD", "DORA", "BaFin", "CNIL"] as const).map((label) => (
             <span
               key={label}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--muted)]/30 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-[var(--muted-foreground)]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-rose-100 bg-rose-50/50 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-rose-700"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-green-500/80" />
               {label}
@@ -547,11 +547,11 @@ function EmptyWithSuggestions({
       {/* Suggested prompts — decorative divider + stagger animation */}
       <div className="w-full space-y-3">
         <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-[var(--border)]" />
+          <div className="h-px flex-1 bg-rose-100" />
           <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
             {suggestionsLabel}
           </p>
-          <div className="h-px flex-1 bg-[var(--border)]" />
+          <div className="h-px flex-1 bg-rose-100" />
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {suggestions.map(({ text, Icon }, idx) => (

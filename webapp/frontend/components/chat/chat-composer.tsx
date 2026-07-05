@@ -80,7 +80,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
           }}
         >
           {/* Integrated pill — focus glow on the wrapper, not on the textarea */}
-          <div className="flex items-end gap-2 rounded-2xl border border-[var(--border)] bg-slate-100 px-4 py-2 transition-[border-color,box-shadow] duration-200 focus-within:border-blue-500/50 focus-within:shadow-[0_0_0_3px_oklch(0.55_0.2_263/0.15)] dark:focus-within:border-blue-400/40 dark:focus-within:shadow-[0_0_0_3px_oklch(0.55_0.2_263/0.18)] text-slate-900">
+          <div className="flex items-end gap-2 rounded-2xl border border-rose-100 bg-rose-50/30 px-4 py-2 transition-[border-color,box-shadow] duration-200 focus-within:border-rose-300/60 focus-within:shadow-[0_0_0_3px_rgba(244,63,94,0.15)] text-slate-900">
             <Textarea
               ref={textareaRef}
               value={value}
@@ -102,7 +102,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
                 size="icon"
                 onClick={onAbort}
                 aria-label={t("stop")}
-                className="mb-0.5 shrink-0 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                className="mb-0.5 shrink-0 text-slate-400 hover:text-rose-500"
               >
                 <StopCircle className="h-4 w-4" />
               </Button>
@@ -134,7 +134,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
         {/* AI Act Art. 50 disclosure — must always be visible to the user, so it
             is persistent (never toggled) and rendered from bundled i18n rather
             than a network call. Mirrors tessera.observability.disclosure. */}
-        <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[0.6rem] text-[var(--muted-foreground)]/70">
+        <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[0.6rem] text-slate-400">
           {disclosure ?? t("disclosure")}
         </p>
       </div>
