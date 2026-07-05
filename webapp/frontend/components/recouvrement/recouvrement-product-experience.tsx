@@ -28,12 +28,9 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useLocale } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CreditAuroreLogo } from "@/components/brand/credit-aurore-logo";
-import type { Locale } from "@/i18n/routing";
-import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
 
 const navigation = [
@@ -52,29 +49,136 @@ const reasons = [
   "Contact autorisé aujourd'hui de 8h à 20h",
 ];
 
+export type AssistantTask =
+  | "summary"
+  | "draft_reminder"
+  | "propose_schedule"
+  | "explain_payment_options"
+  | "check_rule"
+  | "explain_priority";
+
+export type AssistantIntent =
+  | "summarize_case"
+  | "draft_reminder"
+  | "propose_schedule"
+  | "explain_payment_options"
+  | "check_contact_rule"
+  | "explain_priority"
+  | "adjust_existing_proposal"
+  | "ask_for_validation"
+  | "small_clarification";
+
+export type AssistantAction =
+  | "PREPARE_CLIENT_MESSAGE_FROM_SCHEDULE"
+  | "COMPARE_SCHEDULE_OPTIONS"
+  | "ADJUST_SCHEDULE_DURATION"
+  | "SUBMIT_FOR_VALIDATION"
+  | "INSERT_ARTIFACT_IN_CASE"
+  | "COPY_ARTIFACT_TEXT"
+  | "PREPARE_CALL_SCRIPT"
+  | "REPORT_CONTACT"
+  | "CHECK_CONTACT_RULE"
+  | "DRAFT_REMINDER"
+  | "PROPOSE_SCHEDULE"
+  | "SUMMARIZE_CASE";
+
+export type AssistantArtifactType =
+  | "case_summary_v1"
+  | "reminder_draft_v1"
+  | "schedule_proposal"
+  | "schedule_proposal_v2"
+  | "client_message_artifact"
+  | "contact_rule_v1"
+  | "payment_options_v1"
+  | "priority_explanation_v1";
+
+export type AssistantArtifactStatus = "draft" | "inserted" | "pending_validation";
+
+export interface CurrentRecouvrementCase {
+  reference: string;
+  client: string;
+  amountDue: string;
+  daysLate: number;
+  missedPromise: string;
+  contactWindow: string;
+  contactWindowText: string;
+  contactChannel: string;
+  alternativeChannel: string;
+}
+
+export interface ConversationState {
+  content: GeneratedAssistantContent;
+  thread: AssistantThreadMessage[];
+  currentArtifact: AssistantArtifact | null;
+}
+
+export interface RoutedUserTurn {
+  intent: AssistantIntent;
+  confidence: number;
+  extractedSlots: Record<string, boolean | number | string | null>;
+  targetTask: AssistantTask;
+  visibleReply: string;
+  cardUpdates: Partial<GeneratedAssistantContent>;
+  suggestedActions: string[];
+}
+
+export interface AssistantArtifact {
+  id: string;
+  type: AssistantArtifactType;
+  task: AssistantTask;
+  title: string;
+  status: AssistantArtifactStatus;
+  content: GeneratedAssistantContent;
+  sourceArtifactId?: string;
+}
+
+export interface TreatmentAssistantState {
+  currentCase: CurrentRecouvrementCase;
+  currentTask: AssistantTask;
+  currentArtifact: AssistantArtifact | null;
+  artifacts: AssistantArtifact[];
+  content: GeneratedAssistantContent;
+  thread: AssistantThreadMessage[];
+}
+
+export interface AssistantStateTransition {
+  state: TreatmentAssistantState;
+  visibleReply: string;
+  artifact: AssistantArtifact;
+  action?: AssistantAction;
+  routedTurn?: RoutedUserTurn;
+}
+
 const assistantActions = [
   {
     label: "Résumer ce dossier",
+    task: "summary" as const,
     description: "Obtenir les points clés en quelques secondes",
-    prompt: "Résume ce dossier de recouvrement pour préparer l'action suivante.",
+    prompt:
+      "Résume uniquement le dossier RC-2048 : points clés, pourquoi il est prioritaire, et prochaines actions possibles. Ne rédige pas de relance dans ce tour.",
     Icon: FileText,
   },
   {
     label: "Rédiger une relance",
+    task: "draft_reminder" as const,
     description: "Message personnalisé prêt à envoyer",
     prompt: "Prépare une relance amiable et propose un échéancier adapté à la situation.",
     Icon: PenLine,
   },
   {
     label: "Vérifier une règle",
+    task: "check_rule" as const,
     description: "Contrôler la conformité en un clic",
-    prompt: "Vérifie les règles applicables avant de contacter le client sur ce dossier.",
+    prompt:
+      "Vérifie uniquement la règle de contact applicable à RC-2048 : plage autorisée, canal conseillé, alternative, et validations nécessaires. N'utilise pas de conditions générales externes.",
     Icon: ShieldCheck,
   },
   {
     label: "Proposer un échéancier",
+    task: "propose_schedule" as const,
     description: "Simulation adaptée à la situation",
-    prompt: "Propose un échéancier adapté à la situation et indique les points à valider.",
+    prompt:
+      "Propose un échéancier indicatif pour les 840,00 € de RC-2048 et indique les validations nécessaires. Ne crée pas l'échéancier sans validation.",
     Icon: CalendarDays,
   },
 ];
@@ -100,31 +204,37 @@ const quickActions = [
 const cardClass =
   "rounded-[6px] border border-[#dcdee6] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]";
 
-const defaultAssistantTab = "Préparer une relance";
+const defaultAssistantTask: AssistantTask = "draft_reminder";
 
-const assistantTabs = [
-  defaultAssistantTab,
-  "Proposer un échéancier",
-  "Vérifier une règle",
-  "Résumer",
+const assistantTabs: Array<{ label: string; task: AssistantTask }> = [
+  { label: "Préparer une relance", task: "draft_reminder" },
+  { label: "Proposer un échéancier", task: "propose_schedule" },
+  { label: "Vérifier une règle", task: "check_rule" },
+  { label: "Résumer", task: "summary" },
 ];
 
 const contextItems = [
+  "Dossier : RC-2048",
+  "Client : M. D.",
+  "Montant dû : 840,00 €",
+  "Retard : 32 jours",
   "Promesse de paiement non tenue le 12 juin.",
-  "840,00 €",
-  "Retard de 32 jours",
   "Contact autorisé aujourd'hui de 8h à 20h",
 ];
 
-const verificationItems = [
-  "Ton professionnel et factuel",
-  "Absence de pression injustifiée",
-  "Informations exactes et à jour",
-  "Contact autorisé aujourd'hui",
-  "Conforme au cadre réglementaire",
-];
+const currentRecouvrementCase: CurrentRecouvrementCase = {
+  reference: "RC-2048",
+  client: "M. D.",
+  amountDue: "840,00 €",
+  daysLate: 32,
+  missedPromise: "promesse de paiement non tenue le 12 juin",
+  contactWindow: "8h–20h",
+  contactWindowText: "8h et 20h",
+  contactChannel: "appel sortant",
+  alternativeChannel: "email de confirmation",
+};
 
-type AssistantMode = "closed" | "drawer" | "pinned";
+type AssistantMode = "closed" | "drawer" | "pinned" | "focus";
 type AssistantStatus = "idle" | "loading" | "ready" | "error";
 
 interface DraftVersion {
@@ -143,7 +253,20 @@ interface AssistantThreadMessage {
 }
 
 interface GeneratedAssistantContent {
+  context: string[];
+  proposition: string;
   summary: string[];
+  priorityReasons: string[];
+  businessFactors: string[];
+  recommendedAction: string;
+  contactFrame: string[];
+  allowedItems: string[];
+  validationItems: string[];
+  scheduleItems: string[];
+  scheduleVersionLabel: string;
+  clientMessage: string;
+  paymentOptions: string[];
+  paymentRecommendation: string;
   versions: DraftVersion[];
   paymentPlan: string;
   complianceChecks: string[];
@@ -152,13 +275,37 @@ interface GeneratedAssistantContent {
 }
 
 const fallbackAssistantContent: GeneratedAssistantContent = {
+  context: [],
+  proposition: "",
   summary: [],
+  priorityReasons: [],
+  businessFactors: [],
+  recommendedAction: "",
+  contactFrame: [],
+  allowedItems: [],
+  validationItems: [],
+  scheduleItems: [],
+  scheduleVersionLabel: "",
+  clientMessage: "",
+  paymentOptions: [],
+  paymentRecommendation: "",
   versions: [],
   paymentPlan: "",
   complianceChecks: [],
   nextActions: [],
   rawResponse: "",
 };
+
+export function createInitialTreatmentAssistantState(): TreatmentAssistantState {
+  return {
+    currentCase: currentRecouvrementCase,
+    currentTask: defaultAssistantTask,
+    currentArtifact: null,
+    artifacts: [],
+    content: fallbackAssistantContent,
+    thread: [],
+  };
+}
 
 const loadingRows = ["loading-row-1", "loading-row-2", "loading-row-3"];
 const skeletonLineKeys = [
@@ -170,57 +317,37 @@ const skeletonLineKeys = [
   "skeleton-line-6",
 ];
 
-const recouvrementThinkingSteps = [
-  "Recouvrement analyse le dossier RC-2048",
-  "Recouvrement prépare les variantes de réponse",
-  "Recouvrement vérifie les règles de contact",
-  "Recouvrement consolide les prochaines actions",
-];
+const recouvrementThinkingSteps: Record<AssistantTask, string[]> = {
+  summary: ["Analyse du contexte...", "Préparation du résumé...", "Identification des actions..."],
+  draft_reminder: [
+    "Analyse du contexte...",
+    "Rédaction du brouillon...",
+    "Vérification des règles...",
+  ],
+  propose_schedule: [
+    "Analyse du contexte...",
+    "Préparation de l'échéancier...",
+    "Vérification des règles...",
+  ],
+  explain_payment_options: [
+    "Analyse du contexte...",
+    "Identification des options de règlement...",
+    "Vérification des validations nécessaires...",
+  ],
+  check_rule: [
+    "Analyse du contexte...",
+    "Vérification des règles...",
+    "Préparation des actions possibles...",
+  ],
+  explain_priority: [
+    "Analyse du contexte...",
+    "Identification des facteurs métier...",
+    "Préparation de la recommandation...",
+  ],
+};
 
 const defaultAssistantPrompt =
   "Prépare une relance amiable et propose un échéancier adapté à la situation.";
-
-const recouvrementDrawerSystemPrompt = [
-  "Tu es l'assistant interne Recouvrement de Crédit Aurore pour Julie Dubois, chargée de recouvrement.",
-  "Tu aides à préparer une action sur un dossier, tu ne promets jamais qu'elle est exécutée.",
-  "N'oriente jamais Julie vers un service client : tu formules directement l'aide opérationnelle pour le dossier.",
-  "N'invente pas de téléphone, d'adresse e-mail, de frais ou de sanction.",
-  "Base les brouillons sur le contexte dossier transmis, pas sur des conditions générales externes sauf si l'utilisateur demande explicitement une règle.",
-  "N'utilise pas les expressions manquement grave, résiliation, sanction, frais d'incident ou mise en demeure dans une relance amiable.",
-  "Le ton d'une réponse client doit rester amiable, factuel, sans menace et sans pression injustifiée.",
-  "Un échéancier est seulement préparé ou proposé, puis validé avec le client.",
-  "Réponds en français, sans JSON, avec exactement ces titres Markdown dans cet ordre :",
-  "## Résumé du dossier",
-  "## Réponse au client",
-  "### V1 — version courte et directe",
-  "### V2 — version plus empathique",
-  "### V3 — version avec proposition d'échéancier",
-  "## Règles et conformité",
-  "## Prochaines actions suggérées",
-  "Chaque version doit contenir un brouillon complet prêt à relire, pas une consigne.",
-  "Les règles et conformité doivent mentionner seulement les contrôles utiles au recouvrement de ce dossier.",
-].join("\n");
-
-const dossierContextForAssistant = [
-  "Contexte dossier RC-2048 transmis par l'espace Recouvrement.",
-  "Client : M. D.",
-  "Montant dû : 840,00 €.",
-  "Retard : 32 jours.",
-  "Promesse de paiement non tenue le 12 juin.",
-  "Contact autorisé aujourd'hui de 8h à 20h.",
-  "Échéancier envisageable, uniquement après validation client.",
-].join("\n");
-
-function getSubjectId(): string | undefined {
-  if (typeof window === "undefined") return undefined;
-  const key = "tessera.subjectId";
-  let id = window.localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    window.localStorage.setItem(key, id);
-  }
-  return id;
-}
 
 function CountBadge({ count, className }: { count: number; className?: string }) {
   return (
@@ -280,31 +407,58 @@ function AssistantCardBloom() {
 }
 
 function assistantTabForAction(action: string) {
-  if (action.includes("échéancier")) {
-    return "Proposer un échéancier";
-  }
-  if (action.includes("règle")) {
-    return "Vérifier une règle";
-  }
-  if (action.includes("Résumer")) {
-    return "Résumer";
-  }
-  return "Préparer une relance";
+  return assistantTabForTask(assistantTaskForAction(action));
 }
 
-function assistantPromptForTab(activeTab: string) {
-  const action = assistantActions.find((item) => assistantTabForAction(item.label) === activeTab);
+function assistantTaskForAction(action: string): AssistantTask {
+  const normalized = normalizeAssistantText(action);
+  if (normalized.includes("prioritaire") || normalized.includes("priorite")) {
+    return "explain_priority";
+  }
+  if (normalized.includes("echeancier") || normalized.includes("mensualite")) {
+    return "propose_schedule";
+  }
+  if (
+    normalized.includes("regle") ||
+    normalized.includes("contact") ||
+    normalized.includes("appeler")
+  ) {
+    return "check_rule";
+  }
+  if (normalized.includes("resumer") || normalized.includes("resume")) {
+    return "summary";
+  }
+  return "draft_reminder";
+}
+
+function assistantTabForTask(task: AssistantTask) {
+  return assistantTabs.find((tab) => tab.task === task)?.label ?? "Préparer une relance";
+}
+
+function assistantPromptForTask(task: AssistantTask) {
+  if (task === "explain_priority") {
+    return "Explique pourquoi RC-2048 est prioritaire et recommande la prochaine action métier.";
+  }
+  if (task === "explain_payment_options") {
+    return "Explique les options de règlement autorisées pour RC-2048, recommande l'option à préparer et liste les validations nécessaires.";
+  }
+  const action = assistantActions.find((item) => item.task === task);
   return action?.prompt ?? defaultAssistantPrompt;
 }
 
-function asString(value: unknown) {
-  if (typeof value !== "string") return "";
-  return value
-    .trim()
-    .replace(/^fait dossier\s*:?\s*/i, "")
-    .replace(/\bnotre service client\b/gi, "Crédit Aurore")
-    .replace(/\ble service client\b/gi, "Crédit Aurore")
-    .replace(/\bdu service client\b/gi, "de Crédit Aurore");
+function assistantResultLabel(task: AssistantTask) {
+  if (task === "summary") return "Voici le résumé du dossier RC-2048.";
+  if (task === "check_rule") {
+    return "Voici la règle de contact applicable à RC-2048.";
+  }
+  if (task === "propose_schedule") {
+    return "Voici une proposition d'échéancier pour RC-2048.";
+  }
+  if (task === "explain_payment_options") {
+    return "Voici les options de règlement possibles pour RC-2048.";
+  }
+  if (task === "explain_priority") return "Voici pourquoi RC-2048 est prioritaire.";
+  return "Voici une proposition adaptée au dossier RC-2048.";
 }
 
 function normalizeAssistantText(value: string) {
@@ -314,159 +468,889 @@ function normalizeAssistantText(value: string) {
     .toLowerCase();
 }
 
-function cleanAssistantHeading(line: string) {
-  return line
-    .replace(/^#+\s*/, "")
-    .replace(/^[-*]\s*/, "")
-    .replace(/^[_*]+/, "")
-    .replace(/[_*:]+$/, "")
-    .trim();
-}
-
-function isVersionHeading(line: string) {
-  const normalized = normalizeAssistantText(cleanAssistantHeading(line));
-  return /^(reponse au client\s*[-–—:]?\s*)?(version\s*)?v?\s*[123]\b/.test(normalized);
-}
-
-function isAssistantSectionHeading(line: string) {
-  const normalized = normalizeAssistantText(cleanAssistantHeading(line));
-  if (isVersionHeading(line)) return true;
-  if (normalized.length > 84) return false;
-  return [
-    "resume du dossier",
-    "resume",
-    "reponse au client",
-    "regles et conformite",
-    "conformite",
-    "prochaines actions",
-    "prochaines actions suggerees",
-    "echeancier",
-    "plan de paiement",
-  ].some((heading) => normalized.startsWith(heading));
-}
-
-function stripListPrefix(line: string) {
-  return line
-    .replace(/^[-*•]\s*/, "")
-    .replace(/^\d+[.)]\s*/, "")
-    .replace(/^:\s*/, "")
-    .trim();
-}
-
-function blockToItems(block: string, maxItems = 5) {
-  return block
-    .split(/\r?\n/)
-    .map(stripListPrefix)
-    .filter((line) => line && !isAssistantSectionHeading(line))
-    .slice(0, maxItems);
-}
-
-function extractSectionBlock(lines: string[], headings: string[]) {
-  const start = lines.findIndex((line) => {
-    const normalized = normalizeAssistantText(cleanAssistantHeading(line));
-    return headings.some((heading) => normalized.startsWith(heading));
-  });
-  if (start === -1) return "";
-
-  const body: string[] = [];
-  for (const line of lines.slice(start + 1)) {
-    if (isAssistantSectionHeading(line)) break;
-    body.push(line);
-  }
-  return body.join("\n").trim();
-}
-
-function extractDraftVersions(lines: string[]): DraftVersion[] {
-  const markers = lines.flatMap((line, index) => {
-    const cleaned = cleanAssistantHeading(line);
-    const match = cleaned.match(
-      /^(?:Réponse au client\s*[-–—:]?\s*)?(?:Version\s*)?V?\s*([123])\b\s*[-–—:]?\s*(.*)$/i,
-    );
-    if (!match) return [];
-    return [
-      {
-        index,
-        id: `v${match[1]}`,
-        label: `V${match[1]}`,
-        title: match[2]?.trim() || `Version ${match[1]}`,
-      },
-    ];
-  });
-
-  return markers
-    .map((marker, markerIndex) => {
-      const nextVersionIndex = markers[markerIndex + 1]?.index ?? lines.length;
-      const body: string[] = [];
-      for (const line of lines.slice(marker.index + 1, nextVersionIndex)) {
-        if (isAssistantSectionHeading(line) && !isVersionHeading(line)) break;
-        body.push(line);
-      }
-      return {
-        id: marker.id,
-        label: marker.label,
-        title: marker.title,
-        body: body.join("\n").trim(),
-      };
-    })
-    .filter((version) => version.body.length > 0)
-    .slice(0, 3);
-}
-
-function parseGeneratedAssistantContent(raw: string): GeneratedAssistantContent {
-  const text = asString(raw);
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const responseBlock = extractSectionBlock(lines, ["reponse au client"]);
-  const versions = extractDraftVersions(lines);
-  const fallbackVersion =
-    responseBlock && versions.length === 0
-      ? [
-          {
-            id: "v1",
-            label: "V1",
-            title: "Version proposée",
-            body: responseBlock,
-          },
-        ]
-      : [];
-
+function applyAssistantCardUpdates(
+  current: GeneratedAssistantContent,
+  updates: Partial<GeneratedAssistantContent>,
+) {
   return {
-    summary: blockToItems(extractSectionBlock(lines, ["resume du dossier", "resume"])),
-    versions: versions.length > 0 ? versions : fallbackVersion,
-    paymentPlan: extractSectionBlock(lines, ["echeancier", "plan de paiement"]),
-    complianceChecks: blockToItems(
-      extractSectionBlock(lines, ["regles et conformite", "conformite"]),
-      6,
-    ),
-    nextActions: blockToItems(
-      extractSectionBlock(lines, ["prochaines actions suggerees", "prochaines actions"]),
-      5,
-    ),
-    rawResponse: text,
+    ...current,
+    ...updates,
+    context: updates.context ?? current.context,
+    summary: updates.summary ?? current.summary,
+    priorityReasons: updates.priorityReasons ?? current.priorityReasons,
+    businessFactors: updates.businessFactors ?? current.businessFactors,
+    contactFrame: updates.contactFrame ?? current.contactFrame,
+    allowedItems: updates.allowedItems ?? current.allowedItems,
+    validationItems: updates.validationItems ?? current.validationItems,
+    scheduleItems: updates.scheduleItems ?? current.scheduleItems,
+    paymentOptions: updates.paymentOptions ?? current.paymentOptions,
+    versions: updates.versions ?? current.versions,
+    complianceChecks: updates.complianceChecks ?? current.complianceChecks,
+    nextActions: updates.nextActions ?? current.nextActions,
   };
 }
 
-function buildAssistantHistory(thread: AssistantThreadMessage[]) {
-  const stableMessages = thread.filter((message) => message.content.trim() && !message.streaming);
-  return [
-    { role: "user" as const, content: dossierContextForAssistant },
-    ...stableMessages.map((message) => ({
-      role: message.role,
-      content: message.content,
-    })),
-  ];
+function artifactTaskForType(type: AssistantArtifactType): AssistantTask {
+  if (type === "case_summary_v1") return "summary";
+  if (type === "reminder_draft_v1") return "draft_reminder";
+  if (
+    type === "schedule_proposal" ||
+    type === "schedule_proposal_v2" ||
+    type === "client_message_artifact"
+  ) {
+    return "propose_schedule";
+  }
+  if (type === "contact_rule_v1") return "check_rule";
+  if (type === "payment_options_v1") return "explain_payment_options";
+  return "explain_priority";
 }
 
-function AssistantContextPanel({ compact = false }: { compact?: boolean }) {
-  const items = compact
-    ? [
-        "Promesse de paiement non tenue le 12 juin.",
-        "840,00 € · Retard de 32 jours",
-        "Contact autorisé aujourd'hui de 8h à 20h",
-      ]
-    : contextItems;
+function artifactTitleForType(type: AssistantArtifactType) {
+  if (type === "case_summary_v1") return "Résumé du dossier — RC-2048";
+  if (type === "reminder_draft_v1") return "Brouillon de relance — RC-2048";
+  if (type === "schedule_proposal") return "Proposition d'échéancier — RC-2048";
+  if (type === "schedule_proposal_v2") return "Proposition d'échéancier — Version 2";
+  if (type === "client_message_artifact") return "Message client préparé — RC-2048";
+  if (type === "contact_rule_v1") return "Cadre de contact — RC-2048";
+  if (type === "payment_options_v1") return "Options de règlement — RC-2048";
+  return "Priorité du dossier — RC-2048";
+}
+
+function createAssistantArtifact(
+  type: AssistantArtifactType,
+  content: GeneratedAssistantContent,
+  state: TreatmentAssistantState,
+  sourceArtifactId?: string,
+): AssistantArtifact {
+  const sequence = state.artifacts.filter((artifact) => artifact.type === type).length + 1;
+  return {
+    id: `${type}-${sequence}`,
+    type,
+    task: artifactTaskForType(type),
+    title: artifactTitleForType(type),
+    status: "draft",
+    content,
+    sourceArtifactId,
+  };
+}
+
+function artifactTypeForRoute(route: RoutedUserTurn): AssistantArtifactType {
+  if (route.intent === "summarize_case") return "case_summary_v1";
+  if (route.intent === "draft_reminder") return "reminder_draft_v1";
+  if (route.intent === "explain_payment_options") return "payment_options_v1";
+  if (route.intent === "check_contact_rule") return "contact_rule_v1";
+  if (route.intent === "explain_priority") return "priority_explanation_v1";
+  if (route.intent === "propose_schedule" || route.intent === "adjust_existing_proposal") {
+    return route.extractedSlots.requestedMonths ? "schedule_proposal_v2" : "schedule_proposal";
+  }
+  return statefulFallbackArtifactType(route.targetTask);
+}
+
+function statefulFallbackArtifactType(task: AssistantTask): AssistantArtifactType {
+  if (task === "summary") return "case_summary_v1";
+  if (task === "draft_reminder") return "reminder_draft_v1";
+  if (task === "propose_schedule") return "schedule_proposal";
+  if (task === "check_rule") return "contact_rule_v1";
+  if (task === "explain_payment_options") return "payment_options_v1";
+  return "priority_explanation_v1";
+}
+
+function updateAssistantStateWithArtifact(
+  state: TreatmentAssistantState,
+  artifact: AssistantArtifact,
+): TreatmentAssistantState {
+  const otherArtifacts = state.artifacts.filter((item) => item.id !== artifact.id);
+  return {
+    ...state,
+    currentTask: artifact.task,
+    currentArtifact: artifact,
+    artifacts: [...otherArtifacts, artifact],
+    content: artifact.content,
+  };
+}
+
+function updateCurrentArtifactStatus(
+  state: TreatmentAssistantState,
+  status: AssistantArtifactStatus,
+  visibleReply: string,
+  action: AssistantAction,
+): AssistantStateTransition {
+  const currentArtifact =
+    state.currentArtifact ??
+    createAssistantArtifact(statefulFallbackArtifactType(state.currentTask), state.content, state);
+  const artifact = { ...currentArtifact, status };
+  return {
+    state: updateAssistantStateWithArtifact(state, artifact),
+    visibleReply,
+    artifact,
+    action,
+  };
+}
+
+export function assistantActionFromLabel(
+  label: string,
+  state?: TreatmentAssistantState,
+): AssistantAction {
+  const normalized = normalizeAssistantText(label);
+  if (normalized.includes("rediger un email") && state?.currentTask === "check_rule") {
+    return "CHECK_CONTACT_RULE";
+  }
+  if (
+    normalized.includes("preparer le message") ||
+    normalized.includes("message client") ||
+    normalized.includes("rediger un email")
+  ) {
+    return "PREPARE_CLIENT_MESSAGE_FROM_SCHEDULE";
+  }
+  if (normalized.includes("comparer")) return "COMPARE_SCHEDULE_OPTIONS";
+  if (
+    normalized.includes("ajuster") ||
+    normalized.includes("changer l'option") ||
+    normalized.includes("changer l option")
+  ) {
+    return "ADJUST_SCHEDULE_DURATION";
+  }
+  if (
+    normalized.includes("soumettre") ||
+    normalized.includes("validation") ||
+    normalized.includes("escalader") ||
+    normalized.includes("responsable")
+  ) {
+    return "SUBMIT_FOR_VALIDATION";
+  }
+  if (normalized.includes("inserer")) return "INSERT_ARTIFACT_IN_CASE";
+  if (normalized.includes("copier")) return "COPY_ARTIFACT_TEXT";
+  if (normalized.includes("script") || normalized.includes("appel")) return "PREPARE_CALL_SCRIPT";
+  if (normalized.includes("reporter") || normalized.includes("rappel")) return "REPORT_CONTACT";
+  if (normalized.includes("regle") || normalized.includes("contact")) return "CHECK_CONTACT_RULE";
+  if (normalized.includes("relance") || normalized.includes("brouillon")) return "DRAFT_REMINDER";
+  if (normalized.includes("echeancier") || normalized.includes("mensualite")) {
+    return "PROPOSE_SCHEDULE";
+  }
+  if (normalized.includes("resume") || normalized.includes("resumer")) return "SUMMARIZE_CASE";
+  return "INSERT_ARTIFACT_IN_CASE";
+}
+
+function formatEuroAmount(amount: number) {
+  return amount.toLocaleString("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function extractRequestedScheduleMonths(message: string) {
+  const normalized = normalizeAssistantText(message);
+  const match = normalized.match(/\b(\d{1,2})\s*(?:mois|mensualites?)\b/);
+  if (!match) return null;
+
+  const months = Number(match[1]);
+  return Number.isInteger(months) && months >= 2 && months <= 84 ? months : null;
+}
+
+function extractRequestedContactTime(message: string) {
+  const normalized = normalizeAssistantText(message);
+  const match =
+    normalized.match(/(?:^|[^\d])(\d{1,2})\s*(?:h|heures?)(?:\s*(\d{1,2}))?\b/) ??
+    normalized.match(/(?:^|[^\d])(\d{1,2})[:.](\d{2})\b/) ??
+    normalized.match(/\b(?:a|vers|pour)\s+(\d{1,2})(?:\s*(?:h|:)\s*(\d{1,2}))?\b/);
+
+  if (!match) return null;
+
+  const hour = Number(match[1]);
+  const minute = match[2] ? Number(match[2]) : 0;
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  return {
+    hour,
+    minute,
+    label: minute > 0 ? `${hour}h${String(minute).padStart(2, "0")}` : `${hour}h`,
+  };
+}
+
+function isContactTimeAllowed(time: { hour: number; minute: number }) {
+  const minutes = time.hour * 60 + time.minute;
+  return minutes >= 8 * 60 && minutes <= 20 * 60;
+}
+
+function isScheduleSpreadRequest(message: string) {
+  const normalized = normalizeAssistantText(message);
+  return (
+    normalized.includes("etaler") ||
+    normalized.includes("repartir") ||
+    normalized.includes("plusieurs mois") ||
+    normalized.includes("sur plusieurs") ||
+    normalized.includes("mensualite") ||
+    normalized.includes("echelonnement")
+  );
+}
+
+function isSchedulePaymentRequest(message: string) {
+  const normalized = normalizeAssistantText(message);
+  return (
+    extractRequestedScheduleMonths(message) !== null ||
+    isScheduleSpreadRequest(message) ||
+    normalized.includes("echeancier") ||
+    (normalized.includes("paiement") &&
+      (normalized.includes("proposer") ||
+        normalized.includes("proposition") ||
+        normalized.includes("relance") ||
+        normalized.includes("plan") ||
+        normalized.includes("solution")))
+  );
+}
+
+function isPaymentOptionsRequest(message: string) {
+  const normalized = normalizeAssistantText(message);
+  const asksHow =
+    normalized.includes("comment") ||
+    normalized.includes("quelles options") ||
+    normalized.includes("quels moyens") ||
+    normalized.includes("peut-il") ||
+    normalized.includes("peut il");
+  const paymentTerms =
+    normalized.includes("regler") ||
+    normalized.includes("payer") ||
+    normalized.includes("paiement") ||
+    normalized.includes("reglement") ||
+    normalized.includes("solde") ||
+    normalized.includes("echeance");
+
+  return paymentTerms && (asksHow || normalized.includes("options"));
+}
+
+function isContactRuleRequest(message: string) {
+  const normalized = normalizeAssistantText(message);
+  return (
+    normalized.includes("appeler") ||
+    normalized.includes("joindre") ||
+    normalized.includes("contact") ||
+    normalized.includes("regle de contact") ||
+    normalized.includes("verifier une regle") ||
+    normalized.includes("cadre de contact")
+  );
+}
+
+function routeUserTurn(
+  message: string,
+  currentCase: CurrentRecouvrementCase,
+  currentTask: AssistantTask,
+  conversationState: ConversationState,
+): RoutedUserTurn {
+  const normalized = normalizeAssistantText(message);
+  const requestedContactTime = extractRequestedContactTime(message);
+  const requestedMonths = extractRequestedScheduleMonths(message);
+  const baseSlots = {
+    caseReference: currentCase.reference,
+    client: currentCase.client,
+    amountDue: currentCase.amountDue,
+    currentTask,
+    hasExistingCards: Object.values(conversationState.content).some((value) =>
+      Array.isArray(value) ? value.length > 0 : Boolean(value),
+    ),
+  };
+
+  if (isContactRuleRequest(message)) {
+    if (requestedContactTime !== null && !isContactTimeAllowed(requestedContactTime)) {
+      return {
+        intent: "check_contact_rule",
+        confidence: 0.98,
+        extractedSlots: {
+          ...baseSlots,
+          requestedHour: requestedContactTime.hour,
+          requestedTime: requestedContactTime.label,
+          contactAllowed: false,
+        },
+        targetTask: "check_rule",
+        visibleReply: `Non, vous ne devez pas appeler ${currentCase.client} à ${requestedContactTime.label}. Le contact téléphonique est autorisé aujourd'hui uniquement entre ${currentCase.contactWindowText}. Je peux vous aider à planifier un rappel demain ou à préparer un ${currentCase.alternativeChannel}.`,
+        cardUpdates: {
+          context: contextItems,
+          contactFrame: [
+            `Dossier : ${currentCase.reference}`,
+            `Client : ${currentCase.client}`,
+            `Appel à ${requestedContactTime.label} : non autorisé`,
+            `Plage autorisée : ${currentCase.contactWindow}`,
+            `Canal conseillé : ${currentCase.contactChannel} pendant la plage autorisée`,
+            `Alternative : ${currentCase.alternativeChannel}`,
+          ],
+          allowedItems: [
+            `Vous pouvez contacter ${currentCase.client} aujourd'hui entre ${currentCase.contactWindowText}.`,
+          ],
+          validationItems: [
+            `Un appel à ${requestedContactTime.label} n'est pas autorisé. Reportez le contact sur une plage autorisée ou utilisez un canal autorisé si applicable.`,
+          ],
+          nextActions: [
+            "Planifier un rappel demain",
+            "Rédiger un email de confirmation",
+            "Reporter le contact",
+            "Voir la règle de contact",
+          ],
+        },
+        suggestedActions: [
+          "Planifier un rappel demain",
+          "Rédiger un email de confirmation",
+          "Reporter le contact",
+          "Voir la règle de contact",
+        ],
+      };
+    }
+
+    return {
+      intent: "check_contact_rule",
+      confidence: 0.94,
+      extractedSlots: {
+        ...baseSlots,
+        requestedHour: requestedContactTime?.hour ?? null,
+        requestedTime: requestedContactTime?.label ?? null,
+        contactAllowed: true,
+      },
+      targetTask: "check_rule",
+      visibleReply: `Vous pouvez contacter ${currentCase.client} aujourd'hui entre ${currentCase.contactWindowText}. Le canal conseillé est l'${currentCase.contactChannel}.`,
+      cardUpdates: {
+        context: contextItems,
+        contactFrame: [
+          `Dossier : ${currentCase.reference}`,
+          `Client : ${currentCase.client}`,
+          "Contact autorisé aujourd'hui",
+          `Plage : ${currentCase.contactWindow}`,
+          `Canal conseillé : ${currentCase.contactChannel}`,
+          `Alternative : ${currentCase.alternativeChannel}`,
+        ],
+        allowedItems: [
+          `Vous pouvez contacter ${currentCase.client} aujourd'hui entre ${currentCase.contactWindowText}. Le canal recommandé est l'${currentCase.contactChannel}.`,
+        ],
+        validationItems: [
+          "Aucune validation supplémentaire n'est nécessaire pour ce contact aujourd'hui.",
+        ],
+        nextActions: [
+          "Préparer un script d'appel",
+          "Rédiger un email de confirmation",
+          "Reporter le contact",
+          "Voir la règle de contact",
+        ],
+      },
+      suggestedActions: [
+        "Préparer un script d'appel",
+        "Rédiger un email de confirmation",
+        "Reporter le contact",
+        "Voir la règle de contact",
+      ],
+    };
+  }
+
+  if (
+    requestedMonths !== null ||
+    isScheduleSpreadRequest(message) ||
+    isSchedulePaymentRequest(message)
+  ) {
+    const months = requestedMonths ?? 3;
+    const monthlyAmount = formatEuroAmount(840 / months);
+    const hasExplicitMonths = requestedMonths !== null;
+    return {
+      intent: "propose_schedule",
+      confidence: hasExplicitMonths ? 0.96 : 0.88,
+      extractedSlots: {
+        ...baseSlots,
+        requestedMonths: requestedMonths ?? null,
+        monthlyAmount: hasExplicitMonths ? `${monthlyAmount} €` : null,
+        scheduleCreated: false,
+      },
+      targetTask: "propose_schedule",
+      visibleReply: hasExplicitMonths
+        ? `Un échéancier sur ${months} mois représenterait environ ${monthlyAmount} € par mois pour un montant dû de ${currentCase.amountDue}. Cette durée nécessite validation avant proposition au client. L'échéancier n'a pas été créé.`
+        : `Pour ${currentCase.reference}, une option indicative consiste à répartir les ${currentCase.amountDue} sur plusieurs mensualités, sous réserve d'accord du client et de validation interne. L'échéancier n'a pas été créé.`,
+      cardUpdates: hasExplicitMonths
+        ? {
+            context: contextItems,
+            paymentPlan: `Échéancier indicatif sur ${months} mois pour un montant dû de ${currentCase.amountDue}. La mensualité serait d'environ ${monthlyAmount} € par mois, sous réserve de validation interne et d'accord du client.`,
+            scheduleItems: [
+              `Montant dû : ${currentCase.amountDue}`,
+              `Durée demandée : ${months} mois`,
+              `Mensualité indicative : ${monthlyAmount} €`,
+              "Statut : validation requise avant proposition",
+              "Échéancier non créé",
+            ],
+            scheduleVersionLabel: "Version 2",
+            clientMessage:
+              "Une solution d'échelonnement peut être étudiée avec vous, sous réserve de validation et d'accord sur les modalités.",
+            complianceChecks: [
+              "Aucun échéancier créé dans ce tour.",
+              "Durée à valider avant proposition au client.",
+              "Accord du client requis avant mise en place.",
+              "Validation interne requise avant création.",
+            ],
+            nextActions: [
+              "Ajuster la durée",
+              "Comparer avec 3 / 6 / 12 mois",
+              "Préparer le message client",
+              "Soumettre à validation",
+            ],
+          }
+        : {
+            context: contextItems,
+            paymentPlan:
+              "Options indicatives pour répartir les 840,00 € sur plusieurs mensualités, sous réserve d'accord client et de validation interne.",
+            scheduleItems: [
+              "3 mensualités de 280,00 €",
+              "4 mensualités de 210,00 €",
+              "6 mensualités de 140,00 €",
+              "Statut : indicatif",
+              "Validation requise avant création",
+              "Échéancier non créé",
+            ],
+            scheduleVersionLabel: "Version 2",
+            clientMessage:
+              "Message à préparer après accord : présenter les options de mensualités à M. D. et préciser que la mise en place reste soumise à validation interne. Aucun échéancier n'a été créé.",
+            complianceChecks: [
+              "Aucun échéancier créé dans ce tour.",
+              "Accord du client requis avant mise en place.",
+              "Validation interne requise avant création.",
+            ],
+            nextActions: [
+              "Ajuster la durée",
+              "Comparer avec 3 / 6 / 12 mois",
+              "Préparer le message client",
+              "Soumettre à validation",
+            ],
+          },
+      suggestedActions: [
+        "Ajuster la durée",
+        "Comparer avec 3 / 6 / 12 mois",
+        "Préparer le message client",
+        "Soumettre à validation",
+      ],
+    };
+  }
+
+  if (isPaymentOptionsRequest(message)) {
+    return {
+      intent: "explain_payment_options",
+      confidence: 0.92,
+      extractedSlots: {
+        ...baseSlots,
+        paymentQuestion: true,
+        scheduleCreated: false,
+      },
+      targetTask: "explain_payment_options",
+      visibleReply: `Pour ${currentCase.reference}, ${currentCase.client} peut régulariser le montant dû selon les options autorisées : paiement du solde, proposition d'échéancier ou échange avec un conseiller. Pour ce dossier, l'option à préparer est une proposition d'échéancier, sous réserve de validation et d'accord du client.`,
+      cardUpdates: {
+        context: contextItems,
+        paymentOptions: [
+          `Paiement du solde dû : ${currentCase.amountDue}`,
+          "Proposition d'échéancier à valider",
+          "Échange avec un conseiller pour confirmer la solution adaptée",
+        ],
+        paymentRecommendation:
+          "Pour RC-2048, l'option à préparer est une proposition d'échéancier, sous réserve de validation interne et d'accord de M. D.",
+        validationItems: [
+          "Aucun échéancier créé dans ce tour.",
+          "Validation interne requise avant proposition.",
+          "Accord du client requis avant mise en place.",
+        ],
+        nextActions: [
+          "Proposer un échéancier",
+          "Comparer plusieurs durées",
+          "Préparer le message client",
+          "Soumettre à validation",
+        ],
+      },
+      suggestedActions: [
+        "Proposer un échéancier",
+        "Comparer plusieurs durées",
+        "Préparer le message client",
+        "Soumettre à validation",
+      ],
+    };
+  }
+
+  if (normalized.includes("prioritaire") || normalized.includes("priorite")) {
+    return {
+      intent: "explain_priority",
+      confidence: 0.86,
+      extractedSlots: baseSlots,
+      targetTask: "explain_priority",
+      visibleReply:
+        "RC-2048 est prioritaire en raison du retard de 32 jours, de la promesse de paiement non tenue et du contact autorisé aujourd'hui.",
+      cardUpdates: {},
+      suggestedActions: [
+        "Préparer l'étape suivante",
+        "Rédiger une relance",
+        "Proposer un échéancier",
+      ],
+    };
+  }
+
+  if (normalized.includes("resume") || normalized.includes("resumer")) {
+    return {
+      intent: "summarize_case",
+      confidence: 0.86,
+      extractedSlots: baseSlots,
+      targetTask: "summary",
+      visibleReply:
+        "Résumé mis à jour : RC-2048 reste prioritaire à cause du retard de 32 jours et de la promesse non tenue.",
+      cardUpdates: {},
+      suggestedActions: [
+        "Rédiger une relance",
+        "Proposer un échéancier",
+        "Vérifier une règle de contact",
+      ],
+    };
+  }
+
+  if (
+    normalized.includes("validation") ||
+    normalized.includes("valider") ||
+    normalized.includes("soumettre")
+  ) {
+    return {
+      intent: "ask_for_validation",
+      confidence: 0.78,
+      extractedSlots: baseSlots,
+      targetTask: currentTask,
+      visibleReply:
+        "Je peux préparer la soumission à validation, sans exécuter l'action. Les validations nécessaires restent à confirmer avant toute création ou envoi.",
+      cardUpdates: {},
+      suggestedActions: [
+        "Soumettre à validation",
+        "Insérer dans le dossier",
+        "Préparer le message client",
+      ],
+    };
+  }
+
+  if (
+    normalized.includes("modifier") ||
+    normalized.includes("ajuste") ||
+    normalized.includes("passe a") ||
+    normalized.includes("empathique") ||
+    normalized.includes("souple")
+  ) {
+    return {
+      intent: "adjust_existing_proposal",
+      confidence: 0.76,
+      extractedSlots: baseSlots,
+      targetTask: currentTask,
+      visibleReply:
+        "Je mets à jour la carte concernée en conservant le contexte stable de RC-2048.",
+      cardUpdates: {},
+      suggestedActions: ["Modifier", "Comparer les versions", "Soumettre à validation"],
+    };
+  }
+
+  return {
+    intent: "small_clarification",
+    confidence: 0.45,
+    extractedSlots: baseSlots,
+    targetTask: currentTask,
+    visibleReply: "Je garde le contexte RC-2048 et précise la carte active.",
+    cardUpdates: {},
+    suggestedActions: [],
+  };
+}
+
+export function routeUserIntent(message: string, state: TreatmentAssistantState): RoutedUserTurn {
+  return routeUserTurn(message, state.currentCase, state.currentTask, {
+    content: state.content,
+    thread: state.thread,
+    currentArtifact: state.currentArtifact,
+  });
+}
+
+function createArtifactTransition(
+  state: TreatmentAssistantState,
+  type: AssistantArtifactType,
+  content: GeneratedAssistantContent,
+  visibleReply: string,
+  action?: AssistantAction,
+  routedTurn?: RoutedUserTurn,
+): AssistantStateTransition {
+  const artifact = createAssistantArtifact(type, content, state, state.currentArtifact?.id);
+  return {
+    state: updateAssistantStateWithArtifact(state, artifact),
+    visibleReply,
+    artifact,
+    action,
+    routedTurn,
+  };
+}
+
+export function handleUserMessage(
+  message: string,
+  state: TreatmentAssistantState,
+): AssistantStateTransition {
+  const routedTurn = routeUserIntent(message, state);
+  const baseContent =
+    routedTurn.targetTask === state.currentTask ? state.content : fallbackAssistantContent;
+  const nextContent = applyAssistantCardUpdates(baseContent, routedTurn.cardUpdates);
+  return createArtifactTransition(
+    state,
+    artifactTypeForRoute(routedTurn),
+    nextContent,
+    routedTurn.visibleReply,
+    undefined,
+    routedTurn,
+  );
+}
+
+function scheduleMessageContentFromState(
+  state: TreatmentAssistantState,
+): GeneratedAssistantContent {
+  return applyAssistantCardUpdates(fallbackAssistantContent, {
+    context: contextItems,
+    scheduleItems: [
+      "3 mensualités de 280,00 €",
+      `Total : ${state.currentCase.amountDue}`,
+      "Statut : proposition indicative",
+      "Validation requise avant création",
+      "Aucun échéancier créé",
+    ],
+    clientMessage: [
+      `Bonjour ${state.currentCase.client},`,
+      "",
+      `Nous souhaitons faire le point avec vous concernant le montant restant dû de ${state.currentCase.amountDue}.`,
+      "",
+      "Une solution d'échelonnement peut être étudiée avec vous, par exemple en plusieurs mensualités, sous réserve de validation et d'accord sur les modalités.",
+      "",
+      "Nous vous invitons à nous recontacter afin d'échanger sur une solution adaptée à votre situation.",
+      "",
+      "Cordialement,",
+      "Crédit Aurore",
+    ].join("\n"),
+    complianceChecks: [
+      "Ton clair et factuel",
+      "Pas de pression injustifiée",
+      "Aucun échéancier créé",
+      "Validation requise avant mise en place",
+      "Accord du client nécessaire",
+    ],
+    nextActions: [
+      "Modifier le message",
+      "Copier le message",
+      "Insérer dans le dossier",
+      "Soumettre à validation",
+      "Changer l'option d'échéancier",
+    ],
+    rawResponse: "Message client préparé pour RC-2048.",
+  });
+}
+
+function scheduleOptionsContentFromState(
+  state: TreatmentAssistantState,
+): GeneratedAssistantContent {
+  return applyAssistantCardUpdates(fallbackAssistantContent, {
+    context: contextItems,
+    paymentPlan:
+      "Options indicatives pour répartir les 840,00 € sur plusieurs mensualités, sous réserve d'accord client et de validation interne.",
+    scheduleItems: [
+      "3 mensualités de 280,00 €",
+      "4 mensualités de 210,00 €",
+      "6 mensualités de 140,00 €",
+      "Statut : indicatif",
+      "Validation requise avant création",
+      "Échéancier non créé",
+    ],
+    scheduleVersionLabel: state.currentArtifact?.type === "schedule_proposal_v2" ? "Version 2" : "",
+    clientMessage:
+      "Une solution d'échelonnement peut être étudiée avec M. D., sous réserve de validation et d'accord sur les modalités.",
+    complianceChecks: [
+      "Aucun échéancier créé dans ce tour.",
+      "Accord du client requis avant mise en place.",
+      "Validation interne requise avant création.",
+    ],
+    nextActions: [
+      "Ajuster la durée",
+      "Comparer avec 3 / 6 / 12 mois",
+      "Préparer le message client",
+      "Soumettre à validation",
+    ],
+  });
+}
+
+function contactRuleContentFromState(state: TreatmentAssistantState): GeneratedAssistantContent {
+  return applyAssistantCardUpdates(fallbackAssistantContent, {
+    context: contextItems,
+    contactFrame: [
+      `Dossier : ${state.currentCase.reference}`,
+      `Client : ${state.currentCase.client}`,
+      "Contact autorisé aujourd'hui",
+      `Plage : ${state.currentCase.contactWindow}`,
+      `Canal conseillé : ${state.currentCase.contactChannel}`,
+      `Alternative : ${state.currentCase.alternativeChannel}`,
+    ],
+    allowedItems: [
+      `Vous pouvez contacter ${state.currentCase.client} aujourd'hui entre ${state.currentCase.contactWindowText}. Le canal recommandé est l'${state.currentCase.contactChannel}.`,
+    ],
+    validationItems: [
+      "Aucune validation supplémentaire n'est nécessaire pour ce contact aujourd'hui.",
+    ],
+    nextActions: [
+      "Préparer un script d'appel",
+      "Rédiger un email de confirmation",
+      "Reporter le contact",
+      "Voir la règle de contact",
+    ],
+  });
+}
+
+function summaryContentFromState(_state: TreatmentAssistantState): GeneratedAssistantContent {
+  return applyAssistantCardUpdates(fallbackAssistantContent, {
+    context: contextItems,
+    summary: [
+      "Montant dû : 840,00 €",
+      "Retard : 32 jours",
+      "Promesse de paiement non tenue le 12 juin",
+      "Contact autorisé aujourd'hui de 8h à 20h",
+    ],
+    priorityReasons: [
+      "Retard significatif sur le dossier RC-2048",
+      "Promesse de paiement non tenue",
+      "Échéancier envisageable sous validation",
+    ],
+    nextActions: ["Rédiger une relance", "Proposer un échéancier", "Vérifier une règle de contact"],
+  });
+}
+
+function reminderDraftContentFromState(_state: TreatmentAssistantState): GeneratedAssistantContent {
+  return applyAssistantCardUpdates(fallbackAssistantContent, {
+    context: contextItems,
+    versions: [
+      {
+        id: "v1",
+        label: "V1",
+        title: "Version courte et factuelle",
+        body: "Bonjour M. D.,\n\nNous souhaitons faire le point avec vous concernant le dossier RC-2048 et le montant restant dû de 840,00 €. Nous vous invitons à nous recontacter afin d'échanger sur une solution adaptée à votre situation.\n\nCordialement,\nCrédit Aurore",
+      },
+    ],
+    complianceChecks: [
+      "Ton clair et factuel",
+      "Pas de pression injustifiée",
+      "Aucun envoi effectué",
+      "Validation requise avant insertion ou envoi",
+    ],
+    nextActions: [
+      "Modifier le message",
+      "Copier le message",
+      "Insérer dans le dossier",
+      "Soumettre à validation",
+    ],
+  });
+}
+
+export function handleAssistantAction(
+  action: AssistantAction,
+  state: TreatmentAssistantState,
+): AssistantStateTransition {
+  if (action === "PREPARE_CLIENT_MESSAGE_FROM_SCHEDULE") {
+    return createArtifactTransition(
+      state,
+      "client_message_artifact",
+      scheduleMessageContentFromState(state),
+      "Message client préparé pour RC-2048. Il reste indicatif et doit être validé avant toute création d'échéancier.",
+      action,
+    );
+  }
+  if (action === "COMPARE_SCHEDULE_OPTIONS" || action === "ADJUST_SCHEDULE_DURATION") {
+    return createArtifactTransition(
+      state,
+      "schedule_proposal_v2",
+      scheduleOptionsContentFromState(state),
+      action === "COMPARE_SCHEDULE_OPTIONS"
+        ? "Options comparées pour RC-2048 : 3, 4 ou 6 mensualités restent indicatives et à valider."
+        : "Options d'échéancier ajustées pour RC-2048. Aucun échéancier n'a été créé.",
+      action,
+    );
+  }
+  if (action === "CHECK_CONTACT_RULE") {
+    return createArtifactTransition(
+      state,
+      "contact_rule_v1",
+      contactRuleContentFromState(state),
+      "Vous pouvez contacter M. D. aujourd'hui entre 8h et 20h. Le canal conseillé est l'appel sortant.",
+      action,
+    );
+  }
+  if (action === "PROPOSE_SCHEDULE") {
+    return createArtifactTransition(
+      state,
+      "schedule_proposal",
+      scheduleOptionsContentFromState(state),
+      "Proposition d'échéancier préparée pour RC-2048. Elle reste indicative et non créée.",
+      action,
+    );
+  }
+  if (action === "SUMMARIZE_CASE") {
+    return createArtifactTransition(
+      state,
+      "case_summary_v1",
+      summaryContentFromState(state),
+      "Résumé du dossier RC-2048 mis à jour.",
+      action,
+    );
+  }
+  if (action === "DRAFT_REMINDER") {
+    return createArtifactTransition(
+      state,
+      "reminder_draft_v1",
+      reminderDraftContentFromState(state),
+      "Brouillon de relance préparé pour RC-2048. Aucun message n'a été envoyé.",
+      action,
+    );
+  }
+  if (action === "INSERT_ARTIFACT_IN_CASE") {
+    return updateCurrentArtifactStatus(state, "inserted", "Message inséré dans RC-2048.", action);
+  }
+  if (action === "SUBMIT_FOR_VALIDATION") {
+    return updateCurrentArtifactStatus(
+      state,
+      "pending_validation",
+      "Soumission à validation préparée pour RC-2048. Aucun envoi automatique n'a été effectué.",
+      action,
+    );
+  }
+
+  const actionReplies: Record<AssistantAction, string> = {
+    PREPARE_CLIENT_MESSAGE_FROM_SCHEDULE: "",
+    COMPARE_SCHEDULE_OPTIONS: "",
+    ADJUST_SCHEDULE_DURATION: "",
+    SUBMIT_FOR_VALIDATION: "",
+    INSERT_ARTIFACT_IN_CASE: "",
+    COPY_ARTIFACT_TEXT: "Texte de l'artefact prêt à être copié.",
+    PREPARE_CALL_SCRIPT: "Script d'appel préparé à partir du cadre de contact autorisé.",
+    REPORT_CONTACT: "Report du contact préparé sur une plage autorisée.",
+    CHECK_CONTACT_RULE: "",
+    DRAFT_REMINDER: "",
+    PROPOSE_SCHEDULE: "",
+    SUMMARIZE_CASE: "",
+  };
+
+  const currentArtifact =
+    state.currentArtifact ??
+    createAssistantArtifact(statefulFallbackArtifactType(state.currentTask), state.content, state);
+  return {
+    state,
+    visibleReply: actionReplies[action],
+    artifact: currentArtifact,
+    action,
+  };
+}
+
+function AssistantContextPanel({
+  compact = false,
+  items,
+}: {
+  compact?: boolean;
+  items?: string[];
+}) {
+  const displayItems =
+    items && items.length > 0
+      ? items
+      : compact
+        ? [
+            "Promesse de paiement non tenue le 12 juin.",
+            "840,00 € · Retard de 32 jours",
+            "Contact autorisé aujourd'hui de 8h à 20h",
+          ]
+        : contextItems;
 
   return (
     <section
@@ -485,7 +1369,7 @@ function AssistantContextPanel({ compact = false }: { compact?: boolean }) {
         </button>
       </div>
       <div className={cn("grid gap-2 text-[#071044] text-xs", compact ? "" : "sm:grid-cols-2")}>
-        {items.map((item) => (
+        {displayItems.map((item) => (
           <div
             key={item}
             className={cn(
@@ -521,12 +1405,14 @@ function SkeletonLines({ rows = 3 }: { rows?: number }) {
 function AssistantDraftPanel({
   compact = false,
   content,
+  title = "Réponse au client",
   selectedVersionId,
   status,
   onSelectVersion,
 }: {
   compact?: boolean;
   content: GeneratedAssistantContent;
+  title?: string;
   selectedVersionId: string;
   status: AssistantStatus;
   onSelectVersion: (versionId: string) => void;
@@ -543,7 +1429,7 @@ function AssistantDraftPanel({
     <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="!font-sans !text-[#071044] font-bold text-sm">
-          Réponse au client
+          {title}
           {selectedVersion ? (
             <span className="ml-2 font-semibold text-[#071044]/62 text-xs">
               {selectedVersion.title}
@@ -580,7 +1466,7 @@ function AssistantDraftPanel({
             : "min-h-[132px] px-4 py-3 text-sm leading-6",
         )}
       >
-        {status === "loading" ? (
+        {status === "loading" && content.versions.length === 0 ? (
           <SkeletonLines rows={6} />
         ) : draftParagraphs.length > 0 ? (
           draftParagraphs.map((paragraph, index) => (
@@ -627,104 +1513,513 @@ function AssistantVerificationPanel({
   );
 }
 
-function AssistantConversationPanel({
-  compact = false,
-  inputValue,
-  messages,
-  showComposer = true,
-  status,
-  thinkingLabel,
-  onInputChange,
-  onSubmit,
+function AssistantActionPanel({
+  actions,
+  disabled = false,
+  onAction,
 }: {
-  compact?: boolean;
-  inputValue: string;
-  messages: AssistantThreadMessage[];
-  showComposer?: boolean;
-  status: AssistantStatus;
-  thinkingLabel: string;
-  onInputChange: (value: string) => void;
-  onSubmit: () => void;
+  actions: string[];
+  disabled?: boolean;
+  onAction: (action: string) => void;
 }) {
-  const visibleMessages = messages.slice(compact ? -3 : -5);
-
   return (
     <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="!font-sans !text-[#071044] font-bold text-sm">Chat Recouvrement</h3>
-        {status === "loading" ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-[#f0edff] px-3 py-1 font-bold text-[#6048ff] text-[0.66rem]">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#6048ff]" />
-            {thinkingLabel}
-          </span>
-        ) : null}
-      </div>
-      <div
-        className={cn(
-          "space-y-3 overflow-y-auto rounded-[5px] border border-[#eef0f7] bg-[#fbfbfd] p-3",
-          compact ? "max-h-[180px]" : "max-h-[238px]",
-        )}
-      >
-        {visibleMessages.map((message) => (
-          <div
-            key={message.id}
-            className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}
+      <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">Actions proposées</h3>
+      <div className="flex flex-wrap gap-2">
+        {actions.map((item) => (
+          <button
+            key={item}
+            type="button"
+            disabled={disabled}
+            onClick={() => onAction(item)}
+            className="inline-flex min-h-8 items-center rounded-[5px] border border-[#dfe2ec] bg-white px-3 font-semibold text-[#071044] text-xs transition hover:border-[#b7aaff] hover:bg-[#f7f5ff] disabled:cursor-not-allowed disabled:bg-[#f6f7fb] disabled:text-[#071044]/45"
           >
-            <div
-              className={cn(
-                "max-w-[86%] rounded-[6px] px-3 py-2 text-xs leading-5",
-                message.role === "user"
-                  ? "bg-[#f0edff] text-[#071044]"
-                  : "border border-[#dfe2ec] bg-white text-[#071044]",
-                message.error && "border-[#ffd2c9] bg-[#fff5f3] text-[#a23b2a]",
-              )}
-            >
-              {message.content ? (
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              ) : (
-                <p className="inline-flex items-center gap-1.5 font-semibold text-[#6048ff]">
-                  Recouvrement réfléchit
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-[#6048ff]" />
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-[#6048ff] [animation-delay:120ms]" />
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-[#6048ff] [animation-delay:240ms]" />
-                </p>
-              )}
-            </div>
-          </div>
+            {item}
+          </button>
         ))}
       </div>
-      {showComposer ? (
-        <form
-          className="mt-3 flex min-h-11 items-center gap-3 rounded-[5px] border border-[#b7aaff] bg-white px-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSubmit();
-          }}
-        >
-          <input
-            aria-label="Question assistant"
-            value={inputValue}
-            onChange={(event) => onInputChange(event.target.value)}
-            placeholder="Continuer avec le chat Recouvrement..."
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#071044]/55"
-          />
-          <button
-            type="submit"
-            aria-label="Envoyer la question"
-            disabled={status === "loading" || inputValue.trim().length === 0}
-            className="grid h-9 w-9 place-items-center rounded-[5px] bg-[#6048ff] text-white transition disabled:bg-[#c8bbff]"
+    </section>
+  );
+}
+
+function assistantFooterActionsForTask(task: AssistantTask, content: GeneratedAssistantContent) {
+  if (content.nextActions.includes("Modifier le message")) {
+    return [
+      { label: "Modifier le message", Icon: PenLine, primary: true },
+      { label: "Copier le message", Icon: Copy },
+      { label: "Insérer dans le dossier", Icon: Folder },
+      { label: "Soumettre à validation", Icon: ShieldCheck },
+    ];
+  }
+  if (task === "propose_schedule") {
+    return [
+      { label: "Ajuster la durée", Icon: CalendarDays, primary: true },
+      { label: "Comparer les options", Icon: Clock3 },
+      { label: "Préparer le message", Icon: Mail },
+      { label: "Soumettre à validation", Icon: ShieldCheck },
+    ];
+  }
+  if (task === "explain_payment_options") {
+    return [
+      { label: "Proposer un échéancier", Icon: CalendarDays, primary: true },
+      { label: "Comparer les durées", Icon: Clock3 },
+      { label: "Préparer le message", Icon: Mail },
+      { label: "Soumettre à validation", Icon: ShieldCheck },
+    ];
+  }
+  if (task === "check_rule") {
+    if (isOutOfWindowContactContent(content)) {
+      return [
+        { label: "Planifier un rappel demain", Icon: Clock3, primary: true },
+        { label: "Rédiger un email", Icon: Mail },
+        { label: "Reporter le contact", Icon: Clock3 },
+        { label: "Insérer la note dans le dossier", Icon: Folder },
+      ];
+    }
+    return [
+      { label: "Préparer un script d'appel", Icon: Phone, primary: true },
+      { label: "Rédiger un email", Icon: Mail },
+      { label: "Reporter le contact", Icon: Clock3 },
+      { label: "Insérer la note dans le dossier", Icon: Folder },
+    ];
+  }
+
+  return [
+    { label: "Préparer un brouillon", Icon: PenLine, primary: true },
+    { label: "Insérer dans le dossier", Icon: Folder },
+    { label: "Copier le message", Icon: Copy },
+  ];
+}
+
+function AssistantFooterActionButton({
+  action,
+  disabled,
+  onAction,
+}: {
+  action: ReturnType<typeof assistantFooterActionsForTask>[number];
+  disabled: boolean;
+  onAction: (action: string) => void;
+}) {
+  const { Icon } = action;
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onAction(action.label)}
+      className={cn(
+        "inline-flex h-10 items-center justify-center gap-2 rounded-[5px] px-4 font-bold text-xs transition disabled:cursor-not-allowed",
+        action.primary
+          ? "bg-[linear-gradient(180deg,#e38a00,#cf7300)] text-white shadow-[0_10px_22px_rgba(217,119,0,0.22)] hover:bg-[#c96f00] disabled:bg-none disabled:bg-[#d8dbe6] disabled:text-white"
+          : "border border-[#dfe2ec] bg-white text-[#071044] hover:bg-[#f7f8fb] disabled:bg-[#f6f7fb] disabled:text-[#071044]/45",
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {action.label}
+    </button>
+  );
+}
+
+function AssistantProgressLine({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-[6px] border border-[#e2defd] bg-[#fbfaff] px-4 py-3 text-[#6048ff] text-xs">
+      <span className="h-2 w-2 animate-pulse rounded-full bg-[#6048ff]" />
+      <span className="font-bold">{label}</span>
+    </div>
+  );
+}
+
+function assistantActionsForTask(task: AssistantTask, content: GeneratedAssistantContent) {
+  const genericActions = ["Modifier", "Insérer dans le dossier", "Soumettre à validation"];
+  const hasSpecificActions = content.nextActions.some((action) => !genericActions.includes(action));
+  const withModelActions = (fallbacks: string[]) => {
+    const modelActions = hasSpecificActions || task === "draft_reminder" ? content.nextActions : [];
+    return Array.from(new Set([...modelActions, ...fallbacks])).slice(0, 5);
+  };
+  if (task === "summary") {
+    return withModelActions([
+      "Rédiger une relance",
+      "Proposer un échéancier",
+      "Vérifier une règle de contact",
+    ]);
+  }
+  if (task === "propose_schedule") {
+    const scheduleFallbacks = [
+      "Ajuster la durée",
+      "Comparer les options",
+      "Préparer le message client",
+      "Soumettre à validation",
+      "Insérer dans le dossier",
+    ];
+    return hasSpecificActions ? content.nextActions.slice(0, 5) : scheduleFallbacks;
+  }
+  if (task === "explain_payment_options") {
+    return content.nextActions.length > 0
+      ? content.nextActions
+      : [
+          "Proposer un échéancier",
+          "Comparer plusieurs durées",
+          "Préparer le message client",
+          "Soumettre à validation",
+        ];
+  }
+  if (task === "check_rule") {
+    if (isOutOfWindowContactContent(content)) {
+      return [
+        "Planifier un rappel demain",
+        "Rédiger un email de confirmation",
+        "Reporter le contact",
+        "Voir la règle de contact",
+      ];
+    }
+    return [
+      "Préparer un script d'appel",
+      "Rédiger un email de confirmation",
+      "Reporter le contact",
+      "Voir la règle de contact",
+    ];
+  }
+  if (task === "explain_priority") {
+    return withModelActions([
+      "Préparer l'étape suivante",
+      "Rédiger une relance",
+      "Proposer un échéancier",
+    ]);
+  }
+  return withModelActions([
+    "Modifier",
+    "Insérer dans le dossier",
+    "Copier",
+    "Soumettre à validation",
+  ]);
+}
+
+function assistantActionsForArtifact(artifact: AssistantArtifact) {
+  if (artifact.type === "client_message_artifact") {
+    return [
+      "Modifier le message",
+      "Copier le message",
+      "Insérer dans le dossier",
+      "Soumettre à validation",
+      "Changer l'option d'échéancier",
+    ];
+  }
+  return assistantActionsForTask(artifact.task, artifact.content);
+}
+
+function verificationCompleteForTask(task: AssistantTask, content: GeneratedAssistantContent) {
+  if (task === "summary") {
+    return content.summary.length > 0 || content.proposition.length > 0;
+  }
+  if (task === "check_rule") {
+    return content.allowedItems.length > 0 || content.validationItems.length > 0;
+  }
+  if (task === "explain_payment_options") {
+    return content.paymentOptions.length > 0 || content.paymentRecommendation.length > 0;
+  }
+  if (task === "explain_priority") {
+    return content.recommendedAction.length > 0 || content.priorityReasons.length > 0;
+  }
+  return content.complianceChecks.length > 0;
+}
+
+function isOutOfWindowContactContent(content: GeneratedAssistantContent) {
+  return [...content.contactFrame, ...content.validationItems].some((item) =>
+    normalizeAssistantText(item).includes("non autorise"),
+  );
+}
+
+function AssistantTextCard({
+  title,
+  body,
+  badges,
+  items,
+}: {
+  title: string;
+  body?: string;
+  badges?: string[];
+  items?: string[];
+}) {
+  const paragraphs = (body ?? "")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+  const listItems = items?.filter(Boolean) ?? [];
+
+  if (paragraphs.length === 0 && listItems.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <h3 className="!font-sans !text-[#071044] font-bold text-sm">{title}</h3>
+        {badges?.map((badge) => (
+          <span
+            key={badge}
+            className="rounded-full border border-[#d8d1ff] bg-white px-2 py-0.5 font-bold text-[#6048ff] text-[0.64rem]"
           >
-            <Send className="h-4 w-4" />
-          </button>
-        </form>
+            {badge}
+          </span>
+        ))}
+      </div>
+      {listItems.length > 0 ? (
+        <ul className="space-y-1.5 text-[#071044] text-xs leading-5">
+          {listItems.map((item) => (
+            <li key={item} className="flex items-start gap-2">
+              <CircleCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#071044]/60" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {paragraphs.length > 0 ? (
+        <div className="space-y-2 whitespace-pre-wrap text-[#071044] text-xs leading-5">
+          {paragraphs.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
       ) : null}
     </section>
   );
 }
 
+function scheduleDurationFromContent(content: GeneratedAssistantContent) {
+  const durationItem = content.scheduleItems.find((item) => /durée demandée/i.test(item));
+  const durationMatch = durationItem?.match(/(\d{1,2})\s*mois/i);
+  return durationMatch?.[1] ? `${durationMatch[1]} mois` : null;
+}
+
+function scheduleBadgesForContent(content: GeneratedAssistantContent) {
+  const normalizedItems = content.scheduleItems.map(normalizeAssistantText);
+  return [
+    normalizedItems.some((item) => item.includes("validation requise"))
+      ? "Validation requise"
+      : null,
+    normalizedItems.some((item) => item.includes("non cree")) ? "Non créé" : null,
+  ].filter(Boolean) as string[];
+}
+
+function draftPanelTitleForContent(content: GeneratedAssistantContent) {
+  const draftBody = content.versions[0]?.body ?? "";
+  if (
+    normalizeAssistantText(draftBody).includes("contactez") ||
+    normalizeAssistantText(draftBody).includes("proposez")
+  ) {
+    return "Plan d'action proposé";
+  }
+  return "Brouillon de relance";
+}
+
+export interface ArtifactRenderState {
+  compact?: boolean;
+  selectedVersionId: string;
+  status: AssistantStatus;
+  thinkingLabel: string;
+  onActionCommand: (action: string) => void;
+  onSelectVersion: (versionId: string) => void;
+}
+
+function fallbackArtifactForTask(
+  task: AssistantTask,
+  content: GeneratedAssistantContent,
+): AssistantArtifact {
+  const type = statefulFallbackArtifactType(task);
+  return {
+    id: `current-${type}`,
+    type,
+    task,
+    title: artifactTitleForType(type),
+    status: "draft",
+    content,
+  };
+}
+
+export function renderArtifact(artifact: AssistantArtifact, state: ArtifactRenderState) {
+  const task = artifact.task;
+  const content = artifact.content;
+  const compact = state.compact ?? false;
+  const selectedVersionId = state.selectedVersionId;
+  const status = state.status;
+  const thinkingLabel = state.thinkingLabel;
+  const onActionCommand = state.onActionCommand;
+  const onSelectVersion = state.onSelectVersion;
+  const isLoading = status === "loading";
+  const context = content.context.length > 0 ? content.context : contextItems;
+  const actionsReady = !isLoading && verificationCompleteForTask(task, content);
+  const actions = assistantActionsForArtifact(artifact);
+  const progress = isLoading ? <AssistantProgressLine label={thinkingLabel} /> : null;
+
+  if (artifact.type === "client_message_artifact") {
+    return (
+      <div className="grid gap-4">
+        <AssistantTextCard
+          badges={["Validation requise", "Non créé"]}
+          items={content.scheduleItems}
+          title="Option retenue"
+        />
+        <AssistantTextCard body={content.clientMessage} title="Message client proposé" />
+        <AssistantVerificationPanel checks={content.complianceChecks} status={status} />
+        <AssistantActionPanel
+          actions={actions}
+          disabled={!actionsReady}
+          onAction={onActionCommand}
+        />
+      </div>
+    );
+  }
+
+  if (artifact.type === "schedule_proposal" || artifact.type === "schedule_proposal_v2") {
+    const duration = scheduleDurationFromContent(content);
+    const title = duration ? `Échéancier indicatif — ${duration}` : "Proposition d'échéancier";
+
+    return (
+      <div className="grid gap-4">
+        <AssistantContextPanel compact={compact} items={context} />
+        {progress}
+        <AssistantTextCard
+          badges={scheduleBadgesForContent(content)}
+          body={content.paymentPlan}
+          items={content.scheduleItems}
+          title={title}
+        />
+        <AssistantTextCard body={content.clientMessage} title="Message client associé" />
+        <AssistantVerificationPanel checks={content.complianceChecks} status={status} />
+        <AssistantActionPanel
+          actions={actions}
+          disabled={!actionsReady}
+          onAction={onActionCommand}
+        />
+      </div>
+    );
+  }
+
+  if (artifact.type === "payment_options_v1") {
+    return (
+      <div className="grid gap-4">
+        <AssistantTextCard items={content.paymentOptions} title="Options de règlement" />
+        <AssistantTextCard
+          body={content.paymentRecommendation}
+          title="Option recommandée pour RC-2048"
+        />
+        <AssistantTextCard items={content.validationItems} title="Validations nécessaires" />
+        <AssistantActionPanel
+          actions={actions}
+          disabled={!actionsReady}
+          onAction={onActionCommand}
+        />
+      </div>
+    );
+  }
+
+  if (artifact.type === "contact_rule_v1") {
+    return (
+      <div className="grid gap-4">
+        <AssistantTextCard items={content.contactFrame} title="Cadre de contact applicable" />
+        <AssistantTextCard items={content.allowedItems} title="Ce qui est autorisé" />
+        <AssistantTextCard
+          items={content.validationItems}
+          title={
+            isOutOfWindowContactContent(content)
+              ? "Ce qui nécessite validation ou action"
+              : "Ce qui nécessite validation"
+          }
+        />
+        <AssistantActionPanel
+          actions={actions}
+          disabled={!actionsReady}
+          onAction={onActionCommand}
+        />
+      </div>
+    );
+  }
+
+  if (artifact.type === "case_summary_v1") {
+    return (
+      <div className="grid gap-4">
+        <AssistantContextPanel compact={compact} items={context} />
+        {progress}
+        <AssistantTextCard items={content.summary} title="Résumé du dossier" />
+        <AssistantTextCard items={content.priorityReasons} title="Pourquoi prioritaire" />
+        <AssistantActionPanel
+          actions={actions}
+          disabled={!actionsReady}
+          onAction={onActionCommand}
+        />
+      </div>
+    );
+  }
+
+  if (artifact.type === "priority_explanation_v1") {
+    return (
+      <div className="grid gap-4">
+        <AssistantTextCard items={content.priorityReasons} title="Raisons de priorité" />
+        <AssistantTextCard items={content.businessFactors} title="Facteurs métier" />
+        <AssistantTextCard body={content.recommendedAction} title="Prochaine action recommandée" />
+        <AssistantActionPanel
+          actions={actions}
+          disabled={!actionsReady}
+          onAction={onActionCommand}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      <AssistantContextPanel compact={compact} items={context} />
+      {progress}
+      {content.versions.length > 0 ? (
+        <AssistantDraftPanel
+          compact={compact}
+          content={content}
+          title={draftPanelTitleForContent(content)}
+          selectedVersionId={selectedVersionId}
+          status={status}
+          onSelectVersion={onSelectVersion}
+        />
+      ) : null}
+      <AssistantVerificationPanel checks={content.complianceChecks} status={status} />
+      <AssistantActionPanel actions={actions} disabled={!actionsReady} onAction={onActionCommand} />
+    </div>
+  );
+}
+
+function AssistantTaskContent({
+  task,
+  artifact,
+  compact = false,
+  content,
+  selectedVersionId,
+  status,
+  thinkingLabel,
+  onActionCommand,
+  onSelectVersion,
+}: {
+  task: AssistantTask;
+  artifact: AssistantArtifact | null;
+  compact?: boolean;
+  content: GeneratedAssistantContent;
+  selectedVersionId: string;
+  status: AssistantStatus;
+  thinkingLabel: string;
+  onActionCommand: (action: string) => void;
+  onSelectVersion: (versionId: string) => void;
+}) {
+  return renderArtifact(artifact ?? fallbackArtifactForTask(task, content), {
+    compact,
+    selectedVersionId,
+    status,
+    thinkingLabel,
+    onActionCommand,
+    onSelectVersion,
+  });
+}
+
 function AssistantDrawer({
   mode,
-  activeTab,
+  activeTask,
+  artifact,
   content,
   error,
   inputValue,
@@ -735,6 +2030,7 @@ function AssistantDrawer({
   onClose,
   onExpand,
   onInputChange,
+  onActionCommand,
   onRegenerate,
   onSelectVersion,
   onSendMessage,
@@ -742,7 +2038,8 @@ function AssistantDrawer({
   onTogglePinned,
 }: {
   mode: Exclude<AssistantMode, "closed">;
-  activeTab: string;
+  activeTask: AssistantTask;
+  artifact: AssistantArtifact | null;
   content: GeneratedAssistantContent;
   error: string | null;
   inputValue: string;
@@ -753,6 +2050,7 @@ function AssistantDrawer({
   onClose: () => void;
   onExpand: () => void;
   onInputChange: (value: string) => void;
+  onActionCommand: (action: string) => void;
   onRegenerate: () => void;
   onSelectVersion: (versionId: string) => void;
   onSendMessage: () => void;
@@ -760,16 +2058,17 @@ function AssistantDrawer({
   onTogglePinned: () => void;
 }) {
   const isPinned = mode === "pinned";
-  const summary = content.summary.length > 0 ? content.summary : fallbackAssistantContent.summary;
-  const checks =
-    content.complianceChecks.length > 0 ? content.complianceChecks : verificationItems.slice(0, 4);
-  const nextActions =
-    content.nextActions.length > 0
-      ? content.nextActions
-      : ["Relire la proposition avant action.", "Insérer le brouillon après validation."];
-  const initialPrompt =
-    messages.find((message) => message.role === "user")?.content ??
-    assistantPromptForTab(activeTab);
+  const isFocus = mode === "focus";
+  const finalActionsDisabled =
+    status === "loading" || !verificationCompleteForTask(activeTask, content);
+  const footerActions = assistantFooterActionsForTask(activeTask, content);
+  const reversedMessages = [...messages].reverse();
+  const currentPrompt =
+    reversedMessages.find((message) => message.role === "user")?.content ??
+    assistantPromptForTask(activeTask);
+  const latestAssistantReply = reversedMessages.find(
+    (message) => message.role === "assistant" && !message.streaming && !message.error,
+  )?.content;
 
   return (
     <aside
@@ -777,11 +2076,15 @@ function AssistantDrawer({
       aria-modal={isPinned ? undefined : true}
       role={isPinned ? "complementary" : "dialog"}
       className={cn(
-        "fixed right-0 z-50 flex flex-col overflow-hidden border-[#dfe2ec] border-l bg-white text-[#071044] transition-[width,box-shadow,transform] duration-300 ease-out",
-        "top-[90px] h-[calc(100vh-90px)] max-md:top-0 max-md:h-screen",
-        isPinned
-          ? "w-[496px] max-w-[calc(100vw-18px)] shadow-[-12px_0_36px_rgba(7,16,68,0.08)]"
-          : "w-[704px] max-w-[calc(100vw-22px)] shadow-[-26px_0_70px_rgba(7,16,68,0.18)]",
+        "fixed z-50 flex flex-col overflow-hidden border-[#dfe2ec] bg-white text-[#071044] transition-[width,box-shadow,transform] duration-300 ease-out",
+        isFocus
+          ? "top-[108px] right-8 bottom-6 left-[290px] rounded-[8px] border shadow-[0_28px_80px_rgba(7,16,68,0.22)] max-lg:left-6 max-md:inset-0 max-md:rounded-none"
+          : cn(
+              "right-0 top-[90px] h-[calc(100vh-90px)] border-l max-md:top-0 max-md:h-screen",
+              isPinned
+                ? "w-[496px] max-w-[calc(100vw-18px)] shadow-[-12px_0_36px_rgba(7,16,68,0.08)]"
+                : "w-[704px] max-w-[calc(100vw-22px)] shadow-[-26px_0_70px_rgba(7,16,68,0.18)]",
+            ),
       )}
     >
       <header
@@ -800,9 +2103,7 @@ function AssistantDrawer({
             >
               {!isPinned ? <Sparkles className="h-5 w-5 text-[#6048ff]" /> : null}
               <span className="whitespace-nowrap">Assistant de traitement</span>
-              <span className="whitespace-nowrap font-semibold text-[#071044]/80">
-                {isPinned ? "- RC-2048" : "RC-2048"}
-              </span>
+              <span className="whitespace-nowrap font-semibold text-[#071044]/80">— RC-2048</span>
               <span
                 className={cn(
                   "rounded-full bg-[#f0edff] font-bold text-[#6048ff]",
@@ -832,14 +2133,19 @@ function AssistantDrawer({
             </button>
             <button
               type="button"
-              aria-label="Agrandir l'assistant"
+              aria-label={isFocus ? "Quitter le mode focus" : "Mode focus"}
               onClick={onExpand}
               className={cn(
-                "grid place-items-center rounded-[5px] border border-[#dfe2ec] text-[#071044] transition hover:bg-[#f7f8fb]",
-                isPinned ? "h-7 w-7" : "h-8 w-8",
+                "inline-flex items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] px-2 text-[#071044] transition hover:bg-[#f7f8fb]",
+                isPinned ? "h-7 min-w-7" : "h-8 min-w-8",
               )}
             >
-              <Maximize2 className="h-4 w-4" />
+              {isFocus ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              {!isPinned ? (
+                <span className="hidden font-semibold text-xs sm:inline">
+                  {isFocus ? "Réduire" : "Mode focus"}
+                </span>
+              ) : null}
             </button>
             <button
               type="button"
@@ -858,19 +2164,19 @@ function AssistantDrawer({
           <div className="mt-5 flex gap-4 overflow-x-auto border-[#eceef5] border-b">
             {assistantTabs.map((tab) => (
               <button
-                key={tab}
+                key={tab.task}
                 type="button"
-                onClick={() => onSelectTab(tab)}
+                onClick={() => onSelectTab(tab.label)}
                 className={cn(
                   "relative h-10 shrink-0 font-bold text-[0.72rem] transition",
-                  activeTab === tab ? "text-[#6048ff]" : "text-[#071044]",
+                  activeTask === tab.task ? "text-[#6048ff]" : "text-[#071044]",
                 )}
               >
-                {tab}
+                {tab.label}
                 <span
                   className={cn(
                     "absolute right-0 bottom-0 left-0 h-0.5 rounded-full bg-[#6048ff] transition-opacity",
-                    activeTab === tab ? "opacity-100" : "opacity-0",
+                    activeTask === tab.task ? "opacity-100" : "opacity-0",
                   )}
                 />
               </button>
@@ -881,43 +2187,20 @@ function AssistantDrawer({
 
       {isPinned ? (
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          <div className="space-y-4">
-            <AssistantContextPanel compact />
-            <AssistantDraftPanel
-              compact
-              content={content}
-              selectedVersionId={selectedVersionId}
-              status={status}
-              onSelectVersion={onSelectVersion}
-            />
-            <AssistantVerificationPanel checks={checks} status={status} />
-            <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
-              <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">
-                Prochaines actions suggérées
-              </h3>
-              <ul className="space-y-2 text-[#071044] text-xs">
-                {status === "loading"
-                  ? loadingRows.slice(0, 2).map((row) => (
-                      <li key={row}>
-                        <SkeletonLines rows={1} />
-                      </li>
-                    ))
-                  : nextActions.map((item) => <li key={item}>{item}</li>)}
-              </ul>
-            </section>
-            <AssistantConversationPanel
-              compact
-              inputValue={inputValue}
-              messages={messages}
-              status={status}
-              thinkingLabel={thinkingLabel}
-              onInputChange={onInputChange}
-              onSubmit={onSendMessage}
-            />
-          </div>
+          <AssistantTaskContent
+            compact
+            task={activeTask}
+            artifact={artifact}
+            content={content}
+            selectedVersionId={selectedVersionId}
+            status={status}
+            onActionCommand={onActionCommand}
+            onSelectVersion={onSelectVersion}
+            thinkingLabel={thinkingLabel}
+          />
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className={cn("min-h-0 flex-1 overflow-y-auto px-6 py-5", isFocus && "px-8")}>
           <section className="grid gap-3 rounded-[6px] border border-[#dfe2ec] bg-white p-4 md:grid-cols-[minmax(0,1fr)_120px_100px_168px]">
             <div className="flex items-center gap-3">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fbf0dd] font-bold text-[#d97700]">
@@ -950,6 +2233,7 @@ function AssistantDrawer({
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {assistantActions.map(({ label, Icon }) => {
               const tab = assistantTabForAction(label);
+              const task = assistantTaskForAction(label);
               return (
                 <button
                   key={label}
@@ -957,7 +2241,7 @@ function AssistantDrawer({
                   onClick={() => onSelectTab(tab)}
                   className={cn(
                     "flex min-h-12 items-center justify-center gap-2 rounded-[5px] border px-3 font-bold text-xs transition",
-                    activeTab === tab
+                    activeTask === task
                       ? "border-[#b7aaff] bg-[#f4f1ff] text-[#6048ff]"
                       : "border-[#dfe2ec] bg-white text-[#071044] hover:bg-[#f7f8fb]",
                   )}
@@ -970,7 +2254,7 @@ function AssistantDrawer({
           </div>
 
           <div className="mt-5 ml-auto max-w-[430px] rounded-[6px] bg-[#f0edff] px-5 py-4 text-[#071044] text-sm leading-6 shadow-[0_8px_18px_rgba(96,72,255,0.08)]">
-            {initialPrompt}
+            {currentPrompt}
           </div>
 
           <article className="mt-5 rounded-[6px] border border-[#dfe2ec] bg-white p-5 shadow-[0_12px_28px_rgba(7,16,68,0.05)]">
@@ -978,10 +2262,10 @@ function AssistantDrawer({
               <Sparkles
                 className={cn("h-5 w-5 text-[#6048ff]", status === "loading" && "animate-pulse")}
               />
-              <p className="font-bold">
+              <p className="font-bold leading-5">
                 {status === "loading"
                   ? thinkingLabel
-                  : "Voici une proposition adaptée au dossier RC-2048."}
+                  : (latestAssistantReply ?? assistantResultLabel(activeTask))}
               </p>
               <button
                 type="button"
@@ -996,77 +2280,16 @@ function AssistantDrawer({
                 {error}
               </div>
             ) : null}
-            <div className="grid gap-4">
-              <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
-                <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                  Résumé du dossier
-                </h3>
-                <ul className="space-y-1.5 text-xs leading-5">
-                  {status === "loading"
-                    ? loadingRows.map((row) => (
-                        <li key={row}>
-                          <SkeletonLines rows={1} />
-                        </li>
-                      ))
-                    : summary.map((item) => <li key={item}>{item}</li>)}
-                </ul>
-              </section>
-              <AssistantDraftPanel
-                content={content}
-                selectedVersionId={selectedVersionId}
-                status={status}
-                onSelectVersion={onSelectVersion}
-              />
-              {content.paymentPlan || status === "loading" ? (
-                <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
-                  <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                    Échéancier proposé
-                  </h3>
-                  {status === "loading" ? (
-                    <SkeletonLines rows={2} />
-                  ) : (
-                    <p className="text-xs leading-5">{content.paymentPlan}</p>
-                  )}
-                </section>
-              ) : null}
-              <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
-                <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                  Règles et conformité
-                </h3>
-                <ul className="space-y-1.5 text-xs leading-5">
-                  {status === "loading"
-                    ? loadingRows.map((row) => (
-                        <li key={row}>
-                          <SkeletonLines rows={1} />
-                        </li>
-                      ))
-                    : checks.map((item) => <li key={item}>{item}</li>)}
-                </ul>
-              </section>
-              <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
-                <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                  Prochaines actions suggérées
-                </h3>
-                <ul className="space-y-1.5 text-xs leading-5">
-                  {status === "loading"
-                    ? loadingRows.slice(0, 2).map((row) => (
-                        <li key={row}>
-                          <SkeletonLines rows={1} />
-                        </li>
-                      ))
-                    : nextActions.map((item) => <li key={item}>{item}</li>)}
-                </ul>
-              </section>
-              <AssistantConversationPanel
-                inputValue={inputValue}
-                messages={messages}
-                showComposer={false}
-                status={status}
-                thinkingLabel={thinkingLabel}
-                onInputChange={onInputChange}
-                onSubmit={onSendMessage}
-              />
-            </div>
+            <AssistantTaskContent
+              task={activeTask}
+              artifact={artifact}
+              content={content}
+              selectedVersionId={selectedVersionId}
+              status={status}
+              thinkingLabel={thinkingLabel}
+              onActionCommand={onActionCommand}
+              onSelectVersion={onSelectVersion}
+            />
           </article>
         </div>
       )}
@@ -1074,28 +2297,15 @@ function AssistantDrawer({
       <footer className="shrink-0 border-[#dfe2ec] border-t bg-white px-6 py-4">
         {isPinned ? (
           <>
-            <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_1fr_1.05fr]">
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-3 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
-              >
-                <PenLine className="h-4 w-4" />
-                Modifier
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-3 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
-              >
-                <Folder className="h-4 w-4" />
-                Insérer
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] bg-[linear-gradient(180deg,#e38a00,#cf7300)] px-3 font-bold text-white text-xs shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
-              >
-                <Send className="h-4 w-4" />
-                Valider
-              </button>
+            <div className="mb-4 grid gap-2 sm:grid-cols-2">
+              {footerActions.map((action) => (
+                <AssistantFooterActionButton
+                  key={action.label}
+                  action={action}
+                  disabled={finalActionsDisabled}
+                  onAction={onActionCommand}
+                />
+              ))}
             </div>
             <div className="flex items-center justify-between gap-3 text-xs">
               <button
@@ -1119,27 +2329,14 @@ function AssistantDrawer({
         ) : (
           <>
             <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] bg-[linear-gradient(180deg,#e38a00,#cf7300)] px-4 font-bold text-white text-xs shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
-              >
-                <PenLine className="h-4 w-4" />
-                Créer un brouillon
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-4 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
-              >
-                <Folder className="h-4 w-4" />
-                Insérer dans le dossier
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-4 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
-              >
-                <Copy className="h-4 w-4" />
-                Copier le message
-              </button>
+              {footerActions.map((action) => (
+                <AssistantFooterActionButton
+                  key={action.label}
+                  action={action}
+                  disabled={finalActionsDisabled}
+                  onAction={onActionCommand}
+                />
+              ))}
             </div>
             <form
               className="mt-4 flex min-h-[56px] items-center gap-3 rounded-[5px] border border-[#b7aaff] bg-white px-4 shadow-[0_8px_18px_rgba(96,72,255,0.06)]"
@@ -1152,7 +2349,7 @@ function AssistantDrawer({
                 aria-label="Question assistant"
                 value={inputValue}
                 onChange={(event) => onInputChange(event.target.value)}
-                placeholder="Continuer avec le chat Recouvrement..."
+                placeholder="Continuer avec l'assistant Recouvrement..."
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#071044]/55"
               />
               <button
@@ -1175,164 +2372,113 @@ function AssistantDrawer({
 }
 
 export function RecouvrementProductExperience() {
-  const locale = useLocale() as Locale;
   const [assistantMode, setAssistantMode] = useState<AssistantMode>("closed");
-  const [activeAssistantTab, setActiveAssistantTab] = useState(defaultAssistantTab);
+  const [activeAssistantTask, setActiveAssistantTask] =
+    useState<AssistantTask>(defaultAssistantTask);
   const [assistantContent, setAssistantContent] =
     useState<GeneratedAssistantContent>(fallbackAssistantContent);
   const [assistantStatus, setAssistantStatus] = useState<AssistantStatus>("idle");
   const [assistantError, setAssistantError] = useState<string | null>(null);
   const [assistantThread, setAssistantThread] = useState<AssistantThreadMessage[]>([]);
   const [assistantInput, setAssistantInput] = useState("");
+  const [assistantArtifact, setAssistantArtifact] = useState<AssistantArtifact | null>(null);
+  const [assistantArtifacts, setAssistantArtifacts] = useState<AssistantArtifact[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState("v1");
-  const [generationNonce, setGenerationNonce] = useState(0);
   const [thinkingStep, setThinkingStep] = useState(0);
-  const abortRef = useRef<AbortController | null>(null);
   const assistantThreadRef = useRef<AssistantThreadMessage[]>([]);
-  const conversationIdRef = useRef<string | null>(null);
-  const isAssistantOpen = assistantMode !== "closed";
+  const activeThinkingSteps = recouvrementThinkingSteps[activeAssistantTask];
   const thinkingLabel =
-    recouvrementThinkingSteps[thinkingStep % recouvrementThinkingSteps.length] ??
-    "Recouvrement réfléchit";
+    activeThinkingSteps[thinkingStep % activeThinkingSteps.length] ?? "Analyse du contexte...";
 
   useEffect(() => {
     assistantThreadRef.current = assistantThread;
   }, [assistantThread]);
 
-  const openAssistant = (action = defaultAssistantTab) => {
-    setActiveAssistantTab(assistantTabForAction(action));
-    setAssistantMode("drawer");
-  };
+  const currentAssistantState = useCallback(
+    (): TreatmentAssistantState => ({
+      currentCase: currentRecouvrementCase,
+      currentTask: activeAssistantTask,
+      currentArtifact: assistantArtifact,
+      artifacts: assistantArtifacts,
+      content: assistantContent,
+      thread: assistantThreadRef.current,
+    }),
+    [activeAssistantTask, assistantArtifact, assistantArtifacts, assistantContent],
+  );
+
+  const applyAssistantTransition = useCallback((transition: AssistantStateTransition) => {
+    setActiveAssistantTask(transition.state.currentTask);
+    setAssistantContent(transition.state.content);
+    setAssistantArtifact(transition.state.currentArtifact);
+    setAssistantArtifacts(transition.state.artifacts);
+    setAssistantStatus("ready");
+    setAssistantError(null);
+    setSelectedVersionId(transition.artifact.content.versions[0]?.id ?? "v1");
+  }, []);
+
+  const appendHandledTurn = useCallback((userContent: string, assistantContent: string) => {
+    const priorThread = assistantThreadRef.current.filter((item) => !item.streaming);
+    setAssistantThread([
+      ...priorThread,
+      { id: crypto.randomUUID(), role: "user", content: userContent },
+      { id: crypto.randomUUID(), role: "assistant", content: assistantContent },
+    ]);
+  }, []);
+
   const closeAssistant = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
     setAssistantMode("closed");
   };
-  const expandAssistant = () => setAssistantMode("drawer");
+  const expandAssistant = () =>
+    setAssistantMode((currentMode) => (currentMode === "focus" ? "drawer" : "focus"));
   const togglePinnedAssistant = () =>
     setAssistantMode((currentMode) => (currentMode === "pinned" ? "drawer" : "pinned"));
   const regenerateAssistantContent = useCallback(() => {
-    setGenerationNonce((nonce) => nonce + 1);
-  }, []);
+    const state = currentAssistantState();
+    const action = assistantActionFromLabel(assistantTabForTask(activeAssistantTask), state);
+    const transition = handleAssistantAction(action, state);
+    applyAssistantTransition(transition);
+    appendHandledTurn("Régénérer", transition.visibleReply);
+  }, [activeAssistantTask, appendHandledTurn, applyAssistantTransition, currentAssistantState]);
 
-  const sendAssistantTurn = useCallback(
-    (message: string, resetThread: boolean) => {
-      const trimmedMessage = message.trim();
-      if (!trimmedMessage) return;
-
-      const priorThread = resetThread
-        ? []
-        : assistantThreadRef.current.filter((item) => !item.streaming);
-      const userMessage: AssistantThreadMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: trimmedMessage,
-      };
-      const assistantMessage: AssistantThreadMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: "",
-        streaming: true,
-      };
-
-      if (resetThread) {
-        conversationIdRef.current = null;
-        setAssistantContent(fallbackAssistantContent);
-        setSelectedVersionId("v1");
-      }
-
-      setAssistantInput("");
-      setAssistantError(null);
-      setAssistantStatus("loading");
-      setAssistantThread([...priorThread, userMessage, assistantMessage]);
-
-      const controller = new AbortController();
-      abortRef.current?.abort();
-      abortRef.current = controller;
-
-      let rawResponse = "";
-
-      void streamChat(
-        {
-          message: trimmedMessage,
-          language: locale,
-          conversation_id: resetThread ? undefined : (conversationIdRef.current ?? undefined),
-          subject_id: getSubjectId(),
-          history: buildAssistantHistory(priorThread),
-          system_prompt_override: recouvrementDrawerSystemPrompt,
-        },
-        {
-          signal: controller.signal,
-          surface: "recouvrement",
-          onStart: ({ conversation_id }) => {
-            conversationIdRef.current = conversation_id;
-          },
-          onToken: (token) => {
-            rawResponse += token;
-            setAssistantThread((current) =>
-              current.map((item) =>
-                item.id === assistantMessage.id ? { ...item, content: item.content + token } : item,
-              ),
-            );
-          },
-          onEnd: (envelope) => {
-            const finalResponse = asString(envelope.final_response || rawResponse);
-            const parsed = parseGeneratedAssistantContent(finalResponse);
-            setAssistantContent(parsed);
-            setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
-            setAssistantThread((current) =>
-              current.map((item) =>
-                item.id === assistantMessage.id
-                  ? { ...item, content: finalResponse, streaming: false }
-                  : item,
-              ),
-            );
-            setAssistantStatus("ready");
-          },
-          onError: (message) => {
-            if (controller.signal.aborted) return;
-            setAssistantError(message);
-            setAssistantStatus("error");
-            setAssistantThread((current) =>
-              current.map((item) =>
-                item.id === assistantMessage.id
-                  ? { ...item, content: message, streaming: false, error: true }
-                  : item,
-              ),
-            );
-          },
-        },
-      ).catch((err) => {
-        if (controller.signal.aborted) return;
-        const message = err instanceof Error ? err.message : String(err);
-        setAssistantError(message);
-        setAssistantStatus("error");
-        setAssistantThread((current) =>
-          current.map((item) =>
-            item.id === assistantMessage.id
-              ? { ...item, content: message, streaming: false, error: true }
-              : item,
-          ),
-        );
-      });
+  const openAssistant = useCallback(
+    (action = "Préparer une relance") => {
+      const state = currentAssistantState();
+      const transition = handleAssistantAction(assistantActionFromLabel(action, state), state);
+      applyAssistantTransition(transition);
+      appendHandledTurn(action, transition.visibleReply);
+      if (assistantMode === "closed") setAssistantMode("drawer");
     },
-    [locale],
+    [appendHandledTurn, applyAssistantTransition, assistantMode, currentAssistantState],
   );
 
   const selectAssistantTab = useCallback(
     (tab: string) => {
-      if (tab === activeAssistantTab) {
-        regenerateAssistantContent();
-        return;
-      }
-      setActiveAssistantTab(tab);
+      const state = currentAssistantState();
+      const transition = handleAssistantAction(assistantActionFromLabel(tab, state), state);
+      applyAssistantTransition(transition);
+      appendHandledTurn(tab, transition.visibleReply);
     },
-    [activeAssistantTab, regenerateAssistantContent],
+    [appendHandledTurn, applyAssistantTransition, currentAssistantState],
+  );
+
+  const sendAssistantActionCommand = useCallback(
+    (action: string) => {
+      const state = currentAssistantState();
+      const transition = handleAssistantAction(assistantActionFromLabel(action, state), state);
+      applyAssistantTransition(transition);
+      appendHandledTurn(action, transition.visibleReply);
+    },
+    [appendHandledTurn, applyAssistantTransition, currentAssistantState],
   );
 
   const sendAssistantFollowUp = useCallback(() => {
-    sendAssistantTurn(assistantInput, false);
-  }, [assistantInput, sendAssistantTurn]);
+    const trimmedInput = assistantInput.trim();
+    if (!trimmedInput) return;
+    const transition = handleUserMessage(trimmedInput, currentAssistantState());
+    setAssistantInput("");
+    applyAssistantTransition(transition);
+    appendHandledTurn(trimmedInput, transition.visibleReply);
+  }, [appendHandledTurn, applyAssistantTransition, assistantInput, currentAssistantState]);
 
   useEffect(() => {
     if (assistantStatus !== "loading") {
@@ -1344,18 +2490,6 @@ export function RecouvrementProductExperience() {
     }, 1350);
     return () => window.clearInterval(interval);
   }, [assistantStatus]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: generationNonce intentionally retriggers a fresh assistant turn.
-  useEffect(() => {
-    if (!isAssistantOpen) return;
-    sendAssistantTurn(assistantPromptForTab(activeAssistantTab), true);
-  }, [activeAssistantTab, generationNonce, isAssistantOpen, sendAssistantTurn]);
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-[#c9ccd1] font-sans text-[#050816]">
@@ -1542,6 +2676,7 @@ export function RecouvrementProductExperience() {
                           <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap">
                             <button
                               type="button"
+                              onClick={() => openAssistant("Proposer un échéancier")}
                               className="inline-flex h-11 w-[196px] items-center justify-center gap-3 rounded-[8px] bg-[linear-gradient(180deg,#e38a00,#cf7300)] font-bold text-sm text-white shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
                             >
                               Préparer l'échéancier
@@ -1572,9 +2707,9 @@ export function RecouvrementProductExperience() {
                           <div>
                             <h2 className="flex flex-wrap items-center gap-3 !font-sans !text-[#6048ff] font-bold text-sm uppercase tracking-[0]">
                               <Sparkles className="h-5 w-5" />
-                              Assistant de traitement
+                              Assistant de traitement — RC-2048
                               <span className="rounded-full border border-[#c8bbff] bg-white px-2.5 py-1 font-bold text-[#6048ff] text-[0.68rem]">
-                                RC-2048
+                                Contextualisé
                               </span>
                             </h2>
                             <p className="mt-2 max-w-[520px] text-[#071044] text-sm">
@@ -1692,6 +2827,7 @@ export function RecouvrementProductExperience() {
                             <button
                               key={label}
                               type="button"
+                              onClick={() => openAssistant(label)}
                               className="flex w-full items-center gap-4 px-6 py-5 text-left transition hover:bg-[#f7f8fb]"
                             >
                               <Icon className="h-6 w-6 shrink-0" />
@@ -1764,7 +2900,7 @@ export function RecouvrementProductExperience() {
           </div>
         </div>
       </div>
-      {assistantMode === "drawer" ? (
+      {assistantMode === "drawer" || assistantMode === "focus" ? (
         <button
           type="button"
           aria-label="Fermer l'assistant"
@@ -1775,7 +2911,8 @@ export function RecouvrementProductExperience() {
       {assistantMode !== "closed" ? (
         <AssistantDrawer
           mode={assistantMode}
-          activeTab={activeAssistantTab}
+          activeTask={activeAssistantTask}
+          artifact={assistantArtifact}
           content={assistantContent}
           error={assistantError}
           inputValue={assistantInput}
@@ -1786,6 +2923,7 @@ export function RecouvrementProductExperience() {
           onClose={closeAssistant}
           onExpand={expandAssistant}
           onInputChange={setAssistantInput}
+          onActionCommand={sendAssistantActionCommand}
           onRegenerate={regenerateAssistantContent}
           onSelectVersion={setSelectedVersionId}
           onSendMessage={sendAssistantFollowUp}
