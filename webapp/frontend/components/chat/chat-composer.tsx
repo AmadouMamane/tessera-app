@@ -80,7 +80,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
  }}
  >
  {/* Integrated pill — focus glow on the wrapper, not on the textarea */}
- <div className="flex items-end gap-2 rounded-2xl border border-navy-900 bg-white px-4 py-2 transition-[border-color,box-shadow] duration-200 focus-within:border-navy-950 focus-within:shadow-[0_0_0_3px_rgba(15,23,42,0.15)] text-slate-900">
+ <div className="flex items-end gap-2 rounded-2xl border border-navy-900 bg-white px-4 py-2 text-slate-900">
  <Textarea
  ref={textareaRef}
  value={value}
@@ -112,7 +112,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
  size="icon"
  disabled={disabled || value.trim().length === 0}
  aria-label={t("send")}
- className="mb-0.5 shrink-0 bg-navy-900 hover:bg-navy-950 text-white disabled:bg-blue-900 disabled:text-white/60 disabled:opacity-80 border-0"
+ className="mb-0.5 shrink-0 bg-gradient-to-br from-navy-900 to-navy-950 text-white hover:from-navy-950 hover:to-black disabled:bg-none disabled:bg-navy-800 disabled:text-white/50 border-0"
  >
  <Send className="h-4 w-4" />
  </Button>
