@@ -398,7 +398,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
               }
               iconClassName={
                 isRecouvrement
-                  ? "h-16 w-16 rounded-2xl bg-rose-100 shadow-[0_0_28px_-14px_rgba(244,63,94,0.3)] ring-1 ring-rose-300/40"
+                  ? "h-16 w-16 rounded-2xl bg-gold-500/65 shadow-[0_0_28px_-14px_oklch(0.8_0.066_85/0.4)] ring-1 ring-gold-400/15 dark:bg-gold-500/65 dark:shadow-[0_0_28px_-14px_oklch(0.8_0.066_85/0.4)] dark:ring-gold-400/15"
                   : undefined
               }
               suggestionsLabel={t("startWith")}
@@ -521,7 +521,7 @@ function EmptyWithSuggestions({
       {/* Icon — glow ring + mount animation */}
       <div
         className={cn(
-          "animate-in zoom-in-90 flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 shadow-[0_0_28px_-4px_rgba(244,63,94,0.2)] ring-1 ring-rose-200 duration-500",
+          "animate-in zoom-in-90 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-900 text-gold-400 shadow-[0_0_28px_-4px_oklch(0.8_0.066_85/0.3)] ring-1 ring-gold-500/20 duration-500 dark:bg-gold-500 dark:text-navy-950 dark:shadow-[0_0_40px_-4px_oklch(0.8_0.066_85/0.55)] dark:ring-gold-400/30",
           iconClassName,
         )}
       >
