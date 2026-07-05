@@ -486,16 +486,16 @@ const GAUGE_COLORS: Record<SignalStatus, string> = {
 export function QualityGauge({ summary }: { summary: ReturnType<typeof summarizeSignals> }) {
   const tq = useTranslations("quality");
   const total = summary.total || 1;
-  const r = 54;
+  const r = 67;
   const circ = 2 * Math.PI * r;
   let acc = 0;
   return (
     <Card className="flex flex-col items-center gap-4 p-5">
-      <div className="relative h-[150px] w-[150px]">
-        <svg viewBox="0 0 150 150" className="h-full w-full -rotate-90" aria-hidden="true">
+      <div className="relative h-[176px] w-[176px]">
+        <svg viewBox="0 0 176 176" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle
-            cx="75"
-            cy="75"
+            cx="88"
+            cy="88"
             r={r}
             fill="none"
             stroke="var(--tessera-border)"
@@ -506,8 +506,8 @@ export function QualityGauge({ summary }: { summary: ReturnType<typeof summarize
             const seg = (
               <circle
                 key={key}
-                cx="75"
-                cy="75"
+                cx="88"
+                cy="88"
                 r={r}
                 fill="none"
                 stroke={GAUGE_COLORS[key]}
@@ -520,11 +520,11 @@ export function QualityGauge({ summary }: { summary: ReturnType<typeof summarize
             return seg;
           })}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-serif text-4xl font-semibold tabular-nums text-emerald-500">
+        <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+          <span className="max-w-[88px] truncate font-serif text-4xl font-semibold leading-none tabular-nums text-emerald-500">
             {summary.ok}
           </span>
-          <span className="text-[0.7rem] text-[var(--muted-foreground)]">
+          <span className="line-clamp-2 max-w-[88px] break-words text-center text-[0.7rem] leading-tight text-[var(--muted-foreground)]">
             / {summary.total} {tq("signalsTable.status.ok").toLowerCase()}
           </span>
         </div>
@@ -873,7 +873,7 @@ export function ThemeDistribution({ rows }: { rows: SignalRow[] }) {
     n: rows.filter((r) => r.category === c).length,
   })).filter((e) => e.n > 0);
   const total = counts.reduce((s, e) => s + e.n, 0) || 1;
-  const r = 46;
+  const r = 49;
   const circ = 2 * Math.PI * r;
   let acc = 0;
   return (
@@ -886,11 +886,11 @@ export function ThemeDistribution({ rows }: { rows: SignalRow[] }) {
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative h-[104px] w-[104px] shrink-0">
-            <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
+          <div className="relative h-[128px] w-[128px] shrink-0">
+            <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90" aria-hidden="true">
               <circle
-                cx="60"
-                cy="60"
+                cx="64"
+                cy="64"
                 r={r}
                 fill="none"
                 stroke="var(--tessera-border)"
@@ -901,8 +901,8 @@ export function ThemeDistribution({ rows }: { rows: SignalRow[] }) {
                 const seg = (
                   <circle
                     key={e.cat}
-                    cx="60"
-                    cy="60"
+                    cx="64"
+                    cy="64"
                     r={r}
                     fill="none"
                     stroke={THEME_COLORS[e.cat]}
@@ -915,9 +915,11 @@ export function ThemeDistribution({ rows }: { rows: SignalRow[] }) {
                 return seg;
               })}
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-serif text-xl font-semibold tabular-nums">{total}</span>
-              <span className="text-[0.6rem] text-[var(--muted-foreground)]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+              <span className="max-w-[63px] truncate font-serif text-xl font-semibold leading-none tabular-nums">
+                {total}
+              </span>
+              <span className="line-clamp-2 max-w-[63px] break-words text-center text-[0.6rem] leading-tight text-[var(--muted-foreground)]">
                 {tq("signalsTable.signalsLabel")}
               </span>
             </div>

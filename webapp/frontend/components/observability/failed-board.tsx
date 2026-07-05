@@ -246,20 +246,20 @@ function MiniDonut({
 }) {
   const total = items.reduce((a, b) => a + b.value, 0);
   if (total === 0) return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
-  const r = 26;
+  const r = 35;
   const c = 2 * Math.PI * r;
   let offset = 0;
   return (
     <div className="flex items-center gap-3">
-      <div className="relative h-16 w-16 shrink-0">
-        <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90" aria-hidden="true">
+      <div className="relative h-24 w-24 shrink-0">
+        <svg viewBox="0 0 96 96" className="h-24 w-24 -rotate-90" aria-hidden="true">
           {items.map((it, i) => {
             const len = (it.value / total) * c;
             const seg = (
               <circle
                 key={it.key}
-                cx="32"
-                cy="32"
+                cx="48"
+                cy="48"
                 r={r}
                 fill="none"
                 stroke={DONUT_COLORS[i % DONUT_COLORS.length]}
@@ -272,22 +272,26 @@ function MiniDonut({
             return seg;
           })}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-sm font-semibold tabular-nums">{center}</span>
-          <span className="text-[0.55rem] text-[var(--muted-foreground)]">{label}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+          <span className="max-w-[38px] truncate text-sm font-semibold leading-none tabular-nums">
+            {center}
+          </span>
+          <span className="line-clamp-2 max-w-[38px] break-words text-center text-[0.55rem] leading-tight text-[var(--muted-foreground)]">
+            {label}
+          </span>
         </div>
       </div>
       <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.6rem]">
         {items.slice(0, 5).map((it, i) => (
-          <li key={it.key} className="flex items-center justify-between gap-2">
+          <li key={it.key} className="flex flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1">
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full"
                 style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }}
               />
-              <span className="truncate text-[var(--muted-foreground)]">{it.label}</span>
+              <span className="min-w-0 truncate text-[var(--muted-foreground)]">{it.label}</span>
             </span>
-            <span className="shrink-0 tabular-nums">{Math.round((it.value / total) * 100)}%</span>
+            <span className="pl-2.5 tabular-nums">{Math.round((it.value / total) * 100)}%</span>
           </li>
         ))}
       </ul>

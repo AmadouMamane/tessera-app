@@ -949,30 +949,32 @@ function ByAgent({ data }: { data: Data }) {
 function ScoreDonut({ data }: { data: Data }) {
   const s = data.scores;
   if (!s) return null;
+  const R = 35;
+  const C = 2 * Math.PI * R;
   let acc = 0;
   return (
     <PanelCard title={s.title}>
       <div className="flex items-center gap-3">
-        <span className="relative inline-flex h-[68px] w-[68px] shrink-0 items-center justify-center">
-          <svg viewBox="0 0 36 36" className="h-[68px] w-[68px] -rotate-90" aria-hidden="true">
+        <span className="relative inline-flex h-[88px] w-[88px] shrink-0 items-center justify-center">
+          <svg viewBox="0 0 88 88" className="h-[88px] w-[88px] -rotate-90" aria-hidden="true">
             <circle
-              cx="18"
-              cy="18"
-              r="15.915"
+              cx="44"
+              cy="44"
+              r={R}
               fill="none"
               stroke="var(--tessera-bg)"
               strokeWidth="3.4"
             />
             {s.segments.map((seg) => {
-              const dash = `${seg.pct} ${100 - seg.pct}`;
-              const off = -acc;
+              const dash = `${(seg.pct / 100) * C} ${C - (seg.pct / 100) * C}`;
+              const off = -(acc / 100) * C;
               acc += seg.pct;
               return (
                 <circle
                   key={seg.label}
-                  cx="18"
-                  cy="18"
-                  r="15.915"
+                  cx="44"
+                  cy="44"
+                  r={R}
                   fill="none"
                   stroke={SEG_FILL[seg.tone] ?? "#64748b"}
                   strokeWidth="3.4"
@@ -982,26 +984,30 @@ function ScoreDonut({ data }: { data: Data }) {
               );
             })}
           </svg>
-          <span className="absolute flex flex-col items-center">
-            <span className="text-[0.7rem] font-semibold tabular-nums text-[var(--tessera-text)]">
+          <span className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+            <span className="max-w-[48px] truncate text-[0.7rem] font-semibold leading-none tabular-nums text-[var(--tessera-text)]">
               {s.center}
             </span>
-            <span className="text-[0.5rem] text-[var(--tessera-text-muted)]">{s.center_label}</span>
+            <span className="line-clamp-2 max-w-[48px] break-words text-center text-[0.5rem] leading-tight text-[var(--tessera-text-muted)]">
+              {s.center_label}
+            </span>
           </span>
         </span>
         <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.62rem]">
           {s.segments.map((seg) => (
-            <li key={seg.label} className="flex items-center justify-between gap-1.5">
-              <span className="inline-flex min-w-0 items-center gap-1.5">
+            <li key={seg.label} className="flex flex-col gap-0.5">
+              <span className="inline-flex min-w-0 items-center gap-1">
                 <span
                   className={cn(
                     "h-1.5 w-1.5 shrink-0 rounded-full",
                     SEG_DOT[seg.tone] ?? "bg-slate-400",
                   )}
                 />
-                <span className="truncate text-[var(--tessera-text-muted)]">{seg.label}</span>
+                <span className="min-w-0 truncate text-[var(--tessera-text-muted)]">
+                  {seg.label}
+                </span>
               </span>
-              <span className="shrink-0 tabular-nums text-[var(--tessera-text)]">
+              <span className="pl-2.5 tabular-nums text-[var(--tessera-text)]">
                 {seg.value} <span className="text-[var(--tessera-text-muted)]">({seg.share})</span>
               </span>
             </li>

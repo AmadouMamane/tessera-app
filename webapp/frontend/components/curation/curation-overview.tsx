@@ -1300,16 +1300,16 @@ function Donut({
   showCount?: boolean;
 }) {
   const sum = slices.reduce((s, x) => s + x.count, 0) || 1;
-  const R = 28;
+  const R = 39;
   const C = 2 * Math.PI * R;
   let off = 0;
   return (
     <div className="flex items-center gap-3">
-      <div className="relative h-[84px] w-[84px] shrink-0">
-        <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90" aria-hidden="true">
+      <div className="relative h-[104px] w-[104px] shrink-0">
+        <svg viewBox="0 0 104 104" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle
-            cx="36"
-            cy="36"
+            cx="52"
+            cy="52"
             r={R}
             fill="none"
             stroke="var(--tessera-border)"
@@ -1322,8 +1322,8 @@ function Donut({
             return (
               <circle
                 key={s.key}
-                cx="36"
-                cy="36"
+                cx="52"
+                cy="52"
                 r={R}
                 fill="none"
                 stroke={s.color}
@@ -1334,21 +1334,23 @@ function Donut({
             );
           })}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-base font-semibold tabular-nums text-white">{total}</span>
-          <span className="text-[0.46rem] uppercase text-[var(--tessera-text-muted)]">
+        <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+          <span className="max-w-[49px] truncate text-base font-semibold leading-none tabular-nums text-white">
+            {total}
+          </span>
+          <span className="line-clamp-2 max-w-[49px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
             {caption}
           </span>
         </div>
       </div>
       <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.64rem]">
         {slices.map((s) => (
-          <li key={s.key} className="flex items-center gap-1.5">
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
-            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
-              {labelOf(s.key)}
+          <li key={s.key} className="flex flex-col gap-0.5">
+            <span className="flex min-w-0 items-center gap-1">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.color }} />
+              <span className="min-w-0 truncate text-[var(--tessera-text)]">{labelOf(s.key)}</span>
             </span>
-            <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
+            <span className="pl-2.5 tabular-nums text-[var(--tessera-text-muted)]">
               {showCount ? `${s.count} · ` : ""}
               {s.pct}%
             </span>

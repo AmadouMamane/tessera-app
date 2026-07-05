@@ -367,16 +367,16 @@ function MiniMultiline({
 }
 
 function Donut({ value, label }: { value: number; label?: string | null }) {
-  const R = 30;
+  const R = 39;
   const C = 2 * Math.PI * R;
   const t = value >= 0.9 ? "#10b981" : value >= 0.7 ? "#f59e0b" : "#ef4444";
   return (
-    <div className="relative h-[84px] w-[84px] shrink-0">
-      <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90" aria-hidden="true">
-        <circle cx="40" cy="40" r={R} fill="none" stroke="var(--tessera-border)" strokeWidth="9" />
+    <div className="relative h-[108px] w-[108px] shrink-0">
+      <svg viewBox="0 0 108 108" className="h-full w-full -rotate-90" aria-hidden="true">
+        <circle cx="54" cy="54" r={R} fill="none" stroke="var(--tessera-border)" strokeWidth="9" />
         <circle
-          cx="40"
-          cy="40"
+          cx="54"
+          cy="54"
           r={R}
           fill="none"
           stroke={t}
@@ -385,10 +385,14 @@ function Donut({ value, label }: { value: number; label?: string | null }) {
           strokeLinecap="round"
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-base font-semibold tabular-nums">{Math.round(value * 100)}%</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+        <span className="max-w-[48px] truncate text-base font-semibold leading-none tabular-nums">
+          {Math.round(value * 100)}%
+        </span>
         {label ? (
-          <span className="text-[0.5rem] text-[var(--muted-foreground)]">{label}</span>
+          <span className="line-clamp-2 max-w-[48px] break-words text-center text-[0.5rem] leading-tight text-[var(--muted-foreground)]">
+            {label}
+          </span>
         ) : null}
       </div>
     </div>

@@ -185,7 +185,7 @@ export function FailureDistribution({
   const catLabel = useCatLabel();
   const entries = Object.entries(report?.by_category ?? {}).sort((a, b) => b[1] - a[1]);
   const total = entries.reduce((s, [, n]) => s + n, 0) || 1;
-  const r = 54;
+  const r = 50;
   const circ = 2 * Math.PI * r;
   let acc = 0;
 
@@ -209,11 +209,11 @@ export function FailureDistribution({
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative h-[104px] w-[104px] shrink-0">
-            <svg viewBox="0 0 150 150" className="h-full w-full -rotate-90" aria-hidden="true">
+          <div className="relative h-[132px] w-[132px] shrink-0">
+            <svg viewBox="0 0 132 132" className="h-full w-full -rotate-90" aria-hidden="true">
               <circle
-                cx="75"
-                cy="75"
+                cx="66"
+                cy="66"
                 r={r}
                 fill="none"
                 stroke="var(--tessera-border)"
@@ -224,8 +224,8 @@ export function FailureDistribution({
                 const seg = (
                   <circle
                     key={key}
-                    cx="75"
-                    cy="75"
+                    cx="66"
+                    cy="66"
                     r={r}
                     fill="none"
                     stroke={DONUT_COLORS[i % DONUT_COLORS.length]}
@@ -238,24 +238,26 @@ export function FailureDistribution({
                 return seg;
               })}
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-serif text-2xl font-semibold tabular-nums">{total}</span>
-              <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+              <span className="max-w-[59px] truncate font-serif text-2xl font-semibold leading-none tabular-nums">
+                {total}
+              </span>
+              <span className="line-clamp-2 max-w-[59px] break-words text-center text-[0.65rem] leading-tight text-[var(--muted-foreground)]">
                 {tq("failed.casesLabel")}
               </span>
             </div>
           </div>
           <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.7rem]">
             {entries.slice(0, 6).map(([key, n], i) => (
-              <li key={key} className="flex items-center justify-between gap-2">
-                <span className="flex min-w-0 items-center gap-1.5">
+              <li key={key} className="flex flex-col gap-0.5">
+                <span className="flex min-w-0 items-center gap-1">
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }}
                   />
-                  <span className="truncate">{catLabel(key)}</span>
+                  <span className="min-w-0 truncate">{catLabel(key)}</span>
                 </span>
-                <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">
+                <span className="pl-2.5 tabular-nums text-[var(--muted-foreground)]">
                   {Math.round((n / total) * 100)}%
                 </span>
               </li>
