@@ -24,11 +24,11 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { CreditAuroreLogoMark } from "@/components/brand/credit-aurore-logo";
-import { PRODUCT_CHAT_EVENT } from "@/components/product/chat-widget";
+import { CHAT_WIDGET_STATE_EVENT, PRODUCT_CHAT_EVENT } from "@/components/product/chat-widget";
 
 const APPOINTMENT_PROMPT =
   "Je souhaite prendre rendez-vous avec un conseiller Crédit Aurore pour faire le point sur mes comptes.";
@@ -1488,9 +1488,28 @@ function Footer() {
 }
 
 function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) {
+  const [chatOpen, setChatOpen] = useState(false);
+
+  useEffect(() => {
+    const handleWidgetState = (e: Event) => {
+      const detail = (e as CustomEvent<{ open: boolean }>).detail;
+      setChatOpen(detail.open);
+    };
+    window.addEventListener(CHAT_WIDGET_STATE_EVENT, handleWidgetState);
+    return () => window.removeEventListener(CHAT_WIDGET_STATE_EVENT, handleWidgetState);
+  }, []);
+
   return (
     <>
-      <div className="side-widget">
+      <div 
+        className="side-widget"
+        style={{
+          opacity: chatOpen ? 0 : 1,
+          pointerEvents: chatOpen ? "none" : "auto",
+          transform: chatOpen ? "translateY(-50%) translateX(20px)" : "translateY(-50%)",
+          transition: "opacity 0.3s ease, transform 0.3s ease, pointer-events 0.3s"
+        }}
+      >
         <button
           className="rail-action"
           type="button"
