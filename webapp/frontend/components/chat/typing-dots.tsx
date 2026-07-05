@@ -36,17 +36,17 @@ export function TypingDots() {
         }
       `}</style>
       <div className="relative h-7 w-9 ml-1">
-        <div 
-          className="absolute top-0 left-0 h-1.5 w-1.5 rounded-full bg-gradient-to-br from-gold-300 to-gold-500 shadow-[0_0_4px_rgba(234,179,8,0.4)]" 
-          style={{ animation: 'd1 6s infinite linear' }} 
+        <div
+          className="absolute top-0 left-0 h-1.5 w-1.5 rounded-full bg-gradient-to-br from-gold-300 to-gold-500 shadow-[0_0_4px_rgba(234,179,8,0.4)]"
+          style={{ animation: "d1 6s infinite linear" }}
         />
-        <div 
-          className="absolute top-0 left-0 h-1.5 w-1.5 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 shadow-[0_0_4px_rgba(234,179,8,0.4)]" 
-          style={{ animation: 'd2 6s infinite linear' }} 
+        <div
+          className="absolute top-0 left-0 h-1.5 w-1.5 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 shadow-[0_0_4px_rgba(234,179,8,0.4)]"
+          style={{ animation: "d2 6s infinite linear" }}
         />
-        <div 
-          className="absolute top-0 left-0 h-1.5 w-1.5 rounded-full bg-gradient-to-br from-gold-500 to-gold-700 shadow-[0_0_4px_rgba(234,179,8,0.4)]" 
-          style={{ animation: 'd3 6s infinite linear' }} 
+        <div
+          className="absolute top-0 left-0 h-1.5 w-1.5 rounded-full bg-gradient-to-br from-gold-500 to-gold-700 shadow-[0_0_4px_rgba(234,179,8,0.4)]"
+          style={{ animation: "d3 6s infinite linear" }}
         />
       </div>
     </div>
