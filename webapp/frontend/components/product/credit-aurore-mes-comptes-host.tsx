@@ -28,7 +28,7 @@ import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { CreditAuroreLogoMark } from "@/components/brand/credit-aurore-logo";
-import { PRODUCT_CHAT_EVENT } from "@/components/product/chat-widget";
+import { PRODUCT_CHAT_EVENT, CHAT_WIDGET_STATE_EVENT } from "@/components/product/chat-widget";
 
 const APPOINTMENT_PROMPT =
   "Je souhaite prendre rendez-vous avec un conseiller Crédit Aurore pour faire le point sur mes comptes.";
