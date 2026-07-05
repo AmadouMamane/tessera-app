@@ -56,9 +56,9 @@ jobs:
       TESSERA_LLM_PROFILE: on_prem
       TESSERA_OBSERVABILITY__METRICS_ENABLED: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: "3.12"
@@ -100,7 +100,7 @@ jobs:
 
       - name: Upload scorecard
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eval-scorecard-${{ github.run_id }}
           path: |
@@ -110,7 +110,7 @@ jobs:
 
       - name: Comment scorecard on PR
         if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: tessera-eval
           path: eval/reports/scorecard.md
