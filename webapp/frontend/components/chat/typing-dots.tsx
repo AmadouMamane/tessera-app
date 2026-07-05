@@ -3,14 +3,14 @@ export function TypingDots() {
     <div className="flex items-center" aria-label="typing">
       <style>{`
         @keyframes d1 {
-          0%  { transform: translate(10.5px, 8px) rotate(0deg) translate(-3.5px, 6px) scale(1); opacity: 0.4; animation-timing-function: ease-out; }
-          6%  { transform: translate(10.5px, 8px) rotate(0deg) translate(-3.5px, 2px) scale(1); opacity: 1; animation-timing-function: ease-in; }
-          12% { transform: translate(10.5px, 8px) rotate(0deg) translate(-3.5px, 6px) scale(1); opacity: 0.4; animation-timing-function: linear; }
-          25% { transform: translate(10.5px, 8px) rotate(0deg) translate(-3.5px, 6px) scale(1); opacity: 0.4; animation-timing-function: ease-in-out; }
-          50% { transform: translate(10.5px, 8px) rotate(180deg) translate(-3.5px, 6px) scale(1.15); opacity: 1; animation-timing-function: ease-in-out; }
-          65% { transform: translate(10.5px, 8px) rotate(180deg) translate(-3.5px, 6px) scale(1.15); opacity: 1; animation-timing-function: ease-in-out; }
-          90% { transform: translate(10.5px, 8px) rotate(0deg) translate(-3.5px, 6px) scale(1); opacity: 0.4; animation-timing-function: linear; }
-          100%{ transform: translate(10.5px, 8px) rotate(0deg) translate(-3.5px, 6px) scale(1); opacity: 0.4; }
+          0%  { transform: translate(9.5px, 8px) rotate(0deg) translate(-4.5px, 6px) scale(1); opacity: 0.4; animation-timing-function: ease-out; }
+          6%  { transform: translate(9.5px, 8px) rotate(0deg) translate(-4.5px, 2px) scale(1); opacity: 1; animation-timing-function: ease-in; }
+          12% { transform: translate(9.5px, 8px) rotate(0deg) translate(-4.5px, 6px) scale(1); opacity: 0.4; animation-timing-function: linear; }
+          25% { transform: translate(9.5px, 8px) rotate(0deg) translate(-4.5px, 6px) scale(1); opacity: 0.4; animation-timing-function: ease-in-out; }
+          50% { transform: translate(9.5px, 8px) rotate(180deg) translate(-4.5px, 6px) scale(1.15); opacity: 1; animation-timing-function: ease-in-out; }
+          65% { transform: translate(9.5px, 8px) rotate(180deg) translate(-4.5px, 6px) scale(1.15); opacity: 1; animation-timing-function: ease-in-out; }
+          90% { transform: translate(9.5px, 8px) rotate(0deg) translate(-4.5px, 6px) scale(1); opacity: 0.4; animation-timing-function: linear; }
+          100%{ transform: translate(9.5px, 8px) rotate(0deg) translate(-4.5px, 6px) scale(1); opacity: 0.4; }
         }
         @keyframes d2 {
           0%  { transform: translate(17.5px, 14px) rotate(0deg) translate(-3.5px, 0px) scale(1); opacity: 0.4; animation-timing-function: linear; }
@@ -24,15 +24,15 @@ export function TypingDots() {
           100%{ transform: translate(17.5px, 14px) rotate(0deg) translate(-3.5px, 0px) scale(1); opacity: 0.4; }
         }
         @keyframes d3 {
-          0%  { transform: translate(14px, 14px) rotate(0deg) translate(7px, 0px) scale(1); opacity: 0.4; animation-timing-function: linear; }
-          12% { transform: translate(14px, 14px) rotate(0deg) translate(7px, 0px) scale(1); opacity: 0.4; animation-timing-function: ease-out; }
-          18% { transform: translate(14px, 14px) rotate(0deg) translate(7px, -4px) scale(1); opacity: 1; animation-timing-function: ease-in; }
-          24% { transform: translate(14px, 14px) rotate(0deg) translate(7px, 0px) scale(1); opacity: 0.4; animation-timing-function: linear; }
-          25% { transform: translate(14px, 14px) rotate(0deg) translate(7px, 0px) scale(1); opacity: 0.4; animation-timing-function: ease-in-out; }
-          50% { transform: translate(14px, 14px) rotate(180deg) translate(7px, 0px) scale(1.0); opacity: 0.8; animation-timing-function: ease-in-out; }
-          65% { transform: translate(14px, 14px) rotate(180deg) translate(7px, 0px) scale(1.0); opacity: 0.8; animation-timing-function: ease-in-out; }
-          90% { transform: translate(14px, 14px) rotate(0deg) translate(7px, 0px) scale(1); opacity: 0.4; animation-timing-function: linear; }
-          100%{ transform: translate(14px, 14px) rotate(0deg) translate(7px, 0px) scale(1); opacity: 0.4; }
+          0%  { transform: translate(15px, 14px) rotate(0deg) translate(8px, 0px) scale(1); opacity: 0.4; animation-timing-function: linear; }
+          12% { transform: translate(15px, 14px) rotate(0deg) translate(8px, 0px) scale(1); opacity: 0.4; animation-timing-function: ease-out; }
+          18% { transform: translate(15px, 14px) rotate(0deg) translate(8px, -4px) scale(1); opacity: 1; animation-timing-function: ease-in; }
+          24% { transform: translate(15px, 14px) rotate(0deg) translate(8px, 0px) scale(1); opacity: 0.4; animation-timing-function: linear; }
+          25% { transform: translate(15px, 14px) rotate(0deg) translate(8px, 0px) scale(1); opacity: 0.4; animation-timing-function: ease-in-out; }
+          50% { transform: translate(15px, 14px) rotate(180deg) translate(8px, 0px) scale(1.0); opacity: 0.8; animation-timing-function: ease-in-out; }
+          65% { transform: translate(15px, 14px) rotate(180deg) translate(8px, 0px) scale(1.0); opacity: 0.8; animation-timing-function: ease-in-out; }
+          90% { transform: translate(15px, 14px) rotate(0deg) translate(8px, 0px) scale(1); opacity: 0.4; animation-timing-function: linear; }
+          100%{ transform: translate(15px, 14px) rotate(0deg) translate(8px, 0px) scale(1); opacity: 0.4; }
         }
       `}</style>
       <div className="relative h-7 w-9 ml-1">
