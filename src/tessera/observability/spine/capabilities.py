@@ -128,7 +128,6 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("cross_tenant", frozenset()),
     _cap("erasure", frozenset()),
     _cap("memory_inventory", frozenset()),
-    _cap("embedding_inversion", frozenset()),
     _cap("regression_risk", frozenset()),
     _cap("ai_act", frozenset()),
     _cap("control_signals", frozenset()),
@@ -181,6 +180,23 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # build ships without a per-conversation grounded-session store, so it is flagged synthetic
     # and the page carries the demonstration notice rather than reading as a live exchange.
     _cap("assistant", frozenset(), synthetic=True),
+    # Metamorphic wiring proof (Phase 2, docs/design/signal-wiring-map.md +
+    # signal-wiring-reconciliation.md) found these three routes feed their
+    # aggregator a frozen or hardcoded value — never a runtime source — so no
+    # perturbation of the real thing each nominally measures can ever move
+    # them. Each aggregator itself is proven correct in isolation (a direct,
+    # non-route call reacts normally); only the ROUTE's seam is dead. Flagged
+    # synthetic, exactly like `assistant` above, so the cockpit never presents
+    # a frozen number as a live measurement. See the reconciliation doc for
+    # the proposed (unexecuted) route fix for each.
+    _cap("embedding_skew", frozenset(), synthetic=True),  # route aliases corpus=query
+    _cap("disclosure", frozenset(), synthetic=True),  # `enabled=True` is a route literal
+    # embedding_inversion: route always calls assess_inversion_risk on hardcoded
+    # DEMO_MEMORIES/DEMO_PROBES, cached once per process — never the real memory
+    # store. Was previously declared non-synthetic below the org-wide fixed-corpus
+    # probes; moved and flipped here after Phase 2 proved it dead against a real
+    # memory-store perturbation.
+    _cap("embedding_inversion", frozenset(), synthetic=True),
 )
 
 CAPABILITIES: dict[str, SignalCapability] = {c.id: c for c in _DECLARATIONS}
