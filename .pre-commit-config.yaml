@@ -29,6 +29,14 @@ repos:
     rev: v4.6.0
     hooks:
       - id: end-of-file-fixer
+        # eval/reports/local/*.json are generated eval-run archives (some
+        # deliberately kept as evidence, see git log "chore(eval): archive
+        # ..."); webapp/frontend/data/eval/*.json is a curated, build-time
+        # snapshot baked into the Cloud Run image (webapp/frontend/lib/eval.ts).
+        # Neither is hand-edited text, so this hook shouldn't govern them —
+        # rewriting archived-evidence bytes after the fact is worse than
+        # excluding a generated/curated data directory.
+        exclude: ^(eval/reports/|webapp/frontend/data/eval/)
       - id: trailing-whitespace
       - id: check-yaml
         args: [--unsafe]  # syntax-only: allow docker-compose custom tags (!reset/!override)
