@@ -304,23 +304,38 @@ async def observability_scores(at: str | None = None, agent: str = "all") -> dic
 async def observability_business_events(
     at: str | None = None,
     agent: str = "all",
+    workflow_id: str | None = None,
     conversation_id: str | None = None,
     turn_id: str | None = None,
+    case_id: str | None = None,
+    event_name: str | None = None,
+    artifact_type: str | None = None,
+    decision: str | None = None,
 ) -> dict[str, object]:
     """Business workflow events and deterministic métier scores."""
     rows = business_events_mod.business_event_rows(
         at=at,
         agent_id=_agent_or_none(agent),
+        workflow_id=workflow_id,
         conversation_id=conversation_id,
         turn_id=turn_id,
+        case_id=case_id,
+        event_name=event_name,
+        artifact_type=artifact_type,
+        decision=decision,
     )
     return {
         "events": rows,
         "scores": business_scoring_mod.score_rows(rows),
         "as_of": at,
         "agent": agent,
+        "workflow_id": workflow_id,
         "conversation_id": conversation_id,
         "turn_id": turn_id,
+        "case_id": case_id,
+        "event_name": event_name,
+        "artifact_type": artifact_type,
+        "decision": decision,
     }
 
 

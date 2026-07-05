@@ -24,9 +24,12 @@ from zoneinfo import ZoneInfo
 
 from langgraph.graph import END, START, StateGraph
 
+from tessera.agent.registry import get_agent
+from tessera.authz import Surface
 from tessera.observability import business_events as business_events_mod, business_scoring, replay
 from tessera.observability.business_events import BusinessEventName, record_business_event
 from tessera.observability.instrument import instrument_node
+from tessera.recouvrement import ensure_recouvrement_scorer_registered
 
 if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
@@ -42,6 +45,9 @@ __all__ = [
 RECOUVREMENT_AGENT_ID = "recouvrement"
 RECOUVREMENT_WORKFLOW_ID = "recouvrement_collections_v1"
 DEFAULT_SURFACE = "dedicated-ui"
+AUTHORIZED_SURFACES = {Surface.DEDICATED_UI.value, Surface.COCKPIT_EMBEDDED.value}
+
+ensure_recouvrement_scorer_registered()
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,6 +144,8 @@ class RecouvrementWorkflowState(TypedDict):
     model: str
     environment: str
     assistant_state: NotRequired[dict[str, object]]
+    authorized: NotRequired[bool]
+    authorization_reason: NotRequired[str]
     case: NotRequired[RecouvrementCaseSnapshot]
     intent: NotRequired[str]
     intent_confidence: NotRequired[float]
@@ -177,6 +185,50 @@ def _event_common(
         "model": str(state.get("model", RECOUVREMENT_WORKFLOW_ID)),
         "environment": str(state.get("environment", "dev")),
     }
+
+
+def _surface_allowed(surface: str) -> bool:
+    """Whether the requested surface is governed for the Recouvrement operator agent."""
+    try:
+        parsed = Surface(surface)
+    except ValueError:
+        return False
+    if parsed.value not in AUTHORIZED_SURFACES:
+        return False
+    try:
+        agent = get_agent(RECOUVREMENT_AGENT_ID)
+    except KeyError:
+        return False
+    return parsed in agent.surface
+
+
+def verify_surface_authorization(state: RecouvrementWorkflowState) -> dict[str, object]:
+    """Fail closed unless Recouvrement is called from an operator-authorised surface."""
+    surface = str(state.get("surface", DEFAULT_SURFACE))
+    if _surface_allowed(surface):
+        return {"authorized": True}
+    record_business_event(
+        event_name=BusinessEventName.ACTION_BLOCKED,
+        decision="blocked",
+        reason_codes=["UNAUTHORIZED_SURFACE"],
+        payload={"action_name": "run_recouvrement_workflow", "requested_surface": surface},
+        agent_id=RECOUVREMENT_AGENT_ID,
+        workflow_id=RECOUVREMENT_WORKFLOW_ID,
+        surface=surface,
+        conversation_id=state["conversation_id"],
+        turn_id=state["turn_id"],
+        case_id=state["case_id"],
+        node_name="verify_surface_authorization",
+        language=str(state.get("language", "fr")),
+        model=str(state.get("model", RECOUVREMENT_WORKFLOW_ID)),
+        environment=str(state.get("environment", "dev")),
+    )
+    return {"authorized": False, "authorization_reason": "UNAUTHORIZED_SURFACE"}
+
+
+def _after_surface_authorization(state: RecouvrementWorkflowState) -> str:
+    """Route the graph after the surface gate."""
+    return "authorized" if state.get("authorized") is True else "blocked"
 
 
 def _parse_time(message: str) -> str | None:
@@ -461,9 +513,77 @@ def finalize_business_observability(state: RecouvrementWorkflowState) -> dict[st
     return {"output": output}
 
 
+def finalize_unauthorized_surface(state: RecouvrementWorkflowState) -> dict[str, object]:
+    """Return a controlled refusal without executing the contact business rule."""
+    surface = str(state.get("surface", DEFAULT_SURFACE))
+    reply = (
+        "Cette surface n'est pas autorisée pour l'assistant Recouvrement. "
+        "Ouvrez le dossier depuis l'espace Recouvrement ou depuis le cockpit opérateur."
+    )
+    events = business_events_mod.business_event_rows(
+        agent_id=RECOUVREMENT_AGENT_ID,
+        conversation_id=state["conversation_id"],
+        turn_id=state["turn_id"],
+    )
+    output: RecouvrementOutput = {
+        "visibleReply": reply,
+        "artifact": {
+            "id": f"{state['case_id']}-authorization-denial-v1",
+            "type": "authorization_denial_v1",
+            "task": "authorization",
+            "title": f"Accès non autorisé — {state['case_id']}",
+            "status": "blocked",
+            "content": {
+                "case_id": state["case_id"],
+                "requested_surface": surface,
+                "decision": "blocked",
+                "reason_codes": ["UNAUTHORIZED_SURFACE"],
+            },
+        },
+        "cardUpdates": {
+            "context": [
+                f"Dossier : {state['case_id']}",
+                f"Surface demandée : {surface}",
+                "Accès refusé avant exécution de la règle métier.",
+            ],
+            "validationItems": [
+                "La surface demandée n'est pas autorisée pour le workflow Recouvrement."
+            ],
+            "nextActions": ["Ouvrir l'espace Recouvrement", "Retourner au cockpit opérateur"],
+        },
+        "suggestedActions": ["Ouvrir l'espace Recouvrement", "Retourner au cockpit opérateur"],
+        "businessEvents": events,
+        "businessScores": business_scoring.score_rows(events),
+        "decisions": {
+            "authorization": {
+                "decision": "blocked",
+                "reason_codes": ["UNAUTHORIZED_SURFACE"],
+                "surface": surface,
+            }
+        },
+    }
+    replay.capture_bundle(
+        question=state["message"],
+        context=f"Surface demandée : {surface}",
+        original_answer=reply,
+        language=state.get("language", "fr"),
+        original_score=1.0,
+        original_model=RECOUVREMENT_WORKFLOW_ID,
+        conversation_id=state["conversation_id"],
+        agent_id=RECOUVREMENT_AGENT_ID,
+        turn_id=state["turn_id"],
+        business_events=events,
+    )
+    return {"output": output}
+
+
 def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:
     """Construct the minimal specialised Recouvrement graph."""
     graph: StateGraph[RecouvrementWorkflowState] = StateGraph(RecouvrementWorkflowState)
+    graph.add_node(
+        "verify_surface_authorization",
+        instrument_node("verify_surface_authorization", verify_surface_authorization),
+    )
     graph.add_node("load_case_context", instrument_node("load_case_context", load_case_context))
     graph.add_node(
         "route_recouvrement_intent",
@@ -489,7 +609,16 @@ def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:
         "finalize_business_observability",
         instrument_node("finalize_business_observability", finalize_business_observability),
     )
-    graph.add_edge(START, "load_case_context")
+    graph.add_node(
+        "finalize_unauthorized_surface",
+        instrument_node("finalize_unauthorized_surface", finalize_unauthorized_surface),
+    )
+    graph.add_edge(START, "verify_surface_authorization")
+    graph.add_conditional_edges(
+        "verify_surface_authorization",
+        _after_surface_authorization,
+        {"authorized": "load_case_context", "blocked": "finalize_unauthorized_surface"},
+    )
     graph.add_edge("load_case_context", "route_recouvrement_intent")
     graph.add_edge("route_recouvrement_intent", "extract_recouvrement_slots")
     graph.add_edge("extract_recouvrement_slots", "evaluate_contact_policy")
@@ -497,6 +626,7 @@ def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:
     graph.add_edge("build_contact_rule_artifact", "generate_visible_reply")
     graph.add_edge("generate_visible_reply", "finalize_business_observability")
     graph.add_edge("finalize_business_observability", END)
+    graph.add_edge("finalize_unauthorized_surface", END)
     return graph
 
 
