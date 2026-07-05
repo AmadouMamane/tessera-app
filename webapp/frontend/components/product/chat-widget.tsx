@@ -11,6 +11,7 @@ import { fetchConversationMessages } from "@/lib/api/client";
 import { type ChatMessage, useChatStore } from "@/lib/stores/chat-store";
 
 export const PRODUCT_CHAT_EVENT = "tessera:open-product-chat";
+export const CHAT_WIDGET_STATE_EVENT = "tessera:chat-widget-state";
 
 // Per-browser key holding the customer's own conversation id, so the produit
 // widget RESUMES it after a reload / return visit instead of dropping it (the
@@ -107,6 +108,13 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
       // ignore disabled storage
     }
   }, [conversationId]);
+
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(CHAT_WIDGET_STATE_EVENT, { detail: { isOpen: open } })
+    );
+  }, [open]);
 
   // Esc closes the panel (only while open so we don't swallow Esc elsewhere).
   useEffect(() => {

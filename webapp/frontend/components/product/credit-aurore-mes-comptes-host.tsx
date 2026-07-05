@@ -24,7 +24,7 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { CreditAuroreLogoMark } from "@/components/brand/credit-aurore-logo";
@@ -1488,8 +1488,16 @@ function Footer() {
 }
 
 function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) {
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  useEffect(() => {
+    const handleState = (e: any) => setIsChatOpen(e.detail.isOpen);
+    window.addEventListener(CHAT_WIDGET_STATE_EVENT, handleState);
+    return () => window.removeEventListener(CHAT_WIDGET_STATE_EVENT, handleState);
+  }, []);
+
   return (
-    <>
+    <div style={{ transition: 'opacity 300ms ease, transform 300ms ease', opacity: isChatOpen ? 0 : 1, transform: isChatOpen ? 'translateY(10px) scale(0.95)' : 'translateY(0) scale(1)', pointerEvents: isChatOpen ? 'none' : 'auto' }}>
       <div className="side-widget">
         <button
           className="rail-action"
@@ -1512,7 +1520,7 @@ function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) 
         <CircleHelp />
         Votre avis
       </div>
-    </>
+    </div>
   );
 }
 
