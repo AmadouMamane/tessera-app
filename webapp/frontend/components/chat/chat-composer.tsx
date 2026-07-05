@@ -109,11 +109,10 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
             ) : (
               <Button
                 type="submit"
-                variant="primary"
                 size="icon"
                 disabled={disabled || value.trim().length === 0}
                 aria-label={t("send")}
-                className="mb-0.5 shrink-0"
+                className="mb-0.5 shrink-0 bg-navy-800 hover:bg-navy-900 text-white shadow-sm disabled:bg-slate-200 disabled:text-slate-400 disabled:opacity-100"
               >
                 <Send className="h-4 w-4" />
               </Button>
