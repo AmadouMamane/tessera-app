@@ -144,12 +144,6 @@ export function MessageBubble({
  <span className="text-[0.62rem] tabular-nums text-slate-500">
  {formatTime(message.createdAt)}
  </span>
- {message.needsEscalation && (
- <Badge tone="warning" className="gap-1">
- <AlertTriangle className="h-3 w-3" />
- {t("escalated")}
- </Badge>
- )}
  {!isUser && typeof message.confidence === "number" && (
  <ConfidenceBadge value={message.confidence} />
  )}
