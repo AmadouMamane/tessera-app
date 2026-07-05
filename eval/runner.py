@@ -405,24 +405,27 @@ async def _run_all(args: argparse.Namespace) -> int:
         else None
     )
 
-    payload = json.dumps(
-        {
-            "run_at": run_ts,
-            "lang": args.lang,
-            "model": model,
-            "agent_id": args.agent,
-            "eval_set": eval_set.slug if eval_set is not None else None,
-            "catalogue_version": catalogue_version,
-            "summary": asdict(scorecard.summary),
-            "gate": gate_payload,
-            "policy_gate": policy_gate,
-            "results": [asdict(r) for r in results],
-            "synthesis": synthesis,
-            "cost": cost,
-        },
-        indent=2,
-        ensure_ascii=False,
-    )
+    payload = (
+        json.dumps(
+            {
+                "run_at": run_ts,
+                "lang": args.lang,
+                "model": model,
+                "agent_id": args.agent,
+                "eval_set": eval_set.slug if eval_set is not None else None,
+                "catalogue_version": catalogue_version,
+                "summary": asdict(scorecard.summary),
+                "gate": gate_payload,
+                "policy_gate": policy_gate,
+                "results": [asdict(r) for r in results],
+                "synthesis": synthesis,
+                "cost": cost,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n"
+    )  # POSIX text files end in a newline; json.dumps never adds one.
 
     archive = _persist_report(args, payload, run_ts, lang_suffix)
     await _record_gating(payload)  # durable porteur (ADR 0015 §Amendment 2), best-effort
