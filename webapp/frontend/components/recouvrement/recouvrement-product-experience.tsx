@@ -32,7 +32,20 @@ import { useLocale } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CreditAuroreLogo } from "@/components/brand/credit-aurore-logo";
+import {
+  type RecouvrementDrawerTask,
+  buildContactRuleBackendUnavailableFallback,
+  buildScheduleProposalDraft,
+  contactRuleCards,
+  footerActionsForRecouvrementArtifact,
+  routeRecouvrementDrawerMessage,
+} from "@/components/recouvrement/recouvrement-assistant-backend";
 import type { Locale } from "@/i18n/routing";
+import {
+  type RecouvrementAssistantArtifact,
+  type RecouvrementAssistantResponse,
+  sendRecouvrementAssistantMessage,
+} from "@/lib/api/recouvrement-assistant";
 import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
 
@@ -149,6 +162,9 @@ interface GeneratedAssistantContent {
   complianceChecks: string[];
   nextActions: string[];
   rawResponse: string;
+  artifact: RecouvrementAssistantArtifact | null;
+  artifactCards: Record<string, string[]>;
+  businessScores: Array<Record<string, unknown>>;
 }
 
 const fallbackAssistantContent: GeneratedAssistantContent = {
@@ -158,7 +174,36 @@ const fallbackAssistantContent: GeneratedAssistantContent = {
   complianceChecks: [],
   nextActions: [],
   rawResponse: "",
+  artifact: null,
+  artifactCards: {},
+  businessScores: [],
 };
+
+const pendingContactRuleContent: GeneratedAssistantContent = {
+  ...fallbackAssistantContent,
+  artifact: {
+    id: "RC-2048-contact-rule-v1",
+    type: "contact_rule_v1",
+    task: "check_rule",
+    title: "Cadre de contact — RC-2048",
+    status: "loading",
+    content: {},
+  },
+};
+
+function assistantTaskForTab(tab: string): RecouvrementDrawerTask {
+  if (tab === "Vérifier une règle") return "check_contact_rule";
+  if (tab === "Proposer un échéancier") return "propose_schedule";
+  if (tab === "Résumer") return "summary";
+  return "draft_reminder";
+}
+
+function assistantTabForTask(task: RecouvrementDrawerTask): string {
+  if (task === "check_contact_rule") return "Vérifier une règle";
+  if (task === "propose_schedule") return "Proposer un échéancier";
+  if (task === "summary") return "Résumer";
+  return "Préparer une relance";
+}
 
 const loadingRows = ["loading-row-1", "loading-row-2", "loading-row-3"];
 const skeletonLineKeys = [
@@ -176,6 +221,7 @@ const recouvrementThinkingSteps = [
   "Recouvrement vérifie les règles de contact",
   "Recouvrement consolide les prochaines actions",
 ];
+const MIN_ASSISTANT_THINKING_MS = 1800;
 
 const defaultAssistantPrompt =
   "Prépare une relance amiable et propose un échéancier adapté à la situation.";
@@ -445,7 +491,67 @@ function parseGeneratedAssistantContent(raw: string): GeneratedAssistantContent 
       5,
     ),
     rawResponse: text,
+    artifact: null,
+    artifactCards: {},
+    businessScores: [],
   };
+}
+
+function contentFromRecouvrementContactResponse(
+  response: RecouvrementAssistantResponse,
+): GeneratedAssistantContent {
+  const cards = contactRuleCards(response);
+  return {
+    summary: cards.contactFrame,
+    versions: [],
+    paymentPlan: "",
+    complianceChecks: [...cards.allowedItems, ...cards.validationItems],
+    nextActions: cards.nextActions,
+    rawResponse: response.visibleReply,
+    artifact: response.artifact,
+    artifactCards: cards,
+    businessScores: response.businessScores ?? [],
+  };
+}
+
+function contentFromScheduleProposal(
+  proposal: ReturnType<typeof buildScheduleProposalDraft>,
+): GeneratedAssistantContent {
+  return {
+    summary: proposal.cardUpdates.summary ?? proposal.cardUpdates.context ?? [],
+    versions: [
+      {
+        id: "v1",
+        label: "V1",
+        title: "Message prudent",
+        body: [
+          "Bonjour M. D.,",
+          "Une solution d'échelonnement peut être étudiée avec vous, sous réserve de validation et d'accord sur les modalités.",
+          "Nous vous invitons à nous recontacter afin d'échanger sur une solution adaptée à votre situation.",
+          "Cordialement,\nCrédit Aurore",
+        ].join("\n\n"),
+      },
+    ],
+    paymentPlan: (proposal.cardUpdates.paymentPlan ?? []).join("\n"),
+    complianceChecks: proposal.cardUpdates.complianceChecks ?? [],
+    nextActions: proposal.suggestedActions,
+    rawResponse: proposal.visibleReply,
+    artifact: proposal.artifact,
+    artifactCards: proposal.cardUpdates,
+    businessScores: [],
+  };
+}
+
+function artifactString(artifact: RecouvrementAssistantArtifact | null, key: string): string {
+  const value = artifact?.content[key];
+  return typeof value === "string" ? value : "";
+}
+
+function artifactStringList(artifact: RecouvrementAssistantArtifact | null, key: string): string[] {
+  const value = artifact?.content[key];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }
 
 function buildAssistantHistory(thread: AssistantThreadMessage[]) {
@@ -514,6 +620,44 @@ function SkeletonLines({ rows = 3 }: { rows?: number }) {
           )}
         />
       ))}
+    </div>
+  );
+}
+
+function AssistantThinkingIndicator({
+  compact = false,
+  label,
+}: {
+  compact?: boolean;
+  label: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-[6px] border border-[#d8d1ff] bg-[#f5f2ff] text-[#071044] shadow-[0_10px_22px_rgba(96,72,255,0.1)]",
+        compact ? "px-3 py-2.5" : "mb-4 px-4 py-3",
+      )}
+    >
+      <div className="absolute inset-y-0 left-0 w-1 bg-[#6048ff]" />
+      <div className="flex items-center gap-3">
+        <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#6048ff] shadow-[0_6px_16px_rgba(96,72,255,0.16)]">
+          <span className="absolute inset-0 rounded-full border border-[#b7aaff] animate-ping opacity-40" />
+          <Sparkles className="relative h-4 w-4 animate-pulse" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-extrabold text-sm">Recouvrement réfléchit</p>
+          <p className="mt-0.5 text-[#071044]/68 text-xs">{label}</p>
+        </div>
+        <div className="ml-auto flex items-end gap-1.5">
+          {["thinking-dot-1", "thinking-dot-2", "thinking-dot-3"].map((dot, index) => (
+            <span
+              key={dot}
+              className="block h-2 w-2 rounded-full bg-[#6048ff] animate-bounce"
+              style={{ animationDelay: `${index * 140}ms` }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -627,98 +771,131 @@ function AssistantVerificationPanel({
   );
 }
 
-function AssistantConversationPanel({
+function AssistantContactRulePanel({
   compact = false,
-  inputValue,
-  messages,
-  showComposer = true,
+  content,
   status,
-  thinkingLabel,
-  onInputChange,
-  onSubmit,
 }: {
   compact?: boolean;
-  inputValue: string;
-  messages: AssistantThreadMessage[];
-  showComposer?: boolean;
+  content: GeneratedAssistantContent;
   status: AssistantStatus;
-  thinkingLabel: string;
-  onInputChange: (value: string) => void;
-  onSubmit: () => void;
 }) {
-  const visibleMessages = messages.slice(compact ? -3 : -5);
+  const cards = content.artifactCards;
+  const decision = content.artifact?.content.decision;
+  const reasonCodes = artifactStringList(content.artifact, "reason_codes");
+  const isBlocked = decision === "blocked";
+  const contactFrame = cards.contactFrame ?? content.summary;
+  const allowedItems = cards.allowedItems ?? [];
+  const validationItems = cards.validationItems ?? content.complianceChecks;
+  const displayedContactFrame =
+    isBlocked && !contactFrame.includes("Aucun appel préparé")
+      ? [...contactFrame, "Aucun appel préparé"]
+      : contactFrame;
+  const sectionClassName = "rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4";
+  const rows = compact ? loadingRows.slice(0, 2) : loadingRows;
 
   return (
-    <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="!font-sans !text-[#071044] font-bold text-sm">Chat Recouvrement</h3>
-        {status === "loading" ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-[#f0edff] px-3 py-1 font-bold text-[#6048ff] text-[0.66rem]">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#6048ff]" />
-            {thinkingLabel}
-          </span>
-        ) : null}
-      </div>
-      <div
-        className={cn(
-          "space-y-3 overflow-y-auto rounded-[5px] border border-[#eef0f7] bg-[#fbfbfd] p-3",
-          compact ? "max-h-[180px]" : "max-h-[238px]",
-        )}
-      >
-        {visibleMessages.map((message) => (
-          <div
-            key={message.id}
-            className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}
-          >
-            <div
-              className={cn(
-                "max-w-[86%] rounded-[6px] px-3 py-2 text-xs leading-5",
-                message.role === "user"
-                  ? "bg-[#f0edff] text-[#071044]"
-                  : "border border-[#dfe2ec] bg-white text-[#071044]",
-                message.error && "border-[#ffd2c9] bg-[#fff5f3] text-[#a23b2a]",
-              )}
-            >
-              {message.content ? (
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              ) : (
-                <p className="inline-flex items-center gap-1.5 font-semibold text-[#6048ff]">
-                  Recouvrement réfléchit
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-[#6048ff]" />
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-[#6048ff] [animation-delay:120ms]" />
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-[#6048ff] [animation-delay:240ms]" />
-                </p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-      {showComposer ? (
-        <form
-          className="mt-3 flex min-h-11 items-center gap-3 rounded-[5px] border border-[#b7aaff] bg-white px-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSubmit();
-          }}
-        >
-          <input
-            aria-label="Question assistant"
-            value={inputValue}
-            onChange={(event) => onInputChange(event.target.value)}
-            placeholder="Continuer avec le chat Recouvrement..."
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#071044]/55"
-          />
+    <>
+      <section className={sectionClassName}>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <h3 className="!font-sans !text-[#071044] font-bold text-sm">
+            Cadre de contact applicable
+          </h3>
+          {isBlocked ? (
+            <>
+              <span className="rounded-full bg-[#ffe8e5] px-2 py-0.5 font-bold text-[#c0362c] text-[0.64rem]">
+                Action bloquée
+              </span>
+              {reasonCodes[0] ? (
+                <span className="rounded-full border border-[#ffd2c9] bg-white px-2 py-0.5 font-bold text-[#a23b2a] text-[0.64rem]">
+                  {reasonCodes[0]}
+                </span>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+        <ul className="space-y-1.5 text-xs leading-5">
+          {status === "loading"
+            ? rows.map((row) => (
+                <li key={row}>
+                  <SkeletonLines rows={1} />
+                </li>
+              ))
+            : displayedContactFrame.map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      </section>
+      <section className={sectionClassName}>
+        <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">Ce qui est autorisé</h3>
+        <ul className="space-y-1.5 text-xs leading-5">
+          {status === "loading"
+            ? rows.map((row) => (
+                <li key={row}>
+                  <SkeletonLines rows={1} />
+                </li>
+              ))
+            : allowedItems.map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      </section>
+      <section className={sectionClassName}>
+        <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
+          Ce qui nécessite validation ou action
+        </h3>
+        <ul className="space-y-1.5 text-xs leading-5">
+          {status === "loading"
+            ? rows.map((row) => (
+                <li key={row}>
+                  <SkeletonLines rows={1} />
+                </li>
+              ))
+            : validationItems.map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      </section>
+    </>
+  );
+}
+
+function footerIconForAction(action: string) {
+  const normalized = normalizeAssistantText(action);
+  if (normalized.includes("rappel") || normalized.includes("duree")) return CalendarDays;
+  if (normalized.includes("email") || normalized.includes("message")) return Mail;
+  if (normalized.includes("reporter")) return Clock3;
+  if (normalized.includes("script") || normalized.includes("appel")) return Phone;
+  if (normalized.includes("inserer") || normalized.includes("note")) return Folder;
+  if (normalized.includes("copier")) return Copy;
+  if (normalized.includes("validation") || normalized.includes("soumettre")) return Send;
+  return PenLine;
+}
+
+function AssistantFooterActions({
+  actions,
+  compact = false,
+}: {
+  actions: string[];
+  compact?: boolean;
+}) {
+  return (
+    <div className={cn(compact ? "mb-4 flex flex-wrap gap-2" : "flex flex-wrap gap-3")}>
+      {actions.map((action, index) => {
+        const Icon = footerIconForAction(action);
+        const primary = index === 0;
+        return (
           <button
-            type="submit"
-            aria-label="Envoyer la question"
-            disabled={status === "loading" || inputValue.trim().length === 0}
-            className="grid h-9 w-9 place-items-center rounded-[5px] bg-[#6048ff] text-white transition disabled:bg-[#c8bbff]"
+            key={action}
+            type="button"
+            className={cn(
+              "inline-flex h-10 items-center justify-center gap-2 rounded-[5px] px-3 font-bold text-xs transition",
+              compact ? "min-w-[132px]" : "px-4",
+              primary
+                ? "bg-[linear-gradient(180deg,#e38a00,#cf7300)] text-white shadow-[0_10px_22px_rgba(217,119,0,0.22)] hover:bg-[#c96f00]"
+                : "border border-[#dfe2ec] bg-white text-[#071044] hover:bg-[#f7f8fb]",
+            )}
           >
-            <Send className="h-4 w-4" />
+            <Icon className="h-4 w-4" />
+            {action}
           </button>
-        </form>
-      ) : null}
-    </section>
+        );
+      })}
+    </div>
   );
 }
 
@@ -760,6 +937,13 @@ function AssistantDrawer({
   onTogglePinned: () => void;
 }) {
   const isPinned = mode === "pinned";
+  const hasContactRuleArtifact = content.artifact?.type === "contact_rule_v1";
+  const hasStructuredArtifact = content.artifact !== null;
+  const isBlockedContact =
+    content.artifact?.type === "contact_rule_v1" && content.artifact.content.decision === "blocked";
+  const contactStatus = artifactString(content.artifact, "contact_status");
+  const contactReasonCode = artifactStringList(content.artifact, "reason_codes")[0];
+  const footerActions = footerActionsForRecouvrementArtifact(content.artifact);
   const summary = content.summary.length > 0 ? content.summary : fallbackAssistantContent.summary;
   const checks =
     content.complianceChecks.length > 0 ? content.complianceChecks : verificationItems.slice(0, 4);
@@ -770,6 +954,12 @@ function AssistantDrawer({
   const initialPrompt =
     messages.find((message) => message.role === "user")?.content ??
     assistantPromptForTab(activeTab);
+  const resultTitle = hasContactRuleArtifact
+    ? isBlockedContact
+      ? "Action de contact bloquée pour RC-2048."
+      : "Règle de contact vérifiée pour RC-2048."
+    : "Voici une proposition adaptée au dossier RC-2048.";
+  const verifyButtonLabel = hasContactRuleArtifact ? "Revérifier" : "Régénérer";
 
   return (
     <aside
@@ -882,15 +1072,24 @@ function AssistantDrawer({
       {isPinned ? (
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           <div className="space-y-4">
+            {status === "loading" ? (
+              <AssistantThinkingIndicator compact label={thinkingLabel} />
+            ) : null}
             <AssistantContextPanel compact />
-            <AssistantDraftPanel
-              compact
-              content={content}
-              selectedVersionId={selectedVersionId}
-              status={status}
-              onSelectVersion={onSelectVersion}
-            />
-            <AssistantVerificationPanel checks={checks} status={status} />
+            {hasContactRuleArtifact ? (
+              <AssistantContactRulePanel compact content={content} status={status} />
+            ) : (
+              <>
+                <AssistantDraftPanel
+                  compact
+                  content={content}
+                  selectedVersionId={selectedVersionId}
+                  status={status}
+                  onSelectVersion={onSelectVersion}
+                />
+                <AssistantVerificationPanel checks={checks} status={status} />
+              </>
+            )}
             <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
               <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">
                 Prochaines actions suggérées
@@ -905,15 +1104,6 @@ function AssistantDrawer({
                   : nextActions.map((item) => <li key={item}>{item}</li>)}
               </ul>
             </section>
-            <AssistantConversationPanel
-              compact
-              inputValue={inputValue}
-              messages={messages}
-              status={status}
-              thinkingLabel={thinkingLabel}
-              onInputChange={onInputChange}
-              onSubmit={onSendMessage}
-            />
           </div>
         </div>
       ) : (
@@ -938,12 +1128,20 @@ function AssistantDrawer({
               <p className="font-extrabold text-sm">32 jours</p>
               <p className="mt-1 text-xs">Retard</p>
             </div>
-            <div className="rounded-[5px] bg-[#e9f7e9] px-3 py-2 text-[#145b2b] text-xs">
+            <div
+              className={cn(
+                "rounded-[5px] px-3 py-2 text-xs",
+                isBlockedContact ? "bg-[#fff1ef] text-[#a23b2a]" : "bg-[#e9f7e9] text-[#145b2b]",
+              )}
+            >
               <p className="flex items-center gap-2 font-bold">
-                <CircleCheck className="h-4 w-4" />
-                Contact autorisé
+                {isBlockedContact ? <X className="h-4 w-4" /> : <CircleCheck className="h-4 w-4" />}
+                {isBlockedContact ? "Action bloquée" : "Contact autorisé"}
               </p>
-              <p className="mt-1">8h - 20h</p>
+              <p className="mt-1">{isBlockedContact ? contactStatus : "8h - 20h"}</p>
+              {isBlockedContact && contactReasonCode ? (
+                <p className="mt-1 font-bold text-[0.62rem]">{contactReasonCode}</p>
+              ) : null}
             </div>
           </section>
 
@@ -978,17 +1176,13 @@ function AssistantDrawer({
               <Sparkles
                 className={cn("h-5 w-5 text-[#6048ff]", status === "loading" && "animate-pulse")}
               />
-              <p className="font-bold">
-                {status === "loading"
-                  ? thinkingLabel
-                  : "Voici une proposition adaptée au dossier RC-2048."}
-              </p>
+              <p className="font-bold">{status === "loading" ? thinkingLabel : resultTitle}</p>
               <button
                 type="button"
                 onClick={onRegenerate}
                 className="ml-auto font-semibold text-[#6048ff] text-xs"
               >
-                Régénérer
+                {verifyButtonLabel}
               </button>
             </div>
             {error ? (
@@ -996,53 +1190,67 @@ function AssistantDrawer({
                 {error}
               </div>
             ) : null}
+            {hasStructuredArtifact && content.rawResponse && status !== "loading" ? (
+              <div className="mb-4 rounded-[6px] bg-[#f0edff] px-4 py-3 text-[#071044] text-sm leading-6">
+                {content.rawResponse}
+              </div>
+            ) : null}
+            {status === "loading" ? <AssistantThinkingIndicator label={thinkingLabel} /> : null}
             <div className="grid gap-4">
-              <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
-                <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                  Résumé du dossier
-                </h3>
-                <ul className="space-y-1.5 text-xs leading-5">
-                  {status === "loading"
-                    ? loadingRows.map((row) => (
-                        <li key={row}>
-                          <SkeletonLines rows={1} />
-                        </li>
-                      ))
-                    : summary.map((item) => <li key={item}>{item}</li>)}
-                </ul>
-              </section>
-              <AssistantDraftPanel
-                content={content}
-                selectedVersionId={selectedVersionId}
-                status={status}
-                onSelectVersion={onSelectVersion}
-              />
-              {content.paymentPlan || status === "loading" ? (
-                <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
-                  <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                    Échéancier proposé
-                  </h3>
-                  {status === "loading" ? (
-                    <SkeletonLines rows={2} />
-                  ) : (
-                    <p className="text-xs leading-5">{content.paymentPlan}</p>
-                  )}
-                </section>
-              ) : null}
-              <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
-                <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                  Règles et conformité
-                </h3>
-                <ul className="space-y-1.5 text-xs leading-5">
-                  {status === "loading"
-                    ? loadingRows.map((row) => (
-                        <li key={row}>
-                          <SkeletonLines rows={1} />
-                        </li>
-                      ))
-                    : checks.map((item) => <li key={item}>{item}</li>)}
-                </ul>
-              </section>
+              {hasContactRuleArtifact ? (
+                <AssistantContactRulePanel content={content} status={status} />
+              ) : (
+                <>
+                  <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                    <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
+                      Résumé du dossier
+                    </h3>
+                    <ul className="space-y-1.5 text-xs leading-5">
+                      {status === "loading"
+                        ? loadingRows.map((row) => (
+                            <li key={row}>
+                              <SkeletonLines rows={1} />
+                            </li>
+                          ))
+                        : summary.map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  </section>
+                  <AssistantDraftPanel
+                    content={content}
+                    selectedVersionId={selectedVersionId}
+                    status={status}
+                    onSelectVersion={onSelectVersion}
+                  />
+                  {content.paymentPlan || status === "loading" ? (
+                    <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                      <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
+                        Échéancier proposé
+                      </h3>
+                      {status === "loading" ? (
+                        <SkeletonLines rows={2} />
+                      ) : (
+                        <p className="whitespace-pre-wrap text-xs leading-5">
+                          {content.paymentPlan}
+                        </p>
+                      )}
+                    </section>
+                  ) : null}
+                  <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                    <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
+                      Règles et conformité
+                    </h3>
+                    <ul className="space-y-1.5 text-xs leading-5">
+                      {status === "loading"
+                        ? loadingRows.map((row) => (
+                            <li key={row}>
+                              <SkeletonLines rows={1} />
+                            </li>
+                          ))
+                        : checks.map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  </section>
+                </>
+              )}
               <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                 <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
                   Prochaines actions suggérées
@@ -1057,15 +1265,6 @@ function AssistantDrawer({
                     : nextActions.map((item) => <li key={item}>{item}</li>)}
                 </ul>
               </section>
-              <AssistantConversationPanel
-                inputValue={inputValue}
-                messages={messages}
-                showComposer={false}
-                status={status}
-                thinkingLabel={thinkingLabel}
-                onInputChange={onInputChange}
-                onSubmit={onSendMessage}
-              />
             </div>
           </article>
         </div>
@@ -1074,29 +1273,7 @@ function AssistantDrawer({
       <footer className="shrink-0 border-[#dfe2ec] border-t bg-white px-6 py-4">
         {isPinned ? (
           <>
-            <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_1fr_1.05fr]">
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-3 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
-              >
-                <PenLine className="h-4 w-4" />
-                Modifier
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-3 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
-              >
-                <Folder className="h-4 w-4" />
-                Insérer
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] bg-[linear-gradient(180deg,#e38a00,#cf7300)] px-3 font-bold text-white text-xs shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
-              >
-                <Send className="h-4 w-4" />
-                Valider
-              </button>
-            </div>
+            <AssistantFooterActions actions={footerActions} compact />
             <div className="flex items-center justify-between gap-3 text-xs">
               <button
                 type="button"
@@ -1118,29 +1295,7 @@ function AssistantDrawer({
           </>
         ) : (
           <>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] bg-[linear-gradient(180deg,#e38a00,#cf7300)] px-4 font-bold text-white text-xs shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
-              >
-                <PenLine className="h-4 w-4" />
-                Créer un brouillon
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-4 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
-              >
-                <Folder className="h-4 w-4" />
-                Insérer dans le dossier
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[5px] border border-[#dfe2ec] bg-white px-4 font-bold text-[#071044] text-xs transition hover:bg-[#f7f8fb]"
-              >
-                <Copy className="h-4 w-4" />
-                Copier le message
-              </button>
-            </div>
+            <AssistantFooterActions actions={footerActions} />
             <form
               className="mt-4 flex min-h-[56px] items-center gap-3 rounded-[5px] border border-[#b7aaff] bg-white px-4 shadow-[0_8px_18px_rgba(96,72,255,0.06)]"
               onSubmit={(event) => {
@@ -1189,6 +1344,8 @@ export function RecouvrementProductExperience() {
   const [thinkingStep, setThinkingStep] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const assistantThreadRef = useRef<AssistantThreadMessage[]>([]);
+  const assistantContentRef = useRef<GeneratedAssistantContent>(fallbackAssistantContent);
+  const skipNextAssistantAutoTurnRef = useRef(false);
   const conversationIdRef = useRef<string | null>(null);
   const isAssistantOpen = assistantMode !== "closed";
   const thinkingLabel =
@@ -1198,6 +1355,10 @@ export function RecouvrementProductExperience() {
   useEffect(() => {
     assistantThreadRef.current = assistantThread;
   }, [assistantThread]);
+
+  useEffect(() => {
+    assistantContentRef.current = assistantContent;
+  }, [assistantContent]);
 
   const openAssistant = (action = defaultAssistantTab) => {
     setActiveAssistantTab(assistantTabForAction(action));
@@ -1219,6 +1380,17 @@ export function RecouvrementProductExperience() {
     (message: string, resetThread: boolean) => {
       const trimmedMessage = message.trim();
       if (!trimmedMessage) return;
+      const route = routeRecouvrementDrawerMessage(
+        trimmedMessage,
+        assistantTaskForTab(activeAssistantTab),
+        assistantContentRef.current.artifact,
+      );
+      const usesStructuredContactBackend = route.useContactRuleBackend;
+      const routedTab = assistantTabForTask(route.targetTask);
+      if (!resetThread && routedTab !== activeAssistantTab) {
+        skipNextAssistantAutoTurnRef.current = true;
+        setActiveAssistantTab(routedTab);
+      }
 
       const priorThread = resetThread
         ? []
@@ -1237,7 +1409,9 @@ export function RecouvrementProductExperience() {
 
       if (resetThread) {
         conversationIdRef.current = null;
-        setAssistantContent(fallbackAssistantContent);
+        setAssistantContent(
+          usesStructuredContactBackend ? pendingContactRuleContent : fallbackAssistantContent,
+        );
         setSelectedVersionId("v1");
       }
 
@@ -1249,60 +1423,156 @@ export function RecouvrementProductExperience() {
       const controller = new AbortController();
       abortRef.current?.abort();
       abortRef.current = controller;
+      const loadingStartedAt = Date.now();
+      const completeAfterThinkingMinimum = (callback: () => void) => {
+        const remainingMs = Math.max(
+          0,
+          MIN_ASSISTANT_THINKING_MS - (Date.now() - loadingStartedAt),
+        );
+        window.setTimeout(() => {
+          if (controller.signal.aborted) return;
+          callback();
+        }, remainingMs);
+      };
 
-      let rawResponse = "";
+      const runLegacyStream = () => {
+        let rawResponse = "";
 
-      void streamChat(
-        {
+        return streamChat(
+          {
+            message: trimmedMessage,
+            language: locale,
+            conversation_id: resetThread ? undefined : (conversationIdRef.current ?? undefined),
+            subject_id: getSubjectId(),
+            history: buildAssistantHistory(priorThread),
+            system_prompt_override: recouvrementDrawerSystemPrompt,
+          },
+          {
+            signal: controller.signal,
+            surface: "recouvrement",
+            onStart: ({ conversation_id }) => {
+              conversationIdRef.current = conversation_id;
+            },
+            onToken: (token) => {
+              rawResponse += token;
+              setAssistantThread((current) =>
+                current.map((item) =>
+                  item.id === assistantMessage.id
+                    ? { ...item, content: item.content + token }
+                    : item,
+                ),
+              );
+            },
+            onEnd: (envelope) => {
+              const finalResponse = asString(envelope.final_response || rawResponse);
+              const parsed = parseGeneratedAssistantContent(finalResponse);
+              setAssistantContent(parsed);
+              setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
+              setAssistantThread((current) =>
+                current.map((item) =>
+                  item.id === assistantMessage.id
+                    ? { ...item, content: finalResponse, streaming: false }
+                    : item,
+                ),
+              );
+              setAssistantStatus("ready");
+            },
+            onError: (message) => {
+              if (controller.signal.aborted) return;
+              setAssistantError(message);
+              setAssistantStatus("error");
+              setAssistantThread((current) =>
+                current.map((item) =>
+                  item.id === assistantMessage.id
+                    ? { ...item, content: message, streaming: false, error: true }
+                    : item,
+                ),
+              );
+            },
+          },
+        );
+      };
+
+      if (route.targetTask === "propose_schedule") {
+        const proposal = buildScheduleProposalDraft(
+          trimmedMessage,
+          route.extractedSlots.durationMonths,
+        );
+        const parsed = contentFromScheduleProposal(proposal);
+        completeAfterThinkingMinimum(() => {
+          setAssistantContent(parsed);
+          setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
+          setAssistantThread((current) =>
+            current.map((item) =>
+              item.id === assistantMessage.id
+                ? { ...item, content: proposal.visibleReply, streaming: false }
+                : item,
+            ),
+          );
+          setAssistantStatus("ready");
+        });
+        return;
+      }
+
+      if (usesStructuredContactBackend) {
+        const conversationId =
+          resetThread || !conversationIdRef.current
+            ? crypto.randomUUID()
+            : conversationIdRef.current;
+        conversationIdRef.current = conversationId;
+        const turnId = crypto.randomUUID();
+
+        void sendRecouvrementAssistantMessage({
           message: trimmedMessage,
-          language: locale,
-          conversation_id: resetThread ? undefined : (conversationIdRef.current ?? undefined),
-          subject_id: getSubjectId(),
-          history: buildAssistantHistory(priorThread),
-          system_prompt_override: recouvrementDrawerSystemPrompt,
-        },
-        {
+          conversationId,
+          turnId,
+          assistantState: {
+            activeTask: "check_rule",
+            activeTab: activeAssistantTab,
+            caseId: "RC-2048",
+            history: buildAssistantHistory(priorThread),
+          },
           signal: controller.signal,
-          surface: "recouvrement",
-          onStart: ({ conversation_id }) => {
-            conversationIdRef.current = conversation_id;
-          },
-          onToken: (token) => {
-            rawResponse += token;
-            setAssistantThread((current) =>
-              current.map((item) =>
-                item.id === assistantMessage.id ? { ...item, content: item.content + token } : item,
-              ),
-            );
-          },
-          onEnd: (envelope) => {
-            const finalResponse = asString(envelope.final_response || rawResponse);
-            const parsed = parseGeneratedAssistantContent(finalResponse);
-            setAssistantContent(parsed);
-            setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
-            setAssistantThread((current) =>
-              current.map((item) =>
-                item.id === assistantMessage.id
-                  ? { ...item, content: finalResponse, streaming: false }
-                  : item,
-              ),
-            );
-            setAssistantStatus("ready");
-          },
-          onError: (message) => {
+        })
+          .then((response) => {
             if (controller.signal.aborted) return;
-            setAssistantError(message);
-            setAssistantStatus("error");
-            setAssistantThread((current) =>
-              current.map((item) =>
-                item.id === assistantMessage.id
-                  ? { ...item, content: message, streaming: false, error: true }
-                  : item,
-              ),
-            );
-          },
-        },
-      ).catch((err) => {
+            const parsed = contentFromRecouvrementContactResponse(response);
+            completeAfterThinkingMinimum(() => {
+              setAssistantContent(parsed);
+              setSelectedVersionId("v1");
+              setAssistantThread((current) =>
+                current.map((item) =>
+                  item.id === assistantMessage.id
+                    ? { ...item, content: response.visibleReply, streaming: false }
+                    : item,
+                ),
+              );
+              setAssistantStatus("ready");
+            });
+          })
+          .catch((err) => {
+            if (controller.signal.aborted) return;
+            console.warn("[recouvrement-assistant] structured contact rule unavailable", err);
+            const fallbackResponse = buildContactRuleBackendUnavailableFallback();
+            const parsed = contentFromRecouvrementContactResponse(fallbackResponse);
+            completeAfterThinkingMinimum(() => {
+              setAssistantContent(parsed);
+              setSelectedVersionId("v1");
+              setAssistantError(fallbackResponse.visibleReply);
+              setAssistantThread((current) =>
+                current.map((item) =>
+                  item.id === assistantMessage.id
+                    ? { ...item, content: fallbackResponse.visibleReply, streaming: false }
+                    : item,
+                ),
+              );
+              setAssistantStatus("ready");
+            });
+          });
+        return;
+      }
+
+      void runLegacyStream().catch((err) => {
         if (controller.signal.aborted) return;
         const message = err instanceof Error ? err.message : String(err);
         setAssistantError(message);
@@ -1316,7 +1586,7 @@ export function RecouvrementProductExperience() {
         );
       });
     },
-    [locale],
+    [activeAssistantTab, locale],
   );
 
   const selectAssistantTab = useCallback(
@@ -1348,6 +1618,10 @@ export function RecouvrementProductExperience() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: generationNonce intentionally retriggers a fresh assistant turn.
   useEffect(() => {
     if (!isAssistantOpen) return;
+    if (skipNextAssistantAutoTurnRef.current) {
+      skipNextAssistantAutoTurnRef.current = false;
+      return;
+    }
     sendAssistantTurn(assistantPromptForTab(activeAssistantTab), true);
   }, [activeAssistantTab, generationNonce, isAssistantOpen, sendAssistantTurn]);
 
