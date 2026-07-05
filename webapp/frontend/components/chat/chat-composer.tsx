@@ -80,7 +80,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
  }}
  >
  {/* Integrated pill — focus glow on the wrapper, not on the textarea */}
- <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 transition-[border-color,box-shadow] duration-200 focus-within:border-gold-500/50 focus-within:shadow-[0_0_0_3px_rgba(234,179,8,0.15)] text-slate-100">
+ <div className="flex items-end gap-2 rounded-2xl border border-navy-700 bg-gradient-to-br from-navy-800 to-navy-950 px-4 py-2 transition-[border-color,box-shadow] duration-200 focus-within:border-gold-500/50 focus-within:shadow-[0_0_0_3px_rgba(234,179,8,0.2)] text-white">
  <Textarea
  ref={textareaRef}
  value={value}

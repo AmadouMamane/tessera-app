@@ -120,7 +120,7 @@ export function MessageBubble({
  "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
  isUser
  ? "bg-[var(--secondary)] text-[var(--muted-foreground)] ring-1 ring-[var(--border)]"
- : "bg-gold-500/20 text-gold-400 shadow-[inset_0_1px_1px_rgba(234,179,8,0.2)] ring-1 ring-gold-500/40",
+ : "bg-gradient-to-br from-navy-800 to-navy-950 text-gold-400 shadow-[inset_0_1px_1px_oklch(0.8_0.066_85/0.2)] ring-1 ring-gold-500/15 ",
  )}
  >
  {isUser ? (
@@ -161,7 +161,7 @@ export function MessageBubble({
  className={cn(
  "relative w-full",
  isUser
- ? "px-4 py-2.5 rounded-2xl rounded-br-sm border border-white/10 bg-white/10 backdrop-blur-md text-white text-sm leading-relaxed shadow-sm"
+ ? "px-4 py-2.5 rounded-2xl rounded-br-sm bg-gradient-to-br from-navy-800 to-navy-950 text-navy-50 text-sm leading-relaxed shadow-[var(--shadow-card)]"
  : "text-[var(--foreground)]",
  )}
  >
