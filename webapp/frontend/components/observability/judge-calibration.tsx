@@ -242,7 +242,7 @@ function DisagreementDonut({
   total: number;
 }) {
   const tq = useTranslations("quality");
-  const R = 26;
+  const R = 40.4;
   const C = 2 * Math.PI * R;
   let offset = 0;
   const arcs =
@@ -255,12 +255,12 @@ function DisagreementDonut({
         })
       : [];
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative h-[72px] w-[72px] shrink-0">
-        <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90" aria-hidden="true">
+    <div className="flex items-center gap-1">
+      <div className="relative h-[104px] w-[104px] shrink-0">
+        <svg viewBox="0 0 104 104" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle
-            cx="36"
-            cy="36"
+            cx="52"
+            cy="52"
             r={R}
             fill="none"
             stroke="var(--tessera-border)"
@@ -269,8 +269,8 @@ function DisagreementDonut({
           {arcs.map((a) => (
             <circle
               key={a.label}
-              cx="36"
-              cy="36"
+              cx="52"
+              cy="52"
               r={R}
               fill="none"
               stroke={a.color}
@@ -280,9 +280,11 @@ function DisagreementDonut({
             />
           ))}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-base font-semibold tabular-nums">{total}</span>
-          <span className="text-[0.5rem] uppercase text-[var(--muted-foreground)]">
+        <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+          <span className="max-w-[48px] truncate text-lg font-semibold leading-none tabular-nums">
+            {total}
+          </span>
+          <span className="line-clamp-2 max-w-[56px] break-words text-center text-[0.55rem] uppercase leading-tight text-[var(--muted-foreground)]">
             {tq("judge.casDisagree")}
           </span>
         </div>
@@ -294,10 +296,12 @@ function DisagreementDonut({
           </li>
         ) : (
           data.map((d) => (
-            <li key={d.label} className="flex items-center gap-1.5 text-[0.7rem]">
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: d.color }} />
-              <span className="min-w-0 flex-1 truncate">{tq(`judge.cat.${d.label}`)}</span>
-              <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">
+            <li key={d.label} className="flex flex-col gap-0.5 text-[0.66rem]">
+              <span className="flex min-w-0 items-center gap-1">
+                <span className="h-1 w-1 shrink-0 rounded-full" style={{ background: d.color }} />
+                <span className="min-w-0 truncate">{tq(`judge.cat.${d.label}`)}</span>
+              </span>
+              <span className="pl-2.5 tabular-nums text-[var(--muted-foreground)]">
                 {d.count} · {total > 0 ? Math.round((d.count / total) * 100) : 0}%
               </span>
             </li>
