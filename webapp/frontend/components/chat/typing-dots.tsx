@@ -3,16 +3,16 @@ export function TypingDots() {
     <div className="flex items-center" aria-label="typing">
       <style>{`
         @keyframes d1 {
-          0%, 100% { transform: translate(7px, 14px); opacity: 0.3; }
-          50%      { transform: translate(14px, 2px) scale(1.15); opacity: 1; }
+          0%, 100% { transform: translate(10.5px, 8px) rotate(0deg) translate(-3.5px, 6px) scale(1); opacity: 0.3; }
+          50%      { transform: translate(10.5px, 8px) rotate(180deg) translate(-3.5px, 6px) scale(1.15); opacity: 1; }
         }
         @keyframes d2 {
-          0%, 100% { transform: translate(14px, 14px); opacity: 0.3; }
-          50%      { transform: translate(21px, 14px) scale(0.95); opacity: 0.8; }
+          0%, 100% { transform: translate(17.5px, 14px) rotate(0deg) translate(-3.5px, 0px) scale(1); opacity: 0.3; }
+          50%      { transform: translate(17.5px, 14px) rotate(-180deg) translate(-3.5px, 0px) scale(0.95); opacity: 0.8; }
         }
         @keyframes d3 {
-          0%, 100% { transform: translate(21px, 14px); opacity: 0.3; }
-          50%      { transform: translate(7px, 14px) scale(1.0); opacity: 0.8; }
+          0%, 100% { transform: translate(14px, 14px) rotate(0deg) translate(7px, 0px) scale(1); opacity: 0.3; }
+          50%      { transform: translate(14px, 14px) rotate(180deg) translate(7px, 0px) scale(1.0); opacity: 0.8; }
         }
       `}</style>
       <div className="relative h-7 w-9 ml-1">
