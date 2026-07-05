@@ -16,6 +16,7 @@ structured endpoint.
 from __future__ import annotations
 
 import re
+import unicodedata
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -94,6 +95,19 @@ class ContactPolicyDecision(TypedDict):
     is_within_window: bool | None
 
 
+class SchedulePolicyDecision(TypedDict):
+    """Decision produced by the schedule-policy node."""
+
+    decision: str
+    reason_codes: list[str]
+    requested_months: int
+    monthly_amount: float
+    monthly_amount_label: str
+    validation_required: bool
+    client_agreement_required: bool
+    schedule_created: bool
+
+
 class RecouvrementArtifact(TypedDict):
     """Structured artifact consumed by the Recouvrement drawer contract."""
 
@@ -151,6 +165,7 @@ class RecouvrementWorkflowState(TypedDict):
     intent_confidence: NotRequired[float]
     slots: NotRequired[dict[str, object]]
     contact_policy: NotRequired[ContactPolicyDecision]
+    schedule_policy: NotRequired[SchedulePolicyDecision]
     artifact: NotRequired[RecouvrementArtifact]
     visible_reply: NotRequired[str]
     card_updates: NotRequired[dict[str, list[str]]]
@@ -231,6 +246,69 @@ def _after_surface_authorization(state: RecouvrementWorkflowState) -> str:
     return "authorized" if state.get("authorized") is True else "blocked"
 
 
+def _normalize_message(message: str) -> str:
+    """Normalize French free text for deterministic intent routing."""
+    return "".join(
+        char
+        for char in unicodedata.normalize("NFD", message.lower())
+        if unicodedata.category(char) != "Mn"
+    )
+
+
+def _has_schedule_intent(normalized_message: str) -> bool:
+    """Whether the current Julie turn asks for a payment schedule."""
+    return (
+        re.search(
+            r"\b(echeancier|etalement|etaler|mensualite|mensualites|mois|paiement|payer|"
+            r"regler|regulariser|duree)\b",
+            normalized_message,
+        )
+        is not None
+    )
+
+
+def _has_contact_rule_intent(normalized_message: str) -> bool:
+    """Whether the current Julie turn asks for contact-rule verification."""
+    has_contact_action = (
+        re.search(
+            r"\b(appel|appeler|telephone|telephoner|contacter|contact|joindre|email|mail)\b",
+            normalized_message,
+        )
+        is not None
+    )
+    has_rule_signal = (
+        re.search(
+            r"\b(regle|regles|autorise|autorisation|interdit|peux|peut|puis|comment|quand|"
+            r"heure|plage|cadre|conforme|conformite)\b",
+            normalized_message,
+        )
+        is not None
+        or re.search(r"(?:[01]?\d|2[0-3])(?:h|:)", normalized_message) is not None
+    )
+    return (
+        "regle de contact" in normalized_message
+        or "cadre de contact" in normalized_message
+        or (has_contact_action and has_rule_signal)
+    )
+
+
+def _active_task(state: RecouvrementWorkflowState) -> str:
+    """Return the active task passed by the drawer, when available."""
+    assistant_state = state.get("assistant_state") or {}
+    active = assistant_state.get("activeTask")
+    return str(active) if active is not None else ""
+
+
+def _parse_duration_months(message: str) -> int | None:
+    """Extract a requested schedule duration from French free text."""
+    normalized = _normalize_message(message)
+    match = re.search(r"\b(\d{1,3})\s*(?:mois|mensualite|mensualites)\b", normalized)
+    if match is None:
+        return None
+    months = int(match.group(1))
+    return months if months > 0 else None
+
+
 def _parse_time(message: str) -> str | None:
     """Extract a simple requested contact hour from French free text."""
     normalized = message.lower().replace(" ", "")
@@ -255,6 +333,11 @@ def _within_window(requested_time: str, case: RecouvrementCaseSnapshot) -> bool:
     start = _time_to_minutes(case.contact_window_start)
     end = _time_to_minutes(case.contact_window_end)
     return start <= requested < end
+
+
+def _format_euro(value: float) -> str:
+    """Format a deterministic euro amount with French decimal punctuation."""
+    return f"{value:.2f}".replace(".", ",") + " €"
 
 
 def _context_items(case: RecouvrementCaseSnapshot) -> list[str]:
@@ -285,31 +368,63 @@ def load_case_context(state: RecouvrementWorkflowState) -> dict[str, object]:
 
 
 def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, object]:
-    """Route the first supported Recouvrement intent."""
-    intent = "check_contact_rule"
-    confidence = 0.96
+    """Route the supported Recouvrement intents from the current Julie message."""
+    normalized = _normalize_message(state["message"])
+    active_task = _active_task(state)
+    if _has_schedule_intent(normalized):
+        intent = "propose_schedule"
+        confidence = 0.94
+    elif _has_contact_rule_intent(normalized) or active_task in {
+        "check_rule",
+        "check_contact_rule",
+    }:
+        intent = "check_contact_rule"
+        confidence = 0.96
+    else:
+        intent = "check_contact_rule"
+        confidence = 0.72
     record_business_event(
         event_name=BusinessEventName.INTENT_ROUTED,
-        payload={"intent": intent, "confidence": confidence},
+        payload={"intent": intent, "confidence": confidence, "active_task": active_task},
         **_event_common(state, node_name="route_recouvrement_intent"),
     )
     return {"intent": intent, "intent_confidence": confidence}
 
 
 def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, object]:
-    """Extract slots needed by the contact-rule workflow."""
-    requested_time = _parse_time(state["message"])
-    slots: dict[str, object] = {
-        "requested_time": requested_time,
-        "rule_impacting": requested_time is not None,
-        "case_id": state["case_id"],
-    }
+    """Extract slots needed by the routed Recouvrement workflow."""
+    case = state["case"]
+    intent = state.get("intent", "check_contact_rule")
+    if intent == "propose_schedule":
+        requested_months = _parse_duration_months(state["message"]) or 3
+        monthly_amount = round(case.amount_due / requested_months, 2)
+        slots: dict[str, object] = {
+            "case_id": state["case_id"],
+            "requested_months": requested_months,
+            "amount_due": case.amount_due,
+            "amount_due_label": case.amount_due_label,
+            "monthly_amount": monthly_amount,
+            "monthly_amount_label": _format_euro(monthly_amount),
+            "rule_impacting": True,
+        }
+    else:
+        requested_time = _parse_time(state["message"])
+        slots = {
+            "requested_time": requested_time,
+            "rule_impacting": requested_time is not None,
+            "case_id": state["case_id"],
+        }
     record_business_event(
         event_name=BusinessEventName.SLOTS_EXTRACTED,
         payload=slots,
         **_event_common(state, node_name="extract_recouvrement_slots"),
     )
     return {"slots": slots}
+
+
+def _route_after_slot_extraction(state: RecouvrementWorkflowState) -> str:
+    """Route to the policy node that matches the detected business intent."""
+    return "schedule" if state.get("intent") == "propose_schedule" else "contact"
 
 
 def evaluate_contact_policy(state: RecouvrementWorkflowState) -> dict[str, object]:
@@ -356,6 +471,57 @@ def evaluate_contact_policy(state: RecouvrementWorkflowState) -> dict[str, objec
             **_event_common(state, node_name="evaluate_contact_policy"),
         )
     return {"contact_policy": decision}
+
+
+def evaluate_schedule_policy(state: RecouvrementWorkflowState) -> dict[str, object]:
+    """Evaluate the validation policy for an indicative payment schedule."""
+    case = state["case"]
+    slots = state["slots"]
+    requested_months_raw = slots.get("requested_months")
+    requested_months = requested_months_raw if isinstance(requested_months_raw, int) else 3
+    monthly_amount_raw = slots.get("monthly_amount")
+    monthly_amount = (
+        float(monthly_amount_raw)
+        if isinstance(monthly_amount_raw, int | float)
+        else round(case.amount_due / requested_months, 2)
+    )
+    monthly_amount_label = str(slots.get("monthly_amount_label", _format_euro(monthly_amount)))
+    decision: SchedulePolicyDecision = {
+        "decision": "validation_required",
+        "reason_codes": [
+            "VALIDATION_REQUIRED",
+            "CLIENT_AGREEMENT_REQUIRED",
+            "SCHEDULE_NOT_CREATED",
+        ],
+        "requested_months": requested_months,
+        "monthly_amount": monthly_amount,
+        "monthly_amount_label": monthly_amount_label,
+        "validation_required": True,
+        "client_agreement_required": True,
+        "schedule_created": False,
+    }
+    record_business_event(
+        event_name=BusinessEventName.BUSINESS_RULE_CHECKED,
+        decision=decision["decision"],
+        reason_codes=decision["reason_codes"],
+        payload={
+            "rule_id": "SCHEDULE_VALIDATION",
+            "result": "validation_required",
+            "decision": decision["decision"],
+        },
+        **_event_common(state, node_name="evaluate_schedule_policy"),
+    )
+    record_business_event(
+        event_name=BusinessEventName.POLICY_DECISION_MADE,
+        decision=decision["decision"],
+        reason_codes=decision["reason_codes"],
+        payload={
+            "policy_rule": "recouvrement.schedule_validation",
+            "rule_id": "SCHEDULE_VALIDATION",
+        },
+        **_event_common(state, node_name="evaluate_schedule_policy"),
+    )
+    return {"schedule_policy": decision}
 
 
 def build_contact_rule_artifact(state: RecouvrementWorkflowState) -> dict[str, object]:
@@ -444,32 +610,157 @@ def build_contact_rule_artifact(state: RecouvrementWorkflowState) -> dict[str, o
     }
 
 
+def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[str, object]:
+    """Build the drawer-compatible indicative payment-schedule artifact."""
+    case = state["case"]
+    policy = state["schedule_policy"]
+    requested_months = policy["requested_months"]
+    monthly_amount_label = policy["monthly_amount_label"]
+    schedule_title = f"Échéancier indicatif — {requested_months} mois"
+    artifact: RecouvrementArtifact = {
+        "id": f"{case.case_id}-schedule-{requested_months}-months-v2",
+        "type": "schedule_proposal_v2",
+        "task": "propose_schedule",
+        "title": f"Proposition d'échéancier — {case.case_id}",
+        "status": "draft",
+        "content": {
+            "case_id": case.case_id,
+            "client": case.client,
+            "amount_due": case.amount_due_label,
+            "amount_due_numeric": case.amount_due,
+            "duration_months": requested_months,
+            "monthly_amount": monthly_amount_label,
+            "monthly_amount_numeric": policy["monthly_amount"],
+            "validation_required": policy["validation_required"],
+            "client_agreement_required": policy["client_agreement_required"],
+            "created": policy["schedule_created"],
+            "schedule_created": policy["schedule_created"],
+            "status": "indicatif",
+            "reason_codes": policy["reason_codes"],
+        },
+    }
+    client_message = (
+        "Une solution d'échelonnement peut être étudiée avec vous, sous réserve de "
+        "validation et d'accord sur les modalités."
+    )
+    next_actions = [
+        "Ajuster la durée",
+        "Comparer les options",
+        "Préparer le message client",
+        "Soumettre à validation",
+    ]
+    payment_plan = [
+        schedule_title,
+        f"Montant dû : {case.amount_due_label}",
+        f"Durée demandée : {requested_months} mois",
+        f"Mensualité indicative : {monthly_amount_label}",
+        "Statut : validation requise avant proposition",
+        "Échéancier non créé",
+        "Accord client requis",
+    ]
+    card_updates = {
+        "context": _context_items(case),
+        "summary": [
+            f"Étalement demandé : {requested_months} mois",
+            f"Mensualité indicative : {monthly_amount_label}",
+            "Validation interne requise avant proposition au client",
+            "Échéancier non créé",
+            "Accord client requis",
+        ],
+        "paymentPlan": payment_plan,
+        "scheduleItems": [
+            f"{requested_months} mensualités indicatives de {monthly_amount_label}",
+            f"Total : {case.amount_due_label}",
+            "Validation interne requise avant proposition",
+            "Aucun échéancier créé",
+        ],
+        "scheduleVersionLabel": [f"Version indicative — {requested_months} mois"],
+        "clientMessage": [client_message],
+        "complianceChecks": [
+            "Validation requise avant proposition",
+            "Accord client nécessaire avant création",
+            "Échéancier non créé",
+            f"Montant total conservé : {case.amount_due_label}",
+        ],
+        "nextActions": next_actions,
+    }
+    record_business_event(
+        event_name=BusinessEventName.ARTIFACT_CREATED,
+        artifact_id=artifact["id"],
+        artifact_type=artifact["type"],
+        artifact_status=artifact["status"],
+        payload={
+            "task": artifact["task"],
+            "title": artifact["title"],
+            "decision": policy["decision"],
+        },
+        **_event_common(state, node_name="build_schedule_proposal_artifact"),
+    )
+    record_business_event(
+        event_name=BusinessEventName.VALIDATION_REQUESTED,
+        artifact_id=artifact["id"],
+        artifact_type=artifact["type"],
+        artifact_status=artifact["status"],
+        decision=policy["decision"],
+        reason_codes=policy["reason_codes"],
+        payload={
+            "validation_type": "internal_schedule_validation",
+            "validation_reason": "Échéancier indicatif à valider avant proposition au client.",
+        },
+        **_event_common(state, node_name="build_schedule_proposal_artifact"),
+    )
+    record_business_event(
+        event_name=BusinessEventName.ACTION_PREPARED,
+        decision="prepared",
+        reason_codes=["VALIDATION_REQUIRED"],
+        payload={"action_name": "prepare_schedule_proposal"},
+        **_event_common(state, node_name="build_schedule_proposal_artifact"),
+    )
+    return {
+        "artifact": artifact,
+        "card_updates": card_updates,
+        "suggested_actions": next_actions,
+    }
+
+
 def generate_visible_reply(state: RecouvrementWorkflowState) -> dict[str, object]:
     """Generate the natural-language response visible to Julie."""
     case = state["case"]
-    policy = state["contact_policy"]
-    requested_time = policy["requested_time"]
-    if requested_time and policy["decision"] == "blocked":
+    if state.get("intent") == "propose_schedule":
+        schedule_policy = state["schedule_policy"]
         reply = (
-            f"Non, vous ne devez pas appeler {case.client} à {requested_time}. "
-            "Le contact téléphonique est autorisé aujourd'hui uniquement entre "
-            f"{case.contact_window_start} et {case.contact_window_end}. "
-            "Je peux vous aider à planifier un rappel demain ou à préparer un "
-            f"{case.alternative_channel}."
+            f"Pour {case.case_id}, un étalement sur {schedule_policy['requested_months']} mois "
+            f"représenterait environ {schedule_policy['monthly_amount_label']} par mois pour "
+            f"un montant dû de {case.amount_due_label}. Cette proposition reste indicative, "
+            "nécessite une validation interne et l'accord du client. Aucun échéancier n'a "
+            "été créé."
         )
+        task = "propose_schedule"
     else:
-        reply = (
-            f"Pour {case.case_id}, vous pouvez contacter {case.client} aujourd'hui entre "
-            f"{case.contact_window_start} et {case.contact_window_end}. "
-            f"Le canal conseillé est l'{case.recommended_channel}. En alternative, "
-            f"vous pouvez préparer un {case.alternative_channel}."
-        )
+        policy = state["contact_policy"]
+        requested_time = policy["requested_time"]
+        if requested_time and policy["decision"] == "blocked":
+            reply = (
+                f"Non, vous ne devez pas appeler {case.client} à {requested_time}. "
+                "Le contact téléphonique est autorisé aujourd'hui uniquement entre "
+                f"{case.contact_window_start} et {case.contact_window_end}. "
+                "Je peux vous aider à planifier un rappel demain ou à préparer un "
+                f"{case.alternative_channel}."
+            )
+        else:
+            reply = (
+                f"Pour {case.case_id}, vous pouvez contacter {case.client} aujourd'hui entre "
+                f"{case.contact_window_start} et {case.contact_window_end}. "
+                f"Le canal conseillé est l'{case.recommended_channel}. En alternative, "
+                f"vous pouvez préparer un {case.alternative_channel}."
+            )
+        task = "check_rule"
     record_business_event(
         event_name=BusinessEventName.MESSAGE_GENERATED,
         payload={
             "message_kind": "assistant_reply",
             "visible_reply": reply,
-            "task": "check_rule",
+            "task": task,
         },
         **_event_common(state, node_name="generate_visible_reply"),
     )
@@ -484,6 +775,15 @@ def finalize_business_observability(state: RecouvrementWorkflowState) -> dict[st
         turn_id=state["turn_id"],
     )
     scores = business_scoring.score_rows(events)
+    decisions: dict[str, object] = {
+        "intent": state.get("intent"),
+        "confidence": state.get("intent_confidence"),
+        "slots": state.get("slots", {}),
+    }
+    if "contact_policy" in state:
+        decisions["contactPolicy"] = state["contact_policy"]
+    if "schedule_policy" in state:
+        decisions["schedulePolicy"] = state["schedule_policy"]
     output: RecouvrementOutput = {
         "visibleReply": state["visible_reply"],
         "artifact": state["artifact"],
@@ -491,12 +791,7 @@ def finalize_business_observability(state: RecouvrementWorkflowState) -> dict[st
         "suggestedActions": state["suggested_actions"],
         "businessEvents": events,
         "businessScores": scores,
-        "decisions": {
-            "intent": state.get("intent"),
-            "confidence": state.get("intent_confidence"),
-            "slots": state.get("slots", {}),
-            "contactPolicy": state.get("contact_policy", {}),
-        },
+        "decisions": decisions,
     }
     replay.capture_bundle(
         question=state["message"],
@@ -598,8 +893,16 @@ def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:
         instrument_node("evaluate_contact_policy", evaluate_contact_policy),
     )
     graph.add_node(
+        "evaluate_schedule_policy",
+        instrument_node("evaluate_schedule_policy", evaluate_schedule_policy),
+    )
+    graph.add_node(
         "build_contact_rule_artifact",
         instrument_node("build_contact_rule_artifact", build_contact_rule_artifact),
+    )
+    graph.add_node(
+        "build_schedule_proposal_artifact",
+        instrument_node("build_schedule_proposal_artifact", build_schedule_proposal_artifact),
     )
     graph.add_node(
         "generate_visible_reply",
@@ -621,9 +924,15 @@ def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:
     )
     graph.add_edge("load_case_context", "route_recouvrement_intent")
     graph.add_edge("route_recouvrement_intent", "extract_recouvrement_slots")
-    graph.add_edge("extract_recouvrement_slots", "evaluate_contact_policy")
+    graph.add_conditional_edges(
+        "extract_recouvrement_slots",
+        _route_after_slot_extraction,
+        {"contact": "evaluate_contact_policy", "schedule": "evaluate_schedule_policy"},
+    )
     graph.add_edge("evaluate_contact_policy", "build_contact_rule_artifact")
     graph.add_edge("build_contact_rule_artifact", "generate_visible_reply")
+    graph.add_edge("evaluate_schedule_policy", "build_schedule_proposal_artifact")
+    graph.add_edge("build_schedule_proposal_artifact", "generate_visible_reply")
     graph.add_edge("generate_visible_reply", "finalize_business_observability")
     graph.add_edge("finalize_business_observability", END)
     graph.add_edge("finalize_unauthorized_surface", END)

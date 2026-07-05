@@ -542,6 +542,39 @@ function contentFromScheduleProposal(
   };
 }
 
+function contentFromRecouvrementScheduleResponse(
+  response: RecouvrementAssistantResponse,
+): GeneratedAssistantContent {
+  const updates = response.cardUpdates ?? {};
+  const clientMessage =
+    (updates.clientMessage ?? []).join("\n\n") ||
+    [
+      "Bonjour M. D.,",
+      "Une solution d'échelonnement peut être étudiée avec vous, sous réserve de validation et d'accord sur les modalités.",
+      "Nous vous invitons à nous recontacter afin d'échanger sur une solution adaptée à votre situation.",
+      "Cordialement,\nCrédit Aurore",
+    ].join("\n\n");
+
+  return {
+    summary: updates.summary ?? updates.context ?? [],
+    versions: [
+      {
+        id: "v1",
+        label: "V1",
+        title: updates.scheduleVersionLabel?.[0] ?? "Message prudent",
+        body: clientMessage,
+      },
+    ],
+    paymentPlan: (updates.paymentPlan ?? updates.scheduleItems ?? []).join("\n"),
+    complianceChecks: updates.complianceChecks ?? [],
+    nextActions: response.suggestedActions ?? updates.nextActions ?? [],
+    rawResponse: response.visibleReply,
+    artifact: response.artifact,
+    artifactCards: updates,
+    businessScores: response.businessScores ?? [],
+  };
+}
+
 function artifactString(artifact: RecouvrementAssistantArtifact | null, key: string): string {
   const value = artifact?.content[key];
   return typeof value === "string" ? value : "";
@@ -1385,7 +1418,9 @@ export function RecouvrementProductExperience() {
         assistantTaskForTab(activeAssistantTab),
         assistantContentRef.current.artifact,
       );
+      const usesStructuredBackend = route.useStructuredBackend;
       const usesStructuredContactBackend = route.useContactRuleBackend;
+      const usesStructuredScheduleBackend = route.backendIntent === "propose_schedule";
       const routedTab = assistantTabForTask(route.targetTask);
       if (!resetThread && routedTab !== activeAssistantTab) {
         skipNextAssistantAutoTurnRef.current = true;
@@ -1493,7 +1528,7 @@ export function RecouvrementProductExperience() {
         );
       };
 
-      if (route.targetTask === "propose_schedule") {
+      if (route.targetTask === "propose_schedule" && !usesStructuredScheduleBackend) {
         const proposal = buildScheduleProposalDraft(
           trimmedMessage,
           route.extractedSlots.durationMonths,
@@ -1514,7 +1549,7 @@ export function RecouvrementProductExperience() {
         return;
       }
 
-      if (usesStructuredContactBackend) {
+      if (usesStructuredBackend) {
         const conversationId =
           resetThread || !conversationIdRef.current
             ? crypto.randomUUID()
@@ -1527,7 +1562,7 @@ export function RecouvrementProductExperience() {
           conversationId,
           turnId,
           assistantState: {
-            activeTask: "check_rule",
+            activeTask: usesStructuredScheduleBackend ? "propose_schedule" : "check_rule",
             activeTab: activeAssistantTab,
             caseId: "RC-2048",
             history: buildAssistantHistory(priorThread),
@@ -1536,10 +1571,12 @@ export function RecouvrementProductExperience() {
         })
           .then((response) => {
             if (controller.signal.aborted) return;
-            const parsed = contentFromRecouvrementContactResponse(response);
+            const parsed = usesStructuredScheduleBackend
+              ? contentFromRecouvrementScheduleResponse(response)
+              : contentFromRecouvrementContactResponse(response);
             completeAfterThinkingMinimum(() => {
               setAssistantContent(parsed);
-              setSelectedVersionId("v1");
+              setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
               setAssistantThread((current) =>
                 current.map((item) =>
                   item.id === assistantMessage.id
@@ -1552,7 +1589,27 @@ export function RecouvrementProductExperience() {
           })
           .catch((err) => {
             if (controller.signal.aborted) return;
-            console.warn("[recouvrement-assistant] structured contact rule unavailable", err);
+            console.warn("[recouvrement-assistant] structured backend unavailable", err);
+            if (usesStructuredScheduleBackend) {
+              const proposal = buildScheduleProposalDraft(
+                trimmedMessage,
+                route.extractedSlots.durationMonths,
+              );
+              const parsed = contentFromScheduleProposal(proposal);
+              completeAfterThinkingMinimum(() => {
+                setAssistantContent(parsed);
+                setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
+                setAssistantThread((current) =>
+                  current.map((item) =>
+                    item.id === assistantMessage.id
+                      ? { ...item, content: proposal.visibleReply, streaming: false }
+                      : item,
+                  ),
+                );
+                setAssistantStatus("ready");
+              });
+              return;
+            }
             const fallbackResponse = buildContactRuleBackendUnavailableFallback();
             const parsed = contentFromRecouvrementContactResponse(fallbackResponse);
             completeAfterThinkingMinimum(() => {

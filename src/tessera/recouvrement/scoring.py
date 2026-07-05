@@ -197,6 +197,31 @@ def _trace_completeness(rows: list[dict[str, object]]) -> BusinessScore:
 
 
 def _amount_consistency(rows: list[dict[str, object]]) -> BusinessScore:
+    schedule_slots = [
+        _payload(row)
+        for row in rows
+        if row.get("event_name") == BusinessEventName.SLOTS_EXTRACTED.value
+        and _payload(row).get("requested_months") is not None
+        and _payload(row).get("amount_due") is not None
+        and _payload(row).get("monthly_amount") is not None
+    ]
+    if schedule_slots:
+        for payload in schedule_slots:
+            amount_raw = payload.get("amount_due")
+            months_raw = payload.get("requested_months")
+            monthly_raw = payload.get("monthly_amount")
+            if not isinstance(amount_raw, int | float) or not isinstance(
+                months_raw, int
+            ) or not isinstance(monthly_raw, int | float):
+                return _unknown("amount_consistency", "schedule_amount_payload_unusable")
+            amount_due = float(amount_raw)
+            requested_months = months_raw
+            monthly_amount = float(monthly_raw)
+            expected = round(amount_due / requested_months, 2)
+            if monthly_amount != expected:
+                return _scored("amount_consistency", 0.0, "monthly_amount_mismatch")
+        return _scored("amount_consistency", 1.0, "monthly_amount_matches_requested_duration")
+
     schedule_events = [
         row for row in rows if str(row.get("artifact_type") or "").startswith("schedule")
     ]

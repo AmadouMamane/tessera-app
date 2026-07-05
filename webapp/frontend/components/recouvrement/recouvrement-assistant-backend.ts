@@ -11,6 +11,8 @@ export type RecouvrementDrawerTask =
 
 export interface RecouvrementDrawerRoute {
   targetTask: RecouvrementDrawerTask;
+  backendIntent?: "check_contact_rule" | "propose_schedule";
+  useStructuredBackend: boolean;
   useContactRuleBackend: boolean;
   extractedSlots: {
     durationMonths?: number;
@@ -88,6 +90,8 @@ export function routeRecouvrementDrawerMessage(
   if (hasScheduleIntent(normalized)) {
     return {
       targetTask: "propose_schedule",
+      backendIntent: "propose_schedule",
+      useStructuredBackend: true,
       useContactRuleBackend: false,
       extractedSlots: { durationMonths },
     };
@@ -96,20 +100,37 @@ export function routeRecouvrementDrawerMessage(
   if (hasContactRuleIntent(normalized)) {
     return {
       targetTask: "check_contact_rule",
+      backendIntent: "check_contact_rule",
+      useStructuredBackend: true,
       useContactRuleBackend: true,
       extractedSlots: {},
     };
   }
 
   if (hasDraftIntent(normalized)) {
-    return { targetTask: "draft_reminder", useContactRuleBackend: false, extractedSlots: {} };
+    return {
+      targetTask: "draft_reminder",
+      useStructuredBackend: false,
+      useContactRuleBackend: false,
+      extractedSlots: {},
+    };
   }
 
   if (hasSummaryIntent(normalized)) {
-    return { targetTask: "summary", useContactRuleBackend: false, extractedSlots: {} };
+    return {
+      targetTask: "summary",
+      useStructuredBackend: false,
+      useContactRuleBackend: false,
+      extractedSlots: {},
+    };
   }
 
-  return { targetTask: currentTask, useContactRuleBackend: false, extractedSlots: {} };
+  return {
+    targetTask: currentTask,
+    useStructuredBackend: false,
+    useContactRuleBackend: false,
+    extractedSlots: {},
+  };
 }
 
 export function isRecouvrementContactRuleTurn(

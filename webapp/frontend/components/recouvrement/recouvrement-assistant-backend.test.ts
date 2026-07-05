@@ -24,6 +24,8 @@ describe("routeRecouvrementDrawerMessage", () => {
       ),
     ).toMatchObject({
       targetTask: "check_contact_rule",
+      backendIntent: "check_contact_rule",
+      useStructuredBackend: true,
       useContactRuleBackend: true,
     });
   });
@@ -54,6 +56,8 @@ describe("routeRecouvrementDrawerMessage", () => {
 
     expect(route).toEqual({
       targetTask: "propose_schedule",
+      backendIntent: "propose_schedule",
+      useStructuredBackend: true,
       useContactRuleBackend: false,
       extractedSlots: { durationMonths: 36 },
     });
@@ -82,6 +86,22 @@ describe("buildScheduleProposalDraft", () => {
       "Préparer le message client",
       "Soumettre à validation",
     ]);
+  });
+});
+
+describe("structured schedule backend bridge", () => {
+  it("keeps schedule on the structured backend and not on contact-rule routing", () => {
+    const source = readFileSync(
+      join(process.cwd(), "components/recouvrement/recouvrement-product-experience.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("contentFromRecouvrementScheduleResponse");
+    expect(source).toContain('route.backendIntent === "propose_schedule"');
+    expect(source).toContain(
+      'activeTask: usesStructuredScheduleBackend ? "propose_schedule" : "check_rule"',
+    );
+    expect(source).toContain("contentFromScheduleProposal(proposal)");
   });
 });
 

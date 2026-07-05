@@ -247,6 +247,129 @@ def test_recouvrement_graph_scores_contact_rule_without_false_not_applicable_zer
     assert scores["amount_consistency"]["score"] is None
 
 
+def test_recouvrement_graph_proposes_schedule_with_backend_observability(
+    observed_recouvrement_stores: Path,
+) -> None:
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-rc-schedule",
+        turn_id="turn-schedule-36",
+        assistant_state={"activeTask": "check_rule"},
+    )
+
+    assert output["decisions"]["intent"] == "propose_schedule"
+    assert output["decisions"]["slots"]["requested_months"] == 36
+    assert output["decisions"]["slots"]["monthly_amount"] == 23.33
+    assert output["artifact"]["type"] == "schedule_proposal_v2"
+    assert output["artifact"]["task"] == "propose_schedule"
+    assert output["artifact"]["status"] == "draft"
+    assert output["artifact"]["title"] == "Proposition d'échéancier — RC-2048"
+    assert output["artifact"]["content"]["amount_due"] == "840,00 €"
+    assert output["artifact"]["content"]["duration_months"] == 36
+    assert output["artifact"]["content"]["monthly_amount"] == "23,33 €"
+    assert output["artifact"]["content"]["validation_required"] is True
+    assert output["artifact"]["content"]["client_agreement_required"] is True
+    assert output["artifact"]["content"]["schedule_created"] is False
+    assert "23,33 €" in output["visibleReply"]
+    assert "Aucun échéancier n'a été créé" in output["visibleReply"]
+    assert output["cardUpdates"]["paymentPlan"] == [
+        "Échéancier indicatif — 36 mois",
+        "Montant dû : 840,00 €",
+        "Durée demandée : 36 mois",
+        "Mensualité indicative : 23,33 €",
+        "Statut : validation requise avant proposition",
+        "Échéancier non créé",
+        "Accord client requis",
+    ]
+    assert output["cardUpdates"]["clientMessage"] == [
+        (
+            "Une solution d'échelonnement peut être étudiée avec vous, sous réserve de "
+            "validation et d'accord sur les modalités."
+        )
+    ]
+    assert output["suggestedActions"] == [
+        "Ajuster la durée",
+        "Comparer les options",
+        "Préparer le message client",
+        "Soumettre à validation",
+    ]
+
+    rows = output["businessEvents"]
+    assert [row["event_name"] for row in rows] == [
+        "case.context_loaded",
+        "intent.routed",
+        "slots.extracted",
+        "business_rule.checked",
+        "policy.decision_made",
+        "artifact.created",
+        "validation.requested",
+        "action.prepared",
+        "message.generated",
+    ]
+    assert next(row for row in rows if row["event_name"] == "business_rule.checked")[
+        "payload"
+    ]["rule_id"] == "SCHEDULE_VALIDATION"
+    assert next(row for row in rows if row["event_name"] == "action.prepared")["payload"][
+        "action_name"
+    ] == "prepare_schedule_proposal"
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["validation_required_compliance"]["score"] == 1.0
+    assert scores["artifact_governance"]["score"] == 1.0
+    assert scores["recouvrement_trace_completeness"]["score"] > 0.8
+    assert scores["amount_consistency"]["score"] == 1.0
+    assert scores["contact_window_compliance"]["status"] == "not_applicable"
+    assert scores["contact_window_compliance"]["score"] is None
+
+
+def test_recouvrement_graph_routes_schedule_follow_up_after_blocked_contact(
+    observed_recouvrement_stores: Path,
+) -> None:
+    contact = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Je peux l'appeler à 23h ?",
+        conversation_id="conv-rc-followup",
+        turn_id="turn-contact-23",
+    )
+    schedule = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis je lui proposer un étalement sur 36 mois",
+        conversation_id="conv-rc-followup",
+        turn_id="turn-schedule-followup",
+        assistant_state={
+            "activeTask": "check_rule",
+            "currentArtifact": contact["artifact"],
+        },
+    )
+
+    assert contact["decisions"]["intent"] == "check_contact_rule"
+    assert contact["artifact"]["content"]["decision"] == "blocked"
+    assert schedule["decisions"]["intent"] == "propose_schedule"
+    assert schedule["artifact"]["type"] == "schedule_proposal_v2"
+    assert schedule["artifact"]["content"]["monthly_amount"] == "23,33 €"
+    assert not any(
+        row["event_name"] == "business_rule.checked"
+        and row["payload"].get("rule_id") == "CONTACT_WINDOW"
+        for row in schedule["businessEvents"]
+    )
+
+
+def test_recouvrement_graph_denies_schedule_on_unauthorized_surface(
+    observed_recouvrement_stores: Path,
+) -> None:
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Peut-on étaler sur 36 mois ?",
+        conversation_id="conv-rc-schedule-deny",
+        turn_id="turn-schedule-deny",
+        surface="public",
+    )
+
+    assert output["artifact"]["type"] == "authorization_denial_v1"
+    assert output["decisions"]["authorization"]["reason_codes"] == ["UNAUTHORIZED_SURFACE"]
+    assert [row["event_name"] for row in output["businessEvents"]] == ["action.blocked"]
+
+
 def test_recouvrement_business_scorer_is_called_through_registry_without_generic_zero(
     observed_recouvrement_stores: Path,
 ) -> None:
@@ -347,3 +470,31 @@ async def test_recouvrement_assistant_endpoint_returns_structured_contract(
         "Reporter le contact",
         "Voir la règle de contact",
     ]
+
+
+async def test_recouvrement_assistant_endpoint_returns_schedule_contract(
+    observed_recouvrement_stores: Path,
+) -> None:
+    payload = RecouvrementAssistantRequest(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-rc-endpoint-schedule",
+        turn_id="turn-endpoint-schedule",
+        assistant_state={"activeTask": "check_rule"},
+    )
+    output = await recouvrement_assistant_message(payload)
+
+    assert output["decisions"]["intent"] == "propose_schedule"
+    assert output["artifact"]["type"] == "schedule_proposal_v2"
+    assert output["artifact"]["content"]["monthly_amount"] == "23,33 €"
+    assert output["artifact"]["content"]["schedule_created"] is False
+    assert "validation requise" in "\n".join(output["cardUpdates"]["complianceChecks"]).lower()
+    assert {row["event_name"] for row in output["businessEvents"]} >= {
+        "intent.routed",
+        "slots.extracted",
+        "business_rule.checked",
+        "artifact.created",
+        "validation.requested",
+        "action.prepared",
+        "message.generated",
+    }
