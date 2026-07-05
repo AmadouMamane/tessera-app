@@ -71,7 +71,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
  }
 
  return (
- <div className="rounded-b-2xl border-t border-[var(--border)] bg-transparent px-4 pb-3 pt-3">
+ <div className="rounded-b-2xl border-t border-slate-200 bg-transparent px-4 pb-3 pt-3">
  <form
  className="mx-auto max-w-3xl"
  onSubmit={(e) => {
@@ -102,7 +102,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
  size="icon"
  onClick={onAbort}
  aria-label={t("stop")}
- className="mb-0.5 shrink-0 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+ className="mb-0.5 shrink-0 text-slate-500 hover:text-slate-700"
  >
  <StopCircle className="h-4 w-4" />
  </Button>
@@ -123,7 +123,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
  <p
  aria-hidden={value.trim().length > 0 || isStreaming}
  className={cn(
- "mt-1.5 px-1 text-[0.65rem] text-[var(--muted-foreground)] transition-opacity duration-150",
+ "mt-1.5 px-1 text-[0.65rem] text-slate-500 transition-opacity duration-150",
  value.trim().length === 0 && !isStreaming ? "opacity-100" : "opacity-0",
  )}
  >
@@ -133,7 +133,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
  {/* AI Act Art. 50 disclosure — must always be visible to the user, so it
  is persistent (never toggled) and rendered from bundled i18n rather
  than a network call. Mirrors tessera.observability.disclosure. */}
- <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[0.6rem] text-[var(--muted-foreground)]/70">
+ <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[0.6rem] text-slate-500/70">
  {disclosure ?? t("disclosure")}
  </p>
  </div>

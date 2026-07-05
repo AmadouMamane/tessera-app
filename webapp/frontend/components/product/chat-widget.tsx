@@ -173,14 +173,14 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
           role="dialog"
           aria-label={t("title")}
           className={cn(
-            "fixed inset-0 z-50 flex flex-col overflow-hidden border-[var(--border)] !bg-white shadow-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out sm:inset-auto sm:bottom-24 sm:right-6 sm:rounded-2xl sm:border transition-[width,height]",
+            "fixed inset-0 z-50 flex flex-col overflow-hidden border-slate-200 !bg-white shadow-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out sm:inset-auto sm:bottom-24 sm:right-6 sm:rounded-2xl sm:border transition-[width,height]",
             isExpanded
               ? "sm:h-[85vh] sm:w-[550px]"
               : "sm:h-[min(620px,80vh)] sm:w-[400px]"
           )}
         >
           {/* Header strip */}
-          <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] bg-gradient-to-br from-navy-900 to-navy-950 px-4 py-3 text-white dark:from-navy-950 dark:to-black">
+          <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-gradient-to-br from-navy-900 to-navy-950 px-4 py-3 text-white dark:from-navy-950 dark:to-black">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-500/15 text-gold-400 ring-1 ring-gold-500/25">
               <ShieldCheck className="h-4 w-4" />
             </div>

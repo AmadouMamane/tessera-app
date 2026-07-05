@@ -138,10 +138,10 @@ export function MessageBubble({
  {/* Name + timestamp + badges — hidden for grouped messages */}
  {!isGrouped && (
  <div className={cn("flex items-baseline gap-2", isUser ? "justify-end px-1" : "")}>
- <span className="text-[0.7rem] font-medium text-[var(--muted-foreground)]">
+ <span className="text-[0.7rem] font-medium text-slate-700">
  {isUser ? t("youSaid") : assistantLabel}
  </span>
- <span className="text-[0.62rem] tabular-nums text-[var(--muted-foreground)]/40">
+ <span className="text-[0.62rem] tabular-nums text-slate-500">
  {formatTime(message.createdAt)}
  </span>
  {message.needsEscalation && (
@@ -162,7 +162,7 @@ export function MessageBubble({
  "relative w-full",
  isUser
  ? "px-4 py-2.5 rounded-2xl rounded-br-sm bg-gradient-to-br from-navy-800 to-navy-950 text-navy-50 text-sm leading-relaxed shadow-[var(--shadow-card)]"
- : "text-[var(--foreground)]",
+ : "text-slate-900",
  )}
  >
  {isUser ? (
@@ -190,18 +190,18 @@ export function MessageBubble({
  <div className="self-end flex flex-col items-end gap-1">
  {/* Truncation warning — only when this is not the last user message */}
  {!isLastUserMessage && (
- <p className="text-[0.6rem] text-amber-400 select-none">
+ <p className="text-[0.6rem] text-amber-500 font-medium select-none">
  ⚠ {t("editWillTruncate")}
  </p>
  )}
  <div className="flex items-center gap-2">
- <p className="text-[0.6rem] text-navy-300/60 select-none">
+ <p className="text-[0.6rem] text-navy-300/80 select-none">
  {t("editHint")}
  </p>
  <button
  type="button"
  onClick={cancelEdit}
- className="flex items-center gap-1 text-[0.62rem] text-[var(--muted-foreground)]/60 hover:text-[var(--muted-foreground)] transition-colors duration-150"
+ className="flex items-center gap-1 text-[0.62rem] text-slate-500 hover:text-slate-700 transition-colors duration-150"
  >
  {t("cancel")}
  </button>
@@ -209,7 +209,7 @@ export function MessageBubble({
  type="button"
  onClick={confirmEdit}
  disabled={!draft.trim() || draft.trim() === message.content}
- className="flex items-center gap-1 text-[0.62rem] font-medium text-gold-600 hover:text-gold-700 :text-gold-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
+ className="flex items-center gap-1 text-[0.62rem] font-medium text-gold-600 hover:text-gold-700 :text-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
  >
  {t("confirm")}
  </button>
@@ -217,14 +217,14 @@ export function MessageBubble({
  </div>
  ) : (
  /* On desktop: fade-in on hover. On touch (hover:none): always visible. */
- <div className="self-end flex items-center gap-2 opacity-20 group-hover:opacity-100 [@media(hover:none)]:!opacity-100 transition-opacity duration-150">
+ <div className="self-end flex items-center gap-2 opacity-60 group-hover:opacity-100 [@media(hover:none)]:!opacity-100 transition-opacity duration-150">
  <button
  type="button"
  onClick={handleUserCopy}
  aria-label={userCopied ? t("copied") : t("copy")}
  className={cn(
  "flex items-center gap-1 text-[0.62rem] transition-colors duration-150",
- "text-[var(--muted-foreground)]/60 hover:text-[var(--muted-foreground)]",
+ "text-slate-500 hover:text-slate-700",
  userCopied && "!opacity-100 text-green-600 ",
  )}
  >
@@ -237,7 +237,7 @@ export function MessageBubble({
  onClick={startEdit}
  disabled={isStreaming}
  aria-label={t("edit")}
- className="flex items-center gap-1 text-[0.62rem] text-[var(--muted-foreground)]/60 hover:text-[var(--muted-foreground)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-150"
+ className="flex items-center gap-1 text-[0.62rem] text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
  >
  <Pencil className="h-3 w-3" />
  {t("edit")}
@@ -254,8 +254,8 @@ export function MessageBubble({
  aria-label={copied ? t("copied") : t("copy")}
  className={cn(
  "self-start flex items-center gap-1 px-1 text-[0.62rem] transition-all duration-150",
- "text-[var(--muted-foreground)]/40 hover:text-[var(--muted-foreground)]",
- "opacity-20 group-hover:opacity-100",
+ "text-slate-500 hover:text-slate-700",
+ "opacity-60 group-hover:opacity-100",
  copied && "!opacity-100 text-green-600 ",
  )}
  >
