@@ -1,12 +1,12 @@
 "use client";
 
-import { MessageCircle, ShieldCheck, X } from "lucide-react";
+import { Maximize2, MessageCircle, Minimize2, ShieldCheck, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
 import type { ExternalChatPrompt } from "@/components/chat/chat-room";
-import { CustomerSessionBar } from "@/components/product/customer-session-bar";
+import { cn } from "@/lib/cn";
 import { fetchConversationMessages } from "@/lib/api/client";
 import { type ChatMessage, useChatStore } from "@/lib/stores/chat-store";
 
@@ -17,7 +17,7 @@ export const PRODUCT_CHAT_EVENT = "tessera:open-product-chat";
 // chat store is in-memory). It is a capability the customer's browser already
 // holds — resuming only ever loads the conversation whose id is stored here, so
 // there is no cross-customer exposure (the transcript is not subject-scoped).
-const PRODUIT_CID_KEY = "tessera.produit.conversationId";
+export const PRODUIT_CID_KEY = "tessera.produit.conversationId";
 
 interface ProductChatEventDetail {
   prompt?: string;
@@ -41,7 +41,8 @@ interface ChatWidgetProps {
  */
 export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
   const t = useTranslations("product.apercu.widget");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!hideLauncher);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [externalPrompt, setExternalPrompt] = useState<ExternalChatPrompt | null>(null);
   const conversationId = useChatStore((s) => s.conversationId);
   const restoredRef = useRef(false);
@@ -76,11 +77,11 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
           }
           return;
         }
-        const msgs: ChatMessage[] = res.messages.map((m) => ({
-          id: globalThis.crypto?.randomUUID() ?? `${Date.now()}-${Math.random()}`,
-          role: m.role === "assistant" ? "assistant" : "user",
+        const msgs: ChatMessage[] = res.messages.map((m: any) => ({
+          id: m.id ?? globalThis.crypto?.randomUUID() ?? `${Date.now()}-${Math.random()}`,
+          role: (m.role === "assistant" || m.role === "system") ? m.role : "user",
           content: m.content,
-          createdAt: Date.now(),
+          createdAt: m.createdAt ?? m.created_at ?? Date.now(),
         }));
         useChatStore.getState().loadConversation(cid, msgs);
       } catch {
@@ -96,9 +97,12 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
   // can resume it next time. Cleared id (Nouveau chat / branch) is left as-is —
   // the next turn mints and persists a fresh id.
   useEffect(() => {
-    if (!conversationId) return;
     try {
-      localStorage.setItem(PRODUIT_CID_KEY, conversationId);
+      if (conversationId) {
+        localStorage.setItem(PRODUIT_CID_KEY, conversationId);
+      } else {
+        localStorage.removeItem(PRODUIT_CID_KEY);
+      }
     } catch {
       // ignore disabled storage
     }
@@ -129,6 +133,17 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
     return () => window.removeEventListener(PRODUCT_CHAT_EVENT, onOpenChat);
   }, []);
 
+  // Fix ghost sessions: clear PRODUIT_CID_KEY when conversation is reset
+  useEffect(() => {
+    return useChatStore.subscribe((state) => {
+      if (!state.conversationId) {
+        try {
+          localStorage.removeItem(PRODUIT_CID_KEY);
+        } catch {}
+      }
+    });
+  }, []);
+
   return (
     <>
       {/* Mobile backdrop — also a click target to close. Desktop keeps the host
@@ -149,7 +164,12 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
         <div
           role="dialog"
           aria-label={t("title")}
-          className="fixed inset-0 z-50 flex flex-col overflow-hidden border-[var(--border)] bg-[var(--card)] shadow-2xl animate-in fade-in-0 slide-in-from-bottom-4 duration-200 sm:inset-auto sm:bottom-24 sm:right-6 sm:h-[min(620px,80vh)] sm:w-[400px] sm:rounded-2xl sm:border sm:zoom-in-95"
+          className={cn(
+            "fixed inset-0 z-50 flex flex-col overflow-hidden border-[var(--border)] bg-[var(--card)] shadow-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out sm:inset-auto sm:bottom-24 sm:right-6 sm:rounded-2xl sm:border transition-[width,height]",
+            isExpanded
+              ? "sm:h-[85vh] sm:w-[550px]"
+              : "sm:h-[min(620px,80vh)] sm:w-[400px]"
+          )}
         >
           {/* Header strip */}
           <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] bg-gradient-to-br from-navy-900 to-navy-950 px-4 py-3 text-white dark:from-navy-950 dark:to-black">
@@ -160,6 +180,17 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
               <span className="truncate text-sm font-semibold">{t("title")}</span>
               <span className="truncate text-[0.68rem] text-white/55">{t("subtitle")}</span>
             </div>
+            
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              aria-label={isExpanded ? t("minimize") : t("maximize")}
+              title={isExpanded ? t("minimize") : t("maximize")}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -169,12 +200,6 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
               <X className="h-4 w-4" />
             </button>
           </div>
-
-          {/* Customer session strip — reflects anonymous vs. demo-customer and
-              exposes login/logout. Authenticating lifts the agent's auth_state
-              (server-derived), unlocking the account tools. (Recouvrement is
-              operator-only, off this widget — ADR 0010 Phase A.) */}
-          <CustomerSessionBar />
 
           {/* ChatRoom host — neutralise ChatRoom's own card chrome so it fills
               the panel flush. Conditionally mounted so the conversation state

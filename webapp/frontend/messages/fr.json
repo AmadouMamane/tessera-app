@@ -6891,7 +6891,9 @@
         "title": "Assistant Aurore",
         "subtitle": "Réponses sourcées · RGPD · DORA",
         "open": "Ouvrir l'assistant",
-        "close": "Réduire l'assistant",
+        "close": "Fermer l'assistant",
+        "minimize": "Réduire",
+        "maximize": "Agrandir",
         "session": {
           "anonymous": "Session anonyme",
           "anonymousHint": "Connectez-vous (démo) pour débloquer les opérations de compte.",

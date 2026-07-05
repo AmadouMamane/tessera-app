@@ -32,7 +32,6 @@ import { PRODUCT_CHAT_EVENT } from "@/components/product/chat-widget";
 
 const APPOINTMENT_PROMPT =
   "Je souhaite prendre rendez-vous avec un conseiller Crédit Aurore pour faire le point sur mes comptes.";
-const GENERAL_HELP_PROMPT = "Bonjour, j'ai besoin d'aide sur mon espace client Crédit Aurore.";
 const DEMO_ACTION_PROMPTS = {
   rib: "Je souhaite obtenir mon RIB dans cette démo Crédit Aurore. Que peut réellement faire Tessera ici ?",
   statements: "Je souhaite comprendre mes relevés bancaires dans cette démo Crédit Aurore.",
@@ -1218,7 +1217,7 @@ function DemoStrip() {
         className="demo-live"
         type="button"
         aria-label="Ouvrir l'assistant Tessera"
-        onClick={() => openProductChat(GENERAL_HELP_PROMPT)}
+        onClick={() => openProductChat()}
       >
         <span className="demo-dot" aria-hidden="true" />
         Assistant support client intégré et fonctionnel
@@ -1496,7 +1495,7 @@ function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) 
           className="rail-action"
           type="button"
           aria-label="Ouvrir l'assistant Crédit Aurore"
-          onClick={() => openProductChat(GENERAL_HELP_PROMPT)}
+          onClick={() => openProductChat()}
         >
           <MessageCircle />
         </button>

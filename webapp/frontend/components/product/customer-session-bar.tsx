@@ -5,6 +5,9 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { fetchSessionState, loginDemo, logoutSession, type SessionState } from "@/lib/api/session";
+import { useChatStore } from "@/lib/stores/chat-store";
+import { SUBJECT_ID_KEY } from "@/components/chat/chat-room";
+import { PRODUIT_CID_KEY } from "./chat-widget";
 
 /**
  * Customer-session strip for the chat widget (ADR 0008/0009).
@@ -34,7 +37,14 @@ export function CustomerSessionBar() {
   const run = useCallback(async (action: () => Promise<SessionState>) => {
     setPending(true);
     try {
-      setSession(await action());
+      const newState = await action();
+      setSession(newState);
+      try {
+        localStorage.removeItem(PRODUIT_CID_KEY);
+        // Wipe long-term agent memory identity when auth changes (ADR 0007).
+        localStorage.removeItem(SUBJECT_ID_KEY);
+      } catch {}
+      useChatStore.getState().reset();
     } finally {
       setPending(false);
     }
