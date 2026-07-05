@@ -452,6 +452,84 @@
   animation: dot-bounce 1.2s ease-in-out infinite;
 }
 
+.recouvrement-assistant-bloom {
+  animation: recouvrement-bloom-breathe 5.8s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.recouvrement-thinking-ring {
+  animation: recouvrement-ring-breathe 2.8s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+.recouvrement-thinking-mark {
+  animation: recouvrement-mark-breathe 2.4s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+.recouvrement-thinking-dot {
+  animation: recouvrement-dot-wave 1.65s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes recouvrement-bloom-breathe {
+  0%,
+  100% {
+    opacity: 0.92;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  46% {
+    opacity: 1;
+    transform: translate3d(0.75px, -1.25px, 0) scale(1.018);
+  }
+  72% {
+    opacity: 0.96;
+    transform: translate3d(-0.35px, 0.45px, 0) scale(0.996);
+  }
+}
+
+@keyframes recouvrement-ring-breathe {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.92);
+  }
+  52% {
+    opacity: 0.48;
+    transform: scale(1.16);
+  }
+}
+
+@keyframes recouvrement-mark-breathe {
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: scale(0.98) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06) rotate(2deg);
+  }
+}
+
+@keyframes recouvrement-dot-wave {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: translate3d(0, 0, 0) scale(0.94);
+  }
+  44% {
+    opacity: 1;
+    transform: translate3d(0, -3px, 0) scale(1);
+  }
+  68% {
+    opacity: 0.7;
+    transform: translate3d(0, -1px, 0) scale(0.98);
+  }
+}
+
 /* Respect the user's reduced-motion preference: disable non-essential
  * animation (shimmer, dot-bounce, border-shimmer, mount/enter effects) and
  * collapse transitions, including the dark/light theme crossfade. */

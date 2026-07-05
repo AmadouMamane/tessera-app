@@ -229,10 +229,15 @@ describe("footerActionsForRecouvrementArtifact", () => {
       join(process.cwd(), "components/recouvrement/recouvrement-product-experience.tsx"),
       "utf8",
     );
+    const styles = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
     expect(source).toContain("MIN_ASSISTANT_THINKING_MS = 1800");
     expect(source).toContain("completeAfterThinkingMinimum");
     expect(source).toContain("Recouvrement réfléchit");
     expect(source).toContain("AssistantThinkingIndicator");
+    expect(source).toContain("recouvrement-assistant-bloom");
+    expect(source).toContain("recouvrement-thinking-dot");
+    expect(styles).toContain("@keyframes recouvrement-bloom-breathe");
+    expect(styles).toContain("@keyframes recouvrement-dot-wave");
   });
 });

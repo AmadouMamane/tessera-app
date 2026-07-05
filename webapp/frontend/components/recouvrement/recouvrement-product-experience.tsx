@@ -284,7 +284,7 @@ function CountBadge({ count, className }: { count: number; className?: string })
 function AssistantCardBloom() {
   return (
     <svg
-      className="pointer-events-none absolute top-[56px] right-[-15px] z-30 h-[78px] w-[28px]"
+      className="recouvrement-assistant-bloom pointer-events-none absolute top-[56px] right-[-15px] z-30 h-[78px] w-[28px]"
       viewBox="0 0 28 78"
       aria-hidden="true"
       focusable="false"
@@ -674,8 +674,8 @@ function AssistantThinkingIndicator({
       <div className="absolute inset-y-0 left-0 w-1 bg-[#6048ff]" />
       <div className="flex items-center gap-3">
         <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#6048ff] shadow-[0_6px_16px_rgba(96,72,255,0.16)]">
-          <span className="absolute inset-0 rounded-full border border-[#b7aaff] animate-ping opacity-40" />
-          <Sparkles className="relative h-4 w-4 animate-pulse" />
+          <span className="recouvrement-thinking-ring absolute inset-0 rounded-full border border-[#b7aaff] opacity-40" />
+          <Sparkles className="recouvrement-thinking-mark relative h-4 w-4" />
         </span>
         <div className="min-w-0">
           <p className="font-extrabold text-sm">Recouvrement réfléchit</p>
@@ -685,8 +685,8 @@ function AssistantThinkingIndicator({
           {["thinking-dot-1", "thinking-dot-2", "thinking-dot-3"].map((dot, index) => (
             <span
               key={dot}
-              className="block h-2 w-2 rounded-full bg-[#6048ff] animate-bounce"
-              style={{ animationDelay: `${index * 140}ms` }}
+              className="recouvrement-thinking-dot block h-2 w-2 rounded-full bg-[#6048ff]"
+              style={{ animationDelay: `${index * 180}ms` }}
             />
           ))}
         </div>
