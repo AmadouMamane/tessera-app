@@ -97,9 +97,7 @@ class JudgeVerdict:
 class Judge(Protocol):
     """The narrow scoring interface online evaluation depends on."""
 
-    async def score(
-        self, *, metric: str, question: str, answer: str, context: str
-    ) -> JudgeVerdict:
+    async def score(self, *, metric: str, question: str, answer: str, context: str) -> JudgeVerdict:
         """Return a verdict scoring ``answer`` for ``metric`` given the context."""
         ...
 

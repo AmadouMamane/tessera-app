@@ -118,12 +118,8 @@ def test_pass_rate_drift_and_coverage(tmp_path: Path) -> None:
     reports.mkdir()
     _write_failures(failures, cases_per_theme=5)
     # Previous full run: 2/5 pass per theme. Latest: 4/5 per theme → drift +0.4.
-    _write_report(
-        reports, "prev.json", run_at="20260601T000000Z", model="m", passed_per_theme=2
-    )
-    _write_report(
-        reports, "latest.json", run_at="20260606T000000Z", model="m", passed_per_theme=4
-    )
+    _write_report(reports, "prev.json", run_at="20260601T000000Z", model="m", passed_per_theme=2)
+    _write_report(reports, "latest.json", run_at="20260606T000000Z", model="m", passed_per_theme=4)
 
     report = load_quality_datasets(failures, reports)
     by_key = {d.key: d for d in report.datasets}

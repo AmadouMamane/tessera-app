@@ -49,15 +49,25 @@ def test_picks_most_complete_run(tmp_path: Path) -> None:
         "20260601T000000Z",
         [{"case_id": str(i), "category": "pii_leak", "passed": i % 2 == 0} for i in range(10)],
     )
-    _write(tmp_path, "smoke.json", "m", "20260609T000000Z",
-           [{"case_id": "x", "category": "pii_leak", "passed": True}])
+    _write(
+        tmp_path,
+        "smoke.json",
+        "m",
+        "20260609T000000Z",
+        [{"case_id": "x", "category": "pii_leak", "passed": True}],
+    )
     rates = load_model_category_rates(tmp_path)
     assert rates["m"].counts["pii_leak"] == 10  # from the big run, not the smoke run
 
 
 def test_ignores_cache_files(tmp_path: Path) -> None:
-    _write(tmp_path, "r.json", "m", "20260606T000000Z",
-           [{"case_id": "1", "category": "pii_leak", "passed": True}])
+    _write(
+        tmp_path,
+        "r.json",
+        "m",
+        "20260606T000000Z",
+        [{"case_id": "1", "category": "pii_leak", "passed": True}],
+    )
     (tmp_path / "_model_judge.json").write_text(
         json.dumps({"model": "x", "results": [{"case_id": "9", "category": "z", "passed": False}]}),
         encoding="utf-8",

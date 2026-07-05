@@ -76,9 +76,7 @@ _PRICES: dict[tuple[str, str], _Price] = {
 }
 
 
-def estimate_turn_cost(
-    *, model: str, input_tokens: int, output_tokens: int
-) -> tuple[str, Decimal]:
+def estimate_turn_cost(*, model: str, input_tokens: int, output_tokens: int) -> tuple[str, Decimal]:
     """Estimate the indicative EUR cost of a single turn for ``model``.
 
     Looks the model up in the price table by name (model names are unique

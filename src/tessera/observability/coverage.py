@@ -64,9 +64,7 @@ async def measure_coverage(
     """
     embed_fn = embedder or embed
     if not chunks:
-        return CoverageReport(
-            n_chunks=0, max_similarity=0.0, mean_similarity=0.0, covered=False
-        )
+        return CoverageReport(n_chunks=0, max_similarity=0.0, mean_similarity=0.0, covered=False)
 
     vectors = await embed_fn([question, *chunks])
     query_vec = vectors[0]

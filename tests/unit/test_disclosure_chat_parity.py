@@ -23,6 +23,6 @@ _MESSAGES_DIR = Path(__file__).resolve().parents[2] / "webapp" / "frontend" / "m
 def test_chat_disclosure_matches_canonical_text(locale: str) -> None:
     messages = json.loads((_MESSAGES_DIR / f"{locale}.json").read_text(encoding="utf-8"))
     rendered = messages["chat"]["disclosure"]
-    assert rendered == DISCLOSURE_TEXT[locale], (
-        f"chat disclosure for {locale!r} diverged from tessera.observability.disclosure"
-    )
+    assert (
+        rendered == DISCLOSURE_TEXT[locale]
+    ), f"chat disclosure for {locale!r} diverged from tessera.observability.disclosure"

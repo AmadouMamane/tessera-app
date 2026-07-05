@@ -113,8 +113,11 @@ async def _score_model(
 
     means: dict[str, float | int | str] = {"n": len(results), "run_id": str(run.get("run_at", ""))}
     for metric in _METRICS:
-        vals = [detail[f"{model}|{c.get('case_id')}|{metric}"] for c in results
-                if f"{model}|{c.get('case_id')}|{metric}" in detail]
+        vals = [
+            detail[f"{model}|{c.get('case_id')}|{metric}"]
+            for c in results
+            if f"{model}|{c.get('case_id')}|{metric}" in detail
+        ]
         means[metric] = round(sum(vals) / len(vals), 4) if vals else None  # type: ignore[assignment]
     return means
 

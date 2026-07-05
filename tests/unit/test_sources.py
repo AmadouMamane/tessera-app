@@ -166,9 +166,7 @@ def _consumers() -> dict[str, list[dict[str, object]]]:
 
 
 def test_used_by_maps_corpus_consumers_onto_categories() -> None:
-    payload = sm._assemble(
-        _rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), lang="fr", now=NOW
-    )
+    payload = sm._assemble(_rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), lang="fr", now=NOW)
     by_id = {r["id"]: r for r in payload["sources"]}
     # regulation category inherits its corpus (regulations_dora) -> one product
     assert by_id["dora"]["used_by"] == "Support Client"
@@ -179,9 +177,7 @@ def test_used_by_maps_corpus_consumers_onto_categories() -> None:
 
 
 def test_memory_stores_are_shared_infra() -> None:
-    payload = sm._assemble(
-        _rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), lang="fr", now=NOW
-    )
+    payload = sm._assemble(_rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), lang="fr", now=NOW)
     ltm_row = next(r for r in payload["sources"] if r["id"] == sm._LTM_ID)
     assert ltm_row["infra"] is True
     assert ltm_row["used_by"] == "Infra partagée (tous)"
@@ -189,9 +185,7 @@ def test_memory_stores_are_shared_infra() -> None:
 
 
 def test_used_by_detail_carries_regate_blast_radius() -> None:
-    payload = sm._assemble(
-        _rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), lang="fr", now=NOW
-    )
+    payload = sm._assemble(_rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), lang="fr", now=NOW)
     dora = next(r for r in payload["sources"] if r["id"] == "dora")
     consumers = dora["detail"]["consumers"]
     # support-client is not passing -> exactly one consumer to re-validate
@@ -276,8 +270,21 @@ def test_model_change_drifts_and_regates_consumers() -> None:
         hash="x",
     )
     payload = sm._assemble(
-        _rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), {}, {}, None, [], None, None,
-        "fr", NOW, {"regulations": [stale]},
+        _rows(),
+        _ltm(),
+        _tx(),
+        {},
+        _consumers(),
+        _fleet(),
+        {},
+        {},
+        None,
+        [],
+        None,
+        None,
+        "fr",
+        NOW,
+        {"regulations": [stale]},
     )
     by_id = {r["id"]: r for r in payload["sources"]}
     dora = by_id["dora"]["detail"]
@@ -306,9 +313,7 @@ def test_growth_attaches_to_memory_and_not_corpus() -> None:
 def test_cost_is_real_and_negligible() -> None:
     # 5 chunks, ~small char volume -> on-prem 0, frontier sub-cent. Never the fixture.
     index_chars = {"dora": 24000, "comptes": 12000}
-    payload = sm._assemble(
-        _rows(), _ltm(), _tx(), {}, {}, [], {}, index_chars, lang="fr", now=NOW
-    )
+    payload = sm._assemble(_rows(), _ltm(), _tx(), {}, {}, [], {}, index_chars, lang="fr", now=NOW)
     assert payload["cost"]["active"].startswith("EUR 0")
     assert payload["cost"]["frontier"].startswith("EUR 0")
     # Per-corpus-row cost is a real estimate; memory rows have none.
@@ -319,8 +324,17 @@ def test_cost_is_real_and_negligible() -> None:
 
 def test_lineage_is_the_real_source_to_answer_pipeline() -> None:
     payload = sm._assemble(
-        _rows(), _ltm(), _tx(), {}, _consumers(), _fleet(), {}, {}, (False, 16411, 16410),
-        lang="fr", now=NOW,
+        _rows(),
+        _ltm(),
+        _tx(),
+        {},
+        _consumers(),
+        _fleet(),
+        {},
+        {},
+        (False, 16411, 16410),
+        lang="fr",
+        now=NOW,
     )
     steps = {s["key"]: s["value"] for s in payload["lineage"]["steps"]}
     assert steps["corpus"] == "3 documents"  # dora.pdf + comptes_fr + comptes_de
@@ -369,8 +383,20 @@ def test_activity_feed_is_sources_and_memory_lifecycle() -> None:
 def test_latency_annotates_the_lineage_and_cost_uses_the_gauge() -> None:
     # The transcript latency_ms is the Grafana turn-duration signal, persisted.
     payload = sm._assemble(
-        _rows(), _ltm(), _tx(), {}, {}, _fleet(), {}, {}, (True, 1, None), [],
-        (363, 4571.0), 0.0, lang="fr", now=NOW,
+        _rows(),
+        _ltm(),
+        _tx(),
+        {},
+        {},
+        _fleet(),
+        {},
+        {},
+        (True, 1, None),
+        [],
+        (363, 4571.0),
+        0.0,
+        lang="fr",
+        now=NOW,
     )
     # latency annotates the source-to-answer lineage (part of the pipeline story)
     resp = next(s for s in payload["lineage"]["steps"] if s["key"] == "response")

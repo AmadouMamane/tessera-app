@@ -74,7 +74,5 @@ def load_model_category_rates(reports_dir: Path | None = None) -> dict[str, Mode
             if r.get("passed"):
                 passed[cat] += 1
         rates = {cat: passed[cat] / total[cat] for cat in total if total[cat]}
-        out[model] = ModelCategoryRates(
-            model=model, run_id=run_id, rates=rates, counts=dict(total)
-        )
+        out[model] = ModelCategoryRates(model=model, run_id=run_id, rates=rates, counts=dict(total))
     return out
