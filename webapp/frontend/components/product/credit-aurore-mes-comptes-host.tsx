@@ -1496,9 +1496,11 @@ function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) 
     return () => window.removeEventListener(CHAT_WIDGET_STATE_EVENT, handleState);
   }, []);
 
+  const styleProps = { transition: 'opacity 300ms ease, transform 300ms ease', opacity: isChatOpen ? 0 : 1, transform: isChatOpen ? 'translateY(10px) scale(0.95)' : 'translateY(0) scale(1)', pointerEvents: isChatOpen ? 'none' : 'auto' } as React.CSSProperties;
+
   return (
-    <div style={{ transition: 'opacity 300ms ease, transform 300ms ease', opacity: isChatOpen ? 0 : 1, transform: isChatOpen ? 'translateY(10px) scale(0.95)' : 'translateY(0) scale(1)', pointerEvents: isChatOpen ? 'none' : 'auto' }}>
-      <div className="side-widget">
+    <>
+      <div className="side-widget" style={styleProps}>
         <button
           className="rail-action"
           type="button"
@@ -1516,11 +1518,11 @@ function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) 
           <CalendarDays />
         </button>
       </div>
-      <div className="avis" aria-hidden="true">
+      <div className="avis" aria-hidden="true" style={styleProps}>
         <CircleHelp />
         Votre avis
       </div>
-    </div>
+    </>
   );
 }
 
