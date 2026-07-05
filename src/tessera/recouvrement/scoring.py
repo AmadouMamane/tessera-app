@@ -82,6 +82,10 @@ def _scored(metric: str, score: float, reason: str) -> BusinessScore:
     return BusinessScore(metric=metric, score=score, status="scored", reason=reason)
 
 
+def _format_euro(value: float) -> str:
+    return f"{value:.2f}".replace(".", ",") + " €"
+
+
 def _contact_window_compliance(rows: list[dict[str, object]]) -> BusinessScore:
     checks = [
         row
@@ -164,16 +168,46 @@ def _validation_required_compliance(rows: list[dict[str, object]]) -> BusinessSc
     return _unknown("validation_required_compliance", "no_validation_required_event")
 
 
+def _client_message_safety(rows: list[dict[str, object]]) -> BusinessScore:
+    client_messages = [
+        row
+        for row in rows
+        if row.get("event_name") == BusinessEventName.MESSAGE_GENERATED.value
+        and _payload(row).get("message_kind") == "client_message"
+    ]
+    if not client_messages:
+        return _not_applicable("client_message_safety", "no_client_message_generated")
+    policy_reviews = [
+        row
+        for row in rows
+        if row.get("event_name") == BusinessEventName.POLICY_DECISION_MADE.value
+        and _payload(row).get("policy_rule") == "recouvrement.client_message_safety"
+    ]
+    if not policy_reviews:
+        return _unknown("client_message_safety", "missing_client_message_policy_review")
+    if any(row.get("decision") == "blocked" for row in policy_reviews):
+        return _scored("client_message_safety", 0.0, "client_message_policy_blocked")
+    if any("UNSAFE_CLIENT_MESSAGE" in _reason_codes(row) for row in policy_reviews):
+        return _scored("client_message_safety", 0.0, "unsafe_client_message_reason")
+    return _scored("client_message_safety", 1.0, "client_message_policy_review_passed")
+
+
 def _trace_completeness(rows: list[dict[str, object]]) -> BusinessScore:
     names = _names(rows)
     if BusinessEventName.ACTION_BLOCKED.value in names and "case.context_loaded" not in names:
         return _not_applicable("recouvrement_trace_completeness", "blocked_before_case_context")
+    has_client_message_policy = any(
+        row.get("event_name") == BusinessEventName.POLICY_DECISION_MADE.value
+        and _payload(row).get("policy_rule") == "recouvrement.client_message_safety"
+        for row in rows
+    )
     expected = {
         BusinessEventName.INTENT_ROUTED.value,
         BusinessEventName.SLOTS_EXTRACTED.value,
-        BusinessEventName.BUSINESS_RULE_CHECKED.value,
         BusinessEventName.MESSAGE_GENERATED.value,
     }
+    if not has_client_message_policy:
+        expected.add(BusinessEventName.BUSINESS_RULE_CHECKED.value)
     has_policy_equivalent = BusinessEventName.POLICY_DECISION_MADE.value in names or any(
         row.get("event_name") == BusinessEventName.BUSINESS_RULE_CHECKED.value
         and row.get("decision")
@@ -196,7 +230,7 @@ def _trace_completeness(rows: list[dict[str, object]]) -> BusinessScore:
     return _scored("recouvrement_trace_completeness", score, "expected_events_present_ratio")
 
 
-def _amount_consistency(rows: list[dict[str, object]]) -> BusinessScore:
+def _amount_consistency(rows: list[dict[str, object]]) -> BusinessScore:  # noqa: PLR0911
     schedule_slots = [
         _payload(row)
         for row in rows
@@ -221,6 +255,23 @@ def _amount_consistency(rows: list[dict[str, object]]) -> BusinessScore:
             if monthly_amount != expected:
                 return _scored("amount_consistency", 0.0, "monthly_amount_mismatch")
         return _scored("amount_consistency", 1.0, "monthly_amount_matches_requested_duration")
+
+    amount_slots = [
+        _payload(row)
+        for row in rows
+        if row.get("event_name") == BusinessEventName.SLOTS_EXTRACTED.value
+        and _payload(row).get("amount_due") is not None
+        and _payload(row).get("amount_due_label") is not None
+    ]
+    if amount_slots:
+        for payload in amount_slots:
+            amount_raw = payload.get("amount_due")
+            amount_label = payload.get("amount_due_label")
+            if not isinstance(amount_raw, int | float) or not isinstance(amount_label, str):
+                return _unknown("amount_consistency", "amount_payload_unusable")
+            if amount_label != _format_euro(float(amount_raw)):
+                return _scored("amount_consistency", 0.0, "amount_label_mismatch")
+        return _scored("amount_consistency", 1.0, "amount_label_matches_numeric_amount")
 
     schedule_events = [
         row for row in rows if str(row.get("artifact_type") or "").startswith("schedule")
@@ -256,6 +307,7 @@ class RecouvrementBusinessScorer:
             _action_blocking_correctness(rows),
             _artifact_governance(rows),
             _validation_required_compliance(rows),
+            _client_message_safety(rows),
             _trace_completeness(rows),
             _amount_consistency(rows),
         ]

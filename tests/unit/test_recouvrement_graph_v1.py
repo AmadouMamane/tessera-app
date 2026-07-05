@@ -370,6 +370,124 @@ def test_recouvrement_graph_denies_schedule_on_unauthorized_surface(
     assert [row["event_name"] for row in output["businessEvents"]] == ["action.blocked"]
 
 
+def test_recouvrement_graph_drafts_reminder_without_sending_message(
+    observed_recouvrement_stores: Path,
+) -> None:
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Rédiger une relance",
+        conversation_id="conv-rc-draft",
+        turn_id="turn-draft",
+        assistant_state={"activeTask": "draft_reminder"},
+    )
+
+    assert output["decisions"]["intent"] == "draft_reminder"
+    assert output["artifact"]["type"] == "reminder_draft_v1"
+    assert output["artifact"]["task"] == "draft_reminder"
+    assert output["artifact"]["status"] == "draft"
+    assert output["artifact"]["title"] == "Brouillon de relance — RC-2048"
+    assert output["artifact"]["content"]["message_sent"] is False
+    assert output["artifact"]["content"]["no_email_sent"] is True
+    assert output["artifact"]["content"]["schedule_created"] is False
+    assert output["artifact"]["content"]["validation_required"] is False
+    message = str(output["artifact"]["content"]["message_client"])
+    assert "Bonjour M. D." in message
+    assert "840,00 €" in message
+    assert "retard de 32 jours" in message
+    assert "Cordialement" in message
+    assert "mise en demeure" not in message.lower()
+    assert output["cardUpdates"]["complianceChecks"] == [
+        "Ton amiable et factuel",
+        "Aucune menace ni pression injustifiée",
+        "Aucun message envoyé",
+        "Montant cohérent : 840,00 €",
+        "Aucune validation d'échéancier requise dans ce brouillon",
+    ]
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["client_message_safety"]["score"] == 1.0
+    assert scores["artifact_governance"]["score"] == 1.0
+    assert scores["amount_consistency"]["score"] == 1.0
+    assert scores["validation_required_compliance"]["status"] == "unknown"
+
+
+def test_recouvrement_graph_prepares_client_message_from_schedule_artifact(
+    observed_recouvrement_stores: Path,
+) -> None:
+    schedule = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-rc-schedule-message",
+        turn_id="turn-schedule-first",
+        assistant_state={"activeTask": "propose_schedule"},
+    )
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Prépare le message client",
+        conversation_id="conv-rc-schedule-message",
+        turn_id="turn-message-from-schedule",
+        assistant_state={
+            "activeTask": "draft_reminder",
+            "currentArtifact": schedule["artifact"],
+        },
+    )
+
+    assert output["decisions"]["intent"] == "draft_reminder"
+    assert output["artifact"]["type"] == "client_message_artifact"
+    assert output["artifact"]["content"]["validation_required"] is True
+    assert output["artifact"]["content"]["client_agreement_required"] is True
+    assert output["artifact"]["content"]["schedule_created"] is False
+    assert output["artifact"]["content"]["message_sent"] is False
+    message = str(output["artifact"]["content"]["message_client"])
+    assert "36 mois" in message
+    assert "23,33 €" in message
+    assert "sous réserve de validation interne" in message
+    assert "aucun échéancier créé" not in message.lower()
+    assert output["cardUpdates"]["paymentPlan"] == [
+        "Solution d'échelonnement évoquée uniquement comme option à valider",
+        "Montant dû : 840,00 €",
+        "Durée indicative : 36 mois",
+        "Mensualité indicative : 23,33 €",
+        "Échéancier non créé",
+    ]
+    assert "Aucun échéancier créé" in output["cardUpdates"]["complianceChecks"]
+    assert any(row["event_name"] == "validation.requested" for row in output["businessEvents"])
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["client_message_safety"]["score"] == 1.0
+    assert scores["validation_required_compliance"]["score"] == 1.0
+    assert scores["amount_consistency"]["score"] == 1.0
+
+
+def test_recouvrement_graph_updates_current_draft_with_empathic_tone(
+    observed_recouvrement_stores: Path,
+) -> None:
+    first = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Rédiger une relance",
+        conversation_id="conv-rc-empathy",
+        turn_id="turn-draft-v1",
+        assistant_state={"activeTask": "draft_reminder"},
+    )
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="rends-le plus empathique",
+        conversation_id="conv-rc-empathy",
+        turn_id="turn-draft-v2",
+        assistant_state={
+            "activeTask": "draft_reminder",
+            "currentArtifact": first["artifact"],
+        },
+    )
+
+    assert output["artifact"]["type"] == "reminder_draft_v1"
+    assert output["artifact"]["content"]["tone"] == "empathique"
+    assert output["cardUpdates"]["draftVersionLabel"] == ["Version 2 — ton plus empathique"]
+    message = str(output["artifact"]["content"]["message_client"])
+    assert "Nous comprenons" in message
+    assert "RC-2048" in message
+    assert "840,00 €" in message
+    assert output["artifact"]["content"]["message_sent"] is False
+
+
 def test_recouvrement_business_scorer_is_called_through_registry_without_generic_zero(
     observed_recouvrement_stores: Path,
 ) -> None:
@@ -400,6 +518,7 @@ def test_recouvrement_business_scorer_is_called_through_registry_without_generic
         "action_blocking_correctness",
         "artifact_governance",
         "validation_required_compliance",
+        "client_message_safety",
         "recouvrement_trace_completeness",
         "amount_consistency",
     }
@@ -495,6 +614,33 @@ async def test_recouvrement_assistant_endpoint_returns_schedule_contract(
         "business_rule.checked",
         "artifact.created",
         "validation.requested",
+        "action.prepared",
+        "message.generated",
+    }
+
+
+async def test_recouvrement_assistant_endpoint_returns_draft_contract(
+    observed_recouvrement_stores: Path,
+) -> None:
+    payload = RecouvrementAssistantRequest(
+        case_id="RC-2048",
+        message="Rédiger une relance",
+        conversation_id="conv-rc-endpoint-draft",
+        turn_id="turn-endpoint-draft",
+        assistant_state={"activeTask": "draft_reminder"},
+    )
+    output = await recouvrement_assistant_message(payload)
+
+    assert output["decisions"]["intent"] == "draft_reminder"
+    assert output["artifact"]["type"] == "reminder_draft_v1"
+    assert output["artifact"]["content"]["message_sent"] is False
+    assert output["artifact"]["content"]["schedule_created"] is False
+    assert "Aucun message envoyé" in output["cardUpdates"]["complianceChecks"]
+    assert {row["event_name"] for row in output["businessEvents"]} >= {
+        "intent.routed",
+        "slots.extracted",
+        "policy.decision_made",
+        "artifact.created",
         "action.prepared",
         "message.generated",
     }

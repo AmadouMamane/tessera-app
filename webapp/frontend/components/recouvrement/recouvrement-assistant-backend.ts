@@ -11,7 +11,7 @@ export type RecouvrementDrawerTask =
 
 export interface RecouvrementDrawerRoute {
   targetTask: RecouvrementDrawerTask;
-  backendIntent?: "check_contact_rule" | "propose_schedule";
+  backendIntent?: "check_contact_rule" | "propose_schedule" | "draft_reminder";
   useStructuredBackend: boolean;
   useContactRuleBackend: boolean;
   extractedSlots: {
@@ -72,7 +72,9 @@ function hasContactRuleIntent(normalized: string): boolean {
 }
 
 function hasDraftIntent(normalized: string): boolean {
-  return /\b(relance|message client|brouillon|email|mail|courrier)\b/.test(normalized);
+  return /\b(relance|message client|brouillon|email|mail|courrier|rediger|redige|prepare|preparer|version courte|empathique|modifier|modifie|rends-le|rend le)\b/.test(
+    normalized,
+  );
 }
 
 function hasSummaryIntent(normalized: string): boolean {
@@ -86,6 +88,16 @@ export function routeRecouvrementDrawerMessage(
 ): RecouvrementDrawerRoute {
   const normalized = normalizeDrawerMessage(message);
   const durationMonths = extractDurationMonths(message);
+
+  if (hasDraftIntent(normalized)) {
+    return {
+      targetTask: "draft_reminder",
+      backendIntent: "draft_reminder",
+      useStructuredBackend: true,
+      useContactRuleBackend: false,
+      extractedSlots: {},
+    };
+  }
 
   if (hasScheduleIntent(normalized)) {
     return {
@@ -103,15 +115,6 @@ export function routeRecouvrementDrawerMessage(
       backendIntent: "check_contact_rule",
       useStructuredBackend: true,
       useContactRuleBackend: true,
-      extractedSlots: {},
-    };
-  }
-
-  if (hasDraftIntent(normalized)) {
-    return {
-      targetTask: "draft_reminder",
-      useStructuredBackend: false,
-      useContactRuleBackend: false,
       extractedSlots: {},
     };
   }
@@ -299,6 +302,15 @@ export function footerActionsForRecouvrementArtifact(
       "Ajuster la durée",
       "Comparer les options",
       "Préparer le message client",
+      "Soumettre à validation",
+    ];
+  }
+
+  if (artifact?.type === "reminder_draft_v1" || artifact?.type === "client_message_artifact") {
+    return [
+      "Modifier le message",
+      "Copier le message",
+      "Insérer dans le dossier",
       "Soumettre à validation",
     ];
   }

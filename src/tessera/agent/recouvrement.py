@@ -108,6 +108,19 @@ class SchedulePolicyDecision(TypedDict):
     schedule_created: bool
 
 
+class DraftPolicyDecision(TypedDict):
+    """Deterministic review decision for a prepared client message."""
+
+    decision: str
+    reason_codes: list[str]
+    tone: str
+    mentions_schedule: bool
+    validation_required: bool
+    client_agreement_required: bool
+    schedule_created: bool
+    message_sent: bool
+
+
 class RecouvrementArtifact(TypedDict):
     """Structured artifact consumed by the Recouvrement drawer contract."""
 
@@ -166,6 +179,8 @@ class RecouvrementWorkflowState(TypedDict):
     slots: NotRequired[dict[str, object]]
     contact_policy: NotRequired[ContactPolicyDecision]
     schedule_policy: NotRequired[SchedulePolicyDecision]
+    draft_message: NotRequired[str]
+    draft_policy: NotRequired[DraftPolicyDecision]
     artifact: NotRequired[RecouvrementArtifact]
     visible_reply: NotRequired[str]
     card_updates: NotRequired[dict[str, list[str]]]
@@ -267,6 +282,18 @@ def _has_schedule_intent(normalized_message: str) -> bool:
     )
 
 
+def _has_draft_intent(normalized_message: str) -> bool:
+    """Whether the current Julie turn asks for a client message or reminder draft."""
+    return (
+        re.search(
+            r"\b(relance|brouillon|courrier|email|mail|rediger|redige|prepare|preparer|"
+            r"message client|version courte|empathique|modifier|modifie|rends-le|rend le)\b",
+            normalized_message,
+        )
+        is not None
+    )
+
+
 def _has_contact_rule_intent(normalized_message: str) -> bool:
     """Whether the current Julie turn asks for contact-rule verification."""
     has_contact_action = (
@@ -297,6 +324,51 @@ def _active_task(state: RecouvrementWorkflowState) -> str:
     assistant_state = state.get("assistant_state") or {}
     active = assistant_state.get("activeTask")
     return str(active) if active is not None else ""
+
+
+def _current_artifact(state: RecouvrementWorkflowState) -> RecouvrementArtifact | None:
+    """Return the current drawer artifact, if the frontend provided one."""
+    assistant_state = state.get("assistant_state") or {}
+    raw = assistant_state.get("currentArtifact") or assistant_state.get("artifact")
+    if not isinstance(raw, dict):
+        return None
+    artifact_type = raw.get("type")
+    artifact_task = raw.get("task")
+    artifact_title = raw.get("title")
+    artifact_status = raw.get("status")
+    artifact_content = raw.get("content")
+    artifact_id = raw.get("id")
+    if (
+        not isinstance(artifact_id, str)
+        or not isinstance(artifact_type, str)
+        or not isinstance(artifact_task, str)
+        or not isinstance(artifact_title, str)
+        or not isinstance(artifact_status, str)
+        or not isinstance(artifact_content, dict)
+    ):
+        return None
+    return {
+        "id": artifact_id,
+        "type": artifact_type,
+        "task": artifact_task,
+        "title": artifact_title,
+        "status": artifact_status,
+        "content": cast(dict[str, object], dict(artifact_content)),
+    }
+
+
+def _artifact_content_int(artifact: RecouvrementArtifact | None, key: str) -> int | None:
+    if artifact is None:
+        return None
+    value = artifact["content"].get(key)
+    return value if isinstance(value, int) else None
+
+
+def _artifact_content_str(artifact: RecouvrementArtifact | None, key: str) -> str | None:
+    if artifact is None:
+        return None
+    value = artifact["content"].get(key)
+    return value if isinstance(value, str) else None
 
 
 def _parse_duration_months(message: str) -> int | None:
@@ -371,7 +443,10 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
     """Route the supported Recouvrement intents from the current Julie message."""
     normalized = _normalize_message(state["message"])
     active_task = _active_task(state)
-    if _has_schedule_intent(normalized):
+    if _has_draft_intent(normalized) or active_task == "draft_reminder":
+        intent = "draft_reminder"
+        confidence = 0.93
+    elif _has_schedule_intent(normalized):
         intent = "propose_schedule"
         confidence = 0.94
     elif _has_contact_rule_intent(normalized) or active_task in {
@@ -395,6 +470,7 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
     """Extract slots needed by the routed Recouvrement workflow."""
     case = state["case"]
     intent = state.get("intent", "check_contact_rule")
+    current_artifact = _current_artifact(state)
     if intent == "propose_schedule":
         requested_months = _parse_duration_months(state["message"]) or 3
         monthly_amount = round(case.amount_due / requested_months, 2)
@@ -406,6 +482,28 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
             "monthly_amount": monthly_amount,
             "monthly_amount_label": _format_euro(monthly_amount),
             "rule_impacting": True,
+        }
+    elif intent == "draft_reminder":
+        normalized = _normalize_message(state["message"])
+        current_artifact_type = current_artifact["type"] if current_artifact is not None else None
+        schedule_months = _artifact_content_int(current_artifact, "duration_months")
+        schedule_monthly_amount = _artifact_content_str(current_artifact, "monthly_amount")
+        mentions_schedule = _has_schedule_intent(normalized) or current_artifact_type in {
+            "schedule_proposal_v2",
+            "client_message_artifact",
+        }
+        slots = {
+            "case_id": state["case_id"],
+            "amount_due": case.amount_due,
+            "amount_due_label": case.amount_due_label,
+            "mentions_schedule": mentions_schedule,
+            "current_artifact_type": current_artifact_type,
+            "requested_months": schedule_months,
+            "monthly_amount_label": schedule_monthly_amount,
+            "tone": "empathique"
+            if "empathique" in normalized or "rends-le" in normalized or "rend le" in normalized
+            else "amiable et factuel",
+            "rule_impacting": mentions_schedule,
         }
     else:
         requested_time = _parse_time(state["message"])
@@ -424,7 +522,11 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
 
 def _route_after_slot_extraction(state: RecouvrementWorkflowState) -> str:
     """Route to the policy node that matches the detected business intent."""
-    return "schedule" if state.get("intent") == "propose_schedule" else "contact"
+    if state.get("intent") == "propose_schedule":
+        return "schedule"
+    if state.get("intent") == "draft_reminder":
+        return "draft"
+    return "contact"
 
 
 def evaluate_contact_policy(state: RecouvrementWorkflowState) -> dict[str, object]:
@@ -522,6 +624,110 @@ def evaluate_schedule_policy(state: RecouvrementWorkflowState) -> dict[str, obje
         **_event_common(state, node_name="evaluate_schedule_policy"),
     )
     return {"schedule_policy": decision}
+
+
+def draft_client_message(state: RecouvrementWorkflowState) -> dict[str, object]:
+    """Draft a bounded client message; replaceable by an LLM-only drafting node later."""
+    case = state["case"]
+    slots = state["slots"]
+    current_artifact = _current_artifact(state)
+    tone = str(slots.get("tone", "amiable et factuel"))
+    mentions_schedule = bool(slots.get("mentions_schedule"))
+    requested_months = slots.get("requested_months")
+    monthly_amount_label = slots.get("monthly_amount_label")
+    is_empathic = "empathique" in tone
+
+    greeting = f"Bonjour {case.client},"
+    if is_empathic:
+        opening = (
+            "Nous comprenons que votre situation puisse nécessiter un échange adapté. "
+            f"Nous souhaitons faire le point avec vous concernant le dossier {case.case_id}, "
+            f"pour un montant restant dû de {case.amount_due_label}."
+        )
+    else:
+        opening = (
+            f"Nous vous contactons au sujet du dossier {case.case_id}. Sauf erreur de notre part, "
+            f"le montant restant dû est de {case.amount_due_label}."
+        )
+    context = (
+        "Votre promesse de paiement du 12 juin n'a pas pu être tenue et le dossier présente "
+        f"un retard de {case.days_late} jours."
+    )
+    if mentions_schedule and isinstance(requested_months, int) and isinstance(
+        monthly_amount_label, str
+    ):
+        next_step = (
+            "Une solution d'échelonnement peut être étudiée avec vous, par exemple sur "
+            f"{requested_months} mois avec une mensualité indicative de {monthly_amount_label}, "
+            "sous réserve de validation interne et d'accord sur les modalités."
+        )
+    elif mentions_schedule:
+        next_step = (
+            "Une solution d'échelonnement peut être étudiée avec vous, sous réserve de "
+            "validation interne et d'accord sur les modalités."
+        )
+    else:
+        next_step = (
+            "Nous vous invitons à nous recontacter afin d'échanger sur une solution adaptée "
+            "à votre situation."
+        )
+    closing = "Cordialement,\nCrédit Aurore"
+    draft = "\n\n".join([greeting, opening, context, next_step, closing])
+    if current_artifact is not None and is_empathic:
+        draft = draft.replace("Nous vous contactons", "Nous revenons vers vous avec attention")
+    return {"draft_message": draft}
+
+
+def review_client_message_policy(state: RecouvrementWorkflowState) -> dict[str, object]:
+    """Review a drafted client message with deterministic Recouvrement safety checks."""
+    draft = state["draft_message"]
+    slots = state["slots"]
+    normalized_draft = _normalize_message(draft)
+    forbidden_terms = {
+        "mise en demeure",
+        "sanction",
+        "resiliation",
+        "frais d'incident",
+        "pression",
+        "immediatement obligatoire",
+    }
+    unsafe = any(term in normalized_draft for term in forbidden_terms)
+    mentions_schedule = bool(slots.get("mentions_schedule"))
+    validation_required = mentions_schedule
+    reason_codes = ["MESSAGE_SAFE", "MESSAGE_NOT_SENT"]
+    if validation_required:
+        reason_codes = [
+            "VALIDATION_REQUIRED",
+            "CLIENT_AGREEMENT_REQUIRED",
+            "SCHEDULE_NOT_CREATED",
+            "MESSAGE_NOT_SENT",
+        ]
+    if unsafe:
+        reason_codes = ["UNSAFE_CLIENT_MESSAGE"]
+    policy_decision = (
+        "blocked" if unsafe else ("validation_required" if validation_required else "approved")
+    )
+    decision: DraftPolicyDecision = {
+        "decision": policy_decision,
+        "reason_codes": reason_codes,
+        "tone": str(slots.get("tone", "amiable et factuel")),
+        "mentions_schedule": mentions_schedule,
+        "validation_required": validation_required,
+        "client_agreement_required": validation_required,
+        "schedule_created": False,
+        "message_sent": False,
+    }
+    record_business_event(
+        event_name=BusinessEventName.POLICY_DECISION_MADE,
+        decision=decision["decision"],
+        reason_codes=decision["reason_codes"],
+        payload={
+            "policy_rule": "recouvrement.client_message_safety",
+            "rule_id": "CLIENT_MESSAGE_SAFETY",
+        },
+        **_event_common(state, node_name="review_client_message_policy"),
+    )
+    return {"draft_policy": decision}
 
 
 def build_contact_rule_artifact(state: RecouvrementWorkflowState) -> dict[str, object]:
@@ -723,6 +929,143 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
     }
 
 
+def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str, object]:
+    """Build the drawer-compatible reminder/client-message artifact."""
+    case = state["case"]
+    slots = state["slots"]
+    policy = state["draft_policy"]
+    current_artifact = _current_artifact(state)
+    current_artifact_type = current_artifact["type"] if current_artifact is not None else None
+    from_schedule = current_artifact_type == "schedule_proposal_v2"
+    artifact_type = "client_message_artifact" if from_schedule else "reminder_draft_v1"
+    version_label = (
+        "Version 2 — ton plus empathique"
+        if policy["tone"] == "empathique"
+        else "Version 1 — relance amiable"
+    )
+    title = (
+        f"Message client préparé — {case.case_id}"
+        if from_schedule
+        else f"Brouillon de relance — {case.case_id}"
+    )
+    artifact: RecouvrementArtifact = {
+        "id": (
+            f"{case.case_id}-client-message-v1"
+            if from_schedule
+            else f"{case.case_id}-reminder-v1"
+        ),
+        "type": artifact_type,
+        "task": "draft_reminder",
+        "title": title,
+        "status": "draft",
+        "content": {
+            "case_id": case.case_id,
+            "client": case.client,
+            "message_client": state["draft_message"],
+            "tone": policy["tone"],
+            "channel": case.alternative_channel,
+            "validation_required": policy["validation_required"],
+            "client_agreement_required": policy["client_agreement_required"],
+            "schedule_created": policy["schedule_created"],
+            "message_sent": policy["message_sent"],
+            "no_email_sent": True,
+            "amount_due": case.amount_due_label,
+            "mentions_schedule": policy["mentions_schedule"],
+            "reason_codes": policy["reason_codes"],
+            "source_artifact_id": current_artifact["id"] if current_artifact is not None else None,
+        },
+    }
+    compliance_checks = [
+        f"Ton {policy['tone']}",
+        "Aucune menace ni pression injustifiée",
+        "Aucun message envoyé",
+        f"Montant cohérent : {case.amount_due_label}",
+    ]
+    if policy["mentions_schedule"]:
+        compliance_checks.extend(
+            [
+                "Validation requise avant proposition d'échéancier",
+                "Accord client nécessaire",
+                "Aucun échéancier créé",
+            ]
+        )
+    else:
+        compliance_checks.append("Aucune validation d'échéancier requise dans ce brouillon")
+
+    next_actions = [
+        "Modifier le message",
+        "Copier le message",
+        "Insérer dans le dossier",
+        "Soumettre à validation",
+    ]
+    card_updates = {
+        "context": _context_items(case),
+        "summary": [
+            f"Dossier : {case.case_id}",
+            f"Client : {case.client}",
+            f"Montant dû : {case.amount_due_label}",
+            f"Retard : {case.days_late} jours",
+            "Message préparé sans envoi",
+        ],
+        "clientMessage": [state["draft_message"]],
+        "draftVersionLabel": [version_label],
+        "complianceChecks": compliance_checks,
+        "nextActions": next_actions,
+    }
+    if policy["mentions_schedule"]:
+        requested_months = slots.get("requested_months")
+        monthly_amount_label = slots.get("monthly_amount_label")
+        card_updates["paymentPlan"] = [
+            "Solution d'échelonnement évoquée uniquement comme option à valider",
+            f"Montant dû : {case.amount_due_label}",
+            f"Durée indicative : {requested_months} mois"
+            if isinstance(requested_months, int)
+            else "Durée indicative : à confirmer",
+            f"Mensualité indicative : {monthly_amount_label}"
+            if isinstance(monthly_amount_label, str)
+            else "Mensualité indicative : à confirmer",
+            "Échéancier non créé",
+        ]
+    record_business_event(
+        event_name=BusinessEventName.ARTIFACT_CREATED,
+        artifact_id=artifact["id"],
+        artifact_type=artifact["type"],
+        artifact_status=artifact["status"],
+        payload={
+            "task": artifact["task"],
+            "title": artifact["title"],
+            "decision": policy["decision"],
+        },
+        **_event_common(state, node_name="build_reminder_draft_artifact"),
+    )
+    if policy["validation_required"]:
+        record_business_event(
+            event_name=BusinessEventName.VALIDATION_REQUESTED,
+            artifact_id=artifact["id"],
+            artifact_type=artifact["type"],
+            artifact_status=artifact["status"],
+            decision=policy["decision"],
+            reason_codes=policy["reason_codes"],
+            payload={
+                "validation_type": "client_message_schedule_validation",
+                "validation_reason": "Message client mentionnant une solution d'échelonnement.",
+            },
+            **_event_common(state, node_name="build_reminder_draft_artifact"),
+        )
+    record_business_event(
+        event_name=BusinessEventName.ACTION_PREPARED,
+        decision="prepared",
+        reason_codes=policy["reason_codes"],
+        payload={"action_name": "prepare_client_message"},
+        **_event_common(state, node_name="build_reminder_draft_artifact"),
+    )
+    return {
+        "artifact": artifact,
+        "card_updates": card_updates,
+        "suggested_actions": next_actions,
+    }
+
+
 def generate_visible_reply(state: RecouvrementWorkflowState) -> dict[str, object]:
     """Generate the natural-language response visible to Julie."""
     case = state["case"]
@@ -736,6 +1079,31 @@ def generate_visible_reply(state: RecouvrementWorkflowState) -> dict[str, object
             "été créé."
         )
         task = "propose_schedule"
+        message_payload = {
+            "message_kind": "assistant_reply",
+            "visible_reply": reply,
+            "task": task,
+        }
+    elif state.get("intent") == "draft_reminder":
+        draft_policy = state["draft_policy"]
+        if draft_policy["validation_required"]:
+            reply = (
+                f"J'ai préparé un message client prudent pour {case.case_id}. Il mentionne "
+                "une solution d'échelonnement uniquement comme option à valider ; aucun "
+                "message n'a été envoyé et aucun échéancier n'a été créé."
+            )
+        else:
+            reply = (
+                f"J'ai préparé un brouillon de relance amiable pour {case.case_id}. "
+                "Aucun message n'a été envoyé."
+            )
+        task = "draft_reminder"
+        message_payload = {
+            "message_kind": "client_message",
+            "visible_reply": reply,
+            "message_text": state["draft_message"],
+            "task": task,
+        }
     else:
         policy = state["contact_policy"]
         requested_time = policy["requested_time"]
@@ -755,13 +1123,14 @@ def generate_visible_reply(state: RecouvrementWorkflowState) -> dict[str, object
                 f"vous pouvez préparer un {case.alternative_channel}."
             )
         task = "check_rule"
-    record_business_event(
-        event_name=BusinessEventName.MESSAGE_GENERATED,
-        payload={
+        message_payload = {
             "message_kind": "assistant_reply",
             "visible_reply": reply,
             "task": task,
-        },
+        }
+    record_business_event(
+        event_name=BusinessEventName.MESSAGE_GENERATED,
+        payload=message_payload,
         **_event_common(state, node_name="generate_visible_reply"),
     )
     return {"visible_reply": reply}
@@ -784,6 +1153,8 @@ def finalize_business_observability(state: RecouvrementWorkflowState) -> dict[st
         decisions["contactPolicy"] = state["contact_policy"]
     if "schedule_policy" in state:
         decisions["schedulePolicy"] = state["schedule_policy"]
+    if "draft_policy" in state:
+        decisions["draftPolicy"] = state["draft_policy"]
     output: RecouvrementOutput = {
         "visibleReply": state["visible_reply"],
         "artifact": state["artifact"],
@@ -897,12 +1268,24 @@ def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:
         instrument_node("evaluate_schedule_policy", evaluate_schedule_policy),
     )
     graph.add_node(
+        "draft_client_message",
+        instrument_node("draft_client_message", draft_client_message),
+    )
+    graph.add_node(
+        "review_client_message_policy",
+        instrument_node("review_client_message_policy", review_client_message_policy),
+    )
+    graph.add_node(
         "build_contact_rule_artifact",
         instrument_node("build_contact_rule_artifact", build_contact_rule_artifact),
     )
     graph.add_node(
         "build_schedule_proposal_artifact",
         instrument_node("build_schedule_proposal_artifact", build_schedule_proposal_artifact),
+    )
+    graph.add_node(
+        "build_reminder_draft_artifact",
+        instrument_node("build_reminder_draft_artifact", build_reminder_draft_artifact),
     )
     graph.add_node(
         "generate_visible_reply",
@@ -927,12 +1310,19 @@ def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:
     graph.add_conditional_edges(
         "extract_recouvrement_slots",
         _route_after_slot_extraction,
-        {"contact": "evaluate_contact_policy", "schedule": "evaluate_schedule_policy"},
+        {
+            "contact": "evaluate_contact_policy",
+            "schedule": "evaluate_schedule_policy",
+            "draft": "draft_client_message",
+        },
     )
     graph.add_edge("evaluate_contact_policy", "build_contact_rule_artifact")
     graph.add_edge("build_contact_rule_artifact", "generate_visible_reply")
     graph.add_edge("evaluate_schedule_policy", "build_schedule_proposal_artifact")
     graph.add_edge("build_schedule_proposal_artifact", "generate_visible_reply")
+    graph.add_edge("draft_client_message", "review_client_message_policy")
+    graph.add_edge("review_client_message_policy", "build_reminder_draft_artifact")
+    graph.add_edge("build_reminder_draft_artifact", "generate_visible_reply")
     graph.add_edge("generate_visible_reply", "finalize_business_observability")
     graph.add_edge("finalize_business_observability", END)
     graph.add_edge("finalize_unauthorized_surface", END)

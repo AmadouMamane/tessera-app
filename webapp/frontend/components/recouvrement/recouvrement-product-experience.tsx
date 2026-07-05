@@ -575,6 +575,31 @@ function contentFromRecouvrementScheduleResponse(
   };
 }
 
+function contentFromRecouvrementDraftResponse(
+  response: RecouvrementAssistantResponse,
+): GeneratedAssistantContent {
+  const updates = response.cardUpdates ?? {};
+  const clientMessage = (updates.clientMessage ?? []).join("\n\n");
+  return {
+    summary: updates.summary ?? updates.context ?? [],
+    versions: [
+      {
+        id: "v1",
+        label: "V1",
+        title: updates.draftVersionLabel?.[0] ?? "Message client",
+        body: clientMessage,
+      },
+    ],
+    paymentPlan: (updates.paymentPlan ?? []).join("\n"),
+    complianceChecks: updates.complianceChecks ?? [],
+    nextActions: response.suggestedActions ?? updates.nextActions ?? [],
+    rawResponse: response.visibleReply,
+    artifact: response.artifact,
+    artifactCards: updates,
+    businessScores: response.businessScores ?? [],
+  };
+}
+
 function artifactString(artifact: RecouvrementAssistantArtifact | null, key: string): string {
   const value = artifact?.content[key];
   return typeof value === "string" ? value : "";
@@ -1421,6 +1446,7 @@ export function RecouvrementProductExperience() {
       const usesStructuredBackend = route.useStructuredBackend;
       const usesStructuredContactBackend = route.useContactRuleBackend;
       const usesStructuredScheduleBackend = route.backendIntent === "propose_schedule";
+      const usesStructuredDraftBackend = route.backendIntent === "draft_reminder";
       const routedTab = assistantTabForTask(route.targetTask);
       if (!resetThread && routedTab !== activeAssistantTab) {
         skipNextAssistantAutoTurnRef.current = true;
@@ -1562,9 +1588,14 @@ export function RecouvrementProductExperience() {
           conversationId,
           turnId,
           assistantState: {
-            activeTask: usesStructuredScheduleBackend ? "propose_schedule" : "check_rule",
+            activeTask: usesStructuredScheduleBackend
+              ? "propose_schedule"
+              : usesStructuredDraftBackend
+                ? "draft_reminder"
+                : "check_rule",
             activeTab: activeAssistantTab,
             caseId: "RC-2048",
+            currentArtifact: assistantContentRef.current.artifact,
             history: buildAssistantHistory(priorThread),
           },
           signal: controller.signal,
@@ -1573,7 +1604,9 @@ export function RecouvrementProductExperience() {
             if (controller.signal.aborted) return;
             const parsed = usesStructuredScheduleBackend
               ? contentFromRecouvrementScheduleResponse(response)
-              : contentFromRecouvrementContactResponse(response);
+              : usesStructuredDraftBackend
+                ? contentFromRecouvrementDraftResponse(response)
+                : contentFromRecouvrementContactResponse(response);
             completeAfterThinkingMinimum(() => {
               setAssistantContent(parsed);
               setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
@@ -1590,6 +1623,22 @@ export function RecouvrementProductExperience() {
           .catch((err) => {
             if (controller.signal.aborted) return;
             console.warn("[recouvrement-assistant] structured backend unavailable", err);
+            if (usesStructuredDraftBackend) {
+              void runLegacyStream().catch((streamErr) => {
+                if (controller.signal.aborted) return;
+                const message = streamErr instanceof Error ? streamErr.message : String(streamErr);
+                setAssistantError(message);
+                setAssistantStatus("error");
+                setAssistantThread((current) =>
+                  current.map((item) =>
+                    item.id === assistantMessage.id
+                      ? { ...item, content: message, streaming: false, error: true }
+                      : item,
+                  ),
+                );
+              });
+              return;
+            }
             if (usesStructuredScheduleBackend) {
               const proposal = buildScheduleProposalDraft(
                 trimmedMessage,

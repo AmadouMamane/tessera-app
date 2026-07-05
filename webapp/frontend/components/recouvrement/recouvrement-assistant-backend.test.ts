@@ -69,6 +69,30 @@ describe("routeRecouvrementDrawerMessage", () => {
       ),
     ).toBe(false);
   });
+
+  it("routes reminder and client-message wording to the structured backend", () => {
+    expect(routeRecouvrementDrawerMessage("Rédiger une relance", "summary", null)).toMatchObject({
+      targetTask: "draft_reminder",
+      backendIntent: "draft_reminder",
+      useStructuredBackend: true,
+      useContactRuleBackend: false,
+    });
+    expect(
+      routeRecouvrementDrawerMessage("Prépare le message client", "propose_schedule", {
+        id: "RC-2048-schedule-36-months-v2",
+        type: "schedule_proposal_v2",
+        task: "propose_schedule",
+        title: "Échéancier indicatif — 36 mois",
+        status: "draft",
+        content: { duration_months: 36, monthly_amount: "23,33 €" },
+      }),
+    ).toMatchObject({
+      targetTask: "draft_reminder",
+      backendIntent: "draft_reminder",
+      useStructuredBackend: true,
+      useContactRuleBackend: false,
+    });
+  });
 });
 
 describe("buildScheduleProposalDraft", () => {
@@ -97,10 +121,10 @@ describe("structured schedule backend bridge", () => {
     );
 
     expect(source).toContain("contentFromRecouvrementScheduleResponse");
+    expect(source).toContain("contentFromRecouvrementDraftResponse");
     expect(source).toContain('route.backendIntent === "propose_schedule"');
-    expect(source).toContain(
-      'activeTask: usesStructuredScheduleBackend ? "propose_schedule" : "check_rule"',
-    );
+    expect(source).toContain('route.backendIntent === "draft_reminder"');
+    expect(source).toContain("currentArtifact: assistantContentRef.current.artifact");
     expect(source).toContain("contentFromScheduleProposal(proposal)");
   });
 });
@@ -188,6 +212,24 @@ describe("footerActionsForRecouvrementArtifact", () => {
       "Rédiger un email de confirmation",
       "Reporter le contact",
       "Insérer la note dans le dossier",
+    ]);
+  });
+
+  it("uses client-message actions for backend reminder artifacts", () => {
+    expect(
+      footerActionsForRecouvrementArtifact({
+        id: "RC-2048-reminder-v1",
+        type: "reminder_draft_v1",
+        task: "draft_reminder",
+        title: "Brouillon de relance — RC-2048",
+        status: "draft",
+        content: { message_sent: false },
+      }),
+    ).toEqual([
+      "Modifier le message",
+      "Copier le message",
+      "Insérer dans le dossier",
+      "Soumettre à validation",
     ]);
   });
 
