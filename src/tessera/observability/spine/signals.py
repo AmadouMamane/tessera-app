@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING
 
 from tessera.observability import (
     anomalies as anomalies_mod,
+    business_events as business_events_mod,
+    business_scoring as business_scoring_mod,
     conformance as conformance_mod,
     cost_anomaly as cost_anomaly_mod,
     funnel as funnel_mod,
@@ -185,6 +187,24 @@ async def _read_governance(scope: Scope) -> dict[str, object]:
     return {"available": True, **asdict(feed)}
 
 
+async def _read_business_events(scope: Scope) -> dict[str, object]:
+    rows = business_events_mod.business_event_rows(at=scope.at, agent_id=scope.agent_id)
+    return {
+        "events": rows,
+        "as_of": scope.at,
+        "agent": scope.agent_param,
+    }
+
+
+async def _read_recouvrement_business_scores(scope: Scope) -> dict[str, object]:
+    rows = business_events_mod.business_event_rows(at=scope.at, agent_id=scope.agent_id)
+    return {
+        "scores": business_scoring_mod.score_rows(rows),
+        "as_of": scope.at,
+        "agent": scope.agent_param,
+    }
+
+
 async def _read_audit_count(scope: Scope) -> dict[str, object]:
     entries = ledger.events_for_scope(current_context().audit_entries(scope), scope)
     return {"entry_count": len(entries), "as_of": scope.at, "agent": scope.agent_param}
@@ -223,6 +243,8 @@ _READS = {
     "conformance": _read_conformance,
     "tool_validity": _read_tool_validity,
     "governance": _read_governance,
+    "business_events": _read_business_events,
+    "recouvrement_business_scores": _read_recouvrement_business_scores,
     "audit_count": _read_audit_count,
     "audit_integrity": _read_audit_integrity,
 }

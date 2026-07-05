@@ -35,6 +35,8 @@ from tessera.observability import (
     anomalies as anomalies_mod,
     assistant as assistant_mod,
     automations as automations_mod,
+    business_events as business_events_mod,
+    business_scoring as business_scoring_mod,
     citation_resolver as citation_resolver_mod,
     citation_validity as citation_validity_mod,
     client_space as client_space_mod,
@@ -296,6 +298,30 @@ async def observability_scores(at: str | None = None, agent: str = "all") -> dic
     ``agent`` scopes the scores to one agent's turns (``all`` = org view).
     """
     return {"scores": _scores_for(at, _agent_or_none(agent)), "as_of": at, "agent": agent}
+
+
+@router.get("/observability/business-events")
+async def observability_business_events(
+    at: str | None = None,
+    agent: str = "all",
+    conversation_id: str | None = None,
+    turn_id: str | None = None,
+) -> dict[str, object]:
+    """Business workflow events and deterministic métier scores."""
+    rows = business_events_mod.business_event_rows(
+        at=at,
+        agent_id=_agent_or_none(agent),
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+    )
+    return {
+        "events": rows,
+        "scores": business_scoring_mod.score_rows(rows),
+        "as_of": at,
+        "agent": agent,
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+    }
 
 
 @router.get("/observability/snapshot", dependencies=[Depends(require_bearer)])

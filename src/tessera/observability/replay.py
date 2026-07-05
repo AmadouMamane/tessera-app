@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import uuid
 from collections import deque
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING
@@ -87,6 +87,12 @@ def _row_to_bundle(row: dict[str, object]) -> ReplayBundle | None:
             lineage=lineage,
             latency_ms=row.get("latency_ms") if isinstance(row.get("latency_ms"), dict) else None,  # type: ignore[arg-type]
             agent_id=str(row["agent_id"]) if row.get("agent_id") is not None else None,
+            turn_id=str(row["turn_id"]) if row.get("turn_id") is not None else None,
+            business_events=(
+                [dict(item) for item in row.get("business_events", [])]
+                if isinstance(row.get("business_events"), list)
+                else []
+            ),
         )
     except (KeyError, TypeError, ValueError):
         return None
@@ -185,6 +191,8 @@ class ReplayBundle:
     lineage: Lineage | None = None
     latency_ms: dict[str, float] | None = None
     agent_id: str | None = None
+    turn_id: str | None = None
+    business_events: list[dict[str, object]] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +219,8 @@ def capture_bundle(
     original_model: str,
     conversation_id: str | None = None,
     agent_id: str | None = None,
+    turn_id: str | None = None,
+    business_events: list[dict[str, object]] | None = None,
     lineage: Lineage | None = None,
     latency_ms: dict[str, float] | None = None,
 ) -> ReplayBundle:
@@ -219,10 +229,19 @@ def capture_bundle(
     ``agent_id`` attributes the bundle to the responding agent so per-agent
     cost / toxicity / PII / what-changed read that agent's own turns.
     """
+    if business_events is None and conversation_id is not None and turn_id is not None:
+        from tessera.observability import business_events as business_events_mod
+
+        business_events = business_events_mod.business_event_rows(
+            conversation_id=conversation_id,
+            turn_id=turn_id,
+            agent_id=agent_id,
+        )
     bundle = ReplayBundle(
         bundle_id=uuid.uuid4().hex,
         captured_at=datetime.now(UTC).isoformat(),
         conversation_id=conversation_id,
+        turn_id=turn_id,
         language=language,
         question=question,
         context=context,
@@ -232,6 +251,7 @@ def capture_bundle(
         lineage=lineage,
         latency_ms=latency_ms,
         agent_id=agent_id,
+        business_events=list(business_events or []),
     )
     _warm_live_buffer()
     _BUNDLES.append(bundle)

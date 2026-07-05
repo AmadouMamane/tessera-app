@@ -113,6 +113,8 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("conformance", {AGENT, TIME}),
     _cap("tool_validity", {AGENT, TIME}),
     _cap("governance", {AGENT, TIME}),
+    _cap("business_events", {AGENT, TIME}),
+    _cap("recouvrement_business_scores", {AGENT, TIME}),
     # The audit event *count* is per-agent ventilable; its chain *integrity* is not.
     _cap("audit_count", {AGENT, TIME}),
     # Org-wide by construction: the hash chain links entry N to N-1 across all agents; a

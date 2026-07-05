@@ -42,6 +42,10 @@ __all__ = [
     "GEN_AI_USAGE_OUTPUT_TOKENS",
     "OPENINFERENCE_SPAN_KIND",
     "TESSERA_AGENT_ID",
+    "TESSERA_ARTIFACT_ID",
+    "TESSERA_ARTIFACT_STATUS",
+    "TESSERA_ARTIFACT_TYPE",
+    "TESSERA_CASE_ID",
     "TESSERA_DATA_RESIDENCY",
     "TESSERA_GUARD_DECISION",
     "TESSERA_GUARD_RULE",
@@ -52,6 +56,7 @@ __all__ = [
     "TESSERA_RETRIEVAL_HIT_COUNT",
     "TESSERA_RETRIEVAL_TOP_SCORE",
     "TESSERA_TURN_ID",
+    "TESSERA_WORKFLOW_ID",
     "GenAIOperation",
     "add_content_event",
     "agent_span_name",
@@ -78,6 +83,11 @@ GEN_AI_CONVERSATION_ID: Final = "gen_ai.conversation.id"
 TESSERA_LANGUAGE: Final = "tessera.language"
 TESSERA_AGENT_ID: Final = "tessera.agent_id"
 TESSERA_TURN_ID: Final = "tessera.turn_id"
+TESSERA_WORKFLOW_ID: Final = "tessera.workflow_id"
+TESSERA_CASE_ID: Final = "tessera.case_id"
+TESSERA_ARTIFACT_ID: Final = "tessera.artifact_id"
+TESSERA_ARTIFACT_TYPE: Final = "tessera.artifact_type"
+TESSERA_ARTIFACT_STATUS: Final = "tessera.artifact_status"
 DEPLOYMENT_ENVIRONMENT: Final = "deployment.environment"
 TESSERA_PROFILE: Final = "tessera.profile"
 TESSERA_DATA_RESIDENCY: Final = "tessera.data_residency"

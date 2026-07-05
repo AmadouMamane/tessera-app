@@ -39,6 +39,7 @@ __all__ = [
     "emit_agent_lifecycle",
     "emit_agent_proposed",
     "emit_audit",
+    "emit_business_event_audit",
     "emit_handoff",
     "emit_routing",
     "guard_disabled",
@@ -380,6 +381,44 @@ def emit_routing(
         "reason": reason,
         "handoff": handoff,
         "actor": "system",
+    }
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+
+
+def emit_business_event_audit(
+    *,
+    event: Mapping[str, Any],
+    sink: _Sink | None = None,
+) -> None:
+    """Append a normalised business event to the opposable S1 audit journal."""
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    now = datetime.now(UTC).isoformat()
+    occurred_at = str(event.get("timestamp") or event.get("occurred_at") or now)
+    entry: dict[str, Any] = {
+        "type": "tessera.agent.business_event",
+        "version": int(event.get("version", 1)),
+        "event_name": str(event.get("event_name", "")),
+        "occurred_at": occurred_at,
+        "agent_id": str(event.get("agent_id", "none")),
+        "workflow_id": event.get("workflow_id"),
+        "surface": event.get("surface"),
+        "case_id": event.get("case_id"),
+        "node_name": event.get("node_name"),
+        "artifact_id": event.get("artifact_id"),
+        "artifact_type": event.get("artifact_type"),
+        "artifact_status": event.get("artifact_status"),
+        "decision": event.get("decision"),
+        "reason_codes": list(event.get("reason_codes", [])),
+        "payload": event.get("payload") if isinstance(event.get("payload"), dict) else {},
+        "valid_from": occurred_at,
+        "valid_to": None,
+        "recorded_at": now,
+        "conversation_id": str(event.get("conversation_id", "")),
+        "turn_id": str(event.get("turn_id", "")),
+        "actor": str(event.get("actor", "system")),
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
 

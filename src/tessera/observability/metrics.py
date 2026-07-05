@@ -21,13 +21,21 @@ from tessera.settings import get_settings
 __all__ = [
     "AGENT_TURN_DURATION",
     "AGENT_TURNS_TOTAL",
+    "ACTION_BLOCKED_TOTAL",
+    "ACTION_PREPARED_TOTAL",
+    "ARTIFACT_CREATED_TOTAL",
+    "ARTIFACT_STATUS_CHANGED_TOTAL",
     "BUDGET_GAUGE",
+    "BUSINESS_EVENTS_TOTAL",
+    "BUSINESS_RULE_CHECKED_TOTAL",
     "EVAL_SCORE",
     "GUARD_DECISIONS_TOTAL",
+    "POLICY_DECISION_TOTAL",
     "SPINE_CACHE_HIT_RATIO",
     "SPINE_SHADOW_DIVERGENCE",
     "SPINE_SNAPSHOT_LATENCY",
     "SPINE_SNAPSHOT_UPSTREAM_READS",
+    "VALIDATION_REQUESTED_TOTAL",
     "configure",
     "registry",
 ]
@@ -70,6 +78,63 @@ EVAL_SCORE = Histogram(
     "(ADR 0010 #5; agent_id + model added ADR 0015 §Migration B).",
     labelnames=("metric", "language", "agent_id", "model"),
     buckets=(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0),
+    registry=registry,
+)
+
+BUSINESS_EVENTS_TOTAL = Counter(
+    "tessera_business_events_total",
+    "Business workflow events emitted, partitioned by agent, workflow, surface, "
+    "event and decision.",
+    labelnames=("agent_id", "workflow_id", "surface", "event_name", "decision"),
+    registry=registry,
+)
+
+BUSINESS_RULE_CHECKED_TOTAL = Counter(
+    "tessera_business_rule_checked_total",
+    "Business-rule checks emitted by specialised workflows.",
+    labelnames=("agent_id", "workflow_id", "surface", "decision", "reason_code"),
+    registry=registry,
+)
+
+POLICY_DECISION_TOTAL = Counter(
+    "tessera_policy_decision_total",
+    "Policy/compliance decisions emitted by specialised workflows.",
+    labelnames=("agent_id", "workflow_id", "surface", "decision", "reason_code"),
+    registry=registry,
+)
+
+ARTIFACT_CREATED_TOTAL = Counter(
+    "tessera_artifact_created_total",
+    "Business artifacts created by specialised workflows.",
+    labelnames=("agent_id", "workflow_id", "surface", "artifact_type", "artifact_status"),
+    registry=registry,
+)
+
+ARTIFACT_STATUS_CHANGED_TOTAL = Counter(
+    "tessera_artifact_status_changed_total",
+    "Business artifact status changes emitted by specialised workflows.",
+    labelnames=("agent_id", "workflow_id", "surface", "artifact_type", "artifact_status"),
+    registry=registry,
+)
+
+VALIDATION_REQUESTED_TOTAL = Counter(
+    "tessera_validation_requested_total",
+    "Validation requests emitted by specialised workflows.",
+    labelnames=("agent_id", "workflow_id", "surface", "artifact_type", "artifact_status"),
+    registry=registry,
+)
+
+ACTION_PREPARED_TOTAL = Counter(
+    "tessera_action_prepared_total",
+    "Business actions prepared by specialised workflows.",
+    labelnames=("agent_id", "workflow_id", "surface", "decision", "reason_code"),
+    registry=registry,
+)
+
+ACTION_BLOCKED_TOTAL = Counter(
+    "tessera_action_blocked_total",
+    "Business actions blocked by specialised workflows.",
+    labelnames=("agent_id", "workflow_id", "surface", "decision", "reason_code"),
     registry=registry,
 )
 
