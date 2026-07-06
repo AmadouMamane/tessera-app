@@ -532,12 +532,12 @@ function EmptyWithSuggestions({
 
       {/* Description + regulatory trust badges — fade in after icon */}
       <div className="animate-in fade-in-0 slide-in-from-bottom-1 [animation-delay:180ms] [animation-fill-mode:both] flex flex-col items-center gap-3 duration-500">
-        <p className="text-sm text-slate-500">{description}</p>
+        <p className="text-sm text-slate-600">{description}</p>
         <div className="flex flex-wrap justify-center gap-1.5">
           {(["RGPD", "DORA", "BaFin", "CNIL"] as const).map((label) => (
             <span
               key={label}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/30 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-slate-500"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/30 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-slate-600"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-green-500/80" />
               {label}
@@ -550,7 +550,7 @@ function EmptyWithSuggestions({
       <div className="w-full space-y-3">
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-slate-200" />
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
             {suggestionsLabel}
           </p>
           <div className="h-px flex-1 bg-slate-200" />
