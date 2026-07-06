@@ -123,7 +123,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
           <p
             aria-hidden={value.trim().length > 0 || isStreaming}
             className={cn(
-              "mt-1.5 px-1 text-[0.65rem] text-slate-600 transition-opacity duration-150",
+              "mt-1.5 px-1 text-center text-[0.65rem] text-slate-600 transition-opacity duration-150",
               value.trim().length === 0 && !isStreaming ? "opacity-100" : "opacity-0",
             )}
           >
