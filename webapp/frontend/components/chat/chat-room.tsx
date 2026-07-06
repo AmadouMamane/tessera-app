@@ -562,14 +562,14 @@ function EmptyWithSuggestions({
               type="button"
               onClick={() => onSelect(text)}
               style={{ animationDelay: `${idx * 60}ms` }}
-              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-gold-200 bg-white backdrop-blur-md px-4 py-3 text-left text-sm text-black transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400 hover:bg-gold-50/50"
+              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-slate-600/40 bg-white backdrop-blur-md px-4 py-3 text-left text-sm text-slate-800 transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-600 hover:bg-slate-50"
             >
               {/* sliding left border */}
-              <span className="absolute left-0 top-0 z-10 h-full w-0.5 origin-top scale-y-0 bg-gradient-to-b from-gold-400 to-gold-600 transition-transform duration-300 group-hover:scale-y-100" />
+              <span className="absolute left-0 top-0 z-10 h-full w-0.5 origin-top scale-y-0 bg-slate-600 transition-transform duration-300 group-hover:scale-y-100" />
 
               {/* icon container */}
-              <div className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 backdrop-blur-sm transition-colors duration-300 group-hover:bg-gold-200/50">
-                <Icon className="h-3.5 w-3.5 text-slate-500 transition-colors duration-300 group-hover:text-gold-600" />
+              <div className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 backdrop-blur-sm transition-colors duration-300 group-hover:bg-slate-200/50">
+                <Icon className="h-3.5 w-3.5 text-slate-600 transition-colors duration-300 group-hover:text-slate-800" />
               </div>
               <span className="relative z-10 leading-snug drop-shadow-sm">{text}</span>
             </button>
