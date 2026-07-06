@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -32,7 +33,6 @@ from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from pathlib import Path
 
 
 @pytest.fixture
@@ -406,8 +406,17 @@ def test_recouvrement_graph_drafts_reminder_without_sending_message(
     assert output["artifact"]["title"] == "Brouillon de relance — RC-2048"
     assert output["artifact"]["content"]["message_sent"] is False
     assert output["artifact"]["content"]["no_email_sent"] is True
+    assert output["artifact"]["content"]["no_message_sent"] is True
+    assert output["artifact"]["content"]["no_schedule_created"] is True
     assert output["artifact"]["content"]["schedule_created"] is False
     assert output["artifact"]["content"]["validation_required"] is False
+    assert output["artifact"]["content"]["generation_mode"] == "approved_template"
+    assert output["artifact"]["content"]["template_id"] == "recouvrement_reminder_short_v1"
+    assert output["artifact"]["content"]["template_version"] == "1.0.0"
+    assert output["artifact"]["content"]["template_label"] == "relance amiable"
+    assert output["artifact"]["content"]["model_id"] is None
+    assert output["artifact"]["content"]["prompt_version"] is None
+    assert output["artifact"]["content"]["policy_review_status"] == "approved"
     message = str(output["artifact"]["content"]["message_client"])
     assert "Bonjour M. D." in message
     assert "840,00 €" in message
@@ -426,6 +435,21 @@ def test_recouvrement_graph_drafts_reminder_without_sending_message(
     assert scores["artifact_governance"]["score"] == 1.0
     assert scores["amount_consistency"]["score"] == 1.0
     assert scores["validation_required_compliance"]["status"] == "unknown"
+    message_event = next(
+        row for row in output["businessEvents"] if row["event_name"] == "message.generated"
+    )
+    assert message_event["artifact_id"] == "RC-2048-reminder-v1"
+    assert message_event["artifact_type"] == "reminder_draft_v1"
+    assert message_event["payload"]["generation_mode"] == "approved_template"
+    assert message_event["payload"]["template_id"] == "recouvrement_reminder_short_v1"
+    assert message_event["payload"]["policy_review_status"] == "approved"
+    policy_event = next(
+        row
+        for row in output["businessEvents"]
+        if row["event_name"] == "policy.decision_made"
+        and row["payload"].get("policy_rule") == "recouvrement.client_message_safety"
+    )
+    assert policy_event["payload"]["amount_consistent"] is True
 
 
 def test_recouvrement_graph_prepares_client_message_from_schedule_artifact(
@@ -455,6 +479,11 @@ def test_recouvrement_graph_prepares_client_message_from_schedule_artifact(
     assert output["artifact"]["content"]["client_agreement_required"] is True
     assert output["artifact"]["content"]["schedule_created"] is False
     assert output["artifact"]["content"]["message_sent"] is False
+    assert output["artifact"]["content"]["generation_mode"] == "approved_template"
+    assert output["artifact"]["content"]["template_id"] == "recouvrement_schedule_message_v1"
+    assert output["artifact"]["content"]["policy_review_status"] == "validation_required"
+    assert output["artifact"]["content"]["no_message_sent"] is True
+    assert output["artifact"]["content"]["no_schedule_created"] is True
     message = str(output["artifact"]["content"]["message_client"])
     assert "36 mois" in message
     assert "23,33 €" in message
@@ -473,6 +502,12 @@ def test_recouvrement_graph_prepares_client_message_from_schedule_artifact(
     assert scores["client_message_safety"]["score"] == 1.0
     assert scores["validation_required_compliance"]["score"] == 1.0
     assert scores["amount_consistency"]["score"] == 1.0
+    message_event = next(
+        row for row in output["businessEvents"] if row["event_name"] == "message.generated"
+    )
+    assert message_event["payload"]["generation_mode"] == "approved_template"
+    assert message_event["payload"]["template_id"] == "recouvrement_schedule_message_v1"
+    assert message_event["payload"]["policy_review_status"] == "validation_required"
 
 
 def test_recouvrement_graph_updates_current_draft_with_empathic_tone(
@@ -498,12 +533,32 @@ def test_recouvrement_graph_updates_current_draft_with_empathic_tone(
 
     assert output["artifact"]["type"] == "reminder_draft_v1"
     assert output["artifact"]["content"]["tone"] == "empathique"
+    assert output["artifact"]["content"]["generation_mode"] == "approved_template"
+    assert output["artifact"]["content"]["template_id"] == "recouvrement_reminder_empathic_v1"
+    assert output["artifact"]["content"]["template_label"] == "ton plus empathique"
     assert output["cardUpdates"]["draftVersionLabel"] == ["Version 2 — ton plus empathique"]
     message = str(output["artifact"]["content"]["message_client"])
     assert "Nous comprenons" in message
     assert "RC-2048" in message
     assert "840,00 €" in message
     assert output["artifact"]["content"]["message_sent"] is False
+
+
+def test_recouvrement_message_templates_are_not_scattered_in_graph() -> None:
+    graph_source = Path("src/tessera/agent/recouvrement.py").read_text(encoding="utf-8")
+    template_source = Path("src/tessera/recouvrement/message_templates.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "Nous comprenons que votre situation puisse nécessiter un échange adapté."
+        not in graph_source
+    )
+    assert "Nous vous contactons au sujet du dossier" not in graph_source
+    assert "Cordialement" not in graph_source
+    assert "recouvrement_reminder_short_v1" in template_source
+    assert "recouvrement_reminder_empathic_v1" in template_source
+    assert "recouvrement_schedule_message_v1" in template_source
 
 
 def test_recouvrement_business_scorer_is_called_through_registry_without_generic_zero(

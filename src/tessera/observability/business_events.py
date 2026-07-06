@@ -232,6 +232,12 @@ class PolicyDecisionMadePayload(_StrictPayload):
 
     policy_rule: str = Field(min_length=1)
     rule_id: str | None = None
+    generation_mode: str | None = None
+    template_id: str | None = None
+    template_version: str | None = None
+    template_label: str | None = None
+    policy_review_status: str | None = None
+    amount_consistent: bool | None = None
 
 
 class ArtifactCreatedPayload(_StrictPayload):
@@ -240,6 +246,12 @@ class ArtifactCreatedPayload(_StrictPayload):
     task: str | None = None
     title: str | None = None
     decision: str | None = None
+    generation_mode: str | None = None
+    template_id: str | None = None
+    template_version: str | None = None
+    template_label: str | None = None
+    policy_review_status: str | None = None
+    client_message_generation: dict[str, object] | None = None
 
 
 class ArtifactStatusChangedPayload(_StrictPayload):
@@ -288,6 +300,17 @@ class MessageGeneratedPayload(_StrictPayload):
     visible_reply: str | None = None
     message_text: str | None = None
     task: str | None = None
+    generation_mode: str | None = None
+    template_id: str | None = None
+    template_version: str | None = None
+    template_label: str | None = None
+    template_tone: str | None = None
+    model_id: str | None = None
+    prompt_version: str | None = None
+    artifact_id: str | None = None
+    artifact_type: str | None = None
+    policy_review_status: str | None = None
+    client_message_generation: dict[str, object] | None = None
 
     @field_validator("message_kind")
     @classmethod
