@@ -60,9 +60,9 @@ export function CitationList({
           const title = hasTitle ? c.locator : c.source;
           return (
             <li key={`${c.source}-${c.locator}-${idx}`}>
-              <details className="group rounded-md border border-slate-200 bg-slate-50 transition-colors open:border-gold-500/50 open:bg-gold-500/5 hover:border-gold-500/50 hover:bg-gold-500/5">
+              <details className="group rounded-md border border-slate-100 bg-white transition-colors open:border-gold-500/50 open:bg-gold-500/5 hover:border-gold-500/50 hover:bg-gold-500/5">
                 <summary className="grid min-h-10 cursor-pointer list-none grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1.5 text-[0.68rem] [&::-webkit-details-marker]:hidden">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-[0.62rem] font-semibold text-slate-500 tabular-nums transition-colors group-hover:text-gold-700 dark:group-hover:text-gold-300">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-50 text-[0.62rem] font-semibold text-slate-500 tabular-nums transition-colors group-hover:text-gold-700 dark:group-hover:text-gold-300">
                     {idx + 1}
                   </span>
                   <span className="min-w-0">
