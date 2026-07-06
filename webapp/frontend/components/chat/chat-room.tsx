@@ -562,10 +562,8 @@ function EmptyWithSuggestions({
               type="button"
               onClick={() => onSelect(text)}
               style={{ animationDelay: `${idx * 60}ms` }}
-              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-gold-100/50 bg-white backdrop-blur-md px-4 py-3 text-left text-sm text-black shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-300/50 hover:bg-gold-50/50 hover:shadow-[0_8px_20px_-6px_rgba(234,179,8,0.15)]"
+              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-gold-100/50 bg-white backdrop-blur-md px-4 py-3 text-left text-sm text-black transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-300/50 hover:bg-gold-50/50"
             >
-              {/* spotlight inner glow */}
-              <span className="absolute inset-0 z-0 bg-gradient-to-br from-gold-100/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               {/* sliding left border */}
               <span className="absolute left-0 top-0 z-10 h-full w-0.5 origin-top scale-y-0 bg-gradient-to-b from-gold-400 to-gold-600 transition-transform duration-300 group-hover:scale-y-100" />
 
