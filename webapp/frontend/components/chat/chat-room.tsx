@@ -562,7 +562,7 @@ function EmptyWithSuggestions({
               type="button"
               onClick={() => onSelect(text)}
               style={{ animationDelay: `${idx * 60}ms` }}
-              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border-[0.5px] border-slate-500 bg-white px-4 py-3 text-left text-sm text-black transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400 hover:bg-gold-50/50"
+              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-slate-500/30 bg-white px-4 py-3 text-left text-sm text-black transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400 hover:bg-gold-50/50"
             >
               {/* sliding left border */}
               <span className="absolute left-0 top-0 z-10 h-full w-px origin-top scale-y-0 bg-gradient-to-b from-gold-400 to-gold-600 transition-transform duration-300 group-hover:scale-y-100" />
