@@ -169,9 +169,9 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
         <div
           role="dialog"
           aria-label={t("title")}
-          data-theme="light"
           style={{ colorScheme: "light" }}
           className={cn(
+            "light",
             "fixed inset-0 z-50 flex flex-col overflow-hidden border-slate-200 !bg-white shadow-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out sm:inset-auto sm:bottom-24 sm:right-6 sm:rounded-2xl sm:border transition-[width,height]",
             isExpanded ? "sm:h-[85vh] sm:w-[550px]" : "sm:h-[min(620px,80vh)] sm:w-[400px]",
           )}
