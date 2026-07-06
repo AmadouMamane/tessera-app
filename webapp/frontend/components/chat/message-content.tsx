@@ -83,7 +83,7 @@ export function CitationList({
                     <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform group-open:rotate-180" />
                   </span>
                 </summary>
-                <p className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words border-gray-200 border-t px-2.5 py-2 text-gray-600 text-xs leading-relaxed">
+                <p className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words border-gray-200 border-t px-2.5 py-2 text-gray-600 text-xs leading-relaxed [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:border-white hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
                   {c.excerpt?.trim() ? c.excerpt : t("noExcerpt")}
                 </p>
               </details>
