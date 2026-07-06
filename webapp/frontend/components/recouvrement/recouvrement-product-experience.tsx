@@ -33,12 +33,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CreditAuroreLogo } from "@/components/brand/credit-aurore-logo";
 import {
+  type RecouvrementDrawerStateModel,
   type RecouvrementDrawerTask,
+  artifactFamilyForArtifact,
+  artifactFamilyForTask,
+  buildArtifactInsertionPreparedResponse,
+  buildArtifactPendingValidationResponse,
+  buildCaseSummaryDraft,
   buildContactRuleBackendUnavailableFallback,
+  buildDraftBackendUnavailableFallback,
+  buildInvalidDraftEditResponse,
   buildScheduleProposalDraft,
   contactRuleCards,
   footerActionsForRecouvrementArtifact,
   routeRecouvrementDrawerMessage,
+  routeRecouvrementTaskClick,
 } from "@/components/recouvrement/recouvrement-assistant-backend";
 import type { Locale } from "@/i18n/routing";
 import {
@@ -167,6 +176,11 @@ interface GeneratedAssistantContent {
   businessScores: Array<Record<string, unknown>>;
 }
 
+interface AssistantTurnOptions {
+  forcedTask?: RecouvrementDrawerTask;
+  pendingAction?: string | null;
+}
+
 const fallbackAssistantContent: GeneratedAssistantContent = {
   summary: [],
   versions: [],
@@ -189,6 +203,56 @@ const pendingContactRuleContent: GeneratedAssistantContent = {
     status: "loading",
     content: {},
   },
+};
+
+function pendingContentForTask(task: RecouvrementDrawerTask): GeneratedAssistantContent {
+  if (task === "check_contact_rule") return pendingContactRuleContent;
+  if (task === "propose_schedule") {
+    return {
+      ...fallbackAssistantContent,
+      artifact: {
+        id: "RC-2048-schedule-pending",
+        type: "schedule_proposal_v2",
+        task: "propose_schedule",
+        title: "Proposition d'échéancier — RC-2048",
+        status: "loading",
+        content: {},
+      },
+    };
+  }
+  if (task === "summary") {
+    return {
+      ...fallbackAssistantContent,
+      artifact: {
+        id: "RC-2048-summary-pending",
+        type: "case_summary_v1",
+        task: "summary",
+        title: "Résumé du dossier — RC-2048",
+        status: "loading",
+        content: {},
+      },
+    };
+  }
+  return {
+    ...fallbackAssistantContent,
+    artifact: {
+      id: "RC-2048-reminder-pending",
+      type: "reminder_draft_v1",
+      task: "draft_reminder",
+      title: "Brouillon de relance — RC-2048",
+      status: "loading",
+      content: {},
+    },
+  };
+}
+
+const initialDrawerStateModel: RecouvrementDrawerStateModel = {
+  currentTask: "draft_reminder",
+  currentArtifact: null,
+  artifactHistory: [],
+  selectedArtifactFamily: "message",
+  pendingAction: null,
+  lastSuccessfulBackendIntent: null,
 };
 
 function assistantTaskForTab(tab: string): RecouvrementDrawerTask {
@@ -600,6 +664,43 @@ function contentFromRecouvrementDraftResponse(
   };
 }
 
+function contentFromCaseSummaryResponse(
+  response: RecouvrementAssistantResponse,
+): GeneratedAssistantContent {
+  const updates = response.cardUpdates ?? {};
+  return {
+    summary: updates.summary ?? updates.context ?? [],
+    versions: [],
+    paymentPlan: "",
+    complianceChecks: updates.complianceChecks ?? [],
+    nextActions: response.suggestedActions ?? updates.nextActions ?? [],
+    rawResponse: response.visibleReply,
+    artifact: response.artifact,
+    artifactCards: updates,
+    businessScores: response.businessScores ?? [],
+  };
+}
+
+function contentFromArtifactActionResponse(
+  response: RecouvrementAssistantResponse,
+  previousContent: GeneratedAssistantContent,
+): GeneratedAssistantContent {
+  const updates = response.cardUpdates ?? {};
+  return {
+    ...previousContent,
+    summary: updates.summary ?? previousContent.summary,
+    complianceChecks: updates.complianceChecks ?? previousContent.complianceChecks,
+    nextActions: response.suggestedActions ?? updates.nextActions ?? previousContent.nextActions,
+    rawResponse: response.visibleReply,
+    artifact: response.artifact,
+    artifactCards: {
+      ...previousContent.artifactCards,
+      ...updates,
+    },
+    businessScores: response.businessScores ?? previousContent.businessScores,
+  };
+}
+
 function artifactString(artifact: RecouvrementAssistantArtifact | null, key: string): string {
   const value = artifact?.content[key];
   return typeof value === "string" ? value : "";
@@ -927,9 +1028,11 @@ function footerIconForAction(action: string) {
 function AssistantFooterActions({
   actions,
   compact = false,
+  onAction,
 }: {
   actions: string[];
   compact?: boolean;
+  onAction: (action: string) => void;
 }) {
   return (
     <div className={cn(compact ? "mb-4 flex flex-wrap gap-2" : "flex flex-wrap gap-3")}>
@@ -940,6 +1043,7 @@ function AssistantFooterActions({
           <button
             key={action}
             type="button"
+            onClick={() => onAction(action)}
             className={cn(
               "inline-flex h-10 items-center justify-center gap-2 rounded-[5px] px-3 font-bold text-xs transition",
               compact ? "min-w-[132px]" : "px-4",
@@ -971,6 +1075,7 @@ function AssistantDrawer({
   onExpand,
   onInputChange,
   onRegenerate,
+  onAction,
   onSelectVersion,
   onSendMessage,
   onSelectTab,
@@ -989,13 +1094,20 @@ function AssistantDrawer({
   onExpand: () => void;
   onInputChange: (value: string) => void;
   onRegenerate: () => void;
+  onAction: (action: string) => void;
   onSelectVersion: (versionId: string) => void;
   onSendMessage: () => void;
   onSelectTab: (tab: string) => void;
   onTogglePinned: () => void;
 }) {
   const isPinned = mode === "pinned";
+  const artifactFamily = artifactFamilyForArtifact(content.artifact);
   const hasContactRuleArtifact = content.artifact?.type === "contact_rule_v1";
+  const hasMessageArtifact = artifactFamily === "message";
+  const shouldShowDraftPanel =
+    hasMessageArtifact ||
+    artifactFamily === "schedule" ||
+    (status === "loading" && artifactFamily !== "summary");
   const hasStructuredArtifact = content.artifact !== null;
   const isBlockedContact =
     content.artifact?.type === "contact_rule_v1" && content.artifact.content.decision === "blocked";
@@ -1016,7 +1128,7 @@ function AssistantDrawer({
     ? isBlockedContact
       ? "Action de contact bloquée pour RC-2048."
       : "Règle de contact vérifiée pour RC-2048."
-    : "Voici une proposition adaptée au dossier RC-2048.";
+    : (content.artifact?.title ?? "Analyse du dossier RC-2048.");
   const verifyButtonLabel = hasContactRuleArtifact ? "Revérifier" : "Régénérer";
 
   return (
@@ -1136,7 +1248,7 @@ function AssistantDrawer({
             <AssistantContextPanel compact />
             {hasContactRuleArtifact ? (
               <AssistantContactRulePanel compact content={content} status={status} />
-            ) : (
+            ) : shouldShowDraftPanel ? (
               <>
                 <AssistantDraftPanel
                   compact
@@ -1147,6 +1259,8 @@ function AssistantDrawer({
                 />
                 <AssistantVerificationPanel checks={checks} status={status} />
               </>
+            ) : (
+              <AssistantVerificationPanel checks={checks} status={status} />
             )}
             <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
               <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">
@@ -1273,12 +1387,14 @@ function AssistantDrawer({
                         : summary.map((item) => <li key={item}>{item}</li>)}
                     </ul>
                   </section>
-                  <AssistantDraftPanel
-                    content={content}
-                    selectedVersionId={selectedVersionId}
-                    status={status}
-                    onSelectVersion={onSelectVersion}
-                  />
+                  {shouldShowDraftPanel ? (
+                    <AssistantDraftPanel
+                      content={content}
+                      selectedVersionId={selectedVersionId}
+                      status={status}
+                      onSelectVersion={onSelectVersion}
+                    />
+                  ) : null}
                   {content.paymentPlan || status === "loading" ? (
                     <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                       <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
@@ -1331,7 +1447,7 @@ function AssistantDrawer({
       <footer className="shrink-0 border-[#dfe2ec] border-t bg-white px-6 py-4">
         {isPinned ? (
           <>
-            <AssistantFooterActions actions={footerActions} compact />
+            <AssistantFooterActions actions={footerActions} compact onAction={onAction} />
             <div className="flex items-center justify-between gap-3 text-xs">
               <button
                 type="button"
@@ -1353,7 +1469,7 @@ function AssistantDrawer({
           </>
         ) : (
           <>
-            <AssistantFooterActions actions={footerActions} />
+            <AssistantFooterActions actions={footerActions} onAction={onAction} />
             <form
               className="mt-4 flex min-h-[56px] items-center gap-3 rounded-[5px] border border-[#b7aaff] bg-white px-4 shadow-[0_8px_18px_rgba(96,72,255,0.06)]"
               onSubmit={(event) => {
@@ -1400,9 +1516,12 @@ export function RecouvrementProductExperience() {
   const [selectedVersionId, setSelectedVersionId] = useState("v1");
   const [generationNonce, setGenerationNonce] = useState(0);
   const [thinkingStep, setThinkingStep] = useState(0);
+  const [drawerStateModel, setDrawerStateModel] =
+    useState<RecouvrementDrawerStateModel>(initialDrawerStateModel);
   const abortRef = useRef<AbortController | null>(null);
   const assistantThreadRef = useRef<AssistantThreadMessage[]>([]);
   const assistantContentRef = useRef<GeneratedAssistantContent>(fallbackAssistantContent);
+  const drawerStateModelRef = useRef<RecouvrementDrawerStateModel>(initialDrawerStateModel);
   const skipNextAssistantAutoTurnRef = useRef(false);
   const conversationIdRef = useRef<string | null>(null);
   const isAssistantOpen = assistantMode !== "closed";
@@ -1418,8 +1537,37 @@ export function RecouvrementProductExperience() {
     assistantContentRef.current = assistantContent;
   }, [assistantContent]);
 
+  useEffect(() => {
+    drawerStateModelRef.current = drawerStateModel;
+  }, [drawerStateModel]);
+
+  useEffect(() => {
+    if (!assistantContent.artifact) return;
+    const family = artifactFamilyForArtifact(assistantContent.artifact);
+    setDrawerStateModel((current) => {
+      const history = [
+        assistantContent.artifact as RecouvrementAssistantArtifact,
+        ...current.artifactHistory.filter((item) => item.id !== assistantContent.artifact?.id),
+      ].slice(0, 8);
+      return {
+        ...current,
+        currentArtifact: assistantContent.artifact,
+        artifactHistory: history,
+        selectedArtifactFamily: family ?? current.selectedArtifactFamily,
+      };
+    });
+  }, [assistantContent]);
+
   const openAssistant = (action = defaultAssistantTab) => {
-    setActiveAssistantTab(assistantTabForAction(action));
+    const nextTab = assistantTabForAction(action);
+    const nextTask = assistantTaskForTab(nextTab);
+    setDrawerStateModel((current) => ({
+      ...current,
+      currentTask: nextTask,
+      selectedArtifactFamily: artifactFamilyForTask(nextTask),
+      pendingAction: null,
+    }));
+    setActiveAssistantTab(nextTab);
     setAssistantMode("drawer");
   };
   const closeAssistant = () => {
@@ -1435,16 +1583,17 @@ export function RecouvrementProductExperience() {
   }, []);
 
   const sendAssistantTurn = useCallback(
-    (message: string, resetThread: boolean) => {
+    (message: string, resetThread: boolean, options: AssistantTurnOptions = {}) => {
       const trimmedMessage = message.trim();
       if (!trimmedMessage) return;
-      const route = routeRecouvrementDrawerMessage(
-        trimmedMessage,
-        assistantTaskForTab(activeAssistantTab),
-        assistantContentRef.current.artifact,
-      );
+      const currentModel = drawerStateModelRef.current;
+      const currentArtifact = currentModel.currentArtifact ?? assistantContentRef.current.artifact;
+      const currentTask =
+        options.forcedTask ?? currentModel.currentTask ?? assistantTaskForTab(activeAssistantTab);
+      const route = options.forcedTask
+        ? routeRecouvrementTaskClick(options.forcedTask)
+        : routeRecouvrementDrawerMessage(trimmedMessage, currentTask, currentArtifact);
       const usesStructuredBackend = route.useStructuredBackend;
-      const usesStructuredContactBackend = route.useContactRuleBackend;
       const usesStructuredScheduleBackend = route.backendIntent === "propose_schedule";
       const usesStructuredDraftBackend = route.backendIntent === "draft_reminder";
       const routedTab = assistantTabForTask(route.targetTask);
@@ -1452,6 +1601,12 @@ export function RecouvrementProductExperience() {
         skipNextAssistantAutoTurnRef.current = true;
         setActiveAssistantTab(routedTab);
       }
+      setDrawerStateModel((current) => ({
+        ...current,
+        currentTask: route.targetTask,
+        selectedArtifactFamily: artifactFamilyForTask(route.targetTask),
+        pendingAction: options.pendingAction ?? null,
+      }));
 
       const priorThread = resetThread
         ? []
@@ -1470,9 +1625,7 @@ export function RecouvrementProductExperience() {
 
       if (resetThread) {
         conversationIdRef.current = null;
-        setAssistantContent(
-          usesStructuredContactBackend ? pendingContactRuleContent : fallbackAssistantContent,
-        );
+        setAssistantContent(pendingContentForTask(route.targetTask));
         setSelectedVersionId("v1");
       }
 
@@ -1495,6 +1648,24 @@ export function RecouvrementProductExperience() {
           callback();
         }, remainingMs);
       };
+
+      if (route.blockedReason === "requires_message_artifact") {
+        const response = buildInvalidDraftEditResponse(currentArtifact);
+        const parsed = contentFromArtifactActionResponse(response, assistantContentRef.current);
+        completeAfterThinkingMinimum(() => {
+          setAssistantContent(parsed);
+          setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
+          setAssistantThread((current) =>
+            current.map((item) =>
+              item.id === assistantMessage.id
+                ? { ...item, content: response.visibleReply, streaming: false }
+                : item,
+            ),
+          );
+          setAssistantStatus("ready");
+        });
+        return;
+      }
 
       const runLegacyStream = () => {
         let rawResponse = "";
@@ -1575,6 +1746,24 @@ export function RecouvrementProductExperience() {
         return;
       }
 
+      if (route.targetTask === "summary" && !usesStructuredBackend) {
+        const summary = buildCaseSummaryDraft();
+        const parsed = contentFromCaseSummaryResponse(summary);
+        completeAfterThinkingMinimum(() => {
+          setAssistantContent(parsed);
+          setSelectedVersionId("v1");
+          setAssistantThread((current) =>
+            current.map((item) =>
+              item.id === assistantMessage.id
+                ? { ...item, content: summary.visibleReply, streaming: false }
+                : item,
+            ),
+          );
+          setAssistantStatus("ready");
+        });
+        return;
+      }
+
       if (usesStructuredBackend) {
         const conversationId =
           resetThread || !conversationIdRef.current
@@ -1588,14 +1777,17 @@ export function RecouvrementProductExperience() {
           conversationId,
           turnId,
           assistantState: {
-            activeTask: usesStructuredScheduleBackend
-              ? "propose_schedule"
-              : usesStructuredDraftBackend
-                ? "draft_reminder"
-                : "check_rule",
+            activeTask: route.targetTask,
             activeTab: activeAssistantTab,
             caseId: "RC-2048",
-            currentArtifact: assistantContentRef.current.artifact,
+            currentArtifact,
+            currentActionContext: options.pendingAction
+              ? {
+                  action: options.pendingAction,
+                  artifactId: currentArtifact?.id ?? null,
+                  artifactFamily: artifactFamilyForArtifact(currentArtifact),
+                }
+              : null,
             history: buildAssistantHistory(priorThread),
           },
           signal: controller.signal,
@@ -1610,6 +1802,12 @@ export function RecouvrementProductExperience() {
             completeAfterThinkingMinimum(() => {
               setAssistantContent(parsed);
               setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
+              setDrawerStateModel((current) => ({
+                ...current,
+                pendingAction: null,
+                lastSuccessfulBackendIntent:
+                  route.backendIntent ?? current.lastSuccessfulBackendIntent,
+              }));
               setAssistantThread((current) =>
                 current.map((item) =>
                   item.id === assistantMessage.id
@@ -1624,18 +1822,19 @@ export function RecouvrementProductExperience() {
             if (controller.signal.aborted) return;
             console.warn("[recouvrement-assistant] structured backend unavailable", err);
             if (usesStructuredDraftBackend) {
-              void runLegacyStream().catch((streamErr) => {
-                if (controller.signal.aborted) return;
-                const message = streamErr instanceof Error ? streamErr.message : String(streamErr);
-                setAssistantError(message);
-                setAssistantStatus("error");
+              const fallbackResponse = buildDraftBackendUnavailableFallback(currentArtifact);
+              const parsed = contentFromRecouvrementDraftResponse(fallbackResponse);
+              completeAfterThinkingMinimum(() => {
+                setAssistantContent(parsed);
+                setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
                 setAssistantThread((current) =>
                   current.map((item) =>
                     item.id === assistantMessage.id
-                      ? { ...item, content: message, streaming: false, error: true }
+                      ? { ...item, content: fallbackResponse.visibleReply, streaming: false }
                       : item,
                   ),
                 );
+                setAssistantStatus("ready");
               });
               return;
             }
@@ -1697,6 +1896,13 @@ export function RecouvrementProductExperience() {
 
   const selectAssistantTab = useCallback(
     (tab: string) => {
+      const nextTask = assistantTaskForTab(tab);
+      setDrawerStateModel((current) => ({
+        ...current,
+        currentTask: nextTask,
+        selectedArtifactFamily: artifactFamilyForTask(nextTask),
+        pendingAction: null,
+      }));
       if (tab === activeAssistantTab) {
         regenerateAssistantContent();
         return;
@@ -1709,6 +1915,135 @@ export function RecouvrementProductExperience() {
   const sendAssistantFollowUp = useCallback(() => {
     sendAssistantTurn(assistantInput, false);
   }, [assistantInput, sendAssistantTurn]);
+
+  const handleAssistantAction = useCallback(
+    (action: string) => {
+      const normalized = normalizeAssistantText(action);
+      const currentArtifact =
+        drawerStateModelRef.current.currentArtifact ?? assistantContentRef.current.artifact;
+      setDrawerStateModel((current) => ({
+        ...current,
+        pendingAction: action,
+      }));
+
+      if (normalized.includes("inserer")) {
+        if (!currentArtifact) return;
+        const response = buildArtifactInsertionPreparedResponse(currentArtifact, action);
+        const parsed = contentFromArtifactActionResponse(response, assistantContentRef.current);
+        setAssistantContent(parsed);
+        setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
+        setAssistantStatus("ready");
+        setAssistantThread((current) => [
+          ...current.filter((item) => !item.streaming),
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: response.visibleReply,
+          },
+        ]);
+        setDrawerStateModel((current) => ({
+          ...current,
+          currentArtifact: response.artifact,
+          pendingAction: null,
+        }));
+        return;
+      }
+
+      if (normalized.includes("soumettre") || normalized.includes("validation")) {
+        if (!currentArtifact) return;
+        const response = buildArtifactPendingValidationResponse(currentArtifact, action);
+        const parsed = contentFromArtifactActionResponse(response, assistantContentRef.current);
+        setAssistantContent(parsed);
+        setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
+        setAssistantStatus("ready");
+        setAssistantThread((current) => [
+          ...current.filter((item) => !item.streaming),
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: response.visibleReply,
+          },
+        ]);
+        setDrawerStateModel((current) => ({
+          ...current,
+          currentArtifact: response.artifact,
+          pendingAction: null,
+        }));
+        return;
+      }
+
+      if (normalized.includes("copier")) {
+        if (!currentArtifact) return;
+        const response: RecouvrementAssistantResponse = {
+          visibleReply:
+            "Contenu prêt à être copié depuis l'artefact courant. Aucun message envoyé.",
+          artifact: currentArtifact,
+          cardUpdates: {
+            summary: assistantContentRef.current.summary,
+            complianceChecks: [
+              "Artefact courant conservé",
+              "Aucun message envoyé",
+              "Aucune action irréversible exécutée",
+            ],
+            nextActions: assistantContentRef.current.nextActions,
+          },
+          suggestedActions: assistantContentRef.current.nextActions,
+          businessEvents: [],
+          businessScores: [],
+          decisions: {
+            action: "copy_artifact_text",
+            status: "prepared",
+            artifact_id: currentArtifact.id,
+          },
+        };
+        const parsed = contentFromArtifactActionResponse(response, assistantContentRef.current);
+        setAssistantContent(parsed);
+        setAssistantStatus("ready");
+        setAssistantThread((current) => [
+          ...current.filter((item) => !item.streaming),
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: response.visibleReply,
+          },
+        ]);
+        setDrawerStateModel((current) => ({ ...current, pendingAction: null }));
+        return;
+      }
+
+      if (normalized.includes("message") || normalized.includes("email")) {
+        sendAssistantTurn(action, false, { forcedTask: "draft_reminder", pendingAction: action });
+        return;
+      }
+
+      if (
+        normalized.includes("echeancier") ||
+        normalized.includes("duree") ||
+        normalized.includes("comparer")
+      ) {
+        sendAssistantTurn(action, false, { forcedTask: "propose_schedule", pendingAction: action });
+        return;
+      }
+
+      if (
+        normalized.includes("regle") ||
+        normalized.includes("rappel") ||
+        normalized.includes("reporter") ||
+        normalized.includes("appel")
+      ) {
+        sendAssistantTurn(action, false, {
+          forcedTask: "check_contact_rule",
+          pendingAction: action,
+        });
+        return;
+      }
+
+      if (normalized.includes("relance") || normalized.includes("modifier")) {
+        sendAssistantTurn(action, false, { forcedTask: "draft_reminder", pendingAction: action });
+      }
+    },
+    [sendAssistantTurn],
+  );
 
   useEffect(() => {
     if (assistantStatus !== "loading") {
@@ -1728,7 +2063,9 @@ export function RecouvrementProductExperience() {
       skipNextAssistantAutoTurnRef.current = false;
       return;
     }
-    sendAssistantTurn(assistantPromptForTab(activeAssistantTab), true);
+    sendAssistantTurn(assistantPromptForTab(activeAssistantTab), true, {
+      forcedTask: assistantTaskForTab(activeAssistantTab),
+    });
   }, [activeAssistantTab, generationNonce, isAssistantOpen, sendAssistantTurn]);
 
   useEffect(() => {
@@ -2163,6 +2500,7 @@ export function RecouvrementProductExperience() {
           selectedVersionId={selectedVersionId}
           status={assistantStatus}
           thinkingLabel={thinkingLabel}
+          onAction={handleAssistantAction}
           onClose={closeAssistant}
           onExpand={expandAssistant}
           onInputChange={setAssistantInput}

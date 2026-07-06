@@ -354,6 +354,24 @@ def test_recouvrement_graph_routes_schedule_follow_up_after_blocked_contact(
     )
 
 
+def test_recouvrement_graph_routes_relance_with_duration_to_schedule(
+    observed_recouvrement_stores: Path,
+) -> None:
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer une relance avec un paiement sur 24 mois ?",
+        conversation_id="conv-rc-relance-schedule",
+        turn_id="turn-relance-schedule",
+        assistant_state={"activeTask": "propose_schedule"},
+    )
+
+    assert output["decisions"]["intent"] == "propose_schedule"
+    assert output["decisions"]["slots"]["requested_months"] == 24
+    assert output["artifact"]["type"] == "schedule_proposal_v2"
+    assert output["artifact"]["content"]["monthly_amount"] == "35,00 €"
+    assert output["artifact"]["content"]["schedule_created"] is False
+
+
 def test_recouvrement_graph_denies_schedule_on_unauthorized_surface(
     observed_recouvrement_stores: Path,
 ) -> None:

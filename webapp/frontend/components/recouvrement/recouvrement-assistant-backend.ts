@@ -9,11 +9,28 @@ export type RecouvrementDrawerTask =
   | "propose_schedule"
   | "check_contact_rule";
 
+export type RecouvrementBackendIntent =
+  | "check_contact_rule"
+  | "propose_schedule"
+  | "draft_reminder";
+
+export type RecouvrementArtifactFamily = "summary" | "message" | "schedule" | "contact_rule";
+
+export interface RecouvrementDrawerStateModel {
+  currentTask: RecouvrementDrawerTask;
+  currentArtifact: RecouvrementAssistantArtifact | null;
+  artifactHistory: RecouvrementAssistantArtifact[];
+  selectedArtifactFamily: RecouvrementArtifactFamily | null;
+  pendingAction: string | null;
+  lastSuccessfulBackendIntent: RecouvrementBackendIntent | null;
+}
+
 export interface RecouvrementDrawerRoute {
   targetTask: RecouvrementDrawerTask;
-  backendIntent?: "check_contact_rule" | "propose_schedule" | "draft_reminder";
+  backendIntent?: RecouvrementBackendIntent;
   useStructuredBackend: boolean;
   useContactRuleBackend: boolean;
+  blockedReason?: "requires_message_artifact";
   extractedSlots: {
     durationMonths?: number;
   };
@@ -77,24 +94,72 @@ function hasDraftIntent(normalized: string): boolean {
   );
 }
 
+function hasDraftEditIntent(normalized: string): boolean {
+  return /\b(version courte|empathique|modifier|modifie|rends-le|rend le)\b/.test(normalized);
+}
+
 function hasSummaryIntent(normalized: string): boolean {
   return /\b(resume|resumer|synthese|synthetise)\b/.test(normalized);
+}
+
+export function artifactFamilyForArtifact(
+  artifact: RecouvrementAssistantArtifact | null,
+): RecouvrementArtifactFamily | null {
+  if (!artifact) return null;
+  if (artifact.type === "contact_rule_v1") return "contact_rule";
+  if (artifact.type === "schedule_proposal_v2") return "schedule";
+  if (artifact.type === "reminder_draft_v1" || artifact.type === "client_message_artifact") {
+    return "message";
+  }
+  if (artifact.type === "case_summary_v1") return "summary";
+  return null;
+}
+
+export function artifactFamilyForTask(task: RecouvrementDrawerTask): RecouvrementArtifactFamily {
+  if (task === "check_contact_rule") return "contact_rule";
+  if (task === "propose_schedule") return "schedule";
+  if (task === "draft_reminder") return "message";
+  return "summary";
+}
+
+export function isEditableMessageArtifact(artifact: RecouvrementAssistantArtifact | null): boolean {
+  return artifactFamilyForArtifact(artifact) === "message";
+}
+
+export function backendIntentForTask(
+  task: RecouvrementDrawerTask,
+): RecouvrementBackendIntent | undefined {
+  if (task === "check_contact_rule") return "check_contact_rule";
+  if (task === "propose_schedule") return "propose_schedule";
+  if (task === "draft_reminder") return "draft_reminder";
+  return undefined;
+}
+
+export function routeRecouvrementTaskClick(task: RecouvrementDrawerTask): RecouvrementDrawerRoute {
+  const backendIntent = backendIntentForTask(task);
+  return {
+    targetTask: task,
+    backendIntent,
+    useStructuredBackend: backendIntent !== undefined,
+    useContactRuleBackend: backendIntent === "check_contact_rule",
+    extractedSlots: {},
+  };
 }
 
 export function routeRecouvrementDrawerMessage(
   message: string,
   currentTask: RecouvrementDrawerTask,
-  _currentArtifact?: RecouvrementAssistantArtifact | null,
+  currentArtifact?: RecouvrementAssistantArtifact | null,
 ): RecouvrementDrawerRoute {
   const normalized = normalizeDrawerMessage(message);
   const durationMonths = extractDurationMonths(message);
 
-  if (hasDraftIntent(normalized)) {
+  if (hasDraftEditIntent(normalized) && !isEditableMessageArtifact(currentArtifact ?? null)) {
     return {
-      targetTask: "draft_reminder",
-      backendIntent: "draft_reminder",
-      useStructuredBackend: true,
+      targetTask: currentTask,
+      useStructuredBackend: false,
       useContactRuleBackend: false,
+      blockedReason: "requires_message_artifact",
       extractedSlots: {},
     };
   }
@@ -106,6 +171,16 @@ export function routeRecouvrementDrawerMessage(
       useStructuredBackend: true,
       useContactRuleBackend: false,
       extractedSlots: { durationMonths },
+    };
+  }
+
+  if (hasDraftIntent(normalized)) {
+    return {
+      targetTask: "draft_reminder",
+      backendIntent: "draft_reminder",
+      useStructuredBackend: true,
+      useContactRuleBackend: false,
+      extractedSlots: {},
     };
   }
 
@@ -124,6 +199,17 @@ export function routeRecouvrementDrawerMessage(
       targetTask: "summary",
       useStructuredBackend: false,
       useContactRuleBackend: false,
+      extractedSlots: {},
+    };
+  }
+
+  const backendIntent = backendIntentForTask(currentTask);
+  if (backendIntent) {
+    return {
+      targetTask: currentTask,
+      backendIntent,
+      useStructuredBackend: true,
+      useContactRuleBackend: backendIntent === "check_contact_rule",
       extractedSlots: {},
     };
   }
@@ -211,6 +297,45 @@ export function buildScheduleProposalDraft(
   };
 }
 
+export function buildCaseSummaryDraft(): ScheduleProposalDraft {
+  const suggestedActions = ["Rédiger une relance", "Proposer un échéancier", "Vérifier une règle"];
+
+  return {
+    visibleReply:
+      "Voici le résumé opérationnel de RC-2048 : M. D. doit 840,00 €, le retard est de 32 jours et la promesse de paiement du 12 juin n'a pas été tenue.",
+    artifact: {
+      id: "RC-2048-summary-v1",
+      type: "case_summary_v1",
+      task: "summary",
+      title: "Résumé du dossier — RC-2048",
+      status: "ready",
+      content: {
+        case_id: "RC-2048",
+        client: "M. D.",
+        amount_due: "840,00 €",
+        days_late: 32,
+        promise_status: "Promesse de paiement non tenue le 12 juin",
+      },
+    },
+    cardUpdates: {
+      summary: [
+        "Dossier : RC-2048",
+        "Client : M. D.",
+        "Montant dû : 840,00 €",
+        "Retard : 32 jours",
+        "Promesse de paiement non tenue le 12 juin",
+      ],
+      complianceChecks: [
+        "Contexte dossier conservé",
+        "Aucune action exécutée",
+        "Aucun message client généré",
+      ],
+      nextActions: suggestedActions,
+    },
+    suggestedActions,
+  };
+}
+
 export function buildContactRuleBackendUnavailableFallback(): RecouvrementAssistantResponse {
   const suggestedActions = [
     "Planifier un rappel demain",
@@ -254,6 +379,187 @@ export function buildContactRuleBackendUnavailableFallback(): RecouvrementAssist
     decisions: {
       intent: "check_contact_rule",
       decision: "backend_unavailable",
+    },
+  };
+}
+
+export function buildDraftBackendUnavailableFallback(
+  currentArtifact?: RecouvrementAssistantArtifact | null,
+): RecouvrementAssistantResponse {
+  const fromSchedule = currentArtifact?.type === "schedule_proposal_v2";
+  const suggestedActions = [
+    "Modifier le message",
+    "Copier le message",
+    "Insérer dans le dossier",
+    "Soumettre à validation",
+  ];
+  const message =
+    "La préparation backend du message est indisponible. Aucun message n'a été envoyé et aucun échéancier n'a été créé.";
+
+  return {
+    visibleReply: message,
+    artifact: {
+      id: fromSchedule ? "RC-2048-client-message-unavailable" : "RC-2048-reminder-unavailable",
+      type: fromSchedule ? "client_message_artifact" : "reminder_draft_v1",
+      task: "draft_reminder",
+      title: fromSchedule ? "Message client préparé — RC-2048" : "Brouillon de relance — RC-2048",
+      status: "unavailable",
+      content: {
+        message_sent: false,
+        schedule_created: false,
+        validation_required: fromSchedule,
+        source_artifact_id: currentArtifact?.id ?? null,
+      },
+    },
+    cardUpdates: {
+      summary: [
+        "Dossier : RC-2048",
+        "Client : M. D.",
+        "Préparation backend indisponible",
+        "Aucun message envoyé",
+      ],
+      clientMessage: [message],
+      draftVersionLabel: ["Action non disponible"],
+      complianceChecks: [
+        "Aucun message envoyé",
+        "Aucun échéancier créé",
+        fromSchedule ? "Validation requise avant toute proposition" : "Aucune action exécutée",
+      ],
+      nextActions: suggestedActions,
+    },
+    suggestedActions,
+    businessEvents: [],
+    businessScores: [],
+    decisions: {
+      intent: "draft_reminder",
+      decision: "backend_unavailable",
+    },
+  };
+}
+
+export function buildInvalidDraftEditResponse(
+  currentArtifact: RecouvrementAssistantArtifact | null,
+): RecouvrementAssistantResponse {
+  const family = artifactFamilyForArtifact(currentArtifact);
+  const suggestedActions = [
+    "Rédiger une relance",
+    "Préparer le message client",
+    "Conserver l'artefact actuel",
+  ];
+  return {
+    visibleReply:
+      "Cette modification s'applique à un brouillon de relance ou à un message client. Aucun nouvel artefact n'a été généré.",
+    artifact: currentArtifact ?? {
+      id: "RC-2048-action-unavailable",
+      type: "case_summary_v1",
+      task: "summary",
+      title: "Action non disponible — RC-2048",
+      status: "unavailable",
+      content: {},
+    },
+    cardUpdates: {
+      summary: [
+        "Modification de ton non appliquée",
+        `Famille d'artefact active : ${family ?? "aucune"}`,
+        "Un brouillon de relance ou message client est nécessaire",
+      ],
+      complianceChecks: ["Aucune action exécutée", "Aucun message envoyé"],
+      nextActions: suggestedActions,
+    },
+    suggestedActions,
+    businessEvents: [],
+    businessScores: [],
+    decisions: {
+      intent: "draft_reminder",
+      decision: "requires_message_artifact",
+    },
+  };
+}
+
+export function buildArtifactInsertionPreparedResponse(
+  artifact: RecouvrementAssistantArtifact,
+  actionLabel: string,
+): RecouvrementAssistantResponse {
+  const family = artifactFamilyForArtifact(artifact);
+  const isNote = family === "contact_rule";
+  const visibleReply = isNote
+    ? "Note de règle préparée pour RC-2048. Aucune écriture définitive n'a été exécutée."
+    : "Insertion préparée pour RC-2048. Aucune écriture définitive n'a été exécutée.";
+  const updatedArtifact: RecouvrementAssistantArtifact = {
+    ...artifact,
+    status: "insertion_prepared",
+    content: {
+      ...artifact.content,
+      insertion_status: "insertion_prepared",
+      insertion_action: actionLabel,
+      insertion_executed: false,
+    },
+  };
+  return {
+    visibleReply,
+    artifact: updatedArtifact,
+    cardUpdates: {
+      summary: [
+        `Artefact ciblé : ${artifact.title}`,
+        "Statut : insertion préparée",
+        "Écriture réelle : non exécutée",
+      ],
+      complianceChecks: [
+        "Artefact courant conservé",
+        "Aucune réponse client régénérée",
+        "Aucune action irréversible exécutée",
+      ],
+      nextActions: ["Confirmer l'insertion", "Annuler", "Voir le dossier"],
+    },
+    suggestedActions: ["Confirmer l'insertion", "Annuler", "Voir le dossier"],
+    businessEvents: [],
+    businessScores: [],
+    decisions: {
+      action: "insert_artifact_in_case",
+      status: "insertion_prepared",
+      artifact_id: artifact.id,
+    },
+  };
+}
+
+export function buildArtifactPendingValidationResponse(
+  artifact: RecouvrementAssistantArtifact,
+  actionLabel: string,
+): RecouvrementAssistantResponse {
+  const updatedArtifact: RecouvrementAssistantArtifact = {
+    ...artifact,
+    status: "pending_validation",
+    content: {
+      ...artifact.content,
+      validation_status: "pending_validation",
+      validation_action: actionLabel,
+      action_executed: false,
+    },
+  };
+  return {
+    visibleReply:
+      "Demande de validation préparée pour RC-2048. Aucun message n'a été envoyé et aucune action définitive n'a été exécutée.",
+    artifact: updatedArtifact,
+    cardUpdates: {
+      summary: [
+        `Artefact ciblé : ${artifact.title}`,
+        "Statut : validation préparée",
+        "Action réelle : non exécutée",
+      ],
+      complianceChecks: [
+        "Validation requise",
+        "Aucun message envoyé",
+        "Aucune action irréversible exécutée",
+      ],
+      nextActions: ["Confirmer la demande", "Annuler", "Voir le dossier"],
+    },
+    suggestedActions: ["Confirmer la demande", "Annuler", "Voir le dossier"],
+    businessEvents: [],
+    businessScores: [],
+    decisions: {
+      action: "submit_for_validation",
+      status: "pending_validation",
+      artifact_id: artifact.id,
     },
   };
 }
@@ -315,5 +621,9 @@ export function footerActionsForRecouvrementArtifact(
     ];
   }
 
-  return ["Créer un brouillon", "Insérer dans le dossier", "Copier le message"];
+  if (artifact?.type === "case_summary_v1") {
+    return ["Rédiger une relance", "Proposer un échéancier", "Vérifier une règle"];
+  }
+
+  return ["Rédiger une relance", "Proposer un échéancier", "Vérifier une règle"];
 }

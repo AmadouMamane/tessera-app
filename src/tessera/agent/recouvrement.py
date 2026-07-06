@@ -443,10 +443,12 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
     """Route the supported Recouvrement intents from the current Julie message."""
     normalized = _normalize_message(state["message"])
     active_task = _active_task(state)
-    if _has_draft_intent(normalized) or active_task == "draft_reminder":
+    has_schedule_intent = _has_schedule_intent(normalized)
+    has_draft_intent = _has_draft_intent(normalized)
+    if active_task == "draft_reminder" or (has_draft_intent and not has_schedule_intent):
         intent = "draft_reminder"
         confidence = 0.93
-    elif _has_schedule_intent(normalized):
+    elif has_schedule_intent:
         intent = "propose_schedule"
         confidence = 0.94
     elif _has_contact_rule_intent(normalized) or active_task in {
