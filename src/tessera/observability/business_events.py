@@ -44,6 +44,7 @@ __all__ = [
     "BusinessEventStore",
     "BusinessPayloadValidationError",
     "CockpitSignalSink",
+    "GRAMMAR_VERSION",
     "InMemoryBusinessEventStore",
     "MetricsSink",
     "ReplaySink",
@@ -81,6 +82,9 @@ class BusinessEventName(StrEnum):
 
 EVENT_SCHEMA_VERSION = "business_event.v1"
 EVENT_VERSION = 1
+#: ADR 0017 §2 — the workflow grammar is a versioned spec, stamped on every event.
+#: It versions independently from the envelope ``schema_version``.
+GRAMMAR_VERSION = "workflow_grammar.v1"
 
 
 class BusinessPayloadValidationError(ValueError):
@@ -185,6 +189,7 @@ class BusinessEvent:
     turn_id: str
     schema_version: str = EVENT_SCHEMA_VERSION
     event_version: int = EVENT_VERSION
+    grammar_version: str = GRAMMAR_VERSION
     workflow_id: str | None = None
     surface: str | None = None
     language: str | None = None

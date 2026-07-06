@@ -37,15 +37,25 @@ describe("isOrgWide", () => {
 });
 
 describe("isSynthetic", () => {
-  it("flags the deterministic fixtures", () => {
-    for (const id of ["incidents", "curation", "automations", "replay_shadow", "policies"]) {
+  it("flags the deterministic fixtures (post Phase-2 wiring demotions)", () => {
+    // automations / replay_shadow / policies were promoted REAL by the metamorphic
+    // wiring proof (3 demotions moved to their *_workflow / *_traffic / *_versioning
+    // sub-signals) — the registry is the truth, mirrored backend-side.
+    for (const id of [
+      "incidents",
+      "curation",
+      "automation_workflow",
+      "shadow_traffic",
+      "policy_versioning",
+    ]) {
       expect(isSynthetic(id)).toBe(true);
     }
   });
 
   it("is false for real signals and unknown ids", () => {
-    expect(isSynthetic("slo")).toBe(false);
-    expect(isSynthetic("does-not-exist")).toBe(false);
+    for (const id of ["slo", "automations", "replay_shadow", "policies", "does-not-exist"]) {
+      expect(isSynthetic(id)).toBe(false);
+    }
   });
 });
 

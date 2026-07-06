@@ -449,19 +449,35 @@ export async function fetchEvalScores(
   );
 }
 
+/** Generic business runs for ANY agent — dimension filters only (ADR 0017 Phase A). */
+export async function fetchBusinessRuns(
+  signal?: AbortSignal,
+  options: { at?: string; agent?: string; workflowId?: string; limit?: number } = {},
+): Promise<RecouvrementRunsResponse> {
+  const params = new URLSearchParams();
+  if (options.at) params.set("at", options.at);
+  if (options.agent) params.set("agent", options.agent);
+  if (options.workflowId) params.set("workflow_id", options.workflowId);
+  params.set("limit", String(options.limit ?? 20));
+  return request(
+    `/observability/business/runs?${params.toString()}`,
+    { signal },
+    RecouvrementRunsResponseSchema,
+  );
+}
+
+/** @deprecated ADR 0017 Phase A alias — use {@link fetchBusinessRuns}; dies with the tab (Phase C). */
 export async function fetchRecouvrementRuns(
   signal?: AbortSignal,
   at?: string,
   limit = 20,
 ): Promise<RecouvrementRunsResponse> {
-  const params = new URLSearchParams();
-  if (at) params.set("at", at);
-  params.set("limit", String(limit));
-  return request(
-    `/observability/recouvrement-runs?${params.toString()}`,
-    { signal },
-    RecouvrementRunsResponseSchema,
-  );
+  return fetchBusinessRuns(signal, {
+    at,
+    limit,
+    agent: "recouvrement",
+    workflowId: "recouvrement_collections_v1",
+  });
 }
 
 /** Temporal lineage timeline — dated events for the cockpit time rail (#201). */

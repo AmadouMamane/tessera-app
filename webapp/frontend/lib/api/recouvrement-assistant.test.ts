@@ -223,8 +223,9 @@ describe("fetchRecouvrementRuns", () => {
 
     const result = await fetchRecouvrementRuns(undefined, undefined, 30);
 
+    // ADR 0017 Phase A: the deprecated alias now rides the generic dimension-filtered read.
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/observability/recouvrement-runs?limit=30",
+      "/api/observability/business/runs?agent=recouvrement&workflow_id=recouvrement_collections_v1&limit=30",
       expect.objectContaining({ headers: expect.objectContaining({ Accept: "application/json" }) }),
     );
     expect(result.runs[0]?.sensitive_actions[0]?.action_name).toBe("submit_for_validation");

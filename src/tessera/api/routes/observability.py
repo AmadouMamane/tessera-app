@@ -339,7 +339,9 @@ async def observability_business_events(
     }
 
 
-_RECOUVREMENT_EVENT_ORDER = {
+# Canonical ordering of the ADR 0017 §2 workflow grammar (`workflow_grammar.v1`) —
+# domain-agnostic: any agent's business events sort by this narrative order.
+_GRAMMAR_EVENT_ORDER = {
     "intent.routed": 10,
     "slots.extracted": 20,
     "business_rule.checked": 30,
@@ -369,7 +371,10 @@ def _str_payload(row: dict[str, object], key: str) -> str | None:
     return value if isinstance(value, str) else None
 
 
-def _recouvrement_artifacts(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+def _workflow_artifacts(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    # Transitional (ADR 0017 Phase A → dissolved in Phase C): the seeded ``no_*`` flag keys
+    # below are recouvrement vocabulary kept verbatim for render parity. Phase C replaces
+    # this seed list with manifest-declared non-effect flags per artifact type.
     by_id: dict[str, dict[str, object]] = {}
     for row in rows:
         artifact_id = row.get("artifact_id")
@@ -429,7 +434,7 @@ def _recouvrement_artifacts(rows: list[dict[str, object]]) -> list[dict[str, obj
     return list(by_id.values())
 
 
-def _recouvrement_decisions(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+def _workflow_decisions(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     decisions: list[dict[str, object]] = []
     for row in rows:
         decision = row.get("decision")
@@ -449,7 +454,7 @@ def _recouvrement_decisions(rows: list[dict[str, object]]) -> list[dict[str, obj
     return decisions
 
 
-def _recouvrement_sensitive_actions(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+def _workflow_sensitive_actions(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     actions: list[dict[str, object]] = []
     for row in rows:
         if row.get("event_name") not in {
@@ -481,7 +486,7 @@ def _recouvrement_sensitive_actions(rows: list[dict[str, object]]) -> list[dict[
     return actions
 
 
-def _recouvrement_runs_from_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+def _workflow_runs_from_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     grouped: dict[tuple[str, str], list[dict[str, object]]] = {}
     for row in rows:
         conversation_id = str(row.get("conversation_id") or "")
@@ -494,7 +499,7 @@ def _recouvrement_runs_from_rows(rows: list[dict[str, object]]) -> list[dict[str
         ordered_rows = sorted(
             turn_rows,
             key=lambda item: (
-                _RECOUVREMENT_EVENT_ORDER.get(str(item.get("event_name") or ""), 100),
+                _GRAMMAR_EVENT_ORDER.get(str(item.get("event_name") or ""), 100),
                 str(item.get("timestamp") or ""),
             ),
         )
@@ -511,13 +516,75 @@ def _recouvrement_runs_from_rows(rows: list[dict[str, object]]) -> list[dict[str
                 "started_at": first.get("timestamp"),
                 "event_count": len(ordered_rows),
                 "timeline": ordered_rows,
-                "artifacts": _recouvrement_artifacts(ordered_rows),
-                "decisions": _recouvrement_decisions(ordered_rows),
-                "sensitive_actions": _recouvrement_sensitive_actions(ordered_rows),
+                "artifacts": _workflow_artifacts(ordered_rows),
+                "decisions": _workflow_decisions(ordered_rows),
+                "sensitive_actions": _workflow_sensitive_actions(ordered_rows),
                 "scores": scores,
             }
         )
     return sorted(runs, key=lambda run: str(run.get("started_at") or ""), reverse=True)
+
+
+def _business_runs_response(
+    *,
+    at: str | None,
+    agent_id: str | None,
+    workflow_id: str | None,
+    conversation_id: str | None,
+    turn_id: str | None,
+    case_id: str | None,
+    limit: int,
+) -> dict[str, object]:
+    """Shared implementation for the generic and per-agent business-runs reads."""
+    rows = business_events_mod.business_event_rows(
+        at=at,
+        agent_id=agent_id,
+        workflow_id=workflow_id,
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        case_id=case_id,
+    )
+    runs = _workflow_runs_from_rows(rows)
+    bounded_limit = max(1, min(limit, 100))
+    return {
+        "runs": runs[:bounded_limit],
+        "events": rows,
+        "scores": business_scoring_mod.score_rows(rows),
+        "as_of": at,
+        "agent": agent_id or "all",
+        "workflow_id": workflow_id,
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+        "case_id": case_id,
+    }
+
+
+@router.get("/observability/business/runs")
+async def observability_business_runs(
+    at: str | None = None,
+    agent: str = "all",
+    workflow_id: str | None = None,
+    conversation_id: str | None = None,
+    turn_id: str | None = None,
+    case_id: str | None = None,
+    limit: int = 20,
+) -> dict[str, object]:
+    """Workflow business runs for ANY agent — dimension filters only, no domain knowledge.
+
+    ADR 0017 Phase A: the generic read that replaces per-agent hardcoded routes. Filters are
+    the declared ADR 0016 dimensions (``agent``, ``workflow_id``, ``conversation_id``,
+    ``turn_id``, ``case_id``, ``at``); the projection reads envelope fields and the grammar
+    order — never domain payload semantics.
+    """
+    return _business_runs_response(
+        at=at,
+        agent_id=_agent_or_none(agent),
+        workflow_id=workflow_id,
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        case_id=case_id,
+        limit=limit,
+    )
 
 
 @router.get("/observability/recouvrement-runs")
@@ -528,28 +595,20 @@ async def observability_recouvrement_runs(
     case_id: str | None = None,
     limit: int = 20,
 ) -> dict[str, object]:
-    """Cockpit-ready Recouvrement business runs derived from ADR 0016 events."""
-    rows = business_events_mod.business_event_rows(
+    """Transitional alias of ``/observability/business/runs`` pinned to recouvrement.
+
+    Kept for render parity during ADR 0017 Phase A; dissolved with the hardcoded tab in
+    Phase C (step 4 of the execution plan).
+    """
+    return _business_runs_response(
         at=at,
         agent_id="recouvrement",
         workflow_id="recouvrement_collections_v1",
         conversation_id=conversation_id,
         turn_id=turn_id,
         case_id=case_id,
+        limit=limit,
     )
-    runs = _recouvrement_runs_from_rows(rows)
-    bounded_limit = max(1, min(limit, 100))
-    return {
-        "runs": runs[:bounded_limit],
-        "events": rows,
-        "scores": business_scoring_mod.score_rows(rows),
-        "as_of": at,
-        "agent": "recouvrement",
-        "workflow_id": "recouvrement_collections_v1",
-        "conversation_id": conversation_id,
-        "turn_id": turn_id,
-        "case_id": case_id,
-    }
 
 
 @router.get("/observability/snapshot", dependencies=[Depends(require_bearer)])

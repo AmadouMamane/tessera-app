@@ -52,7 +52,6 @@ import {
   RootCauseDiagnostic,
   RunsPassRateTable,
 } from "@/components/observability/overview-exec";
-import { RecouvrementRunsPanel } from "@/components/observability/recouvrement-runs-panel";
 import {
   DatasetsTable,
   RunContextPanel,
@@ -70,6 +69,7 @@ import {
   ThemeDistribution,
   buildSignalRows,
 } from "@/components/observability/signals-table";
+import { WorkflowRunsPanel } from "@/components/observability/workflow-runs-panel";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +79,7 @@ import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import {
   fetchAIAct,
   fetchAnomalies,
+  fetchBusinessRuns,
   fetchCalibration,
   fetchCitations,
   fetchConformance,
@@ -100,7 +101,6 @@ import {
   fetchMetricPairs,
   fetchModelComparison,
   fetchPiiLeak,
-  fetchRecouvrementRuns,
   fetchRefusal,
   fetchRegressionRisk,
   fetchReleaseStatus,
@@ -457,8 +457,14 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const recouvrementRuns = useQuery({
-    queryKey: ["recouvrement-runs", asOf],
-    queryFn: ({ signal }) => fetchRecouvrementRuns(signal, asOf ?? undefined, 30),
+    queryKey: ["business-runs", "recouvrement_collections_v1", asOf],
+    queryFn: ({ signal }) =>
+      fetchBusinessRuns(signal, {
+        at: asOf ?? undefined,
+        agent: "recouvrement",
+        workflowId: "recouvrement_collections_v1",
+        limit: 30,
+      }),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 5_000,
   });
@@ -774,9 +780,13 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
           )}
 
           {tab === "recouvrement" && (
-            <RecouvrementRunsPanel
+            <WorkflowRunsPanel
               data={recouvrementRuns.data}
               loading={recouvrementRuns.isLoading}
+              title="Runs Recouvrement"
+              loadingLabel="Chargement des runs Recouvrement..."
+              emptyTitle="Aucun run Recouvrement observé"
+              emptyHint="Lancez un tour dans /fr/recouvrement-new pour voir apparaître les business events, artefacts, scores et actions gouvernées issus des sinks ADR 15/16."
             />
           )}
         </div>
