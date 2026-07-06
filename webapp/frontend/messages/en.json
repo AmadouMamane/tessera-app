@@ -609,7 +609,7 @@
     "scrollToBottom": "Scroll to bottom",
     "startWith": "Try asking",
     "composerHint": "Enter to send · Shift+Enter for new line",
-    "disclosure": "The assistant is an AI. Check important information before making any decision.",
+    "disclosure": "Tessera is an AI assistant. Check important information before making any decision.",
     "streamingPlaceholder": "The assistant is responding…",
     "recouvrementDisclosure": "Recouvrement is an AI assistant. Check important information before making any decision.",
     "recouvrementStreamingPlaceholder": "Recouvrement is responding…",
