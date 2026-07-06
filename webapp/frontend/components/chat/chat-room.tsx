@@ -365,7 +365,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
   const suggestions = SUGGESTED_PROMPTS[locale] ?? SUGGESTED_PROMPTS.en ?? [];
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white/55 backdrop-blur-xl shadow-sm">
+    <div className="relative flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
       {/* Message list — fix 1: flex flex-col so empty wrapper can use flex-1 */}
       <div
         ref={scrollContainerRef}
