@@ -30,6 +30,7 @@ from tessera.observability.catalog_tabs import (
     SectionItem,
     TabColumn,
     TabDetail,
+    TabExplain,
     TabKpi,
     TabRow,
     TabSection,
@@ -51,6 +52,354 @@ _NADIA = _owner("Nadia El Idrissi", "CISO")
 _THOMAS = _owner("Thomas Klein", "Audit Manager")
 
 
+# --- Grounded explain text for the Conformite command-bar tabs (info popovers).
+# FR is authored here as the source of truth; the DE / EN pairs live in _EX_TR
+# near the bottom and are merged into _TR, so _localize renders each info popover
+# in all three languages. Every distinct string is defined exactly once, which
+# removes any risk of an FR literal drifting from its _TR key; metrics that recur
+# across tabs (evidence readiness, recent activity, linked controls, available
+# evidence) share a single constant.
+# EXPLAIN_CONSTS_ANCHOR (do not remove) -- per-tab constants inserted below.
+_EX_REGISTERED_PROCESSINGS = TabExplain(
+    "Nombre de traitements de donnees inscrits au registre RGPD Art. 30.",
+    source="Registre des traitements (RGPD Art. 30).",
+)
+_EX_DOCUMENTED_PURPOSES = TabExplain(
+    "Traitements dont la finalite est formellement documentee.",
+    source="Registre des traitements (RGPD Art. 30).",
+)
+_EX_VALID_LEGAL_BASES = TabExplain(
+    "Traitements disposant d'une base legale valide au sens du RGPD Art. 6.",
+    source="Registre des traitements (RGPD Art. 30).",
+)
+_EX_COMPLIANT_RETENTION = TabExplain(
+    "Traitements dont la duree de conservation respecte la politique de retention.",
+    source="Registre des traitements (RGPD Art. 30).",
+)
+_EX_REGISTRY_GAPS = TabExplain(
+    "Traitements dont la fiche de registre est incomplete ou a mettre a jour.",
+    source="Registre des traitements (RGPD Art. 30).",
+)
+_EX_REGISTRY_TABLE = TabExplain(
+    "Registre des traitements : finalite, base legale, categories de donnees, duree de "
+    "retention, controles, owner et statut.",
+    "Une ligne par traitement inscrit au registre RGPD Art. 30.",
+    "Registre des traitements (RGPD Art. 30).",
+)
+_EX_REGISTRY_DETAIL = TabExplain(
+    "Fiche du traitement selectionne : categorie de donnees, finalite, base legale, transferts, "
+    "sous-traitants, duree et controles lies.",
+    source="Registre des traitements (RGPD Art. 30).",
+)
+_EX_REGISTRY_TODO = TabExplain(
+    "Fiches de registre incompletes : AIPD, base legale, sous-traitant ou duree a documenter.",
+    source="Registre des traitements (RGPD Art. 30).",
+)
+_EX_SCHEDULED_REVIEWS = TabExplain(
+    "Revues periodiques planifiees des fiches de traitement.",
+    "Traitements avec revue a venir, triee par date.",
+    "Registre des traitements (RGPD Art. 30).",
+)
+_EX_LINKED_EXCEPTIONS = TabExplain(
+    "Exceptions et derogations rattachees aux traitements du registre.",
+    source="Registre des traitements (RGPD Art. 30).",
+)
+_EX_VALID_ATTESTATIONS = TabExplain(
+    "Attestations signees et horodatees encore valides (non expirees).",
+    source="Inventaire des preuves.",
+)
+_EX_EXPIRING_EVIDENCE = TabExplain(
+    "Preuves dont la validite arrive a echeance et qui devront etre renouvelees.",
+    source="Inventaire des preuves.",
+)
+_EX_MISSING_CORRUPT = TabExplain(
+    "Preuves attendues absentes ou dont l'integrite est compromise.",
+    source="Inventaire des preuves.",
+)
+_EX_EVIDENCE_COVERAGE = TabExplain(
+    "Part des obligations disposant d'au moins une preuve valide.",
+    "Obligations avec preuve valide divisees par les obligations applicables.",
+    "Inventaire des preuves.",
+)
+_EX_EVIDENCE_PACK_STATE = TabExplain(
+    "Etat de preparation de l'evidence pack : l'ensemble des preuves requises est-il pret a "
+    "etre assemble et exporte.",
+    source="Inventaire des preuves.",
+)
+_EX_EVIDENCE_TABLE = TabExplain(
+    "Inventaire des preuves : cadre, controle, type, owner, date, validite et statut.",
+    "Une ligne par preuve ; la validite indique la duree restante avant expiration.",
+    "Inventaire des preuves.",
+)
+_EX_EVIDENCE_DETAIL = TabExplain(
+    "Fiche de la preuve selectionnee : cadre, controle, type, date de generation, validite, "
+    "empreinte cryptographique, obligations liees et signature.",
+    source="Inventaire des preuves.",
+)
+_EX_EVIDENCE_RENEW = TabExplain(
+    "Preuves proches de l'expiration a renouveler pour maintenir la couverture.",
+    "Preuves triees par proximite d'expiration.",
+    "Inventaire des preuves.",
+)
+_EX_LATEST_ATTESTATIONS = TabExplain(
+    "Dernieres attestations generees, signees ou horodatees, du plus recent au plus ancien.",
+    source="Inventaire des preuves.",
+)
+_EX_COVERAGE_BY_FRAMEWORK = TabExplain(
+    "Part des obligations couvertes par une preuve valide, par cadre reglementaire.",
+    "Preuves valides sur obligations attendues, par cadre ; l'anneau montre la couverture "
+    "globale.",
+    "Inventaire des preuves.",
+)
+_EX_RESOURCES_RETAINED = TabExplain(
+    "Categories de donnees soumises a une regle de retention et de purge dans Tessera.",
+    source="Politique de retention et de purge.",
+)
+_EX_PURGE_ON_TIME = TabExplain(
+    "Nombre de purges executees dans le delai cible sur la periode.",
+    source="Politique de retention et de purge.",
+)
+_EX_PURGE_JOBS = TabExplain(
+    "Nombre de taches de purge programmees, automatiques ou manuelles.",
+    source="Politique de retention et de purge.",
+)
+_EX_LEGAL_HOLDS = TabExplain(
+    "Ressources gelees par une obligation de conservation legale, exemptees de purge.",
+    source="Politique de retention et de purge.",
+)
+_EX_RETENTION_GAPS = TabExplain(
+    "Ressources dont la purge est en retard ou dont la duree de conservation n'est pas conforme.",
+    source="Politique de retention et de purge.",
+)
+_EX_RETENTION_TABLE = TabExplain(
+    "Regles de retention par ressource : base legale, duree cible, mode de purge, signal, owner "
+    "et statut.",
+    "Une ligne par categorie de donnees ; le mode indique une purge automatique ou manuelle.",
+    "Politique de retention et de purge.",
+)
+_EX_RETENTION_DETAIL = TabExplain(
+    "Fiche de la regle selectionnee : stockage, strategie et methode de purge, legal hold, "
+    "prochaine purge et controles lies.",
+    source="Politique de retention et de purge.",
+)
+_EX_UPCOMING_PURGES = TabExplain(
+    "Purges programmees dans les sept prochains jours, automatiques ou manuelles.",
+    "Taches de purge triees par date d'execution.",
+    "Politique de retention et de purge.",
+)
+_EX_RETENTION_EXCEPTIONS = TabExplain(
+    "Ressources dont la purge est bloquee ou en retard : legal hold, purge manuelle a corriger.",
+    source="Politique de retention et de purge.",
+)
+_EX_COVERAGE_BY_SYSTEM = TabExplain(
+    "Part des ressources correctement soumises a retention par systeme de stockage.",
+    "Ressources conformes par systeme, normalisees sur le plus couvert.",
+    "Politique de retention et de purge.",
+)
+_EX_OPEN_INCIDENTS = TabExplain(
+    "Incidents de conformite actuellement ouverts (controle depasse, obligation non tenue).",
+    source="Registre des incidents et exceptions.",
+)
+_EX_APPROVED_EXCEPTIONS = TabExplain(
+    "Derogations formellement approuvees, assorties d'une mesure compensatoire et d'une "
+    "echeance.",
+    source="Registre des incidents et exceptions.",
+)
+_EX_OVERDUE_EXCEPTIONS = TabExplain(
+    "Exceptions dont l'echeance est passee sans regularisation ; risque de non-conformite.",
+    source="Registre des incidents et exceptions.",
+)
+_EX_MISSING_EVIDENCE = TabExplain(
+    "Preuves attendues pour un incident ou une exception et non encore fournies.",
+    source="Registre des incidents et exceptions.",
+)
+_EX_INCIDENTS_TABLE = TabExplain(
+    "Liste des incidents et exceptions avec type, cadre, controle depasse, signal, owner, "
+    "echeance et statut.",
+    "Une ligne par incident ou exception ; le signal indique la gravite.",
+    "Registre des incidents et exceptions.",
+)
+_EX_INCIDENTS_DETAIL = TabExplain(
+    "Fiche de l'exception selectionnee : cause mere, obligation et controle lies, preuve, "
+    "echeance, risque residuel, mesure compensatoire et chaine d'approbation.",
+    source="Registre des incidents et exceptions.",
+)
+_EX_EXCEPTIONS_DUE = TabExplain(
+    "Exceptions dont l'echeance approche et qui doivent etre regularisees ou renouvelees.",
+    "Exceptions triees par proximite d'echeance.",
+    "Registre des incidents et exceptions.",
+)
+_EX_GAP_TRENDS = TabExplain(
+    "Evolution du nombre d'incidents, d'exceptions et de resolutions sur les cinq dernieres "
+    "periodes.",
+    "Compte par periode, une courbe par serie (incidents, exceptions, resolutions).",
+    "Registre des incidents et exceptions.",
+)
+_EX_OWNERS_LOAD = TabExplain(
+    "Charge relative des responsables : part des incidents et exceptions ouverts qui leur sont "
+    "attribues.",
+    "Incidents et exceptions ouverts par owner, normalises sur le plus sollicite.",
+    "Registre des incidents et exceptions.",
+)
+_EX_EVAL_CAMPAIGNS = TabExplain(
+    "Nombre de campagnes d'evaluation de conformite executees sur les cadres reglementaires.",
+    source="Campagnes d'evaluation de conformite.",
+)
+_EX_CONFORMITY_SCORE = TabExplain(
+    "Part des controles evalues qui passent, ponderee par gravite ; mesure globale de "
+    "conformite du perimetre.",
+    "Controles passes ponderes divises par les controles evalues, sur la derniere campagne.",
+    "Campagnes d'evaluation de conformite.",
+)
+_EX_CONTROLS_PASSED = TabExplain(
+    "Nombre de controles ayant reussi leur derniere evaluation.",
+    source="Campagnes d'evaluation de conformite.",
+)
+_EX_OPEN_GAPS = TabExplain(
+    "Ecarts de conformite detectes par les evaluations et non encore remedies.",
+    source="Campagnes d'evaluation de conformite.",
+)
+_EX_EVIDENCE_REPLAYED = TabExplain(
+    "Nombre de preuves re-executees pour confirmer qu'un controle passe toujours.",
+    source="Campagnes d'evaluation de conformite.",
+)
+_EX_EVAL_TABLE = TabExplain(
+    "Vue par campagne : couverture, score, obligations, controles, signaux, preuves, owner et "
+    "statut.",
+    "Une ligne par cadre evalue ; le score pondere les controles passes par gravite.",
+    "Campagnes d'evaluation de conformite.",
+)
+_EX_EVAL_DETAIL = TabExplain(
+    "Fiche de la campagne selectionnee : score, controles passes, echecs critiques, preuves "
+    "rejouees et derniere execution.",
+    source="Campagnes d'evaluation de conformite.",
+)
+_EX_REMEDIATION_PLAN = TabExplain(
+    "Repartition des ecarts ouverts par gravite (critique, eleve, moyen, faible), a resorber "
+    "dans le plan de remediation.",
+    "Ecarts ouverts comptes par niveau de gravite ; le total correspond aux ecarts ouverts.",
+    "Campagnes d'evaluation de conformite.",
+)
+_EX_SCORE_TRENDS = TabExplain(
+    "Evolution du score de conformite par cadre sur les cinq dernieres campagnes.",
+    "Score pondere par campagne, une courbe par cadre.",
+    "Campagnes d'evaluation de conformite.",
+)
+_EX_DECLINING_FRAMEWORKS = TabExplain(
+    "Cadres dont le score de conformite recule d'une campagne a l'autre.",
+    "Cadres avec une variation de score negative, triee par ampleur.",
+    "Campagnes d'evaluation de conformite.",
+)
+_EX_OBLIGATIONS_ACTIVE = TabExplain(
+    "Obligations reglementaires actuellement applicables au perimetre et suivies dans le "
+    "registre.",
+    source="Cartographie reglementaire (obligations-controles).",
+)
+_EX_COVERAGE_OBLIGATIONS = TabExplain(
+    "Part des obligations du perimetre couvertes par un controle actif et une preuve valide.",
+    "Obligations couvertes (controle et preuve) divisees par les obligations applicables.",
+    "Cartographie reglementaire (obligations-controles).",
+)
+_EX_SIGNALS_PER_EVIDENCE = TabExplain(
+    "Nombre moyen de signaux d'execution (traces, tests, journaux) rattaches a chaque preuve.",
+    "Total des signaux lies divise par le nombre de preuves du perimetre.",
+    "Inventaire des preuves.",
+)
+_EX_DEGRADED_CONTROLS = TabExplain(
+    "Controles dont le dernier resultat est partiel ou en echec et qui exigent une remediation.",
+    "Controles au statut degrade sur l'ensemble des obligations suivies.",
+    "Cartographie reglementaire (statut des controles).",
+)
+_EX_OBLIGATIONS_TABLE = TabExplain(
+    "Liste des obligations avec leur cadre, le controle principal, les signaux, les preuves, "
+    "l'owner, le statut et la couverture.",
+    "Une ligne par obligation suivie ; la barre indique les preuves disponibles sur attendues, "
+    "la jauge la couverture de controle.",
+    "Cartographie reglementaire (obligations-controles).",
+)
+_EX_OBLIGATIONS_DETAIL = TabExplain(
+    "Fiche de l'obligation selectionnee : cadre, controle principal, signaux et preuves "
+    "rattaches, risque residuel, prochaine revue et controles mappes.",
+    source="Cartographie reglementaire (fiche obligation).",
+)
+_EX_CONTROLS_REVIEW = TabExplain(
+    "Controles au statut partiel ou moyen dont le resultat doit etre re-verifie.",
+    source="Cartographie reglementaire (statut des controles).",
+)
+_EX_COVERAGE_GAPS = TabExplain(
+    "Obligations depourvues de controle ou de preuve suffisante ; ecart de conformite a combler.",
+    source="Cartographie reglementaire (obligations-controles).",
+)
+_EX_REMEDIATION_DEADLINES = TabExplain(
+    "Plans de remediation avec leur date butoir pour les controles ou obligations en ecart.",
+    "Actions de remediation triees par proximite d'echeance.",
+    "Cartographie reglementaire (echeances).",
+)
+_EX_EVIDENCE_READINESS = TabExplain(
+    "Part des preuves requises par le referentiel qui sont disponibles, valides et non "
+    "expirees, donc pretes a etre assemblees en evidence pack a la demande d'un auditeur.",
+    "Preuves valides rattachees aux obligations du perimetre divisees par les preuves "
+    "attendues ; une preuve expiree ou manquante fait baisser le ratio.",
+    "Inventaire des preuves.",
+)
+_EX_RECENT_ACTIVITY = TabExplain(
+    "Journal chronologique des dernieres actions de gouvernance sur ce perimetre : preuves "
+    "ajoutees, controles mis a jour, exceptions, revues.",
+    source="Catalogue de gouvernance Conformite (donnees de reference).",
+)
+_EX_LINKED_CONTROLS = TabExplain(
+    "Nombre de controles internes rattaches a une obligation de ce perimetre.",
+    "Liens obligation-controle uniques, agreges sur le perimetre affiche.",
+    "Cartographie reglementaire (obligations-controles).",
+)
+_EX_AVAILABLE_EVIDENCE = TabExplain(
+    "Nombre de preuves et d'attestations disponibles et exploitables comme evidence pour ce "
+    "perimetre.",
+    source="Inventaire des preuves.",
+)
+_EX_FRAMEWORKS_ACTIVE = TabExplain(
+    "Nombre de referentiels reglementaires actuellement suivis et cartographies dans Tessera "
+    "(EU AI Act, RGPD, DORA, ISO, SOC 2, politiques internes).",
+    "Cadres au statut actif dans la cartographie ; un cadre en simple veille n'est pas compte.",
+    "Cartographie reglementaire (referentiel des cadres).",
+)
+_EX_OBLIGATIONS_MAPPED = TabExplain(
+    "Nombre d'obligations reglementaires rattachees a au moins un controle interne.",
+    "Somme des obligations mappees sur l'ensemble des cadres actifs.",
+    "Cartographie reglementaire (obligations-controles).",
+)
+_EX_OBLIGATIONS_AT_RISK = TabExplain(
+    "Obligations dont la couverture de controle ou de preuve est insuffisante, ou dont une "
+    "echeance approche.",
+    "Obligations au statut partiel ou non conforme, ou a echeance proche, comptees une fois.",
+    "Cartographie reglementaire (statut des obligations).",
+)
+_EX_MAPPING_TABLE = TabExplain(
+    "Vue par cadre reglementaire : obligations, controles, signaux et preuves rattaches, avec "
+    "l'owner et le statut de conformite.",
+    "Une ligne par referentiel actif ; les compteurs agregent les obligations et controles "
+    "mappes, la barre indique les preuves disponibles sur attendues.",
+    "Cartographie reglementaire (referentiel obligations-controles).",
+)
+_EX_MAPPING_DETAIL = TabExplain(
+    "Fiche du cadre selectionne : articles applicables, obligations et controles mappes, "
+    "preuves disponibles, risque residuel et prochaine revue.",
+    source="Cartographie reglementaire (fiche cadre).",
+)
+_EX_FRAMEWORKS_WATCH = TabExplain(
+    "Referentiels emergents ou a venir a integrer prochainement a la cartographie (NIS2, Data "
+    "Act, directive responsabilite IA).",
+    "Cadres en veille avec leur trimestre d'applicabilite estime.",
+    "Veille reglementaire.",
+)
+_EX_REG_DEADLINES = TabExplain(
+    "Prochaines echeances imposees par les cadres : rapports annuels, tests de resilience, "
+    "mises a jour de registre.",
+    "Obligations a date butoir triees par proximite d'echeance.",
+    "Cartographie reglementaire (echeances).",
+)
+
+
 def _generer() -> list[str]:
     return ["Voir le detail", "Ouvrir les preuves", "Generer evidence pack"]
 
@@ -60,12 +409,36 @@ def _generer() -> list[str]:
 
 def _tab_mapping() -> CatalogTab:
     kpis = [
-        TabKpi("Cadres actifs", "7", tone="good"),
-        TabKpi("Obligations mappees", "512", delta="+8.2%", delta_good=True, tone="good"),
-        TabKpi("Controles lies", "1 284", delta="+5.1%", delta_good=True),
-        TabKpi("Preuves disponibles", "1 105", delta="+3.4%", delta_good=True),
-        TabKpi("Obligations a risque", "28", delta="-4.0%", delta_good=True, tone="warn"),
-        TabKpi("Evidence pack readiness", "86", unit="%", tone="good"),
+        TabKpi("Cadres actifs", "7", tone="good", explain=_EX_FRAMEWORKS_ACTIVE),
+        TabKpi(
+            "Obligations mappees",
+            "512",
+            delta="+8.2%",
+            delta_good=True,
+            tone="good",
+            explain=_EX_OBLIGATIONS_MAPPED,
+        ),
+        TabKpi(
+            "Controles lies", "1 284", delta="+5.1%", delta_good=True, explain=_EX_LINKED_CONTROLS
+        ),
+        TabKpi(
+            "Preuves disponibles",
+            "1 105",
+            delta="+3.4%",
+            delta_good=True,
+            explain=_EX_AVAILABLE_EVIDENCE,
+        ),
+        TabKpi(
+            "Obligations a risque",
+            "28",
+            delta="-4.0%",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_OBLIGATIONS_AT_RISK,
+        ),
+        TabKpi(
+            "Evidence pack readiness", "86", unit="%", tone="good", explain=_EX_EVIDENCE_READINESS
+        ),
     ]
     columns = [
         TabColumn("framework", "Cadre", "text"),
@@ -176,6 +549,7 @@ def _tab_mapping() -> CatalogTab:
         status_label="Partiel",
         status_tone="warning",
         summary="Systemes d'IA a haut risque, GPAI, transparence et surveillance humaine.",
+        explain=_EX_MAPPING_DETAIL,
         fields=[
             DetailField("Articles applicables", "Art. 5, 9, 13, 14, 50"),
             DetailField("Obligations mappees", "96 / 96"),
@@ -205,6 +579,7 @@ def _tab_mapping() -> CatalogTab:
         TabSection(
             "Cadres a surveiller",
             "list",
+            explain=_EX_FRAMEWORKS_WATCH,
             items=[
                 SectionItem(
                     "NIS2 Directive",
@@ -233,6 +608,7 @@ def _tab_mapping() -> CatalogTab:
         TabSection(
             "Echeances reglementaires",
             "list",
+            explain=_EX_REG_DEADLINES,
             items=[
                 SectionItem(
                     "EU AI Act - Art. 15 (rapport annuel)",
@@ -258,6 +634,7 @@ def _tab_mapping() -> CatalogTab:
         TabSection(
             "Activites recentes",
             "activity",
+            explain=_EX_RECENT_ACTIVITY,
             items=[
                 SectionItem("Preuve EV-2026-06-0321 ajoutee a EU AI Act", "il y a 2 h"),
                 SectionItem("Controle CTRL-09 mis a jour (RGPD)", "il y a 5 h"),
@@ -280,6 +657,7 @@ def _tab_mapping() -> CatalogTab:
     ]
     return CatalogTab(
         "Cartographie reglementaire",
+        table_explain=_EX_MAPPING_TABLE,
         kpis=kpis,
         columns=columns,
         rows=rows,
@@ -293,12 +671,31 @@ def _tab_mapping() -> CatalogTab:
 
 def _tab_obligations() -> CatalogTab:
     kpis = [
-        TabKpi("Obligations actives", "18", tone="good"),
-        TabKpi("Controles lies", "284", delta="+6.0%", delta_good=True),
-        TabKpi("Couverture", "89", unit="%", delta="+7.2 pp", delta_good=True, tone="good"),
-        TabKpi("Signaux par preuve", "3.2", sub="moyenne"),
-        TabKpi("Controles degrades", "17", delta="-3.0%", delta_good=True, tone="warn"),
-        TabKpi("Evidence pack readiness", "84", unit="%", tone="good"),
+        TabKpi("Obligations actives", "18", tone="good", explain=_EX_OBLIGATIONS_ACTIVE),
+        TabKpi(
+            "Controles lies", "284", delta="+6.0%", delta_good=True, explain=_EX_LINKED_CONTROLS
+        ),
+        TabKpi(
+            "Couverture",
+            "89",
+            unit="%",
+            delta="+7.2 pp",
+            delta_good=True,
+            tone="good",
+            explain=_EX_COVERAGE_OBLIGATIONS,
+        ),
+        TabKpi("Signaux par preuve", "3.2", sub="moyenne", explain=_EX_SIGNALS_PER_EVIDENCE),
+        TabKpi(
+            "Controles degrades",
+            "17",
+            delta="-3.0%",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_DEGRADED_CONTROLS,
+        ),
+        TabKpi(
+            "Evidence pack readiness", "84", unit="%", tone="good", explain=_EX_EVIDENCE_READINESS
+        ),
     ]
     columns = [
         TabColumn("obligation", "Obligation", "text"),
@@ -409,6 +806,7 @@ def _tab_obligations() -> CatalogTab:
         status_label="Conforme",
         status_tone="success",
         summary="Maintenir un systeme de gestion des risques pour l'IA a haut risque.",
+        explain=_EX_OBLIGATIONS_DETAIL,
         fields=[
             DetailField("Cadre", "EU AI Act"),
             DetailField("Controle principal", "C-15.1 - Gestion du risque"),
@@ -439,6 +837,7 @@ def _tab_obligations() -> CatalogTab:
         TabSection(
             "Controles a revoir",
             "list",
+            explain=_EX_CONTROLS_REVIEW,
             items=[
                 SectionItem(
                     "C-13.2 - Gouvernance des donnees", badge="Partiel", badge_tone="warning"
@@ -453,6 +852,7 @@ def _tab_obligations() -> CatalogTab:
         TabSection(
             "Gaps de couverture",
             "list",
+            explain=_EX_COVERAGE_GAPS,
             items=[
                 SectionItem(
                     "C-13.2 - Donnees", "EU AI Act - Art. 10", badge="Gap", badge_tone="danger"
@@ -467,6 +867,7 @@ def _tab_obligations() -> CatalogTab:
         TabSection(
             "Activites recentes",
             "activity",
+            explain=_EX_RECENT_ACTIVITY,
             items=[
                 SectionItem("Preuve EV-2026-06-0318 liee a C-15.1", "il y a 1 h"),
                 SectionItem("Controle CTRL-13 repasse conforme", "il y a 4 h"),
@@ -478,6 +879,7 @@ def _tab_obligations() -> CatalogTab:
         TabSection(
             "Echeances de remediation",
             "list",
+            explain=_EX_REMEDIATION_DEADLINES,
             items=[
                 SectionItem(
                     "C-13.2 - Plan de remediation",
@@ -500,6 +902,7 @@ def _tab_obligations() -> CatalogTab:
     ]
     return CatalogTab(
         "Obligations & controles",
+        table_explain=_EX_OBLIGATIONS_TABLE,
         kpis=kpis,
         columns=columns,
         rows=rows,
@@ -513,14 +916,33 @@ def _tab_obligations() -> CatalogTab:
 
 def _tab_evaluations() -> CatalogTab:
     kpis = [
-        TabKpi("Campagnes d'evaluation", "7", tone="good"),
+        TabKpi("Campagnes d'evaluation", "7", tone="good", explain=_EX_EVAL_CAMPAIGNS),
         TabKpi(
-            "Score de conformite", "76", unit="%", delta="+3.0 pp", delta_good=True, tone="warn"
+            "Score de conformite",
+            "76",
+            unit="%",
+            delta="+3.0 pp",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_CONFORMITY_SCORE,
         ),
-        TabKpi("Controles passes", "512", delta="+4.0%", delta_good=True),
-        TabKpi("Ecarts ouverts", "28", delta="-6.0%", delta_good=True, tone="warn"),
-        TabKpi("Preuves rejouees", "105", delta="+5.0%", delta_good=True),
-        TabKpi("Evidence pack readiness", "86", unit="%", tone="good"),
+        TabKpi(
+            "Controles passes", "512", delta="+4.0%", delta_good=True, explain=_EX_CONTROLS_PASSED
+        ),
+        TabKpi(
+            "Ecarts ouverts",
+            "28",
+            delta="-6.0%",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_OPEN_GAPS,
+        ),
+        TabKpi(
+            "Preuves rejouees", "105", delta="+5.0%", delta_good=True, explain=_EX_EVIDENCE_REPLAYED
+        ),
+        TabKpi(
+            "Evidence pack readiness", "86", unit="%", tone="good", explain=_EX_EVIDENCE_READINESS
+        ),
     ]
     columns = [
         TabColumn("campaign", "Campagne / domaine", "text"),
@@ -625,6 +1047,7 @@ def _tab_evaluations() -> CatalogTab:
         status_label="Partiel",
         status_tone="warning",
         summary="Score de conformite 82 % - 11 echecs critiques, 248 controles evalues.",
+        explain=_EX_EVAL_DETAIL,
         fields=[
             DetailField("Score de conformite", "82 %", "warning"),
             DetailField("Controles passes", "230 / 248"),
@@ -664,6 +1087,7 @@ def _tab_evaluations() -> CatalogTab:
         TabSection(
             "Plan de remediation",
             "donut",
+            explain=_EX_REMEDIATION_PLAN,
             donut_value=0.0,
             donut_label="28 total",
             items=[
@@ -677,6 +1101,7 @@ def _tab_evaluations() -> CatalogTab:
         TabSection(
             "Tendances des scores",
             "chart",
+            explain=_EX_SCORE_TRENDS,
             series=[
                 {
                     "label": "EU AI Act",
@@ -696,6 +1121,7 @@ def _tab_evaluations() -> CatalogTab:
         TabSection(
             "Activites recentes",
             "activity",
+            explain=_EX_RECENT_ACTIVITY,
             items=[
                 SectionItem("Evaluation EU AI Act terminee", "il y a 3 h"),
                 SectionItem("Campagne RGPD relancee", "il y a 6 h"),
@@ -707,6 +1133,7 @@ def _tab_evaluations() -> CatalogTab:
         TabSection(
             "Cadres en baisse",
             "list",
+            explain=_EX_DECLINING_FRAMEWORKS,
             items=[
                 SectionItem("DORA", "score en baisse", "-4 pp", badge_tone="danger"),
                 SectionItem(
@@ -719,6 +1146,7 @@ def _tab_evaluations() -> CatalogTab:
     ]
     return CatalogTab(
         "Evaluations",
+        table_explain=_EX_EVAL_TABLE,
         kpis=kpis,
         columns=columns,
         rows=rows,
@@ -732,12 +1160,42 @@ def _tab_evaluations() -> CatalogTab:
 
 def _tab_incidents() -> CatalogTab:
     kpis = [
-        TabKpi("Incidents ouverts", "42", delta="-5.0%", delta_good=True, tone="warn"),
-        TabKpi("Controles degrades", "27", delta="-3.0%", delta_good=True, tone="warn"),
-        TabKpi("Exceptions approuvees", "14", tone="good"),
-        TabKpi("Exceptions depassees", "7", delta="+2.0%", delta_good=False, tone="bad"),
-        TabKpi("Preuves manquantes", "38", delta="-4.0%", delta_good=True, tone="warn"),
-        TabKpi("Evidence pack readiness", "72", unit="%", tone="warn"),
+        TabKpi(
+            "Incidents ouverts",
+            "42",
+            delta="-5.0%",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_OPEN_INCIDENTS,
+        ),
+        TabKpi(
+            "Controles degrades",
+            "27",
+            delta="-3.0%",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_DEGRADED_CONTROLS,
+        ),
+        TabKpi("Exceptions approuvees", "14", tone="good", explain=_EX_APPROVED_EXCEPTIONS),
+        TabKpi(
+            "Exceptions depassees",
+            "7",
+            delta="+2.0%",
+            delta_good=False,
+            tone="bad",
+            explain=_EX_OVERDUE_EXCEPTIONS,
+        ),
+        TabKpi(
+            "Preuves manquantes",
+            "38",
+            delta="-4.0%",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_MISSING_EVIDENCE,
+        ),
+        TabKpi(
+            "Evidence pack readiness", "72", unit="%", tone="warn", explain=_EX_EVIDENCE_READINESS
+        ),
     ]
     columns = [
         TabColumn("id", "ID", "mono"),
@@ -835,6 +1293,7 @@ def _tab_incidents() -> CatalogTab:
         status_label="Approuvee",
         status_tone="success",
         summary="Derogation temporaire RGPD - Art. 6 (3) en attente de mesure compensatoire.",
+        explain=_EX_INCIDENTS_DETAIL,
         fields=[
             DetailField("Cause mere", "Base legale a reconfirmer"),
             DetailField("Obligation liee", "RGPD - Art. 6 (3)"),
@@ -872,6 +1331,7 @@ def _tab_incidents() -> CatalogTab:
         TabSection(
             "Exceptions a echeance proche",
             "list",
+            explain=_EX_EXCEPTIONS_DUE,
             items=[
                 SectionItem("EXC-2026-007", "RGPD - Art. 6", "30 jun 2026", badge_tone="warning"),
                 SectionItem("EXC-2026-005", "DORA - Art. 28", "02 jul 2026", badge_tone="neutral"),
@@ -884,6 +1344,7 @@ def _tab_incidents() -> CatalogTab:
         TabSection(
             "Activites recentes",
             "activity",
+            explain=_EX_RECENT_ACTIVITY,
             items=[
                 SectionItem("INC-2026-003 escalade a Sophie Bernard", "il y a 1 h"),
                 SectionItem("EXC-2026-009 approuvee", "il y a 4 h"),
@@ -895,6 +1356,7 @@ def _tab_incidents() -> CatalogTab:
         TabSection(
             "Tendances d'ecarts",
             "chart",
+            explain=_EX_GAP_TRENDS,
             series=[
                 {"label": "Incidents", "color": "#ef4444", "points": [38, 41, 44, 43, 42]},
                 {"label": "Exceptions", "color": "#3b82f6", "points": [9, 11, 12, 13, 14]},
@@ -905,6 +1367,7 @@ def _tab_incidents() -> CatalogTab:
         TabSection(
             "Owners sollicites",
             "bars",
+            explain=_EX_OWNERS_LOAD,
             bars=[
                 {"label": "Claire Martin", "value": 0.9, "tone": "danger"},
                 {"label": "Damien Leroy", "value": 0.7, "tone": "warning"},
@@ -915,6 +1378,7 @@ def _tab_incidents() -> CatalogTab:
     ]
     return CatalogTab(
         "Incidents & exceptions",
+        table_explain=_EX_INCIDENTS_TABLE,
         kpis=kpis,
         columns=columns,
         rows=rows,
@@ -928,12 +1392,33 @@ def _tab_incidents() -> CatalogTab:
 
 def _tab_retention() -> CatalogTab:
     kpis = [
-        TabKpi("Ressources sous retention", "38", tone="good"),
-        TabKpi("Delais de purge respectes", "112", delta="+2.0%", delta_good=True),
-        TabKpi("Jobs de purge planifies", "246", delta="+4.0%", delta_good=True),
-        TabKpi("Legal holds actifs", "8", sub="dossiers"),
-        TabKpi("Ecarts de retention", "8", delta="-3.0%", delta_good=True, tone="warn"),
-        TabKpi("Evidence pack readiness", "86", unit="%", tone="good"),
+        TabKpi("Ressources sous retention", "38", tone="good", explain=_EX_RESOURCES_RETAINED),
+        TabKpi(
+            "Delais de purge respectes",
+            "112",
+            delta="+2.0%",
+            delta_good=True,
+            explain=_EX_PURGE_ON_TIME,
+        ),
+        TabKpi(
+            "Jobs de purge planifies",
+            "246",
+            delta="+4.0%",
+            delta_good=True,
+            explain=_EX_PURGE_JOBS,
+        ),
+        TabKpi("Legal holds actifs", "8", sub="dossiers", explain=_EX_LEGAL_HOLDS),
+        TabKpi(
+            "Ecarts de retention",
+            "8",
+            delta="-3.0%",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_RETENTION_GAPS,
+        ),
+        TabKpi(
+            "Evidence pack readiness", "86", unit="%", tone="good", explain=_EX_EVIDENCE_READINESS
+        ),
     ]
     columns = [
         TabColumn("resource", "Ressource", "text"),
@@ -1024,6 +1509,7 @@ def _tab_retention() -> CatalogTab:
         status_label="Conforme",
         status_tone="success",
         summary="Retention 90 jours sur interet legitime, purge automatique nocturne.",
+        explain=_EX_RETENTION_DETAIL,
         fields=[
             DetailField("Stockage", "Cloud SQL - Postgres"),
             DetailField("Strategie de suppression", "Purge automatique"),
@@ -1049,6 +1535,7 @@ def _tab_retention() -> CatalogTab:
         TabSection(
             "Purges a venir (7 jours)",
             "list",
+            explain=_EX_UPCOMING_PURGES,
             items=[
                 SectionItem("Embeddings", "purge manuelle", "18 jun 2026", badge_tone="danger"),
                 SectionItem("Transcriptions", "purge auto", "19 jun 2026", badge_tone="warning"),
@@ -1062,6 +1549,7 @@ def _tab_retention() -> CatalogTab:
         TabSection(
             "Exceptions actives",
             "list",
+            explain=_EX_RETENTION_EXCEPTIONS,
             items=[
                 SectionItem(
                     "Jeux d'evaluation", "legal hold actif", badge="Bloque", badge_tone="danger"
@@ -1078,6 +1566,7 @@ def _tab_retention() -> CatalogTab:
         TabSection(
             "Activites recentes",
             "activity",
+            explain=_EX_RECENT_ACTIVITY,
             items=[
                 SectionItem("Purge auto Logs d'agent executee", "il y a 2 h"),
                 SectionItem("Legal hold ajoute sur Jeux d'evaluation", "il y a 5 h"),
@@ -1089,6 +1578,7 @@ def _tab_retention() -> CatalogTab:
         TabSection(
             "Couverture par systeme",
             "bars",
+            explain=_EX_COVERAGE_BY_SYSTEM,
             bars=[
                 {"label": "Postgres", "value": 0.95, "tone": "success"},
                 {"label": "Object store", "value": 0.72, "tone": "warning"},
@@ -1100,6 +1590,7 @@ def _tab_retention() -> CatalogTab:
     ]
     return CatalogTab(
         "Purge & retention",
+        table_explain=_EX_RETENTION_TABLE,
         kpis=kpis,
         columns=columns,
         rows=rows,
@@ -1113,12 +1604,39 @@ def _tab_retention() -> CatalogTab:
 
 def _tab_evidence() -> CatalogTab:
     kpis = [
-        TabKpi("Preuves disponibles", "8 246", delta="+2.0%", delta_good=True, tone="good"),
-        TabKpi("Attestations valides", "7 112", delta="+1.0%", delta_good=True),
-        TabKpi("Preuves expirantes", "312", delta="+4.0%", delta_good=False, tone="warn"),
-        TabKpi("Manquant / corrompu", "28", delta="-2.0%", delta_good=True, tone="warn"),
-        TabKpi("Couverture preuve", "86", unit="%", tone="good"),
-        TabKpi("Evidence pack", "Prete", tone="good"),
+        TabKpi(
+            "Preuves disponibles",
+            "8 246",
+            delta="+2.0%",
+            delta_good=True,
+            tone="good",
+            explain=_EX_AVAILABLE_EVIDENCE,
+        ),
+        TabKpi(
+            "Attestations valides",
+            "7 112",
+            delta="+1.0%",
+            delta_good=True,
+            explain=_EX_VALID_ATTESTATIONS,
+        ),
+        TabKpi(
+            "Preuves expirantes",
+            "312",
+            delta="+4.0%",
+            delta_good=False,
+            tone="warn",
+            explain=_EX_EXPIRING_EVIDENCE,
+        ),
+        TabKpi(
+            "Manquant / corrompu",
+            "28",
+            delta="-2.0%",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_MISSING_CORRUPT,
+        ),
+        TabKpi("Couverture preuve", "86", unit="%", tone="good", explain=_EX_EVIDENCE_COVERAGE),
+        TabKpi("Evidence pack", "Prete", tone="good", explain=_EX_EVIDENCE_PACK_STATE),
     ]
     columns = [
         TabColumn("id", "Preuve", "mono"),
@@ -1216,6 +1734,7 @@ def _tab_evidence() -> CatalogTab:
         status_label="Valide",
         status_tone="success",
         summary="Rapport de gestion du risque EU AI Act - Art. 9, signe et horodate.",
+        explain=_EX_EVIDENCE_DETAIL,
         fields=[
             DetailField("Cadre", "EU AI Act - Art. 9"),
             DetailField("Controle", "C-15.1 - Gestion du risque"),
@@ -1247,6 +1766,7 @@ def _tab_evidence() -> CatalogTab:
         TabSection(
             "Preuves a renouveler (312)",
             "list",
+            explain=_EX_EVIDENCE_RENEW,
             items=[
                 SectionItem(
                     "PRV-2026-05-0091", "DORA - Art. 28", "dans 6 jours", badge_tone="warning"
@@ -1263,6 +1783,7 @@ def _tab_evidence() -> CatalogTab:
         TabSection(
             "Dernieres attestations",
             "activity",
+            explain=_EX_LATEST_ATTESTATIONS,
             items=[
                 SectionItem("PRV-2026-06-0130 generee (SOC 2)", "il y a 1 h"),
                 SectionItem("PRV-2026-06-0123 signee (EU AI Act)", "il y a 3 h"),
@@ -1274,6 +1795,7 @@ def _tab_evidence() -> CatalogTab:
         TabSection(
             "Couverture par cadre",
             "donut",
+            explain=_EX_COVERAGE_BY_FRAMEWORK,
             donut_value=0.865,
             donut_label="Couverture",
             items=[
@@ -1287,6 +1809,7 @@ def _tab_evidence() -> CatalogTab:
         TabSection(
             "Activites recentes",
             "activity",
+            explain=_EX_RECENT_ACTIVITY,
             items=[
                 SectionItem("Evidence pack EU AI Act genere", "il y a 2 h"),
                 SectionItem("Preuve PRV-2026-04-0044 marquee manquante", "il y a 7 h"),
@@ -1297,6 +1820,7 @@ def _tab_evidence() -> CatalogTab:
     ]
     return CatalogTab(
         "Inventaire des preuves & attestations",
+        table_explain=_EX_EVIDENCE_TABLE,
         kpis=kpis,
         columns=columns,
         rows=rows,
@@ -1310,12 +1834,33 @@ def _tab_evidence() -> CatalogTab:
 
 def _tab_registry() -> CatalogTab:
     kpis = [
-        TabKpi("Traitements enregistres", "36", tone="good"),
-        TabKpi("Finalites documentees", "36", delta="+5.0%", delta_good=True),
-        TabKpi("Bases legales valides", "36", tone="good"),
-        TabKpi("Durees de retention conformes", "33", delta="+2.0%", delta_good=True),
-        TabKpi("Ecarts de registre", "4", delta="-3.0%", delta_good=True, tone="warn"),
-        TabKpi("Evidence pack readiness", "84", unit="%", tone="good"),
+        TabKpi("Traitements enregistres", "36", tone="good", explain=_EX_REGISTERED_PROCESSINGS),
+        TabKpi(
+            "Finalites documentees",
+            "36",
+            delta="+5.0%",
+            delta_good=True,
+            explain=_EX_DOCUMENTED_PURPOSES,
+        ),
+        TabKpi("Bases legales valides", "36", tone="good", explain=_EX_VALID_LEGAL_BASES),
+        TabKpi(
+            "Durees de retention conformes",
+            "33",
+            delta="+2.0%",
+            delta_good=True,
+            explain=_EX_COMPLIANT_RETENTION,
+        ),
+        TabKpi(
+            "Ecarts de registre",
+            "4",
+            delta="-3.0%",
+            delta_good=True,
+            tone="warn",
+            explain=_EX_REGISTRY_GAPS,
+        ),
+        TabKpi(
+            "Evidence pack readiness", "84", unit="%", tone="good", explain=_EX_EVIDENCE_READINESS
+        ),
     ]
     columns = [
         TabColumn("name", "Traitement", "text"),
@@ -1400,6 +1945,7 @@ def _tab_registry() -> CatalogTab:
         status_label="Conforme",
         status_tone="success",
         summary="Evaluation de solvabilite sur base contractuelle, sans decision automatisee.",
+        explain=_EX_REGISTRY_DETAIL,
         fields=[
             DetailField("Categorie de donnees", "Donnees financieres"),
             DetailField("Finalite", "Evaluation de solvabilite"),
@@ -1431,6 +1977,7 @@ def _tab_registry() -> CatalogTab:
         TabSection(
             "Registres a completer (4)",
             "list",
+            explain=_EX_REGISTRY_TODO,
             items=[
                 SectionItem(
                     "Privacy Impact Assessment",
@@ -1459,6 +2006,7 @@ def _tab_registry() -> CatalogTab:
         TabSection(
             "Revues programmees (4)",
             "list",
+            explain=_EX_SCHEDULED_REVIEWS,
             items=[
                 SectionItem(
                     "Scoring credit", "revue annuelle", "20 jun 2026", badge_tone="neutral"
@@ -1473,6 +2021,7 @@ def _tab_registry() -> CatalogTab:
         TabSection(
             "Activites recentes",
             "activity",
+            explain=_EX_RECENT_ACTIVITY,
             items=[
                 SectionItem("Traitement Scoring credit mis a jour", "il y a 3 h"),
                 SectionItem("AIPD Support client IA ouverte", "il y a 6 h"),
@@ -1483,6 +2032,7 @@ def _tab_registry() -> CatalogTab:
         TabSection(
             "Exceptions liees (4)",
             "list",
+            explain=_EX_LINKED_EXCEPTIONS,
             items=[
                 SectionItem(
                     "EXC-2026-007", "Support client IA", badge="Partiel", badge_tone="warning"
@@ -1499,6 +2049,7 @@ def _tab_registry() -> CatalogTab:
     ]
     return CatalogTab(
         "Registre des traitements",
+        table_explain=_EX_REGISTRY_TABLE,
         kpis=kpis,
         columns=columns,
         rows=rows,
@@ -2045,6 +2596,550 @@ _TR: dict[str, tuple[str, str]] = {
     "dans 45 jours": ("in 45 Tagen", "in 45 days"),
     "dans 60 jours": ("in 60 Tagen", "in 60 days"),
 }
+
+
+# DE / EN for the grounded explain prose authored as _EX_* constants above.
+# Keyed by the exact FR string (referenced, never retyped), merged into _TR so
+# _localize renders every info popover in all three languages. Keys are typed
+# ``str | None`` because ``TabExplain.how`` / ``.source`` are optional fields;
+# only the present (non-None) ones are ever written, and None is filtered out at
+# merge time below.
+_EX_TR: dict[str | None, tuple[str, str]] = {
+    # EXPLAIN_TR_ANCHOR (do not remove) -- per-tab DE/EN pairs inserted below.
+    _EX_REGISTERED_PROCESSINGS.what: (
+        "Anzahl der im Verzeichnis nach DSGVO Art. 30 eingetragenen Datenverarbeitungen.",
+        "Number of data processing activities recorded in the GDPR Art. 30 register.",
+    ),
+    _EX_REGISTERED_PROCESSINGS.source: (
+        "Verzeichnis von Verarbeitungstaetigkeiten (DSGVO Art. 30).",
+        "Records of processing activities (GDPR Art. 30).",
+    ),
+    _EX_DOCUMENTED_PURPOSES.what: (
+        "Verarbeitungen, deren Zweck foermlich dokumentiert ist.",
+        "Processing activities whose purpose is formally documented.",
+    ),
+    _EX_VALID_LEGAL_BASES.what: (
+        "Verarbeitungen mit gueltiger Rechtsgrundlage im Sinne von DSGVO Art. 6.",
+        "Processing activities with a valid legal basis under GDPR Art. 6.",
+    ),
+    _EX_COMPLIANT_RETENTION.what: (
+        "Verarbeitungen, deren Aufbewahrungsdauer der Aufbewahrungsrichtlinie entspricht.",
+        "Processing activities whose retention duration complies with the retention policy.",
+    ),
+    _EX_REGISTRY_GAPS.what: (
+        "Verarbeitungen, deren Verzeichniseintrag unvollstaendig ist oder aktualisiert werden "
+        "muss.",
+        "Processing activities whose register entry is incomplete or needs updating.",
+    ),
+    _EX_REGISTRY_TABLE.what: (
+        "Verzeichnis der Verarbeitungen: Zweck, Rechtsgrundlage, Datenkategorien, "
+        "Aufbewahrungsdauer, Kontrollen, Owner und Status.",
+        "Register of processing activities: purpose, legal basis, data categories, retention "
+        "duration, controls, owner and status.",
+    ),
+    _EX_REGISTRY_TABLE.how: (
+        "Eine Zeile je im Verzeichnis nach DSGVO Art. 30 eingetragener Verarbeitung.",
+        "One row per processing activity recorded in the GDPR Art. 30 register.",
+    ),
+    _EX_REGISTRY_DETAIL.what: (
+        "Datenblatt der gewaehlten Verarbeitung: Datenkategorie, Zweck, Rechtsgrundlage, "
+        "Uebermittlungen, Auftragsverarbeiter, Dauer und verknuepfte Kontrollen.",
+        "Selected processing activity's data sheet: data category, purpose, legal basis, "
+        "transfers, processors, duration and linked controls.",
+    ),
+    _EX_REGISTRY_TODO.what: (
+        "Unvollstaendige Verzeichniseintraege: DSFA, Rechtsgrundlage, Auftragsverarbeiter oder "
+        "Dauer zu dokumentieren.",
+        "Incomplete register entries: DPIA, legal basis, processor or duration to document.",
+    ),
+    _EX_SCHEDULED_REVIEWS.what: (
+        "Geplante periodische Ueberpruefungen der Verarbeitungseintraege.",
+        "Scheduled periodic reviews of the processing entries.",
+    ),
+    _EX_SCHEDULED_REVIEWS.how: (
+        "Verarbeitungen mit anstehender Ueberpruefung, nach Datum sortiert.",
+        "Processing activities with an upcoming review, sorted by date.",
+    ),
+    _EX_LINKED_EXCEPTIONS.what: (
+        "Ausnahmen und Abweichungen, die den Verarbeitungen des Verzeichnisses zugeordnet sind.",
+        "Exceptions and derogations attached to the register's processing activities.",
+    ),
+    _EX_VALID_ATTESTATIONS.what: (
+        "Signierte und mit Zeitstempel versehene Bescheinigungen, die noch gueltig (nicht "
+        "abgelaufen) sind.",
+        "Signed and timestamped attestations that are still valid (unexpired).",
+    ),
+    _EX_EXPIRING_EVIDENCE.what: (
+        "Nachweise, deren Gueltigkeit auslaeuft und die erneuert werden muessen.",
+        "Evidence whose validity is approaching expiry and that will need renewal.",
+    ),
+    _EX_MISSING_CORRUPT.what: (
+        "Erwartete Nachweise, die fehlen oder deren Integritaet beeintraechtigt ist.",
+        "Expected evidence that is missing or whose integrity is compromised.",
+    ),
+    _EX_EVIDENCE_COVERAGE.what: (
+        "Anteil der Pflichten mit mindestens einem gueltigen Nachweis.",
+        "Share of obligations that have at least one valid piece of evidence.",
+    ),
+    _EX_EVIDENCE_COVERAGE.how: (
+        "Pflichten mit gueltigem Nachweis geteilt durch die anwendbaren Pflichten.",
+        "Obligations with valid evidence divided by the applicable obligations.",
+    ),
+    _EX_EVIDENCE_PACK_STATE.what: (
+        "Bereitschaftszustand des Evidence-Packs: ob alle geforderten Nachweise zusammengestellt "
+        "und exportiert werden koennen.",
+        "Readiness state of the evidence pack: whether all required evidence can be assembled and "
+        "exported.",
+    ),
+    _EX_EVIDENCE_TABLE.what: (
+        "Nachweisinventar: Rahmen, Kontrolle, Typ, Owner, Datum, Gueltigkeit und Status.",
+        "Evidence inventory: framework, control, type, owner, date, validity and status.",
+    ),
+    _EX_EVIDENCE_TABLE.how: (
+        "Eine Zeile je Nachweis; die Gueltigkeit zeigt die verbleibende Zeit bis zum Ablauf.",
+        "One row per evidence item; validity shows the remaining time before expiry.",
+    ),
+    _EX_EVIDENCE_DETAIL.what: (
+        "Datenblatt des gewaehlten Nachweises: Rahmen, Kontrolle, Typ, Erstellungsdatum, "
+        "Gueltigkeit, kryptografischer Fingerabdruck, verknuepfte Pflichten und Signatur.",
+        "Selected evidence item's data sheet: framework, control, type, generation date, "
+        "validity, cryptographic fingerprint, linked obligations and signature.",
+    ),
+    _EX_EVIDENCE_RENEW.what: (
+        "Nachweise kurz vor dem Ablauf, die zur Aufrechterhaltung der Abdeckung zu erneuern sind.",
+        "Evidence close to expiry to renew in order to maintain coverage.",
+    ),
+    _EX_EVIDENCE_RENEW.how: (
+        "Nachweise nach Ablaufnaehe sortiert.",
+        "Evidence sorted by proximity to expiry.",
+    ),
+    _EX_LATEST_ATTESTATIONS.what: (
+        "Zuletzt erzeugte, signierte oder mit Zeitstempel versehene Bescheinigungen, vom neuesten "
+        "zum aeltesten.",
+        "Latest attestations generated, signed or timestamped, from newest to oldest.",
+    ),
+    _EX_COVERAGE_BY_FRAMEWORK.what: (
+        "Anteil der durch einen gueltigen Nachweis abgedeckten Pflichten je Regulierungsrahmen.",
+        "Share of obligations covered by a valid piece of evidence, per regulatory framework.",
+    ),
+    _EX_COVERAGE_BY_FRAMEWORK.how: (
+        "Gueltige Nachweise zu erwarteten Pflichten je Rahmen; der Ring zeigt die "
+        "Gesamtabdeckung.",
+        "Valid evidence to expected obligations per framework; the ring shows overall coverage.",
+    ),
+    _EX_RESOURCES_RETAINED.what: (
+        "Datenkategorien, die in Tessera einer Aufbewahrungs- und Loeschregel unterliegen.",
+        "Data categories subject to a retention and purge rule in Tessera.",
+    ),
+    _EX_RESOURCES_RETAINED.source: (
+        "Aufbewahrungs- und Loeschrichtlinie.",
+        "Retention and purge policy.",
+    ),
+    _EX_PURGE_ON_TIME.what: (
+        "Anzahl der im Zielzeitraum ausgefuehrten Loeschungen im Berichtszeitraum.",
+        "Number of purges executed within the target deadline over the period.",
+    ),
+    _EX_PURGE_JOBS.what: (
+        "Anzahl der geplanten Loeschauftraege, automatisch oder manuell.",
+        "Number of scheduled purge jobs, automatic or manual.",
+    ),
+    _EX_LEGAL_HOLDS.what: (
+        "Durch eine gesetzliche Aufbewahrungspflicht eingefrorene, von der Loeschung "
+        "ausgenommene Ressourcen.",
+        "Resources frozen by a legal retention obligation and exempt from purge.",
+    ),
+    _EX_RETENTION_GAPS.what: (
+        "Ressourcen mit ueberfaelliger Loeschung oder nicht konformer Aufbewahrungsdauer.",
+        "Resources whose purge is overdue or whose retention duration is non-conformant.",
+    ),
+    _EX_RETENTION_TABLE.what: (
+        "Aufbewahrungsregeln je Ressource: Rechtsgrundlage, Zieldauer, Loeschmodus, Signal, "
+        "Owner und Status.",
+        "Retention rules per resource: legal basis, target duration, purge mode, signal, owner "
+        "and status.",
+    ),
+    _EX_RETENTION_TABLE.how: (
+        "Eine Zeile je Datenkategorie; der Modus gibt eine automatische oder manuelle Loeschung "
+        "an.",
+        "One row per data category; the mode indicates an automatic or manual purge.",
+    ),
+    _EX_RETENTION_DETAIL.what: (
+        "Datenblatt der gewaehlten Regel: Speicherung, Loeschstrategie und -methode, Legal Hold, "
+        "naechste Loeschung und verknuepfte Kontrollen.",
+        "Selected rule's data sheet: storage, purge strategy and method, legal hold, next purge "
+        "and linked controls.",
+    ),
+    _EX_UPCOMING_PURGES.what: (
+        "In den naechsten sieben Tagen geplante Loeschungen, automatisch oder manuell.",
+        "Purges scheduled in the next seven days, automatic or manual.",
+    ),
+    _EX_UPCOMING_PURGES.how: (
+        "Loeschauftraege nach Ausfuehrungsdatum sortiert.",
+        "Purge jobs sorted by execution date.",
+    ),
+    _EX_RETENTION_EXCEPTIONS.what: (
+        "Ressourcen mit blockierter oder ueberfaelliger Loeschung: Legal Hold, zu korrigierende "
+        "manuelle Loeschung.",
+        "Resources whose purge is blocked or overdue: legal hold, manual purge to fix.",
+    ),
+    _EX_COVERAGE_BY_SYSTEM.what: (
+        "Anteil der je Speichersystem korrekt der Aufbewahrung unterliegenden Ressourcen.",
+        "Share of resources correctly subject to retention per storage system.",
+    ),
+    _EX_COVERAGE_BY_SYSTEM.how: (
+        "Konforme Ressourcen je System, normiert auf das am besten abgedeckte.",
+        "Conformant resources per system, normalized to the best covered.",
+    ),
+    _EX_OPEN_INCIDENTS.what: (
+        "Derzeit offene Konformitaetsvorfaelle (ueberschrittene Kontrolle, nicht erfuellte "
+        "Pflicht).",
+        "Compliance incidents currently open (breached control, unmet obligation).",
+    ),
+    _EX_OPEN_INCIDENTS.source: (
+        "Verzeichnis der Vorfaelle und Ausnahmen.",
+        "Incident and exception register.",
+    ),
+    _EX_APPROVED_EXCEPTIONS.what: (
+        "Foermlich genehmigte Ausnahmen mit Ausgleichsmassnahme und Frist.",
+        "Formally approved exceptions, each with a compensating measure and a deadline.",
+    ),
+    _EX_OVERDUE_EXCEPTIONS.what: (
+        "Ausnahmen, deren Frist ohne Regularisierung verstrichen ist; Risiko der "
+        "Nichtkonformitaet.",
+        "Exceptions whose deadline has passed without regularization; a non-conformity risk.",
+    ),
+    _EX_MISSING_EVIDENCE.what: (
+        "Fuer einen Vorfall oder eine Ausnahme erwartete und noch nicht gelieferte Nachweise.",
+        "Evidence expected for an incident or exception and not yet provided.",
+    ),
+    _EX_INCIDENTS_TABLE.what: (
+        "Liste der Vorfaelle und Ausnahmen mit Typ, Rahmen, ueberschrittener Kontrolle, Signal, "
+        "Owner, Frist und Status.",
+        "List of incidents and exceptions with type, framework, breached control, signal, owner, "
+        "deadline and status.",
+    ),
+    _EX_INCIDENTS_TABLE.how: (
+        "Eine Zeile je Vorfall oder Ausnahme; das Signal gibt den Schweregrad an.",
+        "One row per incident or exception; the signal indicates severity.",
+    ),
+    _EX_INCIDENTS_DETAIL.what: (
+        "Datenblatt der gewaehlten Ausnahme: Grundursache, verknuepfte Pflicht und Kontrolle, "
+        "Nachweis, Frist, Restrisiko, Ausgleichsmassnahme und Genehmigungskette.",
+        "Selected exception's data sheet: root cause, linked obligation and control, evidence, "
+        "deadline, residual risk, compensating measure and approval chain.",
+    ),
+    _EX_EXCEPTIONS_DUE.what: (
+        "Ausnahmen mit naher Frist, die zu regularisieren oder zu erneuern sind.",
+        "Exceptions whose deadline is approaching and that must be regularized or renewed.",
+    ),
+    _EX_EXCEPTIONS_DUE.how: (
+        "Ausnahmen nach Fristnaehe sortiert.",
+        "Exceptions sorted by deadline proximity.",
+    ),
+    _EX_GAP_TRENDS.what: (
+        "Entwicklung der Anzahl von Vorfaellen, Ausnahmen und Loesungen ueber die letzten fuenf "
+        "Zeitraeume.",
+        "Evolution of the number of incidents, exceptions and resolutions over the last five "
+        "periods.",
+    ),
+    _EX_GAP_TRENDS.how: (
+        "Anzahl je Zeitraum, eine Kurve je Reihe (Vorfaelle, Ausnahmen, Loesungen).",
+        "Count per period, one line per series (incidents, exceptions, resolutions).",
+    ),
+    _EX_OWNERS_LOAD.what: (
+        "Relative Last der Verantwortlichen: Anteil der ihnen zugewiesenen offenen Vorfaelle und "
+        "Ausnahmen.",
+        "Relative load of owners: share of open incidents and exceptions assigned to each.",
+    ),
+    _EX_OWNERS_LOAD.how: (
+        "Offene Vorfaelle und Ausnahmen je Owner, normiert auf den am staerksten belasteten.",
+        "Open incidents and exceptions per owner, normalized to the most loaded.",
+    ),
+    _EX_EVAL_CAMPAIGNS.what: (
+        "Anzahl der durchgefuehrten Konformitaets-Evaluationskampagnen ueber die "
+        "Regulierungsrahmen.",
+        "Number of compliance evaluation campaigns run across the regulatory frameworks.",
+    ),
+    _EX_EVAL_CAMPAIGNS.source: (
+        "Konformitaets-Evaluationskampagnen.",
+        "Compliance evaluation campaigns.",
+    ),
+    _EX_CONFORMITY_SCORE.what: (
+        "Anteil der bestandenen bewerteten Kontrollen, gewichtet nach Schweregrad; globale "
+        "Konformitaetsmessung des Bereichs.",
+        "Share of evaluated controls that pass, weighted by severity; the scope's overall "
+        "conformity measure.",
+    ),
+    _EX_CONFORMITY_SCORE.how: (
+        "Gewichtete bestandene Kontrollen geteilt durch die bewerteten Kontrollen der letzten "
+        "Kampagne.",
+        "Weighted passed controls divided by the evaluated controls, over the latest campaign.",
+    ),
+    _EX_CONTROLS_PASSED.what: (
+        "Anzahl der Kontrollen, die ihre letzte Bewertung bestanden haben.",
+        "Number of controls that passed their latest evaluation.",
+    ),
+    _EX_OPEN_GAPS.what: (
+        "Von den Evaluationen erkannte und noch nicht behobene Konformitaetsabweichungen.",
+        "Compliance gaps detected by the evaluations and not yet remediated.",
+    ),
+    _EX_EVIDENCE_REPLAYED.what: (
+        "Anzahl der erneut ausgefuehrten Nachweise, um zu bestaetigen, dass eine Kontrolle "
+        "weiterhin besteht.",
+        "Number of evidence items re-run to confirm a control still passes.",
+    ),
+    _EX_EVAL_TABLE.what: (
+        "Ansicht je Kampagne: Abdeckung, Score, Pflichten, Kontrollen, Signale, Nachweise, Owner "
+        "und Status.",
+        "View per campaign: coverage, score, obligations, controls, signals, evidence, owner and "
+        "status.",
+    ),
+    _EX_EVAL_TABLE.how: (
+        "Eine Zeile je bewertetem Rahmen; der Score gewichtet die bestandenen Kontrollen nach "
+        "Schweregrad.",
+        "One row per evaluated framework; the score weights passed controls by severity.",
+    ),
+    _EX_EVAL_DETAIL.what: (
+        "Datenblatt der gewaehlten Kampagne: Score, bestandene Kontrollen, kritische Fehler, "
+        "erneut ausgefuehrte Nachweise und letzte Ausfuehrung.",
+        "Selected campaign's data sheet: score, passed controls, critical failures, replayed "
+        "evidence and last run.",
+    ),
+    _EX_REMEDIATION_PLAN.what: (
+        "Verteilung der offenen Abweichungen nach Schweregrad (kritisch, hoch, mittel, niedrig), "
+        "im Behebungsplan abzuarbeiten.",
+        "Breakdown of open gaps by severity (critical, high, medium, low), to be worked off in "
+        "the remediation plan.",
+    ),
+    _EX_REMEDIATION_PLAN.how: (
+        "Offene Abweichungen nach Schweregrad gezaehlt; die Summe entspricht den offenen "
+        "Abweichungen.",
+        "Open gaps counted by severity level; the total matches the open gaps.",
+    ),
+    _EX_SCORE_TRENDS.what: (
+        "Entwicklung des Konformitaetsscores je Rahmen ueber die letzten fuenf Kampagnen.",
+        "Evolution of the conformity score per framework over the last five campaigns.",
+    ),
+    _EX_SCORE_TRENDS.how: (
+        "Gewichteter Score je Kampagne, eine Kurve je Rahmen.",
+        "Weighted score per campaign, one line per framework.",
+    ),
+    _EX_DECLINING_FRAMEWORKS.what: (
+        "Rahmen, deren Konformitaetsscore von einer Kampagne zur naechsten zurueckgeht.",
+        "Frameworks whose conformity score declines from one campaign to the next.",
+    ),
+    _EX_DECLINING_FRAMEWORKS.how: (
+        "Rahmen mit negativer Score-Veraenderung, nach Ausmass sortiert.",
+        "Frameworks with a negative score change, sorted by magnitude.",
+    ),
+    _EX_OBLIGATIONS_ACTIVE.what: (
+        "Regulierungspflichten, die derzeit fuer den Bereich gelten und im Verzeichnis gefuehrt "
+        "werden.",
+        "Regulatory obligations currently applicable to the scope and tracked in the register.",
+    ),
+    _EX_COVERAGE_OBLIGATIONS.what: (
+        "Anteil der Pflichten des Bereichs, die durch eine aktive Kontrolle und einen gueltigen "
+        "Nachweis abgedeckt sind.",
+        "Share of the scope's obligations covered by an active control and a valid piece of "
+        "evidence.",
+    ),
+    _EX_COVERAGE_OBLIGATIONS.how: (
+        "Abgedeckte Pflichten (Kontrolle plus Nachweis) geteilt durch die anwendbaren Pflichten.",
+        "Covered obligations (control plus evidence) divided by the applicable obligations.",
+    ),
+    _EX_SIGNALS_PER_EVIDENCE.what: (
+        "Durchschnittliche Anzahl der Ausfuehrungssignale (Traces, Tests, Protokolle), die jedem "
+        "Nachweis zugeordnet sind.",
+        "Average number of execution signals (traces, tests, logs) linked to each piece of "
+        "evidence.",
+    ),
+    _EX_SIGNALS_PER_EVIDENCE.how: (
+        "Summe der verknuepften Signale geteilt durch die Anzahl der Nachweise im Bereich.",
+        "Total linked signals divided by the number of evidence items in the scope.",
+    ),
+    _EX_DEGRADED_CONTROLS.what: (
+        "Kontrollen, deren letztes Ergebnis teilweise oder fehlgeschlagen ist und die eine "
+        "Behebung erfordern.",
+        "Controls whose latest result is partial or failing and that require remediation.",
+    ),
+    _EX_DEGRADED_CONTROLS.how: (
+        "Kontrollen mit Status verschlechtert ueber alle verfolgten Pflichten.",
+        "Controls in degraded status across all tracked obligations.",
+    ),
+    _EX_DEGRADED_CONTROLS.source: (
+        "Regulatorische Zuordnung (Kontrollstatus).",
+        "Regulatory mapping (control status).",
+    ),
+    _EX_OBLIGATIONS_TABLE.what: (
+        "Liste der Pflichten mit Rahmen, Hauptkontrolle, Signalen, Nachweisen, Owner, Status und "
+        "Abdeckung.",
+        "List of obligations with their framework, main control, signals, evidence, owner, status "
+        "and coverage.",
+    ),
+    _EX_OBLIGATIONS_TABLE.how: (
+        "Eine Zeile je verfolgter Pflicht; der Balken zeigt verfuegbare zu erwarteten Nachweisen, "
+        "die Anzeige die Kontrollabdeckung.",
+        "One row per tracked obligation; the bar shows available versus expected evidence, the "
+        "gauge the control coverage.",
+    ),
+    _EX_OBLIGATIONS_DETAIL.what: (
+        "Datenblatt der gewaehlten Pflicht: Rahmen, Hauptkontrolle, zugeordnete Signale und "
+        "Nachweise, Restrisiko, naechste Pruefung und zugeordnete Kontrollen.",
+        "Selected obligation's data sheet: framework, main control, linked signals and evidence, "
+        "residual risk, next review and mapped controls.",
+    ),
+    _EX_OBLIGATIONS_DETAIL.source: (
+        "Regulatorische Zuordnung (Pflicht-Datenblatt).",
+        "Regulatory mapping (obligation data sheet).",
+    ),
+    _EX_CONTROLS_REVIEW.what: (
+        "Kontrollen mit Status teilweise oder mittel, deren Ergebnis erneut zu pruefen ist.",
+        "Controls in partial or medium status whose result must be re-checked.",
+    ),
+    _EX_COVERAGE_GAPS.what: (
+        "Pflichten ohne ausreichende Kontrolle oder ausreichenden Nachweis; zu schliessende "
+        "Konformitaetsluecke.",
+        "Obligations lacking a sufficient control or evidence; a compliance gap to close.",
+    ),
+    _EX_REMEDIATION_DEADLINES.what: (
+        "Behebungsplaene mit Stichtag fuer Kontrollen oder Pflichten mit Abweichung.",
+        "Remediation plans with a due date for controls or obligations in gap.",
+    ),
+    _EX_REMEDIATION_DEADLINES.how: (
+        "Behebungsmassnahmen sortiert nach Fristnaehe.",
+        "Remediation actions sorted by deadline proximity.",
+    ),
+    _EX_EVIDENCE_READINESS.what: (
+        "Anteil der vom Rahmenwerk geforderten Nachweise, die verfuegbar, gueltig und nicht "
+        "abgelaufen sind und somit auf Anfrage eines Pruefers zu einem Evidence-Pack "
+        "zusammengestellt werden koennen.",
+        "Share of the evidence required by the framework that is available, valid and unexpired, "
+        "and therefore ready to be assembled into an evidence pack on an auditor's request.",
+    ),
+    _EX_EVIDENCE_READINESS.how: (
+        "Gueltige, den Pflichten des Bereichs zugeordnete Nachweise geteilt durch die erwarteten "
+        "Nachweise; ein abgelaufener oder fehlender Nachweis senkt die Quote.",
+        "Valid evidence linked to the scope's obligations divided by the expected evidence; an "
+        "expired or missing item lowers the ratio.",
+    ),
+    _EX_AVAILABLE_EVIDENCE.source: ("Nachweisinventar.", "Evidence inventory."),
+    _EX_RECENT_ACTIVITY.what: (
+        "Chronologisches Protokoll der juengsten Governance-Aktionen in diesem Bereich: "
+        "hinzugefuegte Nachweise, aktualisierte Kontrollen, Ausnahmen, Pruefungen.",
+        "Chronological log of the latest governance actions in this scope: evidence added, "
+        "controls updated, exceptions, reviews.",
+    ),
+    _EX_RECENT_ACTIVITY.source: (
+        "Governance-Katalog Konformitaet (Referenzdaten).",
+        "Compliance governance catalogue (reference data).",
+    ),
+    _EX_LINKED_CONTROLS.what: (
+        "Anzahl interner Kontrollen, die einer Pflicht dieses Bereichs zugeordnet sind.",
+        "Number of internal controls linked to an obligation in this scope.",
+    ),
+    _EX_LINKED_CONTROLS.how: (
+        "Eindeutige Pflicht-Kontroll-Verknuepfungen, aggregiert ueber den angezeigten Bereich.",
+        "Unique obligation-control links, aggregated across the displayed scope.",
+    ),
+    _EX_LINKED_CONTROLS.source: (
+        "Regulatorische Zuordnung (Pflichten-Kontrollen).",
+        "Regulatory mapping (obligations-to-controls).",
+    ),
+    _EX_AVAILABLE_EVIDENCE.what: (
+        "Anzahl der verfuegbaren, als Nachweis nutzbaren Belege und Bescheinigungen fuer diesen "
+        "Bereich.",
+        "Number of evidence items and attestations available and usable as evidence for this "
+        "scope.",
+    ),
+    _EX_FRAMEWORKS_ACTIVE.what: (
+        "Anzahl der derzeit in Tessera verfolgten und zugeordneten Regulierungsrahmen "
+        "(EU AI Act, DSGVO, DORA, ISO, SOC 2, interne Richtlinien).",
+        "Number of regulatory frameworks currently tracked and mapped in Tessera "
+        "(EU AI Act, GDPR, DORA, ISO, SOC 2, internal policies).",
+    ),
+    _EX_FRAMEWORKS_ACTIVE.how: (
+        "Rahmen mit Status aktiv in der Zuordnung; ein reiner Beobachtungsrahmen zaehlt nicht.",
+        "Frameworks with active status in the mapping; a watch-list-only framework is not counted.",
+    ),
+    _EX_FRAMEWORKS_ACTIVE.source: (
+        "Regulatorische Zuordnung (Rahmenverzeichnis).",
+        "Regulatory mapping (framework register).",
+    ),
+    _EX_OBLIGATIONS_MAPPED.what: (
+        "Anzahl der Regulierungspflichten, die mindestens einer internen Kontrolle zugeordnet "
+        "sind.",
+        "Number of regulatory obligations linked to at least one internal control.",
+    ),
+    _EX_OBLIGATIONS_MAPPED.how: (
+        "Summe der zugeordneten Pflichten ueber alle aktiven Rahmenwerke.",
+        "Sum of mapped obligations across all active frameworks.",
+    ),
+    _EX_OBLIGATIONS_AT_RISK.what: (
+        "Pflichten mit unzureichender Kontroll- oder Nachweisabdeckung oder mit naher Frist.",
+        "Obligations with insufficient control or evidence coverage, or with an approaching "
+        "deadline.",
+    ),
+    _EX_OBLIGATIONS_AT_RISK.how: (
+        "Pflichten mit Status teilweise oder nicht konform oder mit naher Frist, einmal gezaehlt.",
+        "Obligations that are partial or non-conformant, or due soon, counted once.",
+    ),
+    _EX_OBLIGATIONS_AT_RISK.source: (
+        "Regulatorische Zuordnung (Pflichtenstatus).",
+        "Regulatory mapping (obligation status).",
+    ),
+    _EX_MAPPING_TABLE.what: (
+        "Ansicht je Regulierungsrahmen: zugeordnete Pflichten, Kontrollen, Signale und Nachweise "
+        "mit Owner und Konformitaetsstatus.",
+        "View per regulatory framework: linked obligations, controls, signals and evidence, with "
+        "owner and conformity status.",
+    ),
+    _EX_MAPPING_TABLE.how: (
+        "Eine Zeile je aktivem Rahmenwerk; die Zaehler aggregieren zugeordnete Pflichten und "
+        "Kontrollen, der Balken zeigt verfuegbare zu erwarteten Nachweisen.",
+        "One row per active framework; counters aggregate mapped obligations and controls, the "
+        "bar shows available versus expected evidence.",
+    ),
+    _EX_MAPPING_TABLE.source: (
+        "Regulatorische Zuordnung (Pflichten-Kontroll-Verzeichnis).",
+        "Regulatory mapping (obligations-controls register).",
+    ),
+    _EX_MAPPING_DETAIL.what: (
+        "Datenblatt des gewaehlten Rahmens: geltende Artikel, zugeordnete Pflichten und "
+        "Kontrollen, verfuegbare Nachweise, Restrisiko und naechste Pruefung.",
+        "Selected framework's data sheet: applicable articles, mapped obligations and controls, "
+        "available evidence, residual risk and next review.",
+    ),
+    _EX_MAPPING_DETAIL.source: (
+        "Regulatorische Zuordnung (Rahmen-Datenblatt).",
+        "Regulatory mapping (framework data sheet).",
+    ),
+    _EX_FRAMEWORKS_WATCH.what: (
+        "Aufkommende oder kuenftige Regelwerke, die demnaechst in die Zuordnung aufzunehmen sind "
+        "(NIS2, Data Act, KI-Haftungsrichtlinie).",
+        "Emerging or upcoming frameworks to add to the mapping soon (NIS2, Data Act, AI Liability "
+        "Directive).",
+    ),
+    _EX_FRAMEWORKS_WATCH.how: (
+        "Rahmen im Beobachtungsstatus mit geschaetztem Quartal der Anwendbarkeit.",
+        "Watch-list frameworks with their estimated quarter of applicability.",
+    ),
+    _EX_FRAMEWORKS_WATCH.source: ("Regulatorische Beobachtung.", "Regulatory watch."),
+    _EX_REG_DEADLINES.what: (
+        "Naechste durch die Rahmenwerke vorgegebene Fristen: Jahresberichte, Resilienztests, "
+        "Aktualisierungen des Verzeichnisses.",
+        "Next deadlines imposed by the frameworks: annual reports, resilience tests, register "
+        "updates.",
+    ),
+    _EX_REG_DEADLINES.how: (
+        "Pflichten mit Stichtag, sortiert nach Fristnaehe.",
+        "Obligations with a due date, sorted by deadline proximity.",
+    ),
+    _EX_REG_DEADLINES.source: (
+        "Regulatorische Zuordnung (Fristen).",
+        "Regulatory mapping (deadlines).",
+    ),
+}
+_TR.update({k: v for k, v in _EX_TR.items() if k is not None})
 
 
 def _localize(value: object, idx: int) -> object:

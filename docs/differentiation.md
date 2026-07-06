@@ -52,13 +52,28 @@ semantics:
 
 ## Citations
 
-References stated as fact are verified against their source:
+References stated as fact are verified against their source (last check:
+2026-07-04):
 
 - Greshake et al., "Not what you've signed up for: Compromising Real-World
   LLM-Integrated Applications with Indirect Prompt Injection", arXiv:2302.12173
-  (2023). Used by `eval/failures/01_prompt_injection.json`.
-- OWASP LLM Top 10 (2024), "LLM06: Sensitive Information Disclosure". Used by
-  `eval/failures/02_pii_leak.json`.
+  (2023). Verified on arxiv.org (title, first author, year, topic). Used by
+  `eval/failures/01_prompt_injection.json`.
+- OWASP Top 10 for LLM Applications v1.1 (2023/2024), "LLM06: Sensitive
+  Information Disclosure". Verified on owasp.org; note the 2025 revision
+  renumbers this entry LLM02 (some newer failure cases cite it as such). Used
+  by `eval/failures/02_pii_leak.json`.
+- Regulation (EU) 2022/2554 (DORA) — scope (art. 2(1): "credit institutions"
+  verified verbatim), incident reporting (art. 19(4)), entry into force and
+  application from 17 January 2025 (art. 64; official EUR-Lex summary).
+  Verified on EUR-Lex (CELEX:32022R2554). Used by
+  `src/tessera/corpus/data/regulations_dora.json` and the router's grounded
+  DORA corrections.
+- Commission Delegated Regulation (EU) 2025/301 — major-incident reporting
+  time limits (initial ≤ 4 h from classification / ≤ 24 h from awareness,
+  intermediate ≤ 72 h, final ≤ 1 month). Verified on EUR-Lex
+  (CELEX:32025R0301, art. 5). Used by the `DORA/art-19` corpus document and
+  `policy_dora_incident_deadline`.
 
 ## Competitive moats
 
@@ -77,10 +92,12 @@ assembly, not from any single component:
    on Apple Silicon via Ollama. Both sit behind one `ChatBackend` Protocol, so
    the same agent code serves both — a deployed system with a data-residency
    story, not a demo notebook.
-3. **A forty-case non-regression harness over documented real-world failures.**
+3. **A 63-case non-regression harness over documented real-world failures.**
    Ten categories, three languages, machine-checked pass criteria, replayed
-   against the live graph on every push, gating merges. This turns "we tested
-   it" into a continuously-enforced contract.
+   against the live graph nightly in CI and per agent on demand, with a
+   two-level release gate (non-derogable security floor + per-agent domain
+   threshold, waivers governed and currently zero). This turns "we tested it"
+   into a continuously-enforced contract.
 4. **Transparent test reporting.** The README documents the tests that pass *and*
    the tests that fail, with root causes. The evaluation contract is enforced in
    CI on every push, which keeps the assembly honest and current.

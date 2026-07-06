@@ -75,9 +75,7 @@ def evaluate_gate(
     Returns:
         A :class:`GateVerdict`. An empty run never passes.
     """
-    failed_critical = tuple(
-        sorted({cid for cid, ok in results if cid in critical_ids and not ok})
-    )
+    failed_critical = tuple(sorted({cid for cid, ok in results if cid in critical_ids and not ok}))
     critical_ok = not failed_critical
 
     standard = [(cid, ok) for cid, ok in results if cid not in critical_ids]

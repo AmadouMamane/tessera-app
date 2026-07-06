@@ -48,9 +48,7 @@ async def _categories_for(query_vec: list[float]) -> set[str]:
     hits = []
     for corpus in _CORPORA:
         hits.extend(
-            await knn_search(
-                query_embedding=query_vec, corpus=corpus, language=None, top_k=_TOP_K
-            )
+            await knn_search(query_embedding=query_vec, corpus=corpus, language=None, top_k=_TOP_K)
         )
     cats: set[str] = set()
     for hit in hits:

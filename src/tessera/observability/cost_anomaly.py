@@ -92,9 +92,7 @@ def analyze_costs(turns: Iterable[tuple[str, str]]) -> CostReport:
     for question, tokens in rows:
         is_anomaly = n_turns >= _MIN_TURNS_FOR_ANOMALY and threshold > 0 and tokens > threshold
         if is_anomaly:
-            anomalies.append(
-                TurnCost(question=question[:_SNIPPET], tokens=tokens, anomaly=True)
-            )
+            anomalies.append(TurnCost(question=question[:_SNIPPET], tokens=tokens, anomaly=True))
 
     return CostReport(
         n_turns=n_turns,

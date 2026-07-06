@@ -21,7 +21,13 @@ from typing import TYPE_CHECKING, Final
 from psycopg import sql
 from psycopg.rows import dict_row
 
-from tessera.memory.entities import extract_from_messages, ledger_from_json, ledger_to_json
+from tessera.guard.redaction import mask_pan
+from tessera.memory.entities import (
+    extract_from_messages,
+    ledger_from_json,
+    ledger_to_json,
+    mask_ledger_pans,
+)
 from tessera.memory.protocol import EntityLedger, MemoryContext
 from tessera.memory.window import WindowBackend
 from tessera.retrieval.store import get_pool
@@ -96,7 +102,24 @@ async def load_summary(conversation_id: UUID) -> tuple[str | None, EntityLedger]
 
 
 async def save_summary(conversation_id: UUID, summary: str | None, entities: EntityLedger) -> None:
-    """Upsert the summary and entity ledger for a conversation."""
+    """Upsert the summary and entity ledger for a conversation.
+
+    Defence-in-depth backstop (docs/design/pii-input-redaction.md §4.2): the
+    ``conversation_memory`` table structurally never holds a Luhn-valid card
+    number. The summariser already receives masked text, so a changed summary
+    here means a missed seam and is logged; the entity-ledger screening is the
+    *designed* seam (extract raw, store masked) and stays silent. Fail-safe:
+    the write always proceeds, with the masked text.
+    """
+    if summary is not None:
+        masked_summary = mask_pan(summary)
+        if masked_summary.changed:
+            sys.stderr.write(
+                "tessera.memory.summary: missed seam — PAN masked in summary at persistence "
+                f"(conversation {conversation_id})\n"
+            )
+            summary = masked_summary.text
+    entities = mask_ledger_pans(entities)
     query = sql.SQL(
         """
         INSERT INTO {table} (conversation_id, summary, entities, updated_at)
@@ -177,6 +200,10 @@ class SummaryBackend(WindowBackend):
         # Bound the model input by the configured budget (cheap guard).
         if budget and len(older_text) > budget:
             older_text = older_text[-budget:]
+        # Input-leg PAN mask (pii-input-redaction, cold-path model call): the
+        # entity extraction above ran on the raw text — the summariser LLM
+        # only ever sees the masked form.
+        older_text = mask_pan(older_text).text
         summary = await self._summarise(older_text, scope.language)
         await save_summary(scope.conversation_id, summary, entities)
 

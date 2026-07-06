@@ -33,7 +33,10 @@ class _LangBackend:
     ) -> ChatResponse:
         self._i += 1
         return ChatResponse(
-            content=f"answer {self._i}", model=self.model, input_tokens=1, output_tokens=1,
+            content=f"answer {self._i}",
+            model=self.model,
+            input_tokens=1,
+            output_tokens=1,
             finish_reason="stop",
         )
 

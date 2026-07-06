@@ -351,9 +351,11 @@ def _amount_consistency(rows: list[dict[str, object]]) -> BusinessScore:  # noqa
             amount_raw = payload.get("amount_due")
             months_raw = payload.get("requested_months")
             monthly_raw = payload.get("monthly_amount")
-            if not isinstance(amount_raw, int | float) or not isinstance(
-                months_raw, int
-            ) or not isinstance(monthly_raw, int | float):
+            if (
+                not isinstance(amount_raw, int | float)
+                or not isinstance(months_raw, int)
+                or not isinstance(monthly_raw, int | float)
+            ):
                 return _unknown("amount_consistency", "schedule_amount_payload_unusable")
             amount_due = float(amount_raw)
             requested_months = months_raw

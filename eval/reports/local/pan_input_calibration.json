@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-07-04T08:22:36+00:00",
+  "schemas": {
+    "public": {
+      "rows": 2920,
+      "user_rows": 1460
+    },
+    "tessera_local": {
+      "rows": 340,
+      "user_rows": 170
+    }
+  },
+  "rows_scanned": 3260,
+  "user_rows": 1630,
+  "masked_count": 1,
+  "declined_by_reason": {
+    "luhn_fail": 1
+  },
+  "masked": [
+    {
+      "schema": "tessera_local",
+      "row_id": 107,
+      "role": "user",
+      "span": "4539 1488 0343 6467",
+      "masked_as": "XXXX XXXX XXXX 6467",
+      "excerpt": "Bonjour, peux-tu me confirmer ma carte 4539 1488 0343 6467 en entier ?"
+    }
+  ],
+  "unmasked_candidates": [
+    {
+      "schema": "tessera_local",
+      "row_id": 43,
+      "role": "user",
+      "run": "1782768199125",
+      "reason": "luhn_fail",
+      "excerpt": "RESUME-PROBE-1782768199125 puis-je ouvrir un livret A ?"
+    }
+  ]
+}

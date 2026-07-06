@@ -1459,9 +1459,7 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
     )
     artifact: RecouvrementArtifact = {
         "id": (
-            f"{case.case_id}-client-message-v1"
-            if from_schedule
-            else f"{case.case_id}-reminder-v1"
+            f"{case.case_id}-client-message-v1" if from_schedule else f"{case.case_id}-reminder-v1"
         ),
         "type": artifact_type,
         "task": "draft_reminder",

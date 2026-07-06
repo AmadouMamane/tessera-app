@@ -129,8 +129,7 @@ def compute_assistant_overview(lang: str = "fr") -> dict[str, object]:
                 lang,
                 "augmentation de la surface d'exposition en cas de fuite ou de "
                 "compromission des conversations.",
-                "groessere Angriffsflaeche bei Leck oder Kompromittierung der "
-                "Konversationen.",
+                "groessere Angriffsflaeche bei Leck oder Kompromittierung der " "Konversationen.",
                 "a larger exposure surface in case of leakage or compromise of the "
                 "conversations.",
             ),
@@ -179,8 +178,7 @@ def compute_assistant_overview(lang: str = "fr") -> dict[str, object]:
                 "rétention des conversations utilisateur sont :",
                 "Die wichtigsten DSGVO-Konformitaetsrisiken bei der Aufbewahrung der "
                 "Nutzerkonversationen sind:",
-                "The main GDPR non-compliance risks tied to retaining user "
-                "conversations are:",
+                "The main GDPR non-compliance risks tied to retaining user " "conversations are:",
             ),
             "points": answer_points,
             "outro": _loc(

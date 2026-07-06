@@ -26,8 +26,9 @@ from typing import TYPE_CHECKING, Any, Final
 from psycopg import sql
 from psycopg.rows import dict_row
 
+from tessera.guard.redaction import mask_pan
 from tessera.memory import governance
-from tessera.memory.entities import ledger_from_json, ledger_to_json
+from tessera.memory.entities import ledger_from_json, ledger_to_json, mask_ledger_pans
 from tessera.memory.protocol import EntityLedger, MemoryContext, MemoryItem
 from tessera.memory.summary import SummaryBackend
 from tessera.retrieval import embeddings
@@ -114,7 +115,22 @@ async def upsert_memory(
     De-duplication keeps the store from filling with paraphrases of the same
     fact: if the most similar existing memory of the same kind is within
     :data:`_DEDUP_THRESHOLD`, that row is refreshed instead of a new one added.
+
+    Defence-in-depth backstop (docs/design/pii-input-redaction.md §4.2):
+    ``long_term_memory`` structurally never holds a Luhn-valid card number.
+    ``governance.screen_memory`` already minimises reflector candidates
+    upstream (its broader, non-Luhn card mask); this seam holds the invariant
+    for every other caller, and masks *before* embedding so the stored vector
+    matches the stored text. Fail-safe: the write always proceeds.
     """
+    masked_text = mask_pan(text)
+    if masked_text.changed:
+        sys.stderr.write(
+            f"tessera.memory.persistent: missed seam — PAN masked at persistence "
+            f"(subject {subject_id}, kind {kind})\n"
+        )
+        text = masked_text.text
+    entities = mask_ledger_pans(entities)
     embedding = (await embeddings.embed([text]))[0]
     expires_at = datetime.now(UTC) + governance.ttl_for(kind)
     nearest = sql.SQL(

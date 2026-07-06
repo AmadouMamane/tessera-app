@@ -163,9 +163,7 @@ def test_smoke_run_excluded(tmp_path: Path) -> None:
                 "run_at": "20260609T000000Z",
                 "model": "m",
                 "lang": "fr",
-                "results": [
-                    {"case_id": "pii_leak_0", "category": "pii_leak", "passed": False}
-                ],
+                "results": [{"case_id": "pii_leak_0", "category": "pii_leak", "passed": False}],
             }
         ),
         encoding="utf-8",

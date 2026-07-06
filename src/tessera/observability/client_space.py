@@ -119,8 +119,7 @@ _REQ_TR: dict[str, dict[str, tuple[str, str, str]]] = {
             "Procédure de remboursement SEPA en cours d'ouverture.",
             "Anfechtung einer nicht erkannten Lastschrift von 49,90 EUR. "
             "SEPA-Rueckerstattungsverfahren wird eroeffnet.",
-            "Dispute of an unrecognized 49.90 EUR debit. "
-            "SEPA refund procedure being opened.",
+            "Dispute of an unrecognized 49.90 EUR debit. " "SEPA refund procedure being opened.",
         ),
     },
     "TS-A07B33E6F4": {
@@ -134,8 +133,7 @@ _REQ_TR: dict[str, dict[str, tuple[str, str, str]]] = {
             "accordé pour un déplacement à l'étranger.",
             "Voruebergehende Erhoehung des Abhebungslimits auf 1.500 EUR / Woche "
             "fuer eine Auslandsreise gewaehrt.",
-            "Temporary withdrawal-limit increase to EUR 1,500 / week granted for "
-            "a trip abroad.",
+            "Temporary withdrawal-limit increase to EUR 1,500 / week granted for " "a trip abroad.",
         ),
     },
     "TS-9D4C71B0E8": {
@@ -163,10 +161,8 @@ _ALERT_TR: dict[str, dict[str, tuple[str, str, str]]] = {
         "body": (
             "Votre relevé du Compte Courant Aurore de mai 2026 est disponible "
             "dans vos documents.",
-            "Ihr Aurore-Girokontoauszug fuer Mai 2026 ist in Ihren Dokumenten "
-            "verfuegbar.",
-            "Your Aurore current-account statement for May 2026 is available in "
-            "your documents.",
+            "Ihr Aurore-Girokontoauszug fuer Mai 2026 ist in Ihren Dokumenten " "verfuegbar.",
+            "Your Aurore current-account statement for May 2026 is available in " "your documents.",
         ),
     },
     "AL-1002": {
@@ -203,8 +199,7 @@ _ALERT_TR: dict[str, dict[str, tuple[str, str, str]]] = {
             "de la carte Visa Premier.",
             "Sie haben 1.820 EUR Ihres monatlichen Limits von 2.000 EUR der "
             "Visa-Premier-Karte verwendet.",
-            "You have used EUR 1,820 of your EUR 2,000 monthly limit on the "
-            "Visa Premier card.",
+            "You have used EUR 1,820 of your EUR 2,000 monthly limit on the " "Visa Premier card.",
         ),
     },
     "AL-1005": {
@@ -232,6 +227,7 @@ def _req_t(ref: str, field_key: str, lang: str) -> str:
 
 def _alert_t(alert_id: str, field_key: str, lang: str) -> str:
     return _ALERT_TR[alert_id][field_key][_LANG_IDX.get(lang, 0)]
+
 
 # ── document taxonomy ────────────────────────────────────────────────────────
 

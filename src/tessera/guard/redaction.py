@@ -22,6 +22,12 @@ The policy's broad IBAN shape can graze prose (any ``LLdd`` token followed by
 alphanumerics and spaces). A hit that classifies as none of the known kinds is
 masked outright only when digit-heavy (data-shaped, e.g. a lowercase IBAN) and
 left untouched otherwise, so ordinary sentences never get mangled.
+
+This module also hosts the **input leg**'s single primitive, :func:`mask_pan`
+(docs/design/pii-input-redaction.md): Luhn-gated, IBAN-context-aware masking of
+card numbers in user-originated text before it reaches the model context or the
+durable stores. Same mask form, much stricter gating — it rewrites what the
+user said, so false positives are the failure mode it is built against.
 """
 
 from __future__ import annotations
@@ -45,6 +51,7 @@ __all__ = [
     "apply_output_guard",
     "contains_pii",
     "emit_output_redaction",
+    "mask_pan",
     "redact_text",
     "redaction_notice",
 ]
@@ -152,6 +159,116 @@ def contains_pii(text: str, *, policy: Policy | None = None) -> bool:
         for pattern in active_policy.pii_patterns
         for match in pattern.finditer(text)
     )
+
+
+# ---------------------------------------------------------------------------
+# Input-side PAN masking (docs/design/pii-input-redaction.md, Option A)
+# ---------------------------------------------------------------------------
+
+# A card-shaped digit run: 13-19 digits with at most one space / NBSP / dot /
+# dash between digits. The lookarounds keep it off longer alphanumeric runs (a
+# 20+ digit sequence is never a PAN), off '+'-prefixed international phone
+# numbers, and off decimal amounts (a ",45" / ".45" tail marks money).
+_PAN_INPUT_CANDIDATE: Final = re.compile(
+    r"(?<![A-Za-z0-9+])\d(?:[ \u00a0.-]?\d){12,18}(?![A-Za-z0-9]|[.,]\d)"
+)
+# The immediate left context that marks a digit run as an IBAN *body*: the
+# 2-letter country + 2 check digits head (FR76 ...), optionally followed by a
+# 4-letter bank code (GB29 NWBK ...). Broad on purpose: corrupting any IBAN is
+# worse than leaving a PAN clear next to an IBAN-shaped token (declared
+# residual, design note §4).
+_IBAN_HEAD_BEFORE: Final = re.compile(
+    r"(?:^|[^A-Za-z0-9])[A-Za-z]{2}\d{2}[ \u00a0.-]*(?:[A-Za-z]{4}[ \u00a0.-]*)?$"
+)
+# How far back an IBAN head can sit from its body run (head + bank code + separators).
+_IBAN_HEAD_WINDOW: Final = 16
+# First group separator inside a declined candidate — the retry point, so a
+# leading date / list number merged into the run cannot shadow a real PAN.
+_PAN_GROUP_BREAK: Final = re.compile(r"[ \u00a0.-]+")
+
+
+# Luhn: a doubled digit above nine folds back to a single digit (16 → 7).
+_LUHN_FOLD: Final = 9
+
+
+def _luhn_valid(digits: str) -> bool:
+    """ISO/IEC 7812 Luhn checksum over a digit-only string."""
+    total = 0
+    for index, char in enumerate(reversed(digits)):
+        digit = int(char)
+        if index % 2 == 1:
+            digit *= 2
+            if digit > _LUHN_FOLD:
+                digit -= _LUHN_FOLD
+        total += digit
+    return total % 10 == 0
+
+
+def _iban_context(text: str, start: int) -> bool:
+    """True when the digit run at ``start`` reads as the body of an IBAN."""
+    window_start = max(0, start - _IBAN_HEAD_WINDOW)
+    return _IBAN_HEAD_BEFORE.search(text, window_start, start) is not None
+
+
+def mask_pan(text: str) -> RedactedText:
+    """Mask Luhn-valid card numbers in *input-side* text, keeping the last four.
+
+    The input leg of the PII guard (docs/design/pii-input-redaction.md): unlike
+    :func:`redact_text` — the output leg, policy-pattern driven and deliberately
+    broad — this primitive rewrites what the *user* said, so it is gated hard
+    against false positives:
+
+    * only 13-19 digit runs (single space/NBSP/dot/dash separators) qualify;
+    * the run must pass the Luhn checksum, which kills ~90 % of coincidental
+      digit runs (order/ticket references, long account numbers);
+    * a run in IBAN context (an ``FR76``-style head, optional 4-letter bank
+      code, immediately before it) is never touched — IBANs are operationally
+      needed and out of PCI display scope on the input side;
+    * ``+``-prefixed and leading-zero runs are phone numbers or padded
+      references, never PANs (no card IIN starts with 0).
+
+    A declined candidate is re-scanned from its next digit group, so a date or
+    list number merged into the run cannot shadow a real PAN behind it. The
+    masked form is the output leg's PAN form (``XXXX XXXX XXXX 6467``), which
+    carries no 13-19 digit run — the function is idempotent by construction
+    (asserted in the unit suite). A Luhn-INVALID card-shaped run (customer
+    typo) is deliberately NOT masked: declared residual, design note §4.
+
+    This is the single primitive every input-leg seam calls (context assembly,
+    transcript/memory persistence backstops, entity-ledger screening, online
+    eval); no seam re-implements detection.
+    """
+    if not text or not any(char.isdigit() for char in text):
+        return RedactedText(text=text, redactions=())
+    parts: list[str] = []
+    redactions: list[str] = []
+    pos = 0
+    while True:
+        match = _PAN_INPUT_CANDIDATE.search(text, pos)
+        if match is None:
+            parts.append(text[pos:])
+            break
+        start, end = match.span()
+        raw = match.group(0)
+        if _iban_context(text, start):
+            # Never rewrite inside an IBAN — skip the whole body run.
+            parts.append(text[pos:end])
+            pos = end
+            continue
+        digits = _NON_DIGIT.sub("", raw)
+        if digits.startswith("0") or not _luhn_valid(digits):
+            # Not a PAN — retry from the candidate's next digit group.
+            group_break = _PAN_GROUP_BREAK.search(raw)
+            retry_at = start + group_break.end() if group_break else end
+            parts.append(text[pos:retry_at])
+            pos = retry_at
+            continue
+        replacement = f"{_MASK} {_MASK} {_MASK} {digits[-4:]}"
+        redactions.append(f"pan={replacement}")
+        parts.append(text[pos:start])
+        parts.append(replacement)
+        pos = end
+    return RedactedText(text="".join(parts), redactions=tuple(redactions))
 
 
 def redaction_notice(language: LanguageCode) -> str:

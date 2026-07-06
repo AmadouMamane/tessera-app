@@ -328,9 +328,10 @@ def test_recouvrement_graph_explains_payment_options_without_payment_effects(
     assert content["no_schedule_created"] is True
     assert content["no_external_effect"] is True
     assert content["validation_required"] is True
-    assert "Options à confirmer selon les moyens disponibles dans le dossier." in content[
-        "eligibilityNotes"
-    ]
+    assert (
+        "Options à confirmer selon les moyens disponibles dans le dossier."
+        in content["eligibilityNotes"]
+    )
     assert output["cardUpdates"]["paymentOptions"] == [
         "Paiement total : option à confirmer selon les moyens disponibles dans le dossier.",
         "Paiement partiel : montant et modalités à confirmer avant toute proposition.",
@@ -421,12 +422,18 @@ def test_recouvrement_graph_proposes_schedule_with_backend_observability(
         "action.prepared",
         "message.generated",
     ]
-    assert next(row for row in rows if row["event_name"] == "business_rule.checked")[
-        "payload"
-    ]["rule_id"] == "SCHEDULE_VALIDATION"
-    assert next(row for row in rows if row["event_name"] == "action.prepared")["payload"][
-        "action_name"
-    ] == "prepare_schedule_proposal"
+    assert (
+        next(row for row in rows if row["event_name"] == "business_rule.checked")["payload"][
+            "rule_id"
+        ]
+        == "SCHEDULE_VALIDATION"
+    )
+    assert (
+        next(row for row in rows if row["event_name"] == "action.prepared")["payload"][
+            "action_name"
+        ]
+        == "prepare_schedule_proposal"
+    )
     scores = {row["metric"]: row for row in output["businessScores"]}
     assert scores["validation_required_compliance"]["score"] == 1.0
     assert scores["artifact_governance"]["score"] == 1.0
@@ -737,9 +744,10 @@ def test_recouvrement_action_prepares_insertion_without_new_draft(
     assert output["artifact"]["id"] == draft["artifact"]["id"]
     assert output["artifact"]["type"] == "reminder_draft_v1"
     assert output["artifact"]["status"] == "insertion_prepared"
-    assert output["artifact"]["content"]["message_client"] == draft["artifact"]["content"][
-        "message_client"
-    ]
+    assert (
+        output["artifact"]["content"]["message_client"]
+        == draft["artifact"]["content"]["message_client"]
+    )
     assert output["artifact"]["content"]["insertion_executed"] is False
     assert output["artifact"]["content"]["case_write_executed"] is False
     assert output["artifact"]["content"]["message_sent"] is False
@@ -753,8 +761,7 @@ def test_recouvrement_action_prepares_insertion_without_new_draft(
         for row in output["businessEvents"]
     )
     assert not any(
-        row["event_name"] == "artifact.created"
-        and row["artifact_type"] == "reminder_draft_v1"
+        row["event_name"] == "artifact.created" and row["artifact_type"] == "reminder_draft_v1"
         for row in output["businessEvents"]
     )
     assert "Aucun nouveau brouillon généré" in output["cardUpdates"]["complianceChecks"]
@@ -1188,8 +1195,7 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
     assert runs["turn-contact-blocked"]["agent_id"] == RECOUVREMENT_AGENT_ID
     assert runs["turn-contact-blocked"]["workflow_id"] == RECOUVREMENT_WORKFLOW_ID
     assert any(
-        decision["decision"] == "blocked"
-        and "OUTSIDE_CONTACT_WINDOW" in decision["reason_codes"]
+        decision["decision"] == "blocked" and "OUTSIDE_CONTACT_WINDOW" in decision["reason_codes"]
         for decision in runs["turn-contact-blocked"]["decisions"]
     )
 

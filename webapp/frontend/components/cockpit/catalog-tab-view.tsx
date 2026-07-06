@@ -2,6 +2,7 @@
 
 import { type ReactNode, useState } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import type {
   SectionItem,
   TabColumn,
   TabDetail,
+  TabExplain,
   TabKpi,
   TabRow,
   TabSection,
@@ -48,6 +50,29 @@ function kpiTone(v: string | null | undefined): string {
   }
 }
 
+/** ⓘ MetricInfo bound to a tab payload's optional `explain` block (grounded,
+ * localized server-side). Renders nothing when the backend omits `explain`. */
+function ExplainInfo({
+  title,
+  explain,
+  className,
+}: {
+  title: string;
+  explain?: TabExplain | null;
+  className?: string;
+}) {
+  if (!explain) return null;
+  return (
+    <MetricInfo
+      title={title}
+      what={explain.what}
+      how={explain.how ?? undefined}
+      source={explain.source ?? undefined}
+      className={className}
+    />
+  );
+}
+
 function Initials({ name }: { name: string }) {
   const ini = name
     .split(" ")
@@ -69,7 +94,10 @@ function KpiTile({ k }: { k: TabKpi }) {
   const good = k.delta_good ?? true;
   return (
     <Card className="flex h-[92px] flex-col gap-0.5 p-3">
-      <div className="truncate text-[0.7rem] text-[var(--muted-foreground)]">{k.label}</div>
+      <div className="flex items-center gap-1 text-[0.7rem] text-[var(--muted-foreground)]">
+        <span className="truncate">{k.label}</span>
+        <ExplainInfo title={k.label} explain={k.explain} className="ml-auto" />
+      </div>
       <div className={`text-2xl font-semibold tabular-nums ${kpiTone(k.tone)}`}>
         {k.value}
         {k.unit ? (
@@ -176,12 +204,14 @@ function Cell({ col, cells }: { col: TabColumn; cells: Record<string, unknown> }
 
 function TablePanel({
   title,
+  explain,
   columns,
   rows,
   selected,
   onSelect,
 }: {
   title: string;
+  explain?: TabExplain | null;
   columns: TabColumn[];
   rows: TabRow[];
   selected: string;
@@ -190,7 +220,10 @@ function TablePanel({
   return (
     <Card className="flex min-w-0 flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="text-[0.82rem] font-medium">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-[0.82rem] font-medium">
+          {title}
+          <ExplainInfo title={title} explain={explain} />
+        </CardTitle>
       </CardHeader>
       <CardContent className="min-w-0 overflow-x-auto">
         <table className="w-full text-[0.72rem]">
@@ -244,7 +277,10 @@ function DetailPanel({ detail, cta }: { detail: TabDetail; cta: string }) {
           {detail.eyebrow}
         </div>
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm">{detail.title}</CardTitle>
+          <CardTitle className="flex items-center gap-1.5 text-sm">
+            {detail.title}
+            <ExplainInfo title={detail.title} explain={detail.explain} />
+          </CardTitle>
           {detail.status_label ? (
             <Badge tone={tone(detail.status_tone)}>{detail.status_label}</Badge>
           ) : null}
@@ -515,7 +551,10 @@ function Section({ s }: { s: TabSection }) {
   return (
     <Card className="flex min-w-0 flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="text-[0.78rem] font-medium">{s.title}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-[0.78rem] font-medium">
+          {s.title}
+          <ExplainInfo title={s.title} explain={s.explain} />
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col justify-between gap-2">
         {body}
@@ -554,6 +593,7 @@ export function CatalogTabView({ tab, footer }: { tab: CatalogTab; footer?: Reac
         <div className="flex min-w-0 flex-col gap-2">
           <TablePanel
             title={tab.table_title}
+            explain={tab.table_explain}
             columns={tab.columns}
             rows={tab.rows}
             selected={selected}

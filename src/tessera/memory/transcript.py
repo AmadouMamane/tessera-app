@@ -23,6 +23,7 @@ commits (it never assumes autocommit).
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -31,6 +32,7 @@ from psycopg.rows import dict_row
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.agent.state import ConversationMessage
+from tessera.guard.redaction import mask_pan
 from tessera.retrieval.store import get_pool
 
 if TYPE_CHECKING:
@@ -246,10 +248,25 @@ async def append_messages(
     defaults to the single agent until the supervisor (Phase 2) routes.
     ``latency_ms`` is the measured end-to-end turn latency; it is stored on the
     assistant row so the Synthèse latency KPI can be derived per agent.
+
+    Defence-in-depth backstop (docs/design/pii-input-redaction.md §4.2): the
+    durable transcript structurally never holds a Luhn-valid card number.
+    Callers mask upstream; if a clear PAN still reaches this seam it is masked
+    here and the missed seam is logged — fail-safe (store masked), never
+    fail-closed (the write always proceeds).
     """
     persisted = [m for m in messages if m.role in _PERSISTED_ROLES]
     if not persisted:
         return
+    contents: list[str] = []
+    for message in persisted:
+        masked = mask_pan(message.content)
+        if masked.changed:
+            sys.stderr.write(
+                "tessera.memory.transcript: missed seam — PAN masked at persistence "
+                f"(conversation {conversation_id}, role {message.role})\n"
+            )
+        contents.append(masked.text)
     insert = sql.SQL(
         """
         INSERT INTO {table}
@@ -264,11 +281,11 @@ async def append_messages(
             seq,
             agent_id,
             m.role,
-            m.content,
+            content,
             m.name,
             latency_ms if m.role == "assistant" else None,
         )
-        for seq, m in enumerate(persisted)
+        for seq, (m, content) in enumerate(zip(persisted, contents, strict=True))
     ]
     pool = get_pool()
     if pool.closed:

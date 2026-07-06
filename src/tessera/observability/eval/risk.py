@@ -121,9 +121,7 @@ def compute_regression_risk(
     regression_rate = (n_reg / compared) if compared else None
 
     # Each component is a real signal mapped onto 0..1.
-    score_component = (
-        _clamp01(-series.delta / _SATURATION) if series.delta is not None else 0.0
-    )
+    score_component = _clamp01(-series.delta / _SATURATION) if series.delta is not None else 0.0
     drift_component = (
         _clamp01(drift.divergence / _SATURATION) if drift.divergence is not None else 0.0
     )

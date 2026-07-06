@@ -60,6 +60,7 @@ _ROLE_LABEL_KEY = {
 def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
 
+
 # Mirror of the seeded operator accounts (accounts.ts). The superadmin exists
 # only when a password is configured; on the demo it is typically absent, so we
 # mark it accordingly rather than inventing an active session for it.

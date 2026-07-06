@@ -2,7 +2,7 @@
 
 Safety in Tessera is layered: a runtime guard (`mcp-firewall`) in front of every
 tool call, a deterministic reviewer that scores each turn and escalates on low
-confidence, and an offline non-regression harness of forty documented failure
+confidence, and an offline non-regression harness of 63 documented failure
 cases gating CI. This document is the operational reference for those layers and
 for the failure modes that are not yet mitigated. The full threat model lives in
 `docs/threat-model.md`.

@@ -52,9 +52,7 @@ class _FixedBackend:
 
 
 class _FixedJudge:
-    async def score(
-        self, *, metric: str, question: str, answer: str, context: str
-    ) -> JudgeVerdict:
+    async def score(self, *, metric: str, question: str, answer: str, context: str) -> JudgeVerdict:
         return JudgeVerdict(metric=metric, score=0.8, rationale="", judge_model="stub")
 
 

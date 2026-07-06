@@ -77,9 +77,7 @@ class TestPolicyShortCircuit:
             == "policy_cookie_consent"
         )
         assert (
-            _match_policy(
-                "Regelt die DSGVO allein die Cookie-Einwilligung?", LanguageCode.DE
-            )
+            _match_policy("Regelt die DSGVO allein die Cookie-Einwilligung?", LanguageCode.DE)
             == "policy_cookie_consent"
         )
 

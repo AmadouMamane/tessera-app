@@ -89,12 +89,8 @@ async def _isolate_environment(conn: AsyncConnection[Any]) -> None:
         # the pool opens several connections at once; a transaction-scoped advisory
         # lock serialises the bootstrap so the IF NOT EXISTS guard actually holds.
         await cur.execute("SELECT pg_advisory_xact_lock(%s)", (_SCHEMA_BOOTSTRAP_LOCK,))
-        await cur.execute(
-            sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(schema))
-        )
-        await cur.execute(
-            sql.SQL("SET search_path TO {}, public").format(sql.Identifier(schema))
-        )
+        await cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(schema)))
+        await cur.execute(sql.SQL("SET search_path TO {}, public").format(sql.Identifier(schema)))
     await conn.commit()
 
 

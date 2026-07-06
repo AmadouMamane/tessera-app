@@ -29,8 +29,10 @@ class _StubPolicy:
 
 def _ctx(audit_total: int = 15000, prompt_after: bool = False) -> ead._Context:
     # prompt_mtime after T iff prompt_after, to drive the prompt diff line.
-    prompt_mtime = datetime(2026, 6, 14, 9, 0, tzinfo=UTC) if prompt_after else datetime(
-        2026, 6, 3, 9, 0, tzinfo=UTC
+    prompt_mtime = (
+        datetime(2026, 6, 14, 9, 0, tzinfo=UTC)
+        if prompt_after
+        else datetime(2026, 6, 3, 9, 0, tzinfo=UTC)
     )
     return ead._Context(
         model="llama3.2:3b",
@@ -142,9 +144,7 @@ def test_original_card_is_the_real_transcript_turn() -> None:
 
 
 def test_no_original_when_absent() -> None:
-    payload = ead._assemble(
-        _rows(), _audit(), _StubPolicy(), _ctx(), None, T_MID, now=NOW
-    )
+    payload = ead._assemble(_rows(), _audit(), _StubPolicy(), _ctx(), None, T_MID, now=NOW)
     assert payload["original"]["available"] is False  # type: ignore[index]
 
 
