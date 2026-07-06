@@ -92,7 +92,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
                   : (placeholder ?? t("placeholder"))
               }
               rows={1}
-              className="min-h-[36px] flex-1 resize-none overflow-hidden border-0 bg-transparent px-0 py-1 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="min-h-[36px] flex-1 resize-none overflow-hidden border-0 bg-transparent px-0 py-1 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-slate-600"
               aria-label={placeholder ?? t("placeholder")}
             />
             {isStreaming && onAbort ? (
@@ -123,7 +123,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
           <p
             aria-hidden={value.trim().length > 0 || isStreaming}
             className={cn(
-              "mt-1.5 px-1 text-[0.65rem] text-slate-500 transition-opacity duration-150",
+              "mt-1.5 px-1 text-[0.65rem] text-slate-600 transition-opacity duration-150",
               value.trim().length === 0 && !isStreaming ? "opacity-100" : "opacity-0",
             )}
           >
@@ -133,7 +133,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(
         {/* AI Act Art. 50 disclosure — must always be visible to the user, so it
  is persistent (never toggled) and rendered from bundled i18n rather
  than a network call. Mirrors tessera.observability.disclosure. */}
-        <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[0.6rem] text-slate-500/70">
+        <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[0.6rem] text-slate-600/80">
           {disclosure ?? t("disclosure")}
         </p>
       </div>
