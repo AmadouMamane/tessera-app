@@ -562,20 +562,23 @@ function EmptyWithSuggestions({
           </p>
           <div className="h-px flex-1 bg-slate-200" />
         </div>
-        <div className="grid w-full gap-2 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+        <div className="mx-auto grid w-full max-w-[540px] gap-2 sm:grid-cols-2">
           {suggestions.map(({ text, Icon }, idx) => (
             <button
               key={text}
               type="button"
               onClick={() => onSelect(text)}
               style={{ animationDelay: `${idx * 60}ms` }}
-              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group flex min-h-[102px] items-start gap-3 rounded-2xl border border-slate-200/80 bg-white/75 p-4 text-left shadow-[0_1px_0_rgba(255,255,255,0.9),0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D6B36A]/45 hover:bg-white hover:shadow-[0_18px_42px_rgba(15,23,42,0.075)]"
+              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative overflow-hidden flex min-h-[102px] items-start gap-3 rounded-2xl border border-slate-200/80 bg-white/75 p-4 text-left shadow-[0_1px_0_rgba(255,255,255,0.9),0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D6B36A]/45 hover:bg-white hover:shadow-[0_18px_42px_rgba(15,23,42,0.075)]"
             >
+              {/* sliding left border */}
+              <span className="absolute left-0 top-0 z-10 h-full w-[2px] origin-top scale-y-0 bg-[#EAB308] shadow-[0_0_14px_rgba(234,179,8,0.9)] transition-transform duration-300 group-hover:scale-y-100" />
+
               {/* icon container */}
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200/70 bg-slate-50 text-slate-500 transition-colors group-hover:border-[#D6B36A]/40 group-hover:bg-[#FBF7EA] group-hover:text-slate-800">
+              <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200/70 bg-slate-50 text-slate-500 transition-colors group-hover:border-[#D6B36A]/40 group-hover:bg-[#FBF7EA] group-hover:text-slate-800">
                 <Icon className="h-4 w-4" />
               </div>
-              <span className="leading-snug text-slate-700">{text}</span>
+              <span className="relative z-10 leading-relaxed text-[0.82rem] text-slate-700">{text}</span>
             </button>
           ))}
         </div>
