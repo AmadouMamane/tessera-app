@@ -196,6 +196,8 @@ import {
   QualityDatasetsReportSchema,
   type RbacMatrix,
   RbacMatrixSchema,
+  type RecouvrementRunsResponse,
+  RecouvrementRunsResponseSchema,
   type RedTeamResponse,
   RedTeamResponseSchema,
   type RefusalReport,
@@ -444,6 +446,21 @@ export async function fetchEvalScores(
     withScope("/observability/scores", at, agent),
     { signal },
     EvalScoresResponseSchema,
+  );
+}
+
+export async function fetchRecouvrementRuns(
+  signal?: AbortSignal,
+  at?: string,
+  limit = 20,
+): Promise<RecouvrementRunsResponse> {
+  const params = new URLSearchParams();
+  if (at) params.set("at", at);
+  params.set("limit", String(limit));
+  return request(
+    `/observability/recouvrement-runs?${params.toString()}`,
+    { signal },
+    RecouvrementRunsResponseSchema,
   );
 }
 

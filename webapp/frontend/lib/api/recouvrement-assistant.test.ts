@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { fetchRecouvrementRuns } from "./client";
 import {
   RecouvrementAssistantApiError,
   sendRecouvrementAssistantAction,
@@ -129,5 +130,104 @@ describe("sendRecouvrementAssistantAction", () => {
       surface: "dedicated-ui",
     });
     expect(result.artifact.status).toBe("insertion_prepared");
+  });
+});
+
+describe("fetchRecouvrementRuns", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("loads the cockpit Recouvrement run read model from observability", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          runs: [
+            {
+              agent_id: "recouvrement",
+              workflow_id: "recouvrement_collections_v1",
+              surface: "dedicated-ui",
+              case_id: "RC-2048",
+              conversation_id: "conv-1",
+              turn_id: "turn-1",
+              started_at: "2026-07-06T09:00:00+02:00",
+              event_count: 2,
+              timeline: [
+                {
+                  event_name: "artifact.status_changed",
+                  timestamp: "2026-07-06T09:00:01+02:00",
+                  agent_id: "recouvrement",
+                  conversation_id: "conv-1",
+                  turn_id: "turn-1",
+                  workflow_id: "recouvrement_collections_v1",
+                  case_id: "RC-2048",
+                  artifact_id: "RC-2048-schedule-36-months-v2",
+                  artifact_type: "schedule_proposal_v2",
+                  artifact_status: "pending_validation",
+                  decision: "prepared",
+                  reason_codes: ["VALIDATION_REQUIRED", "NO_EXTERNAL_EFFECT"],
+                  payload: { no_external_effect: true },
+                },
+              ],
+              artifacts: [
+                {
+                  artifact_id: "RC-2048-schedule-36-months-v2",
+                  artifact_type: "schedule_proposal_v2",
+                  artifact_status: "pending_validation",
+                  no_external_effect: true,
+                },
+              ],
+              decisions: [
+                {
+                  event_name: "policy.decision_made",
+                  decision: "prepared",
+                  reason_codes: ["NO_EXTERNAL_EFFECT"],
+                  no_external_effect: true,
+                },
+              ],
+              sensitive_actions: [
+                {
+                  event_name: "action.prepared",
+                  action_name: "submit_for_validation",
+                  artifact_id: "RC-2048-schedule-36-months-v2",
+                  artifact_type: "schedule_proposal_v2",
+                  target_status: "pending_validation",
+                  no_external_effect: true,
+                  requires_validation: true,
+                  reason_codes: ["VALIDATION_REQUIRED", "NO_EXTERNAL_EFFECT"],
+                },
+              ],
+              scores: [
+                {
+                  metric: "no_uncontrolled_external_effect",
+                  score: 1,
+                  status: "scored",
+                  reason: "no_external_effect_preserved",
+                },
+              ],
+            },
+          ],
+          events: [],
+          scores: [],
+          as_of: null,
+          agent: "recouvrement",
+          workflow_id: "recouvrement_collections_v1",
+          conversation_id: null,
+          turn_id: null,
+          case_id: null,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchRecouvrementRuns(undefined, undefined, 30);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/observability/recouvrement-runs?limit=30",
+      expect.objectContaining({ headers: expect.objectContaining({ Accept: "application/json" }) }),
+    );
+    expect(result.runs[0]?.sensitive_actions[0]?.action_name).toBe("submit_for_validation");
+    expect(result.runs[0]?.artifacts[0]?.no_external_effect).toBe(true);
   });
 });

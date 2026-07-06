@@ -459,6 +459,116 @@ export const EvalScoresResponseSchema = z.object({
 });
 export type EvalScoresResponse = z.infer<typeof EvalScoresResponseSchema>;
 
+export const BusinessEventClassificationSchema = z.object({
+  observable: z.boolean().optional(),
+  auditable: z.boolean().optional(),
+  scoring_input: z.boolean().optional(),
+  metric_input: z.boolean().optional(),
+  cockpit_signal: z.boolean().optional(),
+});
+
+export const BusinessEventSchema = z.object({
+  event_name: z.string(),
+  timestamp: z.string(),
+  agent_id: z.string(),
+  conversation_id: z.string(),
+  turn_id: z.string(),
+  schema_version: z.string().optional(),
+  event_version: z.number().optional(),
+  version: z.number().optional(),
+  workflow_id: z.string().nullable().optional(),
+  surface: z.string().nullable().optional(),
+  language: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  environment: z.string().nullable().optional(),
+  case_id: z.string().nullable().optional(),
+  node_name: z.string().nullable().optional(),
+  artifact_id: z.string().nullable().optional(),
+  artifact_type: z.string().nullable().optional(),
+  artifact_status: z.string().nullable().optional(),
+  decision: z.string().nullable().optional(),
+  reason_codes: z.array(z.string()).default([]),
+  payload: z.record(z.string(), z.unknown()).default({}),
+  actor: z.string().optional(),
+  classification: BusinessEventClassificationSchema.optional(),
+});
+export type BusinessEvent = z.infer<typeof BusinessEventSchema>;
+
+export const BusinessScoreSchema = z.object({
+  metric: z.string(),
+  score: z.number().nullable(),
+  status: z.string(),
+  reason: z.string(),
+});
+export type BusinessScore = z.infer<typeof BusinessScoreSchema>;
+
+export const RecouvrementRunArtifactSchema = z.object({
+  artifact_id: z.string(),
+  artifact_type: z.string().nullable().optional(),
+  artifact_status: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  generation_mode: z.string().nullable().optional(),
+  template_id: z.string().nullable().optional(),
+  template_version: z.string().nullable().optional(),
+  no_message_sent: z.boolean().nullable().optional(),
+  no_schedule_created: z.boolean().nullable().optional(),
+  no_external_effect: z.boolean().nullable().optional(),
+});
+export type RecouvrementRunArtifact = z.infer<typeof RecouvrementRunArtifactSchema>;
+
+export const RecouvrementRunDecisionSchema = z.object({
+  event_name: z.string().nullable().optional(),
+  decision: z.string().nullable().optional(),
+  reason_codes: z.array(z.string()).default([]),
+  rule_id: z.string().nullable().optional(),
+  action_name: z.string().nullable().optional(),
+  no_external_effect: z.boolean().nullable().optional(),
+});
+export type RecouvrementRunDecision = z.infer<typeof RecouvrementRunDecisionSchema>;
+
+export const RecouvrementSensitiveActionSchema = z.object({
+  event_name: z.string().nullable().optional(),
+  action_name: z.string(),
+  artifact_id: z.string().nullable().optional(),
+  artifact_type: z.string().nullable().optional(),
+  current_status: z.string().nullable().optional(),
+  target_status: z.string().nullable().optional(),
+  no_external_effect: z.boolean().nullable().optional(),
+  requires_validation: z.boolean().nullable().optional(),
+  reason_codes: z.array(z.string()).default([]),
+});
+export type RecouvrementSensitiveAction = z.infer<typeof RecouvrementSensitiveActionSchema>;
+
+export const RecouvrementRunSchema = z.object({
+  agent_id: z.string().nullable().optional(),
+  workflow_id: z.string().nullable().optional(),
+  surface: z.string().nullable().optional(),
+  case_id: z.string().nullable().optional(),
+  conversation_id: z.string(),
+  turn_id: z.string(),
+  started_at: z.string().nullable().optional(),
+  event_count: z.number().int(),
+  timeline: z.array(BusinessEventSchema),
+  artifacts: z.array(RecouvrementRunArtifactSchema),
+  decisions: z.array(RecouvrementRunDecisionSchema),
+  sensitive_actions: z.array(RecouvrementSensitiveActionSchema),
+  scores: z.array(BusinessScoreSchema),
+});
+export type RecouvrementRun = z.infer<typeof RecouvrementRunSchema>;
+
+export const RecouvrementRunsResponseSchema = z.object({
+  runs: z.array(RecouvrementRunSchema),
+  events: z.array(BusinessEventSchema),
+  scores: z.array(BusinessScoreSchema),
+  as_of: z.string().nullable().optional(),
+  agent: z.string(),
+  workflow_id: z.string(),
+  conversation_id: z.string().nullable().optional(),
+  turn_id: z.string().nullable().optional(),
+  case_id: z.string().nullable().optional(),
+});
+export type RecouvrementRunsResponse = z.infer<typeof RecouvrementRunsResponseSchema>;
+
 // Temporal control backbone (#201) — dated lineage events for the time rail.
 export const TimelineEventSchema = z.object({
   at: z.string(),

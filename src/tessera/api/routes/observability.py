@@ -339,6 +339,213 @@ async def observability_business_events(
     }
 
 
+_RECOUVREMENT_EVENT_ORDER = {
+    "intent.routed": 10,
+    "slots.extracted": 20,
+    "business_rule.checked": 30,
+    "policy.decision_made": 40,
+    "artifact.created": 50,
+    "artifact.status_changed": 55,
+    "validation.requested": 60,
+    "action.requested": 65,
+    "action.prepared": 70,
+    "action.blocked": 75,
+    "message.generated": 80,
+}
+
+
+def _payload(row: dict[str, object]) -> dict[str, object]:
+    raw = row.get("payload")
+    return dict(raw) if isinstance(raw, dict) else {}
+
+
+def _bool_payload(row: dict[str, object], key: str) -> bool | None:
+    value = _payload(row).get(key)
+    return value if isinstance(value, bool) else None
+
+
+def _str_payload(row: dict[str, object], key: str) -> str | None:
+    value = _payload(row).get(key)
+    return value if isinstance(value, str) else None
+
+
+def _recouvrement_artifacts(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    by_id: dict[str, dict[str, object]] = {}
+    for row in rows:
+        artifact_id = row.get("artifact_id")
+        artifact_type = row.get("artifact_type")
+        if not isinstance(artifact_id, str) or not artifact_id:
+            payload = _payload(row)
+            artifact_id = payload.get("artifact_id")
+            artifact_type = payload.get("artifact_type") or artifact_type
+        if not isinstance(artifact_id, str) or not artifact_id:
+            continue
+        payload = _payload(row)
+        artifact = by_id.setdefault(
+            artifact_id,
+            {
+                "artifact_id": artifact_id,
+                "artifact_type": artifact_type if isinstance(artifact_type, str) else None,
+                "artifact_status": None,
+                "title": None,
+                "generation_mode": None,
+                "template_id": None,
+                "template_version": None,
+                "no_message_sent": None,
+                "no_schedule_created": None,
+                "no_external_effect": None,
+            },
+        )
+        for source_key, target_key in (
+            ("artifact_type", "artifact_type"),
+            ("artifact_status", "artifact_status"),
+        ):
+            value = row.get(source_key)
+            if isinstance(value, str) and value:
+                artifact[target_key] = value
+        for key in (
+            "title",
+            "generation_mode",
+            "template_id",
+            "template_version",
+            "no_message_sent",
+            "no_schedule_created",
+            "no_external_effect",
+        ):
+            if key in payload and payload[key] is not None:
+                artifact[key] = payload[key]
+        generation = payload.get("client_message_generation")
+        if isinstance(generation, dict):
+            for key in ("generation_mode", "template_id", "template_version"):
+                value = generation.get(key)
+                if value is not None:
+                    artifact[key] = value
+    return list(by_id.values())
+
+
+def _recouvrement_decisions(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    decisions: list[dict[str, object]] = []
+    for row in rows:
+        decision = row.get("decision")
+        reason_codes = row.get("reason_codes")
+        if decision is None and not reason_codes:
+            continue
+        decisions.append(
+            {
+                "event_name": row.get("event_name"),
+                "decision": decision,
+                "reason_codes": reason_codes if isinstance(reason_codes, list) else [],
+                "rule_id": _str_payload(row, "rule_id"),
+                "action_name": _str_payload(row, "action_name"),
+                "no_external_effect": _bool_payload(row, "no_external_effect"),
+            }
+        )
+    return decisions
+
+
+def _recouvrement_sensitive_actions(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    actions: list[dict[str, object]] = []
+    for row in rows:
+        if row.get("event_name") not in {
+            "action.requested",
+            "action.prepared",
+            "action.blocked",
+            "artifact.status_changed",
+            "validation.requested",
+        }:
+            continue
+        payload = _payload(row)
+        action_name = payload.get("action_name") or payload.get("status_reason")
+        if not isinstance(action_name, str) or not action_name:
+            continue
+        reason_codes = row.get("reason_codes")
+        actions.append(
+            {
+                "event_name": row.get("event_name"),
+                "action_name": action_name,
+                "artifact_id": row.get("artifact_id") or payload.get("artifact_id"),
+                "artifact_type": row.get("artifact_type") or payload.get("artifact_type"),
+                "current_status": payload.get("current_status") or payload.get("previous_status"),
+                "target_status": payload.get("target_status") or payload.get("new_status"),
+                "no_external_effect": payload.get("no_external_effect"),
+                "requires_validation": payload.get("requires_validation"),
+                "reason_codes": reason_codes if isinstance(reason_codes, list) else [],
+            }
+        )
+    return actions
+
+
+def _recouvrement_runs_from_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    grouped: dict[tuple[str, str], list[dict[str, object]]] = {}
+    for row in rows:
+        conversation_id = str(row.get("conversation_id") or "")
+        turn_id = str(row.get("turn_id") or "")
+        if not conversation_id or not turn_id:
+            continue
+        grouped.setdefault((conversation_id, turn_id), []).append(row)
+    runs: list[dict[str, object]] = []
+    for (conversation_id, turn_id), turn_rows in grouped.items():
+        ordered_rows = sorted(
+            turn_rows,
+            key=lambda item: (
+                _RECOUVREMENT_EVENT_ORDER.get(str(item.get("event_name") or ""), 100),
+                str(item.get("timestamp") or ""),
+            ),
+        )
+        scores = business_scoring_mod.score_rows(ordered_rows)
+        first = ordered_rows[0]
+        runs.append(
+            {
+                "agent_id": first.get("agent_id"),
+                "workflow_id": first.get("workflow_id"),
+                "surface": first.get("surface"),
+                "case_id": first.get("case_id"),
+                "conversation_id": conversation_id,
+                "turn_id": turn_id,
+                "started_at": first.get("timestamp"),
+                "event_count": len(ordered_rows),
+                "timeline": ordered_rows,
+                "artifacts": _recouvrement_artifacts(ordered_rows),
+                "decisions": _recouvrement_decisions(ordered_rows),
+                "sensitive_actions": _recouvrement_sensitive_actions(ordered_rows),
+                "scores": scores,
+            }
+        )
+    return sorted(runs, key=lambda run: str(run.get("started_at") or ""), reverse=True)
+
+
+@router.get("/observability/recouvrement-runs")
+async def observability_recouvrement_runs(
+    at: str | None = None,
+    conversation_id: str | None = None,
+    turn_id: str | None = None,
+    case_id: str | None = None,
+    limit: int = 20,
+) -> dict[str, object]:
+    """Cockpit-ready Recouvrement business runs derived from ADR 0016 events."""
+    rows = business_events_mod.business_event_rows(
+        at=at,
+        agent_id="recouvrement",
+        workflow_id="recouvrement_collections_v1",
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        case_id=case_id,
+    )
+    runs = _recouvrement_runs_from_rows(rows)
+    bounded_limit = max(1, min(limit, 100))
+    return {
+        "runs": runs[:bounded_limit],
+        "events": rows,
+        "scores": business_scoring_mod.score_rows(rows),
+        "as_of": at,
+        "agent": "recouvrement",
+        "workflow_id": "recouvrement_collections_v1",
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+        "case_id": case_id,
+    }
+
+
 @router.get("/observability/snapshot", dependencies=[Depends(require_bearer)])
 async def observability_snapshot(
     at: str | None = None,

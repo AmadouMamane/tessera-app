@@ -962,6 +962,7 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
             "title": artifact["title"],
             "decision": policy["decision"],
             "client_message_generation": client_message_generation,
+            "no_schedule_created": True,
         },
         **_event_common(state, node_name="build_schedule_proposal_artifact"),
     )
@@ -1113,6 +1114,8 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
             "template_version": generation["template_version"],
             "template_label": generation["template_label"],
             "policy_review_status": policy["policy_review_status"],
+            "no_message_sent": policy["no_message_sent"],
+            "no_schedule_created": policy["no_schedule_created"],
         },
         **_event_common(state, node_name="build_reminder_draft_artifact"),
     )
@@ -1168,6 +1171,7 @@ def generate_visible_reply(state: RecouvrementWorkflowState) -> dict[str, object
             "artifact_type": artifact["type"],
             "policy_review_status": schedule_policy["decision"],
             "client_message_generation": client_message_generation,
+            "no_schedule_created": True,
         }
     elif state.get("intent") == "draft_reminder":
         draft_policy = state["draft_policy"]
@@ -1200,6 +1204,8 @@ def generate_visible_reply(state: RecouvrementWorkflowState) -> dict[str, object
             "artifact_id": artifact["id"],
             "artifact_type": artifact["type"],
             "policy_review_status": draft_policy["policy_review_status"],
+            "no_message_sent": draft_policy["no_message_sent"],
+            "no_schedule_created": draft_policy["no_schedule_created"],
         }
     else:
         policy = state["contact_policy"]

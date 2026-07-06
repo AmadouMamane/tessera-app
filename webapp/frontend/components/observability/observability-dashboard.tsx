@@ -52,6 +52,7 @@ import {
   RootCauseDiagnostic,
   RunsPassRateTable,
 } from "@/components/observability/overview-exec";
+import { RecouvrementRunsPanel } from "@/components/observability/recouvrement-runs-panel";
 import {
   DatasetsTable,
   RunContextPanel,
@@ -99,6 +100,7 @@ import {
   fetchMetricPairs,
   fetchModelComparison,
   fetchPiiLeak,
+  fetchRecouvrementRuns,
   fetchRefusal,
   fetchRegressionRisk,
   fetchReleaseStatus,
@@ -128,7 +130,15 @@ const POLL_MS = 5_000;
 const QUALITY_SIGNALS = 42;
 const QUALITY_CATALOGUE = 200;
 
-const TAB_DEFS = ["overview", "signals", "runs", "failed", "models", "judge"] as const;
+const TAB_DEFS = [
+  "overview",
+  "signals",
+  "runs",
+  "failed",
+  "models",
+  "judge",
+  "recouvrement",
+] as const;
 type TabKey = (typeof TAB_DEFS)[number];
 
 /** A translucent banded section grouping one cockpit zone, matching the
@@ -446,6 +456,13 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     refetchInterval: historyMode ? false : 15_000,
   });
 
+  const recouvrementRuns = useQuery({
+    queryKey: ["recouvrement-runs", asOf],
+    queryFn: ({ signal }) => fetchRecouvrementRuns(signal, asOf ?? undefined, 30),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : 5_000,
+  });
+
   // Newest first for display.
 
   // Unified signal catalogue derived from the live reports (reference image 01).
@@ -755,6 +772,13 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
               loading={calibration.isLoading}
             />
           )}
+
+          {tab === "recouvrement" && (
+            <RecouvrementRunsPanel
+              data={recouvrementRuns.data}
+              loading={recouvrementRuns.isLoading}
+            />
+          )}
         </div>
 
         {tab === "signals" ? (
@@ -862,6 +886,7 @@ const TAB_META: Record<TabKey, typeof Gauge> = {
   failed: Siren,
   models: GitCompareArrows,
   judge: Scale,
+  recouvrement: ShieldCheck,
 };
 
 function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) => void }) {

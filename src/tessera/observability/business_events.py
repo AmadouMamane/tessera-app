@@ -256,6 +256,9 @@ class ArtifactCreatedPayload(_StrictPayload):
     template_label: str | None = None
     policy_review_status: str | None = None
     client_message_generation: dict[str, object] | None = None
+    no_message_sent: bool | None = None
+    no_schedule_created: bool | None = None
+    no_external_effect: bool | None = None
 
 
 class ArtifactStatusChangedPayload(_StrictPayload):
@@ -332,6 +335,8 @@ class MessageGeneratedPayload(_StrictPayload):
     policy_review_status: str | None = None
     client_message_generation: dict[str, object] | None = None
     action_name: str | None = None
+    no_message_sent: bool | None = None
+    no_schedule_created: bool | None = None
     no_external_effect: bool | None = None
 
     @field_validator("message_kind")

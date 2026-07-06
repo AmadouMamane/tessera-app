@@ -914,3 +914,98 @@ async def test_recouvrement_assistant_action_endpoint_returns_governed_action_co
         "action.prepared",
         "message.generated",
     }
+
+
+async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_and_scores(
+    observed_recouvrement_stores: Path,
+) -> None:
+    contact = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Je peux l'appeler à 23h ?",
+        conversation_id="conv-rc-cockpit",
+        turn_id="turn-contact-blocked",
+    )
+    schedule = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-rc-cockpit",
+        turn_id="turn-schedule-36",
+        assistant_state={"activeTask": "propose_schedule"},
+    )
+    message = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Prépare le message client",
+        conversation_id="conv-rc-cockpit",
+        turn_id="turn-client-message",
+        assistant_state={
+            "activeTask": "draft_reminder",
+            "currentArtifact": schedule["artifact"],
+        },
+    )
+    validation = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=schedule["artifact"],
+        action_name="submit_for_validation",
+        conversation_id="conv-rc-cockpit",
+        turn_id="turn-submit-validation",
+    )
+    insertion = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=message["artifact"],
+        action_name="insert_artifact_in_case",
+        conversation_id="conv-rc-cockpit",
+        turn_id="turn-insertion-prepared",
+    )
+
+    payload = await obs.observability_recouvrement_runs(conversation_id="conv-rc-cockpit")
+    runs = {run["turn_id"]: run for run in payload["runs"]}
+
+    assert set(runs) == {
+        "turn-contact-blocked",
+        "turn-schedule-36",
+        "turn-client-message",
+        "turn-submit-validation",
+        "turn-insertion-prepared",
+    }
+    assert runs["turn-contact-blocked"]["agent_id"] == RECOUVREMENT_AGENT_ID
+    assert runs["turn-contact-blocked"]["workflow_id"] == RECOUVREMENT_WORKFLOW_ID
+    assert any(
+        decision["decision"] == "blocked"
+        and "OUTSIDE_CONTACT_WINDOW" in decision["reason_codes"]
+        for decision in runs["turn-contact-blocked"]["decisions"]
+    )
+
+    schedule_artifact = runs["turn-schedule-36"]["artifacts"][0]
+    assert schedule_artifact["artifact_type"] == "schedule_proposal_v2"
+    assert schedule_artifact["no_schedule_created"] is True
+
+    message_artifact = runs["turn-client-message"]["artifacts"][0]
+    assert message_artifact["artifact_type"] == "client_message_artifact"
+    assert message_artifact["generation_mode"] == "approved_template"
+    assert message_artifact["template_id"] == "recouvrement_schedule_message_v1"
+    assert message_artifact["no_message_sent"] is True
+    assert message_artifact["no_schedule_created"] is True
+
+    validation_action = runs["turn-submit-validation"]["sensitive_actions"]
+    assert any(
+        action["action_name"] == "submit_for_validation"
+        and action["target_status"] == "pending_validation"
+        and action["no_external_effect"] is True
+        for action in validation_action
+    )
+    insertion_action = runs["turn-insertion-prepared"]["sensitive_actions"]
+    assert any(
+        action["action_name"] == "insert_artifact_in_case"
+        and action["target_status"] == "insertion_prepared"
+        and action["no_external_effect"] is True
+        for action in insertion_action
+    )
+    validation_scores = {
+        score["metric"]: score for score in runs["turn-submit-validation"]["scores"]
+    }
+    assert validation_scores["validation_required_compliance"]["score"] == 1.0
+    assert validation_scores["no_uncontrolled_external_effect"]["score"] == 1.0
+
+    assert validation["artifact"]["status"] == "pending_validation"
+    assert insertion["artifact"]["status"] == "insertion_prepared"
+    assert contact["artifact"]["content"]["decision"] == "blocked"
