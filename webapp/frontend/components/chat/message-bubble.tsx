@@ -192,7 +192,7 @@ export function MessageBubble({
                 <button
                   type="button"
                   onClick={cancelEdit}
-                  className="flex items-center gap-1 text-[0.62rem] text-slate-500 hover:text-slate-700 transition-colors duration-150"
+                  className="flex items-center gap-1 text-[0.62rem] text-slate-600 hover:text-slate-800 transition-colors duration-150"
                 >
                   {t("cancel")}
                 </button>
@@ -215,7 +215,7 @@ export function MessageBubble({
                 aria-label={userCopied ? t("copied") : t("copy")}
                 className={cn(
                   "flex items-center gap-1 text-[0.62rem] transition-colors duration-150",
-                  "text-slate-500 hover:text-slate-700",
+                  "text-slate-600 hover:text-slate-800",
                   userCopied && "!opacity-100 text-green-600 ",
                 )}
               >
@@ -228,7 +228,7 @@ export function MessageBubble({
                   onClick={startEdit}
                   disabled={isStreaming}
                   aria-label={t("edit")}
-                  className="flex items-center gap-1 text-[0.62rem] text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                  className="flex items-center gap-1 text-[0.62rem] text-slate-600 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                 >
                   <Pencil className="h-3 w-3" />
                   {t("edit")}
@@ -245,7 +245,7 @@ export function MessageBubble({
             aria-label={copied ? t("copied") : t("copy")}
             className={cn(
               "self-start flex items-center gap-1 px-1 text-[0.62rem] transition-all duration-150",
-              "text-slate-500 hover:text-slate-700",
+              "text-slate-600 hover:text-slate-800",
               "opacity-60 group-hover:opacity-100",
               copied && "!opacity-100 text-green-600 ",
             )}

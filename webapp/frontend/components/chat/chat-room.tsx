@@ -383,7 +383,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
               reset();
               composerRef.current?.focus();
             }}
-            className="absolute right-4 top-3 z-10 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+            className="absolute right-4 top-3 z-10 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
           >
             <RotateCcw className="h-3 w-3" />
             {t("clear")}
@@ -463,7 +463,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
                   <button
                     type="button"
                     onClick={handleRegenerate}
-                    className="flex items-center gap-1.5 text-[0.65rem] text-slate-500/60 transition-colors hover:text-slate-500"
+                    className="flex items-center gap-1.5 text-[0.65rem] text-slate-600 transition-colors hover:text-slate-800"
                   >
                     <RefreshCw className="h-3 w-3" />
                     {t("regenerate")}
@@ -557,19 +557,19 @@ function EmptyWithSuggestions({
       <div className="w-full space-y-3">
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-slate-200" />
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
             {suggestionsLabel}
           </p>
           <div className="h-px flex-1 bg-slate-200" />
         </div>
-        <div className="mx-auto grid w-full max-w-[540px] gap-2 sm:grid-cols-2">
+        <div className="grid w-full gap-2 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
           {suggestions.map(({ text, Icon }, idx) => (
             <button
               key={text}
               type="button"
               onClick={() => onSelect(text)}
               style={{ animationDelay: `${idx * 60}ms` }}
-              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative overflow-hidden flex min-h-[102px] items-start gap-3 rounded-2xl border border-slate-200/80 bg-white/75 p-4 text-left shadow-[0_1px_0_rgba(255,255,255,0.9),0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D6B36A]/45 hover:bg-white hover:shadow-[0_18px_42px_rgba(15,23,42,0.075)]"
+              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative overflow-hidden flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/75 p-2.5 text-left shadow-[0_1px_0_rgba(255,255,255,0.9),0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D6B36A]/45 hover:bg-white hover:shadow-[0_18px_42px_rgba(15,23,42,0.075)]"
             >
               {/* sliding left border */}
               <span className="absolute left-0 top-0 z-10 h-full w-[2px] origin-top scale-y-0 bg-[#EAB308] shadow-[0_0_14px_rgba(234,179,8,0.9)] transition-transform duration-300 group-hover:scale-y-100" />
