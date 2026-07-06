@@ -9,6 +9,7 @@ import {
   buildContactRuleBackendUnavailableFallback,
   buildDraftBackendUnavailableFallback,
   buildInvalidDraftEditResponse,
+  buildPaymentOptionsBackendUnavailableFallback,
   buildReminderPreparedResponse,
   buildScheduleProposalDraft,
   contactRuleCards,
@@ -93,6 +94,29 @@ describe("routeRecouvrementDrawerMessage", () => {
     });
   });
 
+  it("routes payment-option wording to the structured backend without schedule duration", () => {
+    const route = routeRecouvrementDrawerMessage(
+      "comment peut-il payer et quelles sont les options de paiement ?",
+      "check_contact_rule",
+      {
+        id: "RC-2048-contact-rule-v1",
+        type: "contact_rule_v1",
+        task: "check_rule",
+        title: "Cadre de contact — RC-2048",
+        status: "draft",
+        content: { decision: "blocked" },
+      },
+    );
+
+    expect(route).toEqual({
+      targetTask: "explain_payment_options",
+      backendIntent: "explain_payment_options",
+      useStructuredBackend: true,
+      useContactRuleBackend: false,
+      extractedSlots: {},
+    });
+  });
+
   it("routes reminder and client-message wording to the structured backend", () => {
     expect(routeRecouvrementDrawerMessage("Rédiger une relance", "summary", null)).toMatchObject({
       targetTask: "draft_reminder",
@@ -140,6 +164,7 @@ describe("artifact family and task click routing", () => {
     expect(artifactFamilyForTask("draft_reminder")).toBe("message");
     expect(artifactFamilyForTask("propose_schedule")).toBe("schedule");
     expect(artifactFamilyForTask("check_contact_rule")).toBe("contact_rule");
+    expect(artifactFamilyForTask("explain_payment_options")).toBe("payment_options");
     expect(routeRecouvrementTaskClick("check_contact_rule")).toMatchObject({
       targetTask: "check_contact_rule",
       backendIntent: "check_contact_rule",
@@ -153,6 +178,11 @@ describe("artifact family and task click routing", () => {
     expect(routeRecouvrementTaskClick("summary")).toMatchObject({
       targetTask: "summary",
       backendIntent: "summarize_case",
+      useStructuredBackend: true,
+    });
+    expect(routeRecouvrementTaskClick("explain_payment_options")).toMatchObject({
+      targetTask: "explain_payment_options",
+      backendIntent: "explain_payment_options",
       useStructuredBackend: true,
     });
   });
@@ -199,6 +229,16 @@ describe("artifact family and task click routing", () => {
         content: {},
       }),
     ).toBe("contact_rule");
+    expect(
+      artifactFamilyForArtifact({
+        id: "RC-2048-payment-options-v1",
+        type: "payment_options_v1",
+        task: "explain_payment_options",
+        title: "Options de paiement — RC-2048",
+        status: "draft",
+        content: {},
+      }),
+    ).toBe("payment_options");
   });
 });
 
@@ -230,9 +270,12 @@ describe("structured schedule backend bridge", () => {
     expect(source).toContain("contentFromRecouvrementScheduleResponse");
     expect(source).toContain("contentFromRecouvrementDraftResponse");
     expect(source).toContain("usesStructuredSummaryBackend");
+    expect(source).toContain("usesStructuredPaymentOptionsBackend");
     expect(source).toContain("contentFromCaseSummaryResponse(response)");
+    expect(source).toContain("contentFromPaymentOptionsResponse(response)");
     expect(source).toContain('route.backendIntent === "propose_schedule"');
     expect(source).toContain('route.backendIntent === "draft_reminder"');
+    expect(source).toContain('route.backendIntent === "explain_payment_options"');
     expect(source).toContain("const currentArtifact =");
     expect(source).toContain("currentArtifact,");
     expect(source).toContain("contentFromScheduleProposal(proposal)");
@@ -341,6 +384,35 @@ describe("footerActionsForRecouvrementArtifact", () => {
       "Insérer dans le dossier",
       "Soumettre à validation",
     ]);
+  });
+
+  it("uses payment-option actions for backend payment artifacts", () => {
+    expect(
+      footerActionsForRecouvrementArtifact({
+        id: "RC-2048-payment-options-v1",
+        type: "payment_options_v1",
+        task: "explain_payment_options",
+        title: "Options de paiement — RC-2048",
+        status: "draft",
+        content: { no_payment_initiated: true },
+      }),
+    ).toEqual([
+      "Proposer un échéancier",
+      "Préparer le message client",
+      "Soumettre à validation",
+      "Insérer dans le dossier",
+    ]);
+  });
+
+  it("keeps payment backend failures within the payment-options family", () => {
+    const fallback = buildPaymentOptionsBackendUnavailableFallback();
+
+    expect(fallback.artifact.type).toBe("payment_options_v1");
+    expect(fallback.artifact.content.no_payment_initiated).toBe(true);
+    expect(fallback.artifact.content.no_payment_link_created).toBe(true);
+    expect(fallback.artifact.content.no_payment_link_sent).toBe(true);
+    expect(fallback.artifact.content.no_schedule_created).toBe(true);
+    expect(JSON.stringify(fallback)).not.toContain("Créer un brouillon");
   });
 
   it("does not render the internal Chat Recouvrement card anymore", () => {

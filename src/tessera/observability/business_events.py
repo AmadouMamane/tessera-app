@@ -241,6 +241,10 @@ class PolicyDecisionMadePayload(_StrictPayload):
     policy_review_status: str | None = None
     amount_consistent: bool | None = None
     requires_validation: bool | None = None
+    no_payment_initiated: bool | None = None
+    no_payment_link_created: bool | None = None
+    no_payment_link_sent: bool | None = None
+    no_schedule_created: bool | None = None
     no_external_effect: bool | None = None
 
 
@@ -257,6 +261,9 @@ class ArtifactCreatedPayload(_StrictPayload):
     policy_review_status: str | None = None
     client_message_generation: dict[str, object] | None = None
     no_message_sent: bool | None = None
+    no_payment_initiated: bool | None = None
+    no_payment_link_created: bool | None = None
+    no_payment_link_sent: bool | None = None
     no_schedule_created: bool | None = None
     no_external_effect: bool | None = None
 
@@ -336,6 +343,9 @@ class MessageGeneratedPayload(_StrictPayload):
     client_message_generation: dict[str, object] | None = None
     action_name: str | None = None
     no_message_sent: bool | None = None
+    no_payment_initiated: bool | None = None
+    no_payment_link_created: bool | None = None
+    no_payment_link_sent: bool | None = None
     no_schedule_created: bool | None = None
     no_external_effect: bool | None = None
 

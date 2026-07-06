@@ -7,15 +7,22 @@ export type RecouvrementDrawerTask =
   | "summary"
   | "draft_reminder"
   | "propose_schedule"
-  | "check_contact_rule";
+  | "check_contact_rule"
+  | "explain_payment_options";
 
 export type RecouvrementBackendIntent =
   | "check_contact_rule"
   | "propose_schedule"
   | "draft_reminder"
-  | "summarize_case";
+  | "summarize_case"
+  | "explain_payment_options";
 
-export type RecouvrementArtifactFamily = "summary" | "message" | "schedule" | "contact_rule";
+export type RecouvrementArtifactFamily =
+  | "summary"
+  | "message"
+  | "schedule"
+  | "contact_rule"
+  | "payment_options";
 
 export interface RecouvrementDrawerStateModel {
   currentTask: RecouvrementDrawerTask;
@@ -73,6 +80,12 @@ function hasScheduleIntent(normalized: string): boolean {
   );
 }
 
+function hasPaymentOptionsIntent(normalized: string): boolean {
+  return /\b(options? de paiement|moyens? de paiement|comment peut[- ]?il payer|comment peut[- ]?il regler|paiement total|paiement partiel|paiement en plusieurs fois|echeancier possible|alternatives? de reglement|solution de paiement|options? de reglement|moyens? de reglement)\b/.test(
+    normalized,
+  );
+}
+
 function hasContactRuleIntent(normalized: string): boolean {
   const hasContactAction =
     /\b(appel|appeler|telephone|telephoner|contacter|contact|joindre|email|mail)\b/.test(
@@ -115,6 +128,7 @@ export function artifactFamilyForArtifact(
     return "message";
   }
   if (artifact.type === "case_summary_v1") return "summary";
+  if (artifact.type === "payment_options_v1") return "payment_options";
   return null;
 }
 
@@ -122,6 +136,7 @@ export function artifactFamilyForTask(task: RecouvrementDrawerTask): Recouvremen
   if (task === "check_contact_rule") return "contact_rule";
   if (task === "propose_schedule") return "schedule";
   if (task === "draft_reminder") return "message";
+  if (task === "explain_payment_options") return "payment_options";
   return "summary";
 }
 
@@ -135,6 +150,7 @@ export function backendIntentForTask(
   if (task === "check_contact_rule") return "check_contact_rule";
   if (task === "propose_schedule") return "propose_schedule";
   if (task === "draft_reminder") return "draft_reminder";
+  if (task === "explain_payment_options") return "explain_payment_options";
   return "summarize_case";
 }
 
@@ -156,6 +172,7 @@ export function routeRecouvrementDrawerMessage(
 ): RecouvrementDrawerRoute {
   const normalized = normalizeDrawerMessage(message);
   const durationMonths = extractDurationMonths(message);
+  const paymentOptionsIntent = hasPaymentOptionsIntent(normalized);
 
   if (hasDraftEditIntent(normalized) && !isEditableMessageArtifact(currentArtifact ?? null)) {
     return {
@@ -167,13 +184,23 @@ export function routeRecouvrementDrawerMessage(
     };
   }
 
-  if (hasScheduleIntent(normalized)) {
+  if (hasScheduleIntent(normalized) && (durationMonths || !paymentOptionsIntent)) {
     return {
       targetTask: "propose_schedule",
       backendIntent: "propose_schedule",
       useStructuredBackend: true,
       useContactRuleBackend: false,
       extractedSlots: { durationMonths },
+    };
+  }
+
+  if (paymentOptionsIntent) {
+    return {
+      targetTask: "explain_payment_options",
+      backendIntent: "explain_payment_options",
+      useStructuredBackend: true,
+      useContactRuleBackend: false,
+      extractedSlots: {},
     };
   }
 
@@ -441,6 +468,62 @@ export function buildDraftBackendUnavailableFallback(
   };
 }
 
+export function buildPaymentOptionsBackendUnavailableFallback(): RecouvrementAssistantResponse {
+  const suggestedActions = [
+    "Proposer un échéancier",
+    "Préparer le message client",
+    "Soumettre à validation",
+    "Insérer dans le dossier",
+  ];
+  const visibleReply =
+    "La préparation backend des options de paiement est indisponible. Aucun paiement n'a été initié et aucune action client n'a été exécutée.";
+  return {
+    visibleReply,
+    artifact: {
+      id: "RC-2048-payment-options-unavailable",
+      type: "payment_options_v1",
+      task: "explain_payment_options",
+      title: "Options de paiement — RC-2048",
+      status: "unavailable",
+      content: {
+        no_payment_initiated: true,
+        no_payment_link_created: true,
+        no_payment_link_sent: true,
+        no_schedule_created: true,
+        no_external_effect: true,
+      },
+    },
+    cardUpdates: {
+      summary: [
+        "Dossier : RC-2048",
+        "Options de paiement indisponibles côté backend",
+        "Aucun paiement initié",
+        "Aucun lien de paiement créé ou envoyé",
+        "Aucun échéancier créé",
+      ],
+      paymentOptions: [
+        "Options à confirmer selon les moyens disponibles dans le dossier.",
+        "Échéancier indicatif uniquement après validation interne et accord client.",
+      ],
+      complianceChecks: [
+        "Aucun paiement initié",
+        "Aucun lien de paiement créé",
+        "Aucun lien de paiement envoyé",
+        "Aucun échéancier créé",
+        "Aucune action client exécutée",
+      ],
+      nextActions: suggestedActions,
+    },
+    suggestedActions,
+    businessEvents: [],
+    businessScores: [],
+    decisions: {
+      intent: "explain_payment_options",
+      decision: "backend_unavailable",
+    },
+  };
+}
+
 export function buildInvalidDraftEditResponse(
   currentArtifact: RecouvrementAssistantArtifact | null,
 ): RecouvrementAssistantResponse {
@@ -674,6 +757,15 @@ export function footerActionsForRecouvrementArtifact(
       "Rédiger une relance",
       "Vérifier une règle",
       "Proposer un échéancier",
+      "Insérer dans le dossier",
+    ];
+  }
+
+  if (artifact?.type === "payment_options_v1") {
+    return [
+      "Proposer un échéancier",
+      "Préparer le message client",
+      "Soumettre à validation",
       "Insérer dans le dossier",
     ];
   }

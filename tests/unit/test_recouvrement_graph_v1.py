@@ -301,6 +301,66 @@ def test_recouvrement_graph_summarizes_case_without_external_effects(
     assert scores["contact_window_compliance"]["status"] == "not_applicable"
 
 
+def test_recouvrement_graph_explains_payment_options_without_payment_effects(
+    observed_recouvrement_stores: Path,
+) -> None:
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Quelles sont les options de paiement ?",
+        conversation_id="conv-rc-payment-options",
+        turn_id="turn-payment-options",
+        assistant_state={"activeTask": "explain_payment_options"},
+    )
+
+    artifact = output["artifact"]
+    content = artifact["content"]
+    assert output["visibleReply"] == "Options de paiement du dossier RC-2048 préparées."
+    assert output["decisions"]["intent"] == "explain_payment_options"
+    assert output["decisions"]["slots"]["amount_due_label"] == "840,00 €"
+    assert artifact["type"] == "payment_options_v1"
+    assert artifact["task"] == "explain_payment_options"
+    assert artifact["status"] == "draft"
+    assert artifact["title"] == "Options de paiement — RC-2048"
+    assert content["amountDue"] == "840,00 €"
+    assert content["no_payment_initiated"] is True
+    assert content["no_payment_link_created"] is True
+    assert content["no_payment_link_sent"] is True
+    assert content["no_schedule_created"] is True
+    assert content["no_external_effect"] is True
+    assert content["validation_required"] is True
+    assert "Options à confirmer selon les moyens disponibles dans le dossier." in content[
+        "eligibilityNotes"
+    ]
+    assert output["cardUpdates"]["paymentOptions"] == [
+        "Paiement total : option à confirmer selon les moyens disponibles dans le dossier.",
+        "Paiement partiel : montant et modalités à confirmer avant toute proposition.",
+        "Échéancier indicatif : possible uniquement après validation interne et accord client.",
+        "Contact conseiller / rappel : préparer un échange pour confirmer la solution adaptée.",
+    ]
+    assert output["suggestedActions"] == [
+        "Proposer un échéancier",
+        "Préparer le message client",
+        "Soumettre à validation",
+        "Insérer dans le dossier",
+    ]
+    assert [row["event_name"] for row in output["businessEvents"]] == [
+        "case.context_loaded",
+        "intent.routed",
+        "slots.extracted",
+        "policy.decision_made",
+        "artifact.created",
+        "message.generated",
+    ]
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["payment_option_safety"]["score"] == 1.0
+    assert scores["validation_required_compliance"]["score"] == 1.0
+    assert scores["artifact_governance"]["score"] == 1.0
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
+    assert scores["recouvrement_trace_completeness"]["score"] == 1.0
+    assert scores["amount_consistency"]["score"] == 1.0
+    assert scores["client_message_safety"]["status"] == "not_applicable"
+
+
 def test_recouvrement_graph_proposes_schedule_with_backend_observability(
     observed_recouvrement_stores: Path,
 ) -> None:
@@ -807,6 +867,7 @@ def test_recouvrement_business_scorer_is_called_through_registry_without_generic
         "artifact_governance",
         "validation_required_compliance",
         "client_message_safety",
+        "payment_option_safety",
         "recouvrement_trace_completeness",
         "amount_consistency",
     }
@@ -960,6 +1021,34 @@ async def test_recouvrement_assistant_endpoint_returns_summary_contract(
     ]
 
 
+async def test_recouvrement_assistant_endpoint_returns_payment_options_contract(
+    observed_recouvrement_stores: Path,
+) -> None:
+    payload = RecouvrementAssistantRequest(
+        case_id="RC-2048",
+        message="Options de paiement",
+        conversation_id="conv-rc-endpoint-payment",
+        turn_id="turn-endpoint-payment",
+        assistant_state={"activeTask": "explain_payment_options"},
+    )
+    output = await recouvrement_assistant_message(payload)
+
+    assert output["visibleReply"] == "Options de paiement du dossier RC-2048 préparées."
+    assert output["decisions"]["intent"] == "explain_payment_options"
+    assert output["artifact"]["type"] == "payment_options_v1"
+    assert output["artifact"]["content"]["amountDue"] == "840,00 €"
+    assert output["artifact"]["content"]["no_payment_initiated"] is True
+    assert output["artifact"]["content"]["no_payment_link_created"] is True
+    assert output["artifact"]["content"]["no_payment_link_sent"] is True
+    assert output["artifact"]["content"]["no_schedule_created"] is True
+    assert output["suggestedActions"] == [
+        "Proposer un échéancier",
+        "Préparer le message client",
+        "Soumettre à validation",
+        "Insérer dans le dossier",
+    ]
+
+
 async def test_recouvrement_assistant_action_endpoint_returns_governed_action_contract(
     observed_recouvrement_stores: Path,
 ) -> None:
@@ -993,6 +1082,42 @@ async def test_recouvrement_assistant_action_endpoint_returns_governed_action_co
     }
 
 
+def test_recouvrement_payment_options_actions_are_prepared_without_external_effect(
+    observed_recouvrement_stores: Path,
+) -> None:
+    payment = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Options de paiement",
+        conversation_id="conv-rc-payment-action",
+        turn_id="turn-payment-options",
+        assistant_state={"activeTask": "explain_payment_options"},
+    )
+
+    validation = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=payment["artifact"],
+        action_name="submit_for_validation",
+        conversation_id="conv-rc-payment-action",
+        turn_id="turn-payment-validation",
+    )
+    insertion = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=payment["artifact"],
+        action_name="insert_artifact_in_case",
+        conversation_id="conv-rc-payment-action",
+        turn_id="turn-payment-insertion",
+    )
+
+    assert validation["artifact"]["status"] == "pending_validation"
+    assert validation["artifact"]["content"]["validation_required"] is True
+    assert validation["artifact"]["content"]["no_schedule_created"] is True
+    assert "Aucune action client" in validation["visibleReply"]
+    assert insertion["artifact"]["status"] == "insertion_prepared"
+    assert insertion["artifact"]["content"]["case_write_executed"] is False
+    assert insertion["artifact"]["content"]["no_external_effect"] is True
+    assert "Aucune écriture définitive" in insertion["visibleReply"]
+
+
 async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_and_scores(
     observed_recouvrement_stores: Path,
 ) -> None:
@@ -1002,6 +1127,13 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
         conversation_id="conv-rc-cockpit",
         turn_id="turn-summary",
         assistant_state={"activeTask": "summary"},
+    )
+    payment = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Options de paiement",
+        conversation_id="conv-rc-cockpit",
+        turn_id="turn-payment-options",
+        assistant_state={"activeTask": "explain_payment_options"},
     )
     contact = run_recouvrement_graph_v1(
         case_id="RC-2048",
@@ -1046,6 +1178,7 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
 
     assert set(runs) == {
         "turn-summary",
+        "turn-payment-options",
         "turn-contact-blocked",
         "turn-schedule-36",
         "turn-client-message",
@@ -1065,6 +1198,16 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
     assert summary_artifact["no_external_effect"] is True
     summary_scores = {score["metric"]: score for score in runs["turn-summary"]["scores"]}
     assert summary_scores["no_uncontrolled_external_effect"]["score"] == 1.0
+
+    payment_artifact = runs["turn-payment-options"]["artifacts"][0]
+    assert payment_artifact["artifact_type"] == "payment_options_v1"
+    assert payment_artifact["no_payment_initiated"] is True
+    assert payment_artifact["no_payment_link_created"] is True
+    assert payment_artifact["no_payment_link_sent"] is True
+    assert payment_artifact["no_schedule_created"] is True
+    assert payment_artifact["no_external_effect"] is True
+    payment_scores = {score["metric"]: score for score in runs["turn-payment-options"]["scores"]}
+    assert payment_scores["payment_option_safety"]["score"] == 1.0
 
     schedule_artifact = runs["turn-schedule-36"]["artifacts"][0]
     assert schedule_artifact["artifact_type"] == "schedule_proposal_v2"
@@ -1100,4 +1243,5 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
     assert validation["artifact"]["status"] == "pending_validation"
     assert insertion["artifact"]["status"] == "insertion_prepared"
     assert summary["artifact"]["type"] == "case_summary_v1"
+    assert payment["artifact"]["type"] == "payment_options_v1"
     assert contact["artifact"]["content"]["decision"] == "blocked"

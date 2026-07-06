@@ -511,6 +511,9 @@ export const RecouvrementRunArtifactSchema = z.object({
   template_id: z.string().nullable().optional(),
   template_version: z.string().nullable().optional(),
   no_message_sent: z.boolean().nullable().optional(),
+  no_payment_initiated: z.boolean().nullable().optional(),
+  no_payment_link_created: z.boolean().nullable().optional(),
+  no_payment_link_sent: z.boolean().nullable().optional(),
   no_schedule_created: z.boolean().nullable().optional(),
   no_external_effect: z.boolean().nullable().optional(),
 });

@@ -147,6 +147,26 @@ class SummaryPolicyDecision(TypedDict):
     validation_decision: bool
 
 
+class PaymentOptionsPolicyDecision(TypedDict):
+    """Deterministic review decision for payment-options guidance."""
+
+    decision: str
+    reason_codes: list[str]
+    policy_review_status: str
+    amount_consistent: bool
+    validation_required: bool
+    client_agreement_required: bool
+    payment_initiated: bool
+    payment_link_created: bool
+    payment_link_sent: bool
+    schedule_created: bool
+    no_payment_initiated: bool
+    no_payment_link_created: bool
+    no_payment_link_sent: bool
+    no_schedule_created: bool
+    no_external_effect: bool
+
+
 class DraftGenerationMetadata(TypedDict):
     """Provenance metadata for a generated or selected client-message artifact."""
 
@@ -238,6 +258,7 @@ class RecouvrementWorkflowState(TypedDict):
     draft_generation: NotRequired[DraftGenerationMetadata]
     draft_policy: NotRequired[DraftPolicyDecision]
     summary_policy: NotRequired[SummaryPolicyDecision]
+    payment_options_policy: NotRequired[PaymentOptionsPolicyDecision]
     artifact: NotRequired[RecouvrementArtifact]
     visible_reply: NotRequired[str]
     card_updates: NotRequired[dict[str, list[str]]]
@@ -357,6 +378,20 @@ def _has_summary_intent(normalized_message: str) -> bool:
         re.search(
             r"\b(resume|resumer|synthese|synthetise|points cles|prioritaire|priorite|"
             r"situation du client|que dois je retenir|a retenir)\b",
+            normalized_message,
+        )
+        is not None
+    )
+
+
+def _has_payment_options_intent(normalized_message: str) -> bool:
+    """Whether Julie asks for available payment or settlement options."""
+    return (
+        re.search(
+            r"\b(options? de paiement|moyens? de paiement|comment peut[- ]?il payer|"
+            r"comment peut[- ]?il regler|paiement total|paiement partiel|"
+            r"paiement en plusieurs fois|echeancier possible|alternatives? de reglement|"
+            r"solution de paiement|options? de reglement|moyens? de reglement)\b",
             normalized_message,
         )
         is not None
@@ -515,21 +550,35 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
     has_schedule_intent = _has_schedule_intent(normalized)
     has_draft_intent = _has_draft_intent(normalized)
     has_summary_intent = _has_summary_intent(normalized)
-    if active_task == "draft_reminder" or (has_draft_intent and not has_schedule_intent):
+    has_payment_options_intent = _has_payment_options_intent(normalized)
+    has_requested_duration = _parse_duration_months(state["message"]) is not None
+    if has_draft_intent and not has_schedule_intent and not has_payment_options_intent:
         intent = "draft_reminder"
         confidence = 0.93
-    elif has_schedule_intent:
+    elif has_schedule_intent and (has_requested_duration or not has_payment_options_intent):
         intent = "propose_schedule"
         confidence = 0.94
-    elif active_task == "summary" or has_summary_intent:
+    elif has_payment_options_intent:
+        intent = "explain_payment_options"
+        confidence = 0.94
+    elif has_summary_intent:
         intent = "summarize_case"
         confidence = 0.95
-    elif _has_contact_rule_intent(normalized) or active_task in {
-        "check_rule",
-        "check_contact_rule",
-    }:
+    elif _has_contact_rule_intent(normalized):
         intent = "check_contact_rule"
         confidence = 0.96
+    elif active_task == "explain_payment_options":
+        intent = "explain_payment_options"
+        confidence = 0.82
+    elif active_task == "summary":
+        intent = "summarize_case"
+        confidence = 0.82
+    elif active_task in {"check_rule", "check_contact_rule"}:
+        intent = "check_contact_rule"
+        confidence = 0.82
+    elif active_task == "draft_reminder":
+        intent = "draft_reminder"
+        confidence = 0.82
     else:
         intent = "check_contact_rule"
         confidence = 0.72
@@ -592,6 +641,23 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
             "alternative_channel": case.alternative_channel,
             "no_external_effect": True,
         }
+    elif intent == "explain_payment_options":
+        slots = {
+            "case_id": state["case_id"],
+            "amount_due": case.amount_due,
+            "amount_due_label": case.amount_due_label,
+            "days_late": case.days_late,
+            "missed_promise": case.missed_promise,
+            "contact_window": case.contact_window_label,
+            "schedule_option_mentioned": True,
+            "validation_required": True,
+            "client_agreement_required": True,
+            "no_payment_initiated": True,
+            "no_payment_link_created": True,
+            "no_payment_link_sent": True,
+            "no_schedule_created": True,
+            "no_external_effect": True,
+        }
     else:
         requested_time = _parse_time(state["message"])
         slots = {
@@ -615,6 +681,8 @@ def _route_after_slot_extraction(state: RecouvrementWorkflowState) -> str:
         return "draft"
     if state.get("intent") == "summarize_case":
         return "summary"
+    if state.get("intent") == "explain_payment_options":
+        return "payment_options"
     return "contact"
 
 
@@ -880,6 +948,65 @@ def review_case_summary_policy(state: RecouvrementWorkflowState) -> dict[str, ob
     return {"summary_policy": decision}
 
 
+def review_payment_options_policy(state: RecouvrementWorkflowState) -> dict[str, object]:
+    """Review that payment-option guidance stays indicative and side-effect free."""
+    case = state["case"]
+    slots = state["slots"]
+    amount_consistent = (
+        slots.get("amount_due") == case.amount_due
+        and slots.get("amount_due_label") == case.amount_due_label
+    )
+    reason_codes = [
+        "PAYMENT_NOT_INITIATED",
+        "PAYMENT_LINK_NOT_CREATED",
+        "PAYMENT_LINK_NOT_SENT",
+        "SCHEDULE_NOT_CREATED",
+        "VALIDATION_REQUIRED",
+        "CLIENT_AGREEMENT_REQUIRED",
+        "SNAPSHOT_ONLY",
+        "NO_EXTERNAL_EFFECT",
+    ]
+    if not amount_consistent:
+        reason_codes = ["AMOUNT_MISMATCH"]
+    policy_review_status = "validation_required" if amount_consistent else "blocked"
+    decision: PaymentOptionsPolicyDecision = {
+        "decision": policy_review_status,
+        "reason_codes": reason_codes,
+        "policy_review_status": policy_review_status,
+        "amount_consistent": amount_consistent,
+        "validation_required": amount_consistent,
+        "client_agreement_required": amount_consistent,
+        "payment_initiated": False,
+        "payment_link_created": False,
+        "payment_link_sent": False,
+        "schedule_created": False,
+        "no_payment_initiated": True,
+        "no_payment_link_created": True,
+        "no_payment_link_sent": True,
+        "no_schedule_created": True,
+        "no_external_effect": True,
+    }
+    record_business_event(
+        event_name=BusinessEventName.POLICY_DECISION_MADE,
+        decision=decision["decision"],
+        reason_codes=decision["reason_codes"],
+        payload={
+            "policy_rule": "recouvrement.payment_options_safety",
+            "rule_id": "PAYMENT_OPTIONS_SAFETY",
+            "policy_review_status": decision["policy_review_status"],
+            "amount_consistent": amount_consistent,
+            "requires_validation": decision["validation_required"],
+            "no_payment_initiated": decision["no_payment_initiated"],
+            "no_payment_link_created": decision["no_payment_link_created"],
+            "no_payment_link_sent": decision["no_payment_link_sent"],
+            "no_schedule_created": decision["no_schedule_created"],
+            "no_external_effect": decision["no_external_effect"],
+        },
+        **_event_common(state, node_name="review_payment_options_policy"),
+    )
+    return {"payment_options_policy": decision}
+
+
 def build_case_summary_artifact(state: RecouvrementWorkflowState) -> dict[str, object]:
     """Build the drawer-compatible case-summary artifact."""
     case = state["case"]
@@ -993,6 +1120,116 @@ def build_case_summary_artifact(state: RecouvrementWorkflowState) -> dict[str, o
             "no_external_effect": True,
         },
         **_event_common(state, node_name="build_case_summary_artifact"),
+    )
+    return {
+        "artifact": artifact,
+        "card_updates": card_updates,
+        "suggested_actions": next_actions,
+    }
+
+
+def build_payment_options_artifact(state: RecouvrementWorkflowState) -> dict[str, object]:
+    """Build the drawer-compatible payment-options artifact."""
+    case = state["case"]
+    policy = state["payment_options_policy"]
+    options = [
+        "Paiement total : option à confirmer selon les moyens disponibles dans le dossier.",
+        "Paiement partiel : montant et modalités à confirmer avant toute proposition.",
+        "Échéancier indicatif : possible uniquement après validation interne et accord client.",
+        "Contact conseiller / rappel : préparer un échange pour confirmer la solution adaptée.",
+    ]
+    eligibility_notes = [
+        "Options à confirmer selon les moyens disponibles dans le dossier.",
+        "Aucun moyen de paiement spécifique n'est disponible dans le snapshot RC-2048.",
+        "Ne pas citer de moyen de paiement spécifique sans donnée confirmée.",
+    ]
+    required_validation = [
+        "Validation interne requise avant toute option d'échéancier",
+        "Accord client requis avant mise en place",
+    ]
+    recommended_next_action = (
+        "Confirmer les moyens disponibles dans le dossier, puis préparer un échéancier "
+        "indicatif si une validation est obtenue."
+    )
+    artifact: RecouvrementArtifact = {
+        "id": f"{case.case_id}-payment-options-v1",
+        "type": "payment_options_v1",
+        "task": "explain_payment_options",
+        "title": f"Options de paiement — {case.case_id}",
+        "status": "draft",
+        "content": {
+            "case_id": case.case_id,
+            "client": case.client,
+            "amountDue": case.amount_due_label,
+            "amount_due": case.amount_due_label,
+            "amount_due_numeric": case.amount_due,
+            "options": options,
+            "eligibilityNotes": eligibility_notes,
+            "requiredValidation": required_validation,
+            "required_validation": required_validation,
+            "validation_required": policy["validation_required"],
+            "clientAgreementRequired": policy["client_agreement_required"],
+            "client_agreement_required": policy["client_agreement_required"],
+            "recommendedNextAction": recommended_next_action,
+            "contextUsed": _context_items(case),
+            "no_payment_initiated": policy["no_payment_initiated"],
+            "no_payment_link_created": policy["no_payment_link_created"],
+            "no_payment_link_sent": policy["no_payment_link_sent"],
+            "no_schedule_created": policy["no_schedule_created"],
+            "no_external_effect": policy["no_external_effect"],
+            "payment_initiated": policy["payment_initiated"],
+            "payment_link_created": policy["payment_link_created"],
+            "payment_link_sent": policy["payment_link_sent"],
+            "schedule_created": policy["schedule_created"],
+            "policy_review_status": policy["policy_review_status"],
+            "reason_codes": policy["reason_codes"],
+        },
+    }
+    next_actions = [
+        "Proposer un échéancier",
+        "Préparer le message client",
+        "Soumettre à validation",
+        "Insérer dans le dossier",
+    ]
+    card_updates = {
+        "context": _context_items(case),
+        "summary": [
+            f"Montant dû : {case.amount_due_label}",
+            "Options de règlement préparées sans initier de paiement",
+            "Moyens disponibles à confirmer dans le dossier",
+            "Aucun lien de paiement créé ou envoyé",
+            "Aucun échéancier créé",
+        ],
+        "paymentOptions": options,
+        "eligibilityNotes": eligibility_notes,
+        "requiredValidation": required_validation,
+        "complianceChecks": [
+            "Aucun paiement initié",
+            "Aucun lien de paiement créé",
+            "Aucun lien de paiement envoyé",
+            "Aucun échéancier créé",
+            "Validation requise si une option d'échéancier est retenue",
+            "Effet externe : aucun",
+        ],
+        "nextActions": next_actions,
+    }
+    record_business_event(
+        event_name=BusinessEventName.ARTIFACT_CREATED,
+        artifact_id=artifact["id"],
+        artifact_type=artifact["type"],
+        artifact_status=artifact["status"],
+        payload={
+            "task": artifact["task"],
+            "title": artifact["title"],
+            "decision": policy["decision"],
+            "policy_review_status": policy["policy_review_status"],
+            "no_payment_initiated": policy["no_payment_initiated"],
+            "no_payment_link_created": policy["no_payment_link_created"],
+            "no_payment_link_sent": policy["no_payment_link_sent"],
+            "no_schedule_created": policy["no_schedule_created"],
+            "no_external_effect": policy["no_external_effect"],
+        },
+        **_event_common(state, node_name="build_payment_options_artifact"),
     )
     return {
         "artifact": artifact,
@@ -1375,6 +1612,25 @@ def generate_visible_reply(state: RecouvrementWorkflowState) -> dict[str, object
             "no_schedule_created": True,
             "no_external_effect": True,
         }
+    elif state.get("intent") == "explain_payment_options":
+        payment_policy = state["payment_options_policy"]
+        artifact = state["artifact"]
+        reply = f"Options de paiement du dossier {case.case_id} préparées."
+        task = "explain_payment_options"
+        message_payload = {
+            "message_kind": "assistant_reply",
+            "visible_reply": reply,
+            "task": task,
+            "generation_mode": "deterministic_builder",
+            "artifact_id": artifact["id"],
+            "artifact_type": artifact["type"],
+            "policy_review_status": payment_policy["policy_review_status"],
+            "no_payment_initiated": payment_policy["no_payment_initiated"],
+            "no_payment_link_created": payment_policy["no_payment_link_created"],
+            "no_payment_link_sent": payment_policy["no_payment_link_sent"],
+            "no_schedule_created": payment_policy["no_schedule_created"],
+            "no_external_effect": payment_policy["no_external_effect"],
+        }
     elif state.get("intent") == "propose_schedule":
         schedule_policy = state["schedule_policy"]
         artifact = state["artifact"]
@@ -1496,6 +1752,8 @@ def finalize_business_observability(state: RecouvrementWorkflowState) -> dict[st
         decisions["draftGeneration"] = state["draft_generation"]
     if "summary_policy" in state:
         decisions["summaryPolicy"] = state["summary_policy"]
+    if "payment_options_policy" in state:
+        decisions["paymentOptionsPolicy"] = state["payment_options_policy"]
     output: RecouvrementOutput = {
         "visibleReply": state["visible_reply"],
         "artifact": state["artifact"],
@@ -2228,8 +2486,16 @@ def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:
         instrument_node("review_case_summary_policy", review_case_summary_policy),
     )
     graph.add_node(
+        "review_payment_options_policy",
+        instrument_node("review_payment_options_policy", review_payment_options_policy),
+    )
+    graph.add_node(
         "build_case_summary_artifact",
         instrument_node("build_case_summary_artifact", build_case_summary_artifact),
+    )
+    graph.add_node(
+        "build_payment_options_artifact",
+        instrument_node("build_payment_options_artifact", build_payment_options_artifact),
     )
     graph.add_node(
         "build_contact_rule_artifact",
@@ -2271,10 +2537,13 @@ def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:
             "schedule": "evaluate_schedule_policy",
             "draft": "draft_client_message",
             "summary": "review_case_summary_policy",
+            "payment_options": "review_payment_options_policy",
         },
     )
     graph.add_edge("review_case_summary_policy", "build_case_summary_artifact")
     graph.add_edge("build_case_summary_artifact", "generate_visible_reply")
+    graph.add_edge("review_payment_options_policy", "build_payment_options_artifact")
+    graph.add_edge("build_payment_options_artifact", "generate_visible_reply")
     graph.add_edge("evaluate_contact_policy", "build_contact_rule_artifact")
     graph.add_edge("build_contact_rule_artifact", "generate_visible_reply")
     graph.add_edge("evaluate_schedule_policy", "build_schedule_proposal_artifact")

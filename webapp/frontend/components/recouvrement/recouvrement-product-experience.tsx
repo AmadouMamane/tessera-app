@@ -43,6 +43,7 @@ import {
   buildContactRuleBackendUnavailableFallback,
   buildDraftBackendUnavailableFallback,
   buildInvalidDraftEditResponse,
+  buildPaymentOptionsBackendUnavailableFallback,
   buildReminderPreparedResponse,
   buildScheduleProposalDraft,
   contactRuleCards,
@@ -101,6 +102,12 @@ const assistantActions = [
     prompt: "Propose un échéancier adapté à la situation et indique les points à valider.",
     Icon: CalendarDays,
   },
+  {
+    label: "Options de paiement",
+    description: "Lister les alternatives sans actionner de paiement",
+    prompt: "Prépare les options de paiement possibles pour ce dossier sans initier de paiement.",
+    Icon: CircleHelp,
+  },
 ];
 
 const nextItems = [
@@ -129,6 +136,7 @@ const defaultAssistantTab = "Préparer une relance";
 const assistantTabs = [
   defaultAssistantTab,
   "Proposer un échéancier",
+  "Options de paiement",
   "Vérifier une règle",
   "Résumer",
 ];
@@ -209,6 +217,19 @@ const pendingContactRuleContent: GeneratedAssistantContent = {
 
 function pendingContentForTask(task: RecouvrementDrawerTask): GeneratedAssistantContent {
   if (task === "check_contact_rule") return pendingContactRuleContent;
+  if (task === "explain_payment_options") {
+    return {
+      ...fallbackAssistantContent,
+      artifact: {
+        id: "RC-2048-payment-options-pending",
+        type: "payment_options_v1",
+        task: "explain_payment_options",
+        title: "Options de paiement — RC-2048",
+        status: "loading",
+        content: {},
+      },
+    };
+  }
   if (task === "propose_schedule") {
     return {
       ...fallbackAssistantContent,
@@ -260,6 +281,7 @@ const initialDrawerStateModel: RecouvrementDrawerStateModel = {
 function assistantTaskForTab(tab: string): RecouvrementDrawerTask {
   if (tab === "Vérifier une règle") return "check_contact_rule";
   if (tab === "Proposer un échéancier") return "propose_schedule";
+  if (tab === "Options de paiement") return "explain_payment_options";
   if (tab === "Résumer") return "summary";
   return "draft_reminder";
 }
@@ -267,6 +289,7 @@ function assistantTaskForTab(tab: string): RecouvrementDrawerTask {
 function assistantTabForTask(task: RecouvrementDrawerTask): string {
   if (task === "check_contact_rule") return "Vérifier une règle";
   if (task === "propose_schedule") return "Proposer un échéancier";
+  if (task === "explain_payment_options") return "Options de paiement";
   if (task === "summary") return "Résumer";
   return "Préparer une relance";
 }
@@ -392,6 +415,9 @@ function AssistantCardBloom() {
 }
 
 function assistantTabForAction(action: string) {
+  if (action.includes("Options de paiement")) {
+    return "Options de paiement";
+  }
   if (action.includes("échéancier")) {
     return "Proposer un échéancier";
   }
@@ -675,6 +701,25 @@ function contentFromCaseSummaryResponse(
     versions: [],
     paymentPlan: "",
     complianceChecks: updates.complianceChecks ?? [],
+    nextActions: response.suggestedActions ?? updates.nextActions ?? [],
+    rawResponse: response.visibleReply,
+    artifact: response.artifact,
+    artifactCards: updates,
+    businessScores: response.businessScores ?? [],
+  };
+}
+
+function contentFromPaymentOptionsResponse(
+  response: RecouvrementAssistantResponse,
+): GeneratedAssistantContent {
+  const updates = response.cardUpdates ?? {};
+  return {
+    summary: updates.summary ?? updates.context ?? [],
+    versions: [],
+    paymentPlan: (updates.paymentOptions ?? updates.options ?? updates.eligibilityNotes ?? []).join(
+      "\n",
+    ),
+    complianceChecks: [...(updates.requiredValidation ?? []), ...(updates.complianceChecks ?? [])],
     nextActions: response.suggestedActions ?? updates.nextActions ?? [],
     rawResponse: response.visibleReply,
     artifact: response.artifact,
@@ -1109,7 +1154,7 @@ function AssistantDrawer({
   const shouldShowDraftPanel =
     hasMessageArtifact ||
     artifactFamily === "schedule" ||
-    (status === "loading" && artifactFamily !== "summary");
+    (status === "loading" && artifactFamily !== "summary" && artifactFamily !== "payment_options");
   const hasStructuredArtifact = content.artifact !== null;
   const isBlockedContact =
     content.artifact?.type === "contact_rule_v1" && content.artifact.content.decision === "blocked";
@@ -1132,6 +1177,8 @@ function AssistantDrawer({
       : "Règle de contact vérifiée pour RC-2048."
     : (content.artifact?.title ?? "Analyse du dossier RC-2048.");
   const verifyButtonLabel = hasContactRuleArtifact ? "Revérifier" : "Régénérer";
+  const paymentPlanTitle =
+    artifactFamily === "payment_options" ? "Options de paiement" : "Échéancier proposé";
 
   return (
     <aside
@@ -1400,7 +1447,7 @@ function AssistantDrawer({
                   {content.paymentPlan || status === "loading" ? (
                     <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                       <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                        Échéancier proposé
+                        {paymentPlanTitle}
                       </h3>
                       {status === "loading" ? (
                         <SkeletonLines rows={2} />
@@ -1599,6 +1646,7 @@ export function RecouvrementProductExperience() {
       const usesStructuredScheduleBackend = route.backendIntent === "propose_schedule";
       const usesStructuredDraftBackend = route.backendIntent === "draft_reminder";
       const usesStructuredSummaryBackend = route.backendIntent === "summarize_case";
+      const usesStructuredPaymentOptionsBackend = route.backendIntent === "explain_payment_options";
       const routedTab = assistantTabForTask(route.targetTask);
       if (!resetThread && routedTab !== activeAssistantTab) {
         skipNextAssistantAutoTurnRef.current = true;
@@ -1803,7 +1851,9 @@ export function RecouvrementProductExperience() {
                 ? contentFromRecouvrementDraftResponse(response)
                 : usesStructuredSummaryBackend
                   ? contentFromCaseSummaryResponse(response)
-                  : contentFromRecouvrementContactResponse(response);
+                  : usesStructuredPaymentOptionsBackend
+                    ? contentFromPaymentOptionsResponse(response)
+                    : contentFromRecouvrementContactResponse(response);
             completeAfterThinkingMinimum(() => {
               setAssistantContent(parsed);
               setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
@@ -1873,6 +1923,23 @@ export function RecouvrementProductExperience() {
                   current.map((item) =>
                     item.id === assistantMessage.id
                       ? { ...item, content: summary.visibleReply, streaming: false }
+                      : item,
+                  ),
+                );
+                setAssistantStatus("ready");
+              });
+              return;
+            }
+            if (usesStructuredPaymentOptionsBackend) {
+              const fallbackResponse = buildPaymentOptionsBackendUnavailableFallback();
+              const parsed = contentFromPaymentOptionsResponse(fallbackResponse);
+              completeAfterThinkingMinimum(() => {
+                setAssistantContent(parsed);
+                setSelectedVersionId("v1");
+                setAssistantThread((current) =>
+                  current.map((item) =>
+                    item.id === assistantMessage.id
+                      ? { ...item, content: fallbackResponse.visibleReply, streaming: false }
                       : item,
                   ),
                 );

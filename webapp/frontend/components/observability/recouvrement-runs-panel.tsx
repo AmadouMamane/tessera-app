@@ -26,6 +26,7 @@ const SCORE_ORDER = [
   "artifact_governance",
   "validation_required_compliance",
   "client_message_safety",
+  "payment_option_safety",
   "no_uncontrolled_external_effect",
   "recouvrement_trace_completeness",
   "amount_consistency",
@@ -93,6 +94,7 @@ function runTitle(run: RecouvrementRun): string {
   if (artifact?.artifact_type === "client_message_artifact") return "Message client";
   if (artifact?.artifact_type === "reminder_draft_v1") return "Brouillon de relance";
   if (artifact?.artifact_type === "case_summary_v1") return "Résumé du dossier";
+  if (artifact?.artifact_type === "payment_options_v1") return "Options de paiement";
   if (run.sensitive_actions[0]?.action_name)
     return actionLabel(run.sensitive_actions[0].action_name);
   return run.turn_id;
@@ -291,6 +293,18 @@ export function RecouvrementRunsPanel({
                       <Fact
                         label="Message envoyé"
                         value={artifact.no_message_sent === true ? "non" : "—"}
+                      />
+                      <Fact
+                        label="Paiement initié"
+                        value={artifact.no_payment_initiated === true ? "non" : "—"}
+                      />
+                      <Fact
+                        label="Lien paiement créé"
+                        value={artifact.no_payment_link_created === true ? "non" : "—"}
+                      />
+                      <Fact
+                        label="Lien paiement envoyé"
+                        value={artifact.no_payment_link_sent === true ? "non" : "—"}
                       />
                       <Fact
                         label="Échéancier créé"
