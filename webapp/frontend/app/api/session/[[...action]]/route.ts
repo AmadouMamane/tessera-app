@@ -27,7 +27,11 @@ function relaySetCookie(upstream: Response, headers: Headers): void {
   for (const cookie of cookies) headers.append("set-cookie", cookie);
 }
 
-async function proxy(request: NextRequest, method: "GET" | "POST", path: string): Promise<Response> {
+async function proxy(
+  request: NextRequest,
+  method: "GET" | "POST",
+  path: string,
+): Promise<Response> {
   const cookie = request.headers.get("cookie");
   let upstream: Response;
   try {

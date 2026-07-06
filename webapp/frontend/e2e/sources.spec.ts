@@ -176,7 +176,10 @@ test("the as-of control links to the point-in-time page (no invented Suggestions
 }) => {
   // The non-normative "Suggestions" panel must not exist.
   await expect(page.getByRole("heading", { name: "Suggestions" })).toHaveCount(0);
-  await page.getByRole("link", { name: /Voir à date/ }).first().click();
+  await page
+    .getByRole("link", { name: /Voir à date/ })
+    .first()
+    .click();
   await page.waitForURL(/\/prouver\/etat-a-date/, { timeout: 15_000 });
   expect(page.url()).toContain("/prouver/etat-a-date");
 });

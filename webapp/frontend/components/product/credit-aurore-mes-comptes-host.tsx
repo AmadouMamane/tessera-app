@@ -24,15 +24,14 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { CreditAuroreLogoMark } from "@/components/brand/credit-aurore-logo";
-import { PRODUCT_CHAT_EVENT } from "@/components/product/chat-widget";
+import { CHAT_WIDGET_STATE_EVENT, PRODUCT_CHAT_EVENT } from "@/components/product/chat-widget";
 
 const APPOINTMENT_PROMPT =
   "Je souhaite prendre rendez-vous avec un conseiller Crédit Aurore pour faire le point sur mes comptes.";
-const GENERAL_HELP_PROMPT = "Bonjour, j'ai besoin d'aide sur mon espace client Crédit Aurore.";
 const DEMO_ACTION_PROMPTS = {
   rib: "Je souhaite obtenir mon RIB dans cette démo Crédit Aurore. Que peut réellement faire Tessera ici ?",
   statements: "Je souhaite comprendre mes relevés bancaires dans cette démo Crédit Aurore.",
@@ -1218,7 +1217,7 @@ function DemoStrip() {
         className="demo-live"
         type="button"
         aria-label="Ouvrir l'assistant Tessera"
-        onClick={() => openProductChat(GENERAL_HELP_PROMPT)}
+        onClick={() => openProductChat()}
       >
         <span className="demo-dot" aria-hidden="true" />
         Assistant support client intégré et fonctionnel
@@ -1489,14 +1488,29 @@ function Footer() {
 }
 
 function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) {
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  useEffect(() => {
+    const handleState = (e: any) => setIsChatOpen(e.detail.isOpen);
+    window.addEventListener(CHAT_WIDGET_STATE_EVENT, handleState);
+    return () => window.removeEventListener(CHAT_WIDGET_STATE_EVENT, handleState);
+  }, []);
+
+  const styleProps = {
+    transition: "opacity 300ms ease, transform 300ms ease",
+    opacity: isChatOpen ? 0 : 1,
+    transform: isChatOpen ? "translateY(10px) scale(0.95)" : "translateY(0) scale(1)",
+    pointerEvents: isChatOpen ? "none" : "auto",
+  } as React.CSSProperties;
+
   return (
     <>
-      <div className="side-widget">
+      <div className="side-widget" style={styleProps}>
         <button
           className="rail-action"
           type="button"
           aria-label="Ouvrir l'assistant Crédit Aurore"
-          onClick={() => openProductChat(GENERAL_HELP_PROMPT)}
+          onClick={() => openProductChat()}
         >
           <MessageCircle />
         </button>
@@ -1509,7 +1523,7 @@ function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) 
           <CalendarDays />
         </button>
       </div>
-      <div className="avis" aria-hidden="true">
+      <div className="avis" aria-hidden="true" style={styleProps}>
         <CircleHelp />
         Votre avis
       </div>

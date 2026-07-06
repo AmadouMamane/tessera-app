@@ -1,11 +1,10 @@
 "use client";
 
-import { AlertTriangle, Check, Copy, Pencil, Sparkles, User2 } from "lucide-react";
+import { Check, Copy, Pencil, Sparkles, User2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { RecouvrementMark } from "@/components/recouvrement/recouvrement-logo";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/lib/stores/chat-store";
 import { CitationList, MessageContent } from "./message-content";
@@ -119,8 +118,8 @@ export function MessageBubble({
           className={cn(
             "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
             isUser
-              ? "bg-[var(--secondary)] text-[var(--muted-foreground)] ring-1 ring-[var(--border)]"
-              : "bg-gradient-to-br from-navy-800 to-navy-950 text-gold-400 shadow-[inset_0_1px_1px_oklch(0.8_0.066_85/0.2)] ring-1 ring-gold-500/15 dark:from-gold-500 dark:to-gold-600 dark:text-navy-950 dark:ring-gold-300/25",
+              ? "bg-slate-100 text-slate-500 ring-1 ring-slate-200"
+              : "bg-gradient-to-br from-navy-800 to-navy-950 text-gold-400 shadow-[inset_0_1px_1px_oklch(0.8_0.066_85/0.2)] ring-1 ring-gold-500/15 ",
           )}
         >
           {isUser ? (
@@ -138,18 +137,12 @@ export function MessageBubble({
         {/* Name + timestamp + badges — hidden for grouped messages */}
         {!isGrouped && (
           <div className={cn("flex items-baseline gap-2", isUser ? "justify-end px-1" : "")}>
-            <span className="text-[0.7rem] font-medium text-[var(--muted-foreground)]">
+            <span className="text-[0.7rem] font-medium text-slate-700">
               {isUser ? t("youSaid") : assistantLabel}
             </span>
-            <span className="text-[0.62rem] tabular-nums text-[var(--muted-foreground)]/40">
+            <span className="text-[0.62rem] tabular-nums text-slate-500">
               {formatTime(message.createdAt)}
             </span>
-            {message.needsEscalation && (
-              <Badge tone="warning" className="gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                {t("escalated")}
-              </Badge>
-            )}
             {!isUser && typeof message.confidence === "number" && (
               <ConfidenceBadge value={message.confidence} />
             )}
@@ -161,8 +154,8 @@ export function MessageBubble({
           className={cn(
             "relative w-full",
             isUser
-              ? "px-4 py-2.5 rounded-2xl rounded-br-sm bg-gradient-to-br from-navy-800 to-navy-950 text-navy-50 dark:from-gold-400 dark:to-gold-500 dark:text-navy-950 text-sm leading-relaxed shadow-[var(--shadow-card)]"
-              : "text-[var(--foreground)]",
+              ? "px-4 py-2.5 rounded-2xl rounded-br-sm bg-slate-100 text-slate-800 text-sm leading-relaxed"
+              : "text-slate-900",
           )}
         >
           {isUser ? (
@@ -173,7 +166,7 @@ export function MessageBubble({
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleEditKey}
                 rows={1}
-                className="w-full resize-none bg-transparent text-sm leading-relaxed text-navy-50 dark:text-navy-950 focus:outline-none"
+                className="w-full resize-none bg-transparent text-sm leading-relaxed text-slate-800 focus:outline-none"
               />
             ) : (
               <MessageContent speaker="user" content={message.content} />
@@ -190,18 +183,16 @@ export function MessageBubble({
             <div className="self-end flex flex-col items-end gap-1">
               {/* Truncation warning — only when this is not the last user message */}
               {!isLastUserMessage && (
-                <p className="text-[0.6rem] text-amber-400 dark:text-amber-500 select-none">
+                <p className="text-[0.6rem] text-amber-500 font-medium select-none">
                   ⚠ {t("editWillTruncate")}
                 </p>
               )}
               <div className="flex items-center gap-2">
-                <p className="text-[0.6rem] text-navy-300/60 dark:text-navy-700/60 select-none">
-                  {t("editHint")}
-                </p>
+                <p className="text-[0.6rem] text-navy-300/80 select-none">{t("editHint")}</p>
                 <button
                   type="button"
                   onClick={cancelEdit}
-                  className="flex items-center gap-1 text-[0.62rem] text-[var(--muted-foreground)]/60 hover:text-[var(--muted-foreground)] transition-colors duration-150"
+                  className="flex items-center gap-1 text-[0.62rem] text-slate-500 hover:text-slate-700 transition-colors duration-150"
                 >
                   {t("cancel")}
                 </button>
@@ -209,7 +200,7 @@ export function MessageBubble({
                   type="button"
                   onClick={confirmEdit}
                   disabled={!draft.trim() || draft.trim() === message.content}
-                  className="flex items-center gap-1 text-[0.62rem] font-medium text-gold-600 dark:text-gold-500 hover:text-gold-700 dark:hover:text-gold-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
+                  className="flex items-center gap-1 text-[0.62rem] font-medium text-gold-600 hover:text-gold-700 :text-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                 >
                   {t("confirm")}
                 </button>
@@ -217,15 +208,15 @@ export function MessageBubble({
             </div>
           ) : (
             /* On desktop: fade-in on hover. On touch (hover:none): always visible. */
-            <div className="self-end flex items-center gap-2 opacity-20 group-hover:opacity-100 [@media(hover:none)]:!opacity-100 transition-opacity duration-150">
+            <div className="self-end flex items-center gap-2 opacity-60 group-hover:opacity-100 [@media(hover:none)]:!opacity-100 transition-opacity duration-150">
               <button
                 type="button"
                 onClick={handleUserCopy}
                 aria-label={userCopied ? t("copied") : t("copy")}
                 className={cn(
                   "flex items-center gap-1 text-[0.62rem] transition-colors duration-150",
-                  "text-[var(--muted-foreground)]/60 hover:text-[var(--muted-foreground)]",
-                  userCopied && "!opacity-100 text-green-600 dark:text-green-400",
+                  "text-slate-500 hover:text-slate-700",
+                  userCopied && "!opacity-100 text-green-600 ",
                 )}
               >
                 {userCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -237,7 +228,7 @@ export function MessageBubble({
                   onClick={startEdit}
                   disabled={isStreaming}
                   aria-label={t("edit")}
-                  className="flex items-center gap-1 text-[0.62rem] text-[var(--muted-foreground)]/60 hover:text-[var(--muted-foreground)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-150"
+                  className="flex items-center gap-1 text-[0.62rem] text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                 >
                   <Pencil className="h-3 w-3" />
                   {t("edit")}
@@ -254,9 +245,9 @@ export function MessageBubble({
             aria-label={copied ? t("copied") : t("copy")}
             className={cn(
               "self-start flex items-center gap-1 px-1 text-[0.62rem] transition-all duration-150",
-              "text-[var(--muted-foreground)]/40 hover:text-[var(--muted-foreground)]",
-              "opacity-20 group-hover:opacity-100",
-              copied && "!opacity-100 text-green-600 dark:text-green-400",
+              "text-slate-500 hover:text-slate-700",
+              "opacity-60 group-hover:opacity-100",
+              copied && "!opacity-100 text-green-600 ",
             )}
           >
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -277,10 +268,10 @@ function ConfidenceBadge({ value }: { value: number }) {
   const pct = Math.round(value * 100);
   const tone =
     value >= 0.7
-      ? "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-950/40 border-green-200 dark:border-green-800"
+      ? "text-green-700 bg-green-50 border-green-200 "
       : value >= 0.4
-        ? "text-amber-700 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800"
-        : "text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-950/40 border-red-200 dark:border-red-800";
+        ? "text-amber-700 bg-amber-50 border-amber-200 "
+        : "text-red-700 bg-red-50 border-red-200 ";
   return (
     <span
       className={cn(

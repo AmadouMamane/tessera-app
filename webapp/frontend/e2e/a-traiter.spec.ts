@@ -46,9 +46,7 @@ test("clicking a status badge cycles and persists the status", async ({ page }) 
   const before = (await badge.textContent())?.trim();
   await badge.click();
   // The status label changes (todo -> en cours, etc.).
-  await expect
-    .poll(async () => (await badge.textContent())?.trim())
-    .not.toBe(before);
+  await expect.poll(async () => (await badge.textContent())?.trim()).not.toBe(before);
   const afterClick = (await badge.textContent())?.trim();
 
   // Reload: the durable mutation survives.

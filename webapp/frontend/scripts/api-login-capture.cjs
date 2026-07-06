@@ -12,20 +12,38 @@ const PASS = process.env.TESSERA_ADMIN_PASS || "tessera-admin";
   const { csrfToken } = await csrfRes.json();
   console.log("csrfToken len:", (csrfToken || "").length);
 
-  const cb = await api.post("/api/auth/callback/credentials", {
-    form: { csrfToken, username: USER, password: PASS, callbackUrl: `${BASE}/fr/select-space`, json: "true" },
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    maxRedirects: 0,
-  }).catch((e) => { console.log("post err", e.message); return null; });
+  const cb = await api
+    .post("/api/auth/callback/credentials", {
+      form: {
+        csrfToken,
+        username: USER,
+        password: PASS,
+        callbackUrl: `${BASE}/fr/select-space`,
+        json: "true",
+      },
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      maxRedirects: 0,
+    })
+    .catch((e) => {
+      console.log("post err", e.message);
+      return null;
+    });
   if (cb) console.log("callback status:", cb.status());
 
   const storage = await api.storageState();
   const session = storage.cookies.find((c) => c.name.includes("session-token"));
-  console.log("session cookie:", session ? `${session.name} (${session.value.length} chars)` : "NONE");
-  if (!session) { await api.dispose(); process.exit(2); }
+  console.log(
+    "session cookie:",
+    session ? `${session.name} (${session.value.length} chars)` : "NONE",
+  );
+  if (!session) {
+    await api.dispose();
+    process.exit(2);
+  }
 
   const browser = await chromium.launch();
-  const W = Number(process.env.CAP_W || 1536), H = Number(process.env.CAP_H || 1000);
+  const W = Number(process.env.CAP_W || 1536),
+    H = Number(process.env.CAP_H || 1000);
   const ctx = await browser.newContext({ viewport: { width: W, height: H } });
   await ctx.addCookies([session]);
   const page = await ctx.newPage();
@@ -33,8 +51,14 @@ const PASS = process.env.TESSERA_ADMIN_PASS || "tessera-admin";
   await page.waitForLoadState("networkidle").catch(() => {});
   await page.waitForTimeout(2500);
   await page.screenshot({ path: out, fullPage: true });
-  const dims = await page.evaluate(() => ({ w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight }));
+  const dims = await page.evaluate(() => ({
+    w: document.documentElement.scrollWidth,
+    h: document.documentElement.scrollHeight,
+  }));
   console.log(`captured ${route} -> ${out} (${dims.w}x${dims.h}) url=${page.url()}`);
   await browser.close();
   await api.dispose();
-})().catch((e) => { console.error(e); process.exit(1); });
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

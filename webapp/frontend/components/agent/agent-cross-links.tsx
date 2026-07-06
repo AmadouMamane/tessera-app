@@ -22,13 +22,37 @@ type AgentLinkPage =
   | "console"
   | "historique";
 
-const PRESETS: Record<AgentLinkPage, { configurer: { href: string; label: string }; data?: AgentLinkPage[] }> = {
-  configurations: { configurer: { href: "/configurer/parametres", label: "Définition · paramètres (CONFIGURER)" }, data: ["prompts", "garde-fous"] },
-  "garde-fous": { configurer: { href: "/configurer/garde-fous", label: "Définition · garde-fous (CONFIGURER)" }, data: ["connaissances"] },
-  prompts: { configurer: { href: "/configurer/parametres", label: "Définition · prompts (CONFIGURER)" }, data: ["configurations"] },
-  connaissances: { configurer: { href: "/configurer/sources-memoire", label: "Définition · sources & mémoire (CONFIGURER)" }, data: ["garde-fous"] },
-  console: { configurer: { href: "/configurer/modeles", label: "Définition · modèle (CONFIGURER)" }, data: ["prompts"] },
-  historique: { configurer: { href: "/configurer/parametres", label: "Définition · paramètres (CONFIGURER)" }, data: ["console"] },
+const PRESETS: Record<
+  AgentLinkPage,
+  { configurer: { href: string; label: string }; data?: AgentLinkPage[] }
+> = {
+  configurations: {
+    configurer: { href: "/configurer/parametres", label: "Définition · paramètres (CONFIGURER)" },
+    data: ["prompts", "garde-fous"],
+  },
+  "garde-fous": {
+    configurer: { href: "/configurer/garde-fous", label: "Définition · garde-fous (CONFIGURER)" },
+    data: ["connaissances"],
+  },
+  prompts: {
+    configurer: { href: "/configurer/parametres", label: "Définition · prompts (CONFIGURER)" },
+    data: ["configurations"],
+  },
+  connaissances: {
+    configurer: {
+      href: "/configurer/sources-memoire",
+      label: "Définition · sources & mémoire (CONFIGURER)",
+    },
+    data: ["garde-fous"],
+  },
+  console: {
+    configurer: { href: "/configurer/modeles", label: "Définition · modèle (CONFIGURER)" },
+    data: ["prompts"],
+  },
+  historique: {
+    configurer: { href: "/configurer/parametres", label: "Définition · paramètres (CONFIGURER)" },
+    data: ["console"],
+  },
 };
 
 const DATA_LABEL: Record<AgentLinkPage, string> = {
@@ -44,7 +68,10 @@ export function AgentCrossLinks({ page }: { page: AgentLinkPage }) {
   const agentId = useAgentId();
   const preset = PRESETS[page];
   const items: { href: Route; label: string }[] = [
-    { href: (`/agir/release-control?agent=${agentId}`) as Route, label: "Gouvernance · Release Control" },
+    {
+      href: `/agir/release-control?agent=${agentId}` as Route,
+      label: "Gouvernance · Release Control",
+    },
     { href: preset.configurer.href as Route, label: preset.configurer.label },
     ...(preset.data ?? []).map((d) => ({
       href: agentPath(agentId, d) as Route,

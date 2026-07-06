@@ -10,14 +10,25 @@ const ROUTES = (process.env.ROUTES || "").split(",").filter(Boolean);
 (async () => {
   const api = await request.newContext({ baseURL: BASE });
   const { csrfToken } = await (await api.get("/api/auth/csrf")).json();
-  await api.post("/api/auth/callback/credentials", {
-    form: { csrfToken, username: USER, password: PASS, callbackUrl: `${BASE}/fr/select-space`, json: "true" },
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    maxRedirects: 0,
-  }).catch(() => {});
+  await api
+    .post("/api/auth/callback/credentials", {
+      form: {
+        csrfToken,
+        username: USER,
+        password: PASS,
+        callbackUrl: `${BASE}/fr/select-space`,
+        json: "true",
+      },
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      maxRedirects: 0,
+    })
+    .catch(() => {});
   const storage = await api.storageState();
   const session = storage.cookies.find((c) => c.name.includes("session-token"));
-  if (!session) { console.log("NO SESSION"); process.exit(2); }
+  if (!session) {
+    console.log("NO SESSION");
+    process.exit(2);
+  }
 
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1536, height: 1000 } });
@@ -26,11 +37,17 @@ const ROUTES = (process.env.ROUTES || "").split(",").filter(Boolean);
 
   const found = {};
   const record = (txt) => {
-    const m = /MISSING_MESSAGE[^\n]*?`?([\w.$-]+)`?[^\n]*?locale `?(\w+)`?/i.exec(txt) ||
-              /Could not resolve `([^`]+)` in messages for locale `(\w+)`/i.exec(txt);
-    if (m) { const k = m[1]; (found[k] = found[k] || new Set()).add(page.url().replace(BASE, "")); }
+    const m =
+      /MISSING_MESSAGE[^\n]*?`?([\w.$-]+)`?[^\n]*?locale `?(\w+)`?/i.exec(txt) ||
+      /Could not resolve `([^`]+)` in messages for locale `(\w+)`/i.exec(txt);
+    if (m) {
+      const k = m[1];
+      (found[k] = found[k] || new Set()).add(page.url().replace(BASE, ""));
+    }
   };
-  page.on("console", (msg) => { if (msg.type() === "error") record(msg.text()); });
+  page.on("console", (msg) => {
+    if (msg.type() === "error") record(msg.text());
+  });
   page.on("pageerror", (err) => record(String(err)));
 
   for (const r of ROUTES) {
@@ -38,7 +55,9 @@ const ROUTES = (process.env.ROUTES || "").split(",").filter(Boolean);
       await page.goto(`${BASE}${r}`, { waitUntil: "domcontentloaded" });
       await page.waitForLoadState("networkidle").catch(() => {});
       await page.waitForTimeout(1200);
-    } catch (e) { console.log(`  visit error ${r}: ${e.message}`); }
+    } catch (e) {
+      console.log(`  visit error ${r}: ${e.message}`);
+    }
   }
 
   const keys = Object.keys(found).sort();
@@ -46,4 +65,7 @@ const ROUTES = (process.env.ROUTES || "").split(",").filter(Boolean);
   for (const k of keys) console.log(`  ${k}  @ ${[...found[k]].join(", ")}`);
   await browser.close();
   await api.dispose();
-})().catch((e) => { console.error(e); process.exit(1); });
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

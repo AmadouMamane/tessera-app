@@ -30,7 +30,7 @@ export default async function ProductChatPage({ params }: PageProps) {
   return (
     <>
       <CreditAuroreMesComptesHost />
-      <ChatWidget />
+      <ChatWidget hideLauncher />
       <DemoLauncherLink floating />
     </>
   );

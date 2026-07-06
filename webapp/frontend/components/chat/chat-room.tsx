@@ -33,13 +33,14 @@ import { TypingDots } from "./typing-dots";
  * persisted in localStorage so the agent can recall durable facts across
  * separate conversations. Replaced by a real customer id once auth exists.
  */
+export const SUBJECT_ID_KEY = "tessera.subjectId";
+
 function getSubjectId(): string | undefined {
   if (typeof window === "undefined") return undefined;
-  const KEY = "tessera.subjectId";
-  let id = window.localStorage.getItem(KEY);
+  let id = window.localStorage.getItem(SUBJECT_ID_KEY);
   if (!id) {
     id = crypto.randomUUID();
-    window.localStorage.setItem(KEY, id);
+    window.localStorage.setItem(SUBJECT_ID_KEY, id);
   }
   return id;
 }
@@ -348,7 +349,12 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
   }, [isStreaming, messages, removeLastExchange, sendMessage]);
 
   useEffect(() => {
-    if (!externalPrompt || isStreaming || handledExternalPromptRef.current === externalPrompt.id) {
+    if (
+      !externalPrompt ||
+      isStreaming ||
+      abortRef.current !== null ||
+      handledExternalPromptRef.current === externalPrompt.id
+    ) {
       return;
     }
     handledExternalPromptRef.current = externalPrompt.id;
@@ -359,14 +365,14 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
   const suggestions = SUGGESTED_PROMPTS[locale] ?? SUGGESTED_PROMPTS.en ?? [];
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)]/55 backdrop-blur-xl shadow-sm">
+    <div className="relative flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
       {/* Message list — fix 1: flex flex-col so empty wrapper can use flex-1 */}
       <div
         ref={scrollContainerRef}
         role="log"
         aria-live="polite"
         aria-label={t("title")}
-        className="relative flex flex-1 flex-col overflow-y-auto [overflow-anchor:none] bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,oklch(1_0.004_240/0.05),transparent)] px-4 py-6 sm:px-8 dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,oklch(1_0.004_240/0.08),transparent)]"
+        className="relative flex flex-1 flex-col overflow-y-auto [overflow-anchor:none] bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,rgba(244,63,94,0.03),transparent)] px-4 py-6 sm:px-8 text-slate-800"
       >
         {/* fix 2: "Nouvelle conversation" as absolute overlay, only when there are messages */}
         {messages.length > 0 && (
@@ -377,7 +383,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
               reset();
               composerRef.current?.focus();
             }}
-            className="absolute right-4 top-3 z-10 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+            className="absolute right-4 top-3 z-10 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
           >
             <RotateCcw className="h-3 w-3" />
             {t("clear")}
@@ -396,7 +402,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
               }
               iconClassName={
                 isRecouvrement
-                  ? "h-16 w-16 rounded-2xl bg-gold-500/65 shadow-[0_0_28px_-14px_oklch(0.8_0.066_85/0.4)] ring-1 ring-gold-400/15 dark:bg-gold-500/65 dark:shadow-[0_0_28px_-14px_oklch(0.8_0.066_85/0.4)] dark:ring-gold-400/15"
+                  ? "h-16 w-16 rounded-2xl bg-gold-500/65 shadow-[0_0_28px_-14px_oklch(0.8_0.066_85/0.4)] ring-1 ring-gold-400/15 )] "
                   : undefined
               }
               suggestionsLabel={t("startWith")}
@@ -436,7 +442,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
             {/* Typing indicator — borderless to match assistant messages */}
             {isStreaming && messages[messages.length - 1]?.role === "user" && (
               <div className="mt-5 flex items-start gap-3 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-navy-800 to-navy-950 text-gold-400 shadow-[inset_0_1px_1px_oklch(0.8_0.066_85/0.2)] ring-1 ring-gold-500/15 dark:from-gold-500 dark:to-gold-600 dark:text-navy-950 dark:ring-gold-300/25">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-navy-800 to-navy-950 text-gold-400 shadow-[inset_0_1px_1px_oklch(0.8_0.066_85/0.2)] ring-1 ring-gold-500/15 ">
                   {isRecouvrement ? (
                     <RecouvrementMark className="h-5 animate-pulse" />
                   ) : (
@@ -444,9 +450,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[0.7rem] font-medium text-[var(--muted-foreground)]">
-                    {assistantName}
-                  </span>
+                  <span className="text-[0.7rem] font-medium text-slate-500">{assistantName}</span>
                   <TypingDots />
                 </div>
               </div>
@@ -459,7 +463,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
                   <button
                     type="button"
                     onClick={handleRegenerate}
-                    className="flex items-center gap-1.5 text-[0.65rem] text-[var(--muted-foreground)]/40 transition-colors hover:text-[var(--muted-foreground)]"
+                    className="flex items-center gap-1.5 text-[0.65rem] text-slate-500/60 transition-colors hover:text-slate-500"
                   >
                     <RefreshCw className="h-3 w-3" />
                     {t("regenerate")}
@@ -476,7 +480,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
             type="button"
             onClick={scrollToBottom}
             aria-label={t("scrollToBottom")}
-            className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card)] text-[var(--muted-foreground)] shadow-md transition-all hover:bg-[var(--muted)] animate-in fade-in-0 zoom-in-90 duration-150"
+            className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-md transition-all hover:bg-slate-50 animate-in fade-in-0 zoom-in-90 duration-150"
           >
             <ArrowDown className="h-4 w-4" />
           </button>
@@ -519,23 +523,30 @@ function EmptyWithSuggestions({
       {/* Icon — glow ring + mount animation */}
       <div
         className={cn(
-          "animate-in zoom-in-90 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-900 text-gold-400 shadow-[0_0_28px_-4px_oklch(0.8_0.066_85/0.3)] ring-1 ring-gold-500/20 duration-500 dark:bg-gold-500 dark:text-navy-950 dark:shadow-[0_0_40px_-4px_oklch(0.8_0.066_85/0.55)] dark:ring-gold-400/30",
+          "animate-in zoom-in-90 relative flex h-16 w-16 items-center justify-center rounded-[1.35rem] border border-[#D6B36A]/35 bg-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.22),0_0_0_8px_rgba(214,179,106,0.06)] duration-500",
           iconClassName,
         )}
       >
-        {icon ?? <Sparkles className="h-8 w-8" />}
+        <div className="absolute inset-px rounded-[1.25rem] bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_38%)]" />
+        {icon ?? <Sparkles className="relative h-7 w-7 text-[#F1D899]" />}
       </div>
 
-      {/* Description + regulatory trust badges — fade in after icon */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-1 [animation-delay:180ms] [animation-fill-mode:both] flex flex-col items-center gap-3 duration-500">
-        <p className="text-sm text-[var(--muted-foreground)]">{description}</p>
-        <div className="flex flex-wrap justify-center gap-1.5">
+      {/* Description + regulatory trust badges — premium trust layer */}
+      <div className="animate-in fade-in-0 slide-in-from-bottom-1 [animation-delay:180ms] [animation-fill-mode:both] relative flex flex-col items-center gap-3 duration-500">
+        {/* subtle champagne halo */}
+        <div className="pointer-events-none absolute -top-14 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(214,179,106,0.18)_0%,rgba(214,179,106,0.08)_36%,transparent_70%)] blur-2xl" />
+
+        <p className="relative text-[0.92rem] font-medium tracking-[-0.01em] text-slate-600">
+          {description}
+        </p>
+
+        <div className="relative flex flex-wrap justify-center gap-1.5">
           {(["RGPD", "DORA", "BaFin", "CNIL"] as const).map((label) => (
             <span
               key={label}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--muted)]/30 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-[var(--muted-foreground)]"
+              className="inline-flex h-6 items-center gap-1.5 rounded-full border border-[#D6B36A]/35 bg-white/70 px-2.5 text-[0.62rem] font-semibold tracking-[0.12em] text-slate-600 shadow-[0_1px_0_rgba(255,255,255,0.8),0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-sm"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500/80" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#D6B36A] shadow-[0_0_8px_rgba(214,179,106,0.55)]" />
               {label}
             </span>
           ))}
@@ -545,28 +556,29 @@ function EmptyWithSuggestions({
       {/* Suggested prompts — decorative divider + stagger animation */}
       <div className="w-full space-y-3">
         <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-[var(--border)]" />
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+          <div className="h-px flex-1 bg-slate-200" />
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
             {suggestionsLabel}
           </p>
-          <div className="h-px flex-1 bg-[var(--border)]" />
+          <div className="h-px flex-1 bg-slate-200" />
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="mx-auto grid w-full max-w-[540px] gap-2 sm:grid-cols-2">
           {suggestions.map(({ text, Icon }, idx) => (
             <button
               key={text}
               type="button"
               onClick={() => onSelect(text)}
               style={{ animationDelay: `${idx * 60}ms` }}
-              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--muted)]/60 px-4 py-3 text-left text-sm text-[var(--foreground)] transition-all duration-200 hover:border-gold-500/50 hover:bg-[var(--muted)]/80 dark:border-navy-700/70 dark:bg-navy-800/50 dark:hover:border-gold-600/50 dark:hover:bg-navy-800/80"
+              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative overflow-hidden flex min-h-[102px] items-start gap-3 rounded-2xl border border-slate-200/80 bg-white/75 p-4 text-left shadow-[0_1px_0_rgba(255,255,255,0.9),0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D6B36A]/45 hover:bg-white hover:shadow-[0_18px_42px_rgba(15,23,42,0.075)]"
             >
-              {/* sliding gold left border */}
-              <span className="absolute left-0 top-0 h-full w-0.5 origin-top scale-y-0 bg-gold-500 transition-transform duration-200 group-hover:scale-y-100 dark:bg-gold-400" />
+              {/* sliding left border */}
+              <span className="absolute left-0 top-0 z-10 h-full w-[2px] origin-top scale-y-0 bg-[#EAB308] shadow-[0_0_14px_rgba(234,179,8,0.9)] transition-transform duration-300 group-hover:scale-y-100" />
+
               {/* icon container */}
-              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--muted)] transition-colors duration-200 group-hover:bg-gold-500/15 dark:bg-navy-700/60 dark:group-hover:bg-gold-500/20">
-                <Icon className="h-3.5 w-3.5 text-[var(--muted-foreground)] transition-colors duration-200 group-hover:text-gold-600 dark:group-hover:text-gold-400" />
+              <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200/70 bg-slate-50 text-slate-500 transition-colors group-hover:border-[#D6B36A]/40 group-hover:bg-[#FBF7EA] group-hover:text-slate-800">
+                <Icon className="h-4 w-4" />
               </div>
-              <span className="leading-snug">{text}</span>
+              <span className="relative z-10 leading-relaxed text-[0.82rem] text-slate-700">{text}</span>
             </button>
           ))}
         </div>
@@ -580,7 +592,7 @@ function EmptyWithSuggestions({
           ].map(({ icon: Icon, label }) => (
             <span
               key={label}
-              className="flex items-center gap-1.5 text-[0.62rem] text-[var(--muted-foreground)]/50"
+              className="flex items-center gap-1.5 text-[0.62rem] font-medium text-slate-600"
             >
               <Icon className="h-3 w-3" />
               {label}

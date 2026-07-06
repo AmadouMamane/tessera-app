@@ -12,7 +12,13 @@ const QUESTION =
   const api = await request.newContext({ baseURL: BASE });
   const { csrfToken } = await (await api.get("/api/auth/csrf")).json();
   await api.post("/api/auth/callback/credentials", {
-    form: { csrfToken, username: USER, password: PASS, callbackUrl: `${BASE}/fr/select-space`, json: "true" },
+    form: {
+      csrfToken,
+      username: USER,
+      password: PASS,
+      callbackUrl: `${BASE}/fr/select-space`,
+      json: "true",
+    },
     headers: { "content-type": "application/x-www-form-urlencoded" },
     maxRedirects: 0,
   });
