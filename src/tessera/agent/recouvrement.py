@@ -48,6 +48,7 @@ __all__ = [
     "RECOUVREMENT_WORKFLOW_ID",
     "RecouvrementCaseSnapshot",
     "build_recouvrement_graph_v1",
+    "run_recouvrement_action_workflow_v1",
     "run_recouvrement_graph_v1",
 ]
 
@@ -155,6 +156,22 @@ class RecouvrementArtifact(TypedDict):
     title: str
     status: str
     content: dict[str, object]
+
+
+class ArtifactActionDecision(TypedDict):
+    """Governed action decision for a Recouvrement artifact."""
+
+    artifact_id: str
+    artifact_type: str
+    action_name: str
+    requested_by: str
+    case_id: str
+    current_status: str
+    target_status: str
+    requires_validation: bool
+    reason_codes: list[str]
+    no_external_effect: bool
+    blocked: bool
 
 
 class RecouvrementOutput(TypedDict):
@@ -1332,6 +1349,613 @@ def finalize_unauthorized_surface(state: RecouvrementWorkflowState) -> dict[str,
         business_events=events,
     )
     return {"output": output}
+
+
+def _canonical_artifact_action(action_name: str) -> str:
+    """Return the canonical backend action name from a UI label or API value."""
+    normalized = _normalize_message(action_name).replace("_", " ")
+    compact = normalized.strip()
+    if action_name in {
+        "submit_for_validation",
+        "insert_artifact_in_case",
+        "copy_artifact_text",
+        "prepare_reminder_tomorrow",
+    }:
+        return action_name
+    if "soumettre" in compact or "validation" in compact:
+        return "submit_for_validation"
+    if "inserer" in compact:
+        return "insert_artifact_in_case"
+    if "copier" in compact or "copy" in compact:
+        return "copy_artifact_text"
+    if "rappel" in compact and "demain" in compact:
+        return "prepare_reminder_tomorrow"
+    return compact.replace(" ", "_")
+
+
+def _artifact_mentions_schedule(artifact: RecouvrementArtifact) -> bool:
+    """Whether an artifact carries schedule-sensitive content."""
+    content = artifact["content"]
+    return (
+        artifact["type"] == "schedule_proposal_v2"
+        or bool(content.get("mentions_schedule"))
+        or bool(content.get("validation_required"))
+        or content.get("duration_months") is not None
+    )
+
+
+def _action_payload(decision: ArtifactActionDecision) -> dict[str, object]:
+    """Payload shape shared by action lifecycle events."""
+    return {
+        "artifact_id": decision["artifact_id"],
+        "artifact_type": decision["artifact_type"],
+        "action_name": decision["action_name"],
+        "requested_by": decision["requested_by"],
+        "case_id": decision["case_id"],
+        "current_status": decision["current_status"],
+        "target_status": decision["target_status"],
+        "requires_validation": decision["requires_validation"],
+        "no_external_effect": decision["no_external_effect"],
+    }
+
+
+def _artifact_action_decision(
+    *,
+    artifact: RecouvrementArtifact,
+    action_name: str,
+    requested_by: str,
+    case: RecouvrementCaseSnapshot,
+) -> ArtifactActionDecision:
+    """Evaluate the controlled target status for an artifact action."""
+    current_status = artifact["status"]
+    mentions_schedule = _artifact_mentions_schedule(artifact)
+    if action_name == "submit_for_validation":
+        reason_codes = ["VALIDATION_REQUIRED", "NO_EXTERNAL_EFFECT"]
+        if mentions_schedule:
+            reason_codes.extend(["SCHEDULE_NOT_CREATED", "MESSAGE_NOT_SENT"])
+        return {
+            "artifact_id": artifact["id"],
+            "artifact_type": artifact["type"],
+            "action_name": action_name,
+            "requested_by": requested_by,
+            "case_id": case.case_id,
+            "current_status": current_status,
+            "target_status": "pending_validation",
+            "requires_validation": True,
+            "reason_codes": reason_codes,
+            "no_external_effect": True,
+            "blocked": False,
+        }
+    if action_name == "insert_artifact_in_case":
+        return {
+            "artifact_id": artifact["id"],
+            "artifact_type": artifact["type"],
+            "action_name": action_name,
+            "requested_by": requested_by,
+            "case_id": case.case_id,
+            "current_status": current_status,
+            "target_status": "insertion_prepared",
+            "requires_validation": bool(artifact["content"].get("validation_required")),
+            "reason_codes": ["CASE_WRITE_NOT_EXECUTED", "NO_EXTERNAL_EFFECT"],
+            "no_external_effect": True,
+            "blocked": False,
+        }
+    if action_name == "prepare_reminder_tomorrow":
+        blocked_contact = (
+            artifact["type"] == "contact_rule_v1"
+            and artifact["content"].get("decision") == "blocked"
+        )
+        return {
+            "artifact_id": artifact["id"],
+            "artifact_type": artifact["type"],
+            "action_name": action_name,
+            "requested_by": requested_by,
+            "case_id": case.case_id,
+            "current_status": current_status,
+            "target_status": "reminder_prepared" if blocked_contact else current_status,
+            "requires_validation": False,
+            "reason_codes": (
+                ["REMINDER_PREPARED", "CALENDAR_EVENT_NOT_CREATED", "NO_EXTERNAL_EFFECT"]
+                if blocked_contact
+                else ["ACTION_NOT_APPLICABLE"]
+            ),
+            "no_external_effect": True,
+            "blocked": not blocked_contact,
+        }
+    if action_name == "copy_artifact_text":
+        return {
+            "artifact_id": artifact["id"],
+            "artifact_type": artifact["type"],
+            "action_name": action_name,
+            "requested_by": requested_by,
+            "case_id": case.case_id,
+            "current_status": current_status,
+            "target_status": current_status,
+            "requires_validation": False,
+            "reason_codes": ["COPY_LOCAL_ONLY", "NO_EXTERNAL_EFFECT"],
+            "no_external_effect": True,
+            "blocked": False,
+        }
+    return {
+        "artifact_id": artifact["id"],
+        "artifact_type": artifact["type"],
+        "action_name": action_name,
+        "requested_by": requested_by,
+        "case_id": case.case_id,
+        "current_status": current_status,
+        "target_status": current_status,
+        "requires_validation": False,
+        "reason_codes": ["UNSUPPORTED_ACTION"],
+        "no_external_effect": True,
+        "blocked": True,
+    }
+
+
+def _updated_artifact_for_action(
+    artifact: RecouvrementArtifact,
+    decision: ArtifactActionDecision,
+) -> RecouvrementArtifact:
+    """Return the same artifact with an explicit prepared status and no side effect."""
+    content = dict(artifact["content"])
+    content.update(
+        {
+            "last_action_name": decision["action_name"],
+            "last_action_requested_by": decision["requested_by"],
+            "action_status": decision["target_status"],
+            "action_executed": False,
+            "no_external_effect": decision["no_external_effect"],
+        }
+    )
+    if decision["action_name"] == "submit_for_validation":
+        content.update(
+            {
+                "validation_status": "pending_validation",
+                "validation_required": True,
+                "message_sent": False,
+                "schedule_created": False,
+                "no_message_sent": True,
+                "no_schedule_created": True,
+            }
+        )
+    elif decision["action_name"] == "insert_artifact_in_case":
+        content.update(
+            {
+                "insertion_status": "insertion_prepared",
+                "insertion_executed": False,
+                "case_write_executed": False,
+            }
+        )
+    elif decision["action_name"] == "prepare_reminder_tomorrow":
+        content.update(
+            {
+                "reminder_status": "reminder_prepared",
+                "calendar_event_created": False,
+            }
+        )
+    elif decision["action_name"] == "copy_artifact_text":
+        content.update({"copy_status": "local_clipboard_only"})
+    return {
+        **artifact,
+        "status": decision["target_status"],
+        "content": content,
+    }
+
+
+def _artifact_action_visible_reply(decision: ArtifactActionDecision) -> str:
+    """Natural-language confirmation for a governed artifact action."""
+    if decision["blocked"]:
+        return (
+            f"Cette action n'est pas disponible pour {decision['case_id']}. "
+            "Aucune action client n'a été exécutée."
+        )
+    if decision["action_name"] == "submit_for_validation":
+        return (
+            f"Soumission à validation préparée pour {decision['case_id']}. "
+            "Aucune action client n'a été exécutée."
+        )
+    if decision["action_name"] == "insert_artifact_in_case":
+        return (
+            f"Insertion préparée dans le dossier {decision['case_id']}. "
+            "Aucune écriture définitive n'a encore été exécutée."
+        )
+    if decision["action_name"] == "prepare_reminder_tomorrow":
+        return (
+            f"Rappel préparé pour demain pour {decision['case_id']}. "
+            "Aucun événement calendrier réel n'a été créé."
+        )
+    if decision["action_name"] == "copy_artifact_text":
+        return (
+            f"Copie préparée localement pour {decision['case_id']}. "
+            "Aucune action client n'a été exécutée."
+        )
+    return f"Action préparée pour {decision['case_id']}. Aucune action client n'a été exécutée."
+
+
+def _artifact_action_cards(
+    decision: ArtifactActionDecision,
+) -> tuple[dict[str, list[str]], list[str]]:
+    """Drawer cards and suggested actions for a governed artifact action."""
+    target = decision["target_status"]
+    common = [
+        f"Artefact ciblé : {decision['artifact_type']}",
+        f"Statut : {target}",
+        "Effet externe : aucun",
+    ]
+    if decision["action_name"] == "submit_for_validation":
+        actions = ["Voir la demande", "Annuler", "Insérer dans le dossier"]
+        return (
+            {
+                "summary": [
+                    *common,
+                    "Validation préparée",
+                    "Aucun message envoyé",
+                    "Aucun échéancier créé",
+                ],
+                "complianceChecks": [
+                    "Validation requise",
+                    "Aucun message envoyé",
+                    "Aucun échéancier créé",
+                    "Aucune action client exécutée",
+                    "no_external_effect = true",
+                ],
+                "nextActions": actions,
+            },
+            actions,
+        )
+    if decision["action_name"] == "insert_artifact_in_case":
+        actions = ["Confirmer l'insertion", "Annuler", "Voir le dossier"]
+        return (
+            {
+                "summary": [
+                    *common,
+                    "Insertion préparée",
+                    "Écriture définitive : non exécutée",
+                ],
+                "complianceChecks": [
+                    "Artefact courant conservé",
+                    "Aucun nouveau brouillon généré",
+                    "Aucun message envoyé",
+                    "Aucune écriture définitive exécutée",
+                    "no_external_effect = true",
+                ],
+                "nextActions": actions,
+            },
+            actions,
+        )
+    if decision["action_name"] == "prepare_reminder_tomorrow":
+        actions = ["Voir le rappel préparé", "Rédiger un email", "Annuler"]
+        return (
+            {
+                "summary": [
+                    *common,
+                    "Rappel demain préparé",
+                    "Événement calendrier réel : non créé",
+                ],
+                "complianceChecks": [
+                    "Aucun événement calendrier créé",
+                    "Aucun appel préparé hors plage",
+                    "Aucune action client exécutée",
+                    "no_external_effect = true",
+                ],
+                "nextActions": actions,
+            },
+            actions,
+        )
+    actions = ["Conserver l'artefact", "Retour au dossier"]
+    return (
+        {
+            "summary": common,
+            "complianceChecks": [
+                "Action locale uniquement",
+                "Aucun message envoyé",
+                "Aucune action client exécutée",
+            ],
+            "nextActions": actions,
+        },
+        actions,
+    )
+
+
+def _finalize_action_output(
+    *,
+    event_state: RecouvrementWorkflowState,
+    artifact: RecouvrementArtifact,
+    visible_reply: str,
+    card_updates: dict[str, list[str]],
+    suggested_actions: list[str],
+    decisions: dict[str, object],
+) -> RecouvrementOutput:
+    """Attach observability and replay to an artifact-action response."""
+    events = business_events_mod.business_event_rows(
+        agent_id=RECOUVREMENT_AGENT_ID,
+        conversation_id=event_state["conversation_id"],
+        turn_id=event_state["turn_id"],
+    )
+    scores = business_scoring.score_rows(events)
+    context_case = event_state.get("case", _case_for(event_state["case_id"]))
+    replay.capture_bundle(
+        question=event_state["message"],
+        context="\n".join(_context_items(context_case)),
+        original_answer=visible_reply,
+        language=event_state.get("language", "fr"),
+        original_score=1.0,
+        original_model=RECOUVREMENT_WORKFLOW_ID,
+        conversation_id=event_state["conversation_id"],
+        agent_id=RECOUVREMENT_AGENT_ID,
+        turn_id=event_state["turn_id"],
+        business_events=events,
+    )
+    return {
+        "visibleReply": visible_reply,
+        "artifact": artifact,
+        "cardUpdates": card_updates,
+        "suggestedActions": suggested_actions,
+        "businessEvents": events,
+        "businessScores": scores,
+        "decisions": decisions,
+    }
+
+
+def run_recouvrement_action_workflow_v1(
+    *,
+    case_id: str,
+    artifact: RecouvrementArtifact,
+    action_name: str,
+    requested_by: str = "Julie Dubois",
+    conversation_id: str | None = None,
+    turn_id: str | None = None,
+    surface: str = DEFAULT_SURFACE,
+    language: str = "fr",
+    model: str = RECOUVREMENT_WORKFLOW_ID,
+    environment: str = "dev",
+) -> RecouvrementOutput:
+    """Run a controlled backend cycle for sensitive actions on Recouvrement artifacts."""
+    canonical_action = _canonical_artifact_action(action_name)
+    event_state: RecouvrementWorkflowState = {
+        "conversation_id": conversation_id or uuid.uuid4().hex,
+        "turn_id": turn_id or uuid.uuid4().hex,
+        "case_id": case_id,
+        "message": canonical_action,
+        "surface": surface,
+        "language": language,
+        "model": model,
+        "environment": environment,
+    }
+    if not _surface_allowed(surface):
+        record_business_event(
+            event_name=BusinessEventName.ACTION_BLOCKED,
+            decision="blocked",
+            reason_codes=["UNAUTHORIZED_SURFACE"],
+            payload={
+                "action_name": canonical_action,
+                "requested_surface": surface,
+                "artifact_id": artifact["id"],
+                "artifact_type": artifact["type"],
+                "case_id": case_id,
+                "current_status": artifact["status"],
+                "target_status": artifact["status"],
+                "requested_by": requested_by,
+                "requires_validation": False,
+                "no_external_effect": True,
+            },
+            artifact_id=artifact["id"],
+            artifact_type=artifact["type"],
+            artifact_status=artifact["status"],
+            agent_id=RECOUVREMENT_AGENT_ID,
+            workflow_id=RECOUVREMENT_WORKFLOW_ID,
+            surface=surface,
+            conversation_id=event_state["conversation_id"],
+            turn_id=event_state["turn_id"],
+            case_id=case_id,
+            node_name="verify_action_surface_authorization",
+            language=language,
+            model=model,
+            environment=environment,
+        )
+        denial_artifact: RecouvrementArtifact = {
+            "id": f"{case_id}-action-authorization-denial-v1",
+            "type": "authorization_denial_v1",
+            "task": "artifact_action",
+            "title": f"Action non autorisée — {case_id}",
+            "status": "blocked",
+            "content": {
+                "case_id": case_id,
+                "requested_surface": surface,
+                "action_name": canonical_action,
+                "decision": "blocked",
+                "reason_codes": ["UNAUTHORIZED_SURFACE"],
+                "no_external_effect": True,
+            },
+        }
+        return _finalize_action_output(
+            event_state=event_state,
+            artifact=denial_artifact,
+            visible_reply=(
+                "Cette surface n'est pas autorisée pour les actions Recouvrement. "
+                "Aucune action client n'a été exécutée."
+            ),
+            card_updates={
+                "summary": [
+                    f"Dossier : {case_id}",
+                    f"Surface demandée : {surface}",
+                    "Action refusée avant tout effet métier.",
+                ],
+                "complianceChecks": [
+                    "UNAUTHORIZED_SURFACE",
+                    "Aucune action client exécutée",
+                    "Aucun artefact métier modifié",
+                ],
+                "nextActions": ["Ouvrir l'espace Recouvrement", "Retourner au cockpit opérateur"],
+            },
+            suggested_actions=["Ouvrir l'espace Recouvrement", "Retourner au cockpit opérateur"],
+            decisions={
+                "authorization": {
+                    "decision": "blocked",
+                    "reason_codes": ["UNAUTHORIZED_SURFACE"],
+                    "surface": surface,
+                }
+            },
+        )
+
+    case = _case_for(case_id)
+    event_state["case"] = case
+    record_business_event(
+        event_name=BusinessEventName.CASE_CONTEXT_LOADED,
+        payload={
+            "client": case.client,
+            "amount_due": case.amount_due,
+            "days_late": case.days_late,
+            "contact_window": case.contact_window_label,
+        },
+        **_event_common(event_state, node_name="load_action_case_context", case=case),
+    )
+    decision = _artifact_action_decision(
+        artifact=artifact,
+        action_name=canonical_action,
+        requested_by=requested_by,
+        case=case,
+    )
+    action_payload = _action_payload(decision)
+    record_business_event(
+        event_name=BusinessEventName.ACTION_REQUESTED,
+        artifact_id=artifact["id"],
+        artifact_type=artifact["type"],
+        artifact_status=artifact["status"],
+        reason_codes=decision["reason_codes"],
+        payload=action_payload,
+        **_event_common(event_state, node_name="route_artifact_action"),
+    )
+    if decision["blocked"]:
+        record_business_event(
+            event_name=BusinessEventName.ACTION_BLOCKED,
+            decision="blocked",
+            reason_codes=decision["reason_codes"],
+            artifact_id=artifact["id"],
+            artifact_type=artifact["type"],
+            artifact_status=artifact["status"],
+            payload=action_payload,
+            **_event_common(event_state, node_name="evaluate_artifact_action_policy"),
+        )
+        visible_reply = _artifact_action_visible_reply(decision)
+        card_updates, suggested_actions = _artifact_action_cards(decision)
+        record_business_event(
+            event_name=BusinessEventName.MESSAGE_GENERATED,
+            artifact_id=artifact["id"],
+            artifact_type=artifact["type"],
+            artifact_status=artifact["status"],
+            payload={
+                "message_kind": "internal_confirmation",
+                "visible_reply": visible_reply,
+                "task": "artifact_action",
+                "generation_mode": "deterministic_builder",
+                "artifact_id": artifact["id"],
+                "artifact_type": artifact["type"],
+                "policy_review_status": "blocked",
+                "action_name": canonical_action,
+                "no_external_effect": True,
+            },
+            **_event_common(event_state, node_name="generate_action_visible_reply"),
+        )
+        return _finalize_action_output(
+            event_state=event_state,
+            artifact=artifact,
+            visible_reply=visible_reply,
+            card_updates=card_updates,
+            suggested_actions=suggested_actions,
+            decisions={"artifactAction": decision},
+        )
+
+    record_business_event(
+        event_name=BusinessEventName.POLICY_DECISION_MADE,
+        decision="prepared",
+        reason_codes=decision["reason_codes"],
+        artifact_id=artifact["id"],
+        artifact_type=artifact["type"],
+        artifact_status=artifact["status"],
+        payload={
+            "policy_rule": "recouvrement.artifact_action_governance",
+            "action_name": canonical_action,
+            "requires_validation": decision["requires_validation"],
+            "no_external_effect": decision["no_external_effect"],
+        },
+        **_event_common(event_state, node_name="evaluate_artifact_action_policy"),
+    )
+    updated_artifact = _updated_artifact_for_action(artifact, decision)
+    if canonical_action == "submit_for_validation":
+        record_business_event(
+            event_name=BusinessEventName.VALIDATION_REQUESTED,
+            artifact_id=artifact["id"],
+            artifact_type=artifact["type"],
+            artifact_status=decision["target_status"],
+            decision="pending_validation",
+            reason_codes=decision["reason_codes"],
+            payload={
+                "validation_type": "artifact_validation",
+                "validation_reason": "Validation préparée avant toute action client.",
+                "action_name": canonical_action,
+                "requires_validation": True,
+                "no_external_effect": True,
+            },
+            **_event_common(event_state, node_name="prepare_artifact_action"),
+        )
+    if decision["target_status"] != decision["current_status"]:
+        record_business_event(
+            event_name=BusinessEventName.ARTIFACT_STATUS_CHANGED,
+            artifact_id=artifact["id"],
+            artifact_type=artifact["type"],
+            artifact_status=decision["target_status"],
+            decision="prepared",
+            reason_codes=decision["reason_codes"],
+            payload={
+                "previous_status": decision["current_status"],
+                "new_status": decision["target_status"],
+                "status_reason": canonical_action,
+                "action_name": canonical_action,
+                "requested_by": requested_by,
+                "requires_validation": decision["requires_validation"],
+                "no_external_effect": True,
+            },
+            **_event_common(event_state, node_name="prepare_artifact_action"),
+        )
+    if canonical_action != "copy_artifact_text":
+        record_business_event(
+            event_name=BusinessEventName.ACTION_PREPARED,
+            decision="prepared",
+            reason_codes=decision["reason_codes"],
+            artifact_id=artifact["id"],
+            artifact_type=artifact["type"],
+            artifact_status=decision["target_status"],
+            payload=action_payload,
+            **_event_common(event_state, node_name="prepare_artifact_action"),
+        )
+    visible_reply = _artifact_action_visible_reply(decision)
+    record_business_event(
+        event_name=BusinessEventName.MESSAGE_GENERATED,
+        artifact_id=artifact["id"],
+        artifact_type=artifact["type"],
+        artifact_status=decision["target_status"],
+        payload={
+            "message_kind": "internal_confirmation",
+            "visible_reply": visible_reply,
+            "task": "artifact_action",
+            "generation_mode": "deterministic_builder",
+            "artifact_id": artifact["id"],
+            "artifact_type": artifact["type"],
+            "policy_review_status": "prepared",
+            "action_name": canonical_action,
+            "no_external_effect": True,
+        },
+        **_event_common(event_state, node_name="generate_action_visible_reply"),
+    )
+    card_updates, suggested_actions = _artifact_action_cards(decision)
+    return _finalize_action_output(
+        event_state=event_state,
+        artifact=updated_artifact,
+        visible_reply=visible_reply,
+        card_updates=card_updates,
+        suggested_actions=suggested_actions,
+        decisions={"artifactAction": decision},
+    )
 
 
 def build_recouvrement_graph_v1() -> StateGraph[RecouvrementWorkflowState]:

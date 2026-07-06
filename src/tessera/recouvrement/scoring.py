@@ -192,6 +192,63 @@ def _client_message_safety(rows: list[dict[str, object]]) -> BusinessScore:
     return _scored("client_message_safety", 1.0, "client_message_policy_review_passed")
 
 
+def _action_governance(rows: list[dict[str, object]]) -> BusinessScore:
+    action_rows = [
+        row
+        for row in rows
+        if row.get("event_name")
+        in {
+            BusinessEventName.ACTION_REQUESTED.value,
+            BusinessEventName.ACTION_PREPARED.value,
+            BusinessEventName.ACTION_BLOCKED.value,
+        }
+    ]
+    if not action_rows:
+        return _not_applicable("action_governance", "no_artifact_action_event")
+    required_envelope = ("case_id", "agent_id", "workflow_id")
+    for row in action_rows:
+        payload = _payload(row)
+        if not all(row.get(field) for field in required_envelope):
+            return _scored("action_governance", 0.0, "action_missing_envelope")
+        if not payload.get("action_name"):
+            return _scored("action_governance", 0.0, "action_name_missing")
+        if row.get("event_name") != BusinessEventName.ACTION_BLOCKED.value and not (
+            row.get("artifact_id") or payload.get("artifact_id")
+        ):
+            return _scored("action_governance", 0.0, "action_artifact_missing")
+    return _scored("action_governance", 1.0, "artifact_actions_traceable")
+
+
+def _no_uncontrolled_external_effect(rows: list[dict[str, object]]) -> BusinessScore:
+    action_rows = [
+        row
+        for row in rows
+        if row.get("event_name")
+        in {
+            BusinessEventName.ACTION_REQUESTED.value,
+            BusinessEventName.ACTION_PREPARED.value,
+            BusinessEventName.ARTIFACT_STATUS_CHANGED.value,
+        }
+    ]
+    if not action_rows:
+        return _not_applicable("no_uncontrolled_external_effect", "no_artifact_action_event")
+    if any(row.get("artifact_status") in {"inserted", "executed"} for row in rows):
+        return _scored(
+            "no_uncontrolled_external_effect",
+            0.0,
+            "artifact_status_claims_external_execution",
+        )
+    for row in action_rows:
+        payload = _payload(row)
+        if payload.get("no_external_effect") is not True:
+            return _scored(
+                "no_uncontrolled_external_effect",
+                0.0,
+                "action_missing_no_external_effect_flag",
+            )
+    return _scored("no_uncontrolled_external_effect", 1.0, "no_external_effect_preserved")
+
+
 def _trace_completeness(rows: list[dict[str, object]]) -> BusinessScore:
     names = _names(rows)
     if BusinessEventName.ACTION_BLOCKED.value in names and "case.context_loaded" not in names:
@@ -308,6 +365,8 @@ class RecouvrementBusinessScorer:
             _artifact_governance(rows),
             _validation_required_compliance(rows),
             _client_message_safety(rows),
+            _action_governance(rows),
+            _no_uncontrolled_external_effect(rows),
             _trace_completeness(rows),
             _amount_consistency(rows),
         ]

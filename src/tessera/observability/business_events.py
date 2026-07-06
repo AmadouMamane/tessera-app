@@ -73,6 +73,7 @@ class BusinessEventName(StrEnum):
     ARTIFACT_UPDATED = "artifact.updated"
     ARTIFACT_STATUS_CHANGED = "artifact.status_changed"
     VALIDATION_REQUESTED = "validation.requested"
+    ACTION_REQUESTED = "action.requested"
     ACTION_PREPARED = "action.prepared"
     ACTION_BLOCKED = "action.blocked"
     MESSAGE_GENERATED = "message.generated"
@@ -232,12 +233,15 @@ class PolicyDecisionMadePayload(_StrictPayload):
 
     policy_rule: str = Field(min_length=1)
     rule_id: str | None = None
+    action_name: str | None = None
     generation_mode: str | None = None
     template_id: str | None = None
     template_version: str | None = None
     template_label: str | None = None
     policy_review_status: str | None = None
     amount_consistent: bool | None = None
+    requires_validation: bool | None = None
+    no_external_effect: bool | None = None
 
 
 class ArtifactCreatedPayload(_StrictPayload):
@@ -260,6 +264,10 @@ class ArtifactStatusChangedPayload(_StrictPayload):
     previous_status: str | None = None
     new_status: str | None = None
     status_reason: str | None = None
+    action_name: str | None = None
+    requested_by: str | None = None
+    requires_validation: bool | None = None
+    no_external_effect: bool | None = None
 
 
 class ValidationRequestedPayload(_StrictPayload):
@@ -267,12 +275,24 @@ class ValidationRequestedPayload(_StrictPayload):
 
     validation_type: str = Field(min_length=1)
     validation_reason: str | None = None
+    action_name: str | None = None
+    requires_validation: bool | None = None
+    no_external_effect: bool | None = None
 
 
 class ActionPayload(_StrictPayload):
-    """Payload contract for ``action.prepared`` and ``action.blocked``."""
+    """Payload contract for action lifecycle events."""
 
     action_name: str = Field(min_length=1)
+    action_label: str | None = None
+    artifact_id: str | None = None
+    artifact_type: str | None = None
+    case_id: str | None = None
+    current_status: str | None = None
+    target_status: str | None = None
+    requested_by: str | None = None
+    requires_validation: bool | None = None
+    no_external_effect: bool | None = None
     requested_time: str | None = None
     requested_surface: str | None = None
 
@@ -311,6 +331,8 @@ class MessageGeneratedPayload(_StrictPayload):
     artifact_type: str | None = None
     policy_review_status: str | None = None
     client_message_generation: dict[str, object] | None = None
+    action_name: str | None = None
+    no_external_effect: bool | None = None
 
     @field_validator("message_kind")
     @classmethod
@@ -328,6 +350,7 @@ _CRITICAL_PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     BusinessEventName.ARTIFACT_CREATED.value: ArtifactCreatedPayload,
     BusinessEventName.ARTIFACT_STATUS_CHANGED.value: ArtifactStatusChangedPayload,
     BusinessEventName.VALIDATION_REQUESTED.value: ValidationRequestedPayload,
+    BusinessEventName.ACTION_REQUESTED.value: ActionPayload,
     BusinessEventName.ACTION_PREPARED.value: ActionPayload,
     BusinessEventName.ACTION_BLOCKED.value: ActionPayload,
     BusinessEventName.MESSAGE_GENERATED.value: MessageGeneratedPayload,
@@ -500,6 +523,14 @@ def classify_event(
         return BusinessEventClassification(
             observable=True,
             auditable=True,
+            scoring_input=True,
+            metric_input=True,
+            cockpit_signal=True,
+        )
+    if name == BusinessEventName.ACTION_REQUESTED.value:
+        return BusinessEventClassification(
+            observable=True,
+            auditable=False,
             scoring_input=True,
             metric_input=True,
             cockpit_signal=True,

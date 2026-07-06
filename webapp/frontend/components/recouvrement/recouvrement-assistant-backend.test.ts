@@ -9,6 +9,7 @@ import {
   buildContactRuleBackendUnavailableFallback,
   buildDraftBackendUnavailableFallback,
   buildInvalidDraftEditResponse,
+  buildReminderPreparedResponse,
   buildScheduleProposalDraft,
   contactRuleCards,
   footerActionsForRecouvrementArtifact,
@@ -352,6 +353,22 @@ describe("footerActionsForRecouvrementArtifact", () => {
     expect(JSON.stringify(response)).not.toContain("Créer un brouillon");
   });
 
+  it("prepares a blocked-contact reminder without creating a calendar event", () => {
+    const response = buildReminderPreparedResponse({
+      id: "RC-2048-contact-rule-v1",
+      type: "contact_rule_v1",
+      task: "check_rule",
+      title: "Cadre de contact — RC-2048",
+      status: "draft",
+      content: { decision: "blocked" },
+    });
+
+    expect(response.artifact.status).toBe("reminder_prepared");
+    expect(response.artifact.content.calendar_event_created).toBe(false);
+    expect(response.artifact.content.no_external_effect).toBe(true);
+    expect(response.visibleReply).toContain("Aucun événement calendrier réel");
+  });
+
   it("keeps backend failures within the same covered task family", () => {
     const draftFallback = buildDraftBackendUnavailableFallback({
       id: "RC-2048-schedule-36-months-v2",
@@ -401,7 +418,11 @@ describe("footerActionsForRecouvrementArtifact", () => {
     );
 
     expect(source).toContain("handleAssistantAction");
+    expect(source).toContain("sendRecouvrementAssistantAction");
     expect(source).toContain("buildArtifactInsertionPreparedResponse");
+    expect(source).toContain('runBackendArtifactAction("insert_artifact_in_case"');
+    expect(source).toContain('runBackendArtifactAction("submit_for_validation"');
+    expect(source).toContain('runBackendArtifactAction("prepare_reminder_tomorrow"');
     expect(source).toContain('forcedTask: "check_contact_rule"');
     expect(source).toContain('forcedTask: "propose_schedule"');
     expect(source).toContain('forcedTask: "draft_reminder"');

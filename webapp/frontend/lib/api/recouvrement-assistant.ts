@@ -27,6 +27,17 @@ export interface SendRecouvrementAssistantMessageRequest {
   signal?: AbortSignal;
 }
 
+export interface SendRecouvrementAssistantActionRequest {
+  caseId?: string;
+  artifact: RecouvrementAssistantArtifact;
+  actionName: string;
+  requestedBy?: string;
+  conversationId?: string;
+  turnId?: string;
+  surface?: "dedicated-ui" | "cockpit-embedded";
+  signal?: AbortSignal;
+}
+
 const USER_SAFE_RECOUVREMENT_BACKEND_ERROR =
   "La vérification backend est indisponible. Aucune action n'a été exécutée.";
 
@@ -61,6 +72,42 @@ export async function sendRecouvrementAssistantMessage({
       case_id: caseId,
       message,
       assistant_state: assistantState,
+      conversation_id: conversationId,
+      turn_id: turnId,
+      surface,
+    }),
+    signal,
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new RecouvrementAssistantApiError(response.status, detail || "unknown error");
+  }
+
+  return (await response.json()) as RecouvrementAssistantResponse;
+}
+
+export async function sendRecouvrementAssistantAction({
+  caseId = "RC-2048",
+  artifact,
+  actionName,
+  requestedBy = "Julie Dubois",
+  conversationId,
+  turnId,
+  surface = "dedicated-ui",
+  signal,
+}: SendRecouvrementAssistantActionRequest): Promise<RecouvrementAssistantResponse> {
+  const response = await fetch("/api/recouvrement-assistant/action", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      case_id: caseId,
+      artifact,
+      action_name: actionName,
+      requested_by: requestedBy,
       conversation_id: conversationId,
       turn_id: turnId,
       surface,

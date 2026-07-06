@@ -12,11 +12,14 @@ from prometheus_client import generate_latest
 from tessera.agent.recouvrement import (
     RECOUVREMENT_AGENT_ID,
     RECOUVREMENT_WORKFLOW_ID,
+    run_recouvrement_action_workflow_v1,
     run_recouvrement_graph_v1,
 )
 from tessera.api.routes import observability as obs
 from tessera.api.routes.recouvrement_assistant import (
+    RecouvrementAssistantActionRequest,
     RecouvrementAssistantRequest,
+    recouvrement_assistant_action,
     recouvrement_assistant_message,
 )
 from tessera.guard import audit
@@ -544,6 +547,167 @@ def test_recouvrement_graph_updates_current_draft_with_empathic_tone(
     assert output["artifact"]["content"]["message_sent"] is False
 
 
+def test_recouvrement_action_submits_schedule_for_validation_without_creation(
+    observed_recouvrement_stores: Path,
+) -> None:
+    schedule = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-rc-action-validation",
+        turn_id="turn-schedule-before-validation",
+        assistant_state={"activeTask": "propose_schedule"},
+    )
+
+    output = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=schedule["artifact"],
+        action_name="submit_for_validation",
+        conversation_id="conv-rc-action-validation",
+        turn_id="turn-submit-validation",
+    )
+
+    assert output["artifact"]["id"] == schedule["artifact"]["id"]
+    assert output["artifact"]["type"] == "schedule_proposal_v2"
+    assert output["artifact"]["status"] == "pending_validation"
+    assert output["artifact"]["content"]["validation_status"] == "pending_validation"
+    assert output["artifact"]["content"]["schedule_created"] is False
+    assert output["artifact"]["content"]["no_schedule_created"] is True
+    assert output["artifact"]["content"]["message_sent"] is False
+    assert output["artifact"]["content"]["no_message_sent"] is True
+    assert output["artifact"]["content"]["no_external_effect"] is True
+    assert "Soumission à validation préparée" in output["visibleReply"]
+    assert "Aucune action client n'a été exécutée" in output["visibleReply"]
+    assert "Aucun échéancier créé" in output["cardUpdates"]["complianceChecks"]
+    names = [row["event_name"] for row in output["businessEvents"]]
+    assert names == [
+        "case.context_loaded",
+        "action.requested",
+        "policy.decision_made",
+        "validation.requested",
+        "artifact.status_changed",
+        "action.prepared",
+        "message.generated",
+    ]
+    validation_event = next(
+        row for row in output["businessEvents"] if row["event_name"] == "validation.requested"
+    )
+    assert validation_event["artifact_status"] == "pending_validation"
+    assert validation_event["payload"]["no_external_effect"] is True
+    action_event = next(
+        row for row in output["businessEvents"] if row["event_name"] == "action.prepared"
+    )
+    assert action_event["payload"]["action_name"] == "submit_for_validation"
+    assert action_event["payload"]["no_external_effect"] is True
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["action_governance"]["score"] == 1.0
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
+    assert scores["validation_required_compliance"]["score"] == 1.0
+
+
+def test_recouvrement_action_prepares_insertion_without_new_draft(
+    observed_recouvrement_stores: Path,
+) -> None:
+    draft = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Rédiger une relance",
+        conversation_id="conv-rc-action-insert",
+        turn_id="turn-draft-before-insert",
+        assistant_state={"activeTask": "draft_reminder"},
+    )
+
+    output = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=draft["artifact"],
+        action_name="insert_artifact_in_case",
+        conversation_id="conv-rc-action-insert",
+        turn_id="turn-insert",
+    )
+
+    assert output["artifact"]["id"] == draft["artifact"]["id"]
+    assert output["artifact"]["type"] == "reminder_draft_v1"
+    assert output["artifact"]["status"] == "insertion_prepared"
+    assert output["artifact"]["content"]["message_client"] == draft["artifact"]["content"][
+        "message_client"
+    ]
+    assert output["artifact"]["content"]["insertion_executed"] is False
+    assert output["artifact"]["content"]["case_write_executed"] is False
+    assert output["artifact"]["content"]["message_sent"] is False
+    assert output["artifact"]["content"]["no_external_effect"] is True
+    assert "Insertion préparée" in output["visibleReply"]
+    assert "Aucune écriture définitive" in output["visibleReply"]
+    assert not any(row["event_name"] == "validation.requested" for row in output["businessEvents"])
+    assert any(
+        row["event_name"] == "artifact.status_changed"
+        and row["artifact_status"] == "insertion_prepared"
+        for row in output["businessEvents"]
+    )
+    assert not any(
+        row["event_name"] == "artifact.created"
+        and row["artifact_type"] == "reminder_draft_v1"
+        for row in output["businessEvents"]
+    )
+    assert "Aucun nouveau brouillon généré" in output["cardUpdates"]["complianceChecks"]
+
+
+def test_recouvrement_action_prepares_tomorrow_reminder_for_blocked_contact(
+    observed_recouvrement_stores: Path,
+) -> None:
+    contact = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Je peux l'appeler à 23h ?",
+        conversation_id="conv-rc-action-reminder",
+        turn_id="turn-contact-before-reminder",
+    )
+
+    output = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=contact["artifact"],
+        action_name="prepare_reminder_tomorrow",
+        conversation_id="conv-rc-action-reminder",
+        turn_id="turn-reminder-tomorrow",
+    )
+
+    assert output["artifact"]["type"] == "contact_rule_v1"
+    assert output["artifact"]["status"] == "reminder_prepared"
+    assert output["artifact"]["content"]["calendar_event_created"] is False
+    assert output["artifact"]["content"]["no_external_effect"] is True
+    assert "Aucun événement calendrier réel n'a été créé" in output["visibleReply"]
+    assert any(
+        row["event_name"] == "action.prepared"
+        and row["payload"]["action_name"] == "prepare_reminder_tomorrow"
+        for row in output["businessEvents"]
+    )
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
+
+
+def test_recouvrement_action_denies_unauthorized_surface(
+    observed_recouvrement_stores: Path,
+) -> None:
+    schedule = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Peut-on étaler sur 36 mois ?",
+        conversation_id="conv-rc-action-deny-source",
+        turn_id="turn-schedule-source",
+    )
+
+    output = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=schedule["artifact"],
+        action_name="submit_for_validation",
+        conversation_id="conv-rc-action-deny",
+        turn_id="turn-action-deny",
+        surface="public",
+    )
+
+    assert output["artifact"]["type"] == "authorization_denial_v1"
+    assert output["artifact"]["status"] == "blocked"
+    assert output["decisions"]["authorization"]["reason_codes"] == ["UNAUTHORIZED_SURFACE"]
+    assert [row["event_name"] for row in output["businessEvents"]] == ["action.blocked"]
+    assert output["businessEvents"][0]["payload"]["action_name"] == "submit_for_validation"
+    assert output["businessEvents"][0]["payload"]["no_external_effect"] is True
+
+
 def test_recouvrement_message_templates_are_not_scattered_in_graph() -> None:
     graph_source = Path("src/tessera/agent/recouvrement.py").read_text(encoding="utf-8")
     template_source = Path("src/tessera/recouvrement/message_templates.py").read_text(
@@ -714,6 +878,39 @@ async def test_recouvrement_assistant_endpoint_returns_draft_contract(
         "slots.extracted",
         "policy.decision_made",
         "artifact.created",
+        "action.prepared",
+        "message.generated",
+    }
+
+
+async def test_recouvrement_assistant_action_endpoint_returns_governed_action_contract(
+    observed_recouvrement_stores: Path,
+) -> None:
+    draft = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Rédiger une relance",
+        conversation_id="conv-rc-action-endpoint-source",
+        turn_id="turn-action-endpoint-source",
+        assistant_state={"activeTask": "draft_reminder"},
+    )
+    payload = RecouvrementAssistantActionRequest(
+        case_id="RC-2048",
+        artifact=draft["artifact"],
+        action_name="insert_artifact_in_case",
+        conversation_id="conv-rc-action-endpoint",
+        turn_id="turn-action-endpoint",
+    )
+    output = await recouvrement_assistant_action(payload)
+
+    assert output["artifact"]["type"] == "reminder_draft_v1"
+    assert output["artifact"]["status"] == "insertion_prepared"
+    assert output["artifact"]["content"]["case_write_executed"] is False
+    assert output["artifact"]["content"]["no_external_effect"] is True
+    assert "Aucune écriture définitive" in output["visibleReply"]
+    assert {row["event_name"] for row in output["businessEvents"]} >= {
+        "action.requested",
+        "policy.decision_made",
+        "artifact.status_changed",
         "action.prepared",
         "message.generated",
     }

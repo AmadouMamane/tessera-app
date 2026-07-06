@@ -564,6 +564,50 @@ export function buildArtifactPendingValidationResponse(
   };
 }
 
+export function buildReminderPreparedResponse(
+  artifact: RecouvrementAssistantArtifact,
+): RecouvrementAssistantResponse {
+  const updatedArtifact: RecouvrementAssistantArtifact = {
+    ...artifact,
+    status: "reminder_prepared",
+    content: {
+      ...artifact.content,
+      reminder_status: "reminder_prepared",
+      calendar_event_created: false,
+      action_executed: false,
+      no_external_effect: true,
+    },
+  };
+  return {
+    visibleReply:
+      "Rappel préparé pour demain pour RC-2048. Aucun événement calendrier réel n'a été créé.",
+    artifact: updatedArtifact,
+    cardUpdates: {
+      summary: [
+        `Artefact ciblé : ${artifact.title}`,
+        "Statut : reminder_prepared",
+        "Événement calendrier réel : non créé",
+      ],
+      complianceChecks: [
+        "Aucun événement calendrier créé",
+        "Aucun appel préparé hors plage",
+        "Aucune action client exécutée",
+        "no_external_effect = true",
+      ],
+      nextActions: ["Voir le rappel préparé", "Rédiger un email", "Annuler"],
+    },
+    suggestedActions: ["Voir le rappel préparé", "Rédiger un email", "Annuler"],
+    businessEvents: [],
+    businessScores: [],
+    decisions: {
+      action: "prepare_reminder_tomorrow",
+      status: "reminder_prepared",
+      artifact_id: artifact.id,
+      no_external_effect: true,
+    },
+  };
+}
+
 export function contactRuleCards(response: RecouvrementAssistantResponse) {
   const updates = response.cardUpdates ?? {};
   const decision = response.artifact.content.decision;

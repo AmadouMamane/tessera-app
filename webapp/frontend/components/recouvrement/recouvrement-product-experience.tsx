@@ -43,6 +43,7 @@ import {
   buildContactRuleBackendUnavailableFallback,
   buildDraftBackendUnavailableFallback,
   buildInvalidDraftEditResponse,
+  buildReminderPreparedResponse,
   buildScheduleProposalDraft,
   contactRuleCards,
   footerActionsForRecouvrementArtifact,
@@ -53,6 +54,7 @@ import type { Locale } from "@/i18n/routing";
 import {
   type RecouvrementAssistantArtifact,
   type RecouvrementAssistantResponse,
+  sendRecouvrementAssistantAction,
   sendRecouvrementAssistantMessage,
 } from "@/lib/api/recouvrement-assistant";
 import { streamChat } from "@/lib/api/sse";
@@ -1926,9 +1928,7 @@ export function RecouvrementProductExperience() {
         pendingAction: action,
       }));
 
-      if (normalized.includes("inserer")) {
-        if (!currentArtifact) return;
-        const response = buildArtifactInsertionPreparedResponse(currentArtifact, action);
+      const applyActionResponse = (response: RecouvrementAssistantResponse) => {
         const parsed = contentFromArtifactActionResponse(response, assistantContentRef.current);
         setAssistantContent(parsed);
         setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
@@ -1944,31 +1944,70 @@ export function RecouvrementProductExperience() {
         setDrawerStateModel((current) => ({
           ...current,
           currentArtifact: response.artifact,
+          artifactHistory: [...current.artifactHistory, response.artifact].slice(-8),
           pendingAction: null,
         }));
+      };
+
+      const runBackendArtifactAction = (
+        actionName: string,
+        fallback: () => RecouvrementAssistantResponse,
+      ) => {
+        if (!currentArtifact) return;
+        const controller = new AbortController();
+        abortRef.current?.abort();
+        abortRef.current = controller;
+        const loadingStartedAt = Date.now();
+        const completeAfterThinkingMinimum = (callback: () => void) => {
+          const remainingMs = Math.max(
+            0,
+            MIN_ASSISTANT_THINKING_MS - (Date.now() - loadingStartedAt),
+          );
+          window.setTimeout(() => {
+            if (controller.signal.aborted) return;
+            callback();
+          }, remainingMs);
+        };
+        const conversationId = conversationIdRef.current ?? crypto.randomUUID();
+        conversationIdRef.current = conversationId;
+        setAssistantError(null);
+        setAssistantStatus("loading");
+
+        void sendRecouvrementAssistantAction({
+          artifact: currentArtifact,
+          actionName,
+          conversationId,
+          turnId: crypto.randomUUID(),
+          signal: controller.signal,
+        })
+          .then((response) => {
+            if (controller.signal.aborted) return;
+            completeAfterThinkingMinimum(() => applyActionResponse(response));
+          })
+          .catch((err) => {
+            if (controller.signal.aborted) return;
+            console.warn("[recouvrement-assistant] structured action backend unavailable", err);
+            completeAfterThinkingMinimum(() => applyActionResponse(fallback()));
+          });
+      };
+
+      if (normalized.includes("inserer")) {
+        runBackendArtifactAction("insert_artifact_in_case", () =>
+          buildArtifactInsertionPreparedResponse(
+            currentArtifact as RecouvrementAssistantArtifact,
+            action,
+          ),
+        );
         return;
       }
 
       if (normalized.includes("soumettre") || normalized.includes("validation")) {
-        if (!currentArtifact) return;
-        const response = buildArtifactPendingValidationResponse(currentArtifact, action);
-        const parsed = contentFromArtifactActionResponse(response, assistantContentRef.current);
-        setAssistantContent(parsed);
-        setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
-        setAssistantStatus("ready");
-        setAssistantThread((current) => [
-          ...current.filter((item) => !item.streaming),
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: response.visibleReply,
-          },
-        ]);
-        setDrawerStateModel((current) => ({
-          ...current,
-          currentArtifact: response.artifact,
-          pendingAction: null,
-        }));
+        runBackendArtifactAction("submit_for_validation", () =>
+          buildArtifactPendingValidationResponse(
+            currentArtifact as RecouvrementAssistantArtifact,
+            action,
+          ),
+        );
         return;
       }
 
@@ -2008,6 +2047,13 @@ export function RecouvrementProductExperience() {
           },
         ]);
         setDrawerStateModel((current) => ({ ...current, pendingAction: null }));
+        return;
+      }
+
+      if (normalized.includes("rappel") && currentArtifact?.type === "contact_rule_v1") {
+        runBackendArtifactAction("prepare_reminder_tomorrow", () =>
+          buildReminderPreparedResponse(currentArtifact),
+        );
         return;
       }
 
