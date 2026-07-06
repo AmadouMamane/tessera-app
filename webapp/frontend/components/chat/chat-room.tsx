@@ -562,16 +562,16 @@ function EmptyWithSuggestions({
               type="button"
               onClick={() => onSelect(text)}
               style={{ animationDelay: `${idx * 60}ms` }}
-              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-slate-200 bg-white backdrop-blur-md px-4 py-3 text-left text-sm text-black shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300/70 hover:bg-slate-50/50 hover:shadow-[0_8px_20px_-6px_rgba(148,163,184,0.35)]"
+              className="animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:both] group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-slate-200 bg-white backdrop-blur-md px-4 py-3 text-left text-sm text-black shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-200/60 hover:bg-white hover:shadow-[0_8px_20px_-6px_rgba(6,182,212,0.15)]"
             >
               {/* spotlight inner glow */}
-              <span className="absolute inset-0 z-0 bg-gradient-to-br from-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <span className="absolute inset-0 z-0 bg-gradient-to-br from-cyan-100/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               {/* sliding left border */}
-              <span className="absolute left-0 top-0 z-10 h-full w-0.5 origin-top scale-y-0 bg-gradient-to-b from-slate-300 to-slate-500 transition-transform duration-300 group-hover:scale-y-100" />
+              <span className="absolute left-0 top-0 z-10 h-full w-0.5 origin-top scale-y-0 bg-gradient-to-b from-cyan-300 to-cyan-500 transition-transform duration-300 group-hover:scale-y-100" />
 
               {/* icon container */}
-              <div className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 backdrop-blur-sm transition-colors duration-300 group-hover:bg-slate-200/60">
-                <Icon className="h-3.5 w-3.5 text-slate-500 transition-colors duration-300 group-hover:text-slate-700" />
+              <div className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 backdrop-blur-sm transition-colors duration-300 group-hover:bg-cyan-50">
+                <Icon className="h-3.5 w-3.5 text-slate-500 transition-colors duration-300 group-hover:text-cyan-600" />
               </div>
               <span className="relative z-10 leading-snug drop-shadow-sm">{text}</span>
             </button>
