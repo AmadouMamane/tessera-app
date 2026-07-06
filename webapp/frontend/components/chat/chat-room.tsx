@@ -537,7 +537,7 @@ function EmptyWithSuggestions({
           {(["RGPD", "DORA", "BaFin", "CNIL"] as const).map((label) => (
             <span
               key={label}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/30 px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-slate-600"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-transparent px-2.5 py-0.5 text-[0.65rem] font-medium tracking-wider text-slate-600"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-green-500/80" />
               {label}
