@@ -1598,6 +1598,7 @@ export function RecouvrementProductExperience() {
       const usesStructuredBackend = route.useStructuredBackend;
       const usesStructuredScheduleBackend = route.backendIntent === "propose_schedule";
       const usesStructuredDraftBackend = route.backendIntent === "draft_reminder";
+      const usesStructuredSummaryBackend = route.backendIntent === "summarize_case";
       const routedTab = assistantTabForTask(route.targetTask);
       if (!resetThread && routedTab !== activeAssistantTab) {
         skipNextAssistantAutoTurnRef.current = true;
@@ -1800,7 +1801,9 @@ export function RecouvrementProductExperience() {
               ? contentFromRecouvrementScheduleResponse(response)
               : usesStructuredDraftBackend
                 ? contentFromRecouvrementDraftResponse(response)
-                : contentFromRecouvrementContactResponse(response);
+                : usesStructuredSummaryBackend
+                  ? contentFromCaseSummaryResponse(response)
+                  : contentFromRecouvrementContactResponse(response);
             completeAfterThinkingMinimum(() => {
               setAssistantContent(parsed);
               setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
@@ -1853,6 +1856,23 @@ export function RecouvrementProductExperience() {
                   current.map((item) =>
                     item.id === assistantMessage.id
                       ? { ...item, content: proposal.visibleReply, streaming: false }
+                      : item,
+                  ),
+                );
+                setAssistantStatus("ready");
+              });
+              return;
+            }
+            if (usesStructuredSummaryBackend) {
+              const summary = buildCaseSummaryDraft();
+              const parsed = contentFromCaseSummaryResponse(summary);
+              completeAfterThinkingMinimum(() => {
+                setAssistantContent(parsed);
+                setSelectedVersionId("v1");
+                setAssistantThread((current) =>
+                  current.map((item) =>
+                    item.id === assistantMessage.id
+                      ? { ...item, content: summary.visibleReply, streaming: false }
                       : item,
                   ),
                 );

@@ -28,6 +28,7 @@ _SENSITIVE_ARTIFACTS: Final = {
     "schedule_proposal_v2",
     "client_message_artifact",
     "reminder_draft_v1",
+    "case_summary_v1",
 }
 _SENSITIVE_ACTIONS: Final = {
     "prepare_outbound_call",
@@ -230,7 +231,10 @@ def _no_uncontrolled_external_effect(rows: list[dict[str, object]]) -> BusinessS
             BusinessEventName.ARTIFACT_STATUS_CHANGED.value,
         }
     ]
-    if not action_rows:
+    explicit_no_effect_rows = [
+        row for row in rows if _payload(row).get("no_external_effect") is True
+    ]
+    if not action_rows and not explicit_no_effect_rows:
         return _not_applicable("no_uncontrolled_external_effect", "no_artifact_action_event")
     if any(row.get("artifact_status") in {"inserted", "executed"} for row in rows):
         return _scored(
@@ -238,7 +242,7 @@ def _no_uncontrolled_external_effect(rows: list[dict[str, object]]) -> BusinessS
             0.0,
             "artifact_status_claims_external_execution",
         )
-    for row in action_rows:
+    for row in [*action_rows, *explicit_no_effect_rows]:
         payload = _payload(row)
         if payload.get("no_external_effect") is not True:
             return _scored(
@@ -258,12 +262,17 @@ def _trace_completeness(rows: list[dict[str, object]]) -> BusinessScore:
         and _payload(row).get("policy_rule") == "recouvrement.client_message_safety"
         for row in rows
     )
+    has_summary_policy = any(
+        row.get("event_name") == BusinessEventName.POLICY_DECISION_MADE.value
+        and _payload(row).get("policy_rule") == "recouvrement.case_summary_safety"
+        for row in rows
+    )
     expected = {
         BusinessEventName.INTENT_ROUTED.value,
         BusinessEventName.SLOTS_EXTRACTED.value,
         BusinessEventName.MESSAGE_GENERATED.value,
     }
-    if not has_client_message_policy:
+    if not has_client_message_policy and not has_summary_policy:
         expected.add(BusinessEventName.BUSINESS_RULE_CHECKED.value)
     has_policy_equivalent = BusinessEventName.POLICY_DECISION_MADE.value in names or any(
         row.get("event_name") == BusinessEventName.BUSINESS_RULE_CHECKED.value

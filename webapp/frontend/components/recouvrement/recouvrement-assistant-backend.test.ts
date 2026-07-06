@@ -150,6 +150,32 @@ describe("artifact family and task click routing", () => {
       backendIntent: "propose_schedule",
       useStructuredBackend: true,
     });
+    expect(routeRecouvrementTaskClick("summary")).toMatchObject({
+      targetTask: "summary",
+      backendIntent: "summarize_case",
+      useStructuredBackend: true,
+    });
+  });
+
+  it("routes case-summary wording to the structured backend", () => {
+    expect(routeRecouvrementDrawerMessage("Résumer ce dossier", "draft_reminder", null)).toEqual({
+      targetTask: "summary",
+      backendIntent: "summarize_case",
+      useStructuredBackend: true,
+      useContactRuleBackend: false,
+      extractedSlots: {},
+    });
+    expect(
+      routeRecouvrementDrawerMessage(
+        "que dois-je retenir sur la situation du client ?",
+        "summary",
+        null,
+      ),
+    ).toMatchObject({
+      targetTask: "summary",
+      backendIntent: "summarize_case",
+      useStructuredBackend: true,
+    });
   });
 
   it("classifies current artifacts without falling through to another family", () => {
@@ -203,6 +229,8 @@ describe("structured schedule backend bridge", () => {
 
     expect(source).toContain("contentFromRecouvrementScheduleResponse");
     expect(source).toContain("contentFromRecouvrementDraftResponse");
+    expect(source).toContain("usesStructuredSummaryBackend");
+    expect(source).toContain("contentFromCaseSummaryResponse(response)");
     expect(source).toContain('route.backendIntent === "propose_schedule"');
     expect(source).toContain('route.backendIntent === "draft_reminder"');
     expect(source).toContain("const currentArtifact =");

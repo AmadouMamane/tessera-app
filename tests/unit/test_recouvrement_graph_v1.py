@@ -250,6 +250,57 @@ def test_recouvrement_graph_scores_contact_rule_without_false_not_applicable_zer
     assert scores["amount_consistency"]["score"] is None
 
 
+def test_recouvrement_graph_summarizes_case_without_external_effects(
+    observed_recouvrement_stores: Path,
+) -> None:
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Résumer ce dossier",
+        conversation_id="conv-rc-summary",
+        turn_id="turn-summary",
+        assistant_state={"activeTask": "summary"},
+    )
+
+    artifact = output["artifact"]
+    content = artifact["content"]
+    assert output["visibleReply"] == "Résumé du dossier RC-2048 mis à jour."
+    assert artifact["type"] == "case_summary_v1"
+    assert artifact["task"] == "summary"
+    assert artifact["status"] == "draft"
+    assert artifact["title"] == "Résumé du dossier — RC-2048"
+    assert content["amount_due"] == "840,00 €"
+    assert content["days_late"] == 32
+    assert content["missed_promise"] == "promesse de paiement non tenue le 12 juin"
+    assert content["message_sent"] is False
+    assert content["schedule_created"] is False
+    assert content["no_external_effect"] is True
+    assert "promesse de paiement non tenue le 12 juin" in content["summary"]
+    assert output["suggestedActions"] == [
+        "Rédiger une relance",
+        "Vérifier une règle",
+        "Proposer un échéancier",
+        "Insérer dans le dossier",
+    ]
+    assert output["decisions"]["intent"] == "summarize_case"
+    assert output["decisions"]["summaryPolicy"]["policy_review_status"] == "approved"
+    event_names = [row["event_name"] for row in output["businessEvents"]]
+    assert event_names == [
+        "case.context_loaded",
+        "intent.routed",
+        "slots.extracted",
+        "policy.decision_made",
+        "artifact.created",
+        "message.generated",
+    ]
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["artifact_governance"]["score"] == 1.0
+    assert scores["recouvrement_trace_completeness"]["score"] == 1.0
+    assert scores["amount_consistency"]["score"] == 1.0
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
+    assert scores["client_message_safety"]["status"] == "not_applicable"
+    assert scores["contact_window_compliance"]["status"] == "not_applicable"
+
+
 def test_recouvrement_graph_proposes_schedule_with_backend_observability(
     observed_recouvrement_stores: Path,
 ) -> None:
@@ -883,6 +934,32 @@ async def test_recouvrement_assistant_endpoint_returns_draft_contract(
     }
 
 
+async def test_recouvrement_assistant_endpoint_returns_summary_contract(
+    observed_recouvrement_stores: Path,
+) -> None:
+    payload = RecouvrementAssistantRequest(
+        case_id="RC-2048",
+        message="Résumer ce dossier",
+        conversation_id="conv-rc-endpoint-summary",
+        turn_id="turn-endpoint-summary",
+        assistant_state={"activeTask": "summary"},
+    )
+    output = await recouvrement_assistant_message(payload)
+
+    assert output["decisions"]["intent"] == "summarize_case"
+    assert output["artifact"]["type"] == "case_summary_v1"
+    assert output["artifact"]["content"]["amount_due"] == "840,00 €"
+    assert output["artifact"]["content"]["days_late"] == 32
+    assert output["artifact"]["content"]["no_external_effect"] is True
+    assert "Aucun message client généré" in output["cardUpdates"]["complianceChecks"]
+    assert output["suggestedActions"] == [
+        "Rédiger une relance",
+        "Vérifier une règle",
+        "Proposer un échéancier",
+        "Insérer dans le dossier",
+    ]
+
+
 async def test_recouvrement_assistant_action_endpoint_returns_governed_action_contract(
     observed_recouvrement_stores: Path,
 ) -> None:
@@ -919,6 +996,13 @@ async def test_recouvrement_assistant_action_endpoint_returns_governed_action_co
 async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_and_scores(
     observed_recouvrement_stores: Path,
 ) -> None:
+    summary = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Résumer ce dossier",
+        conversation_id="conv-rc-cockpit",
+        turn_id="turn-summary",
+        assistant_state={"activeTask": "summary"},
+    )
     contact = run_recouvrement_graph_v1(
         case_id="RC-2048",
         message="Je peux l'appeler à 23h ?",
@@ -961,6 +1045,7 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
     runs = {run["turn_id"]: run for run in payload["runs"]}
 
     assert set(runs) == {
+        "turn-summary",
         "turn-contact-blocked",
         "turn-schedule-36",
         "turn-client-message",
@@ -974,6 +1059,12 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
         and "OUTSIDE_CONTACT_WINDOW" in decision["reason_codes"]
         for decision in runs["turn-contact-blocked"]["decisions"]
     )
+
+    summary_artifact = runs["turn-summary"]["artifacts"][0]
+    assert summary_artifact["artifact_type"] == "case_summary_v1"
+    assert summary_artifact["no_external_effect"] is True
+    summary_scores = {score["metric"]: score for score in runs["turn-summary"]["scores"]}
+    assert summary_scores["no_uncontrolled_external_effect"]["score"] == 1.0
 
     schedule_artifact = runs["turn-schedule-36"]["artifacts"][0]
     assert schedule_artifact["artifact_type"] == "schedule_proposal_v2"
@@ -1008,4 +1099,5 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
 
     assert validation["artifact"]["status"] == "pending_validation"
     assert insertion["artifact"]["status"] == "insertion_prepared"
+    assert summary["artifact"]["type"] == "case_summary_v1"
     assert contact["artifact"]["content"]["decision"] == "blocked"

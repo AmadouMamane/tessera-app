@@ -12,7 +12,8 @@ export type RecouvrementDrawerTask =
 export type RecouvrementBackendIntent =
   | "check_contact_rule"
   | "propose_schedule"
-  | "draft_reminder";
+  | "draft_reminder"
+  | "summarize_case";
 
 export type RecouvrementArtifactFamily = "summary" | "message" | "schedule" | "contact_rule";
 
@@ -99,7 +100,9 @@ function hasDraftEditIntent(normalized: string): boolean {
 }
 
 function hasSummaryIntent(normalized: string): boolean {
-  return /\b(resume|resumer|synthese|synthetise)\b/.test(normalized);
+  return /\b(resume|resumer|synthese|synthetise|points cles|prioritaire|priorite|situation du client|que dois je retenir|a retenir)\b/.test(
+    normalized,
+  );
 }
 
 export function artifactFamilyForArtifact(
@@ -132,7 +135,7 @@ export function backendIntentForTask(
   if (task === "check_contact_rule") return "check_contact_rule";
   if (task === "propose_schedule") return "propose_schedule";
   if (task === "draft_reminder") return "draft_reminder";
-  return undefined;
+  return "summarize_case";
 }
 
 export function routeRecouvrementTaskClick(task: RecouvrementDrawerTask): RecouvrementDrawerRoute {
@@ -197,7 +200,8 @@ export function routeRecouvrementDrawerMessage(
   if (hasSummaryIntent(normalized)) {
     return {
       targetTask: "summary",
-      useStructuredBackend: false,
+      backendIntent: "summarize_case",
+      useStructuredBackend: true,
       useContactRuleBackend: false,
       extractedSlots: {},
     };
@@ -666,7 +670,12 @@ export function footerActionsForRecouvrementArtifact(
   }
 
   if (artifact?.type === "case_summary_v1") {
-    return ["Rédiger une relance", "Proposer un échéancier", "Vérifier une règle"];
+    return [
+      "Rédiger une relance",
+      "Vérifier une règle",
+      "Proposer un échéancier",
+      "Insérer dans le dossier",
+    ];
   }
 
   return ["Rédiger une relance", "Proposer un échéancier", "Vérifier une règle"];

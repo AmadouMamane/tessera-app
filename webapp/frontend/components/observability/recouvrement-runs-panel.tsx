@@ -92,6 +92,7 @@ function runTitle(run: RecouvrementRun): string {
   if (artifact?.artifact_type === "schedule_proposal_v2") return "Échéancier indicatif";
   if (artifact?.artifact_type === "client_message_artifact") return "Message client";
   if (artifact?.artifact_type === "reminder_draft_v1") return "Brouillon de relance";
+  if (artifact?.artifact_type === "case_summary_v1") return "Résumé du dossier";
   if (run.sensitive_actions[0]?.action_name)
     return actionLabel(run.sensitive_actions[0].action_name);
   return run.turn_id;
