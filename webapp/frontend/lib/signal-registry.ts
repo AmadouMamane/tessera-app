@@ -61,6 +61,11 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   tool_validity: cap(AGENT_TIME),
   governance: cap(AGENT_TIME),
   audit_count: cap(AGENT_TIME),
+  // Business signals (ADR 0017 §3) — the backend declares these per-agent business reads
+  // (business_scoring over the workflow grammar). Mirrored here so the Métier surfaces and
+  // filter affordances derive from the same descriptor as every other signal.
+  business_events: cap(AGENT_TIME),
+  recouvrement_business_scores: cap(AGENT_TIME),
   traces: cap(CUBE),
   // Control-case inbox: each item is a case an agent's own eval run failed → ventilable.
   inbox: cap(AGENT_TIME),

@@ -5178,6 +5178,9 @@ export const FleetSchema = z.object({
           })
           .nullable()
           .optional(),
+        // ADR 0017 §4 — observability level (L0–L2 in Phase B); null when the agent has
+        // no AgentSpec manifest yet (honest-empty badge, never rendered as "L0").
+        level: z.string().nullable().optional(),
       }),
     )
     .optional(),

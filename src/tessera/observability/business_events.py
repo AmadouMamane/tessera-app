@@ -34,6 +34,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
 __all__ = [
+    "ACTORS",
+    "HUMAN_ACTORS",
+    "Actor",
     "AgentBusinessEvent",
     "ArtifactSink",
     "AuditSink",
@@ -85,6 +88,27 @@ EVENT_VERSION = 1
 #: ADR 0017 §2 — the workflow grammar is a versioned spec, stamped on every event.
 #: It versions independently from the envelope ``schema_version``.
 GRAMMAR_VERSION = "workflow_grammar.v1"
+
+
+class Actor(StrEnum):
+    """Closed vocabulary for the party a business event is attributed to (ADR 0017 §A2.1).
+
+    ``actor`` was a free string defaulting to ``system``; this narrows it to a closed
+    set. The narrowing is additive — every event emitted before this amendment is
+    ``system``, so the envelope stays ``business_event.v1``.
+    """
+
+    SYSTEM = "system"
+    EXTERNAL_CUSTOMER = "external_customer"
+    INTERNAL_COLLABORATOR = "internal_collaborator"
+    OPERATOR = "operator"
+
+
+#: The closed ``actor`` vocabulary (§A2.1) — validated at emit time.
+ACTORS: frozenset[str] = frozenset(a.value for a in Actor)
+#: The human actors: a ``human_action``-level business fact (§A2.2) is exactly an event
+#: whose actor is one of these — the distinction the 3-level ladder is built on.
+HUMAN_ACTORS: frozenset[str] = frozenset(ACTORS - {Actor.SYSTEM.value})
 
 
 class BusinessPayloadValidationError(ValueError):
@@ -913,6 +937,9 @@ def record_business_event(
     """Normalise and fan out one business event to the existing sinks."""
     raw_payload = _json_safe_payload(payload)
     name = _event_name_value(event_name)
+    if actor not in ACTORS:
+        msg = f"unknown actor {actor!r}: expected one of {sorted(ACTORS)}"
+        raise BusinessPayloadValidationError(msg)
     reasons = tuple(str(code) for code in reason_codes)
     safe_payload = _validate_event_payload(
         event_name=name,

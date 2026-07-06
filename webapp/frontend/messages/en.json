@@ -6873,7 +6873,8 @@
     "release": "Release state",
     "releaseNotRun": "Eval not run",
     "candidate": "Candidate",
-    "releaseNote": "Per-agent eval-gate verdict (reference run, case × language grain) — each agent is a governed package."
+    "releaseNote": "Per-agent eval-gate verdict (reference run, case × language grain) — each agent is a governed package.",
+    "observabilityLevel": "Observability level {level}"
   },
   "product": {
     "apercu": {
@@ -8002,5 +8003,18 @@
   "synthetic": {
     "title": "Demonstration data",
     "detail": "a deterministic reference fixture, not from real traffic"
+  },
+  "capability": {
+    "summarize_case": "Case summary",
+    "check_contact_rule": "Contact-rule check",
+    "explain_payment_options": "Explain payment options",
+    "draft_reminder": "Draft reminder",
+    "propose_schedule": "Propose schedule"
+  },
+  "policy": {
+    "contact_window": "Authorized contact window",
+    "client_message_safety": "Client-message safety",
+    "payment_options_safety": "Payment-options safety",
+    "amount_consistency": "Amount consistency"
   }
 }

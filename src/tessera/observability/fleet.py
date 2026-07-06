@@ -20,11 +20,14 @@ from psycopg.rows import dict_row
 from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability.agent_release import fleet_release_states
 from tessera.observability.agent_scope import dedup_org_total
+from tessera.observability.agentspec_projection import observability_level
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from tessera.agent.registry import Agent
 
 __all__ = ["compute_fleet"]
 
@@ -46,6 +49,19 @@ def _registry_agents() -> list[dict[str, str]]:
         ]
     except (OSError, ValueError):
         return []
+
+
+def _agent_records() -> dict[str, Agent]:
+    """Full agent records, for manifest-derived fields (the level badge).
+
+    Empty on a load error — the fleet then degrades to no level badge, never crashes.
+    """
+    try:
+        from tessera.agent.registry import list_agents
+
+        return {a.id: a for a in list_agents()}
+    except (OSError, ValueError):
+        return {}
 
 
 def _handoff_counts(audit_path: Path) -> tuple[dict[str, int], dict[str, int]]:
@@ -106,6 +122,7 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
 
     incoming, outgoing = _handoff_counts(get_settings().guard.audit_file)
     releases = fleet_release_states(lang)
+    records = _agent_records()
 
     # Registry first (every agent appears), enriched with its real slice.
     agents: list[dict[str, Any]] = []
@@ -117,6 +134,11 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
         escalation_rate = round(100 * escal / answers, 1) if answers else 0.0
         lat = row.get("lat")
         rel = releases.get(aid)
+        record = records.get(aid)
+        # L2 (Governed) requires the eval/guard facts to be VISIBLE — a real gating socle
+        # actually ran (ADR 0017 §4). The level is computed from this fact, never asserted.
+        governed = rel is not None and rel.available and rel.socle_total > 0
+        level = observability_level(record, governed=governed) if record is not None else None
         agents.append(
             {
                 "id": aid,
@@ -132,6 +154,9 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                 "handoffs_out": int(outgoing.get(aid, 0)),
                 "health": _health(escalation_rate),
                 "release": rel.as_dict() if rel else None,
+                # ADR 0017 §4 — observability level (L0-L2 in Phase B; None when the agent
+                # has no AgentSpec manifest yet → honest-empty, not "L0").
+                "level": level,
             }
         )
 

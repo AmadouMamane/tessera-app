@@ -84,3 +84,130 @@ agents:
     handoff:
       to: []
       from: []
+    # AgentSpec observability block (ADR 0017 §3 + A1 + A2.3) — recouvrement declares the
+    # first manifest (Phase B). Everything the cockpit renders for this agent's business
+    # surfaces is generated from here; nothing hand-placed per agent. Policy IMPLEMENTATIONS
+    # stay deterministic code in `tessera.recouvrement.*` — the manifest declares only ids,
+    # reason codes and metadata (A1.1 / A2.3). Business signal keys must be produced by the
+    # bound scorer (pinned by `tests/unit/test_agentspec_conformance.py`).
+    observability:
+      spec_version: agentspec.v1
+      telemetry_capabilities: [graph_topology, tools]
+      capabilities:
+        - id: summarize_case
+          label_key: capability.summarize_case
+          output_artifacts: [case_summary_v1]
+          external_effect_level: none
+        - id: check_contact_rule
+          label_key: capability.check_contact_rule
+          output_artifacts: [contact_rule_v1]
+          policies: [contact_window_policy]
+          external_effect_level: none
+        - id: explain_payment_options
+          label_key: capability.explain_payment_options
+          output_artifacts: [payment_options_v1]
+          policies: [payment_options_safety]
+          external_effect_level: draft
+        - id: draft_reminder
+          label_key: capability.draft_reminder
+          output_artifacts: [client_message_artifact]
+          policies: [contact_window_policy, client_message_safety]
+          external_effect_level: requires_validation
+        - id: propose_schedule
+          label_key: capability.propose_schedule
+          output_artifacts: [schedule_proposal_v2]
+          policies: [contact_window_policy, amount_consistency_policy]
+          external_effect_level: requires_validation
+      policies:
+        - id: contact_window_policy
+          label_key: policy.contact_window
+          version: 1.0.0
+          severity: blocking
+          applies_to: [check_contact_rule, draft_reminder, propose_schedule]
+          reason_codes: [OUTSIDE_CONTACT_WINDOW, UNAUTHORIZED_SURFACE]
+        - id: client_message_safety
+          label_key: policy.client_message_safety
+          version: 1.0.0
+          severity: blocking
+          applies_to: [draft_reminder]
+          reason_codes: [UNSAFE_CLIENT_MESSAGE]
+        - id: payment_options_safety
+          label_key: policy.payment_options_safety
+          version: 1.0.0
+          severity: blocking
+          applies_to: [explain_payment_options]
+          reason_codes: []
+        - id: amount_consistency_policy
+          label_key: policy.amount_consistency
+          version: 1.0.0
+          severity: blocking
+          applies_to: [propose_schedule]
+          reason_codes: [AMOUNT_MISMATCH]
+      workflows:
+        - workflow_id: recouvrement_collections_v1
+          grammar: workflow_grammar.v1
+          scorer: recouvrement.collections.v1
+      business_signals:
+        - key: contact_window_compliance
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
+          engagement: legal
+          north_star: true
+        - key: validation_required_compliance
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
+          engagement: legal
+        - key: action_blocking_correctness
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
+        - key: artifact_governance
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
+        - key: client_message_safety
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
+        - key: payment_option_safety
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
+        - key: action_governance
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
+        - key: no_uncontrolled_external_effect
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
+        - key: recouvrement_trace_completeness
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
+        - key: amount_consistency
+          source: business_score
+          level: runtime
+          unit: ratio
+          aggregation: mean
+          dimensions: [agent, time]
