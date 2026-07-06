@@ -597,3 +597,31 @@ column + KPIs). Deviation: the list rows are **eval-run sessions** (case × lang
 `sid` is not a `conversation_messages` id — so opening one yields the empty state; only
 **real chat conversations** (UUID) resolve to the full per-turn detail. Logged;
 **à confirmer** whether the list should also surface real chat conversations.
+
+## Annexe — Lexique des deux plans (binding)
+
+Complément opérationnel de la règle de non-exposition (ADR 0017 §A1.5) et de la
+séparation des plans (ADR 0013). Le vocabulaire ci-dessous est **contractuel** : un terme
+« réservé cockpit » n'apparaît jamais dans une surface produit — ni dans l'UI, ni dans les
+URL (règle déjà posée en tête de ce contrat), ni dans les libellés i18n des namespaces
+produit. Harvested from the "ADR-004" vision draft (2026-07-06); the plane rules
+themselves are ADR 0013's.
+
+| À utiliser côté produit | Réservé au cockpit (jamais côté produit) |
+|---|---|
+| Crédit Aurore | Tessera, AI Control Plane |
+| Banque & assurance | Agent (au sens plateforme) |
+| Recouvrement, Ma journée | Console, Trace, Replay |
+| Assistant de traitement | Eval, Score IA, Juge |
+| Aide au dossier | Prompt, Modèle |
+| À traiter maintenant | Garde-fou technique |
+| Cadre de contact | Audit trail, Ledger |
+
+Notes d'application :
+
+- « Cadre de contact » est la traduction produit de `contact_window_policy` — le
+  collaborateur voit la règle métier, jamais le nom du policy id ni son reason code brut.
+- Les identifiants internes (intent ids, task keys, capability ids, reason codes) ne sont
+  jamais des libellés utilisateur (ADR 0018 §7) ; ils passent par des clés i18n.
+- Enforcement candidate : étendre le sweep i18n pour signaler tout terme réservé apparaissant
+  dans un namespace de messages produit (`produit.*`, `recouvrement.*`).
