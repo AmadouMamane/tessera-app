@@ -4,9 +4,9 @@ import { LogIn, LogOut, ShieldCheck, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { fetchSessionState, loginDemo, logoutSession, type SessionState } from "@/lib/api/session";
-import { useChatStore } from "@/lib/stores/chat-store";
 import { SUBJECT_ID_KEY } from "@/components/chat/chat-room";
+import { type SessionState, fetchSessionState, loginDemo, logoutSession } from "@/lib/api/session";
+import { useChatStore } from "@/lib/stores/chat-store";
 import { PRODUIT_CID_KEY } from "./chat-widget";
 
 /**

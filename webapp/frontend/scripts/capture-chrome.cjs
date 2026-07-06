@@ -8,7 +8,13 @@ const ROUTE = process.argv[2] || "/fr/agents/support-client/synthese";
   const api = await request.newContext({ baseURL: BASE });
   const { csrfToken } = await (await api.get("/api/auth/csrf")).json();
   await api.post("/api/auth/callback/credentials", {
-    form: { csrfToken, username: "admin", password: "tessera-admin", callbackUrl: `${BASE}/fr/select-space`, json: "true" },
+    form: {
+      csrfToken,
+      username: "admin",
+      password: "tessera-admin",
+      callbackUrl: `${BASE}/fr/select-space`,
+      json: "true",
+    },
     headers: { "content-type": "application/x-www-form-urlencoded" },
     maxRedirects: 0,
   });
@@ -29,7 +35,9 @@ const ROUTE = process.argv[2] || "/fr/agents/support-client/synthese";
   await page.keyboard.press("Control+b");
   await page.waitForTimeout(600);
   await page.screenshot({ path: "/tmp/chrome-rail.png", fullPage: false });
-  const persisted = await page.evaluate(() => window.localStorage.getItem("tessera.sidebarCollapsed"));
+  const persisted = await page.evaluate(() =>
+    window.localStorage.getItem("tessera.sidebarCollapsed"),
+  );
   console.log("collapsed persisted =", persisted);
 
   // restore full for the focus shot

@@ -6,8 +6,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
 import type { ExternalChatPrompt } from "@/components/chat/chat-room";
-import { cn } from "@/lib/cn";
 import { fetchConversationMessages } from "@/lib/api/client";
+import { cn } from "@/lib/cn";
 import { type ChatMessage, useChatStore } from "@/lib/stores/chat-store";
 
 export const PRODUCT_CHAT_EVENT = "tessera:open-product-chat";
@@ -80,7 +80,7 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
         }
         const msgs: ChatMessage[] = res.messages.map((m: any) => ({
           id: m.id ?? globalThis.crypto?.randomUUID() ?? `${Date.now()}-${Math.random()}`,
-          role: (m.role === "assistant" || m.role === "system") ? m.role : "user",
+          role: m.role === "assistant" || m.role === "system" ? m.role : "user",
           content: m.content,
           createdAt: m.createdAt ?? m.created_at ?? Date.now(),
         }));
@@ -109,11 +109,8 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
     }
   }, [conversationId]);
 
-
   useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent(CHAT_WIDGET_STATE_EVENT, { detail: { isOpen: open } })
-    );
+    window.dispatchEvent(new CustomEvent(CHAT_WIDGET_STATE_EVENT, { detail: { isOpen: open } }));
   }, [open]);
 
   // Esc closes the panel (only while open so we don't swallow Esc elsewhere).
@@ -147,7 +144,7 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
       if (!state.conversationId) {
         try {
           localStorage.removeItem(PRODUIT_CID_KEY);
-        } catch { }
+        } catch {}
       }
     });
   }, []);
@@ -172,11 +169,10 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
         <div
           role="dialog"
           aria-label={t("title")}
+          style={{ colorScheme: "light" }}
           className={cn(
             "fixed inset-0 z-50 flex flex-col overflow-hidden border-slate-200 !bg-white shadow-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out sm:inset-auto sm:bottom-24 sm:right-6 sm:rounded-2xl sm:border transition-[width,height]",
-            isExpanded
-              ? "sm:h-[85vh] sm:w-[550px]"
-              : "sm:h-[min(620px,80vh)] sm:w-[400px]"
+            isExpanded ? "sm:h-[85vh] sm:w-[550px]" : "sm:h-[min(620px,80vh)] sm:w-[400px]",
           )}
         >
           {/* Header strip */}

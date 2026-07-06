@@ -63,7 +63,10 @@ test("Reconstituer at an early T re-queries the audit-derived diff", async ({ pa
 });
 
 test("the premium calendar opens and selects a day", async ({ page }) => {
-  await page.getByRole("button", { name: /^Maintenant/ }).first().click();
+  await page
+    .getByRole("button", { name: /^Maintenant/ })
+    .first()
+    .click();
   // The homemade popover (month grid + time input) is shown.
   await expect(page.locator('input[type="time"]')).toBeVisible();
   await page.getByRole("button", { name: "20", exact: true }).click();

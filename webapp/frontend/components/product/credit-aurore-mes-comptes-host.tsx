@@ -24,11 +24,11 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { CreditAuroreLogoMark } from "@/components/brand/credit-aurore-logo";
-import { PRODUCT_CHAT_EVENT, CHAT_WIDGET_STATE_EVENT } from "@/components/product/chat-widget";
+import { CHAT_WIDGET_STATE_EVENT, PRODUCT_CHAT_EVENT } from "@/components/product/chat-widget";
 
 const APPOINTMENT_PROMPT =
   "Je souhaite prendre rendez-vous avec un conseiller Crédit Aurore pour faire le point sur mes comptes.";
@@ -1496,7 +1496,12 @@ function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) 
     return () => window.removeEventListener(CHAT_WIDGET_STATE_EVENT, handleState);
   }, []);
 
-  const styleProps = { transition: 'opacity 300ms ease, transform 300ms ease', opacity: isChatOpen ? 0 : 1, transform: isChatOpen ? 'translateY(10px) scale(0.95)' : 'translateY(0) scale(1)', pointerEvents: isChatOpen ? 'none' : 'auto' } as React.CSSProperties;
+  const styleProps = {
+    transition: "opacity 300ms ease, transform 300ms ease",
+    opacity: isChatOpen ? 0 : 1,
+    transform: isChatOpen ? "translateY(10px) scale(0.95)" : "translateY(0) scale(1)",
+    pointerEvents: isChatOpen ? "none" : "auto",
+  } as React.CSSProperties;
 
   return (
     <>
