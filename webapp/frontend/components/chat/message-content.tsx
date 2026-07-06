@@ -60,14 +60,14 @@ export function CitationList({
           const title = hasTitle ? c.locator : c.source;
           return (
             <li key={`${c.source}-${c.locator}-${idx}`}>
-              <details className="group rounded-md border border-gray-200 bg-gray-50 transition-colors open:border-gray-300 open:bg-gray-100 hover:border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:open:border-gray-600 dark:open:bg-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-700">
+              <details className="group rounded-md border border-gray-200 bg-gray-50 transition-colors open:border-gray-300 open:bg-gray-100 hover:border-gray-300 hover:bg-gray-100">
                 <summary className="grid min-h-10 cursor-pointer list-none grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1.5 text-[0.68rem] [&::-webkit-details-marker]:hidden">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-[0.62rem] font-semibold text-gray-500 tabular-nums transition-colors group-hover:text-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:group-hover:text-gray-200">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 bg-white text-[0.62rem] font-semibold text-gray-500 tabular-nums transition-colors group-hover:text-gray-800">
                     {idx + 1}
                   </span>
                   <span className="min-w-0">
                     <span className="flex items-center gap-1 font-medium text-slate-800">
-                      <FileText className="h-3 w-3 shrink-0 text-gray-500 dark:text-gray-400" />
+                      <FileText className="h-3 w-3 shrink-0 text-gray-400" />
                       <span className="truncate">{title}</span>
                     </span>
                     {hasTitle && (
@@ -77,13 +77,13 @@ export function CitationList({
                     )}
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
-                    <span className="rounded border border-gray-200 px-1 py-px text-[0.55rem] font-medium text-gray-500 uppercase tracking-wide dark:border-gray-700 dark:text-gray-400">
+                    <span className="rounded border border-gray-200 px-1 py-px text-[0.55rem] font-medium text-gray-500 uppercase tracking-wide">
                       {c.language}
                     </span>
-                    <ChevronDown className="h-3.5 w-3.5 text-gray-500 transition-transform group-open:rotate-180 dark:text-gray-400" />
+                    <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform group-open:rotate-180" />
                   </span>
                 </summary>
-                <p className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words border-gray-200 border-t px-2.5 py-2 text-gray-700 text-xs leading-relaxed dark:border-gray-700 dark:text-gray-300">
+                <p className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words border-gray-200 border-t px-2.5 py-2 text-gray-600 text-xs leading-relaxed">
                   {c.excerpt?.trim() ? c.excerpt : t("noExcerpt")}
                 </p>
               </details>
