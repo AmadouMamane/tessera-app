@@ -118,7 +118,7 @@ export function MessageBubble({
           className={cn(
             "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
             isUser
-              ? "bg-gradient-to-br from-gold-100 to-gold-200 text-gold-900 ring-1 ring-gold-300/50"
+              ? "bg-slate-100 text-slate-500 ring-1 ring-slate-200"
               : "bg-gradient-to-br from-navy-800 to-navy-950 text-gold-400 shadow-[inset_0_1px_1px_oklch(0.8_0.066_85/0.2)] ring-1 ring-gold-500/15 ",
           )}
         >
@@ -154,7 +154,7 @@ export function MessageBubble({
           className={cn(
             "relative w-full",
             isUser
-              ? "px-4 py-2.5 rounded-2xl rounded-br-sm bg-gradient-to-br from-gold-100 to-gold-200 text-gold-900 text-sm leading-relaxed"
+              ? "px-4 py-2.5 rounded-2xl rounded-br-sm bg-slate-100 text-slate-800 text-sm leading-relaxed"
               : "text-slate-900",
           )}
         >
@@ -166,7 +166,7 @@ export function MessageBubble({
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleEditKey}
                 rows={1}
-                className="w-full resize-none bg-transparent text-sm leading-relaxed text-gold-900 focus:outline-none"
+                className="w-full resize-none bg-transparent text-sm leading-relaxed text-slate-800 focus:outline-none"
               />
             ) : (
               <MessageContent speaker="user" content={message.content} />
