@@ -34,6 +34,9 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     # no SDK mirror at :3900). The write paths themselves are unit-tested against stubbed
     # clients (opting back in per-test) and proven live by the contract tests.
     monkeypatch.setenv("TESSERA_CLICKHOUSE_SCORES", "0")
+    # The ADR 0017 §5 business-event dual-write is off for the same reason (no insert
+    # thread at :18123); the write path is unit-tested against a stubbed client.
+    monkeypatch.setenv("TESSERA_CLICKHOUSE_BUSINESS_EVENTS", "0")
     monkeypatch.setenv("TESSERA_LANGFUSE_SCORES", "0")
     # The §Amendment 3 ledger dual-write is off too: audit emission in tests must not
     # reach Postgres (and the append-only table could never be cleaned). The promoted

@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from tessera.observability import semconv
 from tessera.observability._asof import occurred_before
+from tessera.observability.logging import get_logger
 from tessera.observability.metrics import (
     ACTION_BLOCKED_TOTAL,
     ACTION_PREPARED_TOTAL,
@@ -46,6 +47,7 @@ __all__ = [
     "BusinessEventSink",
     "BusinessEventStore",
     "BusinessPayloadValidationError",
+    "ClickHouseBusinessEventStore",
     "CockpitSignalSink",
     "GRAMMAR_VERSION",
     "InMemoryBusinessEventStore",
@@ -462,6 +464,145 @@ def set_business_event_store(store: BusinessEventStore) -> None:
     _BUSINESS_EVENT_STORE = store
 
 
+_LOG = get_logger("tessera.observability.business_events")
+
+
+class ClickHouseBusinessEventStore:
+    """Read-only ``BusinessEventStore`` backed by the owned ClickHouse table (ADR 0017 §5).
+
+    The active read model once business-event reads flip to ``spine``. Reads rebuild
+    :class:`BusinessEvent` s via :func:`_row_to_event`; ``append`` / ``clear`` are no-ops —
+    writes reach the table through the best-effort dual-write
+    (:mod:`tessera.observability.clickhouse_business_events`), and a read path must never
+    truncate the owned store. An unreachable ClickHouse yields an honest-empty read.
+    """
+
+    def append(self, event: BusinessEvent) -> None:
+        """No-op: writes reach the owned table via the dual-write, not this read store."""
+
+    def list(
+        self,
+        *,
+        at: str | None = None,
+        agent_id: str | None = None,
+        workflow_id: str | None = None,
+        conversation_id: str | None = None,
+        turn_id: str | None = None,
+        case_id: str | None = None,
+        event_name: str | None = None,
+        artifact_type: str | None = None,
+        decision: str | None = None,
+    ) -> list[BusinessEvent]:
+        """Read + rebuild business events from the owned table (honest-empty if unreachable)."""
+        from tessera.observability.spine.adapters.base import SpineUnavailableError
+        from tessera.observability.spine.adapters.clickhouse import ClickHouseAdapter
+
+        try:
+            rows = ClickHouseAdapter().business_events(
+                at=at,
+                agent_id=agent_id,
+                workflow_id=workflow_id,
+                conversation_id=conversation_id,
+                turn_id=turn_id,
+                case_id=case_id,
+                event_name=event_name,
+                artifact_type=artifact_type,
+                decision=decision,
+            )
+        except SpineUnavailableError as exc:
+            _LOG.warning("owned business-event read unavailable: %s", exc)
+            return []
+        return [event for event in (_row_to_event(row) for row in rows) if event is not None]
+
+    def clear(self) -> None:
+        """No-op: a read path never truncates the owned store."""
+
+
+class _ShadowBusinessEventStore:
+    """Serve the in-process store, read the owned store, record divergence (§5 shadow parity).
+
+    The safety net before the flip bakes: the primary (in-process) result is what callers
+    get; the owned-store result is read and any count divergence is logged — a lagging owned
+    store is surfaced, never silently served (ADR 0015 shadow discipline, per-fact).
+    """
+
+    def __init__(self, primary: BusinessEventStore, owned: BusinessEventStore) -> None:
+        self._primary = primary
+        self._owned = owned
+
+    def append(self, event: BusinessEvent) -> None:
+        """Append to the primary in-process store (the owned table is fed by the dual-write)."""
+        self._primary.append(event)
+
+    def list(
+        self,
+        *,
+        at: str | None = None,
+        agent_id: str | None = None,
+        workflow_id: str | None = None,
+        conversation_id: str | None = None,
+        turn_id: str | None = None,
+        case_id: str | None = None,
+        event_name: str | None = None,
+        artifact_type: str | None = None,
+        decision: str | None = None,
+    ) -> list[BusinessEvent]:
+        """Serve the primary result; compare the owned store; log any divergence."""
+        filters = {
+            "at": at,
+            "agent_id": agent_id,
+            "workflow_id": workflow_id,
+            "conversation_id": conversation_id,
+            "turn_id": turn_id,
+            "case_id": case_id,
+            "event_name": event_name,
+            "artifact_type": artifact_type,
+            "decision": decision,
+        }
+        primary = self._primary.list(**filters)
+        owned = self._owned.list(**filters)
+        if len(primary) != len(owned):
+            _LOG.warning(
+                "business-event shadow divergence: primary=%d owned=%d filters=%s",
+                len(primary),
+                len(owned),
+                {key: value for key, value in filters.items() if value is not None},
+            )
+        return primary
+
+    def clear(self) -> None:
+        """Clear the primary in-process store (never truncates the owned table)."""
+        self._primary.clear()
+
+
+_CLICKHOUSE_STORE: ClickHouseBusinessEventStore | None = None
+
+
+def _clickhouse_store() -> ClickHouseBusinessEventStore:
+    """The process-wide owned-store read adapter (stateless; built once)."""
+    global _CLICKHOUSE_STORE
+    if _CLICKHOUSE_STORE is None:
+        _CLICKHOUSE_STORE = ClickHouseBusinessEventStore()
+    return _CLICKHOUSE_STORE
+
+
+def _read_store() -> BusinessEventStore:
+    """The store business-event READS resolve to, per the ``business_events`` fact flip (§5).
+
+    ``jsonl`` (default, mid-migration) → the in-process store; ``spine`` → the owned
+    ClickHouse table; ``shadow`` → serve in-process, compare owned, record divergence.
+    Writes always append to the in-process store; the owned table is fed by the dual-write.
+    """
+    from tessera.observability.spine.adapters import fact_source
+
+    source = fact_source("business_events")
+    if source == "spine":
+        return _clickhouse_store()
+    if source == "shadow":
+        return _ShadowBusinessEventStore(get_business_event_store(), _clickhouse_store())
+    return get_business_event_store()
+
+
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -730,8 +871,12 @@ def persisted_business_events(
     artifact_type: str | None = None,
     decision: str | None = None,
 ) -> list[BusinessEvent]:
-    """Return projected business events filtered by common dimensions."""
-    return get_business_event_store().list(
+    """Return projected business events filtered by common dimensions.
+
+    Reads resolve through the ``business_events`` fact flip (§5): the in-process store by
+    default, the owned ClickHouse table once flipped, or a shadow comparison of both.
+    """
+    return _read_store().list(
         at=at,
         agent_id=agent_id,
         workflow_id=workflow_id,
@@ -911,6 +1056,18 @@ def _emit_metrics(event: BusinessEvent) -> None:
         ).inc()
 
 
+def _dual_write_owned(event: BusinessEvent) -> None:
+    """Best-effort dual-write to the owned ClickHouse read model (ADR 0017 §5 / Phase D).
+
+    Non-blocking and gated (``TESSERA_CLICKHOUSE_BUSINESS_EVENTS``): a down store is skipped,
+    never raised into the hot path. The in-process store + replay bundles stay the read
+    substrate until the flip bakes. Lazily imported to avoid an import cycle.
+    """
+    from tessera.observability.clickhouse_business_events import record_business_event_row
+
+    record_business_event_row(event.to_row())
+
+
 def record_business_event(
     *,
     event_name: BusinessEventName | str,
@@ -983,6 +1140,7 @@ def record_business_event(
         _emit_otel(event)
     _emit_metrics(event)
     get_business_event_store().append(event)
+    _dual_write_owned(event)
     if event.classification.auditable:
         from tessera.guard.audit import emit_business_event_audit
 

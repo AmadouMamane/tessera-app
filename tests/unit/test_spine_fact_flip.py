@@ -54,6 +54,15 @@ class TestFactSource:
         monkeypatch.setenv("TESSERA_SPINE_SOURCE_BUNDLES", "spine")
         assert fact_source("bundles") == "jsonl"
 
+    def test_business_events_is_flippable_but_defaults_to_jsonl(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        # ADR 0017 §5: business_events is mid-migration — flippable, but its default stays
+        # jsonl (the in-process store) until shadow parity bakes, unlike G5's scores/gating.
+        monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
+        monkeypatch.delenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", raising=False)
+        assert fact_source("business_events") == "jsonl"
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", "spine")
+        assert fact_source("business_events") == "spine"  # the flip is honoured
+
 
 class TestFactRouter:
     def test_routes_each_fact_to_its_active_source(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]

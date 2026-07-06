@@ -45,6 +45,7 @@ __all__ = [
     "ErasureFootprint",
     "coverage",
     "footprint",
+    "purge_owned_business_events",
     "purge_owned_scores",
     "purge_spine",
     "purge_telemetry",
@@ -76,6 +77,12 @@ class ErasureFootprint:
     # so it has no erasure surface by construction.
     n_owned_scores: int = 0
     owned_reached: bool = True
+    # The OWNED business-event store (ClickHouse, ADR 0017 §5): the durable business-event
+    # rows are keyed by conversation_id and must be erased too. Same honesty contract as the
+    # score leg — deferred (``reached=False``) and reported when ClickHouse is unreachable,
+    # never faked. Kept erasure-cheap by the §2 PII-free payload rule.
+    n_owned_business_events: int = 0
+    owned_business_events_reached: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,6 +149,13 @@ def _owned_scores_delete(conversation_id: str) -> int:
     return ClickHouseAdapter().delete_conversation(conversation_id)
 
 
+def _owned_business_events_delete(conversation_id: str) -> int:
+    """Delete the conversation's rows in the owned ClickHouse business-event store (the seam)."""
+    from tessera.observability.spine.adapters.clickhouse import ClickHouseAdapter
+
+    return ClickHouseAdapter().delete_business_events(conversation_id)
+
+
 def purge_owned_scores(conversation_id: str) -> tuple[int, bool]:
     """Erase a conversation's rows in the owned online-score store (§Correction 2b).
 
@@ -156,6 +170,26 @@ def purge_owned_scores(conversation_id: str) -> tuple[int, bool]:
         reached = False
         _LOG.warning(
             "owned-score erasure deferred (clickhouse unreachable): %s",
+            exc,
+            extra={"conversation_id": conversation_id},
+        )
+    return deleted, reached
+
+
+def purge_owned_business_events(conversation_id: str) -> tuple[int, bool]:
+    """Erase a conversation's rows in the owned business-event store (ADR 0017 §5).
+
+    Same honesty contract as :func:`purge_owned_scores`: best-effort, ``(n_deleted, reached)``,
+    an unreachable store is logged and reported — deferred, never faked.
+    """
+    deleted = 0
+    reached = True
+    try:
+        deleted = _owned_business_events_delete(conversation_id)
+    except SpineUnavailableError as exc:
+        reached = False
+        _LOG.warning(
+            "owned business-event erasure deferred (clickhouse unreachable): %s",
             exc,
             extra={"conversation_id": conversation_id},
         )
@@ -197,6 +231,7 @@ def purge_telemetry(conversation_id: str) -> ErasureFootprint:
     n_bundles = replay_mod.purge_conversation(conversation_id)
     n_scores = scores_mod.purge_conversation(conversation_id)
     n_owned, owned_reached = purge_owned_scores(conversation_id)
+    n_owned_be, owned_be_reached = purge_owned_business_events(conversation_id)
     n_spine, spine_reached = purge_spine(conversation_id)
     return ErasureFootprint(
         conversation_id=conversation_id,
@@ -207,4 +242,6 @@ def purge_telemetry(conversation_id: str) -> ErasureFootprint:
         spine_reached=spine_reached,
         n_owned_scores=n_owned,
         owned_reached=owned_reached,
+        n_owned_business_events=n_owned_be,
+        owned_business_events_reached=owned_be_reached,
     )
