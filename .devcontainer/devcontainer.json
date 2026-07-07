@@ -19,7 +19,7 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
 
-  "postCreateCommand": "uv sync --frozen && cd webapp/frontend && npm ci",
+  "postCreateCommand": "uv sync --frozen && cd webapp/frontend && corepack enable && corepack pnpm install --frozen-lockfile",
 
   "customizations": {
     "vscode": {
