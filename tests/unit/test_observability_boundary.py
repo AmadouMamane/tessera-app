@@ -31,8 +31,6 @@ _FROZEN_EXCEPTIONS: frozenset[tuple[str, str]] = frozenset(
     {
         ("observability/graph_topology.py", "langgraph.graph"),
         ("observability/graph_topology.py", "tessera.agent.state"),
-        ("api/routes/observability.py", "tessera.agent.reporter"),
-        ("api/routes/observability.py", "tessera.agent.router"),
         ("api/routes/observability.py", "tessera.agent.graph"),
     }
 )

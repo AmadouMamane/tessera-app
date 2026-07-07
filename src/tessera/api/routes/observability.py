@@ -131,6 +131,7 @@ from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.sycophancy import detect_sycophancy
 from tessera.observability.spine.adapters import read_scores
 from tessera.observability.spine.availability import dimension_availability
+from tessera.observability.spine.runtime import get_runtime_provider
 from tessera.observability.spine.scope import Scope
 from tessera.observability.spine.snapshot import compute_snapshot
 
@@ -1423,20 +1424,20 @@ async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
     guard switches from these — never from fabricated values. Read-only;
     overrides are applied per-turn at chat time, never persisted here.
     """
-    from tessera.agent.reporter import load_prompts
-    from tessera.agent.router import _POLICY_RULES
     from tessera.guard.decisions import load_policy
     from tessera.settings import LanguageCode, get_settings
 
     langs = {"fr": LanguageCode.FR, "de": LanguageCode.DE, "en": LanguageCode.EN}
     try:
         language = langs.get(lang, LanguageCode.FR)
-        prompts = load_prompts(language)
+        # ADR 0017 §1: the live system prompt + policy-rule count are agent-runtime
+        # facts, read through the spine port — never by importing the runtime here.
+        defaults = get_runtime_provider().sandbox_defaults(language)
         policy = load_policy(get_settings().guard.policy_path)
         return {
             "available": True,
             "language": language.value,
-            "system_prompt": prompts.get("system", ""),
+            "system_prompt": defaults.system_prompt,
             "guard_categories": [
                 {
                     "key": "prompt_injection",
@@ -1453,7 +1454,7 @@ async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
                 {
                     "key": "policy",
                     "label": "Refus policy",
-                    "count": len(_POLICY_RULES.get(language, [])),
+                    "count": defaults.policy_rule_count,
                     "detail": (
                         "Court-circuits déterministes : conseil hors-scope, procédures "
                         "confidentielles, évasion anti-fraude, promesses interdites."
