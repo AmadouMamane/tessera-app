@@ -19,7 +19,11 @@ from typing import Annotated, Literal, cast
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from tessera.guard.ledger_store import ledger_source, read_ledger_entries, verify_active_ledger
+from tessera.guard.ledger_store import (
+    active_ledger_tree_status,
+    ledger_source,
+    read_ledger_entries,
+)
 
 router = APIRouter(tags=["audit"])
 
@@ -73,13 +77,25 @@ class AuditPage(BaseModel):
 
 
 class AuditIntegrity(BaseModel):
-    """Tamper-evident hash-chain status of the audit log (ADR 0010, #3)."""
+    """Tamper-evident hash-chain status of the audit log (ADR 0010, #3).
+
+    TESS-LEDGER-001 — tree-aware: ``verified``/``content_integrity`` is the tamper-evidence
+    guarantee (every row hashes correctly, no edit/deletion). ``linear`` is the separate
+    total-order property; historical forks degrade ``linear`` WITHOUT touching content
+    integrity (a fork is a tree, not a forgery). ``attested`` is True once an appended
+    attestation entry has ratified the forks (point 4).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    verified: bool
+    verified: bool  # back-compat alias of content_integrity (tamper-evidence)
     length: int
     broken_at: int | None = None
+    content_integrity: bool = True
+    linear: bool = True
+    fork_count: int = 0
+    orphan_count: int = 0
+    attested: bool = False
 
 
 class AuditCount(BaseModel):
@@ -357,24 +373,33 @@ def _read_entries(path: Path) -> list[AuditEntry]:
         return entries
 
 
+def _integrity_from_tree(status: object) -> AuditIntegrity:
+    """Lift a :class:`LedgerTreeStatus` into the API model (``verified`` = content integrity)."""
+    from tessera.guard.ledger_store import LedgerTreeStatus
+
+    assert isinstance(status, LedgerTreeStatus)
+    return AuditIntegrity(
+        verified=status.content_integrity,
+        length=status.length,
+        broken_at=status.broken_at,
+        content_integrity=status.content_integrity,
+        linear=status.linear,
+        fork_count=status.fork_count,
+        orphan_count=status.orphan_count,
+        attested=status.attested,
+    )
+
+
 def _audit_integrity(path: Path) -> AuditIntegrity:
     global _INTEGRITY_CACHE
 
     if ledger_source() == "postgres":
-        status = verify_active_ledger(path)
-        return AuditIntegrity(
-            verified=status.verified, length=status.length, broken_at=status.broken_at
-        )
+        return _integrity_from_tree(active_ledger_tree_status(path))
     state = _audit_file_state(path)
     with _INTEGRITY_CACHE_LOCK:
         if _INTEGRITY_CACHE is not None and _INTEGRITY_CACHE.state == state:
             return _INTEGRITY_CACHE.integrity
-        status = verify_active_ledger(path)
-        integrity = AuditIntegrity(
-            verified=status.verified,
-            length=status.length,
-            broken_at=status.broken_at,
-        )
+        integrity = _integrity_from_tree(active_ledger_tree_status(path))
         _INTEGRITY_CACHE = _IntegrityCache(state=state, integrity=integrity)
         return integrity
 

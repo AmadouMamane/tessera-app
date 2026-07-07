@@ -7596,7 +7596,9 @@
     "sourceOfTruth": "Source of truth: YAML · Git",
     "checking": "Integrity: verifying…",
     "integrityOk": "Hash-chain verified ({n} events)",
-    "integrityBroken": "Integrity: chain broken — investigate",
+    "integrityBroken": "Integrity: content tampered — investigate",
+    "integrityForkedAttested": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} other {, # orphaned}} (attested)",
+    "integrityForkedPending": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} other {, # orphaned}} (attestation pending)",
     "env": "on-prem · EU residency · SOC 2",
     "note": "Status assigned only after successful verification."
   },

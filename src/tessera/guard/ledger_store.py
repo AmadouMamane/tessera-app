@@ -51,8 +51,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 __all__ = [
+    "LEDGER_ATTESTATION_TYPE",
     "LEDGER_TABLE",
+    "LedgerForkPoint",
     "LedgerShadowStatus",
+    "LedgerTreeStatus",
+    "active_ledger_tree_status",
     "backfill_ledger_from_file",
     "drain_spool",
     "dual_write_enabled",
@@ -66,6 +70,7 @@ __all__ = [
     "shadow_verify_ledger",
     "verify_active_ledger",
     "verify_ledger_rows",
+    "verify_ledger_tree",
 ]
 
 LEDGER_TABLE: Final = "audit_ledger"
@@ -472,6 +477,106 @@ def verify_ledger_rows(payloads: Sequence[Mapping[str, Any]]) -> ChainStatus:
     return ChainStatus(verified=True, length=walked, broken_at=None)
 
 
+# TESS-LEDGER-001 — the attestation entry type (point 4): a signed, appended entry that ratifies
+# the historical forks (never a rewrite). Its presence flips the badge to "attested".
+LEDGER_ATTESTATION_TYPE: Final = "tessera.ledger.attestation"
+
+
+@dataclass(frozen=True, slots=True)
+class LedgerForkPoint:
+    """A parent extended by more than one child — a break in the total order (not a forgery)."""
+
+    prev_hash: str
+    children: tuple[str, ...]  # the child hashes sharing this parent (≥2)
+
+
+@dataclass(frozen=True, slots=True)
+class LedgerTreeStatus:
+    """Tree-aware ledger verdict (TESS-LEDGER-001): tamper-evidence ≠ total order.
+
+    The binary "chain broken" conflated three very different things. This separates them:
+
+    * ``content_integrity`` — the tamper-evidence guarantee: every PRESENT row's hash recomputes
+      from its canonical payload (no edited/forged row). It stays TRUE for a forked or gapped
+      chain, because a fork is a tree — not a forgery — and a lost write is not an edit.
+    * ``forks`` — parents extended by more than one child (concurrent writers). REPORTED, never
+      deleted: the orphan branches are real guard events.
+    * ``orphans`` — present rows whose ``prev_hash`` resolves to NO present row: the parent entry
+      was never persisted (a lost write, not a deletion — append-only forbids DELETE). A
+      completeness gap, distinct from tampering.
+    * ``linear`` — the strong property: content intact AND a single unbroken chain (no fork, no
+      orphan).
+    * ``attested`` — True once an appended attestation entry has ratified the historical state
+      (point 4).
+    """
+
+    content_integrity: bool
+    linear: bool
+    forks: tuple[LedgerForkPoint, ...]
+    orphans: tuple[str, ...]  # hashes of rows whose parent is missing (a lost write)
+    length: int
+    broken_at: int | None
+    attested: bool = False
+
+    @property
+    def fork_count(self) -> int:
+        """Number of fork points (parents with more than one child)."""
+        return len(self.forks)
+
+    @property
+    def orphan_count(self) -> int:
+        """Number of rows whose parent entry is missing (lost writes)."""
+        return len(self.orphans)
+
+
+def verify_ledger_tree(payloads: Sequence[Mapping[str, Any]]) -> LedgerTreeStatus:
+    """Tree-aware verification — tamper-evidence, forks and gaps judged separately.
+
+    Recomputes every row's hash (a mismatch is an EDIT → fails ``content_integrity``), collects
+    every fork point instead of dead-ending on the first one, and reports rows whose parent is
+    missing as ``orphans`` (a lost write — completeness, not tampering). A healthy-but-forked
+    ledger returns ``content_integrity=True, linear=False, forks=[…]`` — the honest verdict the
+    binary walk could not give (it reported such a chain as flatly "broken").
+    """
+    if not payloads:
+        return LedgerTreeStatus(True, True, (), (), 0, None)
+    by_hash: dict[str, Mapping[str, Any]] = {}
+    children: dict[str, list[str]] = {}
+    content_ok = True
+    broken_at: int | None = None
+    attested = False
+    for idx, payload in enumerate(payloads):
+        if payload.get("type") == LEDGER_ATTESTATION_TYPE:
+            attested = True
+        stored = payload.get("hash")
+        recomputed = _hash_core({k: v for k, v in payload.items() if k != "hash"})
+        if not isinstance(stored, str) or stored != recomputed:
+            content_ok = False  # an edited/forged row — the tamper signal
+            if broken_at is None:
+                broken_at = idx
+            continue
+        by_hash[stored] = payload
+        children.setdefault(str(payload.get("prev_hash", "")), []).append(stored)
+    orphans = tuple(
+        child
+        for parent, kids in children.items()
+        if parent != _GENESIS and parent not in by_hash
+        for child in kids  # the child(ren) whose declared parent was never persisted
+    )
+    forks = tuple(
+        LedgerForkPoint(parent, tuple(kids)) for parent, kids in children.items() if len(kids) > 1
+    )
+    return LedgerTreeStatus(
+        content_integrity=content_ok,
+        linear=content_ok and not forks and not orphans,
+        forks=forks,
+        orphans=orphans,
+        length=len(payloads),
+        broken_at=broken_at,
+        attested=attested,
+    )
+
+
 def load_ledger_payloads_sync(at: str | None = None) -> list[dict[str, Any]]:
     """Every promoted-ledger payload (oldest→newest by seq), optionally as of instant T.
 
@@ -602,13 +707,44 @@ def shadow_verify_ledger(path: Path) -> LedgerShadowStatus:
 
 
 def verify_active_ledger(path: Path | None = None) -> ChainStatus:
-    """Chain integrity of the ACTIVE ledger source (file today, Postgres after the cut).
+    """CONTENT integrity (tamper-evidence) of the ACTIVE ledger source.
 
-    In file mode ``path`` verifies that file when given (an explicit/test chain), else the
-    settings audit file; in postgres mode the promoted table is walked (``path`` ignored).
+    TESS-LEDGER-001 — ``verified`` is the CONTENT guarantee (every row hashes correctly and
+    every ``prev_hash`` resolves), NOT linearity: a historical fork is a tree, not a forgery,
+    and must not read as tampering across the cockpit. Total order + the fork list are surfaced
+    by :func:`active_ledger_tree_status` (the integrity badge). In file mode the flat journal is
+    single-writer, so content integrity and linearity coincide (``verify_audit_chain``).
+
+    In postgres mode ``path`` is ignored (the promoted table is the source); an unreachable
+    store raises into the caller's honest-empty handling.
     """
     from tessera.settings import get_settings
 
     if ledger_source() == "postgres":
-        return verify_ledger_rows(load_ledger_payloads_sync())
+        tree = verify_ledger_tree(load_ledger_payloads_sync())
+        return ChainStatus(
+            verified=tree.content_integrity, length=tree.length, broken_at=tree.broken_at
+        )
     return verify_audit_chain(path if path is not None else get_settings().guard.audit_file)
+
+
+def active_ledger_tree_status(path: Path | None = None) -> LedgerTreeStatus:
+    """Tree-aware status of the ACTIVE ledger — the integrity badge's source (TESS-LEDGER-001).
+
+    Postgres mode returns the full ``{content_integrity, linear, forks, attested}`` verdict over
+    the promoted table. File mode has no forks (a single-writer append-only journal), so it lifts
+    the binary :func:`verify_audit_chain` result into the same shape (``linear == content``).
+    """
+    from tessera.settings import get_settings
+
+    if ledger_source() == "postgres":
+        return verify_ledger_tree(load_ledger_payloads_sync())
+    status = verify_audit_chain(path if path is not None else get_settings().guard.audit_file)
+    return LedgerTreeStatus(
+        content_integrity=status.verified,
+        linear=status.verified,
+        forks=(),
+        orphans=(),
+        length=status.length,
+        broken_at=status.broken_at,
+    )

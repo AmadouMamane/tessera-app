@@ -13,10 +13,12 @@ import pytest
 
 from tessera.guard.audit import _hash_core
 from tessera.guard.ledger_store import (
+    LEDGER_ATTESTATION_TYPE,
     _entry_occurred_at,
     dual_write_enabled,
     ledger_source,
     verify_ledger_rows,
+    verify_ledger_tree,
 )
 
 _GENESIS = "0" * 64
@@ -77,6 +79,64 @@ class TestChainWalkVerification:
 
     def test_empty_ledger_is_trivially_verified(self) -> None:
         assert verify_ledger_rows([]).verified is True
+
+
+class TestTreeAwareVerification:
+    """TESS-LEDGER-001 — tamper-evidence, forks and gaps judged separately (point 3)."""
+
+    def test_clean_chain_is_content_intact_and_linear(self) -> None:
+        status = verify_ledger_tree(_three())
+        assert status.content_integrity is True
+        assert status.linear is True
+        assert status.fork_count == 0 and status.orphan_count == 0
+
+    def test_a_fork_is_content_intact_but_not_linear(self) -> None:
+        rows = _three()  # e0(genesis) → e1 → e2
+        sibling = {**rows[1], "n": 99}  # a SECOND child of e0's parent (same prev_hash)
+        sibling["hash"] = _hash_core({k: v for k, v in sibling.items() if k != "hash"})
+        status = verify_ledger_tree([*rows, sibling])
+        # A fork is a tree, not a forgery: content stays intact, only the total order breaks.
+        assert status.content_integrity is True
+        assert status.linear is False
+        assert status.fork_count == 1
+        parent, children = status.forks[0].prev_hash, status.forks[0].children
+        assert parent == rows[1]["prev_hash"] and len(children) == 2
+
+    def test_an_orphan_row_is_reported_not_a_tamper(self) -> None:
+        rows = _three()
+        orphan = {
+            "type": "tessera.guard.audit",
+            "occurred_at": "2026-01-01T00:00:09+00:00",
+            "prev_hash": "f" * 64,  # a parent that is not present (a lost write)
+        }
+        orphan["hash"] = _hash_core({k: v for k, v in orphan.items() if k != "hash"})
+        status = verify_ledger_tree([*rows, orphan])
+        assert status.content_integrity is True  # the orphan itself hashes correctly
+        assert status.orphan_count == 1 and status.orphans[0] == orphan["hash"]
+        assert status.linear is False
+
+    def test_an_edited_row_fails_content_integrity(self) -> None:
+        rows = _three()
+        tampered = dict(rows[1])
+        tampered["n"] = 999  # edited without re-hashing → the stored hash no longer matches
+        status = verify_ledger_tree([rows[0], tampered, rows[2]])
+        assert status.content_integrity is False
+        assert status.broken_at == 1
+
+    def test_an_attestation_entry_flips_attested(self) -> None:
+        rows = _three()
+        attestation = {
+            "type": LEDGER_ATTESTATION_TYPE,
+            "occurred_at": "2026-01-01T00:00:09+00:00",
+            "prev_hash": str(rows[2]["hash"]),
+        }
+        attestation["hash"] = _hash_core({k: v for k, v in attestation.items() if k != "hash"})
+        assert verify_ledger_tree([*rows, attestation]).attested is True
+        assert verify_ledger_tree(rows).attested is False
+
+    def test_empty_ledger_is_intact_and_linear(self) -> None:
+        status = verify_ledger_tree([])
+        assert status.content_integrity is True and status.linear is True
 
 
 class TestSourceSwitch:
