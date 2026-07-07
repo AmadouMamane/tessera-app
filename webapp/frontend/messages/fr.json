@@ -7308,7 +7308,7 @@
   },
   "agentMetier": {
     "title": "Métier",
-    "subtitle": "Capacités, signaux et runs métier réels de cet agent.",
+    "subtitle": "Capacités, signaux et exécutions métier réels de cet agent.",
     "level": "Niveau {level}",
     "events": "{count} événements",
     "empty": {
@@ -7317,22 +7317,22 @@
     },
     "unavailable": {
       "title": "Lecture métier indisponible",
-      "detail": "La source business_events ne répond pas pour cet agent."
+      "detail": "La source des faits métier ne répond pas pour cet agent."
     },
     "missing": {
-      "manifest": "manifeste AgentSpec",
-      "observable_contract": "contrat observable",
+      "manifest": "déclaration de l'agent",
+      "observable_contract": "contrat d'observation",
       "governance": "faits de gouvernance",
-      "business_events": "événements métier",
-      "capability_stamps": "liaison capacité"
+      "business_events": "faits métier",
+      "capability_stamps": "attribution capacité"
     },
     "signals": {
       "title": "Signaux métier",
       "empty": "Aucun signal métier déclaré.",
-      "northStar": "North star"
+      "northStar": "Signal clé"
     },
     "signalLevel": {
-      "runtime": "Runtime",
+      "runtime": "Exécution",
       "human_action": "Action humaine",
       "other": "Autre"
     },
@@ -7355,10 +7355,10 @@
       }
     },
     "runs": {
-      "title": "Runs · {capability}",
+      "title": "Exécutions · {capability}",
       "allCapabilities": "Toutes capacités",
-      "emptyTitle": "Aucun run métier observé",
-      "emptyHint": "Aucun run réel n'est encore disponible pour cette capacité."
+      "emptyTitle": "Aucune exécution métier observée",
+      "emptyHint": "Aucune exécution réelle n'est encore disponible pour cette capacité."
     }
   },
   "agentEvaluations": {

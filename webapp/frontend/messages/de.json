@@ -7306,7 +7306,7 @@
   },
   "agentMetier": {
     "title": "Fachlichkeit",
-    "subtitle": "Reale fachliche Fähigkeiten, Signale und Runs dieses Agenten.",
+    "subtitle": "Reale fachliche Fähigkeiten, Signale und Ausführungen dieses Agenten.",
     "level": "Niveau {level}",
     "events": "{count} Ereignisse",
     "empty": {
@@ -7315,22 +7315,22 @@
     },
     "unavailable": {
       "title": "Fachliche Lesung nicht verfügbar",
-      "detail": "Die Quelle business_events antwortet für diesen Agenten nicht."
+      "detail": "Die Quelle der fachlichen Fakten antwortet für diesen Agenten nicht."
     },
     "missing": {
-      "manifest": "AgentSpec-Manifest",
-      "observable_contract": "beobachtbarer Vertrag",
+      "manifest": "Agentenbeschreibung",
+      "observable_contract": "Beobachtungsvertrag",
       "governance": "Governance-Fakten",
-      "business_events": "Fachereignisse",
-      "capability_stamps": "Fähigkeitsverknüpfung"
+      "business_events": "fachliche Fakten",
+      "capability_stamps": "Fähigkeitszuordnung"
     },
     "signals": {
       "title": "Fachsignale",
       "empty": "Kein Fachsignal deklariert.",
-      "northStar": "North star"
+      "northStar": "Leitsignal"
     },
     "signalLevel": {
-      "runtime": "Runtime",
+      "runtime": "Ausführung",
       "human_action": "Menschliche Aktion",
       "other": "Andere"
     },
@@ -7353,10 +7353,10 @@
       }
     },
     "runs": {
-      "title": "Runs · {capability}",
+      "title": "Ausführungen · {capability}",
       "allCapabilities": "Alle Fähigkeiten",
-      "emptyTitle": "Kein fachlicher Run beobachtet",
-      "emptyHint": "Für diese Fähigkeit ist noch kein realer Run verfügbar."
+      "emptyTitle": "Keine fachliche Ausführung beobachtet",
+      "emptyHint": "Für diese Fähigkeit ist noch keine reale Ausführung verfügbar."
     }
   },
   "agentEvaluations": {

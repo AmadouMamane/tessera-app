@@ -115,10 +115,10 @@ function scoreSort(a: BusinessScore, b: BusinessScore): number {
 export function WorkflowRunsPanel({
   data,
   loading,
-  title = "Runs métier",
-  loadingLabel = "Chargement des runs métier...",
-  emptyTitle = "Aucun run métier observé",
-  emptyHint = "Lancez un tour dans la surface produit de l'agent pour voir apparaître les business events, artefacts, scores et actions gouvernées issus des sinks ADR 15/16.",
+  title = "Exécutions métier",
+  loadingLabel = "Chargement des exécutions métier...",
+  emptyTitle = "Aucune exécution métier observée",
+  emptyHint = "Lancez un tour dans la surface produit de l'agent pour voir apparaître les faits métier, artefacts, scores et actions gouvernées.",
 }: {
   data: RecouvrementRunsResponse | undefined;
   loading: boolean;
@@ -210,7 +210,7 @@ export function WorkflowRunsPanel({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-2 text-sm">
-              <span>Contexte du run</span>
+              <span>Contexte de l'exécution</span>
               <Badge
                 tone={
                   hasUnsafeExternalEffect
@@ -231,11 +231,11 @@ export function WorkflowRunsPanel({
           <CardContent className="grid gap-2 text-[0.72rem] md:grid-cols-2 xl:grid-cols-3">
             {[
               ["Agent", selected.agent_id],
-              ["Workflow", selected.workflow_id],
+              ["Parcours", selected.workflow_id],
               ["Surface", selected.surface],
               ["Dossier", selected.case_id],
               ["Conversation", selected.conversation_id],
-              ["Turn", selected.turn_id],
+              ["Tour", selected.turn_id],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg border border-[var(--tessera-border)] p-2">
                 <div className="text-[0.58rem] uppercase text-[var(--tessera-text-muted)]">
@@ -252,7 +252,7 @@ export function WorkflowRunsPanel({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
                 <ListChecks className="h-4 w-4 text-sky-300" />
-                Timeline métier
+                Chronologie métier
               </CardTitle>
             </CardHeader>
             <CardContent className="flex max-h-[420px] flex-col gap-1.5 overflow-y-auto">

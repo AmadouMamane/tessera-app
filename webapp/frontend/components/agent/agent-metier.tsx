@@ -9,15 +9,26 @@ import {
   BarChart3,
   BriefcaseBusiness,
   CheckCircle2,
+  ChevronRight,
   ShieldCheck,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { type KeyboardEvent, useMemo, useState } from "react";
 
+import { MetricCard } from "@/components/cockpit/metric-card";
 import { WorkflowRunsPanel } from "@/components/observability/workflow-runs-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { fetchBusinessCapabilities, fetchBusinessRuns } from "@/lib/api/client";
 import type {
   BusinessCapabilitiesResponse,
@@ -50,18 +61,15 @@ function capabilityMessageKey(row: BusinessCapabilityRow): string | null {
   return key?.startsWith("capability.") ? key.slice("capability.".length) : null;
 }
 
-function signalGroups(signals: BusinessSignalValue[]): [string, BusinessSignalValue[]][] {
-  const byLevel = new Map<string, BusinessSignalValue[]>();
-  for (const signal of signals) {
-    byLevel.set(signal.level, [...(byLevel.get(signal.level) ?? []), signal]);
-  }
-  return [...byLevel.entries()].sort(([a], [b]) => {
-    const ai = LEVEL_ORDER.indexOf(a);
-    const bi = LEVEL_ORDER.indexOf(b);
-    if (ai === -1 && bi === -1) return a.localeCompare(b);
-    if (ai === -1) return 1;
-    if (bi === -1) return -1;
-    return ai - bi;
+function orderedSignals(signals: BusinessSignalValue[]): BusinessSignalValue[] {
+  return [...signals].sort((a, b) => {
+    const ai = LEVEL_ORDER.indexOf(a.level);
+    const bi = LEVEL_ORDER.indexOf(b.level);
+    if (a.north_star !== b.north_star) return a.north_star ? -1 : 1;
+    if (ai !== bi) {
+      return (ai === -1 ? LEVEL_ORDER.length : ai) - (bi === -1 ? LEVEL_ORDER.length : bi);
+    }
+    return a.key.localeCompare(b.key);
   });
 }
 
@@ -138,7 +146,7 @@ export function AgentMetier() {
 
   return (
     <div className="flex min-w-0 flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
-      <SignalBanner data={data} signals={data.business_signals} />
+      <SignalKpiStrip data={data} signals={data.business_signals} />
 
       <div className="grid min-w-0 gap-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(430px,0.9fr)]">
         <CapabilitiesTable
@@ -174,7 +182,7 @@ function trendLabel(trend: BusinessTrend, t: ReturnType<typeof useTranslations>)
   return t("trend.flat");
 }
 
-function SignalBanner({
+function SignalKpiStrip({
   data,
   signals,
 }: {
@@ -183,9 +191,9 @@ function SignalBanner({
 }) {
   const t = useTranslations("agentMetier");
   const tSignal = useTranslations("businessSignal");
-  const groups = signalGroups(signals);
+  const ordered = orderedSignals(signals);
   return (
-    <section className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
+    <section className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <BriefcaseBusiness className="h-4 w-4 text-[#b9a6ff]" />
@@ -197,27 +205,16 @@ function SignalBanner({
         </div>
       </div>
 
-      {groups.length === 0 ? (
-        <div className="rounded-lg border border-[var(--tessera-border)] p-3 text-sm text-[var(--tessera-text-muted)]">
-          {t("signals.empty")}
-        </div>
+      {ordered.length === 0 ? (
+        <Card>
+          <CardContent className="py-3 text-sm text-[var(--tessera-text-muted)]">
+            {t("signals.empty")}
+          </CardContent>
+        </Card>
       ) : (
-        <div className="grid gap-2 xl:grid-cols-2">
-          {groups.map(([level, levelSignals]) => (
-            <div key={level} className="flex min-w-0 flex-col gap-1.5">
-              <div className="text-[0.63rem] font-semibold uppercase tracking-[0.08em] text-[var(--tessera-text-muted)]">
-                {t(`signalLevel.${level}`)}
-              </div>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {levelSignals.map((signal) => (
-                  <SignalTile
-                    key={signal.key}
-                    signal={signal}
-                    label={signalLabel(signal, tSignal)}
-                  />
-                ))}
-              </div>
-            </div>
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
+          {ordered.map((signal) => (
+            <SignalMetric key={signal.key} signal={signal} label={signalLabel(signal, tSignal)} />
           ))}
         </div>
       )}
@@ -229,31 +226,74 @@ function signalLabel(signal: BusinessSignalValue, tSignal: ReturnType<typeof use
   return tSignal.has(signal.key) ? tSignal(signal.key) : "—";
 }
 
-function SignalTile({ signal, label }: { signal: BusinessSignalValue; label: string }) {
+function signalLevelLabel(signal: BusinessSignalValue, t: ReturnType<typeof useTranslations>) {
+  const key = `signalLevel.${signal.level}`;
+  return t.has(key) ? t(key) : t("signalLevel.other");
+}
+
+function SignalMetric({ signal, label }: { signal: BusinessSignalValue; label: string }) {
   const t = useTranslations("agentMetier");
   const TrendIcon = trendIcon(signal.trend.direction);
   const hasValue = typeof signal.value_pct === "number";
   return (
-    <div className="min-w-0 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-2">
-      <div className="flex items-start justify-between gap-2">
-        <span className="line-clamp-2 text-[0.72rem] font-semibold leading-snug">{label}</span>
-        {signal.north_star ? <Badge tone="gold">{t("signals.northStar")}</Badge> : null}
-      </div>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <span
-          className={cn(
-            "text-xl font-semibold",
-            hasValue ? "text-[var(--tessera-text)]" : "text-[var(--tessera-text-muted)]",
-          )}
-        >
-          {hasValue ? pct(signal.value_pct) : "—"}
+    <MetricCard
+      label={label}
+      value={hasValue ? pct(signal.value_pct) : "—"}
+      delta={signal.north_star ? <Badge tone="gold">{t("signals.northStar")}</Badge> : null}
+      trend={
+        <span className="flex min-w-0 items-center justify-between gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+          <span className="inline-flex min-w-0 items-center gap-1 truncate">
+            <TrendIcon className="h-3 w-3 shrink-0" />
+            <span className="truncate">{trendLabel(signal.trend, t)}</span>
+          </span>
+          <span className="shrink-0">{signalLevelLabel(signal, t)}</span>
         </span>
-        <span className="inline-flex items-center gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
-          <TrendIcon className="h-3 w-3" />
-          {trendLabel(signal.trend, t)}
-        </span>
-      </div>
-    </div>
+      }
+    />
+  );
+}
+
+function rowKeyDown(
+  event: KeyboardEvent<HTMLTableRowElement>,
+  selectable: boolean,
+  onSelect: () => void,
+) {
+  if (!selectable) return;
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    onSelect();
+  }
+}
+
+function CapabilityName({
+  row,
+  label,
+  selected,
+  selectable,
+}: {
+  row: BusinessCapabilityRow;
+  label: string;
+  selected: boolean;
+  selectable: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex min-w-0 items-center gap-2 font-semibold",
+        selectable ? "text-[var(--tessera-text)]" : "text-[var(--tessera-text-muted)]",
+      )}
+    >
+      {selected ? (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
+      ) : (
+        <Activity className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
+      )}
+      <span className="truncate">{label}</span>
+      {selectable ? (
+        <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+      ) : null}
+      <span className="sr-only">{row.capability_id}</span>
+    </span>
   );
 }
 
@@ -269,92 +309,95 @@ function CapabilitiesTable({
   const t = useTranslations("agentMetier");
   const tCapability = useTranslations("capability");
   return (
-    <Card className="min-w-0">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
+    <Card className="flex min-w-0 flex-col overflow-hidden">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-1.5 font-sans text-[0.82rem] font-medium tracking-normal">
           <BarChart3 className="h-4 w-4 text-[var(--tessera-green)]" />
           {t("capabilities.title")}
         </CardTitle>
       </CardHeader>
-      <CardContent className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left text-[0.72rem]">
-          <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-[0.06em] text-[var(--tessera-text-muted)]">
-              <th className="py-2 pr-3 font-semibold">{t("capabilities.columns.capability")}</th>
-              <th className="px-3 py-2 text-right font-semibold">
+      <CardContent className="min-w-0 p-0">
+        <Table className="min-w-[760px] text-[0.72rem]">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="h-8 px-3 text-[0.6rem]">
+                {t("capabilities.columns.capability")}
+              </TableHead>
+              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
                 {t("capabilities.columns.volume")}
-              </th>
-              <th className="px-3 py-2 text-right font-semibold">
+              </TableHead>
+              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
                 {t("capabilities.columns.conformity")}
-              </th>
-              <th className="px-3 py-2 text-right font-semibold">
+              </TableHead>
+              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
                 {t("capabilities.columns.validation")}
-              </th>
-              <th className="px-3 py-2 text-right font-semibold">
+              </TableHead>
+              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
                 {t("capabilities.columns.blocked")}
-              </th>
-              <th className="px-3 py-2 text-right font-semibold">
+              </TableHead>
+              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
                 {t("capabilities.columns.prevented")}
-              </th>
-              <th className="py-2 pl-3 font-semibold">{t("capabilities.columns.trend")}</th>
-            </tr>
-          </thead>
-          <tbody>
+              </TableHead>
+              <TableHead className="h-8 px-3 text-[0.6rem]">
+                {t("capabilities.columns.trend")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {capabilities.map((row) => {
               const label = capabilityLabel(row, tCapability);
               const selectable = Boolean(capabilityMessageKey(row));
               const selected = row.capability_id === selectedCapabilityId;
               const TrendIcon = trendIcon(row.trend.direction);
+              const selectRow = () => onSelect(row.capability_id);
               return (
-                <tr
+                <TableRow
                   key={row.capability_id}
+                  data-state={selected ? "selected" : undefined}
+                  role={selectable ? "button" : undefined}
+                  tabIndex={selectable ? 0 : undefined}
+                  onClick={selectable ? selectRow : undefined}
+                  onKeyDown={(event) => rowKeyDown(event, selectable, selectRow)}
                   className={cn(
-                    "border-b border-[var(--tessera-border)]/70 transition-colors",
-                    selected
-                      ? "bg-[var(--tessera-green)]/10"
-                      : "hover:bg-[var(--tessera-muted)]/60",
+                    "border-[var(--tessera-border)]/50",
+                    selectable ? "cursor-pointer" : "cursor-default hover:bg-transparent",
+                    selected && "bg-[var(--tessera-muted)]/60",
                   )}
                 >
-                  <td className="py-2 pr-3">
-                    <button
-                      type="button"
-                      disabled={!selectable}
-                      onClick={() => onSelect(row.capability_id)}
-                      className={cn(
-                        "flex min-w-0 items-center gap-2 text-left font-semibold",
-                        selectable
-                          ? "text-[var(--tessera-text)]"
-                          : "cursor-default text-[var(--tessera-text-muted)]",
-                      )}
-                    >
-                      {selected ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
-                      ) : (
-                        <Activity className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
-                      )}
-                      <span className="truncate">{label}</span>
-                    </button>
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono">{count(row.volume)}</td>
-                  <td className="px-3 py-2 text-right font-mono">{pct(row.conformity_pct)}</td>
-                  <td className="px-3 py-2 text-right font-mono">
+                  <TableCell className="px-3 py-2">
+                    <CapabilityName
+                      row={row}
+                      label={label}
+                      selected={selected}
+                      selectable={selectable}
+                    />
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-right font-mono">
+                    {count(row.volume)}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-right font-mono">
+                    {pct(row.conformity_pct)}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-right font-mono">
                     {pct(row.validation_required_pct)}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono">{pct(row.blocked_pct)}</td>
-                  <td className="px-3 py-2 text-right font-mono">
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-right font-mono">
+                    {pct(row.blocked_pct)}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-right font-mono">
                     {count(row.external_effects_prevented)}
-                  </td>
-                  <td className="py-2 pl-3">
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
                     <span className="inline-flex items-center gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
-                      <TrendIcon className="h-3 w-3" />
+                      <TrendIcon className="h-3 w-3 shrink-0" />
                       {trendLabel(row.trend, t)}
                     </span>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
@@ -372,25 +415,29 @@ function HonestEmpty({
   missing: string[];
 }) {
   const t = useTranslations("agentMetier");
+  const badges = (
+    <div className="flex flex-wrap justify-center gap-1.5">
+      <Badge tone={level === "L3" ? "success" : "warning"}>
+        {t("level", { level: level ?? "—" })}
+      </Badge>
+      {missing.map((item) => (
+        <Badge key={item} tone="neutral">
+          {t(`missing.${item}`)}
+        </Badge>
+      ))}
+    </div>
+  );
   return (
     <div className="flex min-h-[54vh] items-center justify-center">
       <Card className="w-full max-w-3xl">
-        <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
-          <ShieldCheck className="h-8 w-8 text-[var(--tessera-green)]" />
-          <div>
-            <h2 className="text-base font-semibold">{title}</h2>
-            <p className="mt-1 max-w-2xl text-sm text-[var(--tessera-text-muted)]">{detail}</p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-1.5">
-            <Badge tone={level === "L3" ? "success" : "warning"}>
-              {t("level", { level: level ?? "—" })}
-            </Badge>
-            {missing.map((item) => (
-              <Badge key={item} tone="neutral">
-                {t(`missing.${item}`)}
-              </Badge>
-            ))}
-          </div>
+        <CardContent className="p-3">
+          <EmptyState
+            icon={<ShieldCheck />}
+            title={title}
+            description={detail}
+            action={badges}
+            className="border-[var(--tessera-border)] bg-[var(--tessera-bg)]/30 py-8"
+          />
         </CardContent>
       </Card>
     </div>

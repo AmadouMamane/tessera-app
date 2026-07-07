@@ -7306,7 +7306,7 @@
   },
   "agentMetier": {
     "title": "Business",
-    "subtitle": "Real business capabilities, signals and runs for this agent.",
+    "subtitle": "Real business capabilities, signals and executions for this agent.",
     "level": "Level {level}",
     "events": "{count} events",
     "empty": {
@@ -7315,22 +7315,22 @@
     },
     "unavailable": {
       "title": "Business read unavailable",
-      "detail": "The business_events source is not responding for this agent."
+      "detail": "The business facts source is not responding for this agent."
     },
     "missing": {
-      "manifest": "AgentSpec manifest",
-      "observable_contract": "observable contract",
+      "manifest": "agent declaration",
+      "observable_contract": "observation contract",
       "governance": "governance facts",
-      "business_events": "business events",
-      "capability_stamps": "capability link"
+      "business_events": "business facts",
+      "capability_stamps": "capability attribution"
     },
     "signals": {
       "title": "Business signals",
       "empty": "No business signal declared.",
-      "northStar": "North star"
+      "northStar": "Key signal"
     },
     "signalLevel": {
-      "runtime": "Runtime",
+      "runtime": "Execution",
       "human_action": "Human action",
       "other": "Other"
     },
@@ -7353,10 +7353,10 @@
       }
     },
     "runs": {
-      "title": "Runs · {capability}",
+      "title": "Executions · {capability}",
       "allCapabilities": "All capabilities",
-      "emptyTitle": "No business run observed",
-      "emptyHint": "No real run is available for this capability yet."
+      "emptyTitle": "No business execution observed",
+      "emptyHint": "No real execution is available for this capability yet."
     }
   },
   "agentEvaluations": {

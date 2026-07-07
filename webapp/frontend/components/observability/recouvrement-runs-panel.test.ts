@@ -20,7 +20,7 @@ describe("Workflow runs panel (ADR 0017 Phase A)", () => {
     // Agent-specific copy enters through props, not the component.
     expect(dashboard).toContain('title="Runs Recouvrement"');
     expect(panel).not.toContain('"Runs Recouvrement"');
-    expect(panel).toContain("Timeline métier");
+    expect(panel).toContain("Chronologie métier");
     expect(panel).toContain("Actions sensibles");
     expect(panel).toContain("no_external_effect");
     expect(panel).toContain("no_uncontrolled_external_effect");
