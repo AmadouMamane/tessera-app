@@ -24,7 +24,7 @@ updates this file after every step. A resuming session reads this first, then co
 | 3 | 0017-B + A2.1 + A2.3: AgentSpec v1 (schema, CI validation, generation of SignalSpecs + FE mirror + level badge); typed envelope `actor`; declared policy metadata; recouvrement declares the first manifest | [auto] | ✅ done | `3011bac` | AgentSpec = pydantic `extra="forbid"` block in `tessera.agent.agentspec` (a manifest is an API: malformed→ValueError at load), re-exported through `tessera.agent.registry` (the boundary-allowed seam). Referential integrity + ≤1 north_star + **A2.2 outcome-undeclarable** enforced. Recouvrement's first manifest: 5 capabilities, 4 policies (metadata only — impls stay code), scorer `recouvrement.collections.v1`, 10 business_signals (north-star `contact_window_compliance`; `engagement: legal` on contact/validation compliance). A2.1 actor = closed vocab enforced at emit. Generation: `agentspec_projection` computes **level L0–L2 from facts** (None when un-manifested; L3=Phase C) + business-signal descriptors; fleet stamps `level`, card/row render honest-empty LevelBadge. FE mirror: business signal ids in `signal-registry.ts`, `FleetSchema.level`, capability/policy label_keys in fr/en/de. CI gates: `test_agentspec` (schema), `test_agentspec_conformance` (declared business_score keys ⊆ scorer-produced; manifest label_keys ∈ every locale — the i18n sweep is now a manifest-label gate), `test_business_event_actor`. Twice-green: ruff/format/pytest 1323/tsc/biome(changed)/vitest 69. **Deferred to step 4 (supervised):** north-star chip render, per-agent generated FE mirror, Métier tab (Phase C). **Inherited debt untouched:** mypy `observability/replay.py:92` (from antigravity merge `6c1a0db`; `replay.py` left alone per protocol) — blocks a clean `mypy src/tessera`, so **main merge withheld** until it is resolved by its owner. |
 | 4 | 0017-C + A2.2 + 0018-B: Métier tab (per-capability table primary, runs drill-down), fleet north-star chip, À traiter source, Conformité projection; canonical artifact lifecycle mapping; delete the hardcoded tab | [supervised] | ✅ done | ebe15a90…d0699d97 · pnpm c165be72 · merge 844fa775 | Lot 0 committed after checkpoint-1 review fixes. Lot 1 (onglet Métier) implemented and twice-green with real recouvrement data; checkpoint 2 reached with captures. Lot 1.5 completed the substance fix plus the P0-bis/P0/P1/P2 punch list on real data. Lot 2 delivered Flotte north-star/pending count, À traiter business-event source, Conformité legal projection, `page: metier`, and emitter fixes for action artifact/effect flags. **Lot 2 code-review carry-overs** landed: (1) emitter-completeness pinning tests; (2) BR-01 §5 on the Métier tab (URL-derived capability/run deep-link, temporal-mode badge Live→As-of, global as-of propagated to business reads). **Lot 3 dissolution** implemented + committed (recouvrement dashboard tab / shim / `fetchRecouvrementRuns` / `/observability/recouvrement-runs` all removed; tests migrated to the generic business-runs read). Each item twice-green + targeted commit + ledger. Checkpoint-3 captures validated by Amadou; checkpoint-4 merge feu vert given → **merged to main (`844fa775`) after full gate twice-green on the merged tree.** See the step-4 closure Log entry. |
 | 5 | 0017-D: owned ClickHouse `business_events` table; dual-write → backfill → shadow parity → flip `BusinessEventStore`; erasure probe | [auto] | ✅ done | `f95b6cb` | Mirrors the §Correction 2b owned score store. Table `tessera.business_events` (§5 DDL: MergeTree + `toYYYYMM(occurred_at)` + 6-month TTL; `node_name` carried beyond the §5 columns for run-timeline read parity) via `ensure_business_events_schema`; scoped/as-of read (`ClickHouseAdapter.business_events`, rebuilt to `to_row` shape) + `delete_business_events` (count-then-DELETE, bound params). **Dual-write** = `clickhouse_business_events` (best-effort daemon-thread insert, JSONEachRow line + dedup key, gated `TESSERA_CLICKHOUSE_BUSINESS_EVENTS`) hooked into `record_business_event`. **Flip** = `business_events` is now a flippable fact (default `jsonl` — mid-migration, unlike G5's scores/gating); reads route via `_read_store()` in-process→`ClickHouseBusinessEventStore` (spine)→`_ShadowBusinessEventStore` (shadow parity: serve in-process, compare owned, log divergence); source badge resolves at read time (`fact="business_events"`). **Backfill** = `scripts/backfill_owned_business_events.py` from replay bundles + in-process seed (idempotent). **Erasure (G4)** = `purge_owned_business_events` folded into `purge_telemetry`; `ErasureFootprint` gains the business-events leg (deferred-never-faked). **Live-verified** on `tessera-claude-clickhouse:18123`: integration contract (4) + end-to-end emit→dual-write→flipped-read(full fidelity)→erasure all green. Unit suite hermetic (dual-write off in conftest). Twice-green: ruff/format/pytest 1338+4int/tsc/vitest 69. **A2.1 actor** already landed step 3. **Not done here (Phase C, step 4):** the actual prod read flip is a config action (`TESSERA_SPINE_SOURCE_BUSINESS_EVENTS=spine`) after shadow bake — the mechanism ships flipped-off. Same inherited `replay.py:92` mypy debt → **main merge still withheld**. |
-| 6 | 0017-E + A2.4 + 0018-C/D: SDK extraction (instrument/graph_topology), span-contract + grammar-conformance suites, canaries + coverage per agent, enum codegen from capabilities, testkit; L-level → release-gate condition | [auto] | ⬜ pending | — | gate: recouvrement passes L1–L3 |
+| 6 | 0017-E + A2.4 + 0018-C/D: SDK extraction (instrument/graph_topology), span-contract + grammar-conformance suites, canaries + coverage per agent, enum codegen from capabilities, testkit; L-level → release-gate condition | [auto] | 🔄 6a done | 6a `baff0231`→`9126c3de` | **6a shipped**: ratchet `_FROZEN_EXCEPTIONS` 5→0 (SDK extraction), conformance testkit signals 103/104, enum codegen 0018-C — see Log. Branch `claude/step-6-sdk-conformance` off main `40dadade`. **6b** (A2.4 release gate + canaries 94 / coverage 92) + **6c** (require_bearer + snapshot fold) pending; HALT + Claude review between lots. gate: recouvrement passes L1–L3 |
 | 7 | 0017-F: out-of-process demo agent (pure OTLP, no LangGraph) reaches L1 with a **zero-line cockpit diff**; TTO measured and recorded here | [auto] | ⬜ pending | — | the architecture's acceptance test |
 
 ## Coordination register (parallel workstreams — sole-writer rule)
@@ -58,6 +58,39 @@ updates this file after every step. A resuming session reads this first, then co
   `Tessera_private/patch-orphelin-signal-registry-test-2026-07-06.diff`.
 
 ## Log (newest first)
+
+- 2026-07-08 — **step 6 lot 6a done** (`baff0231`→`9126c3de`, 5 commits): 0017 Phase E SDK
+  extraction + 0018-C/D. Branched `claude/step-6-sdk-conformance` off **main `40dadade`**
+  (the run plan cited a stale `ac18d8bc` — 2 dev-tooling commits behind; `40dadade` is the
+  current `main` and a strict superset). **The ratchet is the proof: `_FROZEN_EXCEPTIONS`
+  5 → 0** — the control plane now imports no part of the agent runtime (ADR 0017 §1
+  achieved). (1) `instrument.py` → `tessera.agent.sdk` (off the boundary-scanned tree; §7
+  "two profiles, one wire"), all 7 importers repointed, the scanned `observability/__init__`
+  re-export dropped. (2/3) the three route imports (reporter/router/graph) moved behind a new
+  spine port `observability/spine/runtime.py` (`RuntimeProvider` Protocol + honest-empty null
+  default, **no agent import in the scanned module**); the agent-side adapter
+  `agent/telemetry.py` lives outside the scan and installs at `main.build_app()`;
+  `graph_topology.py` → `tessera.agent.sdk`. `/observability/sandbox-config` +
+  `/observability/graph-topology` now read the port — behavior preserved (verified via
+  build_app: real 3477-char FR prompt / policy count 13; real fingerprint 9 nodes/17 edges;
+  cockpit-only deploy serves honest-empty). **(4) Conformance testkit** (`tessera.agent.sdk.testkit`,
+  §7/0018-D): `span_contract` (signal 103, L1 — full Scope dims, keys sourced from
+  `stamp_turn_dimensions`) + `grammar_conformance` (signal 104, L3 — the 13-name grammar +
+  strict PII-free payloads via a new public `business_events.validate_business_event` +
+  `GRAMMAR_EVENT_NAMES`), each `verify_*`/`assert_*`; 13 tests incl. drift guards tying each
+  contract to its authoritative source + a stray-payload-key (PII) rejection. **(5) Enum
+  codegen (0018-C):** `agent/codegen.py` + `scripts/generate_agent_enums.py` generate
+  recouvrement's backend `Literal` + FE union from the AgentSpec capability ids; FE
+  `RecouvrementBackendIntent` now aliases the generated union (single source); a
+  generate-and-diff test gates committed == regenerated == live manifest. **Twice-green**
+  (delta clean, ×2): backend ruff/format/mypy(273)/pytest **1379**; FE tsc/biome(changed)/vitest
+  **78**. **Scope/honesty notes:** `instrument.py` did NOT actually violate the boundary (only
+  `graph_topology` did, via its `TYPE_CHECKING` `AgentState`/`langgraph` hints) — moved per §7
+  grouping; ADR line 210's claim that `instrument.py` imports langgraph is inaccurate (flagged).
+  The drawer-task/artifact-family FE enums stay hand-owned (domain aliasing/grouping not 1:1
+  with capability ids — owed a manifest-mapping slice). Canaries (94) + coverage (92) + A2.4
+  release gate are **6b**; require_bearer + snapshot fold are **6c**. **HALT for Claude review
+  before 6b.**
 
 - 2026-07-08 — **Reference-server migration after the park-under-live-server break.** The
   step-4 closure parked `agents/codex` while its dev servers (front `:3097`, back `:8099`)
