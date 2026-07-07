@@ -89,8 +89,8 @@ def _row_to_bundle(row: dict[str, object]) -> ReplayBundle | None:
             agent_id=str(row["agent_id"]) if row.get("agent_id") is not None else None,
             turn_id=str(row["turn_id"]) if row.get("turn_id") is not None else None,
             business_events=(
-                [dict(item) for item in row.get("business_events", [])]
-                if isinstance(row.get("business_events"), list)
+                [dict(item) for item in business_events_raw]
+                if isinstance((business_events_raw := row.get("business_events")), list)
                 else []
             ),
         )
