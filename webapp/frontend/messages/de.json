@@ -1611,8 +1611,7 @@
       "runs": "Runs & Datensätze",
       "failed": "Fehlgeschlagene Fälle",
       "models": "Modellvergleich",
-      "judge": "Judge-Kalibrierung",
-      "recouvrement": "Inkasso"
+      "judge": "Judge-Kalibrierung"
     },
     "cta": {
       "evidence": "Qualitäts-Evidence-Pack erzeugen",

@@ -625,32 +625,6 @@ async def observability_business_runs(
     )
 
 
-@router.get("/observability/recouvrement-runs")
-async def observability_recouvrement_runs(
-    at: str | None = None,
-    conversation_id: str | None = None,
-    turn_id: str | None = None,
-    case_id: str | None = None,
-    capability_id: str | None = None,
-    limit: int = 20,
-) -> dict[str, object]:
-    """Transitional alias of ``/observability/business/runs`` pinned to recouvrement.
-
-    Kept for render parity during ADR 0017 Phase A; dissolved with the hardcoded tab in
-    Phase C (step 4 of the execution plan).
-    """
-    return _business_runs_response(
-        at=at,
-        agent_id="recouvrement",
-        workflow_id="recouvrement_collections_v1",
-        conversation_id=conversation_id,
-        turn_id=turn_id,
-        case_id=case_id,
-        capability_id=capability_id,
-        limit=limit,
-    )
-
-
 @router.get("/observability/snapshot", dependencies=[Depends(require_bearer)])
 async def observability_snapshot(
     at: str | None = None,

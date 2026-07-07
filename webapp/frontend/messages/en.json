@@ -1611,8 +1611,7 @@
       "runs": "Runs & datasets",
       "failed": "Failed cases",
       "models": "Model comparison",
-      "judge": "Judge calibration",
-      "recouvrement": "Collections"
+      "judge": "Judge calibration"
     },
     "cta": {
       "evidence": "Generate quality evidence pack",

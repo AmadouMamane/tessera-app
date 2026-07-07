@@ -501,20 +501,6 @@ export async function fetchBusinessCapabilities(
   );
 }
 
-/** @deprecated ADR 0017 Phase A alias — use {@link fetchBusinessRuns}; dies with the tab (Phase C). */
-export async function fetchRecouvrementRuns(
-  signal?: AbortSignal,
-  at?: string,
-  limit = 20,
-): Promise<RecouvrementRunsResponse> {
-  return fetchBusinessRuns(signal, {
-    at,
-    limit,
-    agent: "recouvrement",
-    workflowId: "recouvrement_collections_v1",
-  });
-}
-
 /** Temporal lineage timeline — dated events for the cockpit time rail (#201). */
 export async function fetchTimeline(signal?: AbortSignal, at?: string): Promise<TimelineReport> {
   return request(withAsOf("/observability/timeline", at), { signal }, TimelineReportSchema);

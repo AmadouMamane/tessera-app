@@ -1611,8 +1611,7 @@
       "runs": "Runs & datasets",
       "failed": "Cas échoués",
       "models": "Comparaisons modèles",
-      "judge": "Calibration juge",
-      "recouvrement": "Recouvrement"
+      "judge": "Calibration juge"
     },
     "cta": {
       "evidence": "Générer dossier de preuves qualité",

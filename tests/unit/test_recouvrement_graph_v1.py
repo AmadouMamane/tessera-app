@@ -1348,7 +1348,7 @@ def test_recouvrement_payment_options_actions_are_prepared_without_external_effe
     assert "Aucune écriture définitive" in insertion["visibleReply"]
 
 
-async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_and_scores(
+async def test_observability_business_runs_groups_turns_artifacts_actions_and_scores(
     observed_recouvrement_stores: Path,
 ) -> None:
     summary = run_recouvrement_graph_v1(
@@ -1403,7 +1403,11 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
         turn_id="turn-insertion-prepared",
     )
 
-    payload = await obs.observability_recouvrement_runs(conversation_id="conv-rc-cockpit")
+    payload = await obs.observability_business_runs(
+        agent="recouvrement",
+        workflow_id="recouvrement_collections_v1",
+        conversation_id="conv-rc-cockpit",
+    )
     runs = {run["turn_id"]: run for run in payload["runs"]}
 
     assert set(runs) == {
