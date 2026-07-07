@@ -52,6 +52,153 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Checkpoint 4 review: MERGE FEU VERT (conditioned on operator's
+  checkpoint-3 visual sign-off).** Verified on pieces: emitter invariant pinned via a
+  shared helper over ALL `action.*` events (6f31f1c2 — a new un-flagged emitter fails
+  the gate); BR-01 §5 conform (URL-derived selection in `agent-metier.tsx`, mode
+  indicator, as-of proven honest-empty at=2020); dissolution clean (d0699d97 — the two
+  grep hits are docstrings documenting the removal). **Hygiene finding (inverts the
+  executor's note): `packageManager: pnpm@9.15.0` is declared → pnpm is canonical, and
+  NO lockfile is tracked at all — commit `webapp/frontend/pnpm-lock.yaml` at merge time
+  (reproducible FE builds), do not delete it.** After merge: step 4 row → done; unblocks
+  cockpit-header work (was gated on this merge), craft pass P3 (lot 2.5), and the
+  Claude async backlog.
+
+- 2026-07-07 — **Lot 2 code review: PASS with 1 carry-over; checkpoint-3 visual pending;
+  custody transfer.** Verified on `39a1bdfb` (+ lot-1.5 finish `77ee755e`, dedup fix
+  `6f6fd610`): emitter gaps fixed live (`action_governance=1.0`,
+  `no_uncontrolled_external_effect=1.0` on proof runs), fleet chip + pending counter,
+  À traiter dual-source with Métier deep-links, Conformité legal projection, `page:
+  metier` (3 uses), and two backlog items absorbed early — **business_events default =
+  spine** and **`SOURCE_LOCAL="local"` with `SOURCE_JSONL` compat alias**. Carry-over
+  (binding, before merge): **pin emitter completeness with a unit test** (every `action.*`
+  event carries `artifact_id` + the external-effect flag; the two scores assert 1.0) —
+  live proof must become pinned proof. **Custody: codex out of credits until tomorrow →
+  the claude executor continues ON `codex/step-4-metier` IN the `agents/codex` worktree**
+  (sole-writer holds — codex idle). Claude takes: emitter-pinning test, lot 3
+  (dissolution), BR-01 §5 conformance. Craft pass P3 + e2e: antigravity tonight or codex
+  tomorrow (operator's call). Checkpoint-3 visual (Flotte / À traiter / Conformité
+  captures) owed by the operator before lot 3 lands.
+
+- 2026-07-07 — **Architecture sweep dispatched (operator decision) + BR-01 rail defined.**
+  Deferred to a Claude-owned async backlog: (1) RBAC alignment of the business read
+  routes on the snapshot posture (rides lot 3); (2) fold business signals into the
+  batched snapshot + p95 budget/probe (rides step 6 — the fan-out must not return);
+  (3) minimal AgentSpecs for support-client + onboarding (30-min slice — makes the fleet
+  show the L0-L3 ladder); (5) TESS-LEDGER-001 post-mortem as a publishable artifact
+  (signals 160/114). Item (4) e2e Playwright smoke on Métier + recouvrement-new stays in
+  the codex stream, after the craft pass. **Temporal rail decided from the operator's
+  rails registry (v1.3): `BR-01 · Business Runs Rail` — substrate S3, component C2
+  (shared with ER-01/CT-01), page AGENT/Métier.** §5 conformance owed to the codex
+  stream: URL-derived selection (deep-link), visible time-mode indicator, global as-of
+  propagated (backend `at` already supported). Forbidden: any C4/scrubber on an AGENT
+  page — business-signal time navigation belongs to SURVEILLER (SR-01).
+
+- 2026-07-07 — **Lot 1.5 visually VALIDATED (operator + Claude review on screenshots): GO
+  lot 2.** All 17 punch-list items applied — structural rework matches the wireframe
+  (stacked full-width, featured north-star, master-detail drill-down, 4 equal bottom
+  columns), honesty items done end-to-end (not-applicable = « — » with reason, double
+  negation renamed, artifact safety flags fully visible incl. « Échéancier créé : non »).
+  Carry-overs into lot 2: (1) **emitter gaps surfaced by the honest 0%** — some action
+  events lack artifact linkage (`action sans artefact lié`) and some lack the
+  external-effect flag (`flag effet externe absent`) → complete the emitters (preferred)
+  or requalify to `not_applicable` at the scorer; (2) plural rule « 1 orpheline(s) » ;
+  (3) group the repeated decision headers. Lot 2 scope unchanged: fleet north-star chip,
+  À traiter source, Conformité projection, `page: metier` catalog vocabulary.
+
+- 2026-07-07 — **TESS-LEDGER-001 CLOSED.** Remediation merged + pushed; operator sign-off
+  done — the amber badge renders in-browser with the attested wording (« Intégrité contenu
+  vérifiée · ordre total : 29 fourches historiques, 1 orpheline(s) (attestées) »). Open
+  follow-ups tracked: Hica seal implementation (priority raised, §Corr.3c),
+  business_events default flip after bake, `jsonl`→`local` rename.
+
+- 2026-07-07 — **TESS-LEDGER-001 remediation review: APPROVED — merge + push cleared.**
+  Verified on the 8 commits (`claude/incident-ledger-forks`): append-only held (zero
+  DELETE/UPDATE in the diff), serialized drain under `pg_advisory_xact_lock` with in-txn
+  head read, partial unique anchor, position-independent `event_id` idempotence key (finer
+  than the playbook), tree-aware verifier + tri-state badge, attestation append at seq
+  17136, ADR 0015 §Correction 3c landed. Investigation refined the facts (first fork =
+  parent 5984; `broken_at` = walk position; **+1 orphan seq 11814 = a LOST WRITE**, same
+  root-cause family, ratified by the attestation — deeper investigation logged as accepted
+  optional). Operator items: push; browser render of the amber badge; Hica seal
+  implementation to schedule (priority raised by §Corr.3c); codex must re-merge main into
+  its branch before finishing lot 1.5 (the badge changed under it).
+
+- 2026-07-07 — **INCIDENT TESS-LEDGER-001 opened** (dossier:
+  `Tessera_private/incident-ledger-forks-2026-07-07.md`). The cockpit integrity badge +
+  codex's blocking check found the active `audit_ledger` **forked**: 29 duplicated
+  `prev_hash` groups over 13 374 rows (first at seq 6280 → siblings 6281/6282). Root
+  cause code-confirmed: per-process `_last_hash` cache + unserialized head read (no
+  advisory lock, no `UNIQUE(prev_hash)`) — the Amendment-3 promotion never specified
+  write serialization (ADR gap). Impact framed honestly: per-row tamper-evidence INTACT
+  (it is a fork, not tampering); total order lost at 29 points. Remediation plan in the
+  dossier: evidence freeze → investigate → serialize writes + partial unique index +
+  concurrency test → tree-aware verifier/badge → attestation re-anchor (never rewrite) →
+  ADR correction. Codex may resume lot 1.5 EXCEPT the integrity badge/footer (owned by
+  the incident workstream). **The detection chain worked: badge → halt → escalate.**
+
+- 2026-07-07 — **Checkpoint 2 visual verdict (operator): substance validated, polish owed
+  → lot 1.5 inserted before lot 2.** Scope: (a) mechanical alignment of the Métier tab on
+  its sibling fiche-agent tabs — reuse the house components (KPI strip, tables, badges,
+  spacings from synthese/evaluations/CatalogTabView patterns) instead of the bespoke
+  410-line layout where applicable; (b) the operator's specific punch list (to be
+  dictated); (c) the **unattributed-row unit test** (pulled forward from lot 2). Rationale:
+  the visual bar must be internalised before building 3 more surfaces (lot 2), or the
+  polish debt triples. Iteration loop: servers stay up from the codex worktree,
+  edit→refresh with the operator.
+
+- 2026-07-07 — **Step-4 checkpoint 2 review: PASS on code, 1 carry-over, visual validation
+  pending.** Verified on the diffs (ebe15a90 lot 0, 73ab8e4a lot 1): checkpoint-1 findings
+  fixed (generic module pure; unknown-capability mechanism in place), ui-polish findings
+  absorbed (« Planifié (interne) » + `artifactStatus.*` keys ×3 languages), L3 gating with
+  honest-empty + level shown, KPI grouped by level, AT-01 respected (Synthèse untouched),
+  heavy i18n (+68×3). Carry-over into lot 2 (binding): **a dedicated unit test pinning the
+  unattributed row** (events with `capability_id NULL` → `UNKNOWN_CAPABILITY_ID` row) —
+  the 364-line aggregation module currently has endpoint-level coverage only. Visual
+  validation by the operator required before GO lot 2 (servers must run from the
+  `agents/codex` worktree — the branch is unmerged).
+
+- 2026-07-07 — **ui-polish landed as `04b249b3` directly on main** (operator-ordered commit
+  by the e2e-review session; targeted gates green). Review decision: **accepted as-is** —
+  rewriting shared main for procedure would cost more than the deviation; the branch
+  procedure remains the rule for agents. **Its 2 findings are now BINDING lot-1 items**:
+  (1) `executed` label must carry the boundary (« Planifié (interne) » or equivalent —
+  0018 §4: no label claims more than the chain proves); (2) cockpit-side status labels via
+  i18n keys `artifactStatus.<status>` in `messages/{fr,de,en}` (the FR map may remain a
+  drawer fallback transitionally). codex/step-4-metier fast-forwarded onto it — sequence
+  gate cleared. Housekeeping owed: push main; commit this ledger; `git gc` at a quiet
+  moment (unreachable-objects warning).
+
+- 2026-07-07 — **Step-4 checkpoint 1 (lot 0) review: APPROVED on substance, 2 findings,
+  sequence gate.** Right: mapping in the domain package (`recouvrement/capabilities.py`),
+  stamping via `_event_common` with deterministic test proof (graph → `summarize_case`/
+  `draft_reminder`; action workflow → from artifact type), aggregate columns = A1.4
+  exactly (incl. `label_key` i18n + honest `insufficient_data` trend), manifest-driven
+  capability enumeration. Findings: (1) **domain constant `no_schedule_created` inside the
+  new generic `business_capabilities.py`** — 0016 rule; new code gets no transitional
+  grace: derive "effects prevented" from grammar events/generic envelope fields, or read
+  flag keys from the manifest; (2) **unattributed events must be visible** — events with
+  `capability_id NULL` (history) must aggregate into an explicit "unattributed" row with a
+  test, never silently dropped. Sequence gate: `codex/ui-polish-honesty` recovery was
+  NEVER executed — the polish still sits uncommitted on the landing pad; recover + fix its
+  2 findings + merge to main BEFORE lot 1, then codex merges main into
+  `codex/step-4-metier` (lot 1 builds on the 3-state panel).
+
+- 2026-07-07 — **Landing-pad incident #2 + recovery.** An ad-hoc codex UI-polish prompt ran
+  in the main checkout, leaving 5 files modified uncommitted on `main` (nothing pushed, no
+  loss). Recovery: `git switch -c codex/ui-polish-honesty` (carries the changes), targeted
+  commit, landing pad restored. Review verdict: **adopt** — includes a genuine honesty bug
+  fix (external-effect header badge used `.some()`: one safe flag masked a real effect
+  elsewhere; now strict 3-state) — with 2 findings to fix on the branch before merge:
+  (1) `executed → "Planifié"` overclaims (no real calendar event exists — 0018 §4 honesty
+  rule): label must carry the boundary ("Planifié (interne)" or equivalent); (2) hardcoded
+  FR labels bypass i18n on the cockpit side → `artifactStatus.<status>` keys in
+  `messages/{fr,de,en}`. Merge this branch BEFORE step 4 (it touches
+  `workflow-runs-panel.tsx`). **Process lesson:** every executor prompt MUST start with
+  `cd …/agents/<name>` + branch creation; ad-hoc prompts route through this register.
+  Note for 0018 Phase B: `artifact-status.ts` is the transitional FE label map that the
+  AgentSpec label→canonical-state mapping will absorb — linked so they don't drift.
+
 - 2026-07-07 — **steps 3+5 merged to `main` (`fa63bd9a`), pushed to origin.** The 3 review
   must-fixes executed in order: (1) `14bd3a4f` — replay.py orphan WIP committed as the mypy
   fix (walrus hoist), clearing the sole `mypy src/tessera` error that had withheld the merge;
