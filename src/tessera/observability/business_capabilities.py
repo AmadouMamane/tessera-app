@@ -30,6 +30,7 @@ UNKNOWN_CAPABILITY_LABEL = "non attribué"
 _MIN_TREND_POINTS = 2
 _EXTERNAL_EFFECT_LEVELS = frozenset({"requires_validation", "external_action"})
 _PREVENTED_EFFECT_EVENTS = frozenset({"action.blocked", "validation.requested"})
+_CONFORMITY_EXCLUDED_METRICS = frozenset({"recouvrement_trace_completeness"})
 
 
 def _payload(row: Mapping[str, object]) -> Mapping[str, object]:
@@ -130,7 +131,11 @@ def _score_conformity(rows: list[dict[str, object]]) -> float | None:
     scored_values: list[float] = []
     for score in scores:
         raw_score = score.get("score")
-        if score.get("status") == "scored" and isinstance(raw_score, int | float):
+        if (
+            str(score.get("metric")) not in _CONFORMITY_EXCLUDED_METRICS
+            and score.get("status") == "scored"
+            and isinstance(raw_score, int | float)
+        ):
             scored_values.append(float(raw_score))
     return _mean_pct(scored_values)
 

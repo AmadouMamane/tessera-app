@@ -2,7 +2,6 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
-  Activity,
   ArrowDown,
   ArrowRight,
   ArrowUp,
@@ -11,6 +10,7 @@ import {
   CheckCircle2,
   ChevronRight,
   ShieldCheck,
+  Target,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type KeyboardEvent, useMemo, useState } from "react";
@@ -71,6 +71,16 @@ function orderedSignals(signals: BusinessSignalValue[]): BusinessSignalValue[] {
     }
     return a.key.localeCompare(b.key);
   });
+}
+
+function groupedSignals(signals: BusinessSignalValue[]): [string, BusinessSignalValue[]][] {
+  const groups = new Map<string, BusinessSignalValue[]>();
+  for (const signal of signals) {
+    const current = groups.get(signal.level) ?? [];
+    current.push(signal);
+    groups.set(signal.level, current);
+  }
+  return Array.from(groups.entries());
 }
 
 export function AgentMetier() {
@@ -148,12 +158,13 @@ export function AgentMetier() {
     <div className="flex min-w-0 flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       <SignalKpiStrip data={data} signals={data.business_signals} />
 
-      <div className="grid min-w-0 gap-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(430px,0.9fr)]">
-        <CapabilitiesTable
-          capabilities={data.capabilities}
-          selectedCapabilityId={activeCapabilityId}
-          onSelect={setSelectedCapabilityId}
-        />
+      <CapabilitiesTable
+        capabilities={data.capabilities}
+        selectedCapabilityId={activeCapabilityId}
+        onSelect={setSelectedCapabilityId}
+      />
+
+      {activeCapabilityId && activeCapabilitySelectable ? (
         <WorkflowRunsPanel
           data={runs.data}
           loading={runs.isLoading}
@@ -161,7 +172,7 @@ export function AgentMetier() {
           emptyTitle={t("runs.emptyTitle")}
           emptyHint={t("runs.emptyHint")}
         />
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -182,6 +193,27 @@ function trendLabel(trend: BusinessTrend, t: ReturnType<typeof useTranslations>)
   return t("trend.flat");
 }
 
+function TrendHint({ trend }: { trend: BusinessTrend }) {
+  const t = useTranslations("agentMetier");
+  if (!trend.available) {
+    return (
+      <span
+        className="inline-flex h-5 min-w-5 items-center justify-center text-[0.68rem] text-[var(--tessera-text-muted)]"
+        title={trendLabel(trend, t)}
+      >
+        —
+      </span>
+    );
+  }
+  const TrendIcon = trendIcon(trend.direction);
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1 text-[0.68rem] text-[var(--tessera-text-muted)]">
+      <TrendIcon className="h-3 w-3 shrink-0" />
+      <span className="truncate">{trendLabel(trend, t)}</span>
+    </span>
+  );
+}
+
 function SignalKpiStrip({
   data,
   signals,
@@ -192,6 +224,9 @@ function SignalKpiStrip({
   const t = useTranslations("agentMetier");
   const tSignal = useTranslations("businessSignal");
   const ordered = orderedSignals(signals);
+  const northStar = ordered.find((signal) => signal.north_star) ?? ordered[0] ?? null;
+  const secondary = northStar ? ordered.filter((signal) => signal.key !== northStar.key) : ordered;
+  const groups = groupedSignals(secondary);
   return (
     <section className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -212,10 +247,15 @@ function SignalKpiStrip({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
-          {ordered.map((signal) => (
-            <SignalMetric key={signal.key} signal={signal} label={signalLabel(signal, tSignal)} />
-          ))}
+        <div className="grid gap-2.5 xl:grid-cols-[minmax(230px,1fr)_minmax(0,4fr)]">
+          {northStar ? (
+            <NorthStarSignal signal={northStar} label={signalLabel(northStar, tSignal)} />
+          ) : null}
+          <div className="flex min-w-0 flex-col gap-2">
+            {groups.map(([level, levelSignals]) => (
+              <SignalGroup key={level} level={level} signals={levelSignals} tSignal={tSignal} />
+            ))}
+          </div>
         </div>
       )}
     </section>
@@ -231,24 +271,73 @@ function signalLevelLabel(signal: BusinessSignalValue, t: ReturnType<typeof useT
   return t.has(key) ? t(key) : t("signalLevel.other");
 }
 
-function SignalMetric({ signal, label }: { signal: BusinessSignalValue; label: string }) {
+function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label: string }) {
   const t = useTranslations("agentMetier");
-  const TrendIcon = trendIcon(signal.trend.direction);
+  const hasValue = typeof signal.value_pct === "number";
+  return (
+    <Card className="min-w-0 border-[#7c5cf5]/45 bg-[#211d45]/45">
+      <CardContent className="flex h-full min-h-[108px] flex-col justify-between p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center gap-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[#c4b5fd]">
+              <Target className="h-3.5 w-3.5" />
+              {t("signals.northStar")}
+            </div>
+            <p className="text-sm font-semibold leading-snug">{label}</p>
+          </div>
+          <Badge tone="gold">{signalLevelLabel(signal, t)}</Badge>
+        </div>
+        <div className="flex items-end justify-between gap-2">
+          <p className="text-[1.75rem] font-semibold leading-none text-white">
+            {hasValue ? pct(signal.value_pct) : "—"}
+          </p>
+          <TrendHint trend={signal.trend} />
+        </div>
+        <p className="text-[0.64rem] leading-snug text-[var(--tessera-text-muted)]">
+          {signal.reason.replaceAll("_", " ")}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SignalGroup({
+  level,
+  signals,
+  tSignal,
+}: {
+  level: string;
+  signals: BusinessSignalValue[];
+  tSignal: ReturnType<typeof useTranslations>;
+}) {
+  const t = useTranslations("agentMetier");
+  if (signals.length === 0) return null;
+  const pseudoSignal = signals[0];
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="flex items-center justify-between gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+        <span className="font-medium">
+          {pseudoSignal ? signalLevelLabel(pseudoSignal, t) : level}
+        </span>
+        <span>{signals.length}</span>
+      </div>
+      <div className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
+        {signals.map((signal) => (
+          <SignalMetric key={signal.key} signal={signal} label={signalLabel(signal, tSignal)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SignalMetric({ signal, label }: { signal: BusinessSignalValue; label: string }) {
   const hasValue = typeof signal.value_pct === "number";
   return (
     <MetricCard
       label={label}
       value={hasValue ? pct(signal.value_pct) : "—"}
-      delta={signal.north_star ? <Badge tone="gold">{t("signals.northStar")}</Badge> : null}
-      trend={
-        <span className="flex min-w-0 items-center justify-between gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-          <span className="inline-flex min-w-0 items-center gap-1 truncate">
-            <TrendIcon className="h-3 w-3 shrink-0" />
-            <span className="truncate">{trendLabel(signal.trend, t)}</span>
-          </span>
-          <span className="shrink-0">{signalLevelLabel(signal, t)}</span>
-        </span>
-      }
+      delta={signal.status === "unknown" ? <Badge tone="neutral">—</Badge> : null}
+      trend={<TrendHint trend={signal.trend} />}
     />
   );
 }
@@ -285,10 +374,8 @@ function CapabilityName({
     >
       {selected ? (
         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
-      ) : (
-        <Activity className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
-      )}
-      <span className="truncate">{label}</span>
+      ) : null}
+      <span className="min-w-0 leading-snug">{label}</span>
       {selectable ? (
         <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
       ) : null}
@@ -316,29 +403,29 @@ function CapabilitiesTable({
           {t("capabilities.title")}
         </CardTitle>
       </CardHeader>
-      <CardContent className="min-w-0 p-0">
-        <Table className="min-w-[760px] text-[0.72rem]">
+      <CardContent className="min-w-0 overflow-hidden p-0">
+        <Table className="w-full table-fixed text-[0.72rem]">
           <TableHeader>
             <TableRow>
-              <TableHead className="h-8 px-3 text-[0.6rem]">
+              <TableHead className="h-8 w-[32%] px-3 text-[0.6rem]">
                 {t("capabilities.columns.capability")}
               </TableHead>
-              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
+              <TableHead className="h-8 w-[10%] px-3 text-right text-[0.6rem]">
                 {t("capabilities.columns.volume")}
               </TableHead>
-              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
+              <TableHead className="h-8 w-[12%] px-3 text-right text-[0.6rem]">
                 {t("capabilities.columns.conformity")}
               </TableHead>
-              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
+              <TableHead className="hidden h-8 w-[12%] px-3 text-right text-[0.6rem] md:table-cell">
                 {t("capabilities.columns.validation")}
               </TableHead>
-              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
+              <TableHead className="hidden h-8 w-[10%] px-3 text-right text-[0.6rem] lg:table-cell">
                 {t("capabilities.columns.blocked")}
               </TableHead>
-              <TableHead className="h-8 px-3 text-right text-[0.6rem]">
+              <TableHead className="hidden h-8 w-[12%] px-3 text-right text-[0.6rem] md:table-cell">
                 {t("capabilities.columns.prevented")}
               </TableHead>
-              <TableHead className="h-8 px-3 text-[0.6rem]">
+              <TableHead className="h-8 w-[12%] px-3 text-[0.6rem]">
                 {t("capabilities.columns.trend")}
               </TableHead>
             </TableRow>
@@ -348,7 +435,6 @@ function CapabilitiesTable({
               const label = capabilityLabel(row, tCapability);
               const selectable = Boolean(capabilityMessageKey(row));
               const selected = row.capability_id === selectedCapabilityId;
-              const TrendIcon = trendIcon(row.trend.direction);
               const selectRow = () => onSelect(row.capability_id);
               return (
                 <TableRow
@@ -364,7 +450,7 @@ function CapabilitiesTable({
                     selected && "bg-[var(--tessera-muted)]/60",
                   )}
                 >
-                  <TableCell className="px-3 py-2">
+                  <TableCell className="px-3 py-2 align-middle">
                     <CapabilityName
                       row={row}
                       label={label}
@@ -372,26 +458,23 @@ function CapabilitiesTable({
                       selectable={selectable}
                     />
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-right font-mono">
+                  <TableCell className="px-3 py-2 text-right font-mono align-middle">
                     {count(row.volume)}
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-right font-mono">
+                  <TableCell className="px-3 py-2 text-right font-mono align-middle">
                     {pct(row.conformity_pct)}
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-right font-mono">
+                  <TableCell className="hidden px-3 py-2 text-right font-mono align-middle md:table-cell">
                     {pct(row.validation_required_pct)}
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-right font-mono">
+                  <TableCell className="hidden px-3 py-2 text-right font-mono align-middle lg:table-cell">
                     {pct(row.blocked_pct)}
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-right font-mono">
+                  <TableCell className="hidden px-3 py-2 text-right font-mono align-middle md:table-cell">
                     {count(row.external_effects_prevented)}
                   </TableCell>
-                  <TableCell className="px-3 py-2">
-                    <span className="inline-flex items-center gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
-                      <TrendIcon className="h-3 w-3 shrink-0" />
-                      {trendLabel(row.trend, t)}
-                    </span>
+                  <TableCell className="px-3 py-2 align-middle">
+                    <TrendHint trend={row.trend} />
                   </TableCell>
                 </TableRow>
               );
@@ -448,10 +531,8 @@ function MetierSkeleton() {
   return (
     <div className="flex flex-col gap-2.5">
       <Skeleton className="h-32 rounded-lg" />
-      <div className="grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(430px,0.9fr)]">
-        <Skeleton className="h-[430px] rounded-lg" />
-        <Skeleton className="h-[430px] rounded-lg" />
-      </div>
+      <Skeleton className="h-[320px] rounded-lg" />
+      <Skeleton className="h-[460px] rounded-lg" />
     </div>
   );
 }

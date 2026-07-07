@@ -8090,7 +8090,7 @@
     "client_message_safety": "Sicherheit der Kundennachricht",
     "payment_option_safety": "Sicherheit der Zahlungsoptionen",
     "action_governance": "Aktions-Governance",
-    "no_uncontrolled_external_effect": "Kein unkontrollierter externer Effekt",
+    "no_uncontrolled_external_effect": "Kontrollierte externe Effekte",
     "recouvrement_trace_completeness": "Vollständigkeit der Inkasso-Spur",
     "amount_consistency": "Betragskonsistenz"
   },

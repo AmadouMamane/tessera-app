@@ -8090,7 +8090,7 @@
     "client_message_safety": "Client-message safety",
     "payment_option_safety": "Payment-option safety",
     "action_governance": "Action governance",
-    "no_uncontrolled_external_effect": "No uncontrolled external effect",
+    "no_uncontrolled_external_effect": "Controlled external effects",
     "recouvrement_trace_completeness": "Collections trace completeness",
     "amount_consistency": "Amount consistency"
   },

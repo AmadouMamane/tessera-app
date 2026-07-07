@@ -55,3 +55,30 @@ def test_unknown_capability_row_is_rendered_as_non_attribue(
     assert unknown["label"] == business_capabilities.UNKNOWN_CAPABILITY_LABEL
     assert unknown["label_key"] is None
     assert unknown["volume"] == 1
+
+
+def test_conformity_is_unknown_when_only_diagnostic_trace_score_exists(
+    in_memory_business_events: None,
+) -> None:
+    business_events.record_business_event(
+        event_name=business_events.BusinessEventName.CASE_CONTEXT_LOADED,
+        agent_id=RECOUVREMENT_AGENT_ID,
+        workflow_id=RECOUVREMENT_WORKFLOW_ID,
+        capability_id="summarize_case",
+        conversation_id="conv-summary-diagnostic-only",
+        turn_id="turn-summary-diagnostic-only",
+        case_id="RC-2048",
+        payload={"client": "M. D.", "amount_due": 840, "days_late": 32},
+    )
+
+    aggregate = business_capabilities.business_capability_aggregate(
+        agent_id=RECOUVREMENT_AGENT_ID,
+        workflow_id=RECOUVREMENT_WORKFLOW_ID,
+        conversation_id="conv-summary-diagnostic-only",
+    )
+
+    capabilities = cast("list[dict[str, object]]", aggregate["capabilities"])
+    rows = {str(row["capability_id"]): row for row in capabilities}
+
+    assert rows["summarize_case"]["volume"] == 1
+    assert rows["summarize_case"]["conformity_pct"] is None

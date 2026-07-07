@@ -459,15 +459,16 @@ def test_recouvrement_graph_proposes_schedule_with_backend_observability(
         ]
         == "SCHEDULE_VALIDATION"
     )
-    assert (
-        next(row for row in rows if row["event_name"] == "action.prepared")["payload"][
-            "action_name"
-        ]
-        == "prepare_schedule_proposal"
-    )
+    action_event = next(row for row in rows if row["event_name"] == "action.prepared")
+    assert action_event["artifact_id"] == output["artifact"]["id"]
+    assert action_event["payload"]["action_name"] == "prepare_schedule_proposal"
+    assert action_event["payload"]["artifact_id"] == output["artifact"]["id"]
+    assert action_event["payload"]["no_external_effect"] is True
     scores = {row["metric"]: row for row in output["businessScores"]}
     assert scores["validation_required_compliance"]["score"] == 1.0
     assert scores["artifact_governance"]["score"] == 1.0
+    assert scores["action_governance"]["score"] == 1.0
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
     assert scores["recouvrement_trace_completeness"]["score"] > 0.8
     assert scores["amount_consistency"]["score"] == 1.0
     assert scores["contact_window_compliance"]["status"] == "not_applicable"
@@ -585,8 +586,17 @@ def test_recouvrement_graph_drafts_reminder_without_sending_message(
     scores = {row["metric"]: row for row in output["businessScores"]}
     assert scores["client_message_safety"]["score"] == 1.0
     assert scores["artifact_governance"]["score"] == 1.0
+    assert scores["action_governance"]["score"] == 1.0
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
     assert scores["amount_consistency"]["score"] == 1.0
     assert scores["validation_required_compliance"]["status"] == "unknown"
+    action_event = next(
+        row for row in output["businessEvents"] if row["event_name"] == "action.prepared"
+    )
+    assert action_event["artifact_id"] == "RC-2048-reminder-v1"
+    assert action_event["payload"]["action_name"] == "prepare_client_message"
+    assert action_event["payload"]["artifact_id"] == "RC-2048-reminder-v1"
+    assert action_event["payload"]["no_external_effect"] is True
     message_event = next(
         row for row in output["businessEvents"] if row["event_name"] == "message.generated"
     )

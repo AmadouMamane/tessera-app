@@ -8092,7 +8092,7 @@
     "client_message_safety": "Sûreté des messages client",
     "payment_option_safety": "Sûreté des options de paiement",
     "action_governance": "Gouvernance des actions",
-    "no_uncontrolled_external_effect": "Absence d'effet externe non contrôlé",
+    "no_uncontrolled_external_effect": "Effets externes contrôlés",
     "recouvrement_trace_completeness": "Complétude de la trace recouvrement",
     "amount_consistency": "Cohérence des montants"
   },

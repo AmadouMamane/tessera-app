@@ -1457,9 +1457,21 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
     )
     record_business_event(
         event_name=BusinessEventName.ACTION_PREPARED,
+        artifact_id=artifact["id"],
+        artifact_type=artifact["type"],
+        artifact_status=artifact["status"],
         decision="prepared",
         reason_codes=["VALIDATION_REQUIRED"],
-        payload={"action_name": "prepare_schedule_proposal"},
+        payload={
+            "action_name": "prepare_schedule_proposal",
+            "artifact_id": artifact["id"],
+            "artifact_type": artifact["type"],
+            "case_id": case.case_id,
+            "current_status": artifact["status"],
+            "target_status": artifact["status"],
+            "requires_validation": True,
+            "no_external_effect": True,
+        },
         **_event_common(state, node_name="build_schedule_proposal_artifact"),
     )
     return {
@@ -1609,9 +1621,21 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
         )
     record_business_event(
         event_name=BusinessEventName.ACTION_PREPARED,
+        artifact_id=artifact["id"],
+        artifact_type=artifact["type"],
+        artifact_status=artifact["status"],
         decision="prepared",
         reason_codes=policy["reason_codes"],
-        payload={"action_name": "prepare_client_message"},
+        payload={
+            "action_name": "prepare_client_message",
+            "artifact_id": artifact["id"],
+            "artifact_type": artifact["type"],
+            "case_id": case.case_id,
+            "current_status": artifact["status"],
+            "target_status": artifact["status"],
+            "requires_validation": policy["validation_required"],
+            "no_external_effect": True,
+        },
         **_event_common(state, node_name="build_reminder_draft_artifact"),
     )
     return {
