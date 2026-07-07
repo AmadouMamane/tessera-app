@@ -44,11 +44,11 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 from tessera.agent.graph import build_graph
+from tessera.agent.sdk import graph_topology as graph_topology_mod
 from tessera.llm.router import ChatResponse
 from tessera.observability import (
     conformance as conformance_mod,
     context_overflow as context_overflow_mod,
-    graph_topology as graph_topology_mod,
     handoffs as handoffs_mod,
     reproducibility as reproducibility_mod,
     tool_loops as tool_loops_mod,
@@ -62,10 +62,10 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
     from pathlib import Path
 
+    from tessera.agent.sdk.graph_topology import AgentStateGraph, TopologyDrift
     from tessera.llm.router import ChatMessage
     from tessera.observability.conformance import ConformanceReport
     from tessera.observability.context_overflow import OverflowReport
-    from tessera.observability.graph_topology import AgentStateGraph, TopologyDrift
     from tessera.observability.handoffs import HandoffReport
     from tessera.observability.reproducibility import ReproReport
     from tessera.observability.tool_loops import LoopReport

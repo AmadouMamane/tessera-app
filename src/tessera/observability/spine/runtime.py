@@ -37,6 +37,10 @@ class RuntimeProvider(Protocol):
         """Return the live Console-sandbox defaults for ``language``."""
         ...
 
+    def graph_topology(self) -> dict[str, object]:
+        """Return the live agent graph's topology fingerprint + golden drift (#87)."""
+        ...
+
 
 class _NullRuntimeProvider:
     """Honest-empty default — no agent wired in-process (cockpit-only deploy)."""
@@ -44,6 +48,10 @@ class _NullRuntimeProvider:
     def sandbox_defaults(self, language: LanguageCode) -> SandboxDefaults:  # noqa: ARG002
         """Serve honest-empty defaults — no agent runtime is installed."""
         return SandboxDefaults(system_prompt="", policy_rule_count=0)
+
+    def graph_topology(self) -> dict[str, object]:
+        """Serve honest-empty topology — no agent runtime is installed."""
+        return {}
 
 
 _provider: RuntimeProvider = _NullRuntimeProvider()

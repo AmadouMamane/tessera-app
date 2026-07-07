@@ -36,6 +36,17 @@ class AgentRuntimeProvider:
             policy_rule_count=len(_POLICY_RULES.get(language, [])),
         )
 
+    def graph_topology(self) -> dict[str, object]:
+        """Fingerprint the live LangGraph topology and diff it against the golden pin (#87)."""
+        from dataclasses import asdict
+
+        from tessera.agent.graph import build_graph
+        from tessera.agent.sdk import graph_topology as gt
+
+        snapshot = gt.topology_snapshot(build_graph())
+        drift = gt.compare_topology(snapshot, golden=gt.GOLDEN_FINGERPRINT)
+        return {**asdict(snapshot), "drift": asdict(drift)}
+
 
 def install_runtime_provider() -> None:
     """Install the in-process agent runtime provider into the spine port."""

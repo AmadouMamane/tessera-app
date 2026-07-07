@@ -67,7 +67,6 @@ from tessera.observability import (
     fleet as fleet_mod,
     funnel as funnel_mod,
     governance_feed as governance_feed_mod,
-    graph_topology as graph_topology_mod,
     guard_explain as guard_explain_mod,
     guard_retraction as guard_retraction_mod,
     handoffs as handoffs_mod,
@@ -2843,14 +2842,12 @@ async def observability_cost(at: str | None = None, agent: str = "all") -> dict[
 
 @router.get("/observability/graph-topology")
 async def observability_graph_topology() -> dict[str, object]:
-    """Topology fingerprint of the live agent graph vs the golden pin (#87)."""
-    from tessera.agent.graph import build_graph
+    """Topology fingerprint of the live agent graph vs the golden pin (#87).
 
-    snapshot = graph_topology_mod.topology_snapshot(build_graph())
-    drift = graph_topology_mod.compare_topology(
-        snapshot, golden=graph_topology_mod.GOLDEN_FINGERPRINT
-    )
-    return {**asdict(snapshot), "drift": asdict(drift)}
+    ADR 0017 §1: the fingerprint is computed by the agent runtime (which imports
+    langgraph) and read through the spine port — the cockpit never builds the graph.
+    """
+    return get_runtime_provider().graph_topology()
 
 
 @router.get("/observability/guard-retraction")

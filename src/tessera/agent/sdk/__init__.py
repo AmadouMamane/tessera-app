@@ -11,7 +11,14 @@ one wire"). This is signal 107 (`tessera-otel-genai` extraction) begun in-repo.
 
 from __future__ import annotations
 
-from tessera.agent.sdk import instrument
+from tessera.agent.sdk import graph_topology, instrument
+from tessera.agent.sdk.graph_topology import (
+    GOLDEN_FINGERPRINT,
+    TopologyDrift,
+    TopologySnapshot,
+    compare_topology,
+    topology_snapshot,
+)
 from tessera.agent.sdk.instrument import (
     annotate_retrieval,
     collect_node_timings,
@@ -22,11 +29,17 @@ from tessera.agent.sdk.instrument import (
 )
 
 __all__ = [
+    "GOLDEN_FINGERPRINT",
+    "TopologyDrift",
+    "TopologySnapshot",
     "annotate_retrieval",
     "collect_node_timings",
+    "compare_topology",
+    "graph_topology",
     "instrument",
     "instrument_node",
     "node_start_offsets",
     "retrieval_span",
     "tool_span",
+    "topology_snapshot",
 ]
