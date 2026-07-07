@@ -217,6 +217,10 @@ class BusinessEvent:
     event_version: int = EVENT_VERSION
     grammar_version: str = GRAMMAR_VERSION
     workflow_id: str | None = None
+    # ADR 0017 §A1.2 — optional; additive/optional keeps the envelope ``business_event.v1``
+    # (events emitted before the amendment read honestly as ``capability_id IS NULL``). It is
+    # step 4's per-capability join key; emitter stamping rides step 4.
+    capability_id: str | None = None
     surface: str | None = None
     language: str | None = None
     model: str | None = None
@@ -775,6 +779,9 @@ def _row_to_event(row: dict[str, object]) -> BusinessEvent | None:
             conversation_id=str(row["conversation_id"]),
             turn_id=str(row["turn_id"]),
             workflow_id=str(row["workflow_id"]) if row.get("workflow_id") is not None else None,
+            capability_id=(
+                str(row["capability_id"]) if row.get("capability_id") is not None else None
+            ),
             surface=str(row["surface"]) if row.get("surface") is not None else None,
             language=str(row["language"]) if row.get("language") is not None else None,
             model=str(row["model"]) if row.get("model") is not None else None,
@@ -1075,6 +1082,7 @@ def record_business_event(
     conversation_id: str,
     turn_id: str,
     workflow_id: str | None = None,
+    capability_id: str | None = None,
     surface: str | None = None,
     language: str | None = None,
     model: str | None = None,
@@ -1121,6 +1129,7 @@ def record_business_event(
         schema_version=EVENT_SCHEMA_VERSION,
         event_version=EVENT_VERSION,
         workflow_id=workflow_id,
+        capability_id=capability_id,
         surface=surface,
         language=language,
         model=model,
