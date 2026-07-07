@@ -5,7 +5,7 @@ The AgentSpec is the single onboarding artifact; the cockpit's business surfaces
 the one boundary-allowed seam (``tessera.agent.registry``, ADR 0017 §1 import contract) —
 never the agent runtime — and derives:
 
-- the observability **level** (L0-L2 in Phase B, computed from facts, never asserted);
+- the observability **level** (L0-L3, computed from facts, never asserted);
 - serialisable **business-signal descriptors** (the SignalSpec-equivalent metadata the
   fleet chip, Métier KPI strip and Conformité projection render).
 
@@ -32,10 +32,10 @@ __all__ = [
 LEVELS = ("L0", "L1", "L2", "L3")
 
 
-def observability_level(agent: Agent, *, governed: bool) -> str | None:
+def observability_level(
+    agent: Agent, *, governed: bool, business_events: bool = False
+) -> str | None:
     """Compute the observability level from passing facts (ADR 0017 §4) — never asserted.
-
-    Phase B computes L0-L2:
 
     - **L0 Registered** — a valid AgentSpec is present.
     - **L1 Observable** — L0 and the agent declares an observable contract (≥1 workflow
@@ -43,6 +43,7 @@ def observability_level(agent: Agent, *, governed: bool) -> str | None:
       declared shape the cockpit can read.
     - **L2 Governed** — L1 and the agent's guard/eval/release facts are visible to the
       cockpit (``governed`` — a real gating socle ran).
+    - **L3 Business** — L2 and typed workflow-grammar business events are visible.
 
     Returns ``None`` for an un-manifested agent, so the absence of a manifest renders as an
     honest-empty badge, never as "L0".
@@ -54,6 +55,8 @@ def observability_level(agent: Agent, *, governed: bool) -> str | None:
         return "L0"
     if not governed:
         return "L1"
+    if business_events:
+        return "L3"
     return "L2"
 
 

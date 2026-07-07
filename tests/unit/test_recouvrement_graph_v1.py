@@ -971,6 +971,12 @@ async def test_business_capability_aggregate_is_server_side_and_keeps_unknown_ho
     assert payload["fact"] == "business_events"
     assert payload["source"] == "jsonl"
     assert payload["event_count"] > 0
+    assert payload["observability_level"] == "L3"
+    assert payload["required_level"] == "L3"
+    assert payload["missing_requirements"] == []
+    by_signal = {row["key"]: row for row in payload["business_signals"]}
+    assert by_signal["validation_required_compliance"]["value_pct"] == 100.0
+    assert by_signal["validation_required_compliance"]["status"] == "scored"
     assert by_capability["summarize_case"]["volume"] == 1
     assert by_capability["summarize_case"]["label_key"] == "capability.summarize_case"
     assert by_capability["propose_schedule"]["volume"] == 1

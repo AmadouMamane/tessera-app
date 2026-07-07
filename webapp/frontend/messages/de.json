@@ -100,6 +100,7 @@
       "connaissances": "Wissen",
       "agentGuardrails": "Leitplanken",
       "prompts": "Prompts",
+      "metier": "Fachlichkeit",
       "evaluations": "Evaluierungen",
       "console": "Konsole",
       "historique": "Verlauf",
@@ -7303,6 +7304,61 @@
     "copy": "Kopieren",
     "copied": "Kopiert"
   },
+  "agentMetier": {
+    "title": "Fachlichkeit",
+    "subtitle": "Reale fachliche Fähigkeiten, Signale und Runs dieses Agenten.",
+    "level": "Niveau {level}",
+    "events": "{count} Ereignisse",
+    "empty": {
+      "title": "Fachdaten nicht verfügbar",
+      "detail": "Dieser Agent hat das erforderliche Niveau mit realen Fachfakten noch nicht erreicht."
+    },
+    "unavailable": {
+      "title": "Fachliche Lesung nicht verfügbar",
+      "detail": "Die Quelle business_events antwortet für diesen Agenten nicht."
+    },
+    "missing": {
+      "manifest": "AgentSpec-Manifest",
+      "observable_contract": "beobachtbarer Vertrag",
+      "governance": "Governance-Fakten",
+      "business_events": "Fachereignisse",
+      "capability_stamps": "Fähigkeitsverknüpfung"
+    },
+    "signals": {
+      "title": "Fachsignale",
+      "empty": "Kein Fachsignal deklariert.",
+      "northStar": "North star"
+    },
+    "signalLevel": {
+      "runtime": "Runtime",
+      "human_action": "Menschliche Aktion",
+      "other": "Andere"
+    },
+    "trend": {
+      "insufficient_data": "Trend nicht verfügbar",
+      "up": "+{delta} Pkt.",
+      "down": "-{delta} Pkt.",
+      "flat": "Stabil"
+    },
+    "capabilities": {
+      "title": "Fähigkeiten",
+      "columns": {
+        "capability": "Fähigkeit",
+        "volume": "Volumen",
+        "conformity": "% konform",
+        "validation": "% Validierung",
+        "blocked": "% blockiert",
+        "prevented": "Effekte verhindert",
+        "trend": "Trend"
+      }
+    },
+    "runs": {
+      "title": "Runs · {capability}",
+      "allCapabilities": "Alle Fähigkeiten",
+      "emptyTitle": "Kein fachlicher Run beobachtet",
+      "emptyHint": "Für diese Fähigkeit ist noch kein realer Run verfügbar."
+    }
+  },
   "agentEvaluations": {
     "title": "Evaluierungen",
     "subtitle": "Messen, analysieren und verbessern Sie die Antwortqualität des Assistenten und der Agenten.",
@@ -8023,6 +8079,18 @@
     "explain_payment_options": "Zahlungsoptionen erläutern",
     "draft_reminder": "Mahnung entwerfen",
     "propose_schedule": "Zahlungsplan vorschlagen"
+  },
+  "businessSignal": {
+    "contact_window_compliance": "Einhaltung des Kontaktfensters",
+    "validation_required_compliance": "Erforderliche Validierung eingehalten",
+    "action_blocking_correctness": "Blockierung sensibler Aktionen",
+    "artifact_governance": "Artefakt-Nachvollziehbarkeit",
+    "client_message_safety": "Sicherheit der Kundennachricht",
+    "payment_option_safety": "Sicherheit der Zahlungsoptionen",
+    "action_governance": "Aktions-Governance",
+    "no_uncontrolled_external_effect": "Kein unkontrollierter externer Effekt",
+    "recouvrement_trace_completeness": "Vollständigkeit der Inkasso-Spur",
+    "amount_consistency": "Betragskonsistenz"
   },
   "policy": {
     "contact_window": "Zulässiges Kontaktfenster",

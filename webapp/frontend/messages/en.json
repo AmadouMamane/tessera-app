@@ -100,6 +100,7 @@
       "connaissances": "Knowledge",
       "agentGuardrails": "Guardrails",
       "prompts": "Prompts",
+      "metier": "Business",
       "evaluations": "Evaluations",
       "console": "Console",
       "historique": "History",
@@ -7303,6 +7304,61 @@
     "copy": "Copy",
     "copied": "Copied"
   },
+  "agentMetier": {
+    "title": "Business",
+    "subtitle": "Real business capabilities, signals and runs for this agent.",
+    "level": "Level {level}",
+    "events": "{count} events",
+    "empty": {
+      "title": "Business data unavailable",
+      "detail": "This agent has not yet reached the required level with real business facts."
+    },
+    "unavailable": {
+      "title": "Business read unavailable",
+      "detail": "The business_events source is not responding for this agent."
+    },
+    "missing": {
+      "manifest": "AgentSpec manifest",
+      "observable_contract": "observable contract",
+      "governance": "governance facts",
+      "business_events": "business events",
+      "capability_stamps": "capability link"
+    },
+    "signals": {
+      "title": "Business signals",
+      "empty": "No business signal declared.",
+      "northStar": "North star"
+    },
+    "signalLevel": {
+      "runtime": "Runtime",
+      "human_action": "Human action",
+      "other": "Other"
+    },
+    "trend": {
+      "insufficient_data": "Trend unavailable",
+      "up": "+{delta} pts",
+      "down": "-{delta} pts",
+      "flat": "Stable"
+    },
+    "capabilities": {
+      "title": "Capabilities",
+      "columns": {
+        "capability": "Capability",
+        "volume": "Volume",
+        "conformity": "% conforming",
+        "validation": "% validation",
+        "blocked": "% blocked",
+        "prevented": "Effects prevented",
+        "trend": "Trend"
+      }
+    },
+    "runs": {
+      "title": "Runs · {capability}",
+      "allCapabilities": "All capabilities",
+      "emptyTitle": "No business run observed",
+      "emptyHint": "No real run is available for this capability yet."
+    }
+  },
   "agentEvaluations": {
     "title": "Evaluations",
     "subtitle": "Measure, analyse and improve the answer quality of the assistant and its agents.",
@@ -8023,6 +8079,18 @@
     "explain_payment_options": "Explain payment options",
     "draft_reminder": "Draft reminder",
     "propose_schedule": "Propose schedule"
+  },
+  "businessSignal": {
+    "contact_window_compliance": "Contact-window compliance",
+    "validation_required_compliance": "Required validation compliance",
+    "action_blocking_correctness": "Sensitive-action blocking",
+    "artifact_governance": "Artifact traceability",
+    "client_message_safety": "Client-message safety",
+    "payment_option_safety": "Payment-option safety",
+    "action_governance": "Action governance",
+    "no_uncontrolled_external_effect": "No uncontrolled external effect",
+    "recouvrement_trace_completeness": "Collections trace completeness",
+    "amount_consistency": "Amount consistency"
   },
   "policy": {
     "contact_window": "Authorized contact window",

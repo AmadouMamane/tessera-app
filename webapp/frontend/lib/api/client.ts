@@ -53,6 +53,8 @@ import {
   AutomationsOverviewSchema,
   type BudgetSnapshot,
   BudgetSnapshotSchema,
+  type BusinessCapabilitiesResponse,
+  BusinessCapabilitiesResponseSchema,
   type Calibration,
   CalibrationSchema,
   type CatalogueConsumers,
@@ -470,6 +472,32 @@ export async function fetchBusinessRuns(
     `/observability/business/runs?${params.toString()}`,
     { signal },
     RecouvrementRunsResponseSchema,
+  );
+}
+
+/** Per-capability business aggregate for one agent (ADR 0017 §A1.4). */
+export async function fetchBusinessCapabilities(
+  signal?: AbortSignal,
+  options: {
+    at?: string;
+    agent?: string;
+    workflowId?: string;
+    conversationId?: string;
+    turnId?: string;
+    caseId?: string;
+  } = {},
+): Promise<BusinessCapabilitiesResponse> {
+  const params = new URLSearchParams();
+  if (options.at) params.set("at", options.at);
+  if (options.agent) params.set("agent", options.agent);
+  if (options.workflowId) params.set("workflow_id", options.workflowId);
+  if (options.conversationId) params.set("conversation_id", options.conversationId);
+  if (options.turnId) params.set("turn_id", options.turnId);
+  if (options.caseId) params.set("case_id", options.caseId);
+  return request(
+    `/observability/business/capabilities?${params.toString()}`,
+    { signal },
+    BusinessCapabilitiesResponseSchema,
   );
 }
 

@@ -100,6 +100,7 @@
       "connaissances": "Connaissances",
       "agentGuardrails": "Garde-fous",
       "prompts": "Prompts",
+      "metier": "Métier",
       "evaluations": "Évaluations",
       "console": "Console",
       "historique": "Historique",
@@ -7305,6 +7306,61 @@
     "copy": "Copier",
     "copied": "Copié"
   },
+  "agentMetier": {
+    "title": "Métier",
+    "subtitle": "Capacités, signaux et runs métier réels de cet agent.",
+    "level": "Niveau {level}",
+    "events": "{count} événements",
+    "empty": {
+      "title": "Données métier indisponibles",
+      "detail": "Cet agent n'a pas encore atteint le niveau requis avec des faits métier réels."
+    },
+    "unavailable": {
+      "title": "Lecture métier indisponible",
+      "detail": "La source business_events ne répond pas pour cet agent."
+    },
+    "missing": {
+      "manifest": "manifeste AgentSpec",
+      "observable_contract": "contrat observable",
+      "governance": "faits de gouvernance",
+      "business_events": "événements métier",
+      "capability_stamps": "liaison capacité"
+    },
+    "signals": {
+      "title": "Signaux métier",
+      "empty": "Aucun signal métier déclaré.",
+      "northStar": "North star"
+    },
+    "signalLevel": {
+      "runtime": "Runtime",
+      "human_action": "Action humaine",
+      "other": "Autre"
+    },
+    "trend": {
+      "insufficient_data": "Tendance indisponible",
+      "up": "+{delta} pts",
+      "down": "-{delta} pts",
+      "flat": "Stable"
+    },
+    "capabilities": {
+      "title": "Capacités",
+      "columns": {
+        "capability": "Capacité",
+        "volume": "Volume",
+        "conformity": "% conforme",
+        "validation": "% validation",
+        "blocked": "% bloqué",
+        "prevented": "Effets empêchés",
+        "trend": "Tendance"
+      }
+    },
+    "runs": {
+      "title": "Runs · {capability}",
+      "allCapabilities": "Toutes capacités",
+      "emptyTitle": "Aucun run métier observé",
+      "emptyHint": "Aucun run réel n'est encore disponible pour cette capacité."
+    }
+  },
   "agentEvaluations": {
     "title": "Évaluations",
     "subtitle": "Mesurez, analysez et améliorez la qualité des réponses de l'assistant et des agents.",
@@ -8025,6 +8081,18 @@
     "explain_payment_options": "Explication des options de paiement",
     "draft_reminder": "Rédaction d'une relance",
     "propose_schedule": "Proposition d'échéancier"
+  },
+  "businessSignal": {
+    "contact_window_compliance": "Respect des fenêtres de contact",
+    "validation_required_compliance": "Validation requise respectée",
+    "action_blocking_correctness": "Blocage des actions sensibles",
+    "artifact_governance": "Traçabilité des artefacts",
+    "client_message_safety": "Sûreté des messages client",
+    "payment_option_safety": "Sûreté des options de paiement",
+    "action_governance": "Gouvernance des actions",
+    "no_uncontrolled_external_effect": "Absence d'effet externe non contrôlé",
+    "recouvrement_trace_completeness": "Complétude de la trace recouvrement",
+    "amount_consistency": "Cohérence des montants"
   },
   "policy": {
     "contact_window": "Fenêtre de contact autorisée",

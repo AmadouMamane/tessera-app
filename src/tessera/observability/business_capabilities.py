@@ -7,10 +7,17 @@ from typing import TYPE_CHECKING
 
 from tessera.agent.registry import get_agent
 from tessera.observability import business_events, business_scoring
+from tessera.observability.agent_release import agent_release_state
+from tessera.observability.agentspec_projection import (
+    business_signal_descriptors,
+    observability_level,
+)
 from tessera.observability.spine.adapters import fact_source
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from tessera.agent.registry import Agent
 
 __all__ = [
     "UNKNOWN_CAPABILITY_ID",
@@ -93,12 +100,18 @@ def _trend(rows: list[dict[str, object]]) -> dict[str, object]:
     return {"available": True, "direction": direction, "delta_pct": delta, "points": points}
 
 
-def _manifest_capabilities(agent_id: str | None) -> list[dict[str, object]]:
+def _agent(agent_id: str | None) -> Agent | None:
     if not agent_id:
-        return []
+        return None
     try:
-        agent = get_agent(agent_id)
+        return get_agent(agent_id)
     except KeyError:
+        return None
+
+
+def _manifest_capabilities(agent_id: str | None) -> list[dict[str, object]]:
+    agent = _agent(agent_id)
+    if agent is None:
         return []
     if agent.observability is None:
         return []
@@ -120,6 +133,10 @@ def _score_conformity(rows: list[dict[str, object]]) -> float | None:
         if score.get("status") == "scored" and isinstance(raw_score, int | float):
             scored_values.append(float(raw_score))
     return _mean_pct(scored_values)
+
+
+def _score_by_metric(rows: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+    return {str(score.get("metric")): score for score in business_scoring.score_rows(rows)}
 
 
 def _prevents_external_effect(
@@ -177,6 +194,117 @@ def _row_for_capability(
     }
 
 
+def _signal_trend(metric: str, rows: list[dict[str, object]]) -> dict[str, object]:
+    buckets: dict[str, list[dict[str, object]]] = {}
+    for row in rows:
+        stamp = _timestamp(row)
+        if stamp is None:
+            continue
+        buckets.setdefault(stamp.date().isoformat(), []).append(row)
+
+    points: list[dict[str, object]] = []
+    for bucket, bucket_rows in sorted(buckets.items()):
+        score = _score_by_metric(bucket_rows).get(metric)
+        raw_score = score.get("score") if score else None
+        value_pct = round(float(raw_score) * 100, 1) if isinstance(raw_score, int | float) else None
+        points.append(
+            {
+                "bucket": bucket,
+                "value_pct": value_pct,
+                "status": str(score.get("status")) if score else "unknown",
+            }
+        )
+
+    scored: list[tuple[str, float]] = []
+    for point in points:
+        raw_value_pct = point.get("value_pct")
+        if isinstance(raw_value_pct, int | float):
+            scored.append((str(point["bucket"]), float(raw_value_pct)))
+    if len(scored) < _MIN_TREND_POINTS:
+        return {
+            "available": False,
+            "direction": "insufficient_data",
+            "delta_pct": None,
+            "points": points,
+        }
+
+    first = scored[0][1]
+    last = scored[-1][1]
+    delta = round(last - first, 1)
+    direction = "up" if last > first else ("down" if last < first else "flat")
+    return {"available": True, "direction": direction, "delta_pct": delta, "points": points}
+
+
+def _business_signals(
+    agent_id: str | None, rows: list[dict[str, object]]
+) -> list[dict[str, object]]:
+    agent = _agent(agent_id)
+    if agent is None:
+        return []
+    scores = _score_by_metric(rows)
+    signal_rows: list[dict[str, object]] = []
+    for descriptor in business_signal_descriptors(agent):
+        key = str(descriptor["key"])
+        score = scores.get(key)
+        raw_score = score.get("score") if score else None
+        value = float(raw_score) if isinstance(raw_score, int | float) else None
+        value_pct = (
+            round(value * 100, 1)
+            if value is not None and descriptor.get("unit") == "ratio"
+            else None
+        )
+        signal_rows.append(
+            {
+                **descriptor,
+                "value": value,
+                "value_pct": value_pct,
+                "status": str(score.get("status")) if score else "unknown",
+                "reason": str(score.get("reason")) if score else "no_business_score",
+                "trend": _signal_trend(key, rows),
+            }
+        )
+    return signal_rows
+
+
+def _governed(agent_id: str | None) -> bool:
+    if not agent_id:
+        return False
+    try:
+        release = agent_release_state(agent_id)
+    except (OSError, ValueError):
+        return False
+    return release.available and release.socle_total > 0
+
+
+def _level_payload(agent_id: str | None, rows: list[dict[str, object]]) -> dict[str, object]:
+    agent = _agent(agent_id)
+    governed = _governed(agent_id)
+    has_business_events = any(_capability(row) != UNKNOWN_CAPABILITY_ID for row in rows)
+    level = (
+        observability_level(agent, governed=governed, business_events=has_business_events)
+        if agent is not None
+        else None
+    )
+
+    missing: list[str] = []
+    if agent is None or agent.observability is None:
+        missing.append("manifest")
+    elif not (agent.observability.workflows and agent.observability.telemetry_capabilities):
+        missing.append("observable_contract")
+    if not governed:
+        missing.append("governance")
+    if not rows:
+        missing.append("business_events")
+    elif not has_business_events:
+        missing.append("capability_stamps")
+
+    return {
+        "observability_level": level,
+        "required_level": "L3",
+        "missing_requirements": missing if level != "L3" else [],
+    }
+
+
 def business_capability_aggregate(
     *,
     at: str | None = None,
@@ -200,6 +328,7 @@ def business_capability_aggregate(
         turn_id=turn_id,
         case_id=case_id,
     )
+    level_payload = _level_payload(agent_id, rows)
     by_capability: dict[str, list[dict[str, object]]] = {}
     for row in rows:
         by_capability.setdefault(_capability(row), []).append(row)
@@ -234,6 +363,8 @@ def business_capability_aggregate(
         "case_id": case_id,
         "source": fact_source("business_events"),
         "fact": "business_events",
+        "business_signals": _business_signals(agent_id, rows),
+        **level_payload,
         "unknown_capability_id": UNKNOWN_CAPABILITY_ID,
         "unknown_capability_label": UNKNOWN_CAPABILITY_LABEL,
     }

@@ -173,10 +173,11 @@ def test_duplicate_capability_id_is_rejected() -> None:
 # --- projection: level (computed from facts, never asserted) ---------------------
 
 
-def test_recouvrement_reads_l1_ungoverned_l2_governed() -> None:
+def test_recouvrement_reads_l1_ungoverned_l2_governed_l3_business() -> None:
     agent = get_agent("recouvrement")
     assert observability_level(agent, governed=False) == "L1"
     assert observability_level(agent, governed=True) == "L2"
+    assert observability_level(agent, governed=True, business_events=True) == "L3"
 
 
 def test_unmanifested_agent_has_no_level() -> None:

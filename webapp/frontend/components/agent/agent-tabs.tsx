@@ -2,6 +2,7 @@
 
 import {
   BookOpen,
+  BriefcaseBusiness,
   ClipboardCheck,
   History,
   LayoutDashboard,
@@ -35,6 +36,7 @@ const TABS: ReadonlyArray<{ page: AgentPage; labelKey: string; icon: LucideIcon 
   { page: "connaissances", labelKey: "item.connaissances", icon: BookOpen },
   { page: "garde-fous", labelKey: "item.agentGuardrails", icon: ShieldCheck },
   { page: "prompts", labelKey: "item.prompts", icon: MessageSquareText },
+  { page: "metier", labelKey: "item.metier", icon: BriefcaseBusiness },
   { page: "evaluations", labelKey: "item.evaluations", icon: ClipboardCheck },
   { page: "console", labelKey: "item.console", icon: TerminalSquare },
   { page: "historique", labelKey: "item.historique", icon: History },

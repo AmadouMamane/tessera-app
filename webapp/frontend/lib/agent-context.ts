@@ -26,6 +26,7 @@ export type AgentPage =
   | "connaissances"
   | "garde-fous"
   | "prompts"
+  | "metier"
   | "evaluations"
   | "console"
   | "historique";
@@ -57,6 +58,7 @@ export const AGENT_PAGE_NAMESPACE: Record<AgentPage, string> = {
   connaissances: "agentConnaissances",
   "garde-fous": "agentGardeFous",
   prompts: "agentPrompts",
+  metier: "agentMetier",
   evaluations: "agentEvaluations",
   console: "agentConsole",
   historique: "agentHistorique",
