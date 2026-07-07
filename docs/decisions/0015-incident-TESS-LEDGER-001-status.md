@@ -1,5 +1,11 @@
 # Incident TESS-LEDGER-001 — execution status
 
+> **RESOLVED 2026-07-07** — the strict 0→6 remediation is complete (twice-green per point,
+> ledger after each). Writer serialized (forks impossible at the DB), verifier + badge tree-aware,
+> history re-anchored by an appended attestation (never rewritten), ADR gap corrected. Live
+> `tessera_local` verdict: **content_integrity=True, linear=False, 29 forks + 1 orphan, attested**.
+> Operator owns final sign-off + the optional browser render of the badge.
+
 Single source of truth for **where the `audit_ledger`-forks remediation is**. Executing
 session updates this file after **every point**; a resuming session reads this first, then
 continues the next `pending` point — no re-work. Companion to
@@ -29,11 +35,26 @@ incident retrofits with write-serialization).
 | 3 | Tree-aware verifier + badge: output `{content_integrity, linear, forks[], orphans[]}`; badge "Content integrity: verified · Total order: broken (…historical forks, attested)". Orphans REPORTED, never deleted. | ✅ done | `273e2e17` | **The verifier learned the difference.** New `verify_ledger_tree` → `{content_integrity, linear, forks[], orphans[], attested}`; `verify_active_ledger().verified` now = **content integrity** (tamper-evidence), so the whole cockpit stops mis-reading a fork as tampering. Badge (`app-footer.tsx`) is tri-state: green (intact+linear) / **amber ⑂** (content intact, N forks[+orphans], attested|pending) / red (content edited). Signal + `/audit/integrity` carry `content_integrity/linear/fork_count/orphan_count/attested`. **NEW FINDING (refines, doesn't contradict, the root cause → no halt): 1 ORPHAN** — row seq 11814 references parent `11682ad4…` that no row holds = a **lost parent write** (append-only forbids DELETE; same async-drain bug). So the honest live verdict is **content_integrity=True, linear=False, 29 forks + 1 orphan, unattested**. Corrects the brief's "every row chains to its parent". Tests: `TestTreeAwareVerification` (6). Twice-green: py 1347 ×2 + 6 integration; FE tsc/biome/vitest 69. |
 | 4 | Re-anchor by attestation (append-only): append a signed attestation entry (fork list, cause, decision, point-0 dump hash); the partial index anchors linearity from there. | ✅ done | `283976b9` | **Re-anchored by attestation, never rewrite.** New reusable `build_ledger_attestation_entry` + `emit_ledger_attestation` (the anchoring pattern point 5 documents). **Live-appended to `tessera_local`** via the fixed serialized path (emit → spool → advisory-locked drain): **seq 17136** (> anchor 17135 → itself fork-guarded), `type=tessera.ledger.attestation`, recording the **29 forks + 1 orphan**, cause, decision, and the **point-0 dump SHA-256** (`7affe196…`) as chain of custody; `prev_hash` = the prior head `af8634ab…`. Pure append: rows 13382→**13383**, the 29 forks + 1 orphan **unchanged** (never rewritten), no DELETE/UPDATE. Verifier now reports **attested=True** → the badge flips to "attested". Tests: builder unit test. Twice-green: py 1348 ×2 + 6 integration. |
 | 5 | ADR 0015 §Amendment 3 **Correction**: write-serialization requirement, tree-aware verify semantics, anchoring pattern; priority bump for the external seal (Hica). | ✅ done | `<point-5>` | **§Correction 3c** appended to `0015-runtime-telemetry-spine-and-scope.md` (+ header summary line). Names the ADR gap (Amendment 3 changed the medium, not the write model — the flat file was implicitly single-writer; Postgres opened multi-writer without a serialization contract) and records: (1) writes serialized at the durable point (advisory lock + head-in-txn, `_last_hash` dropped, `event_id` idempotence, partial UNIQUE fork guard); (2) tree-aware verify (content integrity ≠ total order; forks/orphans reported); (3) re-anchor by attestation, never rewrite (the anchoring pattern); (4) Hica seal re-scoped from opposability badge to a **time-bound divergence detector** (would have bounded the 4-day window) — still enrichment, never the store. Docs-only; twice-green py 1348 ×2. |
-| 6 | Closure: closing ledger entry; cockpit badge reflects the attested state. | ⬜ pending | — | — |
+| 6 | Closure: closing ledger entry; cockpit badge reflects the attested state. | ✅ done | `<point-6>` | **Closed.** End-to-end verified: `GET /audit/integrity` over live `tessera_local` serves `{verified:true, content_integrity:true, linear:false, fork_count:29, orphan_count:1, attested:true}` → the footer badge (`app-footer.tsx`) renders the **AMBER "attested"** state = "Content integrity verified · total order: 29 historical forks, 1 orphaned (attested)". Component logic + i18n verified via tsc/vitest; browser render left to the operator. This ledger is the closing record. Final twice-green: py 1348 ×2 + 6 integration; FE tsc/biome/vitest 69. |
 
 Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green) · ⛔ blocked (see notes).
 
 ## Log (newest first)
+
+- 2026-07-07 — **Point 6 done — CLOSED.** End-to-end verification that the cockpit badge reflects
+  the attested state: `_audit_integrity(_resolve_audit_path())` over live `tessera_local` serves
+  `{verified:true, content_integrity:true, linear:false, fork_count:29, orphan_count:1,
+  attested:true, length:13383}`; reproducing the footer's decision → **AMBER attested** →
+  "Content integrity verified · total order: 29 historical forks, 1 orphaned (attested)". The
+  component logic + i18n are covered by tsc/vitest; a browser screenshot is left to the operator
+  (no backend was running). **Summary of the resolution (strict 0→6, twice-green per point,
+  append-only absolute, NO history rewrite, no halt — the one investigation surprise (1 orphan)
+  refined but did not contradict the root cause):** (0) evidence frozen (pg_dump SHA-256
+  `7affe196…`); (1) root cause confirmed = per-process `_last_hash` + unlocked async drain;
+  (2) writer serialized (advisory lock + head-in-txn + fork-guard index; N-writer test = 0 forks);
+  (3) verifier + badge tree-aware (content ≠ order); (4) attested at seq 17136 (append-only);
+  (5) ADR §Correction 3c; (6) badge shows attested. Final twice-green: ruff/format/mypy 262/pytest
+  **1348** ×2 + 6 live integration; FE tsc/biome/vitest 69.
 
 - 2026-07-07 — **Point 5 done — ADR 0015 §Correction 3c.** Appended to
   `0015-runtime-telemetry-spine-and-scope.md` (+ the header amendment summary). It names the gap
