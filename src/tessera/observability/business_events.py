@@ -49,6 +49,7 @@ __all__ = [
     "BusinessPayloadValidationError",
     "ClickHouseBusinessEventStore",
     "CockpitSignalSink",
+    "GRAMMAR_EVENT_NAMES",
     "GRAMMAR_VERSION",
     "InMemoryBusinessEventStore",
     "MetricsSink",
@@ -62,6 +63,7 @@ __all__ = [
     "recent_business_events",
     "reset_business_event_store",
     "set_business_event_store",
+    "validate_business_event",
 ]
 
 _AuditSink = Literal["stdout", "file", "cloud_logging", "postgres"]
@@ -90,6 +92,9 @@ EVENT_VERSION = 1
 #: ADR 0017 §2 — the workflow grammar is a versioned spec, stamped on every event.
 #: It versions independently from the envelope ``schema_version``.
 GRAMMAR_VERSION = "workflow_grammar.v1"
+#: ADR 0017 §2/§4 — the workflow grammar as a frozen name set: the single source
+#: of truth for grammar conformance (signal 104). Never re-list these elsewhere.
+GRAMMAR_EVENT_NAMES: frozenset[str] = frozenset(name.value for name in BusinessEventName)
 
 
 class Actor(StrEnum):
@@ -688,6 +693,38 @@ def _validate_event_payload(
         msg = f"invalid envelope for {event_name}: missing {', '.join(sorted(set(missing)))}"
         raise BusinessPayloadValidationError(msg)
     return dict(payload)
+
+
+def validate_business_event(event: BusinessEvent) -> None:
+    """Validate one event against the versioned workflow grammar (ADR 0017 §2, §4 L3).
+
+    The single authoritative grammar check (signal 104): raises
+    :class:`BusinessPayloadValidationError` if the event name is outside the
+    grammar, its stamped grammar/schema versions disagree with this build, or its
+    payload fails the strict (``extra="forbid"``, PII-free) contract for its name.
+    The SDK testkit (:mod:`tessera.agent.sdk.testkit.grammar_conformance`) wraps
+    this into the reusable CI conformance gate.
+    """
+    if event.event_name not in GRAMMAR_EVENT_NAMES:
+        msg = f"event_name {event.event_name!r} is not in the workflow grammar"
+        raise BusinessPayloadValidationError(msg)
+    if event.grammar_version != GRAMMAR_VERSION:
+        msg = f"grammar_version {event.grammar_version!r} != {GRAMMAR_VERSION!r}"
+        raise BusinessPayloadValidationError(msg)
+    if event.schema_version != EVENT_SCHEMA_VERSION:
+        msg = f"schema_version {event.schema_version!r} != {EVENT_SCHEMA_VERSION!r}"
+        raise BusinessPayloadValidationError(msg)
+    _validate_event_payload(
+        event_name=event.event_name,
+        payload=event.payload,
+        decision=event.decision,
+        reason_codes=event.reason_codes,
+        case_id=event.case_id,
+        node_name=event.node_name,
+        artifact_id=event.artifact_id,
+        artifact_type=event.artifact_type,
+        artifact_status=event.artifact_status,
+    )
 
 
 def classify_event(
