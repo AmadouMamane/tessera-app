@@ -41,8 +41,49 @@ updates this file after every step. A resuming session reads this first, then co
   status`, plumbing reads): a sandboxed `git status` refreshed the index, could not unlink
   its lock (`Operation not permitted`) and left the stale `.git/index.lock` the step-2
   executor had to clear (liveness-checked first — correct handling).
+- **Post-reorg roles (2026-07-07):** the main checkout `tessera-app/tessera` is the
+  **landing pad** — no agent edits it directly; all work happens in `agents/*` worktrees.
+  UI produit work is reassigned **antigravity → codex** (operator call: codex is stronger
+  on UI); antigravity parked pending reassignment. Incident recorded: a stale-context
+  session live-edited the main checkout and **reverted committed step-2 work** in
+  `signal-registry.test.ts` (uncommitted); restored to HEAD, the orphan patch (incl. a new
+  `capabilityFor` describe block someone may want to reclaim) saved at
+  `Tessera_private/patch-orphelin-signal-registry-test-2026-07-06.diff`.
 
 ## Log (newest first)
+
+- 2026-07-07 — clarification (operator question): the `business_events` fact's legacy leg
+  labelled `jsonl` in the per-fact source switch is the **bounded in-memory projection**,
+  never a file (verified; a test asserts `business_events.jsonl` does not exist — 0016
+  rule). Two follow-ups owed: (a) after the must-fix merge + a short bake, **flip the
+  `business_events` default to `spine`** (in-memory demotes to test-only default, 0017 §5);
+  (b) vocabulary debt — rename the switch value `jsonl` → `local` once the scores
+  retirement (0015 G5 bake) concludes, so the label stops lying about the medium.
+
+- 2026-07-07 — **Architecture review of steps 3+5 (claude/step-3-agentspec): APPROVED with
+  3 must-fix before merge.** Core verdict: AgentSpec v1 conforms (extra=forbid frozen,
+  closed vocabularies, i18n namespace validators, referential integrity, ≤1 north-star,
+  A2.2 outcome-undeclarable enforced as a model validator — illegal state unrepresentable);
+  boundary ratchet intact (5 frozen exceptions); registry seam respected. Must-fix:
+  (1) **replay.py orphan WIP adjudicated — it IS the mypy fix** (walrus hoist of
+  `row.get("business_events")`); commit it as its own fix commit — this unblocks the
+  green-merge rule; (2) **packaging debt still owed** (wheel `packages` unchanged) —
+  execute the logged fix; (3) **A1.2 gap: `capability_id` exists as a CH column but NOT on
+  the envelope** — add the optional field (+ to_row test); it is step 4's per-capability
+  join key; emitter stamping may ride step 4. Then re-gate twice → merge to main → push
+  (`-u origin`).
+
+- 2026-07-07 — dev servers relaunched from the new path, verified end-to-end (backend :8099
+  healthz/readyz, front :3097 → 200, proxy /api 200; obs-core up). Three finds, two fixed
+  locally: `PYTHONPATH=.` needed (see debt below), pnpm `--` forwarding quirk, and
+  `webapp/frontend/.env.local` pointing at dead :8392 → :8099 (gitignored, correct home for
+  the fix). **Debt owed — durable packaging fix:** the root `eval/` package is NOT in
+  `[tool.hatch.build.targets.wheel] packages` → `make run` bare and the `tessera-eval`
+  console script are broken on any clean sync (latent bug exposed by the reorg re-sync,
+  masked before by inherited venv state). Fix: `packages = ["src/tessera", "eval"]` +
+  `uv sync` + prove `from eval.sets import load_eval_set` imports WITHOUT PYTHONPATH; gate;
+  commit. Small, gate-able — ride it at the START of the step-3 session or the morning
+  review. (Later, separate slice: consider renaming the top-level `eval` package.)
 
 - 2026-07-07 — **Repo reorg executed** (`Tessera_private/runbook-reorg-repo-2026-07-06.md`):
   `main` fast-forwarded to `c26cb9d` (merge-2/antigravity + step-2, both landed) and pushed to
