@@ -138,6 +138,29 @@ class TestTreeAwareVerification:
         status = verify_ledger_tree([])
         assert status.content_integrity is True and status.linear is True
 
+    def test_built_attestation_entry_ratifies_and_flips_attested(self) -> None:
+        from tessera.guard.audit import build_ledger_attestation_entry
+
+        rows = _three()
+        att = build_ledger_attestation_entry(
+            incident="TESS-LEDGER-001",
+            cause="concurrent writers extended a per-process head",
+            decision="re-anchor by attestation, never rewrite",
+            evidence={"dump_sha256": "abc123", "frozen_at": "2026-07-07T10:53:58Z"},
+            forks=[{"prev_hash": "p0", "children": ["c0", "c1"]}],
+            orphans=["orphan-hash"],
+            anchor_seq=17135,
+        )
+        # Append it into the chain the same way a drain would, then verify the tree.
+        att["prev_hash"] = str(rows[2]["hash"])
+        att["hash"] = _hash_core({k: v for k, v in att.items() if k != "hash"})
+        assert att["type"] == LEDGER_ATTESTATION_TYPE
+        assert att["fork_count"] == 1 and att["orphan_count"] == 1
+        assert att["evidence"]["dump_sha256"] == "abc123" and att["anchor_seq"] == 17135
+        status = verify_ledger_tree([*rows, att])
+        assert status.attested is True  # the appended attestation ratifies the history
+        assert status.content_integrity is True and status.linear is True
+
 
 class TestSourceSwitch:
     def test_default_is_the_promoted_table(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]

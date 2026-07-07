@@ -44,7 +44,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
 
-from tessera.guard.audit import ChainStatus, _event_identity, _hash_core, verify_audit_chain
+from tessera.guard.audit import (
+    LEDGER_ATTESTATION_TYPE,
+    ChainStatus,
+    _event_identity,
+    _hash_core,
+    verify_audit_chain,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -475,11 +481,6 @@ def verify_ledger_rows(payloads: Sequence[Mapping[str, Any]]) -> ChainStatus:
         prev = str(stored)
         walked += 1
     return ChainStatus(verified=True, length=walked, broken_at=None)
-
-
-# TESS-LEDGER-001 — the attestation entry type (point 4): a signed, appended entry that ratifies
-# the historical forks (never a rewrite). Its presence flips the badge to "attested".
-LEDGER_ATTESTATION_TYPE: Final = "tessera.ledger.attestation"
 
 
 @dataclass(frozen=True, slots=True)

@@ -33,7 +33,9 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AGENT_LIFECYCLE_PHASES",
+    "LEDGER_ATTESTATION_TYPE",
     "ChainStatus",
+    "build_ledger_attestation_entry",
     "current_auth_state",
     "current_model",
     "emit_agent_lifecycle",
@@ -41,10 +43,17 @@ __all__ = [
     "emit_audit",
     "emit_business_event_audit",
     "emit_handoff",
+    "emit_ledger_attestation",
     "emit_routing",
     "guard_disabled",
     "verify_audit_chain",
 ]
+
+# TESS-LEDGER-001 — the attestation entry type (point 4): a signed, appended entry that ratifies
+# historical ledger anomalies (forks/orphans) WITHOUT rewriting them (append-only is absolute).
+# Defined here (the entry-builder layer) so :mod:`tessera.guard.ledger_store` can import it
+# without a cycle; the verifier keys "attested" on this type.
+LEDGER_ATTESTATION_TYPE = "tessera.ledger.attestation"
 
 _Outcome = Literal["allowed", "denied", "error"]
 _Sink = Literal["stdout", "file", "cloud_logging", "postgres"]
@@ -533,6 +542,84 @@ def emit_agent_lifecycle(
         **(dict(detail) if detail else {}),
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+
+
+def build_ledger_attestation_entry(
+    *,
+    incident: str,
+    cause: str,
+    decision: str,
+    evidence: Mapping[str, Any],
+    forks: Iterable[Mapping[str, Any]],
+    orphans: Iterable[str],
+    anchor_seq: int | None = None,
+    actor: str = "operator",
+) -> dict[str, Any]:
+    """Build (do not append) an attestation entry ratifying historical ledger anomalies.
+
+    TESS-LEDGER-001 point 4 — re-anchoring by attestation, NEVER by rewrite: it RECORDS the
+    forks + orphans (they stay in the chain — append-only is absolute), the cause, the decision,
+    and the point-0 evidence dump hash (chain of custody). Its own integrity is the hash chain it
+    is appended into; an external cryptographic seal (Hica) is the enrichment, never the store
+    (ADR 0015 §Amendment 3). Pure builder so it is unit-testable without a database.
+    """
+    fork_list = [dict(f) for f in forks]
+    orphan_list = list(orphans)
+    now = datetime.now(UTC).isoformat()
+    return {
+        "type": LEDGER_ATTESTATION_TYPE,
+        "version": 1,
+        "occurred_at": now,
+        "valid_from": now,
+        "valid_to": None,
+        "recorded_at": now,
+        "actor": actor,
+        "incident": incident,
+        "cause": cause,
+        "decision": decision,
+        "evidence": dict(evidence),
+        "anchor_seq": anchor_seq,
+        "forks": fork_list,
+        "fork_count": len(fork_list),
+        "orphans": orphan_list,
+        "orphan_count": len(orphan_list),
+    }
+
+
+def emit_ledger_attestation(
+    *,
+    incident: str,
+    cause: str,
+    decision: str,
+    evidence: Mapping[str, Any],
+    forks: Iterable[Mapping[str, Any]],
+    orphans: Iterable[str],
+    anchor_seq: int | None = None,
+    actor: str = "operator",
+    sink: _Sink | None = None,
+) -> dict[str, Any]:
+    """Append an attestation entry into the tamper-evident ledger (chained + durable).
+
+    Goes through the normal serialized append (:func:`_append_to_chain` → spool → the
+    advisory-locked drain), so the attestation links to the true head and is itself fork-proof
+    (it lands above the fork-guard anchor). Returns the entry (with its stamped ``event_id``).
+    """
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    entry = build_ledger_attestation_entry(
+        incident=incident,
+        cause=cause,
+        decision=decision,
+        evidence=evidence,
+        forks=forks,
+        orphans=orphans,
+        anchor_seq=anchor_seq,
+        actor=actor,
+    )
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+    return entry
 
 
 @dataclass(frozen=True, slots=True)
