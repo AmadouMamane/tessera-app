@@ -75,9 +75,9 @@ eval/calibration/_calibration.json
 # Scratch / local working dir
 tmp/
 
-# Local agent instruction files & personal tooling (kept on disk, never published)
-CLAUDE.md
-AGENTS.md
+# Agent instruction files: AGENTS.md / CLAUDE.md are committed; machine-specific
+# bits live in AGENTS.local.md (kept on disk, never published).
+AGENTS.local.md
 init_claude.sh
 
 # Local-only eval-case generators (artefacts are the JSON files; method in docs/eval-sourcing.md)

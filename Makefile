@@ -148,6 +148,50 @@ run: install
 run-on-prem: install
 	TESSERA_LLM_PROFILE=on_prem uv run python scripts/run_local.py
 
+# ── Local dev servers (detached, health-checked) ────────────────────────────
+# Reference servers run from the MAIN checkout on the canonical ports so the
+# operator's browser reflects `main`. Reviewing UNMERGED work at a supervised
+# checkpoint = `make dev-preview PORT=3098` from that agent's worktree (a temp
+# server on another port, killed after validation). Convention:
+# docs/decisions/0017-execution-status.md (Preconditions). macOS has no setsid,
+# so servers are detached with `perl -MPOSIX setsid` + nohup. Assumes deps are
+# installed (uv sync + pnpm install).
+
+DEV_FPORT       ?= 3097
+DEV_BPORT       ?= 8099
+DEV_BACKEND_LOG ?= /tmp/tessera-backend.log
+DEV_FRONT_LOG   ?= /tmp/tessera-front.log
+_SETSID = perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $$!"'
+
+.PHONY: dev-up dev-down dev-status dev-preview
+
+# Start backend + frontend from THIS checkout, detached; wait for health.
+dev-up:
+	@echo "▶ dev-up from $(CURDIR) (git $$(git rev-parse --short HEAD 2>/dev/null)) — front :$(DEV_FPORT) / back :$(DEV_BPORT)"
+	@for p in $(DEV_FPORT) $(DEV_BPORT); do lsof -nP -iTCP:$$p -sTCP:LISTEN >/dev/null 2>&1 && { echo "✗ port $$p in use — 'make dev-down' first (never two servers on one port)"; exit 1; }; done; true
+	@echo "  backend  → $(DEV_BACKEND_LOG)"; TESSERA_API__PORT=$(DEV_BPORT) nohup $(_SETSID) uv run python scripts/run_local.py >$(DEV_BACKEND_LOG) 2>&1 </dev/null &
+	@echo "  frontend → $(DEV_FRONT_LOG)"; cd webapp/frontend && PORT=$(DEV_FPORT) TESSERA_BACKEND_URL=http://localhost:$(DEV_BPORT) nohup $(_SETSID) corepack pnpm dev >$(DEV_FRONT_LOG) 2>&1 </dev/null &
+	@printf "  backend :$(DEV_BPORT)/healthz … "; curl -sf --retry 60 --retry-connrefused --retry-delay 1 --max-time 120 http://localhost:$(DEV_BPORT)/healthz >/dev/null && echo ok || { echo "FAIL (see $(DEV_BACKEND_LOG))"; exit 1; }
+	@printf "  frontend :$(DEV_FPORT)/api/healthz … "; curl -sf --retry 90 --retry-connrefused --retry-delay 1 --max-time 240 http://localhost:$(DEV_FPORT)/api/healthz >/dev/null && echo ok || { echo "FAIL (see $(DEV_FRONT_LOG))"; exit 1; }
+	@$(MAKE) --no-print-directory dev-status
+
+# Stop the servers on DEV_FPORT/DEV_BPORT (by port — graceful, then hard).
+dev-down:
+	@for p in $(DEV_FPORT) $(DEV_BPORT); do pids=$$(lsof -nP -tiTCP:$$p -sTCP:LISTEN 2>/dev/null); [ -n "$$pids" ] && { echo "  SIGTERM :$$p ($$pids)"; kill $$pids 2>/dev/null; } || echo "  :$$p free"; done; true
+	@perl -e 'select(undef,undef,undef,1.5)'
+	@for p in $(DEV_FPORT) $(DEV_BPORT); do pids=$$(lsof -nP -tiTCP:$$p -sTCP:LISTEN 2>/dev/null); [ -n "$$pids" ] && { echo "  SIGKILL :$$p ($$pids)"; kill -9 $$pids 2>/dev/null; }; done; true
+	@echo "✓ dev-down: :$(DEV_FPORT) and :$(DEV_BPORT) free"
+
+# Ports, PIDs, git head of the served checkout, health.
+dev-status:
+	@for row in "frontend $(DEV_FPORT) /api/healthz" "backend $(DEV_BPORT) /healthz"; do set -- $$row; pid=$$(lsof -nP -tiTCP:$$2 -sTCP:LISTEN 2>/dev/null | head -1); if [ -n "$$pid" ]; then cwd=$$(lsof -a -p $$pid -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1); head=$$(git -C "$$cwd" rev-parse --short HEAD 2>/dev/null || echo -); h=$$(curl -sf --max-time 5 http://localhost:$$2$$3 >/dev/null 2>&1 && echo ok || echo DOWN); printf "  %-8s :%-5s pid %-7s git %-9s %s\n" "$$1" "$$2" "$$pid" "$$head" "$$h"; else printf "  %-8s :%-5s (not running)\n" "$$1" "$$2"; fi; done
+
+# Temporary validation server from a worktree on a custom port.
+#   make dev-preview PORT=3098 [API_PORT=8098]
+dev-preview:
+	@test -n "$(PORT)" || { echo "usage: make dev-preview PORT=3098 [API_PORT=8098]"; exit 1; }
+	@api="$(API_PORT)"; [ -n "$$api" ] || api=$$(( $(PORT) + 5000 )); $(MAKE) --no-print-directory dev-up DEV_FPORT=$(PORT) DEV_BPORT=$$api DEV_BACKEND_LOG=/tmp/tessera-preview-backend-$(PORT).log DEV_FRONT_LOG=/tmp/tessera-preview-front-$(PORT).log
+
 # ── CI simulation ───────────────────────────────────────────────────────────
 
 # Replicate what ci.yml does locally (fast path — no integration tests)
@@ -191,5 +235,11 @@ help:
 	@echo "Run"
 	@echo "  run                Local agent (Vertex AI path)"
 	@echo "  run-on-prem        Local agent (Ollama / on-prem path)"
+	@echo ""
+	@echo "Dev servers (detached, health-checked)"
+	@echo "  dev-up             Backend :8099 + frontend :3097 from THIS checkout"
+	@echo "  dev-down           Stop them (by port)"
+	@echo "  dev-status         Ports, PIDs, served git head, health"
+	@echo "  dev-preview PORT=n Temp validation server from a worktree (e.g. 3098)"
 	@echo ""
 	@echo "  ci                 Local CI simulation (no integration tests)"
